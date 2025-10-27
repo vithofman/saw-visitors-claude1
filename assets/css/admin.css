@@ -1,0 +1,332 @@
+/**
+ * SAW Visitors - Admin Styles
+ * 
+ * Styly pro WordPress admin rozhraní pluginu
+ */
+
+/* =================================================================
+   DASHBOARD
+   ================================================================= */
+
+.saw-dashboard {
+    max-width: 1200px;
+    margin: 20px 0;
+}
+
+.saw-welcome-panel {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+    padding: 30px;
+    margin: 20px 0;
+}
+
+.saw-welcome-panel h2 {
+    margin-top: 0;
+    font-size: 24px;
+    color: #1e40af;
+}
+
+.saw-info-boxes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 30px;
+}
+
+.saw-info-box {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.saw-info-box h3 {
+    margin-top: 0;
+    font-size: 18px;
+    color: #374151;
+    border-bottom: 2px solid #1e40af;
+    padding-bottom: 10px;
+}
+
+.saw-info-box ol,
+.saw-info-box ul {
+    margin: 15px 0;
+    padding-left: 20px;
+}
+
+.saw-info-box li {
+    margin: 8px 0;
+    line-height: 1.6;
+}
+
+.saw-info-box p {
+    margin: 10px 0;
+}
+
+.saw-info-box strong {
+    color: #1e40af;
+    font-weight: 600;
+}
+
+/* =================================================================
+   ABOUT PAGE
+   ================================================================= */
+
+.saw-about {
+    max-width: 800px;
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+    padding: 30px;
+    margin: 20px 0;
+}
+
+.saw-about h2 {
+    color: #1e40af;
+    border-bottom: 2px solid #1e40af;
+    padding-bottom: 10px;
+}
+
+.saw-about h3 {
+    margin-top: 30px;
+    color: #374151;
+}
+
+.saw-about ul {
+    line-height: 1.8;
+}
+
+.saw-about li {
+    margin: 8px 0;
+}
+
+/* =================================================================
+   TABLES
+   ================================================================= */
+
+.saw-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.saw-table th {
+    background: #f9fafb;
+    border-bottom: 2px solid #e5e7eb;
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #374151;
+}
+
+.saw-table td {
+    border-bottom: 1px solid #e5e7eb;
+    padding: 12px;
+}
+
+.saw-table tbody tr:hover {
+    background: #f9fafb;
+}
+
+/* =================================================================
+   BUTTONS
+   ================================================================= */
+
+.saw-button {
+    display: inline-block;
+    padding: 10px 20px;
+    background: #1e40af;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+
+.saw-button:hover {
+    background: #1e3a8a;
+    color: #fff;
+}
+
+.saw-button-secondary {
+    background: #6b7280;
+}
+
+.saw-button-secondary:hover {
+    background: #4b5563;
+}
+
+.saw-button-danger {
+    background: #dc2626;
+}
+
+.saw-button-danger:hover {
+    background: #b91c1c;
+}
+
+.saw-button-small {
+    padding: 6px 12px;
+    font-size: 13px;
+}
+
+/* =================================================================
+   FORMS
+   ================================================================= */
+
+.saw-form-group {
+    margin-bottom: 20px;
+}
+
+.saw-form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.saw-form-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.saw-form-input:focus {
+    outline: none;
+    border-color: #1e40af;
+    box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+}
+
+.saw-form-textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.saw-form-select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 14px;
+    background: #fff;
+}
+
+/* =================================================================
+   ALERTS & NOTICES
+   ================================================================= */
+
+.saw-alert {
+    padding: 15px 20px;
+    border-radius: 4px;
+    margin: 20px 0;
+}
+
+.saw-alert-info {
+    background: #dbeafe;
+    border-left: 4px solid #1e40af;
+    color: #1e3a8a;
+}
+
+.saw-alert-success {
+    background: #d1fae5;
+    border-left: 4px solid #10b981;
+    color: #065f46;
+}
+
+.saw-alert-warning {
+    background: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    color: #92400e;
+}
+
+.saw-alert-error {
+    background: #fee2e2;
+    border-left: 4px solid #dc2626;
+    color: #991b1b;
+}
+
+/* =================================================================
+   BADGES
+   ================================================================= */
+
+.saw-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.saw-badge-primary {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.saw-badge-success {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.saw-badge-warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.saw-badge-danger {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/* =================================================================
+   UTILITIES
+   ================================================================= */
+
+.saw-mt-20 {
+    margin-top: 20px;
+}
+
+.saw-mb-20 {
+    margin-bottom: 20px;
+}
+
+.saw-text-center {
+    text-align: center;
+}
+
+.saw-text-right {
+    text-align: right;
+}
+
+.saw-hidden {
+    display: none;
+}
+
+/* =================================================================
+   RESPONSIVE
+   ================================================================= */
+
+@media (max-width: 768px) {
+    .saw-info-boxes {
+        grid-template-columns: 1fr;
+    }
+    
+    .saw-welcome-panel {
+        padding: 20px;
+    }
+    
+    .saw-table {
+        font-size: 13px;
+    }
+    
+    .saw-table th,
+    .saw-table td {
+        padding: 8px;
+    }
+}
