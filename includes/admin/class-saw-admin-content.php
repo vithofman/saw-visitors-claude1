@@ -2,7 +2,10 @@
 /**
  * Super Admin - Content Management (Phase 5 - UPDATED v4.6.1)
  * 
- * Spravuje školící materiály (video, PDF, WYSIWYG) a dokumenty pro vybraného zákazníka
+ * Spravuje školící materiály (video, PDF, WYSIWYG + dokumenty) pro vybraného zákazníka
+ * - Jazykové záložky nahoře
+ * - Sbalitelné sekce (accordion)
+ * - Dokumenty přímo pod každou sekcí s kategorií
  * 
  * @package    SAW_Visitors
  * @subpackage SAW_Visitors/admin
@@ -15,20 +18,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class SAW_Admin_Content {
 
-	/**
-	 * Maximální velikost souboru (20 MB)
-	 */
-	const MAX_FILE_SIZE = 20 * 1024 * 1024;
-
-	/**
-	 * Povolené MIME typy
-	 */
+	const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 	const ALLOWED_VIDEO_TYPES = array( 'video/mp4' );
 	const ALLOWED_PDF_TYPES = array( 'application/pdf' );
 
-	/**
-	 * Kategorie dokumentů
-	 */
 	const DOC_CATEGORIES = array(
 		'emergency'    => 'Mimořádné situace',
 		'fire'         => 'Požární ochrana',
@@ -39,9 +32,6 @@ class SAW_Admin_Content {
 		'other'        => 'Ostatní',
 	);
 
-	/**
-	 * Jazyky
-	 */
 	const LANGUAGES = array(
 		'cs' => 'Čeština',
 		'en' => 'Angličtina',
@@ -111,23 +101,75 @@ class SAW_Admin_Content {
 
 			<?php self::render_notices(); ?>
 
-			<div class="saw-content-tabs">
-				<button class="saw-tab-button active" data-tab="materials">Školící materiály</button>
-				<button class="saw-tab-button" data-tab="documents">Dokumenty</button>
+			<!-- Jazykové záložky -->
+			<div class="saw-language-tabs">
+				<?php foreach ( self::LANGUAGES as $lang_code => $lang_name ) : ?>
+					<button type="button" 
+							class="saw-language-tab <?php echo $lang_code === 'cs' ? 'active' : ''; ?>" 
+							data-lang="<?php echo esc_attr( $lang_code ); ?>">
+						<?php echo esc_html( $lang_name ); ?>
+					</button>
+				<?php endforeach; ?>
 			</div>
 
 			<form method="post" enctype="multipart/form-data" id="saw-content-form">
 				<?php wp_nonce_field( 'saw_save_content' ); ?>
 
-				<!-- Tab: Školící materiály -->
-				<div id="tab-materials" class="saw-tab-content active">
-					<?php self::render_materials_section( $materials ); ?>
-				</div>
+				<?php foreach ( self::LANGUAGES as $lang_code => $lang_name ) : ?>
+					<div class="saw-language-content" 
+						 data-lang="<?php echo esc_attr( $lang_code ); ?>" 
+						 style="<?php echo $lang_code !== 'cs' ? 'display: none;' : ''; ?>">
+						
+						<!-- Accordion sekce -->
+						<div class="saw-accordion">
+							
+							<!-- Video sekce -->
+							<div class="saw-accordion-item">
+								<button type="button" class="saw-accordion-header">
+									<span class="accordion-title">🎥 Video (MP4)</span>
+									<span class="accordion-icon">▼</span>
+								</button>
+								<div class="saw-accordion-content">
+									<?php self::render_video_section( $materials, $lang_code ); ?>
+								</div>
+							</div>
 
-				<!-- Tab: Dokumenty -->
-				<div id="tab-documents" class="saw-tab-content" style="display: none;">
-					<?php self::render_documents_section( $documents ); ?>
-				</div>
+							<!-- PDF Mapa sekce -->
+							<div class="saw-accordion-item">
+								<button type="button" class="saw-accordion-header">
+									<span class="accordion-title">📄 PDF Mapa</span>
+									<span class="accordion-icon">▼</span>
+								</button>
+								<div class="saw-accordion-content">
+									<?php self::render_pdf_section( $materials, $lang_code ); ?>
+								</div>
+							</div>
+
+							<!-- Rizika sekce -->
+							<div class="saw-accordion-item">
+								<button type="button" class="saw-accordion-header">
+									<span class="accordion-title">⚠️ Rizika (WYSIWYG + Dokumenty)</span>
+									<span class="accordion-icon">▼</span>
+								</button>
+								<div class="saw-accordion-content">
+									<?php self::render_risks_section( $materials, $documents, $lang_code ); ?>
+								</div>
+							</div>
+
+							<!-- Další informace sekce -->
+							<div class="saw-accordion-item">
+								<button type="button" class="saw-accordion-header">
+									<span class="accordion-title">ℹ️ Další informace (WYSIWYG + Dokumenty)</span>
+									<span class="accordion-icon">▼</span>
+								</button>
+								<div class="saw-accordion-content">
+									<?php self::render_additional_section( $materials, $documents, $lang_code ); ?>
+								</div>
+							</div>
+
+						</div>
+					</div>
+				<?php endforeach; ?>
 
 				<p class="submit">
 					<button type="submit" name="saw_save_content" class="button button-primary button-large">
@@ -137,6 +179,219 @@ class SAW_Admin_Content {
 			</form>
 		</div>
 
+		<?php self::render_styles(); ?>
+		<?php self::render_scripts(); ?>
+		<?php
+	}
+
+	/**
+	 * Render video section
+	 */
+	private static function render_video_section( $materials, $lang_code ) {
+		$video = self::get_material( $materials, 'video', $lang_code );
+		?>
+		<div class="saw-material-box">
+			<?php if ( $video && $video->file_url ) : ?>
+				<div class="material-status uploaded">
+					✅ <strong>Nahráno:</strong> <a href="<?php echo esc_url( $video->file_url ); ?>" target="_blank"><?php echo esc_html( $video->filename ); ?></a>
+					<span class="material-meta">(<?php echo esc_html( self::get_file_size( $video->file_url ) ); ?>)</span>
+					<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=saw-content&delete_material=' . $video->id ), 'delete_material_' . $video->id ) ); ?>" 
+					   class="button button-small button-link-delete" 
+					   onclick="return confirm('Opravdu smazat toto video?');">Smazat</a>
+				</div>
+			<?php else : ?>
+				<div class="material-status empty">❌ Nenahrané</div>
+			<?php endif; ?>
+			
+			<div class="upload-field">
+				<input type="file" 
+					   name="video_<?php echo esc_attr( $lang_code ); ?>" 
+					   accept="video/mp4"
+					   class="saw-file-input">
+				<p class="description">Maximální velikost: 20 MB. Formát: MP4</p>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render PDF section
+	 */
+	private static function render_pdf_section( $materials, $lang_code ) {
+		$pdf = self::get_material( $materials, 'pdf', $lang_code );
+		?>
+		<div class="saw-material-box">
+			<?php if ( $pdf && $pdf->file_url ) : ?>
+				<div class="material-status uploaded">
+					✅ <strong>Nahráno:</strong> <a href="<?php echo esc_url( $pdf->file_url ); ?>" target="_blank"><?php echo esc_html( $pdf->filename ); ?></a>
+					<span class="material-meta">(<?php echo esc_html( self::get_file_size( $pdf->file_url ) ); ?>)</span>
+					<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=saw-content&delete_material=' . $pdf->id ), 'delete_material_' . $pdf->id ) ); ?>" 
+					   class="button button-small button-link-delete" 
+					   onclick="return confirm('Opravdu smazat toto PDF?');">Smazat</a>
+				</div>
+			<?php else : ?>
+				<div class="material-status empty">❌ Nenahrané</div>
+			<?php endif; ?>
+			
+			<div class="upload-field">
+				<input type="file" 
+					   name="pdf_<?php echo esc_attr( $lang_code ); ?>" 
+					   accept="application/pdf"
+					   class="saw-file-input">
+				<p class="description">Maximální velikost: 20 MB. Formát: PDF</p>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render risks section (WYSIWYG + Documents)
+	 */
+	private static function render_risks_section( $materials, $documents, $lang_code ) {
+		$risks = self::get_material( $materials, 'risks_wysiwyg', $lang_code );
+		$risks_content = $risks ? $risks->wysiwyg_content : '';
+		
+		// Filtrovat dokumenty pro rizika a tento jazyk
+		$risks_docs = array_filter( $documents, function( $doc ) use ( $lang_code ) {
+			return $doc->language === $lang_code && in_array( $doc->category, array( 'emergency', 'fire', 'work_safety' ) );
+		});
+		?>
+		<div class="saw-material-box">
+			<h4>WYSIWYG Editor</h4>
+			<?php
+			wp_editor(
+				$risks_content,
+				'risks_wysiwyg_' . $lang_code,
+				array(
+					'textarea_name' => 'risks_wysiwyg_' . $lang_code,
+					'textarea_rows' => 10,
+					'media_buttons' => true,
+					'teeny'         => false,
+				)
+			);
+			?>
+
+			<h4 style="margin-top: 30px;">Dokumenty rizik</h4>
+			
+			<!-- Existující dokumenty -->
+			<?php if ( ! empty( $risks_docs ) ) : ?>
+				<div class="existing-documents">
+					<?php foreach ( $risks_docs as $doc ) : ?>
+						<div class="doc-row">
+							<span class="doc-icon">📄</span>
+							<a href="<?php echo esc_url( $doc->file_url ); ?>" target="_blank" class="doc-name">
+								<?php echo esc_html( $doc->filename ); ?>
+							</a>
+							<span class="doc-category-badge"><?php echo esc_html( self::DOC_CATEGORIES[ $doc->category ] ); ?></span>
+							<span class="doc-size">(<?php echo esc_html( self::get_file_size( $doc->file_url ) ); ?>)</span>
+							<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=saw-content&delete_doc=' . $doc->id ), 'delete_doc_' . $doc->id ) ); ?>" 
+							   class="button button-small button-link-delete" 
+							   onclick="return confirm('Opravdu smazat tento dokument?');">Smazat</a>
+						</div>
+					<?php endforeach; ?>
+				</div>
+			<?php endif; ?>
+
+			<!-- Nahrát nové dokumenty -->
+			<div class="upload-documents-section">
+				<p><strong>Nahrát nové dokumenty:</strong></p>
+				<div id="risks-doc-uploads-<?php echo esc_attr( $lang_code ); ?>">
+					<div class="doc-upload-row">
+						<input type="file" 
+							   name="risks_docs_<?php echo esc_attr( $lang_code ); ?>[]" 
+							   accept="application/pdf"
+							   class="saw-file-input">
+						<select name="risks_docs_category_<?php echo esc_attr( $lang_code ); ?>[]" class="doc-category-select">
+							<option value="emergency">Mimořádné situace</option>
+							<option value="fire">Požární ochrana</option>
+							<option value="work_safety">Bezpečnost práce</option>
+						</select>
+						<button type="button" class="button button-small add-doc-row" data-section="risks" data-lang="<?php echo esc_attr( $lang_code ); ?>">+ Přidat další</button>
+					</div>
+				</div>
+				<p class="description">Maximální velikost: 20 MB per soubor. Formát: PDF</p>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render additional info section (WYSIWYG + Documents)
+	 */
+	private static function render_additional_section( $materials, $documents, $lang_code ) {
+		$additional = self::get_material( $materials, 'additional_wysiwyg', $lang_code );
+		$additional_content = $additional ? $additional->wysiwyg_content : '';
+		
+		// Filtrovat dokumenty pro další informace a tento jazyk
+		$additional_docs = array_filter( $documents, function( $doc ) use ( $lang_code ) {
+			return $doc->language === $lang_code && in_array( $doc->category, array( 'hygiene', 'environment', 'security', 'other' ) );
+		});
+		?>
+		<div class="saw-material-box">
+			<h4>WYSIWYG Editor</h4>
+			<?php
+			wp_editor(
+				$additional_content,
+				'additional_wysiwyg_' . $lang_code,
+				array(
+					'textarea_name' => 'additional_wysiwyg_' . $lang_code,
+					'textarea_rows' => 10,
+					'media_buttons' => true,
+					'teeny'         => false,
+				)
+			);
+			?>
+
+			<h4 style="margin-top: 30px;">Dokumenty k dalším informacím</h4>
+			
+			<!-- Existující dokumenty -->
+			<?php if ( ! empty( $additional_docs ) ) : ?>
+				<div class="existing-documents">
+					<?php foreach ( $additional_docs as $doc ) : ?>
+						<div class="doc-row">
+							<span class="doc-icon">📄</span>
+							<a href="<?php echo esc_url( $doc->file_url ); ?>" target="_blank" class="doc-name">
+								<?php echo esc_html( $doc->filename ); ?>
+							</a>
+							<span class="doc-category-badge"><?php echo esc_html( self::DOC_CATEGORIES[ $doc->category ] ); ?></span>
+							<span class="doc-size">(<?php echo esc_html( self::get_file_size( $doc->file_url ) ); ?>)</span>
+							<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=saw-content&delete_doc=' . $doc->id ), 'delete_doc_' . $doc->id ) ); ?>" 
+							   class="button button-small button-link-delete" 
+							   onclick="return confirm('Opravdu smazat tento dokument?');">Smazat</a>
+						</div>
+					<?php endforeach; ?>
+				</div>
+			<?php endif; ?>
+
+			<!-- Nahrát nové dokumenty -->
+			<div class="upload-documents-section">
+				<p><strong>Nahrát nové dokumenty:</strong></p>
+				<div id="additional-doc-uploads-<?php echo esc_attr( $lang_code ); ?>">
+					<div class="doc-upload-row">
+						<input type="file" 
+							   name="additional_docs_<?php echo esc_attr( $lang_code ); ?>[]" 
+							   accept="application/pdf"
+							   class="saw-file-input">
+						<select name="additional_docs_category_<?php echo esc_attr( $lang_code ); ?>[]" class="doc-category-select">
+							<option value="hygiene">Hygiena</option>
+							<option value="environment">Životní prostředí</option>
+							<option value="security">Bezpečnost</option>
+							<option value="other">Ostatní</option>
+						</select>
+						<button type="button" class="button button-small add-doc-row" data-section="additional" data-lang="<?php echo esc_attr( $lang_code ); ?>">+ Přidat další</button>
+					</div>
+				</div>
+				<p class="description">Maximální velikost: 20 MB per soubor. Formát: PDF</p>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render styles
+	 */
+	private static function render_styles() {
+		?>
 		<style>
 			.saw-customer-badge {
 				background: #2271b1;
@@ -147,263 +402,244 @@ class SAW_Admin_Content {
 				font-weight: 600;
 				margin-left: 10px;
 			}
-			.saw-content-tabs {
-				margin: 20px 0;
-				border-bottom: 1px solid #c3c4c7;
+			
+			/* Jazykové záložky */
+			.saw-language-tabs {
+				display: flex;
+				gap: 0;
+				margin: 20px 0 0 0;
+				border-bottom: 2px solid #c3c4c7;
 			}
-			.saw-tab-button {
-				background: transparent;
-				border: none;
-				border-bottom: 3px solid transparent;
-				padding: 12px 24px;
-				font-size: 14px;
+			.saw-language-tab {
+				background: #f0f0f1;
+				border: 1px solid #c3c4c7;
+				border-bottom: none;
+				padding: 12px 30px;
+				font-size: 15px;
 				font-weight: 600;
 				color: #646970;
 				cursor: pointer;
 				transition: all 0.2s;
+				border-radius: 4px 4px 0 0;
+				margin-right: -1px;
 			}
-			.saw-tab-button:hover {
+			.saw-language-tab:hover {
+				background: #fff;
 				color: #2271b1;
 			}
-			.saw-tab-button.active {
+			.saw-language-tab.active {
+				background: #fff;
 				color: #2271b1;
-				border-bottom-color: #2271b1;
+				border-bottom: 2px solid #fff;
+				position: relative;
+				bottom: -2px;
 			}
-			.saw-tab-content {
+			
+			/* Language content */
+			.saw-language-content {
+				background: #fff;
+				border: 1px solid #c3c4c7;
+				border-top: none;
+				padding: 20px;
+			}
+			
+			/* Accordion */
+			.saw-accordion {
 				margin-top: 20px;
 			}
-			.saw-language-section {
-				background: #fff;
+			.saw-accordion-item {
 				border: 1px solid #c3c4c7;
 				border-radius: 4px;
-				padding: 20px;
-				margin-bottom: 20px;
-			}
-			.saw-language-section h3 {
-				margin: 0 0 20px 0;
-				padding: 0 0 10px 0;
-				border-bottom: 2px solid #2271b1;
-				color: #2271b1;
-			}
-			.saw-material-item {
-				background: #f0f0f1;
-				padding: 15px;
-				border-radius: 4px;
-				margin-bottom: 15px;
-			}
-			.saw-material-item .material-status {
-				display: inline-block;
 				margin-bottom: 10px;
 			}
-			.saw-material-item .material-status.uploaded {
-				color: #00a32a;
-				font-weight: 600;
-			}
-			.saw-material-item .material-status.empty {
-				color: #646970;
-			}
-			.saw-document-category {
-				background: #fff;
-				border: 1px solid #c3c4c7;
-				border-radius: 4px;
-				padding: 20px;
-				margin-bottom: 20px;
-			}
-			.saw-document-list {
-				margin-top: 15px;
-			}
-			.saw-document-item {
+			.saw-accordion-header {
+				width: 100%;
+				background: #f0f0f1;
+				border: none;
+				padding: 15px 20px;
+				text-align: left;
+				cursor: pointer;
 				display: flex;
 				justify-content: space-between;
 				align-items: center;
+				font-size: 15px;
+				font-weight: 600;
+				transition: background 0.2s;
+			}
+			.saw-accordion-header:hover {
+				background: #e8e8e8;
+			}
+			.saw-accordion-header .accordion-icon {
+				transition: transform 0.3s;
+			}
+			.saw-accordion-item.active .saw-accordion-header .accordion-icon {
+				transform: rotate(-180deg);
+			}
+			.saw-accordion-content {
+				display: none;
+				padding: 20px;
+				border-top: 1px solid #c3c4c7;
+			}
+			.saw-accordion-item.active .saw-accordion-content {
+				display: block;
+			}
+			
+			/* Material box */
+			.saw-material-box {
+				background: #fafafa;
+				padding: 20px;
+				border-radius: 4px;
+			}
+			.material-status {
+				padding: 10px;
+				border-radius: 4px;
+				margin-bottom: 15px;
+			}
+			.material-status.uploaded {
+				background: #d4edda;
+				color: #155724;
+			}
+			.material-status.empty {
+				background: #f8d7da;
+				color: #721c24;
+			}
+			.material-meta {
+				color: #646970;
+				font-size: 13px;
+			}
+			.upload-field {
+				background: white;
+				padding: 15px;
+				border: 1px solid #c3c4c7;
+				border-radius: 4px;
+			}
+			
+			/* Documents */
+			.existing-documents {
+				background: white;
+				padding: 15px;
+				border: 1px solid #c3c4c7;
+				border-radius: 4px;
+				margin-bottom: 20px;
+			}
+			.doc-row {
+				display: flex;
+				align-items: center;
+				gap: 10px;
 				padding: 10px;
 				background: #f0f0f1;
 				border-radius: 4px;
 				margin-bottom: 10px;
 			}
-			.saw-document-item .doc-info {
-				flex: 1;
+			.doc-icon {
+				font-size: 20px;
 			}
-			.saw-document-item .doc-actions {
+			.doc-name {
+				flex: 1;
+				font-weight: 600;
+				text-decoration: none;
+			}
+			.doc-category-badge {
+				background: #2271b1;
+				color: white;
+				padding: 3px 10px;
+				border-radius: 3px;
+				font-size: 12px;
+				font-weight: 600;
+			}
+			.doc-size {
+				color: #646970;
+				font-size: 13px;
+			}
+			
+			/* Upload documents section */
+			.upload-documents-section {
+				background: white;
+				padding: 15px;
+				border: 1px solid #c3c4c7;
+				border-radius: 4px;
+			}
+			.doc-upload-row {
 				display: flex;
+				align-items: center;
 				gap: 10px;
+				margin-bottom: 10px;
+			}
+			.doc-upload-row input[type="file"] {
+				flex: 2;
+			}
+			.doc-category-select {
+				flex: 1;
+				min-width: 200px;
 			}
 		</style>
-
-		<script>
-		jQuery(document).ready(function($) {
-			// Tab switching
-			$('.saw-tab-button').on('click', function() {
-				const tab = $(this).data('tab');
-				
-				$('.saw-tab-button').removeClass('active');
-				$(this).addClass('active');
-				
-				$('.saw-tab-content').hide();
-				$('#tab-' + tab).show();
-			});
-		});
-		</script>
 		<?php
 	}
 
 	/**
-	 * Render materials section (video, PDF, WYSIWYG)
+	 * Render scripts
 	 */
-	private static function render_materials_section( $materials ) {
-		foreach ( self::LANGUAGES as $lang_code => $lang_name ) {
-			?>
-			<div class="saw-language-section">
-				<h3><?php echo esc_html( $lang_name ); ?></h3>
-
-				<!-- Video -->
-				<div class="saw-material-item">
-					<h4>🎥 Video (MP4)</h4>
-					<?php
-					$video = self::get_material( $materials, 'video', $lang_code );
-					if ( $video && $video->file_url ) {
-						?>
-						<p class="material-status uploaded">
-							✅ Nahráno: <a href="<?php echo esc_url( $video->file_url ); ?>" target="_blank"><?php echo esc_html( $video->filename ); ?></a>
-							<span class="material-meta">(<?php echo esc_html( size_format( filesize( str_replace( content_url(), WP_CONTENT_DIR, $video->file_url ) ) ) ); ?>)</span>
-							<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=saw-content&delete_material=' . $video->id ), 'delete_material_' . $video->id ) ); ?>" 
-							   class="button button-small" 
-							   onclick="return confirm('Opravdu smazat toto video?');">Smazat</a>
-						</p>
-						<?php
-					} else {
-						?>
-						<p class="material-status empty">❌ Nenahrané</p>
-						<?php
-					}
-					?>
-					<input type="file" 
-						   name="video_<?php echo esc_attr( $lang_code ); ?>" 
-						   accept="video/mp4"
-						   class="saw-file-input">
-					<p class="description">Maximální velikost: 20 MB. Formát: MP4</p>
-				</div>
-
-				<!-- PDF Map -->
-				<div class="saw-material-item">
-					<h4>📄 PDF Mapa</h4>
-					<?php
-					$pdf = self::get_material( $materials, 'pdf', $lang_code );
-					if ( $pdf && $pdf->file_url ) {
-						?>
-						<p class="material-status uploaded">
-							✅ Nahráno: <a href="<?php echo esc_url( $pdf->file_url ); ?>" target="_blank"><?php echo esc_html( $pdf->filename ); ?></a>
-							<span class="material-meta">(<?php echo esc_html( size_format( filesize( str_replace( content_url(), WP_CONTENT_DIR, $pdf->file_url ) ) ) ); ?>)</span>
-							<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=saw-content&delete_material=' . $pdf->id ), 'delete_material_' . $pdf->id ) ); ?>" 
-							   class="button button-small" 
-							   onclick="return confirm('Opravdu smazat toto PDF?');">Smazat</a>
-						</p>
-						<?php
-					} else {
-						?>
-						<p class="material-status empty">❌ Nenahrané</p>
-						<?php
-					}
-					?>
-					<input type="file" 
-						   name="pdf_<?php echo esc_attr( $lang_code ); ?>" 
-						   accept="application/pdf"
-						   class="saw-file-input">
-					<p class="description">Maximální velikost: 20 MB. Formát: PDF</p>
-				</div>
-
-				<!-- Risks WYSIWYG -->
-				<div class="saw-material-item">
-					<h4>⚠️ Rizika (WYSIWYG)</h4>
-					<?php
-					$risks = self::get_material( $materials, 'risks_wysiwyg', $lang_code );
-					$risks_content = $risks ? $risks->wysiwyg_content : '';
-					
-					wp_editor(
-						$risks_content,
-						'risks_wysiwyg_' . $lang_code,
-						array(
-							'textarea_name' => 'risks_wysiwyg_' . $lang_code,
-							'textarea_rows' => 10,
-							'media_buttons' => true,
-							'teeny'         => false,
-						)
-					);
-					?>
-				</div>
-
-				<!-- Additional Info WYSIWYG -->
-				<div class="saw-material-item">
-					<h4>ℹ️ Další informace (WYSIWYG)</h4>
-					<?php
-					$additional = self::get_material( $materials, 'additional_wysiwyg', $lang_code );
-					$additional_content = $additional ? $additional->wysiwyg_content : '';
-					
-					wp_editor(
-						$additional_content,
-						'additional_wysiwyg_' . $lang_code,
-						array(
-							'textarea_name' => 'additional_wysiwyg_' . $lang_code,
-							'textarea_rows' => 10,
-							'media_buttons' => true,
-							'teeny'         => false,
-						)
-					);
-					?>
-				</div>
-			</div>
-			<?php
-		}
-	}
-
-	/**
-	 * Render documents section
-	 */
-	private static function render_documents_section( $documents ) {
-		foreach ( self::DOC_CATEGORIES as $category_key => $category_name ) {
-			$category_docs = array_filter( $documents, function( $doc ) use ( $category_key ) {
-				return $doc->category === $category_key;
+	private static function render_scripts() {
+		?>
+		<script>
+		jQuery(document).ready(function($) {
+			// Přepínání jazykových záložek
+			$('.saw-language-tab').on('click', function() {
+				const lang = $(this).data('lang');
+				
+				$('.saw-language-tab').removeClass('active');
+				$(this).addClass('active');
+				
+				$('.saw-language-content').hide();
+				$('.saw-language-content[data-lang="' + lang + '"]').show();
 			});
-			?>
-			<div class="saw-document-category">
-				<h3><?php echo esc_html( $category_name ); ?></h3>
-
-				<?php if ( ! empty( $category_docs ) ) : ?>
-					<div class="saw-document-list">
-						<?php foreach ( $category_docs as $doc ) : ?>
-							<div class="saw-document-item">
-								<div class="doc-info">
-									<strong><?php echo esc_html( $doc->filename ); ?></strong>
-									<span class="doc-meta">
-										<?php echo esc_html( strtoupper( $doc->language ) ); ?> |
-										<?php echo esc_html( size_format( filesize( str_replace( content_url(), WP_CONTENT_DIR, $doc->file_url ) ) ) ); ?>
-									</span>
-								</div>
-								<div class="doc-actions">
-									<a href="<?php echo esc_url( $doc->file_url ); ?>" 
-									   class="button button-small" 
-									   target="_blank">Zobrazit</a>
-									<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=saw-content&delete_doc=' . $doc->id ), 'delete_doc_' . $doc->id ) ); ?>" 
-									   class="button button-small" 
-									   onclick="return confirm('Opravdu smazat tento dokument?');">Smazat</a>
-								</div>
-							</div>
-						<?php endforeach; ?>
-					</div>
-				<?php else : ?>
-					<p class="description">Zatím nejsou nahrány žádné dokumenty v této kategorii.</p>
-				<?php endif; ?>
-
-				<h4 style="margin-top: 20px;">Nahrát nové dokumenty</h4>
-				<input type="file" 
-					   name="doc_<?php echo esc_attr( $category_key ); ?>[]" 
-					   accept="application/pdf"
-					   multiple
-					   class="saw-file-input">
-				<p class="description">Můžete vybrat více souborů najednou. Maximální velikost: 20 MB per soubor. Formát: PDF</p>
-			</div>
-			<?php
-		}
+			
+			// Accordion - otevřít první položku při načtení
+			$('.saw-accordion-item').first().addClass('active');
+			
+			// Accordion toggle
+			$('.saw-accordion-header').on('click', function() {
+				const item = $(this).closest('.saw-accordion-item');
+				const wasActive = item.hasClass('active');
+				
+				// Zavřít všechny
+				$('.saw-accordion-item').removeClass('active');
+				
+				// Otevřít aktuální (pokud nebyla aktivní)
+				if (!wasActive) {
+					item.addClass('active');
+				}
+			});
+			
+			// Přidat další řádek pro nahrání dokumentu
+			$('.add-doc-row').on('click', function() {
+				const section = $(this).data('section');
+				const lang = $(this).data('lang');
+				const container = $('#' + section + '-doc-uploads-' + lang);
+				
+				// Klonovat první řádek
+				const firstRow = container.find('.doc-upload-row').first();
+				const newRow = firstRow.clone();
+				
+				// Vyčistit hodnoty
+				newRow.find('input[type="file"]').val('');
+				newRow.find('select').prop('selectedIndex', 0);
+				
+				// Změnit tlačítko na "Odebrat"
+				const button = newRow.find('.add-doc-row');
+				button.removeClass('add-doc-row').addClass('remove-doc-row');
+				button.text('− Odebrat');
+				
+				container.append(newRow);
+			});
+			
+			// Odebrat řádek
+			$(document).on('click', '.remove-doc-row', function() {
+				$(this).closest('.doc-upload-row').remove();
+			});
+		});
+		</script>
+		<?php
 	}
 
 	/**
@@ -499,12 +735,11 @@ class SAW_Admin_Content {
 					$additional_content = wp_kses_post( $_POST[ 'additional_wysiwyg_' . $lang_code ] );
 					self::save_material( $customer_id, 'additional_wysiwyg', $lang_code, null, $additional_content );
 				}
-			}
 
-			// Uložit dokumenty
-			foreach ( self::DOC_CATEGORIES as $category_key => $category_name ) {
-				if ( ! empty( $_FILES[ 'doc_' . $category_key ]['name'][0] ) ) {
-					$files = $_FILES[ 'doc_' . $category_key ];
+				// Risks documents
+				if ( ! empty( $_FILES[ 'risks_docs_' . $lang_code ]['name'][0] ) ) {
+					$files = $_FILES[ 'risks_docs_' . $lang_code ];
+					$categories = $_POST[ 'risks_docs_category_' . $lang_code ] ?? array();
 					
 					for ( $i = 0; $i < count( $files['name'] ); $i++ ) {
 						if ( empty( $files['name'][ $i ] ) ) {
@@ -519,6 +754,7 @@ class SAW_Admin_Content {
 							'size'     => $files['size'][ $i ],
 						);
 
+						$category = $categories[ $i ] ?? 'emergency';
 						$result = self::handle_file_upload( $file, self::ALLOWED_PDF_TYPES, 'documents' );
 
 						if ( $result['success'] ) {
@@ -526,16 +762,52 @@ class SAW_Admin_Content {
 								$wpdb->prefix . 'saw_documents',
 								array(
 									'customer_id' => $customer_id,
-									'category'    => $category_key,
-									'language'    => 'cs', // Default
+									'category'    => $category,
+									'language'    => $lang_code,
 									'filename'    => basename( $result['file_url'] ),
 									'file_url'    => $result['file_url'],
 									'created_at'  => current_time( 'mysql' ),
 								),
 								array( '%d', '%s', '%s', '%s', '%s', '%s' )
 							);
-						} else {
-							return $result;
+						}
+					}
+				}
+
+				// Additional documents
+				if ( ! empty( $_FILES[ 'additional_docs_' . $lang_code ]['name'][0] ) ) {
+					$files = $_FILES[ 'additional_docs_' . $lang_code ];
+					$categories = $_POST[ 'additional_docs_category_' . $lang_code ] ?? array();
+					
+					for ( $i = 0; $i < count( $files['name'] ); $i++ ) {
+						if ( empty( $files['name'][ $i ] ) ) {
+							continue;
+						}
+
+						$file = array(
+							'name'     => $files['name'][ $i ],
+							'type'     => $files['type'][ $i ],
+							'tmp_name' => $files['tmp_name'][ $i ],
+							'error'    => $files['error'][ $i ],
+							'size'     => $files['size'][ $i ],
+						);
+
+						$category = $categories[ $i ] ?? 'other';
+						$result = self::handle_file_upload( $file, self::ALLOWED_PDF_TYPES, 'documents' );
+
+						if ( $result['success'] ) {
+							$wpdb->insert(
+								$wpdb->prefix . 'saw_documents',
+								array(
+									'customer_id' => $customer_id,
+									'category'    => $category,
+									'language'    => $lang_code,
+									'filename'    => basename( $result['file_url'] ),
+									'file_url'    => $result['file_url'],
+									'created_at'  => current_time( 'mysql' ),
+								),
+								array( '%d', '%s', '%s', '%s', '%s', '%s' )
+							);
 						}
 					}
 				}
@@ -562,19 +834,12 @@ class SAW_Admin_Content {
 	 * Handle file upload
 	 */
 	private static function handle_file_upload( $file, $allowed_types, $subdirectory = 'materials' ) {
-		// Validace
 		if ( $file['error'] !== UPLOAD_ERR_OK ) {
-			return array(
-				'success' => false,
-				'message' => 'Chyba při nahrávání souboru.',
-			);
+			return array( 'success' => false, 'message' => 'Chyba při nahrávání souboru.' );
 		}
 
 		if ( $file['size'] > self::MAX_FILE_SIZE ) {
-			return array(
-				'success' => false,
-				'message' => 'Soubor je příliš velký (max. 20 MB).',
-			);
+			return array( 'success' => false, 'message' => 'Soubor je příliš velký (max. 20 MB).' );
 		}
 
 		$finfo = finfo_open( FILEINFO_MIME_TYPE );
@@ -582,40 +847,25 @@ class SAW_Admin_Content {
 		finfo_close( $finfo );
 
 		if ( ! in_array( $mime_type, $allowed_types, true ) ) {
-			return array(
-				'success' => false,
-				'message' => 'Nepovolený typ souboru.',
-			);
+			return array( 'success' => false, 'message' => 'Nepovolený typ souboru.' );
 		}
 
-		// Vytvořit upload directory
 		$upload_dir = WP_CONTENT_DIR . '/uploads/saw-visitor-docs/' . $subdirectory;
 		if ( ! file_exists( $upload_dir ) ) {
 			wp_mkdir_p( $upload_dir );
 		}
 
-		// Generovat unikátní název
 		$filename = uniqid( 'saw_' ) . '_' . sanitize_file_name( $file['name'] );
 		$file_path = $upload_dir . '/' . $filename;
 
-		// Přesunout soubor
 		if ( ! move_uploaded_file( $file['tmp_name'], $file_path ) ) {
-			return array(
-				'success' => false,
-				'message' => 'Nepodařilo se uložit soubor.',
-			);
+			return array( 'success' => false, 'message' => 'Nepodařilo se uložit soubor.' );
 		}
 
-		// Nastavit oprávnění
 		chmod( $file_path, 0644 );
-
 		$file_url = content_url( 'uploads/saw-visitor-docs/' . $subdirectory . '/' . $filename );
 
-		return array(
-			'success'  => true,
-			'file_url' => $file_url,
-			'filename' => $filename,
-		);
+		return array( 'success' => true, 'file_url' => $file_url, 'filename' => $filename );
 	}
 
 	/**
@@ -627,9 +877,7 @@ class SAW_Admin_Content {
 		$existing = $wpdb->get_row( $wpdb->prepare(
 			"SELECT id FROM {$wpdb->prefix}saw_materials 
 			WHERE customer_id = %d AND material_type = %s AND language = %s",
-			$customer_id,
-			$type,
-			$language
+			$customer_id, $type, $language
 		) );
 
 		$data = array(
@@ -658,11 +906,7 @@ class SAW_Admin_Content {
 			);
 		} else {
 			$data['created_at'] = current_time( 'mysql' );
-			$wpdb->insert(
-				$wpdb->prefix . 'saw_materials',
-				$data,
-				array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
-			);
+			$wpdb->insert( $wpdb->prefix . 'saw_materials', $data );
 		}
 	}
 
@@ -715,7 +959,6 @@ class SAW_Admin_Content {
 			return;
 		}
 
-		// Smazat soubor z disku
 		if ( $material->file_url ) {
 			$file_path = str_replace( content_url(), WP_CONTENT_DIR, $material->file_url );
 			if ( file_exists( $file_path ) ) {
@@ -723,14 +966,8 @@ class SAW_Admin_Content {
 			}
 		}
 
-		// Smazat z databáze
-		$wpdb->delete(
-			$wpdb->prefix . 'saw_materials',
-			array( 'id' => $material_id ),
-			array( '%d' )
-		);
+		$wpdb->delete( $wpdb->prefix . 'saw_materials', array( 'id' => $material_id ), array( '%d' ) );
 
-		// Log audit
 		SAW_Audit::log( array(
 			'action'      => 'material_deleted',
 			'customer_id' => $material->customer_id,
@@ -753,25 +990,29 @@ class SAW_Admin_Content {
 			return;
 		}
 
-		// Smazat soubor z disku
 		$file_path = str_replace( content_url(), WP_CONTENT_DIR, $document->file_url );
 		if ( file_exists( $file_path ) ) {
 			unlink( $file_path );
 		}
 
-		// Smazat z databáze
-		$wpdb->delete(
-			$wpdb->prefix . 'saw_documents',
-			array( 'id' => $document_id ),
-			array( '%d' )
-		);
+		$wpdb->delete( $wpdb->prefix . 'saw_documents', array( 'id' => $document_id ), array( '%d' ) );
 
-		// Log audit
 		SAW_Audit::log( array(
 			'action'      => 'document_deleted',
 			'customer_id' => $document->customer_id,
 			'details'     => sprintf( 'Deleted document: %s (%s)', $document->filename, $document->category ),
 		) );
+	}
+
+	/**
+	 * Get file size
+	 */
+	private static function get_file_size( $file_url ) {
+		$file_path = str_replace( content_url(), WP_CONTENT_DIR, $file_url );
+		if ( file_exists( $file_path ) ) {
+			return size_format( filesize( $file_path ) );
+		}
+		return 'N/A';
 	}
 
 	/**
