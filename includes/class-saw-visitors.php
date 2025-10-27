@@ -4,7 +4,7 @@
  * 
  * Orchestruje všechny komponenty pluginu:
  * - Loader (hooks management)
- * - Admin interface
+ * - Admin interface (Phase 5: Super Admin menu)
  * - Public interface
  * - URL Routing (Phase 4)
  * 
@@ -48,6 +48,7 @@ class SAW_Visitors {
 		$this->version = SAW_VISITORS_VERSION;
 		
 		$this->load_dependencies();
+		$this->init_session();
 		$this->define_admin_hooks();
 		$this->define_public_hooks();
 		$this->define_routing_hooks();
@@ -70,8 +71,25 @@ class SAW_Visitors {
 		// Phase 4: Router
 		require_once SAW_VISITORS_PLUGIN_DIR . 'includes/class-saw-router.php';
 		
+		// Phase 5: Admin page classes
+		require_once SAW_VISITORS_PLUGIN_DIR . 'includes/admin/class-saw-admin-customers.php';
+		require_once SAW_VISITORS_PLUGIN_DIR . 'includes/admin/class-saw-admin-content.php';
+		require_once SAW_VISITORS_PLUGIN_DIR . 'includes/admin/class-saw-admin-training-version.php';
+		require_once SAW_VISITORS_PLUGIN_DIR . 'includes/admin/class-saw-admin-audit-log.php';
+		require_once SAW_VISITORS_PLUGIN_DIR . 'includes/admin/class-saw-admin-email-queue.php';
+		
 		// Inicializovat loader
 		$this->loader = new SAW_Loader();
+	}
+
+	/**
+	 * Initialize session (Phase 5)
+	 * Zajistit že session existuje pro customer selection
+	 */
+	private function init_session() {
+		if ( ! session_id() && ! headers_sent() ) {
+			session_start();
+		}
 	}
 
 	/**
@@ -84,6 +102,11 @@ class SAW_Visitors {
 		// Admin styles & scripts
 		$this->loader->add_action( 'admin_enqueue_scripts', $this, 'enqueue_admin_styles' );
 		$this->loader->add_action( 'admin_enqueue_scripts', $this, 'enqueue_admin_scripts' );
+		
+		// Phase 5: Customer management
+		$this->loader->add_action( 'admin_init', $this, 'init_customer_session' );
+		$this->loader->add_action( 'admin_bar_menu', $this, 'add_customer_dropdown_to_admin_bar', 100 );
+		$this->loader->add_action( 'admin_init', $this, 'handle_customer_switch' );
 	}
 
 	/**
@@ -107,9 +130,264 @@ class SAW_Visitors {
 		
 		// Template redirect (hlavní routing dispatcher)
 		$this->loader->add_action( 'template_redirect', $this, 'handle_routing', 1 );
-		
-		// Flush rewrite rules při aktivaci (handled in activator)
 	}
+
+	// ========================================
+	// PHASE 5: CUSTOMER SESSION MANAGEMENT
+	// ========================================
+
+	/**
+	 * Initialize customer session
+	 * Nastaví výchozího zákazníka pokud není vybrán
+	 */
+	public function init_customer_session() {
+		// Pouze pro přihlášené Super Adminy
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+		
+		// Nastavit výchozího zákazníka pokud není zvolen
+		if ( ! isset( $_SESSION['saw_selected_customer_id'] ) ) {
+			global $wpdb;
+			$first_customer = $wpdb->get_var( "SELECT id FROM {$wpdb->prefix}saw_customers ORDER BY name ASC LIMIT 1" );
+			if ( $first_customer ) {
+				$_SESSION['saw_selected_customer_id'] = intval( $first_customer );
+			}
+		}
+	}
+
+	/**
+	 * Add customer dropdown to admin bar
+	 */
+	public function add_customer_dropdown_to_admin_bar( $wp_admin_bar ) {
+		// Zobrazit pouze pro Super Admin
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+		
+		// Zobrazit pouze na SAW Visitors stránkách
+		$screen = get_current_screen();
+		if ( ! $screen || strpos( $screen->id, 'saw-' ) === false ) {
+			return;
+		}
+		
+		global $wpdb;
+		
+		$customers = $wpdb->get_results( "SELECT id, name FROM {$wpdb->prefix}saw_customers ORDER BY name ASC" );
+		
+		if ( empty( $customers ) ) {
+			return;
+		}
+		
+		$selected_customer_id = isset( $_SESSION['saw_selected_customer_id'] ) ? intval( $_SESSION['saw_selected_customer_id'] ) : 0;
+		
+		// Najít vybraného zákazníka
+		$selected_customer = null;
+		foreach ( $customers as $c ) {
+			if ( $c->id === $selected_customer_id ) {
+				$selected_customer = $c;
+				break;
+			}
+		}
+		
+		// Parent menu item
+		$wp_admin_bar->add_node( array(
+			'id'    => 'saw-customer-selector',
+			'title' => '🏢 Zákazník: ' . ( $selected_customer ? esc_html( $selected_customer->name ) : 'Vyberte' ),
+			'href'  => '#',
+			'meta'  => array(
+				'class' => 'saw-customer-dropdown',
+			),
+		) );
+		
+		// Add customer items
+		foreach ( $customers as $customer ) {
+			$is_selected = ( $customer->id === $selected_customer_id );
+			
+			$wp_admin_bar->add_node( array(
+				'id'     => 'saw-customer-' . $customer->id,
+				'parent' => 'saw-customer-selector',
+				'title'  => ( $is_selected ? '✓ ' : '' ) . esc_html( $customer->name ),
+				'href'   => wp_nonce_url(
+					add_query_arg( array(
+						'saw_action'  => 'switch_customer',
+						'customer_id' => $customer->id,
+					) ),
+					'saw_switch_customer_' . $customer->id
+				),
+				'meta'   => array(
+					'class' => $is_selected ? 'saw-customer-selected' : '',
+				),
+			) );
+		}
+	}
+
+	/**
+	 * Handle customer switch
+	 */
+	public function handle_customer_switch() {
+		if ( ! isset( $_GET['saw_action'] ) || $_GET['saw_action'] !== 'switch_customer' ) {
+			return;
+		}
+		
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( 'Nemáte oprávnění k této akci.', 'Přístup zamítnut', array( 'response' => 403 ) );
+		}
+		
+		$customer_id = isset( $_GET['customer_id'] ) ? intval( $_GET['customer_id'] ) : 0;
+		
+		if ( ! $customer_id ) {
+			wp_die( 'Neplatné ID zákazníka.', 'Chyba', array( 'response' => 400 ) );
+		}
+		
+		check_admin_referer( 'saw_switch_customer_' . $customer_id );
+		
+		// Ověřit že zákazník existuje
+		global $wpdb;
+		$customer = $wpdb->get_row( $wpdb->prepare(
+			"SELECT id, name FROM {$wpdb->prefix}saw_customers WHERE id = %d",
+			$customer_id
+		) );
+		
+		if ( ! $customer ) {
+			wp_die( 'Zákazník nenalezen.', 'Chyba', array( 'response' => 404 ) );
+		}
+		
+		// Nastavit session
+		$_SESSION['saw_selected_customer_id'] = $customer_id;
+		
+		// Log audit
+		SAW_Audit::log( array(
+			'action'      => 'customer_switched',
+			'customer_id' => $customer_id,
+			'details'     => 'Super Admin switched to customer: ' . $customer->name,
+		) );
+		
+		// Redirect zpět na aktuální stránku
+		$redirect_url = remove_query_arg( array( 'saw_action', 'customer_id', '_wpnonce' ) );
+		wp_safe_redirect( $redirect_url );
+		exit;
+	}
+
+	/**
+	 * Get current selected customer ID
+	 */
+	public static function get_selected_customer_id() {
+		return isset( $_SESSION['saw_selected_customer_id'] ) ? intval( $_SESSION['saw_selected_customer_id'] ) : 0;
+	}
+
+	// ========================================
+	// PHASE 5: ADMIN MENU
+	// ========================================
+
+	/**
+	 * Add admin menu (PHASE 5: ROZŠÍŘENÁ VERZE)
+	 */
+	public function add_admin_menu() {
+		// Hlavní menu položka
+		add_menu_page(
+			'SAW Visitors',
+			'SAW Visitors',
+			'manage_options',
+			'saw-visitors',
+			array( $this, 'display_dashboard' ),
+			'dashicons-groups',
+			30
+		);
+		
+		// Submenu - Dashboard
+		add_submenu_page(
+			'saw-visitors',
+			'Dashboard',
+			'Dashboard',
+			'manage_options',
+			'saw-visitors',
+			array( $this, 'display_dashboard' )
+		);
+		
+		// Submenu - Zákazníci
+		add_submenu_page(
+			'saw-visitors',
+			'Zákazníci',
+			'Zákazníci',
+			'manage_options',
+			'saw-customers',
+			array( 'SAW_Admin_Customers', 'list_page' )
+		);
+		
+		// Skryté stránky pro edit/create zákazníka
+		add_submenu_page(
+			null,
+			'Přidat zákazníka',
+			'',
+			'manage_options',
+			'saw-customers-new',
+			array( 'SAW_Admin_Customers', 'edit_page' )
+		);
+		
+		add_submenu_page(
+			null,
+			'Upravit zákazníka',
+			'',
+			'manage_options',
+			'saw-customers-edit',
+			array( 'SAW_Admin_Customers', 'edit_page' )
+		);
+		
+		// Submenu - Správa obsahu
+		add_submenu_page(
+			'saw-visitors',
+			'Správa obsahu',
+			'Správa obsahu',
+			'manage_options',
+			'saw-content',
+			array( 'SAW_Admin_Content', 'main_page' )
+		);
+		
+		// Submenu - Verze školení
+		add_submenu_page(
+			'saw-visitors',
+			'Verze školení',
+			'Verze školení',
+			'manage_options',
+			'saw-training-version',
+			array( 'SAW_Admin_Training_Version', 'main_page' )
+		);
+		
+		// Submenu - Audit Log
+		add_submenu_page(
+			'saw-visitors',
+			'Audit Log',
+			'Audit Log',
+			'manage_options',
+			'saw-audit-log',
+			array( 'SAW_Admin_Audit_Log', 'main_page' )
+		);
+		
+		// Submenu - Email Queue
+		add_submenu_page(
+			'saw-visitors',
+			'Email Queue',
+			'Email Queue',
+			'manage_options',
+			'saw-email-queue',
+			array( 'SAW_Admin_Email_Queue', 'main_page' )
+		);
+		
+		// Submenu - O pluginu
+		add_submenu_page(
+			'saw-visitors',
+			'O pluginu',
+			'O pluginu',
+			'manage_options',
+			'saw-visitors-about',
+			array( $this, 'display_about' )
+		);
+	}
+
+	// ========================================
+	// PHASE 4: URL ROUTING
+	// ========================================
 
 	/**
 	 * Register rewrite rules (Phase 4)
@@ -134,42 +412,6 @@ class SAW_Visitors {
 			'top'
 		);
 		
-		add_rewrite_rule(
-			'^admin/companies/?$',
-			'index.php?saw_route=admin&saw_action=companies',
-			'top'
-		);
-		
-		add_rewrite_rule(
-			'^admin/visitors/?$',
-			'index.php?saw_route=admin&saw_action=visitors',
-			'top'
-		);
-		
-		add_rewrite_rule(
-			'^admin/departments/?$',
-			'index.php?saw_route=admin&saw_action=departments',
-			'top'
-		);
-		
-		add_rewrite_rule(
-			'^admin/content/?$',
-			'index.php?saw_route=admin&saw_action=content',
-			'top'
-		);
-		
-		add_rewrite_rule(
-			'^admin/statistics/?$',
-			'index.php?saw_route=admin&saw_action=statistics',
-			'top'
-		);
-		
-		add_rewrite_rule(
-			'^admin/settings/?$',
-			'index.php?saw_route=admin&saw_action=settings',
-			'top'
-		);
-		
 		// Manager routes
 		add_rewrite_rule(
 			'^manager/login/?$',
@@ -180,24 +422,6 @@ class SAW_Visitors {
 		add_rewrite_rule(
 			'^manager/dashboard/?$',
 			'index.php?saw_route=manager&saw_action=dashboard',
-			'top'
-		);
-		
-		add_rewrite_rule(
-			'^manager/invitations/?$',
-			'index.php?saw_route=manager&saw_action=invitations',
-			'top'
-		);
-		
-		add_rewrite_rule(
-			'^manager/visitors/?$',
-			'index.php?saw_route=manager&saw_action=visitors',
-			'top'
-		);
-		
-		add_rewrite_rule(
-			'^manager/statistics/?$',
-			'index.php?saw_route=manager&saw_action=statistics',
 			'top'
 		);
 		
@@ -284,13 +508,17 @@ class SAW_Visitors {
 		// Router ukončí WordPress processing pomocí exit
 	}
 
+	// ========================================
+	// ASSETS (STYLES & SCRIPTS)
+	// ========================================
+
 	/**
 	 * Load admin styles
 	 */
 	public function enqueue_admin_styles() {
 		// Načíst pouze na našich admin stránkách
 		$screen = get_current_screen();
-		if ( ! $screen || strpos( $screen->id, 'saw-visitors' ) === false ) {
+		if ( ! $screen || strpos( $screen->id, 'saw-' ) === false ) {
 			return;
 		}
 		
@@ -309,7 +537,7 @@ class SAW_Visitors {
 	public function enqueue_admin_scripts() {
 		// Načíst pouze na našich admin stránkách
 		$screen = get_current_screen();
-		if ( ! $screen || strpos( $screen->id, 'saw-visitors' ) === false ) {
+		if ( ! $screen || strpos( $screen->id, 'saw-' ) === false ) {
 			return;
 		}
 		
@@ -321,14 +549,13 @@ class SAW_Visitors {
 			true
 		);
 		
-		// Předat data do JavaScriptu
+		// Localize script pro AJAX
 		wp_localize_script(
 			$this->plugin_name,
-			'sawVisitorsAdmin',
+			'sawAdmin',
 			array(
-				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-				'nonce' => wp_create_nonce( 'saw_admin_nonce' ),
-				'pluginUrl' => SAW_VISITORS_PLUGIN_URL,
+				'ajaxurl' => admin_url( 'admin-ajax.php' ),
+				'nonce'   => wp_create_nonce( 'saw_admin_nonce' ),
 			)
 		);
 	}
@@ -337,76 +564,76 @@ class SAW_Visitors {
 	 * Load public styles
 	 */
 	public function enqueue_public_styles() {
-		// Zatím prázdné - později pro visitor formuláře
+		wp_enqueue_style(
+			$this->plugin_name,
+			SAW_VISITORS_PLUGIN_URL . 'assets/css/public.css',
+			array(),
+			$this->version,
+			'all'
+		);
 	}
 
 	/**
 	 * Load public scripts
 	 */
 	public function enqueue_public_scripts() {
-		// Zatím prázdné - později pro visitor formuláře
+		wp_enqueue_script(
+			$this->plugin_name,
+			SAW_VISITORS_PLUGIN_URL . 'assets/js/public.js',
+			array( 'jquery' ),
+			$this->version,
+			true
+		);
 	}
 
-	/**
-	 * Add admin menu
-	 */
-	public function add_admin_menu() {
-		// Hlavní menu položka
-		add_menu_page(
-			'SAW Visitors',
-			'SAW Visitors',
-			'manage_options',
-			'saw-visitors',
-			array( $this, 'display_dashboard' ),
-			'dashicons-groups',
-			30
-		);
-		
-		// Submenu - Dashboard
-		add_submenu_page(
-			'saw-visitors',
-			'Dashboard',
-			'Dashboard',
-			'manage_options',
-			'saw-visitors',
-			array( $this, 'display_dashboard' )
-		);
-		
-		// Submenu - O pluginu
-		add_submenu_page(
-			'saw-visitors',
-			'O pluginu',
-			'O pluginu',
-			'manage_options',
-			'saw-visitors-about',
-			array( $this, 'display_about' )
-		);
-	}
+	// ========================================
+	// ADMIN PAGE DISPLAYS
+	// ========================================
 
 	/**
 	 * Display dashboard page
 	 */
 	public function display_dashboard() {
+		$selected_customer_id = self::get_selected_customer_id();
+		
 		?>
-		<div class="wrap">
+		<div class="wrap saw-dashboard">
 			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
 			
-			<div class="saw-dashboard">
+			<?php if ( ! $selected_customer_id ): ?>
+				<div class="notice notice-warning">
+					<p><strong>Žádný zákazník není vybrán.</strong> Vytvořte zákazníka v sekci "Zákazníci".</p>
+				</div>
+			<?php else: ?>
+				<?php
+				global $wpdb;
+				$customer = $wpdb->get_row( $wpdb->prepare(
+					"SELECT * FROM {$wpdb->prefix}saw_customers WHERE id = %d",
+					$selected_customer_id
+				) );
+				?>
+				
 				<div class="saw-welcome-panel">
-					<h2>👋 Vítejte v SAW Visitors!</h2>
-					<p>Plugin byl úspěšně aktivován. Nyní můžete začít konfigurovat zákazníky a oddělení.</p>
+					<h2>Vítejte v SAW Visitors Dashboard</h2>
+					<p>Spravujete zákazníka: <strong><?php echo esc_html( $customer->name ); ?></strong></p>
 					
-					<h3>🔗 Odkazy pro testování:</h3>
+					<h3>📋 Dostupné funkce:</h3>
 					<ul>
-						<li><a href="<?php echo esc_url( home_url( '/admin/login/' ) ); ?>" target="_blank">Admin Login</a></li>
-						<li><a href="<?php echo esc_url( home_url( '/manager/login/' ) ); ?>" target="_blank">Manager Login</a></li>
-						<li><a href="<?php echo esc_url( home_url( '/terminal/login/' ) ); ?>" target="_blank">Terminal Login</a></li>
+						<li><a href="<?php echo esc_url( admin_url( 'admin.php?page=saw-customers' ) ); ?>">Správa zákazníků</a> - CRUD operace</li>
+						<li><a href="<?php echo esc_url( admin_url( 'admin.php?page=saw-content' ) ); ?>">Správa obsahu</a> - Školící materiály a dokumenty</li>
+						<li><a href="<?php echo esc_url( admin_url( 'admin.php?page=saw-training-version' ) ); ?>">Verze školení</a> - Reset verze školení</li>
+						<li><a href="<?php echo esc_url( admin_url( 'admin.php?page=saw-audit-log' ) ); ?>">Audit Log</a> - Prohlížeč auditního záznamu</li>
+						<li><a href="<?php echo esc_url( admin_url( 'admin.php?page=saw-email-queue' ) ); ?>">Email Queue</a> - Monitoring emailové fronty</li>
 					</ul>
 					
-					<h3>📊 Statistiky:</h3>
-					<p><em>Zatím neimplementováno - následující fáze vývoje.</em></p>
+					<h3>🔗 Frontend přístupy:</h3>
+					<ul>
+						<li><a href="<?php echo esc_url( home_url( '/admin/login/' ) ); ?>" target="_blank">Admin Login</a> - Pro administrátory</li>
+						<li><a href="<?php echo esc_url( home_url( '/manager/login/' ) ); ?>" target="_blank">Manager Login</a> - Pro manažery</li>
+						<li><a href="<?php echo esc_url( home_url( '/terminal/login/' ) ); ?>" target="_blank">Terminal Login</a> - Pro terminály</li>
+					</ul>
 				</div>
-			</div>
+			<?php endif; ?>
 		</div>
 		<?php
 	}
@@ -430,17 +657,27 @@ class SAW_Visitors {
 					<li>✅ Phase 2: Database Tables (22/22)</li>
 					<li>✅ Phase 3: Auth System</li>
 					<li>✅ Phase 4: URL Routing</li>
+					<li>✅ Phase 5: Super Admin WP Menu</li>
 				</ul>
 				
-				<h3>🔧 Další vývoj:</h3>
+				<h3>🔧 Technické informace:</h3>
 				<ul>
-					<li>Phase 5: Super Admin WP Menu</li>
-					<li>Phase 6-24: Další funkcionality</li>
+					<li><strong>Verze:</strong> <?php echo esc_html( $this->version ); ?></li>
+					<li><strong>PHP:</strong> <?php echo PHP_VERSION; ?></li>
+					<li><strong>WordPress:</strong> <?php echo get_bloginfo( 'version' ); ?></li>
+					<li><strong>MySQL:</strong> <?php global $wpdb; echo $wpdb->db_version(); ?></li>
 				</ul>
+				
+				<h3>📖 Dokumentace:</h3>
+				<p>Pro více informací o použití pluginu, kontaktujte vývojáře.</p>
 			</div>
 		</div>
 		<?php
 	}
+
+	// ========================================
+	// PUBLIC METHODS
+	// ========================================
 
 	/**
 	 * Run loader
