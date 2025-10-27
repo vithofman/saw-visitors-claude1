@@ -1,176 +1,210 @@
 /**
  * SAW Visitors - Admin JavaScript
- * 
- * Základní JavaScriptové funkce pro admin rozhraní
+ * Phase 5: Super Admin WP Menu
+ *
+ * @package    SAW_Visitors
+ * @since      4.6.1
  */
 
 (function($) {
-    'use strict';
+	'use strict';
 
-    /**
-     * Inicializace při načtení stránky
-     */
-    $(document).ready(function() {
-        console.log('SAW Visitors Admin JS loaded');
-        
-        // Inicializovat komponenty
-        initConfirmDialogs();
-        initAjaxForms();
-    });
+	/**
+	 * Initialize when DOM is ready
+	 */
+	$(document).ready(function() {
+		SAW_Admin.init();
+	});
 
-    /**
-     * Potvrzovací dialogy pro destruktivní akce
-     */
-    function initConfirmDialogs() {
-        // Přidat potvrzení pro všechny tlačítka s class "saw-confirm"
-        $('.saw-confirm').on('click', function(e) {
-            var message = $(this).data('confirm-message') || 'Opravdu chcete provést tuto akci?';
-            
-            if (!confirm(message)) {
-                e.preventDefault();
-                return false;
-            }
-        });
-    }
+	/**
+	 * Main Admin Object
+	 */
+	var SAW_Admin = {
+		
+		/**
+		 * Initialize
+		 */
+		init: function() {
+			this.initLanguageTabs();
+			this.initConfirmations();
+			this.initEmailDetailToggle();
+			this.initColorPicker();
+		},
 
-    /**
-     * AJAX formuláře
-     */
-    function initAjaxForms() {
-        $('.saw-ajax-form').on('submit', function(e) {
-            e.preventDefault();
-            
-            var $form = $(this);
-            var $submitBtn = $form.find('[type="submit"]');
-            var originalText = $submitBtn.text();
-            
-            // Disable tlačítko během odeslání
-            $submitBtn.prop('disabled', true).text('Odesílám...');
-            
-            // Získat data z formuláře
-            var formData = new FormData(this);
-            formData.append('action', $form.data('action'));
-            formData.append('nonce', sawVisitorsAdmin.nonce);
-            
-            // Odeslat AJAX request
-            $.ajax({
-                url: sawVisitorsAdmin.ajaxUrl,
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function(response) {
-                    if (response.success) {
-                        showNotice('success', response.data.message || 'Operace úspěšná');
-                        
-                        // Pokud je definován callback, zavolat ho
-                        if (typeof $form.data('success-callback') === 'function') {
-                            $form.data('success-callback')(response.data);
-                        }
-                        
-                        // Reload stránky pokud je to požadováno
-                        if (response.data.reload) {
-                            setTimeout(function() {
-                                location.reload();
-                            }, 1000);
-                        }
-                    } else {
-                        showNotice('error', response.data.message || 'Došlo k chybě');
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('AJAX Error:', error);
-                    showNotice('error', 'Došlo k chybě při komunikaci se serverem');
-                },
-                complete: function() {
-                    // Enable tlačítko zpět
-                    $submitBtn.prop('disabled', false).text(originalText);
-                }
-            });
-        });
-    }
+		/**
+		 * Language tabs for content management
+		 */
+		initLanguageTabs: function() {
+			$('.saw-language-tab').on('click', function(e) {
+				e.preventDefault();
+				
+				var targetLang = $(this).data('lang');
+				
+				// Update tabs
+				$('.saw-language-tab').removeClass('active');
+				$(this).addClass('active');
+				
+				// Show/hide content
+				$('.saw-language-content').hide();
+				$('.saw-language-content[data-lang="' + targetLang + '"]').show();
+			});
+			
+			// Activate first tab by default
+			$('.saw-language-tab').first().trigger('click');
+		},
 
-    /**
-     * Zobrazení notifikace
-     * 
-     * @param {string} type - Typ notifikace (success, error, warning, info)
-     * @param {string} message - Text zprávy
-     */
-    function showNotice(type, message) {
-        var $notice = $('<div>')
-            .addClass('notice notice-' + type + ' is-dismissible')
-            .append($('<p>').text(message));
-        
-        // Přidat dismiss button
-        $notice.append(
-            $('<button>')
-                .addClass('notice-dismiss')
-                .attr('type', 'button')
-                .on('click', function() {
-                    $notice.fadeOut(function() {
-                        $(this).remove();
-                    });
-                })
-        );
-        
-        // Vložit na začátek wrap elementu
-        $('.wrap').prepend($notice);
-        
-        // Auto-hide po 5 sekundách
-        setTimeout(function() {
-            $notice.fadeOut(function() {
-                $(this).remove();
-            });
-        }, 5000);
-    }
+		/**
+		 * Confirmation dialogs
+		 */
+		initConfirmations: function() {
+			// Delete confirmations
+			$('.button-link-delete').on('click', function(e) {
+				if (!confirm('Opravdu smazat? Tato akce je nevratná.')) {
+					e.preventDefault();
+					return false;
+				}
+			});
+			
+			// Version reset confirmation
+			$('input[name="saw_reset_version"]').on('click', function(e) {
+				var reason = $('#reason').val().trim();
+				
+				if (!reason) {
+					e.preventDefault();
+					alert('Vyplňte prosím důvod změny verze.');
+					$('#reason').focus();
+					return false;
+				}
+				
+				if (!confirm('Opravdu resetovat verzi školení? Všichni návštěvníci budou muset absolvovat školení znovu!')) {
+					e.preventDefault();
+					return false;
+				}
+			});
+		},
 
-    /**
-     * AJAX helper funkce
-     * 
-     * @param {string} action - WordPress AJAX action
-     * @param {object} data - Data k odeslání
-     * @param {function} callback - Success callback
-     * @param {function} errorCallback - Error callback
-     */
-    window.sawAjax = function(action, data, callback, errorCallback) {
-        data = data || {};
-        data.action = action;
-        data.nonce = sawVisitorsAdmin.nonce;
-        
-        $.ajax({
-            url: sawVisitorsAdmin.ajaxUrl,
-            type: 'POST',
-            data: data,
-            success: function(response) {
-                if (response.success) {
-                    if (typeof callback === 'function') {
-                        callback(response.data);
-                    }
-                } else {
-                    if (typeof errorCallback === 'function') {
-                        errorCallback(response.data);
-                    } else {
-                        showNotice('error', response.data.message || 'Došlo k chybě');
-                    }
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('AJAX Error:', error);
-                if (typeof errorCallback === 'function') {
-                    errorCallback({ message: 'Chyba komunikace se serverem' });
-                } else {
-                    showNotice('error', 'Došlo k chybě při komunikaci se serverem');
-                }
-            }
-        });
-    };
+		/**
+		 * Email detail toggle
+		 */
+		initEmailDetailToggle: function() {
+			$(document).on('click', '.saw-email-detail-toggle', function(e) {
+				e.preventDefault();
+				var targetId = $(this).data('target');
+				$(targetId).slideToggle(200);
+			});
+		},
 
-    /**
-     * Export do globálního scope pro použití v jiných scriptech
-     */
-    window.sawVisitorsAdminHelper = {
-        showNotice: showNotice,
-        ajax: window.sawAjax
-    };
+		/**
+		 * Color picker enhancement
+		 */
+		initColorPicker: function() {
+			$('input[type="color"]').on('change', function() {
+				var color = $(this).val();
+				$(this).closest('td').find('.color-preview').css('background-color', color);
+			});
+		}
+	};
+
+	/**
+	 * AJAX helpers
+	 */
+	window.SAW_AJAX = {
+		
+		/**
+		 * Generic AJAX request
+		 */
+		request: function(action, data, successCallback, errorCallback) {
+			data.action = action;
+			data.nonce = sawVisitorsAdmin.nonce;
+			
+			$.ajax({
+				url: sawVisitorsAdmin.ajaxUrl,
+				type: 'POST',
+				data: data,
+				success: function(response) {
+					if (response.success) {
+						if (typeof successCallback === 'function') {
+							successCallback(response.data);
+						}
+					} else {
+						if (typeof errorCallback === 'function') {
+							errorCallback(response.data);
+						} else {
+							alert('Chyba: ' + (response.data || 'Neznámá chyba'));
+						}
+					}
+				},
+				error: function(xhr, status, error) {
+					if (typeof errorCallback === 'function') {
+						errorCallback(error);
+					} else {
+						alert('AJAX chyba: ' + error);
+					}
+				}
+			});
+		},
+		
+		/**
+		 * Switch customer (if needed via AJAX in future)
+		 */
+		switchCustomer: function(customerId, callback) {
+			this.request('saw_switch_customer', {
+				customer_id: customerId
+			}, function(data) {
+				if (typeof callback === 'function') {
+					callback(data);
+				} else {
+					location.reload();
+				}
+			});
+		}
+	};
+
+	/**
+	 * Utilities
+	 */
+	window.SAW_Utils = {
+		
+		/**
+		 * Format date
+		 */
+		formatDate: function(dateString) {
+			var date = new Date(dateString);
+			var day = String(date.getDate()).padStart(2, '0');
+			var month = String(date.getMonth() + 1).padStart(2, '0');
+			var year = date.getFullYear();
+			return day + '.' + month + '.' + year;
+		},
+		
+		/**
+		 * Format datetime
+		 */
+		formatDateTime: function(dateString) {
+			var date = new Date(dateString);
+			var day = String(date.getDate()).padStart(2, '0');
+			var month = String(date.getMonth() + 1).padStart(2, '0');
+			var year = date.getFullYear();
+			var hours = String(date.getHours()).padStart(2, '0');
+			var minutes = String(date.getMinutes()).padStart(2, '0');
+			return day + '.' + month + '.' + year + ' ' + hours + ':' + minutes;
+		},
+		
+		/**
+		 * Show notification
+		 */
+		showNotification: function(message, type) {
+			type = type || 'success';
+			
+			var $notice = $('<div class="notice notice-' + type + ' is-dismissible"><p>' + message + '</p></div>');
+			
+			$('.wrap h1').after($notice);
+			
+			setTimeout(function() {
+				$notice.fadeOut(function() {
+					$(this).remove();
+				});
+			}, 5000);
+		}
+	};
 
 })(jQuery);
