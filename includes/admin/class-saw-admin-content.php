@@ -6,6 +6,7 @@
  * - Jazykové záložky nahoře
  * - Sbalitelné sekce (accordion)
  * - Dokumenty přímo pod každou sekcí s kategorií
+ * - Vylepšené stylování upload sekce
  * 
  * @package    SAW_Visitors
  * @subpackage SAW_Visitors/admin
@@ -257,7 +258,7 @@ class SAW_Admin_Content {
 		});
 		?>
 		<div class="saw-material-box">
-			<h4>WYSIWYG Editor</h4>
+			<h4 style="margin: 0 0 15px 0; font-size: 15px;">WYSIWYG Editor</h4>
 			<?php
 			wp_editor(
 				$risks_content,
@@ -271,7 +272,7 @@ class SAW_Admin_Content {
 			);
 			?>
 
-			<h4 style="margin-top: 30px;">Dokumenty rizik</h4>
+			<h4 style="margin: 30px 0 15px 0; font-size: 15px;">Dokumenty rizik</h4>
 			
 			<!-- Existující dokumenty -->
 			<?php if ( ! empty( $risks_docs ) ) : ?>
@@ -294,13 +295,17 @@ class SAW_Admin_Content {
 
 			<!-- Nahrát nové dokumenty -->
 			<div class="upload-documents-section">
-				<p><strong>Nahrát nové dokumenty:</strong></p>
-				<div id="risks-doc-uploads-<?php echo esc_attr( $lang_code ); ?>">
+				<p style="margin: 0 0 15px 0; font-weight: 600;">Nahrát nové dokumenty:</p>
+				<div id="risks-doc-uploads-<?php echo esc_attr( $lang_code ); ?>" class="doc-upload-container">
 					<div class="doc-upload-row">
-						<input type="file" 
-							   name="risks_docs_<?php echo esc_attr( $lang_code ); ?>[]" 
-							   accept="application/pdf"
-							   class="saw-file-input">
+						<div class="doc-upload-file">
+							<label class="file-label">Vybrat soubor</label>
+							<input type="file" 
+								   name="risks_docs_<?php echo esc_attr( $lang_code ); ?>[]" 
+								   accept="application/pdf"
+								   class="file-input-hidden">
+							<span class="file-name">Soubor nevybrán</span>
+						</div>
 						<select name="risks_docs_category_<?php echo esc_attr( $lang_code ); ?>[]" class="doc-category-select">
 							<option value="emergency">Mimořádné situace</option>
 							<option value="fire">Požární ochrana</option>
@@ -309,7 +314,7 @@ class SAW_Admin_Content {
 						<button type="button" class="button button-small add-doc-row" data-section="risks" data-lang="<?php echo esc_attr( $lang_code ); ?>">+ Přidat další</button>
 					</div>
 				</div>
-				<p class="description">Maximální velikost: 20 MB per soubor. Formát: PDF</p>
+				<p class="description" style="margin-top: 10px;">Maximální velikost: 20 MB per soubor. Formát: PDF</p>
 			</div>
 		</div>
 		<?php
@@ -328,7 +333,7 @@ class SAW_Admin_Content {
 		});
 		?>
 		<div class="saw-material-box">
-			<h4>WYSIWYG Editor</h4>
+			<h4 style="margin: 0 0 15px 0; font-size: 15px;">WYSIWYG Editor</h4>
 			<?php
 			wp_editor(
 				$additional_content,
@@ -342,7 +347,7 @@ class SAW_Admin_Content {
 			);
 			?>
 
-			<h4 style="margin-top: 30px;">Dokumenty k dalším informacím</h4>
+			<h4 style="margin: 30px 0 15px 0; font-size: 15px;">Dokumenty k dalším informacím</h4>
 			
 			<!-- Existující dokumenty -->
 			<?php if ( ! empty( $additional_docs ) ) : ?>
@@ -365,13 +370,17 @@ class SAW_Admin_Content {
 
 			<!-- Nahrát nové dokumenty -->
 			<div class="upload-documents-section">
-				<p><strong>Nahrát nové dokumenty:</strong></p>
-				<div id="additional-doc-uploads-<?php echo esc_attr( $lang_code ); ?>">
+				<p style="margin: 0 0 15px 0; font-weight: 600;">Nahrát nové dokumenty:</p>
+				<div id="additional-doc-uploads-<?php echo esc_attr( $lang_code ); ?>" class="doc-upload-container">
 					<div class="doc-upload-row">
-						<input type="file" 
-							   name="additional_docs_<?php echo esc_attr( $lang_code ); ?>[]" 
-							   accept="application/pdf"
-							   class="saw-file-input">
+						<div class="doc-upload-file">
+							<label class="file-label">Vybrat soubor</label>
+							<input type="file" 
+								   name="additional_docs_<?php echo esc_attr( $lang_code ); ?>[]" 
+								   accept="application/pdf"
+								   class="file-input-hidden">
+							<span class="file-name">Soubor nevybrán</span>
+						</div>
 						<select name="additional_docs_category_<?php echo esc_attr( $lang_code ); ?>[]" class="doc-category-select">
 							<option value="hygiene">Hygiena</option>
 							<option value="environment">Životní prostředí</option>
@@ -381,7 +390,7 @@ class SAW_Admin_Content {
 						<button type="button" class="button button-small add-doc-row" data-section="additional" data-lang="<?php echo esc_attr( $lang_code ); ?>">+ Přidat další</button>
 					</div>
 				</div>
-				<p class="description">Maximální velikost: 20 MB per soubor. Formát: PDF</p>
+				<p class="description" style="margin-top: 10px;">Maximální velikost: 20 MB per soubor. Formát: PDF</p>
 			</div>
 		</div>
 		<?php
@@ -491,21 +500,24 @@ class SAW_Admin_Content {
 				border-radius: 4px;
 			}
 			.material-status {
-				padding: 10px;
+				padding: 12px 15px;
 				border-radius: 4px;
 				margin-bottom: 15px;
 			}
 			.material-status.uploaded {
 				background: #d4edda;
 				color: #155724;
+				border: 1px solid #c3e6cb;
 			}
 			.material-status.empty {
 				background: #f8d7da;
 				color: #721c24;
+				border: 1px solid #f5c6cb;
 			}
 			.material-meta {
 				color: #646970;
 				font-size: 13px;
+				margin-left: 5px;
 			}
 			.upload-field {
 				background: white;
@@ -525,52 +537,142 @@ class SAW_Admin_Content {
 			.doc-row {
 				display: flex;
 				align-items: center;
-				gap: 10px;
-				padding: 10px;
+				gap: 12px;
+				padding: 12px;
 				background: #f0f0f1;
 				border-radius: 4px;
-				margin-bottom: 10px;
+				margin-bottom: 8px;
+				border: 1px solid #dcdcde;
 			}
 			.doc-icon {
 				font-size: 20px;
+				flex-shrink: 0;
 			}
 			.doc-name {
 				flex: 1;
 				font-weight: 600;
 				text-decoration: none;
+				color: #2271b1;
+			}
+			.doc-name:hover {
+				text-decoration: underline;
 			}
 			.doc-category-badge {
 				background: #2271b1;
 				color: white;
-				padding: 3px 10px;
+				padding: 4px 12px;
 				border-radius: 3px;
 				font-size: 12px;
 				font-weight: 600;
+				flex-shrink: 0;
 			}
 			.doc-size {
 				color: #646970;
 				font-size: 13px;
+				flex-shrink: 0;
 			}
 			
-			/* Upload documents section */
+			/* Upload documents section - vylepšené stylování */
 			.upload-documents-section {
 				background: white;
-				padding: 15px;
+				padding: 20px;
 				border: 1px solid #c3c4c7;
 				border-radius: 4px;
 			}
+			.doc-upload-container {
+				display: flex;
+				flex-direction: column;
+				gap: 12px;
+			}
 			.doc-upload-row {
+				display: flex;
+				align-items: stretch;
+				gap: 12px;
+				padding: 15px;
+				background: #f6f7f7;
+				border: 1px solid #dcdcde;
+				border-radius: 4px;
+			}
+			
+			/* Custom file input styling */
+			.doc-upload-file {
+				flex: 2;
 				display: flex;
 				align-items: center;
 				gap: 10px;
-				margin-bottom: 10px;
+				position: relative;
 			}
-			.doc-upload-row input[type="file"] {
-				flex: 2;
+			.file-label {
+				background: #2271b1;
+				color: white;
+				padding: 8px 16px;
+				border-radius: 3px;
+				cursor: pointer;
+				font-size: 13px;
+				font-weight: 600;
+				transition: background 0.2s;
+				white-space: nowrap;
 			}
+			.file-label:hover {
+				background: #135e96;
+			}
+			.file-input-hidden {
+				position: absolute;
+				width: 1px;
+				height: 1px;
+				opacity: 0;
+				overflow: hidden;
+			}
+			.file-name {
+				flex: 1;
+				padding: 8px 12px;
+				background: white;
+				border: 1px solid #dcdcde;
+				border-radius: 3px;
+				color: #646970;
+				font-size: 13px;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+			}
+			
+			/* Category select styling */
 			.doc-category-select {
 				flex: 1;
-				min-width: 200px;
+				min-width: 180px;
+				padding: 8px 12px;
+				border: 1px solid #dcdcde;
+				border-radius: 3px;
+				font-size: 13px;
+				background: white;
+			}
+			
+			/* Buttons */
+			.add-doc-row {
+				background: #00a32a;
+				color: white;
+				border: none;
+				padding: 8px 16px;
+				border-radius: 3px;
+				font-weight: 600;
+				white-space: nowrap;
+			}
+			.add-doc-row:hover {
+				background: #008a20;
+				color: white;
+			}
+			.remove-doc-row {
+				background: #d63638;
+				color: white;
+				border: none;
+				padding: 8px 16px;
+				border-radius: 3px;
+				font-weight: 600;
+				white-space: nowrap;
+			}
+			.remove-doc-row:hover {
+				background: #b32d2e;
+				color: white;
 			}
 		</style>
 		<?php
@@ -611,6 +713,17 @@ class SAW_Admin_Content {
 				}
 			});
 			
+			// Custom file input - zobrazit název vybraného souboru
+			$(document).on('change', '.file-input-hidden', function() {
+				const fileName = $(this).val().split('\\').pop() || 'Soubor nevybrán';
+				$(this).siblings('.file-name').text(fileName);
+			});
+			
+			// Kliknutí na label aktivuje file input
+			$(document).on('click', '.file-label', function() {
+				$(this).siblings('.file-input-hidden').click();
+			});
+			
 			// Přidat další řádek pro nahrání dokumentu
 			$('.add-doc-row').on('click', function() {
 				const section = $(this).data('section');
@@ -622,8 +735,9 @@ class SAW_Admin_Content {
 				const newRow = firstRow.clone();
 				
 				// Vyčistit hodnoty
-				newRow.find('input[type="file"]').val('');
-				newRow.find('select').prop('selectedIndex', 0);
+				newRow.find('.file-input-hidden').val('');
+				newRow.find('.file-name').text('Soubor nevybrán');
+				newRow.find('.doc-category-select').prop('selectedIndex', 0);
 				
 				// Změnit tlačítko na "Odebrat"
 				const button = newRow.find('.add-doc-row');
