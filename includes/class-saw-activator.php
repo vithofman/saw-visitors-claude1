@@ -2,12 +2,18 @@
 /**
  * Třída pro aktivaci pluginu
  * 
- * Spouští se pouze při aktivaci pluginu přes WordPress admin.
- * Vytváří databázové tabulky pomocí schema souborů, upload složky a základní nastavení.
+ * Spouští se pouze jednou při aktivaci pluginu přes WordPress admin.
+ * Provádí:
+ * - Kontrolu minimálních požadavků (PHP 8.1+, WordPress 6.0+)
+ * - Vytvoření databázových tabulek
+ * - Vytvoření výchozích dat
+ * - Vytvoření upload složek
+ * - Flush rewrite rules (Phase 4)
  *
  * @package SAW_Visitors
  */
 
+// Zabránit přímému přístupu
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -20,148 +26,223 @@ class SAW_Activator {
 	public static function activate() {
 		global $wpdb;
 		
-		$prefix = $wpdb->prefix . SAW_DB_PREFIX;
+		// =================================================================
+		// 1. Kontrola minimálních požadavků
+		// =================================================================
+		self::check_requirements();
 		
-		require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+		// =================================================================
+		// 2. Vytvoření databázových tabulek (všech 22)
+		// =================================================================
+		self::create_database_tables();
 		
-		$charset_collate = $wpdb->get_charset_collate();
+		// =================================================================
+		// 3. Vytvoření výchozích dat
+		// =================================================================
+		self::insert_default_data();
 		
-		self::create_tables( $prefix, $charset_collate );
-		
+		// =================================================================
+		// 4. Vytvoření upload složek
+		// =================================================================
 		self::create_upload_directories();
 		
+		// =================================================================
+		// 5. Nastavení výchozích options
+		// =================================================================
 		self::set_default_options();
 		
-		flush_rewrite_rules();
+		// =================================================================
+		// 6. Flush rewrite rules (Phase 4)
+		// =================================================================
+		self::flush_rewrite_rules();
 		
-		error_log( '[SAW Visitors] Plugin aktivován - verze ' . SAW_VISITORS_VERSION );
+		// =================================================================
+		// 7. Log aktivace
+		// =================================================================
+		error_log( '[SAW Visitors] Plugin aktivován v' . SAW_VISITORS_VERSION );
 	}
-	
+
 	/**
-	 * Vytvoření všech tabulek pomocí schema souborů
+	 * Kontrola minimálních požadavků
 	 */
-	private static function create_tables( $prefix, $charset_collate ) {
-		global $wpdb;
+	private static function check_requirements() {
+		// PHP verze
+		if ( version_compare( PHP_VERSION, '8.1.0', '<' ) ) {
+			wp_die(
+				'SAW Visitors vyžaduje PHP 8.1 nebo vyšší. Vaše verze: ' . PHP_VERSION,
+				'Nekompatibilní PHP verze',
+				array( 'back_link' => true )
+			);
+		}
 		
-		$schema_dir = SAW_VISITORS_PLUGIN_DIR . 'includes/database/schemas/';
-		
-		$tables_order = array(
-			'customers',
-			'users',
-			'training-config',
-			'departments',
-			'user-departments',
-			'contact-persons',
-			'companies',
-			'invitations',
-			'invitation-departments',
-			'materials',
-			'documents',
-			'department-materials',
-			'department-documents',
-			'uploaded-docs',
-			'visitors',
-			'visits',
-			'audit-log',
-			'error-log',
-			'rate-limits',
-			'sessions',
-			'password-resets',
-			'email-queue',
-		);
-		
-		foreach ( $tables_order as $table_name ) {
-			$schema_file = $schema_dir . 'schema-' . $table_name . '.php';
-			
-			if ( ! file_exists( $schema_file ) ) {
-				error_log( "[SAW Visitors] Schema file not found: {$schema_file}" );
-				continue;
-			}
-			
-			require_once $schema_file;
-			
-			$function_name = 'saw_get_schema_' . str_replace( '-', '_', $table_name );
-			
-			if ( ! function_exists( $function_name ) ) {
-				error_log( "[SAW Visitors] Schema function not found: {$function_name}" );
-				continue;
-			}
-			
-			$full_table_name = $prefix . str_replace( '-', '_', $table_name );
-			
-			if ( $table_name === 'users' ) {
-				$sql = $function_name( $full_table_name, $prefix, $wpdb->users, $charset_collate );
-			} else {
-				$sql = $function_name( $full_table_name, $prefix, $charset_collate );
-			}
-			
-			dbDelta( $sql );
-			
-			error_log( "[SAW Visitors] Table created/updated: {$full_table_name}" );
+		// WordPress verze
+		global $wp_version;
+		if ( version_compare( $wp_version, '6.0', '<' ) ) {
+			wp_die(
+				'SAW Visitors vyžaduje WordPress 6.0 nebo vyšší. Vaše verze: ' . $wp_version,
+				'Nekompatibilní WordPress verze',
+				array( 'back_link' => true )
+			);
 		}
 	}
-	
+
 	/**
-	 * Vytvoření upload složek s .htaccess ochranou
+	 * Vytvoření databázových tabulek
+	 */
+	private static function create_database_tables() {
+		require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+		
+		// Načíst všechny schema soubory
+		$schema_files = array(
+			'schema-customers.php',
+			'schema-users.php',
+			'schema-departments.php',
+			'schema-user-departments.php',
+			'schema-contact-persons.php',
+			'schema-companies.php',
+			'schema-invitations.php',
+			'schema-invitation-departments.php',
+			'schema-visitors.php',
+			'schema-visits.php',
+			'schema-materials.php',
+			'schema-documents.php',
+			'schema-department-materials.php',
+			'schema-department-documents.php',
+			'schema-uploaded-docs.php',
+			'schema-training-config.php',
+			'schema-audit-log.php',
+			'schema-error-log.php',
+			'schema-sessions.php',
+			'schema-password-resets.php',
+			'schema-rate-limits.php',
+			'schema-email-queue.php',
+		);
+		
+		foreach ( $schema_files as $file ) {
+			$path = SAW_VISITORS_PLUGIN_DIR . 'includes/database/schemas/' . $file;
+			if ( file_exists( $path ) ) {
+				require_once $path;
+				
+				// Každý schema soubor má funkci saw_create_[table_name]_table()
+				$function_name = 'saw_create_' . str_replace( 
+					array( 'schema-', '.php', '-' ), 
+					array( '', '', '_' ), 
+					$file 
+				) . '_table';
+				
+				if ( function_exists( $function_name ) ) {
+					call_user_func( $function_name );
+				}
+			}
+		}
+	}
+
+	/**
+	 * Vložení výchozích dat
+	 */
+	private static function insert_default_data() {
+		global $wpdb;
+		$prefix = $wpdb->prefix . SAW_DB_PREFIX;
+		
+		// Zkontrolovat jestli už existují nějaká data
+		$customers_count = $wpdb->get_var( 
+			"SELECT COUNT(*) FROM {$prefix}customers" 
+		);
+		
+		if ( $customers_count > 0 ) {
+			return; // Již existují data
+		}
+		
+		// Vytvořit testovacího zákazníka (volitelné)
+		// V produkci můžete toto odstranit
+		$wpdb->insert(
+			$prefix . 'customers',
+			array(
+				'name'          => 'Demo Zákazník',
+				'ico'           => '12345678',
+				'address'       => 'Demo ulice 123, Praha',
+				'primary_color' => '#0073aa',
+				'created_at'    => current_time( 'mysql' ),
+			),
+			array( '%s', '%s', '%s', '%s', '%s' )
+		);
+	}
+
+	/**
+	 * Vytvoření upload složek
 	 */
 	private static function create_upload_directories() {
-		$base_dir = SAW_VISITORS_UPLOAD_DIR;
+		$upload_dir = wp_upload_dir();
+		$base_dir = $upload_dir['basedir'] . '/saw-visitor-docs';
 		
-		$directories = array(
-			$base_dir,
-			$base_dir . 'materials/',
-			$base_dir . 'visitor-uploads/',
-			$base_dir . 'risk-docs/',
-			$base_dir . 'company-logos/',
+		// Hlavní složka
+		if ( ! file_exists( $base_dir ) ) {
+			wp_mkdir_p( $base_dir );
+		}
+		
+		// Podsložky
+		$subdirs = array(
+			'logos',           // Loga zákazníků
+			'materials',       // Školící materiály
+			'documents',       // Dokumenty
+			'risk-docs',       // Dokumenty rizik od návštěvníků
+			'visitor-photos',  // Fotky návštěvníků
 		);
 		
-		foreach ( $directories as $dir ) {
-			if ( ! file_exists( $dir ) ) {
-				wp_mkdir_p( $dir );
+		foreach ( $subdirs as $subdir ) {
+			$path = $base_dir . '/' . $subdir;
+			if ( ! file_exists( $path ) ) {
+				wp_mkdir_p( $path );
 			}
 		}
 		
-		$htaccess_content = "# SAW Visitors - Ochrana souborů\n";
-		$htaccess_content .= "Order Deny,Allow\n";
-		$htaccess_content .= "Deny from all\n";
-		$htaccess_content .= "<FilesMatch \"\\.(pdf|jpg|jpeg|png|mp4|webm)$\">\n";
-		$htaccess_content .= "    Allow from all\n";
-		$htaccess_content .= "</FilesMatch>\n";
-		
-		$htaccess_file = $base_dir . '.htaccess';
-		if ( ! file_exists( $htaccess_file ) ) {
-			file_put_contents( $htaccess_file, $htaccess_content );
+		// .htaccess pro zabezpečení
+		$htaccess = $base_dir . '/.htaccess';
+		if ( ! file_exists( $htaccess ) ) {
+			file_put_contents(
+				$htaccess,
+				"Options -Indexes\n<FilesMatch '\.(php|php5|php7|phtml)$'>\nOrder Allow,Deny\nDeny from all\n</FilesMatch>"
+			);
 		}
 		
-		$index_content = "<?php\n// Silence is golden.\n";
-		foreach ( $directories as $dir ) {
-			$index_file = $dir . 'index.php';
-			if ( ! file_exists( $index_file ) ) {
-				file_put_contents( $index_file, $index_content );
-			}
+		// index.php pro zabezpečení
+		$index = $base_dir . '/index.php';
+		if ( ! file_exists( $index ) ) {
+			file_put_contents( $index, '<?php // Silence is golden' );
 		}
 	}
-	
+
 	/**
 	 * Nastavení výchozích options
 	 */
 	private static function set_default_options() {
-		update_option( 'saw_visitors_version', SAW_VISITORS_VERSION );
+		add_option( 'saw_visitors_version', SAW_VISITORS_VERSION );
+		add_option( 'saw_visitors_db_version', '1.0' );
+		add_option( 'saw_visitors_activated_at', current_time( 'mysql' ) );
 		
-		if ( ! get_option( 'saw_visitors_installed_date' ) ) {
-			update_option( 'saw_visitors_installed_date', current_time( 'mysql' ) );
-		}
+		// Výchozí nastavení
+		add_option( 'saw_email_from_name', get_bloginfo( 'name' ) );
+		add_option( 'saw_email_from_address', get_bloginfo( 'admin_email' ) );
+		add_option( 'saw_session_lifetime', 7 * DAY_IN_SECONDS );
+		add_option( 'saw_rate_limit_attempts', 5 );
+		add_option( 'saw_rate_limit_window', 15 * MINUTE_IN_SECONDS );
+	}
+
+	/**
+	 * Flush rewrite rules (Phase 4)
+	 */
+	private static function flush_rewrite_rules() {
+		// Načíst hlavní třídu pro registraci rewrite rules
+		require_once SAW_VISITORS_PLUGIN_DIR . 'includes/class-saw-loader.php';
+		require_once SAW_VISITORS_PLUGIN_DIR . 'includes/class-saw-visitors.php';
 		
-		$default_config = array(
-			'training_enabled' => true,
-			'training_version' => 1,
-			'email_notifications' => true,
-			'risk_document_required' => true,
-			'retention_period_days' => 1825,
-		);
+		// Vytvořit instanci a zaregistrovat rules
+		$plugin = new SAW_Visitors();
+		$plugin->register_rewrite_rules();
 		
-		if ( ! get_option( 'saw_visitors_config' ) ) {
-			update_option( 'saw_visitors_config', $default_config );
-		}
+		// Flush
+		flush_rewrite_rules();
+		
+		error_log( '[SAW Visitors] Rewrite rules flushed' );
 	}
 }

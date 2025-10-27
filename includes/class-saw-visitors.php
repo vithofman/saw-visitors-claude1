@@ -2,16 +2,18 @@
 /**
  * Hlavní třída pluginu SAW Visitors
  * 
- * Stará se o:
- * - Načtení všech potřebných tříd
- * - Inicializaci komponent
- * - Registraci hooks přes Loader
- * - Nastavení internacionalizace
- *
- * @package SAW_Visitors
+ * Orchestruje všechny komponenty pluginu:
+ * - Loader (hooks management)
+ * - Admin interface
+ * - Public interface
+ * - URL Routing (Phase 4)
+ * 
+ * @package    SAW_Visitors
+ * @subpackage SAW_Visitors/includes
+ * @since      4.6.1
  */
 
-// Zabránit přímému přístupu
+// Exit if accessed directly
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -19,149 +21,271 @@ if ( ! defined( 'ABSPATH' ) ) {
 class SAW_Visitors {
 
 	/**
-	 * Loader instance pro správu hooks
-	 * 
-	 * @var SAW_Loader
+	 * Loader instance
 	 */
 	protected $loader;
 
 	/**
-	 * Jedinečný identifikátor pluginu
-	 * 
-	 * @var string
+	 * Plugin name
 	 */
 	protected $plugin_name;
 
 	/**
-	 * Verze pluginu
-	 * 
-	 * @var string
+	 * Plugin version
 	 */
 	protected $version;
 
 	/**
-	 * Konstruktor
-	 * 
-	 * Nastaví název a verzi pluginu, načte závislosti a definuje hooks.
+	 * Router instance
+	 */
+	protected $router;
+
+	/**
+	 * Constructor
 	 */
 	public function __construct() {
-		$this->version = SAW_VISITORS_VERSION;
 		$this->plugin_name = 'saw-visitors';
-
+		$this->version = SAW_VISITORS_VERSION;
+		
 		$this->load_dependencies();
-		$this->set_locale();
 		$this->define_admin_hooks();
 		$this->define_public_hooks();
+		$this->define_routing_hooks();
 	}
 
 	/**
-	 * Načtení všech potřebných tříd
-	 * 
-	 * Autoloader pro naše třídy.
-	 * V produkci je lepší použít Composer autoloader, ale pro FTP je toto jednodušší.
+	 * Load všechny závislosti
 	 */
 	private function load_dependencies() {
-		// Načíst Loader třídu
+		// Core classes
 		require_once SAW_VISITORS_PLUGIN_DIR . 'includes/class-saw-loader.php';
+		require_once SAW_VISITORS_PLUGIN_DIR . 'includes/class-saw-auth.php';
+		require_once SAW_VISITORS_PLUGIN_DIR . 'includes/class-saw-session.php';
+		require_once SAW_VISITORS_PLUGIN_DIR . 'includes/class-saw-password.php';
+		require_once SAW_VISITORS_PLUGIN_DIR . 'includes/class-saw-database.php';
+		require_once SAW_VISITORS_PLUGIN_DIR . 'includes/class-saw-audit.php';
+		require_once SAW_VISITORS_PLUGIN_DIR . 'includes/middleware.php';
+		require_once SAW_VISITORS_PLUGIN_DIR . 'includes/admin-access-control.php';
 		
-		// Vytvořit instanci loaderu
+		// Phase 4: Router
+		require_once SAW_VISITORS_PLUGIN_DIR . 'includes/class-saw-router.php';
+		
+		// Inicializovat loader
 		$this->loader = new SAW_Loader();
-		
-		// Zde budeme v budoucnu načítat další třídy:
-		// - SAW_Auth (autentizace)
-		// - SAW_Database (databázové operace)
-		// - SAW_Email (email systém)
-		// - SAW_Admin (admin rozhraní)
-		// atd.
 	}
 
 	/**
-	 * Nastavení lokalizace (překlady)
-	 * 
-	 * V budoucnu umožní překládat plugin do různých jazyků.
-	 */
-	private function set_locale() {
-		$this->loader->add_action(
-			'plugins_loaded',
-			$this,
-			'load_plugin_textdomain'
-		);
-	}
-
-	/**
-	 * Načtení textdomény pro překlady
-	 */
-	public function load_plugin_textdomain() {
-		load_plugin_textdomain(
-			'saw-visitors',
-			false,
-			dirname( SAW_VISITORS_PLUGIN_BASENAME ) . '/languages/'
-		);
-	}
-
-	/**
-	 * Definice hooks pro WordPress admin rozhraní
-	 * 
-	 * Zde registrujeme všechny akce které se týkají WP admin panelu.
+	 * Definovat admin hooks
 	 */
 	private function define_admin_hooks() {
-		// Enqueue admin styly a scripty
-		$this->loader->add_action(
-			'admin_enqueue_scripts',
-			$this,
-			'enqueue_admin_styles'
-		);
+		// Admin menu
+		$this->loader->add_action( 'admin_menu', $this, 'add_admin_menu' );
 		
-		$this->loader->add_action(
-			'admin_enqueue_scripts',
-			$this,
-			'enqueue_admin_scripts'
-		);
-		
-		// Admin menu (zatím prázdné, ale připravené)
-		$this->loader->add_action(
-			'admin_menu',
-			$this,
-			'add_admin_menu'
-		);
-		
-		// Admin notices (pro zobrazení zpráv v admin panelu)
-		$this->loader->add_action(
-			'admin_notices',
-			$this,
-			'display_admin_notices'
-		);
+		// Admin styles & scripts
+		$this->loader->add_action( 'admin_enqueue_scripts', $this, 'enqueue_admin_styles' );
+		$this->loader->add_action( 'admin_enqueue_scripts', $this, 'enqueue_admin_scripts' );
 	}
 
 	/**
-	 * Definice hooks pro veřejnou část (frontend)
-	 * 
-	 * Zde registrujeme všechny akce pro frontend.
+	 * Definovat public hooks
 	 */
 	private function define_public_hooks() {
-		// Enqueue frontend styly a scripty
-		$this->loader->add_action(
-			'wp_enqueue_scripts',
-			$this,
-			'enqueue_public_styles'
+		// Frontend styles & scripts
+		$this->loader->add_action( 'wp_enqueue_scripts', $this, 'enqueue_public_styles' );
+		$this->loader->add_action( 'wp_enqueue_scripts', $this, 'enqueue_public_scripts' );
+	}
+
+	/**
+	 * Definovat routing hooks (Phase 4)
+	 */
+	private function define_routing_hooks() {
+		// Rewrite rules
+		$this->loader->add_action( 'init', $this, 'register_rewrite_rules' );
+		
+		// Query vars
+		$this->loader->add_filter( 'query_vars', $this, 'add_query_vars' );
+		
+		// Template redirect (hlavní routing dispatcher)
+		$this->loader->add_action( 'template_redirect', $this, 'handle_routing', 1 );
+		
+		// Flush rewrite rules při aktivaci (handled in activator)
+	}
+
+	/**
+	 * Register rewrite rules (Phase 4)
+	 */
+	public function register_rewrite_rules() {
+		// Admin routes
+		add_rewrite_rule(
+			'^admin/login/?$',
+			'index.php?saw_route=admin&saw_action=login',
+			'top'
 		);
 		
-		$this->loader->add_action(
-			'wp_enqueue_scripts',
-			$this,
-			'enqueue_public_scripts'
+		add_rewrite_rule(
+			'^admin/dashboard/?$',
+			'index.php?saw_route=admin&saw_action=dashboard',
+			'top'
 		);
 		
-		// Custom rewrite rules (zatím prázdné, později pro /admin/, /visitor/ atd.)
-		$this->loader->add_action(
-			'init',
-			$this,
-			'register_rewrite_rules'
+		add_rewrite_rule(
+			'^admin/invitations/?$',
+			'index.php?saw_route=admin&saw_action=invitations',
+			'top'
+		);
+		
+		add_rewrite_rule(
+			'^admin/companies/?$',
+			'index.php?saw_route=admin&saw_action=companies',
+			'top'
+		);
+		
+		add_rewrite_rule(
+			'^admin/visitors/?$',
+			'index.php?saw_route=admin&saw_action=visitors',
+			'top'
+		);
+		
+		add_rewrite_rule(
+			'^admin/departments/?$',
+			'index.php?saw_route=admin&saw_action=departments',
+			'top'
+		);
+		
+		add_rewrite_rule(
+			'^admin/content/?$',
+			'index.php?saw_route=admin&saw_action=content',
+			'top'
+		);
+		
+		add_rewrite_rule(
+			'^admin/statistics/?$',
+			'index.php?saw_route=admin&saw_action=statistics',
+			'top'
+		);
+		
+		add_rewrite_rule(
+			'^admin/settings/?$',
+			'index.php?saw_route=admin&saw_action=settings',
+			'top'
+		);
+		
+		// Manager routes
+		add_rewrite_rule(
+			'^manager/login/?$',
+			'index.php?saw_route=manager&saw_action=login',
+			'top'
+		);
+		
+		add_rewrite_rule(
+			'^manager/dashboard/?$',
+			'index.php?saw_route=manager&saw_action=dashboard',
+			'top'
+		);
+		
+		add_rewrite_rule(
+			'^manager/invitations/?$',
+			'index.php?saw_route=manager&saw_action=invitations',
+			'top'
+		);
+		
+		add_rewrite_rule(
+			'^manager/visitors/?$',
+			'index.php?saw_route=manager&saw_action=visitors',
+			'top'
+		);
+		
+		add_rewrite_rule(
+			'^manager/statistics/?$',
+			'index.php?saw_route=manager&saw_action=statistics',
+			'top'
+		);
+		
+		// Terminal routes
+		add_rewrite_rule(
+			'^terminal/login/?$',
+			'index.php?saw_route=terminal&saw_action=login',
+			'top'
+		);
+		
+		add_rewrite_rule(
+			'^terminal/checkin/?$',
+			'index.php?saw_route=terminal&saw_action=checkin',
+			'top'
+		);
+		
+		add_rewrite_rule(
+			'^terminal/checkout/?$',
+			'index.php?saw_route=terminal&saw_action=checkout',
+			'top'
+		);
+		
+		// Visitor routes (public)
+		add_rewrite_rule(
+			'^visitor/invitation/([a-zA-Z0-9]+)/?$',
+			'index.php?saw_route=visitor&saw_action=invitation&saw_token=$matches[1]',
+			'top'
+		);
+		
+		add_rewrite_rule(
+			'^visitor/draft/([a-zA-Z0-9]+)/?$',
+			'index.php?saw_route=visitor&saw_action=draft&saw_token=$matches[1]',
+			'top'
+		);
+		
+		add_rewrite_rule(
+			'^visitor/walkin/?$',
+			'index.php?saw_route=visitor&saw_action=walkin',
+			'top'
+		);
+		
+		add_rewrite_rule(
+			'^visitor/training/([a-zA-Z0-9]+)/?$',
+			'index.php?saw_route=visitor&saw_action=training&saw_token=$matches[1]',
+			'top'
+		);
+		
+		// Logout (universal)
+		add_rewrite_rule(
+			'^logout/?$',
+			'index.php?saw_route=logout',
+			'top'
 		);
 	}
 
 	/**
-	 * Načtení admin stylů
+	 * Add custom query vars (Phase 4)
+	 */
+	public function add_query_vars( $vars ) {
+		$vars[] = 'saw_route';
+		$vars[] = 'saw_action';
+		$vars[] = 'saw_token';
+		$vars[] = 'saw_id';
+		return $vars;
+	}
+
+	/**
+	 * Handle routing (Phase 4)
+	 * 
+	 * Hlavní dispatcher - předává kontrolu routeru
+	 */
+	public function handle_routing() {
+		// Zkontrolovat jestli je to naše route
+		$route = get_query_var( 'saw_route', '' );
+		
+		if ( empty( $route ) ) {
+			return; // Není naše route, pokračovat normálně
+		}
+		
+		// Inicializovat router a předat mu kontrolu
+		$this->router = new SAW_Router();
+		$this->router->dispatch();
+		
+		// Router ukončí WordPress processing pomocí exit
+	}
+
+	/**
+	 * Load admin styles
 	 */
 	public function enqueue_admin_styles() {
 		// Načíst pouze na našich admin stránkách
@@ -180,7 +304,7 @@ class SAW_Visitors {
 	}
 
 	/**
-	 * Načtení admin scriptů
+	 * Load admin scripts
 	 */
 	public function enqueue_admin_scripts() {
 		// Načíst pouze na našich admin stránkách
@@ -210,32 +334,32 @@ class SAW_Visitors {
 	}
 
 	/**
-	 * Načtení frontend stylů
+	 * Load public styles
 	 */
 	public function enqueue_public_styles() {
 		// Zatím prázdné - později pro visitor formuláře
 	}
 
 	/**
-	 * Načtení frontend scriptů
+	 * Load public scripts
 	 */
 	public function enqueue_public_scripts() {
 		// Zatím prázdné - později pro visitor formuláře
 	}
 
 	/**
-	 * Přidání admin menu do WordPress
+	 * Add admin menu
 	 */
 	public function add_admin_menu() {
 		// Hlavní menu položka
 		add_menu_page(
-			'SAW Visitors',              // Název stránky
-			'SAW Visitors',              // Text v menu
-			'manage_options',            // Oprávnění (pouze admin)
-			'saw-visitors',              // Slug
-			array( $this, 'display_dashboard' ), // Callback funkce
-			'dashicons-groups',          // Ikona
-			30                           // Pozice v menu
+			'SAW Visitors',
+			'SAW Visitors',
+			'manage_options',
+			'saw-visitors',
+			array( $this, 'display_dashboard' ),
+			'dashicons-groups',
+			30
 		);
 		
 		// Submenu - Dashboard
@@ -260,7 +384,7 @@ class SAW_Visitors {
 	}
 
 	/**
-	 * Zobrazení dashboard stránky
+	 * Display dashboard page
 	 */
 	public function display_dashboard() {
 		?>
@@ -270,33 +394,17 @@ class SAW_Visitors {
 			<div class="saw-dashboard">
 				<div class="saw-welcome-panel">
 					<h2>👋 Vítejte v SAW Visitors!</h2>
-					<p>Plugin byl úspěšně aktivován. Verze: <strong><?php echo esc_html( $this->version ); ?></strong></p>
+					<p>Plugin byl úspěšně aktivován. Nyní můžete začít konfigurovat zákazníky a oddělení.</p>
 					
-					<div class="saw-info-boxes">
-						<div class="saw-info-box">
-							<h3>🎯 První kroky</h3>
-							<ol>
-								<li>Vytvořte prvního zákazníka</li>
-								<li>Přidejte oddělení</li>
-								<li>Nahrajte školící materiály</li>
-								<li>Vytvořte první pozvánku</li>
-							</ol>
-						</div>
-						
-						<div class="saw-info-box">
-							<h3>📊 Statistiky</h3>
-							<p>Aktivní návštěvy: <strong>0</strong></p>
-							<p>Dnes návštěv: <strong>0</strong></p>
-							<p>Tento měsíc: <strong>0</strong></p>
-						</div>
-						
-						<div class="saw-info-box">
-							<h3>⚙️ Systémové info</h3>
-							<p>PHP verze: <strong><?php echo PHP_VERSION; ?></strong></p>
-							<p>WordPress: <strong><?php echo get_bloginfo( 'version' ); ?></strong></p>
-							<p>MySQL verze: <strong><?php echo $this->get_mysql_version(); ?></strong></p>
-						</div>
-					</div>
+					<h3>🔗 Odkazy pro testování:</h3>
+					<ul>
+						<li><a href="<?php echo esc_url( home_url( '/admin/login/' ) ); ?>" target="_blank">Admin Login</a></li>
+						<li><a href="<?php echo esc_url( home_url( '/manager/login/' ) ); ?>" target="_blank">Manager Login</a></li>
+						<li><a href="<?php echo esc_url( home_url( '/terminal/login/' ) ); ?>" target="_blank">Terminal Login</a></li>
+					</ul>
+					
+					<h3>📊 Statistiky:</h3>
+					<p><em>Zatím neimplementováno - následující fáze vývoje.</em></p>
 				</div>
 			</div>
 		</div>
@@ -304,117 +412,59 @@ class SAW_Visitors {
 	}
 
 	/**
-	 * Zobrazení "O pluginu" stránky
+	 * Display about page
 	 */
 	public function display_about() {
 		?>
 		<div class="wrap">
-			<h1>O pluginu SAW Visitors</h1>
+			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
 			
 			<div class="saw-about">
-				<h2>Verze <?php echo esc_html( $this->version ); ?></h2>
+				<h2>SAW Visitors v<?php echo esc_html( $this->version ); ?></h2>
+				<p>Plugin pro správu návštěvníků s multi-tenant architekturou.</p>
 				
-				<h3>📋 O pluginu</h3>
-				<p>SAW Visitors je komplexní WordPress plugin pro správu návštěv s důrazem na BOZP/PO compliance a multi-tenant architekturu.</p>
-				
-				<h3>✨ Klíčové vlastnosti</h3>
+				<h3>📋 Instalované komponenty:</h3>
 				<ul>
-					<li>Multi-tenant architektura s úplnou izolací dat</li>
-					<li>Dual admin systém (Super Admin + Frontend Admin)</li>
-					<li>Školící systém s verzováním</li>
-					<li>Draft mode pro firmy</li>
-					<li>Walk-in systém</li>
-					<li>Check-in/out terminály</li>
-					<li>GDPR compliance</li>
+					<li>✅ Phase 0: Multi-tenant Foundation</li>
+					<li>✅ Phase 1: Core Setup</li>
+					<li>✅ Phase 2: Database Tables (22/22)</li>
+					<li>✅ Phase 3: Auth System</li>
+					<li>✅ Phase 4: URL Routing</li>
 				</ul>
 				
-				<h3>🔧 Technické informace</h3>
+				<h3>🔧 Další vývoj:</h3>
 				<ul>
-					<li><strong>Verze:</strong> <?php echo esc_html( $this->version ); ?></li>
-					<li><strong>PHP požadavky:</strong> 8.1+</li>
-					<li><strong>WordPress požadavky:</strong> 6.0+</li>
-					<li><strong>MySQL požadavky:</strong> 5.7+</li>
+					<li>Phase 5: Super Admin WP Menu</li>
+					<li>Phase 6-24: Další funkcionality</li>
 				</ul>
-				
-				<h3>📞 Podpora</h3>
-				<p>Pro technickou podporu kontaktujte: <a href="mailto:support@sawuh.cz">support@sawuh.cz</a></p>
 			</div>
 		</div>
 		<?php
 	}
 
 	/**
-	 * Zobrazení admin notices
-	 */
-	public function display_admin_notices() {
-		// Kontrola PHP verze
-		if ( version_compare( PHP_VERSION, '8.1', '<' ) ) {
-			?>
-			<div class="notice notice-error">
-				<p>
-					<strong>SAW Visitors:</strong> 
-					Plugin vyžaduje PHP 8.1 nebo vyšší. Aktuální verze: <?php echo PHP_VERSION; ?>
-				</p>
-			</div>
-			<?php
-		}
-		
-		// Kontrola WordPress verze
-		global $wp_version;
-		if ( version_compare( $wp_version, '6.0', '<' ) ) {
-			?>
-			<div class="notice notice-error">
-				<p>
-					<strong>SAW Visitors:</strong> 
-					Plugin vyžaduje WordPress 6.0 nebo vyšší. Aktuální verze: <?php echo $wp_version; ?>
-				</p>
-			</div>
-			<?php
-		}
-	}
-
-	/**
-	 * Registrace custom rewrite rules
-	 * 
-	 * Později zde budou pravidla pro /admin/, /visitor/, /terminal/, atd.
-	 */
-	public function register_rewrite_rules() {
-		// Zatím prázdné - připraveno pro budoucí implementaci
-	}
-
-	/**
-	 * Helper funkce pro získání MySQL verze
-	 */
-	private function get_mysql_version() {
-		global $wpdb;
-		return $wpdb->get_var( "SELECT VERSION()" );
-	}
-
-	/**
-	 * Spuštění loaderu
-	 * 
-	 * Tato metoda se volá z hlavního souboru pluginu.
+	 * Run loader
 	 */
 	public function run() {
 		$this->loader->run();
 	}
 
 	/**
-	 * Získání názvu pluginu
+	 * Get plugin name
 	 */
 	public function get_plugin_name() {
 		return $this->plugin_name;
 	}
 
 	/**
-	 * Získání loader instance
+	 * Get loader
 	 */
 	public function get_loader() {
 		return $this->loader;
 	}
 
 	/**
-	 * Získání verze pluginu
+	 * Get version
 	 */
 	public function get_version() {
 		return $this->version;
