@@ -1,4 +1,5 @@
 <?php
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -13,6 +14,10 @@ function saw_get_schema_department_materials( $table_name, $prefix, $charset_col
 		content_cs longtext DEFAULT NULL,
 		content_en longtext DEFAULT NULL,
 		content_de longtext DEFAULT NULL,
+		wysiwyg_cs longtext DEFAULT NULL,
+		wysiwyg_en longtext DEFAULT NULL,
+		wysiwyg_de longtext DEFAULT NULL,
+		wysiwyg_uk longtext DEFAULT NULL,
 		display_order int(11) NOT NULL DEFAULT 0,
 		is_active tinyint(1) NOT NULL DEFAULT 1,
 		created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
