@@ -1,6 +1,8 @@
 <?php
 /**
- * Super Admin - Training Version Reset
+ * Super Admin - Training Version Management (Phase 5 - NEW v4.6.1)
+ * 
+ * Správa verzí školení + reset verze (force re-training)
  * 
  * @package    SAW_Visitors
  * @subpackage SAW_Visitors/admin
@@ -14,141 +16,146 @@ if ( ! defined( 'ABSPATH' ) ) {
 class SAW_Admin_Training_Version {
 
 	/**
-	 * Display training version page
+	 * Display training version management page
 	 */
 	public static function main_page() {
 		$customer_id = self::get_selected_customer();
 		
 		if ( ! $customer_id ) {
-			echo '<div class="wrap"><h1>Verze školení</h1><p>Nejprve vyberte zákazníka z dropdownu v horní liště.</p></div>';
+			self::render_no_customer_selected();
 			return;
 		}
-		
+
 		// Handle version reset
 		if ( isset( $_POST['saw_reset_version'] ) ) {
 			check_admin_referer( 'saw_reset_version' );
-			self::reset_version( $customer_id );
-			wp_redirect( admin_url( 'admin.php?page=saw-training-version&reset=1' ) );
+			$result = self::reset_training_version( $customer_id );
+
+			if ( $result['success'] ) {
+				wp_redirect( admin_url( 'admin.php?page=saw-training-version&reset_success=1' ) );
+			} else {
+				wp_redirect( admin_url( 'admin.php?page=saw-training-version&error=' . urlencode( $result['message'] ) ) );
+			}
 			exit;
 		}
-		
-		$config = self::get_training_config( $customer_id );
-		$history = self::get_version_history( $customer_id );
-		
+
+		$training_config = self::get_training_config( $customer_id );
+		$customer = self::get_customer( $customer_id );
+		$version_history = self::get_version_history( $customer_id );
+		$stats = self::get_version_stats( $customer_id, $training_config->current_version );
+
+		self::render_page( $customer, $training_config, $version_history, $stats );
+	}
+
+	/**
+	 * Render main page
+	 */
+	private static function render_page( $customer, $training_config, $version_history, $stats ) {
 		?>
 		<div class="wrap">
-			<h1>Verze školení</h1>
-			
-			<?php if ( isset( $_GET['reset'] ) ) : ?>
-				<div class="notice notice-success is-dismissible">
-					<p>Verze školení byla resetována. Všichni návštěvníci budou muset absolvovat školení znovu.</p>
+			<h1>
+				Verze školení
+				<span class="saw-customer-badge"><?php echo esc_html( $customer->name ); ?></span>
+			</h1>
+
+			<?php self::render_notices(); ?>
+
+			<!-- Current Version Info -->
+			<div class="saw-version-info-box">
+				<h2>📊 Aktuální verze školení</h2>
+				<div class="version-display">
+					<div class="version-number">v<?php echo esc_html( $training_config->current_version ); ?></div>
+					<div class="version-meta">
+						<p><strong>Naposledy změněno:</strong> <?php echo esc_html( date_i18n( 'j. n. Y H:i', strtotime( $training_config->updated_at ) ) ); ?></p>
+						<?php if ( $training_config->last_reset_reason ) : ?>
+							<p><strong>Důvod poslední změny:</strong> <?php echo esc_html( $training_config->last_reset_reason ); ?></p>
+						<?php endif; ?>
+					</div>
 				</div>
-			<?php endif; ?>
-			
-			<div class="saw-version-info" style="background: #fff; padding: 20px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 20px;">
-				<h2>Aktuální stav</h2>
-				
-				<p style="font-size: 18px;">
-					<strong>Aktuální verze školení:</strong> 
-					<span style="color: #2271b1; font-size: 24px; font-weight: bold;">v<?php echo intval( $config->training_version ?? 1 ); ?></span>
-				</p>
-				
-				<?php if ( $config && $config->version_updated_at ) : ?>
-					<p>
-						<strong>Poslední aktualizace:</strong> 
-						<?php echo esc_html( mysql2date( 'd.m.Y H:i', $config->version_updated_at ) ); ?>
-					</p>
-					
-					<?php if ( $config->version_reset_reason ) : ?>
-						<p>
-							<strong>Důvod:</strong> 
-							<?php echo esc_html( $config->version_reset_reason ); ?>
-						</p>
-					<?php endif; ?>
-				<?php endif; ?>
+
+				<div class="version-stats">
+					<div class="stat-box">
+						<div class="stat-value"><?php echo esc_html( $stats->total_visitors ); ?></div>
+						<div class="stat-label">Celkem návštěvníků</div>
+					</div>
+					<div class="stat-box">
+						<div class="stat-value stat-success"><?php echo esc_html( $stats->current_version_visitors ); ?></div>
+						<div class="stat-label">Na aktuální verzi</div>
+					</div>
+					<div class="stat-box">
+						<div class="stat-value stat-warning"><?php echo esc_html( $stats->outdated_visitors ); ?></div>
+						<div class="stat-label">Na staré verzi</div>
+					</div>
+				</div>
 			</div>
-			
-			<div class="saw-version-reset" style="background: #fff; padding: 20px; border: 1px solid #ccc; border-radius: 5px; margin-bottom: 20px;">
-				<h2>⚠️ Force Re-training</h2>
+
+			<!-- Reset Version Form -->
+			<div class="saw-version-reset-box">
+				<h2>🔄 Reset verze školení</h2>
 				
-				<div class="notice notice-warning inline" style="margin: 15px 0;">
-					<p><strong>Varování:</strong> Tato akce je nevratná!</p>
+				<div class="reset-warning">
+					<h3>⚠️ Upozornění</h3>
+					<p>Reset verze školení způsobí následující:</p>
+					<ul>
+						<li>Všichni návštěvníci budou muset projít školením znovu (skip training nebude fungovat)</li>
+						<li>Číslo verze se zvýší o 1</li>
+						<li>Návštěvníci dostanou email s informací o nové verzi školení</li>
+						<li>Statistiky budou rozlišovat mezi verzemi</li>
+					</ul>
+					<p><strong>Používejte tuto funkci pouze při významných změnách v obsahu školení!</strong></p>
 				</div>
-				
-				<p>
-					Pokud jste změnili důležitý obsah školení (video, PDF, bezpečnostní pokyny), 
-					můžete vynutit opakování školení pro VŠECHNY návštěvníky.
-				</p>
-				
-				<form method="post">
+
+				<form method="post" onsubmit="return confirm('Opravdu chcete resetovat verzi školení? Všichni návštěvníci budou muset projít školením znovu!');">
 					<?php wp_nonce_field( 'saw_reset_version' ); ?>
-					
+
 					<table class="form-table">
 						<tr>
 							<th scope="row">
-								<label for="reason">Důvod změny *</label>
+								<label for="reset_reason">Důvod resetu <span class="required">*</span></label>
 							</th>
 							<td>
-								<textarea name="reason" id="reason" rows="4" class="large-text" required placeholder="Např: Aktualizace bezpečnostních pokynů pro nové stroje"></textarea>
-								<p class="description">Tento důvod bude zobrazen v audit logu a historii verzí.</p>
+								<textarea id="reset_reason" 
+										  name="reset_reason" 
+										  rows="4" 
+										  class="large-text" 
+										  required 
+										  placeholder="Např: Aktualizace bezpečnostních postupů, Nové požární předpisy, atd."></textarea>
+								<p class="description">Tento důvod bude zaznamenán v historii a odeslán návštěvníkům v emailu.</p>
 							</td>
 						</tr>
 					</table>
-					
-					<div class="saw-reset-info" style="background: #f0f0f1; padding: 15px; border-left: 4px solid #d63638; margin-bottom: 20px;">
-						<p><strong>Tato akce:</strong></p>
-						<ul style="margin-left: 20px;">
-							<li>Zvýší verzi školení na <strong>v<?php echo intval( $config->training_version ?? 1 ) + 1; ?></strong></li>
-							<li><strong>Všichni návštěvníci budou muset absolvovat školení znovu</strong> (i když absolvovali do 1 roku)</li>
-							<li>Odešle email notifikaci všem adminům/manažerům</li>
-							<li>Zaznamená důvod do audit logu</li>
-						</ul>
-					</div>
-					
+
 					<p class="submit">
-						<input 
-							type="submit" 
-							name="saw_reset_version" 
-							class="button button-primary" 
-							value="🔄 Resetovat verzi - vynutit opakování" 
-							onclick="return confirm('Opravdu chcete resetovat verzi školení? Všichni návštěvníci budou muset absolvovat školení znovu!');"
-							style="background: #d63638; border-color: #d63638;"
-						>
+						<button type="submit" name="saw_reset_version" class="button button-primary button-large">
+							🔄 Resetovat verzi (aktuálně v<?php echo esc_html( $training_config->current_version ); ?> → v<?php echo esc_html( $training_config->current_version + 1 ); ?>)
+						</button>
 					</p>
 				</form>
 			</div>
-			
-			<div class="saw-version-history" style="background: #fff; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
-				<h2>Historie verzí</h2>
+
+			<!-- Version History -->
+			<div class="saw-version-history-box">
+				<h2>📋 Historie verzí</h2>
 				
-				<?php if ( empty( $history ) ) : ?>
-					<p>Zatím žádná historie.</p>
+				<?php if ( empty( $version_history ) ) : ?>
+					<p>Zatím nebyla provedena žádná změna verze.</p>
 				<?php else : ?>
 					<table class="wp-list-table widefat fixed striped">
 						<thead>
 							<tr>
-								<th>Akce</th>
+								<th>Verze</th>
 								<th>Datum</th>
-								<th>Uživatel</th>
-								<th>Detaily</th>
+								<th>Důvod</th>
+								<th>Provedl</th>
 							</tr>
 						</thead>
 						<tbody>
-							<?php foreach ( $history as $entry ) : ?>
+							<?php foreach ( $version_history as $history ) : ?>
 								<tr>
-									<td><?php echo esc_html( $entry->event_type ); ?></td>
-									<td><?php echo esc_html( mysql2date( 'd.m.Y H:i', $entry->created_at ) ); ?></td>
-									<td>
-										<?php
-										if ( $entry->user_id ) {
-											$user = get_userdata( $entry->user_id );
-											echo esc_html( $user ? $user->display_name : 'Neznámý' );
-										} else {
-											echo '—';
-										}
-										?>
-									</td>
-									<td><?php echo esc_html( $entry->event_description ); ?></td>
+									<td><strong>v<?php echo esc_html( $history->version ); ?></strong></td>
+									<td><?php echo esc_html( date_i18n( 'j. n. Y H:i', strtotime( $history->created_at ) ) ); ?></td>
+									<td><?php echo esc_html( $history->reason ); ?></td>
+									<td><?php echo esc_html( $history->admin_name ); ?></td>
 								</tr>
 							<?php endforeach; ?>
 						</tbody>
@@ -156,7 +163,255 @@ class SAW_Admin_Training_Version {
 				<?php endif; ?>
 			</div>
 		</div>
+
+		<style>
+			.saw-customer-badge {
+				background: #2271b1;
+				color: white;
+				padding: 5px 15px;
+				border-radius: 4px;
+				font-size: 14px;
+				font-weight: 600;
+				margin-left: 10px;
+			}
+			.saw-version-info-box,
+			.saw-version-reset-box,
+			.saw-version-history-box {
+				background: #fff;
+				border: 1px solid #c3c4c7;
+				border-radius: 4px;
+				padding: 20px;
+				margin-bottom: 20px;
+			}
+			.saw-version-info-box h2,
+			.saw-version-reset-box h2,
+			.saw-version-history-box h2 {
+				margin-top: 0;
+				padding-bottom: 10px;
+				border-bottom: 2px solid #2271b1;
+			}
+			.version-display {
+				display: flex;
+				align-items: center;
+				gap: 30px;
+				margin: 20px 0;
+			}
+			.version-number {
+				font-size: 72px;
+				font-weight: 700;
+				color: #2271b1;
+			}
+			.version-meta p {
+				margin: 5px 0;
+			}
+			.version-stats {
+				display: flex;
+				gap: 20px;
+				margin-top: 20px;
+			}
+			.stat-box {
+				flex: 1;
+				background: #f0f0f1;
+				padding: 20px;
+				border-radius: 4px;
+				text-align: center;
+			}
+			.stat-value {
+				font-size: 48px;
+				font-weight: 700;
+				color: #2271b1;
+				margin-bottom: 10px;
+			}
+			.stat-value.stat-success {
+				color: #00a32a;
+			}
+			.stat-value.stat-warning {
+				color: #dba617;
+			}
+			.stat-label {
+				font-size: 14px;
+				color: #646970;
+				text-transform: uppercase;
+				font-weight: 600;
+			}
+			.reset-warning {
+				background: #fff3cd;
+				border-left: 4px solid #dba617;
+				padding: 15px;
+				margin: 20px 0;
+			}
+			.reset-warning h3 {
+				margin-top: 0;
+				color: #856404;
+			}
+			.reset-warning ul {
+				margin-left: 20px;
+			}
+		</style>
 		<?php
+	}
+
+	/**
+	 * Render notices
+	 */
+	private static function render_notices() {
+		if ( isset( $_GET['reset_success'] ) ) {
+			?>
+			<div class="notice notice-success is-dismissible">
+				<p><strong>✅ Verze školení byla úspěšně resetována!</strong> Návštěvníci budou informováni emailem.</p>
+			</div>
+			<?php
+		}
+
+		if ( isset( $_GET['error'] ) ) {
+			?>
+			<div class="notice notice-error is-dismissible">
+				<p><strong>❌ Chyba:</strong> <?php echo esc_html( urldecode( $_GET['error'] ) ); ?></p>
+			</div>
+			<?php
+		}
+	}
+
+	/**
+	 * Render no customer selected
+	 */
+	private static function render_no_customer_selected() {
+		?>
+		<div class="wrap">
+			<h1>Verze školení</h1>
+			<div class="notice notice-warning">
+				<p><strong>⚠️ Nejprve vyberte zákazníka</strong> z dropdownu v horní liště.</p>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Reset training version
+	 */
+	private static function reset_training_version( $customer_id ) {
+		global $wpdb;
+
+		try {
+			// Validace
+			if ( empty( $_POST['reset_reason'] ) ) {
+				return array(
+					'success' => false,
+					'message' => 'Důvod resetu je povinný.',
+				);
+			}
+
+			$reason = sanitize_textarea_field( $_POST['reset_reason'] );
+
+			// Získat aktuální verzi
+			$training_config = $wpdb->get_row( $wpdb->prepare(
+				"SELECT * FROM {$wpdb->prefix}saw_training_config WHERE customer_id = %d",
+				$customer_id
+			) );
+
+			if ( ! $training_config ) {
+				return array(
+					'success' => false,
+					'message' => 'Training config nenalezen.',
+				);
+			}
+
+			$old_version = $training_config->current_version;
+			$new_version = $old_version + 1;
+
+			// Aktualizovat verzi
+			$wpdb->update(
+				$wpdb->prefix . 'saw_training_config',
+				array(
+					'current_version'     => $new_version,
+					'last_reset_reason'   => $reason,
+					'last_reset_at'       => current_time( 'mysql' ),
+					'updated_at'          => current_time( 'mysql' ),
+				),
+				array( 'customer_id' => $customer_id ),
+				array( '%d', '%s', '%s', '%s' ),
+				array( '%d' )
+			);
+
+			// Zaznamenat do historie (audit log)
+			$admin = wp_get_current_user();
+			SAW_Audit::log( array(
+				'action'      => 'training_version_reset',
+				'customer_id' => $customer_id,
+				'details'     => sprintf(
+					'Version reset from v%d to v%d by %s. Reason: %s',
+					$old_version,
+					$new_version,
+					$admin->display_name,
+					$reason
+				),
+			) );
+
+			// Získat všechny návštěvníky se starou verzí
+			$visitors = $wpdb->get_results( $wpdb->prepare(
+				"SELECT DISTINCT v.id, v.email, v.first_name, v.last_name
+				FROM {$wpdb->prefix}saw_visitors v
+				WHERE v.customer_id = %d 
+				AND v.training_completed = 1
+				AND v.training_version < %d
+				AND v.email IS NOT NULL
+				AND v.email != ''",
+				$customer_id,
+				$new_version
+			) );
+
+			// Odeslat notifikační emaily (přes email queue)
+			foreach ( $visitors as $visitor ) {
+				self::queue_version_notification_email( $visitor, $customer_id, $new_version, $reason );
+			}
+
+			return array( 'success' => true );
+
+		} catch ( Exception $e ) {
+			return array(
+				'success' => false,
+				'message' => 'Chyba při resetování verze: ' . $e->getMessage(),
+			);
+		}
+	}
+
+	/**
+	 * Queue version notification email
+	 */
+	private static function queue_version_notification_email( $visitor, $customer_id, $new_version, $reason ) {
+		global $wpdb;
+
+		$customer = self::get_customer( $customer_id );
+
+		$subject = sprintf( '[%s] Nová verze školení pro návštěvníky', $customer->name );
+		
+		$message = sprintf(
+			"Dobrý den %s,\n\n" .
+			"informujeme Vás, že došlo k aktualizaci školení pro návštěvníky společnosti %s.\n\n" .
+			"Nová verze: v%d\n" .
+			"Důvod aktualizace: %s\n\n" .
+			"Při Vaší příští návštěvě budete muset projít aktualizovaným školením.\n\n" .
+			"S pozdravem,\n%s",
+			$visitor->first_name . ' ' . $visitor->last_name,
+			$customer->name,
+			$new_version,
+			$reason,
+			$customer->name
+		);
+
+		$wpdb->insert(
+			$wpdb->prefix . 'saw_email_queue',
+			array(
+				'customer_id' => $customer_id,
+				'to_email'    => $visitor->email,
+				'subject'     => $subject,
+				'body'        => $message,
+				'status'      => 'pending',
+				'priority'    => 'low',
+				'created_at'  => current_time( 'mysql' ),
+			),
+			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s' )
+		);
 	}
 
 	/**
@@ -164,9 +419,19 @@ class SAW_Admin_Training_Version {
 	 */
 	private static function get_training_config( $customer_id ) {
 		global $wpdb;
-		
 		return $wpdb->get_row( $wpdb->prepare(
 			"SELECT * FROM {$wpdb->prefix}saw_training_config WHERE customer_id = %d",
+			$customer_id
+		) );
+	}
+
+	/**
+	 * Get customer
+	 */
+	private static function get_customer( $customer_id ) {
+		global $wpdb;
+		return $wpdb->get_row( $wpdb->prepare(
+			"SELECT * FROM {$wpdb->prefix}saw_customers WHERE id = %d",
 			$customer_id
 		) );
 	}
@@ -176,96 +441,63 @@ class SAW_Admin_Training_Version {
 	 */
 	private static function get_version_history( $customer_id ) {
 		global $wpdb;
-		
 		return $wpdb->get_results( $wpdb->prepare(
-			"SELECT * FROM {$wpdb->prefix}saw_audit_log 
-			WHERE customer_id = %d 
-			AND event_type IN ('training_version_reset', 'department_version_reset')
-			ORDER BY created_at DESC
+			"SELECT 
+				a.details,
+				a.created_at,
+				u.display_name as admin_name,
+				SUBSTRING_INDEX(SUBSTRING_INDEX(a.details, 'v', -2), ' ', 1) as version,
+				SUBSTRING_INDEX(SUBSTRING_INDEX(a.details, 'Reason: ', -1), '', 1) as reason
+			FROM {$wpdb->prefix}saw_audit_log a
+			LEFT JOIN {$wpdb->users} u ON a.admin_user_id = u.ID
+			WHERE a.customer_id = %d 
+			AND a.action = 'training_version_reset'
+			ORDER BY a.created_at DESC
 			LIMIT 20",
 			$customer_id
 		) );
 	}
 
 	/**
-	 * Reset training version
+	 * Get version statistics
 	 */
-	private static function reset_version( $customer_id ) {
+	private static function get_version_stats( $customer_id, $current_version ) {
 		global $wpdb;
-		
-		$reason = sanitize_textarea_field( $_POST['reason'] );
-		
-		// Increase version
-		$wpdb->query( $wpdb->prepare(
-			"UPDATE {$wpdb->prefix}saw_training_config
-			SET training_version = training_version + 1,
-				version_updated_at = %s,
-				version_reset_reason = %s
-			WHERE customer_id = %d",
-			current_time( 'mysql' ),
-			$reason,
-			$customer_id
-		) );
-		
-		// Get new version
-		$new_version = $wpdb->get_var( $wpdb->prepare(
-			"SELECT training_version FROM {$wpdb->prefix}saw_training_config WHERE customer_id = %d",
-			$customer_id
-		) );
-		
-		// Log audit
-		SAW_Audit::log( array(
-			'action'      => 'training_version_reset',
-			'customer_id' => $customer_id,
-			'details'     => "Training version reset to v{$new_version}. Reason: {$reason}",
-			'severity'    => 'important',
-		) );
-		
-		// Send email notifications
-		self::send_version_reset_notifications( $customer_id, $new_version, $reason );
-	}
 
-	/**
-	 * Send email notifications to admins/managers
-	 */
-	private static function send_version_reset_notifications( $customer_id, $new_version, $reason ) {
-		global $wpdb;
-		
-		$customer = $wpdb->get_row( $wpdb->prepare(
-			"SELECT name FROM {$wpdb->prefix}saw_customers WHERE id = %d",
+		$total_visitors = $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(*) FROM {$wpdb->prefix}saw_visitors 
+			WHERE customer_id = %d AND training_completed = 1",
 			$customer_id
 		) );
-		
-		$users = $wpdb->get_results( $wpdb->prepare(
-			"SELECT email, first_name, last_name FROM {$wpdb->prefix}saw_users 
-			WHERE customer_id = %d AND role IN ('admin', 'manager')",
-			$customer_id
+
+		$current_version_visitors = $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(*) FROM {$wpdb->prefix}saw_visitors 
+			WHERE customer_id = %d AND training_completed = 1 AND training_version = %d",
+			$customer_id,
+			$current_version
 		) );
-		
-		$subject = sprintf( '[SAW Visitors] Nová verze školení - %s', $customer->name );
-		
-		$message = sprintf(
-			"Dobrý den,\n\n" .
-			"byla vytvořena nová verze školení pro zákazníka: %s\n\n" .
-			"Nová verze: v%d\n" .
-			"Důvod: %s\n\n" .
-			"Všichni návštěvníci budou muset absolvovat školení znovu.\n\n" .
-			"S pozdravem,\n" .
-			"SAW Visitors",
-			$customer->name,
-			$new_version,
-			$reason
+
+		$outdated_visitors = $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(*) FROM {$wpdb->prefix}saw_visitors 
+			WHERE customer_id = %d AND training_completed = 1 AND training_version < %d",
+			$customer_id,
+			$current_version
+		) );
+
+		return (object) array(
+			'total_visitors'           => $total_visitors,
+			'current_version_visitors' => $current_version_visitors,
+			'outdated_visitors'        => $outdated_visitors,
 		);
-		
-		foreach ( $users as $user ) {
-			wp_mail( $user->email, $subject, $message );
-		}
 	}
 
 	/**
-	 * Get selected customer from session
+	 * Get selected customer ID
 	 */
 	private static function get_selected_customer() {
+		if ( ! session_id() ) {
+			session_start();
+		}
 		return isset( $_SESSION['saw_selected_customer_id'] ) ? intval( $_SESSION['saw_selected_customer_id'] ) : 0;
 	}
 }
