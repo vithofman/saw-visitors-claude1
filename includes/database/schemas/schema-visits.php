@@ -1,37 +1,34 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
-}
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 function saw_get_schema_visits( $table_name, $prefix, $charset_collate ) {
-	$visitors_table = $prefix . 'visitors';
 	$customers_table = $prefix . 'customers';
+	$visitors_table = $prefix . 'visitors';
 	$users_table = $prefix . 'users';
 	
 	return "CREATE TABLE {$table_name} (
-		id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-		visitor_id bigint(20) UNSIGNED NOT NULL,
-		customer_id bigint(20) UNSIGNED NOT NULL,
-		check_in_time datetime DEFAULT NULL,
-		check_out_time datetime DEFAULT NULL,
-		check_in_by bigint(20) UNSIGNED DEFAULT NULL,
-		check_in_method enum('terminal','admin','auto') DEFAULT 'terminal',
-		check_in_notes text DEFAULT NULL,
-		check_out_by bigint(20) UNSIGNED DEFAULT NULL,
-		check_out_method enum('terminal','admin','auto','bulk') DEFAULT 'terminal',
-		check_out_notes text DEFAULT NULL,
-		duration_minutes int(11) UNSIGNED DEFAULT NULL,
-		created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-		updated_at datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+		id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+		customer_id BIGINT(20) UNSIGNED NOT NULL,
+		visitor_id BIGINT(20) UNSIGNED NOT NULL,
+		check_in_time DATETIME DEFAULT NULL,
+		check_out_time DATETIME DEFAULT NULL,
+		check_in_by BIGINT(20) UNSIGNED DEFAULT NULL,
+		check_in_method ENUM('terminal', 'admin', 'auto') DEFAULT 'terminal',
+		check_in_notes TEXT DEFAULT NULL,
+		check_out_by BIGINT(20) UNSIGNED DEFAULT NULL,
+		check_out_method ENUM('terminal', 'admin', 'auto', 'bulk') DEFAULT 'terminal',
+		check_out_notes TEXT DEFAULT NULL,
+		duration_minutes INT UNSIGNED DEFAULT NULL,
+		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
 		PRIMARY KEY (id),
-		KEY idx_visitor (visitor_id),
 		KEY idx_customer (customer_id),
-		KEY idx_check_in (check_in_time),
-		KEY idx_check_out (check_out_time),
-		KEY idx_active (customer_id, check_in_time, check_out_time),
-		KEY fk_visit_visitor (visitor_id),
-		KEY fk_visit_customer (customer_id),
-		KEY fk_visit_checkin_by (check_in_by),
-		KEY fk_visit_checkout_by (check_out_by)
-	) {$charset_collate};";
+		KEY idx_visitor (visitor_id),
+		KEY idx_checkin (customer_id, check_in_time),
+		KEY idx_checkout (customer_id, check_out_time),
+		CONSTRAINT fk_visit_customer FOREIGN KEY (customer_id) REFERENCES {$customers_table}(id) ON DELETE CASCADE,
+		CONSTRAINT fk_visit_visitor FOREIGN KEY (visitor_id) REFERENCES {$visitors_table}(id) ON DELETE CASCADE,
+		CONSTRAINT fk_visit_checkinby FOREIGN KEY (check_in_by) REFERENCES {$users_table}(id) ON DELETE SET NULL,
+		CONSTRAINT fk_visit_checkoutby FOREIGN KEY (check_out_by) REFERENCES {$users_table}(id) ON DELETE SET NULL
+	) {$charset_collate} COMMENT='Check-in/out záznamy';";
 }

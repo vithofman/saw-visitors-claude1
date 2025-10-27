@@ -1,0 +1,320 @@
+<?php
+/**
+ * SAW Database Helper
+ * 
+ * Utility třída pro práci s databází SAW Visitors v4.6.1
+ * 
+ * @package SAW_Visitors
+ * @version 4.6.1
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+class SAW_DB_Helper {
+	
+	/**
+	 * Seznam všech tabulek v pořadí závislostí
+	 */
+	public static function get_tables_order() {
+		return array(
+			// Core
+			'customers',
+			'customer_api_keys',
+			'users',
+			'training_config',
+			
+			// POI System
+			'beacons',
+			'pois',
+			'routes',
+			'route_pois',
+			'poi_content',
+			'poi_media',
+			'poi_pdfs',
+			'poi_risks',
+			'poi_additional_info',
+			
+			// Departments
+			'departments',
+			'user_departments',
+			'department_materials',
+			'department_documents',
+			'contact_persons',
+			
+			// Visitor Management
+			'companies',
+			'invitations',
+			'invitation_departments',
+			'uploaded_docs',
+			'visitors',
+			'visits',
+			'materials',
+			'documents',
+			
+			// System
+			'audit_log',
+			'error_log',
+			'sessions',
+			'password_resets',
+			'rate_limits',
+			'email_queue',
+		);
+	}
+	
+	/**
+	 * Získání plného názvu tabulky
+	 * 
+	 * @param string $table_name Název tabulky bez prefixu (např. 'pois')
+	 * @return string Plný název s prefixem (např. 'wp_saw_pois')
+	 */
+	public static function get_table_name( $table_name ) {
+		global $wpdb;
+		return $wpdb->prefix . 'saw_' . $table_name;
+	}
+	
+	/**
+	 * Kontrola existence tabulky
+	 * 
+	 * @param string $table_name Název tabulky bez prefixu
+	 * @return bool
+	 */
+	public static function table_exists( $table_name ) {
+		global $wpdb;
+		$full_name = self::get_table_name( $table_name );
+		$result = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $full_name ) );
+		return $result === $full_name;
+	}
+	
+	/**
+	 * Získání všech jazyků použitých v systému pro zákazníka
+	 * 
+	 * @param int $customer_id
+	 * @return array ['cs', 'en', 'de', ...]
+	 */
+	public static function get_customer_languages( $customer_id ) {
+		global $wpdb;
+		
+		$languages = array();
+		
+		// POI content
+		$poi_langs = $wpdb->get_col( $wpdb->prepare(
+			"SELECT DISTINCT language FROM " . self::get_table_name('poi_content') . " WHERE customer_id = %d",
+			$customer_id
+		) );
+		
+		// Materials
+		$mat_langs = $wpdb->get_col( $wpdb->prepare(
+			"SELECT DISTINCT language FROM " . self::get_table_name('materials') . " WHERE customer_id = %d",
+			$customer_id
+		) );
+		
+		// Sloučit a deduplikovat
+		$languages = array_unique( array_merge( $poi_langs, $mat_langs ) );
+		
+		return $languages;
+	}
+	
+	/**
+	 * Bezpečné vložení POI content
+	 * 
+	 * Příklad použití dynamických jazyků
+	 * 
+	 * @param array $data
+	 * @return int|false ID vloženého záznamu nebo false
+	 */
+	public static function insert_poi_content( $data ) {
+		global $wpdb;
+		
+		// Validace povinných polí
+		$required = array( 'customer_id', 'poi_id', 'language', 'title' );
+		foreach ( $required as $field ) {
+			if ( empty( $data[ $field ] ) ) {
+				return false;
+			}
+		}
+		
+		// Ověření, že kombinace poi_id + language neexistuje
+		$exists = $wpdb->get_var( $wpdb->prepare(
+			"SELECT id FROM " . self::get_table_name('poi_content') . " 
+			WHERE customer_id = %d AND poi_id = %d AND language = %s",
+			$data['customer_id'],
+			$data['poi_id'],
+			$data['language']
+		) );
+		
+		if ( $exists ) {
+			// Update místo insert
+			return self::update_poi_content( $exists, $data );
+		}
+		
+		// Insert
+		$result = $wpdb->insert(
+			self::get_table_name('poi_content'),
+			array(
+				'customer_id'          => $data['customer_id'],
+				'poi_id'               => $data['poi_id'],
+				'language'             => $data['language'],
+				'title'                => $data['title'],
+				'subtitle'             => $data['subtitle'] ?? null,
+				'description'          => $data['description'] ?? null,
+				'safety_instructions'  => $data['safety_instructions'] ?? null,
+				'interesting_facts'    => $data['interesting_facts'] ?? null,
+				'technical_specs'      => $data['technical_specs'] ?? null,
+				'meta_description'     => $data['meta_description'] ?? null,
+				'is_published'         => $data['is_published'] ?? 1,
+			),
+			array(
+				'%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d'
+			)
+		);
+		
+		return $result ? $wpdb->insert_id : false;
+	}
+	
+	/**
+	 * Update POI content
+	 */
+	public static function update_poi_content( $id, $data ) {
+		global $wpdb;
+		
+		$update_data = array();
+		$formats = array();
+		
+		// Mapování povolených polí
+		$allowed_fields = array(
+			'title'               => '%s',
+			'subtitle'            => '%s',
+			'description'         => '%s',
+			'safety_instructions' => '%s',
+			'interesting_facts'   => '%s',
+			'technical_specs'     => '%s',
+			'meta_description'    => '%s',
+			'is_published'        => '%d',
+		);
+		
+		foreach ( $allowed_fields as $field => $format ) {
+			if ( isset( $data[ $field ] ) ) {
+				$update_data[ $field ] = $data[ $field ];
+				$formats[] = $format;
+			}
+		}
+		
+		if ( empty( $update_data ) ) {
+			return false;
+		}
+		
+		return $wpdb->update(
+			self::get_table_name('poi_content'),
+			$update_data,
+			array( 'id' => $id ),
+			$formats,
+			array( '%d' )
+		);
+	}
+	
+	/**
+	 * Získání POI content podle jazyka
+	 * 
+	 * @param int $poi_id
+	 * @param string $language ISO kód (např. 'cs')
+	 * @param int $customer_id
+	 * @return object|null
+	 */
+	public static function get_poi_content( $poi_id, $language, $customer_id ) {
+		global $wpdb;
+		
+		return $wpdb->get_row( $wpdb->prepare(
+			"SELECT * FROM " . self::get_table_name('poi_content') . " 
+			WHERE customer_id = %d AND poi_id = %d AND language = %s AND is_published = 1",
+			$customer_id,
+			$poi_id,
+			$language
+		) );
+	}
+	
+	/**
+	 * Získání všech překladů pro POI
+	 * 
+	 * @param int $poi_id
+	 * @param int $customer_id
+	 * @return array Asociativní pole: ['cs' => object, 'en' => object, ...]
+	 */
+	public static function get_poi_translations( $poi_id, $customer_id ) {
+		global $wpdb;
+		
+		$results = $wpdb->get_results( $wpdb->prepare(
+			"SELECT * FROM " . self::get_table_name('poi_content') . " 
+			WHERE customer_id = %d AND poi_id = %d AND is_published = 1 
+			ORDER BY language",
+			$customer_id,
+			$poi_id
+		) );
+		
+		$translations = array();
+		foreach ( $results as $row ) {
+			$translations[ $row->language ] = $row;
+		}
+		
+		return $translations;
+	}
+	
+	/**
+	 * Kontrola customer izolace
+	 * 
+	 * KRITICKÉ: Vždy kontroluj customer_id před smazáním/úpravou!
+	 * 
+	 * @param string $table_name
+	 * @param int $id
+	 * @param int $customer_id
+	 * @return bool
+	 */
+	public static function verify_customer_access( $table_name, $id, $customer_id ) {
+		global $wpdb;
+		
+		$result = $wpdb->get_var( $wpdb->prepare(
+			"SELECT customer_id FROM " . self::get_table_name( $table_name ) . " WHERE id = %d",
+			$id
+		) );
+		
+		return (int) $result === (int) $customer_id;
+	}
+	
+	/**
+	 * Smazání s kontrolou customer_id
+	 * 
+	 * Bezpečné mazání - zamezuje cross-customer data leak
+	 * 
+	 * @param string $table_name
+	 * @param int $id
+	 * @param int $customer_id
+	 * @return bool
+	 */
+	public static function safe_delete( $table_name, $id, $customer_id ) {
+		global $wpdb;
+		
+		// Nejdříve ověř přístup
+		if ( ! self::verify_customer_access( $table_name, $id, $customer_id ) ) {
+			return false;
+		}
+		
+		// Pak smaž
+		return $wpdb->delete(
+			self::get_table_name( $table_name ),
+			array(
+				'id'          => $id,
+				'customer_id' => $customer_id,
+			),
+			array( '%d', '%d' )
+		) !== false;
+	}
+	
+	/**
+	 * Debug: Výpis struktury tabulky
+	 */
+	public static function describe_table( $table_name ) {
+		global $wpdb;
+		return $wpdb->get_results( "DESCRIBE " . self::get_table_name( $table_name ) );
+	}
+}

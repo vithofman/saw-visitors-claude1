@@ -1,24 +1,30 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
-}
+/**
+ * Schema: saw_contact_persons
+ * Kontaktní osoby zákazníka
+ * @version 4.6.1
+ */
+
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 function saw_get_schema_contact_persons( $table_name, $prefix, $charset_collate ) {
-	$departments_table = $prefix . 'departments';
+	$customers_table = $prefix . 'customers';
 	
 	return "CREATE TABLE {$table_name} (
-		id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-		department_id bigint(20) UNSIGNED NOT NULL,
-		name varchar(255) NOT NULL,
-		phone varchar(50) DEFAULT NULL,
-		email varchar(255) DEFAULT NULL,
-		position varchar(100) DEFAULT NULL,
-		is_active tinyint(1) NOT NULL DEFAULT 1,
-		display_order int(11) NOT NULL DEFAULT 0,
-		created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+		customer_id BIGINT(20) UNSIGNED NOT NULL,
+		first_name VARCHAR(100) NOT NULL,
+		last_name VARCHAR(100) NOT NULL,
+		position VARCHAR(100) DEFAULT NULL,
+		email VARCHAR(255) DEFAULT NULL,
+		phone VARCHAR(50) DEFAULT NULL,
+		display_order INT DEFAULT 0,
+		is_visible TINYINT(1) DEFAULT 1,
+		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
 		PRIMARY KEY (id),
-		KEY idx_department (department_id),
-		KEY idx_order (display_order),
-		KEY fk_contact_dept (department_id)
-	) {$charset_collate};";
+		KEY idx_customer (customer_id),
+		KEY idx_visible (customer_id, is_visible),
+		CONSTRAINT fk_contact_customer FOREIGN KEY (customer_id) REFERENCES {$customers_table}(id) ON DELETE CASCADE
+	) {$charset_collate} COMMENT='Kontaktní osoby zákazníka';";
 }
