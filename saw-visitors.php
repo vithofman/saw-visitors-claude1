@@ -14,9 +14,9 @@
  * Requires PHP: 8.1
  */
 
-// Zabránít přímému přístupu k souboru
+// Zabránit přímému přístupu k souboru
 if ( ! defined( 'ABSPATH' ) ) {
-	exit; // Exit if accessed directly
+	exit;
 }
 
 /**

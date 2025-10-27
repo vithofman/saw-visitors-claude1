@@ -183,15 +183,6 @@ class SAW_Visitors {
 			$this->version, 
 			'all' 
 		);
-
-		// 🆕 TODO: Frontend app CSS (až vytvoříme)
-		// wp_enqueue_style( 
-		// 	$this->plugin_name . '-app', 
-		// 	SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-app.css', 
-		// 	array(), 
-		// 	$this->version, 
-		// 	'all' 
-		// );
 	}
 
 	/**
@@ -210,53 +201,5 @@ class SAW_Visitors {
 			$this->version, 
 			false 
 		);
-
-		// 🆕 TODO: Frontend app JS (až vytvoříme)
-		// wp_enqueue_script( 
-		// 	$this->plugin_name . '-app', 
-		// 	SAW_VISITORS_PLUGIN_URL . 'assets/js/saw-app.js', 
-		// 	array( 'jquery' ), 
-		// 	$this->version, 
-		// 	false 
-		// );
 	}
 }
-
-/**
- * ========================================
- * CO BYLO ODSTRANĚNO Z TÉTO TŘÍDY:
- * ========================================
- * 
- * ❌ add_admin_bar_menu() - Customer dropdown v admin baru
- * ❌ define_admin_hooks() - WP Admin enqueue
- * ❌ enqueue_admin_styles() - WP Admin CSS
- * ❌ enqueue_admin_scripts() - WP Admin JS
- * ❌ admin_menu() - Registrace WP Admin menu
- * ❌ display_dashboard() - WP Admin dashboard stránka
- * ❌ display_about() - WP Admin about stránka
- * 
- * ========================================
- * DŮVOD:
- * ========================================
- * 
- * Všechny tyto funkce sloužily pro WordPress Admin menu.
- * Nyní vytváříme vlastní frontend aplikaci, takže je nepotřebujeme.
- * 
- * ✅ ZACHOVÁNO:
- * - Router (custom URLs)
- * - Auth (session management)
- * - Database (schema)
- * - Public flow (visitor checkin)
- * - Audit logging
- * 
- * ========================================
- * NOVÉ KOMPONENTY (přidáme v dalších krocích):
- * ========================================
- * 
- * 🆕 SAW_App_Layout - Hlavní layout manager
- * 🆕 SAW_App_Header - Header komponenta
- * 🆕 SAW_App_Sidebar - Sidebar menu
- * 🆕 SAW_App_Footer - Footer komponenta
- * 🆕 SAW_Permissions - Role-based permissions
- * 🆕 Controllers pro každou stránku (Dashboard, Invitations, atd.)
- */
