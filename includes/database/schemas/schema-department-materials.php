@@ -1,5 +1,4 @@
 <?php
-
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -10,7 +9,7 @@ function saw_get_schema_department_materials( $table_name, $prefix, $charset_col
 	return "CREATE TABLE {$table_name} (
 		id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
 		department_id bigint(20) UNSIGNED NOT NULL,
-		title varchar(255) NOT NULL,
+		title varchar(255) NOT NULL DEFAULT '',
 		content_cs longtext DEFAULT NULL,
 		content_en longtext DEFAULT NULL,
 		content_de longtext DEFAULT NULL,
@@ -25,6 +24,7 @@ function saw_get_schema_department_materials( $table_name, $prefix, $charset_col
 		PRIMARY KEY (id),
 		KEY idx_department (department_id),
 		KEY idx_order (display_order),
-		KEY fk_deptmat_dept (department_id)
+		KEY fk_deptmat_dept (department_id),
+		CONSTRAINT fk_deptmat_dept FOREIGN KEY (department_id) REFERENCES {$departments_table}(id) ON DELETE CASCADE
 	) {$charset_collate};";
 }

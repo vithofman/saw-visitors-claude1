@@ -1,982 +1,1152 @@
 <?php
-// /wp-content/plugins/saw-visitors/includes/admin/class-saw-admin-content.php
+/**
+ * Super Admin - Content Management (Phase 5 - UPDATED v4.6.1)
+ * 
+ * Spravuje školící materiály (video, PDF, WYSIWYG + dokumenty) pro vybraného zákazníka
+ * - Jazykové záložky nahoře
+ * - Sbalitelné sekce (accordion)
+ * - Dokumenty přímo pod každou sekcí s kategorií
+ * - Vylepšené stylování upload sekce
+ * 
+ * @package    SAW_Visitors
+ * @subpackage SAW_Visitors/admin
+ * @since      4.6.1
+ */
 
 if ( ! defined( 'ABSPATH' ) ) {
-    exit;
+	exit;
 }
 
 class SAW_Admin_Content {
 
-    public static function render_page() {
-        global $wpdb;
-
-        if ( ! current_user_can( 'manage_options' ) ) {
-            wp_die( 'Nemáte oprávnění k této stránce.' );
-        }
-
-        if ( ! isset( $_SESSION['saw_selected_customer_id'] ) ) {
-            echo '<div class="wrap"><h1>Správa obsahu</h1>';
-            echo '<div class="notice notice-warning"><p>Nejprve vyberte zákazníka v horní liště.</p></div></div>';
-            return;
-        }
-
-        $customer_id = intval( $_SESSION['saw_selected_customer_id'] );
-        $customer = $wpdb->get_row( $wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_customers WHERE id = %d",
-            $customer_id
-        ) );
-
-        if ( ! $customer ) {
-            wp_die( 'Zákazník nenalezen.' );
-        }
-
-        self::enqueue_styles_scripts();
-
-        if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['saw_content_nonce'] ) ) {
-            self::handle_save( $customer_id );
-        }
-
-        $languages = array(
-            'cs' => 'Čeština',
-            'en' => 'English',
-            'de' => 'Deutsch',
-            'uk' => 'Українська'
-        );
-
-        $departments = $wpdb->get_results( $wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_departments WHERE customer_id = %d ORDER BY name ASC",
-            $customer_id
-        ) );
-
-        ?>
-        <div class="wrap saw-content-wrapper">
-            <h1>
-                Správa obsahu
-                <span class="saw-customer-badge"><?php echo esc_html( $customer->name ); ?></span>
-            </h1>
-
-            <?php if ( isset( $_GET['saved'] ) && $_GET['saved'] === '1' ) : ?>
-                <div class="saw-success-message">
-                    ✓ Obsah byl úspěšně uložen!
-                </div>
-            <?php endif; ?>
-
-            <form method="post" enctype="multipart/form-data">
-                <?php wp_nonce_field( 'saw_save_content', 'saw_content_nonce' ); ?>
-
-                <div class="saw-language-tabs">
-                    <?php foreach ( $languages as $lang_code => $lang_name ) : ?>
-                        <button type="button" class="saw-language-tab <?php echo $lang_code === 'cs' ? 'active' : ''; ?>" data-lang="<?php echo esc_attr( $lang_code ); ?>">
-                            <?php echo esc_html( $lang_name ); ?>
-                        </button>
-                    <?php endforeach; ?>
-                </div>
-
-                <?php foreach ( $languages as $lang_code => $lang_name ) : ?>
-                    <div class="saw-language-content" data-lang-content="<?php echo esc_attr( $lang_code ); ?>" style="<?php echo $lang_code !== 'cs' ? 'display:none;' : ''; ?>">
-                        
-                        <div class="saw-accordion">
-
-                            <?php self::render_video_section( $customer_id, $lang_code ); ?>
-
-                            <?php self::render_pdf_map_section( $customer_id, $lang_code ); ?>
-
-                            <?php self::render_risks_section( $customer_id, $lang_code ); ?>
-
-                            <?php self::render_additional_info_section( $customer_id, $lang_code ); ?>
-
-                            <?php self::render_department_specific_section( $customer_id, $lang_code, $departments ); ?>
-
-                        </div>
-
-                    </div>
-                <?php endforeach; ?>
-
-                <p style="margin-top: 30px;">
-                    <button type="submit" class="button-primary saw-save-btn">Uložit vše</button>
-                </p>
-            </form>
-        </div>
-
-        <script>
-        jQuery(document).ready(function($) {
-            $('.saw-language-tab').on('click', function() {
-                var lang = $(this).data('lang');
-                $('.saw-language-tab').removeClass('active');
-                $(this).addClass('active');
-                $('.saw-language-content').hide();
-                $('[data-lang-content="' + lang + '"]').show();
-            });
-
-            $('.saw-accordion-header').on('click', function() {
-                var $item = $(this).closest('.saw-accordion-item');
-                var $content = $item.find('.saw-accordion-content');
-                
-                if ($item.hasClass('active')) {
-                    $item.removeClass('active');
-                    $content.slideUp(300);
-                } else {
-                    $('.saw-accordion-item').removeClass('active');
-                    $('.saw-accordion-content').slideUp(300);
-                    $item.addClass('active');
-                    $content.slideDown(300);
-                }
-            });
-
-            $('.saw-file-upload-area').on('click', function() {
-                $(this).find('input[type="file"]').click();
-            });
-
-            $('input[type="file"]').on('change', function() {
-                var fileName = $(this).val().split('\\').pop();
-                var $area = $(this).closest('.saw-file-upload-area');
-                if (fileName) {
-                    $area.addClass('has-file');
-                    $area.find('.saw-upload-text').text('Soubor vybrán: ' + fileName);
-                }
-            });
-
-            $('.saw-add-document-btn').on('click', function(e) {
-                e.preventDefault();
-                var $container = $(this).closest('.saw-documents-upload').find('.saw-documents-list');
-                var lang = $(this).closest('[data-lang-content]').data('lang-content');
-                var section = $(this).data('section');
-                var rowIndex = $container.find('.saw-document-row').length;
-                
-                var rowHtml = `
-                    <div class="saw-document-row">
-                        <div class="saw-doc-upload-wrapper">
-                            <label class="saw-doc-upload-btn">
-                                <span>📎</span>
-                                <span>Vybrat soubor</span>
-                                <input type="file" class="saw-file-input-hidden" name="doc_file_${section}_${lang}_${rowIndex}" accept=".pdf,.doc,.docx,.xls,.xlsx">
-                            </label>
-                        </div>
-                        <select name="doc_category_${section}_${lang}_${rowIndex}" class="saw-doc-category-select">
-                            <option value="">-- Vyberte kategorii --</option>
-                            <option value="emergency">Mimořádné situace</option>
-                            <option value="fire">Požární ochrana</option>
-                            <option value="safety">Bezpečnost práce</option>
-                            <option value="hygiene">Hygiena</option>
-                            <option value="environment">Životní prostředí</option>
-                            <option value="security">Bezpečnost</option>
-                            <option value="other">Ostatní</option>
-                        </select>
-                        <button type="button" class="saw-doc-remove-btn">🗑</button>
-                    </div>
-                `;
-                
-                $container.append(rowHtml);
-            });
-
-            $(document).on('click', '.saw-doc-remove-btn', function(e) {
-                e.preventDefault();
-                $(this).closest('.saw-document-row').remove();
-            });
-
-            $(document).on('change', 'input[type="file"]', function() {
-                var fileName = $(this).val().split('\\').pop();
-                var $btn = $(this).closest('.saw-doc-upload-btn');
-                if (fileName) {
-                    $btn.find('span:last').text(fileName);
-                }
-            });
-
-            $('.saw-add-department-btn').on('click', function(e) {
-                e.preventDefault();
-                var $select = $(this).siblings('.saw-department-select');
-                var deptId = $select.val();
-                var deptName = $select.find('option:selected').text();
-                var lang = $(this).closest('[data-lang-content]').data('lang-content');
-                var $container = $(this).closest('.saw-department-selector').siblings('.saw-departments-list');
-                
-                if (!deptId) {
-                    alert('Vyberte oddělení');
-                    return;
-                }
-                
-                var existingDept = $container.find('[data-dept-id="' + deptId + '"]');
-                if (existingDept.length > 0) {
-                    alert('Toto oddělení již bylo přidáno');
-                    return;
-                }
-                
-                var editorId = 'dept_wysiwyg_' + lang + '_' + deptId;
-                
-                var deptHtml = `
-                    <div class="saw-department-item" data-dept-id="${deptId}">
-                        <div class="saw-department-header">
-                            <h4 class="saw-department-name">${deptName}</h4>
-                            <button type="button" class="saw-remove-department-btn">Odstranit</button>
-                        </div>
-                        <div class="saw-content-section">
-                            <label class="saw-subsection-title">Specifické informace pro toto oddělení</label>
-                            <div class="saw-wysiwyg-wrapper">
-                                <textarea id="${editorId}" name="dept_wysiwyg_${lang}_${deptId}" class="saw-wysiwyg-editor" rows="8"></textarea>
-                            </div>
-                        </div>
-                        <div class="saw-content-section">
-                            <label class="saw-subsection-title">Dokumenty pro oddělení</label>
-                            <div class="saw-documents-upload">
-                                <div class="saw-documents-list"></div>
-                                <button type="button" class="saw-add-document-btn" data-section="dept_${deptId}">
-                                    <span>➕</span>
-                                    <span>Přidat dokument</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                
-                $container.append(deptHtml);
-                $container.find('.saw-no-departments-message').remove();
-                
-                if (typeof wp !== 'undefined' && wp.editor) {
-                    wp.editor.initialize(editorId, {
-                        tinymce: {
-                            wpautop: true,
-                            plugins: 'lists,link,textcolor',
-                            toolbar1: 'formatselect,bold,italic,underline,bullist,numlist,link,forecolor'
-                        },
-                        quicktags: true
-                    });
-                }
-                
-                $select.val('');
-            });
-
-            $(document).on('click', '.saw-remove-department-btn', function(e) {
-                e.preventDefault();
-                if (confirm('Opravdu chcete odstranit specifické informace tohoto oddělení?')) {
-                    var $item = $(this).closest('.saw-department-item');
-                    var editorId = $item.find('textarea').attr('id');
-                    
-                    if (typeof wp !== 'undefined' && wp.editor && editorId) {
-                        wp.editor.remove(editorId);
-                    }
-                    
-                    $item.remove();
-                }
-            });
-        });
-        </script>
-        <?php
-    }
-
-    private static function render_video_section( $customer_id, $lang_code ) {
-        global $wpdb;
-        
-        $material = $wpdb->get_row( $wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_materials WHERE customer_id = %d AND type = 'video' AND file_url LIKE CONCAT('%%', %s, '%%')",
-            $customer_id,
-            $lang_code
-        ) );
-
-        $video_url = '';
-        if ( $material && $material->file_url ) {
-            $urls = maybe_unserialize( $material->file_url );
-            if ( is_array( $urls ) && isset( $urls[ $lang_code ] ) ) {
-                $video_url = $urls[ $lang_code ];
-            } elseif ( ! is_array( $urls ) ) {
-                $video_url = $material->file_url;
-            }
-        }
-        ?>
-        <div class="saw-accordion-item">
-            <button type="button" class="saw-accordion-header">
-                <span>🎥 Hlavní instruktážní video</span>
-                <span class="accordion-icon">▼</span>
-            </button>
-            <div class="saw-accordion-content">
-                <div class="saw-content-section">
-                    <label class="saw-section-title">URL videa (YouTube nebo Vimeo)</label>
-                    <div class="saw-video-input-group">
-                        <input 
-                            type="url" 
-                            name="video_url_<?php echo esc_attr( $lang_code ); ?>" 
-                            class="saw-video-input" 
-                            value="<?php echo esc_attr( $video_url ); ?>"
-                            placeholder="https://www.youtube.com/watch?v=... nebo https://vimeo.com/..."
-                        >
-                    </div>
-                    <?php if ( $video_url ) : ?>
-                        <div class="saw-video-preview">
-                            <div class="saw-video-preview-info">
-                                <span class="saw-video-icon">🎬</span>
-                                <div>
-                                    <div style="font-weight: 600; margin-bottom: 4px;">Video uloženo</div>
-                                    <div class="saw-video-url-text"><?php echo esc_html( $video_url ); ?></div>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </div>
-        <?php
-    }
-
-    private static function render_pdf_map_section( $customer_id, $lang_code ) {
-        global $wpdb;
-        
-        $material = $wpdb->get_row( $wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_materials WHERE customer_id = %d AND type = 'pdf' AND file_url LIKE CONCAT('%%', %s, '%%')",
-            $customer_id,
-            $lang_code
-        ) );
-
-        $has_file = false;
-        $file_url = '';
-        if ( $material && $material->file_url ) {
-            $urls = maybe_unserialize( $material->file_url );
-            if ( is_array( $urls ) && isset( $urls[ $lang_code ] ) ) {
-                $has_file = true;
-                $file_url = $urls[ $lang_code ];
-            } elseif ( ! is_array( $urls ) ) {
-                $has_file = true;
-                $file_url = $material->file_url;
-            }
-        }
-        ?>
-        <div class="saw-accordion-item">
-            <button type="button" class="saw-accordion-header">
-                <span>🗺️ Schematický plán areálu / objektů</span>
-                <span class="accordion-icon">▼</span>
-            </button>
-            <div class="saw-accordion-content">
-                <div class="saw-content-section">
-                    <label class="saw-section-title">PDF soubor s mapou</label>
-                    <div class="saw-file-upload-area <?php echo $has_file ? 'has-file' : ''; ?>">
-                        <div class="saw-upload-icon">📄</div>
-                        <div class="saw-upload-text">
-                            <?php echo $has_file ? 'Klikněte pro změnu souboru' : 'Klikněte nebo přetáhněte PDF soubor'; ?>
-                        </div>
-                        <div class="saw-upload-hint">Pouze PDF, max 10MB</div>
-                        <input 
-                            type="file" 
-                            name="pdf_map_<?php echo esc_attr( $lang_code ); ?>" 
-                            class="saw-file-input-hidden" 
-                            accept=".pdf"
-                        >
-                    </div>
-                    <?php if ( $has_file ) : ?>
-                        <div class="saw-current-file">
-                            <div class="saw-file-info">
-                                <span class="saw-file-icon">📕</span>
-                                <div class="saw-file-details">
-                                    <div class="saw-file-name"><?php echo esc_html( basename( $file_url ) ); ?></div>
-                                    <div class="saw-file-size">Nahráno</div>
-                                </div>
-                            </div>
-                            <label>
-                                <input type="checkbox" name="delete_pdf_map_<?php echo esc_attr( $lang_code ); ?>" value="1">
-                                Smazat tento soubor
-                            </label>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </div>
-        <?php
-    }
-
-    private static function render_risks_section( $customer_id, $lang_code ) {
-        global $wpdb;
-        
-        $column_name = 'content_' . $lang_code;
-        $material = $wpdb->get_row( $wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_materials WHERE customer_id = %d AND type = 'wysiwyg' AND title = 'risks'",
-            $customer_id
-        ) );
-
-        $wysiwyg_content = $material && isset( $material->$column_name ) ? $material->$column_name : '';
-
-        $documents = $wpdb->get_results( $wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_documents WHERE customer_id = %d AND language = %s AND category IN ('bozp', 'po') ORDER BY id DESC",
-            $customer_id,
-            $lang_code
-        ) );
-
-        ?>
-        <div class="saw-accordion-item">
-            <button type="button" class="saw-accordion-header">
-                <span>⚠️ Informace o rizicích a o přijatých opatřeních</span>
-                <span class="accordion-icon">▼</span>
-            </button>
-            <div class="saw-accordion-content">
-                <label class="saw-section-subtitle">
-                    Zde zadejte písemně informace o rizicích a o přijatých opatřeních, dle odst. 3, § 101, zákona č. 262/2006 Sb., Zákoníku práce v účinném znění.
-                </label>
-
-                <div class="saw-content-section">
-                    <label class="saw-subsection-title">Textové informace o rizicích</label>
-                    <div class="saw-wysiwyg-wrapper">
-                        <?php 
-                        wp_editor( $wysiwyg_content, 'risks_wysiwyg_' . $lang_code, array(
-                            'textarea_name' => 'risks_wysiwyg_' . $lang_code,
-                            'textarea_rows' => 10,
-                            'media_buttons' => false,
-                            'teeny' => false,
-                            'tinymce' => array(
-                                'toolbar1' => 'formatselect,bold,italic,underline,bullist,numlist,link,forecolor',
-                            ),
-                        ));
-                        ?>
-                    </div>
-                </div>
-
-                <div class="saw-content-section">
-                    <label class="saw-subsection-title">Dokumenty rizik</label>
-                    <div class="saw-documents-upload">
-                        <div class="saw-documents-list">
-                            <?php foreach ( $documents as $doc ) : ?>
-                                <div class="saw-document-row">
-                                    <div>
-                                        <strong><?php echo esc_html( $doc->title ); ?></strong>
-                                        <br>
-                                        <small>Kategorie: <?php echo esc_html( self::get_category_label( $doc->category ) ); ?></small>
-                                        <input type="hidden" name="existing_doc_risks_<?php echo esc_attr( $lang_code ); ?>[]" value="<?php echo esc_attr( $doc->id ); ?>">
-                                    </div>
-                                    <div></div>
-                                    <label>
-                                        <input type="checkbox" name="delete_doc_<?php echo esc_attr( $doc->id ); ?>" value="1">
-                                        Smazat
-                                    </label>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                        <button type="button" class="saw-add-document-btn" data-section="risks">
-                            <span>➕</span>
-                            <span>Přidat dokument</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <?php
-    }
-
-    private static function render_additional_info_section( $customer_id, $lang_code ) {
-        global $wpdb;
-        
-        $column_name = 'content_' . $lang_code;
-        $material = $wpdb->get_row( $wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_materials WHERE customer_id = %d AND type = 'wysiwyg' AND title = 'additional'",
-            $customer_id
-        ) );
-
-        $wysiwyg_content = $material && isset( $material->$column_name ) ? $material->$column_name : '';
-
-        $documents = $wpdb->get_results( $wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_documents WHERE customer_id = %d AND language = %s AND category = 'other' ORDER BY id DESC",
-            $customer_id,
-            $lang_code
-        ) );
-
-        ?>
-        <div class="saw-accordion-item">
-            <button type="button" class="saw-accordion-header">
-                <span>ℹ️ Další informace</span>
-                <span class="accordion-icon">▼</span>
-            </button>
-            <div class="saw-accordion-content">
-                <label class="saw-section-subtitle">
-                    Zde zadejte jakékoliv další důležité informace, které mohou být pro návštěvníky vaší společnosti podstatné.
-                </label>
-
-                <div class="saw-content-section">
-                    <label class="saw-subsection-title">Textové další informace</label>
-                    <div class="saw-wysiwyg-wrapper">
-                        <?php 
-                        wp_editor( $wysiwyg_content, 'additional_wysiwyg_' . $lang_code, array(
-                            'textarea_name' => 'additional_wysiwyg_' . $lang_code,
-                            'textarea_rows' => 10,
-                            'media_buttons' => false,
-                            'teeny' => false,
-                            'tinymce' => array(
-                                'toolbar1' => 'formatselect,bold,italic,underline,bullist,numlist,link,forecolor',
-                            ),
-                        ));
-                        ?>
-                    </div>
-                </div>
-
-                <div class="saw-content-section">
-                    <label class="saw-subsection-title">Dokumenty k dalším informacím</label>
-                    <div class="saw-documents-upload">
-                        <div class="saw-documents-list">
-                            <?php foreach ( $documents as $doc ) : ?>
-                                <div class="saw-document-row">
-                                    <div>
-                                        <strong><?php echo esc_html( $doc->title ); ?></strong>
-                                        <br>
-                                        <small>Kategorie: <?php echo esc_html( self::get_category_label( $doc->category ) ); ?></small>
-                                        <input type="hidden" name="existing_doc_additional_<?php echo esc_attr( $lang_code ); ?>[]" value="<?php echo esc_attr( $doc->id ); ?>">
-                                    </div>
-                                    <div></div>
-                                    <label>
-                                        <input type="checkbox" name="delete_doc_<?php echo esc_attr( $doc->id ); ?>" value="1">
-                                        Smazat
-                                    </label>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                        <button type="button" class="saw-add-document-btn" data-section="additional">
-                            <span>➕</span>
-                            <span>Přidat dokument</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <?php
-    }
-
-    private static function render_department_specific_section( $customer_id, $lang_code, $departments ) {
-        global $wpdb;
-
-        $column_name = 'wysiwyg_' . $lang_code;
-        $dept_materials = $wpdb->get_results( $wpdb->prepare(
-            "SELECT dm.*, d.name as department_name 
-            FROM {$wpdb->prefix}saw_department_materials dm
-            LEFT JOIN {$wpdb->prefix}saw_departments d ON dm.department_id = d.id
-            WHERE d.customer_id = %d AND dm.{$column_name} IS NOT NULL AND dm.{$column_name} != ''",
-            $customer_id
-        ), OBJECT_K );
-
-        ?>
-        <div class="saw-accordion-item">
-            <button type="button" class="saw-accordion-header">
-                <span>🏢 Specifické informace oddělení</span>
-                <span class="accordion-icon">▼</span>
-            </button>
-            <div class="saw-accordion-content">
-                <div class="saw-department-specific-section">
-                    
-                    <div class="saw-department-selector">
-                        <label class="saw-section-title">Přidat specifické informace pro oddělení</label>
-                        <div class="saw-department-select-wrapper">
-                            <select class="saw-department-select">
-                                <option value="">-- Vyberte oddělení --</option>
-                                <?php foreach ( $departments as $dept ) : ?>
-                                    <option value="<?php echo esc_attr( $dept->id ); ?>">
-                                        <?php echo esc_html( $dept->name ); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                            <button type="button" class="saw-add-department-btn">
-                                <span>➕</span>
-                                <span>Přidat oddělení</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="saw-departments-list">
-                        <?php if ( empty( $dept_materials ) ) : ?>
-                            <div class="saw-no-departments-message">
-                                Zatím nejsou přidána žádná oddělení. Použijte tlačítko výše pro přidání.
-                            </div>
-                        <?php else : ?>
-                            <?php foreach ( $dept_materials as $dept_id => $material ) : ?>
-                                <div class="saw-department-item" data-dept-id="<?php echo esc_attr( $material->department_id ); ?>">
-                                    <div class="saw-department-header">
-                                        <h4 class="saw-department-name"><?php echo esc_html( $material->department_name ); ?></h4>
-                                        <button type="button" class="saw-remove-department-btn">Odstranit</button>
-                                    </div>
-                                    <div class="saw-content-section">
-                                        <label class="saw-subsection-title">Specifické informace pro toto oddělení</label>
-                                        <div class="saw-wysiwyg-wrapper">
-                                            <?php 
-                                            $content = isset( $material->$column_name ) ? $material->$column_name : '';
-                                            wp_editor( $content, 'dept_wysiwyg_' . $lang_code . '_' . $material->department_id, array(
-                                                'textarea_name' => 'dept_wysiwyg_' . $lang_code . '_' . $material->department_id,
-                                                'textarea_rows' => 8,
-                                                'media_buttons' => false,
-                                                'teeny' => false,
-                                                'tinymce' => array(
-                                                    'toolbar1' => 'formatselect,bold,italic,underline,bullist,numlist,link,forecolor',
-                                                ),
-                                            ));
-                                            ?>
-                                        </div>
-                                    </div>
-                                    <div class="saw-content-section">
-                                        <label class="saw-subsection-title">Dokumenty pro oddělení</label>
-                                        <div class="saw-documents-upload">
-                                            <div class="saw-documents-list">
-                                                <?php
-                                                $dept_docs = $wpdb->get_results( $wpdb->prepare(
-                                                    "SELECT * FROM {$wpdb->prefix}saw_department_documents 
-                                                    WHERE department_id = %d AND language = %s
-                                                    ORDER BY id DESC",
-                                                    $material->department_id,
-                                                    $lang_code
-                                                ) );
-                                                foreach ( $dept_docs as $doc ) : ?>
-                                                    <div class="saw-document-row">
-                                                        <div>
-                                                            <strong><?php echo esc_html( $doc->title ); ?></strong>
-                                                            <br>
-                                                            <small>Kategorie: <?php echo esc_html( self::get_category_label( $doc->category ) ); ?></small>
-                                                            <input type="hidden" name="existing_doc_dept_<?php echo esc_attr( $lang_code ); ?>_<?php echo esc_attr( $material->department_id ); ?>[]" value="<?php echo esc_attr( $doc->id ); ?>">
-                                                        </div>
-                                                        <div></div>
-                                                        <label>
-                                                            <input type="checkbox" name="delete_doc_<?php echo esc_attr( $doc->id ); ?>" value="1">
-                                                            Smazat
-                                                        </label>
-                                                    </div>
-                                                <?php endforeach; ?>
-                                            </div>
-                                            <button type="button" class="saw-add-document-btn" data-section="dept_<?php echo esc_attr( $material->department_id ); ?>">
-                                                <span>➕</span>
-                                                <span>Přidat dokument</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </div>
-
-                </div>
-            </div>
-        </div>
-        <?php
-    }
-
-    private static function enqueue_styles_scripts() {
-        wp_enqueue_media();
-        wp_enqueue_editor();
-        
-        wp_enqueue_style(
-            'saw-admin-content',
-            SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-admin-content.css',
-            array(),
-            SAW_VISITORS_VERSION
-        );
-    }
-
-    private static function handle_save( $customer_id ) {
-        global $wpdb;
-
-        check_admin_referer( 'saw_save_content', 'saw_content_nonce' );
-
-        $languages = array( 'cs', 'en', 'de', 'uk' );
-        $upload_dir = wp_upload_dir();
-        $base_path = $upload_dir['basedir'] . '/saw-visitor-docs/';
-
-        foreach ( $languages as $lang_code ) {
-
-            $video_url = isset( $_POST['video_url_' . $lang_code] ) ? esc_url_raw( $_POST['video_url_' . $lang_code] ) : '';
-            if ( $video_url ) {
-                $existing = $wpdb->get_row( $wpdb->prepare(
-                    "SELECT id, file_url FROM {$wpdb->prefix}saw_materials WHERE customer_id = %d AND type = 'video'",
-                    $customer_id
-                ) );
-
-                $all_urls = array();
-                if ( $existing && $existing->file_url ) {
-                    $all_urls = maybe_unserialize( $existing->file_url );
-                    if ( ! is_array( $all_urls ) ) {
-                        $all_urls = array();
-                    }
-                }
-
-                $all_urls[ $lang_code ] = $video_url;
-
-                if ( $existing ) {
-                    $wpdb->update(
-                        $wpdb->prefix . 'saw_materials',
-                        array( 'file_url' => maybe_serialize( $all_urls ) ),
-                        array( 'id' => $existing->id )
-                    );
-                } else {
-                    $wpdb->insert(
-                        $wpdb->prefix . 'saw_materials',
-                        array(
-                            'customer_id' => $customer_id,
-                            'title' => 'Video',
-                            'type' => 'video',
-                            'file_url' => maybe_serialize( $all_urls ),
-                        )
-                    );
-                }
-            }
-
-            if ( isset( $_FILES['pdf_map_' . $lang_code] ) && $_FILES['pdf_map_' . $lang_code]['error'] === UPLOAD_ERR_OK ) {
-                $file = $_FILES['pdf_map_' . $lang_code];
-                $filename = sanitize_file_name( $file['name'] );
-                $target_path = $base_path . 'materials/' . $filename;
-                
-                if ( move_uploaded_file( $file['tmp_name'], $target_path ) ) {
-                    $file_url = $upload_dir['baseurl'] . '/saw-visitor-docs/materials/' . $filename;
-                    
-                    $existing = $wpdb->get_row( $wpdb->prepare(
-                        "SELECT id, file_url FROM {$wpdb->prefix}saw_materials WHERE customer_id = %d AND type = 'pdf'",
-                        $customer_id
-                    ) );
-
-                    $all_urls = array();
-                    if ( $existing && $existing->file_url ) {
-                        $all_urls = maybe_unserialize( $existing->file_url );
-                        if ( ! is_array( $all_urls ) ) {
-                            $all_urls = array();
-                        }
-                    }
-
-                    $all_urls[ $lang_code ] = $file_url;
-
-                    if ( $existing ) {
-                        $wpdb->update(
-                            $wpdb->prefix . 'saw_materials',
-                            array( 'file_url' => maybe_serialize( $all_urls ) ),
-                            array( 'id' => $existing->id )
-                        );
-                    } else {
-                        $wpdb->insert(
-                            $wpdb->prefix . 'saw_materials',
-                            array(
-                                'customer_id' => $customer_id,
-                                'title' => 'PDF Mapa',
-                                'type' => 'pdf',
-                                'file_url' => maybe_serialize( $all_urls ),
-                            )
-                        );
-                    }
-                }
-            }
-
-            if ( isset( $_POST['delete_pdf_map_' . $lang_code] ) ) {
-                $existing = $wpdb->get_row( $wpdb->prepare(
-                    "SELECT id, file_url FROM {$wpdb->prefix}saw_materials WHERE customer_id = %d AND type = 'pdf'",
-                    $customer_id
-                ) );
-
-                if ( $existing && $existing->file_url ) {
-                    $all_urls = maybe_unserialize( $existing->file_url );
-                    if ( is_array( $all_urls ) && isset( $all_urls[ $lang_code ] ) ) {
-                        unset( $all_urls[ $lang_code ] );
-                        
-                        if ( empty( $all_urls ) ) {
-                            $wpdb->delete(
-                                $wpdb->prefix . 'saw_materials',
-                                array( 'id' => $existing->id )
-                            );
-                        } else {
-                            $wpdb->update(
-                                $wpdb->prefix . 'saw_materials',
-                                array( 'file_url' => maybe_serialize( $all_urls ) ),
-                                array( 'id' => $existing->id )
-                            );
-                        }
-                    }
-                }
-            }
-
-            $risks_wysiwyg = isset( $_POST['risks_wysiwyg_' . $lang_code] ) ? wp_kses_post( $_POST['risks_wysiwyg_' . $lang_code] ) : '';
-            $column_name = 'content_' . $lang_code;
-            
-            $existing = $wpdb->get_row( $wpdb->prepare(
-                "SELECT id FROM {$wpdb->prefix}saw_materials WHERE customer_id = %d AND type = 'wysiwyg' AND title = 'risks'",
-                $customer_id
-            ) );
-
-            if ( $existing ) {
-                $wpdb->update(
-                    $wpdb->prefix . 'saw_materials',
-                    array( $column_name => $risks_wysiwyg ),
-                    array( 'id' => $existing->id )
-                );
-            } else {
-                $wpdb->insert(
-                    $wpdb->prefix . 'saw_materials',
-                    array(
-                        'customer_id' => $customer_id,
-                        'title' => 'risks',
-                        'type' => 'wysiwyg',
-                        $column_name => $risks_wysiwyg,
-                    )
-                );
-            }
-
-            $additional_wysiwyg = isset( $_POST['additional_wysiwyg_' . $lang_code] ) ? wp_kses_post( $_POST['additional_wysiwyg_' . $lang_code] ) : '';
-            
-            $existing = $wpdb->get_row( $wpdb->prepare(
-                "SELECT id FROM {$wpdb->prefix}saw_materials WHERE customer_id = %d AND type = 'wysiwyg' AND title = 'additional'",
-                $customer_id
-            ) );
-
-            if ( $existing ) {
-                $wpdb->update(
-                    $wpdb->prefix . 'saw_materials',
-                    array( $column_name => $additional_wysiwyg ),
-                    array( 'id' => $existing->id )
-                );
-            } else {
-                $wpdb->insert(
-                    $wpdb->prefix . 'saw_materials',
-                    array(
-                        'customer_id' => $customer_id,
-                        'title' => 'additional',
-                        'type' => 'wysiwyg',
-                        $column_name => $additional_wysiwyg,
-                    )
-                );
-            }
-
-            foreach ( $_FILES as $key => $file ) {
-                if ( strpos( $key, 'doc_file_risks_' . $lang_code ) === 0 && $file['error'] === UPLOAD_ERR_OK ) {
-                    $index = str_replace( 'doc_file_risks_' . $lang_code . '_', '', $key );
-                    $category = isset( $_POST['doc_category_risks_' . $lang_code . '_' . $index] ) ? sanitize_text_field( $_POST['doc_category_risks_' . $lang_code . '_' . $index] ) : 'other';
-                    
-                    $filename = sanitize_file_name( $file['name'] );
-                    $target_path = $base_path . 'risk-docs/' . $filename;
-                    
-                    if ( move_uploaded_file( $file['tmp_name'], $target_path ) ) {
-                        $file_url = $upload_dir['baseurl'] . '/saw-visitor-docs/risk-docs/' . $filename;
-                        $wpdb->insert(
-                            $wpdb->prefix . 'saw_documents',
-                            array(
-                                'department_id' => 0,
-                                'category' => self::map_category_to_enum( $category ),
-                                'title' => $filename,
-                                'file_url' => $file_url,
-                                'language' => $lang_code,
-                                'created_at' => current_time( 'mysql' ),
-                            )
-                        );
-                    }
-                }
-
-                if ( strpos( $key, 'doc_file_additional_' . $lang_code ) === 0 && $file['error'] === UPLOAD_ERR_OK ) {
-                    $index = str_replace( 'doc_file_additional_' . $lang_code . '_', '', $key );
-                    $category = isset( $_POST['doc_category_additional_' . $lang_code . '_' . $index] ) ? sanitize_text_field( $_POST['doc_category_additional_' . $lang_code . '_' . $index] ) : 'other';
-                    
-                    $filename = sanitize_file_name( $file['name'] );
-                    $target_path = $base_path . 'additional-docs/' . $filename;
-                    
-                    if ( move_uploaded_file( $file['tmp_name'], $target_path ) ) {
-                        $file_url = $upload_dir['baseurl'] . '/saw-visitor-docs/additional-docs/' . $filename;
-                        $wpdb->insert(
-                            $wpdb->prefix . 'saw_documents',
-                            array(
-                                'department_id' => 0,
-                                'category' => self::map_category_to_enum( $category ),
-                                'title' => $filename,
-                                'file_url' => $file_url,
-                                'language' => $lang_code,
-                                'created_at' => current_time( 'mysql' ),
-                            )
-                        );
-                    }
-                }
-
-                if ( preg_match( '/^doc_file_dept_(\d+)_' . $lang_code . '_(\d+)$/', $key, $matches ) && $file['error'] === UPLOAD_ERR_OK ) {
-                    $dept_id = intval( $matches[1] );
-                    $index = intval( $matches[2] );
-                    $category = isset( $_POST['doc_category_dept_' . $dept_id . '_' . $lang_code . '_' . $index] ) ? sanitize_text_field( $_POST['doc_category_dept_' . $dept_id . '_' . $lang_code . '_' . $index] ) : 'other';
-                    
-                    $filename = sanitize_file_name( $file['name'] );
-                    $target_path = $base_path . 'department-docs/' . $filename;
-                    
-                    if ( move_uploaded_file( $file['tmp_name'], $target_path ) ) {
-                        $file_url = $upload_dir['baseurl'] . '/saw-visitor-docs/department-docs/' . $filename;
-                        $wpdb->insert(
-                            $wpdb->prefix . 'saw_department_documents',
-                            array(
-                                'department_id' => $dept_id,
-                                'category' => self::map_category_to_enum( $category ),
-                                'title' => $filename,
-                                'file_url' => $file_url,
-                                'language' => $lang_code,
-                                'created_at' => current_time( 'mysql' ),
-                            )
-                        );
-                    }
-                }
-            }
-
-            foreach ( $_POST as $key => $value ) {
-                if ( strpos( $key, 'dept_wysiwyg_' . $lang_code . '_' ) === 0 ) {
-                    $dept_id = intval( str_replace( 'dept_wysiwyg_' . $lang_code . '_', '', $key ) );
-                    $content = wp_kses_post( $value );
-                    
-                    $column_name = 'wysiwyg_' . $lang_code;
-                    
-                    $existing = $wpdb->get_row( $wpdb->prepare(
-                        "SELECT id FROM {$wpdb->prefix}saw_department_materials WHERE department_id = %d",
-                        $dept_id
-                    ) );
-
-                    if ( $existing ) {
-                        $wpdb->update(
-                            $wpdb->prefix . 'saw_department_materials',
-                            array( $column_name => $content ),
-                            array( 'id' => $existing->id )
-                        );
-                    } else {
-                        $wpdb->insert(
-                            $wpdb->prefix . 'saw_department_materials',
-                            array(
-                                'department_id' => $dept_id,
-                                'title' => 'Specific Info',
-                                $column_name => $content,
-                            )
-                        );
-                    }
-                }
-            }
-        }
-
-        foreach ( $_POST as $key => $value ) {
-            if ( strpos( $key, 'delete_doc_' ) === 0 && $value === '1' ) {
-                $doc_id = intval( str_replace( 'delete_doc_', '', $key ) );
-                $wpdb->delete( $wpdb->prefix . 'saw_documents', array( 'id' => $doc_id ) );
-                $wpdb->delete( $wpdb->prefix . 'saw_department_documents', array( 'id' => $doc_id ) );
-            }
-        }
-
-        SAW_Audit::log( array(
-            'action' => 'content_updated',
-            'customer_id' => $customer_id,
-            'details' => 'Content updated for customer ID: ' . $customer_id,
-        ) );
-
-        wp_redirect( add_query_arg( 'saved', '1', wp_get_referer() ) );
-        exit;
-    }
-
-    private static function get_category_label( $category ) {
-        $labels = array(
-            'bozp' => 'Bezpečnost práce',
-            'po' => 'Požární ochrana',
-            'evakuace' => 'Evakuace',
-            'prvni_pomoc' => 'První pomoc',
-            'organizacni' => 'Organizační',
-            'pojisteni' => 'Pojištění',
-            'covid' => 'COVID-19',
-            'emergency' => 'Mimořádné situace',
-            'fire' => 'Požární ochrana',
-            'safety' => 'Bezpečnost práce',
-            'hygiene' => 'Hygiena',
-            'environment' => 'Životní prostředí',
-            'security' => 'Bezpečnost',
-            'other' => 'Ostatní',
-        );
-        return isset( $labels[ $category ] ) ? $labels[ $category ] : $category;
-    }
-
-    private static function map_category_to_enum( $category ) {
-        $map = array(
-            'emergency' => 'evakuace',
-            'fire' => 'po',
-            'safety' => 'bozp',
-            'hygiene' => 'prvni_pomoc',
-            'environment' => 'organizacni',
-            'security' => 'pojisteni',
-            'other' => 'covid',
-        );
-        return isset( $map[ $category ] ) ? $map[ $category ] : 'organizacni';
-    }
+	const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
+	const ALLOWED_VIDEO_TYPES = array( 'video/mp4' );
+	const ALLOWED_PDF_TYPES = array( 'application/pdf' );
+
+	const DOC_CATEGORIES = array(
+		'emergency'    => 'Mimořádné situace',
+		'fire'         => 'Požární ochrana',
+		'work_safety'  => 'Bezpečnost práce',
+		'hygiene'      => 'Hygiena',
+		'environment'  => 'Životní prostředí',
+		'security'     => 'Bezpečnost',
+		'other'        => 'Ostatní',
+	);
+
+	const LANGUAGES = array(
+		'cs' => 'Čeština',
+		'en' => 'Angličtina',
+		'de' => 'Němčina',
+		'uk' => 'Ukrajinština',
+	);
+
+	/**
+	 * Display main content management page
+	 */
+	public static function main_page() {
+		$customer_id = self::get_selected_customer();
+		
+		if ( ! $customer_id ) {
+			self::render_no_customer_selected();
+			return;
+		}
+
+		// Handle form submission
+		if ( isset( $_POST['saw_save_content'] ) ) {
+			check_admin_referer( 'saw_save_content' );
+			$result = self::save_content( $customer_id );
+			
+			if ( $result['success'] ) {
+				wp_redirect( admin_url( 'admin.php?page=saw-content&saved=1' ) );
+			} else {
+				wp_redirect( admin_url( 'admin.php?page=saw-content&error=' . urlencode( $result['message'] ) ) );
+			}
+			exit;
+		}
+
+		// Handle document deletion
+		if ( isset( $_GET['delete_doc'] ) && isset( $_GET['_wpnonce'] ) ) {
+			if ( wp_verify_nonce( $_GET['_wpnonce'], 'delete_doc_' . $_GET['delete_doc'] ) ) {
+				self::delete_document( intval( $_GET['delete_doc'] ) );
+				wp_redirect( admin_url( 'admin.php?page=saw-content&deleted=1' ) );
+				exit;
+			}
+		}
+
+		// Handle material deletion
+		if ( isset( $_GET['delete_material'] ) && isset( $_GET['_wpnonce'] ) ) {
+			if ( wp_verify_nonce( $_GET['_wpnonce'], 'delete_material_' . $_GET['delete_material'] ) ) {
+				self::delete_material( intval( $_GET['delete_material'] ) );
+				wp_redirect( admin_url( 'admin.php?page=saw-content&deleted=1' ) );
+				exit;
+			}
+		}
+
+		$materials = self::get_materials( $customer_id );
+		$documents = self::get_documents( $customer_id );
+		$customer = self::get_customer( $customer_id );
+
+		self::render_page( $customer, $materials, $documents );
+	}
+
+	/**
+	 * Render main content page
+	 */
+	private static function render_page( $customer, $materials, $documents ) {
+		?>
+		<div class="wrap">
+			<h1>
+				Správa obsahu
+				<span class="saw-customer-badge"><?php echo esc_html( $customer->name ); ?></span>
+			</h1>
+
+			<?php self::render_notices(); ?>
+
+			<!-- Jazykové záložky -->
+			<div class="saw-language-tabs">
+				<?php foreach ( self::LANGUAGES as $lang_code => $lang_name ) : ?>
+					<button type="button" 
+							class="saw-language-tab <?php echo $lang_code === 'cs' ? 'active' : ''; ?>" 
+							data-lang="<?php echo esc_attr( $lang_code ); ?>">
+						<?php echo esc_html( $lang_name ); ?>
+					</button>
+				<?php endforeach; ?>
+			</div>
+
+			<form method="post" enctype="multipart/form-data" id="saw-content-form">
+				<?php wp_nonce_field( 'saw_save_content' ); ?>
+
+				<?php foreach ( self::LANGUAGES as $lang_code => $lang_name ) : ?>
+					<div class="saw-language-content" 
+						 data-lang="<?php echo esc_attr( $lang_code ); ?>" 
+						 style="<?php echo $lang_code !== 'cs' ? 'display: none;' : ''; ?>">
+						
+						<!-- Accordion sekce -->
+						<div class="saw-accordion">
+							
+							<!-- Video sekce -->
+							<div class="saw-accordion-item">
+								<button type="button" class="saw-accordion-header">
+									<span class="accordion-title">🎥 Video (MP4)</span>
+									<span class="accordion-icon">▼</span>
+								</button>
+								<div class="saw-accordion-content">
+									<?php self::render_video_section( $materials, $lang_code ); ?>
+								</div>
+							</div>
+
+							<!-- PDF Mapa sekce -->
+							<div class="saw-accordion-item">
+								<button type="button" class="saw-accordion-header">
+									<span class="accordion-title">📄 PDF Mapa</span>
+									<span class="accordion-icon">▼</span>
+								</button>
+								<div class="saw-accordion-content">
+									<?php self::render_pdf_section( $materials, $lang_code ); ?>
+								</div>
+							</div>
+
+							<!-- Rizika sekce -->
+							<div class="saw-accordion-item">
+								<button type="button" class="saw-accordion-header">
+									<span class="accordion-title">⚠️ Rizika (WYSIWYG + Dokumenty)</span>
+									<span class="accordion-icon">▼</span>
+								</button>
+								<div class="saw-accordion-content">
+									<?php self::render_risks_section( $materials, $documents, $lang_code ); ?>
+								</div>
+							</div>
+
+							<!-- Další informace sekce -->
+							<div class="saw-accordion-item">
+								<button type="button" class="saw-accordion-header">
+									<span class="accordion-title">ℹ️ Další informace (WYSIWYG + Dokumenty)</span>
+									<span class="accordion-icon">▼</span>
+								</button>
+								<div class="saw-accordion-content">
+									<?php self::render_additional_section( $materials, $documents, $lang_code ); ?>
+								</div>
+							</div>
+
+						</div>
+					</div>
+				<?php endforeach; ?>
+
+				<p class="submit">
+					<button type="submit" name="saw_save_content" class="button button-primary button-large">
+						💾 Uložit vše
+					</button>
+				</p>
+			</form>
+		</div>
+
+		<?php self::render_styles(); ?>
+		<?php self::render_scripts(); ?>
+		<?php
+	}
+
+	/**
+	 * Render video section
+	 */
+	private static function render_video_section( $materials, $lang_code ) {
+		$video = self::get_material( $materials, 'video', $lang_code );
+		?>
+		<div class="saw-material-box">
+			<?php if ( $video && $video->file_url ) : ?>
+				<div class="material-status uploaded">
+					✅ <strong>Nahráno:</strong> <a href="<?php echo esc_url( $video->file_url ); ?>" target="_blank"><?php echo esc_html( $video->filename ); ?></a>
+					<span class="material-meta">(<?php echo esc_html( self::get_file_size( $video->file_url ) ); ?>)</span>
+					<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=saw-content&delete_material=' . $video->id ), 'delete_material_' . $video->id ) ); ?>" 
+					   class="button button-small button-link-delete" 
+					   onclick="return confirm('Opravdu smazat toto video?');">Smazat</a>
+				</div>
+			<?php else : ?>
+				<div class="material-status empty">❌ Nenahrané</div>
+			<?php endif; ?>
+			
+			<div class="upload-field">
+				<input type="file" 
+					   name="video_<?php echo esc_attr( $lang_code ); ?>" 
+					   accept="video/mp4"
+					   class="saw-file-input">
+				<p class="description">Maximální velikost: 20 MB. Formát: MP4</p>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render PDF section
+	 */
+	private static function render_pdf_section( $materials, $lang_code ) {
+		$pdf = self::get_material( $materials, 'pdf', $lang_code );
+		?>
+		<div class="saw-material-box">
+			<?php if ( $pdf && $pdf->file_url ) : ?>
+				<div class="material-status uploaded">
+					✅ <strong>Nahráno:</strong> <a href="<?php echo esc_url( $pdf->file_url ); ?>" target="_blank"><?php echo esc_html( $pdf->filename ); ?></a>
+					<span class="material-meta">(<?php echo esc_html( self::get_file_size( $pdf->file_url ) ); ?>)</span>
+					<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=saw-content&delete_material=' . $pdf->id ), 'delete_material_' . $pdf->id ) ); ?>" 
+					   class="button button-small button-link-delete" 
+					   onclick="return confirm('Opravdu smazat toto PDF?');">Smazat</a>
+				</div>
+			<?php else : ?>
+				<div class="material-status empty">❌ Nenahrané</div>
+			<?php endif; ?>
+			
+			<div class="upload-field">
+				<input type="file" 
+					   name="pdf_<?php echo esc_attr( $lang_code ); ?>" 
+					   accept="application/pdf"
+					   class="saw-file-input">
+				<p class="description">Maximální velikost: 20 MB. Formát: PDF</p>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render risks section (WYSIWYG + Documents)
+	 */
+	private static function render_risks_section( $materials, $documents, $lang_code ) {
+		$risks = self::get_material( $materials, 'risks_wysiwyg', $lang_code );
+		$risks_content = $risks ? $risks->wysiwyg_content : '';
+		
+		// Filtrovat dokumenty pro rizika a tento jazyk
+		$risks_docs = array_filter( $documents, function( $doc ) use ( $lang_code ) {
+			return $doc->language === $lang_code && in_array( $doc->category, array( 'emergency', 'fire', 'work_safety' ) );
+		});
+		?>
+		<div class="saw-material-box">
+			<h4 style="margin: 0 0 15px 0; font-size: 15px;">WYSIWYG Editor</h4>
+			<?php
+			wp_editor(
+				$risks_content,
+				'risks_wysiwyg_' . $lang_code,
+				array(
+					'textarea_name' => 'risks_wysiwyg_' . $lang_code,
+					'textarea_rows' => 10,
+					'media_buttons' => true,
+					'teeny'         => false,
+				)
+			);
+			?>
+
+			<h4 style="margin: 30px 0 15px 0; font-size: 15px;">Dokumenty rizik</h4>
+			
+			<!-- Existující dokumenty -->
+			<?php if ( ! empty( $risks_docs ) ) : ?>
+				<div class="existing-documents">
+					<?php foreach ( $risks_docs as $doc ) : ?>
+						<div class="doc-row">
+							<span class="doc-icon">📄</span>
+							<a href="<?php echo esc_url( $doc->file_url ); ?>" target="_blank" class="doc-name">
+								<?php echo esc_html( $doc->filename ); ?>
+							</a>
+							<span class="doc-category-badge"><?php echo esc_html( self::DOC_CATEGORIES[ $doc->category ] ); ?></span>
+							<span class="doc-size">(<?php echo esc_html( self::get_file_size( $doc->file_url ) ); ?>)</span>
+							<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=saw-content&delete_doc=' . $doc->id ), 'delete_doc_' . $doc->id ) ); ?>" 
+							   class="button button-small button-link-delete" 
+							   onclick="return confirm('Opravdu smazat tento dokument?');">Smazat</a>
+						</div>
+					<?php endforeach; ?>
+				</div>
+			<?php endif; ?>
+
+			<!-- Nahrát nové dokumenty -->
+			<div class="upload-documents-section">
+				<p style="margin: 0 0 15px 0; font-weight: 600;">Nahrát nové dokumenty:</p>
+				<div id="risks-doc-uploads-<?php echo esc_attr( $lang_code ); ?>" class="doc-upload-container">
+					<div class="doc-upload-row">
+						<div class="doc-upload-file">
+							<label class="file-label">Vybrat soubor</label>
+							<input type="file" 
+								   name="risks_docs_<?php echo esc_attr( $lang_code ); ?>[]" 
+								   accept="application/pdf"
+								   class="file-input-hidden">
+							<span class="file-name">Soubor nevybrán</span>
+						</div>
+						<select name="risks_docs_category_<?php echo esc_attr( $lang_code ); ?>[]" class="doc-category-select">
+							<option value="emergency">Mimořádné situace</option>
+							<option value="fire">Požární ochrana</option>
+							<option value="work_safety">Bezpečnost práce</option>
+						</select>
+						<button type="button" class="button button-small add-doc-row" data-section="risks" data-lang="<?php echo esc_attr( $lang_code ); ?>">+ Přidat další</button>
+					</div>
+				</div>
+				<p class="description" style="margin-top: 10px;">Maximální velikost: 20 MB per soubor. Formát: PDF</p>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render additional info section (WYSIWYG + Documents)
+	 */
+	private static function render_additional_section( $materials, $documents, $lang_code ) {
+		$additional = self::get_material( $materials, 'additional_wysiwyg', $lang_code );
+		$additional_content = $additional ? $additional->wysiwyg_content : '';
+		
+		// Filtrovat dokumenty pro další informace a tento jazyk
+		$additional_docs = array_filter( $documents, function( $doc ) use ( $lang_code ) {
+			return $doc->language === $lang_code && in_array( $doc->category, array( 'hygiene', 'environment', 'security', 'other' ) );
+		});
+		?>
+		<div class="saw-material-box">
+			<h4 style="margin: 0 0 15px 0; font-size: 15px;">WYSIWYG Editor</h4>
+			<?php
+			wp_editor(
+				$additional_content,
+				'additional_wysiwyg_' . $lang_code,
+				array(
+					'textarea_name' => 'additional_wysiwyg_' . $lang_code,
+					'textarea_rows' => 10,
+					'media_buttons' => true,
+					'teeny'         => false,
+				)
+			);
+			?>
+
+			<h4 style="margin: 30px 0 15px 0; font-size: 15px;">Dokumenty k dalším informacím</h4>
+			
+			<!-- Existující dokumenty -->
+			<?php if ( ! empty( $additional_docs ) ) : ?>
+				<div class="existing-documents">
+					<?php foreach ( $additional_docs as $doc ) : ?>
+						<div class="doc-row">
+							<span class="doc-icon">📄</span>
+							<a href="<?php echo esc_url( $doc->file_url ); ?>" target="_blank" class="doc-name">
+								<?php echo esc_html( $doc->filename ); ?>
+							</a>
+							<span class="doc-category-badge"><?php echo esc_html( self::DOC_CATEGORIES[ $doc->category ] ); ?></span>
+							<span class="doc-size">(<?php echo esc_html( self::get_file_size( $doc->file_url ) ); ?>)</span>
+							<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=saw-content&delete_doc=' . $doc->id ), 'delete_doc_' . $doc->id ) ); ?>" 
+							   class="button button-small button-link-delete" 
+							   onclick="return confirm('Opravdu smazat tento dokument?');">Smazat</a>
+						</div>
+					<?php endforeach; ?>
+				</div>
+			<?php endif; ?>
+
+			<!-- Nahrát nové dokumenty -->
+			<div class="upload-documents-section">
+				<p style="margin: 0 0 15px 0; font-weight: 600;">Nahrát nové dokumenty:</p>
+				<div id="additional-doc-uploads-<?php echo esc_attr( $lang_code ); ?>" class="doc-upload-container">
+					<div class="doc-upload-row">
+						<div class="doc-upload-file">
+							<label class="file-label">Vybrat soubor</label>
+							<input type="file" 
+								   name="additional_docs_<?php echo esc_attr( $lang_code ); ?>[]" 
+								   accept="application/pdf"
+								   class="file-input-hidden">
+							<span class="file-name">Soubor nevybrán</span>
+						</div>
+						<select name="additional_docs_category_<?php echo esc_attr( $lang_code ); ?>[]" class="doc-category-select">
+							<option value="hygiene">Hygiena</option>
+							<option value="environment">Životní prostředí</option>
+							<option value="security">Bezpečnost</option>
+							<option value="other">Ostatní</option>
+						</select>
+						<button type="button" class="button button-small add-doc-row" data-section="additional" data-lang="<?php echo esc_attr( $lang_code ); ?>">+ Přidat další</button>
+					</div>
+				</div>
+				<p class="description" style="margin-top: 10px;">Maximální velikost: 20 MB per soubor. Formát: PDF</p>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render styles
+	 */
+	private static function render_styles() {
+		?>
+		<style>
+			.saw-customer-badge {
+				background: #2271b1;
+				color: white;
+				padding: 5px 15px;
+				border-radius: 4px;
+				font-size: 14px;
+				font-weight: 600;
+				margin-left: 10px;
+			}
+			
+			/* Jazykové záložky */
+			.saw-language-tabs {
+				display: flex;
+				gap: 0;
+				margin: 20px 0 0 0;
+				border-bottom: 2px solid #c3c4c7;
+			}
+			.saw-language-tab {
+				background: #f0f0f1;
+				border: 1px solid #c3c4c7;
+				border-bottom: none;
+				padding: 12px 30px;
+				font-size: 15px;
+				font-weight: 600;
+				color: #646970;
+				cursor: pointer;
+				transition: all 0.2s;
+				border-radius: 4px 4px 0 0;
+				margin-right: -1px;
+			}
+			.saw-language-tab:hover {
+				background: #fff;
+				color: #2271b1;
+			}
+			.saw-language-tab.active {
+				background: #fff;
+				color: #2271b1;
+				border-bottom: 2px solid #fff;
+				position: relative;
+				bottom: -2px;
+			}
+			
+			/* Language content */
+			.saw-language-content {
+				background: #fff;
+				border: 1px solid #c3c4c7;
+				border-top: none;
+				padding: 20px;
+			}
+			
+			/* Accordion */
+			.saw-accordion {
+				margin-top: 20px;
+			}
+			.saw-accordion-item {
+				border: 1px solid #c3c4c7;
+				border-radius: 4px;
+				margin-bottom: 10px;
+			}
+			.saw-accordion-header {
+				width: 100%;
+				background: #f0f0f1;
+				border: none;
+				padding: 15px 20px;
+				text-align: left;
+				cursor: pointer;
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				font-size: 15px;
+				font-weight: 600;
+				transition: background 0.2s;
+			}
+			.saw-accordion-header:hover {
+				background: #e8e8e8;
+			}
+			.saw-accordion-header .accordion-icon {
+				transition: transform 0.3s;
+			}
+			.saw-accordion-item.active .saw-accordion-header .accordion-icon {
+				transform: rotate(-180deg);
+			}
+			.saw-accordion-content {
+				display: none;
+				padding: 20px;
+				border-top: 1px solid #c3c4c7;
+			}
+			.saw-accordion-item.active .saw-accordion-content {
+				display: block;
+			}
+			
+			/* Material box */
+			.saw-material-box {
+				background: #fafafa;
+				padding: 20px;
+				border-radius: 4px;
+			}
+			.material-status {
+				padding: 12px 15px;
+				border-radius: 4px;
+				margin-bottom: 15px;
+			}
+			.material-status.uploaded {
+				background: #d4edda;
+				color: #155724;
+				border: 1px solid #c3e6cb;
+			}
+			.material-status.empty {
+				background: #f8d7da;
+				color: #721c24;
+				border: 1px solid #f5c6cb;
+			}
+			.material-meta {
+				color: #646970;
+				font-size: 13px;
+				margin-left: 5px;
+			}
+			.upload-field {
+				background: white;
+				padding: 15px;
+				border: 1px solid #c3c4c7;
+				border-radius: 4px;
+			}
+			
+			/* Documents */
+			.existing-documents {
+				background: white;
+				padding: 15px;
+				border: 1px solid #c3c4c7;
+				border-radius: 4px;
+				margin-bottom: 20px;
+			}
+			.doc-row {
+				display: flex;
+				align-items: center;
+				gap: 12px;
+				padding: 12px;
+				background: #f0f0f1;
+				border-radius: 4px;
+				margin-bottom: 8px;
+				border: 1px solid #dcdcde;
+			}
+			.doc-icon {
+				font-size: 20px;
+				flex-shrink: 0;
+			}
+			.doc-name {
+				flex: 1;
+				font-weight: 600;
+				text-decoration: none;
+				color: #2271b1;
+			}
+			.doc-name:hover {
+				text-decoration: underline;
+			}
+			.doc-category-badge {
+				background: #2271b1;
+				color: white;
+				padding: 4px 12px;
+				border-radius: 3px;
+				font-size: 12px;
+				font-weight: 600;
+				flex-shrink: 0;
+			}
+			.doc-size {
+				color: #646970;
+				font-size: 13px;
+				flex-shrink: 0;
+			}
+			
+			/* Upload documents section - vylepšené stylování */
+			.upload-documents-section {
+				background: white;
+				padding: 20px;
+				border: 1px solid #c3c4c7;
+				border-radius: 4px;
+			}
+			.doc-upload-container {
+				display: flex;
+				flex-direction: column;
+				gap: 12px;
+			}
+			.doc-upload-row {
+				display: flex;
+				align-items: stretch;
+				gap: 12px;
+				padding: 15px;
+				background: #f6f7f7;
+				border: 1px solid #dcdcde;
+				border-radius: 4px;
+			}
+			
+			/* Custom file input styling */
+			.doc-upload-file {
+				flex: 2;
+				display: flex;
+				align-items: center;
+				gap: 10px;
+				position: relative;
+			}
+			.file-label {
+				background: #2271b1;
+				color: white;
+				padding: 8px 16px;
+				border-radius: 3px;
+				cursor: pointer;
+				font-size: 13px;
+				font-weight: 600;
+				transition: background 0.2s;
+				white-space: nowrap;
+			}
+			.file-label:hover {
+				background: #135e96;
+			}
+			.file-input-hidden {
+				position: absolute;
+				width: 1px;
+				height: 1px;
+				opacity: 0;
+				overflow: hidden;
+			}
+			.file-name {
+				flex: 1;
+				padding: 8px 12px;
+				background: white;
+				border: 1px solid #dcdcde;
+				border-radius: 3px;
+				color: #646970;
+				font-size: 13px;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+			}
+			
+			/* Category select styling */
+			.doc-category-select {
+				flex: 1;
+				min-width: 180px;
+				padding: 8px 12px;
+				border: 1px solid #dcdcde;
+				border-radius: 3px;
+				font-size: 13px;
+				background: white;
+			}
+			
+			/* Buttons */
+			.add-doc-row {
+				background: #00a32a;
+				color: white;
+				border: none;
+				padding: 8px 16px;
+				border-radius: 3px;
+				font-weight: 600;
+				white-space: nowrap;
+			}
+			.add-doc-row:hover {
+				background: #008a20;
+				color: white;
+			}
+			.remove-doc-row {
+				background: #d63638;
+				color: white;
+				border: none;
+				padding: 8px 16px;
+				border-radius: 3px;
+				font-weight: 600;
+				white-space: nowrap;
+			}
+			.remove-doc-row:hover {
+				background: #b32d2e;
+				color: white;
+			}
+		</style>
+		<?php
+	}
+
+	/**
+	 * Render scripts
+	 */
+	private static function render_scripts() {
+		?>
+		<script>
+		jQuery(document).ready(function($) {
+			// Přepínání jazykových záložek
+			$('.saw-language-tab').on('click', function() {
+				const lang = $(this).data('lang');
+				
+				$('.saw-language-tab').removeClass('active');
+				$(this).addClass('active');
+				
+				$('.saw-language-content').hide();
+				$('.saw-language-content[data-lang="' + lang + '"]').show();
+			});
+			
+			// Accordion - otevřít první položku při načtení
+			$('.saw-accordion-item').first().addClass('active');
+			
+			// Accordion toggle
+			$('.saw-accordion-header').on('click', function() {
+				const item = $(this).closest('.saw-accordion-item');
+				const wasActive = item.hasClass('active');
+				
+				// Zavřít všechny
+				$('.saw-accordion-item').removeClass('active');
+				
+				// Otevřít aktuální (pokud nebyla aktivní)
+				if (!wasActive) {
+					item.addClass('active');
+				}
+			});
+			
+			// Custom file input - zobrazit název vybraného souboru
+			$(document).on('change', '.file-input-hidden', function() {
+				const fileName = $(this).val().split('\\').pop() || 'Soubor nevybrán';
+				$(this).siblings('.file-name').text(fileName);
+			});
+			
+			// Kliknutí na label aktivuje file input
+			$(document).on('click', '.file-label', function() {
+				$(this).siblings('.file-input-hidden').click();
+			});
+			
+			// Přidat další řádek pro nahrání dokumentu
+			$('.add-doc-row').on('click', function() {
+				const section = $(this).data('section');
+				const lang = $(this).data('lang');
+				const container = $('#' + section + '-doc-uploads-' + lang);
+				
+				// Klonovat první řádek
+				const firstRow = container.find('.doc-upload-row').first();
+				const newRow = firstRow.clone();
+				
+				// Vyčistit hodnoty
+				newRow.find('.file-input-hidden').val('');
+				newRow.find('.file-name').text('Soubor nevybrán');
+				newRow.find('.doc-category-select').prop('selectedIndex', 0);
+				
+				// Změnit tlačítko na "Odebrat"
+				const button = newRow.find('.add-doc-row');
+				button.removeClass('add-doc-row').addClass('remove-doc-row');
+				button.text('− Odebrat');
+				
+				container.append(newRow);
+			});
+			
+			// Odebrat řádek
+			$(document).on('click', '.remove-doc-row', function() {
+				$(this).closest('.doc-upload-row').remove();
+			});
+		});
+		</script>
+		<?php
+	}
+
+	/**
+	 * Render notices
+	 */
+	private static function render_notices() {
+		if ( isset( $_GET['saved'] ) ) {
+			?>
+			<div class="notice notice-success is-dismissible">
+				<p><strong>✅ Obsah byl úspěšně uložen.</strong></p>
+			</div>
+			<?php
+		}
+
+		if ( isset( $_GET['deleted'] ) ) {
+			?>
+			<div class="notice notice-success is-dismissible">
+				<p><strong>✅ Položka byla odstraněna.</strong></p>
+			</div>
+			<?php
+		}
+
+		if ( isset( $_GET['error'] ) ) {
+			?>
+			<div class="notice notice-error is-dismissible">
+				<p><strong>❌ Chyba:</strong> <?php echo esc_html( urldecode( $_GET['error'] ) ); ?></p>
+			</div>
+			<?php
+		}
+	}
+
+	/**
+	 * Render no customer selected message
+	 */
+	private static function render_no_customer_selected() {
+		?>
+		<div class="wrap">
+			<h1>Správa obsahu</h1>
+			<div class="notice notice-warning">
+				<p><strong>⚠️ Nejprve vyberte zákazníka</strong> z dropdownu v horní liště.</p>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Save content (materials + documents)
+	 */
+	private static function save_content( $customer_id ) {
+		try {
+			global $wpdb;
+
+			// Uložit materiály pro každý jazyk
+			foreach ( self::LANGUAGES as $lang_code => $lang_name ) {
+				// Video upload
+				if ( ! empty( $_FILES[ 'video_' . $lang_code ]['name'] ) ) {
+					$result = self::handle_file_upload( 
+						$_FILES[ 'video_' . $lang_code ], 
+						self::ALLOWED_VIDEO_TYPES,
+						'materials'
+					);
+					
+					if ( $result['success'] ) {
+						self::save_material( $customer_id, 'video', $lang_code, $result['file_url'] );
+					} else {
+						return $result;
+					}
+				}
+
+				// PDF upload
+				if ( ! empty( $_FILES[ 'pdf_' . $lang_code ]['name'] ) ) {
+					$result = self::handle_file_upload( 
+						$_FILES[ 'pdf_' . $lang_code ], 
+						self::ALLOWED_PDF_TYPES,
+						'materials'
+					);
+					
+					if ( $result['success'] ) {
+						self::save_material( $customer_id, 'pdf', $lang_code, $result['file_url'] );
+					} else {
+						return $result;
+					}
+				}
+
+				// Risks WYSIWYG
+				if ( isset( $_POST[ 'risks_wysiwyg_' . $lang_code ] ) ) {
+					$risks_content = wp_kses_post( $_POST[ 'risks_wysiwyg_' . $lang_code ] );
+					self::save_material( $customer_id, 'risks_wysiwyg', $lang_code, null, $risks_content );
+				}
+
+				// Additional WYSIWYG
+				if ( isset( $_POST[ 'additional_wysiwyg_' . $lang_code ] ) ) {
+					$additional_content = wp_kses_post( $_POST[ 'additional_wysiwyg_' . $lang_code ] );
+					self::save_material( $customer_id, 'additional_wysiwyg', $lang_code, null, $additional_content );
+				}
+
+				// Risks documents
+				if ( ! empty( $_FILES[ 'risks_docs_' . $lang_code ]['name'][0] ) ) {
+					$files = $_FILES[ 'risks_docs_' . $lang_code ];
+					$categories = $_POST[ 'risks_docs_category_' . $lang_code ] ?? array();
+					
+					for ( $i = 0; $i < count( $files['name'] ); $i++ ) {
+						if ( empty( $files['name'][ $i ] ) ) {
+							continue;
+						}
+
+						$file = array(
+							'name'     => $files['name'][ $i ],
+							'type'     => $files['type'][ $i ],
+							'tmp_name' => $files['tmp_name'][ $i ],
+							'error'    => $files['error'][ $i ],
+							'size'     => $files['size'][ $i ],
+						);
+
+						$category = $categories[ $i ] ?? 'emergency';
+						$result = self::handle_file_upload( $file, self::ALLOWED_PDF_TYPES, 'documents' );
+
+						if ( $result['success'] ) {
+							$wpdb->insert(
+								$wpdb->prefix . 'saw_documents',
+								array(
+									'customer_id' => $customer_id,
+									'category'    => $category,
+									'language'    => $lang_code,
+									'filename'    => basename( $result['file_url'] ),
+									'file_url'    => $result['file_url'],
+									'created_at'  => current_time( 'mysql' ),
+								),
+								array( '%d', '%s', '%s', '%s', '%s', '%s' )
+							);
+						}
+					}
+				}
+
+				// Additional documents
+				if ( ! empty( $_FILES[ 'additional_docs_' . $lang_code ]['name'][0] ) ) {
+					$files = $_FILES[ 'additional_docs_' . $lang_code ];
+					$categories = $_POST[ 'additional_docs_category_' . $lang_code ] ?? array();
+					
+					for ( $i = 0; $i < count( $files['name'] ); $i++ ) {
+						if ( empty( $files['name'][ $i ] ) ) {
+							continue;
+						}
+
+						$file = array(
+							'name'     => $files['name'][ $i ],
+							'type'     => $files['type'][ $i ],
+							'tmp_name' => $files['tmp_name'][ $i ],
+							'error'    => $files['error'][ $i ],
+							'size'     => $files['size'][ $i ],
+						);
+
+						$category = $categories[ $i ] ?? 'other';
+						$result = self::handle_file_upload( $file, self::ALLOWED_PDF_TYPES, 'documents' );
+
+						if ( $result['success'] ) {
+							$wpdb->insert(
+								$wpdb->prefix . 'saw_documents',
+								array(
+									'customer_id' => $customer_id,
+									'category'    => $category,
+									'language'    => $lang_code,
+									'filename'    => basename( $result['file_url'] ),
+									'file_url'    => $result['file_url'],
+									'created_at'  => current_time( 'mysql' ),
+								),
+								array( '%d', '%s', '%s', '%s', '%s', '%s' )
+							);
+						}
+					}
+				}
+			}
+
+			// Log audit
+			SAW_Audit::log( array(
+				'action'      => 'content_updated',
+				'customer_id' => $customer_id,
+				'details'     => 'Super Admin updated content for customer',
+			) );
+
+			return array( 'success' => true );
+
+		} catch ( Exception $e ) {
+			return array(
+				'success' => false,
+				'message' => 'Chyba při ukládání: ' . $e->getMessage(),
+			);
+		}
+	}
+
+	/**
+	 * Handle file upload
+	 */
+	private static function handle_file_upload( $file, $allowed_types, $subdirectory = 'materials' ) {
+		if ( $file['error'] !== UPLOAD_ERR_OK ) {
+			return array( 'success' => false, 'message' => 'Chyba při nahrávání souboru.' );
+		}
+
+		if ( $file['size'] > self::MAX_FILE_SIZE ) {
+			return array( 'success' => false, 'message' => 'Soubor je příliš velký (max. 20 MB).' );
+		}
+
+		$finfo = finfo_open( FILEINFO_MIME_TYPE );
+		$mime_type = finfo_file( $finfo, $file['tmp_name'] );
+		finfo_close( $finfo );
+
+		if ( ! in_array( $mime_type, $allowed_types, true ) ) {
+			return array( 'success' => false, 'message' => 'Nepovolený typ souboru.' );
+		}
+
+		$upload_dir = WP_CONTENT_DIR . '/uploads/saw-visitor-docs/' . $subdirectory;
+		if ( ! file_exists( $upload_dir ) ) {
+			wp_mkdir_p( $upload_dir );
+		}
+
+		$filename = uniqid( 'saw_' ) . '_' . sanitize_file_name( $file['name'] );
+		$file_path = $upload_dir . '/' . $filename;
+
+		if ( ! move_uploaded_file( $file['tmp_name'], $file_path ) ) {
+			return array( 'success' => false, 'message' => 'Nepodařilo se uložit soubor.' );
+		}
+
+		chmod( $file_path, 0644 );
+		$file_url = content_url( 'uploads/saw-visitor-docs/' . $subdirectory . '/' . $filename );
+
+		return array( 'success' => true, 'file_url' => $file_url, 'filename' => $filename );
+	}
+
+	/**
+	 * Save or update material
+	 */
+	private static function save_material( $customer_id, $type, $language, $file_url = null, $wysiwyg_content = null ) {
+		global $wpdb;
+
+		$existing = $wpdb->get_row( $wpdb->prepare(
+			"SELECT id FROM {$wpdb->prefix}saw_materials 
+			WHERE customer_id = %d AND material_type = %s AND language = %s",
+			$customer_id, $type, $language
+		) );
+
+		$data = array(
+			'customer_id'   => $customer_id,
+			'material_type' => $type,
+			'language'      => $language,
+			'updated_at'    => current_time( 'mysql' ),
+		);
+
+		if ( $file_url ) {
+			$data['file_url'] = $file_url;
+			$data['filename'] = basename( $file_url );
+		}
+
+		if ( $wysiwyg_content !== null ) {
+			$data['wysiwyg_content'] = $wysiwyg_content;
+		}
+
+		if ( $existing ) {
+			$wpdb->update(
+				$wpdb->prefix . 'saw_materials',
+				$data,
+				array( 'id' => $existing->id ),
+				array( '%d', '%s', '%s', '%s', '%s', '%s', '%s' ),
+				array( '%d' )
+			);
+		} else {
+			$data['created_at'] = current_time( 'mysql' );
+			$wpdb->insert( $wpdb->prefix . 'saw_materials', $data );
+		}
+	}
+
+	/**
+	 * Get materials for customer
+	 */
+	private static function get_materials( $customer_id ) {
+		global $wpdb;
+		return $wpdb->get_results( $wpdb->prepare(
+			"SELECT * FROM {$wpdb->prefix}saw_materials WHERE customer_id = %d ORDER BY material_type, language",
+			$customer_id
+		) );
+	}
+
+	/**
+	 * Get specific material
+	 */
+	private static function get_material( $materials, $type, $language ) {
+		foreach ( $materials as $material ) {
+			if ( $material->material_type === $type && $material->language === $language ) {
+				return $material;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Get documents for customer
+	 */
+	private static function get_documents( $customer_id ) {
+		global $wpdb;
+		return $wpdb->get_results( $wpdb->prepare(
+			"SELECT * FROM {$wpdb->prefix}saw_documents WHERE customer_id = %d ORDER BY category, language, filename",
+			$customer_id
+		) );
+	}
+
+	/**
+	 * Delete material
+	 */
+	private static function delete_material( $material_id ) {
+		global $wpdb;
+
+		$material = $wpdb->get_row( $wpdb->prepare(
+			"SELECT * FROM {$wpdb->prefix}saw_materials WHERE id = %d",
+			$material_id
+		) );
+
+		if ( ! $material ) {
+			return;
+		}
+
+		if ( $material->file_url ) {
+			$file_path = str_replace( content_url(), WP_CONTENT_DIR, $material->file_url );
+			if ( file_exists( $file_path ) ) {
+				unlink( $file_path );
+			}
+		}
+
+		$wpdb->delete( $wpdb->prefix . 'saw_materials', array( 'id' => $material_id ), array( '%d' ) );
+
+		SAW_Audit::log( array(
+			'action'      => 'material_deleted',
+			'customer_id' => $material->customer_id,
+			'details'     => sprintf( 'Deleted material: %s (%s)', $material->material_type, $material->language ),
+		) );
+	}
+
+	/**
+	 * Delete document
+	 */
+	private static function delete_document( $document_id ) {
+		global $wpdb;
+
+		$document = $wpdb->get_row( $wpdb->prepare(
+			"SELECT * FROM {$wpdb->prefix}saw_documents WHERE id = %d",
+			$document_id
+		) );
+
+		if ( ! $document ) {
+			return;
+		}
+
+		$file_path = str_replace( content_url(), WP_CONTENT_DIR, $document->file_url );
+		if ( file_exists( $file_path ) ) {
+			unlink( $file_path );
+		}
+
+		$wpdb->delete( $wpdb->prefix . 'saw_documents', array( 'id' => $document_id ), array( '%d' ) );
+
+		SAW_Audit::log( array(
+			'action'      => 'document_deleted',
+			'customer_id' => $document->customer_id,
+			'details'     => sprintf( 'Deleted document: %s (%s)', $document->filename, $document->category ),
+		) );
+	}
+
+	/**
+	 * Get file size
+	 */
+	private static function get_file_size( $file_url ) {
+		$file_path = str_replace( content_url(), WP_CONTENT_DIR, $file_url );
+		if ( file_exists( $file_path ) ) {
+			return size_format( filesize( $file_path ) );
+		}
+		return 'N/A';
+	}
+
+	/**
+	 * Get selected customer ID from session
+	 */
+	private static function get_selected_customer() {
+		if ( ! session_id() ) {
+			session_start();
+		}
+		return isset( $_SESSION['saw_selected_customer_id'] ) ? intval( $_SESSION['saw_selected_customer_id'] ) : 0;
+	}
+
+	/**
+	 * Get customer data
+	 */
+	private static function get_customer( $customer_id ) {
+		global $wpdb;
+		return $wpdb->get_row( $wpdb->prepare(
+			"SELECT * FROM {$wpdb->prefix}saw_customers WHERE id = %d",
+			$customer_id
+		) );
+	}
 }

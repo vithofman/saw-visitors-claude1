@@ -1,8 +1,6 @@
 <?php
 /**
- * Super Admin - Customers Management (Phase 5 - UPDATED v4.6.1)
- * 
- * CRUD operace pro zákazníky + logo upload + primary_color
+ * Super Admin - Customers Management (FINÁLNÍ OPRAVA v4.6.1)
  * 
  * @package    SAW_Visitors
  * @subpackage SAW_Visitors/admin
@@ -20,7 +18,7 @@ class SAW_Admin_Customers {
 	 */
 	public static function list_page() {
 		// Handle bulk actions
-		if ( isset( $_POST['bulk_action'] ) && isset( $_POST['customer_ids'] ) ) {
+		if ( isset( $_POST['bulk_action'] ) && isset( $_POST['customer_ids'] ) && ! empty( $_POST['bulk_action'] ) ) {
 			check_admin_referer( 'bulk_customers' );
 			self::handle_bulk_action( $_POST['bulk_action'], $_POST['customer_ids'] );
 			wp_redirect( admin_url( 'admin.php?page=saw-customers&bulk_updated=1' ) );
@@ -50,9 +48,18 @@ class SAW_Admin_Customers {
 		// Handle form submission
 		if ( isset( $_POST['saw_save_customer'] ) ) {
 			check_admin_referer( 'saw_save_customer' );
+			
+			// UCHOVAT CUSTOMER ID PŘED ULOŽENÍM
+			$saved_customer_id = isset( $_SESSION['saw_selected_customer_id'] ) ? $_SESSION['saw_selected_customer_id'] : null;
+			
 			$result = self::save_customer( $customer_id );
 
 			if ( $result['success'] ) {
+				// OBNOVIT SESSION CONTEXT
+				if ( $saved_customer_id ) {
+					$_SESSION['saw_selected_customer_id'] = $saved_customer_id;
+				}
+				
 				wp_redirect( admin_url( 'admin.php?page=saw-customers&saved=1' ) );
 				exit;
 			} else {
@@ -117,7 +124,7 @@ class SAW_Admin_Customers {
 										<input type="checkbox" name="customer_ids[]" value="<?php echo esc_attr( $customer->id ); ?>">
 									</th>
 									<td>
-										<?php if ( $customer->logo_url ) : ?>
+										<?php if ( ! empty( $customer->logo_url ) ) : ?>
 											<img src="<?php echo esc_url( $customer->logo_url ); ?>" alt="Logo" style="max-width: 60px; height: auto;">
 										<?php else : ?>
 											<span class="dashicons dashicons-building" style="font-size: 40px; color: #c3c4c7;"></span>
@@ -133,7 +140,7 @@ class SAW_Admin_Customers {
 									<td>
 										<a href="<?php echo esc_url( admin_url( 'admin.php?page=saw-customers-edit&customer_id=' . $customer->id ) ); ?>" class="button button-small">Upravit</a>
 										<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=saw-customers&delete=' . $customer->id ), 'delete_customer_' . $customer->id ) ); ?>" 
-										   class="button button-small" 
+										   class="button button-small button-link-delete" 
 										   onclick="return confirm('Opravdu smazat tohoto zákazníka? Tato akce je nevratná!');">Smazat</a>
 									</td>
 								</tr>
@@ -253,9 +260,14 @@ class SAW_Admin_Customers {
 							<label for="logo">Logo</label>
 						</th>
 						<td>
-							<?php if ( $is_edit && $customer->logo_url ) : ?>
+							<?php if ( $is_edit && ! empty( $customer->logo_url ) ) : ?>
 								<div style="margin-bottom: 10px;">
 									<img src="<?php echo esc_url( $customer->logo_url ); ?>" alt="Logo" style="max-width: 200px; height: auto; border: 1px solid #ddd; padding: 5px;">
+									<br>
+									<label style="margin-top: 10px; display: inline-block;">
+										<input type="checkbox" name="delete_logo" value="1">
+										Smazat aktuální logo
+									</label>
 								</div>
 							<?php endif; ?>
 							<input type="file" 
@@ -316,7 +328,7 @@ class SAW_Admin_Customers {
 	}
 
 	/**
-	 * Save customer (create or update)
+	 * Save customer - KOMPLETNÍ FIX
 	 */
 	private static function save_customer( $customer_id ) {
 		global $wpdb;
@@ -337,6 +349,7 @@ class SAW_Admin_Customers {
 				);
 			}
 
+			// Základní data
 			$data = array(
 				'name'          => sanitize_text_field( $_POST['name'] ),
 				'ico'           => sanitize_text_field( $_POST['ico'] ?? '' ),
@@ -347,23 +360,44 @@ class SAW_Admin_Customers {
 				'updated_at'    => current_time( 'mysql' ),
 			);
 
+			$format = array( '%s', '%s', '%s', '%s', '%s', '%s', '%s' );
+
 			// Logo upload
-			if ( ! empty( $_FILES['logo']['name'] ) ) {
+			if ( ! empty( $_FILES['logo']['name'] ) && $_FILES['logo']['error'] === UPLOAD_ERR_OK ) {
 				$upload_result = self::handle_logo_upload( $_FILES['logo'] );
 				if ( $upload_result['success'] ) {
+					// Smazat staré logo
+					if ( $customer_id > 0 ) {
+						$old_customer = self::get_customer( $customer_id );
+						if ( $old_customer && ! empty( $old_customer->logo_url ) ) {
+							self::delete_logo_file( $old_customer->logo_url );
+						}
+					}
 					$data['logo_url'] = $upload_result['file_url'];
+					$format[] = '%s';
 				} else {
 					return $upload_result;
 				}
 			}
 
+			// Delete logo
+			if ( isset( $_POST['delete_logo'] ) && $_POST['delete_logo'] == '1' && $customer_id > 0 ) {
+				$old_customer = self::get_customer( $customer_id );
+				if ( $old_customer && ! empty( $old_customer->logo_url ) ) {
+					self::delete_logo_file( $old_customer->logo_url );
+				}
+				$data['logo_url'] = '';
+				$format[] = '%s';
+			}
+
 			// Update or Insert
 			if ( $customer_id > 0 ) {
+				// UPDATE
 				$wpdb->update(
 					$wpdb->prefix . 'saw_customers',
 					$data,
 					array( 'id' => $customer_id ),
-					array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' ),
+					$format,
 					array( '%d' )
 				);
 
@@ -373,16 +407,19 @@ class SAW_Admin_Customers {
 					'details'     => 'Updated customer: ' . $data['name'],
 				) );
 			} else {
+				// INSERT
 				$data['created_at'] = current_time( 'mysql' );
+				$format[] = '%s';
+				
 				$wpdb->insert(
 					$wpdb->prefix . 'saw_customers',
 					$data,
-					array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
+					$format
 				);
 
 				$customer_id = $wpdb->insert_id;
 
-				// Vytvořit training_config pro nového zákazníka
+				// Vytvořit training_config
 				$wpdb->insert(
 					$wpdb->prefix . 'saw_training_config',
 					array(
@@ -408,6 +445,7 @@ class SAW_Admin_Customers {
 			return array( 'success' => true );
 
 		} catch ( Exception $e ) {
+			error_log( '[SAW Visitors] Customer save error: ' . $e->getMessage() );
 			return array(
 				'success' => false,
 				'message' => 'Chyba při ukládání: ' . $e->getMessage(),
@@ -419,21 +457,15 @@ class SAW_Admin_Customers {
 	 * Handle logo upload
 	 */
 	private static function handle_logo_upload( $file ) {
-		// Validace
-		if ( $file['error'] !== UPLOAD_ERR_OK ) {
-			return array(
-				'success' => false,
-				'message' => 'Chyba při nahrávání loga.',
-			);
-		}
-
-		if ( $file['size'] > 2 * 1024 * 1024 ) { // 2 MB
+		// Validace velikosti
+		if ( $file['size'] > 2 * 1024 * 1024 ) {
 			return array(
 				'success' => false,
 				'message' => 'Logo je příliš velké (max. 2 MB).',
 			);
 		}
 
+		// Validace MIME typu
 		$allowed_types = array( 'image/png', 'image/jpeg', 'image/jpg' );
 		$finfo = finfo_open( FILEINFO_MIME_TYPE );
 		$mime_type = finfo_file( $finfo, $file['tmp_name'] );
@@ -454,14 +486,14 @@ class SAW_Admin_Customers {
 
 		// Generovat unikátní název
 		$extension = pathinfo( $file['name'], PATHINFO_EXTENSION );
-		$filename = uniqid( 'logo_' ) . '.' . $extension;
+		$filename = uniqid( 'logo_' . time() . '_' ) . '.' . $extension;
 		$file_path = $upload_dir . '/' . $filename;
 
 		// Přesunout soubor
 		if ( ! move_uploaded_file( $file['tmp_name'], $file_path ) ) {
 			return array(
 				'success' => false,
-				'message' => 'Nepodařilo se uložit logo.',
+				'message' => 'Nepodařilo se uložit logo na server.',
 			);
 		}
 
@@ -476,45 +508,45 @@ class SAW_Admin_Customers {
 	}
 
 	/**
+	 * Delete logo file
+	 */
+	private static function delete_logo_file( $logo_url ) {
+		if ( empty( $logo_url ) ) {
+			return;
+		}
+
+		$file_path = str_replace( content_url(), WP_CONTENT_DIR, $logo_url );
+		if ( file_exists( $file_path ) ) {
+			@unlink( $file_path );
+		}
+	}
+
+	/**
 	 * Delete customer
 	 */
 	private static function delete_customer( $customer_id ) {
 		global $wpdb;
 
-		// Zkontrolovat jestli má zákazník data
+		// Zkontrolovat data
 		$has_data = $wpdb->get_var( $wpdb->prepare(
 			"SELECT COUNT(*) FROM {$wpdb->prefix}saw_invitations WHERE customer_id = %d",
 			$customer_id
 		) );
 
 		if ( $has_data > 0 ) {
-			wp_die( 'Nelze smazat zákazníka s existujícími daty (pozvánky, návštěvy, atd.).', 'Chyba', array( 'back_link' => true ) );
+			wp_die( 'Nelze smazat zákazníka s existujícími daty.', 'Chyba', array( 'back_link' => true ) );
 		}
 
 		// Smazat logo
-		$customer = $wpdb->get_row( $wpdb->prepare(
-			"SELECT logo_url FROM {$wpdb->prefix}saw_customers WHERE id = %d",
-			$customer_id
-		) );
-
-		if ( $customer && $customer->logo_url ) {
-			$file_path = str_replace( content_url(), WP_CONTENT_DIR, $customer->logo_url );
-			if ( file_exists( $file_path ) ) {
-				unlink( $file_path );
-			}
+		$customer = self::get_customer( $customer_id );
+		if ( $customer && ! empty( $customer->logo_url ) ) {
+			self::delete_logo_file( $customer->logo_url );
 		}
 
 		// Smazat zákazníka
 		$wpdb->delete(
 			$wpdb->prefix . 'saw_customers',
 			array( 'id' => $customer_id ),
-			array( '%d' )
-		);
-
-		// Smazat training_config
-		$wpdb->delete(
-			$wpdb->prefix . 'saw_training_config',
-			array( 'customer_id' => $customer_id ),
 			array( '%d' )
 		);
 
@@ -528,7 +560,7 @@ class SAW_Admin_Customers {
 	 * Handle bulk actions
 	 */
 	private static function handle_bulk_action( $action, $customer_ids ) {
-		if ( $action === 'delete' ) {
+		if ( $action === 'delete' && is_array( $customer_ids ) ) {
 			foreach ( $customer_ids as $customer_id ) {
 				self::delete_customer( intval( $customer_id ) );
 			}
