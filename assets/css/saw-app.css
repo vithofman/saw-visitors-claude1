@@ -1,0 +1,351 @@
+/**
+ * SAW Visitors - Main App Styles
+ * 
+ * @package SAW_Visitors
+ * @version 4.6.1
+ */
+
+/* ============================================
+   RESET & BASE
+   ============================================ */
+* {
+    box-sizing: border-box;
+}
+
+body.saw-app-body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #1f2937;
+    background: #f9fafb;
+    overflow-x: hidden;
+}
+
+/* ============================================
+   LAYOUT WRAPPER
+   ============================================ */
+.saw-app-wrapper {
+    display: flex;
+    min-height: calc(100vh - 60px - 50px); /* minus header & footer */
+    padding-top: 60px; /* header height */
+}
+
+/* ============================================
+   MAIN CONTENT AREA
+   ============================================ */
+.saw-app-content {
+    flex: 1;
+    margin-left: 260px; /* sidebar width */
+    padding: 32px;
+    background: #f9fafb;
+    min-height: calc(100vh - 60px - 50px);
+}
+
+/* ============================================
+   PAGE ELEMENTS
+   ============================================ */
+.saw-page-header {
+    margin-bottom: 32px;
+}
+
+.saw-page-header h1 {
+    margin: 0 0 8px 0;
+    font-size: 32px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.saw-page-subtitle {
+    margin: 0;
+    font-size: 16px;
+    color: #6b7280;
+}
+
+/* ============================================
+   STATS GRID
+   ============================================ */
+.saw-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+.saw-stat-card {
+    background: white;
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.saw-stat-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    flex-shrink: 0;
+}
+
+.saw-stat-content {
+    flex: 1;
+}
+
+.saw-stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.saw-stat-label {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+/* ============================================
+   CARDS
+   ============================================ */
+.saw-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 24px;
+}
+
+.saw-card-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.saw-card-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.saw-card-action {
+    font-size: 14px;
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.saw-card-action:hover {
+    color: #1d4ed8;
+}
+
+.saw-card-body {
+    padding: 24px;
+}
+
+/* ============================================
+   DASHBOARD ROW
+   ============================================ */
+.saw-dashboard-row {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+/* ============================================
+   COMPLIANCE CHART
+   ============================================ */
+.saw-compliance-chart {
+    text-align: center;
+}
+
+.saw-compliance-circle {
+    width: 200px;
+    margin: 0 auto 24px;
+}
+
+.saw-circular-chart {
+    display: block;
+    margin: 0 auto;
+    max-width: 100%;
+    max-height: 200px;
+}
+
+.saw-percentage {
+    font-size: 0.5em;
+    font-weight: bold;
+    fill: #111827;
+    text-anchor: middle;
+}
+
+.saw-compliance-description {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0;
+}
+
+/* ============================================
+   QUICK ACTIONS
+   ============================================ */
+.saw-quick-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.saw-quick-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    color: #374151;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.saw-quick-action-btn:hover {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+}
+
+.saw-quick-action-btn.saw-btn-primary {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: white;
+}
+
+.saw-quick-action-btn.saw-btn-primary:hover {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+}
+
+/* ============================================
+   TABLE
+   ============================================ */
+.saw-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.saw-table thead th {
+    text-align: left;
+    padding: 12px;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    color: #6b7280;
+    letter-spacing: 0.5px;
+}
+
+.saw-table tbody td {
+    padding: 16px 12px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.saw-table tbody tr:hover {
+    background: #f9fafb;
+}
+
+.saw-visitor-name {
+    font-weight: 500;
+    color: #111827;
+}
+
+.saw-visitor-email {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 2px;
+}
+
+/* ============================================
+   BADGES
+   ============================================ */
+.saw-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.saw-badge-success {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.saw-badge-gray {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+/* ============================================
+   EMPTY STATE
+   ============================================ */
+.saw-empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: #6b7280;
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+.saw-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: white;
+    color: #374151;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.saw-btn:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+}
+
+.saw-btn-primary {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: white;
+}
+
+.saw-btn-primary:hover {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+}
+
+/* ============================================
+   UTILITIES
+   ============================================ */
+.saw-mt-16 { margin-top: 16px; }
+.saw-mt-24 { margin-top: 24px; }
+.saw-mt-32 { margin-top: 32px; }
+
+.saw-mb-16 { margin-bottom: 16px; }
+.saw-mb-24 { margin-bottom: 24px; }
+.saw-mb-32 { margin-bottom: 32px; }
+
+.saw-text-center { text-align: center; }
+.saw-text-right { text-align: right; }
