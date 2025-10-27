@@ -1,7 +1,7 @@
 <?php
 /**
  * Hlavní třída pluginu SAW Visitors v4.6.1
- * FIXED: Router dispatch s parametry
+ * FIXED: Rewrite rules BEZ kolize s /wp-admin
  * 
  * @package SAW_Visitors
  * @since 4.6.1
@@ -98,12 +98,29 @@ class SAW_Visitors {
                 <p><strong>Verze:</strong> <?php echo esc_html($this->version); ?></p>
                 <p><strong>Popis:</strong> Komplexní systém pro správu návštěvníků s multi-tenant architekturou.</p>
                 
-                <h3>Přístupové URL:</h3>
+                <h3>✅ Přístupové URL:</h3>
                 <ul style="list-style: disc; margin-left: 20px;">
                     <li><strong>Admin:</strong> <a href="<?php echo home_url('/admin/'); ?>" target="_blank"><?php echo home_url('/admin/'); ?></a></li>
                     <li><strong>Manager:</strong> <a href="<?php echo home_url('/manager/'); ?>" target="_blank"><?php echo home_url('/manager/'); ?></a></li>
                     <li><strong>Terminal:</strong> <a href="<?php echo home_url('/terminal/'); ?>" target="_blank"><?php echo home_url('/terminal/'); ?></a></li>
                 </ul>
+                
+                <h3>⚠️ Důležité:</h3>
+                <p style="background: #fef3c7; padding: 12px; border-radius: 4px; color: #92400e;">
+                    Pokud výše uvedené odkazy nefungují, klikněte na tlačítko níže pro obnovení rewrite rules:
+                </p>
+                <form method="post" action="">
+                    <input type="hidden" name="saw_flush_rewrite" value="1">
+                    <?php wp_nonce_field('saw_flush_rewrite'); ?>
+                    <button type="submit" class="button button-primary" style="margin-top: 12px;">🔄 Obnovit Rewrite Rules</button>
+                </form>
+                
+                <?php
+                if (isset($_POST['saw_flush_rewrite']) && check_admin_referer('saw_flush_rewrite')) {
+                    flush_rewrite_rules();
+                    echo '<div style="background: #d1fae5; color: #065f46; padding: 12px; border-radius: 4px; margin-top: 16px;">✅ Rewrite rules byly obnoveny! Zkuste kliknout na odkazy výše.</div>';
+                }
+                ?>
                 
                 <h3>Technické informace:</h3>
                 <ul style="list-style: disc; margin-left: 20px;">
@@ -118,17 +135,26 @@ class SAW_Visitors {
     }
     
     public function register_rewrite_rules() {
-        add_rewrite_rule('^admin/?', 'index.php?saw_route=admin', 'top');
-        add_rewrite_rule('^admin/(.+)', 'index.php?saw_route=admin&saw_path=$matches[1]', 'top');
+        // DŮLEŽITÉ: Používáme PRIORITY aby se admin nezachytával jako WP admin redirect
+        // Admin routes - MUSÍ být PŘED WordPress default rules
+        add_rewrite_rule('^admin/?$', 'index.php?saw_route=admin', 'top');
+        add_rewrite_rule('^admin/([^/]+)/?$', 'index.php?saw_route=admin&saw_path=$matches[1]', 'top');
+        add_rewrite_rule('^admin/([^/]+)/(.+)', 'index.php?saw_route=admin&saw_path=$matches[1]/$matches[2]', 'top');
         
-        add_rewrite_rule('^manager/?', 'index.php?saw_route=manager', 'top');
-        add_rewrite_rule('^manager/(.+)', 'index.php?saw_route=manager&saw_path=$matches[1]', 'top');
+        // Manager routes
+        add_rewrite_rule('^manager/?$', 'index.php?saw_route=manager', 'top');
+        add_rewrite_rule('^manager/([^/]+)/?$', 'index.php?saw_route=manager&saw_path=$matches[1]', 'top');
+        add_rewrite_rule('^manager/([^/]+)/(.+)', 'index.php?saw_route=manager&saw_path=$matches[1]/$matches[2]', 'top');
         
-        add_rewrite_rule('^terminal/?', 'index.php?saw_route=terminal', 'top');
-        add_rewrite_rule('^terminal/(.+)', 'index.php?saw_route=terminal&saw_path=$matches[1]', 'top');
+        // Terminal routes
+        add_rewrite_rule('^terminal/?$', 'index.php?saw_route=terminal', 'top');
+        add_rewrite_rule('^terminal/([^/]+)/?$', 'index.php?saw_route=terminal&saw_path=$matches[1]', 'top');
+        add_rewrite_rule('^terminal/([^/]+)/(.+)', 'index.php?saw_route=terminal&saw_path=$matches[1]/$matches[2]', 'top');
         
-        add_rewrite_rule('^visitor/?', 'index.php?saw_route=visitor', 'top');
-        add_rewrite_rule('^visitor/(.+)', 'index.php?saw_route=visitor&saw_path=$matches[1]', 'top');
+        // Visitor routes
+        add_rewrite_rule('^visitor/?$', 'index.php?saw_route=visitor', 'top');
+        add_rewrite_rule('^visitor/([^/]+)/?$', 'index.php?saw_route=visitor&saw_path=$matches[1]', 'top');
+        add_rewrite_rule('^visitor/([^/]+)/(.+)', 'index.php?saw_route=visitor&saw_path=$matches[1]/$matches[2]', 'top');
     }
     
     public function add_query_vars($vars) {
@@ -144,47 +170,65 @@ class SAW_Visitors {
             return;
         }
         
+        // PREVENT WordPress redirect to /wp-admin/
+        remove_action('template_redirect', 'wp_redirect_admin_locations', 1000);
+        
         $this->router = new SAW_Router();
-        // OPRAVENO: Předáváme parametry!
         $this->router->dispatch($route, get_query_var('saw_path'));
         exit;
     }
     
     public function enqueue_admin_styles() {
         if (isset($_GET['page']) && $_GET['page'] === 'saw-visitors-about') {
-            wp_enqueue_style(
-                $this->plugin_name . '-admin',
-                SAW_VISITORS_PLUGIN_URL . 'assets/css/admin.css',
-                array(),
-                $this->version
-            );
+            if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/css/admin.css')) {
+                wp_enqueue_style(
+                    $this->plugin_name . '-admin',
+                    SAW_VISITORS_PLUGIN_URL . 'assets/css/admin.css',
+                    array(),
+                    $this->version
+                );
+            }
         }
     }
     
     public function enqueue_admin_scripts() {
-        // Empty for now
+        if (isset($_GET['page']) && $_GET['page'] === 'saw-visitors-about') {
+            if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/js/admin.js')) {
+                wp_enqueue_script(
+                    $this->plugin_name . '-admin',
+                    SAW_VISITORS_PLUGIN_URL . 'assets/js/admin.js',
+                    array('jquery'),
+                    $this->version,
+                    true
+                );
+            }
+        }
     }
     
     public function enqueue_public_styles() {
         if (get_query_var('saw_route')) {
-            wp_enqueue_style(
-                $this->plugin_name . '-public',
-                SAW_VISITORS_PLUGIN_URL . 'assets/css/public.css',
-                array(),
-                $this->version
-            );
+            if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/css/public.css')) {
+                wp_enqueue_style(
+                    $this->plugin_name . '-public',
+                    SAW_VISITORS_PLUGIN_URL . 'assets/css/public.css',
+                    array(),
+                    $this->version
+                );
+            }
         }
     }
     
     public function enqueue_public_scripts() {
         if (get_query_var('saw_route')) {
-            wp_enqueue_script(
-                $this->plugin_name . '-public',
-                SAW_VISITORS_PLUGIN_URL . 'assets/js/public.js',
-                array('jquery'),
-                $this->version,
-                true
-            );
+            if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/js/public.js')) {
+                wp_enqueue_script(
+                    $this->plugin_name . '-public',
+                    SAW_VISITORS_PLUGIN_URL . 'assets/js/public.js',
+                    array('jquery'),
+                    $this->version,
+                    true
+                );
+            }
         }
     }
     
