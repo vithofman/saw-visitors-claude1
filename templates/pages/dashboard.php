@@ -118,65 +118,9 @@
             <a href="/admin/visits" class="saw-card-action">Zobrazit vše →</a>
         </div>
         <div class="saw-card-body">
-            <?php
-            global $wpdb;
-            $recent_visits = $wpdb->get_results($wpdb->prepare(
-                "SELECT v.*, vr.first_name, vr.last_name, vr.email, c.name as company_name
-                FROM {$wpdb->prefix}saw_visits v
-                INNER JOIN {$wpdb->prefix}saw_visitors vr ON v.visitor_id = vr.id
-                LEFT JOIN {$wpdb->prefix}saw_companies c ON vr.company_id = c.id
-                WHERE v.customer_id = %d
-                ORDER BY v.checked_in_at DESC
-                LIMIT 10",
-                $customer['id']
-            ));
-            ?>
-            
-            <?php if (empty($recent_visits)): ?>
-                <div class="saw-empty-state">
-                    <p>Zatím žádné návštěvy</p>
-                </div>
-            <?php else: ?>
-                <table class="saw-table">
-                    <thead>
-                        <tr>
-                            <th>Návštěvník</th>
-                            <th>Firma</th>
-                            <th>Check-in</th>
-                            <th>Check-out</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($recent_visits as $visit): ?>
-                            <tr>
-                                <td>
-                                    <div class="saw-visitor-name">
-                                        <?php echo esc_html($visit->first_name . ' ' . $visit->last_name); ?>
-                                    </div>
-                                    <div class="saw-visitor-email"><?php echo esc_html($visit->email); ?></div>
-                                </td>
-                                <td><?php echo esc_html($visit->company_name ?: '—'); ?></td>
-                                <td><?php echo esc_html(date('d.m.Y H:i', strtotime($visit->checked_in_at))); ?></td>
-                                <td>
-                                    <?php if ($visit->checked_out_at): ?>
-                                        <?php echo esc_html(date('d.m.Y H:i', strtotime($visit->checked_out_at))); ?>
-                                    <?php else: ?>
-                                        <span class="saw-badge saw-badge-success">Aktivní</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <?php if ($visit->checked_out_at): ?>
-                                        <span class="saw-badge saw-badge-gray">Ukončena</span>
-                                    <?php else: ?>
-                                        <span class="saw-badge saw-badge-success">Aktivní</span>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            <?php endif; ?>
+            <div class="saw-empty-state">
+                <p>Demo data - zatím bez databázových dotazů</p>
+            </div>
         </div>
     </div>
 </div>

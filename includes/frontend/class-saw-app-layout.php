@@ -30,6 +30,34 @@ class SAW_App_Layout {
         $this->page_title = $page_title;
         $this->active_menu = $active_menu;
         
+        // Add to wp_head
+        add_action('wp_head', array($this, 'add_head_content'));
+        
+        // Add to wp_footer (render before </body>)
+        add_action('wp_footer', array($this, 'render_layout_content'), 1);
+        
+        // Store content for later rendering
+        $GLOBALS['saw_page_content'] = $content;
+    }
+    
+    public function add_head_content() {
+        ?>
+        <style>
+            /* Prevent FOUC */
+            body.saw-app-body { 
+                opacity: 0; 
+            }
+            body.saw-app-body.loaded {
+                opacity: 1;
+                transition: opacity 0.2s;
+            }
+        </style>
+        <?php
+    }
+    
+    public function render_layout_content() {
+        $content = isset($GLOBALS['saw_page_content']) ? $GLOBALS['saw_page_content'] : '';
+        
         $this->render_header();
         
         echo '<div class="saw-app-wrapper">';
@@ -43,6 +71,14 @@ class SAW_App_Layout {
         echo '</div>'; // .saw-app-wrapper
         
         $this->render_footer();
+        
+        ?>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                document.body.classList.add('loaded');
+            });
+        </script>
+        <?php
     }
     
     /**
@@ -67,53 +103,5 @@ class SAW_App_Layout {
     private function render_footer() {
         $footer = new SAW_App_Footer();
         $footer->render();
-    }
-    
-    /**
-     * Enqueue app styles & scripts
-     */
-    public static function enqueue_assets() {
-        wp_enqueue_style(
-            'saw-app',
-            SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-app.css',
-            array(),
-            SAW_VISITORS_VERSION
-        );
-        
-        wp_enqueue_style(
-            'saw-app-header',
-            SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-app-header.css',
-            array('saw-app'),
-            SAW_VISITORS_VERSION
-        );
-        
-        wp_enqueue_style(
-            'saw-app-sidebar',
-            SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-app-sidebar.css',
-            array('saw-app'),
-            SAW_VISITORS_VERSION
-        );
-        
-        wp_enqueue_style(
-            'saw-app-responsive',
-            SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-app-responsive.css',
-            array('saw-app'),
-            SAW_VISITORS_VERSION
-        );
-        
-        wp_enqueue_script(
-            'saw-app',
-            SAW_VISITORS_PLUGIN_URL . 'assets/js/saw-app.js',
-            array('jquery'),
-            SAW_VISITORS_VERSION,
-            true
-        );
-        
-        wp_localize_script('saw-app', 'sawApp', array(
-            'ajaxUrl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('saw_app_nonce'),
-            'userId' => $this->current_user['id'] ?? 0,
-            'customerId' => $this->current_customer['id'] ?? 0,
-        ));
     }
 }
