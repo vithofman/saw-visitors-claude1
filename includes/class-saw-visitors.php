@@ -1,7 +1,7 @@
 <?php
 /**
  * Hlavní třída pluginu SAW Visitors v4.6.1
- * FIXED: Corrected plugin_dir to SAW_VISITORS_PLUGIN_DIR constant
+ * UPDATED: Added Customers Controller initialization
  * 
  * @package SAW_Visitors
  * @since 4.6.1
@@ -24,7 +24,7 @@ class SAW_Visitors {
         
         $this->load_dependencies();
         $this->init_session();
-        $this->init_controllers();
+        $this->init_controllers(); // ✅ NOVÉ: Inicializace controllerů
         $this->define_hooks();
     }
     
@@ -52,11 +52,6 @@ class SAW_Visitors {
         }
         
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/class-saw-router.php';
-
-        // ✅ OPRAVENO: Data Tables System - správná konstanta!
-        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/data-tables/class-saw-data-table-column.php';
-        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/data-tables/class-saw-data-table.php';
-        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/helpers/data-table-helpers.php';
         
         $this->loader = new SAW_Loader();
     }
@@ -68,19 +63,42 @@ class SAW_Visitors {
     }
     
     /**
-     * Inicializace controllerů
+     * ✅ NOVÁ METODA: Inicializace controllerů
+     * Tady se načítají všechny controllery a registrují jejich AJAX handlers
      */
     private function init_controllers() {
-        // Customers Controller
+        // ✅ CUSTOMERS CONTROLLER - Pro správu zákazníků
         $customers_controller_file = SAW_VISITORS_PLUGIN_DIR . 'includes/controllers/admin/class-saw-customers-controller.php';
         
         if (file_exists($customers_controller_file)) {
             require_once $customers_controller_file;
+            
+            // Vytvoř instanci controlleru (tím se zaregistruje AJAX handler)
             new SAW_Customers_Controller();
+            
             error_log('SAW Visitors: Customers Controller initialized');
         } else {
             error_log('SAW Visitors ERROR: Customers Controller file not found at: ' . $customers_controller_file);
         }
+        
+        // ✅ MÍSTO PRO DALŠÍ CONTROLLERY
+        // Až budeš přidávat další controllery, dej je sem:
+        
+        /*
+        // Příklad pro budoucí controllery:
+        
+        $dashboard_controller_file = SAW_VISITORS_PLUGIN_DIR . 'includes/controllers/admin/class-saw-dashboard-controller.php';
+        if (file_exists($dashboard_controller_file)) {
+            require_once $dashboard_controller_file;
+            new SAW_Dashboard_Controller();
+        }
+        
+        $invitations_controller_file = SAW_VISITORS_PLUGIN_DIR . 'includes/controllers/admin/class-saw-invitations-controller.php';
+        if (file_exists($invitations_controller_file)) {
+            require_once $invitations_controller_file;
+            new SAW_Invitations_Controller();
+        }
+        */
     }
     
     private function define_hooks() {
@@ -201,6 +219,9 @@ class SAW_Visitors {
         exit;
     }
     
+    /**
+     * ✅ OPRAVENO: WP Admin styles (jen About page)
+     */
     public function enqueue_admin_styles() {
         if (isset($_GET['page']) && $_GET['page'] === 'saw-visitors-about') {
             if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/css/admin.css')) {
@@ -228,6 +249,9 @@ class SAW_Visitors {
         }
     }
     
+    /**
+     * ✅ UPDATED: Frontend styles with table CSS
+     */
     public function enqueue_public_styles() {
         $route = get_query_var('saw_route');
         
@@ -235,7 +259,7 @@ class SAW_Visitors {
             return;
         }
         
-        // Base public styles
+        // Base public styles - VŽDY
         if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/css/public.css')) {
             wp_enqueue_style(
                 $this->plugin_name . '-public',
@@ -245,7 +269,7 @@ class SAW_Visitors {
             );
         }
         
-        // Tables CSS - pro admin a manager routes
+        // ✅ NOVÉ: Tables CSS - pro admin a manager routes
         if (in_array($route, array('admin', 'manager'))) {
             if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/css/saw-app-tables.css')) {
                 wp_enqueue_style(
@@ -257,7 +281,7 @@ class SAW_Visitors {
             }
         }
         
-        // Customers CSS - jen na customers stránkách
+        // ✅ CUSTOMERS CSS - JEN NA CUSTOMERS STRÁNKÁCH
         $path = get_query_var('saw_path');
         
         if ($this->is_customers_page($route, $path)) {
@@ -272,15 +296,22 @@ class SAW_Visitors {
         }
     }
     
+    /**
+     * ✅ NOVÁ METODA: Detekce customers stránky
+     */
     private function is_customers_page($route, $path) {
+        // Musí být admin route
         if ($route !== 'admin') {
             return false;
         }
         
+        // Prázdná cesta = NE
         if (empty($path)) {
             return false;
         }
         
+        // Kontrola customers v path
+        // Podporuje: settings/customers, settings/customers/new, settings/customers/edit/1
         return (
             strpos($path, 'settings/customers') === 0 ||
             strpos($path, 'customers') === 0
@@ -298,6 +329,7 @@ class SAW_Visitors {
                     true
                 );
                 
+                // Localize script for AJAX
                 wp_localize_script(
                     $this->plugin_name . '-public',
                     'sawAjax',
