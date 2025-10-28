@@ -1,11 +1,8 @@
 <?php
 /**
- * SAW App Layout Manager - WITH AJAX NAVIGATION SUPPORT
+ * SAW App Layout Manager - FIXED VERSION (CHAT 7)
  * 
- * ZMĚNY v4.6.2:
- * - Přidána detekce AJAX requestů
- * - Nová metoda render_content_only() pro SPA navigation
- * - JSON response pro AJAX s content + title + active_menu
+ * ✅ OPRAVA: Dynamic customer loading from session
  * 
  * @package SAW_Visitors
  * @subpackage Frontend
@@ -24,10 +21,13 @@ class SAW_App_Layout {
     private $active_menu;
     
     /**
-     * Konstruktor - BEZ HOOKŮ!
+     * Konstruktor
      */
     public function __construct() {
-        // Žádné hooks zde! Budeme volat metody přímo.
+        // Initialize session if needed
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
     }
     
     /**
@@ -36,41 +36,219 @@ class SAW_App_Layout {
      * @param string $content       HTML content stránky
      * @param string $page_title    Titulek stránky
      * @param string $active_menu   ID aktivní menu položky
-     * @param array  $user          User data (id, name, email, role)
-     * @param array  $customer      Customer data (id, name, ico, address)
+     * @param array  $user          User data (optional - will load dynamically if null)
+     * @param array  $customer      Customer data (optional - will load dynamically if null)
      */
     public function render($content, $page_title = '', $active_menu = '', $user = null, $customer = null) {
         $this->page_title = $page_title;
         $this->active_menu = $active_menu;
         
-        // Použijeme data z parametrů, nebo fallback na demo data
-        $this->current_user = $user ?: array(
-            'id' => 1,
-            'name' => 'Demo Admin',
-            'email' => 'admin@demo.cz',
-            'role' => 'admin',
-        );
+        // ✅ NOVÉ: Load user dynamically if not provided
+        $this->current_user = $user ?: $this->get_current_user_data();
         
-        $this->current_customer = $customer ?: array(
-            'id' => 1,
-            'name' => 'Demo Firma s.r.o.',
-            'ico' => '12345678',
-            'address' => 'Praha 1',
-        );
+        // ✅ KRITICKÁ ZMĚNA: Load customer DYNAMICALLY from session
+        $this->current_customer = $customer ?: $this->get_current_customer_data();
         
-        // ✅ NOVÉ: Pokud je AJAX request, vrať jen obsah
+        // Log for debugging
+        if (defined('SAW_DEBUG') && SAW_DEBUG) {
+            error_log('SAW Layout: Rendering page "' . $page_title . '"');
+            error_log('SAW Layout: User role: ' . $this->current_user['role']);
+            error_log('SAW Layout: Customer ID: ' . $this->current_customer['id'] . ' (' . $this->current_customer['name'] . ')');
+        }
+        
+        // Check if AJAX request
         if ($this->is_ajax_request()) {
             $this->render_content_only($content);
             exit;
         }
         
-        // Standardní render s layoutem
+        // Render complete page
         $this->render_complete_page($content);
         exit;
     }
     
     /**
-     * ✅ NOVÁ METODA: Detekce AJAX requestu
+     * ✅ NOVÁ METODA: Get current customer data DYNAMICALLY
+     * 
+     * Priority:
+     * 1. SuperAdmin: Load from session (selected customer)
+     * 2. Admin/Manager: Load their assigned customer
+     * 3. Fallback: Load first customer
+     */
+    private function get_current_customer_data() {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'saw_customers';
+        
+        // 1. CHECK IF SUPERADMIN
+        if ($this->is_super_admin()) {
+            // Load from session
+            $customer_id = $this->get_selected_customer_id_from_session();
+            
+            if ($customer_id) {
+                $customer = $wpdb->get_row($wpdb->prepare(
+                    "SELECT * FROM {$table_name} WHERE id = %d",
+                    $customer_id
+                ), ARRAY_A);
+                
+                if ($customer) {
+                    if (defined('SAW_DEBUG') && SAW_DEBUG) {
+                        error_log('SAW Layout: SuperAdmin loaded customer from session: ID ' . $customer_id);
+                    }
+                    
+                    return array(
+                        'id' => $customer['id'],
+                        'name' => $customer['name'],
+                        'ico' => $customer['ico'] ?? '',
+                        'address' => $customer['address'] ?? '',
+                        'logo_url' => $customer['logo_url'] ?? '',
+                    );
+                }
+            }
+            
+            // Fallback: Load first customer
+            if (defined('SAW_DEBUG') && SAW_DEBUG) {
+                error_log('SAW Layout: SuperAdmin session empty, loading first customer');
+            }
+            
+            return $this->load_first_customer();
+        }
+        
+        // 2. ADMIN/MANAGER: Load their customer
+        // TODO: Implement when saw_users table is ready
+        // For now, return first customer
+        return $this->load_first_customer();
+    }
+    
+    /**
+     * ✅ NOVÁ METODA: Get selected customer ID from session
+     * 
+     * @return int|null Customer ID or null
+     */
+    private function get_selected_customer_id_from_session() {
+        // 1. Try PHP session
+        if (isset($_SESSION['saw_current_customer_id'])) {
+            $session_id = intval($_SESSION['saw_current_customer_id']);
+            
+            if (defined('SAW_DEBUG') && SAW_DEBUG) {
+                error_log('SAW Layout: Found customer ID in PHP session: ' . $session_id);
+            }
+            
+            return $session_id;
+        }
+        
+        // 2. Try WP user meta
+        if (is_user_logged_in()) {
+            $user_id = get_current_user_id();
+            $meta_id = get_user_meta($user_id, 'saw_current_customer_id', true);
+            
+            if ($meta_id) {
+                $meta_id = intval($meta_id);
+                
+                if (defined('SAW_DEBUG') && SAW_DEBUG) {
+                    error_log('SAW Layout: Found customer ID in user meta: ' . $meta_id);
+                }
+                
+                // Sync back to session
+                $_SESSION['saw_current_customer_id'] = $meta_id;
+                
+                return $meta_id;
+            }
+        }
+        
+        if (defined('SAW_DEBUG') && SAW_DEBUG) {
+            error_log('SAW Layout: No customer ID found in session or user meta');
+        }
+        
+        return null;
+    }
+    
+    /**
+     * ✅ NOVÁ METODA: Load first customer (fallback)
+     * 
+     * @return array Customer data
+     */
+    private function load_first_customer() {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'saw_customers';
+        
+        $customer = $wpdb->get_row(
+            "SELECT * FROM {$table_name} ORDER BY id ASC LIMIT 1",
+            ARRAY_A
+        );
+        
+        if ($customer) {
+            // Save as default in session
+            $_SESSION['saw_current_customer_id'] = intval($customer['id']);
+            
+            if (is_user_logged_in()) {
+                update_user_meta(get_current_user_id(), 'saw_current_customer_id', intval($customer['id']));
+            }
+            
+            if (defined('SAW_DEBUG') && SAW_DEBUG) {
+                error_log('SAW Layout: Loaded first customer as fallback: ID ' . $customer['id']);
+            }
+            
+            return array(
+                'id' => $customer['id'],
+                'name' => $customer['name'],
+                'ico' => $customer['ico'] ?? '',
+                'address' => $customer['address'] ?? '',
+                'logo_url' => $customer['logo_url'] ?? '',
+            );
+        }
+        
+        // Ultimate fallback
+        if (defined('SAW_DEBUG') && SAW_DEBUG) {
+            error_log('SAW Layout: No customers found in database! Using demo data.');
+        }
+        
+        return array(
+            'id' => 0,
+            'name' => 'Žádný zákazník',
+            'ico' => '',
+            'address' => '',
+            'logo_url' => '',
+        );
+    }
+    
+    /**
+     * ✅ NOVÁ METODA: Check if current user is SuperAdmin
+     * 
+     * @return bool
+     */
+    private function is_super_admin() {
+        return is_user_logged_in() && current_user_can('manage_options');
+    }
+    
+    /**
+     * Get current user data
+     * 
+     * @return array User data
+     */
+    private function get_current_user_data() {
+        if (is_user_logged_in()) {
+            $wp_user = wp_get_current_user();
+            
+            return array(
+                'id' => $wp_user->ID,
+                'name' => $wp_user->display_name,
+                'email' => $wp_user->user_email,
+                'role' => current_user_can('manage_options') ? 'super_admin' : 'admin',
+            );
+        }
+        
+        return array(
+            'id' => 0,
+            'name' => 'Guest',
+            'email' => '',
+            'role' => 'guest',
+        );
+    }
+    
+    /**
+     * Check if AJAX request
      */
     private function is_ajax_request() {
         return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
@@ -78,7 +256,7 @@ class SAW_App_Layout {
     }
     
     /**
-     * ✅ NOVÁ METODA: Render jen obsahu (pro AJAX)
+     * Render content only (for AJAX)
      */
     private function render_content_only($content) {
         header('Content-Type: application/json');
@@ -106,98 +284,34 @@ class SAW_App_Layout {
             <link rel="stylesheet" href="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/css/saw-app.css?v=<?php echo SAW_VISITORS_VERSION; ?>">
             <link rel="stylesheet" href="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/css/saw-app-header.css?v=<?php echo SAW_VISITORS_VERSION; ?>">
             <link rel="stylesheet" href="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/css/saw-app-sidebar.css?v=<?php echo SAW_VISITORS_VERSION; ?>">
-            <link rel="stylesheet" href="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/css/saw-app-footer.css?v=<?php echo SAW_VISITORS_VERSION; ?>">
-            
-            <style>
-                body.saw-app-body { 
-                    opacity: 0; 
-                    margin: 0;
-                    padding: 0;
-                }
-                body.saw-app-body.loaded { 
-                    opacity: 1; 
-                    transition: opacity 0.2s; 
-                }
-                
-                /* ✅ NOVÉ: Loading overlay pro SPA navigation */
-                .saw-page-loading-overlay {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background: rgba(255, 255, 255, 0.8);
-                    display: none;
-                    align-items: center;
-                    justify-content: center;
-                    z-index: 9999;
-                }
-                
-                .saw-page-loading-overlay.active {
-                    display: flex;
-                }
-                
-                .saw-page-loading-spinner {
-                    width: 48px;
-                    height: 48px;
-                    border: 4px solid #e5e7eb;
-                    border-top-color: #2563eb;
-                    border-radius: 50%;
-                    animation: saw-spin 0.8s linear infinite;
-                }
-                
-                @keyframes saw-spin {
-                    to { transform: rotate(360deg); }
-                }
-            </style>
             
             <?php
-            /**
-             * BEZPEČNÉ NAČTENÍ WORDPRESS ASSETS
-             */
-            
-            // jQuery (téměř vždy dostupné)
-            if (function_exists('wp_enqueue_script')) {
-                wp_enqueue_script('jquery');
-            }
-            
-            // Dashicons (ikony) - registrujeme pokud nejsou
-            if (function_exists('wp_register_style') && !wp_style_is('dashicons', 'registered')) {
-                wp_register_style('dashicons', includes_url('css/dashicons.min.css'), array(), null);
-            }
-            
-            // Print head scripts a styles
-            if (function_exists('wp_print_head_scripts')) {
-                wp_print_head_scripts();
-            }
-            
-            if (function_exists('wp_print_styles')) {
-                wp_print_styles('dashicons');
+            if (function_exists('wp_head')) {
+                wp_head();
             }
             ?>
         </head>
         <body class="saw-app-body">
             
-            <!-- ✅ NOVÝ: Loading overlay pro SPA navigation -->
-            <div class="saw-page-loading-overlay" id="saw-page-loading">
-                <div class="saw-page-loading-spinner"></div>
-            </div>
-            
+            <!-- Header -->
             <?php $this->render_header(); ?>
             
-            <div class="saw-app-wrapper">
+            <div class="saw-app-container">
+                <!-- Sidebar -->
                 <?php $this->render_sidebar(); ?>
-                <main class="saw-app-content" id="saw-app-content">
-                    <?php echo $content; ?>
+                
+                <!-- Main Content -->
+                <main class="saw-app-main">
+                    <div class="saw-app-content">
+                        <?php echo $content; ?>
+                    </div>
                 </main>
             </div>
             
+            <!-- Footer -->
             <?php $this->render_footer(); ?>
             
             <?php
-            /**
-             * BEZPEČNÉ NAČTENÍ FOOTER SCRIPTŮ
-             */
             if (function_exists('wp_print_footer_scripts')) {
                 wp_print_footer_scripts();
             }
@@ -205,21 +319,15 @@ class SAW_App_Layout {
             
             <!-- SAW App JavaScript -->
             <script src="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/js/saw-app.js?v=<?php echo SAW_VISITORS_VERSION; ?>"></script>
-            
-            <!-- ✅ NOVÝ: SPA Navigation Script -->
             <script src="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/js/saw-app-navigation.js?v=<?php echo SAW_VISITORS_VERSION; ?>"></script>
             
             <script>
-                // Fade in po načtení
                 document.addEventListener('DOMContentLoaded', function() {
                     document.body.classList.add('loaded');
+                    console.log('🚀 SAW Visitors App loaded');
+                    console.log('Version: <?php echo SAW_VISITORS_VERSION; ?>');
+                    console.log('Customer: <?php echo esc_js($this->current_customer['name']); ?> (ID: <?php echo intval($this->current_customer['id']); ?>)');
                 });
-                
-                // Console info
-                console.log('🚀 SAW Visitors App loaded');
-                console.log('Version: <?php echo SAW_VISITORS_VERSION; ?>');
-                console.log('Page: <?php echo esc_js($this->page_title); ?>');
-                console.log('🎯 SPA Navigation: ENABLED');
             </script>
         </body>
         </html>
@@ -233,13 +341,6 @@ class SAW_App_Layout {
         if (class_exists('SAW_App_Header')) {
             $header = new SAW_App_Header($this->current_user, $this->current_customer);
             $header->render();
-        } else {
-            // Fallback pokud header třída neexistuje
-            echo '<header class="saw-app-header">';
-            echo '<div class="saw-header-content">';
-            echo '<h1>' . esc_html($this->page_title) . '</h1>';
-            echo '</div>';
-            echo '</header>';
         }
     }
     
@@ -250,11 +351,6 @@ class SAW_App_Layout {
         if (class_exists('SAW_App_Sidebar')) {
             $sidebar = new SAW_App_Sidebar($this->current_user, $this->current_customer, $this->active_menu);
             $sidebar->render();
-        } else {
-            // Fallback pokud sidebar třída neexistuje
-            echo '<aside class="saw-app-sidebar">';
-            echo '<nav><a href="/admin/">Dashboard</a></nav>';
-            echo '</aside>';
         }
     }
     
@@ -265,11 +361,6 @@ class SAW_App_Layout {
         if (class_exists('SAW_App_Footer')) {
             $footer = new SAW_App_Footer();
             $footer->render();
-        } else {
-            // Fallback pokud footer třída neexistuje
-            echo '<footer class="saw-app-footer">';
-            echo '<p>SAW Visitors v' . SAW_VISITORS_VERSION . ' © ' . date('Y') . '</p>';
-            echo '</footer>';
         }
     }
 }

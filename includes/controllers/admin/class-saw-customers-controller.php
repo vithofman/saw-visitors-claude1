@@ -1,13 +1,11 @@
 <?php
 /**
- * Customers Controller - COMPLETE VERSION
+ * Customers Controller - FINAL FIXED VERSION (CHAT 7)
  * 
- * ✅ OPRAVENO:
- * - Implementovány metody create() a edit() včetně POST handlerů
- * - Logo upload handler
- * - Validace formulářů
- * - Render s layoutem
- * - AJAX handlers pro search, delete, customer switcher
+ * ✅ OPRAVENO v CHAT 7:
+ * - get_current_customer_data() - dynamické načítání ze session
+ * - ajax_switch_customer() - ukládá do session + user meta
+ * - Přidány helper metody pro session management
  * 
  * @package SAW_Visitors
  * @version 4.6.1
@@ -164,7 +162,7 @@ class SAW_Customers_Controller {
     }
     
     /**
-     * ✅ CREATE - Fully implemented
+     * CREATE - Fully implemented
      */
     public function create() {
         if (!current_user_can('manage_options')) {
@@ -231,7 +229,7 @@ class SAW_Customers_Controller {
     }
     
     /**
-     * ✅ EDIT - Fully implemented
+     * EDIT - Fully implemented
      */
     public function edit($id) {
         if (!current_user_can('manage_options')) {
@@ -318,33 +316,135 @@ class SAW_Customers_Controller {
     }
     
     /**
-     * Get current customer data
+     * ✅ FIXED (CHAT 7): Get current customer data DYNAMICALLY
+     * 
+     * @return array Customer data
      */
     private function get_current_customer_data() {
         global $wpdb;
         
-        // TODO: Get from session
-        $customer_id = 1;
+        $table_name = $wpdb->prefix . 'saw_customers';
         
-        $customer = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_customers WHERE id = %d",
-            $customer_id
-        ), ARRAY_A);
+        // Initialize session
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        // 1. CHECK IF SUPERADMIN
+        if (current_user_can('manage_options')) {
+            // Load from session
+            $customer_id = $this->get_selected_customer_id_from_session();
+            
+            if ($customer_id) {
+                $customer = $wpdb->get_row($wpdb->prepare(
+                    "SELECT * FROM {$table_name} WHERE id = %d",
+                    $customer_id
+                ), ARRAY_A);
+                
+                if ($customer) {
+                    if (defined('SAW_DEBUG') && SAW_DEBUG) {
+                        error_log('SAW Controller: SuperAdmin loaded customer from session: ID ' . $customer_id);
+                    }
+                    
+                    return array(
+                        'id' => $customer['id'],
+                        'name' => $customer['name'],
+                        'ico' => $customer['ico'] ?? '',
+                        'address' => $customer['address'] ?? '',
+                        'logo_url' => $customer['logo_url'] ?? '',
+                    );
+                }
+            }
+            
+            // Fallback: Load first customer
+            return $this->load_first_customer();
+        }
+        
+        // 2. ADMIN/MANAGER: Load their customer
+        // TODO: Implement when saw_users table is ready
+        return $this->load_first_customer();
+    }
+    
+    /**
+     * ✅ NEW (CHAT 7): Get selected customer ID from session
+     * 
+     * @return int|null Customer ID or null
+     */
+    private function get_selected_customer_id_from_session() {
+        // 1. Try PHP session
+        if (isset($_SESSION['saw_current_customer_id'])) {
+            return intval($_SESSION['saw_current_customer_id']);
+        }
+        
+        // 2. Try WP user meta
+        if (is_user_logged_in()) {
+            $user_id = get_current_user_id();
+            $meta_id = get_user_meta($user_id, 'saw_current_customer_id', true);
+            
+            if ($meta_id) {
+                $meta_id = intval($meta_id);
+                
+                // Sync back to session
+                $_SESSION['saw_current_customer_id'] = $meta_id;
+                
+                if (defined('SAW_DEBUG') && SAW_DEBUG) {
+                    error_log('SAW Controller: Loaded customer ID from user meta: ' . $meta_id);
+                }
+                
+                return $meta_id;
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * ✅ NEW (CHAT 7): Load first customer (fallback)
+     * 
+     * @return array Customer data
+     */
+    private function load_first_customer() {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'saw_customers';
+        
+        $customer = $wpdb->get_row(
+            "SELECT * FROM {$table_name} ORDER BY id ASC LIMIT 1",
+            ARRAY_A
+        );
         
         if ($customer) {
+            // Save as default in session
+            $_SESSION['saw_current_customer_id'] = intval($customer['id']);
+            
+            if (is_user_logged_in()) {
+                update_user_meta(get_current_user_id(), 'saw_current_customer_id', intval($customer['id']));
+            }
+            
+            if (defined('SAW_DEBUG') && SAW_DEBUG) {
+                error_log('SAW Controller: Loaded first customer as fallback: ID ' . $customer['id']);
+            }
+            
             return array(
                 'id' => $customer['id'],
                 'name' => $customer['name'],
-                'ico' => $customer['ico'],
-                'address' => $customer['address'],
+                'ico' => $customer['ico'] ?? '',
+                'address' => $customer['address'] ?? '',
+                'logo_url' => $customer['logo_url'] ?? '',
             );
         }
         
+        // Ultimate fallback
+        if (defined('SAW_DEBUG') && SAW_DEBUG) {
+            error_log('SAW Controller: No customers found in database!');
+        }
+        
         return array(
-            'id' => 1,
-            'name' => 'Demo Firma s.r.o.',
-            'ico' => '12345678',
-            'address' => 'Praha 1',
+            'id' => 0,
+            'name' => 'Žádný zákazník',
+            'ico' => '',
+            'address' => '',
+            'logo_url' => '',
         );
     }
     
@@ -450,7 +550,7 @@ class SAW_Customers_Controller {
     }
     
     /**
-     * AJAX: Switch customer (SuperAdmin only)
+     * ✅ FIXED (CHAT 7): AJAX switch customer - with session + user meta
      */
     public function ajax_switch_customer() {
         check_ajax_referer('saw_customer_switcher_nonce', 'nonce');
@@ -465,21 +565,56 @@ class SAW_Customers_Controller {
             wp_send_json_error(array('message' => 'Neplatné ID zákazníka.'));
         }
         
+        // Verify customer exists
         $customer = $this->customer_model->get_by_id($customer_id);
         
         if (!$customer) {
             wp_send_json_error(array('message' => 'Zákazník nenalezen.'));
         }
         
-        // TODO: Save to session
-        if (!isset($_SESSION)) {
+        // ✅ KRITICKÁ ZMĚNA: Save to BOTH session and user meta
+        
+        // 1. PHP Session
+        if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
         $_SESSION['saw_current_customer_id'] = $customer_id;
         
+        // 2. WP User Meta (persistence across sessions)
+        if (is_user_logged_in()) {
+            $user_id = get_current_user_id();
+            update_user_meta($user_id, 'saw_current_customer_id', $customer_id);
+            
+            if (defined('SAW_DEBUG') && SAW_DEBUG) {
+                error_log(sprintf(
+                    'SAW Customer Switcher: User %d switched to customer %d (%s)',
+                    $user_id,
+                    $customer_id,
+                    $customer->name
+                ));
+            }
+        }
+        
+        // 3. Session ID for debugging
+        $session_id = session_id();
+        
+        if (defined('SAW_DEBUG') && SAW_DEBUG) {
+            error_log('SAW Customer Switcher: Session ID: ' . $session_id);
+        }
+        
         wp_send_json_success(array(
             'message' => 'Zákazník byl přepnut.',
-            'customer' => $customer,
+            'customer' => array(
+                'id' => $customer->id,
+                'name' => $customer->name,
+                'ico' => $customer->ico ?? '',
+                'address' => $customer->address ?? '',
+            ),
+            'session_id' => $session_id,
+            'debug' => array(
+                'session_saved' => isset($_SESSION['saw_current_customer_id']),
+                'user_meta_saved' => is_user_logged_in(),
+            ),
         ));
     }
 }
