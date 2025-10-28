@@ -1,6 +1,6 @@
 <?php
 /**
- * Customers Controller - FIXED WITH DEBUG
+ * Customers Controller - WITH CUSTOMER SWITCHER
  * 
  * @package SAW_Visitors
  * @version 4.6.1
@@ -20,16 +20,14 @@ class SAW_Customers_Controller {
         
         // Register AJAX handlers
         add_action('wp_ajax_saw_search_customers', array($this, 'ajax_search_customers'));
-        
-        // 🔍 DEBUG: Log že se controller inicializoval
-        error_log('SAW Customers Controller: Initialized, AJAX handler registered');
+        add_action('wp_ajax_saw_get_customers_for_switcher', array($this, 'ajax_get_customers_for_switcher'));
+        add_action('wp_ajax_saw_switch_customer', array($this, 'ajax_switch_customer'));
     }
     
     /**
-     * ✅ FIXED: Načíst VŠECHNY potřebné CSS a JS PŘÍMO
+     * Enqueue customers assets
      */
     private function enqueue_customers_assets() {
-        // 1. Tables CSS (MUSÍ BÝT PRVNÍ!)
         wp_enqueue_style(
             'saw-visitors-tables',
             SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-app-tables.css',
@@ -37,7 +35,6 @@ class SAW_Customers_Controller {
             SAW_VISITORS_VERSION
         );
         
-        // 2. Customers CSS (specifické styly)
         if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/css/saw-customers.css')) {
             wp_enqueue_style(
                 'saw-visitors-customers',
@@ -47,7 +44,6 @@ class SAW_Customers_Controller {
             );
         }
         
-        // 3. Customers JS (pokud existuje)
         if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/js/saw-customers.js')) {
             wp_enqueue_script(
                 'saw-visitors-customers',
@@ -58,7 +54,6 @@ class SAW_Customers_Controller {
             );
         }
         
-        // 4. ✅ AJAX JS (HLAVNÍ!)
         wp_enqueue_script(
             'saw-visitors-customers-ajax',
             SAW_VISITORS_PLUGIN_URL . 'assets/js/saw-customers-ajax.js',
@@ -67,7 +62,6 @@ class SAW_Customers_Controller {
             true
         );
         
-        // 5. Localize script
         wp_localize_script(
             'saw-visitors-customers-ajax',
             'sawCustomersAjax',
@@ -76,9 +70,6 @@ class SAW_Customers_Controller {
                 'nonce'   => wp_create_nonce('saw_customers_ajax_nonce')
             )
         );
-        
-        // 🔍 DEBUG: Log že se assets načetly
-        error_log('SAW Customers Controller: Assets enqueued');
     }
     
     /**
@@ -89,7 +80,6 @@ class SAW_Customers_Controller {
             wp_die('Nemáte oprávnění.', 'Přístup zamítnut', array('response' => 403));
         }
         
-        // ✅ KRITICKÉ: Načíst CSS TADY!
         $this->enqueue_customers_assets();
         
         $page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
@@ -98,13 +88,11 @@ class SAW_Customers_Controller {
         $orderby = isset($_GET['orderby']) ? sanitize_text_field($_GET['orderby']) : 'name';
         $order = isset($_GET['order']) ? sanitize_text_field($_GET['order']) : 'ASC';
         
-        // Validate orderby
         $allowed_orderby = array('name', 'ico', 'created_at', 'id');
         if (!in_array($orderby, $allowed_orderby)) {
             $orderby = 'name';
         }
         
-        // Validate order
         $order = strtoupper($order);
         if (!in_array($order, array('ASC', 'DESC'))) {
             $order = 'ASC';
@@ -114,7 +102,6 @@ class SAW_Customers_Controller {
         $total_customers = 0;
         
         if ($this->customer_model) {
-            // ✅ POUŽIJ ARGS ARRAY (pro starý model)
             $customers = $this->customer_model->get_all(array(
                 'search' => $search,
                 'orderby' => $orderby,
@@ -176,25 +163,15 @@ class SAW_Customers_Controller {
     }
     
     /**
-     * ✅ FIXED: AJAX Search s kompatibilitou pro starý model
+     * AJAX: Search customers
      */
     public function ajax_search_customers() {
-        // 🔍 DEBUG: Log že AJAX handler byl zavolán
-        error_log('SAW AJAX: ajax_search_customers called');
-        error_log('SAW AJAX: POST data: ' . print_r($_POST, true));
-        
-        // Verify nonce
         if (!check_ajax_referer('saw_customers_ajax_nonce', 'nonce', false)) {
-            error_log('SAW AJAX Error: Invalid nonce');
-            error_log('SAW AJAX Error: Expected nonce for action: saw_customers_ajax_nonce');
-            error_log('SAW AJAX Error: Received nonce: ' . (isset($_POST['nonce']) ? $_POST['nonce'] : 'NONE'));
             wp_send_json_error(array('message' => 'Neplatný bezpečnostní token.'));
             return;
         }
         
-        // Check permissions
         if (!current_user_can('manage_options')) {
-            error_log('SAW AJAX Error: No permissions for user ID: ' . get_current_user_id());
             wp_send_json_error(array('message' => 'Nemáte oprávnění.'));
             return;
         }
@@ -206,27 +183,21 @@ class SAW_Customers_Controller {
             $order = isset($_POST['order']) ? sanitize_text_field($_POST['order']) : 'ASC';
             $per_page = 20;
             
-            // Validate orderby
             $allowed_orderby = array('name', 'ico', 'created_at', 'id');
             if (!in_array($orderby, $allowed_orderby)) {
                 $orderby = 'name';
             }
             
-            // Validate order
             $order = strtoupper($order);
             if (!in_array($order, array('ASC', 'DESC'))) {
                 $order = 'ASC';
             }
             
-            error_log('SAW AJAX: search=' . $search . ' page=' . $page . ' orderby=' . $orderby . ' order=' . $order);
-            
             if (!$this->customer_model) {
-                error_log('SAW AJAX Error: Customer model not initialized');
                 wp_send_json_error(array('message' => 'Model zákazníků není inicializován.'));
                 return;
             }
             
-            // ✅ POUŽIJ ARGS ARRAY (pro starý model)
             $customers = $this->customer_model->get_all(array(
                 'search' => $search,
                 'orderby' => $orderby,
@@ -238,9 +209,6 @@ class SAW_Customers_Controller {
             $total_customers = $this->customer_model->count($search);
             $total_pages = $total_customers > 0 ? ceil($total_customers / $per_page) : 1;
             
-            error_log('SAW AJAX: Found ' . count($customers) . ' customers (total: ' . $total_customers . ')');
-            error_log('SAW AJAX: Sending success response');
-            
             wp_send_json_success(array(
                 'customers' => $customers,
                 'total_customers' => $total_customers,
@@ -249,10 +217,98 @@ class SAW_Customers_Controller {
             ));
             
         } catch (Exception $e) {
-            error_log('SAW AJAX Exception: ' . $e->getMessage());
-            error_log('SAW AJAX Exception trace: ' . $e->getTraceAsString());
             wp_send_json_error(array('message' => 'Došlo k chybě: ' . $e->getMessage()));
         }
+    }
+    
+    /**
+     * AJAX: Get customers for switcher dropdown
+     */
+    public function ajax_get_customers_for_switcher() {
+        if (!check_ajax_referer('saw_customer_switcher_nonce', 'nonce', false)) {
+            wp_send_json_error(array('message' => 'Neplatný bezpečnostní token'));
+        }
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Nemáte oprávnění'));
+        }
+        
+        try {
+            $customers = $this->customer_model->get_all(array(
+                'search' => '',
+                'orderby' => 'name',
+                'order' => 'ASC',
+                'limit' => 999,
+                'offset' => 0
+            ));
+            
+            $current_customer_id = $this->get_current_customer_id();
+            
+            wp_send_json_success(array(
+                'customers' => $customers,
+                'current_customer_id' => $current_customer_id
+            ));
+            
+        } catch (Exception $e) {
+            wp_send_json_error(array('message' => 'Chyba při načítání zákazníků: ' . $e->getMessage()));
+        }
+    }
+    
+    /**
+     * AJAX: Switch customer
+     */
+    public function ajax_switch_customer() {
+        if (!check_ajax_referer('saw_customer_switcher_nonce', 'nonce', false)) {
+            wp_send_json_error(array('message' => 'Neplatný bezpečnostní token'));
+        }
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Nemáte oprávnění'));
+        }
+        
+        $customer_id = isset($_POST['customer_id']) ? intval($_POST['customer_id']) : 0;
+        
+        if ($customer_id <= 0) {
+            wp_send_json_error(array('message' => 'Neplatné ID zákazníka'));
+        }
+        
+        $customer = $this->customer_model->get_by_id($customer_id);
+        
+        if (!$customer) {
+            wp_send_json_error(array('message' => 'Zákazník nenalezen'));
+        }
+        
+        // Save to user meta
+        update_user_meta(get_current_user_id(), 'saw_selected_customer_id', $customer_id);
+        
+        wp_send_json_success(array(
+            'message' => 'Zákazník byl přepnut',
+            'customer' => $customer
+        ));
+    }
+    
+    /**
+     * Get current customer ID from session
+     */
+    private function get_current_customer_id() {
+        if (current_user_can('manage_options')) {
+            $saved_customer_id = get_user_meta(get_current_user_id(), 'saw_selected_customer_id', true);
+            
+            if ($saved_customer_id) {
+                return intval($saved_customer_id);
+            }
+            
+            $first_customer = $this->customer_model->get_all(array(
+                'limit' => 1,
+                'offset' => 0,
+                'orderby' => 'id',
+                'order' => 'ASC'
+            ));
+            
+            return !empty($first_customer) ? intval($first_customer[0]['id']) : 0;
+        }
+        
+        return 0;
     }
     
     /**
@@ -263,10 +319,8 @@ class SAW_Customers_Controller {
             wp_die('Nemáte oprávnění.', 'Přístup zamítnut', array('response' => 403));
         }
         
-        // ✅ KRITICKÉ: Načíst CSS TADY!
         $this->enqueue_customers_assets();
         
-        // POST handler
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['saw_customer_nonce'])) {
             if (!wp_verify_nonce($_POST['saw_customer_nonce'], 'saw_customer_form')) {
                 wp_die('Bezpečnostní kontrola selhala.');
@@ -285,13 +339,11 @@ class SAW_Customers_Controller {
             }
         }
         
-        // Render form
         $template_file = SAW_VISITORS_PLUGIN_DIR . 'templates/pages/admin/customers-form.php';
         
         if (file_exists($template_file)) {
             ob_start();
             
-            // CRITICAL: Set variables for template
             $is_edit = false;
             $customer = array(
                 'name' => '',
@@ -326,7 +378,6 @@ class SAW_Customers_Controller {
             wp_die('Nemáte oprávnění.', 'Přístup zamítnut', array('response' => 403));
         }
         
-        // ✅ KRITICKÉ: Načíst CSS TADY!
         $this->enqueue_customers_assets();
         
         $customer = null;
@@ -338,7 +389,6 @@ class SAW_Customers_Controller {
             wp_die('Zákazník nenalezen.', 'Chyba', array('response' => 404));
         }
         
-        // POST handler
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['saw_customer_nonce'])) {
             if (!wp_verify_nonce($_POST['saw_customer_nonce'], 'saw_customer_form')) {
                 wp_die('Bezpečnostní kontrola selhala.');
@@ -357,13 +407,11 @@ class SAW_Customers_Controller {
             }
         }
         
-        // Render form
         $template_file = SAW_VISITORS_PLUGIN_DIR . 'templates/pages/admin/customers-form.php';
         
         if (file_exists($template_file)) {
             ob_start();
             
-            // CRITICAL: Set variables for template
             $is_edit = true;
             
             include $template_file;
@@ -408,6 +456,16 @@ class SAW_Customers_Controller {
      * Get current customer data
      */
     private function get_current_customer_data() {
+        $customer_id = $this->get_current_customer_id();
+        
+        if ($customer_id > 0 && $this->customer_model) {
+            $customer = $this->customer_model->get_by_id($customer_id);
+            
+            if ($customer) {
+                return $customer;
+            }
+        }
+        
         return array(
             'id' => 1,
             'name' => 'Demo Firma s.r.o.',

@@ -1,6 +1,6 @@
 <?php
 /**
- * SAW App Header Component - SIMPLIFIED
+ * SAW App Header Component - WITH WORKING CUSTOMER SWITCHER
  * 
  * @package SAW_Visitors
  * @subpackage Frontend
@@ -17,7 +17,6 @@ class SAW_App_Header {
     private $customer;
     
     public function __construct($user = null, $customer = null) {
-        // Fake data for testing
         $this->user = $user ?: array(
             'id' => 1,
             'name' => 'Demo Admin',
@@ -30,6 +29,38 @@ class SAW_App_Header {
             'name' => 'Demo Firma s.r.o.',
             'ico' => '12345678',
         );
+        
+        // Enqueue assets IMMEDIATELY if SuperAdmin
+        if ($this->is_super_admin()) {
+            $this->enqueue_customer_switcher_assets();
+        }
+    }
+    
+    /**
+     * Enqueue customer switcher assets (only for SuperAdmin)
+     */
+    public function enqueue_customer_switcher_assets() {
+        // CSS - inline protože jsme už v DOM
+        $css_file = SAW_VISITORS_PLUGIN_DIR . 'assets/css/saw-customer-switcher.css';
+        if (file_exists($css_file)) {
+            echo '<style id="saw-customer-switcher-css">' . file_get_contents($css_file) . '</style>';
+        }
+        
+        // JS - inline s localized data
+        $js_file = SAW_VISITORS_PLUGIN_DIR . 'assets/js/saw-customer-switcher.js';
+        if (file_exists($js_file)) {
+            ?>
+            <script type="text/javascript">
+            var sawCustomerSwitcher = {
+                ajaxurl: '<?php echo admin_url('admin-ajax.php'); ?>',
+                nonce: '<?php echo wp_create_nonce('saw_customer_switcher_nonce'); ?>'
+            };
+            </script>
+            <script type="text/javascript" id="saw-customer-switcher-js">
+            <?php echo file_get_contents($js_file); ?>
+            </script>
+            <?php
+        }
     }
     
     public function render() {
@@ -54,8 +85,8 @@ class SAW_App_Header {
             <div class="saw-header-right">
                 <?php if ($this->is_super_admin()): ?>
                     <div class="saw-customer-switcher">
-                        <button class="saw-customer-switcher-button" disabled>
-                            🏢 Přepnutí zákazníka (TODO)
+                        <button class="saw-customer-switcher-button" id="sawCustomerSwitcherButton">
+                            🏢 Přepnout zákazníka
                         </button>
                     </div>
                 <?php endif; ?>

@@ -1,0 +1,211 @@
+/**
+ * SAW Customer Switcher CSS
+ * 
+ * @package SAW_Visitors
+ * @version 4.6.1
+ */
+
+/* Customer Switcher Container */
+.saw-customer-switcher {
+    position: relative;
+}
+
+/* Switcher Button */
+.saw-customer-switcher-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #111827;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.saw-customer-switcher-button:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+}
+
+.saw-customer-switcher-button:disabled {
+    cursor: wait;
+    opacity: 0.7;
+    background: #f3f4f6;
+}
+
+/* Dropdown Container */
+.saw-customer-switcher-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 340px;
+    max-height: 450px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    display: none;
+    flex-direction: column;
+    z-index: 1001;
+}
+
+.saw-customer-switcher-dropdown.active {
+    display: flex;
+}
+
+/* Search Section */
+.saw-customer-search {
+    padding: 12px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.saw-customer-search input {
+    width: 100%;
+    padding: 8px 12px 8px 36px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 13px;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="%236b7280"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: 12px center;
+    background-size: 16px 16px;
+    transition: border-color 0.2s;
+}
+
+.saw-customer-search input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.saw-customer-search input::placeholder {
+    color: #9ca3af;
+}
+
+/* Customer List */
+.saw-customer-list {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 320px;
+}
+
+.saw-customer-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.saw-customer-list::-webkit-scrollbar-track {
+    background: #f9fafb;
+}
+
+.saw-customer-list::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 4px;
+}
+
+.saw-customer-list::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* Customer Item */
+.saw-customer-item {
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background 0.2s;
+    border-bottom: 1px solid #f3f4f6;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.saw-customer-item:last-child {
+    border-bottom: none;
+}
+
+.saw-customer-item:hover {
+    background: #f9fafb;
+}
+
+.saw-customer-item.active {
+    background: #eff6ff;
+    border-left: 3px solid #2563eb;
+    padding-left: 13px;
+}
+
+.saw-customer-item-check {
+    color: #2563eb;
+    font-size: 16px;
+    font-weight: bold;
+    width: 20px;
+    text-align: center;
+}
+
+.saw-customer-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.saw-customer-item-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #111827;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.saw-customer-item.active .saw-customer-item-name {
+    color: #2563eb;
+}
+
+.saw-customer-item-ico {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+/* Footer */
+.saw-customer-footer {
+    padding: 10px 16px;
+    border-top: 1px solid #e5e7eb;
+    font-size: 12px;
+    color: #6b7280;
+    text-align: center;
+    background: #f9fafb;
+    border-radius: 0 0 8px 8px;
+}
+
+/* Loading State */
+.saw-customer-loading {
+    padding: 32px 24px;
+    text-align: center;
+    color: #6b7280;
+}
+
+.saw-customer-loading .spinner {
+    margin: 0 auto 12px;
+}
+
+/* Empty State */
+.saw-customer-empty {
+    padding: 32px 24px;
+    text-align: center;
+    color: #6b7280;
+}
+
+.saw-customer-empty::before {
+    content: "🔍";
+    display: block;
+    font-size: 32px;
+    margin-bottom: 8px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .saw-customer-switcher-dropdown {
+        width: 300px;
+    }
+}
