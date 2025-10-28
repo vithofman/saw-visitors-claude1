@@ -1,6 +1,6 @@
 <?php
 /**
- * SAW App Sidebar Component - SIMPLIFIED
+ * SAW App Sidebar Component
  * 
  * @package SAW_Visitors
  * @subpackage Frontend
@@ -49,7 +49,7 @@ class SAW_App_Sidebar {
     }
     
     private function get_menu_items() {
-        return array(
+        $menu = array(
             array(
                 'items' => array(
                     array(
@@ -81,6 +81,12 @@ class SAW_App_Sidebar {
             array(
                 'heading' => 'Nastavení',
                 'items' => array(
+                    array(
+                        'id' => 'customers',
+                        'label' => 'Zákazníci',
+                        'url' => '/admin/settings/customers',
+                        'icon' => '🏢',
+                    ),
                     array(
                         'id' => 'company',
                         'label' => 'Nastavení firmy',
@@ -120,5 +126,7 @@ class SAW_App_Sidebar {
                 ),
             ),
         );
+        
+        return $menu;
     }
 }
