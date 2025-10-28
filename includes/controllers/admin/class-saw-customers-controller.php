@@ -1,6 +1,6 @@
 <?php
 /**
- * Customers Controller
+ * Customers Controller - FIXED VERSION
  * 
  * Správa zákazníků - pouze pro SuperAdmina
  * 
@@ -28,6 +28,8 @@ class SAW_Customers_Controller {
         if (file_exists($model_file)) {
             require_once $model_file;
             $this->customer_model = new SAW_Customer();
+        } else {
+            error_log('[SAW Customers Controller] Model soubor nenalezen: ' . $model_file);
         }
         
         // AJAX hooky
@@ -57,18 +59,24 @@ class SAW_Customers_Controller {
         $total_customers = 0;
         
         if ($this->customer_model) {
-            $customers = $this->customer_model->get_all( array(
-                'search'  => $search,
-                'orderby' => 'name',
-                'order'   => 'ASC',
-                'limit'   => $per_page,
-                'offset'  => $offset
-            ) );
-            
-            $total_customers = $this->customer_model->count( $search );
+            try {
+                $customers = $this->customer_model->get_all( array(
+                    'search'  => $search,
+                    'orderby' => 'name',
+                    'order'   => 'ASC',
+                    'limit'   => $per_page,
+                    'offset'  => $offset
+                ) );
+                
+                $total_customers = $this->customer_model->count( $search );
+            } catch (Exception $e) {
+                error_log('[SAW Customers Controller] Chyba při načítání zákazníků: ' . $e->getMessage());
+                $customers = array();
+                $total_customers = 0;
+            }
         }
         
-        $total_pages = ceil( $total_customers / $per_page );
+        $total_pages = $total_customers > 0 ? ceil( $total_customers / $per_page ) : 1;
         
         // Success/Error zprávy
         $message = '';
@@ -115,15 +123,61 @@ class SAW_Customers_Controller {
                 $customer = $this->get_current_customer_data();
                 $layout->render($content, 'Správa zákazníků', 'customers', $user, $customer);
             } else {
+                // Fallback - render přímo s minimálním HTML wrapperem
+                echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Správa zákazníků</title>';
+                echo '<link rel="stylesheet" href="' . SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-app.css">';
+                echo '</head><body>';
+                echo '<div class="saw-app-content">';
                 echo $content;
+                echo '</div>';
+                echo '</body></html>';
             }
         } else {
-            // Fallback pokud template neexistuje
-            echo '<div class="saw-card">';
-            echo '<h1>Správa zákazníků</h1>';
-            echo '<p>Template soubor nenalezen: ' . esc_html($template_file) . '</p>';
-            echo '<p>Celkem zákazníků: ' . count($customers) . '</p>';
-            echo '</div>';
+            // Fallback pokud template neexistuje - s layoutem!
+            $error_content = '<div class="saw-card">';
+            $error_content .= '<div class="saw-card-header"><h1>❌ Chyba: Template nenalezen</h1></div>';
+            $error_content .= '<div class="saw-card-body">';
+            $error_content .= '<div class="saw-alert saw-alert-error">';
+            $error_content .= '<p><strong>Template soubor nenalezen:</strong></p>';
+            $error_content .= '<code>' . esc_html($template_file) . '</code>';
+            $error_content .= '</div>';
+            
+            // Debug info
+            $error_content .= '<h3>Debug informace:</h3>';
+            $error_content .= '<ul>';
+            $error_content .= '<li><strong>Plugin DIR:</strong> ' . esc_html(SAW_VISITORS_PLUGIN_DIR) . '</li>';
+            $error_content .= '<li><strong>Template očekáván v:</strong> ' . esc_html($template_file) . '</li>';
+            $error_content .= '<li><strong>Soubor existuje:</strong> ' . (file_exists($template_file) ? '✅ ANO' : '❌ NE') . '</li>';
+            $error_content .= '<li><strong>Celkem zákazníků v DB:</strong> ' . count($customers) . '</li>';
+            $error_content .= '<li><strong>Model načten:</strong> ' . ($this->customer_model ? '✅ ANO' : '❌ NE') . '</li>';
+            $error_content .= '</ul>';
+            
+            // Přímé zobrazení zákazníků
+            if (!empty($customers)) {
+                $error_content .= '<h3>Zákazníci v databázi:</h3>';
+                $error_content .= '<table class="saw-table"><thead><tr><th>ID</th><th>Název</th><th>IČO</th></tr></thead><tbody>';
+                foreach ($customers as $cust) {
+                    $error_content .= '<tr>';
+                    $error_content .= '<td>' . esc_html($cust['id']) . '</td>';
+                    $error_content .= '<td>' . esc_html($cust['name']) . '</td>';
+                    $error_content .= '<td>' . esc_html($cust['ico'] ?? '—') . '</td>';
+                    $error_content .= '</tr>';
+                }
+                $error_content .= '</tbody></table>';
+            }
+            
+            $error_content .= '</div>';
+            $error_content .= '</div>';
+            
+            // Použij layout i pro error
+            if (class_exists('SAW_App_Layout')) {
+                $layout = new SAW_App_Layout();
+                $user = $this->get_current_user_data();
+                $customer = $this->get_current_customer_data();
+                $layout->render($error_content, 'Správa zákazníků - Chyba', 'customers', $user, $customer);
+            } else {
+                echo $error_content;
+            }
         }
     }
     
@@ -142,11 +196,20 @@ class SAW_Customers_Controller {
                 wp_die( 'Bezpečnostní kontrola selhala.' );
             }
             
-            // TODO: Zpracovat vytvoření zákazníka
-            
-            // Redirect po úspěchu
-            wp_redirect( '/admin/settings/customers?message=created' );
-            exit;
+            if ($this->customer_model) {
+                $result = $this->customer_model->create($_POST);
+                
+                if (is_wp_error($result)) {
+                    wp_redirect( '/admin/settings/customers/?message=error&error_msg=' . urlencode($result->get_error_message()) );
+                    exit;
+                }
+                
+                wp_redirect( '/admin/settings/customers/?message=created' );
+                exit;
+            } else {
+                wp_redirect( '/admin/settings/customers/?message=error&error_msg=' . urlencode('Model není k dispozici') );
+                exit;
+            }
         }
         
         // Render formulář
@@ -167,7 +230,16 @@ class SAW_Customers_Controller {
                 echo $content;
             }
         } else {
-            echo '<div class="saw-card"><h1>Nový zákazník</h1><p>Template nenalezen.</p></div>';
+            $error_content = '<div class="saw-card"><h1>Nový zákazník</h1><p>Template nenalezen: ' . esc_html($template_file) . '</p></div>';
+            
+            if (class_exists('SAW_App_Layout')) {
+                $layout = new SAW_App_Layout();
+                $user = $this->get_current_user_data();
+                $customer = $this->get_current_customer_data();
+                $layout->render($error_content, 'Nový zákazník', 'customers', $user, $customer);
+            } else {
+                echo $error_content;
+            }
         }
     }
     
@@ -196,11 +268,17 @@ class SAW_Customers_Controller {
                 wp_die( 'Bezpečnostní kontrola selhala.' );
             }
             
-            // TODO: Zpracovat update
-            
-            // Redirect
-            wp_redirect( '/admin/settings/customers?message=updated' );
-            exit;
+            if ($this->customer_model) {
+                $result = $this->customer_model->update($customer_id, $_POST);
+                
+                if (is_wp_error($result)) {
+                    wp_redirect( '/admin/settings/customers/?message=error&error_msg=' . urlencode($result->get_error_message()) );
+                    exit;
+                }
+                
+                wp_redirect( '/admin/settings/customers/?message=updated' );
+                exit;
+            }
         }
         
         // Render formulář
@@ -220,7 +298,16 @@ class SAW_Customers_Controller {
                 echo $content;
             }
         } else {
-            echo '<div class="saw-card"><h1>Upravit zákazníka</h1><p>Template nenalezen.</p></div>';
+            $error_content = '<div class="saw-card"><h1>Upravit zákazníka</h1><p>Template nenalezen.</p></div>';
+            
+            if (class_exists('SAW_App_Layout')) {
+                $layout = new SAW_App_Layout();
+                $user = $this->get_current_user_data();
+                $current_customer = $this->get_current_customer_data();
+                $layout->render($error_content, 'Upravit zákazníka', 'customers', $user, $current_customer);
+            } else {
+                echo $error_content;
+            }
         }
     }
     
@@ -250,6 +337,7 @@ class SAW_Customers_Controller {
      * Helper: Get current customer data
      */
     private function get_current_customer_data() {
+        // TODO: Load from DB based on session
         return array(
             'id' => 1,
             'name' => 'Demo Firma s.r.o.',
@@ -274,9 +362,17 @@ class SAW_Customers_Controller {
             wp_send_json_error( array( 'message' => 'Neplatné ID zákazníka.' ) );
         }
         
-        // TODO: Delete customer
-        
-        wp_send_json_success( array( 'message' => 'Zákazník byl smazán.' ) );
+        if ($this->customer_model) {
+            $result = $this->customer_model->delete($customer_id);
+            
+            if (is_wp_error($result)) {
+                wp_send_json_error( array( 'message' => $result->get_error_message() ) );
+            }
+            
+            wp_send_json_success( array( 'message' => 'Zákazník byl smazán.' ) );
+        } else {
+            wp_send_json_error( array( 'message' => 'Model není k dispozici.' ) );
+        }
     }
     
     /**
@@ -291,8 +387,15 @@ class SAW_Customers_Controller {
         
         $search = isset( $_POST['search'] ) ? sanitize_text_field( $_POST['search'] ) : '';
         
-        // TODO: Search customers
-        
-        wp_send_json_success( array( 'customers' => array() ) );
+        if ($this->customer_model) {
+            $customers = $this->customer_model->get_all( array(
+                'search' => $search,
+                'limit' => 50,
+            ) );
+            
+            wp_send_json_success( array( 'customers' => $customers ) );
+        } else {
+            wp_send_json_error( array( 'message' => 'Model není k dispozici.' ) );
+        }
     }
 }
