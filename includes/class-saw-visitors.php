@@ -1,7 +1,7 @@
 <?php
 /**
  * Hlavní třída pluginu SAW Visitors v4.6.1
- * FIXED: Customers CSS loading
+ * UPDATED: Added saw-app-tables.css enqueue
  * 
  * @package SAW_Visitors
  * @since 4.6.1
@@ -210,7 +210,7 @@ class SAW_Visitors {
     }
     
     /**
-     * ✅ OPRAVENO: Frontend styles s podmíněným načítáním
+     * ✅ UPDATED: Frontend styles with table CSS
      */
     public function enqueue_public_styles() {
         $route = get_query_var('saw_route');
@@ -229,23 +229,29 @@ class SAW_Visitors {
             );
         }
         
+        // ✅ NOVÉ: Tables CSS - pro admin a manager routes
+        if (in_array($route, array('admin', 'manager'))) {
+            if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/css/saw-app-tables.css')) {
+                wp_enqueue_style(
+                    $this->plugin_name . '-tables',
+                    SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-app-tables.css',
+                    array($this->plugin_name . '-public'),
+                    $this->version
+                );
+            }
+        }
+        
         // ✅ CUSTOMERS CSS - JEN NA CUSTOMERS STRÁNKÁCH
         $path = get_query_var('saw_path');
-        
-        // Debug: Uncomment to see what's happening
-        // error_log('SAW CSS Debug - Route: ' . $route . ' | Path: ' . $path);
         
         if ($this->is_customers_page($route, $path)) {
             if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/css/saw-customers.css')) {
                 wp_enqueue_style(
                     $this->plugin_name . '-customers',
                     SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-customers.css',
-                    array($this->plugin_name . '-public'),
+                    array($this->plugin_name . '-public', $this->plugin_name . '-tables'),
                     $this->version
                 );
-                
-                // Debug: Uncomment to verify loading
-                // error_log('SAW CSS: saw-customers.css LOADED!');
             }
         }
     }

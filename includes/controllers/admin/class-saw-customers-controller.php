@@ -1,6 +1,6 @@
 <?php
 /**
- * Customers Controller - FIXED CSS LOADING
+ * Customers Controller - FIXED for OLD MODEL
  * 
  * @package SAW_Visitors
  * @version 4.6.1
@@ -17,23 +17,34 @@ class SAW_Customers_Controller {
     public function __construct() {
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/models/class-saw-customer.php';
         $this->customer_model = new SAW_Customer();
+        
+        // Register AJAX handlers
+        add_action('wp_ajax_saw_search_customers', array($this, 'ajax_search_customers'));
     }
     
     /**
-     * ✅ NOVÁ METODA: Ruční načtení CSS a JS
+     * ✅ FIXED: Načíst VŠECHNY potřebné CSS a JS PŘÍMO
      */
     private function enqueue_customers_assets() {
-        // CSS
+        // 1. Tables CSS (MUSÍ BÝT PRVNÍ!)
+        wp_enqueue_style(
+            'saw-visitors-tables',
+            SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-app-tables.css',
+            array(),
+            SAW_VISITORS_VERSION
+        );
+        
+        // 2. Customers CSS (specifické styly)
         if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/css/saw-customers.css')) {
             wp_enqueue_style(
                 'saw-visitors-customers',
                 SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-customers.css',
-                array(),
+                array('saw-visitors-tables'),
                 SAW_VISITORS_VERSION
             );
         }
         
-        // JS (pokud existuje)
+        // 3. Customers JS (pokud existuje)
         if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/js/saw-customers.js')) {
             wp_enqueue_script(
                 'saw-visitors-customers',
@@ -43,6 +54,25 @@ class SAW_Customers_Controller {
                 true
             );
         }
+        
+        // 4. ✅ AJAX JS (HLAVNÍ!)
+        wp_enqueue_script(
+            'saw-visitors-customers-ajax',
+            SAW_VISITORS_PLUGIN_URL . 'assets/js/saw-customers-ajax.js',
+            array('jquery'),
+            SAW_VISITORS_VERSION,
+            true
+        );
+        
+        // 5. Localize script
+        wp_localize_script(
+            'saw-visitors-customers-ajax',
+            'sawCustomersAjax',
+            array(
+                'ajaxurl' => admin_url('admin-ajax.php'),
+                'nonce'   => wp_create_nonce('saw_customers_ajax_nonce')
+            )
+        );
     }
     
     /**
@@ -56,15 +86,37 @@ class SAW_Customers_Controller {
         // ✅ KRITICKÉ: Načíst CSS TADY!
         $this->enqueue_customers_assets();
         
-        $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+        $page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
         $per_page = 20;
         $search = isset($_GET['s']) ? sanitize_text_field($_GET['s']) : '';
+        $orderby = isset($_GET['orderby']) ? sanitize_text_field($_GET['orderby']) : 'name';
+        $order = isset($_GET['order']) ? sanitize_text_field($_GET['order']) : 'ASC';
         
-        $customers = [];
+        // Validate orderby
+        $allowed_orderby = array('name', 'ico', 'created_at', 'id');
+        if (!in_array($orderby, $allowed_orderby)) {
+            $orderby = 'name';
+        }
+        
+        // Validate order
+        $order = strtoupper($order);
+        if (!in_array($order, array('ASC', 'DESC'))) {
+            $order = 'ASC';
+        }
+        
+        $customers = array();
         $total_customers = 0;
         
         if ($this->customer_model) {
-            $customers = $this->customer_model->get_all($page, $per_page, $search);
+            // ✅ POUŽIJ ARGS ARRAY (pro starý model)
+            $customers = $this->customer_model->get_all(array(
+                'search' => $search,
+                'orderby' => $orderby,
+                'order' => $order,
+                'limit' => $per_page,
+                'offset' => ($page - 1) * $per_page
+            ));
+            
             $total_customers = $this->customer_model->count($search);
         }
         
@@ -97,7 +149,7 @@ class SAW_Customers_Controller {
         $template_file = SAW_VISITORS_PLUGIN_DIR . 'templates/pages/admin/customers-list.php';
         
         if (file_exists($template_file)) {
-            $data = compact('customers', 'total_customers', 'total_pages', 'page', 'search', 'message', 'message_type');
+            $data = compact('customers', 'total_customers', 'total_pages', 'page', 'search', 'orderby', 'order', 'message', 'message_type');
             
             ob_start();
             extract($data);
@@ -114,6 +166,78 @@ class SAW_Customers_Controller {
             }
         } else {
             wp_die('Template nenalezen: ' . $template_file);
+        }
+    }
+    
+    /**
+     * ✅ FIXED: AJAX Search s kompatibilitou pro starý model
+     */
+    public function ajax_search_customers() {
+        // Verify nonce
+        if (!check_ajax_referer('saw_customers_ajax_nonce', 'nonce', false)) {
+            error_log('SAW AJAX Error: Invalid nonce');
+            wp_send_json_error(array('message' => 'Neplatný bezpečnostní token.'));
+            return;
+        }
+        
+        // Check permissions
+        if (!current_user_can('manage_options')) {
+            error_log('SAW AJAX Error: No permissions');
+            wp_send_json_error(array('message' => 'Nemáte oprávnění.'));
+            return;
+        }
+        
+        try {
+            $search = isset($_POST['search']) ? sanitize_text_field($_POST['search']) : '';
+            $page = isset($_POST['page']) ? max(1, intval($_POST['page'])) : 1;
+            $orderby = isset($_POST['orderby']) ? sanitize_text_field($_POST['orderby']) : 'name';
+            $order = isset($_POST['order']) ? sanitize_text_field($_POST['order']) : 'ASC';
+            $per_page = 20;
+            
+            // Validate orderby
+            $allowed_orderby = array('name', 'ico', 'created_at', 'id');
+            if (!in_array($orderby, $allowed_orderby)) {
+                $orderby = 'name';
+            }
+            
+            // Validate order
+            $order = strtoupper($order);
+            if (!in_array($order, array('ASC', 'DESC'))) {
+                $order = 'ASC';
+            }
+            
+            error_log('SAW AJAX: search=' . $search . ' page=' . $page . ' orderby=' . $orderby . ' order=' . $order);
+            
+            if (!$this->customer_model) {
+                error_log('SAW AJAX Error: Customer model not initialized');
+                wp_send_json_error(array('message' => 'Model zákazníků není inicializován.'));
+                return;
+            }
+            
+            // ✅ POUŽIJ ARGS ARRAY (pro starý model)
+            $customers = $this->customer_model->get_all(array(
+                'search' => $search,
+                'orderby' => $orderby,
+                'order' => $order,
+                'limit' => $per_page,
+                'offset' => ($page - 1) * $per_page
+            ));
+            
+            $total_customers = $this->customer_model->count($search);
+            $total_pages = $total_customers > 0 ? ceil($total_customers / $per_page) : 1;
+            
+            error_log('SAW AJAX: Found ' . count($customers) . ' customers (total: ' . $total_customers . ')');
+            
+            wp_send_json_success(array(
+                'customers' => $customers,
+                'total_customers' => $total_customers,
+                'total_pages' => $total_pages,
+                'current_page' => $page
+            ));
+            
+        } catch (Exception $e) {
+            error_log('SAW AJAX Exception: ' . $e->getMessage());
+            wp_send_json_error(array('message' => 'Došlo k chybě: ' . $e->getMessage()));
         }
     }
     
