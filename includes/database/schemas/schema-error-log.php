@@ -1,7 +1,7 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) { exit; }
+if (!defined('ABSPATH')) { exit; }
 
-function saw_get_schema_error_log( $table_name, $prefix, $charset_collate ) {
+function saw_get_schema_error_log($table_name, $prefix, $charset_collate) {
 	$customers_table = $prefix . 'customers';
 	
 	return "CREATE TABLE {$table_name} (

@@ -1,13 +1,7 @@
 <?php
-/**
- * Schema: saw_companies
- * Firemní databáze + FULLTEXT search
- * @version 4.6.1
- */
+if (!defined('ABSPATH')) { exit; }
 
-if ( ! defined( 'ABSPATH' ) ) { exit; }
-
-function saw_get_schema_companies( $table_name, $prefix, $charset_collate ) {
+function saw_get_schema_companies($table_name, $prefix, $charset_collate) {
 	$customers_table = $prefix . 'customers';
 	
 	return "CREATE TABLE {$table_name} (

@@ -3,7 +3,7 @@
  * SAW App Sidebar Component
  * 
  * @package SAW_Visitors
- * @subpackage Frontend
+ * @version 4.6.1
  * @since 4.6.1
  */
 
@@ -13,16 +13,39 @@ if (!defined('ABSPATH')) {
 
 class SAW_App_Sidebar {
     
+    /**
+     * @var array
+     */
     private $user;
+    
+    /**
+     * @var array
+     */
     private $customer;
+    
+    /**
+     * @var string
+     */
     private $active_menu;
     
+    /**
+     * Konstruktor
+     * 
+     * @param array|null  $user        User data
+     * @param array|null  $customer    Customer data
+     * @param string      $active_menu Active menu ID
+     */
     public function __construct($user = null, $customer = null, $active_menu = '') {
         $this->user = $user ?: array('role' => 'admin');
         $this->customer = $customer;
         $this->active_menu = $active_menu;
     }
     
+    /**
+     * Render sidebar
+     * 
+     * @return void
+     */
     public function render() {
         $menu = $this->get_menu_items();
         ?>
@@ -48,6 +71,11 @@ class SAW_App_Sidebar {
         <?php
     }
     
+    /**
+     * Získání menu položek
+     * 
+     * @return array
+     */
     private function get_menu_items() {
         $menu = array(
             array(

@@ -1,7 +1,7 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) { exit; }
+if (!defined('ABSPATH')) { exit; }
 
-function saw_get_schema_email_queue( $table_name, $prefix, $charset_collate ) {
+function saw_get_schema_email_queue($table_name, $prefix, $charset_collate) {
 	$customers_table = $prefix . 'customers';
 	
 	return "CREATE TABLE {$table_name} (
@@ -23,5 +23,5 @@ function saw_get_schema_email_queue( $table_name, $prefix, $charset_collate ) {
 		KEY idx_status (status),
 		KEY idx_priority (priority, created_at),
 		CONSTRAINT fk_email_customer FOREIGN KEY (customer_id) REFERENCES {$customers_table}(id) ON DELETE CASCADE
-	) {$charset_collate} COMMENT='Email queue (wp_mail)';";
+	) {$charset_collate} COMMENT='Email queue';";
 }

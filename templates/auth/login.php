@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html <?php language_attributes(); ?>>
 <head>
-    <meta charset="<?php bloginfo( 'charset' ); ?>">
+    <meta charset="<?php bloginfo('charset'); ?>">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo esc_html( $page_title ?? 'Přihlášení' ); ?> - SAW Visitors</title>
+    <title><?php echo esc_html($page_title ?? 'Přihlášení'); ?> - SAW Visitors</title>
     <style>
         * {
             margin: 0;
@@ -228,43 +228,40 @@
             <div class="login-logo">SAW Visitors</div>
             <div class="login-subtitle">Správa návštěv</div>
             
-            <?php if ( isset( $role ) ) : ?>
-                <span class="role-badge role-<?php echo esc_attr( $role ); ?>">
+            <?php if (isset($role)): ?>
+                <span class="role-badge role-<?php echo esc_attr($role); ?>">
                     <?php
                     $role_names = array(
                         'admin'    => 'Administrátor',
                         'manager'  => 'Manažer',
                         'terminal' => 'Terminál',
                     );
-                    echo esc_html( $role_names[ $role ] ?? $role );
+                    echo esc_html($role_names[$role] ?? $role);
                     ?>
                 </span>
             <?php endif; ?>
         </div>
 
-        <?php
-        // Zobrazení chybových/úspěšných zpráv
-        if ( isset( $error ) && $error ) :
-        ?>
+        <?php if (isset($error) && $error): ?>
             <div class="alert alert-error">
-                <?php echo esc_html( $error ); ?>
+                <?php echo esc_html($error); ?>
             </div>
         <?php endif; ?>
 
-        <?php if ( isset( $success ) && $success ) : ?>
+        <?php if (isset($success) && $success): ?>
             <div class="alert alert-success">
-                <?php echo esc_html( $success ); ?>
+                <?php echo esc_html($success); ?>
             </div>
         <?php endif; ?>
 
-        <?php if ( isset( $info ) && $info ) : ?>
+        <?php if (isset($info) && $info): ?>
             <div class="alert alert-info">
-                <?php echo esc_html( $info ); ?>
+                <?php echo esc_html($info); ?>
             </div>
         <?php endif; ?>
 
-        <form method="post" action="<?php echo esc_url( $form_action ?? '' ); ?>">
-            <?php wp_nonce_field( 'saw_login_' . ( $role ?? 'user' ), 'saw_nonce' ); ?>
+        <form method="post" action="<?php echo esc_url($form_action ?? ''); ?>">
+            <?php wp_nonce_field('saw_login_' . ($role ?? 'user'), 'saw_nonce'); ?>
 
             <div class="form-group">
                 <label for="email">Email</label>
@@ -274,7 +271,7 @@
                     name="email" 
                     required 
                     autocomplete="username"
-                    value="<?php echo esc_attr( $email ?? '' ); ?>"
+                    value="<?php echo esc_attr($email ?? ''); ?>"
                     placeholder="vas@email.cz"
                 >
             </div>
@@ -293,35 +290,35 @@
                 >
             </div>
 
-            <?php if ( $role !== 'terminal' ) : ?>
+            <?php if ($role !== 'terminal'): ?>
                 <div class="remember-me">
                     <input type="checkbox" id="remember" name="remember" value="1">
                     <label for="remember">Zapamatovat přihlášení</label>
                 </div>
             <?php endif; ?>
 
-            <input type="hidden" name="role" value="<?php echo esc_attr( $role ?? '' ); ?>">
-            <input type="hidden" name="redirect_to" value="<?php echo esc_url( $redirect_to ?? '' ); ?>">
+            <input type="hidden" name="role" value="<?php echo esc_attr($role ?? ''); ?>">
+            <input type="hidden" name="redirect_to" value="<?php echo esc_url($redirect_to ?? ''); ?>">
 
             <button type="submit" class="btn btn-primary">
                 Přihlásit se
             </button>
         </form>
 
-        <?php if ( $role !== 'terminal' ) : ?>
+        <?php if ($role !== 'terminal'): ?>
             <div class="login-footer">
-                <a href="<?php echo esc_url( $forgot_password_url ?? '#' ); ?>">
+                <a href="<?php echo esc_url($forgot_password_url ?? '#'); ?>">
                     Zapomněli jste heslo?
                 </a>
             </div>
         <?php endif; ?>
 
-        <?php if ( $role === 'admin' && isset( $show_other_roles ) && $show_other_roles ) : ?>
+        <?php if ($role === 'admin' && isset($show_other_roles) && $show_other_roles): ?>
             <div class="divider">
                 <span>nebo</span>
             </div>
             <div class="login-footer">
-                <a href="<?php echo esc_url( home_url( '/manager/login/' ) ); ?>">
+                <a href="<?php echo esc_url(home_url('/manager/login/')); ?>">
                     Přihlásit se jako manažer
                 </a>
             </div>
@@ -331,42 +328,22 @@
 </html>
 <?php
 /**
- * POUŽITÍ V CONTROLLERU:
+ * USAGE IN CONTROLLER:
  * 
- * // Admin login
  * $data = array(
  *     'page_title' => 'Přihlášení administrátora',
  *     'role' => 'admin',
- *     'form_action' => home_url( '/admin/login/' ),
- *     'forgot_password_url' => home_url( '/admin/login/?action=forgot-password' ),
- *     'redirect_to' => home_url( '/admin/dashboard/' ),
- *     'error' => '', // Chybová zpráva
- *     'success' => '', // Úspěšná zpráva
- *     'info' => '', // Informační zpráva
- *     'email' => '', // Předvyplněný email
- *     'show_other_roles' => true, // Zobrazit odkazy na jiné role
- * );
- * include( plugin_dir_path( __FILE__ ) . '../templates/auth/login.php' );
- * 
- * // Manager login
- * $data = array(
- *     'page_title' => 'Přihlášení manažera',
- *     'role' => 'manager',
- *     'form_action' => home_url( '/manager/login/' ),
- *     'forgot_password_url' => wp_lostpassword_url(), // WP systém!
- *     'redirect_to' => home_url( '/manager/dashboard/' ),
+ *     'form_action' => home_url('/admin/login/'),
+ *     'forgot_password_url' => home_url('/admin/login/?action=forgot-password'),
+ *     'redirect_to' => home_url('/admin/dashboard/'),
+ *     'error' => '',
+ *     'success' => '',
+ *     'info' => '',
+ *     'email' => '',
+ *     'show_other_roles' => true,
  * );
  * 
- * // Terminal login
- * $data = array(
- *     'page_title' => 'Přihlášení terminálu',
- *     'role' => 'terminal',
- *     'form_action' => home_url( '/terminal/login/' ),
- *     'redirect_to' => home_url( '/terminal/checkin/' ),
- * );
- * 
- * // Extrakce proměnných do šablony
- * extract( $data );
- * include( $template_path );
+ * extract($data);
+ * include(plugin_dir_path(__FILE__) . '../templates/auth/login.php');
  */
 ?>

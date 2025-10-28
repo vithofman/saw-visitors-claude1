@@ -1,11 +1,8 @@
 <?php
 /**
- * SAW App Layout Manager - FIXED VERSION (CHAT 7)
- * 
- * ✅ OPRAVA: Dynamic customer loading from session
+ * SAW App Layout Manager
  * 
  * @package SAW_Visitors
- * @subpackage Frontend
  * @since 4.6.1
  */
 
@@ -21,10 +18,9 @@ class SAW_App_Layout {
     private $active_menu;
     
     /**
-     * Konstruktor
+     * Constructor
      */
     public function __construct() {
-        // Initialize session if needed
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
@@ -33,46 +29,40 @@ class SAW_App_Layout {
     /**
      * Render complete app layout
      * 
-     * @param string $content       HTML content stránky
-     * @param string $page_title    Titulek stránky
-     * @param string $active_menu   ID aktivní menu položky
-     * @param array  $user          User data (optional - will load dynamically if null)
-     * @param array  $customer      Customer data (optional - will load dynamically if null)
+     * @param string $content       HTML content
+     * @param string $page_title    Page title
+     * @param string $active_menu   Active menu item ID
+     * @param array  $user          User data (optional)
+     * @param array  $customer      Customer data (optional)
      */
     public function render($content, $page_title = '', $active_menu = '', $user = null, $customer = null) {
         $this->page_title = $page_title;
         $this->active_menu = $active_menu;
         
-        // ✅ NOVÉ: Load user dynamically if not provided
         $this->current_user = $user ?: $this->get_current_user_data();
-        
-        // ✅ KRITICKÁ ZMĚNA: Load customer DYNAMICALLY from session
         $this->current_customer = $customer ?: $this->get_current_customer_data();
         
-        // Log for debugging
         if (defined('SAW_DEBUG') && SAW_DEBUG) {
             error_log('SAW Layout: Rendering page "' . $page_title . '"');
             error_log('SAW Layout: User role: ' . $this->current_user['role']);
             error_log('SAW Layout: Customer ID: ' . $this->current_customer['id'] . ' (' . $this->current_customer['name'] . ')');
         }
         
-        // Check if AJAX request
         if ($this->is_ajax_request()) {
             $this->render_content_only($content);
             exit;
         }
         
-        // Render complete page
         $this->render_complete_page($content);
         exit;
     }
     
     /**
-     * ✅ NOVÁ METODA: Get current customer data DYNAMICALLY
+     * Get current customer data dynamically
      * 
      * Priority:
-     * 1. SuperAdmin: Load from session (selected customer)
-     * 2. Admin/Manager: Load their assigned customer
+     * 1. SuperAdmin: Load from session
+     * 2. Admin/Manager: Load assigned customer
      * 3. Fallback: Load first customer
      */
     private function get_current_customer_data() {
@@ -80,9 +70,7 @@ class SAW_App_Layout {
         
         $table_name = $wpdb->prefix . 'saw_customers';
         
-        // 1. CHECK IF SUPERADMIN
         if ($this->is_super_admin()) {
-            // Load from session
             $customer_id = $this->get_selected_customer_id_from_session();
             
             if ($customer_id) {
@@ -106,7 +94,6 @@ class SAW_App_Layout {
                 }
             }
             
-            // Fallback: Load first customer
             if (defined('SAW_DEBUG') && SAW_DEBUG) {
                 error_log('SAW Layout: SuperAdmin session empty, loading first customer');
             }
@@ -114,19 +101,15 @@ class SAW_App_Layout {
             return $this->load_first_customer();
         }
         
-        // 2. ADMIN/MANAGER: Load their customer
-        // TODO: Implement when saw_users table is ready
-        // For now, return first customer
         return $this->load_first_customer();
     }
     
     /**
-     * ✅ NOVÁ METODA: Get selected customer ID from session
+     * Get selected customer ID from session
      * 
-     * @return int|null Customer ID or null
+     * @return int|null
      */
     private function get_selected_customer_id_from_session() {
-        // 1. Try PHP session
         if (isset($_SESSION['saw_current_customer_id'])) {
             $session_id = intval($_SESSION['saw_current_customer_id']);
             
@@ -137,7 +120,6 @@ class SAW_App_Layout {
             return $session_id;
         }
         
-        // 2. Try WP user meta
         if (is_user_logged_in()) {
             $user_id = get_current_user_id();
             $meta_id = get_user_meta($user_id, 'saw_current_customer_id', true);
@@ -149,7 +131,6 @@ class SAW_App_Layout {
                     error_log('SAW Layout: Found customer ID in user meta: ' . $meta_id);
                 }
                 
-                // Sync back to session
                 $_SESSION['saw_current_customer_id'] = $meta_id;
                 
                 return $meta_id;
@@ -164,9 +145,9 @@ class SAW_App_Layout {
     }
     
     /**
-     * ✅ NOVÁ METODA: Load first customer (fallback)
+     * Load first customer (fallback)
      * 
-     * @return array Customer data
+     * @return array
      */
     private function load_first_customer() {
         global $wpdb;
@@ -179,7 +160,6 @@ class SAW_App_Layout {
         );
         
         if ($customer) {
-            // Save as default in session
             $_SESSION['saw_current_customer_id'] = intval($customer['id']);
             
             if (is_user_logged_in()) {
@@ -199,7 +179,6 @@ class SAW_App_Layout {
             );
         }
         
-        // Ultimate fallback
         if (defined('SAW_DEBUG') && SAW_DEBUG) {
             error_log('SAW Layout: No customers found in database! Using demo data.');
         }
@@ -214,7 +193,7 @@ class SAW_App_Layout {
     }
     
     /**
-     * ✅ NOVÁ METODA: Check if current user is SuperAdmin
+     * Check if current user is SuperAdmin
      * 
      * @return bool
      */
@@ -225,7 +204,7 @@ class SAW_App_Layout {
     /**
      * Get current user data
      * 
-     * @return array User data
+     * @return array
      */
     private function get_current_user_data() {
         if (is_user_logged_in()) {
@@ -280,10 +259,9 @@ class SAW_App_Layout {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title><?php echo esc_html($this->page_title); ?> - SAW Visitors</title>
             
-            <!-- SAW App Styles -->
-            <link rel="stylesheet" href="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/css/saw-app.css?v=<?php echo SAW_VISITORS_VERSION; ?>">
-            <link rel="stylesheet" href="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/css/saw-app-header.css?v=<?php echo SAW_VISITORS_VERSION; ?>">
-            <link rel="stylesheet" href="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/css/saw-app-sidebar.css?v=<?php echo SAW_VISITORS_VERSION; ?>">
+            <link rel="stylesheet" href="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/css/global/saw-app.css?v=<?php echo SAW_VISITORS_VERSION; ?>">
+            <link rel="stylesheet" href="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/css/global/saw-app-header.css?v=<?php echo SAW_VISITORS_VERSION; ?>">
+            <link rel="stylesheet" href="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/css/global/saw-app-sidebar.css?v=<?php echo SAW_VISITORS_VERSION; ?>">
             
             <?php
             if (function_exists('wp_head')) {
@@ -293,14 +271,11 @@ class SAW_App_Layout {
         </head>
         <body class="saw-app-body">
             
-            <!-- Header -->
             <?php $this->render_header(); ?>
             
             <div class="saw-app-container">
-                <!-- Sidebar -->
                 <?php $this->render_sidebar(); ?>
                 
-                <!-- Main Content -->
                 <main class="saw-app-main">
                     <div class="saw-app-content">
                         <?php echo $content; ?>
@@ -308,7 +283,6 @@ class SAW_App_Layout {
                 </main>
             </div>
             
-            <!-- Footer -->
             <?php $this->render_footer(); ?>
             
             <?php
@@ -317,9 +291,8 @@ class SAW_App_Layout {
             }
             ?>
             
-            <!-- SAW App JavaScript -->
-            <script src="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/js/saw-app.js?v=<?php echo SAW_VISITORS_VERSION; ?>"></script>
-            <script src="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/js/saw-app-navigation.js?v=<?php echo SAW_VISITORS_VERSION; ?>"></script>
+            <script src="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/js/global/saw-app.js?v=<?php echo SAW_VISITORS_VERSION; ?>"></script>
+            <script src="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/js/global/saw-app-navigation.js?v=<?php echo SAW_VISITORS_VERSION; ?>"></script>
             
             <script>
                 document.addEventListener('DOMContentLoaded', function() {

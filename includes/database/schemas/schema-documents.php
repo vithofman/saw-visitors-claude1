@@ -1,13 +1,13 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) { exit; }
+if (!defined('ABSPATH')) { exit; }
 
-function saw_get_schema_documents( $table_name, $prefix, $charset_collate ) {
+function saw_get_schema_documents($table_name, $prefix, $charset_collate) {
 	$customers_table = $prefix . 'customers';
 	
 	return "CREATE TABLE {$table_name} (
 		id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
 		customer_id BIGINT(20) UNSIGNED NOT NULL,
-		language VARCHAR(5) NOT NULL COMMENT 'cs, en, de...',
+		language VARCHAR(5) NOT NULL,
 		category ENUM('evacuation', 'fire', 'first_aid', 'hazmat', 'ppe', 'general', 'other') DEFAULT 'general',
 		title VARCHAR(255) NOT NULL,
 		description TEXT DEFAULT NULL,
@@ -24,5 +24,5 @@ function saw_get_schema_documents( $table_name, $prefix, $charset_collate ) {
 		KEY idx_category (customer_id, category),
 		KEY idx_order (customer_id, display_order),
 		CONSTRAINT fk_document_customer FOREIGN KEY (customer_id) REFERENCES {$customers_table}(id) ON DELETE CASCADE
-	) {$charset_collate} COMMENT='Dokumenty (7 kategorií)';";
+	) {$charset_collate} COMMENT='Dokumenty';";
 }

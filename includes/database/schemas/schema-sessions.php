@@ -1,7 +1,7 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) { exit; }
+if (!defined('ABSPATH')) { exit; }
 
-function saw_get_schema_sessions( $table_name, $prefix, $charset_collate ) {
+function saw_get_schema_sessions($table_name, $prefix, $charset_collate) {
 	$customers_table = $prefix . 'customers';
 	$users_table = $prefix . 'users';
 	
@@ -14,7 +14,6 @@ function saw_get_schema_sessions( $table_name, $prefix, $charset_collate ) {
 		user_agent VARCHAR(500) DEFAULT NULL,
 		expires_at DATETIME NOT NULL,
 		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-		last_activity DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
 		PRIMARY KEY (id),
 		UNIQUE KEY idx_token (session_token),
 		KEY idx_customer (customer_id),
@@ -22,5 +21,5 @@ function saw_get_schema_sessions( $table_name, $prefix, $charset_collate ) {
 		KEY idx_expires (expires_at),
 		CONSTRAINT fk_session_customer FOREIGN KEY (customer_id) REFERENCES {$customers_table}(id) ON DELETE CASCADE,
 		CONSTRAINT fk_session_user FOREIGN KEY (user_id) REFERENCES {$users_table}(id) ON DELETE CASCADE
-	) {$charset_collate} COMMENT='DB-backed sessions';";
+	) {$charset_collate} COMMENT='Sessions';";
 }

@@ -1,9 +1,8 @@
 <?php
 /**
- * SAW App Header Component - WITH WORKING CUSTOMER SWITCHER
+ * SAW App Header Component
  * 
  * @package SAW_Visitors
- * @subpackage Frontend
  * @since 4.6.1
  */
 
@@ -30,24 +29,21 @@ class SAW_App_Header {
             'ico' => '12345678',
         );
         
-        // Enqueue assets IMMEDIATELY if SuperAdmin
         if ($this->is_super_admin()) {
             $this->enqueue_customer_switcher_assets();
         }
     }
     
     /**
-     * Enqueue customer switcher assets (only for SuperAdmin)
+     * Enqueue customer switcher assets (SuperAdmin only)
      */
     public function enqueue_customer_switcher_assets() {
-        // CSS - inline protože jsme už v DOM
-        $css_file = SAW_VISITORS_PLUGIN_DIR . 'assets/css/saw-customer-switcher.css';
+        $css_file = SAW_VISITORS_PLUGIN_DIR . 'assets/css/global/saw-customer-switcher.css';
         if (file_exists($css_file)) {
             echo '<style id="saw-customer-switcher-css">' . file_get_contents($css_file) . '</style>';
         }
         
-        // JS - inline s localized data
-        $js_file = SAW_VISITORS_PLUGIN_DIR . 'assets/js/saw-customer-switcher.js';
+        $js_file = SAW_VISITORS_PLUGIN_DIR . 'assets/js/global/saw-customer-switcher.js';
         if (file_exists($js_file)) {
             ?>
             <script type="text/javascript">

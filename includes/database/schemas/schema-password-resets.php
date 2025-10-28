@@ -1,7 +1,7 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) { exit; }
+if (!defined('ABSPATH')) { exit; }
 
-function saw_get_schema_password_resets( $table_name, $prefix, $charset_collate ) {
+function saw_get_schema_password_resets($table_name, $prefix, $charset_collate) {
 	$customers_table = $prefix . 'customers';
 	$users_table = $prefix . 'users';
 	

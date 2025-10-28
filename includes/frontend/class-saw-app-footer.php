@@ -3,7 +3,7 @@
  * SAW App Footer Component
  * 
  * @package SAW_Visitors
- * @subpackage Frontend
+ * @version 4.6.1
  * @since 4.6.1
  */
 
@@ -13,6 +13,11 @@ if (!defined('ABSPATH')) {
 
 class SAW_App_Footer {
     
+    /**
+     * Render footer
+     * 
+     * @return void
+     */
     public function render() {
         ?>
         <footer class="saw-app-footer">
