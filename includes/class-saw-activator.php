@@ -18,6 +18,9 @@ class SAW_Activator {
     /**
      * Aktivace pluginu
      * 
+     * KRITICKÉ: Veškerý výstup je zachycen v saw-visitors.php pomocí ob_start/ob_end_clean
+     * Proto můžeme bezpečně volat metody, které by mohly produkovat output
+     * 
      * @return void
      */
     public static function activate() {
@@ -26,7 +29,7 @@ class SAW_Activator {
         self::insert_default_data();
         self::create_upload_directories();
         self::set_default_options();
-        self::flush_rewrite_rules();
+        self::register_and_flush_rewrite_rules();
         
         if (defined('SAW_DEBUG') && SAW_DEBUG) {
             error_log('[SAW Visitors] Plugin aktivován v ' . SAW_VISITORS_VERSION);
@@ -68,12 +71,14 @@ class SAW_Activator {
         global $wpdb;
         $prefix = $wpdb->prefix . 'saw_';
         
+        // Kontrola, zda už existují zákazníci
         $customers_count = $wpdb->get_var("SELECT COUNT(*) FROM {$prefix}customers");
         
         if ($customers_count > 0) {
             return;
         }
         
+        // Vložení demo zákazníka
         $wpdb->insert(
             $prefix . 'customers',
             array(
@@ -115,14 +120,32 @@ class SAW_Activator {
      */
     private static function set_default_options() {
         add_option('saw_db_version', SAW_VISITORS_VERSION);
+        add_option('saw_plugin_activated', current_time('mysql'));
     }
 
     /**
-     * Flush rewrite rules
+     * Registrace a flush rewrite rules
+     * 
+     * KRITICKÉ: Musíme manuálně zaregistrovat rewrite rules před flush,
+     * protože 'init' hook se při aktivaci ještě nespustil
      * 
      * @return void
      */
-    private static function flush_rewrite_rules() {
+    private static function register_and_flush_rewrite_rules() {
+        // Načteme router
+        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-router.php';
+        $router = new SAW_Router();
+        
+        // Zaregistrujeme routes (normálně se volá přes 'init' hook)
+        $router->register_routes();
+        
+        // Query vars se přidají automaticky přes filter 'query_vars' při prvním načtení
+        
+        // Flush rewrite rules - aplikuje všechny naše nové routes
         flush_rewrite_rules();
+        
+        if (defined('SAW_DEBUG') && SAW_DEBUG) {
+            error_log('[SAW Visitors] Rewrite rules registrovány a flushnuty');
+        }
     }
 }

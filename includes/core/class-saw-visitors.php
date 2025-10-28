@@ -43,6 +43,7 @@ class SAW_Visitors {
         $this->version = SAW_VISITORS_VERSION;
         
         $this->load_dependencies();
+        $this->init_router();
         $this->init_session();
         $this->init_controllers();
         $this->define_hooks();
@@ -82,6 +83,15 @@ class SAW_Visitors {
     }
     
     /**
+     * Inicializace routeru
+     * 
+     * @return void
+     */
+    private function init_router() {
+        $this->router = new SAW_Router();
+    }
+    
+    /**
      * Inicializace session
      * 
      * @return void
@@ -95,11 +105,13 @@ class SAW_Visitors {
     /**
      * Inicializace controllerů
      * 
-     * Načítá všechny controllery a registruje jejich AJAX handlery
+     * Načítá pouze Customers controller - ostatní se inicializují na požádání
+     * Content controller vyžaduje customer_id, takže se vytváří až v routeru
      * 
      * @return void
      */
     private function init_controllers() {
+        // Customers controller - můžeme inicializovat globálně pro AJAX handlery
         $customers_controller_file = SAW_VISITORS_PLUGIN_DIR . 'includes/controllers/class-saw-controller-customers.php';
         
         if (file_exists($customers_controller_file)) {
@@ -113,16 +125,8 @@ class SAW_Visitors {
             error_log('SAW Visitors ERROR: Customers Controller not found at: ' . $customers_controller_file);
         }
         
-        $content_controller_file = SAW_VISITORS_PLUGIN_DIR . 'includes/controllers/class-saw-controller-content.php';
-        
-        if (file_exists($content_controller_file)) {
-            require_once $content_controller_file;
-            new SAW_Controller_Content();
-            
-            if (defined('SAW_DEBUG') && SAW_DEBUG) {
-                error_log('SAW Visitors: Content Controller initialized');
-            }
-        }
+        // Content controller má povinný parametr $customer_id v konstruktoru,
+        // takže se inicializuje až v routeru když známe customer context
     }
     
     /**
@@ -131,15 +135,18 @@ class SAW_Visitors {
      * @return void
      */
     private function define_hooks() {
-        $this->loader->add_action('init', $this, 'register_rewrite_rules');
-        $this->loader->add_filter('query_vars', $this, 'add_query_vars');
-        $this->loader->add_action('template_redirect', $this, 'handle_routing', 1);
+        // KRITICKÉ: Registrace router hooks - BEZ TOHO ROUTING NEFUNGUJE!
+        $this->loader->add_action('init', $this->router, 'register_routes');
+        $this->loader->add_filter('query_vars', $this->router, 'register_query_vars');
+        $this->loader->add_action('template_redirect', $this->router, 'dispatch', 1);
         
+        // Enqueue assets
         $this->loader->add_action('wp_enqueue_scripts', $this, 'enqueue_public_styles');
         $this->loader->add_action('wp_enqueue_scripts', $this, 'enqueue_public_scripts');
         $this->loader->add_action('admin_enqueue_scripts', $this, 'enqueue_admin_styles');
         $this->loader->add_action('admin_enqueue_scripts', $this, 'enqueue_admin_scripts');
         
+        // Admin menu
         $this->loader->add_action('admin_menu', $this, 'add_minimal_admin_menu');
     }
     
@@ -210,60 +217,6 @@ class SAW_Visitors {
             </div>
         </div>
         <?php
-    }
-    
-    /**
-     * Registrace rewrite rules
-     * 
-     * @return void
-     */
-    public function register_rewrite_rules() {
-        add_rewrite_rule('^admin/?$', 'index.php?saw_route=admin', 'top');
-        add_rewrite_rule('^admin/([^/]+)/?$', 'index.php?saw_route=admin&saw_path=$matches[1]', 'top');
-        add_rewrite_rule('^admin/([^/]+)/(.+)', 'index.php?saw_route=admin&saw_path=$matches[1]/$matches[2]', 'top');
-        
-        add_rewrite_rule('^manager/?$', 'index.php?saw_route=manager', 'top');
-        add_rewrite_rule('^manager/([^/]+)/?$', 'index.php?saw_route=manager&saw_path=$matches[1]', 'top');
-        add_rewrite_rule('^manager/([^/]+)/(.+)', 'index.php?saw_route=manager&saw_path=$matches[1]/$matches[2]', 'top');
-        
-        add_rewrite_rule('^terminal/?$', 'index.php?saw_route=terminal', 'top');
-        add_rewrite_rule('^terminal/([^/]+)/?$', 'index.php?saw_route=terminal&saw_path=$matches[1]', 'top');
-        add_rewrite_rule('^terminal/([^/]+)/(.+)', 'index.php?saw_route=terminal&saw_path=$matches[1]/$matches[2]', 'top');
-        
-        add_rewrite_rule('^visitor/?$', 'index.php?saw_route=visitor', 'top');
-        add_rewrite_rule('^visitor/([^/]+)/?$', 'index.php?saw_route=visitor&saw_path=$matches[1]', 'top');
-        add_rewrite_rule('^visitor/([^/]+)/(.+)', 'index.php?saw_route=visitor&saw_path=$matches[1]/$matches[2]', 'top');
-    }
-    
-    /**
-     * Přidání query vars
-     * 
-     * @param array $vars Query variables
-     * @return array
-     */
-    public function add_query_vars($vars) {
-        $vars[] = 'saw_route';
-        $vars[] = 'saw_path';
-        return $vars;
-    }
-    
-    /**
-     * Zpracování routingu
-     * 
-     * @return void
-     */
-    public function handle_routing() {
-        $route = get_query_var('saw_route');
-        
-        if (!$route) {
-            return;
-        }
-        
-        remove_action('template_redirect', 'wp_redirect_admin_locations', 1000);
-        
-        $this->router = new SAW_Router();
-        $this->router->dispatch($route, get_query_var('saw_path'));
-        exit;
     }
     
     /**
