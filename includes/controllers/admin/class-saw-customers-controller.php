@@ -1,6 +1,6 @@
 <?php
 /**
- * Customers Controller - FIXED for OLD MODEL
+ * Customers Controller - FIXED WITH DEBUG
  * 
  * @package SAW_Visitors
  * @version 4.6.1
@@ -20,6 +20,9 @@ class SAW_Customers_Controller {
         
         // Register AJAX handlers
         add_action('wp_ajax_saw_search_customers', array($this, 'ajax_search_customers'));
+        
+        // 🔍 DEBUG: Log že se controller inicializoval
+        error_log('SAW Customers Controller: Initialized, AJAX handler registered');
     }
     
     /**
@@ -73,6 +76,9 @@ class SAW_Customers_Controller {
                 'nonce'   => wp_create_nonce('saw_customers_ajax_nonce')
             )
         );
+        
+        // 🔍 DEBUG: Log že se assets načetly
+        error_log('SAW Customers Controller: Assets enqueued');
     }
     
     /**
@@ -173,16 +179,22 @@ class SAW_Customers_Controller {
      * ✅ FIXED: AJAX Search s kompatibilitou pro starý model
      */
     public function ajax_search_customers() {
+        // 🔍 DEBUG: Log že AJAX handler byl zavolán
+        error_log('SAW AJAX: ajax_search_customers called');
+        error_log('SAW AJAX: POST data: ' . print_r($_POST, true));
+        
         // Verify nonce
         if (!check_ajax_referer('saw_customers_ajax_nonce', 'nonce', false)) {
             error_log('SAW AJAX Error: Invalid nonce');
+            error_log('SAW AJAX Error: Expected nonce for action: saw_customers_ajax_nonce');
+            error_log('SAW AJAX Error: Received nonce: ' . (isset($_POST['nonce']) ? $_POST['nonce'] : 'NONE'));
             wp_send_json_error(array('message' => 'Neplatný bezpečnostní token.'));
             return;
         }
         
         // Check permissions
         if (!current_user_can('manage_options')) {
-            error_log('SAW AJAX Error: No permissions');
+            error_log('SAW AJAX Error: No permissions for user ID: ' . get_current_user_id());
             wp_send_json_error(array('message' => 'Nemáte oprávnění.'));
             return;
         }
@@ -227,6 +239,7 @@ class SAW_Customers_Controller {
             $total_pages = $total_customers > 0 ? ceil($total_customers / $per_page) : 1;
             
             error_log('SAW AJAX: Found ' . count($customers) . ' customers (total: ' . $total_customers . ')');
+            error_log('SAW AJAX: Sending success response');
             
             wp_send_json_success(array(
                 'customers' => $customers,
@@ -237,6 +250,7 @@ class SAW_Customers_Controller {
             
         } catch (Exception $e) {
             error_log('SAW AJAX Exception: ' . $e->getMessage());
+            error_log('SAW AJAX Exception trace: ' . $e->getTraceAsString());
             wp_send_json_error(array('message' => 'Došlo k chybě: ' . $e->getMessage()));
         }
     }

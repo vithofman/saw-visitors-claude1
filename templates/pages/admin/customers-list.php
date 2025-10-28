@@ -1,6 +1,6 @@
 <?php
 /**
- * Template: Seznam zákazníků - WITH AJAX SEARCH & SORTING
+ * Template: Seznam zákazníků - WITH AJAX SEARCH & SORTING & DEBUG
  * 
  * @package SAW_Visitors
  * @version 4.6.1
@@ -105,12 +105,12 @@ function get_sort_icon($column, $current_orderby, $current_order) {
                         <thead>
                             <tr>
                                 <th style="width: 80px;">Logo</th>
-                                <th class="saw-sortable" data-column="name">
+                                <th class="saw-sortable" data-column="name" data-label="Název">
                                     <a href="<?php echo esc_url(get_sort_url('name', $orderby, $order)); ?>">
                                         Název <?php echo get_sort_icon('name', $orderby, $order); ?>
                                     </a>
                                 </th>
-                                <th class="saw-sortable" data-column="ico" style="width: 120px;">
+                                <th class="saw-sortable" data-column="ico" style="width: 120px;" data-label="IČO">
                                     <a href="<?php echo esc_url(get_sort_url('ico', $orderby, $order)); ?>">
                                         IČO <?php echo get_sort_icon('ico', $orderby, $order); ?>
                                     </a>
@@ -214,6 +214,12 @@ function get_sort_icon($column, $current_orderby, $current_order) {
 
 <script>
 jQuery(document).ready(function($) {
+    // 🔍 DEBUG: Log template variables
+    console.log('SAW Template: Loaded with', <?php echo count($customers); ?>, 'customers');
+    console.log('SAW Template: Search term:', '<?php echo esc_js($search); ?>');
+    console.log('SAW Template: Order by:', '<?php echo esc_js($orderby); ?>', '<?php echo esc_js($order); ?>');
+    console.log('SAW Template: Page:', <?php echo intval($page); ?>, 'of', <?php echo intval($total_pages); ?>);
+    
     // Delete customer (unchanged from original)
     $('.saw-delete-customer').on('click', function(e) {
         e.preventDefault();
@@ -221,6 +227,8 @@ jQuery(document).ready(function($) {
         var customerId = $(this).data('customer-id');
         var customerName = $(this).data('customer-name');
         var $row = $(this).closest('tr');
+        
+        console.log('SAW Template: Delete clicked for customer ID:', customerId);
         
         if (!confirm('Opravdu chcete smazat zákazníka "' + customerName + '"?\n\nTato akce je nevratná!')) {
             return;
@@ -237,6 +245,8 @@ jQuery(document).ready(function($) {
                 nonce: '<?php echo wp_create_nonce('saw_delete_customer'); ?>'
             },
             success: function(response) {
+                console.log('SAW Template: Delete response:', response);
+                
                 if (response.success) {
                     $row.fadeOut(300, function() {
                         $(this).remove();
@@ -246,7 +256,8 @@ jQuery(document).ready(function($) {
                     alert('Chyba: ' + response.data.message);
                 }
             },
-            error: function() {
+            error: function(xhr, status, error) {
+                console.error('SAW Template: Delete error:', error);
                 alert('Došlo k chybě při mazání zákazníka.');
             }
         });

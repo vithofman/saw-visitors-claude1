@@ -1,5 +1,5 @@
 /**
- * SAW Customers AJAX - Live Search & Sorting
+ * SAW Customers AJAX - Live Search & Sorting - WITH DEBUG
  * @package SAW_Visitors
  * @version 4.6.1
  */
@@ -14,6 +14,11 @@
     let currentOrder = 'ASC';
     
     $(document).ready(function() {
+        // 🔍 DEBUG: Log že se JS načetl
+        console.log('SAW Customers AJAX: Script loaded');
+        console.log('SAW Customers AJAX: ajaxurl =', sawCustomersAjax.ajaxurl);
+        console.log('SAW Customers AJAX: nonce =', sawCustomersAjax.nonce);
+        
         initSearchInput();
         initSorting();
         initPagination();
@@ -26,11 +31,18 @@
         const $searchInput = $('#saw-customers-search');
         const $clearBtn = $('#saw-search-clear');
         
-        if (!$searchInput.length) return;
+        if (!$searchInput.length) {
+            console.warn('SAW Customers AJAX: Search input not found');
+            return;
+        }
+        
+        console.log('SAW Customers AJAX: Search input initialized');
         
         // Live search with debounce
         $searchInput.on('input', function() {
             const searchValue = $(this).val().trim();
+            
+            console.log('SAW Customers AJAX: Search input changed:', searchValue);
             
             // Show/hide clear button
             if (searchValue.length > 0) {
@@ -48,12 +60,14 @@
             searchTimeout = setTimeout(function() {
                 currentSearch = searchValue;
                 currentPage = 1; // Reset to page 1
+                console.log('SAW Customers AJAX: Performing search after debounce');
                 performSearch();
             }, 500);
         });
         
         // Clear button
         $clearBtn.on('click', function() {
+            console.log('SAW Customers AJAX: Clear button clicked');
             $searchInput.val('').trigger('input').focus();
         });
         
@@ -64,6 +78,7 @@
                 clearTimeout(searchTimeout);
                 currentSearch = $(this).val().trim();
                 currentPage = 1;
+                console.log('SAW Customers AJAX: Enter pressed, performing immediate search');
                 performSearch();
             }
         });
@@ -79,6 +94,8 @@
             const $th = $(this).closest('th');
             const column = $th.data('column');
             
+            console.log('SAW Customers AJAX: Sort clicked on column:', column);
+            
             // Toggle order if same column
             if (currentOrderBy === column) {
                 currentOrder = currentOrder === 'ASC' ? 'DESC' : 'ASC';
@@ -88,6 +105,8 @@
             }
             
             currentPage = 1; // Reset to page 1
+            
+            console.log('SAW Customers AJAX: New sort:', currentOrderBy, currentOrder);
             performSearch();
         });
     }
@@ -100,6 +119,8 @@
             e.preventDefault();
             
             const page = parseInt($(this).data('page'));
+            console.log('SAW Customers AJAX: Pagination clicked, page:', page);
+            
             if (page && page > 0) {
                 currentPage = page;
                 performSearch();
@@ -114,6 +135,16 @@
         const $container = $('#saw-customers-container');
         const $loading = $('#saw-customers-loading');
         const $spinner = $('.saw-search-spinner');
+        
+        console.log('SAW Customers AJAX: Starting AJAX request');
+        console.log('SAW Customers AJAX: Parameters:', {
+            action: 'saw_search_customers',
+            nonce: sawCustomersAjax.nonce,
+            search: currentSearch,
+            page: currentPage,
+            orderby: currentOrderBy,
+            order: currentOrder
+        });
         
         // Show loading
         $loading.fadeIn(200);
@@ -132,7 +163,10 @@
                 order: currentOrder
             },
             success: function(response) {
+                console.log('SAW Customers AJAX: Success response:', response);
+                
                 if (response.success) {
+                    console.log('SAW Customers AJAX: Updating table with', response.data.customers.length, 'customers');
                     updateCustomersTable(response.data);
                     updatePagination(response.data);
                     updateCustomersCount(response.data.total_customers);
@@ -140,14 +174,20 @@
                     // Update URL without reload
                     updateURL();
                 } else {
+                    console.error('SAW Customers AJAX: Error in response:', response.data);
                     showError(response.data.message || 'Chyba při načítání zákazníků.');
                 }
             },
             error: function(xhr, status, error) {
-                console.error('AJAX Error:', error);
-                showError('Došlo k chybě při komunikaci se serverem.');
+                console.error('SAW Customers AJAX: AJAX Error');
+                console.error('SAW Customers AJAX: Status:', status);
+                console.error('SAW Customers AJAX: Error:', error);
+                console.error('SAW Customers AJAX: Response:', xhr.responseText);
+                
+                showError('Došlo k chybě při komunikaci se serverem. Zkontrolujte konzoli pro detaily.');
             },
             complete: function() {
+                console.log('SAW Customers AJAX: Request completed');
                 $loading.fadeOut(200);
                 $spinner.hide();
             }
@@ -161,7 +201,11 @@
         const $tbody = $('#saw-customers-tbody');
         const $container = $('#saw-customers-container');
         
+        console.log('SAW Customers AJAX: Updating table');
+        
         if (!data.customers || data.customers.length === 0) {
+            console.log('SAW Customers AJAX: No customers found, showing empty state');
+            
             // Show empty state
             const emptyMessage = currentSearch 
                 ? 'Nebyli nalezeni žádní zákazníci odpovídající hledanému výrazu.'
@@ -232,7 +276,10 @@
         // Update tbody
         if ($tbody.length) {
             $tbody.html(rowsHTML);
+            console.log('SAW Customers AJAX: Table updated');
         } else {
+            console.log('SAW Customers AJAX: Rebuilding entire table');
+            
             // Rebuild entire table if it doesn't exist
             const tableHTML = `
                 <div class="saw-table-responsive">
@@ -240,10 +287,10 @@
                         <thead>
                             <tr>
                                 <th style="width: 80px;">Logo</th>
-                                <th class="saw-sortable" data-column="name">
+                                <th class="saw-sortable" data-column="name" data-label="Název">
                                     <a href="#">Název ${getSortIcon('name')}</a>
                                 </th>
-                                <th class="saw-sortable" data-column="ico" style="width: 120px;">
+                                <th class="saw-sortable" data-column="ico" style="width: 120px;" data-label="IČO">
                                     <a href="#">IČO ${getSortIcon('ico')}</a>
                                 </th>
                                 <th>Adresa</th>
@@ -269,6 +316,8 @@
      * Update pagination
      */
     function updatePagination(data) {
+        console.log('SAW Customers AJAX: Updating pagination, total pages:', data.total_pages);
+        
         if (data.total_pages <= 1) {
             $('#saw-customers-pagination').remove();
             return;
@@ -310,6 +359,7 @@
      * Update customers count
      */
     function updateCustomersCount(count) {
+        console.log('SAW Customers AJAX: Updating count to:', count);
         $('#saw-customers-count').text(count);
     }
     
@@ -322,7 +372,22 @@
             const $th = $link.closest('th');
             const column = $th.data('column');
             
-            $link.html($link.text().split(' ')[0] + ' ' + getSortIcon(column));
+            // Get column text (buď z data-label nebo odvodit z column)
+            let columnText = $th.data('label');
+            
+            if (!columnText) {
+                // Odvoď text z column názvu
+                const columnNames = {
+                    'name': 'Název',
+                    'ico': 'IČO',
+                    'created_at': 'Vytvořeno',
+                    'id': 'ID'
+                };
+                columnText = columnNames[column] || column;
+            }
+            
+            // Update with text + new icon
+            $link.html(columnText + ' ' + getSortIcon(column));
         });
     }
     
@@ -362,12 +427,16 @@
         
         const newURL = window.location.pathname + '?' + params.toString();
         window.history.replaceState({}, '', newURL);
+        
+        console.log('SAW Customers AJAX: URL updated to:', newURL);
     }
     
     /**
      * Show error message
      */
     function showError(message) {
+        console.error('SAW Customers AJAX: Showing error:', message);
+        
         const alertHTML = `
             <div class="saw-alert saw-alert-error">
                 ${escapeHtml(message)}

@@ -1,7 +1,7 @@
 <?php
 /**
  * Hlavní třída pluginu SAW Visitors v4.6.1
- * UPDATED: Added saw-app-tables.css enqueue
+ * UPDATED: Added Customers Controller initialization
  * 
  * @package SAW_Visitors
  * @since 4.6.1
@@ -24,6 +24,7 @@ class SAW_Visitors {
         
         $this->load_dependencies();
         $this->init_session();
+        $this->init_controllers(); // ✅ NOVÉ: Inicializace controllerů
         $this->define_hooks();
     }
     
@@ -59,6 +60,45 @@ class SAW_Visitors {
         if (!session_id() && !headers_sent()) {
             session_start();
         }
+    }
+    
+    /**
+     * ✅ NOVÁ METODA: Inicializace controllerů
+     * Tady se načítají všechny controllery a registrují jejich AJAX handlers
+     */
+    private function init_controllers() {
+        // ✅ CUSTOMERS CONTROLLER - Pro správu zákazníků
+        $customers_controller_file = SAW_VISITORS_PLUGIN_DIR . 'includes/controllers/admin/class-saw-customers-controller.php';
+        
+        if (file_exists($customers_controller_file)) {
+            require_once $customers_controller_file;
+            
+            // Vytvoř instanci controlleru (tím se zaregistruje AJAX handler)
+            new SAW_Customers_Controller();
+            
+            error_log('SAW Visitors: Customers Controller initialized');
+        } else {
+            error_log('SAW Visitors ERROR: Customers Controller file not found at: ' . $customers_controller_file);
+        }
+        
+        // ✅ MÍSTO PRO DALŠÍ CONTROLLERY
+        // Až budeš přidávat další controllery, dej je sem:
+        
+        /*
+        // Příklad pro budoucí controllery:
+        
+        $dashboard_controller_file = SAW_VISITORS_PLUGIN_DIR . 'includes/controllers/admin/class-saw-dashboard-controller.php';
+        if (file_exists($dashboard_controller_file)) {
+            require_once $dashboard_controller_file;
+            new SAW_Dashboard_Controller();
+        }
+        
+        $invitations_controller_file = SAW_VISITORS_PLUGIN_DIR . 'includes/controllers/admin/class-saw-invitations-controller.php';
+        if (file_exists($invitations_controller_file)) {
+            require_once $invitations_controller_file;
+            new SAW_Invitations_Controller();
+        }
+        */
     }
     
     private function define_hooks() {

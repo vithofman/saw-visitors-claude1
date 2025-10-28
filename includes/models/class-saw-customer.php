@@ -1,6 +1,6 @@
 <?php
 /**
- * Customer Model - FIXED VERSION
+ * Customer Model - FIXED VERSION WITH DEBUG
  * 
  * Správa zákazníků - CRUD operace, logo upload, validace
  * 
@@ -107,7 +107,7 @@ class SAW_Customer {
         $limit = absint( $args['limit'] );
         $offset = absint( $args['offset'] );
         
-        // SQL
+        // SQL - START
         $sql = "SELECT * FROM {$this->table_name} WHERE 1=1";
         
         // Search
@@ -119,16 +119,32 @@ class SAW_Customer {
         $sql .= " ORDER BY {$orderby} {$order}";
         $sql .= " LIMIT {$limit} OFFSET {$offset}";
         
+        // 🔍 DEBUG: Log SQL dotaz
+        error_log( 'SAW Customer Model SQL: ' . $sql );
+        
+        // Spusť dotaz
         $customers = $wpdb->get_results( $sql, ARRAY_A );
         
-        // Přidej URL loga
-        if ( is_array( $customers ) ) {
-            foreach ( $customers as &$customer ) {
-                $customer['logo_url_full'] = $this->get_logo_url( $customer['logo_url'] );
-            }
+        // 🔍 DEBUG: Log výsledek
+        if ( $wpdb->last_error ) {
+            error_log( 'SAW Customer Model ERROR: ' . $wpdb->last_error );
+            return array(); // Vrať prázdné pole při chybě
         }
         
-        return is_array( $customers ) ? $customers : array();
+        error_log( 'SAW Customer Model: Found ' . count( (array) $customers ) . ' customers' );
+        
+        // Kontrola jestli je to pole
+        if ( ! is_array( $customers ) ) {
+            error_log( 'SAW Customer Model WARNING: get_results returned non-array: ' . gettype( $customers ) );
+            $customers = array();
+        }
+        
+        // Přidej URL loga
+        foreach ( $customers as &$customer ) {
+            $customer['logo_url_full'] = $this->get_logo_url( $customer['logo_url'] );
+        }
+        
+        return $customers;
     }
     
     /**
@@ -147,7 +163,18 @@ class SAW_Customer {
             $sql .= $wpdb->prepare( " AND (name LIKE %s OR ico LIKE %s OR address LIKE %s)", $search_term, $search_term, $search_term );
         }
         
+        // 🔍 DEBUG: Log SQL dotaz
+        error_log( 'SAW Customer Model COUNT SQL: ' . $sql );
+        
         $count = $wpdb->get_var( $sql );
+        
+        // 🔍 DEBUG: Log výsledek
+        if ( $wpdb->last_error ) {
+            error_log( 'SAW Customer Model COUNT ERROR: ' . $wpdb->last_error );
+            return 0;
+        }
+        
+        error_log( 'SAW Customer Model COUNT: ' . (int) $count );
         
         return (int) $count;
     }
@@ -212,6 +239,7 @@ class SAW_Customer {
         $result = $wpdb->insert( $this->table_name, $insert_data );
         
         if ( $result === false ) {
+            error_log( 'SAW Customer Model CREATE ERROR: ' . $wpdb->last_error );
             return new WP_Error( 'db_error', 'Chyba při vytváření zákazníka: ' . $wpdb->last_error );
         }
         
@@ -287,6 +315,7 @@ class SAW_Customer {
         );
         
         if ( $result === false ) {
+            error_log( 'SAW Customer Model UPDATE ERROR: ' . $wpdb->last_error );
             return new WP_Error( 'db_error', 'Chyba při aktualizaci zákazníka: ' . $wpdb->last_error );
         }
         
@@ -317,6 +346,7 @@ class SAW_Customer {
         $result = $wpdb->delete( $this->table_name, array( 'id' => $id ) );
         
         if ( $result === false ) {
+            error_log( 'SAW Customer Model DELETE ERROR: ' . $wpdb->last_error );
             return new WP_Error( 'db_error', 'Chyba při mazání zákazníka: ' . $wpdb->last_error );
         }
         
