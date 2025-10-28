@@ -95,13 +95,11 @@ class SAW_Visitors {
     /**
      * Inicializace controllerů
      * 
-     * Načítá pouze Customers controller - ostatní se inicializují na požádání
-     * Content controller vyžaduje customer_id, takže se vytváří až v routeru
+     * Načítá všechny controllery a registruje jejich AJAX handlery
      * 
      * @return void
      */
     private function init_controllers() {
-        // Customers controller - můžeme inicializovat globálně pro AJAX handlery
         $customers_controller_file = SAW_VISITORS_PLUGIN_DIR . 'includes/controllers/class-saw-controller-customers.php';
         
         if (file_exists($customers_controller_file)) {
@@ -115,8 +113,16 @@ class SAW_Visitors {
             error_log('SAW Visitors ERROR: Customers Controller not found at: ' . $customers_controller_file);
         }
         
-        // Content controller má povinný parametr $customer_id v konstruktoru,
-        // takže se inicializuje až v routeru když známe customer context
+        $content_controller_file = SAW_VISITORS_PLUGIN_DIR . 'includes/controllers/class-saw-controller-content.php';
+        
+        if (file_exists($content_controller_file)) {
+            require_once $content_controller_file;
+            new SAW_Controller_Content();
+            
+            if (defined('SAW_DEBUG') && SAW_DEBUG) {
+                error_log('SAW Visitors: Content Controller initialized');
+            }
+        }
     }
     
     /**
