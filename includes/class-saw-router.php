@@ -1,6 +1,6 @@
 <?php
 /**
- * SAW Router - S POVINNOU AUTENTIZACÍ
+ * SAW Router - S POVINNOU AUTENTIZACÍ + CONTENT MANAGEMENT
  * 
  * @package SAW_Visitors
  * @since 4.6.1
@@ -343,6 +343,28 @@ class SAW_Router {
             return;
         }
         
+        // ==========================================
+        // CONTENT MANAGEMENT
+        // ==========================================
+        if ($path === 'settings/content' || strpos($path, 'settings/content') === 0) {
+            // CRITICAL: Enqueue WordPress editor scripts
+            wp_enqueue_editor();
+            wp_enqueue_media();
+            
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/controllers/class-saw-content-controller.php';
+            $controller = new SAW_Content_Controller($this->get_current_customer_data()['id']);
+            $content = $controller->index();
+            
+            if (class_exists('SAW_App_Layout')) {
+                $layout = new SAW_App_Layout();
+                $user = $this->get_current_user_data();
+                $customer = $this->get_current_customer_data();
+                $layout->render($content, 'Správa obsahu', 'content', $user, $customer);
+            }
+            return;
+        }
+        
+        // Default placeholder page
         $this->render_page('Admin Interface', $path, 'admin');
     }
     
@@ -447,6 +469,7 @@ class SAW_Router {
                         <a href="/admin/invitations" class="saw-button saw-button-primary">Pozvánky</a>
                         <a href="/admin/visits" class="saw-button saw-button-primary">Návštěvy</a>
                         <a href="/admin/statistics" class="saw-button saw-button-primary">Statistiky</a>
+                        <a href="/admin/settings/content" class="saw-button saw-button-success">📚 Správa obsahu</a>
                     </div>
                 </div>
             </div>

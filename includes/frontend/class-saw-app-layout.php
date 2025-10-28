@@ -1,7 +1,7 @@
 <?php
 /**
- * SAW App Layout Manager - FINAL VERSION
- * Přijímá user a customer data jako parametry od routeru
+ * SAW App Layout Manager - FIXED VERSION (No Fatal Errors)
+ * Bezpečné načítání WordPress scriptů pro WYSIWYG editor
  * 
  * @package SAW_Visitors
  * @subpackage Frontend
@@ -20,7 +20,22 @@ class SAW_App_Layout {
     private $active_menu;
     
     public function __construct() {
-        // Constructor je prázdný - data přijímáme v render()
+        // Enqueue WordPress editor assets properly
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_editor_assets'));
+    }
+    
+    /**
+     * Enqueue WordPress editor assets (voláno PŘED renderem)
+     */
+    public function enqueue_editor_assets() {
+        // Načteme editor styly a scripty bezpečně
+        wp_enqueue_style('dashicons');
+        wp_enqueue_style('editor-buttons');
+        
+        // WYSIWYG editor needs these
+        wp_enqueue_script('jquery');
+        wp_enqueue_editor();
+        wp_enqueue_media();
     }
     
     /**
@@ -51,6 +66,9 @@ class SAW_App_Layout {
             'address' => 'Praha 1',
         );
         
+        // CRITICAL: Enqueue editor assets BEFORE rendering
+        $this->enqueue_editor_assets();
+        
         // Render immediately
         $this->render_complete_page($content);
         exit;
@@ -78,6 +96,29 @@ class SAW_App_Layout {
                 body.saw-app-body { opacity: 0; }
                 body.saw-app-body.loaded { opacity: 1; transition: opacity 0.2s; }
             </style>
+            
+            <?php
+            /**
+             * BEZPEČNÉ NAČTENÍ WP STYLŮ
+             * Kontrolujeme, zda funkce existují PŘED voláním
+             */
+            if (function_exists('wp_print_styles')) {
+                // Dashicons (pro tlačítka editoru)
+                if (wp_style_is('dashicons', 'registered')) {
+                    wp_print_styles('dashicons');
+                }
+                
+                // Editor buttons styly
+                if (wp_style_is('editor-buttons', 'registered')) {
+                    wp_print_styles('editor-buttons');
+                }
+            }
+            
+            // Print head scripts (bezpečně)
+            if (function_exists('wp_print_head_scripts')) {
+                wp_print_head_scripts();
+            }
+            ?>
         </head>
         <body class="saw-app-body">
             
@@ -91,6 +132,16 @@ class SAW_App_Layout {
             </div>
             
             <?php $this->render_footer(); ?>
+            
+            <?php
+            /**
+             * BEZPEČNÉ NAČTENÍ WP FOOTER SCRIPTŮ
+             * Kontrolujeme existenci funkce PŘED voláním
+             */
+            if (function_exists('wp_print_footer_scripts')) {
+                wp_print_footer_scripts();
+            }
+            ?>
             
             <script src="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/js/saw-app.js?v=<?php echo SAW_VISITORS_VERSION; ?>"></script>
             <script>
