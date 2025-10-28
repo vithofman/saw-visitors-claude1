@@ -1,7 +1,7 @@
 <?php
 /**
  * Hlavní třída pluginu SAW Visitors v4.6.1
- * FIXED: Rewrite rules BEZ kolize s /wp-admin
+ * AKTUALIZOVÁNO: + Customers management CSS
  * 
  * @package SAW_Visitors
  * @since 4.6.1
@@ -101,6 +101,7 @@ class SAW_Visitors {
                 <h3>✅ Přístupové URL:</h3>
                 <ul style="list-style: disc; margin-left: 20px;">
                     <li><strong>Admin:</strong> <a href="<?php echo home_url('/admin/'); ?>" target="_blank"><?php echo home_url('/admin/'); ?></a></li>
+                    <li><strong>Správa zákazníků:</strong> <a href="<?php echo home_url('/admin/settings/customers/'); ?>" target="_blank"><?php echo home_url('/admin/settings/customers/'); ?></a></li>
                     <li><strong>Manager:</strong> <a href="<?php echo home_url('/manager/'); ?>" target="_blank"><?php echo home_url('/manager/'); ?></a></li>
                     <li><strong>Terminal:</strong> <a href="<?php echo home_url('/terminal/'); ?>" target="_blank"><?php echo home_url('/terminal/'); ?></a></li>
                 </ul>
@@ -118,7 +119,7 @@ class SAW_Visitors {
                 <?php
                 if (isset($_POST['saw_flush_rewrite']) && check_admin_referer('saw_flush_rewrite')) {
                     flush_rewrite_rules();
-                    echo '<div style="background: #d1fae5; color: #065f46; padding: 12px; border-radius: 4px; margin-top: 16px;">✅ Rewrite rules byly obnoveny! Zkuste kliknout na odkazy výše.</div>';
+                    echo '<div style="background: #d1fae5; color: #065f46; padding: 12px; border-radius: 4px; margin-top: 16px;">✅ Rewrite rules byly obnoveny!</div>';
                 }
                 ?>
                 
@@ -128,6 +129,7 @@ class SAW_Visitors {
                     <li>WordPress: <?php echo get_bloginfo('version'); ?> (požadováno: 6.0+)</li>
                     <li>Multi-tenant: ✓</li>
                     <li>Frontend admin: ✓</li>
+                    <li>Customers management: ✓</li>
                 </ul>
             </div>
         </div>
@@ -135,8 +137,7 @@ class SAW_Visitors {
     }
     
     public function register_rewrite_rules() {
-        // DŮLEŽITÉ: Používáme PRIORITY aby se admin nezachytával jako WP admin redirect
-        // Admin routes - MUSÍ být PŘED WordPress default rules
+        // Admin routes
         add_rewrite_rule('^admin/?$', 'index.php?saw_route=admin', 'top');
         add_rewrite_rule('^admin/([^/]+)/?$', 'index.php?saw_route=admin&saw_path=$matches[1]', 'top');
         add_rewrite_rule('^admin/([^/]+)/(.+)', 'index.php?saw_route=admin&saw_path=$matches[1]/$matches[2]', 'top');
@@ -207,10 +208,21 @@ class SAW_Visitors {
     
     public function enqueue_public_styles() {
         if (get_query_var('saw_route')) {
+            // Base styles
             if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/css/public.css')) {
                 wp_enqueue_style(
                     $this->plugin_name . '-public',
                     SAW_VISITORS_PLUGIN_URL . 'assets/css/public.css',
+                    array(),
+                    $this->version
+                );
+            }
+            
+            // Customers management styles
+            if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/css/saw-customers.css')) {
+                wp_enqueue_style(
+                    $this->plugin_name . '-customers',
+                    SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-customers.css',
                     array(),
                     $this->version
                 );
@@ -227,6 +239,16 @@ class SAW_Visitors {
                     array('jquery'),
                     $this->version,
                     true
+                );
+                
+                // Localize script for AJAX
+                wp_localize_script(
+                    $this->plugin_name . '-public',
+                    'sawAjax',
+                    array(
+                        'ajaxurl' => admin_url('admin-ajax.php'),
+                        'nonce'   => wp_create_nonce('saw_ajax_nonce')
+                    )
                 );
             }
         }

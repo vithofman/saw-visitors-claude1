@@ -1,0 +1,442 @@
+/**
+ * SAW Customers - Styles
+ * 
+ * @package SAW_Visitors
+ * @version 4.6.1
+ */
+
+/* ===================================================================
+   CUSTOMER LIST
+   =================================================================== */
+
+/* Customer logo in table */
+.saw-customer-logo {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    padding: 4px;
+}
+
+.saw-customer-logo-placeholder {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f3f4f6;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    color: #9ca3af;
+}
+
+.saw-customer-logo-placeholder .dashicons {
+    font-size: 32px;
+    width: 32px;
+    height: 32px;
+}
+
+/* Color preview in table */
+.saw-color-preview {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    font-size: 11px;
+    font-weight: 600;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.saw-color-preview span {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+/* ===================================================================
+   CUSTOMER FORM
+   =================================================================== */
+
+/* Form layout */
+.saw-form-row {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.saw-form-row:last-child {
+    margin-bottom: 0;
+}
+
+.saw-col-4 {
+    flex: 0 0 calc(33.333% - 16px);
+}
+
+.saw-col-6 {
+    flex: 0 0 calc(50% - 12px);
+}
+
+.saw-col-8 {
+    flex: 0 0 calc(66.667% - 16px);
+}
+
+/* Form group */
+.saw-form-group {
+    margin-bottom: 24px;
+}
+
+.saw-form-group:last-child {
+    margin-bottom: 0;
+}
+
+/* Labels */
+.saw-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    color: #374151;
+}
+
+.saw-label.saw-required::after {
+    content: " *";
+    color: #ef4444;
+}
+
+/* Inputs */
+.saw-input,
+.saw-textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #1f2937;
+    transition: all 0.2s;
+    background: #fff;
+}
+
+.saw-input:focus,
+.saw-textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.saw-input::placeholder,
+.saw-textarea::placeholder {
+    color: #9ca3af;
+}
+
+.saw-textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* Help text */
+.saw-help-text {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    color: #6b7280;
+    line-height: 1.5;
+}
+
+/* ===================================================================
+   FILE INPUT (Logo Upload)
+   =================================================================== */
+
+.saw-file-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.saw-file-input {
+    display: none;
+}
+
+.saw-file-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #3b82f6;
+    color: #fff;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.saw-file-label:hover {
+    background: #2563eb;
+}
+
+.saw-file-label .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+.saw-file-name {
+    font-size: 13px;
+    color: #6b7280;
+    font-style: italic;
+}
+
+/* Logo preview */
+.saw-logo-preview-current {
+    margin-bottom: 16px;
+    text-align: center;
+}
+
+.saw-logo-preview-current img {
+    max-width: 200px;
+    max-height: 120px;
+    object-fit: contain;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 12px;
+    background: #fff;
+}
+
+.saw-logo-preview-current p {
+    margin-top: 8px;
+    font-size: 12px;
+}
+
+.saw-logo-preview {
+    margin-top: 16px;
+    padding: 16px;
+    background: #f9fafb;
+    border-radius: 8px;
+    border: 2px dashed #d1d5db;
+    text-align: center;
+}
+
+.saw-logo-preview img {
+    max-width: 200px;
+    max-height: 120px;
+    object-fit: contain;
+    margin-bottom: 12px;
+}
+
+/* ===================================================================
+   COLOR PICKER
+   =================================================================== */
+
+.saw-color-picker-wrapper {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.saw-color-input {
+    width: 80px;
+    height: 48px;
+    padding: 4px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.saw-color-input::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.saw-color-input::-webkit-color-swatch {
+    border: none;
+    border-radius: 6px;
+}
+
+.saw-color-text {
+    flex: 1;
+    max-width: 150px;
+    font-family: 'Courier New', monospace;
+    text-transform: uppercase;
+}
+
+.saw-color-preview-large {
+    margin-top: 16px;
+    height: 80px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 600;
+    font-size: 16px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* ===================================================================
+   FORM ACTIONS
+   =================================================================== */
+
+.saw-form-actions {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    gap: 12px;
+}
+
+/* ===================================================================
+   ALERTS
+   =================================================================== */
+
+.saw-alert {
+    padding: 14px 18px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.saw-alert-success {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #6ee7b7;
+}
+
+.saw-alert-error {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+}
+
+.saw-alert-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    line-height: 1;
+    color: currentColor;
+    opacity: 0.6;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.2s;
+}
+
+.saw-alert-close:hover {
+    opacity: 1;
+}
+
+/* ===================================================================
+   RESPONSIVE
+   =================================================================== */
+
+@media (max-width: 1024px) {
+    .saw-form-row {
+        flex-direction: column;
+    }
+    
+    .saw-col-4,
+    .saw-col-6,
+    .saw-col-8 {
+        flex: 1 1 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .saw-page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+    
+    .saw-page-header-actions {
+        width: 100%;
+    }
+    
+    .saw-page-header-actions .saw-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .saw-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .saw-card-header-right {
+        width: 100%;
+    }
+    
+    .saw-search-form {
+        width: 100%;
+    }
+    
+    .saw-table-responsive {
+        overflow-x: auto;
+    }
+    
+    .saw-table {
+        min-width: 800px;
+    }
+    
+    .saw-form-actions {
+        flex-direction: column;
+    }
+    
+    .saw-form-actions .saw-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .saw-color-picker-wrapper {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .saw-color-text {
+        max-width: 100%;
+    }
+}
+
+/* ===================================================================
+   LOADING STATE
+   =================================================================== */
+
+.saw-loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+.saw-loading::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    margin: -8px 0 0 -8px;
+    border: 2px solid #fff;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: saw-spin 0.6s linear infinite;
+}
+
+@keyframes saw-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

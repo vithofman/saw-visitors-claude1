@@ -1,6 +1,6 @@
 <?php
 /**
- * SAW Router - S POVINNOU AUTENTIZACÍ + CONTENT MANAGEMENT
+ * SAW Router - S CUSTOMERS MANAGEMENT
  * 
  * @package SAW_Visitors
  * @since 4.6.1
@@ -72,415 +72,129 @@ class SAW_Router {
     }
     
     /**
-     * Check if user is logged in
+     * Handle admin route
      */
-    private function is_logged_in() {
-        // DOČASNÉ: Kontrola WordPress session
-        // TODO: Později použít SAW_Session
-        
-        // Check if user has active WordPress session
-        if (is_user_logged_in()) {
-            return true;
+    private function handle_admin_route($path = '') {
+        // Require authentication + Super Admin check
+        if (!current_user_can('manage_options')) {
+            wp_die('Nemáte oprávnění k přístupu na tuto stránku.', 'Přístup zamítnut', array('response' => 403));
         }
         
-        // Check if has SAW session cookie
-        if (isset($_COOKIE['saw_session_token'])) {
-            // TODO: Validovat session token v databázi
-            return true;
-        }
+        // Parse path
+        $path_parts = explode('/', trim($path, '/'));
         
-        return false;
-    }
-    
-    /**
-     * Redirect to login page
-     */
-    private function redirect_to_login($route = 'admin') {
-        // Render simple login page
-        $this->render_login_page($route);
-    }
-    
-    /**
-     * Render login page
-     */
-    private function render_login_page($route) {
-        ?>
-        <!DOCTYPE html>
-        <html <?php language_attributes(); ?>>
-        <head>
-            <meta charset="<?php bloginfo('charset'); ?>">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Přihlášení - SAW Visitors</title>
-            <style>
-                * { box-sizing: border-box; margin: 0; padding: 0; }
-                body {
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    min-height: 100vh;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    padding: 20px;
-                }
-                .login-container {
-                    background: white;
-                    padding: 48px;
-                    border-radius: 16px;
-                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-                    width: 100%;
-                    max-width: 440px;
-                }
-                .login-logo {
-                    text-align: center;
-                    margin-bottom: 32px;
-                }
-                .login-logo svg {
-                    display: inline-block;
-                }
-                .login-title {
-                    font-size: 28px;
-                    font-weight: 700;
-                    color: #111827;
-                    margin-bottom: 8px;
-                    text-align: center;
-                }
-                .login-subtitle {
-                    font-size: 14px;
-                    color: #6b7280;
-                    text-align: center;
-                    margin-bottom: 32px;
-                }
-                .login-alert {
-                    background: #fee2e2;
-                    color: #991b1b;
-                    padding: 16px;
-                    border-radius: 8px;
-                    margin-bottom: 24px;
-                    border-left: 4px solid #ef4444;
-                }
-                .login-form {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 20px;
-                }
-                .form-group {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 8px;
-                }
-                .form-label {
-                    font-size: 14px;
-                    font-weight: 500;
-                    color: #374151;
-                }
-                .form-input {
-                    padding: 12px 16px;
-                    border: 1px solid #d1d5db;
-                    border-radius: 8px;
-                    font-size: 14px;
-                    transition: all 0.2s;
-                }
-                .form-input:focus {
-                    outline: none;
-                    border-color: #2563eb;
-                    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-                }
-                .form-button {
-                    padding: 14px;
-                    background: #2563eb;
-                    color: white;
-                    border: none;
-                    border-radius: 8px;
-                    font-size: 16px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                }
-                .form-button:hover {
-                    background: #1d4ed8;
-                    transform: translateY(-1px);
-                    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
-                }
-                .form-button:disabled {
-                    background: #9ca3af;
-                    cursor: not-allowed;
-                    transform: none;
-                }
-                .login-footer {
-                    margin-top: 24px;
-                    text-align: center;
-                    font-size: 12px;
-                    color: #6b7280;
-                }
-                .login-demo {
-                    margin-top: 24px;
-                    padding: 16px;
-                    background: #f3f4f6;
-                    border-radius: 8px;
-                    font-size: 13px;
-                    color: #4b5563;
-                }
-                .login-demo strong {
-                    color: #111827;
-                }
-            </style>
-        </head>
-        <body>
-            <div class="login-container">
-                <div class="login-logo">
-                    <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
-                        <rect width="60" height="60" rx="12" fill="#2563eb"/>
-                        <text x="30" y="42" font-size="28" font-weight="bold" fill="white" text-anchor="middle">SAW</text>
-                    </svg>
-                </div>
-                
-                <h1 class="login-title">SAW Visitors</h1>
-                <p class="login-subtitle">Systém pro správu návštěv</p>
-                
-                <div class="login-alert">
-                    <strong>🔒 Vyžadováno přihlášení</strong><br>
-                    Pro přístup k <?php echo esc_html($route === 'admin' ? 'administraci' : 'této části'); ?> musíte být přihlášeni.
-                </div>
-                
-                <form class="login-form" method="POST" action="<?php echo admin_url('admin-post.php'); ?>">
-                    <input type="hidden" name="action" value="saw_login">
-                    <input type="hidden" name="redirect_to" value="<?php echo esc_url($_SERVER['REQUEST_URI']); ?>">
-                    <?php wp_nonce_field('saw_login'); ?>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="username">Email / Uživatelské jméno</label>
-                        <input 
-                            type="text" 
-                            id="username" 
-                            name="username" 
-                            class="form-input" 
-                            required
-                            placeholder="admin@example.com"
-                            autocomplete="username"
-                        >
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="password">Heslo</label>
-                        <input 
-                            type="password" 
-                            id="password" 
-                            name="password" 
-                            class="form-input" 
-                            required
-                            placeholder="••••••••"
-                            autocomplete="current-password"
-                        >
-                    </div>
-                    
-                    <button type="submit" class="form-button">
-                        🔐 Přihlásit se
-                    </button>
-                </form>
-                
-                <div class="login-demo">
-                    <strong>ℹ️ Demo režim:</strong><br>
-                    Autentizace ještě není plně implementována.<br>
-                    Tento screen se zobrazuje, protože NENÍ aktivní WordPress session.
-                </div>
-                
-                <div class="login-footer">
-                    SAW Visitors v<?php echo SAW_VISITORS_VERSION; ?> © <?php echo date('Y'); ?>
-                </div>
-            </div>
-        </body>
-        </html>
-        <?php
-        exit;
-    }
-    
-    /**
-     * Get current user data
-     */
-    private function get_current_user_data() {
-        // Pokud je WP user přihlášen, použijeme jeho data
-        if (is_user_logged_in()) {
-            $wp_user = wp_get_current_user();
-            return array(
-                'id' => $wp_user->ID,
-                'name' => $wp_user->display_name,
-                'email' => $wp_user->user_email,
-                'role' => 'admin', // TODO: Načíst z saw_users tabulky
-            );
-        }
-        
-        // TODO: Check SAW session cookie and load from database
-        
-        // Fallback demo data
-        return array(
-            'id' => 1,
-            'name' => 'Demo Admin',
-            'email' => 'admin@demo.cz',
-            'role' => 'admin',
-        );
-    }
-    
-    /**
-     * Get current customer data
-     */
-    private function get_current_customer_data() {
-        // TODO: Load from database based on user's customer_id
-        return array(
-            'id' => 1,
-            'name' => 'Demo Firma s.r.o.',
-            'ico' => '12345678',
-            'address' => 'Praha 1, Hlavní 123',
-        );
-    }
-    
-    /**
-     * Handle admin routes
-     */
-    private function handle_admin_route($path) {
-        // AUTH CHECK - POVINNÉ!
-        if (!$this->is_logged_in()) {
-            $this->redirect_to_login('admin');
+        // Default to dashboard
+        if (empty($path)) {
+            $this->render_placeholder('Admin Dashboard', 'admin');
             return;
         }
         
-        // ==========================================
-        // CONTENT MANAGEMENT
-        // ==========================================
-        if ($path === 'settings/content' || strpos($path, 'settings/content') === 0) {
-            // CRITICAL: Enqueue WordPress editor scripts
-            wp_enqueue_editor();
-            wp_enqueue_media();
-            
-            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/controllers/class-saw-content-controller.php';
-            $controller = new SAW_Content_Controller($this->get_current_customer_data()['id']);
-            $content = $controller->index();
-            
-            if (class_exists('SAW_App_Layout')) {
-                $layout = new SAW_App_Layout();
-                $user = $this->get_current_user_data();
-                $customer = $this->get_current_customer_data();
-                $layout->render($content, 'Správa obsahu', 'content', $user, $customer);
-            }
+        // Handle different sections
+        switch ($path_parts[0]) {
+            case 'dashboard':
+                $this->render_placeholder('Admin Dashboard', 'admin');
+                break;
+                
+            case 'settings':
+                $this->handle_admin_settings($path_parts);
+                break;
+                
+            default:
+                $this->handle_404();
+                break;
+        }
+    }
+    
+    /**
+     * Handle admin settings routes
+     */
+    private function handle_admin_settings($path_parts) {
+        if (!isset($path_parts[1])) {
+            $this->handle_404();
             return;
         }
         
-        // Default placeholder page
-        $this->render_page('Admin Interface', $path, 'admin');
-    }
-    
-    /**
-     * Handle manager routes
-     */
-    private function handle_manager_route($path) {
-        // AUTH CHECK - POVINNÉ!
-        if (!$this->is_logged_in()) {
-            $this->redirect_to_login('manager');
-            return;
+        switch ($path_parts[1]) {
+            case 'customers':
+                $this->handle_customers_routes($path_parts);
+                break;
+                
+            default:
+                $this->handle_404();
+                break;
         }
-        
-        $this->render_page('Manager Interface', $path, 'manager');
     }
     
     /**
-     * Handle terminal routes
+     * Handle customers routes
      */
-    private function handle_terminal_route($path) {
-        // AUTH CHECK - POVINNÉ!
-        if (!$this->is_logged_in()) {
-            $this->redirect_to_login('terminal');
-            return;
+    private function handle_customers_routes($path_parts) {
+        // Load controller
+        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/controllers/admin/class-saw-customers-controller.php';
+        $controller = new SAW_Customers_Controller();
+        
+        // Route to action
+        if (!isset($path_parts[2]) || $path_parts[2] === '') {
+            // List
+            $controller->index();
+        } elseif ($path_parts[2] === 'create') {
+            // Create form
+            $controller->form();
+        } elseif ($path_parts[2] === 'edit') {
+            // Edit form
+            $controller->form();
+        } elseif ($path_parts[2] === 'delete') {
+            // Delete
+            $controller->delete();
+        } else {
+            $this->handle_404();
         }
-        
-        $this->render_page('Terminal Interface', $path, 'terminal');
     }
     
     /**
-     * Handle visitor routes
+     * Handle manager route
      */
-    private function handle_visitor_route($path) {
-        // Visitor routes jsou veřejné - bez auth
-        $this->render_page('Visitor Portal', $path, 'visitor');
+    private function handle_manager_route($path = '') {
+        $this->render_placeholder('Manager Dashboard', 'manager');
     }
     
     /**
-     * Render page using layout component
+     * Handle terminal route
      */
-    private function render_page($title, $path, $route) {
-        // Get user and customer data
-        $user = $this->get_current_user_data();
-        $customer = $this->get_current_customer_data();
-        
-        // Generate page content
-        ob_start();
-        ?>
-        <div class="saw-page-wrapper">
-            <div class="saw-page-header">
-                <h1>🎯 <?php echo esc_html($title); ?></h1>
-                <p class="saw-page-subtitle">Stránka ve vývoji</p>
-            </div>
-            
-            <div class="saw-card">
-                <div class="saw-card-header">
-                    <h2>✅ Autentizace funguje!</h2>
-                </div>
-                <div class="saw-card-body">
-                    <div class="saw-alert saw-alert-success">
-                        <strong>🔒 Úspěšně přihlášen!</strong><br>
-                        Tuto stránku vidíš, protože jsi prošel autentizační kontrolou.<br>
-                        Zkus otevřít v anonymním okně - měl bys vidět login screen.
-                    </div>
-                    
-                    <table class="saw-info-table" style="margin-top: 16px;">
-                        <tr>
-                            <th>Route:</th>
-                            <td><code><?php echo esc_html($route); ?></code></td>
-                        </tr>
-                        <tr>
-                            <th>Path:</th>
-                            <td><code><?php echo esc_html($path ?: '/'); ?></code></td>
-                        </tr>
-                        <tr>
-                            <th>User:</th>
-                            <td><code><?php echo esc_html($user['name'] . ' (' . $user['email'] . ')'); ?></code></td>
-                        </tr>
-                        <tr>
-                            <th>Role:</th>
-                            <td><code><?php echo esc_html($user['role']); ?></code></td>
-                        </tr>
-                        <tr>
-                            <th>Customer:</th>
-                            <td><code><?php echo esc_html($customer['name']); ?></code></td>
-                        </tr>
-                        <tr>
-                            <th>WordPress User:</th>
-                            <td><?php echo is_user_logged_in() ? '✅ Ano' : '❌ Ne'; ?></td>
-                        </tr>
-                    </table>
-                </div>
-            </div>
-            
-            <div class="saw-card">
-                <div class="saw-card-header">
-                    <h3>🚀 Quick Links</h3>
-                </div>
-                <div class="saw-card-body">
-                    <div class="saw-button-group">
-                        <a href="/admin/" class="saw-button saw-button-primary">Admin Dashboard</a>
-                        <a href="/admin/invitations" class="saw-button saw-button-primary">Pozvánky</a>
-                        <a href="/admin/visits" class="saw-button saw-button-primary">Návštěvy</a>
-                        <a href="/admin/statistics" class="saw-button saw-button-primary">Statistiky</a>
-                        <a href="/admin/settings/content" class="saw-button saw-button-success">📚 Správa obsahu</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <?php
-        $content = ob_get_clean();
-        
-        // Use layout component
+    private function handle_terminal_route($path = '') {
+        $this->render_placeholder('Terminal Check-in', 'terminal');
+    }
+    
+    /**
+     * Handle visitor route
+     */
+    private function handle_visitor_route($path = '') {
+        $this->render_placeholder('Visitor Training', 'visitor');
+    }
+    
+    /**
+     * Render placeholder page
+     */
+    private function render_placeholder($title, $role) {
         if (class_exists('SAW_App_Layout')) {
             $layout = new SAW_App_Layout();
-            $layout->render($content, $title, '', $user, $customer);
+            $layout->set_title($title);
+            
+            ob_start();
+            ?>
+            <div class="saw-card">
+                <div class="saw-card-body">
+                    <h2><?php echo esc_html($title); ?></h2>
+                    <p>Tato stránka je ve vývoji.</p>
+                    <p><strong>Role:</strong> <?php echo esc_html($role); ?></p>
+                </div>
+            </div>
+            <?php
+            $content = ob_get_clean();
+            $layout->render($content);
+        } else {
+            echo '<h1>' . esc_html($title) . '</h1>';
+            echo '<p>Tato stránka je ve vývoji.</p>';
         }
     }
     
@@ -488,6 +202,33 @@ class SAW_Router {
      * Handle 404
      */
     private function handle_404() {
-        $this->render_page('404 - Stránka nenalezena', '404', 'error');
+        status_header(404);
+        nocache_headers();
+        
+        if (class_exists('SAW_App_Layout')) {
+            $layout = new SAW_App_Layout();
+            $layout->set_title('404 - Stránka nenalezena');
+            
+            ob_start();
+            ?>
+            <div class="saw-card">
+                <div class="saw-card-body" style="text-align: center; padding: 60px 20px;">
+                    <h1 style="font-size: 72px; color: #9ca3af; margin: 0;">404</h1>
+                    <h2 style="margin-top: 16px;">Stránka nenalezena</h2>
+                    <p style="color: #6b7280; margin-top: 12px;">
+                        Požadovaná stránka neexistuje nebo k ní nemáte přístup.
+                    </p>
+                    <a href="<?php echo home_url('/admin/dashboard/'); ?>" class="saw-btn saw-btn-primary" style="margin-top: 24px;">
+                        Zpět na dashboard
+                    </a>
+                </div>
+            </div>
+            <?php
+            $content = ob_get_clean();
+            $layout->render($content);
+        } else {
+            echo '<h1>404 - Stránka nenalezena</h1>';
+        }
+        exit;
     }
 }
