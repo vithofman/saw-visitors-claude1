@@ -1,6 +1,6 @@
 <?php
 /**
- * Customers Controller - FIXED
+ * Customers Controller - FIXED CSS LOADING
  * 
  * @package SAW_Visitors
  * @version 4.6.1
@@ -20,12 +20,41 @@ class SAW_Customers_Controller {
     }
     
     /**
+     * ✅ NOVÁ METODA: Ruční načtení CSS a JS
+     */
+    private function enqueue_customers_assets() {
+        // CSS
+        if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/css/saw-customers.css')) {
+            wp_enqueue_style(
+                'saw-visitors-customers',
+                SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-customers.css',
+                array(),
+                SAW_VISITORS_VERSION
+            );
+        }
+        
+        // JS (pokud existuje)
+        if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/js/saw-customers.js')) {
+            wp_enqueue_script(
+                'saw-visitors-customers',
+                SAW_VISITORS_PLUGIN_URL . 'assets/js/saw-customers.js',
+                array('jquery'),
+                SAW_VISITORS_VERSION,
+                true
+            );
+        }
+    }
+    
+    /**
      * List customers
      */
     public function index() {
         if (!current_user_can('manage_options')) {
             wp_die('Nemáte oprávnění.', 'Přístup zamítnut', array('response' => 403));
         }
+        
+        // ✅ KRITICKÉ: Načíst CSS TADY!
+        $this->enqueue_customers_assets();
         
         $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
         $per_page = 20;
@@ -96,6 +125,9 @@ class SAW_Customers_Controller {
             wp_die('Nemáte oprávnění.', 'Přístup zamítnut', array('response' => 403));
         }
         
+        // ✅ KRITICKÉ: Načíst CSS TADY!
+        $this->enqueue_customers_assets();
+        
         // POST handler
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['saw_customer_nonce'])) {
             if (!wp_verify_nonce($_POST['saw_customer_nonce'], 'saw_customer_form')) {
@@ -155,6 +187,9 @@ class SAW_Customers_Controller {
         if (!current_user_can('manage_options')) {
             wp_die('Nemáte oprávnění.', 'Přístup zamítnut', array('response' => 403));
         }
+        
+        // ✅ KRITICKÉ: Načíst CSS TADY!
+        $this->enqueue_customers_assets();
         
         $customer = null;
         if ($this->customer_model) {

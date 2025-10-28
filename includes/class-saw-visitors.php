@@ -1,7 +1,7 @@
 <?php
 /**
  * Hlavní třída pluginu SAW Visitors v4.6.1
- * AKTUALIZOVÁNO: + Customers management CSS
+ * FIXED: Customers CSS loading
  * 
  * @package SAW_Visitors
  * @since 4.6.1
@@ -179,6 +179,9 @@ class SAW_Visitors {
         exit;
     }
     
+    /**
+     * ✅ OPRAVENO: WP Admin styles (jen About page)
+     */
     public function enqueue_admin_styles() {
         if (isset($_GET['page']) && $_GET['page'] === 'saw-visitors-about') {
             if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/css/admin.css')) {
@@ -206,28 +209,67 @@ class SAW_Visitors {
         }
     }
     
+    /**
+     * ✅ OPRAVENO: Frontend styles s podmíněným načítáním
+     */
     public function enqueue_public_styles() {
-        if (get_query_var('saw_route')) {
-            // Base styles
-            if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/css/public.css')) {
-                wp_enqueue_style(
-                    $this->plugin_name . '-public',
-                    SAW_VISITORS_PLUGIN_URL . 'assets/css/public.css',
-                    array(),
-                    $this->version
-                );
-            }
-            
-            // Customers management styles
+        $route = get_query_var('saw_route');
+        
+        if (!$route) {
+            return;
+        }
+        
+        // Base public styles - VŽDY
+        if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/css/public.css')) {
+            wp_enqueue_style(
+                $this->plugin_name . '-public',
+                SAW_VISITORS_PLUGIN_URL . 'assets/css/public.css',
+                array(),
+                $this->version
+            );
+        }
+        
+        // ✅ CUSTOMERS CSS - JEN NA CUSTOMERS STRÁNKÁCH
+        $path = get_query_var('saw_path');
+        
+        // Debug: Uncomment to see what's happening
+        // error_log('SAW CSS Debug - Route: ' . $route . ' | Path: ' . $path);
+        
+        if ($this->is_customers_page($route, $path)) {
             if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/css/saw-customers.css')) {
                 wp_enqueue_style(
                     $this->plugin_name . '-customers',
                     SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-customers.css',
-                    array(),
+                    array($this->plugin_name . '-public'),
                     $this->version
                 );
+                
+                // Debug: Uncomment to verify loading
+                // error_log('SAW CSS: saw-customers.css LOADED!');
             }
         }
+    }
+    
+    /**
+     * ✅ NOVÁ METODA: Detekce customers stránky
+     */
+    private function is_customers_page($route, $path) {
+        // Musí být admin route
+        if ($route !== 'admin') {
+            return false;
+        }
+        
+        // Prázdná cesta = NE
+        if (empty($path)) {
+            return false;
+        }
+        
+        // Kontrola customers v path
+        // Podporuje: settings/customers, settings/customers/new, settings/customers/edit/1
+        return (
+            strpos($path, 'settings/customers') === 0 ||
+            strpos($path, 'customers') === 0
+        );
     }
     
     public function enqueue_public_scripts() {
