@@ -1,12 +1,11 @@
 <?php
 /**
- * SAW App Layout Manager - OPRAVENÁ VERZE (BEZ FATAL ERRORS)
+ * SAW App Layout Manager - WITH AJAX NAVIGATION SUPPORT
  * 
- * ZMĚNY:
- * - Odstraněn problematický admin_enqueue_scripts hook
- * - Bezpečné načítání WordPress assets
- * - Funguje jak ve frontendu tak v backendu
- * - Žádné závislosti na WordPress admin hooku
+ * ZMĚNY v4.6.2:
+ * - Přidána detekce AJAX requestů
+ * - Nová metoda render_content_only() pro SPA navigation
+ * - JSON response pro AJAX s content + title + active_menu
  * 
  * @package SAW_Visitors
  * @subpackage Frontend
@@ -59,9 +58,36 @@ class SAW_App_Layout {
             'address' => 'Praha 1',
         );
         
-        // Render immediately
+        // ✅ NOVÉ: Pokud je AJAX request, vrať jen obsah
+        if ($this->is_ajax_request()) {
+            $this->render_content_only($content);
+            exit;
+        }
+        
+        // Standardní render s layoutem
         $this->render_complete_page($content);
         exit;
+    }
+    
+    /**
+     * ✅ NOVÁ METODA: Detekce AJAX requestu
+     */
+    private function is_ajax_request() {
+        return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
+               strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+    }
+    
+    /**
+     * ✅ NOVÁ METODA: Render jen obsahu (pro AJAX)
+     */
+    private function render_content_only($content) {
+        header('Content-Type: application/json');
+        
+        wp_send_json_success(array(
+            'content' => $content,
+            'title' => $this->page_title,
+            'active_menu' => $this->active_menu
+        ));
     }
     
     /**
@@ -92,14 +118,42 @@ class SAW_App_Layout {
                     opacity: 1; 
                     transition: opacity 0.2s; 
                 }
+                
+                /* ✅ NOVÉ: Loading overlay pro SPA navigation */
+                .saw-page-loading-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(255, 255, 255, 0.8);
+                    display: none;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 9999;
+                }
+                
+                .saw-page-loading-overlay.active {
+                    display: flex;
+                }
+                
+                .saw-page-loading-spinner {
+                    width: 48px;
+                    height: 48px;
+                    border: 4px solid #e5e7eb;
+                    border-top-color: #2563eb;
+                    border-radius: 50%;
+                    animation: saw-spin 0.8s linear infinite;
+                }
+                
+                @keyframes saw-spin {
+                    to { transform: rotate(360deg); }
+                }
             </style>
             
             <?php
             /**
              * BEZPEČNÉ NAČTENÍ WORDPRESS ASSETS
-             * 
-             * Kontrolujeme existenci funkcí PŘED voláním.
-             * Toto funguje i ve frontendu!
              */
             
             // jQuery (téměř vždy dostupné)
@@ -124,11 +178,16 @@ class SAW_App_Layout {
         </head>
         <body class="saw-app-body">
             
+            <!-- ✅ NOVÝ: Loading overlay pro SPA navigation -->
+            <div class="saw-page-loading-overlay" id="saw-page-loading">
+                <div class="saw-page-loading-spinner"></div>
+            </div>
+            
             <?php $this->render_header(); ?>
             
             <div class="saw-app-wrapper">
                 <?php $this->render_sidebar(); ?>
-                <main class="saw-app-content">
+                <main class="saw-app-content" id="saw-app-content">
                     <?php echo $content; ?>
                 </main>
             </div>
@@ -147,6 +206,9 @@ class SAW_App_Layout {
             <!-- SAW App JavaScript -->
             <script src="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/js/saw-app.js?v=<?php echo SAW_VISITORS_VERSION; ?>"></script>
             
+            <!-- ✅ NOVÝ: SPA Navigation Script -->
+            <script src="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/js/saw-app-navigation.js?v=<?php echo SAW_VISITORS_VERSION; ?>"></script>
+            
             <script>
                 // Fade in po načtení
                 document.addEventListener('DOMContentLoaded', function() {
@@ -157,6 +219,7 @@ class SAW_App_Layout {
                 console.log('🚀 SAW Visitors App loaded');
                 console.log('Version: <?php echo SAW_VISITORS_VERSION; ?>');
                 console.log('Page: <?php echo esc_js($this->page_title); ?>');
+                console.log('🎯 SPA Navigation: ENABLED');
             </script>
         </body>
         </html>
