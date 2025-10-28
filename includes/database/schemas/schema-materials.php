@@ -1,15 +1,15 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) { exit; }
+if (!defined('ABSPATH')) { exit; }
 
-function saw_get_schema_materials( $table_name, $prefix, $charset_collate ) {
+function saw_get_schema_materials($table_name, $prefix, $charset_collate) {
 	$customers_table = $prefix . 'customers';
 	
 	return "CREATE TABLE {$table_name} (
 		id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
 		customer_id BIGINT(20) UNSIGNED NOT NULL,
-		language VARCHAR(5) NOT NULL COMMENT 'cs, en, de...',
+		language VARCHAR(5) NOT NULL,
 		title VARCHAR(255) NOT NULL,
-		content LONGTEXT DEFAULT NULL COMMENT 'WYSIWYG HTML',
+		content LONGTEXT DEFAULT NULL,
 		material_type ENUM('text', 'video', 'pdf', 'link') DEFAULT 'text',
 		file_path VARCHAR(500) DEFAULT NULL,
 		external_url VARCHAR(1000) DEFAULT NULL,
@@ -23,5 +23,5 @@ function saw_get_schema_materials( $table_name, $prefix, $charset_collate ) {
 		KEY idx_type (customer_id, material_type),
 		KEY idx_order (customer_id, display_order),
 		CONSTRAINT fk_material_customer FOREIGN KEY (customer_id) REFERENCES {$customers_table}(id) ON DELETE CASCADE
-	) {$charset_collate} COMMENT='Školící materiály (globální)';";
+	) {$charset_collate} COMMENT='Školící materiály';";
 }

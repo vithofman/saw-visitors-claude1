@@ -1,7 +1,7 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) { exit; }
+if (!defined('ABSPATH')) { exit; }
 
-function saw_get_schema_audit_log( $table_name, $prefix, $charset_collate ) {
+function saw_get_schema_audit_log($table_name, $prefix, $charset_collate) {
 	$customers_table = $prefix . 'customers';
 	$users_table = $prefix . 'users';
 	
@@ -25,5 +25,5 @@ function saw_get_schema_audit_log( $table_name, $prefix, $charset_collate ) {
 		KEY idx_created (created_at),
 		CONSTRAINT fk_audit_customer FOREIGN KEY (customer_id) REFERENCES {$customers_table}(id) ON DELETE CASCADE,
 		CONSTRAINT fk_audit_user FOREIGN KEY (user_id) REFERENCES {$users_table}(id) ON DELETE SET NULL
-	) {$charset_collate} COMMENT='Audit log (BOZP compliance)';";
+	) {$charset_collate} COMMENT='Audit log';";
 }

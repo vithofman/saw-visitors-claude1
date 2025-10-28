@@ -1,7 +1,7 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) { exit; }
+if (!defined('ABSPATH')) { exit; }
 
-function saw_get_schema_invitations( $table_name, $prefix, $charset_collate ) {
+function saw_get_schema_invitations($table_name, $prefix, $charset_collate) {
 	$customers_table = $prefix . 'customers';
 	$companies_table = $prefix . 'companies';
 	$users_table = $prefix . 'users';
@@ -28,5 +28,5 @@ function saw_get_schema_invitations( $table_name, $prefix, $charset_collate ) {
 		CONSTRAINT fk_inv_customer FOREIGN KEY (customer_id) REFERENCES {$customers_table}(id) ON DELETE CASCADE,
 		CONSTRAINT fk_inv_company FOREIGN KEY (company_id) REFERENCES {$companies_table}(id) ON DELETE SET NULL,
 		CONSTRAINT fk_inv_manager FOREIGN KEY (responsible_manager_id) REFERENCES {$users_table}(id) ON DELETE SET NULL
-	) {$charset_collate} COMMENT='Pozvánky (draft mode workflow)';";
+	) {$charset_collate} COMMENT='Pozvánky';";
 }

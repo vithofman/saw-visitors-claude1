@@ -2,7 +2,7 @@
 /**
  * Plugin Name: SAW Visitors
  * Plugin URI: https://visitors.sawuh.cz
- * Description: Komplexní systém pro správu návštěv s BOZP/PO compliance a multi-tenant architekturou. Frontend admin systém pro zákazníky.
+ * Description: Komplexní systém pro správu návštěv s BOZP/PO compliance a multi-tenant architekturou. Frontend admin systém pro zákaznÃ­ky.
  * Version: 4.6.1
  * Author: SAW
  * Author URI: https://sawuh.cz
@@ -48,6 +48,8 @@ define( 'SAW_DEBUG', false );
 
 /**
  * Aktivace pluginu
+ * 
+ * OPRAVA: Cesta k activatoru je přímo v includes/, ne v includes/database/
  */
 function saw_activate_plugin() {
 	require_once SAW_VISITORS_PLUGIN_DIR . 'includes/class-saw-activator.php';
@@ -57,6 +59,8 @@ register_activation_hook( __FILE__, 'saw_activate_plugin' );
 
 /**
  * Deaktivace pluginu
+ * 
+ * OPRAVA: Cesta k deactivatoru je přímo v includes/, ne v includes/database/
  */
 function saw_deactivate_plugin() {
 	require_once SAW_VISITORS_PLUGIN_DIR . 'includes/class-saw-deactivator.php';
@@ -67,7 +71,7 @@ register_deactivation_hook( __FILE__, 'saw_deactivate_plugin' );
 /**
  * Načtení hlavní třídy pluginu
  */
-require_once SAW_VISITORS_PLUGIN_DIR . 'includes/class-saw-visitors.php';
+require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-visitors.php';
 
 /**
  * Spuštění pluginu

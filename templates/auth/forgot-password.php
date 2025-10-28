@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html <?php language_attributes(); ?>>
 <head>
-    <meta charset="<?php bloginfo( 'charset' ); ?>">
+    <meta charset="<?php bloginfo('charset'); ?>">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zapomenuté heslo - SAW Visitors</title>
     <style>
@@ -204,38 +204,38 @@
                 Zadejte svůj email a my vám pošleme odkaz pro reset hesla
             </div>
             
-            <?php if ( isset( $role ) ) : ?>
-                <span class="role-badge role-<?php echo esc_attr( $role ); ?>">
+            <?php if (isset($role)): ?>
+                <span class="role-badge role-<?php echo esc_attr($role); ?>">
                     <?php
                     $role_names = array(
                         'admin'   => 'Administrátor',
                         'manager' => 'Manažer',
                     );
-                    echo esc_html( $role_names[ $role ] ?? $role );
+                    echo esc_html($role_names[$role] ?? $role);
                     ?>
                 </span>
             <?php endif; ?>
         </div>
 
-        <?php if ( isset( $error ) && $error ) : ?>
+        <?php if (isset($error) && $error): ?>
             <div class="alert alert-error">
-                <?php echo esc_html( $error ); ?>
+                <?php echo esc_html($error); ?>
             </div>
         <?php endif; ?>
 
-        <?php if ( isset( $success ) && $success ) : ?>
+        <?php if (isset($success) && $success): ?>
             <div class="alert alert-success">
-                <?php echo esc_html( $success ); ?>
+                <?php echo esc_html($success); ?>
             </div>
         <?php endif; ?>
 
-        <?php if ( isset( $info ) && $info ) : ?>
+        <?php if (isset($info) && $info): ?>
             <div class="alert alert-info">
-                <?php echo esc_html( $info ); ?>
+                <?php echo esc_html($info); ?>
             </div>
         <?php endif; ?>
 
-        <?php if ( ! isset( $success ) || ! $success ) : ?>
+        <?php if (!isset($success) || !$success): ?>
             <div class="instructions">
                 <strong>ℹ️ Jak to funguje:</strong><br>
                 1. Zadejte svůj emailovou adresu<br>
@@ -244,8 +244,8 @@
                 4. Po resetu se můžete přihlásit s novým heslem
             </div>
 
-            <form method="post" action="<?php echo esc_url( $form_action ?? '' ); ?>">
-                <?php wp_nonce_field( 'saw_forgot_password_' . ( $role ?? 'user' ), 'saw_nonce' ); ?>
+            <form method="post" action="<?php echo esc_url($form_action ?? ''); ?>">
+                <?php wp_nonce_field('saw_forgot_password_' . ($role ?? 'user'), 'saw_nonce'); ?>
 
                 <div class="form-group">
                     <label for="email">Emailová adresa</label>
@@ -255,19 +255,19 @@
                         name="email" 
                         required 
                         autocomplete="email"
-                        value="<?php echo esc_attr( $email ?? '' ); ?>"
+                        value="<?php echo esc_attr($email ?? ''); ?>"
                         placeholder="vas@email.cz"
                     >
                 </div>
 
-                <input type="hidden" name="role" value="<?php echo esc_attr( $role ?? '' ); ?>">
+                <input type="hidden" name="role" value="<?php echo esc_attr($role ?? ''); ?>">
                 <input type="hidden" name="action" value="forgot_password">
 
                 <button type="submit" class="btn btn-primary">
                     Odeslat reset odkaz
                 </button>
             </form>
-        <?php else : ?>
+        <?php else: ?>
             <div class="alert alert-info">
                 <strong>📧 Email byl odeslán!</strong><br>
                 Zkontrolujte svou emailovou schránku a postupujte podle instrukcí v emailu.
@@ -276,7 +276,7 @@
         <?php endif; ?>
 
         <div class="forgot-footer">
-            <a href="<?php echo esc_url( $back_url ?? home_url() ); ?>" class="back-link">
+            <a href="<?php echo esc_url($back_url ?? home_url()); ?>" class="back-link">
                 <span>←</span>
                 <span>Zpět na přihlášení</span>
             </a>
@@ -286,45 +286,18 @@
 </html>
 <?php
 /**
- * POUŽITÍ V CONTROLLERU:
+ * USAGE IN CONTROLLER:
  * 
- * // Admin forgot password
  * $data = array(
  *     'role' => 'admin',
- *     'form_action' => home_url( '/admin/login/?action=forgot-password' ),
- *     'back_url' => home_url( '/admin/login/' ),
- *     'error' => '', // Chybová zpráva
- *     'success' => false, // True pokud byl email úspěšně odeslán
- *     'email' => '', // Předvyplněný email
+ *     'form_action' => home_url('/admin/login/?action=forgot-password'),
+ *     'back_url' => home_url('/admin/login/'),
+ *     'error' => '',
+ *     'success' => false,
+ *     'email' => '',
  * );
  * 
- * // Manager forgot password - použít WP systém
- * // Pro managery použít wp_lostpassword_url() a WP template
- * 
- * // Extrakce proměnných
- * extract( $data );
- * include( plugin_dir_path( __FILE__ ) . '../templates/auth/forgot-password.php' );
- * 
- * 
- * CONTROLLER LOGIKA:
- * 
- * if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
- *     // Validace nonce
- *     if ( ! wp_verify_nonce( $_POST['saw_nonce'], 'saw_forgot_password_admin' ) ) {
- *         $error = 'Bezpečnostní kontrola selhala';
- *     } else {
- *         $email = sanitize_email( $_POST['email'] );
- *         $role = sanitize_text_field( $_POST['role'] );
- *         
- *         $password_handler = new SAW_Password();
- *         $result = $password_handler->send_reset_email( $email, $role );
- *         
- *         if ( is_wp_error( $result ) ) {
- *             $error = $result->get_error_message();
- *         } else {
- *             $success = true;
- *         }
- *     }
- * }
+ * extract($data);
+ * include(plugin_dir_path(__FILE__) . '../templates/auth/forgot-password.php');
  */
 ?>

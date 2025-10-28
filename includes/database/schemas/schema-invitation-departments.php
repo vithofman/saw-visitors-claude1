@@ -1,7 +1,7 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) { exit; }
+if (!defined('ABSPATH')) { exit; }
 
-function saw_get_schema_invitation_departments( $table_name, $prefix, $charset_collate ) {
+function saw_get_schema_invitation_departments($table_name, $prefix, $charset_collate) {
 	$customers_table = $prefix . 'customers';
 	$invitations_table = $prefix . 'invitations';
 	$departments_table = $prefix . 'departments';
@@ -20,5 +20,5 @@ function saw_get_schema_invitation_departments( $table_name, $prefix, $charset_c
 		CONSTRAINT fk_invdept_customer FOREIGN KEY (customer_id) REFERENCES {$customers_table}(id) ON DELETE CASCADE,
 		CONSTRAINT fk_invdept_inv FOREIGN KEY (invitation_id) REFERENCES {$invitations_table}(id) ON DELETE CASCADE,
 		CONSTRAINT fk_invdept_dept FOREIGN KEY (department_id) REFERENCES {$departments_table}(id) ON DELETE CASCADE
-	) {$charset_collate} COMMENT='M:N: pozvánky ↔ oddělení';";
+	) {$charset_collate} COMMENT='M:N pozvánky oddělení';";
 }

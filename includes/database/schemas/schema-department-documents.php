@@ -1,13 +1,7 @@
 <?php
-/**
- * Schema: saw_department_documents
- * Soubory pro oddělení - DYNAMICKÉ JAZYKY
- * @version 4.6.1
- */
+if (!defined('ABSPATH')) { exit; }
 
-if ( ! defined( 'ABSPATH' ) ) { exit; }
-
-function saw_get_schema_department_documents( $table_name, $prefix, $charset_collate ) {
+function saw_get_schema_department_documents($table_name, $prefix, $charset_collate) {
 	$customers_table = $prefix . 'customers';
 	$departments_table = $prefix . 'departments';
 	
@@ -15,7 +9,7 @@ function saw_get_schema_department_documents( $table_name, $prefix, $charset_col
 		id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
 		customer_id BIGINT(20) UNSIGNED NOT NULL,
 		department_id BIGINT(20) UNSIGNED NOT NULL,
-		language VARCHAR(5) NOT NULL COMMENT 'cs, en, de...',
+		language VARCHAR(5) NOT NULL,
 		title VARCHAR(255) NOT NULL,
 		file_path VARCHAR(500) NOT NULL,
 		file_size BIGINT UNSIGNED DEFAULT NULL,
@@ -30,5 +24,5 @@ function saw_get_schema_department_documents( $table_name, $prefix, $charset_col
 		KEY idx_language (language),
 		CONSTRAINT fk_deptdoc_customer FOREIGN KEY (customer_id) REFERENCES {$customers_table}(id) ON DELETE CASCADE,
 		CONSTRAINT fk_deptdoc_dept FOREIGN KEY (department_id) REFERENCES {$departments_table}(id) ON DELETE CASCADE
-	) {$charset_collate} COMMENT='Dokumenty oddělení (PDF, atd.)';";
+	) {$charset_collate} COMMENT='Dokumenty oddělení';";
 }

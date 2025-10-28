@@ -13,20 +13,17 @@
  * @package SAW_Visitors
  */
 
-// Exit pokud není voláno z WordPressu
 if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 	exit;
 }
 
 global $wpdb;
 
-// Prefix pro naše tabulky
 $prefix = $wpdb->prefix . 'saw_';
 
-// =================================================================
-// 1. SMAZÁNÍ DATABÁZOVÝCH TABULEK
-// =================================================================
-
+/**
+ * 1. SMAZÁNÍ DATABÁZOVÝCH TABULEK
+ */
 $tables = array(
 	// Phase 0 - Multi-tenant
 	$prefix . 'customers',
@@ -42,7 +39,7 @@ $tables = array(
 	$prefix . 'invitations',
 	$prefix . 'invitation_departments',
 	
-	// Budoucí tabulky (když budou implementované)
+	// Budoucí tabulky
 	$prefix . 'visitors',
 	$prefix . 'visits',
 	$prefix . 'materials',
@@ -59,25 +56,20 @@ $tables = array(
 	$prefix . 'email_queue',
 );
 
-// Vypnout foreign key checks pro smazání v libovolném pořadí
 $wpdb->query( 'SET FOREIGN_KEY_CHECKS=0' );
 
-// Smazat každou tabulku
 foreach ( $tables as $table ) {
 	$wpdb->query( "DROP TABLE IF EXISTS {$table}" );
 }
 
-// Zapnout foreign key checks zpět
 $wpdb->query( 'SET FOREIGN_KEY_CHECKS=1' );
 
-// =================================================================
-// 2. SMAZÁNÍ UPLOAD SOUBORŮ
-// =================================================================
-
+/**
+ * 2. SMAZÁNÍ UPLOAD SOUBORŮ
+ */
 $upload_dir = WP_CONTENT_DIR . '/uploads/saw-visitor-docs/';
 
 if ( file_exists( $upload_dir ) ) {
-	// Rekurzivní funkce pro smazání složky včetně obsahu
 	function saw_delete_directory( $dir ) {
 		if ( ! file_exists( $dir ) ) {
 			return true;
@@ -103,10 +95,9 @@ if ( file_exists( $upload_dir ) ) {
 	saw_delete_directory( $upload_dir );
 }
 
-// =================================================================
-// 3. SMAZÁNÍ WORDPRESS OPTIONS
-// =================================================================
-
+/**
+ * 3. SMAZÁNÍ WORDPRESS OPTIONS
+ */
 $options = array(
 	'saw_visitors_version',
 	'saw_visitors_installed_date',
@@ -117,28 +108,24 @@ foreach ( $options as $option ) {
 	delete_option( $option );
 }
 
-// =================================================================
-// 4. SMAZÁNÍ TRANSIENTS
-// =================================================================
-
+/**
+ * 4. SMAZÁNÍ TRANSIENTS
+ */
 $wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_saw_%'" );
 $wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_timeout_saw_%'" );
 
-// =================================================================
-// 5. SMAZÁNÍ SCHEDULED CRONJOBS
-// =================================================================
-
+/**
+ * 5. SMAZÁNÍ SCHEDULED CRONJOBS
+ */
 wp_clear_scheduled_hook( 'saw_daily_cleanup' );
 wp_clear_scheduled_hook( 'saw_email_queue_process' );
 
-// =================================================================
-// 6. SMAZÁNÍ USER META (pokud existují)
-// =================================================================
-
+/**
+ * 6. SMAZÁNÍ USER META
+ */
 $wpdb->query( "DELETE FROM {$wpdb->usermeta} WHERE meta_key LIKE 'saw_%'" );
 
-// =================================================================
-// 7. LOG ODINSTALACE
-// =================================================================
-
+/**
+ * 7. LOG ODINSTALACE
+ */
 error_log( '[SAW Visitors] Plugin odinstalován - všechna data smazána' );

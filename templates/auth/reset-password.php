@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html <?php language_attributes(); ?>>
 <head>
-    <meta charset="<?php bloginfo( 'charset' ); ?>">
+    <meta charset="<?php bloginfo('charset'); ?>">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reset hesla - SAW Visitors</title>
     <style>
@@ -245,8 +245,7 @@
 </head>
 <body>
     <div class="reset-container">
-        <?php if ( isset( $success ) && $success ) : ?>
-            <!-- Úspěšný reset -->
+        <?php if (isset($success) && $success): ?>
             <div class="success-message">
                 <div class="success-icon">✅</div>
                 <div class="reset-title">Heslo bylo resetováno</div>
@@ -255,13 +254,12 @@
                 </div>
                 
                 <div style="margin-top: 32px;">
-                    <a href="<?php echo esc_url( $login_url ?? home_url() ); ?>" class="btn btn-primary">
+                    <a href="<?php echo esc_url($login_url ?? home_url()); ?>" class="btn btn-primary">
                         Přejít na přihlášení
                     </a>
                 </div>
             </div>
-        <?php else : ?>
-            <!-- Formulář pro reset -->
+        <?php else: ?>
             <div class="reset-header">
                 <div class="reset-icon">🔑</div>
                 <div class="reset-title">Nastavení nového hesla</div>
@@ -269,40 +267,40 @@
                     Zadejte své nové heslo
                 </div>
                 
-                <?php if ( isset( $role ) ) : ?>
-                    <span class="role-badge role-<?php echo esc_attr( $role ); ?>">
+                <?php if (isset($role)): ?>
+                    <span class="role-badge role-<?php echo esc_attr($role); ?>">
                         <?php
                         $role_names = array(
                             'admin'   => 'Administrátor',
                             'manager' => 'Manažer',
                         );
-                        echo esc_html( $role_names[ $role ] ?? $role );
+                        echo esc_html($role_names[$role] ?? $role);
                         ?>
                     </span>
                 <?php endif; ?>
             </div>
 
-            <?php if ( isset( $error ) && $error ) : ?>
+            <?php if (isset($error) && $error): ?>
                 <div class="alert alert-error">
-                    <?php echo esc_html( $error ); ?>
+                    <?php echo esc_html($error); ?>
                 </div>
             <?php endif; ?>
 
-            <?php if ( isset( $token_invalid ) && $token_invalid ) : ?>
+            <?php if (isset($token_invalid) && $token_invalid): ?>
                 <div class="alert alert-error">
-                    <strong>❌ Neplatný nebo expirovaný odkaz</strong><br>
+                    <strong>Neplatný nebo expirovaný odkaz</strong><br>
                     Tento odkaz pro reset hesla je neplatný nebo již vypršela jeho platnost (1 hodina).
                     Prosím, požádejte o nový reset hesla.
                 </div>
                 
                 <div class="reset-footer">
-                    <a href="<?php echo esc_url( $forgot_password_url ?? '#' ); ?>">
+                    <a href="<?php echo esc_url($forgot_password_url ?? '#'); ?>">
                         Požádat o nový reset hesla
                     </a>
                 </div>
-            <?php else : ?>
+            <?php else: ?>
                 <div class="password-requirements">
-                    <strong>🔒 Požadavky na heslo:</strong>
+                    <strong>Požadavky na heslo:</strong>
                     <ul>
                         <li>Minimálně 12 znaků</li>
                         <li>Alespoň 1 velké písmeno (A-Z)</li>
@@ -312,8 +310,8 @@
                     </ul>
                 </div>
 
-                <form method="post" action="<?php echo esc_url( $form_action ?? '' ); ?>" id="resetForm">
-                    <?php wp_nonce_field( 'saw_reset_password_' . ( $role ?? 'user' ), 'saw_nonce' ); ?>
+                <form method="post" action="<?php echo esc_url($form_action ?? ''); ?>" id="resetForm">
+                    <?php wp_nonce_field('saw_reset_password_' . ($role ?? 'user'), 'saw_nonce'); ?>
 
                     <div class="form-group">
                         <label for="new_password">Nové heslo</label>
@@ -345,8 +343,8 @@
                         >
                     </div>
 
-                    <input type="hidden" name="token" value="<?php echo esc_attr( $token ?? '' ); ?>">
-                    <input type="hidden" name="role" value="<?php echo esc_attr( $role ?? '' ); ?>">
+                    <input type="hidden" name="token" value="<?php echo esc_attr($token ?? ''); ?>">
+                    <input type="hidden" name="role" value="<?php echo esc_attr($role ?? ''); ?>">
                     <input type="hidden" name="action" value="reset_password">
 
                     <button type="submit" class="btn btn-primary">
@@ -355,7 +353,7 @@
                 </form>
 
                 <div class="reset-footer">
-                    <a href="<?php echo esc_url( $login_url ?? home_url() ); ?>">
+                    <a href="<?php echo esc_url($login_url ?? home_url()); ?>">
                         Zpět na přihlášení
                     </a>
                 </div>
@@ -364,7 +362,6 @@
     </div>
 
     <script>
-        // Password strength checker
         const newPasswordInput = document.getElementById('new_password');
         const confirmPasswordInput = document.getElementById('confirm_password');
         const strengthBar = document.getElementById('strengthBar');
@@ -397,7 +394,6 @@
             });
         }
 
-        // Form validation
         if (form) {
             form.addEventListener('submit', function(e) {
                 const newPassword = newPasswordInput.value;
@@ -432,61 +428,3 @@
     </script>
 </body>
 </html>
-<?php
-/**
- * POUŽITÍ V CONTROLLERU:
- * 
- * // Reset password page
- * $token = isset( $_GET['token'] ) ? sanitize_text_field( $_GET['token'] ) : '';
- * $role = isset( $_GET['role'] ) ? sanitize_text_field( $_GET['role'] ) : '';
- * 
- * $password_handler = new SAW_Password();
- * 
- * // Validace tokenu
- * $user_id = $password_handler->validate_reset_token( $token );
- * 
- * if ( ! $user_id ) {
- *     $data = array(
- *         'role' => $role,
- *         'token_invalid' => true,
- *         'forgot_password_url' => home_url( '/' . $role . '/login/?action=forgot-password' ),
- *         'login_url' => home_url( '/' . $role . '/login/' ),
- *     );
- * } else {
- *     // Token je platný
- *     if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
- *         // Zpracování formuláře
- *         if ( ! wp_verify_nonce( $_POST['saw_nonce'], 'saw_reset_password_' . $role ) ) {
- *             $error = 'Bezpečnostní kontrola selhala';
- *         } else {
- *             $new_password = $_POST['new_password'];
- *             $confirm_password = $_POST['confirm_password'];
- *             
- *             if ( $new_password !== $confirm_password ) {
- *                 $error = 'Hesla se neshodují';
- *             } else {
- *                 $result = $password_handler->reset_password( $token, $new_password );
- *                 
- *                 if ( is_wp_error( $result ) ) {
- *                     $error = $result->get_error_message();
- *                 } else {
- *                     $success = true;
- *                 }
- *             }
- *         }
- *     }
- *     
- *     $data = array(
- *         'role' => $role,
- *         'token' => $token,
- *         'form_action' => add_query_arg( array( 'action' => 'reset_password', 'token' => $token, 'role' => $role ), home_url() ),
- *         'login_url' => home_url( '/' . $role . '/login/' ),
- *         'error' => $error ?? '',
- *         'success' => $success ?? false,
- *     );
- * }
- * 
- * extract( $data );
- * include( plugin_dir_path( __FILE__ ) . '../templates/auth/reset-password.php' );
- */
-?>
