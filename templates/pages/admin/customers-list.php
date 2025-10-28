@@ -1,17 +1,14 @@
 <?php
 /**
- * Template: Seznam zákazníků
+ * Template: Seznam zákazníků - FIXED
  * 
  * @package SAW_Visitors
  * @version 4.6.1
  */
 
-if ( ! defined( 'ABSPATH' ) ) {
+if (!defined('ABSPATH')) {
     exit;
 }
-
-// TENTO TEMPLATE UŽ NEDĚLÁ LAYOUT SETUP!
-// Layout je volán z controlleru pomocí render($content, $title, $menu)
 ?>
 
 <div class="saw-page-header">
@@ -20,15 +17,15 @@ if ( ! defined( 'ABSPATH' ) ) {
         <p class="saw-page-subtitle">Zde můžete spravovat všechny zákazníky v systému</p>
     </div>
     <div class="saw-page-header-actions">
-        <a href="<?php echo esc_url( home_url( '/admin/settings/customers/create/' ) ); ?>" class="saw-btn saw-btn-primary">
+        <a href="<?php echo esc_url(home_url('/admin/settings/customers/new/')); ?>" class="saw-btn saw-btn-primary">
             <span class="dashicons dashicons-plus-alt"></span> Přidat zákazníka
         </a>
     </div>
 </div>
 
-<?php if ( ! empty( $message ) ) : ?>
-    <div class="saw-alert saw-alert-<?php echo esc_attr( $message_type ); ?>">
-        <?php echo esc_html( $message ); ?>
+<?php if (!empty($message)): ?>
+    <div class="saw-alert saw-alert-<?php echo esc_attr($message_type); ?>">
+        <?php echo esc_html($message); ?>
         <button type="button" class="saw-alert-close">&times;</button>
     </div>
 <?php endif; ?>
@@ -37,17 +34,16 @@ if ( ! defined( 'ABSPATH' ) ) {
     <div class="saw-card-header">
         <div class="saw-card-header-left">
             <h2 class="saw-card-title">
-                Zákazníci (<?php echo esc_html( $total_customers ); ?>)
+                Zákazníci (<?php echo esc_html($total_customers); ?>)
             </h2>
         </div>
         <div class="saw-card-header-right">
             <form method="get" action="" class="saw-search-form">
-                <input type="hidden" name="page" value="customers">
                 <div class="saw-search-input-wrapper">
                     <input 
                         type="text" 
                         name="s" 
-                        value="<?php echo esc_attr( $search ); ?>" 
+                        value="<?php echo esc_attr($search); ?>" 
                         placeholder="Hledat zákazníka..."
                         class="saw-search-input"
                     >
@@ -60,19 +56,19 @@ if ( ! defined( 'ABSPATH' ) ) {
     </div>
     
     <div class="saw-card-body">
-        <?php if ( empty( $customers ) ) : ?>
+        <?php if (empty($customers)): ?>
             <div class="saw-empty-state">
                 <span class="dashicons dashicons-groups"></span>
                 <h3>Žádní zákazníci</h3>
                 <p>
-                    <?php if ( ! empty( $search ) ) : ?>
+                    <?php if (!empty($search)): ?>
                         Nebyli nalezeni žádní zákazníci odpovídající hledanému výrazu.
-                    <?php else : ?>
+                    <?php else: ?>
                         Zatím nemáte žádné zákazníky. Klikněte na tlačítko výše pro přidání prvního zákazníka.
                     <?php endif; ?>
                 </p>
             </div>
-        <?php else : ?>
+        <?php else: ?>
             <div class="saw-table-responsive">
                 <table class="saw-table">
                     <thead>
@@ -86,47 +82,47 @@ if ( ! defined( 'ABSPATH' ) ) {
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ( $customers as $customer ) : ?>
-                            <tr data-customer-id="<?php echo esc_attr( $customer['id'] ); ?>">
+                        <?php foreach ($customers as $customer): ?>
+                            <tr data-customer-id="<?php echo esc_attr($customer['id']); ?>">
                                 <td>
-                                    <?php if ( ! empty( $customer['logo_url_full'] ) ) : ?>
+                                    <?php if (!empty($customer['logo_url_full'])): ?>
                                         <img 
-                                            src="<?php echo esc_url( $customer['logo_url_full'] ); ?>" 
-                                            alt="<?php echo esc_attr( $customer['name'] ); ?>"
+                                            src="<?php echo esc_url($customer['logo_url_full']); ?>" 
+                                            alt="<?php echo esc_attr($customer['name']); ?>"
                                             class="saw-customer-logo"
                                         >
-                                    <?php else : ?>
+                                    <?php else: ?>
                                         <div class="saw-customer-logo-placeholder">
                                             <span class="dashicons dashicons-building"></span>
                                         </div>
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <strong><?php echo esc_html( $customer['name'] ); ?></strong>
-                                    <?php if ( ! empty( $customer['notes'] ) ) : ?>
+                                    <strong><?php echo esc_html($customer['name']); ?></strong>
+                                    <?php if (!empty($customer['notes'])): ?>
                                         <br>
                                         <small class="saw-text-muted">
-                                            <?php echo esc_html( wp_trim_words( $customer['notes'], 10 ) ); ?>
+                                            <?php echo esc_html(wp_trim_words($customer['notes'], 10)); ?>
                                         </small>
                                     <?php endif; ?>
                                 </td>
-                                <td><?php echo esc_html( $customer['ico'] ?? '—' ); ?></td>
+                                <td><?php echo esc_html($customer['ico'] ?? '—'); ?></td>
                                 <td>
-                                    <?php if ( ! empty( $customer['address'] ) ) : ?>
-                                        <small><?php echo nl2br( esc_html( $customer['address'] ) ); ?></small>
-                                    <?php else : ?>
+                                    <?php if (!empty($customer['address'])): ?>
+                                        <small><?php echo nl2br(esc_html($customer['address'])); ?></small>
+                                    <?php else: ?>
                                         <span class="saw-text-muted">—</span>
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <div class="saw-color-preview" style="background-color: <?php echo esc_attr( $customer['primary_color'] ?? '#1e40af' ); ?>">
-                                        <span><?php echo esc_html( $customer['primary_color'] ?? '#1e40af' ); ?></span>
+                                    <div class="saw-color-preview" style="background-color: <?php echo esc_attr($customer['primary_color'] ?? '#1e40af'); ?>">
+                                        <span><?php echo esc_html($customer['primary_color'] ?? '#1e40af'); ?></span>
                                     </div>
                                 </td>
                                 <td class="saw-text-center">
                                     <div class="saw-actions">
                                         <a 
-                                            href="<?php echo esc_url( home_url( '/admin/settings/customers/edit/?id=' . $customer['id'] ) ); ?>" 
+                                            href="<?php echo esc_url(home_url('/admin/settings/customers/edit/' . $customer['id'] . '/')); ?>" 
                                             class="saw-btn saw-btn-sm saw-btn-secondary"
                                             title="Upravit"
                                         >
@@ -135,8 +131,8 @@ if ( ! defined( 'ABSPATH' ) ) {
                                         <button 
                                             type="button"
                                             class="saw-btn saw-btn-sm saw-btn-danger saw-delete-customer"
-                                            data-customer-id="<?php echo esc_attr( $customer['id'] ); ?>"
-                                            data-customer-name="<?php echo esc_attr( $customer['name'] ); ?>"
+                                            data-customer-id="<?php echo esc_attr($customer['id']); ?>"
+                                            data-customer-name="<?php echo esc_attr($customer['name']); ?>"
                                             title="Smazat"
                                         >
                                             <span class="dashicons dashicons-trash"></span>
@@ -149,28 +145,25 @@ if ( ! defined( 'ABSPATH' ) ) {
                 </table>
             </div>
             
-            <?php if ( $total_pages > 1 ) : ?>
+            <?php if ($total_pages > 1): ?>
                 <div class="saw-pagination">
                     <?php
-                    $base_url = remove_query_arg( 'paged' );
+                    $base_url = remove_query_arg('paged');
                     
-                    // Předchozí stránka
-                    if ( $page > 1 ) {
-                        echo '<a href="' . esc_url( add_query_arg( 'paged', $page - 1, $base_url ) ) . '" class="saw-pagination-link">&laquo; Předchozí</a>';
+                    if ($page > 1) {
+                        echo '<a href="' . esc_url(add_query_arg('paged', $page - 1, $base_url)) . '" class="saw-pagination-link">&laquo; Předchozí</a>';
                     }
                     
-                    // Čísla stránek
-                    for ( $i = 1; $i <= $total_pages; $i++ ) {
-                        if ( $i == $page ) {
+                    for ($i = 1; $i <= $total_pages; $i++) {
+                        if ($i == $page) {
                             echo '<span class="saw-pagination-link saw-pagination-active">' . $i . '</span>';
                         } else {
-                            echo '<a href="' . esc_url( add_query_arg( 'paged', $i, $base_url ) ) . '" class="saw-pagination-link">' . $i . '</a>';
+                            echo '<a href="' . esc_url(add_query_arg('paged', $i, $base_url)) . '" class="saw-pagination-link">' . $i . '</a>';
                         }
                     }
                     
-                    // Následující stránka
-                    if ( $page < $total_pages ) {
-                        echo '<a href="' . esc_url( add_query_arg( 'paged', $page + 1, $base_url ) ) . '" class="saw-pagination-link">Další &raquo;</a>';
+                    if ($page < $total_pages) {
+                        echo '<a href="' . esc_url(add_query_arg('paged', $page + 1, $base_url)) . '" class="saw-pagination-link">Další &raquo;</a>';
                     }
                     ?>
                 </div>
@@ -181,7 +174,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 <script>
 jQuery(document).ready(function($) {
-    // Delete customer
     $('.saw-delete-customer').on('click', function(e) {
         e.preventDefault();
         
@@ -193,46 +185,32 @@ jQuery(document).ready(function($) {
             return;
         }
         
-        // Disable button
         $(this).prop('disabled', true).addClass('saw-loading');
         
-        // AJAX request
         $.ajax({
             url: ajaxurl,
             type: 'POST',
             data: {
                 action: 'saw_delete_customer',
                 customer_id: customerId,
-                nonce: '<?php echo wp_create_nonce( 'saw_delete_customer' ); ?>'
+                nonce: '<?php echo wp_create_nonce('saw_delete_customer'); ?>'
             },
             success: function(response) {
                 if (response.success) {
-                    // Remove row with animation
                     $row.fadeOut(300, function() {
                         $(this).remove();
-                        
-                        // Show success message
-                        var $alert = $('<div class="saw-alert saw-alert-success">' + response.data.message + '<button type="button" class="saw-alert-close">&times;</button></div>');
-                        $('.saw-page-header').after($alert);
-                        
-                        // Reload page after 2s
-                        setTimeout(function() {
-                            location.reload();
-                        }, 2000);
+                        location.reload();
                     });
                 } else {
                     alert('Chyba: ' + response.data.message);
-                    $(this).prop('disabled', false).removeClass('saw-loading');
                 }
             },
             error: function() {
                 alert('Došlo k chybě při mazání zákazníka.');
-                $(this).prop('disabled', false).removeClass('saw-loading');
             }
         });
     });
     
-    // Close alert
     $(document).on('click', '.saw-alert-close', function() {
         $(this).closest('.saw-alert').fadeOut(300, function() {
             $(this).remove();
