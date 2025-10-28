@@ -1,8 +1,5 @@
 /**
- * SAW Visitors - Header Styles
- * 
- * @package SAW_Visitors
- * @version 4.6.1
+ * SAW App Header Styles
  */
 
 .saw-app-header {
@@ -17,16 +14,13 @@
     align-items: center;
     justify-content: space-between;
     padding: 0 24px;
-    z-index: 100;
+    z-index: 1000;
 }
 
-/* ============================================
-   LEFT SECTION
-   ============================================ */
 .saw-header-left {
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 16px;
 }
 
 .saw-logo svg {
@@ -35,7 +29,7 @@
 
 .saw-customer-info {
     border-left: 1px solid #e5e7eb;
-    padding-left: 20px;
+    padding-left: 16px;
 }
 
 .saw-customer-name {
@@ -48,109 +42,24 @@
 .saw-customer-ico {
     font-size: 12px;
     color: #6b7280;
-    margin-top: 2px;
 }
 
-/* ============================================
-   RIGHT SECTION
-   ============================================ */
 .saw-header-right {
     display: flex;
     align-items: center;
     gap: 16px;
 }
 
-/* ============================================
-   CUSTOMER SWITCHER
-   ============================================ */
-.saw-customer-switcher {
-    position: relative;
-}
-
 .saw-customer-switcher-button {
-    display: flex;
-    align-items: center;
-    gap: 8px;
     padding: 8px 16px;
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
-    color: #374151;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.saw-customer-switcher-button:hover {
     background: #f3f4f6;
-    border-color: #d1d5db;
-}
-
-.saw-customer-switcher-dropdown {
-    position: absolute;
-    top: calc(100% + 8px);
-    right: 0;
-    min-width: 300px;
-    max-height: 400px;
-    overflow-y: auto;
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-    display: none;
-    z-index: 1000;
-}
-
-.saw-customer-switcher-dropdown.active {
-    display: block;
-}
-
-.saw-customer-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    width: 100%;
-    padding: 12px 16px;
-    border: none;
-    background: none;
-    text-align: left;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.saw-customer-item:hover {
-    background: #f9fafb;
-}
-
-.saw-customer-item.active {
-    background: #eff6ff;
-}
-
-.saw-customer-item svg {
-    flex-shrink: 0;
-    color: #2563eb;
-}
-
-.saw-customer-item-info {
-    flex: 1;
-}
-
-.saw-customer-item-name {
-    font-size: 14px;
-    font-weight: 500;
-    color: #111827;
-}
-
-.saw-customer-item-ico {
-    font-size: 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 13px;
     color: #6b7280;
-    margin-top: 2px;
+    cursor: not-allowed;
 }
 
-/* ============================================
-   USER MENU
-   ============================================ */
 .saw-user-menu {
     position: relative;
 }
@@ -163,8 +72,6 @@
     background: white;
     border: 1px solid #e5e7eb;
     border-radius: 6px;
-    color: #374151;
-    font-size: 14px;
     cursor: pointer;
     transition: all 0.2s;
 }
@@ -179,20 +86,22 @@
 }
 
 .saw-user-name {
+    font-size: 14px;
     font-weight: 500;
+    color: #111827;
 }
 
 .saw-user-dropdown {
     position: absolute;
     top: calc(100% + 8px);
     right: 0;
-    width: 280px;
+    min-width: 240px;
     background: white;
     border: 1px solid #e5e7eb;
     border-radius: 8px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     display: none;
-    z-index: 1000;
+    z-index: 1001;
 }
 
 .saw-user-dropdown.active {
@@ -205,46 +114,38 @@
 }
 
 .saw-user-name-full {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 600;
     color: #111827;
     margin-bottom: 4px;
 }
 
 .saw-user-email {
-    font-size: 13px;
+    font-size: 12px;
     color: #6b7280;
     margin-bottom: 4px;
 }
 
 .saw-user-role {
     display: inline-block;
-    padding: 2px 8px;
-    background: #eff6ff;
-    color: #2563eb;
     font-size: 11px;
-    font-weight: 600;
+    padding: 2px 8px;
+    background: #f3f4f6;
+    color: #6b7280;
     border-radius: 4px;
-    text-transform: uppercase;
 }
 
 .saw-user-actions {
-    padding: 8px;
+    padding: 8px 0;
 }
 
 .saw-dropdown-item {
     display: flex;
     align-items: center;
     gap: 12px;
-    width: 100%;
-    padding: 10px 12px;
-    background: none;
-    border: none;
-    border-radius: 6px;
-    color: #374151;
-    font-size: 14px;
+    padding: 10px 16px;
+    color: #4b5563;
     text-decoration: none;
-    cursor: pointer;
     transition: background 0.2s;
 }
 
@@ -253,13 +154,9 @@
 }
 
 .saw-dropdown-item-danger {
-    color: #dc2626;
+    color: #ef4444;
 }
 
 .saw-dropdown-item-danger:hover {
     background: #fee2e2;
-}
-
-.saw-dropdown-item svg {
-    flex-shrink: 0;
 }

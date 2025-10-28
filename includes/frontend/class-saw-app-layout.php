@@ -1,6 +1,7 @@
 <?php
 /**
- * SAW App Layout Manager - FIXED VERSION
+ * SAW App Layout Manager - FINAL VERSION
+ * Přijímá user a customer data jako parametry od routeru
  * 
  * @package SAW_Visitors
  * @subpackage Frontend
@@ -19,35 +20,38 @@ class SAW_App_Layout {
     private $active_menu;
     
     public function __construct() {
-        // OPRAVENO: Kontrola existence SAW_Auth před voláním
-        if (class_exists('SAW_Auth')) {
-            $this->current_user = SAW_Auth::get_current_user();
-            $this->current_customer = SAW_Auth::get_current_customer();
-        } else {
-            // Fallback: Fake data pro testování
-            $this->current_user = array(
-                'id' => 1,
-                'name' => 'Demo Admin',
-                'email' => 'admin@demo.cz',
-                'role' => 'admin',
-            );
-            
-            $this->current_customer = array(
-                'id' => 1,
-                'name' => 'Demo Firma s.r.o.',
-                'ico' => '12345678',
-            );
-        }
+        // Constructor je prázdný - data přijímáme v render()
     }
     
     /**
      * Render complete app layout
+     * 
+     * @param string $content       HTML content stránky
+     * @param string $page_title    Titulek stránky
+     * @param string $active_menu   ID aktivní menu položky
+     * @param array  $user          User data (id, name, email, role)
+     * @param array  $customer      Customer data (id, name, ico, address)
      */
-    public function render($content, $page_title = '', $active_menu = '') {
+    public function render($content, $page_title = '', $active_menu = '', $user = null, $customer = null) {
         $this->page_title = $page_title;
         $this->active_menu = $active_menu;
         
-        // Render immediately (don't wait for wp_footer)
+        // Použijeme data z parametrů, nebo fallback na demo data
+        $this->current_user = $user ?: array(
+            'id' => 1,
+            'name' => 'Demo Admin',
+            'email' => 'admin@demo.cz',
+            'role' => 'admin',
+        );
+        
+        $this->current_customer = $customer ?: array(
+            'id' => 1,
+            'name' => 'Demo Firma s.r.o.',
+            'ico' => '12345678',
+            'address' => 'Praha 1',
+        );
+        
+        // Render immediately
         $this->render_complete_page($content);
         exit;
     }
@@ -71,14 +75,8 @@ class SAW_App_Layout {
             <link rel="stylesheet" href="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/css/saw-app-footer.css?v=<?php echo SAW_VISITORS_VERSION; ?>">
             
             <style>
-                /* Prevent FOUC */
-                body.saw-app-body { 
-                    opacity: 0; 
-                }
-                body.saw-app-body.loaded {
-                    opacity: 1;
-                    transition: opacity 0.2s;
-                }
+                body.saw-app-body { opacity: 0; }
+                body.saw-app-body.loaded { opacity: 1; transition: opacity 0.2s; }
             </style>
         </head>
         <body class="saw-app-body">
@@ -86,18 +84,14 @@ class SAW_App_Layout {
             <?php $this->render_header(); ?>
             
             <div class="saw-app-wrapper">
-                
                 <?php $this->render_sidebar(); ?>
-                
                 <main class="saw-app-content">
                     <?php echo $content; ?>
                 </main>
-                
             </div>
             
             <?php $this->render_footer(); ?>
             
-            <!-- SAW App Scripts -->
             <script src="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/js/saw-app.js?v=<?php echo SAW_VISITORS_VERSION; ?>"></script>
             <script>
                 document.addEventListener('DOMContentLoaded', function() {
@@ -113,38 +107,29 @@ class SAW_App_Layout {
      * Render header
      */
     private function render_header() {
-        if (!class_exists('SAW_App_Header')) {
-            echo '<!-- SAW_App_Header class not loaded yet -->';
-            return;
+        if (class_exists('SAW_App_Header')) {
+            $header = new SAW_App_Header($this->current_user, $this->current_customer);
+            $header->render();
         }
-        
-        $header = new SAW_App_Header($this->current_user, $this->current_customer);
-        $header->render();
     }
     
     /**
      * Render sidebar
      */
     private function render_sidebar() {
-        if (!class_exists('SAW_App_Sidebar')) {
-            echo '<!-- SAW_App_Sidebar class not loaded yet -->';
-            return;
+        if (class_exists('SAW_App_Sidebar')) {
+            $sidebar = new SAW_App_Sidebar($this->current_user, $this->current_customer, $this->active_menu);
+            $sidebar->render();
         }
-        
-        $sidebar = new SAW_App_Sidebar($this->current_user, $this->current_customer, $this->active_menu);
-        $sidebar->render();
     }
     
     /**
      * Render footer
      */
     private function render_footer() {
-        if (!class_exists('SAW_App_Footer')) {
-            echo '<!-- SAW_App_Footer class not loaded yet -->';
-            return;
+        if (class_exists('SAW_App_Footer')) {
+            $footer = new SAW_App_Footer();
+            $footer->render();
         }
-        
-        $footer = new SAW_App_Footer();
-        $footer->render();
     }
 }

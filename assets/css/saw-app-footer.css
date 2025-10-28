@@ -1,21 +1,11 @@
 /**
- * SAW Visitors - Footer Styles
- * 
- * @package SAW_Visitors
- * @version 4.6.1
+ * SAW App Footer Styles
  */
 
 .saw-app-footer {
-    position: relative;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 50px;
     background: white;
     border-top: 1px solid #e5e7eb;
-    display: flex;
-    align-items: center;
-    padding: 0 24px;
+    padding: 16px 24px;
     margin-left: 260px;
 }
 
@@ -23,14 +13,14 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    width: 100%;
+    max-width: 1400px;
 }
 
 .saw-footer-left {
     display: flex;
     align-items: center;
     gap: 12px;
-    font-size: 13px;
+    font-size: 12px;
     color: #6b7280;
 }
 
@@ -40,11 +30,11 @@
 }
 
 .saw-footer-version {
-    padding: 2px 8px;
-    background: #f3f4f6;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 500;
+    color: #9ca3af;
+}
+
+.saw-footer-copy {
+    color: #9ca3af;
 }
 
 .saw-footer-right {
@@ -54,39 +44,13 @@
 }
 
 .saw-footer-link {
-    font-size: 13px;
-    color: #6b7280;
+    font-size: 12px;
+    color: #2563eb;
     text-decoration: none;
     transition: color 0.2s;
 }
 
 .saw-footer-link:hover {
-    color: #2563eb;
-}
-
-/* ============================================
-   RESPONSIVE
-   ============================================ */
-@media (max-width: 1024px) {
-    .saw-app-footer {
-        margin-left: 200px;
-    }
-}
-
-@media (max-width: 768px) {
-    .saw-app-footer {
-        margin-left: 0;
-        padding: 0 16px;
-    }
-    
-    .saw-footer-content {
-        flex-direction: column;
-        gap: 8px;
-        padding: 12px 0;
-    }
-    
-    .saw-footer-left,
-    .saw-footer-right {
-        gap: 8px;
-    }
+    color: #1d4ed8;
+    text-decoration: underline;
 }

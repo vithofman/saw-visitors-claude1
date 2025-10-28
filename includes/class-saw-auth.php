@@ -33,11 +33,32 @@ class SAW_Auth {
     private $password;
 
     /**
-     * Constructor
+     * Constructor - LAZY LOADING
      */
     public function __construct() {
-        $this->session = new SAW_Session();
-        $this->password = new SAW_Password();
+        // Lenivá inicializace - vytvoří se až když budou potřeba
+        $this->session = null;
+        $this->password = null;
+    }
+    
+    /**
+     * Získání session instance (lazy loading)
+     */
+    private function get_session() {
+        if ($this->session === null && class_exists('SAW_Session')) {
+            $this->session = new SAW_Session();
+        }
+        return $this->session;
+    }
+    
+    /**
+     * Získání password instance (lazy loading)
+     */
+    private function get_password() {
+        if ($this->password === null && class_exists('SAW_Password')) {
+            $this->password = new SAW_Password();
+        }
+        return $this->password;
     }
 
     /**
@@ -147,7 +168,7 @@ class SAW_Auth {
         do_action( 'wp_login', $user->user_login, $user );
 
         // Vytvoření SAW session
-        $session_token = $this->session->create_session( $saw_user->id, $saw_user->customer_id );
+        $session_token = $this->get_session()->create_session( $saw_user->id, $saw_user->customer_id );
 
         if ( ! $session_token ) {
             return new WP_Error( 'session_failed', __( 'Nepodařilo se vytvořit session', 'saw-visitors' ) );
@@ -203,12 +224,12 @@ class SAW_Auth {
             return new WP_Error( 'no_password', __( 'Uživatel nemá nastavené heslo', 'saw-visitors' ) );
         }
 
-        if ( ! $this->password->verify( $password, $stored_hash ) ) {
+        if ( ! $this->get_password()->verify( $password, $stored_hash ) ) {
             return new WP_Error( 'invalid_credentials', __( 'Neplatné přihlašovací údaje', 'saw-visitors' ) );
         }
 
         // Vytvoření session
-        $session_token = $this->session->create_session( $user->id, $user->customer_id );
+        $session_token = $this->get_session()->create_session( $user->id, $user->customer_id );
 
         if ( ! $session_token ) {
             return new WP_Error( 'session_failed', __( 'Nepodařilo se vytvořit session', 'saw-visitors' ) );
@@ -251,7 +272,7 @@ class SAW_Auth {
             // Zrušení SAW session
             $session_token = $this->get_session_token();
             if ( $session_token ) {
-                $this->session->destroy_session( $session_token );
+                $this->get_session()->destroy_session( $session_token );
             }
 
             // Odhlášení WP uživatele (pokud je manager)
@@ -287,7 +308,7 @@ class SAW_Auth {
         }
 
         // Validace session
-        $session_data = $this->session->validate_session( $session_token );
+        $session_data = $this->get_session()->validate_session( $session_token );
 
         if ( ! $session_data ) {
             return null;

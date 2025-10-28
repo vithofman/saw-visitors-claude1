@@ -6,6 +6,48 @@
  */
 
 /* ============================================
+   CSS VARIABLES
+   ============================================ */
+:root {
+    /* Colors */
+    --saw-primary: #2563eb;
+    --saw-success: #10b981;
+    --saw-warning: #f59e0b;
+    --saw-danger: #ef4444;
+    --saw-info: #3b82f6;
+    
+    /* Grays */
+    --saw-gray-50: #f9fafb;
+    --saw-gray-100: #f3f4f6;
+    --saw-gray-200: #e5e7eb;
+    --saw-gray-300: #d1d5db;
+    --saw-gray-400: #9ca3af;
+    --saw-gray-500: #6b7280;
+    --saw-gray-600: #4b5563;
+    --saw-gray-700: #374151;
+    --saw-gray-800: #1f2937;
+    --saw-gray-900: #111827;
+    
+    /* Spacing */
+    --saw-spacing-xs: 4px;
+    --saw-spacing-sm: 8px;
+    --saw-spacing-md: 16px;
+    --saw-spacing-lg: 24px;
+    --saw-spacing-xl: 32px;
+    --saw-spacing-2xl: 48px;
+    
+    /* Border radius */
+    --saw-radius-sm: 4px;
+    --saw-radius-md: 6px;
+    --saw-radius-lg: 8px;
+    
+    /* Shadows */
+    --saw-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --saw-shadow-md: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --saw-shadow-lg: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* ============================================
    RESET & BASE
    ============================================ */
 * {
@@ -15,100 +57,52 @@
 body.saw-app-body {
     margin: 0;
     padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-size: 14px;
     line-height: 1.5;
-    color: #1f2937;
-    background: #f9fafb;
-    overflow-x: hidden;
+    color: var(--saw-gray-900);
+    background: var(--saw-gray-50);
 }
 
 /* ============================================
-   LAYOUT WRAPPER
+   LAYOUT
    ============================================ */
 .saw-app-wrapper {
     display: flex;
-    min-height: calc(100vh - 60px - 50px); /* minus header & footer */
-    padding-top: 60px; /* header height */
+    min-height: calc(100vh - 60px - 50px);
+    padding-top: 60px;
 }
 
-/* ============================================
-   MAIN CONTENT AREA
-   ============================================ */
 .saw-app-content {
     flex: 1;
-    margin-left: 260px; /* sidebar width */
-    padding: 32px;
-    background: #f9fafb;
-    min-height: calc(100vh - 60px - 50px);
+    margin-left: 260px;
+    padding: var(--saw-spacing-xl);
+    background: var(--saw-gray-50);
+    min-height: calc(100vh - 110px);
 }
 
 /* ============================================
    PAGE ELEMENTS
    ============================================ */
+.saw-page-wrapper {
+    max-width: 1400px;
+}
+
 .saw-page-header {
-    margin-bottom: 32px;
+    margin-bottom: var(--saw-spacing-xl);
 }
 
 .saw-page-header h1 {
-    margin: 0 0 8px 0;
+    margin: 0 0 var(--saw-spacing-sm) 0;
     font-size: 32px;
     font-weight: 700;
-    color: #111827;
+    color: var(--saw-gray-900);
 }
 
 .saw-page-subtitle {
     margin: 0;
     font-size: 16px;
-    color: #6b7280;
-}
-
-/* ============================================
-   STATS GRID
-   ============================================ */
-.saw-stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 24px;
-    margin-bottom: 32px;
-}
-
-.saw-stat-card {
-    background: white;
-    border-radius: 8px;
-    padding: 24px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.saw-stat-icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 28px;
-    flex-shrink: 0;
-}
-
-.saw-stat-content {
-    flex: 1;
-}
-
-.saw-stat-value {
-    font-size: 32px;
-    font-weight: 700;
-    color: #111827;
-    line-height: 1;
-    margin-bottom: 4px;
-}
-
-.saw-stat-label {
-    font-size: 14px;
-    color: #6b7280;
+    color: var(--saw-gray-500);
 }
 
 /* ============================================
@@ -116,159 +110,66 @@ body.saw-app-body {
    ============================================ */
 .saw-card {
     background: white;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    margin-bottom: 24px;
+    border: 1px solid var(--saw-gray-200);
+    border-radius: var(--saw-radius-lg);
+    margin-bottom: var(--saw-spacing-lg);
+    box-shadow: var(--saw-shadow-sm);
 }
 
 .saw-card-header {
-    padding: 20px 24px;
-    border-bottom: 1px solid #e5e7eb;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    padding: var(--saw-spacing-lg);
+    border-bottom: 1px solid var(--saw-gray-200);
 }
 
-.saw-card-title {
+.saw-card-header h2,
+.saw-card-header h3 {
     margin: 0;
     font-size: 18px;
     font-weight: 600;
-    color: #111827;
-}
-
-.saw-card-action {
-    font-size: 14px;
-    color: #2563eb;
-    text-decoration: none;
-    font-weight: 500;
-}
-
-.saw-card-action:hover {
-    color: #1d4ed8;
+    color: var(--saw-gray-900);
 }
 
 .saw-card-body {
-    padding: 24px;
+    padding: var(--saw-spacing-lg);
 }
 
 /* ============================================
-   DASHBOARD ROW
+   TABLES
    ============================================ */
-.saw-dashboard-row {
-    display: flex;
-    gap: 24px;
-    margin-bottom: 24px;
-}
-
-/* ============================================
-   COMPLIANCE CHART
-   ============================================ */
-.saw-compliance-chart {
-    text-align: center;
-}
-
-.saw-compliance-circle {
-    width: 200px;
-    margin: 0 auto 24px;
-}
-
-.saw-circular-chart {
-    display: block;
-    margin: 0 auto;
-    max-width: 100%;
-    max-height: 200px;
-}
-
-.saw-percentage {
-    font-size: 0.5em;
-    font-weight: bold;
-    fill: #111827;
-    text-anchor: middle;
-}
-
-.saw-compliance-description {
-    font-size: 14px;
-    color: #6b7280;
-    margin: 0;
-}
-
-/* ============================================
-   QUICK ACTIONS
-   ============================================ */
-.saw-quick-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.saw-quick-action-btn {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
-    color: #374151;
-    text-decoration: none;
-    font-weight: 500;
-    transition: all 0.2s;
-}
-
-.saw-quick-action-btn:hover {
-    background: #f3f4f6;
-    border-color: #d1d5db;
-}
-
-.saw-quick-action-btn.saw-btn-primary {
-    background: #2563eb;
-    border-color: #2563eb;
-    color: white;
-}
-
-.saw-quick-action-btn.saw-btn-primary:hover {
-    background: #1d4ed8;
-    border-color: #1d4ed8;
-}
-
-/* ============================================
-   TABLE
-   ============================================ */
-.saw-table {
+.saw-info-table {
     width: 100%;
     border-collapse: collapse;
 }
 
-.saw-table thead th {
+.saw-info-table tr {
+    border-bottom: 1px solid var(--saw-gray-200);
+}
+
+.saw-info-table tr:last-child {
+    border-bottom: none;
+}
+
+.saw-info-table th {
     text-align: left;
     padding: 12px;
-    background: #f9fafb;
-    border-bottom: 1px solid #e5e7eb;
+    background: var(--saw-gray-50);
     font-weight: 600;
-    font-size: 12px;
-    text-transform: uppercase;
-    color: #6b7280;
-    letter-spacing: 0.5px;
+    color: var(--saw-gray-700);
+    width: 150px;
 }
 
-.saw-table tbody td {
-    padding: 16px 12px;
-    border-bottom: 1px solid #e5e7eb;
+.saw-info-table td {
+    padding: 12px;
+    color: var(--saw-gray-600);
 }
 
-.saw-table tbody tr:hover {
-    background: #f9fafb;
-}
-
-.saw-visitor-name {
-    font-weight: 500;
-    color: #111827;
-}
-
-.saw-visitor-email {
-    font-size: 12px;
-    color: #6b7280;
-    margin-top: 2px;
+.saw-info-table code {
+    background: var(--saw-gray-100);
+    padding: 2px 6px;
+    border-radius: var(--saw-radius-sm);
+    font-family: 'Monaco', 'Courier New', monospace;
+    font-size: 13px;
+    color: var(--saw-gray-700);
 }
 
 /* ============================================
@@ -277,7 +178,7 @@ body.saw-app-body {
 .saw-badge {
     display: inline-block;
     padding: 4px 12px;
-    border-radius: 12px;
+    border-radius: var(--saw-radius-sm);
     font-size: 12px;
     font-weight: 500;
 }
@@ -287,65 +188,122 @@ body.saw-app-body {
     color: #065f46;
 }
 
-.saw-badge-gray {
-    background: #f3f4f6;
-    color: #374151;
+.saw-badge-warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.saw-badge-danger {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.saw-badge-info {
+    background: #dbeafe;
+    color: #1e40af;
 }
 
 /* ============================================
-   EMPTY STATE
+   ALERTS
    ============================================ */
-.saw-empty-state {
-    text-align: center;
-    padding: 48px 24px;
-    color: #6b7280;
+.saw-alert {
+    padding: var(--saw-spacing-md);
+    border-radius: var(--saw-radius-md);
+    margin-bottom: var(--saw-spacing-md);
+}
+
+.saw-alert-success {
+    background: #d1fae5;
+    color: #065f46;
+    border-left: 4px solid #10b981;
+}
+
+.saw-alert-warning {
+    background: #fef3c7;
+    color: #92400e;
+    border-left: 4px solid #f59e0b;
+}
+
+.saw-alert-danger {
+    background: #fee2e2;
+    color: #991b1b;
+    border-left: 4px solid #ef4444;
+}
+
+.saw-alert-info {
+    background: #dbeafe;
+    color: #1e40af;
+    border-left: 4px solid #3b82f6;
 }
 
 /* ============================================
    BUTTONS
    ============================================ */
-.saw-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
+.saw-button-group {
+    display: flex;
+    gap: var(--saw-spacing-md);
+    flex-wrap: wrap;
+}
+
+.saw-button {
+    display: inline-block;
     padding: 10px 20px;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    background: white;
-    color: #374151;
+    border-radius: var(--saw-radius-md);
     font-size: 14px;
     font-weight: 500;
     text-decoration: none;
-    cursor: pointer;
     transition: all 0.2s;
+    border: none;
+    cursor: pointer;
 }
 
-.saw-btn:hover {
-    background: #f9fafb;
-    border-color: #9ca3af;
-}
-
-.saw-btn-primary {
-    background: #2563eb;
-    border-color: #2563eb;
+.saw-button-primary {
+    background: var(--saw-primary);
     color: white;
 }
 
-.saw-btn-primary:hover {
+.saw-button-primary:hover {
     background: #1d4ed8;
-    border-color: #1d4ed8;
+}
+
+.saw-button-success {
+    background: var(--saw-success);
+    color: white;
+}
+
+.saw-button-success:hover {
+    background: #059669;
+}
+
+.saw-button-purple {
+    background: #7c3aed;
+    color: white;
+}
+
+.saw-button-purple:hover {
+    background: #6d28d9;
+}
+
+/* ============================================
+   LISTS
+   ============================================ */
+ul, ol {
+    color: var(--saw-gray-600);
+    line-height: 1.8;
+}
+
+li {
+    margin: var(--saw-spacing-sm) 0;
 }
 
 /* ============================================
    UTILITIES
    ============================================ */
-.saw-mt-16 { margin-top: 16px; }
-.saw-mt-24 { margin-top: 24px; }
-.saw-mt-32 { margin-top: 32px; }
+code {
+    font-family: 'Monaco', 'Courier New', monospace;
+}
 
-.saw-mb-16 { margin-bottom: 16px; }
-.saw-mb-24 { margin-bottom: 24px; }
-.saw-mb-32 { margin-bottom: 32px; }
-
-.saw-text-center { text-align: center; }
-.saw-text-right { text-align: right; }
+strong {
+    font-weight: 600;
+    color: var(--saw-gray-900);
+}
