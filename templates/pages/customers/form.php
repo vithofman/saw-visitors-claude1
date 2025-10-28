@@ -1,17 +1,18 @@
 <?php
 /**
- * Customers Form Template
- * 
- * Formulář pro vytvoření/úpravu zákazníka
+ * Customers Form Template - ENHANCED VERSION WITH GRID LAYOUT
  * 
  * @package SAW_Visitors
- * @version 4.6.1
- * @since 4.6.1
+ * @version 4.6.1 ENHANCED
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
+
+$form_action = $is_edit 
+    ? home_url('/admin/settings/customers/edit/' . $customer['id'] . '/')
+    : home_url('/admin/settings/customers/new/');
 ?>
 
 <div class="saw-page-header">
@@ -19,27 +20,28 @@ if (!defined('ABSPATH')) {
         <h1 class="saw-page-title">
             <?php echo $is_edit ? 'Upravit zákazníka' : 'Přidat nového zákazníka'; ?>
         </h1>
-        <p class="saw-page-subtitle">
-            <a href="<?php echo esc_url(home_url('/admin/settings/customers/')); ?>" class="saw-breadcrumb">
-                &larr; Zpět na seznam
-            </a>
-        </p>
+        <a href="<?php echo esc_url(home_url('/admin/settings/customers/')); ?>" class="saw-back-button">
+            <span class="dashicons dashicons-arrow-left-alt2"></span>
+            Zpět na seznam
+        </a>
     </div>
 </div>
 
-<?php if (isset($error)): ?>
+<?php if (isset($_SESSION['saw_customer_error'])): ?>
     <div class="saw-alert saw-alert-error">
-        <?php echo esc_html($error); ?>
+        <?php echo esc_html($_SESSION['saw_customer_error']); ?>
         <button type="button" class="saw-alert-close">&times;</button>
     </div>
+    <?php unset($_SESSION['saw_customer_error']); ?>
 <?php endif; ?>
 
-<form method="post" enctype="multipart/form-data" class="saw-form" id="saw-customer-form">
+<form method="post" action="<?php echo esc_url($form_action); ?>" enctype="multipart/form-data" class="saw-form" id="saw-customer-form">
     <?php wp_nonce_field('saw_customer_form', 'saw_customer_nonce'); ?>
     
+    <!-- ZÁKLADNÍ INFORMACE -->
     <div class="saw-card">
         <div class="saw-card-header">
-            <h2 class="saw-card-title">Základní informace</h2>
+            <h2 class="saw-card-title">📋 Základní informace</h2>
         </div>
         <div class="saw-card-body">
             <div class="saw-form-row">
@@ -72,188 +74,291 @@ if (!defined('ABSPATH')) {
                 </div>
             </div>
             
-            <div class="saw-form-group">
-                <label for="address" class="saw-label">Adresa</label>
-                <textarea 
-                    id="address" 
-                    name="address" 
-                    class="saw-textarea" 
-                    rows="3"
-                    placeholder="např. Karlovo náměstí 123, Praha 2, 120 00"
-                ><?php echo esc_textarea($customer['address'] ?? ''); ?></textarea>
-                <small class="saw-help-text">Zadejte úplnou adresu firmy</small>
-            </div>
-            
-            <div class="saw-form-group">
-                <label for="notes" class="saw-label">Poznámky</label>
-                <textarea 
-                    id="notes" 
-                    name="notes" 
-                    class="saw-textarea" 
-                    rows="4"
-                    placeholder="Interní poznámky, kontaktní osoby, atd."
-                ><?php echo esc_textarea($customer['notes'] ?? ''); ?></textarea>
-                <small class="saw-help-text">Interní poznámky viditelné jen SuperAdminovi</small>
+            <!-- ✨ NOVÉ: Adresa a poznámky vedle sebe -->
+            <div class="saw-form-row">
+                <div class="saw-form-group saw-col-6">
+                    <label for="address" class="saw-label">Adresa</label>
+                    <textarea 
+                        id="address" 
+                        name="address" 
+                        class="saw-textarea" 
+                        rows="5"
+                        placeholder="např. Karlovo náměstí 123, Praha 2, 120 00"
+                    ><?php echo esc_textarea($customer['address'] ?? ''); ?></textarea>
+                    <small class="saw-help-text">Fyzická adresa sídla společnosti</small>
+                </div>
+                
+                <div class="saw-form-group saw-col-6">
+                    <label for="notes" class="saw-label">Interní poznámky</label>
+                    <textarea 
+                        id="notes" 
+                        name="notes" 
+                        class="saw-textarea" 
+                        rows="5"
+                        placeholder="Interní poznámky, kontaktní informace, zvláštnosti..."
+                    ><?php echo esc_textarea($customer['notes'] ?? ''); ?></textarea>
+                    <small class="saw-help-text">Poznámky viditelné pouze administrátorům (neviditelné pro zákazníka)</small>
+                </div>
             </div>
         </div>
     </div>
     
+    <!-- BRANDING -->
     <div class="saw-card">
         <div class="saw-card-header">
-            <h2 class="saw-card-title">Branding</h2>
+            <h2 class="saw-card-title">🎨 Branding a vzhled</h2>
         </div>
         <div class="saw-card-body">
-            <div class="saw-form-row">
-                <div class="saw-form-group saw-col-6">
-                    <label for="logo" class="saw-label">Logo zákazníka</label>
+            
+            <div class="saw-branding-grid">
+                
+                <!-- COLUMN 1: LOGO PREVIEW -->
+                <div class="saw-logo-column">
+                    <label class="saw-label">Logo</label>
                     
+                    <!-- Aktuální logo (pokud existuje) -->
                     <?php if ($is_edit && !empty($customer['logo_url_full'])): ?>
-                        <div class="saw-logo-preview-current">
-                            <img src="<?php echo esc_url($customer['logo_url_full']); ?>" alt="Současné logo" id="current-logo">
-                            <p class="saw-text-muted">Současné logo</p>
+                        <div class="saw-logo-preview-current" id="current-logo-wrapper">
+                            <span class="saw-logo-preview-label">Současné</span>
+                            <img src="<?php echo esc_url($customer['logo_url_full']); ?>" alt="Logo" id="current-logo">
+                            <button type="button" class="saw-remove-logo-btn" id="remove-current-logo" title="Smazat logo">
+                                <span class="dashicons dashicons-trash"></span>
+                                Smazat
+                            </button>
+                            <input type="hidden" name="remove_logo" id="remove_logo_input" value="0">
                         </div>
                     <?php endif; ?>
                     
-                    <div class="saw-file-input-wrapper">
+                    <!-- Náhled nového loga -->
+                    <div class="saw-logo-new-preview" id="new-logo-preview" style="display: none;">
+                        <span class="preview-label">Nové logo</span>
+                        <img src="" alt="Náhled" id="new-logo-img">
+                        <button type="button" class="saw-remove-preview-btn" id="remove-new-preview">
+                            ✕
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- COLUMN 2: UPLOAD CONTROLS -->
+                <div class="saw-upload-column">
+                    <label class="saw-label">Nahrát logo</label>
+                    
+                    <div class="saw-file-upload-wrapper">
                         <input 
                             type="file" 
                             id="logo" 
                             name="logo" 
-                            accept="image/*"
-                            class="saw-file-input"
+                            class="saw-file-input" 
+                            accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
                         >
                         <label for="logo" class="saw-file-label">
                             <span class="dashicons dashicons-upload"></span>
                             Vybrat soubor
                         </label>
-                        <span class="saw-file-name">Žádný soubor nevybrán</span>
+                        <span class="saw-file-info" id="file-info">
+                            <span class="dashicons dashicons-info"></span>
+                            Žádný soubor
+                        </span>
                     </div>
                     
                     <small class="saw-help-text">
-                        Podporované formáty: JPG, PNG, GIF, WebP, SVG<br>
-                        Maximální velikost: 5 MB
+                        JPG, PNG, GIF, WebP, SVG<br>
+                        Max. 5 MB
                     </small>
-                    
-                    <div id="logo-preview" class="saw-logo-preview" style="display: none;">
-                        <img src="" alt="Náhled loga" id="logo-preview-img">
-                        <button type="button" class="saw-btn saw-btn-sm saw-btn-secondary" id="remove-logo-preview">
-                            <span class="dashicons dashicons-no"></span> Zrušit
-                        </button>
+                </div>
+                
+                <!-- COLUMN 3: COLOR PICKER -->
+                <div class="saw-color-column">
+                    <label for="primary_color" class="saw-label">Primární barva</label>
+                    <div class="saw-color-section">
+                        <div class="saw-color-picker-wrapper">
+                            <input 
+                                type="color" 
+                                id="primary_color" 
+                                name="primary_color" 
+                                class="saw-color-picker" 
+                                value="<?php echo esc_attr($customer['primary_color'] ?? '#1e40af'); ?>"
+                            >
+                            <input 
+                                type="text" 
+                                class="saw-color-value" 
+                                id="color_value" 
+                                value="<?php echo esc_attr($customer['primary_color'] ?? '#1e40af'); ?>" 
+                                pattern="^#[0-9A-Fa-f]{6}$"
+                                maxlength="7"
+                            >
+                        </div>
+                        <small class="saw-help-text">Barva v rozhraní</small>
                     </div>
                 </div>
                 
-                <div class="saw-form-group saw-col-6">
-                    <label for="primary_color" class="saw-label">Primární barva</label>
-                    <div class="saw-color-picker-wrapper">
-                        <input 
-                            type="color" 
-                            id="primary_color" 
-                            name="primary_color" 
-                            class="saw-color-input" 
-                            value="<?php echo esc_attr($customer['primary_color'] ?? '#1e40af'); ?>"
-                        >
-                        <input 
-                            type="text" 
-                            id="primary_color_text" 
-                            class="saw-input saw-color-text" 
-                            value="<?php echo esc_attr($customer['primary_color'] ?? '#1e40af'); ?>"
-                            pattern="^#[0-9A-Fa-f]{6}$"
-                            placeholder="#1e40af"
-                        >
-                    </div>
-                    <small class="saw-help-text">Hlavní barva používaná v aplikaci pro tohoto zákazníka</small>
-                    
-                    <div class="saw-color-preview-large" id="color-preview" style="background-color: <?php echo esc_attr($customer['primary_color'] ?? '#1e40af'); ?>">
-                        <span>Náhled barvy</span>
-                    </div>
-                </div>
             </div>
+            
         </div>
     </div>
     
+    <!-- ACTIONS -->
     <div class="saw-form-actions">
-        <button type="submit" class="saw-btn saw-btn-primary saw-btn-lg">
-            <span class="dashicons dashicons-yes"></span>
-            <?php echo $is_edit ? 'Uložit změny' : 'Vytvořit zákazníka'; ?>
+        <button type="submit" class="saw-button saw-button-primary saw-button-large">
+            <?php if ($is_edit): ?>
+                💾 Uložit změny
+            <?php else: ?>
+                ➕ Vytvořit zákazníka
+            <?php endif; ?>
         </button>
-        <a href="<?php echo esc_url(home_url('/admin/settings/customers/')); ?>" class="saw-btn saw-btn-secondary saw-btn-lg">
-            Zrušit
+        <a href="<?php echo esc_url(home_url('/admin/settings/customers/')); ?>" class="saw-button saw-button-secondary saw-button-large">
+            ❌ Zrušit
         </a>
     </div>
 </form>
 
 <script>
-jQuery(document).ready(function($) {
-    $('#logo').on('change', function(e) {
-        var file = e.target.files[0];
-        
-        if (file) {
-            $('.saw-file-name').text(file.name);
+document.addEventListener('DOMContentLoaded', function() {
+    // ===================================================================
+    // LOGO UPLOAD HANDLING
+    // ===================================================================
+    
+    const logoInput = document.getElementById('logo');
+    const fileInfo = document.getElementById('file-info');
+    const newPreview = document.getElementById('new-logo-preview');
+    const newLogoImg = document.getElementById('new-logo-img');
+    const currentLogoWrapper = document.getElementById('current-logo-wrapper');
+    const currentLogo = document.getElementById('current-logo');
+    
+    // Změna souboru
+    if (logoInput) {
+        logoInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
             
-            var reader = new FileReader();
-            reader.onload = function(e) {
-                $('#logo-preview-img').attr('src', e.target.result);
-                $('#logo-preview').show();
-                $('#current-logo').css('opacity', '0.3');
-            };
-            reader.readAsDataURL(file);
-        }
-    });
-    
-    $('#remove-logo-preview').on('click', function() {
-        $('#logo').val('');
-        $('.saw-file-name').text('Žádný soubor nevybrán');
-        $('#logo-preview').hide();
-        $('#current-logo').css('opacity', '1');
-    });
-    
-    $('#primary_color').on('input', function() {
-        var color = $(this).val();
-        $('#primary_color_text').val(color);
-        $('#color-preview').css('background-color', color);
-    });
-    
-    $('#primary_color_text').on('input', function() {
-        var color = $(this).val();
-        if (/^#[0-9A-Fa-f]{6}$/.test(color)) {
-            $('#primary_color').val(color);
-            $('#color-preview').css('background-color', color);
-        }
-    });
-    
-    $('#saw-customer-form').on('submit', function(e) {
-        var name = $('#name').val().trim();
-        
-        if (name.length < 2) {
-            e.preventDefault();
-            alert('Název zákazníka musí mít alespoň 2 znaky.');
-            $('#name').focus();
-            return false;
-        }
-        
-        var ico = $('#ico').val().trim();
-        if (ico && !/^[0-9]{6,12}$/.test(ico.replace(/\s/g, ''))) {
-            e.preventDefault();
-            alert('IČO musí obsahovat 6-12 číslic.');
-            $('#ico').focus();
-            return false;
-        }
-        
-        var color = $('#primary_color_text').val();
-        if (!/^#[0-9A-Fa-f]{6}$/.test(color)) {
-            e.preventDefault();
-            alert('Primární barva musí být v HEX formátu (#RRGGBB).');
-            $('#primary_color_text').focus();
-            return false;
-        }
-        
-        return true;
-    });
-    
-    $(document).on('click', '.saw-alert-close', function() {
-        $(this).closest('.saw-alert').fadeOut(300, function() {
-            $(this).remove();
+            if (file) {
+                // Validace typu
+                const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+                if (!allowedTypes.includes(file.type)) {
+                    alert('❌ Nepovolený typ souboru. Použijte JPG, PNG, GIF, WebP nebo SVG.');
+                    logoInput.value = '';
+                    return;
+                }
+                
+                // Validace velikosti (5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('❌ Soubor je příliš velký. Maximální velikost je 5 MB.');
+                    logoInput.value = '';
+                    return;
+                }
+                
+                // Update file info
+                fileInfo.innerHTML = '<span class="dashicons dashicons-yes"></span> ' + file.name;
+                fileInfo.classList.add('has-file');
+                
+                // Show preview
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    newLogoImg.src = e.target.result;
+                    newPreview.style.display = 'block';
+                    
+                    // Dim current logo
+                    if (currentLogo) {
+                        currentLogo.style.opacity = '0.3';
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
         });
-    });
+    }
+    
+    // Zrušit náhled nového loga
+    const removeNewPreviewBtn = document.getElementById('remove-new-preview');
+    if (removeNewPreviewBtn) {
+        removeNewPreviewBtn.addEventListener('click', function() {
+            logoInput.value = '';
+            fileInfo.innerHTML = '<span class="dashicons dashicons-info"></span> Žádný soubor nevybrán';
+            fileInfo.classList.remove('has-file');
+            newPreview.style.display = 'none';
+            
+            if (currentLogo) {
+                currentLogo.style.opacity = '1';
+            }
+        });
+    }
+    
+    // Smazat aktuální logo
+    const removeCurrentLogoBtn = document.getElementById('remove-current-logo');
+    const removeLogoInput = document.getElementById('remove_logo_input');
+    
+    if (removeCurrentLogoBtn) {
+        removeCurrentLogoBtn.addEventListener('click', function() {
+            if (confirm('⚠️ Opravdu chcete smazat aktuální logo?')) {
+                removeLogoInput.value = '1';
+                currentLogoWrapper.style.opacity = '0.3';
+                currentLogoWrapper.style.pointerEvents = 'none';
+                this.textContent = '✓ Logo bude smazáno';
+                this.style.background = '#059669';
+            }
+        });
+    }
+    
+    // ===================================================================
+    // COLOR PICKER SYNC
+    // ===================================================================
+    
+    const colorPicker = document.getElementById('primary_color');
+    const colorValue = document.getElementById('color_value');
+    
+    if (colorPicker && colorValue) {
+        // Color picker změna
+        colorPicker.addEventListener('input', function() {
+            const color = this.value.toUpperCase();
+            colorValue.value = color;
+        });
+        
+        // Text input změna
+        colorValue.addEventListener('input', function() {
+            const color = this.value.toUpperCase();
+            const hexPattern = /^#[0-9A-F]{6}$/;
+            
+            if (hexPattern.test(color)) {
+                colorPicker.value = color;
+            }
+        });
+    }
+    
+    // ===================================================================
+    // ALERT CLOSE
+    // ===================================================================
+    
+    const alertClose = document.querySelector('.saw-alert-close');
+    if (alertClose) {
+        alertClose.addEventListener('click', function() {
+            this.closest('.saw-alert').remove();
+        });
+    }
+    
+    // ===================================================================
+    // FORM VALIDATION
+    // ===================================================================
+    
+    const form = document.getElementById('saw-customer-form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const name = document.getElementById('name').value.trim();
+            
+            if (name.length < 2) {
+                e.preventDefault();
+                alert('❌ Název zákazníka musí mít alespoň 2 znaky.');
+                document.getElementById('name').focus();
+                return false;
+            }
+            
+            const ico = document.getElementById('ico').value.trim();
+            if (ico && !/^[0-9]{6,12}$/.test(ico)) {
+                e.preventDefault();
+                alert('❌ IČO musí obsahovat 6-12 číslic.');
+                document.getElementById('ico').focus();
+                return false;
+            }
+            
+            return true;
+        });
+    }
 });
 </script>
