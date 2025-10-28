@@ -1,7 +1,12 @@
 <?php
 /**
- * SAW App Layout Manager - FIXED VERSION (No Fatal Errors)
- * Bezpečné načítání WordPress scriptů pro WYSIWYG editor
+ * SAW App Layout Manager - OPRAVENÁ VERZE (BEZ FATAL ERRORS)
+ * 
+ * ZMĚNY:
+ * - Odstraněn problematický admin_enqueue_scripts hook
+ * - Bezpečné načítání WordPress assets
+ * - Funguje jak ve frontendu tak v backendu
+ * - Žádné závislosti na WordPress admin hooku
  * 
  * @package SAW_Visitors
  * @subpackage Frontend
@@ -19,23 +24,11 @@ class SAW_App_Layout {
     private $page_title;
     private $active_menu;
     
-    public function __construct() {
-        // Enqueue WordPress editor assets properly
-        add_action('admin_enqueue_scripts', array($this, 'enqueue_editor_assets'));
-    }
-    
     /**
-     * Enqueue WordPress editor assets (voláno PŘED renderem)
+     * Konstruktor - BEZ HOOKŮ!
      */
-    public function enqueue_editor_assets() {
-        // Načteme editor styly a scripty bezpečně
-        wp_enqueue_style('dashicons');
-        wp_enqueue_style('editor-buttons');
-        
-        // WYSIWYG editor needs these
-        wp_enqueue_script('jquery');
-        wp_enqueue_editor();
-        wp_enqueue_media();
+    public function __construct() {
+        // Žádné hooks zde! Budeme volat metody přímo.
     }
     
     /**
@@ -66,9 +59,6 @@ class SAW_App_Layout {
             'address' => 'Praha 1',
         );
         
-        // CRITICAL: Enqueue editor assets BEFORE rendering
-        $this->enqueue_editor_assets();
-        
         // Render immediately
         $this->render_complete_page($content);
         exit;
@@ -93,30 +83,42 @@ class SAW_App_Layout {
             <link rel="stylesheet" href="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/css/saw-app-footer.css?v=<?php echo SAW_VISITORS_VERSION; ?>">
             
             <style>
-                body.saw-app-body { opacity: 0; }
-                body.saw-app-body.loaded { opacity: 1; transition: opacity 0.2s; }
+                body.saw-app-body { 
+                    opacity: 0; 
+                    margin: 0;
+                    padding: 0;
+                }
+                body.saw-app-body.loaded { 
+                    opacity: 1; 
+                    transition: opacity 0.2s; 
+                }
             </style>
             
             <?php
             /**
-             * BEZPEČNÉ NAČTENÍ WP STYLŮ
-             * Kontrolujeme, zda funkce existují PŘED voláním
+             * BEZPEČNÉ NAČTENÍ WORDPRESS ASSETS
+             * 
+             * Kontrolujeme existenci funkcí PŘED voláním.
+             * Toto funguje i ve frontendu!
              */
-            if (function_exists('wp_print_styles')) {
-                // Dashicons (pro tlačítka editoru)
-                if (wp_style_is('dashicons', 'registered')) {
-                    wp_print_styles('dashicons');
-                }
-                
-                // Editor buttons styly
-                if (wp_style_is('editor-buttons', 'registered')) {
-                    wp_print_styles('editor-buttons');
-                }
+            
+            // jQuery (téměř vždy dostupné)
+            if (function_exists('wp_enqueue_script')) {
+                wp_enqueue_script('jquery');
             }
             
-            // Print head scripts (bezpečně)
+            // Dashicons (ikony) - registrujeme pokud nejsou
+            if (function_exists('wp_register_style') && !wp_style_is('dashicons', 'registered')) {
+                wp_register_style('dashicons', includes_url('css/dashicons.min.css'), array(), null);
+            }
+            
+            // Print head scripts a styles
             if (function_exists('wp_print_head_scripts')) {
                 wp_print_head_scripts();
+            }
+            
+            if (function_exists('wp_print_styles')) {
+                wp_print_styles('dashicons');
             }
             ?>
         </head>
@@ -135,19 +137,26 @@ class SAW_App_Layout {
             
             <?php
             /**
-             * BEZPEČNÉ NAČTENÍ WP FOOTER SCRIPTŮ
-             * Kontrolujeme existenci funkce PŘED voláním
+             * BEZPEČNÉ NAČTENÍ FOOTER SCRIPTŮ
              */
             if (function_exists('wp_print_footer_scripts')) {
                 wp_print_footer_scripts();
             }
             ?>
             
+            <!-- SAW App JavaScript -->
             <script src="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/js/saw-app.js?v=<?php echo SAW_VISITORS_VERSION; ?>"></script>
+            
             <script>
+                // Fade in po načtení
                 document.addEventListener('DOMContentLoaded', function() {
                     document.body.classList.add('loaded');
                 });
+                
+                // Console info
+                console.log('🚀 SAW Visitors App loaded');
+                console.log('Version: <?php echo SAW_VISITORS_VERSION; ?>');
+                console.log('Page: <?php echo esc_js($this->page_title); ?>');
             </script>
         </body>
         </html>
@@ -161,6 +170,13 @@ class SAW_App_Layout {
         if (class_exists('SAW_App_Header')) {
             $header = new SAW_App_Header($this->current_user, $this->current_customer);
             $header->render();
+        } else {
+            // Fallback pokud header třída neexistuje
+            echo '<header class="saw-app-header">';
+            echo '<div class="saw-header-content">';
+            echo '<h1>' . esc_html($this->page_title) . '</h1>';
+            echo '</div>';
+            echo '</header>';
         }
     }
     
@@ -171,6 +187,11 @@ class SAW_App_Layout {
         if (class_exists('SAW_App_Sidebar')) {
             $sidebar = new SAW_App_Sidebar($this->current_user, $this->current_customer, $this->active_menu);
             $sidebar->render();
+        } else {
+            // Fallback pokud sidebar třída neexistuje
+            echo '<aside class="saw-app-sidebar">';
+            echo '<nav><a href="/admin/">Dashboard</a></nav>';
+            echo '</aside>';
         }
     }
     
@@ -181,6 +202,11 @@ class SAW_App_Layout {
         if (class_exists('SAW_App_Footer')) {
             $footer = new SAW_App_Footer();
             $footer->render();
+        } else {
+            // Fallback pokud footer třída neexistuje
+            echo '<footer class="saw-app-footer">';
+            echo '<p>SAW Visitors v' . SAW_VISITORS_VERSION . ' © ' . date('Y') . '</p>';
+            echo '</footer>';
         }
     }
 }

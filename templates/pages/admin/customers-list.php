@@ -10,14 +10,8 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-// Načti layout
-if ( class_exists( 'SAW_App_Layout' ) ) {
-    $layout = new SAW_App_Layout();
-    $layout->set_title( 'Správa zákazníků' );
-    $layout->set_active_menu( 'settings-customers' );
-    
-    ob_start();
-}
+// TENTO TEMPLATE UŽ NEDĚLÁ LAYOUT SETUP!
+// Layout je volán z controlleru pomocí render($content, $title, $menu)
 ?>
 
 <div class="saw-page-header">
@@ -246,10 +240,3 @@ jQuery(document).ready(function($) {
     });
 });
 </script>
-
-<?php
-if ( class_exists( 'SAW_App_Layout' ) ) {
-    $content = ob_get_clean();
-    $layout->render( $content );
-}
-?>
