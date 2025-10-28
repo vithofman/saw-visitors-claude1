@@ -1,10 +1,9 @@
 <?php
 /**
- * SAW Customer Model
- * Customer management - CRUD operations, logo upload, validation
+ * SAW Customer Model - DEBUG VERSION
  * 
  * @package SAW_Visitors
- * @since 4.6.1
+ * @version 4.6.1 DEBUG
  */
 
 if (!defined('ABSPATH')) {
@@ -13,20 +12,10 @@ if (!defined('ABSPATH')) {
 
 class SAW_Model_Customer {
     
-    /**
-     * Database table
-     */
     private $table_name;
-    
-    /**
-     * Upload directory for logos
-     */
     private $upload_dir;
     private $upload_url;
     
-    /**
-     * Allowed MIME types for logos
-     */
     private $allowed_mime_types = array(
         'image/jpeg',
         'image/jpg',
@@ -36,51 +25,45 @@ class SAW_Model_Customer {
         'image/svg+xml'
     );
     
-    /**
-     * Maximum file size (5MB)
-     */
     private $max_file_size = 5242880;
     
-    /**
-     * Constructor
-     */
     public function __construct() {
         global $wpdb;
         
         $this->table_name = $wpdb->prefix . 'saw_customers';
         
+        error_log('🔧 SAW Model Customer: Constructor called');
+        error_log('   Table name: ' . $this->table_name);
+        
         $upload = wp_upload_dir();
         $this->upload_dir = $upload['basedir'] . '/saw-visitors/saw-customers/';
         $this->upload_url = $upload['baseurl'] . '/saw-visitors/saw-customers/';
         
+        error_log('   Upload dir: ' . $this->upload_dir);
+        error_log('   Upload URL: ' . $this->upload_url);
+        
         $this->ensure_upload_directory();
     }
     
-    /**
-     * Ensure upload directory exists
-     */
     private function ensure_upload_directory() {
         if (!file_exists($this->upload_dir)) {
             wp_mkdir_p($this->upload_dir);
+            error_log('✅ Upload directory created: ' . $this->upload_dir);
             
             $htaccess_file = $this->upload_dir . '.htaccess';
             if (!file_exists($htaccess_file)) {
                 file_put_contents($htaccess_file, "# Allow only images\n<FilesMatch \"\\.(jpg|jpeg|png|gif|webp|svg)$\">\n    Order allow,deny\n    Allow from all\n</FilesMatch>\n<FilesMatch \"^(?!(.*\\.(jpg|jpeg|png|gif|webp|svg)$)).*$\">\n    Order allow,deny\n    Deny from all\n</FilesMatch>");
+                error_log('✅ .htaccess created');
             }
             
             $index_file = $this->upload_dir . 'index.php';
             if (!file_exists($index_file)) {
                 file_put_contents($index_file, "<?php\n// Silence is golden.\n");
+                error_log('✅ index.php created');
             }
         }
     }
     
-    /**
-     * Get all customers
-     * 
-     * @param array $args Filters
-     * @return array
-     */
     public function get_all($args = array()) {
         global $wpdb;
         
@@ -111,35 +94,17 @@ class SAW_Model_Customer {
         $sql .= " ORDER BY {$orderby} {$order}";
         $sql .= " LIMIT {$limit} OFFSET {$offset}";
         
-        error_log('SAW Customer Model SQL: ' . $sql);
-        
         $customers = $wpdb->get_results($sql, ARRAY_A);
         
-        if ($wpdb->last_error) {
-            error_log('SAW Customer Model ERROR: ' . $wpdb->last_error);
-            return array();
-        }
-        
-        error_log('SAW Customer Model: Found ' . count((array) $customers) . ' customers');
-        
-        if (!is_array($customers)) {
-            error_log('SAW Customer Model WARNING: get_results returned non-array: ' . gettype($customers));
-            $customers = array();
-        }
-        
-        foreach ($customers as &$customer) {
-            $customer['logo_url_full'] = $this->get_logo_url($customer['logo_url']);
+        if (!empty($customers)) {
+            foreach ($customers as &$customer) {
+                $customer['logo_url_full'] = $this->get_logo_url($customer['logo_url']);
+            }
         }
         
         return $customers;
     }
     
-    /**
-     * Get customer count
-     * 
-     * @param string $search Search term
-     * @return int
-     */
     public function count($search = '') {
         global $wpdb;
         
@@ -150,28 +115,15 @@ class SAW_Model_Customer {
             $sql .= $wpdb->prepare(" AND (name LIKE %s OR ico LIKE %s OR address LIKE %s)", $search_term, $search_term, $search_term);
         }
         
-        error_log('SAW Customer Model COUNT SQL: ' . $sql);
-        
         $count = $wpdb->get_var($sql);
-        
-        if ($wpdb->last_error) {
-            error_log('SAW Customer Model COUNT ERROR: ' . $wpdb->last_error);
-            return 0;
-        }
-        
-        error_log('SAW Customer Model COUNT: ' . (int) $count);
         
         return (int) $count;
     }
     
-    /**
-     * Get customer by ID
-     * 
-     * @param int $id Customer ID
-     * @return array|null
-     */
     public function get_by_id($id) {
         global $wpdb;
+        
+        error_log('🔍 SAW Model Customer: get_by_id() called for ID: ' . $id);
         
         $customer = $wpdb->get_row(
             $wpdb->prepare("SELECT * FROM {$this->table_name} WHERE id = %d", $id),
@@ -179,25 +131,28 @@ class SAW_Model_Customer {
         );
         
         if ($customer) {
+            error_log('✅ Customer found: ' . $customer['name']);
             $customer['logo_url_full'] = $this->get_logo_url($customer['logo_url']);
+        } else {
+            error_log('❌ Customer NOT found for ID: ' . $id);
         }
         
         return $customer;
     }
     
-    /**
-     * Create new customer
-     * 
-     * @param array $data Customer data
-     * @return int|WP_Error Customer ID or error
-     */
     public function create($data) {
         global $wpdb;
         
+        error_log('📝 SAW Model Customer: create() called');
+        error_log('   Input data: ' . print_r($data, true));
+        
         $validation = $this->validate($data);
         if (is_wp_error($validation)) {
+            error_log('❌ Validation FAILED: ' . $validation->get_error_message());
             return $validation;
         }
+        
+        error_log('✅ Validation passed');
         
         $insert_data = array(
             'name'          => sanitize_text_field($data['name']),
@@ -209,38 +164,49 @@ class SAW_Model_Customer {
             'created_at'    => current_time('mysql'),
         );
         
+        error_log('📦 Insert data prepared:');
+        error_log('   ' . print_r($insert_data, true));
+        
         if (isset($_FILES['logo']) && !empty($_FILES['logo']['name'])) {
+            error_log('📸 Logo file detected, attempting upload...');
             $logo_result = $this->upload_logo($_FILES['logo']);
             if (is_wp_error($logo_result)) {
+                error_log('❌ Logo upload FAILED: ' . $logo_result->get_error_message());
                 return $logo_result;
             }
             $insert_data['logo_url'] = $logo_result;
+            error_log('✅ Logo uploaded: ' . $logo_result);
         }
         
+        error_log('🚀 Attempting INSERT into table: ' . $this->table_name);
         $result = $wpdb->insert($this->table_name, $insert_data);
         
         if ($result === false) {
-            error_log('SAW Customer Model CREATE ERROR: ' . $wpdb->last_error);
+            error_log('❌ INSERT FAILED!');
+            error_log('   Last error: ' . $wpdb->last_error);
+            error_log('   Last query: ' . $wpdb->last_query);
             return new WP_Error('db_error', 'Chyba při vytváření zákazníka: ' . $wpdb->last_error);
         }
         
-        return $wpdb->insert_id;
+        $insert_id = $wpdb->insert_id;
+        error_log('✅ INSERT SUCCESS! New customer ID: ' . $insert_id);
+        
+        return $insert_id;
     }
     
-    /**
-     * Update customer
-     * 
-     * @param int   $id   Customer ID
-     * @param array $data Data to update
-     * @return bool|WP_Error
-     */
     public function update($id, $data) {
         global $wpdb;
         
+        error_log('✏️ SAW Model Customer: update() called for ID: ' . $id);
+        error_log('   Input data: ' . print_r($data, true));
+        
         $validation = $this->validate($data, $id);
         if (is_wp_error($validation)) {
+            error_log('❌ Validation FAILED: ' . $validation->get_error_message());
             return $validation;
         }
+        
+        error_log('✅ Validation passed');
         
         $update_data = array();
         
@@ -265,24 +231,33 @@ class SAW_Model_Customer {
         }
         
         if (isset($_FILES['logo']) && !empty($_FILES['logo']['name'])) {
+            error_log('📸 Logo file detected, attempting upload...');
             $old_customer = $this->get_by_id($id);
             
             $logo_result = $this->upload_logo($_FILES['logo']);
             if (is_wp_error($logo_result)) {
+                error_log('❌ Logo upload FAILED: ' . $logo_result->get_error_message());
                 return $logo_result;
             }
             
             if (!empty($old_customer['logo_url'])) {
                 $this->delete_logo($old_customer['logo_url']);
+                error_log('🗑️ Old logo deleted');
             }
             
             $update_data['logo_url'] = $logo_result;
+            error_log('✅ Logo uploaded: ' . $logo_result);
         }
         
         if (empty($update_data)) {
+            error_log('⚠️ No data to update');
             return new WP_Error('no_data', 'Žádná data k aktualizaci.');
         }
         
+        error_log('📦 Update data prepared:');
+        error_log('   ' . print_r($update_data, true));
+        
+        error_log('🚀 Attempting UPDATE in table: ' . $this->table_name);
         $result = $wpdb->update(
             $this->table_name,
             $update_data,
@@ -290,79 +265,81 @@ class SAW_Model_Customer {
         );
         
         if ($result === false) {
-            error_log('SAW Customer Model UPDATE ERROR: ' . $wpdb->last_error);
+            error_log('❌ UPDATE FAILED!');
+            error_log('   Last error: ' . $wpdb->last_error);
+            error_log('   Last query: ' . $wpdb->last_query);
             return new WP_Error('db_error', 'Chyba při aktualizaci zákazníka: ' . $wpdb->last_error);
         }
+        
+        error_log('✅ UPDATE SUCCESS! Rows affected: ' . $result);
         
         return true;
     }
     
-    /**
-     * Delete customer
-     * 
-     * @param int $id Customer ID
-     * @return bool|WP_Error
-     */
     public function delete($id) {
         global $wpdb;
         
+        error_log('🗑️ SAW Model Customer: delete() called for ID: ' . $id);
+        
         $customer = $this->get_by_id($id);
         if (!$customer) {
+            error_log('❌ Customer NOT found for deletion');
             return new WP_Error('not_found', 'Zákazník nenalezen.');
         }
         
         if (!empty($customer['logo_url'])) {
             $this->delete_logo($customer['logo_url']);
+            error_log('🗑️ Logo deleted');
         }
         
         $result = $wpdb->delete($this->table_name, array('id' => $id));
         
         if ($result === false) {
-            error_log('SAW Customer Model DELETE ERROR: ' . $wpdb->last_error);
+            error_log('❌ DELETE FAILED: ' . $wpdb->last_error);
             return new WP_Error('db_error', 'Chyba při mazání zákazníka: ' . $wpdb->last_error);
         }
+        
+        error_log('✅ DELETE SUCCESS!');
         
         return true;
     }
     
-    /**
-     * Validate customer data
-     * 
-     * @param array $data Data to validate
-     * @param int   $id   Customer ID (for update)
-     * @return bool|WP_Error
-     */
     private function validate($data, $id = null) {
+        error_log('🔍 Validating data...');
+        
         if (empty($data['name'])) {
+            error_log('❌ Validation: Name is empty');
             return new WP_Error('name_required', 'Název zákazníka je povinný.');
         }
         
         if (!empty($data['ico'])) {
             $ico = sanitize_text_field($data['ico']);
-            if (!preg_match('/^\d{8}$/', $ico)) {
-                return new WP_Error('ico_invalid', 'IČO musí být 8 číslic.');
+            if (!preg_match('/^\d{6,12}$/', $ico)) {
+                error_log('❌ Validation: ICO format invalid');
+                return new WP_Error('ico_invalid', 'IČO musí být 6-12 číslic.');
             }
         }
         
         if (!empty($data['primary_color']) && !preg_match('/^#[0-9A-Fa-f]{6}$/', $data['primary_color'])) {
+            error_log('❌ Validation: Color format invalid');
             return new WP_Error('color_invalid', 'Neplatný formát barvy.');
         }
         
+        error_log('✅ Validation: All checks passed');
         return true;
     }
     
-    /**
-     * Upload logo
-     * 
-     * @param array $file $_FILES['logo']
-     * @return string|WP_Error
-     */
     private function upload_logo($file) {
+        error_log('📸 upload_logo() called');
+        error_log('   File info: ' . print_r($file, true));
+        
         if ($file['error'] !== UPLOAD_ERR_OK) {
+            error_log('❌ Upload error code: ' . $file['error']);
             return new WP_Error('upload_error', 'Chyba při nahrávání souboru.');
         }
         
         if ($file['size'] > $this->max_file_size) {
+            error_log('❌ File too large: ' . $file['size'] . ' bytes');
             return new WP_Error('file_too_large', 'Soubor je příliš velký. Maximum je 5 MB.');
         }
         
@@ -370,7 +347,10 @@ class SAW_Model_Customer {
         $mime_type = finfo_file($finfo, $file['tmp_name']);
         finfo_close($finfo);
         
+        error_log('   MIME type: ' . $mime_type);
+        
         if (!in_array($mime_type, $this->allowed_mime_types)) {
+            error_log('❌ Invalid MIME type');
             return new WP_Error('invalid_file_type', 'Neplatný typ souboru. Povolené jsou pouze obrázky.');
         }
         
@@ -378,44 +358,36 @@ class SAW_Model_Customer {
         $filename = 'logo-' . uniqid() . '.' . $extension;
         $filepath = $this->upload_dir . $filename;
         
+        error_log('   Target filepath: ' . $filepath);
+        
         if (!move_uploaded_file($file['tmp_name'], $filepath)) {
+            error_log('❌ move_uploaded_file() FAILED');
             return new WP_Error('move_failed', 'Nepodařilo se uložit soubor.');
         }
+        
+        error_log('✅ File uploaded successfully: ' . $filename);
         
         return $filename;
     }
     
-    /**
-     * Delete logo
-     * 
-     * @param string $logo_url Logo filename
-     * @return bool
-     */
-    private function delete_logo($logo_url) {
-        if (empty($logo_url)) {
-            return false;
+    private function delete_logo($logo_filename) {
+        if (empty($logo_filename)) {
+            return;
         }
         
-        $filepath = $this->upload_dir . $logo_url;
+        $filepath = $this->upload_dir . $logo_filename;
         
         if (file_exists($filepath)) {
-            return unlink($filepath);
+            unlink($filepath);
+            error_log('🗑️ Logo file deleted: ' . $filepath);
         }
-        
-        return false;
     }
     
-    /**
-     * Get full logo URL
-     * 
-     * @param string|null $logo_url Filename
-     * @return string|null
-     */
-    private function get_logo_url($logo_url) {
-        if (empty($logo_url)) {
-            return null;
+    private function get_logo_url($logo_filename) {
+        if (empty($logo_filename)) {
+            return '';
         }
         
-        return $this->upload_url . $logo_url;
+        return $this->upload_url . $logo_filename;
     }
 }

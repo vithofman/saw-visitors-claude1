@@ -1,12 +1,9 @@
 <?php
 /**
- * SAW Controller Customers
- * 
- * Controller pro správu zákazníků - list, create, edit, delete, AJAX operace
+ * SAW Controller Customers - DEBUG FIXED VERSION
  * 
  * @package SAW_Visitors
- * @version 4.6.1
- * @since 4.6.1
+ * @version 4.6.1 FIX
  */
 
 if (!defined('ABSPATH')) {
@@ -15,19 +12,10 @@ if (!defined('ABSPATH')) {
 
 class SAW_Controller_Customers {
     
-    /**
-     * Instance Customer modelu
-     * 
-     * @var SAW_Model_Customer
-     */
     private $customer_model;
     
-    /**
-     * Konstruktor
-     * 
-     * Inicializuje model a registruje AJAX handlery
-     */
     public function __construct() {
+        error_log('🟢 SAW Controller Customers: __construct() called');
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/models/class-saw-model-customer.php';
         $this->customer_model = new SAW_Model_Customer();
         
@@ -37,71 +25,29 @@ class SAW_Controller_Customers {
         add_action('wp_ajax_saw_switch_customer', array($this, 'ajax_switch_customer'));
     }
     
-    /**
-     * Enqueue customers assets
-     * 
-     * Načítá globální admin table CSS/JS a lokální customers CSS/JS
-     */
     private function enqueue_customers_assets() {
-        wp_enqueue_style(
-            'saw-admin-table',
-            SAW_VISITORS_PLUGIN_URL . 'assets/css/global/saw-admin-table.css',
-            array(),
-            SAW_VISITORS_VERSION
-        );
+        wp_enqueue_style('saw-admin-table', SAW_VISITORS_PLUGIN_URL . 'assets/css/global/saw-admin-table.css', array(), SAW_VISITORS_VERSION);
+        wp_enqueue_script('saw-admin-table', SAW_VISITORS_PLUGIN_URL . 'assets/js/global/saw-admin-table.js', array('jquery'), SAW_VISITORS_VERSION, true);
+        wp_enqueue_script('saw-admin-table-ajax', SAW_VISITORS_PLUGIN_URL . 'assets/js/global/saw-admin-table-ajax.js', array('jquery', 'saw-admin-table'), SAW_VISITORS_VERSION, true);
         
-        wp_enqueue_script(
-            'saw-admin-table',
-            SAW_VISITORS_PLUGIN_URL . 'assets/js/global/saw-admin-table.js',
-            array('jquery'),
-            SAW_VISITORS_VERSION,
-            true
-        );
-        
-        wp_enqueue_script(
-            'saw-admin-table-ajax',
-            SAW_VISITORS_PLUGIN_URL . 'assets/js/global/saw-admin-table-ajax.js',
-            array('jquery', 'saw-admin-table'),
-            SAW_VISITORS_VERSION,
-            true
-        );
-        
-        wp_localize_script(
-            'saw-admin-table-ajax',
-            'sawAdminTableAjax',
-            array(
-                'ajaxurl' => admin_url('admin-ajax.php'),
-                'nonce'   => wp_create_nonce('saw_admin_table_nonce'),
-                'entity'  => 'customers',
-            )
-        );
+        wp_localize_script('saw-admin-table-ajax', 'sawAdminTableAjax', array(
+            'ajaxurl' => admin_url('admin-ajax.php'),
+            'nonce'   => wp_create_nonce('saw_admin_table_nonce'),
+            'entity'  => 'customers',
+        ));
         
         if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/css/pages/saw-customers.css')) {
-            wp_enqueue_style(
-                'saw-customers',
-                SAW_VISITORS_PLUGIN_URL . 'assets/css/pages/saw-customers.css',
-                array('saw-admin-table'),
-                SAW_VISITORS_VERSION
-            );
+            wp_enqueue_style('saw-customers', SAW_VISITORS_PLUGIN_URL . 'assets/css/pages/saw-customers.css', array('saw-admin-table'), SAW_VISITORS_VERSION);
         }
         
         if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/js/pages/saw-customers.js')) {
-            wp_enqueue_script(
-                'saw-customers',
-                SAW_VISITORS_PLUGIN_URL . 'assets/js/pages/saw-customers.js',
-                array('jquery', 'saw-admin-table'),
-                SAW_VISITORS_VERSION,
-                true
-            );
+            wp_enqueue_script('saw-customers', SAW_VISITORS_PLUGIN_URL . 'assets/js/pages/saw-customers.js', array('jquery', 'saw-admin-table'), SAW_VISITORS_VERSION, true);
         }
     }
     
-    /**
-     * List customers - zobrazení seznamu zákazníků
-     * 
-     * @return void
-     */
     public function index() {
+        error_log('🟢 SAW Controller: index() called');
+        
         if (!current_user_can('manage_options')) {
             wp_die('Nemáte oprávnění.', 'Přístup zamítnut', array('response' => 403));
         }
@@ -168,22 +114,36 @@ class SAW_Controller_Customers {
         }
     }
     
-    /**
-     * Create customer - zobrazení formuláře a zpracování vytvoření
-     * 
-     * @return void
-     */
     public function create() {
+        error_log('🟢 SAW Controller: create() called');
+        error_log('   Request URI: ' . $_SERVER['REQUEST_URI']);
+        error_log('   Request Method: ' . $_SERVER['REQUEST_METHOD']);
+        
         if (!current_user_can('manage_options')) {
+            error_log('❌ User lacks permissions');
             wp_die('Nemáte oprávnění.', 'Přístup zamítnut', array('response' => 403));
         }
         
         $this->enqueue_customers_assets();
         
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['saw_customer_nonce'])) {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            error_log('🔵 POST request detected');
+            error_log('   POST data: ' . print_r($_POST, true));
+            error_log('   FILES data: ' . print_r($_FILES, true));
+            
+            if (!isset($_POST['saw_customer_nonce'])) {
+                error_log('❌ CRITICAL: Nonce field NOT present in POST!');
+                wp_die('Chybí bezpečnostní token.');
+            }
+            
+            error_log('✅ Nonce field present: ' . $_POST['saw_customer_nonce']);
+            
             if (!wp_verify_nonce($_POST['saw_customer_nonce'], 'saw_customer_form')) {
+                error_log('❌ Nonce verification FAILED');
                 wp_die('Bezpečnostní kontrola selhala.');
             }
+            
+            error_log('✅ Nonce verified successfully');
             
             $data = array(
                 'name' => isset($_POST['name']) ? sanitize_text_field($_POST['name']) : '',
@@ -193,17 +153,27 @@ class SAW_Controller_Customers {
                 'primary_color' => isset($_POST['primary_color']) ? sanitize_text_field($_POST['primary_color']) : '#1e40af',
             );
             
+            error_log('📦 Data prepared for create:');
+            error_log('   Name: ' . $data['name']);
+            error_log('   ICO: ' . $data['ico']);
+            error_log('   Color: ' . $data['primary_color']);
+            
+            error_log('🚀 Calling customer_model->create()...');
             $result = $this->customer_model->create($data);
             
             if (is_wp_error($result)) {
+                error_log('❌ Create FAILED: ' . $result->get_error_message());
                 $_SESSION['saw_customer_error'] = $result->get_error_message();
                 wp_redirect('/admin/settings/customers/new/');
                 exit;
             }
             
+            error_log('✅ Customer created successfully! ID: ' . $result);
             wp_redirect('/admin/settings/customers/?created=1');
             exit;
         }
+        
+        error_log('📋 Rendering create form (GET request)');
         
         $is_edit = false;
         $customer = array(
@@ -230,13 +200,11 @@ class SAW_Controller_Customers {
         }
     }
     
-    /**
-     * Edit customer - zobrazení formuláře a zpracování úpravy
-     * 
-     * @param int $id ID zákazníka
-     * @return void
-     */
     public function edit($id) {
+        error_log('🟢 SAW Controller: edit() called for ID: ' . $id);
+        error_log('   Request URI: ' . $_SERVER['REQUEST_URI']);
+        error_log('   Request Method: ' . $_SERVER['REQUEST_METHOD']);
+        
         if (!current_user_can('manage_options')) {
             wp_die('Nemáte oprávnění.', 'Přístup zamítnut', array('response' => 403));
         }
@@ -246,14 +214,31 @@ class SAW_Controller_Customers {
         $customer = $this->customer_model->get_by_id($id);
         
         if (!$customer) {
+            error_log('❌ Customer ID ' . $id . ' not found');
             wp_redirect('/admin/settings/customers/');
             exit;
         }
         
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['saw_customer_nonce'])) {
+        error_log('✅ Customer loaded: ' . $customer['name']);
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            error_log('🔵 POST request detected');
+            error_log('   POST data: ' . print_r($_POST, true));
+            error_log('   FILES data: ' . print_r($_FILES, true));
+            
+            if (!isset($_POST['saw_customer_nonce'])) {
+                error_log('❌ CRITICAL: Nonce field NOT present in POST!');
+                wp_die('Chybí bezpečnostní token.');
+            }
+            
+            error_log('✅ Nonce field present: ' . $_POST['saw_customer_nonce']);
+            
             if (!wp_verify_nonce($_POST['saw_customer_nonce'], 'saw_customer_form')) {
+                error_log('❌ Nonce verification FAILED');
                 wp_die('Bezpečnostní kontrola selhala.');
             }
+            
+            error_log('✅ Nonce verified successfully');
             
             $data = array(
                 'name' => isset($_POST['name']) ? sanitize_text_field($_POST['name']) : '',
@@ -263,17 +248,27 @@ class SAW_Controller_Customers {
                 'primary_color' => isset($_POST['primary_color']) ? sanitize_text_field($_POST['primary_color']) : '#1e40af',
             );
             
+            error_log('📦 Data prepared for update:');
+            error_log('   Name: ' . $data['name']);
+            error_log('   ICO: ' . $data['ico']);
+            error_log('   Color: ' . $data['primary_color']);
+            
+            error_log('🚀 Calling customer_model->update()...');
             $result = $this->customer_model->update($id, $data);
             
             if (is_wp_error($result)) {
+                error_log('❌ Update FAILED: ' . $result->get_error_message());
                 $_SESSION['saw_customer_error'] = $result->get_error_message();
                 wp_redirect('/admin/settings/customers/edit/' . $id . '/');
                 exit;
             }
             
+            error_log('✅ Customer updated successfully! ID: ' . $id);
             wp_redirect('/admin/settings/customers/?updated=1');
             exit;
         }
+        
+        error_log('📋 Rendering edit form (GET request)');
         
         $is_edit = true;
         
@@ -291,72 +286,64 @@ class SAW_Controller_Customers {
         }
     }
     
-    /**
-     * Get current user data
-     * 
-     * @return array User data pro layout
-     */
-    private function get_current_user_data() {
-        $current_user = wp_get_current_user();
+    public function delete($id) {
+        if (!current_user_can('manage_options')) {
+            wp_die('Nemáte oprávnění.', 'Přístup zamítnut', array('response' => 403));
+        }
         
-        return array(
-            'id' => $current_user->ID,
-            'email' => $current_user->user_email,
-            'display_name' => $current_user->display_name,
-        );
+        if (!isset($_GET['_wpnonce']) || !wp_verify_nonce($_GET['_wpnonce'], 'delete_customer_' . $id)) {
+            wp_die('Bezpečnostní kontrola selhala.');
+        }
+        
+        $result = $this->customer_model->delete($id);
+        
+        if (is_wp_error($result)) {
+            $_SESSION['saw_customer_error'] = $result->get_error_message();
+        }
+        
+        wp_redirect('/admin/settings/customers/?deleted=1');
+        exit;
     }
     
-    /**
-     * Get current customer data (dynamicky ze session)
-     * 
-     * @return array Customer data pro layout
-     */
+    private function get_current_user_data() {
+        $user_id = isset($_SESSION['saw_user_id']) ? absint($_SESSION['saw_user_id']) : 0;
+        
+        if (!$user_id) {
+            return null;
+        }
+        
+        global $wpdb;
+        $user = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}saw_users WHERE id = %d",
+            $user_id
+        ), ARRAY_A);
+        
+        return $user;
+    }
+    
     private function get_current_customer_data() {
-        $customer_id = $this->get_session_customer_id();
+        $customer_id = $this->get_current_customer_id();
         
         if (!$customer_id) {
             return $this->load_first_customer();
         }
         
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'saw_customers';
+        $customer = $this->customer_model->get_by_id($customer_id);
         
-        $customer = $wpdb->get_row(
-            $wpdb->prepare(
-                "SELECT * FROM {$table_name} WHERE id = %d",
-                $customer_id
-            ),
-            ARRAY_A
-        );
-        
-        if ($customer) {
-            if (defined('SAW_DEBUG') && SAW_DEBUG) {
-                error_log('SAW Controller: Loaded customer from session: ID ' . $customer['id']);
-            }
-            
-            return array(
-                'id' => $customer['id'],
-                'name' => $customer['name'],
-                'ico' => $customer['ico'] ?? '',
-                'address' => $customer['address'] ?? '',
-                'logo_url' => $customer['logo_url'] ?? '',
-            );
+        if (!$customer) {
+            return $this->load_first_customer();
         }
         
-        return $this->load_first_customer();
+        return $customer;
     }
     
-    /**
-     * Get customer ID ze session nebo user meta
-     * 
-     * @return int|null Customer ID nebo null
-     */
-    private function get_session_customer_id() {
+    private function get_current_customer_id() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
         if (isset($_SESSION['saw_current_customer_id'])) {
-            if (defined('SAW_DEBUG') && SAW_DEBUG) {
-                error_log('SAW Controller: Found customer ID in session: ' . $_SESSION['saw_current_customer_id']);
-            }
-            return intval($_SESSION['saw_current_customer_id']);
+            return absint($_SESSION['saw_current_customer_id']);
         }
         
         if (is_user_logged_in()) {
@@ -364,11 +351,6 @@ class SAW_Controller_Customers {
             
             if ($meta_id) {
                 $_SESSION['saw_current_customer_id'] = $meta_id;
-                
-                if (defined('SAW_DEBUG') && SAW_DEBUG) {
-                    error_log('SAW Controller: Loaded customer ID from user meta: ' . $meta_id);
-                }
-                
                 return $meta_id;
             }
         }
@@ -376,11 +358,6 @@ class SAW_Controller_Customers {
         return null;
     }
     
-    /**
-     * Load first customer jako fallback
-     * 
-     * @return array Customer data
-     */
     private function load_first_customer() {
         global $wpdb;
         
@@ -398,10 +375,6 @@ class SAW_Controller_Customers {
                 update_user_meta(get_current_user_id(), 'saw_current_customer_id', intval($customer['id']));
             }
             
-            if (defined('SAW_DEBUG') && SAW_DEBUG) {
-                error_log('SAW Controller: Loaded first customer as fallback: ID ' . $customer['id']);
-            }
-            
             return array(
                 'id' => $customer['id'],
                 'name' => $customer['name'],
@@ -409,10 +382,6 @@ class SAW_Controller_Customers {
                 'address' => $customer['address'] ?? '',
                 'logo_url' => $customer['logo_url'] ?? '',
             );
-        }
-        
-        if (defined('SAW_DEBUG') && SAW_DEBUG) {
-            error_log('SAW Controller: No customers found in database!');
         }
         
         return array(
@@ -424,11 +393,6 @@ class SAW_Controller_Customers {
         );
     }
     
-    /**
-     * AJAX: Search customers
-     * 
-     * @return void
-     */
     public function ajax_search_customers() {
         check_ajax_referer('saw_admin_table_nonce', 'nonce');
         
@@ -472,11 +436,6 @@ class SAW_Controller_Customers {
         ));
     }
     
-    /**
-     * AJAX: Delete customer
-     * 
-     * @return void
-     */
     public function ajax_delete_customer() {
         check_ajax_referer('saw_admin_table_nonce', 'nonce');
         
@@ -505,11 +464,6 @@ class SAW_Controller_Customers {
         wp_send_json_success(array('message' => 'Zákazník byl úspěšně smazán'));
     }
     
-    /**
-     * AJAX: Get customers for switcher (SuperAdmin only)
-     * 
-     * @return void
-     */
     public function ajax_get_customers_for_switcher() {
         check_ajax_referer('saw_customer_switcher_nonce', 'nonce');
         
@@ -531,11 +485,6 @@ class SAW_Controller_Customers {
         ));
     }
     
-    /**
-     * AJAX: Switch customer - uloží do session + user meta
-     * 
-     * @return void
-     */
     public function ajax_switch_customer() {
         check_ajax_referer('saw_customer_switcher_nonce', 'nonce');
         
@@ -563,30 +512,17 @@ class SAW_Controller_Customers {
         if (is_user_logged_in()) {
             $user_id = get_current_user_id();
             update_user_meta($user_id, 'saw_current_customer_id', $customer_id);
-            
-            if (defined('SAW_DEBUG') && SAW_DEBUG) {
-                error_log(sprintf(
-                    'SAW Customer Switcher: User %d switched to customer %d (%s)',
-                    $user_id,
-                    $customer_id,
-                    $customer->name
-                ));
-            }
         }
         
         $session_id = session_id();
         
-        if (defined('SAW_DEBUG') && SAW_DEBUG) {
-            error_log('SAW Customer Switcher: Session ID: ' . $session_id);
-        }
-        
         wp_send_json_success(array(
             'message' => 'Zákazník byl přepnut.',
             'customer' => array(
-                'id' => $customer->id,
-                'name' => $customer->name,
-                'ico' => $customer->ico ?? '',
-                'address' => $customer->address ?? '',
+                'id' => $customer['id'],
+                'name' => $customer['name'],
+                'ico' => $customer['ico'] ?? '',
+                'address' => $customer['address'] ?? '',
             ),
             'session_id' => $session_id,
             'debug' => array(

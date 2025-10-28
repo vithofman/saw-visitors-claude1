@@ -57,9 +57,16 @@ $admin_table = new SAW_Component_Admin_Table('customers', array(
         ),
         'primary_color' => array(
             'label' => 'Barva',
-            'type'  => 'color',
+            'type'  => 'custom',
             'align' => 'center',
             'sortable' => false,
+            'render' => function($value, $row) {
+                if (empty($value)) {
+                    $value = '#6b7280'; // výchozí šedá
+                }
+                // Vytvoří barevný kroužek s barvou zákazníka
+                return '<span class="saw-color-indicator" style="background-color: ' . esc_attr($value) . ';" title="' . esc_attr($value) . '"></span>';
+            },
         ),
     ),
     
@@ -85,6 +92,21 @@ $admin_table = new SAW_Component_Admin_Table('customers', array(
     
     'message'      => $message,
     'message_type' => $message_type,
+    
+    // ✨ NOVÉ: Callback funkce pro barevné pozadí řádků
+    'row_class_callback' => function($row) {
+        return 'saw-customer-row';
+    },
+    'row_style_callback' => function($row) {
+        if (!empty($row['primary_color'])) {
+            // Vytvoří světlou verzi barvy pro pozadí (gradient 8% → 2% opacity)
+            $color = $row['primary_color'];
+            // Převede hex na RGB a přidá alpha kanál
+            list($r, $g, $b) = sscanf($color, "#%02x%02x%02x");
+            return 'background: linear-gradient(to right, rgba(' . $r . ', ' . $g . ', ' . $b . ', 0.08) 0%, rgba(' . $r . ', ' . $g . ', ' . $b . ', 0.02) 100%);';
+        }
+        return '';
+    },
 ));
 
 $admin_table->render();

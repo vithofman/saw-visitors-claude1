@@ -17,6 +17,10 @@ $actions = $config['actions'] ?? array();
 $edit_url = $config['edit_url'] ?? '';
 $orderby = $config['orderby'] ?? '';
 $order = $config['order'] ?? 'ASC';
+
+// ✨ NOVÉ: Callback funkce pro custom class a style na řádcích
+$row_class_callback = $config['row_class_callback'] ?? null;
+$row_style_callback = $config['row_style_callback'] ?? null;
 ?>
 
 <div class="saw-table-responsive" id="saw-<?php echo esc_attr($entity); ?>-table-wrapper">
@@ -67,7 +71,7 @@ $order = $config['order'] ?? 'ASC';
                                 <?php if (!empty($config['search_value'])): ?>
                                     Pro hledaný výraz nebyly nalezeny žádné výsledky.
                                 <?php else: ?>
-                                    V systému zatím nejsou žádné <?php echo esc_html(strtolower($config['plural'] ?? 'záznamy')); ?>.
+                                    V systému zatím nejsou žádné <?php echo esc_html(strtolower($config['plural'] ?? $entity)); ?>.
                                 <?php endif; ?>
                             </p>
                         </div>
@@ -75,64 +79,65 @@ $order = $config['order'] ?? 'ASC';
                 </tr>
             <?php else: ?>
                 <?php foreach ($rows as $row): ?>
-                    <tr data-id="<?php echo esc_attr($row['id']); ?>">
+                    <?php
+                    // ✨ NOVÉ: Aplikace custom class a style na řádek
+                    $row_class = '';
+                    $row_style = '';
+                    
+                    if (is_callable($row_class_callback)) {
+                        $row_class = call_user_func($row_class_callback, $row);
+                    }
+                    
+                    if (is_callable($row_style_callback)) {
+                        $row_style = call_user_func($row_style_callback, $row);
+                    }
+                    ?>
+                    <tr class="<?php echo esc_attr($row_class); ?>" 
+                        style="<?php echo esc_attr($row_style); ?>"
+                        data-id="<?php echo esc_attr($row['id'] ?? ''); ?>">
+                        
                         <?php foreach ($columns as $column_key => $column_config): ?>
                             <?php
                             $value = $row[$column_key] ?? '';
                             $type = $column_config['type'] ?? 'text';
                             $align = $column_config['align'] ?? 'left';
-                            $td_class = 'saw-td-' . esc_attr($column_key);
+                            $cell_class = 'saw-td-' . esc_attr($column_key);
                             if ($align === 'center') {
-                                $td_class .= ' saw-text-center';
+                                $cell_class .= ' saw-text-center';
                             }
                             ?>
-                            <td class="<?php echo esc_attr($td_class); ?>">
+                            <td class="<?php echo esc_attr($cell_class); ?>">
                                 <?php
+                                // Render podle typu
                                 switch ($type) {
-                                    case 'date':
-                                        echo !empty($value) ? esc_html(date('d.m.Y', strtotime($value))) : '—';
-                                        break;
-                                    
-                                    case 'datetime':
-                                        echo !empty($value) ? esc_html(date('d.m.Y H:i', strtotime($value))) : '—';
-                                        break;
-                                    
-                                    case 'bool':
-                                        echo $value ? '✅ Ano' : '❌ Ne';
-                                        break;
-                                    
-                                    case 'color':
-                                        if (!empty($value)) {
-                                            echo '<div class="saw-color-preview" style="background-color: ' . esc_attr($value) . ';">';
-                                            echo '<span>' . esc_html($value) . '</span>';
-                                            echo '</div>';
-                                        } else {
-                                            echo '—';
-                                        }
-                                        break;
-                                    
-                                    case 'image':
                                     case 'logo':
                                         if (!empty($value)) {
-                                            $alt = $column_config['alt'] ?? '';
-                                            echo '<img src="' . esc_url($value) . '" alt="' . esc_attr($alt) . '" class="saw-' . esc_attr($type) . '">';
+                                            $alt = $column_config['alt'] ?? 'Logo';
+                                            echo '<img src="' . esc_url($value) . '" alt="' . esc_attr($alt) . '" class="saw-table-logo">';
                                         } else {
-                                            echo '<div class="saw-' . esc_attr($type) . '-placeholder">';
-                                            echo '<span class="dashicons dashicons-format-image"></span>';
-                                            echo '</div>';
+                                            echo '<span class="saw-text-muted">—</span>';
                                         }
                                         break;
-                                    
+                                        
+                                    case 'color':
+                                        if (!empty($value)) {
+                                            echo '<span class="saw-color-badge" style="background-color: ' . esc_attr($value) . ';" title="' . esc_attr($value) . '"></span>';
+                                        } else {
+                                            echo '<span class="saw-text-muted">—</span>';
+                                        }
+                                        break;
+                                        
                                     case 'custom':
                                         if (isset($column_config['render']) && is_callable($column_config['render'])) {
-                                            echo $column_config['render']($value, $row);
+                                            echo call_user_func($column_config['render'], $value, $row);
                                         } else {
                                             echo esc_html($value);
                                         }
                                         break;
-                                    
+                                        
                                     default:
-                                        echo !empty($value) ? esc_html($value) : '—';
+                                        echo esc_html($value);
+                                        break;
                                 }
                                 ?>
                             </td>
@@ -140,41 +145,24 @@ $order = $config['order'] ?? 'ASC';
                         
                         <?php if (!empty($actions)): ?>
                             <td class="saw-td-actions saw-text-center">
-                                <div class="saw-actions">
-                                    <?php if (in_array('edit', $actions) && !empty($edit_url)): ?>
-                                        <?php 
-                                        $edit_link = str_replace('{id}', $row['id'], $edit_url);
-                                        ?>
-                                        <a 
-                                            href="<?php echo esc_url($edit_link); ?>" 
-                                            class="saw-btn saw-btn-sm saw-btn-secondary"
-                                            title="Upravit"
-                                        >
-                                            <span class="dashicons dashicons-edit"></span>
-                                        </a>
-                                    <?php endif; ?>
-                                    
-                                    <?php if (in_array('delete', $actions)): ?>
-                                        <button 
-                                            type="button"
-                                            class="saw-btn saw-btn-sm saw-btn-danger saw-delete-<?php echo esc_attr($entity); ?>"
-                                            data-<?php echo esc_attr($entity); ?>-id="<?php echo esc_attr($row['id']); ?>"
-                                            data-<?php echo esc_attr($entity); ?>-name="<?php echo esc_attr($row['name'] ?? $row['id']); ?>"
-                                            title="Smazat"
-                                        >
-                                            <span class="dashicons dashicons-trash"></span>
-                                        </button>
-                                    <?php endif; ?>
-                                    
-                                    <?php
-                                    if (isset($column_config['custom_actions']) && is_array($column_config['custom_actions'])) {
-                                        foreach ($column_config['custom_actions'] as $custom_action) {
-                                            if (is_callable($custom_action)) {
-                                                echo $custom_action($row);
-                                            }
-                                        }
-                                    }
-                                    ?>
+                                <div class="saw-action-buttons">
+                                    <?php foreach ($actions as $action): ?>
+                                        <?php if ($action === 'edit' && !empty($edit_url)): ?>
+                                            <a href="<?php echo esc_url(str_replace('{id}', $row['id'] ?? '', $edit_url)); ?>" 
+                                               class="saw-btn saw-btn-sm saw-btn-icon" 
+                                               title="Upravit">
+                                                <span class="dashicons dashicons-edit"></span>
+                                            </a>
+                                        <?php elseif ($action === 'delete'): ?>
+                                            <button type="button" 
+                                                    class="saw-btn saw-btn-sm saw-btn-icon saw-btn-danger saw-delete-btn" 
+                                                    data-id="<?php echo esc_attr($row['id'] ?? ''); ?>"
+                                                    data-name="<?php echo esc_attr($row['name'] ?? ''); ?>"
+                                                    title="Smazat">
+                                                <span class="dashicons dashicons-trash"></span>
+                                            </button>
+                                        <?php endif; ?>
+                                    <?php endforeach; ?>
                                 </div>
                             </td>
                         <?php endif; ?>

@@ -88,6 +88,10 @@ class SAW_Component_Admin_Table {
             'singular'     => '',
             'plural'       => '',
             'add_new'      => 'Přidat nový',
+            
+            // ✨ NOVÉ: Callback funkce pro custom styling řádků
+            'row_class_callback' => null,
+            'row_style_callback' => null,
         );
         
         return wp_parse_args($config, $defaults);
@@ -127,81 +131,56 @@ class SAW_Component_Admin_Table {
             SAW_VISITORS_VERSION,
             true
         );
-        
-        wp_enqueue_script(
-            'saw-admin-table-ajax',
-            SAW_VISITORS_PLUGIN_URL . 'assets/js/global/saw-admin-table-ajax.js',
-            array('jquery', 'saw-admin-table'),
-            SAW_VISITORS_VERSION,
-            true
-        );
-        
-        wp_localize_script(
-            'saw-admin-table-ajax',
-            'sawAdminTableAjax',
-            array(
-                'ajaxurl' => admin_url('admin-ajax.php'),
-                'nonce'   => wp_create_nonce('saw_admin_table_nonce'),
-                'entity'  => $this->entity,
-            )
-        );
     }
     
     /**
-     * Helper: Get sort URL
+     * Získá URL pro řazení podle sloupce
      * 
-     * Vytvoří URL s parametry pro řazení sloupce
-     * 
-     * @param string $column          Název sloupce
-     * @param string $current_orderby Aktuální řazený sloupec
-     * @param string $current_order   Aktuální směr řazení (ASC/DESC)
-     * @return string URL s sort parametry
+     * @param string $column Název sloupce
+     * @param string $current_orderby Aktuální orderby
+     * @param string $current_order Aktuální order
+     * @return string URL pro řazení
      */
     public static function get_sort_url($column, $current_orderby, $current_order) {
         $new_order = 'ASC';
-        if ($current_orderby === $column && $current_order === 'ASC') {
-            $new_order = 'DESC';
+        
+        if ($column === $current_orderby) {
+            $new_order = ($current_order === 'ASC') ? 'DESC' : 'ASC';
         }
         
-        $base_url = remove_query_arg(array('orderby', 'order'));
-        return add_query_arg(array('orderby' => $column, 'order' => $new_order), $base_url);
+        $query_args = array(
+            'orderby' => $column,
+            'order'   => $new_order,
+        );
+        
+        if (isset($_GET['s']) && !empty($_GET['s'])) {
+            $query_args['s'] = sanitize_text_field($_GET['s']);
+        }
+        
+        if (isset($_GET['paged'])) {
+            $query_args['paged'] = intval($_GET['paged']);
+        }
+        
+        return add_query_arg($query_args);
     }
     
     /**
-     * Helper: Get sort icon
+     * Vrátí ikonu pro řazení
      * 
-     * Vrátí HTML se správnou ikonou pro řazení sloupce
-     * 
-     * @param string $column          Název sloupce
-     * @param string $current_orderby Aktuální řazený sloupec
-     * @param string $current_order   Aktuální směr řazení (ASC/DESC)
-     * @return string HTML s ikonou řazení
+     * @param string $column Název sloupce
+     * @param string $current_orderby Aktuální orderby
+     * @param string $current_order Aktuální order
+     * @return string HTML ikony
      */
     public static function get_sort_icon($column, $current_orderby, $current_order) {
-        if ($current_orderby !== $column) {
-            return '<span class="saw-sort-icon">⇅</span>';
+        if ($column !== $current_orderby) {
+            return '<span class="dashicons dashicons-sort saw-sort-icon"></span>';
         }
         
-        return $current_order === 'ASC' 
-            ? '<span class="saw-sort-icon saw-sort-asc">▲</span>' 
-            : '<span class="saw-sort-icon saw-sort-desc">▼</span>';
-    }
-    
-    /**
-     * Getter pro entity
-     * 
-     * @return string Název entity
-     */
-    public function get_entity() {
-        return $this->entity;
-    }
-    
-    /**
-     * Getter pro config
-     * 
-     * @return array Kompletní konfigurace tabulky
-     */
-    public function get_config() {
-        return $this->config;
+        if ($current_order === 'ASC') {
+            return '<span class="dashicons dashicons-arrow-up saw-sort-icon"></span>';
+        } else {
+            return '<span class="dashicons dashicons-arrow-down saw-sort-icon"></span>';
+        }
     }
 }
