@@ -1,9 +1,15 @@
 <?php
 /**
- * SAW Data Table Column - Column definition for data tables
+ * SAW Data Table Column - FIXED with custom_render support
+ * 
+ * OPRAVY v4.6.2:
+ * 1. Přidána metoda get_custom_render() pro získání custom rendereru
+ * 2. Přidána metoda get_type() pro získání typu sloupce
+ * 3. Přidána metoda get_label() pro získání labelu
+ * 4. Přidána metoda get_width() pro získání šířky
  * 
  * @package SAW_Visitors
- * @version 4.6.1
+ * @version 4.6.2
  */
 
 if (!defined('ABSPATH')) {
@@ -35,7 +41,7 @@ class SAW_Data_Table_Column {
             'width' => '',
             'align' => 'left', // left, center, right
             'type' => 'text', // text, image, badge, date, custom
-            'custom_render' => null, // Callback function for custom rendering
+            'custom_render' => null, // ✅ Callback function for custom rendering
         );
         
         $config = wp_parse_args($config, $defaults);
@@ -46,6 +52,9 @@ class SAW_Data_Table_Column {
         $this->align = $config['align'];
         $this->type = $config['type'];
         $this->custom_render = $config['custom_render'];
+        
+        // 🔍 DEBUG: Log column creation
+        error_log("Column created: $key, type: {$this->type}, has custom_render: " . (is_callable($this->custom_render) ? 'YES' : 'NO'));
     }
     
     /**
@@ -87,7 +96,19 @@ class SAW_Data_Table_Column {
         if ($this->sortable) {
             echo '<a href="#">';
             echo esc_html($this->label);
-            echo ' ' . $this->get_sort_icon($current_orderby, $current_order);
+            echo ' ';
+            
+            // Sort indicator
+            if ($current_orderby === $this->key) {
+                if ($current_order === 'ASC') {
+                    echo '<span class="dashicons dashicons-arrow-up-alt2"></span>';
+                } else {
+                    echo '<span class="dashicons dashicons-arrow-down-alt2"></span>';
+                }
+            } else {
+                echo '<span class="dashicons dashicons-sort"></span>';
+            }
+            
             echo '</a>';
         } else {
             echo esc_html($this->label);
@@ -97,124 +118,65 @@ class SAW_Data_Table_Column {
     }
     
     /**
-     * Get sort icon based on current state
+     * ✅ NOVÁ METODA: Get custom render callback
+     * 
+     * @return callable|null
      */
-    private function get_sort_icon($current_orderby, $current_order) {
-        if ($current_orderby !== $this->key) {
-            return '<span class="saw-sort-icon">⇅</span>';
-        }
-        
-        return $current_order === 'ASC' 
-            ? '<span class="saw-sort-icon saw-sort-asc">▲</span>' 
-            : '<span class="saw-sort-icon saw-sort-desc">▼</span>';
+    public function get_custom_render() {
+        return $this->custom_render;
     }
     
     /**
-     * Render cell content
+     * ✅ NOVÁ METODA: Get column type
+     * 
+     * @return string
      */
-    public function render_cell($value, $item = null) {
-        if ($this->custom_render && is_callable($this->custom_render)) {
-            call_user_func($this->custom_render, $value, $item);
-            return;
-        }
-        
-        switch ($this->type) {
-            case 'image':
-                $this->render_image_cell($value);
-                break;
-                
-            case 'badge':
-                $this->render_badge_cell($value);
-                break;
-                
-            case 'date':
-                $this->render_date_cell($value);
-                break;
-                
-            case 'text':
-            default:
-                echo esc_html($value);
-                break;
-        }
+    public function get_type() {
+        return $this->type;
     }
     
     /**
-     * Render image cell
+     * ✅ NOVÁ METODA: Get column label
+     * 
+     * @return string
      */
-    private function render_image_cell($value) {
-        if (empty($value)) {
-            echo '<div class="saw-table-avatar saw-table-avatar-empty">';
-            echo '<span class="dashicons dashicons-businessman"></span>';
-            echo '</div>';
-        } else {
-            echo '<div class="saw-table-avatar">';
-            echo '<img src="' . esc_url($value) . '" alt="">';
-            echo '</div>';
-        }
+    public function get_label() {
+        return $this->label;
     }
     
     /**
-     * Render badge cell
+     * ✅ NOVÁ METODA: Get column width
+     * 
+     * @return string
      */
-    private function render_badge_cell($value) {
-        $badge_class = 'saw-badge';
-        
-        // Add color class based on value
-        $value_lower = strtolower($value);
-        if (in_array($value_lower, array('active', 'aktivní', 'success', 'úspěch'))) {
-            $badge_class .= ' saw-badge-success';
-        } elseif (in_array($value_lower, array('inactive', 'neaktivní', 'pending', 'čeká'))) {
-            $badge_class .= ' saw-badge-warning';
-        } elseif (in_array($value_lower, array('error', 'chyba', 'failed', 'selhalo'))) {
-            $badge_class .= ' saw-badge-danger';
-        }
-        
-        echo '<span class="' . esc_attr($badge_class) . '">' . esc_html($value) . '</span>';
+    public function get_width() {
+        return $this->width;
     }
     
     /**
-     * Render date cell
-     */
-    private function render_date_cell($value) {
-        if (empty($value)) {
-            echo '—';
-            return;
-        }
-        
-        $timestamp = strtotime($value);
-        if ($timestamp) {
-            echo '<span title="' . esc_attr(date_i18n('j.n.Y H:i:s', $timestamp)) . '">';
-            echo esc_html(date_i18n('j.n.Y', $timestamp));
-            echo '</span>';
-        } else {
-            echo esc_html($value);
-        }
-    }
-    
-    /**
-     * Getters
+     * Get column key
+     * 
+     * @return string
      */
     public function get_key() {
         return $this->key;
     }
     
-    public function get_label() {
-        return $this->label;
-    }
-    
+    /**
+     * Is column sortable?
+     * 
+     * @return bool
+     */
     public function is_sortable() {
         return $this->sortable;
     }
     
-    public function get_width() {
-        return $this->width;
-    }
-    
+    /**
+     * Get column align
+     * 
+     * @return string
+     */
     public function get_align() {
         return $this->align;
-    }
-    
-    public function get_type() {
-        return $this->type;
     }
 }
