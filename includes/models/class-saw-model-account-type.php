@@ -1,270 +1,218 @@
 <?php
 /**
- * SAW Account Type Model
- * 
+ * Account Type Model
+ *
  * @package SAW_Visitors
- * @version 4.6.1
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-class SAW_Model_Account_Type {
+require_once SAW_VISITORS_PLUGIN_DIR . 'includes/models/class-saw-model-base.php';
+
+class SAW_Model_Account_Type extends SAW_Model_Base {
     
-    private $table_name;
+    protected $table_name = 'account_types';
     
-    public function __construct() {
-        global $wpdb;
-        $this->table_name = $wpdb->prefix . 'saw_account_types';
-    }
+    protected $fillable = [
+        'name',
+        'display_name',
+        'color',
+        'price',
+        'features',
+        'sort_order',
+        'is_active'
+    ];
     
-    /**
-     * Získat všechny typy účtů
-     * 
-     * @param bool $active_only Pouze aktivní typy
-     * @return array
-     */
-    public function get_all($active_only = true) {
-        global $wpdb;
+    public function get_all($args = []) {
+        $defaults = [
+            'orderby' => 'sort_order',
+            'order' => 'ASC',
+            'per_page' => 20,
+            'page' => 1,
+            'search' => '',
+            'is_active' => null
+        ];
         
-        $sql = "SELECT * FROM {$this->table_name}";
+        $args = wp_parse_args($args, $defaults);
         
-        if ($active_only) {
-            $sql .= " WHERE is_active = 1";
+        $where_conditions = ['1=1'];
+        $where_values = [];
+        
+        if (!empty($args['search'])) {
+            $where_conditions[] = '(name LIKE %s OR display_name LIKE %s)';
+            $search_term = '%' . $this->db->esc_like($args['search']) . '%';
+            $where_values[] = $search_term;
+            $where_values[] = $search_term;
         }
         
-        $sql .= " ORDER BY sort_order ASC";
+        if ($args['is_active'] !== null) {
+            $where_conditions[] = 'is_active = %d';
+            $where_values[] = (int) $args['is_active'];
+        }
         
-        return $wpdb->get_results($sql, ARRAY_A);
+        $where_clause = implode(' AND ', $where_conditions);
+        
+        $offset = ($args['page'] - 1) * $args['per_page'];
+        
+        $order_clause = sprintf(
+            'ORDER BY %s %s',
+            $this->sanitize_orderby($args['orderby']),
+            $args['order'] === 'DESC' ? 'DESC' : 'ASC'
+        );
+        
+        $sql = "SELECT * FROM {$this->table_name} WHERE {$where_clause} {$order_clause} LIMIT %d OFFSET %d";
+        
+        if (!empty($where_values)) {
+            $query = $this->db->prepare($sql, array_merge($where_values, [$args['per_page'], $offset]));
+        } else {
+            $query = $this->db->prepare($sql, $args['per_page'], $offset);
+        }
+        
+        $results = $this->db->get_results($query);
+        
+        $count_sql = "SELECT COUNT(*) FROM {$this->table_name} WHERE {$where_clause}";
+        if (!empty($where_values)) {
+            $count_query = $this->db->prepare($count_sql, $where_values);
+        } else {
+            $count_query = $count_sql;
+        }
+        $total = $this->db->get_var($count_query);
+        
+        return [
+            'items' => $results,
+            'total' => (int) $total,
+            'pages' => ceil($total / $args['per_page'])
+        ];
     }
     
-    /**
-     * Získat typ účtu podle ID
-     * 
-     * @param int $id ID typu účtu
-     * @return array|null
-     */
     public function get_by_id($id) {
-        global $wpdb;
-        
-        return $wpdb->get_row(
-            $wpdb->prepare("SELECT * FROM {$this->table_name} WHERE id = %d", $id),
-            ARRAY_A
+        $sql = $this->db->prepare(
+            "SELECT * FROM {$this->table_name} WHERE id = %d",
+            $id
         );
+        return $this->db->get_row($sql);
     }
     
-    /**
-     * Získat typ účtu podle interního názvu
-     * 
-     * @param string $name Interní název (basic, bronze, silver, gold, vip)
-     * @return array|null
-     */
-    public function get_by_name($name) {
-        global $wpdb;
-        
-        return $wpdb->get_row(
-            $wpdb->prepare("SELECT * FROM {$this->table_name} WHERE name = %s", $name),
-            ARRAY_A
-        );
-    }
-    
-    /**
-     * Získat typy účtů ve formátu pro <select>
-     * 
-     * @return array [id => display_name]
-     */
-    public function get_for_select() {
-        $types = $this->get_all(true);
-        $options = array();
-        
-        foreach ($types as $type) {
-            $options[$type['id']] = $type['display_name'];
-        }
-        
-        return $options;
-    }
-    
-    /**
-     * Získat aktivní typy s barvami pro badges
-     * 
-     * @return array
-     */
-    public function get_active_types_with_colors() {
-        $types = $this->get_all(true);
-        $result = array();
-        
-        foreach ($types as $type) {
-            $result[] = array(
-                'id'           => $type['id'],
-                'name'         => $type['name'],
-                'display_name' => $type['display_name'],
-                'color'        => $type['color'],
-                'price'        => $type['price'],
-            );
-        }
-        
-        return $result;
-    }
-    
-    /**
-     * Vytvořit nový typ účtu
-     * 
-     * @param array $data Data typu účtu
-     * @return int|WP_Error ID nového záznamu nebo chyba
-     */
     public function create($data) {
-        global $wpdb;
+        $validated = $this->validate($data);
         
-        $validation = $this->validate($data);
-        if (is_wp_error($validation)) {
-            return $validation;
+        if (is_wp_error($validated)) {
+            return $validated;
         }
         
-        $insert_data = array(
-            'name'         => sanitize_text_field($data['name']),
-            'display_name' => sanitize_text_field($data['display_name']),
-            'color'        => sanitize_hex_color($data['color']),
-            'price'        => floatval($data['price']),
-            'features'     => isset($data['features']) ? wp_json_encode($data['features']) : null,
-            'sort_order'   => isset($data['sort_order']) ? intval($data['sort_order']) : 0,
-            'is_active'    => isset($data['is_active']) ? intval($data['is_active']) : 1,
-        );
+        $insert_data = [
+            'name' => $validated['name'],
+            'display_name' => $validated['display_name'],
+            'color' => $validated['color'],
+            'price' => $validated['price'],
+            'features' => $validated['features'],
+            'sort_order' => $validated['sort_order'],
+            'is_active' => $validated['is_active']
+        ];
         
-        $result = $wpdb->insert($this->table_name, $insert_data);
+        $result = $this->db->insert($this->table_name, $insert_data);
         
         if ($result === false) {
-            return new WP_Error('db_error', 'Chyba při vytváření typu účtu: ' . $wpdb->last_error);
+            return new WP_Error('db_error', 'Failed to create account type');
         }
         
-        return $wpdb->insert_id;
+        return $this->db->insert_id;
     }
     
-    /**
-     * Aktualizovat typ účtu
-     * 
-     * @param int   $id   ID typu účtu
-     * @param array $data Data k aktualizaci
-     * @return bool|WP_Error
-     */
     public function update($id, $data) {
-        global $wpdb;
+        $validated = $this->validate($data, $id);
         
-        $validation = $this->validate($data, $id);
-        if (is_wp_error($validation)) {
-            return $validation;
+        if (is_wp_error($validated)) {
+            return $validated;
         }
         
-        $update_data = array();
+        $update_data = [
+            'name' => $validated['name'],
+            'display_name' => $validated['display_name'],
+            'color' => $validated['color'],
+            'price' => $validated['price'],
+            'features' => $validated['features'],
+            'sort_order' => $validated['sort_order'],
+            'is_active' => $validated['is_active']
+        ];
         
-        if (isset($data['name'])) {
-            $update_data['name'] = sanitize_text_field($data['name']);
-        }
-        
-        if (isset($data['display_name'])) {
-            $update_data['display_name'] = sanitize_text_field($data['display_name']);
-        }
-        
-        if (isset($data['color'])) {
-            $update_data['color'] = sanitize_hex_color($data['color']);
-        }
-        
-        if (isset($data['price'])) {
-            $update_data['price'] = floatval($data['price']);
-        }
-        
-        if (isset($data['features'])) {
-            $update_data['features'] = is_array($data['features']) 
-                ? wp_json_encode($data['features']) 
-                : $data['features'];
-        }
-        
-        if (isset($data['sort_order'])) {
-            $update_data['sort_order'] = intval($data['sort_order']);
-        }
-        
-        if (isset($data['is_active'])) {
-            $update_data['is_active'] = intval($data['is_active']);
-        }
-        
-        if (empty($update_data)) {
-            return new WP_Error('no_data', 'Žádná data k aktualizaci.');
-        }
-        
-        $result = $wpdb->update(
+        $result = $this->db->update(
             $this->table_name,
             $update_data,
-            array('id' => $id)
+            ['id' => $id]
         );
         
         if ($result === false) {
-            return new WP_Error('db_error', 'Chyba při aktualizaci typu účtu: ' . $wpdb->last_error);
+            return new WP_Error('db_error', 'Failed to update account type');
         }
         
         return true;
     }
     
-    /**
-     * Smazat typ účtu
-     * 
-     * @param int $id ID typu účtu
-     * @return bool|WP_Error
-     */
     public function delete($id) {
-        global $wpdb;
-        
-        $type = $this->get_by_id($id);
-        if (!$type) {
-            return new WP_Error('not_found', 'Typ účtu nenalezen.');
-        }
-        
-        $result = $wpdb->delete($this->table_name, array('id' => $id));
+        $result = $this->db->delete($this->table_name, ['id' => $id]);
         
         if ($result === false) {
-            return new WP_Error('db_error', 'Chyba při mazání typu účtu: ' . $wpdb->last_error);
+            return new WP_Error('db_error', 'Failed to delete account type');
         }
         
         return true;
     }
     
-    /**
-     * Validace dat
-     * 
-     * @param array    $data Data k validaci
-     * @param int|null $id   ID pro update (kontrola duplicity)
-     * @return bool|WP_Error
-     */
-    private function validate($data, $id = null) {
+    protected function validate($data, $id = null) {
+        $errors = new WP_Error();
+        
         if (empty($data['name'])) {
-            return new WP_Error('name_required', 'Název typu účtu je povinný.');
+            $errors->add('name', 'Name is required');
+        } elseif (strlen($data['name']) > 50) {
+            $errors->add('name', 'Name cannot exceed 50 characters');
         }
         
         if (empty($data['display_name'])) {
-            return new WP_Error('display_name_required', 'Zobrazovaný název je povinný.');
+            $errors->add('display_name', 'Display name is required');
+        } elseif (strlen($data['display_name']) > 100) {
+            $errors->add('display_name', 'Display name cannot exceed 100 characters');
         }
         
-        if (!empty($data['color']) && !preg_match('/^#[0-9A-Fa-f]{6}$/', $data['color'])) {
-            return new WP_Error('color_invalid', 'Neplatný formát barvy.');
+        if (empty($data['color'])) {
+            $data['color'] = '#6b7280';
+        } elseif (!preg_match('/^#[0-9A-Fa-f]{6}$/', $data['color'])) {
+            $errors->add('color', 'Invalid color format');
         }
         
-        global $wpdb;
-        $name = sanitize_text_field($data['name']);
-        
-        $query = $wpdb->prepare(
-            "SELECT id FROM {$this->table_name} WHERE name = %s",
-            $name
-        );
-        
-        if ($id) {
-            $query .= $wpdb->prepare(" AND id != %d", $id);
+        if (!isset($data['price'])) {
+            $data['price'] = 0.00;
+        } elseif (!is_numeric($data['price']) || $data['price'] < 0) {
+            $errors->add('price', 'Price must be a positive number');
         }
         
-        $existing = $wpdb->get_var($query);
-        
-        if ($existing) {
-            return new WP_Error('name_exists', 'Typ účtu s tímto názvem již existuje.');
+        if (!isset($data['sort_order'])) {
+            $data['sort_order'] = 0;
+        } elseif (!is_numeric($data['sort_order'])) {
+            $errors->add('sort_order', 'Sort order must be a number');
         }
         
-        return true;
+        if (!isset($data['is_active'])) {
+            $data['is_active'] = 1;
+        } else {
+            $data['is_active'] = (int) (bool) $data['is_active'];
+        }
+        
+        if (!empty($data['features']) && !is_string($data['features'])) {
+            $data['features'] = json_encode($data['features']);
+        }
+        
+        if ($errors->has_errors()) {
+            return $errors;
+        }
+        
+        return $data;
+    }
+    
+    private function sanitize_orderby($orderby) {
+        $allowed = ['id', 'name', 'display_name', 'price', 'sort_order', 'is_active', 'created_at'];
+        return in_array($orderby, $allowed) ? $orderby : 'sort_order';
     }
 }
