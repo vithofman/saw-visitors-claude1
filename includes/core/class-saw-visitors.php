@@ -105,8 +105,9 @@ class SAW_Visitors {
     /**
      * Inicializace controllerů
      * 
-     * Načítá pouze Customers controller - ostatní se inicializují na požádání
+     * Načítá pouze Customers controller - ostatní se inicializují na požádání v routeru
      * Content controller vyžaduje customer_id, takže se vytváří až v routeru
+     * Account Types controller se inicializuje lazy v routeru (má závislosti)
      * 
      * @return void
      */
@@ -125,8 +126,8 @@ class SAW_Visitors {
             error_log('SAW Visitors ERROR: Customers Controller not found at: ' . $customers_controller_file);
         }
         
-        // Content controller má povinný parametr $customer_id v konstruktoru,
-        // takže se inicializuje až v routeru když známe customer context
+        // Account Types controller - LAZY LOADING v routeru (má závislosti na model-base)
+        // Content controller - LAZY LOADING v routeru (má povinný parametr $customer_id)
     }
     
     /**
@@ -185,6 +186,7 @@ class SAW_Visitors {
                 <ul style="list-style: disc; margin-left: 20px;">
                     <li><strong>Admin:</strong> <a href="<?php echo home_url('/admin/'); ?>" target="_blank"><?php echo home_url('/admin/'); ?></a></li>
                     <li><strong>Správa zákazníků:</strong> <a href="<?php echo home_url('/admin/settings/customers/'); ?>" target="_blank"><?php echo home_url('/admin/settings/customers/'); ?></a></li>
+                    <li><strong>Typy účtů:</strong> <a href="<?php echo home_url('/admin/settings/account-types/'); ?>" target="_blank"><?php echo home_url('/admin/settings/account-types/'); ?></a></li>
                     <li><strong>Manager:</strong> <a href="<?php echo home_url('/manager/'); ?>" target="_blank"><?php echo home_url('/manager/'); ?></a></li>
                     <li><strong>Terminal:</strong> <a href="<?php echo home_url('/terminal/'); ?>" target="_blank"><?php echo home_url('/terminal/'); ?></a></li>
                 </ul>
@@ -213,6 +215,7 @@ class SAW_Visitors {
                     <li>Multi-tenant: ✔</li>
                     <li>Frontend admin: ✔</li>
                     <li>Customers management: ✔</li>
+                    <li>Account Types management: ✔</li>
                 </ul>
             </div>
         </div>
@@ -300,6 +303,17 @@ class SAW_Visitors {
                 );
             }
         }
+        
+        if ($this->is_account_types_page($route, $path)) {
+            if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/css/pages/saw-account-types.css')) {
+                wp_enqueue_style(
+                    $this->plugin_name . '-account-types',
+                    SAW_VISITORS_PLUGIN_URL . 'assets/css/pages/saw-account-types.css',
+                    array($this->plugin_name . '-public', $this->plugin_name . '-tables'),
+                    $this->version
+                );
+            }
+        }
     }
     
     /**
@@ -321,6 +335,28 @@ class SAW_Visitors {
         return (
             strpos($path, 'settings/customers') === 0 ||
             strpos($path, 'customers') === 0
+        );
+    }
+    
+    /**
+     * Detekce account types stránky
+     * 
+     * @param string $route Route
+     * @param string $path  Path
+     * @return bool
+     */
+    private function is_account_types_page($route, $path) {
+        if ($route !== 'admin') {
+            return false;
+        }
+        
+        if (empty($path)) {
+            return false;
+        }
+        
+        return (
+            strpos($path, 'settings/account-types') === 0 ||
+            strpos($path, 'account-types') === 0
         );
     }
     

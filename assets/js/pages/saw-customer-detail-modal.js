@@ -1,8 +1,14 @@
 /**
  * SAW Customer Detail Modal - Tab System
  * 
+ * ✨ ENHANCED v4.7.5: SPA Navigation Support
+ * - Exports CustomerModal to window for reinitialization
+ * - Listens to 'saw:scripts-reinitialized' event
+ * - Fixes modal not working after AJAX navigation
+ * - Prevents duplicate event bindings with destroy() method
+ * 
  * @package SAW_Visitors
- * @version 4.7.4
+ * @version 4.7.5
  */
 
 (function($) {
@@ -11,7 +17,15 @@
     const CustomerModal = {
         $modal: null,
         currentCustomerId: null,
+        eventsInitialized: false, // ✨ Flag pro prevenci duplicitních eventů
         
+        /**
+         * Initialize modal
+         * 
+         * Volá se:
+         * 1. Při prvním načtení stránky (document.ready)
+         * 2. Po AJAX načtení (saw:scripts-reinitialized event)
+         */
         init() {
             console.log('🎯 Customer Modal: Initializing...');
             
@@ -27,20 +41,39 @@
                 return;
             }
             
+            // ✨ NOVÉ: Unbind předchozí eventy aby se nepřidávaly duplicitně
+            if (this.eventsInitialized) {
+                console.log('  ↳ Destroying previous event bindings...');
+                this.destroy();
+            }
+            
             this.bindEvents();
+            this.eventsInitialized = true;
+            
             console.log('✅ Customer Modal initialized');
         },
         
+        /**
+         * Bind event handlers
+         * 
+         * DŮLEŽITÉ: Používáme event delegation přes $(document).on()
+         * s namespace '.customerModal' pro snadné unbinding
+         */
         bindEvents() {
-            $(document).on('click', '.saw-customer-row', (e) => {
+            // ✨ Row click - otevření modalu
+            // Event delegation funguje i pro nově načtené řádky po AJAX
+            $(document).on('click.customerModal', '.saw-customer-row', (e) => {
+                // Ignore clicks on action buttons
                 if ($(e.target).closest('.saw-actions').length > 0) {
                     return;
                 }
                 
+                // Ignore direct link clicks
                 if ($(e.target).is('a') || $(e.target).closest('a').length > 0) {
                     return;
                 }
                 
+                // Ignore copy email button
                 if ($(e.target).hasClass('copy-email-btn') || $(e.target).closest('.copy-email-btn').length > 0) {
                     return;
                 }
@@ -49,48 +82,77 @@
                 const customerId = $nameElement.data('customer-id');
                 
                 if (customerId) {
+                    console.log('📋 Opening customer detail:', customerId);
                     this.open(customerId);
                 }
             });
             
-            $(document).on('click', '#saw-modal-close, #saw-modal-mobile-close', () => {
+            // ✨ Close buttons
+            $(document).on('click.customerModal', '#saw-modal-close, #saw-modal-mobile-close', () => {
                 this.close();
             });
             
-            $(document).on('keydown', (e) => {
+            // ✨ ESC key
+            $(document).on('keydown.customerModal', (e) => {
                 if (e.key === 'Escape' && this.$modal.is(':visible')) {
                     this.close();
                 }
             });
             
-            this.$modal.on('click', (e) => {
+            // ✨ Overlay click
+            this.$modal.on('click.customerModal', (e) => {
                 if ($(e.target).is('.saw-modal-overlay')) {
                     this.close();
                 }
             });
             
-            $(document).on('click', '.saw-modal-tab', (e) => {
+            // ✨ Tab switching
+            $(document).on('click.customerModal', '.saw-modal-tab', (e) => {
                 const tabId = $(e.currentTarget).data('tab');
                 this.switchTab(tabId);
             });
             
-            $(document).on('click', '#saw-modal-edit, #saw-modal-mobile-edit', () => {
+            // ✨ Edit button
+            $(document).on('click.customerModal', '#saw-modal-edit, #saw-modal-mobile-edit', () => {
                 if (this.currentCustomerId && sawCustomerModal.editUrl) {
                     const editUrl = sawCustomerModal.editUrl.replace('{id}', this.currentCustomerId);
                     window.location.href = editUrl;
                 }
             });
             
-            $(document).on('click', '#saw-modal-delete, #saw-modal-mobile-delete', () => {
+            // ✨ Delete button
+            $(document).on('click.customerModal', '#saw-modal-delete, #saw-modal-mobile-delete', () => {
                 this.handleDelete();
             });
             
-            $(document).on('click', '.copy-btn', (e) => {
+            // ✨ Copy buttons
+            $(document).on('click.customerModal', '.copy-btn', (e) => {
                 const type = $(e.currentTarget).data('copy');
                 this.copyToClipboard(type);
             });
+            
+            console.log('  ↳ Events bound with namespace .customerModal');
         },
         
+        /**
+         * ✨ NOVÉ: Destroy method - unbind all events
+         * 
+         * Zabraňuje duplicitním event handlerům při reinicializaci
+         */
+        destroy() {
+            // Unbind všechny eventy s namespace .customerModal
+            $(document).off('.customerModal');
+            
+            if (this.$modal) {
+                this.$modal.off('.customerModal');
+            }
+            
+            console.log('  ↳ Previous events destroyed');
+        },
+        
+        /**
+         * Open modal and load customer data
+         */
         open(customerId) {
             console.log('📂 Opening modal for customer:', customerId);
             
@@ -102,6 +164,9 @@
             this.loadCustomerData(customerId);
         },
         
+        /**
+         * Close modal
+         */
         close() {
             console.log('🚪 Closing modal');
             
@@ -113,6 +178,9 @@
             }, 200);
         },
         
+        /**
+         * Reset modal state
+         */
         reset() {
             this.currentCustomerId = null;
             $('#saw-modal-loading').show();
@@ -121,6 +189,9 @@
             $('.saw-modal-tab').first().trigger('click');
         },
         
+        /**
+         * Switch between tabs
+         */
         switchTab(tabId) {
             $('.saw-modal-tab').removeClass('active');
             $('.saw-modal-tab[data-tab="' + tabId + '"]').addClass('active');
@@ -129,6 +200,9 @@
             $('#saw-tab-' + tabId).addClass('active');
         },
         
+        /**
+         * Load customer data via AJAX
+         */
         loadCustomerData(customerId) {
             $.ajax({
                 url: sawCustomerModal.ajaxurl,
@@ -153,12 +227,17 @@
             });
         },
         
+        /**
+         * Render customer data in modal
+         */
         renderCustomer(customer) {
             console.log('🎨 Rendering customer:', customer);
             
+            // Header
             $('#saw-modal-title, #saw-modal-mobile-title').text(customer.name);
             $('#saw-modal-ico').text(customer.ico ? 'IČO: ' + customer.ico : '');
             
+            // Logo
             if (customer.logo_url_full) {
                 $('#saw-modal-logo').show();
                 $('#saw-modal-logo-img').attr('src', customer.logo_url_full);
@@ -166,21 +245,27 @@
                 $('#saw-modal-logo').hide();
             }
             
+            // Brand color
             if (customer.primary_color) {
                 this.applyBrandColor(customer.primary_color);
             }
             
+            // Render all tabs
             this.renderBasicInfo(customer);
             this.renderAddresses(customer);
             this.renderContact(customer);
             this.renderBusiness(customer);
             this.renderSystem(customer);
             
+            // Show content
             $('#saw-modal-loading').hide();
             $('#saw-modal-content').show();
             $('#saw-modal-footer').show();
         },
         
+        /**
+         * Render Basic Info tab
+         */
         renderBasicInfo(customer) {
             $('#basic-name').text(customer.name);
             $('#basic-ico').text(customer.ico || '—');
@@ -193,6 +278,9 @@
             }
         },
         
+        /**
+         * Render Addresses tab
+         */
         renderAddresses(customer) {
             if (customer.formatted_operational_address) {
                 $('#operational-address').html(
@@ -213,6 +301,9 @@
             }
         },
         
+        /**
+         * Render Contact tab
+         */
         renderContact(customer) {
             let hasContact = false;
             
@@ -259,12 +350,17 @@
             $('#contact-section').toggle(hasContact);
         },
         
+        /**
+         * Render Business tab
+         */
         renderBusiness(customer) {
+            // Status badge
             const statusBadge = $('#business-status-badge');
             statusBadge.removeClass('saw-badge-potential saw-badge-active saw-badge-inactive');
             statusBadge.addClass('saw-badge-' + customer.status);
             statusBadge.text(customer.status_label);
             
+            // Account type
             if (customer.account_type_display_name) {
                 const accountBadge = $('#business-account-type-badge');
                 accountBadge.text(customer.account_type_display_name);
@@ -277,6 +373,7 @@
                 $('#business-account-type-row').hide();
             }
             
+            // Acquisition source
             if (customer.acquisition_source) {
                 $('#business-acquisition-source').text(customer.acquisition_source);
                 $('#business-acquisition-row').show();
@@ -284,6 +381,7 @@
                 $('#business-acquisition-row').hide();
             }
             
+            // Subscription type
             if (customer.subscription_type) {
                 $('#business-subscription-type').text(customer.subscription_type_label);
                 $('#business-subscription-row').show();
@@ -291,6 +389,7 @@
                 $('#business-subscription-row').hide();
             }
             
+            // Last payment
             if (customer.last_payment_date_formatted) {
                 $('#business-last-payment').text(customer.last_payment_date_formatted);
                 $('#business-payment-row').show();
@@ -298,6 +397,7 @@
                 $('#business-payment-row').hide();
             }
             
+            // Notes
             if (customer.notes) {
                 $('#business-notes').text(customer.notes);
                 $('#business-notes-section').show();
@@ -306,6 +406,9 @@
             }
         },
         
+        /**
+         * Render System tab
+         */
         renderSystem(customer) {
             $('#system-primary-color-value').text(customer.primary_color);
             $('#system-primary-color-preview').css('background-color', customer.primary_color);
@@ -321,6 +424,9 @@
             }
         },
         
+        /**
+         * Apply brand color to modal header
+         */
         applyBrandColor(color) {
             const header = $('#saw-modal-header, #saw-modal-mobile-header');
             header.css('background-color', color);
@@ -330,6 +436,9 @@
             header.find('.dashicons').css('color', textColor);
         },
         
+        /**
+         * Calculate contrast color (black or white)
+         */
         getContrastColor(hexColor) {
             const r = parseInt(hexColor.substr(1, 2), 16);
             const g = parseInt(hexColor.substr(3, 2), 16);
@@ -338,6 +447,9 @@
             return brightness > 155 ? '#000000' : '#ffffff';
         },
         
+        /**
+         * Handle customer deletion
+         */
         handleDelete() {
             if (!confirm('Opravdu chcete smazat tohoto zákazníka? Tato akce je nevratná.')) {
                 return;
@@ -367,6 +479,9 @@
             });
         },
         
+        /**
+         * Copy text to clipboard
+         */
         copyToClipboard(type) {
             let text = '';
             
@@ -383,6 +498,7 @@
                     alert('Zkopírováno: ' + text);
                 });
             } else {
+                // Fallback for older browsers
                 const $temp = $('<input>');
                 $('body').append($temp);
                 $temp.val(text).select();
@@ -393,7 +509,28 @@
         }
     };
     
-    $(document).ready(() => {
+    // ✨ NOVÉ: Export do window pro možnost reinicializace
+    // Díky tomuto může SAW Navigation volat window.CustomerModal.init()
+    window.CustomerModal = CustomerModal;
+    
+    /**
+     * Initialize on document ready (první načtení stránky)
+     */
+    $(document).ready(function() {
+        CustomerModal.init();
+    });
+    
+    /**
+     * ✨ NOVÉ: Reinicializace po AJAX načtení
+     * 
+     * Když saw-app-navigation.js načte novou stránku přes AJAX,
+     * vyvolá event 'saw:scripts-reinitialized'.
+     * 
+     * Na tento event nasloucháme a reinicializujeme modal.
+     * Díky destroy() metodě se nepřidávají duplicitní event handlery.
+     */
+    $(document).on('saw:scripts-reinitialized', function() {
+        console.log('🔄 Reinitializing Customer Modal after AJAX...');
         CustomerModal.init();
     });
     

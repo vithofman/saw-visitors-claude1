@@ -8,21 +8,32 @@
 if (!defined('ABSPATH')) {
     exit;
 }
+
+$user = array(
+    'id' => get_current_user_id(),
+    'name' => wp_get_current_user()->display_name,
+    'email' => wp_get_current_user()->user_email,
+    'role' => 'admin',
+);
+
+$customer = array(
+    'id' => 1,
+    'name' => 'Demo Company',
+);
+
+ob_start();
 ?>
 
-<div class="wrap saw-account-types-page">
-    <div class="saw-page-header">
-        <h1 class="saw-page-title">Account Types</h1>
-        <button type="button" class="button button-primary" id="add-account-type-btn">
-            <span class="dashicons dashicons-plus-alt2"></span>
-            Add New Account Type
-        </button>
-    </div>
-
-    <?php $admin_table->render(); ?>
+<div class="saw-page-header">
+    <h1 class="saw-page-title">Account Types</h1>
+    <button type="button" class="button button-primary" id="add-account-type-btn">
+        <span class="dashicons dashicons-plus-alt2"></span>
+        Add New Account Type
+    </button>
 </div>
 
-<!-- Account Type Detail Modal -->
+<?php $admin_table->render(); ?>
+
 <div id="account-type-detail-modal" class="saw-modal" style="display: none;">
     <div class="saw-modal-overlay"></div>
     <div class="saw-modal-container">
@@ -86,7 +97,6 @@ if (!defined('ABSPATH')) {
     </div>
 </div>
 
-<!-- Account Type Form Modal -->
 <div id="account-type-form-modal" class="saw-modal" style="display: none;">
     <div class="saw-modal-overlay"></div>
     <div class="saw-modal-container saw-modal-lg">
@@ -101,3 +111,13 @@ if (!defined('ABSPATH')) {
         </div>
     </div>
 </div>
+
+<?php
+$content = ob_get_clean();
+
+if (class_exists('SAW_App_Layout')) {
+    $layout = new SAW_App_Layout();
+    $layout->render($content, 'Account Types', '', $user, $customer);
+} else {
+    echo $content;
+}

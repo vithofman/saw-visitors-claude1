@@ -277,7 +277,7 @@ class SAW_App_Layout {
                 <?php $this->render_sidebar(); ?>
                 
                 <main class="saw-app-main">
-                    <div class="saw-app-content">
+                    <div id="saw-app-content" class="saw-app-content">
                         <?php echo $content; ?>
                     </div>
                 </main>

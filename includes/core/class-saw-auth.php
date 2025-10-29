@@ -36,6 +36,28 @@ class SAW_Auth {
     }
 
     /**
+     * Check if user has permission (STATIC METHOD)
+     * 
+     * @param string $permission Permission identifier
+     * @return bool
+     */
+    public static function check_permission($permission) {
+        if ($permission === 'manage_account_types') {
+            return current_user_can('manage_options');
+        }
+        
+        if ($permission === 'manage_customers') {
+            return current_user_can('manage_options');
+        }
+        
+        if ($permission === 'manage_settings') {
+            return current_user_can('manage_options');
+        }
+        
+        return false;
+    }
+
+    /**
      * Get current customer ID
      * 
      * For SuperAdmin: from user meta (switchable)

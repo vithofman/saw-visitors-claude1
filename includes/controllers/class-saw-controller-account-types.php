@@ -26,8 +26,8 @@ class SAW_Controller_Account_Types {
     }
     
     public function index() {
-        if (!SAW_Auth::check_permission('manage_account_types')) {
-            wp_die('Unauthorized access');
+        if (!current_user_can('manage_options')) {
+            wp_die('Nemáte oprávnění.', 'Přístup zamítnut', array('response' => 403));
         }
         
         wp_enqueue_style(
@@ -52,23 +52,45 @@ class SAW_Controller_Account_Types {
         
         $admin_table = new SAW_Component_Admin_Table($this->get_table_config());
         
+        ob_start();
         include SAW_VISITORS_PLUGIN_DIR . 'templates/pages/account-types/list.php';
+        $content = ob_get_clean();
+        
+        if (class_exists('SAW_App_Layout')) {
+            $layout = new SAW_App_Layout();
+            $user = $this->get_current_user_data();
+            $customer = $this->get_current_customer_data();
+            $layout->render($content, 'Account Types', 'account-types', $user, $customer);
+        } else {
+            echo $content;
+        }
     }
     
     public function add() {
-        if (!SAW_Auth::check_permission('manage_account_types')) {
-            wp_die('Unauthorized access');
+        if (!current_user_can('manage_options')) {
+            wp_die('Nemáte oprávnění.', 'Přístup zamítnut', array('response' => 403));
         }
         
         $account_type = null;
         $form_action = 'add';
         
+        ob_start();
         include SAW_VISITORS_PLUGIN_DIR . 'templates/pages/account-types/form.php';
+        $content = ob_get_clean();
+        
+        if (class_exists('SAW_App_Layout')) {
+            $layout = new SAW_App_Layout();
+            $user = $this->get_current_user_data();
+            $customer = $this->get_current_customer_data();
+            $layout->render($content, 'New Account Type', 'account-types', $user, $customer);
+        } else {
+            echo $content;
+        }
     }
     
     public function edit($id) {
-        if (!SAW_Auth::check_permission('manage_account_types')) {
-            wp_die('Unauthorized access');
+        if (!current_user_can('manage_options')) {
+            wp_die('Nemáte oprávnění.', 'Přístup zamítnut', array('response' => 403));
         }
         
         $account_type = $this->model->get_by_id($id);
@@ -79,13 +101,24 @@ class SAW_Controller_Account_Types {
         
         $form_action = 'edit';
         
+        ob_start();
         include SAW_VISITORS_PLUGIN_DIR . 'templates/pages/account-types/form.php';
+        $content = ob_get_clean();
+        
+        if (class_exists('SAW_App_Layout')) {
+            $layout = new SAW_App_Layout();
+            $user = $this->get_current_user_data();
+            $customer = $this->get_current_customer_data();
+            $layout->render($content, 'Edit Account Type', 'account-types', $user, $customer);
+        } else {
+            echo $content;
+        }
     }
     
     public function ajax_list() {
         check_ajax_referer('saw_account_types_nonce', 'nonce');
         
-        if (!SAW_Auth::check_permission('manage_account_types')) {
+        if (!current_user_can('manage_options')) {
             wp_send_json_error(['message' => 'Unauthorized access']);
         }
         
@@ -109,7 +142,7 @@ class SAW_Controller_Account_Types {
     public function ajax_save() {
         check_ajax_referer('saw_account_types_nonce', 'nonce');
         
-        if (!SAW_Auth::check_permission('manage_account_types')) {
+        if (!current_user_can('manage_options')) {
             wp_send_json_error(['message' => 'Unauthorized access']);
         }
         
@@ -145,7 +178,7 @@ class SAW_Controller_Account_Types {
     public function ajax_delete() {
         check_ajax_referer('saw_account_types_nonce', 'nonce');
         
-        if (!SAW_Auth::check_permission('manage_account_types')) {
+        if (!current_user_can('manage_options')) {
             wp_send_json_error(['message' => 'Unauthorized access']);
         }
         
@@ -167,7 +200,7 @@ class SAW_Controller_Account_Types {
     public function ajax_bulk_delete() {
         check_ajax_referer('saw_account_types_nonce', 'nonce');
         
-        if (!SAW_Auth::check_permission('manage_account_types')) {
+        if (!current_user_can('manage_options')) {
             wp_send_json_error(['message' => 'Unauthorized access']);
         }
         
@@ -263,5 +296,78 @@ class SAW_Controller_Account_Types {
             'default_orderby' => 'sort_order',
             'default_order' => 'ASC'
         ];
+    }
+    
+    private function get_current_user_data() {
+        if (is_user_logged_in()) {
+            $wp_user = wp_get_current_user();
+            return array(
+                'id' => $wp_user->ID,
+                'name' => $wp_user->display_name,
+                'email' => $wp_user->user_email,
+                'role' => current_user_can('manage_options') ? 'super_admin' : 'admin',
+            );
+        }
+        
+        return array(
+            'id' => 0,
+            'name' => 'Guest',
+            'email' => '',
+            'role' => 'guest',
+        );
+    }
+    
+    private function get_current_customer_data() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        $customer_id = isset($_SESSION['saw_current_customer_id']) ? intval($_SESSION['saw_current_customer_id']) : 0;
+        
+        if (!$customer_id && is_user_logged_in()) {
+            $customer_id = intval(get_user_meta(get_current_user_id(), 'saw_current_customer_id', true));
+        }
+        
+        if ($customer_id > 0) {
+            global $wpdb;
+            $customer = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM {$wpdb->prefix}saw_customers WHERE id = %d",
+                $customer_id
+            ), ARRAY_A);
+            
+            if ($customer) {
+                return array(
+                    'id' => $customer['id'],
+                    'name' => $customer['name'],
+                    'ico' => $customer['ico'] ?? '',
+                    'address' => ($customer['address_street'] ?? '') . ', ' . ($customer['address_city'] ?? ''),
+                    'logo_url' => $customer['logo_url'] ?? '',
+                );
+            }
+        }
+        
+        global $wpdb;
+        $customer = $wpdb->get_row(
+            "SELECT * FROM {$wpdb->prefix}saw_customers ORDER BY id ASC LIMIT 1",
+            ARRAY_A
+        );
+        
+        if ($customer) {
+            return array(
+                'id' => $customer['id'],
+                'name' => $customer['name'],
+                'ico' => $customer['ico'] ?? '',
+                'address' => ($customer['address_street'] ?? '') . ', ' . ($customer['address_city'] ?? ''),
+                'logo_url' => $customer['logo_url'] ?? '',
+            );
+        }
+        
+        return array(
+            'id' => 0,
+            'name' => 'Žádný zákazník',
+            'ico' => '',
+            'address' => '',
+            'logo_url' => '',
+        );
     }
 }
