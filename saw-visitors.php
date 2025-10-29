@@ -10,6 +10,10 @@
  * Requires PHP: 8.1
  */
 
+define( 'SAW_DEBUG', true );
+define( 'WP_DEBUG', true );
+define( 'WP_DEBUG_LOG', true );
+
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 /** Konstanta verze a cesty */

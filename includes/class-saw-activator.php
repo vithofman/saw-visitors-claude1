@@ -72,7 +72,7 @@ class SAW_Activator {
         $prefix = $wpdb->prefix . 'saw_';
         
         // Kontrola, zda už existují zákazníci
-        $customers_count = $wpdb->get_var("SELECT COUNT(*) FROM {$prefix}customers");
+        $customers_count = $wpdb->get_var("SELECT COUNT(*) FROM `{$prefix}customers`");
         
         if ($customers_count > 0) {
             return;
@@ -132,16 +132,24 @@ class SAW_Activator {
      * @return void
      */
     private static function register_and_flush_rewrite_rules() {
-        // Načteme router
-        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-router.php';
+        $router_file = SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-router.php';
+        
+        if (!file_exists($router_file)) {
+            return;
+        }
+        
+        require_once $router_file;
+        
+        if (!class_exists('SAW_Router')) {
+            return;
+        }
+        
         $router = new SAW_Router();
         
-        // Zaregistrujeme routes (normálně se volá přes 'init' hook)
-        $router->register_routes();
+        if (method_exists($router, 'register_routes')) {
+            $router->register_routes();
+        }
         
-        // Query vars se přidají automaticky přes filter 'query_vars' při prvním načtení
-        
-        // Flush rewrite rules - aplikuje všechny naše nové routes
         flush_rewrite_rules();
         
         if (defined('SAW_DEBUG') && SAW_DEBUG) {

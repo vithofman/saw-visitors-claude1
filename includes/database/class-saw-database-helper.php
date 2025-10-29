@@ -17,16 +17,20 @@ class SAW_Database_Helper {
     
     /**
      * Seznam všech tabulek v pořadí závislostí
+     * TOTAL: 33 tables
      * 
      * @return array
      */
     public static function get_tables_order() {
         return array(
+            // Core (5)
             'customers',
             'customer_api_keys',
             'users',
             'training_config',
+            'account_types',
             
+            // POI System (9)
             'beacons',
             'pois',
             'routes',
@@ -37,12 +41,14 @@ class SAW_Database_Helper {
             'poi_risks',
             'poi_additional_info',
             
+            // Multi-tenant Core (5)
             'departments',
             'user_departments',
             'department_materials',
             'department_documents',
             'contact_persons',
             
+            // Visitor Management (8)
             'companies',
             'invitations',
             'invitation_departments',
@@ -52,6 +58,7 @@ class SAW_Database_Helper {
             'materials',
             'documents',
             
+            // System (6)
             'audit_log',
             'error_log',
             'sessions',
@@ -96,19 +103,34 @@ class SAW_Database_Helper {
         
         $languages = array();
         
-        $poi_langs = $wpdb->get_col($wpdb->prepare(
-            "SELECT DISTINCT language FROM " . self::get_table_name('poi_content') . " WHERE customer_id = %d",
-            $customer_id
-        ));
+        // POI content languages
+        if (self::table_exists('poi_content')) {
+            $poi_langs = $wpdb->get_col($wpdb->prepare(
+                "SELECT DISTINCT language FROM " . self::get_table_name('poi_content') . " WHERE customer_id = %d",
+                $customer_id
+            ));
+            $languages = array_merge($languages, $poi_langs);
+        }
         
-        $mat_langs = $wpdb->get_col($wpdb->prepare(
-            "SELECT DISTINCT language FROM " . self::get_table_name('materials') . " WHERE customer_id = %d",
-            $customer_id
-        ));
+        // Materials languages
+        if (self::table_exists('materials')) {
+            $mat_langs = $wpdb->get_col($wpdb->prepare(
+                "SELECT DISTINCT language FROM " . self::get_table_name('materials') . " WHERE customer_id = %d",
+                $customer_id
+            ));
+            $languages = array_merge($languages, $mat_langs);
+        }
         
-        $languages = array_unique(array_merge($poi_langs, $mat_langs));
+        // Department materials languages
+        if (self::table_exists('department_materials')) {
+            $dept_mat_langs = $wpdb->get_col($wpdb->prepare(
+                "SELECT DISTINCT language FROM " . self::get_table_name('department_materials') . " WHERE customer_id = %d",
+                $customer_id
+            ));
+            $languages = array_merge($languages, $dept_mat_langs);
+        }
         
-        return $languages;
+        return array_unique(array_filter($languages));
     }
     
     /**
@@ -303,6 +325,96 @@ class SAW_Database_Helper {
     }
     
     /**
+     * Získání počtu záznamů v tabulce
+     * 
+     * @param string $table_name  Název tabulky
+     * @param int    $customer_id Optional customer filter
+     * @return int
+     */
+    public static function get_table_count($table_name, $customer_id = null) {
+        global $wpdb;
+        
+        $full_table_name = self::get_table_name($table_name);
+        
+        if ($customer_id && self::has_customer_id_column($table_name)) {
+            $count = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM `{$full_table_name}` WHERE customer_id = %d",
+                $customer_id
+            ));
+        } else {
+            $count = $wpdb->get_var("SELECT COUNT(*) FROM `{$full_table_name}`");
+        }
+        
+        return (int) $count;
+    }
+    
+    /**
+     * Kontrola, zda tabulka má sloupec customer_id
+     * 
+     * @param string $table_name Název tabulky
+     * @return bool
+     */
+    public static function has_customer_id_column($table_name) {
+        global $wpdb;
+        
+        $full_table_name = self::get_table_name($table_name);
+        
+        $columns = $wpdb->get_col($wpdb->prepare(
+            "SHOW COLUMNS FROM `{$full_table_name}` LIKE %s",
+            'customer_id'
+        ));
+        
+        return !empty($columns);
+    }
+    
+    /**
+     * Bezpečné získání záznamu s customer kontrolou
+     * 
+     * @param string $table_name  Název tabulky
+     * @param int    $id          ID záznamu
+     * @param int    $customer_id Customer ID
+     * @return object|null
+     */
+    public static function get_by_id($table_name, $id, $customer_id) {
+        global $wpdb;
+        
+        return $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM " . self::get_table_name($table_name) . " 
+            WHERE id = %d AND customer_id = %d",
+            $id,
+            $customer_id
+        ));
+    }
+    
+    /**
+     * Získání všech záznamů pro zákazníka
+     * 
+     * @param string $table_name  Název tabulky
+     * @param int    $customer_id Customer ID
+     * @param string $order_by    ORDER BY clause (např. 'created_at DESC')
+     * @param int    $limit       Limit počtu záznamů
+     * @return array
+     */
+    public static function get_all_by_customer($table_name, $customer_id, $order_by = 'id ASC', $limit = null) {
+        global $wpdb;
+        
+        $sql = $wpdb->prepare(
+            "SELECT * FROM " . self::get_table_name($table_name) . " WHERE customer_id = %d",
+            $customer_id
+        );
+        
+        if ($order_by) {
+            $sql .= " ORDER BY {$order_by}";
+        }
+        
+        if ($limit) {
+            $sql .= $wpdb->prepare(" LIMIT %d", $limit);
+        }
+        
+        return $wpdb->get_results($sql);
+    }
+    
+    /**
      * Debug: Výpis struktury tabulky
      * 
      * @param string $table_name Název tabulky
@@ -311,5 +423,30 @@ class SAW_Database_Helper {
     public static function describe_table($table_name) {
         global $wpdb;
         return $wpdb->get_results("DESCRIBE " . self::get_table_name($table_name));
+    }
+    
+    /**
+     * Získání statistik databáze
+     * 
+     * @param int $customer_id Optional customer filter
+     * @return array
+     */
+    public static function get_database_stats($customer_id = null) {
+        $stats = array(
+            'total_tables' => 0,
+            'tables' => array(),
+        );
+        
+        foreach (self::get_tables_order() as $table_name) {
+            if (self::table_exists($table_name)) {
+                $stats['total_tables']++;
+                $stats['tables'][$table_name] = array(
+                    'count' => self::get_table_count($table_name, $customer_id),
+                    'has_customer_id' => self::has_customer_id_column($table_name),
+                );
+            }
+        }
+        
+        return $stats;
     }
 }

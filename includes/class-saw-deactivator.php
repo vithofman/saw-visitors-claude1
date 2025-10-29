@@ -38,8 +38,13 @@ class SAW_Deactivator {
         
         // 2. Cleanup sessions (if table exists)
         $sessions_table = $prefix . 'sessions';
-        if ($wpdb->get_var("SHOW TABLES LIKE '{$sessions_table}'") === $sessions_table) {
-            $wpdb->query("TRUNCATE TABLE {$sessions_table}");
+        $table_exists = $wpdb->get_var($wpdb->prepare(
+            "SHOW TABLES LIKE %s",
+            $sessions_table
+        ));
+        
+        if ($table_exists === $sessions_table) {
+            $wpdb->query("TRUNCATE TABLE `{$sessions_table}`");
         }
         
         // 3. Clear transients
@@ -58,7 +63,9 @@ class SAW_Deactivator {
         }
         
         // 5. Log deactivation
-        error_log('[SAW Visitors] Plugin deactivated');
+        if (defined('WP_DEBUG_LOG') && WP_DEBUG_LOG) {
+            error_log('[SAW Visitors] Plugin deactivated');
+        }
         
         // NOTE:
         // Tables and data are NOT deleted - user may want to reactivate
