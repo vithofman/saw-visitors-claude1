@@ -6,7 +6,7 @@
  * Globální reusable komponenta kopírující design a funkcionalitu z původního customers-list.php
  * 
  * @package SAW_Visitors
- * @version 4.6.1
+ * @version 4.6.1 ENHANCED - Modal detail support
  * @since 4.6.1
  */
 
@@ -92,6 +92,9 @@ class SAW_Component_Admin_Table {
             // ✨ NOVÉ: Callback funkce pro custom styling řádků
             'row_class_callback' => null,
             'row_style_callback' => null,
+            
+            // ✨ NOVÉ: Detail modal
+            'enable_detail_modal' => false,
         );
         
         return wp_parse_args($config, $defaults);
@@ -109,6 +112,11 @@ class SAW_Component_Admin_Table {
         $this->enqueue_assets();
         
         include SAW_VISITORS_PLUGIN_DIR . 'templates/components/admin-table/wrapper.php';
+        
+        // ✨ NOVÉ: Pokud je zapnutý modal detail, načti modal template
+        if ($config['enable_detail_modal']) {
+            $this->render_modal_template();
+        }
     }
     
     /**
@@ -117,6 +125,7 @@ class SAW_Component_Admin_Table {
      * Načítá globální CSS/JS pro admin table komponentu
      */
     private function enqueue_assets() {
+        // Základní admin table CSS
         wp_enqueue_style(
             'saw-admin-table',
             SAW_VISITORS_PLUGIN_URL . 'assets/css/global/saw-admin-table.css',
@@ -124,6 +133,7 @@ class SAW_Component_Admin_Table {
             SAW_VISITORS_VERSION
         );
         
+        // Základní admin table JS
         wp_enqueue_script(
             'saw-admin-table',
             SAW_VISITORS_PLUGIN_URL . 'assets/js/global/saw-admin-table.js',
@@ -131,6 +141,50 @@ class SAW_Component_Admin_Table {
             SAW_VISITORS_VERSION,
             true
         );
+        
+        // ✨ NOVÉ: Pokud je zapnutý modal, načti modal assets
+        if ($this->config['enable_detail_modal']) {
+            wp_enqueue_style(
+                'saw-customer-detail-modal',
+                SAW_VISITORS_PLUGIN_URL . 'assets/css/global/saw-customer-detail-modal.css',
+                array('saw-admin-table'),
+                SAW_VISITORS_VERSION
+            );
+            
+            wp_enqueue_script(
+                'saw-customer-detail-modal',
+                SAW_VISITORS_PLUGIN_URL . 'assets/js/global/saw-customer-detail-modal.js',
+                array('jquery', 'saw-admin-table'),
+                SAW_VISITORS_VERSION,
+                true
+            );
+            
+            // Localize data pro modal JS
+            wp_localize_script('saw-customer-detail-modal', 'sawCustomerModal', array(
+                'ajaxurl' => admin_url('admin-ajax.php'),
+                'nonce'   => wp_create_nonce('saw_customer_modal_nonce'),
+                'entity'  => $this->entity,
+                'editUrl' => $this->config['edit_url'] ?? '',
+            ));
+        }
+    }
+    
+    /**
+     * ✨ NOVÉ: Render modal template
+     */
+    private function render_modal_template() {
+        $entity = $this->entity;
+        $edit_url = $this->config['edit_url'] ?? '';
+        
+        // Načti modal template podle entity
+        $modal_template = SAW_VISITORS_PLUGIN_DIR . 'templates/pages/' . $entity . '/detail-modal.php';
+        
+        if (file_exists($modal_template)) {
+            include $modal_template;
+        } else {
+            // Fallback na generický modal
+            include SAW_VISITORS_PLUGIN_DIR . 'templates/components/admin-table/detail-modal-generic.php';
+        }
     }
     
     /**

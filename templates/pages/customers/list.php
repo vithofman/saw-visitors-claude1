@@ -3,7 +3,7 @@
  * Template: Seznam zákazníků
  * 
  * @package SAW_Visitors
- * @version 4.6.1 FIXED - Sorting now works
+ * @version 4.6.1 ENHANCED - Modal detail view
  */
 
 if (!defined('ABSPATH')) {
@@ -87,14 +87,17 @@ $admin_table = new SAW_Component_Admin_Table('customers', array(
     'create_url'   => home_url('/admin/settings/customers/new/'),
     'edit_url'     => home_url('/admin/settings/customers/edit/{id}/'),
     
-    // ✅ KRITICKÁ OPRAVA: Vypnuto AJAX pro sorting
-    'ajax_search'  => false,  // ✅ ZMĚNĚNO z true na false!
+    // ✅ AJAX vypnuto pro sorting
+    'ajax_search'  => false,
     'ajax_action'  => 'saw_search_customers',
     
     'message'      => $message,
     'message_type' => $message_type,
     
-    // ✨ NOVÉ: Callback funkce pro barevné pozadí řádků
+    // ✨ NOVÉ: Povolení detail modal
+    'enable_detail_modal' => true,
+    
+    // ✨ Callback funkce pro barevné pozadí řádků
     'row_class_callback' => function($row) {
         return 'saw-customer-row';
     },

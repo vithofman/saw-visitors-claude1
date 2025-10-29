@@ -1232,3 +1232,80 @@
     opacity: 1;
     color: #2563eb;
 }
+/* ===================================================================
+   ✨ NOVÉ: KLIKATELNÉ ŘÁDKY + MODAL
+   =================================================================== */
+
+/* Kompaktnější řádky tabulky */
+.saw-table tbody tr {
+    height: 48px; /* Sníženo z původních ~60px */
+}
+
+.saw-table tbody td {
+    padding: 8px 12px; /* Sníženo z původních 12px 16px */
+    vertical-align: middle;
+}
+
+/* Klikatelný řádek s hover efektem */
+.saw-row-clickable {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.saw-row-clickable:hover {
+    background-color: rgba(37, 99, 235, 0.05) !important;
+    transform: translateX(2px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Vizuální indikátor že řádek je klikatelný */
+.saw-row-clickable::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 0;
+    background: #2563eb;
+    transition: height 0.2s ease;
+    border-radius: 0 2px 2px 0;
+}
+
+.saw-row-clickable:hover::after {
+    height: 70%;
+}
+
+/* Action buttony v řádku - zabrání propagaci kliknutí */
+.saw-action-buttons {
+    position: relative;
+    z-index: 10;
+}
+
+.saw-action-edit,
+.saw-action-delete {
+    position: relative;
+    z-index: 11;
+}
+
+/* Logo v kompaktnější výšce */
+.saw-table-logo {
+    max-height: 32px; /* Sníženo z 40px */
+    width: auto;
+}
+
+/* Barevný indikátor také kompaktnější */
+.saw-color-indicator {
+    width: 24px; /* Sníženo z 30px */
+    height: 24px;
+    display: inline-block;
+    border-radius: 6px;
+    border: 2px solid #e5e7eb;
+    transition: all 0.2s ease;
+}
+
+.saw-row-clickable:hover .saw-color-indicator {
+    transform: scale(1.1);
+    border-color: #2563eb;
+}

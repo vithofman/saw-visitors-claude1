@@ -23,6 +23,9 @@ class SAW_Controller_Customers {
         add_action('wp_ajax_saw_admin_table_delete', array($this, 'ajax_delete_customer'));
         add_action('wp_ajax_saw_get_customers_for_switcher', array($this, 'ajax_get_customers_for_switcher'));
         add_action('wp_ajax_saw_switch_customer', array($this, 'ajax_switch_customer'));
+        
+        // ✨ NOVÉ: AJAX handler pro customer detail modal
+        add_action('wp_ajax_saw_get_customer_detail', array($this, 'ajax_get_customer_detail'));
     }
     
     private function enqueue_customers_assets() {
@@ -544,6 +547,49 @@ class SAW_Controller_Customers {
                 'session_saved' => isset($_SESSION['saw_current_customer_id']),
                 'user_meta_saved' => is_user_logged_in(),
             ),
+        ));
+    }
+    
+    /**
+     * ✨ NOVÉ: AJAX handler pro získání detailu zákazníka pro modal
+     * 
+     * @return void
+     */
+    public function ajax_get_customer_detail() {
+        check_ajax_referer('saw_customer_modal_nonce', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Nedostatečná oprávnění.'));
+        }
+        
+        $customer_id = isset($_POST['customer_id']) ? intval($_POST['customer_id']) : 0;
+        
+        if (!$customer_id) {
+            wp_send_json_error(array('message' => 'Neplatné ID zákazníka.'));
+        }
+        
+        $customer = $this->customer_model->get_by_id($customer_id);
+        
+        if (!$customer) {
+            wp_send_json_error(array('message' => 'Zákazník nenalezen.'));
+        }
+        
+        // Formátování dat pro frontend
+        $formatted_customer = array(
+            'id' => $customer['id'],
+            'name' => $customer['name'],
+            'ico' => $customer['ico'] ?? '',
+            'address' => $customer['address'] ?? '',
+            'notes' => $customer['notes'] ?? '',
+            'primary_color' => $customer['primary_color'] ?? '#1e40af',
+            'logo_url' => $customer['logo_url'] ?? '',
+            'logo_url_full' => $customer['logo_url_full'] ?? '',
+            'created_at' => $customer['created_at'] ?? '',
+            'updated_at' => $customer['updated_at'] ?? '',
+        );
+        
+        wp_send_json_success(array(
+            'customer' => $formatted_customer,
         ));
     }
 }

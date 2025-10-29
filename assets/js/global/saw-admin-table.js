@@ -24,6 +24,7 @@
             this.bindDeleteButtons();
             this.bindAlertClose();
             
+            this.bindClickableRows(); // ✨ NOVÉ: Klikatelné řádky pro modal
             console.log('SAW Admin Table: Initialized');
         },
         
@@ -220,6 +221,35 @@
                 $(this).closest('.saw-alert').fadeOut(300);
             });
         }
+        
+        /**
+         * ✨ NOVÉ: Bind klikatelné řádky pro otevření modalu
+         */
+        bindClickableRows: function() {
+            $(document).on('click', '.saw-row-clickable', function(e) {
+                // Ignoruj kliknutí na action buttony
+                if ($(e.target).closest('.saw-action-buttons').length > 0) {
+                    return;
+                }
+                
+                const $row = $(this);
+                const entity = $row.data('entity');
+                const customerId = $row.data('id');
+                
+                console.log('SAW Admin Table: Row clicked', {
+                    entity: entity,
+                    id: customerId
+                });
+                
+                // Trigger event pro modal (bude zpracován v saw-customer-detail-modal.js)
+                $(document).trigger('saw:table:row-click', {
+                    entity: entity,
+                    id: customerId,
+                    rowData: $row.data('row-data')
+                });
+            });
+        }
+    };
     };
     
     $(document).ready(function() {
