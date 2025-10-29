@@ -23,7 +23,24 @@
     gap: 16px;
 }
 
-.saw-logo svg {
+.saw-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+}
+
+.saw-logo-image {
+    max-width: 40px;
+    max-height: 40px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    display: block;
+}
+
+.saw-logo-fallback {
     display: block;
 }
 
@@ -56,8 +73,14 @@
     border: 1px solid #d1d5db;
     border-radius: 6px;
     font-size: 13px;
-    color: #6b7280;
-    cursor: not-allowed;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.saw-customer-switcher-button:hover {
+    background: #e5e7eb;
+    border-color: #9ca3af;
 }
 
 .saw-user-menu {

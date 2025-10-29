@@ -60,14 +60,19 @@ class SAW_App_Header {
     }
     
     public function render() {
+        $logo_url = !empty($this->customer['logo_url_full']) ? $this->customer['logo_url_full'] : '';
         ?>
         <header class="saw-app-header">
             <div class="saw-header-left">
                 <div class="saw-logo">
-                    <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-                        <rect width="40" height="40" rx="8" fill="#2563eb"/>
-                        <text x="20" y="28" font-size="20" font-weight="bold" fill="white" text-anchor="middle">SAW</text>
-                    </svg>
+                    <?php if ($logo_url): ?>
+                        <img src="<?php echo esc_url($logo_url); ?>" alt="<?php echo esc_attr($this->customer['name']); ?>" class="saw-logo-image">
+                    <?php else: ?>
+                        <svg width="40" height="40" viewBox="0 0 40 40" fill="none" class="saw-logo-fallback">
+                            <rect width="40" height="40" rx="8" fill="#2563eb"/>
+                            <text x="20" y="28" font-size="20" font-weight="bold" fill="white" text-anchor="middle">SAW</text>
+                        </svg>
+                    <?php endif; ?>
                 </div>
                 
                 <div class="saw-customer-info">
