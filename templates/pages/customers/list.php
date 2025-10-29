@@ -3,7 +3,7 @@
  * Template: Seznam zákazníků
  * 
  * @package SAW_Visitors
- * @version 4.7.0
+ * @version 4.7.4
  */
 
 if (!defined('ABSPATH')) {
@@ -72,10 +72,12 @@ $admin_table = new SAW_Component_Admin_Table('customers', array(
             'sortable' => true,
             'type'     => 'custom',
             'render'   => function($value, $row) {
-                $html = '<strong style="font-size: 14px;">' . esc_html($value) . '</strong>';
+                $html = '<div class="saw-customer-name" data-customer-id="' . esc_attr($row['id']) . '" style="cursor: pointer;">';
+                $html .= '<strong style="font-size: 14px; color: #2563eb;">' . esc_html($value) . '</strong>';
                 if (!empty($row['ico'])) {
                     $html .= '<br><small style="color: #646970;">IČO: ' . esc_html($row['ico']) . '</small>';
                 }
+                $html .= '</div>';
                 return $html;
             },
         ),
@@ -120,7 +122,7 @@ $admin_table = new SAW_Component_Admin_Table('customers', array(
                 if (empty($value)) {
                     return '<span style="color: #9ca3af;">—</span>';
                 }
-                return '<a href="mailto:' . esc_attr($value) . '" style="color: #0073aa; text-decoration: none;">' . esc_html($value) . '</a> <button type="button" class="copy-email-btn" data-email="' . esc_attr($value) . '" style="background: transparent; border: none; cursor: pointer; color: #646970; padding: 0; margin-left: 4px;" title="Zkopírovat email"><span class="dashicons dashicons-admin-page" style="font-size: 14px;"></span></button>';
+                return '<a href="mailto:' . esc_attr($value) . '" style="color: #0073aa; text-decoration: none;" onclick="event.stopPropagation();">' . esc_html($value) . '</a> <button type="button" class="copy-email-btn" data-email="' . esc_attr($value) . '" style="background: transparent; border: none; cursor: pointer; color: #646970; padding: 0; margin-left: 4px;" title="Zkopírovat email" onclick="event.stopPropagation();"><span class="dashicons dashicons-admin-page" style="font-size: 14px;"></span></button>';
             },
         ),
         'address_city' => array(
@@ -186,6 +188,11 @@ $admin_table = new SAW_Component_Admin_Table('customers', array(
 $admin_table->render();
 ?>
 
+<?php
+// Načtení detail modalu
+include SAW_VISITORS_PLUGIN_DIR . 'templates/pages/customers/detail-modal.php';
+?>
+
 <script>
 (function($) {
     'use strict';
@@ -226,7 +233,8 @@ $admin_table->render();
         window.location.href = url.toString();
     });
     
-    $(document).on('click', '.copy-email-btn', function() {
+    $(document).on('click', '.copy-email-btn', function(e) {
+        e.stopPropagation();
         var email = $(this).data('email');
         navigator.clipboard.writeText(email).then(function() {
             if (window.SAWNotifications) {

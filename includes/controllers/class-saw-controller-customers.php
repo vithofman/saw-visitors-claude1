@@ -259,8 +259,6 @@ class SAW_Controller_Customers {
             wp_die('Nemáte oprávnění.', 'Přístup zamítnut', array('response' => 403));
         }
         
-        $this->enqueue_customers_assets();
-        
         $customer = $this->customer_model->get_by_id($id);
         
         if (!$customer) {
@@ -268,6 +266,8 @@ class SAW_Controller_Customers {
             wp_redirect('/admin/settings/customers/');
             exit;
         }
+        
+        $this->enqueue_customers_assets();
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!isset($_POST['saw_customer_nonce']) || !wp_verify_nonce($_POST['saw_customer_nonce'], 'saw_customer_form')) {
