@@ -32,10 +32,25 @@
         },
         
         bindEvents() {
-            $(document).on('click', '.saw-customer-name', (e) => {
-                e.preventDefault();
-                const customerId = $(e.currentTarget).data('customer-id');
-                this.open(customerId);
+            $(document).on('click', '.saw-customer-row', (e) => {
+                if ($(e.target).closest('.saw-actions').length > 0) {
+                    return;
+                }
+                
+                if ($(e.target).is('a') || $(e.target).closest('a').length > 0) {
+                    return;
+                }
+                
+                if ($(e.target).hasClass('copy-email-btn') || $(e.target).closest('.copy-email-btn').length > 0) {
+                    return;
+                }
+                
+                const $nameElement = $(e.currentTarget).find('.saw-customer-name');
+                const customerId = $nameElement.data('customer-id');
+                
+                if (customerId) {
+                    this.open(customerId);
+                }
             });
             
             $(document).on('click', '#saw-modal-close, #saw-modal-mobile-close', () => {
@@ -61,7 +76,8 @@
             
             $(document).on('click', '#saw-modal-edit, #saw-modal-mobile-edit', () => {
                 if (this.currentCustomerId && sawCustomerModal.editUrl) {
-                    window.location.href = sawCustomerModal.editUrl + this.currentCustomerId;
+                    const editUrl = sawCustomerModal.editUrl.replace('{id}', this.currentCustomerId);
+                    window.location.href = editUrl;
                 }
             });
             
