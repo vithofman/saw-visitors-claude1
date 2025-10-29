@@ -3,7 +3,7 @@
  * Template: Seznam zákazníků
  * 
  * @package SAW_Visitors
- * @version 4.6.1 ENHANCED
+ * @version 4.7.0
  */
 
 if (!defined('ABSPATH')) {
@@ -12,7 +12,6 @@ if (!defined('ABSPATH')) {
 
 require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/class-saw-component-admin-table.php';
 
-// Filtry pro tabulku
 $filters_html = '<div class="saw-filters" style="margin-bottom: 20px; display: flex; gap: 12px; align-items: flex-end;">
     <div style="flex: 1; max-width: 200px;">
         <label for="filter-status" style="display: block; margin-bottom: 4px; font-weight: 600; font-size: 13px;">Status:</label>
@@ -169,9 +168,6 @@ $admin_table = new SAW_Component_Admin_Table('customers', array(
     'ajax_search'  => false,
     'ajax_action'  => 'saw_search_customers',
     
-    'message'      => $message,
-    'message_type' => $message_type,
-    
     'enable_detail_modal' => true,
     
     'row_class_callback' => function($row) {
@@ -194,7 +190,6 @@ $admin_table->render();
 (function($) {
     'use strict';
     
-    // Apply filters
     $('#apply-filters').on('click', function() {
         var status = $('#filter-status').val();
         var accountType = $('#filter-account-type').val();
@@ -222,7 +217,6 @@ $admin_table->render();
         window.location.href = url.toString();
     });
     
-    // Reset filters
     $('#reset-filters').on('click', function() {
         var url = new URL(window.location.href);
         url.searchParams.delete('status');
@@ -232,11 +226,14 @@ $admin_table->render();
         window.location.href = url.toString();
     });
     
-    // Copy email to clipboard
     $(document).on('click', '.copy-email-btn', function() {
         var email = $(this).data('email');
         navigator.clipboard.writeText(email).then(function() {
-            alert('Email zkopírován: ' + email);
+            if (window.SAWNotifications) {
+                window.SAWNotifications.success('Email zkopírován: ' + email);
+            } else {
+                alert('Email zkopírován: ' + email);
+            }
         });
     });
     

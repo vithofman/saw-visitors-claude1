@@ -5,7 +5,7 @@
  * Kompletní wrapper pro admin tabulku s hlavičkou, vyhledáváním a paginací
  * 
  * @package SAW_Visitors
- * @version 4.6.1 FIXED
+ * @version 4.7.0
  * @since 4.6.1
  */
 
@@ -20,20 +20,11 @@ $title = $config['title'] ?? ucfirst($entity);
 $subtitle = $config['subtitle'] ?? '';
 $create_url = $config['create_url'] ?? '';
 $add_new_label = $config['add_new'] ?? 'Přidat nový';
-$message = $config['message'] ?? '';
-$message_type = $config['message_type'] ?? '';
 $total_items = $config['total_items'] ?? 0;
 $search_value = $config['search_value'] ?? '';
 $singular = $config['singular'] ?? $entity;
 $plural = $config['plural'] ?? $entity;
 ?>
-
-<?php if (!empty($message)): ?>
-    <div class="saw-alert saw-alert-<?php echo esc_attr($message_type); ?>">
-        <?php echo esc_html($message); ?>
-        <button type="button" class="saw-alert-close">&times;</button>
-    </div>
-<?php endif; ?>
 
 <div class="saw-card">
     <!-- ✨ NOVÉ UNIFIED HEADER - vše v jedné sekci -->
@@ -74,9 +65,6 @@ $plural = $config['plural'] ?? $entity;
                         data-ajax-enabled="<?php echo $config['ajax_search'] ? '1' : '0'; ?>"
                     >
                     <span class="dashicons dashicons-search saw-search-icon"></span>
-                    <?php 
-                    // ✅ OPRAVA: Změna class na id pro správnou funkci JS
-                    ?>
                     <button type="button" id="saw-search-clear" class="saw-search-clear" style="display: <?php echo !empty($search_value) ? 'flex' : 'none'; ?>;">
                         <span class="dashicons dashicons-no-alt"></span>
                     </button>
