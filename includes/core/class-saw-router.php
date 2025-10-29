@@ -181,6 +181,12 @@ class SAW_Router {
             return;
         }
         
+        // Account Types routes: /admin/settings/account-types
+        if ($segments[0] === 'settings' && isset($segments[1]) && $segments[1] === 'account-types') {
+            $this->handle_account_types_routes($segments);
+            return;
+        }
+        
         // Other settings routes
         if ($segments[0] === 'settings' && isset($segments[1])) {
             $this->render_page('Settings: ' . ucfirst($segments[1]), $path, 'admin');
@@ -225,6 +231,48 @@ class SAW_Router {
             $customer_id = intval($segments[3]);
             if ($customer_id > 0) {
                 $controller->edit($customer_id);
+                return;
+            }
+        }
+        
+        // Neznámá route
+        $this->handle_404();
+    }
+    
+    /**
+     * Handle account types routes
+     */
+    private function handle_account_types_routes($segments) {
+        $controller_file = SAW_VISITORS_PLUGIN_DIR . 'includes/controllers/class-saw-controller-account-types.php';
+        
+        if (!file_exists($controller_file)) {
+            if (defined('SAW_DEBUG') && SAW_DEBUG) {
+                error_log('SAW Router: Account Types controller not found at: ' . $controller_file);
+            }
+            $this->handle_404();
+            return;
+        }
+        
+        require_once $controller_file;
+        $controller = new SAW_Controller_Account_Types();
+        
+        // /admin/settings/account-types
+        if (count($segments) === 2) {
+            $controller->index();
+            return;
+        }
+        
+        // /admin/settings/account-types/new
+        if (count($segments) === 3 && $segments[2] === 'new') {
+            $controller->add();
+            return;
+        }
+        
+        // /admin/settings/account-types/edit/123
+        if (count($segments) === 4 && $segments[2] === 'edit') {
+            $account_type_id = intval($segments[3]);
+            if ($account_type_id > 0) {
+                $controller->edit($account_type_id);
                 return;
             }
         }
@@ -330,6 +378,7 @@ class SAW_Router {
                         <a href="/admin/visits" class="saw-button saw-button-primary">Návštěvy</a>
                         <a href="/admin/statistics" class="saw-button saw-button-primary">Statistiky</a>
                         <a href="/admin/settings/customers" class="saw-button saw-button-success">👥 Správa zákazníků</a>
+                        <a href="/admin/settings/account-types" class="saw-button saw-button-success">💳 Account Types</a>
                     </div>
                 </div>
             </div>

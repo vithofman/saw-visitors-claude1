@@ -116,6 +116,12 @@ class SAW_App_Sidebar {
                         'icon' => '🏢',
                     ),
                     array(
+                        'id' => 'account-types',
+                        'label' => 'Account Types',
+                        'url' => '/admin/settings/account-types',
+                        'icon' => '💳',
+                    ),
+                    array(
                         'id' => 'company',
                         'label' => 'Nastavení firmy',
                         'url' => '/admin/settings/company',
@@ -131,7 +137,7 @@ class SAW_App_Sidebar {
                         'id' => 'departments',
                         'label' => 'Oddělení',
                         'url' => '/admin/settings/departments',
-                        'icon' => '🏛️',
+                        'icon' => '🛏️',
                     ),
                     array(
                         'id' => 'content',
