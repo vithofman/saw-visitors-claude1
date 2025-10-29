@@ -1,9 +1,9 @@
 <?php
 /**
- * SAW Controller Customers - DEBUG FIXED VERSION
+ * SAW Controller Customers - SORTING FIXED VERSION
  * 
  * @package SAW_Visitors
- * @version 4.6.1 FIX
+ * @version 4.6.1 SORTING FIX
  */
 
 if (!defined('ABSPATH')) {
@@ -54,23 +54,34 @@ class SAW_Controller_Customers {
         
         $this->enqueue_customers_assets();
         
-        $page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
-        $per_page = 20;
+        // ✅ Načtení parametrů z URL
         $search = isset($_GET['s']) ? sanitize_text_field($_GET['s']) : '';
+        $page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
         $orderby = isset($_GET['orderby']) ? sanitize_text_field($_GET['orderby']) : 'name';
         $order = isset($_GET['order']) ? strtoupper(sanitize_text_field($_GET['order'])) : 'ASC';
         
+        // ✅ Validace order direction
         if (!in_array($order, array('ASC', 'DESC'))) {
             $order = 'ASC';
         }
         
+        // ✅ Validace orderby column (whitelist)
         $allowed_orderby = array('name', 'ico', 'created_at');
         if (!in_array($orderby, $allowed_orderby)) {
             $orderby = 'name';
         }
         
+        // Debug log
+        error_log('=== SORTING DEBUG ===');
+        error_log('orderby: ' . $orderby);
+        error_log('order: ' . $order);
+        error_log('search: ' . $search);
+        error_log('page: ' . $page);
+        
+        $per_page = 20;
         $offset = ($page - 1) * $per_page;
         
+        // ✅ Předání orderby a order do modelu
         $customers = $this->customer_model->get_all(array(
             'search'  => $search,
             'orderby' => $orderby,
@@ -99,6 +110,10 @@ class SAW_Controller_Customers {
             $message = 'Zákazník byl úspěšně vytvořen.';
             $message_type = 'success';
         }
+        
+        // ✅ DŮLEŽITÉ: Všechny proměnné jsou nyní dostupné pro template
+        // Template má přístup k: $customers, $total_customers, $page, $total_pages, 
+        // $orderby, $order, $search, $message, $message_type
         
         ob_start();
         include SAW_VISITORS_PLUGIN_DIR . 'templates/pages/customers/list.php';

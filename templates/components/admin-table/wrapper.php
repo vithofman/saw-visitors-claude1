@@ -5,7 +5,7 @@
  * Kompletní wrapper pro admin tabulku s hlavičkou, vyhledáváním a paginací
  * 
  * @package SAW_Visitors
- * @version 4.6.1
+ * @version 4.6.1 FIXED
  * @since 4.6.1
  */
 
@@ -36,7 +36,7 @@ $plural = $config['plural'] ?? $entity;
 <?php endif; ?>
 
 <div class="saw-card">
-    <!-- ✨ NOVÝ UNIFIED HEADER - vše v jedné sekci -->
+    <!-- ✨ NOVÉ UNIFIED HEADER - vše v jedné sekci -->
     <div class="saw-card-header-unified">
         <!-- Hlavní nadpis + tlačítko -->
         <div class="saw-unified-title-row">
@@ -74,7 +74,10 @@ $plural = $config['plural'] ?? $entity;
                         data-ajax-enabled="<?php echo $config['ajax_search'] ? '1' : '0'; ?>"
                     >
                     <span class="dashicons dashicons-search saw-search-icon"></span>
-                    <button type="button" class="saw-search-clear" style="display: <?php echo !empty($search_value) ? 'flex' : 'none'; ?>;">
+                    <?php 
+                    // ✅ OPRAVA: Změna class na id pro správnou funkci JS
+                    ?>
+                    <button type="button" id="saw-search-clear" class="saw-search-clear" style="display: <?php echo !empty($search_value) ? 'flex' : 'none'; ?>;">
                         <span class="dashicons dashicons-no-alt"></span>
                     </button>
                 </div>

@@ -1187,3 +1187,48 @@
         justify-content: center;
     }
 }
+
+/* ========================================
+   SORTABLE HEADERS - FIX UNDERLINE
+   ======================================== */
+
+/* Odstranění podtržení u sortable linků */
+.saw-table-sortable thead th.saw-sortable a {
+    text-decoration: none !important;
+    color: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+/* Hover efekt */
+.saw-table-sortable thead th.saw-sortable a:hover {
+    color: #2563eb;
+}
+
+/* Aktivní řazení - zvýrazněná barva */
+.saw-table-sortable thead th.saw-sortable a:has(.dashicons-arrow-up),
+.saw-table-sortable thead th.saw-sortable a:has(.dashicons-arrow-down) {
+    color: #2563eb;
+    font-weight: 600;
+}
+
+/* Ikona řazení */
+.saw-table-sortable thead th.saw-sortable .saw-sort-icon {
+    opacity: 0.4;
+    transition: opacity 0.2s ease;
+}
+
+/* Zvýraznění ikony při hoveru */
+.saw-table-sortable thead th.saw-sortable a:hover .saw-sort-icon {
+    opacity: 1;
+}
+
+/* Aktivní ikona */
+.saw-table-sortable thead th.saw-sortable .dashicons-arrow-up,
+.saw-table-sortable thead th.saw-sortable .dashicons-arrow-down {
+    opacity: 1;
+    color: #2563eb;
+}

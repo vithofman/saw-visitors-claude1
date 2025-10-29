@@ -5,6 +5,7 @@
  * 
  * @package SAW_Visitors
  * @since 4.6.1
+ * @version FIXED - Sort links now work
  */
 
 if (!defined('ABSPATH')) {
@@ -42,8 +43,11 @@ $row_style_callback = $config['row_style_callback'] ?? null;
                     ?>
                     <th class="<?php echo esc_attr($class); ?>">
                         <?php if ($sortable): ?>
+                            <?php 
+                            // ✅ OPRAVA: Odstraněna třída saw-sort-link
+                            // JavaScript hledá: .saw-table-sortable thead th.saw-sortable a
+                            ?>
                             <a href="<?php echo esc_url(SAW_Component_Admin_Table::get_sort_url($column_key, $orderby, $order)); ?>" 
-                               class="saw-sort-link" 
                                data-column="<?php echo esc_attr($column_key); ?>">
                                 <?php echo esc_html($label); ?>
                                 <?php echo SAW_Component_Admin_Table::get_sort_icon($column_key, $orderby, $order); ?>

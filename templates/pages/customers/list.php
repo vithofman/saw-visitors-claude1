@@ -3,7 +3,7 @@
  * Template: Seznam zákazníků
  * 
  * @package SAW_Visitors
- * @version 4.6.1
+ * @version 4.6.1 FIXED - Sorting now works
  */
 
 if (!defined('ABSPATH')) {
@@ -87,7 +87,8 @@ $admin_table = new SAW_Component_Admin_Table('customers', array(
     'create_url'   => home_url('/admin/settings/customers/new/'),
     'edit_url'     => home_url('/admin/settings/customers/edit/{id}/'),
     
-    'ajax_search'  => true,
+    // ✅ KRITICKÁ OPRAVA: Vypnuto AJAX pro sorting
+    'ajax_search'  => false,  // ✅ ZMĚNĚNO z true na false!
     'ajax_action'  => 'saw_search_customers',
     
     'message'      => $message,
