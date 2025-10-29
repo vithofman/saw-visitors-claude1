@@ -6,7 +6,7 @@
  * 
  * @package SAW_Visitors
  * @since   4.6.1
- * @version FIXED - Sorting now works correctly
+ * @version FIXED - Syntax error corrected (missing comma)
  */
 
 (function($) {
@@ -23,8 +23,8 @@
             this.bindSortHeaders();
             this.bindDeleteButtons();
             this.bindAlertClose();
-            
             this.bindClickableRows(); // ✨ NOVÉ: Klikatelné řádky pro modal
+            
             console.log('SAW Admin Table: Initialized');
         },
         
@@ -220,7 +220,7 @@
             $(document).on('click', '.saw-alert-close', function() {
                 $(this).closest('.saw-alert').fadeOut(300);
             });
-        }
+        },  // ✅ OPRAVENO: Přidána chybějící čárka!
         
         /**
          * ✨ NOVÉ: Bind klikatelné řádky pro otevření modalu
@@ -249,8 +249,7 @@
                 });
             });
         }
-    };
-    };
+    };  // ✅ OPRAVENO: Odstraněna nadbytečná závorka
     
     $(document).ready(function() {
         SawAdminTable.init();

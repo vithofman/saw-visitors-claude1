@@ -1,9 +1,9 @@
 <?php
 /**
- * SAW Customer Model - DEBUG VERSION
+ * SAW Customer Model
  * 
  * @package SAW_Visitors
- * @version 4.6.1 DEBUG
+ * @version 4.6.1 ENHANCED
  */
 
 if (!defined('ABSPATH')) {
@@ -13,6 +13,7 @@ if (!defined('ABSPATH')) {
 class SAW_Model_Customer {
     
     private $table_name;
+    private $account_types_table;
     private $upload_dir;
     private $upload_url;
     
@@ -31,16 +32,11 @@ class SAW_Model_Customer {
         global $wpdb;
         
         $this->table_name = $wpdb->prefix . 'saw_customers';
-        
-        error_log('🔧 SAW Model Customer: Constructor called');
-        error_log('   Table name: ' . $this->table_name);
+        $this->account_types_table = $wpdb->prefix . 'saw_account_types';
         
         $upload = wp_upload_dir();
         $this->upload_dir = $upload['basedir'] . '/saw-visitors/saw-customers/';
         $this->upload_url = $upload['baseurl'] . '/saw-visitors/saw-customers/';
-        
-        error_log('   Upload dir: ' . $this->upload_dir);
-        error_log('   Upload URL: ' . $this->upload_url);
         
         $this->ensure_upload_directory();
     }
@@ -48,27 +44,32 @@ class SAW_Model_Customer {
     private function ensure_upload_directory() {
         if (!file_exists($this->upload_dir)) {
             wp_mkdir_p($this->upload_dir);
-            error_log('✅ Upload directory created: ' . $this->upload_dir);
             
             $htaccess_file = $this->upload_dir . '.htaccess';
             if (!file_exists($htaccess_file)) {
                 file_put_contents($htaccess_file, "# Allow only images\n<FilesMatch \"\\.(jpg|jpeg|png|gif|webp|svg)$\">\n    Order allow,deny\n    Allow from all\n</FilesMatch>\n<FilesMatch \"^(?!(.*\\.(jpg|jpeg|png|gif|webp|svg)$)).*$\">\n    Order allow,deny\n    Deny from all\n</FilesMatch>");
-                error_log('✅ .htaccess created');
             }
             
             $index_file = $this->upload_dir . 'index.php';
             if (!file_exists($index_file)) {
                 file_put_contents($index_file, "<?php\n// Silence is golden.\n");
-                error_log('✅ index.php created');
             }
         }
     }
     
+    /**
+     * Získat všechny zákazníky s JOIN na account_types
+     * 
+     * @param array $args Parametry dotazu
+     * @return array
+     */
     public function get_all($args = array()) {
         global $wpdb;
         
         $defaults = array(
             'search'  => '',
+            'status'  => '',
+            'account_type' => '',
             'orderby' => 'name',
             'order'   => 'ASC',
             'limit'   => 999,
@@ -77,21 +78,38 @@ class SAW_Model_Customer {
         
         $args = wp_parse_args($args, $defaults);
         
-        $orderby = in_array($args['orderby'], array('id', 'name', 'ico', 'created_at')) 
+        $orderby = in_array($args['orderby'], array('id', 'name', 'ico', 'status', 'created_at')) 
             ? $args['orderby'] 
             : 'name';
         $order = strtoupper($args['order']) === 'DESC' ? 'DESC' : 'ASC';
         $limit = absint($args['limit']);
         $offset = absint($args['offset']);
         
-        $sql = "SELECT * FROM {$this->table_name} WHERE 1=1";
+        $sql = "SELECT 
+            c.*,
+            at.display_name as account_type_display_name,
+            at.color as account_type_color
+        FROM {$this->table_name} c
+        LEFT JOIN {$this->account_types_table} at ON c.account_type_id = at.id
+        WHERE 1=1";
         
         if (!empty($args['search'])) {
             $search = '%' . $wpdb->esc_like(sanitize_text_field($args['search'])) . '%';
-            $sql .= $wpdb->prepare(" AND (name LIKE %s OR ico LIKE %s OR address LIKE %s)", $search, $search, $search);
+            $sql .= $wpdb->prepare(
+                " AND (c.name LIKE %s OR c.ico LIKE %s OR c.contact_email LIKE %s OR c.address_city LIKE %s)",
+                $search, $search, $search, $search
+            );
         }
         
-        $sql .= " ORDER BY {$orderby} {$order}";
+        if (!empty($args['status'])) {
+            $sql .= $wpdb->prepare(" AND c.status = %s", sanitize_text_field($args['status']));
+        }
+        
+        if (!empty($args['account_type'])) {
+            $sql .= $wpdb->prepare(" AND c.account_type_id = %d", intval($args['account_type']));
+        }
+        
+        $sql .= " ORDER BY c.{$orderby} {$order}";
         $sql .= " LIMIT {$limit} OFFSET {$offset}";
         
         $customers = $wpdb->get_results($sql, ARRAY_A);
@@ -105,159 +123,309 @@ class SAW_Model_Customer {
         return $customers;
     }
     
-    public function count($search = '') {
+    /**
+     * Počet zákazníků
+     * 
+     * @param array $args Filtry
+     * @return int
+     */
+    public function count($args = array()) {
         global $wpdb;
+        
+        $defaults = array(
+            'search' => '',
+            'status' => '',
+            'account_type' => '',
+        );
+        
+        $args = wp_parse_args($args, $defaults);
         
         $sql = "SELECT COUNT(*) FROM {$this->table_name} WHERE 1=1";
         
-        if (!empty($search)) {
-            $search_term = '%' . $wpdb->esc_like(sanitize_text_field($search)) . '%';
-            $sql .= $wpdb->prepare(" AND (name LIKE %s OR ico LIKE %s OR address LIKE %s)", $search_term, $search_term, $search_term);
+        if (!empty($args['search'])) {
+            $search = '%' . $wpdb->esc_like(sanitize_text_field($args['search'])) . '%';
+            $sql .= $wpdb->prepare(
+                " AND (name LIKE %s OR ico LIKE %s OR contact_email LIKE %s OR address_city LIKE %s)",
+                $search, $search, $search, $search
+            );
         }
         
-        $count = $wpdb->get_var($sql);
+        if (!empty($args['status'])) {
+            $sql .= $wpdb->prepare(" AND status = %s", sanitize_text_field($args['status']));
+        }
         
-        return (int) $count;
+        if (!empty($args['account_type'])) {
+            $sql .= $wpdb->prepare(" AND account_type_id = %d", intval($args['account_type']));
+        }
+        
+        return (int) $wpdb->get_var($sql);
     }
     
+    /**
+     * Získat zákazníka podle ID s JOIN na account_types
+     * 
+     * @param int $id ID zákazníka
+     * @return array|null
+     */
     public function get_by_id($id) {
         global $wpdb;
         
-        error_log('🔍 SAW Model Customer: get_by_id() called for ID: ' . $id);
-        
         $customer = $wpdb->get_row(
-            $wpdb->prepare("SELECT * FROM {$this->table_name} WHERE id = %d", $id),
+            $wpdb->prepare(
+                "SELECT 
+                    c.*,
+                    at.display_name as account_type_display_name,
+                    at.color as account_type_color
+                FROM {$this->table_name} c
+                LEFT JOIN {$this->account_types_table} at ON c.account_type_id = at.id
+                WHERE c.id = %d",
+                $id
+            ),
             ARRAY_A
         );
         
         if ($customer) {
-            error_log('✅ Customer found: ' . $customer['name']);
             $customer['logo_url_full'] = $this->get_logo_url($customer['logo_url']);
-        } else {
-            error_log('❌ Customer NOT found for ID: ' . $id);
+            $customer['has_billing_address'] = !empty($customer['billing_address_street']);
         }
         
         return $customer;
     }
     
+    /**
+     * Získat zákazníky podle statusu
+     * 
+     * @param string $status Status (potential, active, inactive)
+     * @param array  $args   Další parametry
+     * @return array
+     */
+    public function get_by_status($status, $args = array()) {
+        $args['status'] = $status;
+        return $this->get_all($args);
+    }
+    
+    /**
+     * Získat zákazníky podle typu účtu
+     * 
+     * @param int   $account_type_id ID typu účtu
+     * @param array $args            Další parametry
+     * @return array
+     */
+    public function get_by_account_type($account_type_id, $args = array()) {
+        $args['account_type'] = $account_type_id;
+        return $this->get_all($args);
+    }
+    
+    /**
+     * Získat pouze aktivní zákazníky
+     * 
+     * @param array $args Další parametry
+     * @return array
+     */
+    public function get_active_customers($args = array()) {
+        return $this->get_by_status('active', $args);
+    }
+    
+    /**
+     * Počet zákazníků podle statusu (pro dashboard)
+     * 
+     * @return array
+     */
+    public function count_by_status() {
+        global $wpdb;
+        
+        $results = $wpdb->get_results(
+            "SELECT status, COUNT(*) as count FROM {$this->table_name} GROUP BY status",
+            ARRAY_A
+        );
+        
+        $counts = array(
+            'potential' => 0,
+            'active'    => 0,
+            'inactive'  => 0,
+        );
+        
+        foreach ($results as $row) {
+            $counts[$row['status']] = (int) $row['count'];
+        }
+        
+        return $counts;
+    }
+    
+    /**
+     * Formátovat adresu do jednoho stringu
+     * 
+     * @param array  $customer Zákazník
+     * @param string $type     Typ adresy (operational|billing)
+     * @return string
+     */
+    public function format_address($customer, $type = 'operational') {
+        $prefix = $type === 'billing' ? 'billing_' : '';
+        
+        $parts = array();
+        
+        $street = trim($customer[$prefix . 'address_street'] ?? '');
+        $number = trim($customer[$prefix . 'address_number'] ?? '');
+        
+        if ($street && $number) {
+            $parts[] = $street . ' ' . $number;
+        } elseif ($street) {
+            $parts[] = $street;
+        }
+        
+        $zip = trim($customer[$prefix . 'address_zip'] ?? '');
+        $city = trim($customer[$prefix . 'address_city'] ?? '');
+        
+        if ($zip && $city) {
+            $parts[] = $zip . ' ' . $city;
+        } elseif ($city) {
+            $parts[] = $city;
+        }
+        
+        $country = trim($customer[$prefix . 'address_country'] ?? '');
+        if ($country && $country !== 'Česká republika') {
+            $parts[] = $country;
+        }
+        
+        return implode(', ', array_filter($parts));
+    }
+    
+    /**
+     * Vytvořit nového zákazníka
+     * 
+     * @param array $data Data zákazníka
+     * @return int|WP_Error ID nového zákazníka nebo chyba
+     */
     public function create($data) {
         global $wpdb;
         
-        error_log('📝 SAW Model Customer: create() called');
-        error_log('   Input data: ' . print_r($data, true));
-        
         $validation = $this->validate($data);
         if (is_wp_error($validation)) {
-            error_log('❌ Validation FAILED: ' . $validation->get_error_message());
             return $validation;
         }
         
-        error_log('✅ Validation passed');
-        
         $insert_data = array(
-            'name'          => sanitize_text_field($data['name']),
-            'ico'           => !empty($data['ico']) ? sanitize_text_field($data['ico']) : null,
-            'address'       => !empty($data['address']) ? sanitize_textarea_field($data['address']) : null,
-            'notes'         => !empty($data['notes']) ? sanitize_textarea_field($data['notes']) : null,
-            'primary_color' => !empty($data['primary_color']) ? sanitize_hex_color($data['primary_color']) : '#1e40af',
-            'logo_url'      => null,
-            'created_at'    => current_time('mysql'),
+            'name'                      => sanitize_text_field($data['name']),
+            'ico'                       => !empty($data['ico']) ? sanitize_text_field($data['ico']) : null,
+            'dic'                       => !empty($data['dic']) ? sanitize_text_field($data['dic']) : null,
+            
+            'address_street'            => !empty($data['address_street']) ? sanitize_text_field($data['address_street']) : null,
+            'address_number'            => !empty($data['address_number']) ? sanitize_text_field($data['address_number']) : null,
+            'address_city'              => !empty($data['address_city']) ? sanitize_text_field($data['address_city']) : null,
+            'address_zip'               => !empty($data['address_zip']) ? sanitize_text_field($data['address_zip']) : null,
+            'address_country'           => !empty($data['address_country']) ? sanitize_text_field($data['address_country']) : 'Česká republika',
+            
+            'billing_address_street'    => !empty($data['billing_address_street']) ? sanitize_text_field($data['billing_address_street']) : null,
+            'billing_address_number'    => !empty($data['billing_address_number']) ? sanitize_text_field($data['billing_address_number']) : null,
+            'billing_address_city'      => !empty($data['billing_address_city']) ? sanitize_text_field($data['billing_address_city']) : null,
+            'billing_address_zip'       => !empty($data['billing_address_zip']) ? sanitize_text_field($data['billing_address_zip']) : null,
+            'billing_address_country'   => !empty($data['billing_address_country']) ? sanitize_text_field($data['billing_address_country']) : null,
+            
+            'contact_person'            => !empty($data['contact_person']) ? sanitize_text_field($data['contact_person']) : null,
+            'contact_position'          => !empty($data['contact_position']) ? sanitize_text_field($data['contact_position']) : null,
+            'contact_email'             => !empty($data['contact_email']) ? sanitize_email($data['contact_email']) : null,
+            'contact_phone'             => !empty($data['contact_phone']) ? sanitize_text_field($data['contact_phone']) : null,
+            'website'                   => !empty($data['website']) ? esc_url_raw($data['website']) : null,
+            
+            'account_type_id'           => !empty($data['account_type_id']) ? intval($data['account_type_id']) : null,
+            'status'                    => !empty($data['status']) ? sanitize_text_field($data['status']) : 'potential',
+            'acquisition_source'        => !empty($data['acquisition_source']) ? sanitize_text_field($data['acquisition_source']) : null,
+            'subscription_type'         => !empty($data['subscription_type']) ? sanitize_text_field($data['subscription_type']) : 'monthly',
+            'last_payment_date'         => !empty($data['last_payment_date']) ? sanitize_text_field($data['last_payment_date']) : null,
+            
+            'primary_color'             => !empty($data['primary_color']) ? sanitize_hex_color($data['primary_color']) : '#1e40af',
+            'admin_language_default'    => !empty($data['admin_language_default']) ? sanitize_text_field($data['admin_language_default']) : 'cs',
+            'notes'                     => !empty($data['notes']) ? sanitize_textarea_field($data['notes']) : null,
+            'logo_url'                  => null,
+            'created_at'                => current_time('mysql'),
         );
         
-        error_log('📦 Insert data prepared:');
-        error_log('   ' . print_r($insert_data, true));
-        
         if (isset($_FILES['logo']) && !empty($_FILES['logo']['name'])) {
-            error_log('📸 Logo file detected, attempting upload...');
             $logo_result = $this->upload_logo($_FILES['logo']);
             if (is_wp_error($logo_result)) {
-                error_log('❌ Logo upload FAILED: ' . $logo_result->get_error_message());
                 return $logo_result;
             }
             $insert_data['logo_url'] = $logo_result;
-            error_log('✅ Logo uploaded: ' . $logo_result);
         }
         
-        error_log('🚀 Attempting INSERT into table: ' . $this->table_name);
         $result = $wpdb->insert($this->table_name, $insert_data);
         
         if ($result === false) {
-            error_log('❌ INSERT FAILED!');
-            error_log('   Last error: ' . $wpdb->last_error);
-            error_log('   Last query: ' . $wpdb->last_query);
             return new WP_Error('db_error', 'Chyba při vytváření zákazníka: ' . $wpdb->last_error);
         }
         
-        $insert_id = $wpdb->insert_id;
-        error_log('✅ INSERT SUCCESS! New customer ID: ' . $insert_id);
-        
-        return $insert_id;
+        return $wpdb->insert_id;
     }
     
+    /**
+     * Aktualizovat zákazníka
+     * 
+     * @param int   $id   ID zákazníka
+     * @param array $data Data k aktualizaci
+     * @return bool|WP_Error
+     */
     public function update($id, $data) {
         global $wpdb;
         
-        error_log('✏️ SAW Model Customer: update() called for ID: ' . $id);
-        error_log('   Input data: ' . print_r($data, true));
-        
         $validation = $this->validate($data, $id);
         if (is_wp_error($validation)) {
-            error_log('❌ Validation FAILED: ' . $validation->get_error_message());
             return $validation;
         }
         
-        error_log('✅ Validation passed');
-        
         $update_data = array();
         
-        if (isset($data['name'])) {
-            $update_data['name'] = sanitize_text_field($data['name']);
+        $fields = array(
+            'name', 'ico', 'dic',
+            'address_street', 'address_number', 'address_city', 'address_zip', 'address_country',
+            'billing_address_street', 'billing_address_number', 'billing_address_city', 'billing_address_zip', 'billing_address_country',
+            'contact_person', 'contact_position', 'contact_email', 'contact_phone', 'website',
+            'status', 'acquisition_source', 'subscription_type', 'last_payment_date',
+            'primary_color', 'admin_language_default', 'notes'
+        );
+        
+        foreach ($fields as $field) {
+            if (!isset($data[$field])) {
+                continue;
+            }
+            
+            $value = $data[$field];
+            
+            if (in_array($field, array('name', 'ico', 'dic', 'address_street', 'address_number', 'address_city', 'address_zip', 'address_country', 'billing_address_street', 'billing_address_number', 'billing_address_city', 'billing_address_zip', 'billing_address_country', 'contact_person', 'contact_position', 'contact_phone', 'status', 'acquisition_source', 'subscription_type', 'last_payment_date', 'admin_language_default'))) {
+                $update_data[$field] = !empty($value) ? sanitize_text_field($value) : null;
+            } elseif ($field === 'contact_email') {
+                $update_data[$field] = !empty($value) ? sanitize_email($value) : null;
+            } elseif ($field === 'website') {
+                $update_data[$field] = !empty($value) ? esc_url_raw($value) : null;
+            } elseif ($field === 'primary_color') {
+                $update_data[$field] = sanitize_hex_color($value);
+            } elseif ($field === 'notes') {
+                $update_data[$field] = !empty($value) ? sanitize_textarea_field($value) : null;
+            }
         }
         
-        if (isset($data['ico'])) {
-            $update_data['ico'] = !empty($data['ico']) ? sanitize_text_field($data['ico']) : null;
-        }
-        
-        if (isset($data['address'])) {
-            $update_data['address'] = !empty($data['address']) ? sanitize_textarea_field($data['address']) : null;
-        }
-        
-        if (isset($data['notes'])) {
-            $update_data['notes'] = !empty($data['notes']) ? sanitize_textarea_field($data['notes']) : null;
-        }
-        
-        if (isset($data['primary_color'])) {
-            $update_data['primary_color'] = sanitize_hex_color($data['primary_color']);
+        if (isset($data['account_type_id'])) {
+            $update_data['account_type_id'] = !empty($data['account_type_id']) ? intval($data['account_type_id']) : null;
         }
         
         if (isset($_FILES['logo']) && !empty($_FILES['logo']['name'])) {
-            error_log('📸 Logo file detected, attempting upload...');
             $old_customer = $this->get_by_id($id);
             
             $logo_result = $this->upload_logo($_FILES['logo']);
             if (is_wp_error($logo_result)) {
-                error_log('❌ Logo upload FAILED: ' . $logo_result->get_error_message());
                 return $logo_result;
             }
             
             if (!empty($old_customer['logo_url'])) {
                 $this->delete_logo($old_customer['logo_url']);
-                error_log('🗑️ Old logo deleted');
             }
             
             $update_data['logo_url'] = $logo_result;
-            error_log('✅ Logo uploaded: ' . $logo_result);
         }
         
         if (empty($update_data)) {
-            error_log('⚠️ No data to update');
             return new WP_Error('no_data', 'Žádná data k aktualizaci.');
         }
         
-        error_log('📦 Update data prepared:');
-        error_log('   ' . print_r($update_data, true));
-        
-        error_log('🚀 Attempting UPDATE in table: ' . $this->table_name);
         $result = $wpdb->update(
             $this->table_name,
             $update_data,
@@ -265,81 +433,98 @@ class SAW_Model_Customer {
         );
         
         if ($result === false) {
-            error_log('❌ UPDATE FAILED!');
-            error_log('   Last error: ' . $wpdb->last_error);
-            error_log('   Last query: ' . $wpdb->last_query);
             return new WP_Error('db_error', 'Chyba při aktualizaci zákazníka: ' . $wpdb->last_error);
         }
-        
-        error_log('✅ UPDATE SUCCESS! Rows affected: ' . $result);
         
         return true;
     }
     
+    /**
+     * Smazat zákazníka
+     * 
+     * @param int $id ID zákazníka
+     * @return bool|WP_Error
+     */
     public function delete($id) {
         global $wpdb;
         
-        error_log('🗑️ SAW Model Customer: delete() called for ID: ' . $id);
-        
         $customer = $this->get_by_id($id);
         if (!$customer) {
-            error_log('❌ Customer NOT found for deletion');
             return new WP_Error('not_found', 'Zákazník nenalezen.');
         }
         
         if (!empty($customer['logo_url'])) {
             $this->delete_logo($customer['logo_url']);
-            error_log('🗑️ Logo deleted');
         }
         
         $result = $wpdb->delete($this->table_name, array('id' => $id));
         
         if ($result === false) {
-            error_log('❌ DELETE FAILED: ' . $wpdb->last_error);
             return new WP_Error('db_error', 'Chyba při mazání zákazníka: ' . $wpdb->last_error);
         }
-        
-        error_log('✅ DELETE SUCCESS!');
         
         return true;
     }
     
+    /**
+     * Validace dat
+     * 
+     * @param array    $data Data k validaci
+     * @param int|null $id   ID pro update
+     * @return bool|WP_Error
+     */
     private function validate($data, $id = null) {
-        error_log('🔍 Validating data...');
-        
         if (empty($data['name'])) {
-            error_log('❌ Validation: Name is empty');
             return new WP_Error('name_required', 'Název zákazníka je povinný.');
         }
         
-        if (!empty($data['ico'])) {
-            $ico = sanitize_text_field($data['ico']);
-            if (!preg_match('/^\d{6,12}$/', $ico)) {
-                error_log('❌ Validation: ICO format invalid');
-                return new WP_Error('ico_invalid', 'IČO musí být 6-12 číslic.');
+        if (!empty($data['ico']) && !preg_match('/^\d{6,12}$/', sanitize_text_field($data['ico']))) {
+            return new WP_Error('ico_invalid', 'IČO musí být 6-12 číslic.');
+        }
+        
+        if (!empty($data['contact_email']) && !is_email($data['contact_email'])) {
+            return new WP_Error('email_invalid', 'Neplatný formát emailu.');
+        }
+        
+        if (!empty($data['website']) && !filter_var($data['website'], FILTER_VALIDATE_URL)) {
+            return new WP_Error('url_invalid', 'Neplatný formát URL.');
+        }
+        
+        if (!empty($data['status']) && !in_array($data['status'], array('potential', 'active', 'inactive'))) {
+            return new WP_Error('status_invalid', 'Neplatný status.');
+        }
+        
+        if (!empty($data['account_type_id'])) {
+            global $wpdb;
+            $exists = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$this->account_types_table} WHERE id = %d",
+                intval($data['account_type_id'])
+            ));
+            
+            if (!$exists) {
+                return new WP_Error('account_type_invalid', 'Typ účtu neexistuje.');
             }
         }
         
         if (!empty($data['primary_color']) && !preg_match('/^#[0-9A-Fa-f]{6}$/', $data['primary_color'])) {
-            error_log('❌ Validation: Color format invalid');
             return new WP_Error('color_invalid', 'Neplatný formát barvy.');
         }
         
-        error_log('✅ Validation: All checks passed');
         return true;
     }
     
+    /**
+     * Nahrát logo
+     * 
+     * @param array $file $_FILES data
+     * @return string|WP_Error Název souboru nebo chyba
+     */
     private function upload_logo($file) {
-        error_log('📸 upload_logo() called');
-        error_log('   File info: ' . print_r($file, true));
-        
         if ($file['error'] !== UPLOAD_ERR_OK) {
-            error_log('❌ Upload error code: ' . $file['error']);
             return new WP_Error('upload_error', 'Chyba při nahrávání souboru.');
         }
         
         if ($file['size'] > $this->max_file_size) {
-            error_log('❌ File too large: ' . $file['size'] . ' bytes');
             return new WP_Error('file_too_large', 'Soubor je příliš velký. Maximum je 5 MB.');
         }
         
@@ -347,10 +532,7 @@ class SAW_Model_Customer {
         $mime_type = finfo_file($finfo, $file['tmp_name']);
         finfo_close($finfo);
         
-        error_log('   MIME type: ' . $mime_type);
-        
         if (!in_array($mime_type, $this->allowed_mime_types)) {
-            error_log('❌ Invalid MIME type');
             return new WP_Error('invalid_file_type', 'Neplatný typ souboru. Povolené jsou pouze obrázky.');
         }
         
@@ -358,18 +540,19 @@ class SAW_Model_Customer {
         $filename = 'logo-' . uniqid() . '.' . $extension;
         $filepath = $this->upload_dir . $filename;
         
-        error_log('   Target filepath: ' . $filepath);
-        
         if (!move_uploaded_file($file['tmp_name'], $filepath)) {
-            error_log('❌ move_uploaded_file() FAILED');
             return new WP_Error('move_failed', 'Nepodařilo se uložit soubor.');
         }
-        
-        error_log('✅ File uploaded successfully: ' . $filename);
         
         return $filename;
     }
     
+    /**
+     * Smazat logo
+     * 
+     * @param string $logo_filename Název souboru
+     * @return void
+     */
     private function delete_logo($logo_filename) {
         if (empty($logo_filename)) {
             return;
@@ -379,10 +562,15 @@ class SAW_Model_Customer {
         
         if (file_exists($filepath)) {
             unlink($filepath);
-            error_log('🗑️ Logo file deleted: ' . $filepath);
         }
     }
     
+    /**
+     * Získat URL loga
+     * 
+     * @param string $logo_filename Název souboru
+     * @return string
+     */
     private function get_logo_url($logo_filename) {
         if (empty($logo_filename)) {
             return '';

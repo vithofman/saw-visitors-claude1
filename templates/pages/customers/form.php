@@ -1,6 +1,6 @@
 <?php
 /**
- * Customers Form Template - ENHANCED VERSION WITH GRID LAYOUT
+ * Customers Form Template
  * 
  * @package SAW_Visitors
  * @version 4.6.1 ENHANCED
@@ -20,30 +20,32 @@ $form_action = $is_edit
         <h1 class="saw-page-title">
             <?php echo $is_edit ? 'Upravit zákazníka' : 'Přidat nového zákazníka'; ?>
         </h1>
-        <a href="<?php echo esc_url(home_url('/admin/settings/customers/')); ?>" class="saw-back-button">
+        <a href="<?php echo esc_url($back_url); ?>" class="saw-back-button">
             <span class="dashicons dashicons-arrow-left-alt2"></span>
             Zpět na seznam
         </a>
     </div>
 </div>
 
-<?php if (isset($_SESSION['saw_customer_error'])): ?>
-    <div class="saw-alert saw-alert-error">
-        <?php echo esc_html($_SESSION['saw_customer_error']); ?>
+<?php if (isset($_GET['message'])): ?>
+    <div class="saw-alert <?php echo isset($_GET['message_type']) && $_GET['message_type'] === 'error' ? 'saw-alert-error' : ''; ?>">
+        <?php echo esc_html(urldecode($_GET['message'])); ?>
         <button type="button" class="saw-alert-close">&times;</button>
     </div>
-    <?php unset($_SESSION['saw_customer_error']); ?>
 <?php endif; ?>
 
 <form method="post" action="<?php echo esc_url($form_action); ?>" enctype="multipart/form-data" class="saw-form" id="saw-customer-form">
-    <?php wp_nonce_field('saw_customer_form', 'saw_customer_nonce'); ?>
+    <?php wp_nonce_field('saw_customer_save', 'saw_customer_nonce'); ?>
     
-    <!-- ZÁKLADNÍ INFORMACE -->
-    <div class="saw-card">
-        <div class="saw-card-header">
-            <h2 class="saw-card-title">📋 Základní informace</h2>
-        </div>
-        <div class="saw-card-body">
+    <!-- ========================================= -->
+    <!-- SEKCE 1: ZÁKLADNÍ ÚDAJE -->
+    <!-- ========================================= -->
+    <details open class="saw-form-section">
+        <summary>
+            <span class="dashicons dashicons-businessman"></span>
+            <strong>Základní údaje</strong>
+        </summary>
+        <div class="saw-form-section-content">
             <div class="saw-form-row">
                 <div class="saw-form-group saw-col-8">
                     <label for="name" class="saw-label saw-required">Název zákazníka</label>
@@ -74,291 +76,495 @@ $form_action = $is_edit
                 </div>
             </div>
             
-            <!-- ✨ NOVÉ: Adresa a poznámky vedle sebe -->
             <div class="saw-form-row">
                 <div class="saw-form-group saw-col-6">
-                    <label for="address" class="saw-label">Adresa</label>
-                    <textarea 
-                        id="address" 
-                        name="address" 
-                        class="saw-textarea" 
-                        rows="5"
-                        placeholder="např. Karlovo náměstí 123, Praha 2, 120 00"
-                    ><?php echo esc_textarea($customer['address'] ?? ''); ?></textarea>
-                    <small class="saw-help-text">Fyzická adresa sídla společnosti</small>
+                    <label for="dic" class="saw-label">DIČ</label>
+                    <input 
+                        type="text" 
+                        id="dic" 
+                        name="dic" 
+                        class="saw-input" 
+                        value="<?php echo esc_attr($customer['dic'] ?? ''); ?>"
+                        placeholder="CZ12345678"
+                    >
+                    <small class="saw-help-text">Daňové identifikační číslo</small>
+                </div>
+            </div>
+        </div>
+    </details>
+    
+    <!-- ========================================= -->
+    <!-- SEKCE 2: PROVOZNÍ ADRESA -->
+    <!-- ========================================= -->
+    <details open class="saw-form-section">
+        <summary>
+            <span class="dashicons dashicons-location"></span>
+            <strong>Provozní adresa</strong>
+        </summary>
+        <div class="saw-form-section-content">
+            <div class="saw-form-row">
+                <div class="saw-form-group saw-col-8">
+                    <label for="address_street" class="saw-label">Ulice</label>
+                    <input 
+                        type="text" 
+                        id="address_street" 
+                        name="address_street" 
+                        class="saw-input" 
+                        value="<?php echo esc_attr($customer['address_street'] ?? ''); ?>"
+                        placeholder="Karlovo náměstí"
+                    >
+                </div>
+                
+                <div class="saw-form-group saw-col-4">
+                    <label for="address_number" class="saw-label">Číslo popisné</label>
+                    <input 
+                        type="text" 
+                        id="address_number" 
+                        name="address_number" 
+                        class="saw-input" 
+                        value="<?php echo esc_attr($customer['address_number'] ?? ''); ?>"
+                        placeholder="123/45"
+                    >
+                </div>
+            </div>
+            
+            <div class="saw-form-row">
+                <div class="saw-form-group saw-col-6">
+                    <label for="address_city" class="saw-label">Město</label>
+                    <input 
+                        type="text" 
+                        id="address_city" 
+                        name="address_city" 
+                        class="saw-input" 
+                        value="<?php echo esc_attr($customer['address_city'] ?? ''); ?>"
+                        placeholder="Praha"
+                    >
+                </div>
+                
+                <div class="saw-form-group saw-col-3">
+                    <label for="address_zip" class="saw-label">PSČ</label>
+                    <input 
+                        type="text" 
+                        id="address_zip" 
+                        name="address_zip" 
+                        class="saw-input" 
+                        value="<?php echo esc_attr($customer['address_zip'] ?? ''); ?>"
+                        placeholder="120 00"
+                    >
+                </div>
+                
+                <div class="saw-form-group saw-col-3">
+                    <label for="address_country" class="saw-label">Země</label>
+                    <input 
+                        type="text" 
+                        id="address_country" 
+                        name="address_country" 
+                        class="saw-input" 
+                        value="<?php echo esc_attr($customer['address_country'] ?? 'Česká republika'); ?>"
+                        placeholder="Česká republika"
+                    >
+                </div>
+            </div>
+        </div>
+    </details>
+    
+    <!-- ========================================= -->
+    <!-- SEKCE 3: FAKTURAČNÍ ADRESA -->
+    <!-- ========================================= -->
+    <details class="saw-form-section" id="billing-section">
+        <summary>
+            <span class="dashicons dashicons-media-document"></span>
+            <strong>Fakturační adresa</strong>
+        </summary>
+        <div class="saw-form-section-content">
+            <div class="saw-form-group">
+                <label>
+                    <input 
+                        type="checkbox" 
+                        id="billing-different" 
+                        name="billing_different"
+                        <?php echo !empty($customer['billing_address_street']) ? 'checked' : ''; ?>
+                    >
+                    Fakturační adresa se liší od provozní adresy
+                </label>
+            </div>
+            
+            <div id="billing-fields" style="display: <?php echo !empty($customer['billing_address_street']) ? 'block' : 'none'; ?>;">
+                <div class="saw-form-row">
+                    <div class="saw-form-group saw-col-8">
+                        <label for="billing_address_street" class="saw-label">Ulice</label>
+                        <input 
+                            type="text" 
+                            id="billing_address_street" 
+                            name="billing_address_street" 
+                            class="saw-input" 
+                            value="<?php echo esc_attr($customer['billing_address_street'] ?? ''); ?>"
+                            placeholder="Karlovo náměstí"
+                        >
+                    </div>
+                    
+                    <div class="saw-form-group saw-col-4">
+                        <label for="billing_address_number" class="saw-label">Číslo popisné</label>
+                        <input 
+                            type="text" 
+                            id="billing_address_number" 
+                            name="billing_address_number" 
+                            class="saw-input" 
+                            value="<?php echo esc_attr($customer['billing_address_number'] ?? ''); ?>"
+                            placeholder="123/45"
+                        >
+                    </div>
+                </div>
+                
+                <div class="saw-form-row">
+                    <div class="saw-form-group saw-col-6">
+                        <label for="billing_address_city" class="saw-label">Město</label>
+                        <input 
+                            type="text" 
+                            id="billing_address_city" 
+                            name="billing_address_city" 
+                            class="saw-input" 
+                            value="<?php echo esc_attr($customer['billing_address_city'] ?? ''); ?>"
+                            placeholder="Praha"
+                        >
+                    </div>
+                    
+                    <div class="saw-form-group saw-col-3">
+                        <label for="billing_address_zip" class="saw-label">PSČ</label>
+                        <input 
+                            type="text" 
+                            id="billing_address_zip" 
+                            name="billing_address_zip" 
+                            class="saw-input" 
+                            value="<?php echo esc_attr($customer['billing_address_zip'] ?? ''); ?>"
+                            placeholder="120 00"
+                        >
+                    </div>
+                    
+                    <div class="saw-form-group saw-col-3">
+                        <label for="billing_address_country" class="saw-label">Země</label>
+                        <input 
+                            type="text" 
+                            id="billing_address_country" 
+                            name="billing_address_country" 
+                            class="saw-input" 
+                            value="<?php echo esc_attr($customer['billing_address_country'] ?? ''); ?>"
+                            placeholder="Česká republika"
+                        >
+                    </div>
+                </div>
+            </div>
+        </div>
+    </details>
+    
+    <!-- ========================================= -->
+    <!-- SEKCE 4: KONTAKTNÍ OSOBA -->
+    <!-- ========================================= -->
+    <details open class="saw-form-section">
+        <summary>
+            <span class="dashicons dashicons-admin-users"></span>
+            <strong>Kontaktní osoba</strong>
+        </summary>
+        <div class="saw-form-section-content">
+            <div class="saw-form-row">
+                <div class="saw-form-group saw-col-6">
+                    <label for="contact_person" class="saw-label">Jméno a příjmení</label>
+                    <input 
+                        type="text" 
+                        id="contact_person" 
+                        name="contact_person" 
+                        class="saw-input" 
+                        value="<?php echo esc_attr($customer['contact_person'] ?? ''); ?>"
+                        placeholder="Jan Novák"
+                    >
                 </div>
                 
                 <div class="saw-form-group saw-col-6">
+                    <label for="contact_position" class="saw-label">Funkce / Pozice</label>
+                    <input 
+                        type="text" 
+                        id="contact_position" 
+                        name="contact_position" 
+                        class="saw-input" 
+                        value="<?php echo esc_attr($customer['contact_position'] ?? ''); ?>"
+                        placeholder="Jednatel"
+                    >
+                </div>
+            </div>
+            
+            <div class="saw-form-row">
+                <div class="saw-form-group saw-col-6">
+                    <label for="contact_email" class="saw-label">Email</label>
+                    <input 
+                        type="email" 
+                        id="contact_email" 
+                        name="contact_email" 
+                        class="saw-input" 
+                        value="<?php echo esc_attr($customer['contact_email'] ?? ''); ?>"
+                        placeholder="jan.novak@firma.cz"
+                    >
+                    <small class="saw-help-text">Hlavní kontaktní email</small>
+                </div>
+                
+                <div class="saw-form-group saw-col-6">
+                    <label for="contact_phone" class="saw-label">Telefon</label>
+                    <input 
+                        type="tel" 
+                        id="contact_phone" 
+                        name="contact_phone" 
+                        class="saw-input" 
+                        value="<?php echo esc_attr($customer['contact_phone'] ?? ''); ?>"
+                        placeholder="+420 123 456 789"
+                    >
+                </div>
+            </div>
+            
+            <div class="saw-form-row">
+                <div class="saw-form-group">
+                    <label for="website" class="saw-label">Webové stránky</label>
+                    <input 
+                        type="url" 
+                        id="website" 
+                        name="website" 
+                        class="saw-input" 
+                        value="<?php echo esc_attr($customer['website'] ?? ''); ?>"
+                        placeholder="https://www.firma.cz"
+                    >
+                </div>
+            </div>
+        </div>
+    </details>
+    
+    <!-- ========================================= -->
+    <!-- SEKCE 5: OBCHODNÍ ÚDAJE -->
+    <!-- ========================================= -->
+    <details open class="saw-form-section">
+        <summary>
+            <span class="dashicons dashicons-chart-line"></span>
+            <strong>Obchodní údaje</strong>
+        </summary>
+        <div class="saw-form-section-content">
+            <div class="saw-form-row">
+                <div class="saw-form-group saw-col-6">
+                    <label for="account_type_id" class="saw-label">Typ účtu</label>
+                    <select id="account_type_id" name="account_type_id" class="saw-input">
+                        <option value="">-- Vyberte typ účtu --</option>
+                        <?php foreach ($account_types as $id => $display_name): ?>
+                            <option value="<?php echo esc_attr($id); ?>" <?php selected($customer['account_type_id'] ?? '', $id); ?>>
+                                <?php echo esc_html($display_name); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                
+                <div class="saw-form-group saw-col-6">
+                    <label for="status" class="saw-label">Status</label>
+                    <select id="status" name="status" class="saw-input">
+                        <?php foreach ($status_options as $value => $data): ?>
+                            <option value="<?php echo esc_attr($value); ?>" <?php selected($customer['status'] ?? 'potential', $value); ?>>
+                                <?php echo esc_html($data['icon'] . ' ' . $data['label']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="saw-form-row">
+                <div class="saw-form-group saw-col-6">
+                    <label for="acquisition_source" class="saw-label">Zdroj akvizice</label>
+                    <select id="acquisition_source" name="acquisition_source" class="saw-input">
+                        <option value="">-- Vyberte zdroj --</option>
+                        <?php foreach ($acquisition_options as $value => $label): ?>
+                            <option value="<?php echo esc_attr($value); ?>" <?php selected($customer['acquisition_source'] ?? '', $value); ?>>
+                                <?php echo esc_html($label); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                
+                <div class="saw-form-group saw-col-6">
+                    <label for="last_payment_date" class="saw-label">Datum poslední platby</label>
+                    <input 
+                        type="date" 
+                        id="last_payment_date" 
+                        name="last_payment_date" 
+                        class="saw-input" 
+                        value="<?php echo esc_attr($customer['last_payment_date'] ?? ''); ?>"
+                    >
+                </div>
+            </div>
+            
+            <div class="saw-form-row">
+                <div class="saw-form-group">
+                    <label class="saw-label">Typ předplatného</label>
+                    <div style="display: flex; gap: 20px; margin-top: 8px;">
+                        <?php foreach ($subscription_options as $value => $label): ?>
+                            <label style="display: flex; align-items: center; gap: 6px;">
+                                <input 
+                                    type="radio" 
+                                    name="subscription_type" 
+                                    value="<?php echo esc_attr($value); ?>"
+                                    <?php checked($customer['subscription_type'] ?? 'monthly', $value); ?>
+                                >
+                                <?php echo esc_html($label); ?>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </details>
+    
+    <!-- ========================================= -->
+    <!-- SEKCE 6: BRANDING -->
+    <!-- ========================================= -->
+    <details open class="saw-form-section">
+        <summary>
+            <span class="dashicons dashicons-art"></span>
+            <strong>Branding</strong>
+        </summary>
+        <div class="saw-form-section-content">
+            <div class="saw-branding-grid">
+                <!-- Logo preview -->
+                <div class="saw-logo-column">
+                    <div class="saw-form-group">
+                        <label class="saw-label">Aktuální logo</label>
+                        <?php if (!empty($customer['logo_url_full'])): ?>
+                            <div class="saw-logo-preview-current">
+                                <p class="saw-logo-preview-label">Aktuální</p>
+                                <img src="<?php echo esc_url($customer['logo_url_full']); ?>" alt="Logo">
+                                <button type="button" class="saw-remove-logo-btn" id="remove-logo-btn">
+                                    <span class="dashicons dashicons-trash"></span>
+                                    Odebrat
+                                </button>
+                            </div>
+                        <?php else: ?>
+                            <div class="saw-logo-preview-current">
+                                <p class="saw-logo-preview-label">Žádné logo</p>
+                                <span style="color: #9ca3af;">Logo nebylo nastaveno</span>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                
+                <!-- Upload -->
+                <div class="saw-upload-column">
+                    <div class="saw-form-group">
+                        <label class="saw-label">Nahrát nové logo</label>
+                        <div class="saw-file-upload-wrapper">
+                            <input type="file" id="customer_logo" name="logo" accept="image/*" class="saw-file-input">
+                            <label for="customer_logo" class="saw-file-label">
+                                <span class="dashicons dashicons-upload"></span>
+                                Vybrat soubor
+                            </label>
+                            <div class="saw-file-info">
+                                <span class="dashicons dashicons-info"></span>
+                                <span class="saw-file-name">JPG, PNG, GIF, WEBP, SVG - max 5 MB</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Color picker -->
+                <div class="saw-color-column">
+                    <div class="saw-form-group">
+                        <label for="customer_primary_color_picker" class="saw-label">Primární barva</label>
+                        <div class="saw-color-section">
+                            <div class="saw-color-picker-wrapper">
+                                <input 
+                                    type="color" 
+                                    id="customer_primary_color_picker" 
+                                    class="saw-color-picker"
+                                    value="<?php echo esc_attr($customer['primary_color'] ?? '#1e40af'); ?>"
+                                >
+                                <input 
+                                    type="text" 
+                                    id="customer_primary_color" 
+                                    name="primary_color" 
+                                    class="saw-color-value" 
+                                    value="<?php echo esc_attr($customer['primary_color'] ?? '#1e40af'); ?>"
+                                    pattern="^#[0-9A-Fa-f]{6}$"
+                                >
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </details>
+    
+    <!-- ========================================= -->
+    <!-- SEKCE 7: NASTAVENÍ -->
+    <!-- ========================================= -->
+    <details class="saw-form-section">
+        <summary>
+            <span class="dashicons dashicons-admin-settings"></span>
+            <strong>Nastavení</strong>
+        </summary>
+        <div class="saw-form-section-content">
+            <div class="saw-form-row">
+                <div class="saw-form-group">
+                    <label class="saw-label">Výchozí jazyk administrace</label>
+                    <div style="display: flex; gap: 20px; margin-top: 8px;">
+                        <?php foreach ($language_options as $value => $label): ?>
+                            <label style="display: flex; align-items: center; gap: 6px;">
+                                <input 
+                                    type="radio" 
+                                    name="admin_language_default" 
+                                    value="<?php echo esc_attr($value); ?>"
+                                    <?php checked($customer['admin_language_default'] ?? 'cs', $value); ?>
+                                >
+                                <?php echo esc_html($label); ?>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="saw-form-row">
+                <div class="saw-form-group">
                     <label for="notes" class="saw-label">Interní poznámky</label>
                     <textarea 
                         id="notes" 
                         name="notes" 
                         class="saw-textarea" 
                         rows="5"
-                        placeholder="Interní poznámky, kontaktní informace, zvláštnosti..."
+                        placeholder="Interní poznámky viditelné pouze administrátorům..."
                     ><?php echo esc_textarea($customer['notes'] ?? ''); ?></textarea>
-                    <small class="saw-help-text">Poznámky viditelné pouze administrátorům (neviditelné pro zákazníka)</small>
+                    <small class="saw-help-text">Poznámky neviditelné pro zákazníka</small>
                 </div>
             </div>
         </div>
-    </div>
+    </details>
     
-    <!-- BRANDING -->
-    <div class="saw-card">
-        <div class="saw-card-header">
-            <h2 class="saw-card-title">🎨 Branding a vzhled</h2>
-        </div>
-        <div class="saw-card-body">
-            
-            <div class="saw-branding-grid">
-                
-                <!-- COLUMN 1: LOGO PREVIEW -->
-                <div class="saw-logo-column">
-                    <label class="saw-label">Logo</label>
-                    
-                    <!-- Aktuální logo (pokud existuje) -->
-                    <?php if ($is_edit && !empty($customer['logo_url_full'])): ?>
-                        <div class="saw-logo-preview-current" id="current-logo-wrapper">
-                            <span class="saw-logo-preview-label">Současné</span>
-                            <img src="<?php echo esc_url($customer['logo_url_full']); ?>" alt="Logo" id="current-logo">
-                            <button type="button" class="saw-remove-logo-btn" id="remove-current-logo" title="Smazat logo">
-                                <span class="dashicons dashicons-trash"></span>
-                                Smazat
-                            </button>
-                            <input type="hidden" name="remove_logo" id="remove_logo_input" value="0">
-                        </div>
-                    <?php endif; ?>
-                    
-                    <!-- Náhled nového loga -->
-                    <div class="saw-logo-new-preview" id="new-logo-preview" style="display: none;">
-                        <span class="preview-label">Nové logo</span>
-                        <img src="" alt="Náhled" id="new-logo-img">
-                        <button type="button" class="saw-remove-preview-btn" id="remove-new-preview">
-                            ✕
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- COLUMN 2: UPLOAD CONTROLS -->
-                <div class="saw-upload-column">
-                    <label class="saw-label">Nahrát logo</label>
-                    
-                    <div class="saw-file-upload-wrapper">
-                        <input 
-                            type="file" 
-                            id="logo" 
-                            name="logo" 
-                            class="saw-file-input" 
-                            accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
-                        >
-                        <label for="logo" class="saw-file-label">
-                            <span class="dashicons dashicons-upload"></span>
-                            Vybrat soubor
-                        </label>
-                        <span class="saw-file-info" id="file-info">
-                            <span class="dashicons dashicons-info"></span>
-                            Žádný soubor
-                        </span>
-                    </div>
-                    
-                    <small class="saw-help-text">
-                        JPG, PNG, GIF, WebP, SVG<br>
-                        Max. 5 MB
-                    </small>
-                </div>
-                
-                <!-- COLUMN 3: COLOR PICKER -->
-                <div class="saw-color-column">
-                    <label for="primary_color" class="saw-label">Primární barva</label>
-                    <div class="saw-color-section">
-                        <div class="saw-color-picker-wrapper">
-                            <input 
-                                type="color" 
-                                id="primary_color" 
-                                name="primary_color" 
-                                class="saw-color-picker" 
-                                value="<?php echo esc_attr($customer['primary_color'] ?? '#1e40af'); ?>"
-                            >
-                            <input 
-                                type="text" 
-                                class="saw-color-value" 
-                                id="color_value" 
-                                value="<?php echo esc_attr($customer['primary_color'] ?? '#1e40af'); ?>" 
-                                pattern="^#[0-9A-Fa-f]{6}$"
-                                maxlength="7"
-                            >
-                        </div>
-                        <small class="saw-help-text">Barva v rozhraní</small>
-                    </div>
-                </div>
-                
-            </div>
-            
-        </div>
-    </div>
-    
-    <!-- ACTIONS -->
+    <!-- ========================================= -->
+    <!-- TLAČÍTKA -->
+    <!-- ========================================= -->
     <div class="saw-form-actions">
         <button type="submit" class="saw-button saw-button-primary saw-button-large">
-            <?php if ($is_edit): ?>
-                💾 Uložit změny
-            <?php else: ?>
-                ➕ Vytvořit zákazníka
-            <?php endif; ?>
+            <span class="dashicons dashicons-yes"></span>
+            <?php echo $is_edit ? 'Uložit změny' : 'Vytvořit zákazníka'; ?>
         </button>
-        <a href="<?php echo esc_url(home_url('/admin/settings/customers/')); ?>" class="saw-button saw-button-secondary saw-button-large">
-            ❌ Zrušit
+        <a href="<?php echo esc_url($back_url); ?>" class="saw-button saw-button-secondary saw-button-large">
+            <span class="dashicons dashicons-no-alt"></span>
+            Zrušit
         </a>
     </div>
 </form>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // ===================================================================
-    // LOGO UPLOAD HANDLING
-    // ===================================================================
+(function($) {
+    'use strict';
     
-    const logoInput = document.getElementById('logo');
-    const fileInfo = document.getElementById('file-info');
-    const newPreview = document.getElementById('new-logo-preview');
-    const newLogoImg = document.getElementById('new-logo-img');
-    const currentLogoWrapper = document.getElementById('current-logo-wrapper');
-    const currentLogo = document.getElementById('current-logo');
+    // Toggle fakturační adresy
+    $('#billing-different').on('change', function() {
+        $('#billing-fields').slideToggle(200);
+    });
     
-    // Změna souboru
-    if (logoInput) {
-        logoInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            
-            if (file) {
-                // Validace typu
-                const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
-                if (!allowedTypes.includes(file.type)) {
-                    alert('❌ Nepovolený typ souboru. Použijte JPG, PNG, GIF, WebP nebo SVG.');
-                    logoInput.value = '';
-                    return;
-                }
-                
-                // Validace velikosti (5MB)
-                if (file.size > 5 * 1024 * 1024) {
-                    alert('❌ Soubor je příliš velký. Maximální velikost je 5 MB.');
-                    logoInput.value = '';
-                    return;
-                }
-                
-                // Update file info
-                fileInfo.innerHTML = '<span class="dashicons dashicons-yes"></span> ' + file.name;
-                fileInfo.classList.add('has-file');
-                
-                // Show preview
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    newLogoImg.src = e.target.result;
-                    newPreview.style.display = 'block';
-                    
-                    // Dim current logo
-                    if (currentLogo) {
-                        currentLogo.style.opacity = '0.3';
-                    }
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-    }
+    // Close alerts
+    $('.saw-alert-close').on('click', function() {
+        $(this).parent().fadeOut(200);
+    });
     
-    // Zrušit náhled nového loga
-    const removeNewPreviewBtn = document.getElementById('remove-new-preview');
-    if (removeNewPreviewBtn) {
-        removeNewPreviewBtn.addEventListener('click', function() {
-            logoInput.value = '';
-            fileInfo.innerHTML = '<span class="dashicons dashicons-info"></span> Žádný soubor nevybrán';
-            fileInfo.classList.remove('has-file');
-            newPreview.style.display = 'none';
-            
-            if (currentLogo) {
-                currentLogo.style.opacity = '1';
-            }
-        });
-    }
-    
-    // Smazat aktuální logo
-    const removeCurrentLogoBtn = document.getElementById('remove-current-logo');
-    const removeLogoInput = document.getElementById('remove_logo_input');
-    
-    if (removeCurrentLogoBtn) {
-        removeCurrentLogoBtn.addEventListener('click', function() {
-            if (confirm('⚠️ Opravdu chcete smazat aktuální logo?')) {
-                removeLogoInput.value = '1';
-                currentLogoWrapper.style.opacity = '0.3';
-                currentLogoWrapper.style.pointerEvents = 'none';
-                this.textContent = '✓ Logo bude smazáno';
-                this.style.background = '#059669';
-            }
-        });
-    }
-    
-    // ===================================================================
-    // COLOR PICKER SYNC
-    // ===================================================================
-    
-    const colorPicker = document.getElementById('primary_color');
-    const colorValue = document.getElementById('color_value');
-    
-    if (colorPicker && colorValue) {
-        // Color picker změna
-        colorPicker.addEventListener('input', function() {
-            const color = this.value.toUpperCase();
-            colorValue.value = color;
-        });
-        
-        // Text input změna
-        colorValue.addEventListener('input', function() {
-            const color = this.value.toUpperCase();
-            const hexPattern = /^#[0-9A-F]{6}$/;
-            
-            if (hexPattern.test(color)) {
-                colorPicker.value = color;
-            }
-        });
-    }
-    
-    // ===================================================================
-    // ALERT CLOSE
-    // ===================================================================
-    
-    const alertClose = document.querySelector('.saw-alert-close');
-    if (alertClose) {
-        alertClose.addEventListener('click', function() {
-            this.closest('.saw-alert').remove();
-        });
-    }
-    
-    // ===================================================================
-    // FORM VALIDATION
-    // ===================================================================
-    
-    const form = document.getElementById('saw-customer-form');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            const name = document.getElementById('name').value.trim();
-            
-            if (name.length < 2) {
-                e.preventDefault();
-                alert('❌ Název zákazníka musí mít alespoň 2 znaky.');
-                document.getElementById('name').focus();
-                return false;
-            }
-            
-            const ico = document.getElementById('ico').value.trim();
-            if (ico && !/^[0-9]{6,12}$/.test(ico)) {
-                e.preventDefault();
-                alert('❌ IČO musí obsahovat 6-12 číslic.');
-                document.getElementById('ico').focus();
-                return false;
-            }
-            
-            return true;
-        });
-    }
-});
+})(jQuery);
 </script>

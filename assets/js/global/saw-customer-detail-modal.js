@@ -4,9 +4,11 @@
  * Responsivní modal pro zobrazení detailu zákazníka
  * - Desktop: Modal s blur backdrop
  * - Mobile: Fullscreen view
+ * - Branded header with customer color
  * 
  * @package SAW_Visitors
  * @since 4.6.1
+ * @version REDESIGNED - Branded header implementation
  */
 
 (function($) {
@@ -181,6 +183,9 @@
         renderCustomerData: function(customer) {
             console.log('SAW Customer Modal: Rendering data', customer);
             
+            // ✨ NOVÉ: Aplikuj branding barvu na header
+            this.applyBrandingColor(customer.primary_color || '#2563eb');
+            
             // Header - název a IČO
             $('#saw-modal-title, #saw-modal-mobile-title').text(customer.name || 'Neznámý zákazník');
             $('#saw-modal-ico').text(customer.ico ? 'IČO: ' + customer.ico : '');
@@ -199,23 +204,7 @@
             $('#saw-info-ico').text(customer.ico || '—');
             $('#saw-info-address').html(customer.address ? customer.address.replace(/\n/g, '<br>') : '—');
             
-            // Branding - barva
-            if (customer.primary_color) {
-                $('#saw-info-color').css('background-color', customer.primary_color);
-                $('#saw-info-color-hex').text(customer.primary_color.toUpperCase());
-            } else {
-                $('#saw-info-color').css('background-color', '#6b7280');
-                $('#saw-info-color-hex').text('—');
-            }
-            
-            // Branding - logo preview
-            if (customer.logo_url_full || customer.logo_url) {
-                const logoUrl = customer.logo_url_full || customer.logo_url;
-                $('#saw-modal-logo-preview').show();
-                $('#saw-info-logo').attr('src', logoUrl);
-            } else {
-                $('#saw-modal-logo-preview').hide();
-            }
+            // ✨ ODSTRANĚNO: Branding sekce již není součástí modalu
             
             // Poznámky
             if (customer.notes && customer.notes.trim() !== '') {
@@ -242,6 +231,107 @@
             this.$modalLoading.hide();
             this.$modalContent.show();
             this.$modalFooter.show();
+        },
+        
+        /**
+         * ✨ NOVÉ: Aplikuj branding barvu na header s kontrastním textem
+         * 
+         * @param {string} color - Hex barva (např. #2563eb)
+         */
+        applyBrandingColor: function(color) {
+            // Ověř že color je validní hex
+            if (!color || !color.match(/^#[0-9A-F]{6}$/i)) {
+                console.warn('SAW Customer Modal: Invalid color, using default', color);
+                color = '#2563eb';
+            }
+            
+            // Vypočti kontrastní barvu textu (bílá nebo černá)
+            const textColor = this.getContrastColor(color);
+            
+            console.log('SAW Customer Modal: Applying branding color', {
+                background: color,
+                text: textColor
+            });
+            
+            // Aplikuj na desktop header
+            $('#saw-modal-header').css('background-color', color);
+            $('#saw-modal-title').css('color', textColor);
+            $('#saw-modal-ico').css('color', this.adjustOpacity(textColor, 0.9));
+            $('#saw-modal-close').css('background-color', this.adjustOpacity(textColor, 0.2));
+            $('#saw-modal-close .dashicons').css('color', this.adjustOpacity(textColor, 0.95));
+            
+            // Aplikuj na mobile header
+            $('#saw-modal-mobile-header').css('background-color', color);
+            $('#saw-modal-mobile-title').css('color', textColor);
+            $('#saw-modal-mobile-close').css('background-color', this.adjustOpacity(textColor, 0.2));
+            $('#saw-modal-mobile-close .dashicons').css('color', this.adjustOpacity(textColor, 0.95));
+            $('#saw-modal-mobile-edit').css('background-color', this.adjustOpacity(textColor, 0.2));
+            $('#saw-modal-mobile-edit .dashicons').css('color', this.adjustOpacity(textColor, 0.95));
+        },
+        
+        /**
+         * ✨ NOVÉ: Vypočítej kontrastní barvu textu (bílá nebo černá)
+         * 
+         * Používá algoritmus relativní luminance (WCAG)
+         * 
+         * @param {string} hexColor - Hex barva pozadí (např. #2563eb)
+         * @return {string} '#ffffff' pro světlé pozadí, '#000000' pro tmavé
+         */
+        getContrastColor: function(hexColor) {
+            // Převeď hex na RGB
+            const rgb = this.hexToRgb(hexColor);
+            
+            // Vypočítej relativní luminanci
+            // Vzorec: https://www.w3.org/TR/WCAG20/#relativeluminancedef
+            const r = rgb.r / 255;
+            const g = rgb.g / 255;
+            const b = rgb.b / 255;
+            
+            const rLin = r <= 0.03928 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);
+            const gLin = g <= 0.03928 ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4);
+            const bLin = b <= 0.03928 ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4);
+            
+            const luminance = 0.2126 * rLin + 0.7152 * gLin + 0.0722 * bLin;
+            
+            // Pokud je luminance vyšší než 0.5, použij tmavý text, jinak světlý
+            return luminance > 0.5 ? '#000000' : '#ffffff';
+        },
+        
+        /**
+         * ✨ NOVÉ: Převeď hex barvu na RGB objekt
+         * 
+         * @param {string} hex - Hex barva (např. #2563eb)
+         * @return {object} {r: 37, g: 99, b: 235}
+         */
+        hexToRgb: function(hex) {
+            // Odstraň # pokud tam je
+            hex = hex.replace(/^#/, '');
+            
+            // Parsuj hex na RGB
+            const bigint = parseInt(hex, 16);
+            const r = (bigint >> 16) & 255;
+            const g = (bigint >> 8) & 255;
+            const b = bigint & 255;
+            
+            return {r: r, g: g, b: b};
+        },
+        
+        /**
+         * ✨ NOVÉ: Přidej průhlednost k barvě
+         * 
+         * @param {string} color - Hex nebo rgba barva
+         * @param {number} opacity - Průhlednost (0-1)
+         * @return {string} rgba barva
+         */
+        adjustOpacity: function(color, opacity) {
+            if (color.startsWith('rgba')) {
+                // Už je rgba, jen uprav opacity
+                return color.replace(/[\d.]+\)$/g, opacity + ')');
+            }
+            
+            // Převeď hex na rgba
+            const rgb = this.hexToRgb(color);
+            return 'rgba(' + rgb.r + ', ' + rgb.g + ', ' + rgb.b + ', ' + opacity + ')';
         },
         
         /**
