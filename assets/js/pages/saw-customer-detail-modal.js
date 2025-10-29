@@ -1,381 +1,400 @@
 /**
- * SAW Customer Detail Modal JavaScript
+ * SAW Customer Detail Modal - Tab System
  * 
  * @package SAW_Visitors
- * @version 4.6.1 ENHANCED
+ * @version 4.7.4
  */
 
 (function($) {
     'use strict';
     
-    const SawCustomerDetailModal = {
-        
+    const CustomerModal = {
+        $modal: null,
         currentCustomerId: null,
-        currentCustomerData: null,
         
-        /**
-         * Inicializace
-         */
-        init: function() {
+        init() {
+            console.log('🎯 Customer Modal: Initializing...');
+            
+            this.$modal = $('#saw-customer-detail-modal');
+            
+            if (!this.$modal.length) {
+                console.warn('⚠️ Modal element not found');
+                return;
+            }
+            
+            if (typeof sawCustomerModal === 'undefined') {
+                console.error('❌ sawCustomerModal config not found');
+                return;
+            }
+            
             this.bindEvents();
-            console.log('SAW Customer Detail Modal: Initialized');
+            console.log('✅ Customer Modal initialized');
         },
         
-        /**
-         * Bind events
-         */
-        bindEvents: function() {
-            const self = this;
-            
-            // Otevřít modal (delegovaný event na detail tlačítko v tabulce)
-            $(document).on('click', '.saw-action-detail, [data-action="detail"]', function(e) {
-                e.preventDefault();
-                const customerId = $(this).data('id') || $(this).closest('tr').data('id');
+        bindEvents() {
+            $(document).on('click', '.saw-customer-row', (e) => {
+                if ($(e.target).closest('.saw-actions').length > 0) {
+                    return;
+                }
+                
+                if ($(e.target).is('a') || $(e.target).closest('a').length > 0) {
+                    return;
+                }
+                
+                if ($(e.target).hasClass('copy-email-btn') || $(e.target).closest('.copy-email-btn').length > 0) {
+                    return;
+                }
+                
+                const $nameElement = $(e.currentTarget).find('.saw-customer-name');
+                const customerId = $nameElement.data('customer-id');
+                
                 if (customerId) {
-                    self.open(customerId);
+                    this.open(customerId);
                 }
             });
             
-            // Zavřít modal
-            $('#saw-modal-close, #saw-modal-mobile-close').on('click', function() {
-                self.close();
+            $(document).on('click', '#saw-modal-close, #saw-modal-mobile-close', () => {
+                this.close();
             });
             
-            // Zavřít při kliknutí mimo modal
-            $('#saw-customer-detail-modal').on('click', function(e) {
-                if ($(e.target).is('#saw-customer-detail-modal')) {
-                    self.close();
-                }
-            });
-            
-            // ESC key
-            $(document).on('keyup', function(e) {
-                if (e.key === 'Escape' && $('#saw-customer-detail-modal').is(':visible')) {
-                    self.close();
+            $(document).on('keydown', (e) => {
+                if (e.key === 'Escape' && this.$modal.is(':visible')) {
+                    this.close();
                 }
             });
             
-            // Edit button
-            $('#saw-modal-edit, #saw-modal-mobile-edit').on('click', function() {
-                if (self.currentCustomerId) {
-                    window.location.href = '/admin/settings/customers/edit/' + self.currentCustomerId + '/';
+            this.$modal.on('click', (e) => {
+                if ($(e.target).is('.saw-modal-overlay')) {
+                    this.close();
                 }
             });
             
-            // Delete button
-            $('#saw-modal-delete, #saw-modal-mobile-delete').on('click', function() {
-                if (self.currentCustomerId && confirm('Opravdu chcete smazat tohoto zákazníka?')) {
-                    self.deleteCustomer(self.currentCustomerId);
+            $(document).on('click', '.saw-modal-tab', (e) => {
+                const tabId = $(e.currentTarget).data('tab');
+                this.switchTab(tabId);
+            });
+            
+            $(document).on('click', '#saw-modal-edit, #saw-modal-mobile-edit', () => {
+                if (this.currentCustomerId && sawCustomerModal.editUrl) {
+                    const editUrl = sawCustomerModal.editUrl.replace('{id}', this.currentCustomerId);
+                    window.location.href = editUrl;
                 }
             });
             
-            // Copy to clipboard
-            $('.copy-btn').on('click', function() {
-                const type = $(this).data('copy');
-                let text = '';
-                
-                if (type === 'email') {
-                    text = $('#saw-contact-email').text();
-                } else if (type === 'phone') {
-                    text = $('#saw-contact-phone').text();
-                }
-                
-                if (text && text !== '—') {
-                    self.copyToClipboard(text);
-                    $(this).text('✅');
-                    setTimeout(() => {
-                        $(this).text('📋');
-                    }, 2000);
-                }
+            $(document).on('click', '#saw-modal-delete, #saw-modal-mobile-delete', () => {
+                this.handleDelete();
+            });
+            
+            $(document).on('click', '.copy-btn', (e) => {
+                const type = $(e.currentTarget).data('copy');
+                this.copyToClipboard(type);
             });
         },
         
-        /**
-         * Otevřít modal
-         */
-        open: function(customerId) {
+        open(customerId) {
+            console.log('📂 Opening modal for customer:', customerId);
+            
             this.currentCustomerId = customerId;
             
-            $('#saw-customer-detail-modal').fadeIn(200);
-            $('#saw-modal-loading').show();
-            $('#saw-modal-content').hide();
-            $('#saw-modal-footer').hide();
+            this.$modal.fadeIn(200);
+            $('body').css('overflow', 'hidden');
             
             this.loadCustomerData(customerId);
         },
         
-        /**
-         * Zavřít modal
-         */
-        close: function() {
-            $('#saw-customer-detail-modal').fadeOut(200);
-            this.currentCustomerId = null;
-            this.currentCustomerData = null;
+        close() {
+            console.log('🚪 Closing modal');
+            
+            this.$modal.fadeOut(200);
+            $('body').css('overflow', '');
+            
+            setTimeout(() => {
+                this.reset();
+            }, 200);
         },
         
-        /**
-         * Načíst data zákazníka přes AJAX
-         */
-        loadCustomerData: function(customerId) {
-            const self = this;
+        reset() {
+            this.currentCustomerId = null;
+            $('#saw-modal-loading').show();
+            $('#saw-modal-content').hide();
+            $('#saw-modal-footer').hide();
+            $('.saw-modal-tab').first().trigger('click');
+        },
+        
+        switchTab(tabId) {
+            $('.saw-modal-tab').removeClass('active');
+            $('.saw-modal-tab[data-tab="' + tabId + '"]').addClass('active');
             
+            $('.saw-modal-tab-panel').removeClass('active');
+            $('#saw-tab-' + tabId).addClass('active');
+        },
+        
+        loadCustomerData(customerId) {
             $.ajax({
-                url: sawAdminTableAjax.ajaxurl,
+                url: sawCustomerModal.ajaxurl,
                 type: 'POST',
                 data: {
                     action: 'saw_get_customer_detail',
-                    nonce: sawAdminTableAjax.nonce,
+                    nonce: sawCustomerModal.nonce,
                     customer_id: customerId
                 },
-                success: function(response) {
+                success: (response) => {
                     if (response.success) {
-                        self.currentCustomerData = response.data;
-                        self.renderCustomerData(response.data);
+                        this.renderCustomer(response.data.customer);
                     } else {
-                        alert('Chyba při načítání: ' + (response.data.message || 'Neznámá chyba'));
-                        self.close();
+                        alert(response.data.message || 'Chyba při načítání dat');
+                        this.close();
                     }
                 },
-                error: function() {
-                    alert('Chyba při načítání dat zákazníka.');
-                    self.close();
+                error: () => {
+                    alert('Chyba komunikace se serverem');
+                    this.close();
                 }
             });
         },
         
-        /**
-         * Vykreslit data zákazníka do modalu
-         */
-        renderCustomerData: function(data) {
-            // Header barva podle primary_color
-            const primaryColor = data.primary_color || '#2563eb';
-            $('#saw-modal-header, #saw-modal-mobile-header').css('background-color', primaryColor);
+        renderCustomer(customer) {
+            console.log('🎨 Rendering customer:', customer);
             
-            // Text barva podle kontrastu
-            const textColor = this.getContrastColor(primaryColor);
-            $('#saw-modal-header .saw-modal-title, #saw-modal-header .saw-modal-ico, #saw-modal-mobile-header .saw-modal-mobile-title').css('color', textColor);
-            $('#saw-modal-header .saw-modal-close .dashicons, #saw-modal-mobile-header .dashicons').css('color', textColor);
+            $('#saw-modal-title, #saw-modal-mobile-title').text(customer.name);
+            $('#saw-modal-ico').text(customer.ico ? 'IČO: ' + customer.ico : '');
             
-            // Logo
-            if (data.logo_url_full) {
+            if (customer.logo_url_full) {
                 $('#saw-modal-logo').show();
-                $('#saw-modal-logo-img').attr('src', data.logo_url_full);
+                $('#saw-modal-logo-img').attr('src', customer.logo_url_full);
             } else {
                 $('#saw-modal-logo').hide();
             }
             
-            // Title
-            $('#saw-modal-title, #saw-modal-mobile-title').text(data.name);
-            
-            // IČO
-            if (data.ico) {
-                $('#saw-modal-ico').text('IČO: ' + data.ico).show();
-            } else {
-                $('#saw-modal-ico').hide();
+            if (customer.primary_color) {
+                this.applyBrandColor(customer.primary_color);
             }
             
-            // Základní informace
-            $('#saw-info-name').text(data.name);
-            $('#saw-info-ico').text(data.ico || '—');
+            this.renderBasicInfo(customer);
+            this.renderAddresses(customer);
+            this.renderContact(customer);
+            this.renderBusiness(customer);
+            this.renderSystem(customer);
             
-            if (data.dic) {
-                $('#saw-info-dic').text(data.dic);
-                $('#saw-dic-row').show();
+            $('#saw-modal-loading').hide();
+            $('#saw-modal-content').show();
+            $('#saw-modal-footer').show();
+        },
+        
+        renderBasicInfo(customer) {
+            $('#basic-name').text(customer.name);
+            $('#basic-ico').text(customer.ico || '—');
+            
+            if (customer.dic) {
+                $('#basic-dic').text(customer.dic);
+                $('#basic-dic-row').show();
             } else {
-                $('#saw-dic-row').hide();
+                $('#basic-dic-row').hide();
             }
-            
-            // Provozní adresa
-            if (data.operational_address) {
-                $('#saw-operational-address').html(data.operational_address.replace(/\n/g, '<br>'));
+        },
+        
+        renderAddresses(customer) {
+            if (customer.formatted_operational_address) {
+                $('#operational-address').html(
+                    customer.formatted_operational_address.replace(/,\s*/g, '<br>')
+                );
                 $('#operational-address-section').show();
             } else {
                 $('#operational-address-section').hide();
             }
             
-            // Fakturační adresa
-            if (data.has_billing_address && data.billing_address) {
-                $('#saw-billing-address').html(data.billing_address.replace(/\n/g, '<br>'));
+            if (customer.formatted_billing_address) {
+                $('#billing-address').html(
+                    customer.formatted_billing_address.replace(/,\s*/g, '<br>')
+                );
                 $('#billing-address-section').show();
             } else {
                 $('#billing-address-section').hide();
             }
-            
-            // Kontaktní osoba
+        },
+        
+        renderContact(customer) {
             let hasContact = false;
             
-            if (data.contact_person) {
-                $('#saw-contact-person').text(data.contact_person);
+            if (customer.contact_person) {
+                $('#contact-person').text(customer.contact_person);
                 $('#contact-person-row').show();
                 hasContact = true;
             } else {
                 $('#contact-person-row').hide();
             }
             
-            if (data.contact_position) {
-                $('#saw-contact-position').text(data.contact_position);
+            if (customer.contact_position) {
+                $('#contact-position').text(customer.contact_position);
                 $('#contact-position-row').show();
                 hasContact = true;
             } else {
                 $('#contact-position-row').hide();
             }
             
-            if (data.contact_email) {
-                $('#saw-contact-email').text(data.contact_email);
+            if (customer.contact_email) {
+                $('#contact-email').text(customer.contact_email);
                 $('#contact-email-row').show();
                 hasContact = true;
             } else {
                 $('#contact-email-row').hide();
             }
             
-            if (data.contact_phone) {
-                $('#saw-contact-phone').text(data.contact_phone);
+            if (customer.contact_phone) {
+                $('#contact-phone').text(customer.contact_phone);
                 $('#contact-phone-row').show();
                 hasContact = true;
             } else {
                 $('#contact-phone-row').hide();
             }
             
-            if (data.website) {
-                $('#saw-contact-website').attr('href', data.website).text(data.website);
+            if (customer.website) {
+                $('#contact-website').attr('href', customer.website).text(customer.website);
                 $('#contact-website-row').show();
                 hasContact = true;
             } else {
                 $('#contact-website-row').hide();
             }
             
-            if (hasContact) {
-                $('#contact-section').show();
-            } else {
-                $('#contact-section').hide();
-            }
-            
-            // Obchodní údaje
-            $('#saw-customer-status-badge')
-                .text(data.status_label)
-                .css('background-color', data.status_color);
-            
-            $('#saw-account-type-badge')
-                .text(data.account_type_display_name)
-                .css('background-color', data.account_type_color);
-            
-            if (data.acquisition_source) {
-                $('#saw-acquisition-source').text(data.acquisition_source);
-                $('#acquisition-row').show();
-            } else {
-                $('#acquisition-row').hide();
-            }
-            
-            if (data.subscription_type) {
-                $('#saw-subscription-type').text(data.subscription_type);
-                $('#subscription-row').show();
-            } else {
-                $('#subscription-row').hide();
-            }
-            
-            if (data.last_payment_date) {
-                $('#saw-last-payment').text(data.last_payment_date);
-                $('#payment-row').show();
-            } else {
-                $('#payment-row').hide();
-            }
-            
-            // Poznámky
-            if (data.notes) {
-                $('#saw-info-notes').html(data.notes.replace(/\n/g, '<br>'));
-                $('#notes-section').show();
-            } else {
-                $('#notes-section').hide();
-            }
-            
-            // Metadata
-            $('#saw-info-created').text(data.created_at || '—');
-            
-            if (data.updated_at) {
-                $('#saw-info-updated').text(data.updated_at);
-                $('#saw-updated-row').show();
-            } else {
-                $('#saw-updated-row').hide();
-            }
-            
-            // Zobrazit obsah
-            $('#saw-modal-loading').hide();
-            $('#saw-modal-content').fadeIn(200);
-            $('#saw-modal-footer').fadeIn(200);
-            
-            // Mobile: zkopírovat obsah
-            $('#saw-modal-mobile-body').html($('#saw-modal-content').html());
+            $('#contact-section').toggle(hasContact);
         },
         
-        /**
-         * Smazat zákazníka
-         */
-        deleteCustomer: function(customerId) {
-            const self = this;
+        renderBusiness(customer) {
+            const statusBadge = $('#business-status-badge');
+            statusBadge.removeClass('saw-badge-potential saw-badge-active saw-badge-inactive');
+            statusBadge.addClass('saw-badge-' + customer.status);
+            statusBadge.text(customer.status_label);
+            
+            if (customer.account_type_display_name) {
+                const accountBadge = $('#business-account-type-badge');
+                accountBadge.text(customer.account_type_display_name);
+                if (customer.account_type_color) {
+                    accountBadge.css('background-color', customer.account_type_color + '20');
+                    accountBadge.css('color', customer.account_type_color);
+                }
+                $('#business-account-type-row').show();
+            } else {
+                $('#business-account-type-row').hide();
+            }
+            
+            if (customer.acquisition_source) {
+                $('#business-acquisition-source').text(customer.acquisition_source);
+                $('#business-acquisition-row').show();
+            } else {
+                $('#business-acquisition-row').hide();
+            }
+            
+            if (customer.subscription_type) {
+                $('#business-subscription-type').text(customer.subscription_type_label);
+                $('#business-subscription-row').show();
+            } else {
+                $('#business-subscription-row').hide();
+            }
+            
+            if (customer.last_payment_date_formatted) {
+                $('#business-last-payment').text(customer.last_payment_date_formatted);
+                $('#business-payment-row').show();
+            } else {
+                $('#business-payment-row').hide();
+            }
+            
+            if (customer.notes) {
+                $('#business-notes').text(customer.notes);
+                $('#business-notes-section').show();
+            } else {
+                $('#business-notes-section').hide();
+            }
+        },
+        
+        renderSystem(customer) {
+            $('#system-primary-color-value').text(customer.primary_color);
+            $('#system-primary-color-preview').css('background-color', customer.primary_color);
+            
+            $('#system-language').text(customer.admin_language_label);
+            $('#system-created-at').text(customer.created_at_formatted);
+            
+            if (customer.updated_at_formatted) {
+                $('#system-updated-at').text(customer.updated_at_formatted);
+                $('#system-updated-row').show();
+            } else {
+                $('#system-updated-row').hide();
+            }
+        },
+        
+        applyBrandColor(color) {
+            const header = $('#saw-modal-header, #saw-modal-mobile-header');
+            header.css('background-color', color);
+            
+            const textColor = this.getContrastColor(color);
+            header.find('.saw-modal-title, .saw-modal-ico, .saw-modal-mobile-title').css('color', textColor);
+            header.find('.dashicons').css('color', textColor);
+        },
+        
+        getContrastColor(hexColor) {
+            const r = parseInt(hexColor.substr(1, 2), 16);
+            const g = parseInt(hexColor.substr(3, 2), 16);
+            const b = parseInt(hexColor.substr(5, 2), 16);
+            const brightness = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+            return brightness > 155 ? '#000000' : '#ffffff';
+        },
+        
+        handleDelete() {
+            if (!confirm('Opravdu chcete smazat tohoto zákazníka? Tato akce je nevratná.')) {
+                return;
+            }
             
             $.ajax({
-                url: sawAdminTableAjax.ajaxurl,
+                url: sawCustomerModal.ajaxurl,
                 type: 'POST',
                 data: {
                     action: 'saw_admin_table_delete',
-                    nonce: sawAdminTableAjax.nonce,
-                    entity: 'customers',
-                    id: customerId
+                    nonce: sawCustomerModal.nonce,
+                    id: this.currentCustomerId,
+                    entity: 'customers'
                 },
-                success: function(response) {
+                success: (response) => {
                     if (response.success) {
-                        alert('Zákazník byl smazán.');
-                        self.close();
+                        alert('Zákazník byl úspěšně smazán');
+                        this.close();
                         location.reload();
                     } else {
-                        alert('Chyba při mazání: ' + (response.data.message || 'Neznámá chyba'));
+                        alert(response.data.message || 'Chyba při mazání');
                     }
                 },
-                error: function() {
-                    alert('Chyba při mazání zákazníka.');
+                error: () => {
+                    alert('Chyba komunikace se serverem');
                 }
             });
         },
         
-        /**
-         * Zkopírovat do schránky
-         */
-        copyToClipboard: function(text) {
+        copyToClipboard(type) {
+            let text = '';
+            
+            if (type === 'email') {
+                text = $('#contact-email').text();
+            } else if (type === 'phone') {
+                text = $('#contact-phone').text();
+            }
+            
+            if (!text) return;
+            
             if (navigator.clipboard) {
-                navigator.clipboard.writeText(text).then(function() {
-                    console.log('Copied:', text);
+                navigator.clipboard.writeText(text).then(() => {
+                    alert('Zkopírováno: ' + text);
                 });
             } else {
-                // Fallback
-                const textarea = document.createElement('textarea');
-                textarea.value = text;
-                document.body.appendChild(textarea);
-                textarea.select();
+                const $temp = $('<input>');
+                $('body').append($temp);
+                $temp.val(text).select();
                 document.execCommand('copy');
-                document.body.removeChild(textarea);
+                $temp.remove();
+                alert('Zkopírováno: ' + text);
             }
-        },
-        
-        /**
-         * Získat kontrastní barvu textu (bílá/černá) podle pozadí
-         */
-        getContrastColor: function(hexColor) {
-            const r = parseInt(hexColor.substr(1, 2), 16);
-            const g = parseInt(hexColor.substr(3, 2), 16);
-            const b = parseInt(hexColor.substr(5, 2), 16);
-            
-            const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-            
-            return luminance > 0.5 ? '#000000' : '#ffffff';
         }
     };
     
-    // Inicializace
-    $(document).ready(function() {
-        SawCustomerDetailModal.init();
+    $(document).ready(() => {
+        CustomerModal.init();
     });
-    
-    // Export pro případné externí použití
-    window.SawCustomerDetailModal = SawCustomerDetailModal;
     
 })(jQuery);

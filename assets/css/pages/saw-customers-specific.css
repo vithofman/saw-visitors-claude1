@@ -1,0 +1,691 @@
+/**
+ * SAW Customers - Entity-Specific Styles
+ * 
+ * POUZE styling specifický pro zákazníky:
+ * - Logo preview a upload
+ * - Branding grid layout
+ * 
+ * @package SAW_Visitors
+ * @version 2.0.0
+ * @since   4.8.0
+ */
+
+/* ============================================
+   WHITE BACKGROUND EVERYWHERE
+   ============================================ */
+
+body,
+body.saw-app-body,
+html,
+#wpcontent,
+#wpbody,
+#wpbody-content,
+.wrap,
+.saw-admin-wrapper,
+.saw-app-layout,
+.saw-app-layout-content,
+.saw-app-container,
+.saw-app-main,
+.saw-app-content,
+.saw-content-area,
+.saw-main-content {
+    background-color: #fff !important;
+}
+
+body::before,
+body::after,
+.wrap::before,
+.wrap::after {
+    display: none !important;
+}
+
+body.admin-page,
+.saw-admin-wrapper,
+#wpcontent,
+#wpbody,
+#wpbody-content {
+    background: #fff !important;
+}
+
+/* ============================================
+   PAGE HEADER
+   ============================================ */
+
+.saw-page-header {
+    background: #fff;
+    border-bottom: 1px solid #dcdcde;
+    padding: 30px 0;
+    margin-bottom: 30px;
+}
+
+.saw-page-header-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.saw-page-title {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 600;
+    color: #1d2327;
+    line-height: 1.2;
+}
+
+.saw-back-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px;
+    background: #f0f0f1;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    text-decoration: none;
+    color: #2c3338;
+    font-weight: 500;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.saw-back-button:hover {
+    background: #fff;
+    border-color: #0073aa;
+    color: #0073aa;
+}
+
+.saw-back-button .dashicons {
+    font-size: 18px;
+}
+
+/* ============================================
+   FORM CONTAINER
+   ============================================ */
+
+.saw-form {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 20px 40px;
+    background: #fff;
+    min-height: 100vh;
+}
+
+/* ============================================
+   CARDS - NO BACKGROUND
+   ============================================ */
+
+.saw-card {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    margin-bottom: 48px;
+    box-shadow: none;
+    overflow: visible;
+}
+
+.saw-card-header {
+    background: transparent;
+    border-bottom: 2px solid #dcdcde;
+    padding: 0 0 16px 0;
+    margin-bottom: 32px;
+}
+
+.saw-card-title {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #1d2327;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.saw-card-body {
+    padding: 0;
+}
+
+/* ============================================
+   BRANDING GRID
+   ============================================ */
+
+.saw-branding-grid {
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+    gap: 32px;
+    align-items: start;
+    max-width: 100%;
+}
+
+.saw-logo-column {
+    min-width: 200px;
+    max-width: 200px;
+}
+
+.saw-upload-column {
+    min-width: 240px;
+    max-width: 280px;
+}
+
+.saw-color-column {
+    min-width: 200px;
+    margin-left: auto;
+}
+
+.saw-form-group .saw-label {
+    margin-bottom: 16px;
+    font-size: 15px;
+}
+
+.saw-logo-preview-current {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #fafafa;
+    border: 2px dashed #d0d0d0;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 0;
+    min-height: 100px;
+    width: 100%;
+    transition: all 0.3s ease;
+}
+
+.saw-logo-preview-current:hover {
+    background: #f5f5f5;
+    border-color: #b0b0b0;
+}
+
+.saw-logo-preview-label {
+    position: absolute;
+    top: -10px;
+    left: 16px;
+    background: #fff;
+    padding: 3px 10px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #646970;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.saw-logo-preview-current img {
+    display: block;
+    max-width: 160px;
+    max-height: 70px;
+    height: auto;
+    object-fit: contain;
+    transition: opacity 0.3s ease;
+}
+
+.saw-remove-logo-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: #fff;
+    color: #d63638;
+    border: 1px solid #d63638;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(214, 54, 56, 0.1);
+    opacity: 0;
+}
+
+.saw-logo-preview-current:hover .saw-remove-logo-btn {
+    opacity: 1;
+}
+
+.saw-remove-logo-btn:hover {
+    background: #d63638;
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(214, 54, 56, 0.2);
+}
+
+.saw-remove-logo-btn .dashicons {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+}
+
+.saw-file-upload-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.saw-file-input {
+    display: none;
+}
+
+.saw-file-label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 11px 20px;
+    background: #0073aa;
+    color: #fff;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(0, 115, 170, 0.2);
+    width: 100%;
+}
+
+.saw-file-label:hover {
+    background: #005a87;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 115, 170, 0.3);
+}
+
+.saw-file-label .dashicons {
+    font-size: 18px;
+}
+
+.saw-file-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #646970;
+    font-style: italic;
+}
+
+.saw-file-info.has-file {
+    color: #00a32a;
+    font-weight: 500;
+    font-style: normal;
+}
+
+.saw-file-info .dashicons {
+    font-size: 14px;
+}
+
+.saw-logo-new-preview {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 12px;
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.25);
+    min-height: 100px;
+    width: 100%;
+    animation: slideIn 0.4s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.saw-logo-new-preview .preview-label {
+    position: absolute;
+    top: -10px;
+    left: 16px;
+    background: #fff;
+    padding: 3px 10px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #667eea;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.2);
+}
+
+.saw-logo-new-preview img {
+    display: block;
+    max-width: 160px;
+    max-height: 70px;
+    height: auto;
+    object-fit: contain;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 12px;
+}
+
+.saw-remove-preview-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(255, 255, 255, 0.95);
+    color: #d63638;
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.saw-remove-preview-btn:hover {
+    background: #d63638;
+    color: #fff;
+    transform: rotate(90deg) scale(1.1);
+}
+
+.saw-color-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.saw-color-picker-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 0;
+}
+
+.saw-color-picker {
+    width: 56px;
+    height: 56px;
+    border: 2px solid #dcdcde;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 4px;
+    background: #fff;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.saw-color-picker::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.saw-color-picker::-webkit-color-swatch {
+    border: none;
+    border-radius: 8px;
+}
+
+.saw-color-picker:hover {
+    border-color: #0073aa;
+    box-shadow: 0 4px 12px rgba(0, 115, 170, 0.15);
+    transform: translateY(-2px);
+}
+
+.saw-color-picker:focus {
+    outline: none;
+    border-color: #0073aa;
+    box-shadow: 0 0 0 3px rgba(0, 115, 170, 0.1);
+}
+
+.saw-color-value {
+    flex: 1;
+    max-width: 140px;
+    padding: 14px 16px;
+    border: 2px solid #dcdcde;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.saw-color-value:focus {
+    border-color: #0073aa;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 115, 170, 0.1);
+}
+
+/* ============================================
+   FORM ACTIONS
+   ============================================ */
+
+.saw-form-actions {
+    display: flex;
+    gap: 12px;
+    padding-top: 32px;
+    border-top: 2px solid #e8e8e8;
+    margin-top: 48px;
+}
+
+.saw-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 24px;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    line-height: 1.4;
+}
+
+.saw-button-large {
+    padding: 14px 32px;
+    font-size: 15px;
+}
+
+.saw-button-primary {
+    background: #0073aa;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(0, 115, 170, 0.2);
+    border-color: #0073aa;
+}
+
+.saw-button-primary:hover {
+    background: #005a87;
+    border-color: #005a87;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 115, 170, 0.3);
+}
+
+.saw-button-secondary {
+    background: #fff;
+    color: #2c3338;
+    border-color: #c3c4c7;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.saw-button-secondary:hover {
+    background: #f6f7f7;
+    border-color: #8c8f94;
+    color: #000;
+}
+
+/* ============================================
+   ALERTS
+   ============================================ */
+
+.saw-alert {
+    position: relative;
+    background: #fff;
+    border-left: 4px solid #0073aa;
+    padding: 14px 50px 14px 18px;
+    margin: 0 auto 24px;
+    max-width: 1000px;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    font-size: 14px;
+    line-height: 1.6;
+    color: #2c3338;
+}
+
+.saw-alert-error {
+    border-left-color: #d63638;
+    background: #fcf0f1;
+}
+
+.saw-alert-close {
+    position: absolute;
+    top: 50%;
+    right: 14px;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    color: #787c82;
+    cursor: pointer;
+    padding: 4px;
+    line-height: 1;
+    transition: color 0.2s ease;
+}
+
+.saw-alert-close:hover {
+    color: #d63638;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media screen and (max-width: 960px) {
+    .saw-branding-grid {
+        grid-template-columns: 1fr;
+        gap: 32px;
+        max-width: 400px;
+    }
+    
+    .saw-logo-column,
+    .saw-upload-column,
+    .saw-color-column {
+        min-width: 0;
+        max-width: 100%;
+    }
+    
+    .saw-page-header-content {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .saw-back-button {
+        align-self: flex-start;
+    }
+}
+
+@media screen and (max-width: 782px) {
+    .saw-page-header {
+        padding: 20px 0;
+        margin-bottom: 20px;
+    }
+    
+    .saw-page-header-content {
+        padding: 0 16px;
+    }
+    
+    .saw-page-title {
+        font-size: 22px;
+    }
+    
+    .saw-form {
+        padding: 0 16px 32px;
+    }
+    
+    .saw-card-header {
+        padding: 14px 18px;
+    }
+    
+    .saw-card-title {
+        font-size: 16px;
+    }
+    
+    .saw-card-body {
+        padding: 20px 18px;
+    }
+    
+    .saw-file-upload-wrapper {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .saw-file-label {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .saw-file-info {
+        width: 100%;
+    }
+    
+    .saw-color-picker-wrapper {
+        flex-wrap: wrap;
+    }
+    
+    .saw-color-value {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .saw-form-actions {
+        flex-direction: column;
+    }
+    
+    .saw-button-large {
+        width: 100%;
+        padding: 14px 24px;
+    }
+    
+    .saw-logo-preview-current img,
+    .saw-logo-new-preview img {
+        max-width: 160px;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .saw-page-title {
+        font-size: 20px;
+    }
+    
+    .saw-back-button {
+        font-size: 13px;
+        padding: 8px 16px;
+    }
+    
+    .saw-color-picker {
+        width: 50px;
+        height: 38px;
+    }
+    
+    .saw-color-value {
+        font-size: 13px;
+    }
+    
+    .saw-logo-preview-current,
+    .saw-logo-new-preview {
+        width: 100%;
+    }
+    
+    .saw-logo-preview-current img,
+    .saw-logo-new-preview img {
+        max-width: 100%;
+    }
+}

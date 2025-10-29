@@ -153,7 +153,7 @@ class SAW_Component_Admin_Table {
             
             wp_enqueue_script(
                 'saw-customer-detail-modal',
-                SAW_VISITORS_PLUGIN_URL . 'assets/js/global/saw-customer-detail-modal.js',
+                SAW_VISITORS_PLUGIN_URL . 'assets/js/pages/saw-customer-detail-modal.js',
                 array('jquery', 'saw-admin-table'),
                 SAW_VISITORS_VERSION,
                 true

@@ -3,7 +3,7 @@
  * SAW Controller Customers
  * 
  * @package SAW_Visitors
- * @version 4.7.4
+ * @version 4.8.0
  */
 
 if (!defined('ABSPATH')) {
@@ -26,9 +26,28 @@ class SAW_Controller_Customers {
     }
     
     private function enqueue_customers_assets() {
-        wp_enqueue_style('saw-admin-table', SAW_VISITORS_PLUGIN_URL . 'assets/css/global/saw-admin-table.css', array(), SAW_VISITORS_VERSION);
-        wp_enqueue_script('saw-admin-table', SAW_VISITORS_PLUGIN_URL . 'assets/js/global/saw-admin-table.js', array('jquery'), SAW_VISITORS_VERSION, true);
-        wp_enqueue_script('saw-admin-table-ajax', SAW_VISITORS_PLUGIN_URL . 'assets/js/global/saw-admin-table-ajax.js', array('jquery', 'saw-admin-table'), SAW_VISITORS_VERSION, true);
+        wp_enqueue_style(
+            'saw-admin-table',
+            SAW_VISITORS_PLUGIN_URL . 'assets/css/global/saw-admin-table.css',
+            array(),
+            SAW_VISITORS_VERSION
+        );
+        
+        wp_enqueue_script(
+            'saw-admin-table',
+            SAW_VISITORS_PLUGIN_URL . 'assets/js/global/saw-admin-table.js',
+            array('jquery'),
+            SAW_VISITORS_VERSION,
+            true
+        );
+        
+        wp_enqueue_script(
+            'saw-admin-table-ajax',
+            SAW_VISITORS_PLUGIN_URL . 'assets/js/global/saw-admin-table-ajax.js',
+            array('jquery', 'saw-admin-table'),
+            SAW_VISITORS_VERSION,
+            true
+        );
         
         wp_localize_script('saw-admin-table-ajax', 'sawAdminTableAjax', array(
             'ajaxurl' => admin_url('admin-ajax.php'),
@@ -36,16 +55,30 @@ class SAW_Controller_Customers {
             'entity'  => 'customers',
         ));
         
-        if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/css/pages/saw-customers.css')) {
-            wp_enqueue_style('saw-customers', SAW_VISITORS_PLUGIN_URL . 'assets/css/pages/saw-customers.css', array('saw-admin-table'), SAW_VISITORS_VERSION);
-        }
+        wp_enqueue_style(
+            'saw-admin-table-form',
+            SAW_VISITORS_PLUGIN_URL . 'assets/css/global/saw-admin-table-form.css',
+            array(),
+            SAW_VISITORS_VERSION
+        );
         
-        if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/css/pages/saw-customers-form.css')) {
-            wp_enqueue_style('saw-customers-form', SAW_VISITORS_PLUGIN_URL . 'assets/css/pages/saw-customers-form.css', array('saw-customers'), SAW_VISITORS_VERSION);
+        if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/css/pages/saw-customers-specific.css')) {
+            wp_enqueue_style(
+                'saw-customers-specific',
+                SAW_VISITORS_PLUGIN_URL . 'assets/css/pages/saw-customers-specific.css',
+                array('saw-admin-table-form'),
+                SAW_VISITORS_VERSION
+            );
         }
         
         if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/js/pages/saw-customers.js')) {
-            wp_enqueue_script('saw-customers', SAW_VISITORS_PLUGIN_URL . 'assets/js/pages/saw-customers.js', array('jquery', 'saw-admin-table'), SAW_VISITORS_VERSION, true);
+            wp_enqueue_script(
+                'saw-customers',
+                SAW_VISITORS_PLUGIN_URL . 'assets/js/pages/saw-customers.js',
+                array('jquery', 'saw-admin-table'),
+                SAW_VISITORS_VERSION,
+                true
+            );
         }
     }
     
@@ -196,6 +229,45 @@ class SAW_Controller_Customers {
                 'admin_language' => isset($_POST['admin_language']) ? sanitize_text_field($_POST['admin_language']) : 'cs',
             );
             
+            if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
+                $upload_dir = wp_upload_dir();
+                $target_dir = $upload_dir['basedir'] . '/saw-customers/';
+                
+                if (!file_exists($target_dir)) {
+                    wp_mkdir_p($target_dir);
+                }
+                
+                $file_extension = strtolower(pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION));
+                $allowed_extensions = array('jpg', 'jpeg', 'png', 'gif', 'svg');
+                
+                if (in_array($file_extension, $allowed_extensions)) {
+                    $new_filename = 'customer-' . $id . '-' . time() . '.' . $file_extension;
+                    $target_file = $target_dir . $new_filename;
+                    
+                    if (move_uploaded_file($_FILES['logo']['tmp_name'], $target_file)) {
+                        if (!empty($customer['logo_url'])) {
+                            $old_file = str_replace($upload_dir['baseurl'], $upload_dir['basedir'], $customer['logo_url']);
+                            if (file_exists($old_file)) {
+                                @unlink($old_file);
+                            }
+                        }
+                        
+                        $data['logo_url'] = $upload_dir['baseurl'] . '/saw-customers/' . $new_filename;
+                    }
+                }
+            }
+            
+            if (isset($_POST['remove_logo']) && $_POST['remove_logo'] === '1') {
+                if (!empty($customer['logo_url'])) {
+                    $upload_dir = wp_upload_dir();
+                    $old_file = str_replace($upload_dir['baseurl'], $upload_dir['basedir'], $customer['logo_url']);
+                    if (file_exists($old_file)) {
+                        @unlink($old_file);
+                    }
+                }
+                $data['logo_url'] = '';
+            }
+            
             $result = $this->customer_model->update($id, $data);
             
             if (is_wp_error($result)) {
@@ -299,6 +371,20 @@ class SAW_Controller_Customers {
         
         if (!$id) {
             wp_send_json_error(array('message' => 'Neplatné ID'));
+        }
+        
+        $customer = $this->customer_model->get_by_id($id);
+        
+        if (!$customer) {
+            wp_send_json_error(array('message' => 'Zákazník nenalezen.'));
+        }
+        
+        if (!empty($customer['logo_url'])) {
+            $upload_dir = wp_upload_dir();
+            $logo_file = str_replace($upload_dir['baseurl'], $upload_dir['basedir'], $customer['logo_url']);
+            if (file_exists($logo_file)) {
+                @unlink($logo_file);
+            }
         }
         
         $result = $this->customer_model->delete($id);
