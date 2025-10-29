@@ -9,13 +9,16 @@ class SAW_Controller_Account_Types {
     
     public function __construct() {
         $this->model = new SAW_Model_Account_Type();
-        add_action('wp_ajax_saw_delete_account_type', [$this, 'ajax_delete']);
+        add_action('wp_ajax_saw_account_type_save', [$this, 'ajax_save']);
+        add_action('wp_ajax_saw_account_type_delete', [$this, 'ajax_delete']);
     }
     
     public function index() {
         if (!current_user_can('manage_options')) {
             wp_die('Nemáte oprávnění.', 'Přístup zamítnut', ['response' => 403]);
         }
+        
+        $this->enqueue_assets();
         
         $page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
         $per_page = 20;
@@ -60,30 +63,7 @@ class SAW_Controller_Account_Types {
             wp_die('Nemáte oprávnění.', 'Přístup zamítnut', ['response' => 403]);
         }
         
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            if (!isset($_POST['saw_account_type_nonce']) || !wp_verify_nonce($_POST['saw_account_type_nonce'], 'saw_account_type_form')) {
-                wp_die('Bezpečnostní kontrola selhala.');
-            }
-            
-            $data = [
-                'name' => sanitize_text_field($_POST['name']),
-                'display_name' => sanitize_text_field($_POST['display_name']),
-                'color' => sanitize_hex_color($_POST['color']),
-                'price' => floatval($_POST['price']),
-                'features' => sanitize_textarea_field($_POST['features']),
-                'sort_order' => intval($_POST['sort_order']),
-                'is_active' => isset($_POST['is_active']) ? 1 : 0
-            ];
-            
-            $result = $this->model->create($data);
-            
-            if (is_wp_error($result)) {
-                wp_die($result->get_error_message());
-            }
-            
-            wp_redirect(home_url('/admin/settings/account-types/?created=1'));
-            exit;
-        }
+        $this->enqueue_assets();
         
         ob_start();
         $account_type = null;
@@ -105,35 +85,12 @@ class SAW_Controller_Account_Types {
             wp_die('Nemáte oprávnění.', 'Přístup zamítnut', ['response' => 403]);
         }
         
+        $this->enqueue_assets();
+        
         $account_type = $this->model->get_by_id($id);
         
         if (!$account_type) {
             wp_die('Account type nenalezen.');
-        }
-        
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            if (!isset($_POST['saw_account_type_nonce']) || !wp_verify_nonce($_POST['saw_account_type_nonce'], 'saw_account_type_form')) {
-                wp_die('Bezpečnostní kontrola selhala.');
-            }
-            
-            $data = [
-                'name' => sanitize_text_field($_POST['name']),
-                'display_name' => sanitize_text_field($_POST['display_name']),
-                'color' => sanitize_hex_color($_POST['color']),
-                'price' => floatval($_POST['price']),
-                'features' => sanitize_textarea_field($_POST['features']),
-                'sort_order' => intval($_POST['sort_order']),
-                'is_active' => isset($_POST['is_active']) ? 1 : 0
-            ];
-            
-            $result = $this->model->update($id, $data);
-            
-            if (is_wp_error($result)) {
-                wp_die($result->get_error_message());
-            }
-            
-            wp_redirect(home_url('/admin/settings/account-types/?updated=1'));
-            exit;
         }
         
         ob_start();
@@ -148,6 +105,40 @@ class SAW_Controller_Account_Types {
         } else {
             echo $content;
         }
+    }
+    
+    public function ajax_save() {
+        check_ajax_referer('saw_account_type_nonce', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => 'Unauthorized']);
+        }
+        
+        $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+        
+        $data = [
+            'name' => sanitize_text_field($_POST['name']),
+            'display_name' => sanitize_text_field($_POST['display_name']),
+            'color' => sanitize_hex_color($_POST['color']),
+            'price' => floatval($_POST['price']),
+            'features' => sanitize_textarea_field($_POST['features']),
+            'sort_order' => intval($_POST['sort_order']),
+            'is_active' => isset($_POST['is_active']) ? 1 : 0
+        ];
+        
+        if ($id > 0) {
+            $result = $this->model->update($id, $data);
+            $message = 'Account type updated successfully';
+        } else {
+            $result = $this->model->create($data);
+            $message = 'Account type created successfully';
+        }
+        
+        if (is_wp_error($result)) {
+            wp_send_json_error(['message' => $result->get_error_message()]);
+        }
+        
+        wp_send_json_success(['message' => $message]);
     }
     
     public function ajax_delete() {
@@ -170,6 +161,51 @@ class SAW_Controller_Account_Types {
         }
         
         wp_send_json_success(['message' => 'Account type deleted']);
+    }
+    
+    private function enqueue_assets() {
+        wp_enqueue_style(
+            'saw-admin-table',
+            SAW_VISITORS_PLUGIN_URL . 'assets/css/global/saw-admin-table.css',
+            [],
+            SAW_VISITORS_VERSION
+        );
+        
+        wp_enqueue_style(
+            'saw-account-types',
+            SAW_VISITORS_PLUGIN_URL . 'assets/css/pages/saw-account-types.css',
+            ['saw-admin-table'],
+            SAW_VISITORS_VERSION
+        );
+        
+        wp_enqueue_script(
+            'saw-admin-table',
+            SAW_VISITORS_PLUGIN_URL . 'assets/js/global/saw-admin-table.js',
+            ['jquery'],
+            SAW_VISITORS_VERSION,
+            true
+        );
+        
+        wp_enqueue_script(
+            'saw-admin-table-ajax',
+            SAW_VISITORS_PLUGIN_URL . 'assets/js/global/saw-admin-table-ajax.js',
+            ['jquery', 'saw-admin-table'],
+            SAW_VISITORS_VERSION,
+            true
+        );
+        
+        wp_enqueue_script(
+            'saw-account-types',
+            SAW_VISITORS_PLUGIN_URL . 'assets/js/pages/saw-account-types.js',
+            ['jquery', 'saw-admin-table'],
+            SAW_VISITORS_VERSION,
+            true
+        );
+        
+        wp_localize_script('saw-account-types', 'sawAccountTypesData', [
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('saw_account_type_nonce')
+        ]);
     }
     
     private function get_current_user_data() {

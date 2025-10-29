@@ -4,11 +4,6 @@
  * Enables seamless navigation without full page reloads
  * Header, sidebar, and footer remain static while content updates
  * 
- * ✨ ENHANCED v4.6.2: JavaScript Reinitialization System
- * - Reinitializes inline scripts after AJAX page load
- * - Triggers custom event 'saw:scripts-reinitialized'
- * - Fixes modal and interactive elements not working after navigation
- * 
  * @package SAW_Visitors
  * @since   4.6.2
  */
@@ -33,22 +28,18 @@
             const $link = $(this);
             const href = $link.attr('href');
             
-            // Skip external links
             if (!href || href.startsWith('http') || href.startsWith('//')) {
                 return;
             }
             
-            // Skip anchor links
             if (href.startsWith('#')) {
                 return;
             }
             
-            // Skip links with target="_blank"
             if ($link.attr('target') === '_blank') {
                 return;
             }
             
-            // Skip links with data-no-ajax attribute
             if ($link.data('no-ajax') === true) {
                 return;
             }
@@ -75,7 +66,6 @@
         
         showLoading();
         
-        // Scroll to top smoothly
         $('html, body').animate({ scrollTop: 0 }, 300);
         
         $.ajax({
@@ -93,8 +83,6 @@
                     updateBrowserURL(url, response.data.title);
                     updateActiveMenuItem(response.data.active_menu);
                     
-                    // ✨ NOVÉ: Reinicializace JavaScriptu po načtení
-                    // Timeout zajistí, že DOM je plně aktualizován
                     setTimeout(function() {
                         reinitializePageScripts();
                     }, 200);
@@ -126,22 +114,17 @@
             return;
         }
         
-        // Fade out
         $content.css('opacity', '0');
         
         setTimeout(function() {
-            // Update content
             $content.html(data.content);
             
-            // Update title
             if (data.title) {
                 document.title = data.title + ' - SAW Visitors';
             }
             
-            // Fade in
             $content.css('opacity', '1');
             
-            // Trigger page loaded event
             $(document).trigger('saw:page-loaded', [data]);
             
             console.log('✅ Content updated');
@@ -149,34 +132,21 @@
     }
     
     /**
-     * ✨ NOVÉ: Reinicializace JavaScriptu po AJAX načtení
-     * 
-     * Tato funkce řeší problém, kdy se JavaScript moduly neinicializují
-     * po načtení stránky přes AJAX, protože $(document).ready() se volá
-     * pouze jednou při prvním načtení.
-     * 
-     * Funkce:
-     * 1. Najde všechny inline <script> tagy v #saw-app-content
-     * 2. Spustí je znovu (např. jQuery event bindings z templates)
-     * 3. Vyvolá custom event 'saw:scripts-reinitialized'
-     * 4. Na tento event naslouchají moduly jako CustomerModal
+     * Reinitialize JavaScript after AJAX load
      */
     function reinitializePageScripts() {
         console.log('🔄 Reinitializing page scripts...');
         
         let scriptsExecuted = 0;
         
-        // Najdi a spusť všechny inline <script> tagy v načteném obsahu
         $('#saw-app-content').find('script').each(function() {
             const scriptContent = $(this).html();
             
-            // Přeskoč prázdné scripty
             if (!scriptContent || !scriptContent.trim()) {
                 return;
             }
             
             try {
-                // Vytvoř nový script element a spusť jeho obsah
                 const script = document.createElement('script');
                 script.text = scriptContent;
                 document.head.appendChild(script).parentNode.removeChild(script);
@@ -190,8 +160,6 @@
         
         console.log('✅ Total inline scripts executed:', scriptsExecuted);
         
-        // Vyvolej custom event pro reinicializaci modulů
-        // Na tento event naslouchají např. CustomerModal, FormValidation, atd.
         $(document).trigger('saw:scripts-reinitialized');
         
         console.log('📢 Event triggered: saw:scripts-reinitialized');
@@ -266,7 +234,6 @@
             }
         });
         
-        // Initialize current state
         const currentURL = window.location.pathname;
         const currentTitle = document.title;
         
@@ -285,25 +252,14 @@
      * Public API for manual navigation
      */
     window.SAW_Navigation = {
-        /**
-         * Navigate to URL programmatically
-         * @param {string} url Target URL
-         */
         navigateTo: function(url) {
             navigateToPage(url);
         },
         
-        /**
-         * Reload current page via AJAX
-         */
         reload: function() {
             navigateToPage(window.location.pathname);
         },
         
-        /**
-         * ✨ NOVÉ: Manuální reinicializace scriptů
-         * Užitečné pro moduly, které chtějí vynutit refresh
-         */
         reinitializeScripts: function() {
             reinitializePageScripts();
         }

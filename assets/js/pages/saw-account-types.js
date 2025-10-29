@@ -10,58 +10,53 @@
     const AccountTypes = {
         
         init: function() {
+            console.log('💳 Account Types: Initializing...');
             this.bindEvents();
             this.syncColorInputs();
+            console.log('✅ Account Types: Initialized');
         },
         
         bindEvents: function() {
-            // Add new account type button
-            $('#add-account-type-btn').on('click', function(e) {
+            $('#add-account-type-btn').off('click').on('click', function(e) {
                 e.preventDefault();
                 AccountTypes.openFormModal();
             });
             
-            // Edit button in detail modal
-            $(document).on('click', '.saw-edit-account-type', function(e) {
+            $(document).off('click', '.saw-edit-account-type').on('click', '.saw-edit-account-type', function(e) {
                 e.preventDefault();
                 const id = $(this).data('id');
                 AccountTypes.openFormModal(id);
             });
             
-            // View button in table
-            $(document).on('click', '.saw-table-action-view', function(e) {
+            $(document).off('click', '.saw-table-action-view').on('click', '.saw-table-action-view', function(e) {
                 e.preventDefault();
                 const id = $(this).data('id');
                 AccountTypes.showDetail(id);
             });
             
-            // Edit button in table
-            $(document).on('click', '.saw-table-action-edit', function(e) {
+            $(document).off('click', '.saw-table-action-edit').on('click', '.saw-table-action-edit', function(e) {
                 e.preventDefault();
                 const id = $(this).data('id');
                 AccountTypes.openFormModal(id);
             });
             
-            // Form submit
-            $(document).on('submit', '#account-type-form', function(e) {
+            $(document).off('submit', '#account-type-form').on('submit', '#account-type-form', function(e) {
                 e.preventDefault();
                 AccountTypes.submitForm($(this));
             });
             
-            // Color picker sync
-            $(document).on('input', '#color', function() {
+            $(document).off('input', '#color').on('input', '#color', function() {
                 $('#color-text').val($(this).val().toUpperCase());
             });
             
-            $(document).on('input', '#color-text', function() {
+            $(document).off('input', '#color-text').on('input', '#color-text', function() {
                 const color = $(this).val();
                 if (/^#[0-9A-Fa-f]{6}$/.test(color)) {
                     $('#color').val(color);
                 }
             });
             
-            // Name to slug conversion
-            $(document).on('input', '#display_name', function() {
+            $(document).off('input', '#display_name').on('input', '#display_name', function() {
                 const $nameInput = $('#name');
                 if (!$nameInput.val() || $nameInput.data('manual-edit') !== true) {
                     const slug = AccountTypes.slugify($(this).val());
@@ -69,7 +64,7 @@
                 }
             });
             
-            $(document).on('input', '#name', function() {
+            $(document).off('input', '#name').on('input', '#name', function() {
                 $(this).data('manual-edit', true);
             });
         },
@@ -79,27 +74,22 @@
             const $form = $('#account-type-form');
             const $title = $('#form-modal-title');
             
-            // Reset form
             $form[0].reset();
             $form.find('input[name="id"]').val('');
             $form.find('.saw-form-message').hide();
             $('#name').removeData('manual-edit');
             
             if (id) {
-                // Edit mode - load data
                 $title.text('Edit Account Type');
                 AccountTypes.loadAccountType(id);
             } else {
-                // Add mode
                 $title.text('Add Account Type');
                 $('#color').val('#6b7280');
                 $('#color-text').val('#6b7280');
             }
             
-            // Close detail modal if open
             $('#account-type-detail-modal').hide();
             
-            // Open form modal
             $modal.fadeIn(200);
         },
         
@@ -141,46 +131,41 @@
         
         submitForm: function($form) {
             const $submitBtn = $form.find('button[type="submit"]');
-            const $message = $form.find('.saw-form-message');
+            const originalText = $submitBtn.text();
             
-            $submitBtn.prop('disabled', true).text('Saving...');
-            $message.hide();
+            $submitBtn.prop('disabled', true).text('Ukládám...');
+            
+            const formData = $form.serialize() + '&action=saw_account_type_save&nonce=' + sawAccountTypesData.nonce;
             
             $.ajax({
                 url: sawAccountTypesData.ajaxUrl,
                 type: 'POST',
-                data: $form.serialize(),
+                data: formData,
                 success: function(response) {
                     if (response.success) {
-                        $message
-                            .removeClass('error')
-                            .addClass('success')
-                            .text(response.data.message)
-                            .fadeIn();
+                        if (window.SAWNotifications) {
+                            window.SAWNotifications.success(response.data.message);
+                        }
                         
                         setTimeout(function() {
-                            $('#account-type-form-modal').fadeOut(200);
-                            if (typeof window.sawAdminTable !== 'undefined') {
-                                window.sawAdminTable.reload();
-                            }
-                        }, 1000);
+                            window.location.href = '/admin/settings/account-types/';
+                        }, 500);
                     } else {
-                        $message
-                            .removeClass('success')
-                            .addClass('error')
-                            .text(response.data.message)
-                            .fadeIn();
+                        if (window.SAWNotifications) {
+                            window.SAWNotifications.error(response.data.message);
+                        } else {
+                            alert('Chyba: ' + response.data.message);
+                        }
+                        $submitBtn.prop('disabled', false).text(originalText);
                     }
                 },
                 error: function() {
-                    $message
-                        .removeClass('success')
-                        .addClass('error')
-                        .text('An error occurred. Please try again.')
-                        .fadeIn();
-                },
-                complete: function() {
-                    $submitBtn.prop('disabled', false).text($form.find('input[name="id"]').val() ? 'Update Account Type' : 'Add Account Type');
+                    if (window.SAWNotifications) {
+                        window.SAWNotifications.error('Nastala chyba při ukládání');
+                    } else {
+                        alert('Nastala chyba při ukládání');
+                    }
+                    $submitBtn.prop('disabled', false).text(originalText);
                 }
             });
         },
@@ -265,9 +250,15 @@
         }
     };
     
-    // Initialize on document ready
     $(document).ready(function() {
         AccountTypes.init();
     });
+    
+    $(document).on('saw:scripts-reinitialized', function() {
+        console.log('🔄 Account Types: Reinitializing after AJAX navigation...');
+        AccountTypes.init();
+    });
+    
+    window.AccountTypes = AccountTypes;
     
 })(jQuery);

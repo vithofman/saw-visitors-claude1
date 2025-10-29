@@ -6,12 +6,16 @@ $is_edit = isset($account_type) && $account_type;
 
 <div class="saw-page-header" style="margin-bottom: 24px;">
     <h1 class="saw-page-title"><?php echo $is_edit ? 'Upravit Account Type' : 'Nový Account Type'; ?></h1>
+    <a href="<?php echo home_url('/admin/settings/account-types/'); ?>" class="saw-button saw-button-secondary">
+        <span class="dashicons dashicons-arrow-left-alt2"></span>
+        Zpět na seznam
+    </a>
 </div>
 
 <div class="saw-card">
     <div class="saw-card-body">
-        <form method="post" class="saw-form">
-            <?php wp_nonce_field('saw_account_type_form', 'saw_account_type_nonce'); ?>
+        <form id="account-type-form" class="saw-form">
+            <input type="hidden" name="id" value="<?php echo $is_edit ? esc_attr($account_type->id) : ''; ?>">
             
             <div class="saw-form-row">
                 <div class="saw-form-group">
