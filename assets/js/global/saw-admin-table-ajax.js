@@ -8,7 +8,7 @@
  * - Delete actions
  * 
  * @package SAW_Visitors
- * @version 4.6.1
+ * @version 4.6.1 FIXED - URL handling corrected
  */
 
 (function($) {
@@ -207,11 +207,15 @@
                     console.log('SAW Admin Table AJAX: Success response', response);
                     
                     if (response.success) {
-                        // For now, reload page with new parameters
-                        // Future: pure JS update without reload
-                        console.log('Reloading page with new parameters...');
-                        this.updateURL();
-                        window.location.reload();
+                        // ✅ KRITICKÁ OPRAVA: Nejdříve updatuj URL, PAK reload
+                        console.log('Updating URL and reloading page...');
+                        
+                        // Build new URL with all parameters
+                        const newUrl = this.buildURL();
+                        console.log('New URL:', newUrl);
+                        
+                        // Redirect to new URL (with reload)
+                        window.location.href = newUrl;
                     } else {
                         console.error('SAW Admin Table AJAX: Error response', response.data);
                         alert('Chyba: ' + (response.data.message || 'Neznámá chyba'));
@@ -235,7 +239,52 @@
         },
         
         /**
+         * Build complete URL with current parameters
+         * 
+         * ✅ NOVÁ METODA: Vytvoří kompletní URL s všemi parametry
+         * 
+         * @returns {string} Complete URL with all parameters
+         */
+        buildURL: function() {
+            // Start with base URL (without query params)
+            const baseUrl = window.location.origin + window.location.pathname;
+            const url = new URL(baseUrl);
+            
+            // Preserve existing important params
+            const currentParams = new URLSearchParams(window.location.search);
+            const preserveParams = ['page']; // WordPress admin page parameter
+            
+            preserveParams.forEach(param => {
+                const value = currentParams.get(param);
+                if (value) {
+                    url.searchParams.set(param, value);
+                }
+            });
+            
+            // Add search
+            if (this.currentSearch) {
+                url.searchParams.set('s', this.currentSearch);
+            }
+            
+            // Add pagination
+            if (this.currentPage > 1) {
+                url.searchParams.set('paged', this.currentPage);
+            }
+            
+            // Add sorting
+            if (this.currentOrderBy) {
+                url.searchParams.set('orderby', this.currentOrderBy);
+                url.searchParams.set('order', this.currentOrder);
+            }
+            
+            return url.toString();
+        },
+        
+        /**
          * Update URL without reload using History API
+         * 
+         * ⚠️ DEPRECATED: Ponecháno pro zpětnou kompatibilitu
+         * Nyní používáme buildURL() + window.location.href
          */
         updateURL: function() {
             const url = new URL(window.location.href);

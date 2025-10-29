@@ -6,6 +6,7 @@
  * 
  * @package SAW_Visitors
  * @since   4.6.1
+ * @version FIXED - Sorting now works correctly
  */
 
 (function($) {
@@ -117,14 +118,29 @@
         
         /**
          * Bind sortable column headers
+         * 
+         * ✅ FIXED: Now properly checks if AJAX is enabled BEFORE preventing default
          */
         bindSortHeaders: function() {
             $(document).on('click', '.saw-table-sortable thead th.saw-sortable a', function(e) {
                 const $link = $(this);
                 const $th = $link.closest('th');
                 const $input = $('.saw-search-input');
+                
+                // ✅ KRITICKÁ ZMĚNA: Nejdříve zkontroluj jestli AJAX vůbec existuje
+                if ($input.length === 0) {
+                    console.log('SAW Admin Table: No search input found, allowing normal link behavior');
+                    return; // Nech link fungovat normálně
+                }
+                
                 const ajaxEnabled = $input.data('ajax-enabled') === 1;
                 
+                console.log('SAW Admin Table: Sort clicked', {
+                    ajaxEnabled: ajaxEnabled,
+                    href: $link.attr('href')
+                });
+                
+                // ✅ POUZE pokud je AJAX enabled, prevent default
                 if (ajaxEnabled) {
                     e.preventDefault();
                     
@@ -136,7 +152,7 @@
                         newOrder = 'DESC';
                     }
                     
-                    console.log('SAW Admin Table: Sorting', {
+                    console.log('SAW Admin Table: Sorting via AJAX', {
                         entity: entity,
                         column: column,
                         order: newOrder
@@ -148,6 +164,10 @@
                         column: column,
                         order: newOrder
                     });
+                } else {
+                    // ✅ AJAX není enabled, nech link fungovat normálně
+                    console.log('SAW Admin Table: AJAX not enabled, following link normally');
+                    // Neděláme e.preventDefault(), link funguje normálně
                 }
             });
         },
