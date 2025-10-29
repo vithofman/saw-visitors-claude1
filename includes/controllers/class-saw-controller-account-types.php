@@ -1,56 +1,45 @@
 <?php
-/**
- * Account Types Controller
- *
- * @package SAW_Visitors
- */
-
-if (!defined('ABSPATH')) {
-    exit;
-}
+if (!defined('ABSPATH')) exit;
 
 require_once SAW_VISITORS_PLUGIN_DIR . 'includes/models/class-saw-model-account-type.php';
 require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/class-saw-component-admin-table.php';
 
 class SAW_Controller_Account_Types {
-    
     private $model;
     
     public function __construct() {
         $this->model = new SAW_Model_Account_Type();
-        
-        add_action('wp_ajax_saw_account_types_list', [$this, 'ajax_list']);
-        add_action('wp_ajax_saw_account_type_save', [$this, 'ajax_save']);
-        add_action('wp_ajax_saw_account_type_delete', [$this, 'ajax_delete']);
-        add_action('wp_ajax_saw_account_type_bulk_delete', [$this, 'ajax_bulk_delete']);
+        add_action('wp_ajax_saw_delete_account_type', [$this, 'ajax_delete']);
     }
     
     public function index() {
         if (!current_user_can('manage_options')) {
-            wp_die('Nemáte oprávnění.', 'Přístup zamítnut', array('response' => 403));
+            wp_die('Nemáte oprávnění.', 'Přístup zamítnut', ['response' => 403]);
         }
         
-        wp_enqueue_style(
-            'saw-account-types',
-            SAW_VISITORS_PLUGIN_URL . 'assets/css/pages/saw-account-types.css',
-            ['saw-admin-table'],
-            SAW_VISITORS_VERSION
-        );
+        $page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
+        $per_page = 20;
+        $search = isset($_GET['s']) ? sanitize_text_field($_GET['s']) : '';
+        $orderby = isset($_GET['orderby']) ? sanitize_text_field($_GET['orderby']) : 'sort_order';
+        $order = isset($_GET['order']) ? strtoupper(sanitize_text_field($_GET['order'])) : 'ASC';
+        $is_active_filter = isset($_GET['is_active']) ? intval($_GET['is_active']) : null;
         
-        wp_enqueue_script(
-            'saw-account-types',
-            SAW_VISITORS_PLUGIN_URL . 'assets/js/pages/saw-account-types.js',
-            ['jquery', 'saw-admin-table', 'saw-admin-table-ajax'],
-            SAW_VISITORS_VERSION,
-            true
-        );
+        $args = [
+            'page' => $page,
+            'per_page' => $per_page,
+            'search' => $search,
+            'orderby' => $orderby,
+            'order' => $order
+        ];
         
-        wp_localize_script('saw-account-types', 'sawAccountTypesData', [
-            'ajaxUrl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('saw_account_types_nonce')
-        ]);
+        if ($is_active_filter !== null) {
+            $args['is_active'] = $is_active_filter;
+        }
         
-        $admin_table = new SAW_Component_Admin_Table($this->get_table_config());
+        $result = $this->model->get_all($args);
+        $account_types = $result['items'];
+        $total_account_types = $result['total'];
+        $total_pages = ceil($total_account_types / $per_page);
         
         ob_start();
         include SAW_VISITORS_PLUGIN_DIR . 'templates/pages/account-types/list.php';
@@ -66,15 +55,38 @@ class SAW_Controller_Account_Types {
         }
     }
     
-    public function add() {
+    public function create() {
         if (!current_user_can('manage_options')) {
-            wp_die('Nemáte oprávnění.', 'Přístup zamítnut', array('response' => 403));
+            wp_die('Nemáte oprávnění.', 'Přístup zamítnut', ['response' => 403]);
         }
         
-        $account_type = null;
-        $form_action = 'add';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!isset($_POST['saw_account_type_nonce']) || !wp_verify_nonce($_POST['saw_account_type_nonce'], 'saw_account_type_form')) {
+                wp_die('Bezpečnostní kontrola selhala.');
+            }
+            
+            $data = [
+                'name' => sanitize_text_field($_POST['name']),
+                'display_name' => sanitize_text_field($_POST['display_name']),
+                'color' => sanitize_hex_color($_POST['color']),
+                'price' => floatval($_POST['price']),
+                'features' => sanitize_textarea_field($_POST['features']),
+                'sort_order' => intval($_POST['sort_order']),
+                'is_active' => isset($_POST['is_active']) ? 1 : 0
+            ];
+            
+            $result = $this->model->create($data);
+            
+            if (is_wp_error($result)) {
+                wp_die($result->get_error_message());
+            }
+            
+            wp_redirect(home_url('/admin/settings/account-types/?created=1'));
+            exit;
+        }
         
         ob_start();
+        $account_type = null;
         include SAW_VISITORS_PLUGIN_DIR . 'templates/pages/account-types/form.php';
         $content = ob_get_clean();
         
@@ -82,7 +94,7 @@ class SAW_Controller_Account_Types {
             $layout = new SAW_App_Layout();
             $user = $this->get_current_user_data();
             $customer = $this->get_current_customer_data();
-            $layout->render($content, 'New Account Type', 'account-types', $user, $customer);
+            $layout->render($content, 'Nový Account Type', 'account-types', $user, $customer);
         } else {
             echo $content;
         }
@@ -90,16 +102,39 @@ class SAW_Controller_Account_Types {
     
     public function edit($id) {
         if (!current_user_can('manage_options')) {
-            wp_die('Nemáte oprávnění.', 'Přístup zamítnut', array('response' => 403));
+            wp_die('Nemáte oprávnění.', 'Přístup zamítnut', ['response' => 403]);
         }
         
         $account_type = $this->model->get_by_id($id);
         
         if (!$account_type) {
-            wp_die('Account type not found');
+            wp_die('Account type nenalezen.');
         }
         
-        $form_action = 'edit';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!isset($_POST['saw_account_type_nonce']) || !wp_verify_nonce($_POST['saw_account_type_nonce'], 'saw_account_type_form')) {
+                wp_die('Bezpečnostní kontrola selhala.');
+            }
+            
+            $data = [
+                'name' => sanitize_text_field($_POST['name']),
+                'display_name' => sanitize_text_field($_POST['display_name']),
+                'color' => sanitize_hex_color($_POST['color']),
+                'price' => floatval($_POST['price']),
+                'features' => sanitize_textarea_field($_POST['features']),
+                'sort_order' => intval($_POST['sort_order']),
+                'is_active' => isset($_POST['is_active']) ? 1 : 0
+            ];
+            
+            $result = $this->model->update($id, $data);
+            
+            if (is_wp_error($result)) {
+                wp_die($result->get_error_message());
+            }
+            
+            wp_redirect(home_url('/admin/settings/account-types/?updated=1'));
+            exit;
+        }
         
         ob_start();
         include SAW_VISITORS_PLUGIN_DIR . 'templates/pages/account-types/form.php';
@@ -109,83 +144,23 @@ class SAW_Controller_Account_Types {
             $layout = new SAW_App_Layout();
             $user = $this->get_current_user_data();
             $customer = $this->get_current_customer_data();
-            $layout->render($content, 'Edit Account Type', 'account-types', $user, $customer);
+            $layout->render($content, 'Upravit Account Type', 'account-types', $user, $customer);
         } else {
             echo $content;
         }
     }
     
-    public function ajax_list() {
-        check_ajax_referer('saw_account_types_nonce', 'nonce');
-        
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => 'Unauthorized access']);
-        }
-        
-        $args = [
-            'page' => isset($_POST['page']) ? (int) $_POST['page'] : 1,
-            'per_page' => isset($_POST['per_page']) ? (int) $_POST['per_page'] : 20,
-            'search' => isset($_POST['search']) ? sanitize_text_field($_POST['search']) : '',
-            'orderby' => isset($_POST['orderby']) ? sanitize_text_field($_POST['orderby']) : 'sort_order',
-            'order' => isset($_POST['order']) ? sanitize_text_field($_POST['order']) : 'ASC'
-        ];
-        
-        if (isset($_POST['filters']['is_active']) && $_POST['filters']['is_active'] !== '') {
-            $args['is_active'] = (int) $_POST['filters']['is_active'];
-        }
-        
-        $result = $this->model->get_all($args);
-        
-        wp_send_json_success($result);
-    }
-    
-    public function ajax_save() {
-        check_ajax_referer('saw_account_types_nonce', 'nonce');
-        
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => 'Unauthorized access']);
-        }
-        
-        $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
-        $data = [
-            'name' => sanitize_text_field($_POST['name']),
-            'display_name' => sanitize_text_field($_POST['display_name']),
-            'color' => sanitize_hex_color($_POST['color']),
-            'price' => floatval($_POST['price']),
-            'features' => sanitize_textarea_field($_POST['features']),
-            'sort_order' => (int) $_POST['sort_order'],
-            'is_active' => isset($_POST['is_active']) ? 1 : 0
-        ];
-        
-        if ($id > 0) {
-            $result = $this->model->update($id, $data);
-            $message = 'Account type updated successfully';
-        } else {
-            $result = $this->model->create($data);
-            $message = 'Account type created successfully';
-        }
-        
-        if (is_wp_error($result)) {
-            wp_send_json_error([
-                'message' => $result->get_error_message(),
-                'errors' => $result->get_error_messages()
-            ]);
-        }
-        
-        wp_send_json_success(['message' => $message]);
-    }
-    
     public function ajax_delete() {
-        check_ajax_referer('saw_account_types_nonce', 'nonce');
+        check_ajax_referer('saw_admin_table_nonce', 'nonce');
         
         if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => 'Unauthorized access']);
+            wp_send_json_error(['message' => 'Unauthorized']);
         }
         
-        $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
+        $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
         
         if (!$id) {
-            wp_send_json_error(['message' => 'Invalid account type ID']);
+            wp_send_json_error(['message' => 'Invalid ID']);
         }
         
         $result = $this->model->delete($id);
@@ -194,127 +169,20 @@ class SAW_Controller_Account_Types {
             wp_send_json_error(['message' => $result->get_error_message()]);
         }
         
-        wp_send_json_success(['message' => 'Account type deleted successfully']);
-    }
-    
-    public function ajax_bulk_delete() {
-        check_ajax_referer('saw_account_types_nonce', 'nonce');
-        
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => 'Unauthorized access']);
-        }
-        
-        $ids = isset($_POST['ids']) ? array_map('intval', $_POST['ids']) : [];
-        
-        if (empty($ids)) {
-            wp_send_json_error(['message' => 'No account types selected']);
-        }
-        
-        $deleted = 0;
-        foreach ($ids as $id) {
-            $result = $this->model->delete($id);
-            if (!is_wp_error($result)) {
-                $deleted++;
-            }
-        }
-        
-        wp_send_json_success([
-            'message' => sprintf('%d account type(s) deleted successfully', $deleted)
-        ]);
-    }
-    
-    private function get_table_config() {
-        return [
-            'id' => 'account-types-table',
-            'ajax_action' => 'saw_account_types_list',
-            'columns' => [
-                'id' => [
-                    'label' => 'ID',
-                    'sortable' => true,
-                    'width' => '80px'
-                ],
-                'display_name' => [
-                    'label' => 'Display Name',
-                    'sortable' => true
-                ],
-                'name' => [
-                    'label' => 'Internal Name',
-                    'sortable' => true
-                ],
-                'price' => [
-                    'label' => 'Price',
-                    'sortable' => true,
-                    'width' => '120px',
-                    'formatter' => function($value) {
-                        return '$' . number_format($value, 2);
-                    }
-                ],
-                'sort_order' => [
-                    'label' => 'Order',
-                    'sortable' => true,
-                    'width' => '100px'
-                ],
-                'is_active' => [
-                    'label' => 'Status',
-                    'sortable' => true,
-                    'width' => '120px',
-                    'formatter' => function($value) {
-                        if ($value == 1) {
-                            return '<span class="saw-status-badge saw-status-active">Active</span>';
-                        }
-                        return '<span class="saw-status-badge saw-status-inactive">Inactive</span>';
-                    }
-                ],
-                'created_at' => [
-                    'label' => 'Created',
-                    'sortable' => true,
-                    'width' => '150px',
-                    'formatter' => function($value) {
-                        return date('Y-m-d H:i', strtotime($value));
-                    }
-                ]
-            ],
-            'actions' => [
-                'view' => true,
-                'edit' => true,
-                'delete' => true
-            ],
-            'bulk_actions' => [
-                'delete' => 'Delete Selected'
-            ],
-            'filters' => [
-                'is_active' => [
-                    'label' => 'Status',
-                    'type' => 'select',
-                    'options' => [
-                        '' => 'All',
-                        '1' => 'Active',
-                        '0' => 'Inactive'
-                    ]
-                ]
-            ],
-            'default_orderby' => 'sort_order',
-            'default_order' => 'ASC'
-        ];
+        wp_send_json_success(['message' => 'Account type deleted']);
     }
     
     private function get_current_user_data() {
         if (is_user_logged_in()) {
             $wp_user = wp_get_current_user();
-            return array(
+            return [
                 'id' => $wp_user->ID,
                 'name' => $wp_user->display_name,
                 'email' => $wp_user->user_email,
                 'role' => current_user_can('manage_options') ? 'super_admin' : 'admin',
-            );
+            ];
         }
-        
-        return array(
-            'id' => 0,
-            'name' => 'Guest',
-            'email' => '',
-            'role' => 'guest',
-        );
+        return ['id' => 0, 'name' => 'Guest', 'email' => '', 'role' => 'guest'];
     }
     
     private function get_current_customer_data() {
@@ -336,13 +204,13 @@ class SAW_Controller_Account_Types {
             ), ARRAY_A);
             
             if ($customer) {
-                return array(
+                return [
                     'id' => $customer['id'],
                     'name' => $customer['name'],
                     'ico' => $customer['ico'] ?? '',
                     'address' => ($customer['address_street'] ?? '') . ', ' . ($customer['address_city'] ?? ''),
                     'logo_url' => $customer['logo_url'] ?? '',
-                );
+                ];
             }
         }
         
@@ -353,21 +221,15 @@ class SAW_Controller_Account_Types {
         );
         
         if ($customer) {
-            return array(
+            return [
                 'id' => $customer['id'],
                 'name' => $customer['name'],
                 'ico' => $customer['ico'] ?? '',
                 'address' => ($customer['address_street'] ?? '') . ', ' . ($customer['address_city'] ?? ''),
                 'logo_url' => $customer['logo_url'] ?? '',
-            );
+            ];
         }
         
-        return array(
-            'id' => 0,
-            'name' => 'Žádný zákazník',
-            'ico' => '',
-            'address' => '',
-            'logo_url' => '',
-        );
+        return ['id' => 0, 'name' => 'Žádný zákazník', 'ico' => '', 'address' => '', 'logo_url' => ''];
     }
 }
