@@ -3,7 +3,7 @@
  * SAW Customer Model
  * 
  * @package SAW_Visitors
- * @version 4.6.1 ENHANCED
+ * @version 4.7.1 COMPLETE
  */
 
 if (!defined('ABSPATH')) {
@@ -57,12 +57,6 @@ class SAW_Model_Customer {
         }
     }
     
-    /**
-     * Získat všechny zákazníky s JOIN na account_types
-     * 
-     * @param array $args Parametry dotazu
-     * @return array
-     */
     public function get_all($args = array()) {
         global $wpdb;
         
@@ -123,12 +117,6 @@ class SAW_Model_Customer {
         return $customers;
     }
     
-    /**
-     * Počet zákazníků
-     * 
-     * @param array $args Filtry
-     * @return int
-     */
     public function count($args = array()) {
         global $wpdb;
         
@@ -161,12 +149,6 @@ class SAW_Model_Customer {
         return (int) $wpdb->get_var($sql);
     }
     
-    /**
-     * Získat zákazníka podle ID s JOIN na account_types
-     * 
-     * @param int $id ID zákazníka
-     * @return array|null
-     */
     public function get_by_id($id) {
         global $wpdb;
         
@@ -192,45 +174,20 @@ class SAW_Model_Customer {
         return $customer;
     }
     
-    /**
-     * Získat zákazníky podle statusu
-     * 
-     * @param string $status Status (potential, active, inactive)
-     * @param array  $args   Další parametry
-     * @return array
-     */
     public function get_by_status($status, $args = array()) {
         $args['status'] = $status;
         return $this->get_all($args);
     }
     
-    /**
-     * Získat zákazníky podle typu účtu
-     * 
-     * @param int   $account_type_id ID typu účtu
-     * @param array $args            Další parametry
-     * @return array
-     */
     public function get_by_account_type($account_type_id, $args = array()) {
         $args['account_type'] = $account_type_id;
         return $this->get_all($args);
     }
     
-    /**
-     * Získat pouze aktivní zákazníky
-     * 
-     * @param array $args Další parametry
-     * @return array
-     */
     public function get_active_customers($args = array()) {
         return $this->get_by_status('active', $args);
     }
     
-    /**
-     * Počet zákazníků podle statusu (pro dashboard)
-     * 
-     * @return array
-     */
     public function count_by_status() {
         global $wpdb;
         
@@ -252,13 +209,6 @@ class SAW_Model_Customer {
         return $counts;
     }
     
-    /**
-     * Formátovat adresu do jednoho stringu
-     * 
-     * @param array  $customer Zákazník
-     * @param string $type     Typ adresy (operational|billing)
-     * @return string
-     */
     public function format_address($customer, $type = 'operational') {
         $prefix = $type === 'billing' ? 'billing_' : '';
         
@@ -290,17 +240,15 @@ class SAW_Model_Customer {
         return implode(', ', array_filter($parts));
     }
     
-    /**
-     * Vytvořit nového zákazníka
-     * 
-     * @param array $data Data zákazníka
-     * @return int|WP_Error ID nového zákazníka nebo chyba
-     */
     public function create($data) {
         global $wpdb;
         
+        error_log('🚀 Model: create() - START');
+        error_log('   Incoming data: ' . print_r($data, true));
+        
         $validation = $this->validate($data);
         if (is_wp_error($validation)) {
+            error_log('❌ Validation failed: ' . $validation->get_error_message());
             return $validation;
         }
         
@@ -348,27 +296,29 @@ class SAW_Model_Customer {
             $insert_data['logo_url'] = $logo_result;
         }
         
+        error_log('📦 Prepared insert data: ' . print_r($insert_data, true));
+        
         $result = $wpdb->insert($this->table_name, $insert_data);
         
         if ($result === false) {
+            error_log('❌ INSERT failed: ' . $wpdb->last_error);
             return new WP_Error('db_error', 'Chyba při vytváření zákazníka: ' . $wpdb->last_error);
         }
         
-        return $wpdb->insert_id;
+        $insert_id = $wpdb->insert_id;
+        error_log('✅ Customer created with ID: ' . $insert_id);
+        
+        return $insert_id;
     }
     
-    /**
-     * Aktualizovat zákazníka
-     * 
-     * @param int   $id   ID zákazníka
-     * @param array $data Data k aktualizaci
-     * @return bool|WP_Error
-     */
     public function update($id, $data) {
         global $wpdb;
         
+        error_log('🚀 Model: update() - START for ID: ' . $id);
+        
         $validation = $this->validate($data, $id);
         if (is_wp_error($validation)) {
+            error_log('❌ Validation failed: ' . $validation->get_error_message());
             return $validation;
         }
         
@@ -426,6 +376,8 @@ class SAW_Model_Customer {
             return new WP_Error('no_data', 'Žádná data k aktualizaci.');
         }
         
+        error_log('📦 Prepared update data: ' . print_r($update_data, true));
+        
         $result = $wpdb->update(
             $this->table_name,
             $update_data,
@@ -433,18 +385,15 @@ class SAW_Model_Customer {
         );
         
         if ($result === false) {
+            error_log('❌ UPDATE failed: ' . $wpdb->last_error);
             return new WP_Error('db_error', 'Chyba při aktualizaci zákazníka: ' . $wpdb->last_error);
         }
+        
+        error_log('✅ Customer updated successfully');
         
         return true;
     }
     
-    /**
-     * Smazat zákazníka
-     * 
-     * @param int $id ID zákazníka
-     * @return bool|WP_Error
-     */
     public function delete($id) {
         global $wpdb;
         
@@ -466,13 +415,25 @@ class SAW_Model_Customer {
         return true;
     }
     
-    /**
-     * Validace dat
-     * 
-     * @param array    $data Data k validaci
-     * @param int|null $id   ID pro update
-     * @return bool|WP_Error
-     */
+    public function get_by_ico($ico) {
+        global $wpdb;
+        
+        $ico = sanitize_text_field($ico);
+        
+        if (empty($ico)) {
+            return null;
+        }
+        
+        $sql = $wpdb->prepare(
+            "SELECT * FROM {$this->table_name} WHERE ico = %s",
+            $ico
+        );
+        
+        $result = $wpdb->get_row($sql, ARRAY_A);
+        
+        return $result;
+    }
+    
     private function validate($data, $id = null) {
         if (empty($data['name'])) {
             return new WP_Error('name_required', 'Název zákazníka je povinný.');
@@ -513,12 +474,6 @@ class SAW_Model_Customer {
         return true;
     }
     
-    /**
-     * Nahrát logo
-     * 
-     * @param array $file $_FILES data
-     * @return string|WP_Error Název souboru nebo chyba
-     */
     private function upload_logo($file) {
         if ($file['error'] !== UPLOAD_ERR_OK) {
             return new WP_Error('upload_error', 'Chyba při nahrávání souboru.');
@@ -547,12 +502,6 @@ class SAW_Model_Customer {
         return $filename;
     }
     
-    /**
-     * Smazat logo
-     * 
-     * @param string $logo_filename Název souboru
-     * @return void
-     */
     private function delete_logo($logo_filename) {
         if (empty($logo_filename)) {
             return;
@@ -565,12 +514,6 @@ class SAW_Model_Customer {
         }
     }
     
-    /**
-     * Získat URL loga
-     * 
-     * @param string $logo_filename Název souboru
-     * @return string
-     */
     private function get_logo_url($logo_filename) {
         if (empty($logo_filename)) {
             return '';
