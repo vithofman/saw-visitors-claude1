@@ -10,13 +10,38 @@
    ============================================ */
 
 .saw-customer-form-container {
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
-    padding: 0 20px 40px;
+    padding: 32px 20px 40px;
 }
 
 .saw-customer-form {
     width: 100%;
+}
+
+/* ============================================
+   PAGE HEADER
+   ============================================ */
+
+.saw-page-header {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px 20px;
+    border-bottom: 1px solid #dcdcde;
+}
+
+.saw-page-header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.saw-page-title {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 600;
+    color: #1d2327;
 }
 
 /* ============================================
@@ -71,11 +96,11 @@
 .saw-form-row {
     display: flex;
     gap: 20px;
-    margin-bottom: 0;
+    margin-bottom: 20px;
 }
 
 .saw-form-group {
-    margin-bottom: 24px;
+    margin-bottom: 0;
     width: 100%;
 }
 

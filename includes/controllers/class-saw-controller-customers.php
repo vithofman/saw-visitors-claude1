@@ -40,6 +40,10 @@ class SAW_Controller_Customers {
             wp_enqueue_style('saw-customers', SAW_VISITORS_PLUGIN_URL . 'assets/css/pages/saw-customers.css', array('saw-admin-table'), SAW_VISITORS_VERSION);
         }
         
+        if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/css/pages/saw-customers-form.css')) {
+            wp_enqueue_style('saw-customers-form', SAW_VISITORS_PLUGIN_URL . 'assets/css/pages/saw-customers-form.css', array('saw-customers'), SAW_VISITORS_VERSION);
+        }
+        
         if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/js/pages/saw-customers.js')) {
             wp_enqueue_script('saw-customers', SAW_VISITORS_PLUGIN_URL . 'assets/js/pages/saw-customers.js', array('jquery', 'saw-admin-table'), SAW_VISITORS_VERSION, true);
         }

@@ -17,13 +17,13 @@ $account_types = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}saw_account_ty
 
 <div class="saw-page-header">
     <div class="saw-page-header-content">
+        <h1 class="saw-page-title"><?php echo $is_edit ? 'Upravit zákazníka' : 'Nový zákazník'; ?></h1>
         <a href="/admin/settings/customers/" class="saw-button saw-button-secondary">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                 <path d="M12.5 15L7.5 10L12.5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
             Zpět
         </a>
-        <h1 class="saw-page-title"><?php echo $is_edit ? 'Upravit zákazníka' : 'Nový zákazník'; ?></h1>
     </div>
 </div>
 
