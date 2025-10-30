@@ -1,0 +1,76 @@
+/**
+ * SAW Tables Global Styles
+ * 
+ * Pro admin tabulky (list views)
+ * 
+ * @package SAW_Visitors
+ * @version 2.0.0
+ * @since   4.8.0
+ */
+
+.saw-admin-table {
+    background: #fff;
+    border: 1px solid #dcdcde;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.saw-admin-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.saw-admin-table thead {
+    background: #f9fafb;
+    border-bottom: 2px solid #dcdcde;
+}
+
+.saw-admin-table th {
+    padding: 16px;
+    text-align: left;
+    font-weight: 600;
+    color: #1d2327;
+    font-size: 14px;
+}
+
+.saw-admin-table td {
+    padding: 14px 16px;
+    border-top: 1px solid #f0f0f1;
+    font-size: 14px;
+    color: #2c3338;
+}
+
+.saw-admin-table tbody tr:hover {
+    background: #f9fafb;
+}
+
+/* Pagination */
+.saw-pagination {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 20px;
+    border-top: 1px solid #dcdcde;
+}
+
+.saw-pagination a,
+.saw-pagination span {
+    padding: 8px 12px;
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+    text-decoration: none;
+    color: #2c3338;
+    transition: all 0.2s ease;
+}
+
+.saw-pagination a:hover {
+    background: #0073aa;
+    color: #fff;
+    border-color: #0073aa;
+}
+
+.saw-pagination .current {
+    background: #0073aa;
+    color: #fff;
+    border-color: #0073aa;
+}

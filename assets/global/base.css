@@ -1,0 +1,116 @@
+/**
+ * SAW Base Styles
+ * 
+ * Core styling pro celou aplikaci
+ * 
+ * @package SAW_Visitors
+ * @version 2.0.0
+ * @since   4.8.0
+ */
+
+/* Reset */
+* {
+    box-sizing: border-box;
+}
+
+/* Layout */
+.saw-app-layout,
+.saw-admin-wrapper {
+    background: #fff;
+}
+
+/* Page Header */
+.saw-page-header {
+    background: #fff;
+    border-bottom: 1px solid #dcdcde;
+    padding: 30px 0;
+    margin-bottom: 30px;
+}
+
+.saw-page-header-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.saw-page-title {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 600;
+    color: #1d2327;
+    line-height: 1.2;
+}
+
+/* Buttons */
+.saw-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 24px;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    line-height: 1.5;
+}
+
+.saw-button-primary {
+    background: #0073aa;
+    color: #fff;
+}
+
+.saw-button-primary:hover {
+    background: #005177;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 115, 170, 0.25);
+}
+
+.saw-button-secondary {
+    background: #f0f0f1;
+    border-color: #c3c4c7;
+    color: #2c3338;
+}
+
+.saw-button-secondary:hover {
+    background: #fff;
+    border-color: #0073aa;
+    color: #0073aa;
+}
+
+.saw-back-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px;
+    background: #f0f0f1;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    text-decoration: none;
+    color: #2c3338;
+    font-weight: 500;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.saw-back-button:hover {
+    background: #fff;
+    border-color: #0073aa;
+    color: #0073aa;
+}
+
+/* Utilities */
+.saw-text-center {
+    text-align: center;
+}
+
+.saw-text-muted {
+    color: #646970;
+}

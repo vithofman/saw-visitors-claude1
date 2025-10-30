@@ -1,0 +1,177 @@
+/**
+ * Customers Module Styles
+ * 
+ * JEN styling specifický pro customers (logo preview, branding grid)
+ * 
+ * @package SAW_Visitors
+ * @version 2.0.0
+ * @since   4.8.0
+ */
+
+/* Logo preview v form */
+.saw-logo-preview-current {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #fafafa;
+    border: 2px dashed #d0d0d0;
+    border-radius: 12px;
+    padding: 16px;
+    min-height: 120px;
+    width: 100%;
+    transition: all 0.3s ease;
+}
+
+.saw-logo-preview-current img {
+    max-width: 100%;
+    max-height: 100px;
+    object-fit: contain;
+}
+
+.saw-logo-placeholder {
+    color: #9ca3af;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* Branding grid layout */
+.saw-branding-grid {
+    display: grid;
+    grid-template-columns: 200px 280px 1fr;
+    gap: 32px;
+    align-items: start;
+}
+
+.saw-logo-column {
+    min-width: 200px;
+}
+
+.saw-upload-column {
+    min-width: 240px;
+}
+
+.saw-color-column {
+    min-width: 200px;
+    margin-left: auto;
+}
+
+/* Color picker */
+.saw-color-picker-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.saw-color-picker {
+    width: 56px;
+    height: 56px;
+    border: 2px solid #dcdcde;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 4px;
+    background: #fff;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.saw-color-picker::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.saw-color-picker::-webkit-color-swatch {
+    border: none;
+    border-radius: 8px;
+}
+
+.saw-color-picker:hover {
+    border-color: #0073aa;
+    box-shadow: 0 4px 12px rgba(0, 115, 170, 0.15);
+    transform: translateY(-2px);
+}
+
+.saw-color-value {
+    flex: 1;
+    max-width: 140px;
+    padding: 14px 16px;
+    border: 2px solid #dcdcde;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+/* Address fields */
+.saw-address-fields {
+    display: grid;
+    grid-template-columns: 3fr 1fr;
+    gap: 16px;
+}
+
+.saw-address-city-zip {
+    display: flex;
+    gap: 16px;
+}
+
+.saw-address-city-zip .saw-form-group:first-child {
+    flex: 2;
+}
+
+.saw-address-city-zip .saw-form-group:last-child {
+    flex: 1;
+}
+
+/* Status badge v listu */
+.saw-badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.saw-badge-warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.saw-badge-success {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.saw-badge-secondary {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/* Color badge v listu */
+.saw-color-badge {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    vertical-align: middle;
+}
+
+/* Responsive */
+@media screen and (max-width: 1200px) {
+    .saw-branding-grid {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+    
+    .saw-logo-column,
+    .saw-upload-column,
+    .saw-color-column {
+        min-width: auto;
+        max-width: 100%;
+        margin-left: 0;
+    }
+}
