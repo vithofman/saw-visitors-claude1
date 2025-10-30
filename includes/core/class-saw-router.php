@@ -93,13 +93,15 @@ class SAW_Router {
         $config = SAW_Module_Loader::load($slug);
         
         if (!$config) {
+            error_log("SAW Router: Module config not loaded for: $slug");
             $this->handle_404();
             return;
         }
         
-        $controller_class = 'SAW_Module_' . str_replace('-', '_', ucwords($slug, '-')) . '_Controller';
+        $controller_class = 'SAW_Module_' . ucfirst(str_replace('-', '_', $slug)) . '_Controller';
         
         if (!class_exists($controller_class)) {
+            error_log("SAW Router: Controller class not found: $controller_class");
             $this->handle_404();
             return;
         }
@@ -180,10 +182,16 @@ class SAW_Router {
         $segments = explode('/', $clean_path);
         
         $modules = SAW_Module_Loader::get_all();
+        
+        error_log("SAW Router: Path=$clean_path, Modules count=" . count($modules));
+        
         foreach ($modules as $slug => $config) {
             $route = ltrim($config['route'] ?? '', '/');
             
+            error_log("SAW Router: Checking module '$slug' with route '$route'");
+            
             if (strpos($clean_path, $route) === 0) {
+                error_log("SAW Router: MATCH! Dispatching to module '$slug'");
                 $route_segments = explode('/', $route);
                 $module_segments = array_slice($segments, count($route_segments));
                 $this->dispatch_module($slug, $module_segments);
@@ -191,15 +199,7 @@ class SAW_Router {
             }
         }
         
-        if ($segments[0] === 'settings' && isset($segments[1]) && $segments[1] === 'customers') {
-            $this->handle_customers_routes($segments);
-            return;
-        }
-        
-        if ($segments[0] === 'settings' && isset($segments[1]) && $segments[1] === 'account-types') {
-            $this->handle_account_types_routes($segments);
-            return;
-        }
+        error_log("SAW Router: No module match, falling to 404");
         
         if ($segments[0] === 'settings' && isset($segments[1])) {
             $this->render_page('Settings: ' . ucfirst($segments[1]), $path, 'admin', 'settings');
@@ -207,76 +207,6 @@ class SAW_Router {
         }
         
         $this->render_page('Admin Interface', $path, 'admin', '');
-    }
-    
-    private function handle_customers_routes($segments) {
-        $controller_file = SAW_VISITORS_PLUGIN_DIR . 'includes/controllers/class-saw-controller-customers.php';
-        
-        if (!file_exists($controller_file)) {
-            if (defined('SAW_DEBUG') && SAW_DEBUG) {
-                error_log('SAW Router: Customers controller not found at: ' . $controller_file);
-            }
-            $this->handle_404();
-            return;
-        }
-        
-        require_once $controller_file;
-        $controller = new SAW_Controller_Customers();
-        
-        if (count($segments) === 2) {
-            $controller->index();
-            return;
-        }
-        
-        if (count($segments) === 3 && ($segments[2] === 'new' || $segments[2] === 'create')) {
-            $controller->create();
-            return;
-        }
-        
-        if (count($segments) === 4 && $segments[2] === 'edit') {
-            $customer_id = intval($segments[3]);
-            if ($customer_id > 0) {
-                $controller->edit($customer_id);
-                return;
-            }
-        }
-        
-        $this->handle_404();
-    }
-    
-    private function handle_account_types_routes($segments) {
-        $controller_file = SAW_VISITORS_PLUGIN_DIR . 'includes/controllers/class-saw-controller-account-types.php';
-        
-        if (!file_exists($controller_file)) {
-            if (defined('SAW_DEBUG') && SAW_DEBUG) {
-                error_log('SAW Router: Account Types controller not found at: ' . $controller_file);
-            }
-            $this->handle_404();
-            return;
-        }
-        
-        require_once $controller_file;
-        $controller = new SAW_Controller_Account_Types();
-        
-        if (count($segments) === 2) {
-            $controller->index();
-            return;
-        }
-        
-        if (count($segments) === 3 && ($segments[2] === 'new' || $segments[2] === 'create')) {
-            $controller->create();
-            return;
-        }
-        
-        if (count($segments) === 4 && $segments[2] === 'edit') {
-            $account_type_id = intval($segments[3]);
-            if ($account_type_id > 0) {
-                $controller->edit($account_type_id);
-                return;
-            }
-        }
-        
-        $this->handle_404();
     }
     
     private function handle_manager_route($path) {

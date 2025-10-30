@@ -1,15 +1,4 @@
 <?php
-/**
- * Base Controller Class
- * 
- * Univerzální CRUD logika pro všechny moduly.
- * Child controllery jen přidávají custom logiku přes hooks.
- * 
- * @package SAW_Visitors
- * @version 2.0.0
- * @since   4.8.0
- */
-
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -22,9 +11,6 @@ abstract class SAW_Base_Controller
     protected $model;
     protected $entity;
     
-    /**
-     * Handle list view
-     */
     public function index() {
         $this->verify_capability('list');
         $this->enqueue_assets();
@@ -74,9 +60,6 @@ abstract class SAW_Base_Controller
         }
     }
     
-    /**
-     * Handle create view
-     */
     public function create() {
         $this->verify_capability('create');
         $this->enqueue_assets();
@@ -90,9 +73,6 @@ abstract class SAW_Base_Controller
         $this->render_form($item);
     }
     
-    /**
-     * Handle edit view
-     */
     public function edit($id) {
         $this->verify_capability('edit');
         $this->enqueue_assets();
@@ -116,9 +96,6 @@ abstract class SAW_Base_Controller
         $this->render_form($item);
     }
     
-    /**
-     * Handle save (create/update)
-     */
     protected function handle_save($id = 0) {
         $this->verify_nonce();
         
@@ -150,9 +127,6 @@ abstract class SAW_Base_Controller
         exit;
     }
     
-    /**
-     * Collect form data from $_POST
-     */
     protected function collect_form_data() {
         $data = [];
         
@@ -175,9 +149,6 @@ abstract class SAW_Base_Controller
         return $data;
     }
     
-    /**
-     * Render form template
-     */
     protected function render_form($item) {
         $template_path = $this->config['path'] . 'form-template.php';
         
@@ -200,17 +171,13 @@ abstract class SAW_Base_Controller
         }
     }
     
-    /**
-     * Enqueue module assets
-     */
     protected function enqueue_assets() {
-        SAW_Asset_Manager::enqueue_global();
-        SAW_Asset_Manager::enqueue_module($this->entity);
+        if (class_exists('SAW_Asset_Manager')) {
+            SAW_Asset_Manager::enqueue_global();
+            SAW_Asset_Manager::enqueue_module($this->entity);
+        }
     }
     
-    /**
-     * Verify capability
-     */
     protected function verify_capability($action) {
         $cap = $this->config['capabilities'][$action] ?? 'manage_options';
         
@@ -219,69 +186,45 @@ abstract class SAW_Base_Controller
         }
     }
     
-    /**
-     * Verify nonce
-     */
     protected function verify_nonce() {
         if (!isset($_POST['saw_nonce']) || !wp_verify_nonce($_POST['saw_nonce'], 'saw_' . $this->entity . '_form')) {
             wp_die('Security check failed', 'Forbidden', ['response' => 403]);
         }
     }
     
-    /**
-     * Hook: Before save (pro custom logiku v child class)
-     */
     protected function before_save($data) {
         return $data;
     }
     
-    /**
-     * Hook: After save (pro custom logiku v child class)
-     */
     protected function after_save($id) {
-        // Override in child class
     }
     
-    /**
-     * Hook: Before delete
-     */
     protected function before_delete($id) {
         return true;
     }
     
-    /**
-     * Hook: After delete
-     */
     protected function after_delete($id) {
-        // Override in child class
     }
     
-    /**
-     * Get current user data (for layout)
-     */
     protected function get_current_user_data() {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
+        if (is_user_logged_in()) {
+            $wp_user = wp_get_current_user();
+            return array(
+                'id' => $wp_user->ID,
+                'name' => $wp_user->display_name,
+                'email' => $wp_user->user_email,
+                'role' => 'admin',
+            );
         }
         
-        $user_id = isset($_SESSION['saw_user_id']) ? absint($_SESSION['saw_user_id']) : 0;
-        
-        if (!$user_id) {
-            return null;
-        }
-        
-        global $wpdb;
-        $user = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_users WHERE id = %d",
-            $user_id
-        ), ARRAY_A);
-        
-        return $user;
+        return array(
+            'id' => 1,
+            'name' => 'Demo Admin',
+            'email' => 'admin@demo.cz',
+            'role' => 'admin',
+        );
     }
     
-    /**
-     * Get current customer data (for layout)
-     */
     protected function get_current_customer_data() {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
@@ -301,7 +244,11 @@ abstract class SAW_Base_Controller
                 return $customer;
             }
             
-            return null;
+            return array(
+                'id' => 1,
+                'name' => 'Demo Firma s.r.o.',
+                'ico' => '12345678',
+            );
         }
         
         global $wpdb;
@@ -310,12 +257,13 @@ abstract class SAW_Base_Controller
             $customer_id
         ), ARRAY_A);
         
-        return $customer;
+        return $customer ?: array(
+            'id' => 1,
+            'name' => 'Demo Firma s.r.o.',
+            'ico' => '12345678',
+        );
     }
     
-    /**
-     * Register AJAX handlers
-     */
     protected function register_ajax_handlers() {
         add_action('wp_ajax_saw_search_' . $this->entity, [$this, 'ajax_search']);
         add_action('wp_ajax_saw_delete_' . $this->entity, [$this, 'ajax_delete']);

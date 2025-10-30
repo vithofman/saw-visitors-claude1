@@ -1,14 +1,4 @@
 <?php
-/**
- * Customers List Template
- * 
- * Používá existující SAW_Component_Admin_Table
- * 
- * @package SAW_Visitors
- * @version 2.0.0
- * @since   4.8.0
- */
-
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -56,7 +46,7 @@ $admin_table = new SAW_Component_Admin_Table('customers', array(
                 if (empty($value)) {
                     return '';
                 }
-                return '<span class="saw-color-badge" style="background-color: ' . esc_attr($value) . '; border: 2px solid #fff; box-shadow: 0 0 0 1px #dcdcde;" title="' . esc_attr($value) . '"></span>';
+                return '<span class="saw-color-badge" style="background-color: ' . esc_attr($value) . '; border: 2px solid #fff; box-shadow: 0 0 0 1px #dcdcde; display: inline-block; width: 24px; height: 24px; border-radius: 4px; vertical-align: middle;" title="' . esc_attr($value) . '"></span>';
             },
         ),
         'created_at' => array(
@@ -68,18 +58,18 @@ $admin_table = new SAW_Component_Admin_Table('customers', array(
         ),
     ),
     
-    'rows' => $items,
-    'total_items' => $total_items,
+    'rows' => $items ?? [],
+    'total_items' => $total_items ?? 0,
     
-    'current_page' => $page,
-    'total_pages' => $total_pages,
+    'current_page' => $page ?? 1,
+    'total_pages' => $total_pages ?? 1,
     'per_page' => 20,
     
-    'orderby' => $orderby,
-    'order' => $order,
+    'orderby' => $orderby ?? 'id',
+    'order' => $order ?? 'DESC',
     
     'search' => true,
-    'search_value' => $search,
+    'search_value' => $search ?? '',
     
     'actions' => array('edit', 'delete'),
     'create_url' => home_url('/admin/settings/customers/new/'),
@@ -102,4 +92,7 @@ $admin_table = new SAW_Component_Admin_Table('customers', array(
 
 $admin_table->render();
 
-include SAW_VISITORS_PLUGIN_DIR . 'templates/modals/customer-detail-modal.php';
+$customer_modal_template = SAW_VISITORS_PLUGIN_DIR . 'templates/modals/customer-detail-modal.php';
+if (file_exists($customer_modal_template)) {
+    include $customer_modal_template;
+}

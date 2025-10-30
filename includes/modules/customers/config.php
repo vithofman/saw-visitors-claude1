@@ -1,14 +1,4 @@
 <?php
-/**
- * Customers Module Config
- * 
- * Definice entity Customers - vše co potřebuje Base Controller/Model.
- * 
- * @package SAW_Visitors
- * @version 2.0.0
- * @since   4.8.0
- */
-
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -18,7 +8,7 @@ return [
     'table' => 'saw_customers',
     'singular' => 'Zákazník',
     'plural' => 'Zákazníci',
-    'route' => '/admin/settings/customers',
+    'route' => 'settings/customers',
     'icon' => '🏢',
     
     'capabilities' => [
