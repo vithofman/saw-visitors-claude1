@@ -52,7 +52,7 @@ class SAW_Controller_Account_Types {
             $layout = new SAW_App_Layout();
             $user = $this->get_current_user_data();
             $customer = $this->get_current_customer_data();
-            $layout->render($content, 'Account Types', 'account-types', $user, $customer);
+            $layout->render($content, 'Account Types', 'settings-account-types', $user, $customer);
         } else {
             echo $content;
         }
@@ -74,7 +74,7 @@ class SAW_Controller_Account_Types {
             $layout = new SAW_App_Layout();
             $user = $this->get_current_user_data();
             $customer = $this->get_current_customer_data();
-            $layout->render($content, 'Nový Account Type', 'account-types', $user, $customer);
+            $layout->render($content, 'Nový Account Type', 'settings-account-types', $user, $customer);
         } else {
             echo $content;
         }
@@ -101,7 +101,7 @@ class SAW_Controller_Account_Types {
             $layout = new SAW_App_Layout();
             $user = $this->get_current_user_data();
             $customer = $this->get_current_customer_data();
-            $layout->render($content, 'Upravit Account Type', 'account-types', $user, $customer);
+            $layout->render($content, 'Upravit Account Type', 'settings-account-types', $user, $customer);
         } else {
             echo $content;
         }

@@ -23,7 +23,7 @@
             this.bindSortHeaders();
             this.bindDeleteButtons();
             this.bindAlertClose();
-            this.bindClickableRows(); // ✨ NOVÉ: Klikatelné řádky pro modal
+            this.bindClickableRows();
             
             console.log('SAW Admin Table: Initialized');
         },
@@ -119,8 +119,6 @@
         
         /**
          * Bind sortable column headers
-         * 
-         * ✅ FIXED: Now properly checks if AJAX is enabled BEFORE preventing default
          */
         bindSortHeaders: function() {
             $(document).on('click', '.saw-table-sortable thead th.saw-sortable a', function(e) {
@@ -128,10 +126,9 @@
                 const $th = $link.closest('th');
                 const $input = $('.saw-search-input');
                 
-                // ✅ KRITICKÁ ZMĚNA: Nejdříve zkontroluj jestli AJAX vůbec existuje
                 if ($input.length === 0) {
                     console.log('SAW Admin Table: No search input found, allowing normal link behavior');
-                    return; // Nech link fungovat normálně
+                    return;
                 }
                 
                 const ajaxEnabled = $input.data('ajax-enabled') === 1;
@@ -141,7 +138,6 @@
                     href: $link.attr('href')
                 });
                 
-                // ✅ POUZE pokud je AJAX enabled, prevent default
                 if (ajaxEnabled) {
                     e.preventDefault();
                     
@@ -166,9 +162,7 @@
                         order: newOrder
                     });
                 } else {
-                    // ✅ AJAX není enabled, nech link fungovat normálně
                     console.log('SAW Admin Table: AJAX not enabled, following link normally');
-                    // Neděláme e.preventDefault(), link funguje normálně
                 }
             });
         },
@@ -220,14 +214,13 @@
             $(document).on('click', '.saw-alert-close', function() {
                 $(this).closest('.saw-alert').fadeOut(300);
             });
-        },  // ✅ OPRAVENO: Přidána chybějící čárka!
+        },
         
         /**
-         * ✨ NOVÉ: Bind klikatelné řádky pro otevření modalu
+         * Bind klikatelné řádky pro otevření modalu
          */
         bindClickableRows: function() {
             $(document).on('click', '.saw-row-clickable', function(e) {
-                // Ignoruj kliknutí na action buttony
                 if ($(e.target).closest('.saw-action-buttons').length > 0) {
                     return;
                 }
@@ -241,7 +234,6 @@
                     id: customerId
                 });
                 
-                // Trigger event pro modal (bude zpracován v saw-customer-detail-modal.js)
                 $(document).trigger('saw:table:row-click', {
                     entity: entity,
                     id: customerId,
@@ -249,9 +241,14 @@
                 });
             });
         }
-    };  // ✅ OPRAVENO: Odstraněna nadbytečná závorka
+    };
     
     $(document).ready(function() {
+        SawAdminTable.init();
+    });
+    
+    $(document).on('saw:scripts-reinitialized', function() {
+        console.log('🔄 SAW Admin Table: Reinitializing after navigation...');
         SawAdminTable.init();
     });
     

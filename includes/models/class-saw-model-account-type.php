@@ -9,11 +9,10 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-require_once SAW_VISITORS_PLUGIN_DIR . 'includes/models/class-saw-model-base.php';
-
-class SAW_Model_Account_Type extends SAW_Model_Base {
+class SAW_Model_Account_Type {
     
-    protected $table_name = 'account_types';
+    protected $table_name;
+    protected $db;
     
     protected $fillable = [
         'name',
@@ -24,6 +23,12 @@ class SAW_Model_Account_Type extends SAW_Model_Base {
         'sort_order',
         'is_active'
     ];
+    
+    public function __construct() {
+        global $wpdb;
+        $this->db = $wpdb;
+        $this->table_name = $wpdb->prefix . 'saw_account_types';
+    }
     
     public function get_all($args = []) {
         $defaults = [
@@ -109,13 +114,15 @@ class SAW_Model_Account_Type extends SAW_Model_Base {
             'price' => $validated['price'],
             'features' => $validated['features'],
             'sort_order' => $validated['sort_order'],
-            'is_active' => $validated['is_active']
+            'is_active' => $validated['is_active'],
+            'created_at' => current_time('mysql')
         ];
         
         $result = $this->db->insert($this->table_name, $insert_data);
         
         if ($result === false) {
-            return new WP_Error('db_error', 'Failed to create account type');
+            error_log('SAW Account Type Create Error: ' . $this->db->last_error);
+            return new WP_Error('db_error', 'Failed to create account type: ' . $this->db->last_error);
         }
         
         return $this->db->insert_id;
@@ -135,7 +142,8 @@ class SAW_Model_Account_Type extends SAW_Model_Base {
             'price' => $validated['price'],
             'features' => $validated['features'],
             'sort_order' => $validated['sort_order'],
-            'is_active' => $validated['is_active']
+            'is_active' => $validated['is_active'],
+            'updated_at' => current_time('mysql')
         ];
         
         $result = $this->db->update(
@@ -145,7 +153,8 @@ class SAW_Model_Account_Type extends SAW_Model_Base {
         );
         
         if ($result === false) {
-            return new WP_Error('db_error', 'Failed to update account type');
+            error_log('SAW Account Type Update Error: ' . $this->db->last_error);
+            return new WP_Error('db_error', 'Failed to update account type: ' . $this->db->last_error);
         }
         
         return true;

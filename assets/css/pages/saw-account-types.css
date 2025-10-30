@@ -4,6 +4,33 @@
  * @package SAW_Visitors
  */
 
+/* FORCE WHITE BACKGROUND EVERYWHERE - NUCLEAR OPTION */
+body,
+body.saw-app-body,
+html,
+#wpcontent,
+#wpbody,
+#wpbody-content,
+.wrap,
+.saw-admin-wrapper,
+.saw-app-layout,
+.saw-app-layout-content,
+.saw-app-container,
+.saw-app-main,
+.saw-app-content,
+.saw-content-area,
+.saw-main-content {
+    background-color: #fff !important;
+}
+
+/* Remove any potential gray overlays */
+body::before,
+body::after,
+.wrap::before,
+.wrap::after {
+    display: none !important;
+}
+
 /* Page Header */
 .saw-account-types-page .saw-page-header {
     display: flex;
