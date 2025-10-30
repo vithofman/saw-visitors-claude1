@@ -1,43 +1,15 @@
 <?php
-/**
- * SAW Visitors Main Class
- * 
- * Hlavní třída pluginu - inicializace, routing, hooks
- * 
- * @package SAW_Visitors
- * @version 4.6.1
- * @since 4.6.1
- */
-
 if (!defined('ABSPATH')) {
     exit;
 }
 
 class SAW_Visitors {
     
-    /**
-     * @var SAW_Loader
-     */
     protected $loader;
-    
-    /**
-     * @var string
-     */
     protected $plugin_name;
-    
-    /**
-     * @var string
-     */
     protected $version;
-    
-    /**
-     * @var SAW_Router
-     */
     protected $router;
     
-    /**
-     * Konstruktor
-     */
     public function __construct() {
         $this->plugin_name = 'saw-visitors';
         $this->version = SAW_VISITORS_VERSION;
@@ -45,17 +17,17 @@ class SAW_Visitors {
         $this->load_dependencies();
         $this->init_router();
         $this->init_session();
-        $this->init_controllers();
         $this->define_hooks();
     }
     
-    /**
-     * Načtení závislostí
-     * 
-     * @return void
-     */
     private function load_dependencies() {
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-loader.php';
+        
+        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/trait-ajax-handlers.php';
+        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/class-base-model.php';
+        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/class-base-controller.php';
+        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-module-loader.php';
+        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-asset-manager.php';
         
         if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-auth.php')) {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-auth.php';
@@ -82,80 +54,29 @@ class SAW_Visitors {
         $this->loader = new SAW_Loader();
     }
     
-    /**
-     * Inicializace routeru
-     * 
-     * @return void
-     */
     private function init_router() {
         $this->router = new SAW_Router();
     }
     
-    /**
-     * Inicializace session
-     * 
-     * @return void
-     */
     private function init_session() {
         if (!session_id() && !headers_sent()) {
             session_start();
         }
     }
     
-    /**
-     * Inicializace controllerů
-     * 
-     * Načítá pouze Customers controller - ostatní se inicializují na požádání v routeru
-     * Content controller vyžaduje customer_id, takže se vytváří až v routeru
-     * Account Types controller se inicializuje lazy v routeru (má závislosti)
-     * 
-     * @return void
-     */
-    private function init_controllers() {
-        // Customers controller - můžeme inicializovat globálně pro AJAX handlery
-        $customers_controller_file = SAW_VISITORS_PLUGIN_DIR . 'includes/controllers/class-saw-controller-customers.php';
-        
-        if (file_exists($customers_controller_file)) {
-            require_once $customers_controller_file;
-            new SAW_Controller_Customers();
-            
-            if (defined('SAW_DEBUG') && SAW_DEBUG) {
-                error_log('SAW Visitors: Customers Controller initialized');
-            }
-        } else {
-            error_log('SAW Visitors ERROR: Customers Controller not found at: ' . $customers_controller_file);
-        }
-        
-        // Account Types controller - LAZY LOADING v routeru (má závislosti na model-base)
-        // Content controller - LAZY LOADING v routeru (má povinný parametr $customer_id)
-    }
-    
-    /**
-     * Definice WordPress hooks
-     * 
-     * @return void
-     */
     private function define_hooks() {
-        // KRITICKÉ: Registrace router hooks - BEZ TOHO ROUTING NEFUNGUJE!
         $this->loader->add_action('init', $this->router, 'register_routes');
         $this->loader->add_filter('query_vars', $this->router, 'register_query_vars');
         $this->loader->add_action('template_redirect', $this->router, 'dispatch', 1);
         
-        // Enqueue assets
         $this->loader->add_action('wp_enqueue_scripts', $this, 'enqueue_public_styles');
         $this->loader->add_action('wp_enqueue_scripts', $this, 'enqueue_public_scripts');
         $this->loader->add_action('admin_enqueue_scripts', $this, 'enqueue_admin_styles');
         $this->loader->add_action('admin_enqueue_scripts', $this, 'enqueue_admin_scripts');
         
-        // Admin menu
         $this->loader->add_action('admin_menu', $this, 'add_minimal_admin_menu');
     }
     
-    /**
-     * Přidání WP Admin menu
-     * 
-     * @return void
-     */
     public function add_minimal_admin_menu() {
         add_menu_page(
             'SAW Visitors',
@@ -168,11 +89,6 @@ class SAW_Visitors {
         );
     }
     
-    /**
-     * Zobrazení About stránky
-     * 
-     * @return void
-     */
     public function display_about_page() {
         ?>
         <div class="wrap">
@@ -214,19 +130,13 @@ class SAW_Visitors {
                     <li>WordPress: <?php echo get_bloginfo('version'); ?> (požadováno: 6.0+)</li>
                     <li>Multi-tenant: ✔</li>
                     <li>Frontend admin: ✔</li>
-                    <li>Customers management: ✔</li>
-                    <li>Account Types management: ✔</li>
+                    <li>Modulární architektura v2: ✔</li>
                 </ul>
             </div>
         </div>
         <?php
     }
     
-    /**
-     * Enqueue admin styles
-     * 
-     * @return void
-     */
     public function enqueue_admin_styles() {
         if (isset($_GET['page']) && $_GET['page'] === 'saw-visitors-about') {
             if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/css/admin.css')) {
@@ -240,11 +150,6 @@ class SAW_Visitors {
         }
     }
     
-    /**
-     * Enqueue admin scripts
-     * 
-     * @return void
-     */
     public function enqueue_admin_scripts() {
         if (isset($_GET['page']) && $_GET['page'] === 'saw-visitors-about') {
             if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/js/admin.js')) {
@@ -259,11 +164,6 @@ class SAW_Visitors {
         }
     }
     
-    /**
-     * Enqueue public styles
-     * 
-     * @return void
-     */
     public function enqueue_public_styles() {
         $route = get_query_var('saw_route');
         
@@ -271,100 +171,14 @@ class SAW_Visitors {
             return;
         }
         
-        if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/css/public.css')) {
-            wp_enqueue_style(
-                $this->plugin_name . '-public',
-                SAW_VISITORS_PLUGIN_URL . 'assets/css/public.css',
-                array(),
-                $this->version
-            );
-        }
+        SAW_Asset_Manager::enqueue_global();
         
-        if (in_array($route, array('admin', 'manager'))) {
-            if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/css/saw-app-tables.css')) {
-                wp_enqueue_style(
-                    $this->plugin_name . '-tables',
-                    SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-app-tables.css',
-                    array($this->plugin_name . '-public'),
-                    $this->version
-                );
-            }
-        }
-        
-        $path = get_query_var('saw_path');
-        
-        if ($this->is_customers_page($route, $path)) {
-            if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/css/pages/saw-customers.css')) {
-                wp_enqueue_style(
-                    $this->plugin_name . '-customers',
-                    SAW_VISITORS_PLUGIN_URL . 'assets/css/pages/saw-customers.css',
-                    array($this->plugin_name . '-public', $this->plugin_name . '-tables'),
-                    $this->version
-                );
-            }
-        }
-        
-        if ($this->is_account_types_page($route, $path)) {
-            if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/css/pages/saw-account-types.css')) {
-                wp_enqueue_style(
-                    $this->plugin_name . '-account-types',
-                    SAW_VISITORS_PLUGIN_URL . 'assets/css/pages/saw-account-types.css',
-                    array($this->plugin_name . '-public', $this->plugin_name . '-tables'),
-                    $this->version
-                );
-            }
+        $active_module = $this->router->get_active_module();
+        if ($active_module) {
+            SAW_Asset_Manager::enqueue_module($active_module);
         }
     }
     
-    /**
-     * Detekce customers stránky
-     * 
-     * @param string $route Route
-     * @param string $path  Path
-     * @return bool
-     */
-    private function is_customers_page($route, $path) {
-        if ($route !== 'admin') {
-            return false;
-        }
-        
-        if (empty($path)) {
-            return false;
-        }
-        
-        return (
-            strpos($path, 'settings/customers') === 0 ||
-            strpos($path, 'customers') === 0
-        );
-    }
-    
-    /**
-     * Detekce account types stránky
-     * 
-     * @param string $route Route
-     * @param string $path  Path
-     * @return bool
-     */
-    private function is_account_types_page($route, $path) {
-        if ($route !== 'admin') {
-            return false;
-        }
-        
-        if (empty($path)) {
-            return false;
-        }
-        
-        return (
-            strpos($path, 'settings/account-types') === 0 ||
-            strpos($path, 'account-types') === 0
-        );
-    }
-    
-    /**
-     * Enqueue public scripts
-     * 
-     * @return void
-     */
     public function enqueue_public_scripts() {
         if (get_query_var('saw_route')) {
             if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/js/public.js')) {
@@ -388,32 +202,18 @@ class SAW_Visitors {
         }
     }
     
-    /**
-     * Spuštění pluginu
-     * 
-     * @return void
-     */
     public function run() {
         $this->loader->run();
     }
     
-    /**
-     * @return string
-     */
     public function get_plugin_name() {
         return $this->plugin_name;
     }
     
-    /**
-     * @return SAW_Loader
-     */
     public function get_loader() {
         return $this->loader;
     }
     
-    /**
-     * @return string
-     */
     public function get_version() {
         return $this->version;
     }

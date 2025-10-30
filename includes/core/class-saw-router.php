@@ -1,21 +1,10 @@
 <?php
-/**
- * SAW Router
- * Handles routing for all application routes
- * 
- * @package SAW_Visitors
- * @since 4.6.1
- */
-
 if (!defined('ABSPATH')) {
     exit;
 }
 
 class SAW_Router {
     
-    /**
-     * Register rewrite rules
-     */
     public function register_routes() {
         add_rewrite_rule('^admin/?$', 'index.php?saw_route=admin', 'top');
         add_rewrite_rule('^admin/([^/]+)/?$', 'index.php?saw_route=admin&saw_path=$matches[1]', 'top');
@@ -34,18 +23,12 @@ class SAW_Router {
         add_rewrite_rule('^visitor/([^/]+)/(.+)', 'index.php?saw_route=visitor&saw_path=$matches[1]/$matches[2]', 'top');
     }
     
-    /**
-     * Register query vars
-     */
     public function register_query_vars($vars) {
         $vars[] = 'saw_route';
         $vars[] = 'saw_path';
         return $vars;
     }
     
-    /**
-     * Dispatch routing
-     */
     public function dispatch($route = '', $path = '') {
         if (empty($route)) {
             $route = get_query_var('saw_route');
@@ -86,9 +69,54 @@ class SAW_Router {
         exit;
     }
     
-    /**
-     * Load frontend components
-     */
+    public function get_active_module() {
+        $path = get_query_var('saw_path');
+        
+        if (empty($path)) {
+            return null;
+        }
+        
+        $modules = SAW_Module_Loader::get_all();
+        
+        foreach ($modules as $slug => $config) {
+            $route = ltrim($config['route'] ?? '', '/');
+            
+            if (strpos($path, $route) === 0) {
+                return $slug;
+            }
+        }
+        
+        return null;
+    }
+    
+    private function dispatch_module($slug, $segments) {
+        $config = SAW_Module_Loader::load($slug);
+        
+        if (!$config) {
+            $this->handle_404();
+            return;
+        }
+        
+        $controller_class = 'SAW_Module_' . str_replace('-', '_', ucwords($slug, '-')) . '_Controller';
+        
+        if (!class_exists($controller_class)) {
+            $this->handle_404();
+            return;
+        }
+        
+        $controller = new $controller_class();
+        
+        if (empty($segments[0])) {
+            $controller->index();
+        } elseif ($segments[0] === 'create' || $segments[0] === 'new') {
+            $controller->create();
+        } elseif ($segments[0] === 'edit' && !empty($segments[1])) {
+            $controller->edit(intval($segments[1]));
+        } else {
+            $this->handle_404();
+        }
+    }
+    
     private function load_frontend_components() {
         $components = array(
             'class-saw-app-layout.php',
@@ -105,16 +133,10 @@ class SAW_Router {
         }
     }
     
-    /**
-     * Check if user is logged in
-     */
     private function is_logged_in() {
         return is_user_logged_in();
     }
     
-    /**
-     * Redirect to login
-     */
     private function redirect_to_login($route = 'admin') {
         $login_url = '/' . $route . '/login/';
         
@@ -142,9 +164,6 @@ class SAW_Router {
         exit;
     }
     
-    /**
-     * Handle admin routes
-     */
     private function handle_admin_route($path) {
         if (!$this->is_logged_in()) {
             $this->redirect_to_login('admin');
@@ -159,6 +178,18 @@ class SAW_Router {
         }
         
         $segments = explode('/', $clean_path);
+        
+        $modules = SAW_Module_Loader::get_all();
+        foreach ($modules as $slug => $config) {
+            $route = ltrim($config['route'] ?? '', '/');
+            
+            if (strpos($clean_path, $route) === 0) {
+                $route_segments = explode('/', $route);
+                $module_segments = array_slice($segments, count($route_segments));
+                $this->dispatch_module($slug, $module_segments);
+                return;
+            }
+        }
         
         if ($segments[0] === 'settings' && isset($segments[1]) && $segments[1] === 'customers') {
             $this->handle_customers_routes($segments);
@@ -178,9 +209,6 @@ class SAW_Router {
         $this->render_page('Admin Interface', $path, 'admin', '');
     }
     
-    /**
-     * Handle customers routes
-     */
     private function handle_customers_routes($segments) {
         $controller_file = SAW_VISITORS_PLUGIN_DIR . 'includes/controllers/class-saw-controller-customers.php';
         
@@ -200,7 +228,7 @@ class SAW_Router {
             return;
         }
         
-        if (count($segments) === 3 && $segments[2] === 'new') {
+        if (count($segments) === 3 && ($segments[2] === 'new' || $segments[2] === 'create')) {
             $controller->create();
             return;
         }
@@ -216,9 +244,6 @@ class SAW_Router {
         $this->handle_404();
     }
     
-    /**
-     * Handle account types routes
-     */
     private function handle_account_types_routes($segments) {
         $controller_file = SAW_VISITORS_PLUGIN_DIR . 'includes/controllers/class-saw-controller-account-types.php';
         
@@ -238,7 +263,7 @@ class SAW_Router {
             return;
         }
         
-        if (count($segments) === 3 && $segments[2] === 'new') {
+        if (count($segments) === 3 && ($segments[2] === 'new' || $segments[2] === 'create')) {
             $controller->create();
             return;
         }
@@ -254,9 +279,6 @@ class SAW_Router {
         $this->handle_404();
     }
     
-    /**
-     * Handle manager routes
-     */
     private function handle_manager_route($path) {
         if (!$this->is_logged_in()) {
             $this->redirect_to_login('manager');
@@ -266,9 +288,6 @@ class SAW_Router {
         $this->render_page('Manager Interface', $path, 'manager', '');
     }
     
-    /**
-     * Handle terminal routes
-     */
     private function handle_terminal_route($path) {
         if (!$this->is_logged_in()) {
             $this->redirect_to_login('terminal');
@@ -278,16 +297,10 @@ class SAW_Router {
         $this->render_page('Terminal Interface', $path, 'terminal', '');
     }
     
-    /**
-     * Handle visitor routes
-     */
     private function handle_visitor_route($path) {
         $this->render_page('Visitor Portal', $path, 'visitor', '');
     }
     
-    /**
-     * Render page using layout component
-     */
     private function render_page($title, $path, $route, $active_menu = '') {
         $user = $this->get_current_user_data();
         $customer = $this->get_current_customer_data();
@@ -350,7 +363,7 @@ class SAW_Router {
                         <a href="/admin/invitations" class="saw-button saw-button-primary">Pozvánky</a>
                         <a href="/admin/visits" class="saw-button saw-button-primary">Návštěvy</a>
                         <a href="/admin/statistics" class="saw-button saw-button-primary">Statistiky</a>
-                        <a href="/admin/settings/customers" class="saw-button saw-button-success">👥 Správa zákazníků</a>
+                        <a href="/admin/settings/customers" class="saw-button saw-button-success">💥 Správa zákazníků</a>
                         <a href="/admin/settings/account-types" class="saw-button saw-button-success">💳 Account Types</a>
                     </div>
                 </div>
@@ -367,16 +380,10 @@ class SAW_Router {
         }
     }
     
-    /**
-     * Handle 404
-     */
     private function handle_404() {
         $this->render_page('404 - Stránka nenalezena', '404', 'error', '');
     }
     
-    /**
-     * Get current user data
-     */
     private function get_current_user_data() {
         if (is_user_logged_in()) {
             $wp_user = wp_get_current_user();
@@ -396,9 +403,6 @@ class SAW_Router {
         );
     }
     
-    /**
-     * Get current customer data
-     */
     private function get_current_customer_data() {
         return array(
             'id' => 1,
