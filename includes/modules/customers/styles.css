@@ -1,12 +1,102 @@
 /**
  * Customers Module Styles
  * 
- * JEN styling specifický pro customers (logo preview, branding grid)
+ * JEN styling specifický pro customers (logo preview, branding grid, table)
  * 
  * @package SAW_Visitors
  * @version 2.0.0
  * @since   4.8.0
  */
+
+/* ============================================
+   CUSTOMER TABLE STYLES
+   ============================================ */
+
+.saw-customer-logo {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #f9fafb;
+    border: 2px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.saw-customer-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 3px;
+}
+
+.saw-customer-logo-placeholder {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: 2px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.saw-customer-logo-placeholder .dashicons {
+    color: #ffffff;
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+}
+
+.saw-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    margin: 0 4px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.saw-action-btn .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: #6b7280;
+}
+
+.saw-action-edit:hover {
+    background: #eff6ff;
+}
+
+.saw-action-edit:hover .dashicons {
+    color: #2563eb;
+}
+
+.saw-action-delete:hover {
+    background: #fef2f2;
+}
+
+.saw-action-delete:hover .dashicons {
+    color: #dc2626;
+}
+
+.saw-customer-row:hover {
+    background-color: #f9fafb !important;
+}
+
+/* ============================================
+   FORM STYLES
+   ============================================ */
 
 /* Logo preview v form */
 .saw-logo-preview-current {
@@ -129,11 +219,13 @@
 
 /* Status badge v listu */
 .saw-badge {
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-size: 11px;
     font-weight: 600;
     display: inline-block;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .saw-badge-warning {
@@ -154,13 +246,18 @@
 /* Color badge v listu */
 .saw-color-badge {
     display: inline-block;
-    width: 24px;
-    height: 24px;
-    border-radius: 6px;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
     vertical-align: middle;
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 1px #e5e7eb, 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* Responsive */
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
 @media screen and (max-width: 1200px) {
     .saw-branding-grid {
         grid-template-columns: 1fr;
@@ -173,5 +270,19 @@
         min-width: auto;
         max-width: 100%;
         margin-left: 0;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .saw-action-btn {
+        width: 32px;
+        height: 32px;
+        margin: 0 2px;
+    }
+    
+    .saw-action-btn .dashicons {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
     }
 }
