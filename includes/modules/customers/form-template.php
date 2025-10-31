@@ -29,7 +29,7 @@ $item = $item ?? [];
     </div>
 </div>
 
-<div class="saw-customer-form-container">
+<div class="saw-form-container">
     <form method="post" enctype="multipart/form-data" class="saw-customer-form">
         <?php wp_nonce_field('saw_customers_form', 'saw_nonce'); ?>
         
@@ -248,11 +248,11 @@ $item = $item ?? [];
             <div class="saw-form-section-content">
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-6">
-                        <label for="admin_language" class="saw-label">Jazyk administrace</label>
-                        <select id="admin_language" name="admin_language" class="saw-input">
-                            <option value="cs" <?php selected($item['admin_language'] ?? 'cs', 'cs'); ?>>Čeština</option>
-                            <option value="en" <?php selected($item['admin_language'] ?? '', 'en'); ?>>English</option>
-                            <option value="de" <?php selected($item['admin_language'] ?? '', 'de'); ?>>Deutsch</option>
+                        <label for="admin_language_default" class="saw-label">Jazyk administrace</label>
+                        <select id="admin_language_default" name="admin_language_default" class="saw-input">
+                            <option value="cs" <?php selected($item['admin_language_default'] ?? 'cs', 'cs'); ?>>Čeština</option>
+                            <option value="en" <?php selected($item['admin_language_default'] ?? '', 'en'); ?>>English</option>
+                            <option value="de" <?php selected($item['admin_language_default'] ?? '', 'de'); ?>>Deutsch</option>
                         </select>
                     </div>
                 </div>

@@ -80,8 +80,9 @@ class SAW_Router {
         
         foreach ($modules as $slug => $config) {
             $route = ltrim($config['route'] ?? '', '/');
+            $route_without_admin = str_replace('admin/', '', $route);
             
-            if (strpos($path, $route) === 0) {
+            if (strpos($path, $route_without_admin) === 0) {
                 return $slug;
             }
         }
@@ -93,7 +94,6 @@ class SAW_Router {
         $config = SAW_Module_Loader::load($slug);
         
         if (!$config) {
-            error_log("SAW Router: Module config not loaded for: $slug");
             $this->handle_404();
             return;
         }
@@ -101,7 +101,6 @@ class SAW_Router {
         $controller_class = 'SAW_Module_' . ucfirst(str_replace('-', '_', $slug)) . '_Controller';
         
         if (!class_exists($controller_class)) {
-            error_log("SAW Router: Controller class not found: $controller_class");
             $this->handle_404();
             return;
         }
@@ -112,7 +111,7 @@ class SAW_Router {
             $controller->index();
         } elseif ($segments[0] === 'create' || $segments[0] === 'new') {
             $controller->create();
-        } elseif ($segments[0] === 'edit' && !empty($segments[1])) {
+        } elseif (($segments[0] === 'edit' || $segments[0] === 'upravit') && !empty($segments[1])) {
             $controller->edit(intval($segments[1]));
         } else {
             $this->handle_404();
@@ -179,37 +178,22 @@ class SAW_Router {
             return;
         }
         
-        // OPRAVA: Zkontroluj moduly PŘED rozdělením segments
         $modules = SAW_Module_Loader::get_all();
-        
-        error_log("SAW Router: Path=$clean_path, Modules count=" . count($modules));
         
         foreach ($modules as $slug => $config) {
             $module_route = ltrim($config['route'] ?? '', '/');
-            
-            // KRITICKÁ ZMĚNA: Porovnej bez 'admin/' prefixu
             $module_route_without_admin = str_replace('admin/', '', $module_route);
             
-            error_log("SAW Router: Checking module '$slug' with route '$module_route' (clean: '$module_route_without_admin')");
-            
             if (strpos($clean_path, $module_route_without_admin) === 0) {
-                error_log("SAW Router: MATCH! Dispatching to module '$slug'");
-                
-                // Vypočti zbývající segmenty PO module route
                 $route_parts = explode('/', $module_route_without_admin);
                 $path_parts = explode('/', $clean_path);
                 $remaining_segments = array_slice($path_parts, count($route_parts));
-                
-                error_log("SAW Router: Remaining segments: " . print_r($remaining_segments, true));
                 
                 $this->dispatch_module($slug, $remaining_segments);
                 return;
             }
         }
         
-        error_log("SAW Router: No module match, falling to default render");
-        
-        // Fallback pro ostatní admin stránky
         $segments = explode('/', $clean_path);
         
         if ($segments[0] === 'settings' && isset($segments[1])) {

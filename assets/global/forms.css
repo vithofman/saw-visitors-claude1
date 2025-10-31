@@ -8,6 +8,13 @@
  * @since   4.8.0
  */
 
+/* Form Container */
+.saw-form-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
 /* Form Sections (Details/Summary) */
 .saw-form-section {
     background: #fff;
@@ -97,7 +104,8 @@
 }
 
 .saw-input,
-.saw-textarea {
+.saw-textarea,
+.saw-select {
     width: 100%;
     padding: 10px 14px;
     border: 1px solid #8c8f94;
@@ -111,7 +119,8 @@
 }
 
 .saw-input:focus,
-.saw-textarea:focus {
+.saw-textarea:focus,
+.saw-select:focus {
     border-color: #0073aa;
     outline: none;
     box-shadow: 0 0 0 1px #0073aa;

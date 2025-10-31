@@ -22,14 +22,9 @@ abstract class SAW_Base_Controller
     protected $model;
     protected $entity;
     
-    /**
-     * Index (list view)
-     * 
-     * Zobrazí tabulku s daty z DB. Pagination, search, filters.
-     */
     public function index() {
         $this->verify_capability('list');
-        $this->enqueue_assets(); // ← Tady se načtou CSS/JS
+        $this->enqueue_assets();
         
         $page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
         $per_page = $this->config['list_config']['per_page'] ?? 20;
@@ -79,12 +74,9 @@ abstract class SAW_Base_Controller
         }
     }
     
-    /**
-     * Create (form + save)
-     */
     public function create() {
         $this->verify_capability('create');
-        $this->enqueue_assets(); // ← Tady se načtou CSS/JS
+        $this->enqueue_assets();
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $this->handle_save();
@@ -95,12 +87,9 @@ abstract class SAW_Base_Controller
         $this->render_form($item);
     }
     
-    /**
-     * Edit (form + save)
-     */
     public function edit($id) {
         $this->verify_capability('edit');
-        $this->enqueue_assets(); // ← Tady se načtou CSS/JS
+        $this->enqueue_assets();
         
         $id = intval($id);
         if ($id <= 0) {
@@ -121,21 +110,30 @@ abstract class SAW_Base_Controller
         $this->render_form($item);
     }
     
-    /**
-     * Handle save (create/update)
-     */
     protected function handle_save($id = 0) {
         $this->verify_nonce();
         
         $data = $this->collect_form_data();
+        
+        if ($id > 0) {
+            $data['id'] = $id;
+        }
         
         $data = $this->before_save($data);
         
         $validation = $this->model->validate($data, $id);
         
         if (is_wp_error($validation)) {
-            wp_die($validation->get_error_message());
+            $errors = $validation->get_error_data();
+            if (is_array($errors)) {
+                $error_messages = implode('<br>', array_values($errors));
+                wp_die($error_messages);
+            } else {
+                wp_die($validation->get_error_message());
+            }
         }
+        
+        unset($data['id']);
         
         if ($id > 0) {
             $result = $this->model->update($id, $data);
@@ -155,14 +153,14 @@ abstract class SAW_Base_Controller
         exit;
     }
     
-    /**
-     * Collect form data
-     */
     protected function collect_form_data() {
         $data = [];
         
         foreach ($this->config['fields'] as $field_key => $field_config) {
             if (!isset($_POST[$field_key])) {
+                if (isset($field_config['default'])) {
+                    $data[$field_key] = $field_config['default'];
+                }
                 continue;
             }
             
@@ -180,9 +178,6 @@ abstract class SAW_Base_Controller
         return $data;
     }
     
-    /**
-     * Render form template
-     */
     protected function render_form($item) {
         $template_path = $this->config['path'] . 'form-template.php';
         
@@ -190,7 +185,16 @@ abstract class SAW_Base_Controller
             wp_die('Form template not found: ' . $template_path);
         }
         
-        extract(compact('item'));
+        $account_types = [];
+        if (class_exists('SAW_Module_Account_Types_Model')) {
+            global $wpdb;
+            $account_types = $wpdb->get_results(
+                "SELECT id, display_name FROM {$wpdb->prefix}saw_account_types ORDER BY sort_order ASC",
+                ARRAY_A
+            );
+        }
+        
+        extract(compact('item', 'account_types'));
         
         ob_start();
         include $template_path;
@@ -207,22 +211,11 @@ abstract class SAW_Base_Controller
         }
     }
     
-    /**
-     * Enqueue assets
-     * 
-     * ← TADY JE FIX! Vždy načte globální + module CSS/JS.
-     */
     protected function enqueue_assets() {
-        // Enqueue global assets (base, tables, forms, components)
         SAW_Asset_Manager::enqueue_global();
-        
-        // Enqueue module-specific assets (customers/styles.css, scripts.js)
         SAW_Asset_Manager::enqueue_module($this->entity);
     }
     
-    /**
-     * Verify capability
-     */
     protected function verify_capability($action) {
         $cap = $this->config['capabilities'][$action] ?? 'manage_options';
         
@@ -231,55 +224,26 @@ abstract class SAW_Base_Controller
         }
     }
     
-    /**
-     * Verify nonce
-     */
     protected function verify_nonce() {
         if (!isset($_POST['saw_nonce']) || !wp_verify_nonce($_POST['saw_nonce'], 'saw_' . $this->entity . '_form')) {
             wp_die('Security check failed', 'Forbidden', ['response' => 403]);
         }
     }
     
-    /**
-     * Hook: Before save
-     * 
-     * Override v child class pro custom logiku (např. logo upload).
-     */
     protected function before_save($data) {
         return $data;
     }
     
-    /**
-     * Hook: After save
-     * 
-     * Override v child class pro cache invalidation, notifikace, atd.
-     */
     protected function after_save($id) {
-        // Noop
     }
     
-    /**
-     * Hook: Before delete
-     * 
-     * Override v child class pro custom checks (např. foreign key constraints).
-     * Return false = zastaví mazání.
-     */
     protected function before_delete($id) {
         return true;
     }
     
-    /**
-     * Hook: After delete
-     * 
-     * Override v child class pro cleanup (např. smazání souborů).
-     */
     protected function after_delete($id) {
-        // Noop
     }
     
-    /**
-     * Get current user data
-     */
     protected function get_current_user_data() {
         if (is_user_logged_in()) {
             $wp_user = wp_get_current_user();
@@ -299,9 +263,6 @@ abstract class SAW_Base_Controller
         );
     }
     
-    /**
-     * Get current customer data
-     */
     protected function get_current_customer_data() {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
@@ -341,9 +302,6 @@ abstract class SAW_Base_Controller
         );
     }
     
-    /**
-     * Register AJAX handlers
-     */
     protected function register_ajax_handlers() {
         add_action('wp_ajax_saw_search_' . $this->entity, [$this, 'ajax_search']);
         add_action('wp_ajax_saw_delete_' . $this->entity, [$this, 'ajax_delete']);

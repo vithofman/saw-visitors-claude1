@@ -1,4 +1,10 @@
 <?php
+/**
+ * Customers Module Config
+ * 
+ * @package SAW_Visitors
+ */
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -8,7 +14,7 @@ return [
     'table' => 'saw_customers',
     'singular' => 'Zákazník',
     'plural' => 'Zákazníci',
-    'route' => 'settings/customers',
+    'route' => 'admin/settings/customers',
     'icon' => '🏢',
     
     'capabilities' => [
@@ -24,19 +30,13 @@ return [
             'type' => 'text',
             'label' => 'Název',
             'required' => true,
-            'validation' => ['min' => 3, 'max' => 255],
             'sanitize' => 'sanitize_text_field',
-            'searchable' => true,
-            'sortable' => true,
         ],
         'ico' => [
             'type' => 'text',
             'label' => 'IČO',
             'required' => false,
-            'validation' => ['regex' => '/^\d{8}$/'],
             'sanitize' => 'sanitize_text_field',
-            'searchable' => true,
-            'sortable' => true,
         ],
         'dic' => [
             'type' => 'text',
@@ -48,9 +48,6 @@ return [
             'type' => 'file',
             'label' => 'Logo',
             'required' => false,
-            'mime_types' => ['image/jpeg', 'image/png', 'image/gif'],
-            'max_size' => 2097152,
-            'upload_dir' => 'saw-customers',
         ],
         'primary_color' => [
             'type' => 'color',
@@ -63,33 +60,27 @@ return [
             'type' => 'select',
             'label' => 'Status',
             'required' => true,
-            'options' => [
-                'potential' => 'Potenciální',
-                'active' => 'Aktivní',
-                'inactive' => 'Neaktivní',
-            ],
             'default' => 'potential',
-            'filterable' => true,
+            'sanitize' => 'sanitize_text_field',
+        ],
+        'account_type_id' => [
+            'type' => 'select',
+            'label' => 'Typ účtu',
+            'required' => false,
+            'sanitize' => 'absint',
         ],
         'subscription_type' => [
             'type' => 'select',
             'label' => 'Typ předplatného',
             'required' => false,
-            'options' => [
-                'free' => 'Zdarma',
-                'basic' => 'Basic',
-                'pro' => 'Pro',
-                'enterprise' => 'Enterprise',
-            ],
             'default' => 'free',
-            'filterable' => true,
+            'sanitize' => 'sanitize_text_field',
         ],
         'contact_email' => [
             'type' => 'email',
             'label' => 'Kontaktní email',
             'required' => false,
             'sanitize' => 'sanitize_email',
-            'searchable' => true,
         ],
         'contact_person' => [
             'type' => 'text',
@@ -151,16 +142,12 @@ return [
             'required' => false,
             'sanitize' => 'sanitize_text_field',
         ],
-        'admin_language' => [
+        'admin_language_default' => [
             'type' => 'select',
-            'label' => 'Jazyk administrace',
+            'label' => 'Výchozí jazyk',
             'required' => false,
-            'options' => [
-                'cs' => 'Čeština',
-                'en' => 'English',
-                'de' => 'Deutsch',
-            ],
             'default' => 'cs',
+            'sanitize' => 'sanitize_text_field',
         ],
         'notes' => [
             'type' => 'textarea',
@@ -171,12 +158,12 @@ return [
     ],
     
     'list_config' => [
-        'columns' => ['name', 'ico', 'status', 'subscription_type', 'primary_color', 'created_at'],
+        'columns' => ['name', 'ico', 'status', 'account_type', 'created_at'],
         'searchable' => ['name', 'ico', 'contact_email'],
         'sortable' => ['name', 'ico', 'created_at'],
         'filters' => [
             'status' => true,
-            'subscription_type' => true,
+            'account_type' => true,
         ],
         'per_page' => 20,
         'enable_detail_modal' => true,
