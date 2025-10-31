@@ -1,14 +1,17 @@
 /**
- * SAW Modal Styles
+ * SAW Modal Component Styles
  * 
- * Modal okno pro detail zákazníka (pravý okraj obrazovky)
+ * Univerzální modal komponenta s podporou různých velikostí
+ * a pozic (pravý okraj, střed obrazovky).
  * 
  * @package SAW_Visitors
  * @version 2.0.0
- * @since   4.8.0
+ * @since   4.6.1
  */
 
-/* ===== MODAL OVERLAY ===== */
+/* ========================================
+   MODAL OVERLAY & BASE
+   ======================================== */
 
 .saw-modal {
     position: fixed;
@@ -36,24 +39,80 @@
     background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(2px);
     animation: saw-fade-in 0.3s ease;
+    cursor: pointer;
 }
 
-/* ===== MODAL PANEL (pravý okraj) ===== */
+/* ========================================
+   MODAL PANEL - BASE
+   ======================================== */
 
 .saw-modal-panel {
     position: relative;
     margin-left: auto;
-    width: 100%;
-    max-width: 600px;
     height: 100%;
     background: #fff;
     box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
     display: flex;
     flex-direction: column;
     animation: saw-slide-in-right 0.3s ease;
+    z-index: 1;
 }
 
-/* ===== MODAL HEADER ===== */
+/* ========================================
+   MODAL SIZES
+   ======================================== */
+
+/* Small - 400px */
+.saw-modal-small {
+    width: 100%;
+    max-width: 400px;
+}
+
+/* Medium - 600px (default) */
+.saw-modal-medium {
+    width: 100%;
+    max-width: 600px;
+}
+
+/* Large - 800px */
+.saw-modal-large {
+    width: 100%;
+    max-width: 800px;
+}
+
+/* Fullscreen - 100% */
+.saw-modal-fullscreen {
+    width: 100%;
+    max-width: 100%;
+}
+
+/* ========================================
+   MODAL CENTERED VARIANT
+   ======================================== */
+
+.saw-modal-centered .saw-modal-panel {
+    margin: auto;
+    max-height: 90vh;
+    border-radius: 12px;
+    animation: saw-modal-scale-in 0.3s ease;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.saw-modal-centered.saw-modal-small .saw-modal-panel {
+    max-width: 400px;
+}
+
+.saw-modal-centered.saw-modal-medium .saw-modal-panel {
+    max-width: 600px;
+}
+
+.saw-modal-centered.saw-modal-large .saw-modal-panel {
+    max-width: 800px;
+}
+
+/* ========================================
+   MODAL HEADER
+   ======================================== */
 
 .saw-modal-header {
     display: flex;
@@ -62,6 +121,7 @@
     padding: 24px 32px;
     border-bottom: 1px solid #e5e7eb;
     background: #f9fafb;
+    flex-shrink: 0;
 }
 
 .saw-modal-title {
@@ -96,7 +156,9 @@
     height: 20px;
 }
 
-/* ===== MODAL BODY ===== */
+/* ========================================
+   MODAL BODY
+   ======================================== */
 
 .saw-modal-body {
     flex: 1;
@@ -122,7 +184,61 @@
     background: #c3c4c7;
 }
 
-/* ===== DETAIL LAYOUT ===== */
+/* ========================================
+   MODAL FOOTER
+   ======================================== */
+
+.saw-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 32px;
+    border-top: 1px solid #e5e7eb;
+    background: #f9fafb;
+    flex-shrink: 0;
+}
+
+.saw-modal-footer button {
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+/* ========================================
+   MODAL LOADING STATE
+   ======================================== */
+
+.saw-modal-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+    gap: 16px;
+}
+
+.saw-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f4f6;
+    border-top-color: #2271b1;
+    border-radius: 50%;
+    animation: saw-spin 0.8s linear infinite;
+}
+
+.saw-modal-loading p {
+    color: #646970;
+    font-size: 14px;
+    margin: 0;
+}
+
+/* ========================================
+   DETAIL LAYOUT (Customer Detail)
+   ======================================== */
 
 .saw-detail-header {
     display: flex;
@@ -153,9 +269,12 @@
 .saw-detail-header-info p {
     margin: 0;
     font-size: 14px;
+    color: #646970;
 }
 
-/* ===== DETAIL SECTIONS ===== */
+/* ========================================
+   DETAIL SECTIONS
+   ======================================== */
 
 .saw-detail-sections {
     display: flex;
@@ -181,9 +300,10 @@
 .saw-detail-section p {
     margin: 0;
     line-height: 1.6;
+    color: #1d2327;
 }
 
-/* Definition list */
+/* Definition list for key-value pairs */
 .saw-detail-section dl {
     display: grid;
     grid-template-columns: 140px 1fr;
@@ -221,7 +341,17 @@
     padding: 16px 0 0 0;
 }
 
-/* ===== ANIMATIONS ===== */
+.saw-text-small {
+    font-size: 12px;
+}
+
+.saw-text-muted {
+    color: #646970;
+}
+
+/* ========================================
+   ANIMATIONS
+   ======================================== */
 
 @keyframes saw-fade-in {
     from {
@@ -241,7 +371,34 @@
     }
 }
 
-/* ===== TOAST NOTIFICATIONS ===== */
+@keyframes saw-modal-scale-in {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes saw-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ========================================
+   BODY LOCK (when modal is open)
+   ======================================== */
+
+body.saw-modal-active {
+    overflow: hidden;
+}
+
+/* ========================================
+   TOAST NOTIFICATIONS
+   ======================================== */
 
 .saw-toast {
     position: fixed;
@@ -281,13 +438,9 @@
     background: #3b82f6;
 }
 
-/* ===== BODY LOCK (když je modal open) ===== */
-
-body.saw-modal-active {
-    overflow: hidden;
-}
-
-/* ===== RESPONSIVE ===== */
+/* ========================================
+   RESPONSIVE
+   ======================================== */
 
 @media screen and (max-width: 782px) {
     .saw-modal-panel {
@@ -300,6 +453,10 @@ body.saw-modal-active {
     
     .saw-modal-body {
         padding: 20px;
+    }
+    
+    .saw-modal-footer {
+        padding: 12px 20px;
     }
     
     .saw-detail-header {

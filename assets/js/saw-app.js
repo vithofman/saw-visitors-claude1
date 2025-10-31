@@ -1,290 +1,23 @@
 /**
- * SAW App JavaScript - SLOUČENÝ
+ * SAW App JavaScript - VYČIŠTĚNÁ VERZE
  * 
- * Kombinuje funkcionalitu z původních app.js a saw-app.js:
- * - Modal systém (AJAX dialogy)
- * - Customer detail modal
+ * Utility funkce pro aplikaci:
  * - Delete confirmations
  * - Toast notifications
  * - User menu dropdown
- * - Layout utilities
+ * - Form validation helpers
+ * - Loading state helpers
+ * 
+ * POZNÁMKA: Modal systém je v samostatném souboru saw-modal.js
+ * POZNÁMKA: Starý SAW_Modal objekt byl odstraněn - používejte SAWModal
  * 
  * @package SAW_Visitors
- * @version 5.0.0
- * @since   4.8.0
+ * @version 5.2.0
+ * @since   4.6.1
  */
 
 (function($) {
     'use strict';
-    
-    // ========================================
-    // MODAL SYSTEM
-    // ========================================
-    
-    const SAW_Modal = {
-        open: function(modalId) {
-            const $modal = $('#' + modalId);
-            if ($modal.length === 0) {
-                console.error('Modal not found:', modalId);
-                return;
-            }
-            
-            $modal.addClass('saw-modal-open');
-            $('body').addClass('saw-modal-active');
-            
-            $modal.find('[data-modal-close]').first().focus();
-        },
-        
-        close: function(modalId) {
-            const $modal = $('#' + modalId);
-            $modal.removeClass('saw-modal-open');
-            $('body').removeClass('saw-modal-active');
-        },
-        
-        loadData: function(modalId, ajaxAction, data, onSuccess) {
-            const $modal = $('#' + modalId);
-            const $content = $modal.find('.saw-modal-body');
-            
-            console.log('🔵 SAW Modal: Loading data', {
-                modalId: modalId,
-                action: ajaxAction,
-                data: data,
-                ajaxurl: sawGlobal.ajaxurl
-            });
-            
-            $content.html('<div class="saw-loading"><div class="saw-spinner"></div></div>');
-            this.open(modalId);
-            
-            $.ajax({
-                url: sawGlobal.ajaxurl,
-                method: 'POST',
-                data: {
-                    action: ajaxAction,
-                    ...data
-                },
-                success: function(response) {
-                    console.log('✅ SAW Modal: Response received', response);
-                    
-                    if (response.success) {
-                        if (onSuccess) {
-                            onSuccess(response.data, $modal, $content);
-                        }
-                    } else {
-                        console.error('❌ SAW Modal: Error response', response);
-                        $content.html(
-                            '<div class="saw-alert saw-alert-danger">' +
-                            '<strong>Chyba:</strong> ' + (response.data?.message || 'Neznámá chyba') +
-                            '</div>'
-                        );
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('❌ SAW Modal: AJAX error', {
-                        status: status,
-                        error: error,
-                        response: xhr.responseText
-                    });
-                    $content.html(
-                        '<div class="saw-alert saw-alert-danger">' +
-                        '<strong>Chyba:</strong> ' + error + ' (Status: ' + xhr.status + ')' +
-                        '</div>'
-                    );
-                }
-            });
-        }
-    };
-    
-    // ========================================
-    // CUSTOMER DETAIL MODAL
-    // ========================================
-    
-    $(document).on('click', '.saw-customer-row', function(e) {
-        if ($(e.target).closest('button, a, .saw-actions-column').length > 0) {
-            return;
-        }
-        
-        const customerId = $(this).data('id');
-        
-        console.log('🔵 Customer row clicked', {
-            customerId: customerId,
-            element: this,
-            sawGlobal: sawGlobal
-        });
-        
-        if (!customerId) {
-            console.error('❌ Customer ID not found on element', this);
-            return;
-        }
-        
-        if (typeof sawGlobal === 'undefined') {
-            console.error('❌ sawGlobal is not defined!');
-            alert('Chyba: sawGlobal není definován. Kontaktujte správce.');
-            return;
-        }
-        
-        if (!sawGlobal.customerModalNonce) {
-            console.error('❌ customerModalNonce is missing!', sawGlobal);
-            alert('Chyba: Chybí nonce pro modal. Obnovte stránku.');
-            return;
-        }
-        
-        SAW_Modal.loadData(
-            'saw-customer-modal',
-            'saw_get_customers_detail',
-            {
-                nonce: sawGlobal.customerModalNonce,
-                id: customerId
-            },
-            function(data, $modal, $content) {
-                console.log('🔵 Processing customer data', data);
-                
-                const customer = data.customers || data.customer || data.item;
-                
-                if (!customer) {
-                    console.error('❌ No customer data in response', data);
-                    $content.html('<div class="saw-alert saw-alert-danger">Zákazník nenalezen v odpovědi serveru</div>');
-                    return;
-                }
-                
-                const html = renderCustomerDetail(customer);
-                $content.html(html);
-            }
-        );
-    });
-    
-    // ========================================
-    // CUSTOMER DETAIL RENDERER
-    // ========================================
-    
-    function renderCustomerDetail(customer) {
-        let html = '<div class="saw-detail-grid">';
-        
-        html += '<div class="saw-detail-header">';
-        if (customer.logo_url) {
-            html += '<img src="' + customer.logo_url + '" alt="Logo" class="saw-detail-logo">';
-        }
-        html += '<div class="saw-detail-header-info">';
-        html += '<h2>' + escapeHtml(customer.name) + '</h2>';
-        if (customer.ico) {
-            html += '<p class="saw-text-muted">IČO: ' + escapeHtml(customer.ico) + '</p>';
-        }
-        html += '</div>';
-        html += '</div>';
-        
-        html += '<div class="saw-detail-sections">';
-        
-        html += '<div class="saw-detail-section">';
-        html += '<h3>Základní údaje</h3>';
-        html += '<dl>';
-        html += renderDetailRow('Status', customer.status_label || customer.status);
-        html += renderDetailRow('Typ předplatného', customer.subscription_type_label || customer.subscription_type);
-        if (customer.dic) {
-            html += renderDetailRow('DIČ', customer.dic);
-        }
-        if (customer.primary_color) {
-            html += renderDetailRow('Hlavní barva', '<span class="saw-color-badge" style="background-color: ' + customer.primary_color + '; width: 24px; height: 24px; display: inline-block; border-radius: 4px;"></span> ' + customer.primary_color);
-        }
-        html += '</dl>';
-        html += '</div>';
-        
-        if (customer.contact_person || customer.contact_email || customer.contact_phone) {
-            html += '<div class="saw-detail-section">';
-            html += '<h3>Kontaktní údaje</h3>';
-            html += '<dl>';
-            if (customer.contact_person) {
-                html += renderDetailRow('Kontaktní osoba', customer.contact_person);
-            }
-            if (customer.contact_email) {
-                html += renderDetailRow('Email', '<a href="mailto:' + customer.contact_email + '">' + customer.contact_email + '</a>');
-            }
-            if (customer.contact_phone) {
-                html += renderDetailRow('Telefon', '<a href="tel:' + customer.contact_phone + '">' + customer.contact_phone + '</a>');
-            }
-            html += '</dl>';
-            html += '</div>';
-        }
-        
-        if (customer.formatted_operational_address) {
-            html += '<div class="saw-detail-section">';
-            html += '<h3>Provozní adresa</h3>';
-            html += '<p>' + escapeHtml(customer.formatted_operational_address) + '</p>';
-            html += '</div>';
-        }
-        
-        if (customer.formatted_billing_address) {
-            html += '<div class="saw-detail-section">';
-            html += '<h3>Fakturační adresa</h3>';
-            html += '<p>' + escapeHtml(customer.formatted_billing_address) + '</p>';
-            html += '</div>';
-        }
-        
-        if (customer.notes) {
-            html += '<div class="saw-detail-section">';
-            html += '<h3>Poznámky</h3>';
-            html += '<p>' + escapeHtml(customer.notes) + '</p>';
-            html += '</div>';
-        }
-        
-        html += '<div class="saw-detail-section saw-detail-meta">';
-        html += '<p class="saw-text-small saw-text-muted">';
-        if (customer.created_at_formatted) {
-            html += 'Vytvořeno: ' + customer.created_at_formatted;
-        }
-        if (customer.updated_at_formatted) {
-            html += ' | Upraveno: ' + customer.updated_at_formatted;
-        }
-        html += '</p>';
-        html += '</div>';
-        
-        html += '</div>';
-        html += '</div>';
-        
-        return html;
-    }
-    
-    function renderDetailRow(label, value) {
-        if (!value || value === '-' || value === '') {
-            return '';
-        }
-        return '<dt>' + escapeHtml(label) + '</dt><dd>' + value + '</dd>';
-    }
-    
-    function escapeHtml(text) {
-        if (!text) return '';
-        const map = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#039;'
-        };
-        return text.toString().replace(/[&<>"']/g, function(m) { return map[m]; });
-    }
-    
-    // ========================================
-    // MODAL EVENT HANDLERS
-    // ========================================
-    
-    $(document).on('click', '[data-modal-close]', function() {
-        const modalId = $(this).closest('.saw-modal').attr('id');
-        SAW_Modal.close(modalId);
-    });
-    
-    $(document).on('click', '.saw-modal-overlay', function(e) {
-        if (e.target === this) {
-            const modalId = $(this).closest('.saw-modal').attr('id');
-            SAW_Modal.close(modalId);
-        }
-    });
-    
-    $(document).on('keydown', function(e) {
-        if (e.key === 'Escape' && $('body').hasClass('saw-modal-active')) {
-            const $openModal = $('.saw-modal.saw-modal-open');
-            if ($openModal.length > 0) {
-                SAW_Modal.close($openModal.attr('id'));
-            }
-        }
-    });
     
     // ========================================
     // DELETE CONFIRMATION
@@ -303,6 +36,7 @@
         }
         
         const $btn = $(this);
+        const originalText = $btn.text();
         $btn.prop('disabled', true).text('Mažu...');
         
         $.ajax({
@@ -316,15 +50,28 @@
             },
             success: function(response) {
                 if (response.success) {
-                    location.reload();
+                    // Show success message
+                    if (typeof sawShowToast === 'function') {
+                        sawShowToast('Úspěšně smazáno', 'success');
+                    }
+                    
+                    // Reload page after short delay
+                    setTimeout(function() {
+                        location.reload();
+                    }, 500);
                 } else {
                     alert('Chyba: ' + (response.data?.message || 'Neznámá chyba'));
-                    $btn.prop('disabled', false).text('Smazat');
+                    $btn.prop('disabled', false).text(originalText);
                 }
             },
-            error: function() {
+            error: function(xhr, status, error) {
+                console.error('Delete error:', {
+                    status: status,
+                    error: error,
+                    response: xhr.responseText
+                });
                 alert('Chyba při mazání');
-                $btn.prop('disabled', false).text('Smazat');
+                $btn.prop('disabled', false).text(originalText);
             }
         });
     });
@@ -333,9 +80,21 @@
     // TOAST NOTIFICATIONS
     // ========================================
     
+    /**
+     * Show toast notification
+     * 
+     * @param {string} message - Message to display
+     * @param {string} type - Type: success, danger, warning, info
+     */
     window.sawShowToast = function(message, type = 'success') {
-        const $toast = $('<div class="saw-toast saw-toast-' + type + '">' + escapeHtml(message) + '</div>');
+        // Remove existing toasts
+        $('.saw-toast').remove();
+        
+        const $toast = $('<div class="saw-toast saw-toast-' + type + '">' + sawEscapeHtml(message) + '</div>');
         $('body').append($toast);
+        
+        // Trigger reflow for animation
+        $toast[0].offsetHeight;
         
         setTimeout(function() {
             $toast.addClass('saw-toast-show');
@@ -349,15 +108,35 @@
         }, 3000);
     };
     
+    /**
+     * Escape HTML to prevent XSS
+     * 
+     * @param {string} text - Text to escape
+     * @return {string} Escaped text
+     */
+    window.sawEscapeHtml = function(text) {
+        if (!text) return '';
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.toString().replace(/[&<>"']/g, function(m) { return map[m]; });
+    };
+    
     // ========================================
-    // USER MENU DROPDOWN (vanilla JS)
+    // USER MENU DROPDOWN
     // ========================================
     
     function initUserMenu() {
         const toggle = document.getElementById('sawUserMenuToggle');
         const dropdown = document.getElementById('sawUserDropdown');
         
-        if (!toggle || !dropdown) return;
+        if (!toggle || !dropdown) {
+            return;
+        }
         
         toggle.addEventListener('click', function(e) {
             e.stopPropagation();
@@ -374,21 +153,114 @@
     }
     
     // ========================================
+    // FORM VALIDATION HELPERS
+    // ========================================
+    
+    /**
+     * Validate email format
+     * 
+     * @param {string} email - Email to validate
+     * @return {boolean} Is valid
+     */
+    window.sawValidateEmail = function(email) {
+        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return re.test(String(email).toLowerCase());
+    };
+    
+    /**
+     * Validate phone format (Czech)
+     * 
+     * @param {string} phone - Phone to validate
+     * @return {boolean} Is valid
+     */
+    window.sawValidatePhone = function(phone) {
+        const re = /^(\+420)?[0-9]{9}$/;
+        return re.test(String(phone).replace(/\s/g, ''));
+    };
+    
+    // ========================================
+    // LOADING STATE HELPERS
+    // ========================================
+    
+    /**
+     * Show loading state on button
+     * 
+     * @param {jQuery} $button - Button element
+     * @param {string} text - Loading text (optional)
+     */
+    window.sawButtonLoading = function($button, text = 'Načítám...') {
+        if (!$button.data('original-text')) {
+            $button.data('original-text', $button.html());
+        }
+        $button.prop('disabled', true).html(
+            '<span class="dashicons dashicons-update saw-spin"></span> ' + text
+        );
+    };
+    
+    /**
+     * Reset button to original state
+     * 
+     * @param {jQuery} $button - Button element
+     */
+    window.sawButtonReset = function($button) {
+        const originalText = $button.data('original-text');
+        if (originalText) {
+            $button.prop('disabled', false).html(originalText);
+        }
+    };
+    
+    // ========================================
+    // CONFIRMATION DIALOGS
+    // ========================================
+    
+    /**
+     * Show confirmation dialog using native confirm
+     * In future, this can be replaced with a custom modal
+     * 
+     * @param {string} message - Confirmation message
+     * @param {function} callback - Callback if confirmed
+     */
+    window.sawConfirm = function(message, callback) {
+        if (confirm(message)) {
+            callback();
+        }
+    };
+    
+    // ========================================
+    // TABLE HELPERS
+    // ========================================
+    
+    /**
+     * Highlight table row on hover
+     */
+    function initTableRowHover() {
+        $('.saw-admin-table tbody tr').hover(
+            function() {
+                $(this).addClass('saw-row-hover');
+            },
+            function() {
+                $(this).removeClass('saw-row-hover');
+            }
+        );
+    }
+    
+    // ========================================
     // INITIALIZE ON DOM READY
     // ========================================
     
     $(document).ready(function() {
         initUserMenu();
+        initTableRowHover();
+        
+        // Add loaded class to body for animations
         document.body.classList.add('loaded');
         
         console.log('🚀 SAW App initialized', {
-            sawGlobal: sawGlobal,
+            sawGlobal: typeof sawGlobal !== 'undefined' ? sawGlobal : 'not defined',
             jQuery: !!$,
-            modalSystem: !!window.SAW_Modal
+            newModalSystem: typeof SAWModal !== 'undefined',
+            oldModalSystem: typeof SAW_Modal !== 'undefined' ? 'WARNING: Old SAW_Modal still present!' : 'removed'
         });
     });
-    
-    // Export modal object to global scope
-    window.SAW_Modal = SAW_Modal;
     
 })(jQuery);

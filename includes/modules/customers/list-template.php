@@ -1,14 +1,28 @@
 <?php
+/**
+ * Customers List Template
+ * 
+ * Template pro výpis zákazníků s podporou modal detailu.
+ * 
+ * @package SAW_Visitors
+ * @since 4.6.1
+ */
+
 if (!defined('ABSPATH')) {
     exit;
 }
 
+// Load required components
 if (!class_exists('SAW_Component_Search')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/search/class-saw-component-search.php';
 }
 
 if (!class_exists('SAW_Component_Selectbox')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/selectbox/class-saw-component-selectbox.php';
+}
+
+if (!class_exists('SAW_Component_Modal')) {
+    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/modal/class-saw-component-modal.php';
 }
 ?>
 
@@ -183,16 +197,50 @@ if (!class_exists('SAW_Component_Selectbox')) {
     <?php endif; ?>
 </div>
 
-<div id="saw-customer-modal" class="saw-modal">
-    <div class="saw-modal-overlay"></div>
-    <div class="saw-modal-panel">
-        <div class="saw-modal-header">
-            <h2 class="saw-modal-title">Detail zákazníka</h2>
-            <button type="button" class="saw-modal-close" data-modal-close>
-                <span class="dashicons dashicons-no-alt"></span>
-            </button>
-        </div>
-        <div class="saw-modal-body">
-        </div>
-    </div>
-</div>
+<?php
+// Generate nonce for customer modal
+$customer_modal_nonce = wp_create_nonce('saw_customer_modal_nonce');
+
+// Render Customer Detail Modal using new component
+$customer_modal = new SAW_Component_Modal('customer-detail', array(
+    'title' => 'Detail zákazníka',
+    'ajax_enabled' => true,
+    'ajax_action' => 'saw_get_customers_detail',
+    'size' => 'large',
+    'show_close' => true,
+    'close_on_backdrop' => true,
+    'close_on_escape' => true,
+));
+$customer_modal->render();
+?>
+
+<script>
+jQuery(document).ready(function($) {
+    // Customer row click handler
+    $('.saw-customer-row').on('click', function(e) {
+        // Don't open modal if clicking on action buttons
+        if ($(e.target).closest('button, a, .saw-action-buttons').length > 0) {
+            return;
+        }
+        
+        const customerId = $(this).data('id');
+        
+        if (!customerId) {
+            console.error('Customer ID not found');
+            return;
+        }
+        
+        console.log('Opening customer detail modal for ID:', customerId);
+        
+        // Open modal with customer ID
+        if (typeof SAWModal !== 'undefined') {
+            SAWModal.open('customer-detail', {
+                id: customerId,
+                nonce: '<?php echo $customer_modal_nonce; ?>'
+            });
+        } else {
+            console.error('SAWModal is not defined');
+        }
+    });
+});
+</script>
