@@ -5,7 +5,7 @@
  * Smart loading CSS/JS - globální vždy, module jen když potřeba.
  * 
  * @package SAW_Visitors
- * @version 2.0.0
+ * @version 3.0.0
  * @since   4.8.0
  */
 
@@ -15,7 +15,15 @@ if (!defined('ABSPATH')) {
 
 class SAW_Asset_Manager 
 {
+    /**
+     * Enqueue global assets
+     * 
+     * Tyto assety se načítají na všech SAW stránkách.
+     * Neobsahují specifické komponenty (modal, selectbox, search),
+     * ty si enqueue samy při použití.
+     */
     public static function enqueue_global() {
+        // Base styles
         wp_enqueue_style(
             'saw-base',
             SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-base.css',
@@ -23,6 +31,7 @@ class SAW_Asset_Manager
             SAW_VISITORS_VERSION
         );
         
+        // Tables styles
         wp_enqueue_style(
             'saw-tables',
             SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-tables.css',
@@ -30,22 +39,18 @@ class SAW_Asset_Manager
             SAW_VISITORS_VERSION
         );
         
+        // Forms styles
         wp_enqueue_style(
             'saw-forms',
             SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-forms.css',
             ['saw-base'],
             SAW_VISITORS_VERSION
         );
-                    
-        wp_enqueue_style(
-            'saw-modal',
-            SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-modal.css',
-            ['saw-base'],
-            SAW_VISITORS_VERSION
-        );
         
+        // jQuery (WordPress built-in)
         wp_enqueue_script('jquery');
 
+        // Main app JS
         wp_enqueue_script(
             'saw-app',
             SAW_VISITORS_PLUGIN_URL . 'assets/js/saw-app.js',
@@ -54,6 +59,7 @@ class SAW_Asset_Manager
             true
         );
         
+        // Localize script with global config
         wp_localize_script('saw-app', 'sawGlobal', [
             'ajaxurl' => admin_url('admin-ajax.php'),
             'homeUrl' => home_url(),
@@ -65,6 +71,11 @@ class SAW_Asset_Manager
         ]);
     }
     
+    /**
+     * Enqueue module-specific assets
+     * 
+     * @param string $slug Module slug (customers, account-types, etc.)
+     */
     public static function enqueue_module($slug) {
         $modules = SAW_Module_Loader::get_all();
         
@@ -80,6 +91,7 @@ class SAW_Asset_Manager
             $module_path
         );
         
+        // Module CSS
         $css_file = $module_path . 'styles.css';
         if (file_exists($css_file)) {
             wp_enqueue_style(
@@ -90,6 +102,7 @@ class SAW_Asset_Manager
             );
         }
         
+        // Module JS
         $js_file = $module_path . 'scripts.js';
         if (file_exists($js_file)) {
             wp_enqueue_script(
@@ -100,6 +113,7 @@ class SAW_Asset_Manager
                 true
             );
             
+            // Localize module-specific data
             wp_localize_script('saw-module-' . $slug, 'sawModule', [
                 'ajaxurl' => admin_url('admin-ajax.php'),
                 'nonce' => wp_create_nonce('saw_' . $slug . '_ajax'),
@@ -111,6 +125,11 @@ class SAW_Asset_Manager
         }
     }
     
+    /**
+     * Dequeue old/deprecated assets
+     * 
+     * Odstraní staré assety z předchozích verzí pluginu.
+     */
     public static function dequeue_old_assets() {
         $old_css = [
             'saw-customers',
@@ -139,6 +158,11 @@ class SAW_Asset_Manager
         }
     }
     
+    /**
+     * Check if current page is SAW page
+     * 
+     * @return bool
+     */
     public static function is_saw_page() {
         $route = get_query_var('saw_route');
         return !empty($route);

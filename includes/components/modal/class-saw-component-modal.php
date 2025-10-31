@@ -6,6 +6,7 @@
  * Podporuje statický obsah i dynamické načítání přes AJAX.
  * 
  * @package SAW_Visitors
+ * @version 3.0.0
  * @since 4.6.1
  */
 
@@ -63,6 +64,22 @@ class SAW_Component_Modal {
             'show_close' => true,
             'show_footer' => false,
             'footer_buttons' => array(),
+            
+            // Header actions (NEW!)
+            'header_actions' => array(),
+            // Format: array(
+            //     array(
+            //         'type' => 'edit',           // edit, delete, custom
+            //         'label' => 'Upravit',       // Optional label
+            //         'icon' => 'dashicons-edit', // Dashicon class
+            //         'url' => '',                // URL for edit (can use {id} placeholder)
+            //         'confirm' => false,         // Show confirm dialog?
+            //         'confirm_message' => '',    // Confirm message
+            //         'ajax_action' => '',        // AJAX action for delete
+            //         'callback' => '',           // JS callback function name
+            //         'class' => '',              // Additional CSS class
+            //     )
+            // )
             
             // Behavior
             'close_on_backdrop' => true,

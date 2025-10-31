@@ -4,11 +4,12 @@
  * Univerzální modal systém s podporou:
  * - Otevírání/zavírání modálů
  * - AJAX načítání obsahu
+ * - Header actions (edit, delete, custom)
  * - Event handling (ESC, backdrop click)
  * - Multiple modals support
  * 
  * @package SAW_Visitors
- * @version 2.0.0
+ * @version 3.0.0
  * @since   4.6.1
  */
 
@@ -19,6 +20,9 @@
      * SAW Modal System
      */
     const SAWModal = {
+        
+        // Store current modal data
+        currentModalData: {},
         
         /**
          * Open modal
@@ -35,7 +39,13 @@
                 return;
             }
             
-            console.log('🔵 SAWModal: Opening modal', fullId);
+            // Store modal data for header actions
+            this.currentModalData[modalId] = data;
+            
+            console.log('🔵 SAWModal: Opening modal', fullId, data);
+            
+            // Update header actions with current data
+            this.updateHeaderActions($modal, data);
             
             // Check if AJAX enabled
             const ajaxEnabled = $modal.data('ajax-enabled') === 1;
@@ -60,6 +70,36 @@
         },
         
         /**
+         * Update header actions with current item data
+         * 
+         * @param {jQuery} $modal - Modal element
+         * @param {object} data - Current item data
+         */
+        updateHeaderActions: function($modal, data) {
+            const itemId = data.id || null;
+            
+            if (!itemId) {
+                return;
+            }
+            
+            // Update edit button URL
+            $modal.find('[data-action-type="edit"]').each(function() {
+                const $btn = $(this);
+                let url = $btn.data('action-url');
+                
+                if (url && url.includes('{id}')) {
+                    url = url.replace('{id}', itemId);
+                    $btn.attr('href', url);
+                }
+            });
+            
+            // Update delete button with item ID
+            $modal.find('[data-action-type="delete"]').each(function() {
+                $(this).data('item-id', itemId);
+            });
+        },
+        
+        /**
          * Close modal
          * 
          * @param {string} modalId - Modal ID (bez prefixu 'saw-modal-')
@@ -77,6 +117,9 @@
             
             $modal.removeClass('saw-modal-open');
             
+            // Clear modal data
+            delete this.currentModalData[modalId];
+            
             // Remove body class only if no other modals are open
             if ($('.saw-modal.saw-modal-open').length === 0) {
                 $('body').removeClass('saw-modal-active');
@@ -90,62 +133,55 @@
         },
         
         /**
-         * Load content via AJAX
+         * Load AJAX content
          * 
          * @param {jQuery} $modal - Modal jQuery object
-         * @param {object} data - Data to send with AJAX request
+         * @param {object} data - Data to send
          */
-        loadAjaxContent: function($modal, data = {}) {
+        loadAjaxContent: function($modal, data) {
             const ajaxAction = $modal.data('ajax-action');
-            const ajaxData = $modal.data('ajax-data') || {};
-            const $content = $modal.find('.saw-modal-body');
             
             if (!ajaxAction) {
-                console.error('SAWModal: No AJAX action specified');
+                console.error('SAWModal: Missing AJAX action');
                 return;
             }
             
-            console.log('🔵 SAWModal: Loading AJAX content', {
-                action: ajaxAction,
-                data: data,
-                ajaxData: ajaxData
-            });
+            const $content = $modal.find('.saw-modal-body');
             
             // Show loading state
-            $content.html('<div class="saw-modal-loading"><div class="saw-spinner"></div><p>Načítám...</p></div>');
+            $content.html(
+                '<div class="saw-modal-loading">' +
+                '<div class="saw-spinner"></div>' +
+                '<p>Načítám...</p>' +
+                '</div>'
+            );
             
-            // Merge data - use custom nonce from data if available, otherwise use default
-            const requestData = $.extend({}, ajaxData, data, {
-                action: ajaxAction
-            });
+            // Prepare AJAX data
+            const ajaxData = {
+                action: ajaxAction,
+                nonce: data.nonce || sawModalGlobal.nonce,
+                ...data
+            };
             
-            // Add nonce - prefer custom nonce from data, fallback to global
-            if (!requestData.nonce) {
-                requestData.nonce = sawModalGlobal.nonce;
-            }
-            
-            // AJAX request
+            // Make AJAX request
             $.ajax({
                 url: sawModalGlobal.ajaxurl,
                 method: 'POST',
-                data: requestData,
+                data: ajaxData,
                 success: (response) => {
-                    console.log('✅ SAWModal: AJAX response received', response);
-                    
                     if (response.success) {
                         this.handleAjaxSuccess($modal, $content, response.data);
                     } else {
-                        this.handleAjaxError($modal, $content, response.data?.message || 'Neznámá chyba');
+                        this.handleAjaxError($modal, $content, response.data?.message || 'Chyba při načítání');
                     }
                 },
                 error: (xhr, status, error) => {
-                    console.error('❌ SAWModal: AJAX error', {
+                    console.error('SAWModal AJAX error:', {
                         status: status,
                         error: error,
                         response: xhr.responseText
                     });
-                    
-                    this.handleAjaxError($modal, $content, 'Chyba serveru (' + xhr.status + ')');
+                    this.handleAjaxError($modal, $content, 'Chyba komunikace se serverem (HTTP ' + xhr.status + ')');
                 }
             });
         },
@@ -386,6 +422,109 @@
             }
         }
     });
+    
+    // Header action buttons
+    $(document).on('click', '.saw-modal-action-btn', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const $btn = $(this);
+        const $modal = $btn.closest('.saw-modal');
+        const modalId = $modal.attr('id').replace('saw-modal-', '');
+        
+        const actionType = $btn.data('action-type');
+        const actionUrl = $btn.data('action-url');
+        const actionConfirm = $btn.data('action-confirm');
+        const actionConfirmMsg = $btn.data('action-confirm-message') || 'Opravdu chcete provést tuto akci?';
+        const actionAjax = $btn.data('action-ajax');
+        const actionCallback = $btn.data('action-callback');
+        const itemId = $btn.data('item-id') || SAWModal.currentModalData[modalId]?.id;
+        
+        // Confirm if needed
+        if (actionConfirm && !confirm(actionConfirmMsg)) {
+            return;
+        }
+        
+        // Handle different action types
+        if (actionType === 'edit' && actionUrl) {
+            // Navigate to edit URL
+            let url = actionUrl;
+            if (url.includes('{id}') && itemId) {
+                url = url.replace('{id}', itemId);
+            }
+            window.location.href = url;
+            
+        } else if (actionType === 'delete') {
+            // Handle delete via AJAX or custom callback
+            if (actionAjax) {
+                handleDeleteAction($btn, $modal, modalId, actionAjax, itemId);
+            } else if (actionCallback && typeof window[actionCallback] === 'function') {
+                window[actionCallback](modalId, itemId, $modal);
+            }
+            
+        } else if (actionCallback && typeof window[actionCallback] === 'function') {
+            // Custom callback
+            window[actionCallback](modalId, itemId, $modal);
+        }
+        
+        // Trigger event
+        $(document).trigger('saw:modal:action', {
+            modalId: modalId,
+            actionType: actionType,
+            itemId: itemId,
+            button: this
+        });
+    });
+    
+    /**
+     * Handle delete action via AJAX
+     */
+    function handleDeleteAction($btn, $modal, modalId, ajaxAction, itemId) {
+        const originalHtml = $btn.html();
+        
+        // Show loading state
+        $btn.prop('disabled', true).html(
+            '<span class="dashicons dashicons-update saw-spin"></span>'
+        );
+        
+        $.ajax({
+            url: sawModalGlobal.ajaxurl,
+            method: 'POST',
+            data: {
+                action: ajaxAction,
+                nonce: sawModalGlobal.nonce,
+                id: itemId
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Show success message
+                    if (typeof sawShowToast === 'function') {
+                        sawShowToast('Úspěšně smazáno', 'success');
+                    }
+                    
+                    // Close modal
+                    SAWModal.close(modalId);
+                    
+                    // Reload page after short delay
+                    setTimeout(function() {
+                        location.reload();
+                    }, 500);
+                } else {
+                    alert('Chyba: ' + (response.data?.message || 'Neznámá chyba'));
+                    $btn.prop('disabled', false).html(originalHtml);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Delete error:', {
+                    status: status,
+                    error: error,
+                    response: xhr.responseText
+                });
+                alert('Chyba při mazání');
+                $btn.prop('disabled', false).html(originalHtml);
+            }
+        });
+    }
     
     // Footer button actions
     $(document).on('click', '[data-modal-action]', function() {

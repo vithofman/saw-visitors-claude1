@@ -5,7 +5,7 @@
  * a pozic (pravý okraj, střed obrazovky).
  * 
  * @package SAW_Visitors
- * @version 2.0.0
+ * @version 3.0.0
  * @since   4.6.1
  */
 
@@ -131,6 +131,68 @@
     margin: 0;
 }
 
+/* ========================================
+   MODAL HEADER ACTIONS (NEW!)
+   ======================================== */
+
+.saw-modal-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.saw-modal-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 12px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: #646970;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.saw-modal-action-btn:hover {
+    background: #e5e7eb;
+    color: #1d2327;
+}
+
+.saw-modal-action-btn .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+/* Edit action - blue */
+.saw-modal-action-edit:hover {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
+/* Delete action - red */
+.saw-modal-action-delete:hover {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+/* Hide label on mobile by default */
+.saw-modal-action-label {
+    display: none;
+}
+
+@media screen and (min-width: 782px) {
+    .saw-modal-action-label {
+        display: inline;
+    }
+}
+
+/* Close button */
 .saw-modal-close {
     display: flex;
     align-items: center;
@@ -143,6 +205,7 @@
     color: #646970;
     cursor: pointer;
     transition: all 0.2s ease;
+    margin-left: 4px;
 }
 
 .saw-modal-close:hover {

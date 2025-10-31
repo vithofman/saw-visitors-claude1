@@ -8,11 +8,8 @@
  * - Form validation helpers
  * - Loading state helpers
  * 
- * POZNÁMKA: Modal systém je v samostatném souboru saw-modal.js
- * POZNÁMKA: Starý SAW_Modal objekt byl odstraněn - používejte SAWModal
- * 
  * @package SAW_Visitors
- * @version 5.2.0
+ * @version 5.3.0
  * @since   4.6.1
  */
 
@@ -255,12 +252,14 @@
         // Add loaded class to body for animations
         document.body.classList.add('loaded');
         
-        console.log('🚀 SAW App initialized', {
-            sawGlobal: typeof sawGlobal !== 'undefined' ? sawGlobal : 'not defined',
-            jQuery: !!$,
-            newModalSystem: typeof SAWModal !== 'undefined',
-            oldModalSystem: typeof SAW_Modal !== 'undefined' ? 'WARNING: Old SAW_Modal still present!' : 'removed'
-        });
+        // Debug log
+        if (sawGlobal.debug) {
+            console.log('🚀 SAW App initialized', {
+                sawGlobal: typeof sawGlobal !== 'undefined',
+                jQuery: !!$,
+                modalSystem: typeof SAWModal !== 'undefined'
+            });
+        }
     });
     
 })(jQuery);

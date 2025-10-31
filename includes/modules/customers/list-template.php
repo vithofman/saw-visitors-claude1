@@ -201,7 +201,7 @@ if (!class_exists('SAW_Component_Modal')) {
 // Generate nonce for customer modal
 $customer_modal_nonce = wp_create_nonce('saw_customer_modal_nonce');
 
-// Render Customer Detail Modal using new component
+// Render Customer Detail Modal with HEADER ACTIONS
 $customer_modal = new SAW_Component_Modal('customer-detail', array(
     'title' => 'Detail zákazníka',
     'ajax_enabled' => true,
@@ -210,6 +210,26 @@ $customer_modal = new SAW_Component_Modal('customer-detail', array(
     'show_close' => true,
     'close_on_backdrop' => true,
     'close_on_escape' => true,
+    
+    // ⭐ NOVÉ: Header akce (Edit + Delete) - jen ikony
+    'header_actions' => array(
+        // Edit button - přesměruje na edit stránku
+        array(
+            'type' => 'edit',
+            'label' => '', // Prázdný label = jen ikona
+            'icon' => 'dashicons-edit',
+            'url' => home_url('/admin/settings/customers/edit/{id}/'), // {id} bude nahrazeno
+        ),
+        // Delete button - smaže přes AJAX
+        array(
+            'type' => 'delete',
+            'label' => '', // Prázdný label = jen ikona
+            'icon' => 'dashicons-trash',
+            'confirm' => true,
+            'confirm_message' => 'Opravdu chcete smazat tohoto zákazníka?',
+            'ajax_action' => 'saw_delete_customers',
+        ),
+    ),
 ));
 $customer_modal->render();
 ?>
