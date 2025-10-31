@@ -164,11 +164,13 @@
     background: rgba(0, 0, 0, 0.5);
     z-index: 998;
     opacity: 0;
+    pointer-events: none;
     transition: opacity 0.3s ease;
 }
 
 .saw-sidebar-overlay.active {
     opacity: 1;
+    pointer-events: auto;
 }
 
 /* ============================================
@@ -193,7 +195,6 @@
         display: block;
     }
     
-    /* KRITICKÉ: Content area se roztáhne přes celou šířku */
     .saw-app-main {
         margin-left: 0 !important;
         width: 100% !important;

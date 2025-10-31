@@ -51,11 +51,15 @@
             openMobileSidebar();
         });
 
-        $overlay.on('click', function() {
+        $overlay.on('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
             closeMobileSidebar();
         });
 
-        $close.on('click', function() {
+        $close.on('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
             closeMobileSidebar();
         });
 
@@ -178,16 +182,13 @@
 
         console.log('✅ Total inline scripts executed:', scriptsExecuted);
 
-        // Reinitialize event handlers
         $(document).trigger('saw:scripts-reinitialized');
         console.log('📢 Event triggered: saw:scripts-reinitialized');
         
-        // Reinitialize table interactions
         initTableInteractions();
     }
 
     function initTableInteractions() {
-        // Search form
         $('.saw-search-form').off('submit').on('submit', function(e) {
             e.preventDefault();
             const searchValue = $(this).find('input[name="s"]').val();
@@ -196,7 +197,6 @@
             navigateToPage(newUrl);
         });
 
-        // Filter selects
         $('.saw-filter-select').off('change').on('change', function() {
             const filterValue = $(this).val();
             const filterName = $(this).attr('name');
@@ -205,7 +205,6 @@
             navigateToPage(newUrl);
         });
 
-        // Delete buttons
         $('.saw-delete-btn').off('click').on('click', function(e) {
             e.stopPropagation();
             const itemId = $(this).data('id');
@@ -295,7 +294,6 @@
             }
         }
         
-        // Initialize table interactions on load
         initTableInteractions();
     }
 
