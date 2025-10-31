@@ -1,14 +1,4 @@
 <?php
-/**
- * SAW Visitors Main Class
- * 
- * OPRAVA: enqueue_public_styles() nyní správně detekuje SAW stránky
- * a načítá CSS i při navigaci zpět.
- * 
- * @package SAW_Visitors
- * @version 4.8.0
- */
-
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -27,6 +17,7 @@ class SAW_Visitors {
         $this->load_dependencies();
         $this->init_router();
         $this->init_session();
+        $this->init_ajax_controllers();
         $this->define_hooks();
     }
     
@@ -74,6 +65,25 @@ class SAW_Visitors {
         }
     }
     
+    private function init_ajax_controllers() {
+        $modules = SAW_Module_Loader::get_all();
+        
+        foreach ($modules as $slug => $config) {
+            $controller_file = $config['path'] . 'controller.php';
+            
+            if (file_exists($controller_file)) {
+                require_once $config['path'] . 'model.php';
+                require_once $controller_file;
+                
+                $controller_class = 'SAW_Module_' . str_replace('-', '_', ucfirst($slug)) . '_Controller';
+                
+                if (class_exists($controller_class)) {
+                    new $controller_class();
+                }
+            }
+        }
+    }
+    
     private function define_hooks() {
         $this->loader->add_action('init', $this->router, 'register_routes');
         $this->loader->add_filter('query_vars', $this->router, 'register_query_vars');
@@ -103,46 +113,18 @@ class SAW_Visitors {
         ?>
         <div class="wrap">
             <h1>SAW Visitors <?php echo esc_html($this->version); ?></h1>
-            <div style="background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 20px; max-width: 800px;">
-                <h2>O pluginu</h2>
-                <p><strong>Verze:</strong> <?php echo esc_html($this->version); ?></p>
-                <p><strong>Popis:</strong> Komplexní systém pro správu návštěvníků s multi-tenant architekturou.</p>
-                
-                <h3>✅ Přístupové URL:</h3>
-                <ul style="list-style: disc; margin-left: 20px;">
-                    <li><strong>Admin:</strong> <a href="<?php echo home_url('/admin/'); ?>" target="_blank"><?php echo home_url('/admin/'); ?></a></li>
-                    <li><strong>Správa zákazníků:</strong> <a href="<?php echo home_url('/admin/settings/customers/'); ?>" target="_blank"><?php echo home_url('/admin/settings/customers/'); ?></a></li>
-                    <li><strong>Typy účtů:</strong> <a href="<?php echo home_url('/admin/settings/account-types/'); ?>" target="_blank"><?php echo home_url('/admin/settings/account-types/'); ?></a></li>
-                    <li><strong>Manager:</strong> <a href="<?php echo home_url('/manager/'); ?>" target="_blank"><?php echo home_url('/manager/'); ?></a></li>
-                    <li><strong>Terminal:</strong> <a href="<?php echo home_url('/terminal/'); ?>" target="_blank"><?php echo home_url('/terminal/'); ?></a></li>
-                </ul>
-                
-                <h3>⚠️ Důležité:</h3>
-                <p style="background: #fef3c7; padding: 12px; border-radius: 4px; color: #92400e;">
-                    Pokud výše uvedené odkazy nefungují, klikněte na tlačítko níže pro obnovení rewrite rules:
-                </p>
-                <form method="post" action="">
-                    <input type="hidden" name="saw_flush_rewrite" value="1">
-                    <?php wp_nonce_field('saw_flush_rewrite'); ?>
-                    <button type="submit" class="button button-primary" style="margin-top: 12px;">🔄 Obnovit Rewrite Rules</button>
-                </form>
-                
+            <p>Plugin verze: <strong><?php echo esc_html($this->version); ?></strong></p>
+            <p>Používá modulární architekturu v2.</p>
+            
+            <h2>Aktivní moduly</h2>
+            <ul>
                 <?php
-                if (isset($_POST['saw_flush_rewrite']) && check_admin_referer('saw_flush_rewrite')) {
-                    flush_rewrite_rules();
-                    echo '<div style="background: #d1fae5; color: #065f46; padding: 12px; border-radius: 4px; margin-top: 16px;">✅ Rewrite rules byly obnoveny!</div>';
+                $modules = SAW_Module_Loader::get_all();
+                foreach ($modules as $slug => $config) {
+                    echo '<li>' . esc_html($config['plural']) . ' (' . esc_html($slug) . ')</li>';
                 }
                 ?>
-                
-                <h3>Technické informace:</h3>
-                <ul style="list-style: disc; margin-left: 20px;">
-                    <li>PHP: <?php echo PHP_VERSION; ?> (požadováno: 8.1+)</li>
-                    <li>WordPress: <?php echo get_bloginfo('version'); ?> (požadováno: 6.0+)</li>
-                    <li>Multi-tenant: ✔</li>
-                    <li>Frontend admin: ✔</li>
-                    <li>Modulární architektura v2: ✔</li>
-                </ul>
-            </div>
+            </ul>
         </div>
         <?php
     }
@@ -174,13 +156,7 @@ class SAW_Visitors {
         }
     }
     
-    /**
-     * Enqueue public styles
-     * 
-     * ← FIX: Používá lepší detekci SAW stránek (místo jen saw_route)
-     */
     public function enqueue_public_styles() {
-        // Detekce SAW stránky - použij VŠECHNY možné indikátory
         $route = get_query_var('saw_route');
         $path = get_query_var('saw_path');
         $is_saw_page = !empty($route) || !empty($path) || $this->is_saw_url();
@@ -189,24 +165,15 @@ class SAW_Visitors {
             return;
         }
         
-        // Enqueue global assets (base, tables, forms, components)
-        // Tyhle se načtou VŽDYCKY na SAW stránkách
         SAW_Asset_Manager::enqueue_global();
         
-        // Enqueue module-specific assets (jen když je známý module)
         $active_module = $this->router->get_active_module();
         if ($active_module) {
             SAW_Asset_Manager::enqueue_module($active_module);
         }
     }
     
-    /**
-     * Enqueue public scripts
-     * 
-     * ← FIX: Stejná detekce jako u CSS
-     */
     public function enqueue_public_scripts() {
-        // Detekce SAW stránky
         $route = get_query_var('saw_route');
         $path = get_query_var('saw_path');
         $is_saw_page = !empty($route) || !empty($path) || $this->is_saw_url();
@@ -235,45 +202,13 @@ class SAW_Visitors {
         }
     }
     
-    /**
-     * Helper: Is SAW URL?
-     * 
-     * Backup detekce pro případy kdy query vars ještě nejsou ready.
-     * Kontroluje URL path přímo.
-     */
     private function is_saw_url() {
         $request_uri = $_SERVER['REQUEST_URI'] ?? '';
-        
-        // SAW URL patterns
-        $patterns = [
-            '/admin/',
-            '/manager/',
-            '/terminal/',
-            '/settings/',
-        ];
-        
-        foreach ($patterns as $pattern) {
-            if (strpos($request_uri, $pattern) !== false) {
-                return true;
-            }
-        }
-        
-        return false;
+        return strpos($request_uri, '/admin/') !== false || 
+               strpos($request_uri, '/app/') !== false;
     }
     
     public function run() {
         $this->loader->run();
-    }
-    
-    public function get_plugin_name() {
-        return $this->plugin_name;
-    }
-    
-    public function get_loader() {
-        return $this->loader;
-    }
-    
-    public function get_version() {
-        return $this->version;
     }
 }

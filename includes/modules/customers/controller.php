@@ -2,12 +2,7 @@
 /**
  * Customers Module Controller
  * 
- * JEN custom logika (logo upload, customer switcher).
- * Vše ostatní dědí z Base Controller.
- * 
  * @package SAW_Visitors
- * @version 2.0.0
- * @since   4.8.0
  */
 
 if (!defined('ABSPATH')) {
@@ -16,6 +11,8 @@ if (!defined('ABSPATH')) {
 
 class SAW_Module_Customers_Controller extends SAW_Base_Controller 
 {
+    use SAW_AJAX_Handlers;
+    
     public function __construct() {
         $this->config = require __DIR__ . '/config.php';
         $this->entity = $this->config['entity'];
@@ -24,11 +21,11 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         require_once __DIR__ . '/model.php';
         $this->model = new SAW_Module_Customers_Model($this->config);
         
-        $this->register_ajax_handlers();
-        
         add_action('wp_ajax_saw_get_customers_for_switcher', [$this, 'ajax_get_customers_for_switcher']);
         add_action('wp_ajax_saw_switch_customer', [$this, 'ajax_switch_customer']);
         add_action('wp_ajax_saw_get_customers_detail', [$this, 'ajax_get_detail']);
+        add_action('wp_ajax_saw_search_customers', [$this, 'ajax_search']);
+        add_action('wp_ajax_saw_delete_customers', [$this, 'ajax_delete']);
     }
     
     protected function before_save($data) {
@@ -223,3 +220,10 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         ]);
     }
 }
+
+add_action('init', function() {
+    if (!class_exists('SAW_Module_Customers_Controller')) {
+        return;
+    }
+    new SAW_Module_Customers_Controller();
+}, 5);

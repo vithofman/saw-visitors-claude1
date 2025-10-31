@@ -17,6 +17,15 @@ if (!defined('ABSPATH')) {
 trait SAW_AJAX_Handlers 
 {
     /**
+     * Register AJAX handlers
+     */
+    protected function register_ajax_handlers() {
+        add_action('wp_ajax_saw_search_' . $this->entity, [$this, 'ajax_search']);
+        add_action('wp_ajax_saw_delete_' . $this->entity, [$this, 'ajax_delete']);
+        add_action('wp_ajax_saw_get_' . $this->entity . '_detail', [$this, 'ajax_get_detail']);
+    }
+    
+    /**
      * AJAX: Search items
      */
     public function ajax_search() {
@@ -91,12 +100,7 @@ trait SAW_AJAX_Handlers
             wp_send_json_error(['message' => 'Nedostatečná oprávnění']);
         }
         
-        $id_key = $this->entity . '_id';
-        $id = isset($_POST[$id_key]) ? intval($_POST[$id_key]) : 0;
-        
-        if (!$id && isset($_POST['id'])) {
-            $id = intval($_POST['id']);
-        }
+        $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
         
         if (!$id) {
             wp_send_json_error(['message' => 'Neplatné ID']);
