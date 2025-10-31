@@ -1,12 +1,62 @@
 /**
  * SAW Tables Global Styles
- * 
- * Pro admin tabulky (list views)
- * 
- * @package SAW_Visitors
- * @version 2.0.0
- * @since   4.8.0
  */
+
+.saw-list-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.saw-search-info {
+    background: #fef3c7;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    color: #92400e;
+}
+
+.saw-search-info a {
+    color: #0073aa;
+    text-decoration: none;
+    margin-left: 12px;
+}
+
+.saw-table-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    gap: 20px;
+}
+
+.saw-search-form {
+    display: flex;
+    gap: 8px;
+    flex: 1;
+    max-width: 400px;
+}
+
+.saw-search-form input[type="text"] {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.saw-filters {
+    display: flex;
+    gap: 12px;
+}
+
+.saw-filters select {
+    padding: 10px 14px;
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+}
 
 .saw-admin-table {
     background: #fff;
@@ -33,6 +83,18 @@
     font-size: 14px;
 }
 
+.saw-admin-table th a {
+    color: #1d2327;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.saw-admin-table th a:hover {
+    color: #0073aa;
+}
+
 .saw-admin-table td {
     padding: 14px 16px;
     border-top: 1px solid #f0f0f1;
@@ -44,7 +106,58 @@
     background: #f9fafb;
 }
 
-/* Pagination */
+.saw-customer-name {
+    font-weight: 500;
+}
+
+.saw-actions-column {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.saw-actions-column .saw-button {
+    margin-left: 8px;
+}
+
+.saw-button-small {
+    padding: 6px 12px;
+    font-size: 13px;
+}
+
+.saw-button-danger {
+    background: #dc2626;
+    color: #fff;
+    border-color: #dc2626;
+}
+
+.saw-button-danger:hover {
+    background: #b91c1c;
+    border-color: #b91c1c;
+}
+
+.saw-badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.saw-badge-warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.saw-badge-success {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.saw-badge-secondary {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
 .saw-pagination {
     display: flex;
     justify-content: center;
@@ -53,8 +166,7 @@
     border-top: 1px solid #dcdcde;
 }
 
-.saw-pagination a,
-.saw-pagination span {
+.saw-pagination-link {
     padding: 8px 12px;
     border: 1px solid #dcdcde;
     border-radius: 4px;
@@ -63,14 +175,36 @@
     transition: all 0.2s ease;
 }
 
-.saw-pagination a:hover {
+.saw-pagination-link:hover {
     background: #0073aa;
     color: #fff;
     border-color: #0073aa;
 }
 
-.saw-pagination .current {
+.saw-pagination-link.current {
     background: #0073aa;
     color: #fff;
     border-color: #0073aa;
+}
+
+.saw-empty-state {
+    text-align: center;
+    padding: 80px 20px;
+    background: #fff;
+    border: 1px solid #dcdcde;
+    border-radius: 8px;
+}
+
+.saw-empty-state .dashicons {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    color: #9ca3af;
+    margin-bottom: 16px;
+}
+
+.saw-empty-state p {
+    font-size: 16px;
+    color: #6b7280;
+    margin-bottom: 24px;
 }

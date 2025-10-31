@@ -1,4 +1,14 @@
 <?php
+/**
+ * SAW Visitors Main Class
+ * 
+ * OPRAVA: enqueue_public_styles() nyní správně detekuje SAW stránky
+ * a načítá CSS i při navigaci zpět.
+ * 
+ * @package SAW_Visitors
+ * @version 4.8.0
+ */
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -164,42 +174,91 @@ class SAW_Visitors {
         }
     }
     
+    /**
+     * Enqueue public styles
+     * 
+     * ← FIX: Používá lepší detekci SAW stránek (místo jen saw_route)
+     */
     public function enqueue_public_styles() {
+        // Detekce SAW stránky - použij VŠECHNY možné indikátory
         $route = get_query_var('saw_route');
+        $path = get_query_var('saw_path');
+        $is_saw_page = !empty($route) || !empty($path) || $this->is_saw_url();
         
-        if (!$route) {
+        if (!$is_saw_page) {
             return;
         }
         
+        // Enqueue global assets (base, tables, forms, components)
+        // Tyhle se načtou VŽDYCKY na SAW stránkách
         SAW_Asset_Manager::enqueue_global();
         
+        // Enqueue module-specific assets (jen když je známý module)
         $active_module = $this->router->get_active_module();
         if ($active_module) {
             SAW_Asset_Manager::enqueue_module($active_module);
         }
     }
     
+    /**
+     * Enqueue public scripts
+     * 
+     * ← FIX: Stejná detekce jako u CSS
+     */
     public function enqueue_public_scripts() {
-        if (get_query_var('saw_route')) {
-            if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/js/public.js')) {
-                wp_enqueue_script(
-                    $this->plugin_name . '-public',
-                    SAW_VISITORS_PLUGIN_URL . 'assets/js/public.js',
-                    array('jquery'),
-                    $this->version,
-                    true
-                );
-                
-                wp_localize_script(
-                    $this->plugin_name . '-public',
-                    'sawAjax',
-                    array(
-                        'ajaxurl' => admin_url('admin-ajax.php'),
-                        'nonce'   => wp_create_nonce('saw_ajax_nonce')
-                    )
-                );
+        // Detekce SAW stránky
+        $route = get_query_var('saw_route');
+        $path = get_query_var('saw_path');
+        $is_saw_page = !empty($route) || !empty($path) || $this->is_saw_url();
+        
+        if (!$is_saw_page) {
+            return;
+        }
+        
+        if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'assets/js/public.js')) {
+            wp_enqueue_script(
+                $this->plugin_name . '-public',
+                SAW_VISITORS_PLUGIN_URL . 'assets/js/public.js',
+                array('jquery'),
+                $this->version,
+                true
+            );
+            
+            wp_localize_script(
+                $this->plugin_name . '-public',
+                'sawAjax',
+                array(
+                    'ajaxurl' => admin_url('admin-ajax.php'),
+                    'nonce'   => wp_create_nonce('saw_ajax_nonce')
+                )
+            );
+        }
+    }
+    
+    /**
+     * Helper: Is SAW URL?
+     * 
+     * Backup detekce pro případy kdy query vars ještě nejsou ready.
+     * Kontroluje URL path přímo.
+     */
+    private function is_saw_url() {
+        $request_uri = $_SERVER['REQUEST_URI'] ?? '';
+        
+        // SAW URL patterns
+        $patterns = [
+            '/admin/',
+            '/manager/',
+            '/terminal/',
+            '/settings/',
+        ];
+        
+        foreach ($patterns as $pattern) {
+            if (strpos($request_uri, $pattern) !== false) {
+                return true;
             }
         }
+        
+        return false;
     }
     
     public function run() {

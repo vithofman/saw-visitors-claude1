@@ -83,6 +83,8 @@ trait SAW_AJAX_Handlers
     
     /**
      * AJAX: Get item detail for modal
+     * 
+     * ← OPRAVA: Správný nonce + flexible ID key
      */
     public function ajax_get_detail() {
         check_ajax_referer('saw_customer_modal_nonce', 'nonce');
@@ -91,8 +93,14 @@ trait SAW_AJAX_Handlers
             wp_send_json_error(['message' => 'Insufficient permissions']);
         }
         
+        // Podporuj různé formáty ID parametru
         $id_key = $this->entity . '_id';
         $id = isset($_POST[$id_key]) ? intval($_POST[$id_key]) : 0;
+        
+        // Fallback na prostý 'id'
+        if (!$id && isset($_POST['id'])) {
+            $id = intval($_POST['id']);
+        }
         
         if (!$id) {
             wp_send_json_error(['message' => 'Invalid ID']);
@@ -104,9 +112,15 @@ trait SAW_AJAX_Handlers
             wp_send_json_error(['message' => ucfirst($this->entity) . ' not found']);
         }
         
+        // Format data for modal display
         $item = $this->format_detail_data($item);
         
-        wp_send_json_success([$this->entity => $item]);
+        // Return s oběma možnými klíči (pro BC s JS)
+        wp_send_json_success([
+            $this->entity => $item,
+            'customer' => $item, // BC
+            'item' => $item,     // Generic
+        ]);
     }
     
     /**

@@ -179,27 +179,38 @@ class SAW_Router {
             return;
         }
         
-        $segments = explode('/', $clean_path);
-        
+        // OPRAVA: Zkontroluj moduly PŘED rozdělením segments
         $modules = SAW_Module_Loader::get_all();
         
         error_log("SAW Router: Path=$clean_path, Modules count=" . count($modules));
         
         foreach ($modules as $slug => $config) {
-            $route = ltrim($config['route'] ?? '', '/');
+            $module_route = ltrim($config['route'] ?? '', '/');
             
-            error_log("SAW Router: Checking module '$slug' with route '$route'");
+            // KRITICKÁ ZMĚNA: Porovnej bez 'admin/' prefixu
+            $module_route_without_admin = str_replace('admin/', '', $module_route);
             
-            if (strpos($clean_path, $route) === 0) {
+            error_log("SAW Router: Checking module '$slug' with route '$module_route' (clean: '$module_route_without_admin')");
+            
+            if (strpos($clean_path, $module_route_without_admin) === 0) {
                 error_log("SAW Router: MATCH! Dispatching to module '$slug'");
-                $route_segments = explode('/', $route);
-                $module_segments = array_slice($segments, count($route_segments));
-                $this->dispatch_module($slug, $module_segments);
+                
+                // Vypočti zbývající segmenty PO module route
+                $route_parts = explode('/', $module_route_without_admin);
+                $path_parts = explode('/', $clean_path);
+                $remaining_segments = array_slice($path_parts, count($route_parts));
+                
+                error_log("SAW Router: Remaining segments: " . print_r($remaining_segments, true));
+                
+                $this->dispatch_module($slug, $remaining_segments);
                 return;
             }
         }
         
-        error_log("SAW Router: No module match, falling to 404");
+        error_log("SAW Router: No module match, falling to default render");
+        
+        // Fallback pro ostatní admin stránky
+        $segments = explode('/', $clean_path);
         
         if ($segments[0] === 'settings' && isset($segments[1])) {
             $this->render_page('Settings: ' . ucfirst($segments[1]), $path, 'admin', 'settings');

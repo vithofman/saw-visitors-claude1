@@ -1,98 +1,176 @@
 <?php
+/**
+ * Customers List Template
+ * 
+ * Zobrazuje tabulku zákazníků + modal pro detail
+ * 
+ * @package SAW_Visitors
+ * @version 2.0.0
+ * @since   4.8.0
+ */
+
 if (!defined('ABSPATH')) {
     exit;
 }
+?>
 
-require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/class-saw-component-admin-table.php';
+<div class="saw-page-header">
+    <div class="saw-page-header-content">
+        <h1 class="saw-page-title">Zákazníci</h1>
+        <a href="<?php echo home_url('/admin/settings/customers/new/'); ?>" class="saw-button saw-button-primary">
+            <span class="dashicons dashicons-plus-alt"></span>
+            Nový zákazník
+        </a>
+    </div>
+</div>
 
-$admin_table = new SAW_Component_Admin_Table('customers', array(
-    'title' => 'Zákazníci',
+<div class="saw-list-container">
+    <?php if (!empty($search)): ?>
+        <div class="saw-search-info">
+            Vyhledávání: <strong><?php echo esc_html($search); ?></strong>
+            <a href="<?php echo home_url('/admin/settings/customers/'); ?>">Zrušit</a>
+        </div>
+    <?php endif; ?>
     
-    'columns' => array(
-        'name' => array(
-            'label' => 'Název',
-            'sortable' => true,
-        ),
-        'ico' => array(
-            'label' => 'IČO',
-            'sortable' => true,
-        ),
-        'status' => array(
-            'label' => 'Status',
-            'format' => function($value) {
-                $badges = array(
-                    'potential' => '<span class="saw-badge saw-badge-warning">Potenciální</span>',
-                    'active' => '<span class="saw-badge saw-badge-success">Aktivní</span>',
-                    'inactive' => '<span class="saw-badge saw-badge-secondary">Neaktivní</span>',
-                );
-                return $badges[$value] ?? $value;
-            },
-        ),
-        'subscription_type' => array(
-            'label' => 'Předplatné',
-            'format' => function($value) {
-                $labels = array(
-                    'free' => 'Zdarma',
-                    'basic' => 'Basic',
-                    'pro' => 'Pro',
-                    'enterprise' => 'Enterprise',
-                );
-                return $labels[$value ?? 'free'] ?? 'Zdarma';
-            },
-        ),
-        'primary_color' => array(
-            'label' => 'Barva',
-            'format' => function($value) {
-                if (empty($value)) {
-                    return '';
-                }
-                return '<span class="saw-color-badge" style="background-color: ' . esc_attr($value) . '; border: 2px solid #fff; box-shadow: 0 0 0 1px #dcdcde; display: inline-block; width: 24px; height: 24px; border-radius: 4px; vertical-align: middle;" title="' . esc_attr($value) . '"></span>';
-            },
-        ),
-        'created_at' => array(
-            'label' => 'Vytvořeno',
-            'sortable' => true,
-            'format' => function($value) {
-                return date_i18n('d.m.Y', strtotime($value));
-            },
-        ),
-    ),
+    <div class="saw-table-controls">
+        <form method="get" action="" class="saw-search-form">
+            <input type="text" name="s" value="<?php echo esc_attr($search); ?>" placeholder="Hledat zákazníka...">
+            <button type="submit" class="saw-button">Hledat</button>
+        </form>
+        
+        <div class="saw-filters">
+            <?php if (!empty($this->config['list_config']['filters']['status'])): ?>
+                <select name="status" onchange="window.location.href='?status=' + this.value">
+                    <option value="">Všechny statusy</option>
+                    <option value="potential" <?php selected($_GET['status'] ?? '', 'potential'); ?>>Potenciální</option>
+                    <option value="active" <?php selected($_GET['status'] ?? '', 'active'); ?>>Aktivní</option>
+                    <option value="inactive" <?php selected($_GET['status'] ?? '', 'inactive'); ?>>Neaktivní</option>
+                </select>
+            <?php endif; ?>
+        </div>
+    </div>
     
-    'rows' => $items ?? [],
-    'total_items' => $total_items ?? 0,
-    
-    'current_page' => $page ?? 1,
-    'total_pages' => $total_pages ?? 1,
-    'per_page' => 20,
-    
-    'orderby' => $orderby ?? 'id',
-    'order' => $order ?? 'DESC',
-    
-    'search' => true,
-    'search_value' => $search ?? '',
-    
-    'actions' => array('edit', 'delete'),
-    'create_url' => home_url('/admin/settings/customers/new/'),
-    'edit_url' => home_url('/admin/settings/customers/edit/{id}/'),
-    
-    'enable_detail_modal' => true,
-    
-    'row_class_callback' => function($row) {
-        return 'saw-customer-row';
-    },
-    'row_style_callback' => function($row) {
-        if (!empty($row['primary_color'])) {
-            $color = $row['primary_color'];
-            list($r, $g, $b) = sscanf($color, "#%02x%02x%02x");
-            return 'background: linear-gradient(to right, rgba(' . $r . ', ' . $g . ', ' . $b . ', 0.08) 0%, rgba(' . $r . ', ' . $g . ', ' . $b . ', 0.02) 100%);';
-        }
-        return '';
-    },
-));
+    <?php if (empty($items)): ?>
+        <div class="saw-empty-state">
+            <span class="dashicons dashicons-info"></span>
+            <p>Žádní zákazníci nenalezeni</p>
+            <a href="<?php echo home_url('/admin/settings/customers/new/'); ?>" class="saw-button saw-button-primary">
+                Vytvořit prvního zákazníka
+            </a>
+        </div>
+    <?php else: ?>
+        <div class="saw-admin-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>
+                            <a href="?orderby=name&order=<?php echo ($orderby === 'name' && $order === 'ASC') ? 'DESC' : 'ASC'; ?>">
+                                Název
+                                <?php if ($orderby === 'name'): ?>
+                                    <span class="dashicons dashicons-arrow-<?php echo $order === 'ASC' ? 'up' : 'down'; ?>"></span>
+                                <?php endif; ?>
+                            </a>
+                        </th>
+                        <th>IČO</th>
+                        <th>Status</th>
+                        <th>Předplatné</th>
+                        <th>Barva</th>
+                        <th>Vytvořeno</th>
+                        <th class="saw-actions-column">Akce</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($items as $item): ?>
+                        <tr class="saw-customer-row" data-id="<?php echo esc_attr($item['id']); ?>" style="cursor: pointer;">
+                            <td class="saw-customer-name">
+                                <strong><?php echo esc_html($item['name']); ?></strong>
+                            </td>
+                            <td><?php echo esc_html($item['ico'] ?? '-'); ?></td>
+                            <td>
+                                <?php
+                                $status_badges = [
+                                    'potential' => '<span class="saw-badge saw-badge-warning">Potenciální</span>',
+                                    'active' => '<span class="saw-badge saw-badge-success">Aktivní</span>',
+                                    'inactive' => '<span class="saw-badge saw-badge-secondary">Neaktivní</span>',
+                                ];
+                                echo $status_badges[$item['status']] ?? esc_html($item['status']);
+                                ?>
+                            </td>
+                            <td>
+                                <?php
+                                $sub_labels = [
+                                    'free' => 'Zdarma',
+                                    'basic' => 'Basic',
+                                    'pro' => 'Pro',
+                                    'enterprise' => 'Enterprise',
+                                ];
+                                echo $sub_labels[$item['subscription_type'] ?? 'free'] ?? 'Zdarma';
+                                ?>
+                            </td>
+                            <td>
+                                <?php if (!empty($item['primary_color'])): ?>
+                                    <span class="saw-color-badge" style="background-color: <?php echo esc_attr($item['primary_color']); ?>; width: 24px; height: 24px; display: inline-block; border-radius: 4px; border: 2px solid #fff; box-shadow: 0 0 0 1px #dcdcde;" title="<?php echo esc_attr($item['primary_color']); ?>"></span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <?php echo !empty($item['created_at']) ? date_i18n('d.m.Y', strtotime($item['created_at'])) : '-'; ?>
+                            </td>
+                            <td class="saw-actions-column">
+                                <a href="<?php echo home_url('/admin/settings/customers/edit/' . $item['id'] . '/'); ?>" class="saw-button saw-button-secondary saw-button-small" onclick="event.stopPropagation();">
+                                    <span class="dashicons dashicons-edit"></span>
+                                    Upravit
+                                </a>
+                                <button type="button" class="saw-button saw-button-danger saw-button-small saw-delete-btn" data-id="<?php echo esc_attr($item['id']); ?>" data-name="<?php echo esc_attr($item['name']); ?>" data-entity="customers" onclick="event.stopPropagation();">
+                                    <span class="dashicons dashicons-trash"></span>
+                                    Smazat
+                                </button>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        
+        <?php if ($total_pages > 1): ?>
+            <div class="saw-pagination">
+                <?php if ($page > 1): ?>
+                    <a href="?paged=<?php echo ($page - 1); ?><?php echo $search ? '&s=' . urlencode($search) : ''; ?>" class="saw-pagination-link">
+                        « Předchozí
+                    </a>
+                <?php endif; ?>
+                
+                <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                    <?php if ($i == $page): ?>
+                        <span class="saw-pagination-link current"><?php echo $i; ?></span>
+                    <?php else: ?>
+                        <a href="?paged=<?php echo $i; ?><?php echo $search ? '&s=' . urlencode($search) : ''; ?>" class="saw-pagination-link">
+                            <?php echo $i; ?>
+                        </a>
+                    <?php endif; ?>
+                <?php endfor; ?>
+                
+                <?php if ($page < $total_pages): ?>
+                    <a href="?paged=<?php echo ($page + 1); ?><?php echo $search ? '&s=' . urlencode($search) : ''; ?>" class="saw-pagination-link">
+                        Další »
+                    </a>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+    <?php endif; ?>
+</div>
 
-$admin_table->render();
-
-$customer_modal_template = SAW_VISITORS_PLUGIN_DIR . 'templates/modals/customer-detail-modal.php';
-if (file_exists($customer_modal_template)) {
-    include $customer_modal_template;
-}
+<!-- ===== CUSTOMER DETAIL MODAL ===== -->
+<div id="saw-customer-modal" class="saw-modal">
+    <div class="saw-modal-overlay"></div>
+    <div class="saw-modal-panel">
+        <div class="saw-modal-header">
+            <h2 class="saw-modal-title">Detail zákazníka</h2>
+            <button type="button" class="saw-modal-close" data-modal-close>
+                <span class="dashicons dashicons-no-alt"></span>
+            </button>
+        </div>
+        <div class="saw-modal-body">
+            <!-- Content loaded via AJAX -->
+        </div>
+    </div>
+</div>

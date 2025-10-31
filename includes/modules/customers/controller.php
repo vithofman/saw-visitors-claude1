@@ -24,10 +24,15 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         require_once __DIR__ . '/model.php';
         $this->model = new SAW_Module_Customers_Model($this->config);
         
+        // ✅ KRITICKÉ: Registruj AJAX handlery
         $this->register_ajax_handlers();
         
+        // ✅ PŘIDÁNO: Registruj custom AJAX handlery
         add_action('wp_ajax_saw_get_customers_for_switcher', [$this, 'ajax_get_customers_for_switcher']);
         add_action('wp_ajax_saw_switch_customer', [$this, 'ajax_switch_customer']);
+        
+        // ✅ PŘIDÁNO: Alias pro modal (saw_get_customers_detail)
+        add_action('wp_ajax_saw_get_customers_detail', [$this, 'ajax_get_detail']);
     }
     
     /**

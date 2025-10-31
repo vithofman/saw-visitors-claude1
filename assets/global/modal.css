@@ -1,0 +1,318 @@
+/**
+ * SAW Modal Styles
+ * 
+ * Modal okno pro detail zákazníka (pravý okraj obrazovky)
+ * 
+ * @package SAW_Visitors
+ * @version 2.0.0
+ * @since   4.8.0
+ */
+
+/* ===== MODAL OVERLAY ===== */
+
+.saw-modal {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 9999;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.saw-modal.saw-modal-open {
+    display: flex;
+    opacity: 1;
+}
+
+.saw-modal-overlay {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    animation: saw-fade-in 0.3s ease;
+}
+
+/* ===== MODAL PANEL (pravý okraj) ===== */
+
+.saw-modal-panel {
+    position: relative;
+    margin-left: auto;
+    width: 100%;
+    max-width: 600px;
+    height: 100%;
+    background: #fff;
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    animation: saw-slide-in-right 0.3s ease;
+}
+
+/* ===== MODAL HEADER ===== */
+
+.saw-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 32px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+}
+
+.saw-modal-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1d2327;
+    margin: 0;
+}
+
+.saw-modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: #646970;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.saw-modal-close:hover {
+    background: #e5e7eb;
+    color: #1d2327;
+}
+
+.saw-modal-close .dashicons {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+}
+
+/* ===== MODAL BODY ===== */
+
+.saw-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 32px;
+}
+
+/* Custom scrollbar */
+.saw-modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.saw-modal-body::-webkit-scrollbar-track {
+    background: #f9fafb;
+}
+
+.saw-modal-body::-webkit-scrollbar-thumb {
+    background: #dcdcde;
+    border-radius: 4px;
+}
+
+.saw-modal-body::-webkit-scrollbar-thumb:hover {
+    background: #c3c4c7;
+}
+
+/* ===== DETAIL LAYOUT ===== */
+
+.saw-detail-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding-bottom: 24px;
+    margin-bottom: 24px;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.saw-detail-logo {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 8px;
+    background: #fff;
+}
+
+.saw-detail-header-info h2 {
+    font-size: 24px;
+    font-weight: 600;
+    color: #1d2327;
+    margin: 0 0 4px 0;
+}
+
+.saw-detail-header-info p {
+    margin: 0;
+    font-size: 14px;
+}
+
+/* ===== DETAIL SECTIONS ===== */
+
+.saw-detail-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.saw-detail-section {
+    background: #f9fafb;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.saw-detail-section h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1d2327;
+    margin: 0 0 16px 0;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.saw-detail-section p {
+    margin: 0;
+    line-height: 1.6;
+}
+
+/* Definition list */
+.saw-detail-section dl {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 12px 20px;
+    margin: 0;
+}
+
+.saw-detail-section dt {
+    font-size: 13px;
+    font-weight: 600;
+    color: #646970;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.saw-detail-section dd {
+    font-size: 14px;
+    color: #1d2327;
+    margin: 0;
+}
+
+.saw-detail-section dd a {
+    color: #2271b1;
+    text-decoration: none;
+}
+
+.saw-detail-section dd a:hover {
+    text-decoration: underline;
+}
+
+/* Meta section */
+.saw-detail-meta {
+    background: transparent;
+    border-top: 1px solid #e5e7eb;
+    padding: 16px 0 0 0;
+}
+
+/* ===== ANIMATIONS ===== */
+
+@keyframes saw-fade-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes saw-slide-in-right {
+    from {
+        transform: translateX(100%);
+    }
+    to {
+        transform: translateX(0);
+    }
+}
+
+/* ===== TOAST NOTIFICATIONS ===== */
+
+.saw-toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    padding: 16px 24px;
+    background: #1d2327;
+    color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 10000;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s ease;
+}
+
+.saw-toast.saw-toast-show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.saw-toast-success {
+    background: #10b981;
+}
+
+.saw-toast-danger {
+    background: #ef4444;
+}
+
+.saw-toast-warning {
+    background: #f59e0b;
+}
+
+.saw-toast-info {
+    background: #3b82f6;
+}
+
+/* ===== BODY LOCK (když je modal open) ===== */
+
+body.saw-modal-active {
+    overflow: hidden;
+}
+
+/* ===== RESPONSIVE ===== */
+
+@media screen and (max-width: 782px) {
+    .saw-modal-panel {
+        max-width: 100%;
+    }
+    
+    .saw-modal-header {
+        padding: 16px 20px;
+    }
+    
+    .saw-modal-body {
+        padding: 20px;
+    }
+    
+    .saw-detail-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .saw-detail-section dl {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    
+    .saw-detail-section dt {
+        margin-top: 8px;
+    }
+}

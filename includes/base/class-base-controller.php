@@ -1,4 +1,15 @@
 <?php
+/**
+ * Base Controller Class
+ * 
+ * Univerzální CRUD operace pro všechny moduly.
+ * Child controllery jen přidávají custom logiku přes hooks.
+ * 
+ * @package SAW_Visitors
+ * @version 2.0.0
+ * @since   4.8.0
+ */
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -11,9 +22,14 @@ abstract class SAW_Base_Controller
     protected $model;
     protected $entity;
     
+    /**
+     * Index (list view)
+     * 
+     * Zobrazí tabulku s daty z DB. Pagination, search, filters.
+     */
     public function index() {
         $this->verify_capability('list');
-        $this->enqueue_assets();
+        $this->enqueue_assets(); // ← Tady se načtou CSS/JS
         
         $page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
         $per_page = $this->config['list_config']['per_page'] ?? 20;
@@ -46,6 +62,9 @@ abstract class SAW_Base_Controller
             wp_die('List template not found: ' . $template_path);
         }
         
+        $template_vars = compact('items', 'total_items', 'total_pages', 'page', 'per_page', 'search', 'orderby', 'order');
+        extract($template_vars);
+        
         ob_start();
         include $template_path;
         $content = ob_get_clean();
@@ -60,9 +79,12 @@ abstract class SAW_Base_Controller
         }
     }
     
+    /**
+     * Create (form + save)
+     */
     public function create() {
         $this->verify_capability('create');
-        $this->enqueue_assets();
+        $this->enqueue_assets(); // ← Tady se načtou CSS/JS
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $this->handle_save();
@@ -73,9 +95,12 @@ abstract class SAW_Base_Controller
         $this->render_form($item);
     }
     
+    /**
+     * Edit (form + save)
+     */
     public function edit($id) {
         $this->verify_capability('edit');
-        $this->enqueue_assets();
+        $this->enqueue_assets(); // ← Tady se načtou CSS/JS
         
         $id = intval($id);
         if ($id <= 0) {
@@ -96,6 +121,9 @@ abstract class SAW_Base_Controller
         $this->render_form($item);
     }
     
+    /**
+     * Handle save (create/update)
+     */
     protected function handle_save($id = 0) {
         $this->verify_nonce();
         
@@ -127,6 +155,9 @@ abstract class SAW_Base_Controller
         exit;
     }
     
+    /**
+     * Collect form data
+     */
     protected function collect_form_data() {
         $data = [];
         
@@ -149,12 +180,17 @@ abstract class SAW_Base_Controller
         return $data;
     }
     
+    /**
+     * Render form template
+     */
     protected function render_form($item) {
         $template_path = $this->config['path'] . 'form-template.php';
         
         if (!file_exists($template_path)) {
             wp_die('Form template not found: ' . $template_path);
         }
+        
+        extract(compact('item'));
         
         ob_start();
         include $template_path;
@@ -171,13 +207,22 @@ abstract class SAW_Base_Controller
         }
     }
     
+    /**
+     * Enqueue assets
+     * 
+     * ← TADY JE FIX! Vždy načte globální + module CSS/JS.
+     */
     protected function enqueue_assets() {
-        if (class_exists('SAW_Asset_Manager')) {
-            SAW_Asset_Manager::enqueue_global();
-            SAW_Asset_Manager::enqueue_module($this->entity);
-        }
+        // Enqueue global assets (base, tables, forms, components)
+        SAW_Asset_Manager::enqueue_global();
+        
+        // Enqueue module-specific assets (customers/styles.css, scripts.js)
+        SAW_Asset_Manager::enqueue_module($this->entity);
     }
     
+    /**
+     * Verify capability
+     */
     protected function verify_capability($action) {
         $cap = $this->config['capabilities'][$action] ?? 'manage_options';
         
@@ -186,26 +231,55 @@ abstract class SAW_Base_Controller
         }
     }
     
+    /**
+     * Verify nonce
+     */
     protected function verify_nonce() {
         if (!isset($_POST['saw_nonce']) || !wp_verify_nonce($_POST['saw_nonce'], 'saw_' . $this->entity . '_form')) {
             wp_die('Security check failed', 'Forbidden', ['response' => 403]);
         }
     }
     
+    /**
+     * Hook: Before save
+     * 
+     * Override v child class pro custom logiku (např. logo upload).
+     */
     protected function before_save($data) {
         return $data;
     }
     
+    /**
+     * Hook: After save
+     * 
+     * Override v child class pro cache invalidation, notifikace, atd.
+     */
     protected function after_save($id) {
+        // Noop
     }
     
+    /**
+     * Hook: Before delete
+     * 
+     * Override v child class pro custom checks (např. foreign key constraints).
+     * Return false = zastaví mazání.
+     */
     protected function before_delete($id) {
         return true;
     }
     
+    /**
+     * Hook: After delete
+     * 
+     * Override v child class pro cleanup (např. smazání souborů).
+     */
     protected function after_delete($id) {
+        // Noop
     }
     
+    /**
+     * Get current user data
+     */
     protected function get_current_user_data() {
         if (is_user_logged_in()) {
             $wp_user = wp_get_current_user();
@@ -225,6 +299,9 @@ abstract class SAW_Base_Controller
         );
     }
     
+    /**
+     * Get current customer data
+     */
     protected function get_current_customer_data() {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
@@ -264,6 +341,9 @@ abstract class SAW_Base_Controller
         );
     }
     
+    /**
+     * Register AJAX handlers
+     */
     protected function register_ajax_handlers() {
         add_action('wp_ajax_saw_search_' . $this->entity, [$this, 'ajax_search']);
         add_action('wp_ajax_saw_delete_' . $this->entity, [$this, 'ajax_delete']);
