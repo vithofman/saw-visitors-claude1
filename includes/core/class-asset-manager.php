@@ -18,37 +18,37 @@ class SAW_Asset_Manager
     public static function enqueue_global() {
         wp_enqueue_style(
             'saw-base',
-            SAW_VISITORS_PLUGIN_URL . 'assets/css/base.css',
+            SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-base.css',
             [],
             SAW_VISITORS_VERSION
         );
         
         wp_enqueue_style(
             'saw-tables',
-            SAW_VISITORS_PLUGIN_URL . 'assets/css/tables.css',
+            SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-tables.css',
             ['saw-base'],
             SAW_VISITORS_VERSION
         );
         
         wp_enqueue_style(
             'saw-forms',
-            SAW_VISITORS_PLUGIN_URL . 'assets/css/forms.css',
+            SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-forms.css',
             ['saw-base'],
             SAW_VISITORS_VERSION
         );
                     
         wp_enqueue_style(
             'saw-modal',
-            SAW_VISITORS_PLUGIN_URL . 'assets/css/modal.css',
+            SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-modal.css',
             ['saw-base'],
             SAW_VISITORS_VERSION
         );
         
         wp_enqueue_script('jquery');
-        
+
         wp_enqueue_script(
             'saw-app',
-            SAW_VISITORS_PLUGIN_URL . 'assets/js/app.js',
+            SAW_VISITORS_PLUGIN_URL . 'assets/js/saw-app.js',
             ['jquery'],
             SAW_VISITORS_VERSION,
             true
