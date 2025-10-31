@@ -137,6 +137,7 @@ class SAW_App_Header {
         $switcher = new SAW_Component_Selectbox('customer-switcher', array(
             'ajax_enabled' => true,
             'ajax_action' => 'saw_get_customers_for_switcher',
+            'ajax_nonce' => wp_create_nonce('saw_customer_switcher_nonce'),
             'searchable' => true,
             'placeholder' => 'Přepnout zákazníka...',
             'selected' => $this->customer['id'],

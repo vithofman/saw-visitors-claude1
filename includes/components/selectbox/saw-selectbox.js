@@ -16,6 +16,7 @@
             this.searchable = $container.data('searchable') === 1;
             this.onChange = $container.data('on-change');
             this.showIcons = $container.data('show-icons') === 1;
+            this.ajaxNonce = $container.data('ajax-nonce') || '';
             
             this.searchTimeout = null;
             this.isLoaded = false;
@@ -166,35 +167,40 @@
         }
         
         loadOptions(query = '') {
-    if (!this.ajaxEnabled || !this.ajaxAction) {
-        return;
-    }
-    
-    this.$options.html('<div class="saw-selectbox-loading"><div class="spinner is-active"></div><div>Načítám...</div></div>');
-    
-    const nonce = sawGlobal.customerSwitcherNonce || sawGlobal.nonce;
-    
-    $.ajax({
-        url: sawGlobal.ajaxurl,
-        type: 'GET',
-        data: {
-            action: this.ajaxAction,
-            s: query,
-            nonce: nonce
-        },
-        success: (response) => {
-            if (response.success && response.data) {
-                this.renderOptions(response.data);
-                this.isLoaded = true;
-            } else {
-                this.$options.html('<div class="saw-selectbox-empty">Chyba načítání</div>');
+            if (!this.ajaxEnabled || !this.ajaxAction) {
+                return;
             }
-        },
-        error: () => {
-            this.$options.html('<div class="saw-selectbox-empty">Chyba serveru</div>');
+            
+            this.$options.html('<div class="saw-selectbox-loading"><div class="spinner is-active"></div><div>Načítám...</div></div>');
+            
+            const nonce = this.ajaxNonce || (typeof sawGlobal !== 'undefined' ? sawGlobal.nonce : '');
+            
+            $.ajax({
+                url: sawGlobal.ajaxurl,
+                type: 'GET',
+                data: {
+                    action: this.ajaxAction,
+                    s: query,
+                    nonce: nonce
+                },
+                success: (response) => {
+                    if (response.success && response.data) {
+                        this.renderOptions(response.data);
+                        this.isLoaded = true;
+                    } else {
+                        this.$options.html('<div class="saw-selectbox-empty">Chyba načítání</div>');
+                    }
+                },
+                error: (xhr, status, error) => {
+                    console.error('Selectbox AJAX error:', {
+                        status: xhr.status,
+                        statusText: xhr.statusText,
+                        responseText: xhr.responseText
+                    });
+                    this.$options.html('<div class="saw-selectbox-empty">Chyba serveru (' + xhr.status + ')</div>');
+                }
+            });
         }
-    });
-}
         
         renderOptions(options) {
             const currentValue = this.$valueInput.val();

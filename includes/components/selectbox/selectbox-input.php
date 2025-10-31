@@ -11,6 +11,7 @@ $selected = $config['selected'] ?? '';
 $placeholder = $config['placeholder'] ?? 'Vyberte...';
 $ajax_enabled = $config['ajax_enabled'] ?? false;
 $ajax_action = $config['ajax_action'] ?? '';
+$ajax_nonce = $config['ajax_nonce'] ?? '';
 $searchable = $config['searchable'] ?? false;
 $allow_empty = $config['allow_empty'] ?? true;
 $empty_label = $config['empty_label'] ?? '';
@@ -33,6 +34,7 @@ if (!empty($selected) && !empty($options)) {
      data-id="<?php echo esc_attr($id); ?>"
      data-ajax-enabled="<?php echo $ajax_enabled ? '1' : '0'; ?>"
      data-ajax-action="<?php echo esc_attr($ajax_action); ?>"
+     data-ajax-nonce="<?php echo esc_attr($ajax_nonce); ?>"
      data-searchable="<?php echo $searchable ? '1' : '0'; ?>"
      data-on-change="<?php echo esc_attr($on_change); ?>"
      data-show-icons="<?php echo $show_icons ? '1' : '0'; ?>">
