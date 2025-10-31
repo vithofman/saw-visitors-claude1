@@ -64,6 +64,14 @@ class SAW_App_Header {
         ?>
         <header class="saw-app-header">
             <div class="saw-header-left">
+                <button class="saw-hamburger-menu" id="sawHamburgerMenu">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                
                 <div class="saw-logo">
                     <?php if ($logo_url): ?>
                         <img src="<?php echo esc_url($logo_url); ?>" alt="<?php echo esc_attr($this->customer['name']); ?>" class="saw-logo-image">

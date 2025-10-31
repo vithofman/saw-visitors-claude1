@@ -15,6 +15,7 @@
         initSPANavigation();
         initBrowserBackButton();
         updateActiveMenuItemOnLoad();
+        initMobileSidebar();
     });
 
     function initSPANavigation() {
@@ -29,8 +30,62 @@
 
             console.log('🔗 SPA Navigation: Intercepted link:', href);
             e.preventDefault();
+            
+            if (window.innerWidth <= 1024) {
+                closeMobileSidebar();
+            }
+            
             navigateToPage(href);
         });
+    }
+
+    function initMobileSidebar() {
+        const $hamburger = $('#sawHamburgerMenu');
+        const $sidebar = $('#sawAppSidebar');
+        const $overlay = $('#sawSidebarOverlay');
+        const $close = $('#sawSidebarClose');
+
+        $hamburger.on('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            openMobileSidebar();
+        });
+
+        $overlay.on('click', function() {
+            closeMobileSidebar();
+        });
+
+        $close.on('click', function() {
+            closeMobileSidebar();
+        });
+
+        $(document).on('keydown', function(e) {
+            if (e.key === 'Escape' && $sidebar.hasClass('open')) {
+                closeMobileSidebar();
+            }
+        });
+    }
+
+    function openMobileSidebar() {
+        const $sidebar = $('#sawAppSidebar');
+        const $overlay = $('#sawSidebarOverlay');
+        
+        $sidebar.addClass('open');
+        $overlay.addClass('active');
+        $('body').css('overflow', 'hidden');
+        
+        console.log('📱 Mobile sidebar opened');
+    }
+
+    function closeMobileSidebar() {
+        const $sidebar = $('#sawAppSidebar');
+        const $overlay = $('#sawSidebarOverlay');
+        
+        $sidebar.removeClass('open');
+        $overlay.removeClass('active');
+        $('body').css('overflow', '');
+        
+        console.log('📱 Mobile sidebar closed');
     }
 
     function navigateToPage(url) {
@@ -255,7 +310,9 @@
         navigateTo: function(url) { navigateToPage(url); },
         reload: function() { navigateToPage(window.location.pathname); },
         reinitializeScripts: function() { reinitializePageScripts(); },
-        setActiveByMenuId: function(menuId) { updateActiveMenuItem(menuId); }
+        setActiveByMenuId: function(menuId) { updateActiveMenuItem(menuId); },
+        openSidebar: function() { openMobileSidebar(); },
+        closeSidebar: function() { closeMobileSidebar(); }
     };
 
 })(jQuery);

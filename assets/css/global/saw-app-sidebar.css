@@ -3,6 +3,7 @@
  * 
  * Navigation sidebar component for frontend application layout
  * Fixed position sidebar with navigation menu and scrollable content
+ * Responsive with hamburger menu for mobile devices
  * 
  * @package SAW_Visitors
  * @since   4.6.1
@@ -18,6 +19,32 @@
     border-right: 1px solid #e5e7eb;
     overflow-y: auto;
     z-index: 999;
+    transition: transform 0.3s ease;
+}
+
+.saw-sidebar-header {
+    display: none;
+    padding: 16px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.saw-sidebar-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: transparent;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.saw-sidebar-close:hover {
+    background: #f3f4f6;
+    color: #111827;
 }
 
 .saw-sidebar-nav {
@@ -81,4 +108,83 @@
 
 .saw-app-sidebar::-webkit-scrollbar-thumb:hover {
     background: #9ca3af;
+}
+
+.saw-sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 60px;
+    left: 0;
+    width: 100%;
+    height: calc(100vh - 60px);
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 998;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.saw-sidebar-overlay.active {
+    opacity: 1;
+}
+
+.saw-hamburger-menu {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: transparent;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s;
+    margin-right: 12px;
+}
+
+.saw-hamburger-menu:hover {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+@media (max-width: 1024px) {
+    .saw-hamburger-menu {
+        display: flex;
+    }
+    
+    .saw-app-sidebar {
+        transform: translateX(-100%);
+    }
+    
+    .saw-app-sidebar.open {
+        transform: translateX(0);
+        box-shadow: 4px 0 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .saw-sidebar-header {
+        display: flex;
+        justify-content: flex-end;
+    }
+    
+    .saw-sidebar-overlay {
+        display: block;
+    }
+}
+
+@media (max-width: 768px) {
+    .saw-app-sidebar {
+        width: 280px;
+        top: 60px;
+    }
+    
+    .saw-customer-info {
+        display: none !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .saw-app-sidebar {
+        width: 100%;
+        max-width: 320px;
+    }
 }

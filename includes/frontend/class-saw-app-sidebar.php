@@ -49,7 +49,16 @@ class SAW_App_Sidebar {
     public function render() {
         $menu = $this->get_menu_items();
         ?>
-        <aside class="saw-app-sidebar">
+        <div class="saw-sidebar-overlay" id="sawSidebarOverlay"></div>
+        <aside class="saw-app-sidebar" id="sawAppSidebar">
+            <div class="saw-sidebar-header">
+                <button class="saw-sidebar-close" id="sawSidebarClose">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
             <nav class="saw-sidebar-nav">
                 <?php foreach ($menu as $section): ?>
                     <?php if (isset($section['heading'])): ?>
