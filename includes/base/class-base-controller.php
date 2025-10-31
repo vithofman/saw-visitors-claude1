@@ -64,14 +64,7 @@ abstract class SAW_Base_Controller
         include $template_path;
         $content = ob_get_clean();
         
-        if (class_exists('SAW_App_Layout')) {
-            $layout = new SAW_App_Layout();
-            $user = $this->get_current_user_data();
-            $customer = $this->get_current_customer_data();
-            $layout->render($content, $this->config['plural'], $this->entity, $user, $customer);
-        } else {
-            echo $content;
-        }
+        $this->render_with_layout($content, $this->config['plural']);
     }
     
     public function create() {
@@ -200,11 +193,15 @@ abstract class SAW_Base_Controller
         include $template_path;
         $content = ob_get_clean();
         
+        $title = $item ? 'Edit ' . $this->config['singular'] : 'New ' . $this->config['singular'];
+        $this->render_with_layout($content, $title);
+    }
+    
+    protected function render_with_layout($content, $title) {
         if (class_exists('SAW_App_Layout')) {
             $layout = new SAW_App_Layout();
             $user = $this->get_current_user_data();
             $customer = $this->get_current_customer_data();
-            $title = $item ? 'Edit ' . $this->config['singular'] : 'New ' . $this->config['singular'];
             $layout->render($content, $title, $this->entity, $user, $customer);
         } else {
             echo $content;

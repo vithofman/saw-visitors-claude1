@@ -73,7 +73,7 @@ class SAW_Router {
         $path = get_query_var('saw_path');
         
         if (empty($path)) {
-            return null;
+            return 'dashboard';
         }
         
         $modules = SAW_Module_Loader::get_all();
@@ -85,6 +85,11 @@ class SAW_Router {
             if (strpos($path, $route_without_admin) === 0) {
                 return $slug;
             }
+        }
+        
+        $segments = explode('/', trim($path, '/'));
+        if (isset($segments[0])) {
+            return $segments[0];
         }
         
         return null;
@@ -201,7 +206,8 @@ class SAW_Router {
             return;
         }
         
-        $this->render_page('Admin Interface', $path, 'admin', '');
+        $active_section = isset($segments[0]) ? $segments[0] : '';
+        $this->render_page('Admin Interface', $path, 'admin', $active_section);
     }
     
     private function handle_manager_route($path) {
@@ -288,7 +294,7 @@ class SAW_Router {
                         <a href="/admin/invitations" class="saw-button saw-button-primary">Pozvánky</a>
                         <a href="/admin/visits" class="saw-button saw-button-primary">Návštěvy</a>
                         <a href="/admin/statistics" class="saw-button saw-button-primary">Statistiky</a>
-                        <a href="/admin/settings/customers" class="saw-button saw-button-success">💥 Správa zákazníků</a>
+                        <a href="/admin/settings/customers" class="saw-button saw-button-success">👥 Správa zákazníků</a>
                         <a href="/admin/settings/account-types" class="saw-button saw-button-success">💳 Account Types</a>
                     </div>
                 </div>

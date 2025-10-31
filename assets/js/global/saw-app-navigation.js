@@ -14,6 +14,7 @@
         console.log('🎯 SAW SPA Navigation: Initialized');
         initSPANavigation();
         initBrowserBackButton();
+        updateActiveMenuItemOnLoad();
     });
 
     function initSPANavigation() {
@@ -53,17 +54,11 @@
                 console.log('✅ Page loaded successfully');
 
                 if (response && response.success && response.data) {
-                    // 1) Odlinkovat předchozí page-scoped styly (pokud existují)
                     cleanupPageScopedAssets();
-
-                    // 2) Aktualizovat obsah
                     updatePageContent(response.data);
-
-                    // 3) URL + aktivní menu
                     updateBrowserURL(url, response.data.title);
                     updateActiveMenuItem(response.data.active_menu, url);
 
-                    // 4) Reinit skriptů
                     setTimeout(function() {
                         reinitializePageScripts();
                     }, 200);
@@ -111,7 +106,6 @@
         console.log('🔄 Reinitializing page scripts...');
         let scriptsExecuted = 0;
 
-        // Spustit inline skripty vrácené uvnitř contentu
         $('#saw-app-content').find('script').each(function() {
             const scriptContent = $(this).html();
             if (!scriptContent || !scriptContent.trim()) return;
@@ -129,7 +123,6 @@
 
         console.log('✅ Total inline scripts executed:', scriptsExecuted);
 
-        // Událost pro reinit externích skriptů (page-specific moduly na to můžou reagovat)
         $(document).trigger('saw:scripts-reinitialized');
         console.log('📢 Event triggered: saw:scripts-reinitialized');
     }
@@ -144,16 +137,10 @@
         console.log('🔗 URL updated:', url);
     }
 
-    /**
-     * Označení aktivní položky menu.
-     * - Preferuje data-menu, jinak páruje podle URL.
-     * - Podporuje .saw-nav-item i .saw-sidebar-nav-item.
-     */
     function updateActiveMenuItem(activeMenu, urlFallback) {
         const $items = $('.saw-nav-item, .saw-sidebar-nav-item');
         $items.removeClass('active');
 
-        // 1) Pokud přišlo active_menu ze serveru
         if (activeMenu) {
             let $target = $items.filter('[data-menu="' + activeMenu + '"]');
             if ($target.length) {
@@ -163,20 +150,37 @@
             }
         }
 
-        // 2) Fallback: odvodit z URL
         const candidate = deriveMenuFromURL(urlFallback || window.location.pathname);
         if (candidate) {
             let $target = $items.filter('[data-menu="' + candidate + '"]');
-            if (!$target.length) {
-                // poslední segment URL bez trailing slash
-                $target = $items.filter(function() {
-                    const href = ($(this).attr('href') || '').replace(/\/+$/, '');
-                    return href.endsWith('/' + candidate);
-                });
-            }
             if ($target.length) {
                 $target.first().addClass('active');
                 console.log('📍 Active menu updated by URL fallback:', candidate);
+                return;
+            }
+            
+            $target = $items.filter(function() {
+                const href = ($(this).attr('href') || '').replace(/\/+$/, '');
+                return href.indexOf('/' + candidate) !== -1;
+            });
+            if ($target.length) {
+                $target.first().addClass('active');
+                console.log('📍 Active menu updated by URL match:', candidate);
+            }
+        }
+    }
+
+    function updateActiveMenuItemOnLoad() {
+        const pathname = window.location.pathname;
+        const candidate = deriveMenuFromURL(pathname);
+        
+        if (candidate) {
+            const $items = $('.saw-nav-item, .saw-sidebar-nav-item');
+            let $target = $items.filter('[data-menu="' + candidate + '"]');
+            
+            if ($target.length) {
+                $target.first().addClass('active');
+                console.log('📍 Initial active menu set:', candidate);
             }
         }
     }
@@ -184,9 +188,23 @@
     function deriveMenuFromURL(pathname) {
         try {
             const parts = (pathname || '').replace(/\/+$/, '').split('/').filter(Boolean);
-            // očekáváme /admin/<section>/... => vrátíme <section>
-            if (parts[0] === 'admin' && parts[1]) return parts[1];
-            if (parts[0] === 'manager' && parts[1]) return parts[1];
+            
+            if (parts.length === 1 && parts[0] === 'admin') {
+                return 'dashboard';
+            }
+            
+            if (parts[0] === 'admin' && parts[1] === 'settings' && parts[2]) {
+                return parts[2];
+            }
+            
+            if (parts[0] === 'admin' && parts[1]) {
+                return parts[1];
+            }
+            
+            if (parts[0] === 'manager' && parts[1]) {
+                return parts[1];
+            }
+            
             return parts[parts.length - 1] || null;
         } catch (e) {
             return null;
@@ -227,17 +245,12 @@
         );
     }
 
-    /**
-     * Odstraní page-scoped styly, které si stránka mohla připojit při zobrazení formuláře apod.
-     * Tyto <link>/<style> přidávejte s data-saw-scope="page", aby šly bezpečně odstranit.
-     */
     function cleanupPageScopedAssets() {
         $('link[data-saw-scope="page"], style[data-saw-scope="page"]').each(function() {
             try { this.parentNode.removeChild(this); } catch(e) {}
         });
     }
 
-    // Public API
     window.SAW_Navigation = {
         navigateTo: function(url) { navigateToPage(url); },
         reload: function() { navigateToPage(window.location.pathname); },

@@ -60,6 +60,7 @@ class SAW_App_Sidebar {
                         <a 
                             href="<?php echo esc_url($item['url']); ?>" 
                             class="saw-nav-item <?php echo ($this->active_menu === $item['id']) ? 'active' : ''; ?>"
+                            data-menu="<?php echo esc_attr($item['id']); ?>"
                         >
                             <span class="saw-nav-icon"><?php echo $item['icon']; ?></span>
                             <span class="saw-nav-label"><?php echo esc_html($item['label']); ?></span>
@@ -110,49 +111,49 @@ class SAW_App_Sidebar {
                 'heading' => 'Nastavení',
                 'items' => array(
                     array(
-                        'id' => 'settings-customers',
+                        'id' => 'customers',
                         'label' => 'Zákazníci',
                         'url' => '/admin/settings/customers',
                         'icon' => '🏢',
                     ),
                     array(
-                        'id' => 'settings-account-types',
+                        'id' => 'account-types',
                         'label' => 'Account Types',
                         'url' => '/admin/settings/account-types',
                         'icon' => '💳',
                     ),
                     array(
-                        'id' => 'settings-company',
+                        'id' => 'company',
                         'label' => 'Nastavení firmy',
                         'url' => '/admin/settings/company',
                         'icon' => '⚙️',
                     ),
                     array(
-                        'id' => 'settings-users',
+                        'id' => 'users',
                         'label' => 'Uživatelé',
                         'url' => '/admin/settings/users',
                         'icon' => '👤',
                     ),
                     array(
-                        'id' => 'settings-departments',
+                        'id' => 'departments',
                         'label' => 'Oddělení',
                         'url' => '/admin/settings/departments',
                         'icon' => '🏛️',
                     ),
                     array(
-                        'id' => 'settings-content',
+                        'id' => 'content',
                         'label' => 'Školící obsah',
                         'url' => '/admin/settings/content',
                         'icon' => '📚',
                     ),
                     array(
-                        'id' => 'settings-training',
+                        'id' => 'training',
                         'label' => 'Verze školení',
                         'url' => '/admin/settings/training',
                         'icon' => '🎓',
                     ),
                     array(
-                        'id' => 'settings-about',
+                        'id' => 'about',
                         'label' => 'O aplikaci',
                         'url' => '/admin/settings/about',
                         'icon' => 'ℹ️',
