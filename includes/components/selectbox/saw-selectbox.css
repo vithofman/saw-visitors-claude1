@@ -1,0 +1,250 @@
+/**
+ * SAW Selectbox Component CSS
+ * Univerzální selectbox s podporou vyhledávání a AJAX
+ * 
+ * @package SAW_Visitors
+ * @version 4.6.1
+ */
+
+/* Container */
+.saw-selectbox-component {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
+
+/* Trigger Button */
+.saw-selectbox-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 12px;
+    background: white;
+    border: 1px solid #dcdcde;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 400;
+    color: #111827;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+}
+
+.saw-selectbox-trigger:hover {
+    border-color: #2271b1;
+    background: #f9fafb;
+}
+
+.saw-selectbox-trigger:focus {
+    outline: none;
+    border-color: #2271b1;
+    box-shadow: 0 0 0 1px #2271b1;
+}
+
+.saw-selectbox-component.open .saw-selectbox-trigger {
+    border-color: #2271b1;
+    box-shadow: 0 0 0 1px #2271b1;
+}
+
+.saw-selectbox-trigger-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.saw-selectbox-trigger-icon {
+    flex-shrink: 0;
+    transition: transform 0.2s;
+}
+
+.saw-selectbox-component.open .saw-selectbox-trigger-icon {
+    transform: rotate(180deg);
+}
+
+/* Dropdown */
+.saw-selectbox-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #dcdcde;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    display: none;
+    flex-direction: column;
+    max-height: 320px;
+    z-index: 1000;
+}
+
+.saw-selectbox-component.open .saw-selectbox-dropdown {
+    display: flex;
+}
+
+/* Search */
+.saw-selectbox-search {
+    padding: 8px;
+    border-bottom: 1px solid #f0f0f1;
+    position: relative;
+}
+
+.saw-selectbox-search-input {
+    width: 100%;
+    padding: 8px 12px 8px 36px;
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+    font-size: 13px;
+    transition: border-color 0.2s;
+}
+
+.saw-selectbox-search-input:focus {
+    outline: none;
+    border-color: #2271b1;
+    box-shadow: 0 0 0 1px #2271b1;
+}
+
+.saw-selectbox-search-icon {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #646970;
+    font-size: 16px;
+    pointer-events: none;
+}
+
+/* Options Container */
+.saw-selectbox-options {
+    overflow-y: auto;
+    max-height: 280px;
+}
+
+.saw-selectbox-options::-webkit-scrollbar {
+    width: 8px;
+}
+
+.saw-selectbox-options::-webkit-scrollbar-track {
+    background: #f9fafb;
+}
+
+.saw-selectbox-options::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 4px;
+}
+
+.saw-selectbox-options::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* Option Item */
+.saw-selectbox-option {
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+    border-bottom: 1px solid #f9fafb;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.saw-selectbox-option:last-child {
+    border-bottom: none;
+}
+
+.saw-selectbox-option:hover {
+    background: #f9fafb;
+}
+
+.saw-selectbox-option.active {
+    background: #eff6ff;
+    color: #2271b1;
+}
+
+.saw-selectbox-option.hidden {
+    display: none;
+}
+
+.saw-selectbox-option-check {
+    color: #2271b1;
+    font-weight: bold;
+    width: 16px;
+    flex-shrink: 0;
+}
+
+.saw-selectbox-option-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.saw-selectbox-option-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.saw-selectbox-option-label {
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.saw-selectbox-option-meta {
+    font-size: 12px;
+    color: #646970;
+    margin-top: 2px;
+}
+
+/* Loading State */
+.saw-selectbox-loading {
+    padding: 32px 24px;
+    text-align: center;
+    color: #646970;
+}
+
+.saw-selectbox-loading .spinner {
+    margin: 0 auto 12px;
+    float: none;
+}
+
+/* Empty State */
+.saw-selectbox-empty {
+    padding: 32px 24px;
+    text-align: center;
+    color: #646970;
+    font-size: 14px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .saw-selectbox-trigger {
+        font-size: 16px;
+        padding: 10px 12px;
+    }
+    
+    .saw-selectbox-dropdown {
+        max-height: 280px;
+    }
+    
+    .saw-selectbox-options {
+        max-height: 240px;
+    }
+}
+
+@media (max-width: 480px) {
+    .saw-selectbox-dropdown {
+        position: fixed;
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        max-height: 70vh;
+        border-radius: 12px 12px 0 0;
+    }
+}

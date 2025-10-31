@@ -165,7 +165,10 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             wp_send_json_error(['message' => 'Nedostatečná oprávnění.']);
         }
         
-        $search = isset($_POST['search']) ? sanitize_text_field($_POST['search']) : '';
+        $search = isset($_GET['s']) ? sanitize_text_field($_GET['s']) : '';
+        if (empty($search) && isset($_POST['search'])) {
+            $search = sanitize_text_field($_POST['search']);
+        }
         
         $customers = $this->model->get_all([
             'search' => $search,
@@ -174,9 +177,19 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             'per_page' => 50,
         ]);
         
-        wp_send_json_success([
-            'customers' => $customers['items'] ?? $customers,
-        ]);
+        $items = $customers['items'] ?? $customers;
+        
+        $formatted_items = array();
+        foreach ($items as $customer) {
+            $formatted_items[] = [
+                'value' => (string) $customer['id'],
+                'label' => $customer['name'],
+                'icon' => $customer['logo_url'] ?? '',
+                'meta' => !empty($customer['ico']) ? 'IČO: ' . $customer['ico'] : '',
+            ];
+        }
+        
+        wp_send_json_success($formatted_items);
     }
     
     public function ajax_switch_customer() {

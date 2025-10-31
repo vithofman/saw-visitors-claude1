@@ -28,35 +28,6 @@ class SAW_App_Header {
             'name' => 'Demo Firma s.r.o.',
             'ico' => '12345678',
         );
-        
-        if ($this->is_super_admin()) {
-            $this->enqueue_customer_switcher_assets();
-        }
-    }
-    
-    /**
-     * Enqueue customer switcher assets (SuperAdmin only)
-     */
-    public function enqueue_customer_switcher_assets() {
-        $css_file = SAW_VISITORS_PLUGIN_DIR . 'assets/css/saw-customer-switcher.css';
-        if (file_exists($css_file)) {
-            echo '<style id="saw-customer-switcher-css">' . file_get_contents($css_file) . '</style>';
-        }
-        
-        $js_file = SAW_VISITORS_PLUGIN_DIR . 'assets/js/saw-customer-switcher.js';
-        if (file_exists($js_file)) {
-            ?>
-            <script type="text/javascript">
-            var sawCustomerSwitcher = {
-                ajaxurl: '<?php echo admin_url('admin-ajax.php'); ?>',
-                nonce: '<?php echo wp_create_nonce('saw_customer_switcher_nonce'); ?>'
-            };
-            </script>
-            <script type="text/javascript" id="saw-customer-switcher-js">
-            <?php echo file_get_contents($js_file); ?>
-            </script>
-            <?php
-        }
     }
     
     /**
@@ -113,11 +84,8 @@ class SAW_App_Header {
                 </div>
                 
                 <?php if ($this->is_super_admin()): ?>
-                    <div class="saw-customer-switcher">
-                        <button class="saw-customer-switcher-button" id="sawCustomerSwitcherButton">
-                            <span class="saw-switcher-icon">🏢</span>
-                            <span class="saw-switcher-text">Přepnout zákazníka</span>
-                        </button>
+                    <div class="saw-customer-switcher-wrapper">
+                        <?php $this->render_customer_switcher(); ?>
                     </div>
                 <?php endif; ?>
                 
@@ -156,6 +124,61 @@ class SAW_App_Header {
                 </div>
             </div>
         </header>
+        
+        <?php $this->enqueue_customer_switcher_nonce(); ?>
+        <?php
+    }
+    
+    private function render_customer_switcher() {
+        if (!class_exists('SAW_Component_Selectbox')) {
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/selectbox/class-saw-component-selectbox.php';
+        }
+        
+        $switcher = new SAW_Component_Selectbox('customer-switcher', array(
+            'ajax_enabled' => true,
+            'ajax_action' => 'saw_get_customers_for_switcher',
+            'searchable' => true,
+            'placeholder' => 'Přepnout zákazníka...',
+            'selected' => $this->customer['id'],
+            'show_icons' => true,
+            'custom_class' => 'saw-customer-switcher',
+            'on_change' => 'sawSwitchCustomer',
+        ));
+        
+        $switcher->render();
+    }
+    
+    private function enqueue_customer_switcher_nonce() {
+        ?>
+        <script type="text/javascript">
+        if (typeof sawGlobal !== 'undefined') {
+            sawGlobal.customerSwitcherNonce = '<?php echo wp_create_nonce('saw_customer_switcher_nonce'); ?>';
+        }
+        
+        function sawSwitchCustomer(customerId) {
+            if (!customerId) return;
+            
+            jQuery.ajax({
+                url: sawGlobal.ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'saw_switch_customer',
+                    customer_id: customerId,
+                    nonce: sawGlobal.customerSwitcherNonce || '<?php echo wp_create_nonce('saw_customer_switcher_nonce'); ?>'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        window.location.reload();
+                    } else {
+                        alert(response.data?.message || 'Chyba při přepínání zákazníka');
+                    }
+                },
+                error: function() {
+                    alert('Chyba serveru');
+                }
+            });
+        }
+        </script>
         <?php
     }
     

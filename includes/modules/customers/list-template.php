@@ -6,6 +6,10 @@ if (!defined('ABSPATH')) {
 if (!class_exists('SAW_Component_Search')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/search/class-saw-component-search.php';
 }
+
+if (!class_exists('SAW_Component_Selectbox')) {
+    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/selectbox/class-saw-component-selectbox.php';
+}
 ?>
 
 <div class="saw-page-header">
@@ -38,16 +42,22 @@ if (!class_exists('SAW_Component_Search')) {
         
         <?php if (!empty($this->config['list_config']['filters']['status'])): ?>
             <div class="saw-filters">
-                <select 
-                    name="status" 
-                    class="saw-filter-select" 
-                    onchange="window.location.href='?status=' + this.value"
-                >
-                    <option value="">Všechny statusy</option>
-                    <option value="potential" <?php selected($_GET['status'] ?? '', 'potential'); ?>>Potenciální</option>
-                    <option value="active" <?php selected($_GET['status'] ?? '', 'active'); ?>>Aktivní</option>
-                    <option value="inactive" <?php selected($_GET['status'] ?? '', 'inactive'); ?>>Neaktivní</option>
-                </select>
+                <?php
+                $status_filter = new SAW_Component_Selectbox('status-filter', array(
+                    'options' => array(
+                        '' => 'Všechny statusy',
+                        'potential' => 'Potenciální',
+                        'active' => 'Aktivní',
+                        'inactive' => 'Neaktivní',
+                    ),
+                    'selected' => $_GET['status'] ?? '',
+                    'on_change' => 'redirect',
+                    'allow_empty' => true,
+                    'custom_class' => 'saw-filter-select',
+                    'name' => 'status',
+                ));
+                $status_filter->render();
+                ?>
             </div>
         <?php endif; ?>
     </div>
