@@ -259,10 +259,10 @@ class SAW_App_Layout {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title><?php echo esc_html($this->page_title); ?> - SAW Visitors</title>
             
-            <link rel="stylesheet" href="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/css/global/saw-app.css?v=<?php echo SAW_VISITORS_VERSION; ?>">
-            <link rel="stylesheet" href="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/css/global/saw-app-header.css?v=<?php echo SAW_VISITORS_VERSION; ?>">
-            <link rel="stylesheet" href="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/css/global/saw-app-sidebar.css?v=<?php echo SAW_VISITORS_VERSION; ?>">
-            <link rel="stylesheet" href="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/css/global/saw-app-responsive.css?v=<?php echo SAW_VISITORS_VERSION; ?>">
+            <link rel="stylesheet" href="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/css/saw-app.css?v=<?php echo SAW_VISITORS_VERSION; ?>">
+            <link rel="stylesheet" href="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/css/saw-app-header.css?v=<?php echo SAW_VISITORS_VERSION; ?>">
+            <link rel="stylesheet" href="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/css/saw-app-sidebar.css?v=<?php echo SAW_VISITORS_VERSION; ?>">
+            <link rel="stylesheet" href="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/css/saw-app-responsive.css?v=<?php echo SAW_VISITORS_VERSION; ?>">
             
             <?php
             if (function_exists('wp_head')) {
@@ -292,8 +292,8 @@ class SAW_App_Layout {
             }
             ?>
             
-            <script src="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/js/global/saw-app.js?v=<?php echo SAW_VISITORS_VERSION; ?>"></script>
-            <script src="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/js/global/saw-app-navigation.js?v=<?php echo SAW_VISITORS_VERSION; ?>"></script>
+            <script src="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/js/saw-app.js?v=<?php echo SAW_VISITORS_VERSION; ?>"></script>
+            <script src="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/js/saw-app-navigation.js?v=<?php echo SAW_VISITORS_VERSION; ?>"></script>
             
             <script>
                 document.addEventListener('DOMContentLoaded', function() {

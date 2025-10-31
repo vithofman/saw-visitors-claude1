@@ -38,12 +38,12 @@ class SAW_App_Header {
      * Enqueue customer switcher assets (SuperAdmin only)
      */
     public function enqueue_customer_switcher_assets() {
-        $css_file = SAW_VISITORS_PLUGIN_DIR . 'assets/css/global/saw-customer-switcher.css';
+        $css_file = SAW_VISITORS_PLUGIN_DIR . 'assets/css/saw-customer-switcher.css';
         if (file_exists($css_file)) {
             echo '<style id="saw-customer-switcher-css">' . file_get_contents($css_file) . '</style>';
         }
         
-        $js_file = SAW_VISITORS_PLUGIN_DIR . 'assets/js/global/saw-customer-switcher.js';
+        $js_file = SAW_VISITORS_PLUGIN_DIR . 'assets/js/saw-customer-switcher.js';
         if (file_exists($js_file)) {
             ?>
             <script type="text/javascript">
