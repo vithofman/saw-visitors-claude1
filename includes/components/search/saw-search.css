@@ -1,0 +1,145 @@
+.saw-search-info {
+    background: #fef3c7;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    color: #92400e;
+    font-size: 14px;
+    width: 100%;
+}
+
+.saw-search-info strong {
+    font-weight: 600;
+    color: #78350f;
+}
+
+.saw-search-info a {
+    color: #0073aa;
+    text-decoration: none;
+    margin-left: 12px;
+    font-weight: 500;
+}
+
+.saw-search-info a:hover {
+    text-decoration: underline;
+}
+
+.saw-search-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 500px;
+}
+
+.saw-search-input {
+    flex: 1;
+    padding: 10px 44px 10px 12px;
+    border: 1px solid #dcdcde;
+    border-radius: 8px;
+    font-size: 14px;
+    line-height: 1.4;
+    transition: all 0.2s ease;
+    background: #fff;
+}
+
+.saw-search-input:focus {
+    outline: none;
+    border-color: #2271b1;
+    box-shadow: 0 0 0 1px #2271b1;
+}
+
+.saw-search-input::placeholder {
+    color: #a7aaad;
+}
+
+.saw-search-icon {
+    display: none;
+}
+
+.saw-search-clear {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    padding: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background 0.2s ease;
+    z-index: 2;
+}
+
+.saw-search-clear:hover {
+    background: #f0f0f1;
+}
+
+.saw-search-clear .dashicons {
+    color: #646970;
+    font-size: 18px;
+}
+
+.saw-search-clear:hover .dashicons {
+    color: #d63638;
+}
+
+.saw-search-submit {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    background: #2271b1;
+    color: #fff;
+    border: 1px solid #2271b1;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.saw-search-submit:hover {
+    background: #135e96;
+    border-color: #135e96;
+}
+
+.saw-search-submit:active {
+    transform: scale(0.98);
+}
+
+.saw-search-submit .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+@media (max-width: 768px) {
+    .saw-search-wrapper {
+        max-width: 100%;
+    }
+    
+    .saw-search-input {
+        font-size: 16px;
+        padding: 12px 44px 12px 12px;
+    }
+    
+    .saw-search-submit {
+        padding: 12px 14px;
+        min-width: 44px;
+        justify-content: center;
+    }
+    
+    .saw-search-submit-text {
+        display: none;
+    }
+    
+    .saw-search-submit .dashicons {
+        margin: 0;
+    }
+}

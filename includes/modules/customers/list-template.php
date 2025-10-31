@@ -1,16 +1,10 @@
 <?php
-/**
- * Customers List Template
- * 
- * Zobrazuje tabulku zákazníků + modal pro detail
- * 
- * @package SAW_Visitors
- * @version 2.0.0
- * @since   4.8.0
- */
-
 if (!defined('ABSPATH')) {
     exit;
+}
+
+if (!class_exists('SAW_Component_Search')) {
+    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/search/class-saw-component-search.php';
 }
 ?>
 
@@ -25,18 +19,22 @@ if (!defined('ABSPATH')) {
 </div>
 
 <div class="saw-list-container">
-    <?php if (!empty($search)): ?>
-        <div class="saw-search-info">
-            Vyhledávání: <strong><?php echo esc_html($search); ?></strong>
-            <a href="<?php echo home_url('/admin/settings/customers/'); ?>">Zrušit</a>
-        </div>
-    <?php endif; ?>
-    
     <div class="saw-table-controls">
-        <form method="get" action="" class="saw-search-form">
-            <input type="text" name="s" value="<?php echo esc_attr($search); ?>" placeholder="Hledat zákazníka...">
-            <button type="submit" class="saw-button">Hledat</button>
-        </form>
+        <div class="saw-search-form">
+            <?php
+            $search_component = new SAW_Component_Search('customers', array(
+                'placeholder' => 'Hledat zákazníka...',
+                'search_value' => $search,
+                'ajax_enabled' => false,
+                'ajax_action' => 'saw_search_customers',
+                'show_button' => true,
+                'show_info_banner' => true,
+                'info_banner_label' => 'Vyhledávání:',
+                'clear_url' => home_url('/admin/settings/customers/'),
+            ));
+            $search_component->render();
+            ?>
+        </div>
         
         <?php if (!empty($this->config['list_config']['filters']['status'])): ?>
             <div class="saw-filters">
