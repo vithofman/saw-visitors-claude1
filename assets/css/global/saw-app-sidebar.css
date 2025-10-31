@@ -2,8 +2,7 @@
  * SAW App Sidebar - Global Component Styles
  * 
  * Navigation sidebar component for frontend application layout
- * Fixed position sidebar with navigation menu and scrollable content
- * Responsive with hamburger menu for mobile devices
+ * Responzivní design s mobilním overlay menu
  * 
  * @package SAW_Visitors
  * @since   4.6.1
@@ -26,6 +25,50 @@
     display: none;
     padding: 16px;
     border-bottom: 1px solid #e5e7eb;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.saw-sidebar-mobile-customer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+
+.saw-sidebar-mobile-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+}
+
+.saw-sidebar-logo-image {
+    max-width: 32px;
+    max-height: 32px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    display: block;
+}
+
+.saw-sidebar-logo-fallback {
+    display: block;
+    width: 32px;
+    height: 32px;
+}
+
+.saw-sidebar-mobile-customer-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #111827;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .saw-sidebar-close {
@@ -40,6 +83,7 @@
     cursor: pointer;
     border-radius: 8px;
     transition: all 0.2s;
+    flex-shrink: 0;
 }
 
 .saw-sidebar-close:hover {
@@ -127,61 +171,56 @@
     opacity: 1;
 }
 
-.saw-hamburger-menu {
-    display: none;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    background: transparent;
-    border: none;
-    color: #6b7280;
-    cursor: pointer;
-    border-radius: 8px;
-    transition: all 0.2s;
-    margin-right: 12px;
-}
-
-.saw-hamburger-menu:hover {
-    background: #f3f4f6;
-    color: #111827;
-}
-
+/* ============================================
+   TABLET & MOBILE (< 1024px)
+   ============================================ */
 @media (max-width: 1024px) {
-    .saw-hamburger-menu {
-        display: flex;
-    }
-    
     .saw-app-sidebar {
         transform: translateX(-100%);
+        box-shadow: none;
     }
     
     .saw-app-sidebar.open {
         transform: translateX(0);
-        box-shadow: 4px 0 12px rgba(0, 0, 0, 0.1);
+        box-shadow: 4px 0 12px rgba(0, 0, 0, 0.15);
     }
     
     .saw-sidebar-header {
         display: flex;
-        justify-content: flex-end;
     }
     
     .saw-sidebar-overlay {
         display: block;
     }
+    
+    /* KRITICKÉ: Content area se roztáhne přes celou šířku */
+    .saw-app-main {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
+    
+    .saw-app-content {
+        margin-left: 0 !important;
+        padding: 24px 16px;
+    }
 }
 
+/* ============================================
+   MOBILE (< 768px)
+   ============================================ */
 @media (max-width: 768px) {
     .saw-app-sidebar {
         width: 280px;
-        top: 60px;
     }
     
-    .saw-customer-info {
-        display: none !important;
+    .saw-app-content {
+        padding: 16px 12px;
     }
 }
 
+/* ============================================
+   SMALL MOBILE (< 480px)
+   ============================================ */
 @media (max-width: 480px) {
     .saw-app-sidebar {
         width: 100%;

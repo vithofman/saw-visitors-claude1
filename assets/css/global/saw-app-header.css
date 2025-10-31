@@ -1,5 +1,6 @@
 /**
  * SAW App Header Styles
+ * Responzivní design s mobilním layoutem
  */
 
 .saw-app-header {
@@ -21,6 +22,28 @@
     display: flex;
     align-items: center;
     gap: 16px;
+    flex: 1;
+    min-width: 0;
+}
+
+.saw-hamburger-menu {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: transparent;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.saw-hamburger-menu:hover {
+    background: #f3f4f6;
+    color: #111827;
 }
 
 .saw-logo {
@@ -29,6 +52,7 @@
     justify-content: center;
     width: 40px;
     height: 40px;
+    flex-shrink: 0;
 }
 
 .saw-logo-image {
@@ -47,6 +71,8 @@
 .saw-customer-info {
     border-left: 1px solid #e5e7eb;
     padding-left: 16px;
+    min-width: 0;
+    flex-shrink: 1;
 }
 
 .saw-customer-name {
@@ -54,33 +80,66 @@
     font-weight: 600;
     color: #111827;
     line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .saw-customer-ico {
     font-size: 12px;
     color: #6b7280;
+    white-space: nowrap;
 }
 
 .saw-header-right {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.saw-branch-switcher-placeholder {
+    min-width: 120px;
+}
+
+.saw-customer-switcher {
+    position: relative;
 }
 
 .saw-customer-switcher-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     padding: 8px 16px;
-    background: #f3f4f6;
-    border: 1px solid #d1d5db;
+    background: white;
+    border: 1px solid #e5e7eb;
     border-radius: 6px;
     font-size: 13px;
-    color: #374151;
+    font-weight: 500;
+    color: #111827;
     cursor: pointer;
     transition: all 0.2s;
+    white-space: nowrap;
 }
 
 .saw-customer-switcher-button:hover {
-    background: #e5e7eb;
-    border-color: #9ca3af;
+    background: #f9fafb;
+    border-color: #d1d5db;
+}
+
+.saw-customer-switcher-button:disabled {
+    cursor: wait;
+    opacity: 0.7;
+    background: #f3f4f6;
+}
+
+.saw-switcher-icon {
+    font-size: 16px;
+    line-height: 1;
+}
+
+.saw-switcher-text {
+    font-size: 13px;
 }
 
 .saw-user-menu {
@@ -97,6 +156,7 @@
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s;
+    white-space: nowrap;
 }
 
 .saw-user-button:hover {
@@ -106,12 +166,18 @@
 
 .saw-user-icon {
     font-size: 18px;
+    line-height: 1;
+    flex-shrink: 0;
 }
 
 .saw-user-name {
     font-size: 14px;
     font-weight: 500;
     color: #111827;
+}
+
+.saw-user-dropdown-arrow {
+    flex-shrink: 0;
 }
 
 .saw-user-dropdown {
@@ -182,4 +248,78 @@
 
 .saw-dropdown-item-danger:hover {
     background: #fee2e2;
+}
+
+/* ============================================
+   TABLET (< 1024px)
+   ============================================ */
+@media (max-width: 1024px) {
+    .saw-hamburger-menu {
+        display: flex;
+    }
+    
+    .saw-app-header {
+        padding: 0 16px;
+    }
+    
+    .saw-customer-switcher-button {
+        padding: 8px 12px;
+    }
+    
+    .saw-switcher-text {
+        display: none;
+    }
+}
+
+/* ============================================
+   MOBILE (< 768px)
+   ============================================ */
+@media (max-width: 768px) {
+    .saw-app-header {
+        padding: 0 12px;
+        gap: 8px;
+    }
+    
+    .saw-header-left {
+        gap: 12px;
+    }
+    
+    .saw-customer-info {
+        display: none;
+    }
+    
+    .saw-header-right {
+        gap: 8px;
+    }
+    
+    .saw-user-name {
+        display: none;
+    }
+    
+    .saw-user-button {
+        padding: 8px;
+    }
+    
+    .saw-customer-switcher-button {
+        padding: 8px;
+    }
+}
+
+/* ============================================
+   SMALL MOBILE (< 480px)
+   ============================================ */
+@media (max-width: 480px) {
+    .saw-app-header {
+        padding: 0 8px;
+    }
+    
+    .saw-logo {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .saw-logo-image {
+        max-width: 36px;
+        max-height: 36px;
+    }
 }

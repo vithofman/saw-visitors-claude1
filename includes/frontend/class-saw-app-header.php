@@ -59,12 +59,28 @@ class SAW_App_Header {
         }
     }
     
+    /**
+     * Get logo URL with fallback logic
+     * Unified approach to handle both logo_url and logo_url_full
+     */
+    private function get_logo_url() {
+        if (!empty($this->customer['logo_url_full'])) {
+            return $this->customer['logo_url_full'];
+        }
+        
+        if (!empty($this->customer['logo_url'])) {
+            return $this->customer['logo_url'];
+        }
+        
+        return '';
+    }
+    
     public function render() {
-        $logo_url = !empty($this->customer['logo_url_full']) ? $this->customer['logo_url_full'] : '';
+        $logo_url = $this->get_logo_url();
         ?>
         <header class="saw-app-header">
             <div class="saw-header-left">
-                <button class="saw-hamburger-menu" id="sawHamburgerMenu">
+                <button class="saw-hamburger-menu" id="sawHamburgerMenu" aria-label="Toggle menu">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="3" y1="6" x2="21" y2="6"></line>
                         <line x1="3" y1="12" x2="21" y2="12"></line>
@@ -92,10 +108,15 @@ class SAW_App_Header {
             </div>
             
             <div class="saw-header-right">
+                <div class="saw-branch-switcher-placeholder" style="display: none;">
+                    <!-- Placeholder pro budoucí přepínač poboček -->
+                </div>
+                
                 <?php if ($this->is_super_admin()): ?>
                     <div class="saw-customer-switcher">
                         <button class="saw-customer-switcher-button" id="sawCustomerSwitcherButton">
-                            🏢 Přepnout zákazníka
+                            <span class="saw-switcher-icon">🏢</span>
+                            <span class="saw-switcher-text">Přepnout zákazníka</span>
                         </button>
                     </div>
                 <?php endif; ?>
@@ -104,7 +125,7 @@ class SAW_App_Header {
                     <button class="saw-user-button" id="sawUserMenuToggle">
                         <span class="saw-user-icon">👤</span>
                         <span class="saw-user-name"><?php echo esc_html($this->user['name']); ?></span>
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" class="saw-user-dropdown-arrow">
                             <path d="M8 10.5l-4-4h8l-4 4z"/>
                         </svg>
                     </button>
@@ -144,7 +165,7 @@ class SAW_App_Header {
     
     private function get_role_label() {
         if ($this->is_super_admin()) {
-            return 'Super Administrator';
+            return 'Super Administrátor';
         }
         
         $role = $this->user['role'] ?? 'admin';

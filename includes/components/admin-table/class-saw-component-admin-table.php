@@ -6,7 +6,7 @@
  * Globální reusable komponenta kopírující design a funkcionalitu z původního customers-list.php
  * 
  * @package SAW_Visitors
- * @version 4.6.1 ENHANCED - Modal detail support
+ * @version 4.6.1 ENHANCED - Modal detail support + Responsive
  * @since 4.6.1
  */
 

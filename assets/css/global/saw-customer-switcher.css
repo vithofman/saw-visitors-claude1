@@ -1,5 +1,6 @@
 /**
  * SAW Customer Switcher CSS
+ * Responzivní dropdown pro přepínání zákazníků
  * 
  * @package SAW_Visitors
  * @version 4.6.1
@@ -203,9 +204,64 @@
     margin-bottom: 8px;
 }
 
-/* Responsive */
+/* ============================================
+   TABLET (< 1024px)
+   ============================================ */
+@media (max-width: 1024px) {
+    .saw-customer-switcher-dropdown {
+        width: 320px;
+    }
+}
+
+/* ============================================
+   MOBILE (< 768px)
+   ============================================ */
 @media (max-width: 768px) {
     .saw-customer-switcher-dropdown {
         width: 300px;
+        max-height: 400px;
+        right: -8px;
+    }
+    
+    .saw-customer-search {
+        padding: 10px;
+    }
+    
+    .saw-customer-search input {
+        font-size: 14px;
+    }
+    
+    .saw-customer-list {
+        max-height: 280px;
+    }
+    
+    .saw-customer-item {
+        padding: 10px 12px;
+    }
+    
+    .saw-customer-item-name {
+        font-size: 13px;
+    }
+    
+    .saw-customer-item-ico {
+        font-size: 11px;
+    }
+}
+
+/* ============================================
+   SMALL MOBILE (< 480px)
+   ============================================ */
+@media (max-width: 480px) {
+    .saw-customer-switcher-dropdown {
+        position: fixed;
+        top: 60px;
+        right: 8px;
+        left: 8px;
+        width: auto;
+        max-height: calc(100vh - 80px);
+    }
+    
+    .saw-customer-list {
+        max-height: calc(100vh - 200px);
     }
 }

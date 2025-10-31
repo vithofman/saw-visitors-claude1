@@ -262,6 +262,7 @@ class SAW_App_Layout {
             <link rel="stylesheet" href="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/css/global/saw-app.css?v=<?php echo SAW_VISITORS_VERSION; ?>">
             <link rel="stylesheet" href="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/css/global/saw-app-header.css?v=<?php echo SAW_VISITORS_VERSION; ?>">
             <link rel="stylesheet" href="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/css/global/saw-app-sidebar.css?v=<?php echo SAW_VISITORS_VERSION; ?>">
+            <link rel="stylesheet" href="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/css/global/saw-app-responsive.css?v=<?php echo SAW_VISITORS_VERSION; ?>">
             
             <?php
             if (function_exists('wp_head')) {

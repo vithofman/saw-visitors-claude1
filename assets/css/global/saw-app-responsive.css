@@ -1,29 +1,341 @@
 /**
  * SAW Visitors - Responsive Styles
+ * Globální responzivní pravidla pro celou aplikaci
  * 
  * @package SAW_Visitors
- * @version 4.6.1
+ * @version 4.6.2 - Enhanced responsive fixes
  */
+
+/* ============================================
+   BASE LAYOUT
+   ============================================ */
+.saw-app-body {
+    margin: 0;
+    padding: 0;
+    background: #f9fafb;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.saw-app-container {
+    display: flex;
+    min-height: calc(100vh - 60px);
+    margin-top: 60px;
+}
+
+.saw-app-main {
+    flex: 1;
+    margin-left: 260px;
+    min-width: 0;
+    transition: margin-left 0.3s ease;
+}
+
+.saw-app-content {
+    padding: 32px;
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+/* ============================================
+   RESPONSIVE BUTTONS
+   ============================================ */
+.saw-btn-responsive {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    transition: all 0.2s;
+}
+
+.saw-btn-responsive .saw-btn-icon {
+    flex-shrink: 0;
+}
+
+.saw-btn-responsive .saw-btn-text {
+    white-space: nowrap;
+}
+
+/* ============================================
+   RESPONSIVE SELECT FILTERS
+   ============================================ */
+.saw-select-responsive {
+    min-width: 160px;
+    max-width: 200px;
+    height: 44px;
+    padding: 0 40px 0 16px;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #1f2937;
+    background-color: #ffffff;
+    background-image: url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2720%27 height=%2720%27 viewBox=%270 0 20 20%27%3E%3Cpath fill=%27%232563eb%27 d=%27M10 12.5l-5-5h10z%27/%3E%3C/svg%3E');
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 18px;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s;
+}
+
+.saw-select-responsive:hover {
+    border-color: #d1d5db;
+}
+
+.saw-select-responsive:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* ============================================
+   RESPONSIVE TABLE WRAPPER
+   ============================================ */
+.saw-table-responsive-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: white;
+}
+
+.saw-table-responsive-wrapper::-webkit-scrollbar {
+    height: 8px;
+}
+
+.saw-table-responsive-wrapper::-webkit-scrollbar-track {
+    background: #f9fafb;
+}
+
+.saw-table-responsive-wrapper::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 4px;
+}
+
+.saw-table-responsive-wrapper::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* ============================================
+   TABULKY - RESPONSIVE
+   ============================================ */
+.saw-admin-table table {
+    width: 100%;
+    min-width: 900px;
+    border-collapse: collapse;
+}
+
+.saw-admin-table thead th,
+.saw-admin-table tbody td {
+    padding: 12px 16px;
+    text-align: left;
+}
+
+/* Quick actions v tabulce */
+.saw-quick-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: nowrap;
+}
+
+.saw-quick-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.saw-quick-action-btn:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+}
+
+.saw-quick-action-btn .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+.saw-action-text {
+    font-size: 13px;
+}
+
+/* ============================================
+   CARDS & STATS
+   ============================================ */
+.saw-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+.saw-stat-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.saw-stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 4px;
+}
+
+.saw-stat-label {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.saw-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    margin-bottom: 24px;
+}
+
+.saw-card-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.saw-card-body {
+    padding: 24px;
+}
+
+/* ============================================
+   FORMS - RESPONSIVE
+   ============================================ */
+.saw-form-row {
+    margin-bottom: 20px;
+}
+
+.saw-form-row label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 6px;
+}
+
+.saw-form-row input,
+.saw-form-row select,
+.saw-form-row textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.saw-form-row-group {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+/* ============================================
+   PAGE HEADER
+   ============================================ */
+.saw-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.saw-page-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+}
+
+.saw-page-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* ============================================
+   TABLE CONTROLS
+   ============================================ */
+.saw-table-controls {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.saw-search-form {
+    display: flex;
+    gap: 8px;
+    flex: 1;
+    min-width: 250px;
+}
+
+.saw-filters {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
 
 /* ============================================
    TABLET (< 1024px)
    ============================================ */
 @media (max-width: 1024px) {
-    .saw-app-sidebar {
-        width: 200px;
+    .saw-app-main {
+        margin-left: 0;
     }
     
     .saw-app-content {
-        margin-left: 200px;
-        padding: 24px;
+        padding: 24px 16px;
     }
     
     .saw-stats-grid {
         grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
     }
     
-    .saw-dashboard-row {
-        flex-direction: column;
+    .saw-form-row-group {
+        grid-template-columns: 1fr;
+    }
+    
+    .saw-page-title {
+        font-size: 24px;
+    }
+    
+    .saw-card-header,
+    .saw-card-body {
+        padding: 16px;
+    }
+    
+    /* Responsive button na tablet */
+    .saw-btn-responsive {
+        padding: 8px 16px;
+    }
+    
+    /* Select filter na tablet */
+    .saw-select-responsive {
+        min-width: 140px;
+        max-width: 180px;
+        font-size: 13px;
     }
 }
 
@@ -31,38 +343,14 @@
    MOBILE (< 768px)
    ============================================ */
 @media (max-width: 768px) {
-    .saw-app-header {
-        padding: 0 16px;
-    }
-    
-    .saw-customer-info {
-        display: none;
-    }
-    
-    .saw-customer-switcher-button span {
-        display: none;
-    }
-    
-    .saw-user-name {
-        display: none;
-    }
-    
-    .saw-app-sidebar {
-        transform: translateX(-100%);
-        transition: transform 0.3s;
-    }
-    
-    .saw-app-sidebar.mobile-open {
-        transform: translateX(0);
-    }
-    
     .saw-app-content {
-        margin-left: 0;
-        padding: 16px;
+        padding: 16px 12px;
     }
     
     .saw-stats-grid {
         grid-template-columns: 1fr;
+        gap: 12px;
+        margin-bottom: 24px;
     }
     
     .saw-stat-card {
@@ -73,51 +361,217 @@
         font-size: 24px;
     }
     
+    .saw-card-header {
+        padding: 16px;
+    }
+    
     .saw-card-body {
         padding: 16px;
     }
     
-    .saw-table {
-        font-size: 12px;
+    .saw-page-header {
+        flex-direction: column;
+        align-items: flex-start;
     }
     
-    .saw-table thead th,
-    .saw-table tbody td {
-        padding: 8px;
+    .saw-page-title {
+        font-size: 20px;
     }
     
-    .saw-quick-action-btn {
+    .saw-page-actions {
+        width: 100%;
+    }
+    
+    .saw-page-actions .saw-button {
+        flex: 1;
+        justify-content: center;
+    }
+    
+    /* Responsive button - jen ikona na mobile */
+    .saw-btn-responsive .saw-btn-text {
+        display: none;
+    }
+    
+    .saw-btn-responsive {
+        padding: 10px;
+        min-width: 44px;
+        justify-content: center;
+    }
+    
+    .saw-btn-responsive .saw-btn-icon {
+        margin: 0;
+    }
+    
+    /* Select filter na mobile */
+    .saw-select-responsive {
+        min-width: 120px;
+        max-width: 150px;
+        height: 40px;
         font-size: 13px;
-        padding: 10px 14px;
+        padding: 0 36px 0 12px;
+    }
+    
+    /* Table controls na mobile */
+    .saw-table-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .saw-search-form {
+        width: 100%;
+        min-width: 0;
+    }
+    
+    .saw-filters {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    
+    /* Tabulky na mobile */
+    .saw-admin-table table {
+        font-size: 13px;
+        min-width: 800px;
+    }
+    
+    .saw-admin-table thead th,
+    .saw-admin-table tbody td {
+        padding: 8px 12px;
+    }
+    
+    /* Quick actions na mobile - jen ikony */
+    .saw-quick-action-btn {
+        padding: 6px 8px;
+    }
+    
+    .saw-quick-action-btn .saw-action-text {
+        display: none;
+    }
+    
+    .saw-quick-action-btn .dashicons {
+        margin: 0;
+    }
+    
+    /* Forms na mobile */
+    .saw-form-row input,
+    .saw-form-row select,
+    .saw-form-row textarea {
+        font-size: 16px;
     }
 }
 
 /* ============================================
-   MOBILE MENU TOGGLE
+   SMALL MOBILE (< 480px)
    ============================================ */
-.saw-mobile-menu-toggle {
-    display: none;
+@media (max-width: 480px) {
+    .saw-app-content {
+        padding: 12px 8px;
+    }
+    
+    .saw-page-title {
+        font-size: 18px;
+    }
+    
+    .saw-admin-table table {
+        font-size: 12px;
+        min-width: 700px;
+    }
+    
+    .saw-admin-table thead th,
+    .saw-admin-table tbody td {
+        padding: 6px 8px;
+    }
+    
+    .saw-select-responsive {
+        min-width: 100px;
+        max-width: 130px;
+        height: 38px;
+        font-size: 12px;
+    }
+}
+
+/* ============================================
+   DASHBOARD SPECIFIC
+   ============================================ */
+.saw-dashboard-row {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.saw-dashboard-col {
+    flex: 1;
+}
+
+@media (max-width: 1024px) {
+    .saw-dashboard-row {
+        flex-direction: column;
+        gap: 16px;
+    }
+}
+
+/* ============================================
+   MODAL - RESPONSIVE
+   ============================================ */
+.saw-modal {
     position: fixed;
-    bottom: 24px;
-    right: 24px;
-    width: 56px;
-    height: 56px;
-    background: #2563eb;
-    border: none;
-    border-radius: 50%;
-    color: white;
-    font-size: 24px;
-    cursor: pointer;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
-    z-index: 1000;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 20px;
+}
+
+.saw-modal-content {
+    background: white;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
 @media (max-width: 768px) {
-    .saw-mobile-menu-toggle {
-        display: flex;
-        align-items: center;
-        justify-content: center;
+    .saw-modal {
+        padding: 0;
+        align-items: flex-end;
     }
+    
+    .saw-modal-content {
+        max-height: 95vh;
+        border-radius: 16px 16px 0 0;
+    }
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+.saw-hide-mobile {
+    display: block;
+}
+
+.saw-show-mobile {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .saw-hide-mobile {
+        display: none;
+    }
+    
+    .saw-show-mobile {
+        display: block;
+    }
+}
+
+.saw-text-truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* ============================================
@@ -127,12 +581,34 @@
     .saw-app-header,
     .saw-app-sidebar,
     .saw-app-footer,
-    .saw-mobile-menu-toggle {
-        display: none;
+    .saw-sidebar-overlay,
+    .saw-page-actions,
+    .saw-quick-actions,
+    .saw-table-controls {
+        display: none !important;
+    }
+    
+    .saw-app-main {
+        margin-left: 0 !important;
     }
     
     .saw-app-content {
-        margin-left: 0;
-        padding: 0;
+        padding: 0 !important;
+        max-width: 100% !important;
+    }
+    
+    .saw-table-responsive-wrapper {
+        overflow: visible !important;
+        border: none !important;
+    }
+    
+    .saw-admin-table table {
+        border: 1px solid #000;
+        min-width: 0 !important;
+    }
+    
+    .saw-admin-table thead th,
+    .saw-admin-table tbody td {
+        border: 1px solid #000;
     }
 }
