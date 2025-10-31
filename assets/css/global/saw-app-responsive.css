@@ -91,39 +91,43 @@
 }
 
 /* ============================================
-   RESPONSIVE TABLE WRAPPER
+   RESPONSIVE TABLE WRAPPER - HORIZONTAL SCROLL
    ============================================ */
 .saw-table-responsive-wrapper {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    background: white;
+    margin: 0 -24px;
+    padding: 0 24px;
 }
 
 .saw-table-responsive-wrapper::-webkit-scrollbar {
-    height: 8px;
+    height: 10px;
 }
 
 .saw-table-responsive-wrapper::-webkit-scrollbar-track {
-    background: #f9fafb;
+    background: #f3f4f6;
+    border-radius: 5px;
 }
 
 .saw-table-responsive-wrapper::-webkit-scrollbar-thumb {
-    background: #d1d5db;
-    border-radius: 4px;
+    background: #9ca3af;
+    border-radius: 5px;
 }
 
 .saw-table-responsive-wrapper::-webkit-scrollbar-thumb:hover {
-    background: #9ca3af;
+    background: #6b7280;
 }
 
 /* ============================================
    TABULKY - RESPONSIVE
    ============================================ */
+.saw-admin-table {
+    overflow: visible;
+}
+
 .saw-admin-table table {
     width: 100%;
-    min-width: 900px;
+    min-width: 1000px;
     border-collapse: collapse;
 }
 
@@ -131,10 +135,34 @@
 .saw-admin-table tbody td {
     padding: 12px 16px;
     text-align: left;
+    white-space: nowrap;
+}
+
+/* Akce sloupec - vždy viditelný */
+.saw-admin-table thead th:last-child,
+.saw-admin-table tbody td:last-child {
+    position: sticky;
+    right: 0;
+    background: inherit;
+    box-shadow: -2px 0 4px rgba(0, 0, 0, 0.05);
+    z-index: 2;
+}
+
+.saw-admin-table thead th:last-child {
+    background: linear-gradient(180deg, #f9fafb 0%, #f3f4f6 100%);
+}
+
+.saw-admin-table tbody td:last-child {
+    background: #ffffff;
+}
+
+.saw-admin-table tbody tr:hover td:last-child {
+    background: #f9fafb;
 }
 
 /* Quick actions v tabulce */
-.saw-quick-actions {
+.saw-quick-actions,
+.saw-action-buttons {
     display: flex;
     gap: 8px;
     align-items: center;
@@ -142,7 +170,8 @@
     flex-wrap: nowrap;
 }
 
-.saw-quick-action-btn {
+.saw-quick-action-btn,
+.saw-action-btn {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -154,14 +183,17 @@
     cursor: pointer;
     transition: all 0.2s;
     white-space: nowrap;
+    flex-shrink: 0;
 }
 
-.saw-quick-action-btn:hover {
+.saw-quick-action-btn:hover,
+.saw-action-btn:hover {
     background: #f9fafb;
     border-color: #9ca3af;
 }
 
-.saw-quick-action-btn .dashicons {
+.saw-quick-action-btn .dashicons,
+.saw-action-btn .dashicons {
     font-size: 16px;
     width: 16px;
     height: 16px;
@@ -326,12 +358,10 @@
         padding: 16px;
     }
     
-    /* Responsive button na tablet */
     .saw-btn-responsive {
         padding: 8px 16px;
     }
     
-    /* Select filter na tablet */
     .saw-select-responsive {
         min-width: 140px;
         max-width: 180px;
@@ -387,22 +417,15 @@
         justify-content: center;
     }
     
-    /* Responsive button - jen ikona na mobile */
-    .saw-btn-responsive .saw-btn-text {
-        display: none;
+    /* Responsive button - změna na ikonu */
+    .saw-button-primary .dashicons {
+        display: inline-block;
     }
     
-    .saw-btn-responsive {
-        padding: 10px;
-        min-width: 44px;
-        justify-content: center;
+    .saw-button-primary {
+        padding: 10px 16px;
     }
     
-    .saw-btn-responsive .saw-btn-icon {
-        margin: 0;
-    }
-    
-    /* Select filter na mobile */
     .saw-select-responsive {
         min-width: 120px;
         max-width: 150px;
@@ -411,7 +434,6 @@
         padding: 0 36px 0 12px;
     }
     
-    /* Table controls na mobile */
     .saw-table-controls {
         flex-direction: column;
         align-items: stretch;
@@ -427,10 +449,15 @@
         justify-content: flex-start;
     }
     
-    /* Tabulky na mobile */
+    /* Tabulky na mobile - horizontální scroll */
+    .saw-table-responsive-wrapper {
+        margin: 0 -16px;
+        padding: 0 16px;
+    }
+    
     .saw-admin-table table {
         font-size: 13px;
-        min-width: 800px;
+        min-width: 900px;
     }
     
     .saw-admin-table thead th,
@@ -439,19 +466,21 @@
     }
     
     /* Quick actions na mobile - jen ikony */
-    .saw-quick-action-btn {
+    .saw-quick-action-btn,
+    .saw-action-btn {
         padding: 6px 8px;
     }
     
-    .saw-quick-action-btn .saw-action-text {
+    .saw-quick-action-btn .saw-action-text,
+    .saw-action-btn .saw-action-text {
         display: none;
     }
     
-    .saw-quick-action-btn .dashicons {
+    .saw-quick-action-btn .dashicons,
+    .saw-action-btn .dashicons {
         margin: 0;
     }
     
-    /* Forms na mobile */
     .saw-form-row input,
     .saw-form-row select,
     .saw-form-row textarea {
@@ -471,9 +500,24 @@
         font-size: 18px;
     }
     
+    /* Tlačítko jen ikona */
+    .saw-button-primary {
+        min-width: 44px;
+        padding: 10px;
+    }
+    
+    .saw-button-primary span:not(.dashicons) {
+        display: none;
+    }
+    
+    .saw-table-responsive-wrapper {
+        margin: 0 -8px;
+        padding: 0 8px;
+    }
+    
     .saw-admin-table table {
         font-size: 12px;
-        min-width: 700px;
+        min-width: 800px;
     }
     
     .saw-admin-table thead th,
@@ -599,7 +643,8 @@
     
     .saw-table-responsive-wrapper {
         overflow: visible !important;
-        border: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
     
     .saw-admin-table table {

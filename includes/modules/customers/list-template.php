@@ -19,7 +19,7 @@ if (!defined('ABSPATH')) {
         <h1 class="saw-page-title">Zákazníci</h1>
         <a href="<?php echo home_url('/admin/settings/customers/new/'); ?>" class="saw-button saw-button-primary">
             <span class="dashicons dashicons-plus-alt"></span>
-            Nový zákazník
+            <span>Nový zákazník</span>
         </a>
     </div>
 </div>
@@ -64,86 +64,90 @@ if (!defined('ABSPATH')) {
             </a>
         </div>
     <?php else: ?>
-        <div class="saw-admin-table saw-customers-table">
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width: 60px; text-align: center;">Logo</th>
-                        <th>
-                            <a href="?orderby=name&order=<?php echo ($orderby === 'name' && $order === 'ASC') ? 'DESC' : 'ASC'; ?>">
-                                Název
-                                <?php if ($orderby === 'name'): ?>
-                                    <span class="dashicons dashicons-arrow-<?php echo $order === 'ASC' ? 'up' : 'down'; ?>"></span>
-                                <?php endif; ?>
-                            </a>
-                        </th>
-                        <th>IČO</th>
-                        <th>Status</th>
-                        <th>Předplatné</th>
-                        <th style="width: 80px; text-align: center;">Barva</th>
-                        <th>Vytvořeno</th>
-                        <th style="width: 120px; text-align: center;">Akce</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($items as $item): ?>
-                        <tr class="saw-customer-row" data-id="<?php echo esc_attr($item['id']); ?>" style="cursor: pointer;">
-                            <td style="width: 60px; text-align: center; padding: 8px;">
-                                <?php if (!empty($item['logo_url'])): ?>
-                                    <div class="saw-customer-logo">
-                                        <img src="<?php echo esc_url($item['logo_url']); ?>" alt="<?php echo esc_attr($item['name']); ?>">
-                                    </div>
-                                <?php else: ?>
-                                    <div class="saw-customer-logo-placeholder">
-                                        <span class="dashicons dashicons-building"></span>
-                                    </div>
-                                <?php endif; ?>
-                            </td>
-                            <td class="saw-customer-name">
-                                <strong><?php echo esc_html($item['name']); ?></strong>
-                            </td>
-                            <td><?php echo esc_html($item['ico'] ?? '-'); ?></td>
-                            <td>
-                                <?php
-                                $status_badges = [
-                                    'potential' => '<span class="saw-badge saw-badge-warning">Potenciální</span>',
-                                    'active' => '<span class="saw-badge saw-badge-success">Aktivní</span>',
-                                    'inactive' => '<span class="saw-badge saw-badge-secondary">Neaktivní</span>',
-                                ];
-                                echo $status_badges[$item['status']] ?? esc_html($item['status']);
-                                ?>
-                            </td>
-                            <td>
-                                <?php
-                                $sub_labels = [
-                                    'free' => 'Zdarma',
-                                    'basic' => 'Basic',
-                                    'pro' => 'Pro',
-                                    'enterprise' => 'Enterprise',
-                                ];
-                                echo $sub_labels[$item['subscription_type'] ?? 'free'] ?? 'Zdarma';
-                                ?>
-                            </td>
-                            <td style="width: 80px; text-align: center;">
-                                <?php if (!empty($item['primary_color'])): ?>
-                                    <span class="saw-color-badge" style="background-color: <?php echo esc_attr($item['primary_color']); ?>;" title="<?php echo esc_attr($item['primary_color']); ?>"></span>
-                                <?php endif; ?>
-                            </td>
-                            <td>
-                                <?php echo !empty($item['created_at']) ? date_i18n('d.m.Y', strtotime($item['created_at'])) : '-'; ?>
-                            </td>
-                            <td style="width: 180px; text-align: center;">
-                                <a href="<?php echo home_url('/admin/settings/customers/edit/' . $item['id'] . '/'); ?>" class="saw-action-btn saw-action-edit" title="Upravit" onclick="event.stopPropagation();">
-                                    <span class="dashicons dashicons-edit"></span>
+        <div class="saw-table-responsive-wrapper">
+            <div class="saw-admin-table saw-customers-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 60px; text-align: center;">Logo</th>
+                            <th>
+                                <a href="?orderby=name&order=<?php echo ($orderby === 'name' && $order === 'ASC') ? 'DESC' : 'ASC'; ?>">
+                                    Název
+                                    <?php if ($orderby === 'name'): ?>
+                                        <span class="dashicons dashicons-arrow-<?php echo $order === 'ASC' ? 'up' : 'down'; ?>"></span>
+                                    <?php endif; ?>
                                 </a>
-                                <button type="button" class="saw-action-btn saw-action-delete saw-delete-btn" data-id="<?php echo esc_attr($item['id']); ?>" data-name="<?php echo esc_attr($item['name']); ?>" data-entity="customers" title="Smazat" onclick="event.stopPropagation();">
-                                    <span class="dashicons dashicons-trash"></span>
-                                </button>
-                            </td>
+                            </th>
+                            <th>IČO</th>
+                            <th>Status</th>
+                            <th>Předplatné</th>
+                            <th style="width: 80px; text-align: center;">Barva</th>
+                            <th>Vytvořeno</th>
+                            <th style="width: 120px; text-align: center;">Akce</th>
                         </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($items as $item): ?>
+                            <tr class="saw-customer-row" data-id="<?php echo esc_attr($item['id']); ?>" style="cursor: pointer;">
+                                <td style="width: 60px; text-align: center; padding: 8px;">
+                                    <?php if (!empty($item['logo_url'])): ?>
+                                        <div class="saw-customer-logo">
+                                            <img src="<?php echo esc_url($item['logo_url']); ?>" alt="<?php echo esc_attr($item['name']); ?>">
+                                        </div>
+                                    <?php else: ?>
+                                        <div class="saw-customer-logo-placeholder">
+                                            <span class="dashicons dashicons-building"></span>
+                                        </div>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="saw-customer-name">
+                                    <strong><?php echo esc_html($item['name']); ?></strong>
+                                </td>
+                                <td><?php echo esc_html($item['ico'] ?? '-'); ?></td>
+                                <td>
+                                    <?php
+                                    $status_badges = [
+                                        'potential' => '<span class="saw-badge saw-badge-warning">Potenciální</span>',
+                                        'active' => '<span class="saw-badge saw-badge-success">Aktivní</span>',
+                                        'inactive' => '<span class="saw-badge saw-badge-secondary">Neaktivní</span>',
+                                    ];
+                                    echo $status_badges[$item['status']] ?? esc_html($item['status']);
+                                    ?>
+                                </td>
+                                <td>
+                                    <?php
+                                    $sub_labels = [
+                                        'free' => 'Zdarma',
+                                        'basic' => 'Basic',
+                                        'pro' => 'Pro',
+                                        'enterprise' => 'Enterprise',
+                                    ];
+                                    echo $sub_labels[$item['subscription_type'] ?? 'free'] ?? 'Zdarma';
+                                    ?>
+                                </td>
+                                <td style="width: 80px; text-align: center;">
+                                    <?php if (!empty($item['primary_color'])): ?>
+                                        <span class="saw-color-badge" style="background-color: <?php echo esc_attr($item['primary_color']); ?>;" title="<?php echo esc_attr($item['primary_color']); ?>"></span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php echo !empty($item['created_at']) ? date_i18n('d.m.Y', strtotime($item['created_at'])) : '-'; ?>
+                                </td>
+                                <td style="width: 120px; text-align: center;">
+                                    <div class="saw-action-buttons">
+                                        <a href="<?php echo home_url('/admin/settings/customers/edit/' . $item['id'] . '/'); ?>" class="saw-action-btn saw-action-edit" title="Upravit" onclick="event.stopPropagation();">
+                                            <span class="dashicons dashicons-edit"></span>
+                                        </a>
+                                        <button type="button" class="saw-action-btn saw-action-delete saw-delete-btn" data-id="<?php echo esc_attr($item['id']); ?>" data-name="<?php echo esc_attr($item['name']); ?>" data-entity="customers" title="Smazat" onclick="event.stopPropagation();">
+                                            <span class="dashicons dashicons-trash"></span>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
         
         <?php if ($total_pages > 1): ?>

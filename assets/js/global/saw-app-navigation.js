@@ -178,8 +178,64 @@
 
         console.log('✅ Total inline scripts executed:', scriptsExecuted);
 
+        // Reinitialize event handlers
         $(document).trigger('saw:scripts-reinitialized');
         console.log('📢 Event triggered: saw:scripts-reinitialized');
+        
+        // Reinitialize table interactions
+        initTableInteractions();
+    }
+
+    function initTableInteractions() {
+        // Search form
+        $('.saw-search-form').off('submit').on('submit', function(e) {
+            e.preventDefault();
+            const searchValue = $(this).find('input[name="s"]').val();
+            const currentUrl = window.location.pathname;
+            const newUrl = currentUrl + '?s=' + encodeURIComponent(searchValue);
+            navigateToPage(newUrl);
+        });
+
+        // Filter selects
+        $('.saw-filter-select').off('change').on('change', function() {
+            const filterValue = $(this).val();
+            const filterName = $(this).attr('name');
+            const currentUrl = window.location.pathname;
+            const newUrl = currentUrl + '?' + filterName + '=' + encodeURIComponent(filterValue);
+            navigateToPage(newUrl);
+        });
+
+        // Delete buttons
+        $('.saw-delete-btn').off('click').on('click', function(e) {
+            e.stopPropagation();
+            const itemId = $(this).data('id');
+            const itemName = $(this).data('name');
+            
+            if (confirm('Opravdu chcete smazat: ' + itemName + '?')) {
+                deleteItem(itemId, $(this).data('entity'));
+            }
+        });
+
+        console.log('✅ Table interactions reinitialized');
+    }
+
+    function deleteItem(itemId, entity) {
+        $.ajax({
+            url: '/wp-admin/admin-ajax.php',
+            method: 'POST',
+            data: {
+                action: 'saw_delete_' + entity,
+                id: itemId,
+                nonce: $('#saw_nonce').val()
+            },
+            success: function(response) {
+                if (response.success) {
+                    window.location.reload();
+                } else {
+                    alert('Chyba při mazání');
+                }
+            }
+        });
     }
 
     function updateBrowserURL(url, title) {
@@ -238,6 +294,9 @@
                 console.log('📍 Initial active menu set:', candidate);
             }
         }
+        
+        // Initialize table interactions on load
+        initTableInteractions();
     }
 
     function deriveMenuFromURL(pathname) {
