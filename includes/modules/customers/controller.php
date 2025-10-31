@@ -24,20 +24,13 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         require_once __DIR__ . '/model.php';
         $this->model = new SAW_Module_Customers_Model($this->config);
         
-        // ✅ KRITICKÉ: Registruj AJAX handlery
         $this->register_ajax_handlers();
         
-        // ✅ PŘIDÁNO: Registruj custom AJAX handlery
         add_action('wp_ajax_saw_get_customers_for_switcher', [$this, 'ajax_get_customers_for_switcher']);
         add_action('wp_ajax_saw_switch_customer', [$this, 'ajax_switch_customer']);
-        
-        // ✅ PŘIDÁNO: Alias pro modal (saw_get_customers_detail)
         add_action('wp_ajax_saw_get_customers_detail', [$this, 'ajax_get_detail']);
     }
     
-    /**
-     * Override: Before save (logo upload handling)
-     */
     protected function before_save($data) {
         if (!empty($_FILES['logo']['name'])) {
             $upload = $this->handle_logo_upload($_FILES['logo']);
@@ -59,9 +52,6 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         return $data;
     }
     
-    /**
-     * Override: After save (cache invalidation)
-     */
     protected function after_save($id) {
         delete_transient('customers_list');
         delete_transient('customers_count');
@@ -71,9 +61,6 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         }
     }
     
-    /**
-     * Override: Before delete (logo cleanup)
-     */
     protected function before_delete($id) {
         $customer = $this->model->get_by_id($id);
         
@@ -84,9 +71,6 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         return true;
     }
     
-    /**
-     * Custom: Logo upload
-     */
     private function handle_logo_upload($file) {
         $allowed_mimes = ['image/jpeg', 'image/png', 'image/gif'];
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
@@ -121,9 +105,6 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         return new WP_Error('upload_failed', 'Nahrání souboru selhalo');
     }
     
-    /**
-     * Custom: Delete old logo file
-     */
     private function delete_old_logo($logo_url) {
         $upload_dir = wp_upload_dir();
         $logo_path = str_replace($upload_dir['baseurl'], $upload_dir['basedir'], $logo_url);
@@ -133,9 +114,6 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         }
     }
     
-    /**
-     * Override: Format detail data
-     */
     protected function format_detail_data($item) {
         $status_labels = [
             'potential' => 'Potenciální',
@@ -157,30 +135,20 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         ];
         
         $item['status_label'] = $status_labels[$item['status']] ?? $item['status'];
-        $item['admin_language_label'] = $language_labels[$item['admin_language'] ?? 'cs'] ?? 'Čeština';
+        $item['admin_language_label'] = $language_labels[$item['admin_language_default'] ?? 'cs'] ?? 'Čeština';
         $item['subscription_type_label'] = $subscription_labels[$item['subscription_type'] ?? 'free'] ?? 'Zdarma';
         
-        $item['formatted_operational_address'] = trim(
-            ($item['address_street'] ?? '') . ' ' . 
-            ($item['address_number'] ?? '') . ', ' . 
-            ($item['address_city'] ?? '') . ' ' . 
-            ($item['address_zip'] ?? '')
-        );
+        $operational_parts = array_filter([
+            trim(($item['address_street'] ?? '') . ' ' . ($item['address_number'] ?? '')),
+            ($item['address_city'] ?? '') . ' ' . ($item['address_zip'] ?? '')
+        ]);
+        $item['formatted_operational_address'] = implode(', ', $operational_parts);
         
-        if ($item['formatted_operational_address'] === ', ') {
-            $item['formatted_operational_address'] = '';
-        }
-        
-        $item['formatted_billing_address'] = trim(
-            ($item['billing_address_street'] ?? '') . ' ' . 
-            ($item['billing_address_number'] ?? '') . ', ' . 
-            ($item['billing_address_city'] ?? '') . ' ' . 
-            ($item['billing_address_zip'] ?? '')
-        );
-        
-        if ($item['formatted_billing_address'] === ', ') {
-            $item['formatted_billing_address'] = '';
-        }
+        $billing_parts = array_filter([
+            trim(($item['billing_address_street'] ?? '') . ' ' . ($item['billing_address_number'] ?? '')),
+            ($item['billing_address_city'] ?? '') . ' ' . ($item['billing_address_zip'] ?? '')
+        ]);
+        $item['formatted_billing_address'] = implode(', ', $billing_parts);
         
         if (!empty($item['created_at'])) {
             $item['created_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['created_at']));
@@ -193,9 +161,6 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         return $item;
     }
     
-    /**
-     * Custom AJAX: Get customers for switcher
-     */
     public function ajax_get_customers_for_switcher() {
         check_ajax_referer('saw_customer_switcher_nonce', 'nonce');
         
@@ -217,9 +182,6 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         ]);
     }
     
-    /**
-     * Custom AJAX: Switch customer
-     */
     public function ajax_switch_customer() {
         check_ajax_referer('saw_customer_switcher_nonce', 'nonce');
         
