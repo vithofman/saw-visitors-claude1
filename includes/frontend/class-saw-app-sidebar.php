@@ -162,7 +162,7 @@ class SAW_App_Sidebar {
                     ),
                     array(
                         'id' => 'account-types',
-                        'label' => 'Account Types',
+                        'label' => 'Typy účtů',
                         'url' => '/admin/settings/account-types',
                         'icon' => '💳',
                     ),

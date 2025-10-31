@@ -1,0 +1,285 @@
+/**
+ * Account Types Module Styles
+ * 
+ * Styling specifický pro account types modul:
+ * - Color badges v tabulce a formuláři
+ * - Code badges pro interní názvy
+ * - Features list styling
+ * - Input addons (pro Kč u price)
+ * - Sort order badges
+ * 
+ * @package SAW_Visitors
+ * @version 1.0.0
+ * @since   4.9.0
+ */
+
+/* ============================================
+   COLOR BADGES (v tabulce)
+   ============================================ */
+
+.saw-color-badge {
+    display: inline-block;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    vertical-align: middle;
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 1px #e5e7eb, 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+}
+
+.saw-color-badge:hover {
+    transform: scale(1.2);
+    box-shadow: 0 0 0 2px #e5e7eb, 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* ============================================
+   CODE BADGES (pro interní názvy / slugs)
+   ============================================ */
+
+.saw-code-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    letter-spacing: 0.5px;
+}
+
+/* ============================================
+   SORT ORDER BADGES
+   ============================================ */
+
+.saw-sort-order-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: #f9fafb;
+    border: 2px solid #e5e7eb;
+    border-radius: 50%;
+    font-weight: 600;
+    font-size: 13px;
+    color: #6b7280;
+}
+
+/* ============================================
+   FORM: COLOR PICKER
+   ============================================ */
+
+.saw-color-picker-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.saw-color-picker {
+    width: 56px;
+    height: 56px;
+    border: 2px solid #dcdcde;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 4px;
+    background: #fff;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.saw-color-picker::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.saw-color-picker::-webkit-color-swatch {
+    border: none;
+    border-radius: 8px;
+}
+
+.saw-color-picker:hover {
+    border-color: #0073aa;
+    box-shadow: 0 4px 12px rgba(0, 115, 170, 0.15);
+    transform: translateY(-2px);
+}
+
+.saw-color-value {
+    flex: 1;
+    max-width: 140px;
+    padding: 14px 16px;
+    border: 2px solid #dcdcde;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.2s ease;
+    text-align: center;
+    background: #f9fafb;
+}
+
+/* Color preview v formuláři */
+.saw-color-preview {
+    display: flex;
+    align-items: center;
+    padding: 16px 0;
+}
+
+.saw-color-preview .saw-badge {
+    font-size: 14px;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* ============================================
+   FORM: INPUT WITH ADDON (price s "Kč")
+   ============================================ */
+
+.saw-input-with-addon {
+    display: flex;
+    align-items: stretch;
+    position: relative;
+}
+
+.saw-input-with-addon .saw-input {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-right: none;
+    flex: 1;
+}
+
+.saw-input-addon {
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    background: #f9fafb;
+    border: 2px solid #dcdcde;
+    border-left: none;
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px;
+    font-weight: 600;
+    color: #6b7280;
+    font-size: 14px;
+}
+
+/* ============================================
+   FORM: FEATURES TEXTAREA
+   ============================================ */
+
+#features {
+    font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.8;
+}
+
+/* ============================================
+   TABLE: ACCOUNT TYPE ROW
+   ============================================ */
+
+.saw-account-type-row:hover {
+    background-color: #f9fafb !important;
+}
+
+.saw-account-type-name strong {
+    font-size: 15px;
+    color: #111827;
+}
+
+/* ============================================
+   ACTION BUTTONS
+   ============================================ */
+
+.saw-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    margin: 0 4px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.saw-action-btn .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: #6b7280;
+}
+
+.saw-action-edit:hover {
+    background: #eff6ff;
+}
+
+.saw-action-edit:hover .dashicons {
+    color: #2563eb;
+}
+
+.saw-action-delete:hover {
+    background: #fef2f2;
+}
+
+.saw-action-delete:hover .dashicons {
+    color: #dc2626;
+}
+
+/* ============================================
+   BADGE VARIATIONS (info badge pro features count)
+   ============================================ */
+
+.saw-badge-info {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+/* ============================================
+   HELPER: TEXT MUTED (pro "Zdarma", "—")
+   ============================================ */
+
+.saw-text-muted {
+    color: #9ca3af;
+    font-size: 13px;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media screen and (max-width: 768px) {
+    .saw-color-picker-wrapper {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .saw-color-value {
+        max-width: 100%;
+    }
+    
+    .saw-action-btn {
+        width: 32px;
+        height: 32px;
+        margin: 0 2px;
+    }
+    
+    .saw-action-btn .dashicons {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+    }
+    
+    .saw-code-badge {
+        font-size: 11px;
+        padding: 3px 8px;
+    }
+}
