@@ -3,7 +3,7 @@
  * SAW App Sidebar Component
  * 
  * @package SAW_Visitors
- * @version 4.6.1
+ * @version 4.7.0
  * @since 4.6.1
  */
 
@@ -29,13 +29,19 @@ class SAW_App_Sidebar {
     private $active_menu;
     
     /**
+     * @var array|null
+     */
+    private $current_branch;
+    
+    /**
      * Konstruktor
      * 
-     * @param array|null  $user        User data
-     * @param array|null  $customer    Customer data
-     * @param string      $active_menu Active menu ID
+     * @param array|null  $user           User data
+     * @param array|null  $customer       Customer data
+     * @param string      $active_menu    Active menu ID
+     * @param array|null  $current_branch Current branch data
      */
-    public function __construct($user = null, $customer = null, $active_menu = '') {
+    public function __construct($user = null, $customer = null, $active_menu = '', $current_branch = null) {
         $this->user = $user ?: array('role' => 'admin');
         $this->customer = $customer ?: array(
             'id' => 0,
@@ -43,6 +49,7 @@ class SAW_App_Sidebar {
             'logo_url' => '',
         );
         $this->active_menu = $active_menu;
+        $this->current_branch = $current_branch;
     }
     
     /**
@@ -94,6 +101,9 @@ class SAW_App_Sidebar {
                     </svg>
                 </button>
             </div>
+            
+            <?php $this->render_branch_switcher(); ?>
+            
             <nav class="saw-sidebar-nav">
                 <?php foreach ($menu as $section): ?>
                     <?php if (isset($section['heading'])): ?>
@@ -114,6 +124,18 @@ class SAW_App_Sidebar {
             </nav>
         </aside>
         <?php
+    }
+    
+    /**
+     * Render Branch Switcher (první položka v sidebaru)
+     */
+    private function render_branch_switcher() {
+        if (!class_exists('SAW_Component_Branch_Switcher')) {
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/branch-switcher/class-saw-component-branch-switcher.php';
+        }
+        
+        $switcher = new SAW_Component_Branch_Switcher($this->customer['id'], $this->current_branch);
+        $switcher->render();
     }
     
     /**

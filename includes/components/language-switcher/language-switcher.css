@@ -1,0 +1,134 @@
+/**
+ * SAW Language Switcher - Styles
+ * 
+ * @package SAW_Visitors
+ * @since 4.7.0
+ */
+
+/* ============================================
+   LANGUAGE SWITCHER (v headeru)
+   ============================================ */
+.saw-language-switcher {
+    position: relative;
+}
+
+.saw-language-switcher-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.saw-language-switcher-button:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+}
+
+.saw-language-switcher-button:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.saw-language-flag {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.saw-language-code {
+    font-size: 13px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.saw-language-arrow {
+    flex-shrink: 0;
+    color: #6b7280;
+    transition: transform 0.2s;
+}
+
+.saw-language-switcher-button:hover .saw-language-arrow {
+    color: #111827;
+}
+
+/* ============================================
+   DROPDOWN
+   ============================================ */
+.saw-language-switcher-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 180px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    padding: 8px;
+    display: none;
+    z-index: 1001;
+}
+
+.saw-language-switcher-dropdown.active {
+    display: block;
+}
+
+/* ============================================
+   LANGUAGE ITEMS
+   ============================================ */
+.saw-language-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.saw-language-item:hover {
+    background: #f3f4f6;
+}
+
+.saw-language-item.active {
+    background: #eff6ff;
+}
+
+.saw-language-item-flag {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.saw-language-item-name {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 500;
+    color: #111827;
+}
+
+.saw-language-item-check {
+    font-size: 16px;
+    color: #2563eb;
+    flex-shrink: 0;
+}
+
+/* ============================================
+   MOBILE RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+    .saw-language-code {
+        display: none;
+    }
+    
+    .saw-language-switcher-button {
+        padding: 8px;
+    }
+    
+    .saw-language-switcher-dropdown {
+        min-width: 160px;
+    }
+}

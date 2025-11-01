@@ -1,0 +1,220 @@
+/**
+ * SAW Branch Switcher - Styles
+ * 
+ * @package SAW_Visitors
+ * @since 4.7.0
+ */
+
+/* ============================================
+   BRANCH SWITCHER (v sidebaru)
+   ============================================ */
+.saw-branch-switcher {
+    position: relative;
+    margin: 12px 16px;
+}
+
+.saw-branch-switcher-button {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 12px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.saw-branch-switcher-button:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+}
+
+.saw-branch-switcher-button:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.saw-branch-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.saw-branch-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+
+.saw-branch-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6b7280;
+}
+
+.saw-branch-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #111827;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.saw-branch-arrow {
+    flex-shrink: 0;
+    color: #6b7280;
+    transition: transform 0.2s;
+}
+
+.saw-branch-switcher-button:hover .saw-branch-arrow {
+    color: #111827;
+}
+
+/* ============================================
+   DROPDOWN
+   ============================================ */
+.saw-branch-switcher-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    max-height: 360px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    display: none;
+    flex-direction: column;
+    z-index: 1000;
+}
+
+.saw-branch-switcher-dropdown.active {
+    display: flex;
+}
+
+.saw-branch-list {
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.saw-branch-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.saw-branch-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.saw-branch-list::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 3px;
+}
+
+.saw-branch-list::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* ============================================
+   BRANCH ITEMS
+   ============================================ */
+.saw-branch-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.saw-branch-item:hover {
+    background: #f3f4f6;
+}
+
+.saw-branch-item.active {
+    background: #eff6ff;
+}
+
+.saw-branch-item-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.saw-branch-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.saw-branch-item-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #111827;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.saw-branch-item-address {
+    font-size: 11px;
+    color: #6b7280;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.saw-branch-item-check {
+    font-size: 16px;
+    color: #2563eb;
+    flex-shrink: 0;
+}
+
+/* ============================================
+   STATES
+   ============================================ */
+.saw-branch-loading,
+.saw-branch-error,
+.saw-branch-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 24px 16px;
+    text-align: center;
+    color: #6b7280;
+    font-size: 13px;
+}
+
+.saw-branch-error {
+    color: #ef4444;
+}
+
+.saw-spinner {
+    width: 20px;
+    height: 20px;
+    border: 3px solid #e5e7eb;
+    border-top-color: #2563eb;
+    border-radius: 50%;
+    animation: saw-spin 0.8s linear infinite;
+}
+
+@keyframes saw-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ============================================
+   MOBILE RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+    .saw-branch-switcher {
+        margin: 12px 12px;
+    }
+}
