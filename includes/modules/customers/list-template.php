@@ -4,11 +4,8 @@
  * 
  * Template pro výpis zákazníků s podporou modal detailu.
  * 
- * ✅ OPRAVA v4.9.0: Používá univerzální saw_ajax_nonce místo saw_customer_modal_nonce
- * 
  * @package SAW_Visitors
- * @version 4.9.0
- * @since   4.6.1
+ * @version 5.0.0
  */
 
 if (!defined('ABSPATH')) {
@@ -23,15 +20,21 @@ if (!class_exists('SAW_Component_Search')) {
 if (!class_exists('SAW_Component_Selectbox')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/selectbox/class-saw-component-selectbox.php';
 }
-
-if (!class_exists('SAW_Component_Modal')) {
-    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/modal/class-saw-component-modal.php';
-}
 ?>
 
-<!-- ========================================
-     PAGE HEADER
-     ======================================== -->
+<!-- FORCE CLEANUP: Remove all modals on page load -->
+<script>
+jQuery(document).ready(function($) {
+    console.log('[CUSTOMERS] Force removing all modals');
+    $('[id*="saw-modal-"]').remove();
+    $('.saw-modal').remove();
+    $('.saw-modal-overlay').remove();
+    $('.modal-backdrop').remove();
+    $('body').removeClass('modal-open saw-modal-open');
+});
+</script>
+
+<!-- PAGE HEADER -->
 <div class="saw-page-header">
     <div class="saw-page-header-content">
         <h1 class="saw-page-title">Zákazníci</h1>
@@ -42,12 +45,10 @@ if (!class_exists('SAW_Component_Modal')) {
     </div>
 </div>
 
-<!-- ========================================
-     LIST CONTAINER
-     ======================================== -->
+<!-- LIST CONTAINER -->
 <div class="saw-list-container">
     
-    <!-- TABLE CONTROLS (Search + Filters) -->
+    <!-- TABLE CONTROLS -->
     <div class="saw-table-controls">
         
         <!-- SEARCH -->
@@ -244,14 +245,14 @@ if (!class_exists('SAW_Component_Modal')) {
     
 </div>
 
-<!-- ========================================
-     MODAL DETAIL
-     ======================================== -->
+<!-- MODAL DETAIL - Dynamicky generovaný -->
 <?php
-// ✅ OPRAVA: Použij univerzální SAW nonce místo custom customer nonce
+if (!class_exists('SAW_Component_Modal')) {
+    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/modal/class-saw-component-modal.php';
+}
+
 $ajax_nonce = wp_create_nonce('saw_ajax_nonce');
 
-// Render Customer Detail Modal with HEADER ACTIONS
 $customer_modal = new SAW_Component_Modal('customer-detail', array(
     'title' => 'Detail zákazníka',
     'ajax_enabled' => true,
@@ -260,20 +261,16 @@ $customer_modal = new SAW_Component_Modal('customer-detail', array(
     'show_close' => true,
     'close_on_backdrop' => true,
     'close_on_escape' => true,
-    
-    // Header akce (Edit + Delete) - jen ikony
     'header_actions' => array(
-        // Edit button - přesměruje na edit stránku
         array(
             'type' => 'edit',
-            'label' => '', // Prázdný label = jen ikona
+            'label' => '',
             'icon' => 'dashicons-edit',
-            'url' => home_url('/admin/settings/customers/edit/{id}/'), // {id} bude nahrazeno
+            'url' => home_url('/admin/settings/customers/edit/{id}/'),
         ),
-        // Delete button - smaže přes AJAX
         array(
             'type' => 'delete',
-            'label' => '', // Prázdný label = jen ikona
+            'label' => '',
             'icon' => 'dashicons-trash',
             'confirm' => true,
             'confirm_message' => 'Opravdu chcete smazat tohoto zákazníka?',
@@ -284,14 +281,13 @@ $customer_modal = new SAW_Component_Modal('customer-detail', array(
 $customer_modal->render();
 ?>
 
-<!-- ========================================
-     JAVASCRIPT
-     ======================================== -->
+<!-- JAVASCRIPT -->
 <script>
 jQuery(document).ready(function($) {
-    // Customer row click handler - otevře modal detail
+    console.log('[CUSTOMERS] Initializing table interactions');
+    
+    // Customer row click handler
     $('.saw-customer-row').on('click', function(e) {
-        // Don't open modal if clicking on action buttons
         if ($(e.target).closest('button, a, .saw-action-buttons').length > 0) {
             return;
         }
@@ -299,21 +295,22 @@ jQuery(document).ready(function($) {
         const customerId = $(this).data('id');
         
         if (!customerId) {
-            console.error('Customer ID not found');
+            console.error('[CUSTOMERS] Customer ID not found');
             return;
         }
         
-        console.log('Opening customer detail modal for ID:', customerId);
+        console.log('[CUSTOMERS] Opening customer detail modal for ID:', customerId);
         
-        // ✅ OPRAVA: Použij univerzální SAW nonce
         if (typeof SAWModal !== 'undefined') {
             SAWModal.open('customer-detail', {
                 id: customerId,
-                nonce: '<?php echo $ajax_nonce; ?>'  // ← Univerzální nonce
+                nonce: '<?php echo $ajax_nonce; ?>'
             });
         } else {
-            console.error('SAWModal is not defined');
+            console.error('[CUSTOMERS] SAWModal is not defined');
         }
     });
+    
+    console.log('[CUSTOMERS] Table interactions initialized');
 });
 </script>
