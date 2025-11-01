@@ -1,9 +1,9 @@
 <?php
 /**
- * Module Style Manager - ULTRA BRUTAL VERSION
+ * Module Style Manager
  * 
  * @package SAW_Visitors
- * @version 3.0.0 - ULTRA BRUTAL
+ * @version 4.0.0 - NO CLEANUP VERSION
  */
 
 if (!defined('ABSPATH')) {
@@ -24,8 +24,7 @@ class SAW_Module_Style_Manager
     }
     
     private function __construct() {
-        // Cleanup OKAMŽITĚ při každém page load
-        add_action('admin_head', [$this, 'inject_immediate_cleanup'], 1);
+        // Žádný cleanup - necháme to na PHP full page reload
     }
     
     public function get_module_css($module_slug) {
@@ -61,92 +60,6 @@ class SAW_Module_Style_Manager
         );
         
         return $output;
-    }
-    
-    /**
-     * ULTRA BRUTAL IMMEDIATE CLEANUP
-     * 
-     * Běží IHNED v <head>, PŘED jakýmkoliv contentem
-     */
-    public function inject_immediate_cleanup() {
-        ?>
-        <script type="text/javascript">
-        (function() {
-            'use strict';
-            
-            console.log('[SAW-ULTRA-BRUTAL] IMMEDIATE cleanup starting...');
-            
-            // Funkce která se spustí OKAMŽITĚ a OPAKOVANĚ
-            function brutalCleanup() {
-                // 1. SMAŽ všechny staré wrappery
-                const allWrappers = document.querySelectorAll('[class*="saw-module-"]');
-                if (allWrappers.length > 1) {
-                    console.log('[SAW-ULTRA-BRUTAL] Found ' + allWrappers.length + ' wrappers, removing old ones');
-                    for (let i = 0; i < allWrappers.length - 1; i++) {
-                        console.log('[SAW-ULTRA-BRUTAL] Removing wrapper:', allWrappers[i].className);
-                        allWrappers[i].remove();
-                    }
-                }
-                
-                // 2. SMAŽ VŠECHNY modaly
-                const allModals = document.querySelectorAll('[id*="saw-modal-"], .saw-modal');
-                if (allModals.length > 0) {
-                    console.log('[SAW-ULTRA-BRUTAL] Removing ' + allModals.length + ' modals');
-                    allModals.forEach(function(modal) {
-                        modal.remove();
-                    });
-                }
-                
-                // 3. SMAŽ VŠECHNY overlays
-                const allOverlays = document.querySelectorAll('.saw-modal-overlay, .modal-backdrop, [class*="overlay"]');
-                if (allOverlays.length > 0) {
-                    console.log('[SAW-ULTRA-BRUTAL] Removing ' + allOverlays.length + ' overlays');
-                    allOverlays.forEach(function(overlay) {
-                        overlay.remove();
-                    });
-                }
-                
-                // 4. VYČISTI body
-                document.body.classList.remove('modal-open', 'saw-modal-open', 'saw-modal-active');
-                document.body.style.overflow = '';
-                document.body.style.paddingRight = '';
-                document.body.style.height = '';
-                document.body.style.position = '';
-                
-                console.log('[SAW-ULTRA-BRUTAL] Cleanup done');
-            }
-            
-            // Spusť OKAMŽITĚ
-            brutalCleanup();
-            
-            // Spusť po DOMContentLoaded
-            document.addEventListener('DOMContentLoaded', function() {
-                console.log('[SAW-ULTRA-BRUTAL] DOMContentLoaded cleanup');
-                brutalCleanup();
-            });
-            
-            // Spusť po window.load
-            window.addEventListener('load', function() {
-                console.log('[SAW-ULTRA-BRUTAL] window.load cleanup');
-                brutalCleanup();
-            });
-            
-            // Spusť po každé změně URL (pro SPA navigaci)
-            let lastUrl = location.href;
-            new MutationObserver(function() {
-                const url = location.href;
-                if (url !== lastUrl) {
-                    lastUrl = url;
-                    console.log('[SAW-ULTRA-BRUTAL] URL changed, cleaning up');
-                    setTimeout(brutalCleanup, 100);
-                }
-            }).observe(document, {subtree: true, childList: true});
-            
-            console.log('[SAW-ULTRA-BRUTAL] Cleanup system initialized');
-            
-        })();
-        </script>
-        <?php
     }
     
     public function get_active_module() {

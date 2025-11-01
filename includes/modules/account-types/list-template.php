@@ -3,7 +3,7 @@
  * Account Types List Template
  * 
  * @package SAW_Visitors
- * @version 5.2.0 - INSTANT CLEANUP
+ * @version 6.0.0 - NO CLEANUP (jako customers)
  */
 
 if (!defined('ABSPATH')) {
@@ -14,36 +14,6 @@ if (!class_exists('SAW_Component_Search')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/search/class-saw-component-search.php';
 }
 ?>
-
-<!-- INSTANT MODAL CLEANUP - SPUSTÍ SE OKAMŽITĚ -->
-<script>
-(function() {
-    console.log('[ACCOUNT-TYPES-INSTANT-CLEANUP] Running...');
-    
-    function cleanup() {
-        var modals = document.querySelectorAll('[id*="saw-modal-"], .saw-modal');
-        if (modals.length > 0) {
-            console.log('[ACCOUNT-TYPES-INSTANT-CLEANUP] Removing ' + modals.length + ' modals');
-            modals.forEach(function(el) { el.remove(); });
-        }
-        
-        var overlays = document.querySelectorAll('.saw-modal-overlay, .modal-backdrop');
-        if (overlays.length > 0) {
-            console.log('[ACCOUNT-TYPES-INSTANT-CLEANUP] Removing ' + overlays.length + ' overlays');
-            overlays.forEach(function(el) { el.remove(); });
-        }
-        
-        document.body.classList.remove('modal-open', 'saw-modal-open', 'saw-modal-active');
-        document.body.style.overflow = '';
-        document.body.style.paddingRight = '';
-        
-        console.log('[ACCOUNT-TYPES-INSTANT-CLEANUP] Done!');
-    }
-    
-    cleanup();
-    setTimeout(cleanup, 50);
-})();
-</script>
 
 <div class="saw-page-header">
     <div class="saw-page-header-content">
@@ -58,12 +28,14 @@ if (!class_exists('SAW_Component_Search')) {
 <div class="saw-list-container">
     
     <div class="saw-table-controls">
+        
         <div class="saw-search-form">
             <?php
             $search_component = new SAW_Component_Search('account-types', array(
                 'placeholder' => 'Hledat typ účtu...',
                 'search_value' => $search,
                 'ajax_enabled' => false,
+                'ajax_action' => 'saw_search_account_types',
                 'show_button' => true,
                 'show_info_banner' => true,
                 'info_banner_label' => 'Vyhledávání:',
@@ -75,7 +47,7 @@ if (!class_exists('SAW_Component_Search')) {
         
         <div class="saw-filters">
             <select name="status" class="saw-select-responsive" onchange="window.location.href='?status=' + this.value">
-                <option value="">Vyberte...</option>
+                <option value="">Všechny statusy</option>
                 <option value="active" <?php selected($_GET['status'] ?? '', 'active'); ?>>Aktivní</option>
                 <option value="inactive" <?php selected($_GET['status'] ?? '', 'inactive'); ?>>Neaktivní</option>
             </select>
@@ -93,7 +65,7 @@ if (!class_exists('SAW_Component_Search')) {
     <?php else: ?>
         
         <div class="saw-table-responsive-wrapper">
-            <table class="saw-admin-table">
+            <table class="saw-admin-table saw-account-types-table">
                 <thead>
                     <tr>
                         <th style="width: 80px; text-align: center;">Barva</th>
@@ -159,7 +131,7 @@ if (!class_exists('SAW_Component_Search')) {
                                 <div class="saw-action-buttons">
                                     <a href="<?php echo home_url('/admin/settings/account-types/edit/' . $item['id'] . '/'); ?>" 
                                        class="saw-action-btn saw-action-edit" 
-                                       title="Upravit"
+                                       title="Upravit" 
                                        onclick="event.stopPropagation();">
                                         <span class="dashicons dashicons-edit"></span>
                                     </a>
@@ -168,7 +140,7 @@ if (!class_exists('SAW_Component_Search')) {
                                             data-id="<?php echo esc_attr($item['id']); ?>" 
                                             data-name="<?php echo esc_attr($item['display_name']); ?>" 
                                             data-entity="account-types" 
-                                            title="Smazat"
+                                            title="Smazat" 
                                             onclick="event.stopPropagation();">
                                         <span class="dashicons dashicons-trash"></span>
                                     </button>
@@ -211,7 +183,7 @@ if (!class_exists('SAW_Component_Search')) {
 </div>
 
 <?php
-// MODAL - vytvoří se AŽ TADY (po cleanup scriptu)
+// MODAL
 if (!class_exists('SAW_Component_Modal')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/modal/class-saw-component-modal.php';
 }
@@ -248,7 +220,7 @@ $account_type_modal->render();
 
 <script>
 jQuery(document).ready(function($) {
-    console.log('[ACCOUNT-TYPES] Initializing table interactions');
+    console.log('[ACCOUNT-TYPES] Initializing');
     
     $('.saw-account-type-row').on('click', function(e) {
         if ($(e.target).closest('button, a, .saw-action-buttons').length > 0) {
@@ -262,7 +234,7 @@ jQuery(document).ready(function($) {
             return;
         }
         
-        console.log('[ACCOUNT-TYPES] Opening account type detail modal for ID:', accountTypeId);
+        console.log('[ACCOUNT-TYPES] Opening modal for ID:', accountTypeId);
         
         if (typeof SAWModal !== 'undefined') {
             SAWModal.open('account-type-detail', {
@@ -270,10 +242,8 @@ jQuery(document).ready(function($) {
                 nonce: '<?php echo $ajax_nonce; ?>'
             });
         } else {
-            console.error('[ACCOUNT-TYPES] SAWModal is not defined');
+            console.error('[ACCOUNT-TYPES] SAWModal not defined');
         }
     });
-    
-    console.log('[ACCOUNT-TYPES] Table interactions initialized');
 });
 </script>

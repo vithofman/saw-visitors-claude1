@@ -3,7 +3,7 @@
  * Customers List Template
  * 
  * @package SAW_Visitors
- * @version 5.2.0 - INSTANT CLEANUP
+ * @version 6.0.0 - NO CLEANUP, FULL PAGE RELOAD ONLY
  */
 
 if (!defined('ABSPATH')) {
@@ -19,37 +19,6 @@ if (!class_exists('SAW_Component_Selectbox')) {
 }
 ?>
 
-<!-- INSTANT MODAL CLEANUP - SPUSTÍ SE OKAMŽITĚ -->
-<script>
-(function() {
-    console.log('[CUSTOMERS-INSTANT-CLEANUP] Running...');
-    
-    function cleanup() {
-        var modals = document.querySelectorAll('[id*="saw-modal-"], .saw-modal');
-        if (modals.length > 0) {
-            console.log('[CUSTOMERS-INSTANT-CLEANUP] Removing ' + modals.length + ' modals');
-            modals.forEach(function(el) { el.remove(); });
-        }
-        
-        var overlays = document.querySelectorAll('.saw-modal-overlay, .modal-backdrop');
-        if (overlays.length > 0) {
-            console.log('[CUSTOMERS-INSTANT-CLEANUP] Removing ' + overlays.length + ' overlays');
-            overlays.forEach(function(el) { el.remove(); });
-        }
-        
-        document.body.classList.remove('modal-open', 'saw-modal-open', 'saw-modal-active');
-        document.body.style.overflow = '';
-        document.body.style.paddingRight = '';
-        
-        console.log('[CUSTOMERS-INSTANT-CLEANUP] Done!');
-    }
-    
-    cleanup();
-    setTimeout(cleanup, 50);
-})();
-</script>
-
-<!-- PAGE HEADER -->
 <div class="saw-page-header">
     <div class="saw-page-header-content">
         <h1 class="saw-page-title">Zákazníci</h1>
@@ -60,13 +29,10 @@ if (!class_exists('SAW_Component_Selectbox')) {
     </div>
 </div>
 
-<!-- LIST CONTAINER -->
 <div class="saw-list-container">
     
-    <!-- TABLE CONTROLS -->
     <div class="saw-table-controls">
         
-        <!-- SEARCH -->
         <div class="saw-search-form">
             <?php
             $search_component = new SAW_Component_Search('customers', array(
@@ -83,7 +49,6 @@ if (!class_exists('SAW_Component_Selectbox')) {
             ?>
         </div>
         
-        <!-- FILTERS -->
         <?php if (!empty($this->config['list_config']['filters']['status'])): ?>
             <div class="saw-filters">
                 <?php
@@ -106,7 +71,6 @@ if (!class_exists('SAW_Component_Selectbox')) {
         <?php endif; ?>
     </div>
     
-    <!-- EMPTY STATE nebo TABLE -->
     <?php if (empty($items)): ?>
         <div class="saw-empty-state">
             <span class="dashicons dashicons-info"></span>
@@ -117,7 +81,6 @@ if (!class_exists('SAW_Component_Selectbox')) {
         </div>
     <?php else: ?>
         
-        <!-- TABLE -->
         <div class="saw-table-responsive-wrapper">
             <table class="saw-admin-table saw-customers-table">
                 <thead>
@@ -218,7 +181,6 @@ if (!class_exists('SAW_Component_Selectbox')) {
             </table>
         </div>
         
-        <!-- PAGINATION -->
         <?php if ($total_pages > 1): ?>
             <div class="saw-pagination">
                 <?php if ($page > 1): ?>
@@ -250,7 +212,7 @@ if (!class_exists('SAW_Component_Selectbox')) {
 </div>
 
 <?php
-// MODAL - vytvoří se AŽ TADY (po cleanup scriptu)
+// MODAL
 if (!class_exists('SAW_Component_Modal')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/modal/class-saw-component-modal.php';
 }
@@ -285,10 +247,9 @@ $customer_modal = new SAW_Component_Modal('customer-detail', array(
 $customer_modal->render();
 ?>
 
-<!-- JAVASCRIPT -->
 <script>
 jQuery(document).ready(function($) {
-    console.log('[CUSTOMERS] Initializing table interactions');
+    console.log('[CUSTOMERS] Initializing');
     
     $('.saw-customer-row').on('click', function(e) {
         if ($(e.target).closest('button, a, .saw-action-buttons').length > 0) {
@@ -302,7 +263,7 @@ jQuery(document).ready(function($) {
             return;
         }
         
-        console.log('[CUSTOMERS] Opening customer detail modal for ID:', customerId);
+        console.log('[CUSTOMERS] Opening modal for ID:', customerId);
         
         if (typeof SAWModal !== 'undefined') {
             SAWModal.open('customer-detail', {
@@ -310,10 +271,8 @@ jQuery(document).ready(function($) {
                 nonce: '<?php echo $ajax_nonce; ?>'
             });
         } else {
-            console.error('[CUSTOMERS] SAWModal is not defined');
+            console.error('[CUSTOMERS] SAWModal not defined');
         }
     });
-    
-    console.log('[CUSTOMERS] Table interactions initialized');
 });
 </script>
