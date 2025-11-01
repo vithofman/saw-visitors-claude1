@@ -180,9 +180,12 @@ class SAW_Activator {
             error_log('[SAW Activator] ✓ Base složka již existuje');
         }
         
-        $subdirs = array('materials', 'visitor-uploads', 'risk-docs');
+        $subdirs = array('materials', 'visitor-uploads', 'risk-docs', 'saw-customers');
         foreach ($subdirs as $subdir) {
-            $path = $base_dir . '/' . $subdir;
+            $path = $subdir === 'saw-customers' 
+                ? $upload_dir['basedir'] . '/' . $subdir
+                : $base_dir . '/' . $subdir;
+                
             if (!file_exists($path)) {
                 $result = wp_mkdir_p($path);
                 if ($result) {

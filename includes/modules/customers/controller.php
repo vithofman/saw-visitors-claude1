@@ -13,6 +13,8 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
 {
     use SAW_AJAX_Handlers;
     
+    private $file_uploader;
+    
     public function __construct() {
         $this->config = require __DIR__ . '/config.php';
         $this->entity = $this->config['entity'];
@@ -21,16 +23,37 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         require_once __DIR__ . '/model.php';
         $this->model = new SAW_Module_Customers_Model($this->config);
         
+        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/class-saw-file-uploader.php';
+        $this->file_uploader = new SAW_File_Uploader();
+        
         add_action('wp_ajax_saw_get_customers_for_switcher', [$this, 'ajax_get_customers_for_switcher']);
         add_action('wp_ajax_saw_switch_customer', [$this, 'ajax_switch_customer']);
         add_action('wp_ajax_saw_get_customers_detail', [$this, 'ajax_get_detail']);
         add_action('wp_ajax_saw_search_customers', [$this, 'ajax_search']);
         add_action('wp_ajax_saw_delete_customers', [$this, 'ajax_delete']);
+        
+        add_action('admin_enqueue_scripts', [$this, 'enqueue_assets']);
+    }
+    
+    public function enqueue_assets() {
+        $this->file_uploader->enqueue_assets();
     }
     
     protected function before_save($data) {
+        // Kontrola, zda se má odstranit existující logo
+        if ($this->file_uploader->should_remove_file('logo')) {
+            if (!empty($data['id'])) {
+                $existing = $this->model->get_by_id($data['id']);
+                if (!empty($existing['logo_url'])) {
+                    $this->file_uploader->delete($existing['logo_url']);
+                }
+            }
+            $data['logo_url'] = '';
+        }
+        
+        // Nahrání nového souboru
         if (!empty($_FILES['logo']['name'])) {
-            $upload = $this->handle_logo_upload($_FILES['logo']);
+            $upload = $this->file_uploader->upload($_FILES['logo'], 'customers');
             
             if (is_wp_error($upload)) {
                 wp_die($upload->get_error_message());
@@ -38,10 +61,11 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             
             $data['logo_url'] = $upload['url'];
             
+            // Smazání starého loga při nahrání nového
             if (!empty($data['id'])) {
                 $existing = $this->model->get_by_id($data['id']);
-                if (!empty($existing['logo_url'])) {
-                    $this->delete_old_logo($existing['logo_url']);
+                if (!empty($existing['logo_url']) && $existing['logo_url'] !== $data['logo_url']) {
+                    $this->file_uploader->delete($existing['logo_url']);
                 }
             }
         }
@@ -62,53 +86,10 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         $customer = $this->model->get_by_id($id);
         
         if (!empty($customer['logo_url'])) {
-            $this->delete_old_logo($customer['logo_url']);
+            $this->file_uploader->delete($customer['logo_url']);
         }
         
         return true;
-    }
-    
-    private function handle_logo_upload($file) {
-        $allowed_mimes = ['image/jpeg', 'image/png', 'image/gif'];
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mime = finfo_file($finfo, $file['tmp_name']);
-        finfo_close($finfo);
-        
-        if (!in_array($mime, $allowed_mimes)) {
-            return new WP_Error('invalid_mime', 'Neplatný typ souboru. Povolené: JPG, PNG, GIF');
-        }
-        
-        if ($file['size'] > 2097152) {
-            return new WP_Error('file_too_large', 'Soubor je příliš velký (max 2MB)');
-        }
-        
-        $upload_dir = wp_upload_dir();
-        $customer_dir = $upload_dir['basedir'] . '/saw-customers/';
-        
-        if (!file_exists($customer_dir)) {
-            wp_mkdir_p($customer_dir);
-        }
-        
-        $filename = time() . '_' . sanitize_file_name($file['name']);
-        $filepath = $customer_dir . $filename;
-        
-        if (move_uploaded_file($file['tmp_name'], $filepath)) {
-            return [
-                'url' => $upload_dir['baseurl'] . '/saw-customers/' . $filename,
-                'path' => $filepath,
-            ];
-        }
-        
-        return new WP_Error('upload_failed', 'Nahrání souboru selhalo');
-    }
-    
-    private function delete_old_logo($logo_url) {
-        $upload_dir = wp_upload_dir();
-        $logo_path = str_replace($upload_dir['baseurl'], $upload_dir['basedir'], $logo_url);
-        
-        if (file_exists($logo_path)) {
-            @unlink($logo_path);
-        }
     }
     
     protected function format_detail_data($item) {

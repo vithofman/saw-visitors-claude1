@@ -98,28 +98,19 @@ $item = $item ?? [];
             </summary>
             <div class="saw-form-section-content">
                 <div class="saw-branding-grid">
-                    <!-- Logo Preview -->
-                    <div class="saw-logo-column">
-                        <label class="saw-label">Současné logo</label>
-                        <div class="saw-logo-preview-current">
-                            <?php if (!empty($item['logo_url'])): ?>
-                                <img src="<?php echo esc_url($item['logo_url']); ?>" alt="Logo">
-                            <?php else: ?>
-                                <span class="saw-logo-placeholder">Žádné logo</span>
-                            <?php endif; ?>
-                        </div>
+                    <div class="saw-branding-upload">
+                        <?php
+                        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/class-saw-file-uploader.php';
+                        $id = 'logo';
+                        $name = 'logo';
+                        $current_file_url = $item['logo_url'] ?? '';
+                        $label = 'Nahrát nové logo';
+                        $current_label = 'Současné logo';
+                        include SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/file-upload-input.php';
+                        ?>
                     </div>
                     
-                    <!-- Logo Upload -->
-                    <div class="saw-upload-column">
-                        <label for="logo" class="saw-label">Nahrát nové logo</label>
-                        <input type="file" id="logo" name="logo" class="saw-input"
-                               accept="image/jpeg,image/png,image/gif">
-                        <span class="saw-help-text">Max 2MB, formáty: JPG, PNG, GIF</span>
-                    </div>
-                    
-                    <!-- Primary Color -->
-                    <div class="saw-color-column">
+                    <div class="saw-branding-color">
                         <label for="primary_color" class="saw-label">Hlavní barva</label>
                         <div class="saw-color-picker-wrapper">
                             <input type="color" id="primary_color" name="primary_color" class="saw-color-picker"

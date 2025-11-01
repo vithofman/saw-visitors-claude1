@@ -126,36 +126,31 @@
 /* ============================================
    BRANDING GRID
    ============================================ */
-.saw-module-customers .saw-branding-grid {
+.saw-branding-grid {
     display: grid;
-    grid-template-columns: 200px 280px 1fr;
-    gap: 32px;
+    grid-template-columns: 1fr 280px;
+    gap: 40px;
     align-items: start;
 }
 
-.saw-module-customers .saw-logo-column {
-    min-width: 200px;
+.saw-branding-upload {
+    flex: 1;
 }
 
-.saw-module-customers .saw-upload-column {
-    min-width: 240px;
-}
-
-.saw-module-customers .saw-color-column {
-    min-width: 200px;
-    margin-left: auto;
+.saw-branding-color {
+    min-width: 280px;
 }
 
 /* ============================================
    COLOR PICKER
    ============================================ */
-.saw-module-customers .saw-color-picker-wrapper {
+.saw-color-picker-wrapper {
     display: flex;
     align-items: center;
     gap: 12px;
 }
 
-.saw-module-customers .saw-color-picker {
+.saw-color-picker {
     width: 56px;
     height: 56px;
     border: 2px solid #dcdcde;
@@ -168,24 +163,24 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-.saw-module-customers .saw-color-picker::-webkit-color-swatch-wrapper {
+.saw-color-picker::-webkit-color-swatch-wrapper {
     padding: 0;
 }
 
-.saw-module-customers .saw-color-picker::-webkit-color-swatch {
+.saw-color-picker::-webkit-color-swatch {
     border: none;
     border-radius: 8px;
 }
 
-.saw-module-customers .saw-color-picker:hover {
+.saw-color-picker:hover {
     border-color: #0073aa;
     box-shadow: 0 4px 12px rgba(0, 115, 170, 0.15);
     transform: translateY(-2px);
 }
 
-.saw-module-customers .saw-color-value {
+.saw-color-value {
     flex: 1;
-    max-width: 140px;
+    max-width: 180px;
     padding: 14px 16px;
     border: 2px solid #dcdcde;
     border-radius: 8px;
@@ -237,17 +232,14 @@
    RESPONSIVE
    ============================================ */
 @media (max-width: 1200px) {
-    .saw-module-customers .saw-branding-grid {
+    .saw-branding-grid {
         grid-template-columns: 1fr;
         gap: 24px;
     }
     
-    .saw-module-customers .saw-logo-column,
-    .saw-module-customers .saw-upload-column,
-    .saw-module-customers .saw-color-column {
+    .saw-branding-color {
         min-width: auto;
-        max-width: 100%;
-        margin-left: 0;
+        max-width: 400px;
     }
 }
 

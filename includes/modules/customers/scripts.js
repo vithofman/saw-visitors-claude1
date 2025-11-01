@@ -1,7 +1,7 @@
 /**
  * Customers Module Scripts
  * 
- * Logo preview, color picker sync, IČO validace
+ * Color picker sync, IČO validace
  * 
  * @package SAW_Visitors
  * @version 2.0.0
@@ -12,27 +12,6 @@
     'use strict';
     
     $(document).ready(function() {
-        // Logo preview při výběru souboru
-        $('#logo').on('change', function(e) {
-            const file = e.target.files[0];
-            
-            if (file) {
-                // Validace velikosti (2MB)
-                if (file.size > 2097152) {
-                    alert('Soubor je příliš velký! Maximální velikost je 2MB.');
-                    $(this).val('');
-                    return;
-                }
-                
-                // Preview
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    $('.saw-logo-preview-current').html('<img src="' + e.target.result + '" alt="Preview">');
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-        
         // Color picker sync s text inputem
         $('#primary_color').on('input', function() {
             $('#primary_color_value').val($(this).val().toUpperCase());
