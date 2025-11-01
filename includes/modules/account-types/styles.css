@@ -1,18 +1,17 @@
 /**
- * Account Types Module Styles - FINAL
- * @version 4.0.0
+ * Account Types Module Styles
+ * 
+ * @package SAW_Visitors
+ * @version 5.0.0
  */
 
+/* ============================================
+   COLOR BADGE
+   ============================================ */
 .saw-module-account-types .saw-color-badge {
-    display: inline-block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    width: 32px !important;
-    height: 32px !important;
-    min-width: 32px !important;
-    min-height: 32px !important;
-    max-width: 32px !important;
-    max-height: 32px !important;
+    display: inline-block;
+    width: 32px;
+    height: 32px;
     border-radius: 8px;
     vertical-align: middle;
     border: 3px solid #fff;
@@ -25,6 +24,9 @@
     box-shadow: 0 0 0 2px #e5e7eb, 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
+/* ============================================
+   CODE BADGE
+   ============================================ */
 .saw-module-account-types .saw-code-badge {
     display: inline-block;
     padding: 4px 10px;
@@ -38,6 +40,9 @@
     letter-spacing: 0.5px;
 }
 
+/* ============================================
+   SORT ORDER BADGE
+   ============================================ */
 .saw-module-account-types .saw-sort-order-badge {
     display: inline-flex;
     align-items: center;
@@ -52,6 +57,9 @@
     color: #6b7280;
 }
 
+/* ============================================
+   COLOR PICKER
+   ============================================ */
 .saw-module-account-types .saw-color-picker-wrapper {
     display: flex;
     align-items: center;
@@ -102,6 +110,9 @@
     background: #f9fafb;
 }
 
+/* ============================================
+   COLOR PREVIEW
+   ============================================ */
 .saw-module-account-types .saw-color-preview {
     display: flex;
     align-items: center;
@@ -116,6 +127,9 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+/* ============================================
+   INPUT WITH ADDON
+   ============================================ */
 .saw-module-account-types .saw-input-with-addon {
     display: flex;
     align-items: stretch;
@@ -143,12 +157,18 @@
     font-size: 14px;
 }
 
+/* ============================================
+   FEATURES TEXTAREA
+   ============================================ */
 .saw-module-account-types #features {
     font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
     font-size: 13px;
     line-height: 1.8;
 }
 
+/* ============================================
+   TABLE ROW
+   ============================================ */
 .saw-module-account-types .saw-account-type-row:hover {
     background-color: #f9fafb;
 }
@@ -158,6 +178,9 @@
     color: #111827;
 }
 
+/* ============================================
+   ACTION BUTTONS
+   ============================================ */
 .saw-module-account-types .saw-action-btn {
     display: inline-flex;
     align-items: center;
@@ -197,17 +220,18 @@
     color: #dc2626;
 }
 
-.saw-module-account-types .saw-badge-info {
-    background: #dbeafe;
-    color: #1e40af;
-}
-
+/* ============================================
+   UTILITIES
+   ============================================ */
 .saw-module-account-types .saw-text-muted {
     color: #9ca3af;
     font-size: 13px;
 }
 
-@media screen and (max-width: 768px) {
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
     .saw-module-account-types .saw-color-picker-wrapper {
         flex-direction: column;
         align-items: stretch;

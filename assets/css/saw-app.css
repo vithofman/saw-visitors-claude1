@@ -1,22 +1,20 @@
 /**
- * SAW Visitors - Main App Styles
+ * SAW App - Main Application Styles
  * 
  * @package SAW_Visitors
- * @version 4.6.1
+ * @version 5.1.0
  */
 
 /* ============================================
    CSS VARIABLES
    ============================================ */
 :root {
-    /* Colors */
     --saw-primary: #2563eb;
     --saw-success: #10b981;
     --saw-warning: #f59e0b;
     --saw-danger: #ef4444;
     --saw-info: #3b82f6;
     
-    /* Grays */
     --saw-gray-50: #f9fafb;
     --saw-gray-100: #f3f4f6;
     --saw-gray-200: #e5e7eb;
@@ -28,7 +26,6 @@
     --saw-gray-800: #1f2937;
     --saw-gray-900: #111827;
     
-    /* Spacing */
     --saw-spacing-xs: 4px;
     --saw-spacing-sm: 8px;
     --saw-spacing-md: 16px;
@@ -36,24 +33,18 @@
     --saw-spacing-xl: 32px;
     --saw-spacing-2xl: 48px;
     
-    /* Border radius */
     --saw-radius-sm: 4px;
     --saw-radius-md: 6px;
     --saw-radius-lg: 8px;
     
-    /* Shadows */
     --saw-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
     --saw-shadow-md: 0 1px 3px rgba(0, 0, 0, 0.1);
     --saw-shadow-lg: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 /* ============================================
-   RESET & BASE
+   BASE
    ============================================ */
-* {
-    box-sizing: border-box;
-}
-
 body.saw-app-body {
     margin: 0;
     padding: 0;
@@ -65,44 +56,16 @@ body.saw-app-body {
 }
 
 /* ============================================
-   LAYOUT
+   LAYOUT - DO NOT OVERRIDE
+   Layout is controlled by saw-app-responsive.css
    ============================================ */
-.saw-app-wrapper {
-    display: flex;
-    min-height: calc(100vh - 60px - 50px);
-    padding-top: 60px;
-}
-
-.saw-app-content {
-    flex: 1;
-    margin-left: 260px;
-    padding: var(--saw-spacing-xl);
-    background: var(--saw-gray-50);
-    min-height: calc(100vh - 110px);
-}
 
 /* ============================================
-   PAGE ELEMENTS
+   PAGE WRAPPER
    ============================================ */
 .saw-page-wrapper {
-    max-width: 1400px;
-}
-
-.saw-page-header {
-    margin-bottom: var(--saw-spacing-xl);
-}
-
-.saw-page-header h1 {
-    margin: 0 0 var(--saw-spacing-sm) 0;
-    font-size: 32px;
-    font-weight: 700;
-    color: var(--saw-gray-900);
-}
-
-.saw-page-subtitle {
-    margin: 0;
-    font-size: 16px;
-    color: var(--saw-gray-500);
+    width: 100%;
+    max-width: 100%;
 }
 
 /* ============================================
@@ -134,7 +97,7 @@ body.saw-app-body {
 }
 
 /* ============================================
-   TABLES
+   INFO TABLES
    ============================================ */
 .saw-info-table {
     width: 100%;
@@ -237,33 +200,12 @@ body.saw-app-body {
 }
 
 /* ============================================
-   BUTTONS
+   BUTTON GROUPS
    ============================================ */
 .saw-button-group {
     display: flex;
     gap: var(--saw-spacing-md);
     flex-wrap: wrap;
-}
-
-.saw-button {
-    display: inline-block;
-    padding: 10px 20px;
-    border-radius: var(--saw-radius-md);
-    font-size: 14px;
-    font-weight: 500;
-    text-decoration: none;
-    transition: all 0.2s;
-    border: none;
-    cursor: pointer;
-}
-
-.saw-button-primary {
-    background: var(--saw-primary);
-    color: white;
-}
-
-.saw-button-primary:hover {
-    background: #1d4ed8;
 }
 
 .saw-button-success {
@@ -282,28 +224,4 @@ body.saw-app-body {
 
 .saw-button-purple:hover {
     background: #6d28d9;
-}
-
-/* ============================================
-   LISTS
-   ============================================ */
-ul, ol {
-    color: var(--saw-gray-600);
-    line-height: 1.8;
-}
-
-li {
-    margin: var(--saw-spacing-sm) 0;
-}
-
-/* ============================================
-   UTILITIES
-   ============================================ */
-code {
-    font-family: 'Monaco', 'Courier New', monospace;
-}
-
-strong {
-    font-weight: 600;
-    color: var(--saw-gray-900);
 }

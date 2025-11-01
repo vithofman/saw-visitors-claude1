@@ -1,18 +1,19 @@
 /**
- * Customers Module Styles - FINAL
- * @version 5.0.0
+ * Customers Module Styles
+ * 
+ * @package SAW_Visitors
+ * @version 6.0.0
  */
 
+/* ============================================
+   CUSTOMER LOGO
+   ============================================ */
 .saw-module-customers .saw-customer-logo {
-    width: 44px !important;
-    height: 44px !important;
-    min-width: 44px !important;
-    min-height: 44px !important;
-    max-width: 44px !important;
-    max-height: 44px !important;
+    width: 44px;
+    height: 44px;
     border-radius: 8px;
     overflow: hidden;
-    display: inline-flex !important;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     background: #f9fafb;
@@ -21,22 +22,17 @@
 }
 
 .saw-module-customers .saw-customer-logo img {
-    width: 100% !important;
-    height: 100% !important;
-    min-width: auto !important;
-    min-height: auto !important;
-    max-width: 40px !important;
-    max-height: 40px !important;
-    object-fit: contain !important;
+    max-width: 40px;
+    max-height: 40px;
+    object-fit: contain;
     padding: 3px;
-    display: block !important;
 }
 
 .saw-module-customers .saw-customer-logo-placeholder {
-    width: 44px !important;
-    height: 44px !important;
+    width: 44px;
+    height: 44px;
     border-radius: 8px;
-    display: inline-flex !important;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -51,6 +47,9 @@
     height: 22px;
 }
 
+/* ============================================
+   ACTION BUTTONS
+   ============================================ */
 .saw-module-customers .saw-action-btn {
     display: inline-flex;
     align-items: center;
@@ -94,6 +93,9 @@
     background-color: #f9fafb;
 }
 
+/* ============================================
+   LOGO PREVIEW
+   ============================================ */
 .saw-module-customers .saw-logo-preview-current {
     position: relative;
     display: flex;
@@ -121,6 +123,9 @@
     font-weight: 500;
 }
 
+/* ============================================
+   BRANDING GRID
+   ============================================ */
 .saw-module-customers .saw-branding-grid {
     display: grid;
     grid-template-columns: 200px 280px 1fr;
@@ -141,6 +146,9 @@
     margin-left: auto;
 }
 
+/* ============================================
+   COLOR PICKER
+   ============================================ */
 .saw-module-customers .saw-color-picker-wrapper {
     display: flex;
     align-items: center;
@@ -190,6 +198,9 @@
     text-align: center;
 }
 
+/* ============================================
+   ADDRESS FIELDS
+   ============================================ */
 .saw-module-customers .saw-address-fields {
     display: grid;
     grid-template-columns: 3fr 1fr;
@@ -209,46 +220,23 @@
     flex: 1;
 }
 
-.saw-module-customers .saw-badge {
-    padding: 6px 12px;
-    border-radius: 16px;
-    font-size: 11px;
-    font-weight: 600;
-    display: inline-block;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.saw-module-customers .saw-badge-warning {
-    background: #fef3c7;
-    color: #92400e;
-}
-
-.saw-module-customers .saw-badge-success {
-    background: #d1fae5;
-    color: #065f46;
-}
-
-.saw-module-customers .saw-badge-secondary {
-    background: #fee2e2;
-    color: #991b1b;
-}
-
+/* ============================================
+   COLOR BADGE
+   ============================================ */
 .saw-module-customers .saw-color-badge {
-    display: inline-block !important;
-    width: 32px !important;
-    height: 32px !important;
-    min-width: 32px !important;
-    min-height: 32px !important;
-    max-width: 32px !important;
-    max-height: 32px !important;
+    display: inline-block;
+    width: 32px;
+    height: 32px;
     border-radius: 8px;
     vertical-align: middle;
     border: 3px solid #fff;
     box-shadow: 0 0 0 1px #e5e7eb, 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-@media screen and (max-width: 1200px) {
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 1200px) {
     .saw-module-customers .saw-branding-grid {
         grid-template-columns: 1fr;
         gap: 24px;
@@ -263,7 +251,7 @@
     }
 }
 
-@media screen and (max-width: 768px) {
+@media (max-width: 768px) {
     .saw-module-customers .saw-action-btn {
         width: 32px;
         height: 32px;
@@ -274,5 +262,9 @@
         font-size: 16px;
         width: 16px;
         height: 16px;
+    }
+    
+    .saw-module-customers .saw-address-fields {
+        grid-template-columns: 1fr;
     }
 }

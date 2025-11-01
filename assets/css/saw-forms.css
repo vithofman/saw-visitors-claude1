@@ -1,21 +1,22 @@
 /**
- * SAW Forms Global Styles
- * 
- * Pro formuláře (create/edit views)
+ * SAW Forms - Global Form Styles
  * 
  * @package SAW_Visitors
- * @version 2.0.0
- * @since   4.8.0
+ * @version 3.0.0
  */
 
-/* Form Container */
+/* ============================================
+   FORM CONTAINER
+   ============================================ */
 .saw-form-container {
     max-width: 1400px;
     margin: 0 auto;
     padding: 0 20px;
 }
 
-/* Form Sections (Details/Summary) */
+/* ============================================
+   FORM SECTIONS
+   ============================================ */
 .saw-form-section {
     background: #fff;
     border: 1px solid #dcdcde;
@@ -57,7 +58,9 @@
     padding: 24px;
 }
 
-/* Form Layout */
+/* ============================================
+   FORM LAYOUT
+   ============================================ */
 .saw-form-row {
     display: flex;
     gap: 20px;
@@ -89,7 +92,9 @@
     min-width: 0;
 }
 
-/* Form Elements */
+/* ============================================
+   FORM ELEMENTS
+   ============================================ */
 .saw-label {
     display: block;
     margin-bottom: 8px;
@@ -139,11 +144,29 @@
     line-height: 1.5;
 }
 
-/* Form Actions */
+/* ============================================
+   FORM ACTIONS
+   ============================================ */
 .saw-form-actions {
     display: flex;
     gap: 12px;
     padding-top: 32px;
     border-top: 2px solid #e8e8e8;
     margin-top: 48px;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 1024px) {
+    .saw-form-row {
+        flex-direction: column;
+    }
+    
+    .saw-col-3,
+    .saw-col-4,
+    .saw-col-6,
+    .saw-col-8 {
+        flex: 1 1 100%;
+    }
 }

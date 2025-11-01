@@ -1,59 +1,51 @@
 /**
  * SAW Base Styles
- * 
- * Core styling pro celou aplikaci
+ * Core foundation styles for the entire application
  * 
  * @package SAW_Visitors
- * @version 2.0.0
- * @since   4.8.0
+ * @version 3.3.0
  */
 
-/* Reset */
+/* ============================================
+   RESET
+   ============================================ */
 * {
     box-sizing: border-box;
 }
 
-/* Layout */
-.saw-app-layout,
-.saw-admin-wrapper {
-    background: #fff;
-}
-
-.saw-app-main {
-    background: #fff;
-}
-
-.saw-app-content {
-    background: #fff;
-}
-
-/* Page Header */
+/* ============================================
+   PAGE HEADER - CLEAN & ELEGANT
+   ============================================ */
 .saw-page-header {
-    background: #fff;
-    border-bottom: 1px solid #dcdcde;
-    padding: 30px 0;
-    margin-bottom: 30px;
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 20px 0;
+    margin-bottom: 24px;
 }
 
 .saw-page-header-content {
-    max-width: 1400px;
+    max-width: 1600px;
     margin: 0 auto;
-    padding: 0 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    padding: 0 32px;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
     gap: 20px;
+    text-align: left !important;
 }
 
 .saw-page-title {
-    margin: 0;
-    font-size: 28px;
+    margin: 0 !important;
+    font-size: 24px;
     font-weight: 600;
-    color: #1d2327;
+    color: #111827;
     line-height: 1.2;
+    text-align: left !important;
 }
 
-/* Buttons */
+/* ============================================
+   BUTTONS
+   ============================================ */
 .saw-button {
     display: inline-flex;
     align-items: center;
@@ -114,11 +106,72 @@
     color: #0073aa;
 }
 
-/* Utilities */
+/* ============================================
+   HEADER ACTIONS
+   ============================================ */
+.saw-page-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-left: auto;
+}
+
+.saw-page-actions .saw-button-primary .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+/* ============================================
+   UTILITIES
+   ============================================ */
 .saw-text-center {
     text-align: center;
 }
 
 .saw-text-muted {
     color: #646970;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+    .saw-page-header {
+        padding: 16px 0;
+    }
+    
+    .saw-page-header-content {
+        padding: 0 16px;
+    }
+    
+    .saw-page-title {
+        font-size: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .saw-page-header-content {
+        padding: 0 12px;
+        flex-wrap: wrap;
+    }
+    
+    .saw-page-title {
+        font-size: 18px;
+        flex: 1 1 100%;
+        margin-bottom: 12px;
+    }
+    
+    .saw-page-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+    
+    .saw-page-actions .saw-button-primary span:not(.dashicons) {
+        display: none;
+    }
+    
+    .saw-page-actions .saw-button-primary {
+        padding: 10px 16px;
+    }
 }
