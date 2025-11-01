@@ -2,15 +2,8 @@
 /**
  * Branches Module Model
  * 
- * Model pro správu poboček. Dědí z Base Model a přidává:
- * - Validaci unique code (pokud je vyplněn)
- * - Převod opening_hours (textarea → JSON → array)
- * - Generování full address
- * - Check použití v systému
- * 
  * @package SAW_Visitors
  * @version 1.0.0
- * @since   4.6.1
  */
 
 if (!defined('ABSPATH')) {
@@ -90,13 +83,22 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
     }
     
     /**
-     * Override: Create
+     * Override: Create - automaticky přidá customer_id
      */
     public function create($data) {
-        if (empty($data['customer_id'])) {
-            global $wpdb;
-            $data['customer_id'] = 1;
+        // ✅ ZÍSKEJ CUSTOMER_ID ZE SESSION
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
         }
+        
+        $customer_id = isset($_SESSION['saw_current_customer_id']) ? absint($_SESSION['saw_current_customer_id']) : 0;
+        
+        if (!$customer_id) {
+            global $wpdb;
+            $customer_id = $wpdb->get_var("SELECT id FROM {$wpdb->prefix}saw_customers ORDER BY id ASC LIMIT 1");
+        }
+        
+        $data['customer_id'] = $customer_id;
         
         $data = $this->process_opening_hours_for_save($data);
         $data = $this->ensure_single_headquarters($data);
@@ -105,12 +107,13 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
     }
     
     /**
-     * Override: Update
+     * Override: Update - udrží customer_id
      */
     public function update($id, $data) {
+        // ✅ ZAJISTI, ŽE SE CUSTOMER_ID NEZTRATÍ
         if (empty($data['customer_id'])) {
-            global $wpdb;
-            $data['customer_id'] = 1;
+            $existing = $this->get_by_id($id);
+            $data['customer_id'] = $existing['customer_id'] ?? 1;
         }
         
         $data = $this->process_opening_hours_for_save($data);
@@ -129,13 +132,18 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
             $wpdb->update(
                 $this->table,
                 ['is_headquarters' => 0],
-                [
-                    'customer_id' => $data['customer_id'],
-                    'id' => ['!=', $exclude_id]
-                ],
+                ['customer_id' => $data['customer_id']],
                 ['%d'],
                 ['%d']
             );
+            
+            if ($exclude_id > 0) {
+                $wpdb->query($wpdb->prepare(
+                    "UPDATE {$this->table} SET is_headquarters = 0 WHERE customer_id = %d AND id != %d",
+                    $data['customer_id'],
+                    $exclude_id
+                ));
+            }
         }
         
         return $data;

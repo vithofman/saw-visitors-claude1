@@ -2,19 +2,8 @@
 /**
  * Branches Module Controller
  * 
- * Controller pro správu poboček zákazníka. Dědí z Base Controller:
- * - index() - list view
- * - create() - formulář pro novou pobočku
- * - edit($id) - formulář pro editaci
- * 
- * Přidává:
- * - AJAX handlery (detail, search, delete)
- * - Before delete check (kontrola použití)
- * - Image upload handling
- * 
  * @package SAW_Visitors
  * @version 1.0.0
- * @since   4.6.1
  */
 
 if (!defined('ABSPATH')) {
@@ -27,9 +16,6 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
     
     private $media_uploader;
     
-    /**
-     * Constructor
-     */
     public function __construct() {
         $this->config = require __DIR__ . '/config.php';
         $this->entity = $this->config['entity'];
@@ -56,9 +42,6 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         }
     }
     
-    /**
-     * Format detail data pro modal
-     */
     protected function format_detail_data($item) {
         if (!empty($item['created_at'])) {
             $item['created_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['created_at']));
@@ -69,9 +52,7 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         }
         
         $item['full_address'] = $this->model->get_full_address($item);
-        
         $item['opening_hours_array'] = $this->model->get_opening_hours_as_array($item['opening_hours'] ?? null);
-        
         $item['has_gps'] = !empty($item['latitude']) && !empty($item['longitude']);
         
         if ($item['has_gps']) {
@@ -93,9 +74,6 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         return $item;
     }
     
-    /**
-     * Get country name from code
-     */
     private function get_country_name($code) {
         $countries = [
             'CZ' => 'Česká republika',
@@ -108,9 +86,6 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         return $countries[$code] ?? $code;
     }
     
-    /**
-     * Before delete hook
-     */
     protected function before_delete($id) {
         if ($this->model->is_used_in_system($id)) {
             return new WP_Error(
@@ -122,16 +97,10 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         return true;
     }
     
-    /**
-     * After save hook
-     */
     protected function after_save($id) {
-        delete_transient('branches_list');
-        delete_transient('branches_count');
-        delete_transient('branches_customer_' . get_current_customer_id());
-        
-        if (defined('SAW_DEBUG') && SAW_DEBUG) {
-            error_log("SAW: Branch saved - ID: {$id}");
-        }
+        // ✅ OPRAVA - smazání cache BEZ volání neexistující funkce
+        global $wpdb;
+        $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_branches_%'");
+        $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_timeout_branches_%'");
     }
 }

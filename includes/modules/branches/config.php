@@ -2,12 +2,8 @@
 /**
  * Branches Module Config
  * 
- * Konfigurace pro správu poboček zákazníka.
- * Obsahuje fields definition, list config, cache settings a capabilities.
- * 
  * @package SAW_Visitors
  * @version 1.0.0
- * @since   4.6.1
  */
 
 if (!defined('ABSPATH')) {
@@ -22,8 +18,9 @@ return [
     'plural' => 'Pobočky',
     'route' => 'admin/branches',
     'icon' => '🏢',
+    'filter_by_customer' => true,  // ← Filtrovat podle customer_id
     
-    // === CAPABILITIES (kdo může dělat co) ===
+    // === CAPABILITIES ===
     'capabilities' => [
         'list' => 'manage_options',
         'view' => 'manage_options',
@@ -34,7 +31,6 @@ return [
     
     // === FIELDS DEFINITION ===
     'fields' => [
-        // Název pobočky
         'name' => [
             'type' => 'text',
             'label' => 'Název pobočky',
@@ -43,7 +39,6 @@ return [
             'help' => 'Název pobočky (např. "Pobočka Praha")',
         ],
         
-        // Interní kód
         'code' => [
             'type' => 'text',
             'label' => 'Kód pobočky',
@@ -52,7 +47,6 @@ return [
             'help' => 'Interní kód pro identifikaci (např. "PR001")',
         ],
         
-        // Ulice a číslo
         'street' => [
             'type' => 'text',
             'label' => 'Ulice a číslo',
@@ -61,7 +55,6 @@ return [
             'help' => 'Ulice a číslo popisné',
         ],
         
-        // Město
         'city' => [
             'type' => 'text',
             'label' => 'Město',
@@ -70,7 +63,6 @@ return [
             'help' => 'Město',
         ],
         
-        // PSČ
         'postal_code' => [
             'type' => 'text',
             'label' => 'PSČ',
@@ -79,7 +71,6 @@ return [
             'help' => 'Poštovní směrovací číslo',
         ],
         
-        // Země
         'country' => [
             'type' => 'select',
             'label' => 'Země',
@@ -96,7 +87,6 @@ return [
             'help' => 'Země',
         ],
         
-        // GPS souřadnice - latitude
         'latitude' => [
             'type' => 'number',
             'label' => 'Zeměpisná šířka',
@@ -106,7 +96,6 @@ return [
             'help' => 'GPS - zeměpisná šířka (např. 50.0755)',
         ],
         
-        // GPS souřadnice - longitude
         'longitude' => [
             'type' => 'number',
             'label' => 'Zeměpisná délka',
@@ -116,7 +105,6 @@ return [
             'help' => 'GPS - zeměpisná délka (např. 14.4378)',
         ],
         
-        // Telefon
         'phone' => [
             'type' => 'text',
             'label' => 'Telefon',
@@ -125,7 +113,6 @@ return [
             'help' => 'Telefonní číslo pobočky',
         ],
         
-        // Email
         'email' => [
             'type' => 'email',
             'label' => 'Email',
@@ -134,7 +121,6 @@ return [
             'help' => 'Emailová adresa pobočky',
         ],
         
-        // Obrázek - URL
         'image_url' => [
             'type' => 'media',
             'label' => 'Obrázek pobočky',
@@ -143,7 +129,6 @@ return [
             'help' => 'Hlavní obrázek pobočky',
         ],
         
-        // Thumbnail - URL
         'image_thumbnail' => [
             'type' => 'hidden',
             'label' => 'Náhled obrázku',
@@ -151,7 +136,6 @@ return [
             'sanitize' => 'esc_url_raw',
         ],
         
-        // Popis
         'description' => [
             'type' => 'textarea',
             'label' => 'Popis',
@@ -161,7 +145,6 @@ return [
             'rows' => 5,
         ],
         
-        // Poznámky (interní)
         'notes' => [
             'type' => 'textarea',
             'label' => 'Interní poznámky',
@@ -171,7 +154,6 @@ return [
             'rows' => 3,
         ],
         
-        // Provozní doba (JSON)
         'opening_hours' => [
             'type' => 'textarea',
             'label' => 'Provozní doba',
@@ -181,7 +163,6 @@ return [
             'rows' => 7,
         ],
         
-        // Je aktivní?
         'is_active' => [
             'type' => 'checkbox',
             'label' => 'Aktivní',
@@ -191,7 +172,6 @@ return [
             'help' => 'Pouze aktivní pobočky jsou viditelné',
         ],
         
-        // Je to hlavní sídlo?
         'is_headquarters' => [
             'type' => 'checkbox',
             'label' => 'Hlavní sídlo',
@@ -201,7 +181,6 @@ return [
             'help' => 'Je toto hlavní sídlo společnosti?',
         ],
         
-        // Pořadí řazení
         'sort_order' => [
             'type' => 'number',
             'label' => 'Pořadí řazení',
@@ -220,6 +199,7 @@ return [
         'filters' => [
             'is_active' => true,
             'is_headquarters' => true,
+            'customer_id' => true,  // ← POVOLENÍ FILTRU
         ],
         'per_page' => 20,
         'enable_detail_modal' => true,

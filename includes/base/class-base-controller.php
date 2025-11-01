@@ -3,7 +3,7 @@
  * Base Controller Class
  * 
  * @package SAW_Visitors
- * @version 3.1.0
+ * @version 4.0.0
  */
 
 if (!defined('ABSPATH')) {
@@ -36,8 +36,15 @@ abstract class SAW_Base_Controller
             'order' => $order
         ];
         
+        // ✅ AUTOMATICKÝ FILTR PODLE CUSTOMER_ID
+        if (!empty($this->config['filter_by_customer'])) {
+            $customer = $this->get_current_customer_data();
+            $filters['customer_id'] = $customer['id'] ?? 0;
+        }
+        
+        // Ostatní filtry z GET parametrů
         foreach ($this->config['list_config']['filters'] ?? [] as $filter_key => $enabled) {
-            if ($enabled && isset($_GET[$filter_key])) {
+            if ($enabled && isset($_GET[$filter_key]) && $filter_key !== 'customer_id') {
                 $filters[$filter_key] = sanitize_text_field($_GET[$filter_key]);
             }
         }
@@ -100,6 +107,14 @@ abstract class SAW_Base_Controller
             wp_die($this->config['singular'] . ' not found', 'Not Found', ['response' => 404]);
         }
         
+        // ✅ OVĚŘ PŘÍSTUP K ZÁZNAMU (pokud je filter_by_customer)
+        if (!empty($this->config['filter_by_customer'])) {
+            $customer = $this->get_current_customer_data();
+            if (isset($item['customer_id']) && $item['customer_id'] != $customer['id']) {
+                wp_die('Nemáte oprávnění upravovat tento záznam', 'Forbidden', ['response' => 403]);
+            }
+        }
+        
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $this->handle_save($id);
             return;
@@ -115,6 +130,12 @@ abstract class SAW_Base_Controller
         
         if ($id > 0) {
             $data['id'] = $id;
+        }
+        
+        // ✅ AUTOMATICKY PŘIDEJ CUSTOMER_ID PRO NOVÉ ZÁZNAMY
+        if ($id === 0 && !empty($this->config['filter_by_customer'])) {
+            $customer = $this->get_current_customer_data();
+            $data['customer_id'] = $customer['id'] ?? 0;
         }
         
         $data = $this->before_save($data);
