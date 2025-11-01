@@ -26,6 +26,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         
         add_action('wp_ajax_saw_get_customers_for_switcher', [$this, 'ajax_get_customers_for_switcher']);
         add_action('wp_ajax_saw_switch_customer', [$this, 'ajax_switch_customer']);
+        add_action('wp_ajax_saw_switch_language', [$this, 'ajax_switch_language']);
         add_action('wp_ajax_saw_get_customers_detail', [$this, 'ajax_get_detail']);
         add_action('wp_ajax_saw_search_customers', [$this, 'ajax_search']);
         add_action('wp_ajax_saw_delete_customers', [$this, 'ajax_delete']);
@@ -243,5 +244,37 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         }
         
         return null;
+    }
+    
+    public function ajax_switch_language() {
+        if (!current_user_can('read')) {
+            wp_send_json_error(['message' => 'Nedostatečná oprávnění']);
+        }
+        
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'saw_language_switcher')) {
+            wp_send_json_error(['message' => 'Neplatný bezpečnostní token']);
+        }
+        
+        $language = isset($_POST['language']) ? sanitize_text_field($_POST['language']) : '';
+        
+        $allowed_languages = ['cs', 'en'];
+        if (!in_array($language, $allowed_languages)) {
+            wp_send_json_error(['message' => 'Neplatný jazyk']);
+        }
+        
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        $_SESSION['saw_current_language'] = $language;
+        
+        if (is_user_logged_in()) {
+            update_user_meta(get_current_user_id(), 'saw_current_language', $language);
+        }
+        
+        wp_send_json_success([
+            'message' => 'Jazyk byl úspěšně přepnut',
+            'language' => $language
+        ]);
     }
 }

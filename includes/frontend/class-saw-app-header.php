@@ -147,6 +147,8 @@ class SAW_App_Header {
             </div>
             
             <div class="saw-header-right">
+                <?php $this->render_language_switcher(); ?>
+                
                 <div class="saw-user-menu">
                     <button class="saw-user-button" id="sawUserMenuToggle">
                         <span class="saw-user-icon">👤</span>
@@ -213,6 +215,42 @@ class SAW_App_Header {
             'currentCustomerId' => $this->customer['id'],
             'currentCustomerName' => $this->customer['name'],
         ]);
+    }
+    
+    /**
+     * Render Language Switcher
+     */
+    private function render_language_switcher() {
+        if (!class_exists('SAW_Component_Language_Switcher')) {
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/language-switcher/class-saw-component-language-switcher.php';
+        }
+        
+        $current_language = $this->get_current_language();
+        $switcher = new SAW_Component_Language_Switcher($current_language);
+        $switcher->render();
+    }
+    
+    /**
+     * Get current language
+     */
+    private function get_current_language() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        if (isset($_SESSION['saw_current_language'])) {
+            return $_SESSION['saw_current_language'];
+        }
+        
+        if (is_user_logged_in()) {
+            $lang = get_user_meta(get_current_user_id(), 'saw_current_language', true);
+            if ($lang) {
+                $_SESSION['saw_current_language'] = $lang;
+                return $lang;
+            }
+        }
+        
+        return 'cs';
     }
     
     /**
