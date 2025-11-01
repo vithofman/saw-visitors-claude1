@@ -1,0 +1,365 @@
+/**
+ * Branches Module Styles
+ * 
+ * @package SAW_Visitors
+ * @version 1.0.0
+ */
+
+/* ============================================
+   BRANCH THUMBNAIL
+   ============================================ */
+.saw-module-branches .saw-branch-thumbnail {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-right: 12px;
+    vertical-align: middle;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.saw-module-branches .saw-branch-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    margin-right: 12px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 8px;
+    font-size: 24px;
+    vertical-align: middle;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* ============================================
+   CODE BADGE
+   ============================================ */
+.saw-module-branches .saw-code-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    letter-spacing: 0.5px;
+}
+
+/* ============================================
+   SORT ORDER BADGE
+   ============================================ */
+.saw-module-branches .saw-sort-order-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: #f9fafb;
+    border: 2px solid #e5e7eb;
+    border-radius: 50%;
+    font-weight: 600;
+    font-size: 13px;
+    color: #6b7280;
+}
+
+/* ============================================
+   PHONE LINK
+   ============================================ */
+.saw-module-branches .saw-phone-link {
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.saw-module-branches .saw-phone-link:hover {
+    color: #1d4ed8;
+    text-decoration: underline;
+}
+
+/* ============================================
+   BRANCH NAME
+   ============================================ */
+.saw-module-branches .saw-branch-name {
+    display: flex;
+    align-items: center;
+}
+
+.saw-module-branches .saw-branch-name strong {
+    font-size: 15px;
+    color: #111827;
+    margin-right: 8px;
+}
+
+.saw-module-branches .saw-badge-sm {
+    font-size: 11px;
+    padding: 2px 8px;
+}
+
+/* ============================================
+   TABLE ROW
+   ============================================ */
+.saw-module-branches .saw-branch-row:hover {
+    background-color: #f9fafb;
+}
+
+/* ============================================
+   ACTION BUTTONS
+   ============================================ */
+.saw-module-branches .saw-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    margin: 0 4px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.saw-module-branches .saw-action-btn .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: #6b7280;
+}
+
+.saw-module-branches .saw-action-edit:hover {
+    background: #eff6ff;
+}
+
+.saw-module-branches .saw-action-edit:hover .dashicons {
+    color: #2563eb;
+}
+
+.saw-module-branches .saw-action-delete:hover {
+    background: #fef2f2;
+}
+
+.saw-module-branches .saw-action-delete:hover .dashicons {
+    color: #dc2626;
+}
+
+/* ============================================
+   FORM CURRENT IMAGE
+   ============================================ */
+.saw-module-branches .saw-current-image {
+    margin-bottom: 16px;
+}
+
+.saw-module-branches .saw-current-image img {
+    max-width: 300px;
+    border-radius: 8px;
+    border: 3px solid #fff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* ============================================
+   GPS BUTTON
+   ============================================ */
+.saw-module-branches .saw-get-gps-btn {
+    margin-top: 8px;
+}
+
+.saw-module-branches .saw-get-gps-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ============================================
+   OPENING HOURS TEMPLATES
+   ============================================ */
+.saw-module-branches .saw-opening-hours-templates {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.saw-module-branches .saw-template-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.saw-module-branches .saw-template-btn:hover {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.saw-module-branches .saw-template-btn:active {
+    transform: translateY(0);
+}
+
+/* ============================================
+   MAP PREVIEW (for detail modal)
+   ============================================ */
+.saw-module-branches .saw-map-preview {
+    width: 100%;
+    height: 300px;
+    border-radius: 8px;
+    border: 2px solid #e5e7eb;
+    overflow: hidden;
+}
+
+.saw-module-branches .saw-map-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #eff6ff;
+    border: 2px solid #bfdbfe;
+    border-radius: 8px;
+    color: #1e40af;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.saw-module-branches .saw-map-link:hover {
+    background: #dbeafe;
+    border-color: #93c5fd;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.saw-module-branches .saw-map-link .dashicons {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+}
+
+/* ============================================
+   ADDRESS DISPLAY
+   ============================================ */
+.saw-module-branches .saw-address-block {
+    padding: 16px;
+    background: #f9fafb;
+    border-left: 4px solid #667eea;
+    border-radius: 8px;
+    margin: 16px 0;
+}
+
+.saw-module-branches .saw-address-block strong {
+    display: block;
+    margin-bottom: 8px;
+    color: #374151;
+    font-size: 14px;
+}
+
+.saw-module-branches .saw-address-block p {
+    margin: 4px 0;
+    color: #6b7280;
+    line-height: 1.6;
+}
+
+/* ============================================
+   OPENING HOURS DISPLAY
+   ============================================ */
+.saw-module-branches .saw-opening-hours-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.saw-module-branches .saw-opening-hours-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 12px;
+    margin: 4px 0;
+    background: #f9fafb;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.saw-module-branches .saw-opening-hours-list li strong {
+    color: #374151;
+    min-width: 40px;
+}
+
+.saw-module-branches .saw-opening-hours-list li span {
+    color: #6b7280;
+}
+
+/* ============================================
+   UTILITIES
+   ============================================ */
+.saw-module-branches .saw-text-muted {
+    color: #9ca3af;
+    font-size: 13px;
+}
+
+/* ============================================
+   SPIN ANIMATION
+   ============================================ */
+@keyframes saw-spin-animation {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.saw-module-branches .saw-spin {
+    animation: saw-spin-animation 1s linear infinite;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+    .saw-module-branches .saw-action-btn {
+        width: 32px;
+        height: 32px;
+        margin: 0 2px;
+    }
+    
+    .saw-module-branches .saw-action-btn .dashicons {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+    }
+    
+    .saw-module-branches .saw-branch-thumbnail {
+        width: 40px;
+        height: 40px;
+        margin-right: 8px;
+    }
+    
+    .saw-module-branches .saw-branch-icon {
+        width: 40px;
+        height: 40px;
+        margin-right: 8px;
+        font-size: 20px;
+    }
+    
+    .saw-module-branches .saw-code-badge {
+        font-size: 11px;
+        padding: 3px 8px;
+    }
+    
+    .saw-module-branches .saw-template-btn {
+        font-size: 12px;
+        padding: 6px 12px;
+    }
+    
+    .saw-module-branches .saw-map-preview {
+        height: 200px;
+    }
+}

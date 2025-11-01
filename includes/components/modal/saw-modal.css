@@ -1,12 +1,8 @@
 /**
- * SAW Modal Component Styles
- * 
- * Univerzální modal komponenta s podporou různých velikostí
- * a pozic (pravý okraj, střed obrazovky).
+ * SAW Modal Component Styles - Modern & Elegant Edition
  * 
  * @package SAW_Visitors
- * @version 3.0.0
- * @since   4.6.1
+ * @version 4.0.0
  */
 
 /* ========================================
@@ -22,7 +18,7 @@
     z-index: 9999;
     display: none;
     opacity: 0;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .saw-modal.saw-modal-open {
@@ -36,9 +32,9 @@
     right: 0;
     bottom: 0;
     left: 0;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(2px);
-    animation: saw-fade-in 0.3s ease;
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.7) 0%, rgba(30, 41, 59, 0.85) 100%);
+    backdrop-filter: blur(8px) saturate(180%);
+    animation: saw-fade-in 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
 }
 
@@ -50,11 +46,14 @@
     position: relative;
     margin-left: auto;
     height: 100%;
-    background: #fff;
-    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+    background: #ffffff;
+    box-shadow: 
+        -8px 0 40px rgba(0, 0, 0, 0.12),
+        -4px 0 20px rgba(0, 0, 0, 0.08),
+        -2px 0 8px rgba(0, 0, 0, 0.04);
     display: flex;
     flex-direction: column;
-    animation: saw-slide-in-right 0.3s ease;
+    animation: saw-slide-in-right 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     z-index: 1;
 }
 
@@ -62,25 +61,21 @@
    MODAL SIZES
    ======================================== */
 
-/* Small - 400px */
 .saw-modal-small {
     width: 100%;
-    max-width: 400px;
+    max-width: 440px;
 }
 
-/* Medium - 600px (default) */
 .saw-modal-medium {
     width: 100%;
-    max-width: 600px;
+    max-width: 680px;
 }
 
-/* Large - 800px */
 .saw-modal-large {
     width: 100%;
-    max-width: 800px;
+    max-width: 920px;
 }
 
-/* Fullscreen - 100% */
 .saw-modal-fullscreen {
     width: 100%;
     max-width: 100%;
@@ -92,22 +87,25 @@
 
 .saw-modal-centered .saw-modal-panel {
     margin: auto;
-    max-height: 90vh;
-    border-radius: 12px;
-    animation: saw-modal-scale-in 0.3s ease;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    max-height: 92vh;
+    border-radius: 16px;
+    animation: saw-modal-scale-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 
+        0 24px 80px rgba(0, 0, 0, 0.25),
+        0 12px 40px rgba(0, 0, 0, 0.15),
+        0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .saw-modal-centered.saw-modal-small .saw-modal-panel {
-    max-width: 400px;
+    max-width: 440px;
 }
 
 .saw-modal-centered.saw-modal-medium .saw-modal-panel {
-    max-width: 600px;
+    max-width: 680px;
 }
 
 .saw-modal-centered.saw-modal-large .saw-modal-panel {
-    max-width: 800px;
+    max-width: 920px;
 }
 
 /* ========================================
@@ -118,72 +116,109 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 24px 32px;
+    padding: 28px 36px;
     border-bottom: 1px solid #e5e7eb;
-    background: #f9fafb;
+    background: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
     flex-shrink: 0;
+    position: relative;
+}
+
+.saw-modal-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(59, 130, 246, 0.2) 50%, transparent 100%);
 }
 
 .saw-modal-title {
-    font-size: 20px;
-    font-weight: 600;
-    color: #1d2327;
+    font-size: 22px;
+    font-weight: 700;
+    color: #0f172a;
     margin: 0;
+    letter-spacing: -0.02em;
+    line-height: 1.3;
 }
 
 /* ========================================
-   MODAL HEADER ACTIONS (NEW!)
+   MODAL HEADER ACTIONS
    ======================================== */
 
 .saw-modal-header-actions {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
 }
 
 .saw-modal-action-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    height: 36px;
-    padding: 0 12px;
+    gap: 7px;
+    height: 40px;
+    padding: 0 16px;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     background: transparent;
-    color: #646970;
+    color: #64748b;
     cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 13px;
-    font-weight: 500;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    position: relative;
 }
 
-.saw-modal-action-btn:hover {
-    background: #e5e7eb;
-    color: #1d2327;
+.saw-modal-action-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 8px;
+    background: currentColor;
+    opacity: 0;
+    transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.saw-modal-action-btn:hover::before {
+    opacity: 0.08;
+}
+
+.saw-modal-action-btn:active {
+    transform: scale(0.96);
 }
 
 .saw-modal-action-btn .dashicons {
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    position: relative;
+    z-index: 1;
 }
 
-/* Edit action - blue */
-.saw-modal-action-edit:hover {
-    background: #e0f2fe;
+.saw-modal-action-edit {
     color: #0369a1;
 }
 
-/* Delete action - red */
-.saw-modal-action-delete:hover {
-    background: #fee2e2;
+.saw-modal-action-edit:hover {
+    background: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 100%);
+    color: #0c4a6e;
+}
+
+.saw-modal-action-delete {
     color: #dc2626;
 }
 
-/* Hide label on mobile by default */
+.saw-modal-action-delete:hover {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    color: #991b1b;
+}
+
 .saw-modal-action-label {
     display: none;
+    position: relative;
+    z-index: 1;
 }
 
 @media screen and (min-width: 782px) {
@@ -197,26 +232,46 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     background: transparent;
-    color: #646970;
+    color: #64748b;
     cursor: pointer;
-    transition: all 0.2s ease;
-    margin-left: 4px;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-left: 8px;
+    position: relative;
+}
+
+.saw-modal-close::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 8px;
+    background: currentColor;
+    opacity: 0;
+    transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .saw-modal-close:hover {
-    background: #e5e7eb;
-    color: #1d2327;
+    color: #1e293b;
+}
+
+.saw-modal-close:hover::before {
+    opacity: 0.08;
+}
+
+.saw-modal-close:active {
+    transform: scale(0.94);
 }
 
 .saw-modal-close .dashicons {
-    font-size: 20px;
-    width: 20px;
-    height: 20px;
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+    position: relative;
+    z-index: 1;
 }
 
 /* ========================================
@@ -226,25 +281,27 @@
 .saw-modal-body {
     flex: 1;
     overflow-y: auto;
-    padding: 32px;
+    padding: 36px;
+    background: #fafbfc;
 }
 
-/* Custom scrollbar */
 .saw-modal-body::-webkit-scrollbar {
-    width: 8px;
+    width: 10px;
 }
 
 .saw-modal-body::-webkit-scrollbar-track {
-    background: #f9fafb;
+    background: #f1f5f9;
+    border-radius: 5px;
 }
 
 .saw-modal-body::-webkit-scrollbar-thumb {
-    background: #dcdcde;
-    border-radius: 4px;
+    background: linear-gradient(180deg, #cbd5e1 0%, #94a3b8 100%);
+    border-radius: 5px;
+    border: 2px solid #f1f5f9;
 }
 
 .saw-modal-body::-webkit-scrollbar-thumb:hover {
-    background: #c3c4c7;
+    background: linear-gradient(180deg, #94a3b8 0%, #64748b 100%);
 }
 
 /* ========================================
@@ -255,20 +312,21 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 12px;
-    padding: 16px 32px;
+    gap: 14px;
+    padding: 20px 36px;
     border-top: 1px solid #e5e7eb;
-    background: #f9fafb;
+    background: linear-gradient(180deg, #fafbfc 0%, #ffffff 100%);
     flex-shrink: 0;
 }
 
 .saw-modal-footer button {
-    padding: 10px 20px;
-    border-radius: 6px;
-    font-size: 14px;
-    font-weight: 500;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    letter-spacing: -0.01em;
 }
 
 /* ========================================
@@ -280,59 +338,70 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 200px;
-    gap: 16px;
+    min-height: 280px;
+    gap: 20px;
 }
 
 .saw-spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid #f3f4f6;
-    border-top-color: #2271b1;
+    width: 48px;
+    height: 48px;
+    border: 5px solid #e2e8f0;
+    border-top-color: #3b82f6;
+    border-right-color: #60a5fa;
     border-radius: 50%;
-    animation: saw-spin 0.8s linear infinite;
+    animation: saw-spin 0.8s cubic-bezier(0.5, 0, 0.5, 1) infinite;
 }
 
 .saw-modal-loading p {
-    color: #646970;
-    font-size: 14px;
+    color: #64748b;
+    font-size: 15px;
+    font-weight: 500;
     margin: 0;
+    letter-spacing: -0.01em;
 }
 
 /* ========================================
-   DETAIL LAYOUT (Customer Detail)
+   DETAIL LAYOUT
    ======================================== */
 
 .saw-detail-header {
     display: flex;
     align-items: center;
-    gap: 20px;
-    padding-bottom: 24px;
-    margin-bottom: 24px;
-    border-bottom: 2px solid #e5e7eb;
+    gap: 24px;
+    padding: 24px;
+    margin-bottom: 28px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
 }
 
 .saw-detail-logo {
-    width: 80px;
-    height: 80px;
+    width: 88px;
+    height: 88px;
     object-fit: contain;
-    border: 2px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 8px;
-    background: #fff;
+    border: 2px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 10px;
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .saw-detail-header-info h2 {
-    font-size: 24px;
-    font-weight: 600;
-    color: #1d2327;
-    margin: 0 0 4px 0;
+    font-size: 26px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 6px 0;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
 }
 
 .saw-detail-header-info p {
     margin: 0;
-    font-size: 14px;
-    color: #646970;
+    font-size: 15px;
+    color: #64748b;
+    font-weight: 500;
+    letter-spacing: -0.01em;
 }
 
 /* ========================================
@@ -342,74 +411,88 @@
 .saw-detail-sections {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 28px;
 }
 
 .saw-detail-section {
-    background: #f9fafb;
-    border-radius: 8px;
-    padding: 20px;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 24px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.saw-detail-section:hover {
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+    border-color: #cbd5e1;
 }
 
 .saw-detail-section h3 {
-    font-size: 16px;
-    font-weight: 600;
-    color: #1d2327;
-    margin: 0 0 16px 0;
-    padding-bottom: 12px;
-    border-bottom: 1px solid #e5e7eb;
+    font-size: 17px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 18px 0;
+    padding-bottom: 14px;
+    border-bottom: 2px solid #e2e8f0;
+    letter-spacing: -0.01em;
 }
 
 .saw-detail-section p {
     margin: 0;
-    line-height: 1.6;
-    color: #1d2327;
+    line-height: 1.7;
+    color: #1e293b;
+    font-size: 15px;
 }
 
-/* Definition list for key-value pairs */
 .saw-detail-section dl {
     display: grid;
-    grid-template-columns: 140px 1fr;
-    gap: 12px 20px;
+    grid-template-columns: 160px 1fr;
+    gap: 16px 24px;
     margin: 0;
 }
 
 .saw-detail-section dt {
     font-size: 13px;
-    font-weight: 600;
-    color: #646970;
+    font-weight: 700;
+    color: #64748b;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.06em;
 }
 
 .saw-detail-section dd {
-    font-size: 14px;
-    color: #1d2327;
+    font-size: 15px;
+    color: #1e293b;
     margin: 0;
+    font-weight: 500;
+    letter-spacing: -0.01em;
 }
 
 .saw-detail-section dd a {
-    color: #2271b1;
+    color: #3b82f6;
     text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s ease;
 }
 
 .saw-detail-section dd a:hover {
+    color: #2563eb;
     text-decoration: underline;
 }
 
-/* Meta section */
 .saw-detail-meta {
     background: transparent;
-    border-top: 1px solid #e5e7eb;
-    padding: 16px 0 0 0;
+    border-top: 1px solid #e2e8f0;
+    padding: 20px 0 0 0;
+    box-shadow: none;
 }
 
 .saw-text-small {
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .saw-text-muted {
-    color: #646970;
+    color: #64748b;
 }
 
 /* ========================================
@@ -428,20 +511,22 @@
 @keyframes saw-slide-in-right {
     from {
         transform: translateX(100%);
+        opacity: 0;
     }
     to {
         transform: translateX(0);
+        opacity: 1;
     }
 }
 
 @keyframes saw-modal-scale-in {
     from {
         opacity: 0;
-        transform: scale(0.95);
+        transform: scale(0.92) translateY(20px);
     }
     to {
         opacity: 1;
-        transform: scale(1);
+        transform: scale(1) translateY(0);
     }
 }
 
@@ -452,7 +537,7 @@
 }
 
 /* ========================================
-   BODY LOCK (when modal is open)
+   BODY LOCK
    ======================================== */
 
 body.saw-modal-active {
@@ -465,40 +550,110 @@ body.saw-modal-active {
 
 .saw-toast {
     position: fixed;
-    bottom: 24px;
-    right: 24px;
-    padding: 16px 24px;
-    background: #1d2327;
-    color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    font-size: 14px;
-    font-weight: 500;
+    bottom: 28px;
+    right: 28px;
+    padding: 18px 28px;
+    background: #0f172a;
+    color: #ffffff;
+    border-radius: 10px;
+    box-shadow: 
+        0 8px 24px rgba(15, 23, 42, 0.25),
+        0 4px 12px rgba(15, 23, 42, 0.15);
+    font-size: 15px;
+    font-weight: 600;
     z-index: 10000;
     opacity: 0;
-    transform: translateY(20px);
-    transition: all 0.3s ease;
+    transform: translateY(24px) scale(0.95);
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    letter-spacing: -0.01em;
 }
 
 .saw-toast.saw-toast-show {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
 }
 
 .saw-toast-success {
-    background: #10b981;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
 }
 
 .saw-toast-danger {
-    background: #ef4444;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
 }
 
 .saw-toast-warning {
-    background: #f59e0b;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
 }
 
 .saw-toast-info {
-    background: #3b82f6;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+/* ========================================
+   FEATURES LIST
+   ======================================== */
+
+.saw-features-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.saw-features-list li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: #ffffff;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    font-size: 15px;
+    color: #1e293b;
+    font-weight: 500;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.saw-features-list li:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    transform: translateX(6px);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+
+.saw-features-list li .dashicons {
+    color: #10b981;
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+}
+
+/* ========================================
+   BADGES
+   ======================================== */
+
+.saw-badge {
+    padding: 7px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-block;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.saw-badge-success {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    color: #065f46;
+}
+
+.saw-badge-secondary {
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    color: #475569;
 }
 
 /* ========================================
@@ -511,93 +666,37 @@ body.saw-modal-active {
     }
     
     .saw-modal-header {
-        padding: 16px 20px;
+        padding: 20px 24px;
+    }
+    
+    .saw-modal-title {
+        font-size: 19px;
     }
     
     .saw-modal-body {
-        padding: 20px;
+        padding: 24px;
     }
     
     .saw-modal-footer {
-        padding: 12px 20px;
+        padding: 16px 24px;
     }
     
     .saw-detail-header {
         flex-direction: column;
         align-items: flex-start;
+        padding: 20px;
+    }
+    
+    .saw-detail-section {
+        padding: 20px;
     }
     
     .saw-detail-section dl {
         grid-template-columns: 1fr;
-        gap: 8px;
+        gap: 10px;
     }
     
     .saw-detail-section dt {
-        margin-top: 8px;
+        margin-top: 10px;
     }
-}
-
-
-* ========================================
-   FEATURES LIST (Account Types)
-   ======================================== */
-
-.saw-features-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.saw-features-list li {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 16px;
-    background: #ffffff;
-    border-radius: 8px;
-    border: 1px solid #e5e7eb;
-    font-size: 14px;
-    color: #1d2327;
-    transition: all 0.2s ease;
-}
-
-.saw-features-list li:hover {
-    background: #f9fafb;
-    border-color: #d1d5db;
-    transform: translateX(4px);
-}
-
-.saw-features-list li .dashicons {
-    color: #10b981;
-    font-size: 20px;
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
-}
-
-/* ========================================
-   BADGES (Status, Active/Inactive)
-   ======================================== */
-
-.saw-badge {
-    padding: 6px 12px;
-    border-radius: 16px;
-    font-size: 11px;
-    font-weight: 600;
-    display: inline-block;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.saw-badge-success {
-    background: #d1fae5;
-    color: #065f46;
-}
-
-.saw-badge-secondary {
-    background: #f3f4f6;
-    color: #6b7280;
 }

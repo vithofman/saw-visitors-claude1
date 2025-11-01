@@ -17,7 +17,7 @@ class SAW_Database_Helper {
     
     /**
      * Seznam všech tabulek v pořadí závislostí
-     * TOTAL: 33 tables
+     * TOTAL: 34 tables
      * 
      * @return array
      */
@@ -47,6 +47,7 @@ class SAW_Database_Helper {
             'department_materials',
             'department_documents',
             'contact_persons',
+  	    'branches',
             
             // Visitor Management (8)
             'companies',

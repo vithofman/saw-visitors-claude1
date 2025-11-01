@@ -185,6 +185,12 @@ class SAW_App_Sidebar {
                         'icon' => '🏛️',
                     ),
                     array(
+                        'id' => 'branches',
+                        'label' => 'Pobočky',
+                        'url' => '/admin/branches',
+                        'icon' => '🏢',
+                    ),
+                    array(
                         'id' => 'content',
                         'label' => 'Školicí obsah',
                         'url' => '/admin/settings/content',

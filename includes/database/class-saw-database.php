@@ -16,7 +16,7 @@ class SAW_Database {
     /**
      * All tables (without 'saw_' prefix)
      * Ordered by dependencies (foreign keys)
-     * TOTAL: 33 tables
+     * TOTAL: 34 tables
      */
     private static $tables_order = array(
         // Core (4)
@@ -43,6 +43,7 @@ class SAW_Database {
         'department_materials',
         'department_documents',
         'contact_persons',
+	'branches',
         
         // Visitor Management (8)
         'companies',
@@ -232,6 +233,9 @@ class SAW_Database {
             
             // contact_persons
             array('table' => 'contact_persons', 'constraint' => 'fk_contact_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+
+	    // branches
+	    array('table' => 'branches', 'constraint' => 'fk_branch_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
             // companies
             array('table' => 'companies', 'constraint' => 'fk_company_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
