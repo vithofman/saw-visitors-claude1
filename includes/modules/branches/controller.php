@@ -27,6 +27,8 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/class-saw-file-uploader.php';
         $this->file_uploader = new SAW_File_Uploader();
         
+        add_action('wp_ajax_saw_get_branches_for_switcher', [$this, 'ajax_get_branches_for_switcher']);
+        add_action('wp_ajax_saw_switch_branch', [$this, 'ajax_switch_branch']);
         add_action('wp_ajax_saw_get_branches_detail', [$this, 'ajax_get_detail']);
         add_action('wp_ajax_saw_search_branches', [$this, 'ajax_search']);
         add_action('wp_ajax_saw_delete_branches', [$this, 'ajax_delete']);
@@ -51,7 +53,7 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         }
         
         if (!empty($_FILES['image_url']['name'])) {
-            $upload = $this->file_uploader->upload($_FILES['image_url'], 'customers');
+            $upload = $this->file_uploader->upload($_FILES['image_url'], 'branches');
             
             if (is_wp_error($upload)) {
                 wp_die($upload->get_error_message());
@@ -71,65 +73,171 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         return $data;
     }
     
-    protected function format_detail_data($item) {
-        if (!empty($item['created_at'])) {
-            $item['created_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['created_at']));
-        }
-        
-        if (!empty($item['updated_at'])) {
-            $item['updated_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['updated_at']));
-        }
-        
-        $item['full_address'] = $this->model->get_full_address($item);
-        $item['opening_hours_array'] = $this->model->get_opening_hours_as_array($item['opening_hours'] ?? null);
-        $item['has_gps'] = !empty($item['latitude']) && !empty($item['longitude']);
-        
-        if ($item['has_gps']) {
-            $item['google_maps_url'] = sprintf(
-                'https://www.google.com/maps/search/?api=1&query=%s,%s',
-                $item['latitude'],
-                $item['longitude']
-            );
-        }
-        
-        // ✅ FIX: Explicitní == 1 check místo !empty() kvůli string "0" vs int 0
-        $item['is_active_label'] = ($item['is_active'] == 1) ? 'Aktivní' : 'Neaktivní';
-        $item['is_active_badge_class'] = ($item['is_active'] == 1) ? 'saw-badge-success' : 'saw-badge-secondary';
-        
-        $item['is_headquarters_label'] = ($item['is_headquarters'] == 1) ? 'Ano' : 'Ne';
-        $item['is_headquarters_badge_class'] = ($item['is_headquarters'] == 1) ? 'saw-badge-info' : 'saw-badge-secondary';
-        
-        $item['country_name'] = $this->get_country_name($item['country'] ?? 'CZ');
-        
-        return $item;
-    }
-    
-    private function get_country_name($code) {
-        $countries = [
-            'CZ' => 'Česká republika',
-            'SK' => 'Slovensko',
-            'DE' => 'Německo',
-            'AT' => 'Rakousko',
-            'PL' => 'Polsko',
-        ];
-        
-        return $countries[$code] ?? $code;
-    }
-    
-    protected function before_delete($id) {
-        if ($this->model->is_used_in_system($id)) {
-            return new WP_Error(
-                'cannot_delete_in_use',
-                'Tuto pobočku nelze smazat, protože je používána v systému. Nejdříve odeberte všechny vazby na tuto pobočku.'
-            );
-        }
-        
-        return true;
-    }
-    
     protected function after_save($id) {
+        if (!empty($this->config['customer_id'])) {
+            delete_transient('branches_for_switcher_' . $this->config['customer_id']);
+        }
+    }
+    
+    public function ajax_get_branches_for_switcher() {
+        if (!current_user_can('read')) {
+            wp_send_json_error(['message' => 'Nedostatečná oprávnění']);
+        }
+        
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'saw_branch_switcher')) {
+            wp_send_json_error(['message' => 'Neplatný bezpečnostní token']);
+        }
+        
+        $customer_id = isset($_POST['customer_id']) ? intval($_POST['customer_id']) : 0;
+        
+        if (!$customer_id) {
+            wp_send_json_error(['message' => 'Chybí ID zákazníka']);
+        }
+        
         global $wpdb;
-        $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_branches_%'");
-        $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_timeout_branches_%'");
+        $table = $wpdb->prefix . 'saw_branches';
+        
+        $branches = $wpdb->get_results($wpdb->prepare(
+            "SELECT id, name, code, city, street, is_headquarters 
+             FROM {$table} 
+             WHERE customer_id = %d 
+             AND is_active = 1 
+             ORDER BY is_headquarters DESC, name ASC",
+            $customer_id
+        ), ARRAY_A);
+        
+        if (!$branches) {
+            wp_send_json_success([
+                'branches' => [],
+                'current_branch_id' => $this->get_current_branch_id()
+            ]);
+            return;
+        }
+        
+        $formatted = array_map(function($branch) {
+            $address = '';
+            if (!empty($branch['street']) && !empty($branch['city'])) {
+                $address = $branch['street'] . ', ' . $branch['city'];
+            } elseif (!empty($branch['city'])) {
+                $address = $branch['city'];
+            }
+            
+            return [
+                'id' => intval($branch['id']),
+                'name' => $branch['name'],
+                'code' => $branch['code'] ?? '',
+                'city' => $branch['city'] ?? '',
+                'address' => $address,
+                'is_headquarters' => (bool)$branch['is_headquarters']
+            ];
+        }, $branches);
+        
+        wp_send_json_success([
+            'branches' => $formatted,
+            'current_branch_id' => $this->get_current_branch_id()
+        ]);
+    }
+    
+    public function ajax_switch_branch() {
+        if (!current_user_can('read')) {
+            wp_send_json_error(['message' => 'Nedostatečná oprávnění']);
+        }
+        
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'saw_branch_switcher')) {
+            wp_send_json_error(['message' => 'Neplatný bezpečnostní token']);
+        }
+        
+        $branch_id = isset($_POST['branch_id']) ? intval($_POST['branch_id']) : 0;
+        
+        if ($branch_id <= 0) {
+            $this->clear_branch_session();
+            wp_send_json_success([
+                'message' => 'Pobočka byla odstraněna',
+                'branch_id' => null
+            ]);
+            return;
+        }
+        
+        global $wpdb;
+        $table = $wpdb->prefix . 'saw_branches';
+        
+        $branch = $wpdb->get_row($wpdb->prepare(
+            "SELECT id, name, customer_id FROM {$table} WHERE id = %d AND is_active = 1",
+            $branch_id
+        ), ARRAY_A);
+        
+        if (!$branch) {
+            wp_send_json_error(['message' => 'Pobočka nebyla nalezena']);
+        }
+        
+        if (is_user_logged_in()) {
+            $user_id = get_current_user_id();
+            $customer_id = $branch['customer_id'];
+            
+            update_user_meta($user_id, 'saw_current_branch_id', $branch_id);
+            update_user_meta($user_id, 'saw_branch_customer_' . $customer_id, $branch_id);
+        }
+        
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        $_SESSION['saw_current_branch_id'] = $branch_id;
+        
+        wp_send_json_success([
+            'message' => 'Pobočka byla úspěšně přepnuta',
+            'branch_id' => $branch_id,
+            'branch_name' => $branch['name']
+        ]);
+    }
+    
+    private function get_current_branch_id() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        if (isset($_SESSION['saw_current_branch_id'])) {
+            return intval($_SESSION['saw_current_branch_id']);
+        }
+        
+        if (is_user_logged_in()) {
+            $user_id = get_current_user_id();
+            
+            if (isset($_SESSION['saw_current_customer_id'])) {
+                $customer_id = intval($_SESSION['saw_current_customer_id']);
+                $branch_id = get_user_meta($user_id, 'saw_branch_customer_' . $customer_id, true);
+                
+                if ($branch_id) {
+                    $_SESSION['saw_current_branch_id'] = intval($branch_id);
+                    return intval($branch_id);
+                }
+            }
+            
+            $branch_id = get_user_meta($user_id, 'saw_current_branch_id', true);
+            if ($branch_id) {
+                $_SESSION['saw_current_branch_id'] = intval($branch_id);
+                return intval($branch_id);
+            }
+        }
+        
+        return null;
+    }
+    
+    private function clear_branch_session() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        unset($_SESSION['saw_current_branch_id']);
+        
+        if (is_user_logged_in()) {
+            $user_id = get_current_user_id();
+            delete_user_meta($user_id, 'saw_current_branch_id');
+            
+            if (isset($_SESSION['saw_current_customer_id'])) {
+                $customer_id = intval($_SESSION['saw_current_customer_id']);
+                delete_user_meta($user_id, 'saw_branch_customer_' . $customer_id);
+            }
+        }
     }
 }

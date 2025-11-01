@@ -28,23 +28,25 @@
                 return;
             }
             
-            this.customerId = this.container.data('customer-id');
-            this.currentBranchId = this.button.data('current-branch-id');
+            if (typeof sawBranchSwitcher === 'undefined') {
+                console.error('Branch Switcher: sawBranchSwitcher object not found');
+                return;
+            }
             
-            // Button click
+            this.customerId = parseInt(this.container.data('customer-id'));
+            this.currentBranchId = parseInt(this.button.data('current-branch-id')) || null;
+            
             this.button.on('click', (e) => {
                 e.stopPropagation();
                 this.toggle();
             });
             
-            // Outside click
             $(document).on('click', (e) => {
                 if (!$(e.target).closest('#sawBranchSwitcher').length) {
                     this.close();
                 }
             });
             
-            // ESC key
             $(document).on('keydown', (e) => {
                 if (e.key === 'Escape' && this.isOpen) {
                     this.close();
@@ -64,7 +66,6 @@
             this.isOpen = true;
             this.dropdown.addClass('active');
             
-            // Load branches if not loaded
             if (this.branches.length === 0) {
                 this.loadBranches();
             }
@@ -92,23 +93,36 @@
                 success: (response) => {
                     this.isLoading = false;
                     
-                    if (response.success && response.data) {
-                        this.branches = response.data;
+                    if (response.success && response.data && response.data.branches) {
+                        this.branches = response.data.branches;
+                        
+                        if (response.data.current_branch_id) {
+                            this.currentBranchId = parseInt(response.data.current_branch_id);
+                        }
+                        
                         this.renderBranches();
                     } else {
-                        this.showError('Nepodařilo se načíst pobočky');
+                        this.showError(response.data?.message || 'Nepodařilo se načíst pobočky');
                     }
                 },
-                error: () => {
+                error: (xhr, status, error) => {
                     this.isLoading = false;
-                    this.showError('Chyba serveru');
+                    console.error('Branch Switcher Error:', status, error);
+                    this.showError('Chyba serveru při načítání poboček');
                 }
             });
         }
         
         renderBranches() {
             if (this.branches.length === 0) {
-                this.list.html('<div class="saw-branch-empty">Zákazník nemá žádné pobočky</div>');
+                this.list.html(`
+                    <div class="saw-branch-empty">
+                        <p>Zákazník nemá žádné pobočky</p>
+                        <a href="${window.location.origin}/admin/branches/new/" class="saw-branch-create-button">
+                            ➕ Vytvořit pobočku
+                        </a>
+                    </div>
+                `);
                 return;
             }
             
@@ -122,8 +136,8 @@
                     <div class="saw-branch-item ${activeClass}" data-branch-id="${branch.id}">
                         <span class="saw-branch-item-icon">🏢</span>
                         <div class="saw-branch-item-info">
-                            <div class="saw-branch-item-name">${branch.name}</div>
-                            ${branch.address ? `<div class="saw-branch-item-address">${branch.address}</div>` : ''}
+                            <div class="saw-branch-item-name">${this.escapeHtml(branch.name)}</div>
+                            ${branch.address ? `<div class="saw-branch-item-address">${this.escapeHtml(branch.address)}</div>` : ''}
                         </div>
                         ${isActive ? '<span class="saw-branch-item-check">✓</span>' : ''}
                     </div>
@@ -132,9 +146,8 @@
             
             this.list.html(html);
             
-            // Attach click handlers
             this.list.find('.saw-branch-item').on('click', (e) => {
-                const branchId = $(e.currentTarget).data('branch-id');
+                const branchId = parseInt($(e.currentTarget).data('branch-id'));
                 this.switchBranch(branchId);
             });
         }
@@ -157,7 +170,6 @@
                 },
                 success: (response) => {
                     if (response.success) {
-                        // Update button text
                         const branch = this.branches.find(b => b.id === branchId);
                         if (branch) {
                             this.button.find('.saw-branch-name').text(branch.name);
@@ -169,8 +181,9 @@
                     }
                     this.button.prop('disabled', false);
                 },
-                error: () => {
-                    alert('Chyba serveru');
+                error: (xhr, status, error) => {
+                    console.error('Branch Switch Error:', status, error);
+                    alert('Chyba serveru při přepínání pobočky');
                     this.button.prop('disabled', false);
                 }
             });
@@ -187,12 +200,22 @@
         
         showError(message) {
             this.list.html(`
-                <div class="saw-branch-error">${message}</div>
+                <div class="saw-branch-error">${this.escapeHtml(message)}</div>
             `);
+        }
+        
+        escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return String(text).replace(/[&<>"']/g, m => map[m]);
         }
     }
     
-    // Initialize
     $(document).ready(function() {
         new BranchSwitcher();
     });

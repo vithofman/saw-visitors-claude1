@@ -18,7 +18,7 @@
     gap: 12px;
     padding: 6px 12px 6px 6px;
     background: white;
-    border: 1px solid #e5e7eb;
+    border: 0px solid #e5e7eb;
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s;

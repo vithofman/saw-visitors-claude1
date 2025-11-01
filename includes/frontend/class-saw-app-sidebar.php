@@ -13,34 +13,11 @@ if (!defined('ABSPATH')) {
 
 class SAW_App_Sidebar {
     
-    /**
-     * @var array
-     */
     private $user;
-    
-    /**
-     * @var array
-     */
     private $customer;
-    
-    /**
-     * @var string
-     */
     private $active_menu;
-    
-    /**
-     * @var array|null
-     */
     private $current_branch;
     
-    /**
-     * Konstruktor
-     * 
-     * @param array|null  $user           User data
-     * @param array|null  $customer       Customer data
-     * @param string      $active_menu    Active menu ID
-     * @param array|null  $current_branch Current branch data
-     */
     public function __construct($user = null, $customer = null, $active_menu = '', $current_branch = null) {
         $this->user = $user ?: array('role' => 'admin');
         $this->customer = $customer ?: array(
@@ -49,12 +26,9 @@ class SAW_App_Sidebar {
             'logo_url' => '',
         );
         $this->active_menu = $active_menu;
-        $this->current_branch = $current_branch;
+        $this->current_branch = $current_branch ?: $this->load_current_branch();
     }
     
-    /**
-     * Get logo URL with fallback logic
-     */
     private function get_logo_url() {
         if (!empty($this->customer['logo_url_full'])) {
             return $this->customer['logo_url_full'];
@@ -67,11 +41,77 @@ class SAW_App_Sidebar {
         return '';
     }
     
-    /**
-     * Render sidebar
-     * 
-     * @return void
-     */
+    private function load_current_branch() {
+        $branch_id = $this->get_current_branch_id();
+        
+        if (!$branch_id || !$this->customer['id']) {
+            return null;
+        }
+        
+        global $wpdb;
+        $table = $wpdb->prefix . 'saw_branches';
+        
+        $branch = $wpdb->get_row($wpdb->prepare(
+            "SELECT id, name, code, city 
+             FROM {$table} 
+             WHERE id = %d 
+             AND customer_id = %d 
+             AND is_active = 1",
+            $branch_id,
+            $this->customer['id']
+        ), ARRAY_A);
+        
+        if (!$branch) {
+            $this->clear_invalid_branch();
+            return null;
+        }
+        
+        return $branch;
+    }
+    
+    private function clear_invalid_branch() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        unset($_SESSION['saw_current_branch_id']);
+        
+        if (is_user_logged_in()) {
+            delete_user_meta(get_current_user_id(), 'saw_current_branch_id');
+        }
+    }
+    
+    private function get_current_branch_id() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        if (isset($_SESSION['saw_current_branch_id'])) {
+            return intval($_SESSION['saw_current_branch_id']);
+        }
+        
+        if (is_user_logged_in()) {
+            $user_id = get_current_user_id();
+            
+            if (isset($_SESSION['saw_current_customer_id'])) {
+                $customer_id = intval($_SESSION['saw_current_customer_id']);
+                $branch_id = get_user_meta($user_id, 'saw_branch_customer_' . $customer_id, true);
+                
+                if ($branch_id) {
+                    $_SESSION['saw_current_branch_id'] = intval($branch_id);
+                    return intval($branch_id);
+                }
+            }
+            
+            $branch_id = get_user_meta($user_id, 'saw_current_branch_id', true);
+            if ($branch_id) {
+                $_SESSION['saw_current_branch_id'] = intval($branch_id);
+                return intval($branch_id);
+            }
+        }
+        
+        return null;
+    }
+    
     public function render() {
         $menu = $this->get_menu_items();
         $logo_url = $this->get_logo_url();
@@ -126,9 +166,6 @@ class SAW_App_Sidebar {
         <?php
     }
     
-    /**
-     * Render Branch Switcher (první položka v sidebaru)
-     */
     private function render_branch_switcher() {
         if (!class_exists('SAW_Component_Branch_Switcher')) {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/branch-switcher/class-saw-component-branch-switcher.php';
@@ -138,11 +175,6 @@ class SAW_App_Sidebar {
         $switcher->render();
     }
     
-    /**
-     * Získání menu položek
-     * 
-     * @return array
-     */
     private function get_menu_items() {
         $menu = array(
             array(

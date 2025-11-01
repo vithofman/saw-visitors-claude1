@@ -36,7 +36,6 @@ class SAW_Component_Customer_Switcher {
      * Render customer switcher
      */
     public function render() {
-        // Kontrola oprávnění - pouze superadmin
         if (!$this->is_super_admin()) {
             $this->render_static_info();
             return;
@@ -143,6 +142,8 @@ class SAW_Component_Customer_Switcher {
             array(
                 'ajaxurl' => admin_url('admin-ajax.php'),
                 'nonce' => wp_create_nonce('saw_customer_switcher'),
+                'currentCustomerId' => $this->current_customer['id'],
+                'currentCustomerName' => $this->current_customer['name'],
             )
         );
     }
@@ -156,7 +157,10 @@ class SAW_Component_Customer_Switcher {
         }
         
         if (!empty($this->current_customer['logo_url'])) {
-            return $this->current_customer['logo_url'];
+            if (strpos($this->current_customer['logo_url'], 'http') === 0) {
+                return $this->current_customer['logo_url'];
+            }
+            return wp_upload_dir()['baseurl'] . '/' . ltrim($this->current_customer['logo_url'], '/');
         }
         
         return '';

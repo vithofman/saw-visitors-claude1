@@ -75,14 +75,14 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
     }
     
     public function ajax_get_customers_for_switcher() {
+        delete_transient('customers_for_switcher');
+        
         if (!current_user_can('manage_options')) {
             wp_send_json_error(['message' => 'Nedostatečná oprávnění']);
         }
         
-        $cached = get_transient('customers_for_switcher');
-        if ($cached !== false) {
-            wp_send_json_success($cached);
-            return;
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'saw_customer_switcher')) {
+            wp_send_json_error(['message' => 'Neplatný bezpečnostní token']);
         }
         
         global $wpdb;
@@ -96,18 +96,38 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             ARRAY_A
         );
         
+        if (!$customers) {
+            wp_send_json_success([
+                'customers' => [],
+                'current_customer_id' => $this->get_current_customer_id()
+            ]);
+            return;
+        }
+        
         $formatted = array_map(function($customer) {
+            $logo_url = '';
+            if (!empty($customer['logo_url'])) {
+                if (strpos($customer['logo_url'], 'http') === 0) {
+                    $logo_url = $customer['logo_url'];
+                } else {
+                    $upload_dir = wp_upload_dir();
+                    $logo_url = $upload_dir['baseurl'] . '/' . ltrim($customer['logo_url'], '/');
+                }
+            }
+            
             return [
-                'value' => $customer['id'],
-                'label' => $customer['name'],
-                'icon' => !empty($customer['logo_url']) ? $customer['logo_url'] : '',
-                'meta' => !empty($customer['ico']) ? 'IČO: ' . $customer['ico'] : ''
+                'id' => intval($customer['id']),
+                'name' => $customer['name'],
+                'ico' => $customer['ico'] ?? '',
+                'logo_url' => $logo_url,
+                'primary_color' => $customer['primary_color'] ?? '#2563eb'
             ];
         }, $customers);
         
-        set_transient('customers_for_switcher', $formatted, HOUR_IN_SECONDS);
-        
-        wp_send_json_success($formatted);
+        wp_send_json_success([
+            'customers' => $formatted,
+            'current_customer_id' => $this->get_current_customer_id()
+        ]);
     }
     
     public function ajax_switch_customer() {
@@ -115,10 +135,25 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             wp_send_json_error(['message' => 'Nedostatečná oprávnění']);
         }
         
-        $customer_id = intval($_POST['customer_id']);
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'saw_customer_switcher')) {
+            wp_send_json_error(['message' => 'Neplatný bezpečnostní token']);
+        }
+        
+        $customer_id = isset($_POST['customer_id']) ? intval($_POST['customer_id']) : 0;
         
         if ($customer_id <= 0) {
             wp_send_json_error(['message' => 'Neplatné ID zákazníka']);
+        }
+        
+        global $wpdb;
+        $table = $wpdb->prefix . 'saw_customers';
+        $customer = $wpdb->get_row($wpdb->prepare(
+            "SELECT id, name FROM {$table} WHERE id = %d AND status = 'active'",
+            $customer_id
+        ), ARRAY_A);
+        
+        if (!$customer) {
+            wp_send_json_error(['message' => 'Zákazník nebyl nalezen']);
         }
         
         if (session_status() === PHP_SESSION_NONE) {
@@ -127,9 +162,86 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         
         $_SESSION['saw_current_customer_id'] = $customer_id;
         
+        if (is_user_logged_in()) {
+            update_user_meta(get_current_user_id(), 'saw_current_customer_id', $customer_id);
+        }
+        
+        delete_transient('branches_for_switcher_' . $customer_id);
+        
+        $this->handle_branch_on_customer_switch($customer_id);
+        
         wp_send_json_success([
             'message' => 'Zákazník byl úspěšně přepnut',
-            'customer_id' => $customer_id
+            'customer_id' => $customer_id,
+            'customer_name' => $customer['name']
         ]);
+    }
+    
+    private function handle_branch_on_customer_switch($customer_id) {
+        global $wpdb;
+        $branches_table = $wpdb->prefix . 'saw_branches';
+        
+        $branches = $wpdb->get_results($wpdb->prepare(
+            "SELECT id FROM {$branches_table} WHERE customer_id = %d AND is_active = 1 LIMIT 2",
+            $customer_id
+        ), ARRAY_A);
+        
+        $branch_count = count($branches);
+        
+        if ($branch_count === 1) {
+            $branch_id = intval($branches[0]['id']);
+            
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
+            $_SESSION['saw_current_branch_id'] = $branch_id;
+            
+            if (is_user_logged_in()) {
+                $user_id = get_current_user_id();
+                update_user_meta($user_id, 'saw_current_branch_id', $branch_id);
+                update_user_meta($user_id, 'saw_branch_customer_' . $customer_id, $branch_id);
+            }
+        } else {
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
+            unset($_SESSION['saw_current_branch_id']);
+            
+            if (is_user_logged_in()) {
+                $user_id = get_current_user_id();
+                delete_user_meta($user_id, 'saw_current_branch_id');
+            }
+        }
+    }
+    
+    private function get_current_customer_id() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        if (isset($_SESSION['saw_current_customer_id'])) {
+            return intval($_SESSION['saw_current_customer_id']);
+        }
+        
+        if (is_user_logged_in()) {
+            $meta_id = get_user_meta(get_current_user_id(), 'saw_current_customer_id', true);
+            if ($meta_id) {
+                $_SESSION['saw_current_customer_id'] = intval($meta_id);
+                return intval($meta_id);
+            }
+        }
+        
+        global $wpdb;
+        $table = $wpdb->prefix . 'saw_customers';
+        $first_customer = $wpdb->get_var(
+            "SELECT id FROM {$table} WHERE status = 'active' ORDER BY name ASC LIMIT 1"
+        );
+        
+        if ($first_customer) {
+            $_SESSION['saw_current_customer_id'] = intval($first_customer);
+            return intval($first_customer);
+        }
+        
+        return null;
     }
 }

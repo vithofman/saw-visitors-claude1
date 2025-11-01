@@ -197,6 +197,26 @@
     color: #ef4444;
 }
 
+.saw-branch-create-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 8px 16px;
+    background: #2563eb;
+    color: white;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.2s;
+}
+
+.saw-branch-create-button:hover {
+    background: #1d4ed8;
+    color: white;
+}
+
 .saw-spinner {
     width: 20px;
     height: 20px;

@@ -28,27 +28,28 @@
                 return;
             }
             
-            this.currentCustomerId = this.button.data('current-customer-id');
+            if (typeof sawCustomerSwitcher === 'undefined') {
+                console.error('SAW Customer Switcher: sawCustomerSwitcher object not found');
+                return;
+            }
             
-            // Button click
+            this.currentCustomerId = parseInt(this.button.data('current-customer-id'));
+            
             this.button.on('click', (e) => {
                 e.stopPropagation();
                 this.toggle();
             });
             
-            // Search input
             this.searchInput.on('input', () => {
                 this.filterCustomers(this.searchInput.val());
             });
             
-            // Outside click
             $(document).on('click', (e) => {
                 if (!$(e.target).closest('#sawCustomerSwitcher').length) {
                     this.close();
                 }
             });
             
-            // ESC key
             $(document).on('keydown', (e) => {
                 if (e.key === 'Escape' && this.isOpen) {
                     this.close();
@@ -69,7 +70,6 @@
             this.dropdown.addClass('active');
             this.searchInput.focus();
             
-            // Load customers if not loaded
             if (this.customers.length === 0) {
                 this.loadCustomers();
             }
@@ -98,17 +98,23 @@
                 success: (response) => {
                     this.isLoading = false;
                     
-                    if (response.success && response.data) {
-                        this.customers = response.data;
+                    if (response.success && response.data && response.data.customers) {
+                        this.customers = response.data.customers;
                         this.filteredCustomers = this.customers;
+                        
+                        if (response.data.current_customer_id) {
+                            this.currentCustomerId = parseInt(response.data.current_customer_id);
+                        }
+                        
                         this.renderCustomers();
                     } else {
-                        this.showError('Nepodařilo se načíst zákazníky');
+                        this.showError(response.data?.message || 'Nepodařilo se načíst zákazníky');
                     }
                 },
-                error: () => {
+                error: (xhr, status, error) => {
                     this.isLoading = false;
-                    this.showError('Chyba serveru');
+                    console.error('Customer Switcher AJAX Error:', status, error);
+                    this.showError('Chyba serveru při načítání zákazníků');
                 }
             });
         }
@@ -143,20 +149,18 @@
                     <div class="saw-switcher-item ${activeClass}" data-customer-id="${customer.id}">
                         <div class="saw-switcher-item-logo">
                             ${customer.logo_url ? 
-                                `<img src="${customer.logo_url}" alt="${customer.name}">` : 
-                                `<div class="saw-switcher-item-logo-fallback">
-                                    <svg width="24" height="24" viewBox="0 0 40 40" fill="none">
-                                        <rect width="40" height="40" rx="8" fill="#2563eb"/>
-                                        <text x="20" y="28" font-size="20" font-weight="bold" fill="white" text-anchor="middle">
-                                            ${customer.name.charAt(0).toUpperCase()}
-                                        </text>
-                                    </svg>
-                                </div>`
+                                `<img src="${this.escapeHtml(customer.logo_url)}" alt="${this.escapeHtml(customer.name)}">` : 
+                                `<svg width="36" height="36" viewBox="0 0 40 40" fill="none" class="saw-switcher-item-logo-fallback">
+                                    <rect width="40" height="40" rx="8" fill="${customer.primary_color || '#2563eb'}"/>
+                                    <text x="20" y="28" font-size="20" font-weight="bold" fill="white" text-anchor="middle">
+                                        ${this.escapeHtml(customer.name.charAt(0).toUpperCase())}
+                                    </text>
+                                </svg>`
                             }
                         </div>
                         <div class="saw-switcher-item-info">
-                            <div class="saw-switcher-item-name">${customer.name}</div>
-                            ${customer.ico ? `<div class="saw-switcher-item-ico">IČO: ${customer.ico}</div>` : ''}
+                            <div class="saw-switcher-item-name">${this.escapeHtml(customer.name)}</div>
+                            ${customer.ico ? `<div class="saw-switcher-item-ico">IČO: ${this.escapeHtml(customer.ico)}</div>` : ''}
                         </div>
                         ${isActive ? '<div class="saw-switcher-item-check">✓</div>' : ''}
                     </div>
@@ -165,9 +169,8 @@
             
             this.list.html(html);
             
-            // Attach click handlers
             this.list.find('.saw-switcher-item').on('click', (e) => {
-                const customerId = $(e.currentTarget).data('customer-id');
+                const customerId = parseInt($(e.currentTarget).data('customer-id'));
                 this.switchCustomer(customerId);
             });
         }
@@ -196,8 +199,9 @@
                         this.button.prop('disabled', false);
                     }
                 },
-                error: () => {
-                    alert('Chyba serveru');
+                error: (xhr, status, error) => {
+                    console.error('Customer Switch Error:', status, error);
+                    alert('Chyba serveru při přepínání zákazníka');
                     this.button.prop('disabled', false);
                 }
             });
@@ -214,12 +218,22 @@
         
         showError(message) {
             this.list.html(`
-                <div class="saw-switcher-error">${message}</div>
+                <div class="saw-switcher-error">${this.escapeHtml(message)}</div>
             `);
+        }
+        
+        escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
         }
     }
     
-    // Initialize
     $(document).ready(function() {
         new CustomerSwitcher();
     });

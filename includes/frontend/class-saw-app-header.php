@@ -62,14 +62,12 @@ class SAW_App_Header {
         $logo_url = $this->get_logo_url();
         $is_super_admin = $this->is_super_admin();
         
-        // Enqueue customer switcher assets if SuperAdmin
         if ($is_super_admin) {
             $this->enqueue_customer_switcher_assets();
         }
         ?>
         <header class="saw-app-header">
             <div class="saw-header-left">
-                <!-- Hamburger menu for mobile -->
                 <button class="saw-hamburger-menu" id="sawHamburgerMenu" aria-label="Toggle menu">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="3" y1="6" x2="21" y2="6"></line>
@@ -79,7 +77,6 @@ class SAW_App_Header {
                 </button>
                 
                 <?php if ($is_super_admin): ?>
-                    <!-- SuperAdmin: Logo + Customer info = Customer Switcher -->
                     <div class="saw-customer-switcher" id="sawCustomerSwitcher">
                         <button class="saw-customer-switcher-button" id="sawCustomerSwitcherButton"
                                 data-current-customer-id="<?php echo esc_attr($this->customer['id']); ?>"
@@ -110,11 +107,23 @@ class SAW_App_Header {
                             </svg>
                         </button>
                         
-                        <!-- Dropdown will be inserted here by JavaScript -->
+                        <div class="saw-customer-switcher-dropdown" id="sawCustomerSwitcherDropdown">
+                            <div class="saw-switcher-search">
+                                <input type="text" 
+                                       class="saw-switcher-search-input" 
+                                       id="sawCustomerSwitcherSearch" 
+                                       placeholder="Hledat zákazníka...">
+                            </div>
+                            <div class="saw-switcher-list" id="sawCustomerSwitcherList">
+                                <div class="saw-switcher-loading">
+                                    <div class="saw-spinner"></div>
+                                    <span>Načítání zákazníků...</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
                 <?php else: ?>
-                    <!-- Regular users: Non-clickable logo + customer info -->
                     <div class="saw-logo">
                         <?php if ($logo_url): ?>
                             <img src="<?php echo esc_url($logo_url); ?>" 
@@ -138,7 +147,6 @@ class SAW_App_Header {
             </div>
             
             <div class="saw-header-right">
-                <!-- User menu -->
                 <div class="saw-user-menu">
                     <button class="saw-user-button" id="sawUserMenuToggle">
                         <span class="saw-user-icon">👤</span>
@@ -184,27 +192,24 @@ class SAW_App_Header {
      * Enqueue customer switcher assets
      */
     private function enqueue_customer_switcher_assets() {
-        // Enqueue CSS
         wp_enqueue_style(
             'saw-customer-switcher',
-            SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-customer-switcher.css',
+            SAW_VISITORS_PLUGIN_URL . 'includes/components/customer-switcher/customer-switcher.css',
             [],
             SAW_VISITORS_VERSION
         );
         
-        // Enqueue JS
         wp_enqueue_script(
             'saw-customer-switcher',
-            SAW_VISITORS_PLUGIN_URL . 'assets/js/saw-customer-switcher.js',
+            SAW_VISITORS_PLUGIN_URL . 'includes/components/customer-switcher/customer-switcher.js',
             ['jquery'],
             SAW_VISITORS_VERSION,
             true
         );
         
-        // Localize script with data
         wp_localize_script('saw-customer-switcher', 'sawCustomerSwitcher', [
             'ajaxurl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('saw_ajax_nonce'),
+            'nonce' => wp_create_nonce('saw_customer_switcher'),
             'currentCustomerId' => $this->customer['id'],
             'currentCustomerName' => $this->customer['name'],
         ]);
