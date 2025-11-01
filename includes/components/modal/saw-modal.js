@@ -1,35 +1,19 @@
 /**
  * SAW Modal Component JavaScript
  * 
- * Univerzální modal systém s podporou:
- * - Otevírání/zavírání modálů
- * - AJAX načítání obsahu
- * - Header actions (edit, delete, custom)
- * - Event handling (ESC, backdrop click)
- * - Multiple modals support
+ * Univerzální modal systém - ŽÁDNÉ hardcoded entity!
  * 
  * @package SAW_Visitors
- * @version 3.0.0
- * @since   4.6.1
+ * @version 4.9.0
  */
 
 (function($) {
     'use strict';
     
-    /**
-     * SAW Modal System
-     */
     const SAWModal = {
         
-        // Store current modal data
         currentModalData: {},
         
-        /**
-         * Open modal
-         * 
-         * @param {string} modalId - Modal ID (bez prefixu 'saw-modal-')
-         * @param {object} data - Data pro AJAX request (optional)
-         */
         open: function(modalId, data = {}) {
             const fullId = this.getFullId(modalId);
             const $modal = $('#' + fullId);
@@ -39,29 +23,23 @@
                 return;
             }
             
-            // Store modal data for header actions
             this.currentModalData[modalId] = data;
             
             console.log('🔵 SAWModal: Opening modal', fullId, data);
             
-            // Update header actions with current data
             this.updateHeaderActions($modal, data);
             
-            // Check if AJAX enabled
             const ajaxEnabled = $modal.data('ajax-enabled') === 1;
             
             if (ajaxEnabled) {
                 this.loadAjaxContent($modal, data);
             }
             
-            // Open modal
             $modal.addClass('saw-modal-open');
             $('body').addClass('saw-modal-active');
             
-            // Focus close button
             $modal.find('[data-modal-close]').first().focus();
             
-            // Trigger event
             $(document).trigger('saw:modal:opened', {
                 modalId: modalId,
                 fullId: fullId,
@@ -69,12 +47,6 @@
             });
         },
         
-        /**
-         * Update header actions with current item data
-         * 
-         * @param {jQuery} $modal - Modal element
-         * @param {object} data - Current item data
-         */
         updateHeaderActions: function($modal, data) {
             const itemId = data.id || null;
             
@@ -82,7 +54,6 @@
                 return;
             }
             
-            // Update edit button URL
             $modal.find('[data-action-type="edit"]').each(function() {
                 const $btn = $(this);
                 let url = $btn.data('action-url');
@@ -93,17 +64,11 @@
                 }
             });
             
-            // Update delete button with item ID
             $modal.find('[data-action-type="delete"]').each(function() {
                 $(this).data('item-id', itemId);
             });
         },
         
-        /**
-         * Close modal
-         * 
-         * @param {string} modalId - Modal ID (bez prefixu 'saw-modal-')
-         */
         close: function(modalId) {
             const fullId = this.getFullId(modalId);
             const $modal = $('#' + fullId);
@@ -117,27 +82,18 @@
             
             $modal.removeClass('saw-modal-open');
             
-            // Clear modal data
             delete this.currentModalData[modalId];
             
-            // Remove body class only if no other modals are open
             if ($('.saw-modal.saw-modal-open').length === 0) {
                 $('body').removeClass('saw-modal-active');
             }
             
-            // Trigger event
             $(document).trigger('saw:modal:closed', {
                 modalId: modalId,
                 fullId: fullId
             });
         },
         
-        /**
-         * Load AJAX content
-         * 
-         * @param {jQuery} $modal - Modal jQuery object
-         * @param {object} data - Data to send
-         */
         loadAjaxContent: function($modal, data) {
             const ajaxAction = $modal.data('ajax-action');
             
@@ -148,7 +104,6 @@
             
             const $content = $modal.find('.saw-modal-body');
             
-            // Show loading state
             $content.html(
                 '<div class="saw-modal-loading">' +
                 '<div class="saw-spinner"></div>' +
@@ -156,14 +111,12 @@
                 '</div>'
             );
             
-            // Prepare AJAX data
             const ajaxData = {
                 action: ajaxAction,
                 nonce: data.nonce || sawModalGlobal.nonce,
                 ...data
             };
             
-            // Make AJAX request
             $.ajax({
                 url: sawModalGlobal.ajaxurl,
                 method: 'POST',
@@ -186,166 +139,319 @@
             });
         },
         
-        /**
-         * Handle successful AJAX response
-         * 
-         * @param {jQuery} $modal - Modal jQuery object
-         * @param {jQuery} $content - Content container
-         * @param {object} data - Response data
-         */
         handleAjaxSuccess: function($modal, $content, data) {
-            // Check if data contains HTML content directly
             if (typeof data === 'string') {
                 $content.html(data);
                 return;
             }
             
-            // Check for 'html' property
             if (data.html) {
                 $content.html(data.html);
                 return;
             }
             
-            // Check for 'content' property
             if (data.content) {
                 $content.html(data.content);
                 return;
             }
             
-            // For customer detail - render using template
-            if (data.customer || data.customers || data.item) {
-                const item = data.customer || data.customers || data.item;
-                const html = this.renderCustomerDetail(item);
-                $content.html(html);
-                return;
+            let item = null;
+            for (let key in data) {
+                if (key !== 'success' && key !== 'message' && typeof data[key] === 'object') {
+                    item = data[key];
+                    break;
+                }
             }
             
-            // Fallback: show raw data
-            console.warn('SAWModal: Unknown response format, rendering as JSON', data);
-            $content.html('<pre>' + JSON.stringify(data, null, 2) + '</pre>');
+            if (!item) {
+                item = data.item || data;
+            }
+            
+            const html = this.renderUniversalDetail(item);
+            $content.html(html);
         },
         
-        /**
-         * Handle AJAX error
-         * 
-         * @param {jQuery} $modal - Modal jQuery object
-         * @param {jQuery} $content - Content container
-         * @param {string} message - Error message
-         */
         handleAjaxError: function($modal, $content, message) {
             $content.html(
-                '<div class="saw-alert saw-alert-danger">' +
+                '<div class="saw-alert saw-alert-danger" style="padding: 16px 20px; border-radius: 8px; background: #fee2e2; color: #991b1b; border-left: 4px solid #dc2626;">' +
                 '<strong>Chyba:</strong> ' + this.escapeHtml(message) +
                 '</div>'
             );
         },
         
-        /**
-         * Render customer detail HTML
-         * 
-         * @param {object} customer - Customer data
-         * @return {string} HTML
-         */
-        renderCustomerDetail: function(customer) {
+        renderUniversalDetail: function(item) {
+            if (!item || typeof item !== 'object') {
+                return '<p class="saw-text-muted">Žádná data k zobrazení</p>';
+            }
+            
             let html = '<div class="saw-detail-grid">';
             
-            // Header with logo
-            html += '<div class="saw-detail-header">';
-            if (customer.logo_url) {
-                html += '<img src="' + customer.logo_url + '" alt="Logo" class="saw-detail-logo">';
+            const headerInfo = this.getHeaderInfo(item);
+            if (headerInfo.visual || headerInfo.title) {
+                html += '<div class="saw-detail-header">';
+                
+                if (headerInfo.visual) {
+                    html += headerInfo.visual;
+                }
+                
+                if (headerInfo.title) {
+                    html += '<div class="saw-detail-header-info">';
+                    html += '<h2>' + this.escapeHtml(headerInfo.title) + '</h2>';
+                    if (headerInfo.subtitle) {
+                        html += '<p class="saw-text-muted">' + this.escapeHtml(headerInfo.subtitle) + '</p>';
+                    }
+                    html += '</div>';
+                }
+                
+                html += '</div>';
             }
-            html += '<div class="saw-detail-header-info">';
-            html += '<h2>' + this.escapeHtml(customer.name) + '</h2>';
-            if (customer.ico) {
-                html += '<p class="saw-text-muted">IČO: ' + this.escapeHtml(customer.ico) + '</p>';
-            }
-            html += '</div>';
-            html += '</div>';
             
             html += '<div class="saw-detail-sections">';
             
-            // Basic info
-            html += '<div class="saw-detail-section">';
-            html += '<h3>Základní údaje</h3>';
-            html += '<dl>';
-            html += this.renderDetailRow('Status', customer.status_label || customer.status);
-            html += this.renderDetailRow('Typ předplatného', customer.subscription_type_label || customer.subscription_type);
-            if (customer.dic) {
-                html += this.renderDetailRow('DIČ', customer.dic);
-            }
-            if (customer.primary_color) {
-                html += this.renderDetailRow('Hlavní barva', '<span class="saw-color-badge" style="background-color: ' + customer.primary_color + '; width: 24px; height: 24px; display: inline-block; border-radius: 4px;"></span> ' + customer.primary_color);
-            }
-            html += '</dl>';
-            html += '</div>';
+            const sections = this.groupFieldsIntoSections(item);
             
-            // Contact info
-            if (customer.contact_person || customer.contact_email || customer.contact_phone) {
+            sections.forEach(section => {
+                if (section.fields.length === 0) return;
+                
                 html += '<div class="saw-detail-section">';
-                html += '<h3>Kontaktní údaje</h3>';
-                html += '<dl>';
-                if (customer.contact_person) {
-                    html += this.renderDetailRow('Kontaktní osoba', customer.contact_person);
+                html += '<h3>' + section.title + '</h3>';
+                
+                if (section.type === 'list') {
+                    html += '<ul class="saw-features-list">';
+                    section.fields.forEach(value => {
+                        html += '<li><span class="dashicons dashicons-yes-alt"></span> ' + this.escapeHtml(value) + '</li>';
+                    });
+                    html += '</ul>';
+                } else if (section.type === 'text') {
+                    html += '<p>' + this.escapeHtml(section.fields[0]) + '</p>';
+                } else {
+                    html += '<dl>';
+                    section.fields.forEach(field => {
+                        html += this.renderDetailRow(field.label, field.value);
+                    });
+                    html += '</dl>';
                 }
-                if (customer.contact_email) {
-                    html += this.renderDetailRow('Email', '<a href="mailto:' + customer.contact_email + '">' + customer.contact_email + '</a>');
-                }
-                if (customer.contact_phone) {
-                    html += this.renderDetailRow('Telefon', '<a href="tel:' + customer.contact_phone + '">' + customer.contact_phone + '</a>');
-                }
-                html += '</dl>';
+                
+                html += '</div>';
+            });
+            
+            const meta = this.getMetaInfo(item);
+            if (meta) {
+                html += '<div class="saw-detail-section saw-detail-meta">';
+                html += '<p class="saw-text-small saw-text-muted">' + meta + '</p>';
                 html += '</div>';
             }
             
-            // Operational address
-            if (customer.formatted_operational_address) {
-                html += '<div class="saw-detail-section">';
-                html += '<h3>Provozní adresa</h3>';
-                html += '<p>' + this.escapeHtml(customer.formatted_operational_address) + '</p>';
-                html += '</div>';
-            }
-            
-            // Billing address
-            if (customer.formatted_billing_address) {
-                html += '<div class="saw-detail-section">';
-                html += '<h3>Fakturační adresa</h3>';
-                html += '<p>' + this.escapeHtml(customer.formatted_billing_address) + '</p>';
-                html += '</div>';
-            }
-            
-            // Notes
-            if (customer.notes) {
-                html += '<div class="saw-detail-section">';
-                html += '<h3>Poznámky</h3>';
-                html += '<p>' + this.escapeHtml(customer.notes) + '</p>';
-                html += '</div>';
-            }
-            
-            // Meta info
-            html += '<div class="saw-detail-section saw-detail-meta">';
-            html += '<p class="saw-text-small saw-text-muted">';
-            if (customer.created_at_formatted) {
-                html += 'Vytvořeno: ' + customer.created_at_formatted;
-            }
-            if (customer.updated_at_formatted) {
-                html += ' | Upraveno: ' + customer.updated_at_formatted;
-            }
-            html += '</p>';
-            html += '</div>';
-            
-            html += '</div>';
-            html += '</div>';
+            html += '</div></div>';
             
             return html;
         },
         
-        /**
-         * Render detail row (dt/dd pair)
-         * 
-         * @param {string} label - Label
-         * @param {string} value - Value
-         * @return {string} HTML
-         */
+        getHeaderInfo: function(item) {
+            const info = {
+                visual: null,
+                title: null,
+                subtitle: null
+            };
+            
+            if (item.logo_url) {
+                info.visual = '<img src="' + item.logo_url + '" alt="Logo" class="saw-detail-logo">';
+            } else if (item.color && item.display_name) {
+                info.visual = '<div style="width: 80px; height: 80px; background-color: ' + item.color + '; border-radius: 16px; border: 4px solid #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.1), 0 0 0 1px #e5e7eb;"></div>';
+            }
+            
+            info.title = item.display_name || item.name || item.title || this.getFirstTextField(item);
+            
+            if (item.ico) {
+                info.subtitle = 'IČO: ' + item.ico;
+            } else if (item.name && item.display_name && item.name !== item.display_name) {
+                info.subtitle = 'Interní název: ' + item.name;
+            } else if (item.email) {
+                info.subtitle = item.email;
+            }
+            
+            return info;
+        },
+        
+        groupFieldsIntoSections: function(item) {
+            const sections = [];
+            const skipFields = ['id', 'created_at', 'updated_at', 'logo_url', 'color', 'name', 'display_name', 'title', 'ico', 'email'];
+            const arrayFields = ['features', 'features_array'];
+            const textFields = ['description', 'notes', 'bio', 'about'];
+            
+            const basicFields = [];
+            let featuresArray = null;
+            let textBlock = null;
+            const contactFields = [];
+            const addressFields = [];
+            
+            Object.keys(item).forEach(key => {
+                if (skipFields.includes(key) || (key.includes('_formatted') && key !== 'price_formatted')) return;
+                if (item[key] === null || item[key] === undefined || item[key] === '') return;
+                
+                if (arrayFields.includes(key) && Array.isArray(item[key])) {
+                    featuresArray = item[key];
+                    return;
+                }
+                
+                if (textFields.includes(key)) {
+                    textBlock = { key, value: item[key] };
+                    return;
+                }
+                
+                if (key.includes('contact') || (key.includes('email') && !key.includes('_')) || (key.includes('phone') && !key.includes('_'))) {
+                    contactFields.push({
+                        label: this.humanizeKey(key),
+                        value: this.formatValue(key, item[key], item)
+                    });
+                    return;
+                }
+                
+                if (key.includes('address') || key.includes('street') || key.includes('city') || key.includes('zip')) {
+                    addressFields.push({
+                        label: this.humanizeKey(key),
+                        value: this.formatValue(key, item[key], item)
+                    });
+                    return;
+                }
+                
+                basicFields.push({
+                    label: this.humanizeKey(key),
+                    value: this.formatValue(key, item[key], item)
+                });
+            });
+            
+            if (basicFields.length > 0) {
+                sections.push({
+                    title: 'Základní údaje',
+                    type: 'keyvalue',
+                    fields: basicFields
+                });
+            }
+            
+            if (featuresArray && featuresArray.length > 0) {
+                sections.push({
+                    title: 'Funkce',
+                    type: 'list',
+                    fields: featuresArray
+                });
+            }
+            
+            if (textBlock) {
+                sections.push({
+                    title: this.humanizeKey(textBlock.key),
+                    type: 'text',
+                    fields: [textBlock.value]
+                });
+            }
+            
+            if (contactFields.length > 0) {
+                sections.push({
+                    title: 'Kontaktní údaje',
+                    type: 'keyvalue',
+                    fields: contactFields
+                });
+            }
+            
+            if (addressFields.length > 0) {
+                sections.push({
+                    title: 'Adresa',
+                    type: 'keyvalue',
+                    fields: addressFields
+                });
+            }
+            
+            return sections;
+        },
+        
+        formatValue: function(key, value, item) {
+            if (typeof value === 'boolean' || key.includes('is_')) {
+                return value ? '<span class="saw-badge saw-badge-success">Ano</span>' : '<span class="saw-badge saw-badge-secondary">Ne</span>';
+            }
+            
+            if (key === 'color' || key.includes('_color')) {
+                return '<span style="display: inline-block; width: 32px; height: 32px; background-color: ' + value + '; border-radius: 8px; border: 3px solid #fff; box-shadow: 0 0 0 1px #e5e7eb; vertical-align: middle;"></span> ' + value.toUpperCase();
+            }
+            
+            if (key.includes('email') && typeof value === 'string' && value.includes('@')) {
+                return '<a href="mailto:' + value + '">' + this.escapeHtml(value) + '</a>';
+            }
+            
+            if (key.includes('phone') || key.includes('telefon')) {
+                return '<a href="tel:' + value + '">' + this.escapeHtml(value) + '</a>';
+            }
+            
+            if (key.includes('price') && !key.includes('_formatted')) {
+                return parseFloat(value).toLocaleString('cs-CZ') + ' Kč';
+            }
+            
+            if (key === 'status' && item.status_label) {
+                return item.status_label;
+            }
+            
+            if (key === 'subscription_type' && item.subscription_type_label) {
+                return item.subscription_type_label;
+            }
+            
+            return this.escapeHtml(String(value));
+        },
+        
+        humanizeKey: function(key) {
+            key = key.replace('_formatted', '');
+            
+            const translations = {
+                'name': 'Název',
+                'display_name': 'Zobrazovaný název',
+                'price': 'Cena',
+                'color': 'Barva',
+                'status': 'Status',
+                'is_active': 'Aktivní',
+                'sort_order': 'Pořadí',
+                'ico': 'IČO',
+                'dic': 'DIČ',
+                'contact_person': 'Kontaktní osoba',
+                'contact_email': 'Email',
+                'contact_phone': 'Telefon',
+                'subscription_type': 'Typ předplatného',
+                'primary_color': 'Hlavní barva',
+            };
+            
+            if (translations[key]) {
+                return translations[key];
+            }
+            
+            return key.split('_').map(word => 
+                word.charAt(0).toUpperCase() + word.slice(1)
+            ).join(' ');
+        },
+        
+        getFirstTextField: function(item) {
+            for (let key in item) {
+                if (key !== 'id' && typeof item[key] === 'string' && item[key].length > 0) {
+                    return item[key];
+                }
+            }
+            return 'Detail';
+        },
+        
+        getMetaInfo: function(item) {
+            const parts = [];
+            
+            if (item.created_at_formatted) {
+                parts.push('Vytvořeno: ' + item.created_at_formatted);
+            } else if (item.created_at) {
+                parts.push('Vytvořeno: ' + item.created_at);
+            }
+            
+            if (item.updated_at_formatted) {
+                parts.push('Upraveno: ' + item.updated_at_formatted);
+            } else if (item.updated_at) {
+                parts.push('Upraveno: ' + item.updated_at);
+            }
+            
+            return parts.length > 0 ? parts.join(' | ') : null;
+        },
+        
         renderDetailRow: function(label, value) {
             if (!value || value === '-' || value === '') {
                 return '';
@@ -353,12 +459,6 @@
             return '<dt>' + this.escapeHtml(label) + '</dt><dd>' + value + '</dd>';
         },
         
-        /**
-         * Get full modal ID with prefix
-         * 
-         * @param {string} modalId - Short modal ID
-         * @return {string} Full ID
-         */
         getFullId: function(modalId) {
             if (modalId.startsWith('saw-modal-')) {
                 return modalId;
@@ -366,12 +466,6 @@
             return 'saw-modal-' + modalId;
         },
         
-        /**
-         * Escape HTML
-         * 
-         * @param {string} text - Text to escape
-         * @return {string} Escaped text
-         */
         escapeHtml: function(text) {
             if (!text) return '';
             const map = {
@@ -384,10 +478,6 @@
             return text.toString().replace(/[&<>"']/g, function(m) { return map[m]; });
         }
     };
-    
-    /**
-     * Event Handlers
-     */
     
     // Close button click
     $(document).on('click', '[data-modal-close]', function() {
@@ -440,14 +530,11 @@
         const actionCallback = $btn.data('action-callback');
         const itemId = $btn.data('item-id') || SAWModal.currentModalData[modalId]?.id;
         
-        // Confirm if needed
         if (actionConfirm && !confirm(actionConfirmMsg)) {
             return;
         }
         
-        // Handle different action types
         if (actionType === 'edit' && actionUrl) {
-            // Navigate to edit URL
             let url = actionUrl;
             if (url.includes('{id}') && itemId) {
                 url = url.replace('{id}', itemId);
@@ -455,7 +542,6 @@
             window.location.href = url;
             
         } else if (actionType === 'delete') {
-            // Handle delete via AJAX or custom callback
             if (actionAjax) {
                 handleDeleteAction($btn, $modal, modalId, actionAjax, itemId);
             } else if (actionCallback && typeof window[actionCallback] === 'function') {
@@ -463,11 +549,9 @@
             }
             
         } else if (actionCallback && typeof window[actionCallback] === 'function') {
-            // Custom callback
             window[actionCallback](modalId, itemId, $modal);
         }
         
-        // Trigger event
         $(document).trigger('saw:modal:action', {
             modalId: modalId,
             actionType: actionType,
@@ -476,13 +560,9 @@
         });
     });
     
-    /**
-     * Handle delete action via AJAX
-     */
     function handleDeleteAction($btn, $modal, modalId, ajaxAction, itemId) {
         const originalHtml = $btn.html();
         
-        // Show loading state
         $btn.prop('disabled', true).html(
             '<span class="dashicons dashicons-update saw-spin"></span>'
         );
@@ -497,15 +577,12 @@
             },
             success: function(response) {
                 if (response.success) {
-                    // Show success message
                     if (typeof sawShowToast === 'function') {
                         sawShowToast('Úspěšně smazáno', 'success');
                     }
                     
-                    // Close modal
                     SAWModal.close(modalId);
                     
-                    // Reload page after short delay
                     setTimeout(function() {
                         location.reload();
                     }, 500);
@@ -526,7 +603,6 @@
         });
     }
     
-    // Footer button actions
     $(document).on('click', '[data-modal-action]', function() {
         const action = $(this).data('modal-action');
         const $modal = $(this).closest('.saw-modal');
@@ -548,16 +624,10 @@
         }
     });
     
-    /**
-     * Initialize
-     */
     $(document).ready(function() {
         console.log('🚀 SAWModal initialized');
     });
     
-    /**
-     * Export to global scope
-     */
     window.SAWModal = SAWModal;
     
 })(jQuery);

@@ -4,8 +4,10 @@
  * 
  * Smart loading CSS/JS - globální vždy, module jen když potřeba.
  * 
+ * ✅ OPRAVA v4.9.1: Force CSS refresh při změně stránky
+ * 
  * @package SAW_Visitors
- * @version 3.0.0
+ * @version 4.9.1
  * @since   4.8.0
  */
 
@@ -69,6 +71,23 @@ class SAW_Asset_Manager
             'customerModalNonce' => wp_create_nonce('saw_customer_modal_nonce'),
             'deleteNonce' => wp_create_nonce('saw_admin_table_nonce'),
         ]);
+        
+        // ✅ OPRAVA: Force CSS refresh při každém page load
+        // Přidá dynamickou verzi do URL → browser nepoužije starou cache
+        global $wp_styles;
+        if (isset($wp_styles->registered)) {
+            // Hash z aktuální URL - každá stránka má vlastní verzi
+            $route = get_query_var('saw_route') ?: ($_SERVER['REQUEST_URI'] ?? '');
+            $route_hash = substr(md5($route), 0, 8);
+            
+            foreach ($wp_styles->registered as $handle => $style) {
+                // Pouze SAW styly
+                if (strpos($handle, 'saw-') === 0) {
+                    // Přidej hash do verze
+                    $wp_styles->registered[$handle]->ver = SAW_VISITORS_VERSION . '.' . $route_hash;
+                }
+            }
+        }
     }
     
     /**
@@ -91,6 +110,11 @@ class SAW_Asset_Manager
             $module_path
         );
         
+        // ✅ OPRAVA: Dynamická verze i pro module CSS
+        $route = get_query_var('saw_route') ?: ($_SERVER['REQUEST_URI'] ?? '');
+        $route_hash = substr(md5($route), 0, 8);
+        $dynamic_version = SAW_VISITORS_VERSION . '.' . $route_hash;
+        
         // Module CSS
         $css_file = $module_path . 'styles.css';
         if (file_exists($css_file)) {
@@ -98,7 +122,7 @@ class SAW_Asset_Manager
                 'saw-module-' . $slug,
                 $module_url . 'styles.css',
                 ['saw-base', 'saw-tables', 'saw-forms'],
-                SAW_VISITORS_VERSION
+                $dynamic_version  // ✅ Použij dynamickou verzi
             );
         }
         
@@ -109,7 +133,7 @@ class SAW_Asset_Manager
                 'saw-module-' . $slug,
                 $module_url . 'scripts.js',
                 ['jquery', 'saw-app'],
-                SAW_VISITORS_VERSION,
+                $dynamic_version,  // ✅ Použij dynamickou verzi
                 true
             );
             
