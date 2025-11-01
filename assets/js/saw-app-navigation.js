@@ -1,8 +1,10 @@
 /**
  * SAW App Navigation - SPA (Single Page Application) Support
+ * 
+ * OPRAVENÁ VERZE s brutálním modal cleanupem
  *
  * @package SAW_Visitors
- * @since   4.6.3
+ * @version 5.2.0 - BRUTAL CLEANUP
  */
 
 (function($) {
@@ -19,6 +21,12 @@
     });
 
     function initSPANavigation() {
+        // 🔴 SPA NAVIGACE VYPNUTA - použij klasické page reloady
+        console.log('⚠️ SPA Navigation DISABLED - using full page reloads');
+        return;
+        
+        // Původní SPA kód zakomentován
+        /*
         $(document).on('click', '.saw-app-sidebar a, .saw-page-wrapper a[href^="/admin"], .saw-page-wrapper a[href^="/manager"]', function(e) {
             const $link = $(this);
             const href = $link.attr('href');
@@ -37,6 +45,7 @@
             
             navigateToPage(href);
         });
+        */
     }
 
     function initMobileSidebar() {
@@ -113,6 +122,9 @@
                 console.log('✅ Page loaded successfully');
 
                 if (response && response.success && response.data) {
+                    // 🔥 BRUTAL CLEANUP PŘED update contentu
+                    brutalCleanupBeforeNavigate();
+                    
                     cleanupPageScopedAssets();
                     updatePageContent(response.data);
                     updateBrowserURL(url, response.data.title);
@@ -138,6 +150,64 @@
         });
     }
 
+    /**
+     * 🔥 BRUTAL CLEANUP BEFORE NAVIGATE
+     * 
+     * Odstraní VŠECHNY modaly a content z #saw-app-content
+     * PŘED tím než se vloží nový content
+     * 
+     * KRITICKY DŮLEŽITÉ: Cleanup běží na STARÉM contentu PŘED jeho nahrazením!
+     */
+    function brutalCleanupBeforeNavigate() {
+        console.log('[BRUTAL-CLEANUP] Starting pre-navigation cleanup...');
+        
+        const $content = $('#saw-app-content');
+        if (!$content.length) {
+            console.log('[BRUTAL-CLEANUP] Content container not found, skipping');
+            return;
+        }
+        
+        // 1. NAJDI všechny modaly UVNITŘ starého contentu
+        const $oldModals = $content.find('[id*="saw-modal-"], .saw-modal');
+        if ($oldModals.length > 0) {
+            console.log('[BRUTAL-CLEANUP] Removing ' + $oldModals.length + ' old modals from content');
+            $oldModals.remove();
+        }
+        
+        // 2. ODSTRAŇ všechny overlays (ty jsou obvykle mimo content)
+        const $overlays = $('.saw-modal-overlay, .modal-backdrop').not('#sawSidebarOverlay');
+        if ($overlays.length > 0) {
+            console.log('[BRUTAL-CLEANUP] Removing ' + $overlays.length + ' overlays');
+            $overlays.remove();
+        }
+        
+        // 3. VYČISTI body classes a styles
+        $('body').removeClass('modal-open saw-modal-open saw-modal-active');
+        $('body').css({
+            'overflow': '',
+            'padding-right': '',
+            'height': '',
+            'position': ''
+        });
+        console.log('[BRUTAL-CLEANUP] Cleaned body');
+        
+        // 4. ODSTRAŇ staré module wrappery
+        const $oldWrappers = $content.find('[class*="saw-module-"]');
+        if ($oldWrappers.length > 0) {
+            console.log('[BRUTAL-CLEANUP] Removing ' + $oldWrappers.length + ' old module wrappers');
+            $oldWrappers.remove();
+        }
+        
+        // 5. ODSTRAŇ staré module styles
+        const $oldStyles = $('style[id*="saw-module-css-"]');
+        if ($oldStyles.length > 0) {
+            console.log('[BRUTAL-CLEANUP] Removing ' + $oldStyles.length + ' old module styles');
+            $oldStyles.remove();
+        }
+        
+        console.log('[BRUTAL-CLEANUP] ✅ Cleanup complete!');
+    }
+
     function updatePageContent(data) {
         const $content = $('#saw-app-content');
         if (!$content.length) {
@@ -148,6 +218,7 @@
         $content.css('opacity', '0');
 
         setTimeout(function() {
+            // POUŽIJ .html() AŽ PO BRUTAL CLEANUP
             $content.html(data.content || '');
 
             if (data.title) {

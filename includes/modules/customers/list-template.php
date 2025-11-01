@@ -2,17 +2,14 @@
 /**
  * Customers List Template
  * 
- * Template pro výpis zákazníků s podporou modal detailu.
- * 
  * @package SAW_Visitors
- * @version 5.0.0
+ * @version 5.2.0 - INSTANT CLEANUP
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-// Load required components
 if (!class_exists('SAW_Component_Search')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/search/class-saw-component-search.php';
 }
@@ -22,16 +19,34 @@ if (!class_exists('SAW_Component_Selectbox')) {
 }
 ?>
 
-<!-- FORCE CLEANUP: Remove all modals on page load -->
+<!-- INSTANT MODAL CLEANUP - SPUSTÍ SE OKAMŽITĚ -->
 <script>
-jQuery(document).ready(function($) {
-    console.log('[CUSTOMERS] Force removing all modals');
-    $('[id*="saw-modal-"]').remove();
-    $('.saw-modal').remove();
-    $('.saw-modal-overlay').remove();
-    $('.modal-backdrop').remove();
-    $('body').removeClass('modal-open saw-modal-open');
-});
+(function() {
+    console.log('[CUSTOMERS-INSTANT-CLEANUP] Running...');
+    
+    function cleanup() {
+        var modals = document.querySelectorAll('[id*="saw-modal-"], .saw-modal');
+        if (modals.length > 0) {
+            console.log('[CUSTOMERS-INSTANT-CLEANUP] Removing ' + modals.length + ' modals');
+            modals.forEach(function(el) { el.remove(); });
+        }
+        
+        var overlays = document.querySelectorAll('.saw-modal-overlay, .modal-backdrop');
+        if (overlays.length > 0) {
+            console.log('[CUSTOMERS-INSTANT-CLEANUP] Removing ' + overlays.length + ' overlays');
+            overlays.forEach(function(el) { el.remove(); });
+        }
+        
+        document.body.classList.remove('modal-open', 'saw-modal-open', 'saw-modal-active');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+        
+        console.log('[CUSTOMERS-INSTANT-CLEANUP] Done!');
+    }
+    
+    cleanup();
+    setTimeout(cleanup, 50);
+})();
 </script>
 
 <!-- PAGE HEADER -->
@@ -127,7 +142,6 @@ jQuery(document).ready(function($) {
                 <tbody>
                     <?php foreach ($items as $item): ?>
                         <tr class="saw-customer-row" data-id="<?php echo esc_attr($item['id']); ?>" style="cursor: pointer;">
-                            <!-- LOGO -->
                             <td style="width: 60px; text-align: center; padding: 8px;">
                                 <?php if (!empty($item['logo_url'])): ?>
                                     <div class="saw-customer-logo">
@@ -140,15 +154,12 @@ jQuery(document).ready(function($) {
                                 <?php endif; ?>
                             </td>
                             
-                            <!-- NAME -->
                             <td class="saw-customer-name">
                                 <strong><?php echo esc_html($item['name']); ?></strong>
                             </td>
                             
-                            <!-- IČO -->
                             <td><?php echo esc_html($item['ico'] ?? '-'); ?></td>
                             
-                            <!-- STATUS -->
                             <td>
                                 <?php
                                 $status_badges = [
@@ -160,7 +171,6 @@ jQuery(document).ready(function($) {
                                 ?>
                             </td>
                             
-                            <!-- SUBSCRIPTION -->
                             <td>
                                 <?php
                                 $sub_labels = [
@@ -173,19 +183,16 @@ jQuery(document).ready(function($) {
                                 ?>
                             </td>
                             
-                            <!-- PRIMARY COLOR -->
                             <td style="width: 80px; text-align: center;">
                                 <?php if (!empty($item['primary_color'])): ?>
                                     <span class="saw-color-badge" style="background-color: <?php echo esc_attr($item['primary_color']); ?>;" title="<?php echo esc_attr($item['primary_color']); ?>"></span>
                                 <?php endif; ?>
                             </td>
                             
-                            <!-- CREATED AT -->
                             <td>
                                 <?php echo !empty($item['created_at']) ? date_i18n('d.m.Y', strtotime($item['created_at'])) : '-'; ?>
                             </td>
                             
-                            <!-- ACTIONS -->
                             <td style="width: 120px; text-align: center;">
                                 <div class="saw-action-buttons">
                                     <a href="<?php echo home_url('/admin/settings/customers/edit/' . $item['id'] . '/'); ?>" 
@@ -214,14 +221,12 @@ jQuery(document).ready(function($) {
         <!-- PAGINATION -->
         <?php if ($total_pages > 1): ?>
             <div class="saw-pagination">
-                <!-- Previous -->
                 <?php if ($page > 1): ?>
                     <a href="?paged=<?php echo ($page - 1); ?><?php echo $search ? '&s=' . urlencode($search) : ''; ?>" class="saw-pagination-link">
                         « Předchozí
                     </a>
                 <?php endif; ?>
                 
-                <!-- Pages -->
                 <?php for ($i = 1; $i <= $total_pages; $i++): ?>
                     <?php if ($i == $page): ?>
                         <span class="saw-pagination-link current"><?php echo $i; ?></span>
@@ -232,7 +237,6 @@ jQuery(document).ready(function($) {
                     <?php endif; ?>
                 <?php endfor; ?>
                 
-                <!-- Next -->
                 <?php if ($page < $total_pages): ?>
                     <a href="?paged=<?php echo ($page + 1); ?><?php echo $search ? '&s=' . urlencode($search) : ''; ?>" class="saw-pagination-link">
                         Další »
@@ -245,8 +249,8 @@ jQuery(document).ready(function($) {
     
 </div>
 
-<!-- MODAL DETAIL - Dynamicky generovaný -->
 <?php
+// MODAL - vytvoří se AŽ TADY (po cleanup scriptu)
 if (!class_exists('SAW_Component_Modal')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/modal/class-saw-component-modal.php';
 }
@@ -286,7 +290,6 @@ $customer_modal->render();
 jQuery(document).ready(function($) {
     console.log('[CUSTOMERS] Initializing table interactions');
     
-    // Customer row click handler
     $('.saw-customer-row').on('click', function(e) {
         if ($(e.target).closest('button, a, .saw-action-buttons').length > 0) {
             return;

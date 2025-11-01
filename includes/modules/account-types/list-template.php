@@ -3,7 +3,7 @@
  * Account Types List Template
  * 
  * @package SAW_Visitors
- * @version 5.0.0
+ * @version 5.2.0 - INSTANT CLEANUP
  */
 
 if (!defined('ABSPATH')) {
@@ -15,15 +15,34 @@ if (!class_exists('SAW_Component_Search')) {
 }
 ?>
 
+<!-- INSTANT MODAL CLEANUP - SPUSTÍ SE OKAMŽITĚ -->
 <script>
-jQuery(document).ready(function($) {
-    console.log('[ACCOUNT-TYPES] Force removing all modals');
-    $('[id*="saw-modal-"]').remove();
-    $('.saw-modal').remove();
-    $('.saw-modal-overlay').remove();
-    $('.modal-backdrop').remove();
-    $('body').removeClass('modal-open saw-modal-open');
-});
+(function() {
+    console.log('[ACCOUNT-TYPES-INSTANT-CLEANUP] Running...');
+    
+    function cleanup() {
+        var modals = document.querySelectorAll('[id*="saw-modal-"], .saw-modal');
+        if (modals.length > 0) {
+            console.log('[ACCOUNT-TYPES-INSTANT-CLEANUP] Removing ' + modals.length + ' modals');
+            modals.forEach(function(el) { el.remove(); });
+        }
+        
+        var overlays = document.querySelectorAll('.saw-modal-overlay, .modal-backdrop');
+        if (overlays.length > 0) {
+            console.log('[ACCOUNT-TYPES-INSTANT-CLEANUP] Removing ' + overlays.length + ' overlays');
+            overlays.forEach(function(el) { el.remove(); });
+        }
+        
+        document.body.classList.remove('modal-open', 'saw-modal-open', 'saw-modal-active');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+        
+        console.log('[ACCOUNT-TYPES-INSTANT-CLEANUP] Done!');
+    }
+    
+    cleanup();
+    setTimeout(cleanup, 50);
+})();
 </script>
 
 <div class="saw-page-header">
@@ -42,7 +61,7 @@ jQuery(document).ready(function($) {
         <div class="saw-search-form">
             <?php
             $search_component = new SAW_Component_Search('account-types', array(
-                'placeholder' => 'Hledar typ účtu...',
+                'placeholder' => 'Hledat typ účtu...',
                 'search_value' => $search,
                 'ajax_enabled' => false,
                 'show_button' => true,
@@ -192,6 +211,7 @@ jQuery(document).ready(function($) {
 </div>
 
 <?php
+// MODAL - vytvoří se AŽ TADY (po cleanup scriptu)
 if (!class_exists('SAW_Component_Modal')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/modal/class-saw-component-modal.php';
 }
@@ -201,7 +221,7 @@ $ajax_nonce = wp_create_nonce('saw_ajax_nonce');
 $account_type_modal = new SAW_Component_Modal('account-type-detail', array(
     'title' => 'Detail typu účtu',
     'ajax_enabled' => true,
-    'ajax_action' => 'saw_get_account-types_detail',
+    'ajax_action' => 'saw_get_account_types_detail',
     'size' => 'large',
     'show_close' => true,
     'close_on_backdrop' => true,
@@ -219,7 +239,7 @@ $account_type_modal = new SAW_Component_Modal('account-type-detail', array(
             'icon' => 'dashicons-trash',
             'confirm' => true,
             'confirm_message' => 'Opravdu chcete smazat tento typ účtu?',
-            'ajax_action' => 'saw_delete_account-types',
+            'ajax_action' => 'saw_delete_account_types',
         ),
     ),
 ));
