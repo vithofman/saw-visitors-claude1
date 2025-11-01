@@ -165,6 +165,7 @@ class SAW_Visitors {
             return;
         }
         
+        SAW_Asset_Manager::dequeue_old_assets();
         SAW_Asset_Manager::enqueue_global();
         
         $active_module = $this->router->get_active_module();

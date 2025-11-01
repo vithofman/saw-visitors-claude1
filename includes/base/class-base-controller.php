@@ -2,12 +2,8 @@
 /**
  * Base Controller Class
  * 
- * Univerzální CRUD operace pro všechny moduly.
- * Child controllery jen přidávají custom logiku přes hooks.
- * 
  * @package SAW_Visitors
- * @version 2.0.0
- * @since   4.8.0
+ * @version 3.0.0
  */
 
 if (!defined('ABSPATH')) {
@@ -61,7 +57,9 @@ abstract class SAW_Base_Controller
         extract($template_vars);
         
         ob_start();
+        echo '<div class="saw-module-' . esc_attr($this->entity) . '">';
         include $template_path;
+        echo '</div>';
         $content = ob_get_clean();
         
         $this->render_with_layout($content, $this->config['plural']);
@@ -190,7 +188,9 @@ abstract class SAW_Base_Controller
         extract(compact('item', 'account_types'));
         
         ob_start();
+        echo '<div class="saw-module-' . esc_attr($this->entity) . '">';
         include $template_path;
+        echo '</div>';
         $content = ob_get_clean();
         
         $title = $item ? 'Edit ' . $this->config['singular'] : 'New ' . $this->config['singular'];
