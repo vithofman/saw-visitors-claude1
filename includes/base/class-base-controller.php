@@ -3,7 +3,7 @@
  * Base Controller Class
  * 
  * @package SAW_Visitors
- * @version 3.0.0
+ * @version 3.1.0
  */
 
 if (!defined('ABSPATH')) {
@@ -57,9 +57,16 @@ abstract class SAW_Base_Controller
         extract($template_vars);
         
         ob_start();
+        
+        $style_manager = SAW_Module_Style_Manager::get_instance();
+        echo $style_manager->inject_module_css($this->entity);
+        
         echo '<div class="saw-module-' . esc_attr($this->entity) . '">';
         include $template_path;
         echo '</div>';
+        
+        echo '<script>document.dispatchEvent(new Event("sawModuleChanged"));</script>';
+        
         $content = ob_get_clean();
         
         $this->render_with_layout($content, $this->config['plural']);
@@ -188,9 +195,16 @@ abstract class SAW_Base_Controller
         extract(compact('item', 'account_types'));
         
         ob_start();
+        
+        $style_manager = SAW_Module_Style_Manager::get_instance();
+        echo $style_manager->inject_module_css($this->entity);
+        
         echo '<div class="saw-module-' . esc_attr($this->entity) . '">';
         include $template_path;
         echo '</div>';
+        
+        echo '<script>document.dispatchEvent(new Event("sawModuleChanged"));</script>';
+        
         $content = ob_get_clean();
         
         $title = $item ? 'Edit ' . $this->config['singular'] : 'New ' . $this->config['singular'];
@@ -210,7 +224,6 @@ abstract class SAW_Base_Controller
     
     protected function enqueue_assets() {
         SAW_Asset_Manager::enqueue_global();
-        SAW_Asset_Manager::enqueue_module($this->entity);
     }
     
     protected function verify_capability($action) {

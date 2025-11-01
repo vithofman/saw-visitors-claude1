@@ -1,9 +1,9 @@
 <?php
 /**
- * Asset Manager - FINAL VERSION
+ * Asset Manager
  * 
  * @package SAW_Visitors
- * @version 6.0.0
+ * @version 7.0.0
  */
 
 if (!defined('ABSPATH')) {
@@ -69,16 +69,6 @@ class SAW_Asset_Manager
             SAW_VISITORS_PLUGIN_URL,
             $module_path
         );
-        
-        $css_file = $module_path . 'styles.css';
-        if (file_exists($css_file)) {
-            wp_enqueue_style(
-                'saw-module-' . $slug,
-                $module_url . 'styles.css',
-                ['saw-base', 'saw-tables', 'saw-forms'],
-                SAW_VISITORS_VERSION
-            );
-        }
         
         $js_file = $module_path . 'scripts.js';
         if (file_exists($js_file)) {

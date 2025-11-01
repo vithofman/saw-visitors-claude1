@@ -3,7 +3,7 @@
  * Plugin Name: SAW Visitors
  * Plugin URI: https://visitors.sawuh.cz
  * Description: Komplexní systém pro správu návštěv s BOZP/PO (multi-tenant).
- * Version: 4.6.1
+ * Version: 4.7.0
  * Author: SAW
  * Text Domain: saw-visitors
  * Requires at least: 6.0
@@ -17,7 +17,7 @@ define( 'WP_DEBUG_LOG', true );
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 /** Konstanta verze a cesty */
-define( 'SAW_VISITORS_VERSION', '4.6.1' );
+define( 'SAW_VISITORS_VERSION', '4.7.0' );
 define( 'SAW_VISITORS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SAW_VISITORS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SAW_VISITORS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -61,6 +61,9 @@ if ( ! function_exists( 'saw_log_error' ) ) {
 /** Bezpečný bootstrap až po načtení všech pluginů */
 add_action( 'plugins_loaded', function () {
 	try {
+		require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-module-style-manager.php';
+		SAW_Module_Style_Manager::get_instance();
+		
 		$main = SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-visitors.php';
 		if ( ! file_exists( $main ) ) {
 			saw_log_error( 'Missing main class file', [ 'path' => $main ] );
