@@ -142,58 +142,6 @@
 }
 
 /* ============================================
-   COLOR PICKER
-   ============================================ */
-.saw-color-picker-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.saw-color-picker {
-    width: 56px;
-    height: 56px;
-    border: 2px solid #dcdcde;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    padding: 4px;
-    background: #fff;
-    flex-shrink: 0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.saw-color-picker::-webkit-color-swatch-wrapper {
-    padding: 0;
-}
-
-.saw-color-picker::-webkit-color-swatch {
-    border: none;
-    border-radius: 8px;
-}
-
-.saw-color-picker:hover {
-    border-color: #0073aa;
-    box-shadow: 0 4px 12px rgba(0, 115, 170, 0.15);
-    transform: translateY(-2px);
-}
-
-.saw-color-value {
-    flex: 1;
-    max-width: 180px;
-    padding: 14px 16px;
-    border: 2px solid #dcdcde;
-    border-radius: 8px;
-    font-size: 14px;
-    font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    transition: all 0.2s ease;
-    text-align: center;
-}
-
-/* ============================================
    ADDRESS FIELDS
    ============================================ */
 .saw-module-customers .saw-address-fields {

@@ -170,40 +170,16 @@ if (!empty($item['features'])) {
                 
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-6">
-                        <label for="color" class="saw-label">
-                            Barva
-                        </label>
-                        <div class="saw-color-picker-wrapper">
-                            <!-- Color picker -->
-                            <input 
-                                type="color" 
-                                id="color" 
-                                name="color" 
-                                class="saw-color-picker"
-                                value="<?php echo esc_attr($item['color'] ?? '#6b7280'); ?>"
-                            >
-                            <!-- Text preview s hex kódem -->
-                            <input 
-                                type="text" 
-                                id="color_value" 
-                                class="saw-color-value" 
-                                value="<?php echo esc_attr($item['color'] ?? '#6b7280'); ?>" 
-                                readonly
-                            >
-                        </div>
-                        <span class="saw-help-text">
-                            Barva pro vizuální označení typu účtu
-                        </span>
-                    </div>
-                    
-                    <!-- Preview barvy v badge -->
-                    <div class="saw-form-group saw-col-6">
-                        <label class="saw-label">Náhled</label>
-                        <div class="saw-color-preview">
-                            <span class="saw-badge" id="color-preview-badge" style="background-color: <?php echo esc_attr($item['color'] ?? '#6b7280'); ?>; color: #fff;">
-                                <?php echo esc_html($item['display_name'] ?? 'Název'); ?>
-                            </span>
-                        </div>
+                        <?php
+                        $id = 'color';
+                        $name = 'color';
+                        $value = $item['color'] ?? '#6b7280';
+                        $label = 'Barva';
+                        $show_preview = true;
+                        $preview_text = 'Náhled';
+                        $help_text = 'Barva pro vizuální označení typu účtu';
+                        include SAW_VISITORS_PLUGIN_DIR . 'includes/components/color-picker/color-picker-input.php';
+                        ?>
                     </div>
                 </div>
                 
@@ -290,16 +266,8 @@ if (!empty($item['features'])) {
 </div>
 
 <script>
-// === COLOR PICKER SYNC ===
-// Synchronizuje color picker s text inputem a preview badge
+// Sync display_name do preview badge
 jQuery(document).ready(function($) {
-    $('#color').on('input', function() {
-        const color = $(this).val().toUpperCase();
-        $('#color_value').val(color);
-        $('#color-preview-badge').css('background-color', color);
-    });
-    
-    // Sync display_name do preview badge
     $('#display_name').on('input', function() {
         const name = $(this).val() || 'Název';
         $('#color-preview-badge').text(name);

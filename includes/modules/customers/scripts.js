@@ -1,7 +1,7 @@
 /**
  * Customers Module Scripts
  * 
- * Color picker sync, IČO validace
+ * IČO validace, PSČ formátování
  * 
  * @package SAW_Visitors
  * @version 2.0.0
@@ -12,11 +12,6 @@
     'use strict';
     
     $(document).ready(function() {
-        // Color picker sync s text inputem
-        $('#primary_color').on('input', function() {
-            $('#primary_color_value').val($(this).val().toUpperCase());
-        });
-        
         // IČO validace
         $('#ico').on('blur', function() {
             const ico = $(this).val();

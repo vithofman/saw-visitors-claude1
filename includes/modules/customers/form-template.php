@@ -111,13 +111,13 @@ $item = $item ?? [];
                     </div>
                     
                     <div class="saw-branding-color">
-                        <label for="primary_color" class="saw-label">Hlavní barva</label>
-                        <div class="saw-color-picker-wrapper">
-                            <input type="color" id="primary_color" name="primary_color" class="saw-color-picker"
-                                   value="<?php echo esc_attr($item['primary_color'] ?? '#1e40af'); ?>">
-                            <input type="text" id="primary_color_value" class="saw-color-value"
-                                   value="<?php echo esc_attr($item['primary_color'] ?? '#1e40af'); ?>" readonly>
-                        </div>
+                        <?php
+                        $id = 'primary_color';
+                        $name = 'primary_color';
+                        $value = $item['primary_color'] ?? '#1e40af';
+                        $label = 'Hlavní barva';
+                        include SAW_VISITORS_PLUGIN_DIR . 'includes/components/color-picker/color-picker-input.php';
+                        ?>
                     </div>
                 </div>
             </div>

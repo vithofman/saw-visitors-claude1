@@ -22,7 +22,9 @@ if (!defined('ABSPATH')) {
 
 class SAW_Module_Account_Types_Controller extends SAW_Base_Controller 
 {
-    use SAW_AJAX_Handlers; // Trait s AJAX handlery (ajax_get_detail, ajax_search, ajax_delete)
+    use SAW_AJAX_Handlers;
+    
+    private $color_picker;
     
     /**
      * Constructor
@@ -39,6 +41,9 @@ class SAW_Module_Account_Types_Controller extends SAW_Base_Controller
         require_once __DIR__ . '/model.php';
         $this->model = new SAW_Module_Account_Types_Model($this->config);
         
+        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/color-picker/class-saw-color-picker.php';
+        $this->color_picker = new SAW_Color_Picker();
+        
         // === AJAX HANDLERY ===
         // Tyto handlery umožňují AJAX operace z frontendu
         
@@ -50,6 +55,12 @@ class SAW_Module_Account_Types_Controller extends SAW_Base_Controller
         
         // Delete (pro smazání přes AJAX)
         add_action('wp_ajax_saw_delete_account_types', [$this, 'ajax_delete']);
+        
+        add_action('admin_enqueue_scripts', [$this, 'enqueue_assets']);
+    }
+    
+    public function enqueue_assets() {
+        $this->color_picker->enqueue_assets();
     }
     
     /**
@@ -140,6 +151,3 @@ class SAW_Module_Account_Types_Controller extends SAW_Base_Controller
         }
     }
 }
-
-// POZOR: ŽÁDNÝ add_action('init', ...) NENÍ POTŘEBA!
-// Controller se inicializuje automaticky přes SAW_Module_Loader

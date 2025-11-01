@@ -2,7 +2,6 @@
  * Account Types Module Scripts
  * 
  * JavaScript pro:
- * - Color picker synchronizaci s text inputem a preview
  * - Automatické generování slug z display_name
  * - Validaci interního názvu (slug)
  * - Features textarea helpers (emoji shortcuts)
@@ -16,17 +15,6 @@
     'use strict';
     
     $(document).ready(function() {
-        
-        // ================================================
-        // COLOR PICKER SYNC
-        // ================================================
-        // Synchronizuje color picker s text inputem a preview badge
-        
-        $('#color').on('input', function() {
-            const color = $(this).val().toUpperCase();
-            $('#color_value').val(color);
-            $('#color-preview-badge').css('background-color', color);
-        });
         
         // ================================================
         // DISPLAY NAME → SLUG AUTO-GENERATION
