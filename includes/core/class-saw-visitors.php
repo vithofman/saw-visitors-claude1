@@ -66,22 +66,45 @@ class SAW_Visitors {
     }
     
     private function init_ajax_controllers() {
+        error_log('SAW: init_ajax_controllers() START');
+        
         $modules = SAW_Module_Loader::get_all();
         
+        error_log('SAW: Found ' . count($modules) . ' modules');
+        
         foreach ($modules as $slug => $config) {
+            error_log('SAW: Processing module: ' . $slug);
+            
             $controller_file = $config['path'] . 'controller.php';
             
             if (file_exists($controller_file)) {
-                require_once $config['path'] . 'model.php';
+                error_log('SAW: Loading controller file: ' . $controller_file);
+                
+                if (file_exists($config['path'] . 'model.php')) {
+                    require_once $config['path'] . 'model.php';
+                }
+                
                 require_once $controller_file;
                 
-                $controller_class = 'SAW_Module_' . str_replace('-', '_', ucfirst($slug)) . '_Controller';
+                $parts = explode('-', $slug);
+                $parts = array_map('ucfirst', $parts);
+                $class_name = implode('_', $parts);
+                $controller_class = 'SAW_Module_' . $class_name . '_Controller';
+                
+                error_log('SAW: Looking for class: ' . $controller_class);
                 
                 if (class_exists($controller_class)) {
+                    error_log('SAW: Creating instance of ' . $controller_class);
                     new $controller_class();
+                } else {
+                    error_log('SAW: ERROR - Class not found: ' . $controller_class);
                 }
+            } else {
+                error_log('SAW: Controller file not found: ' . $controller_file);
             }
         }
+        
+        error_log('SAW: init_ajax_controllers() END');
     }
     
     private function define_hooks() {
@@ -165,7 +188,6 @@ class SAW_Visitors {
             return;
         }
         
-        SAW_Asset_Manager::dequeue_old_assets();
         SAW_Asset_Manager::enqueue_global();
         
         $active_module = $this->router->get_active_module();

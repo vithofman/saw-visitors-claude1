@@ -1,10 +1,4 @@
 <?php
-/**
- * Customers Module Controller
- * 
- * @package SAW_Visitors
- */
-
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -45,7 +39,6 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
     }
     
     protected function before_save($data) {
-        // Kontrola, zda se má odstranit existující logo
         if ($this->file_uploader->should_remove_file('logo')) {
             if (!empty($data['id'])) {
                 $existing = $this->model->get_by_id($data['id']);
@@ -56,7 +49,6 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             $data['logo_url'] = '';
         }
         
-        // Nahrání nového souboru
         if (!empty($_FILES['logo']['name'])) {
             $upload = $this->file_uploader->upload($_FILES['logo'], 'customers');
             
@@ -66,7 +58,6 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             
             $data['logo_url'] = $upload['url'];
             
-            // Smazání starého loga při nahrání nového
             if (!empty($data['id'])) {
                 $existing = $this->model->get_by_id($data['id']);
                 if (!empty($existing['logo_url']) && $existing['logo_url'] !== $data['logo_url']) {
@@ -84,31 +75,45 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
     }
     
     public function ajax_get_customers_for_switcher() {
-        check_ajax_referer('saw_customer_switcher_nonce', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => 'Nedostatečná oprávnění']);
+        }
         
         $cached = get_transient('customers_for_switcher');
         if ($cached !== false) {
             wp_send_json_success($cached);
+            return;
         }
         
         global $wpdb;
         $table = $wpdb->prefix . 'saw_customers';
         
         $customers = $wpdb->get_results(
-            "SELECT id, name, logo_url, primary_color 
+            "SELECT id, name, ico, logo_url, primary_color 
              FROM {$table} 
              WHERE status = 'active' 
              ORDER BY name ASC",
             ARRAY_A
         );
         
-        set_transient('customers_for_switcher', $customers, HOUR_IN_SECONDS);
+        $formatted = array_map(function($customer) {
+            return [
+                'value' => $customer['id'],
+                'label' => $customer['name'],
+                'icon' => !empty($customer['logo_url']) ? $customer['logo_url'] : '',
+                'meta' => !empty($customer['ico']) ? 'IČO: ' . $customer['ico'] : ''
+            ];
+        }, $customers);
         
-        wp_send_json_success($customers);
+        set_transient('customers_for_switcher', $formatted, HOUR_IN_SECONDS);
+        
+        wp_send_json_success($formatted);
     }
     
     public function ajax_switch_customer() {
-        check_ajax_referer('saw_customer_switcher_nonce', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => 'Nedostatečná oprávnění']);
+        }
         
         $customer_id = intval($_POST['customer_id']);
         
@@ -116,7 +121,11 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             wp_send_json_error(['message' => 'Neplatné ID zákazníka']);
         }
         
-        $_SESSION['current_customer_id'] = $customer_id;
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        $_SESSION['saw_current_customer_id'] = $customer_id;
         
         wp_send_json_success([
             'message' => 'Zákazník byl úspěšně přepnut',

@@ -16,7 +16,6 @@
             this.searchable = $container.data('searchable') === 1;
             this.onChange = $container.data('on-change');
             this.showIcons = $container.data('show-icons') === 1;
-            this.ajaxNonce = $container.data('ajax-nonce') || '';
             
             this.searchTimeout = null;
             this.isLoaded = false;
@@ -173,15 +172,14 @@
             
             this.$options.html('<div class="saw-selectbox-loading"><div class="spinner is-active"></div><div>Načítám...</div></div>');
             
-            const nonce = this.ajaxNonce || (typeof sawGlobal !== 'undefined' ? sawGlobal.nonce : '');
+            const ajaxurl = (typeof sawGlobal !== 'undefined' && sawGlobal.ajaxurl) ? sawGlobal.ajaxurl : '/wp-admin/admin-ajax.php';
             
             $.ajax({
-                url: sawGlobal.ajaxurl,
-                type: 'GET',
+                url: ajaxurl,
+                type: 'POST',
                 data: {
                     action: this.ajaxAction,
-                    s: query,
-                    nonce: nonce
+                    s: query
                 },
                 success: (response) => {
                     if (response.success && response.data) {
@@ -192,11 +190,7 @@
                     }
                 },
                 error: (xhr, status, error) => {
-                    console.error('Selectbox AJAX error:', {
-                        status: xhr.status,
-                        statusText: xhr.statusText,
-                        responseText: xhr.responseText
-                    });
+                    console.error('Selectbox AJAX error:', xhr.status, xhr.responseText);
                     this.$options.html('<div class="saw-selectbox-empty">Chyba serveru (' + xhr.status + ')</div>');
                 }
             });

@@ -1,11 +1,4 @@
 <?php
-/**
- * SAW App Header Component
- * 
- * @package SAW_Visitors
- * @since 4.6.1
- */
-
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -30,10 +23,6 @@ class SAW_App_Header {
         );
     }
     
-    /**
-     * Get logo URL with fallback logic
-     * Unified approach to handle both logo_url and logo_url_full
-     */
     private function get_logo_url() {
         if (!empty($this->customer['logo_url_full'])) {
             return $this->customer['logo_url_full'];
@@ -80,7 +69,6 @@ class SAW_App_Header {
             
             <div class="saw-header-right">
                 <div class="saw-branch-switcher-placeholder" style="display: none;">
-                    <!-- Placeholder pro budoucí přepínač poboček -->
                 </div>
                 
                 <?php if ($this->is_super_admin()): ?>
@@ -125,7 +113,7 @@ class SAW_App_Header {
             </div>
         </header>
         
-        <?php $this->enqueue_customer_switcher_nonce(); ?>
+        <?php $this->enqueue_customer_switcher_script(); ?>
         <?php
     }
     
@@ -137,7 +125,6 @@ class SAW_App_Header {
         $switcher = new SAW_Component_Selectbox('customer-switcher', array(
             'ajax_enabled' => true,
             'ajax_action' => 'saw_get_customers_for_switcher',
-            'ajax_nonce' => wp_create_nonce('saw_customer_switcher_nonce'),
             'searchable' => true,
             'placeholder' => 'Přepnout zákazníka...',
             'selected' => $this->customer['id'],
@@ -149,13 +136,9 @@ class SAW_App_Header {
         $switcher->render();
     }
     
-    private function enqueue_customer_switcher_nonce() {
+    private function enqueue_customer_switcher_script() {
         ?>
         <script type="text/javascript">
-        if (typeof sawGlobal !== 'undefined') {
-            sawGlobal.customerSwitcherNonce = '<?php echo wp_create_nonce('saw_customer_switcher_nonce'); ?>';
-        }
-        
         function sawSwitchCustomer(customerId) {
             if (!customerId) return;
             
@@ -164,8 +147,7 @@ class SAW_App_Header {
                 type: 'POST',
                 data: {
                     action: 'saw_switch_customer',
-                    customer_id: customerId,
-                    nonce: sawGlobal.customerSwitcherNonce || '<?php echo wp_create_nonce('saw_customer_switcher_nonce'); ?>'
+                    customer_id: customerId
                 },
                 success: function(response) {
                     if (response.success) {
