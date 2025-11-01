@@ -3,7 +3,7 @@
  * Account Types List Template
  * 
  * @package SAW_Visitors
- * @version 6.0.0 - NO CLEANUP (jako customers)
+ * @version 6.0.0
  */
 
 if (!defined('ABSPATH')) {
@@ -13,6 +13,8 @@ if (!defined('ABSPATH')) {
 if (!class_exists('SAW_Component_Search')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/search/class-saw-component-search.php';
 }
+
+$current_is_active = $_GET['is_active'] ?? '';
 ?>
 
 <div class="saw-page-header">
@@ -46,10 +48,10 @@ if (!class_exists('SAW_Component_Search')) {
         </div>
         
         <div class="saw-filters">
-            <select name="status" class="saw-select-responsive" onchange="window.location.href='?status=' + this.value">
+            <select name="is_active" class="saw-select-responsive" onchange="window.location.href='?is_active=' + this.value + '<?php echo $search ? '&s=' . urlencode($search) : ''; ?>'">
                 <option value="">Všechny statusy</option>
-                <option value="active" <?php selected($_GET['status'] ?? '', 'active'); ?>>Aktivní</option>
-                <option value="inactive" <?php selected($_GET['status'] ?? '', 'inactive'); ?>>Neaktivní</option>
+                <option value="1" <?php selected($current_is_active, '1'); ?>>Aktivní</option>
+                <option value="0" <?php selected($current_is_active, '0'); ?>>Neaktivní</option>
             </select>
         </div>
     </div>
@@ -120,7 +122,7 @@ if (!class_exists('SAW_Component_Search')) {
                             </td>
                             
                             <td style="text-align: center;">
-                                <?php if (!empty($item['is_active'])): ?>
+                                <?php if ($item['is_active'] == 1): ?>
                                     <span class="saw-badge saw-badge-success">Aktivní</span>
                                 <?php else: ?>
                                     <span class="saw-badge saw-badge-secondary">Neaktivní</span>
@@ -155,7 +157,7 @@ if (!class_exists('SAW_Component_Search')) {
         <?php if ($total_pages > 1): ?>
             <div class="saw-pagination">
                 <?php if ($page > 1): ?>
-                    <a href="?paged=<?php echo ($page - 1); ?><?php echo $search ? '&s=' . urlencode($search) : ''; ?>" class="saw-pagination-link">
+                    <a href="?paged=<?php echo ($page - 1); ?><?php echo $search ? '&s=' . urlencode($search) : ''; ?><?php echo $current_is_active !== '' ? '&is_active=' . $current_is_active : ''; ?>" class="saw-pagination-link">
                         « Předchozí
                     </a>
                 <?php endif; ?>
@@ -164,14 +166,14 @@ if (!class_exists('SAW_Component_Search')) {
                     <?php if ($i == $page): ?>
                         <span class="saw-pagination-link current"><?php echo $i; ?></span>
                     <?php else: ?>
-                        <a href="?paged=<?php echo $i; ?><?php echo $search ? '&s=' . urlencode($search) : ''; ?>" class="saw-pagination-link">
+                        <a href="?paged=<?php echo $i; ?><?php echo $search ? '&s=' . urlencode($search) : ''; ?><?php echo $current_is_active !== '' ? '&is_active=' . $current_is_active : ''; ?>" class="saw-pagination-link">
                             <?php echo $i; ?>
                         </a>
                     <?php endif; ?>
                 <?php endfor; ?>
                 
                 <?php if ($page < $total_pages): ?>
-                    <a href="?paged=<?php echo ($page + 1); ?><?php echo $search ? '&s=' . urlencode($search) : ''; ?>" class="saw-pagination-link">
+                    <a href="?paged=<?php echo ($page + 1); ?><?php echo $search ? '&s=' . urlencode($search) : ''; ?><?php echo $current_is_active !== '' ? '&is_active=' . $current_is_active : ''; ?>" class="saw-pagination-link">
                         Další »
                     </a>
                 <?php endif; ?>
@@ -183,7 +185,6 @@ if (!class_exists('SAW_Component_Search')) {
 </div>
 
 <?php
-// MODAL
 if (!class_exists('SAW_Component_Modal')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/modal/class-saw-component-modal.php';
 }

@@ -18,6 +18,7 @@ return [
     'max_file_size' => 2097152, // 2MB
     'upload_dirs' => [
         'customers' => '/saw-customers/',
+        'branches' => '/saw-branches/',
         'materials' => '/saw-visitor-docs/materials/',
         'visitor-uploads' => '/saw-visitor-docs/visitor-uploads/',
         'risk-docs' => '/saw-visitor-docs/risk-docs/',

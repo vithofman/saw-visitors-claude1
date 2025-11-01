@@ -36,13 +36,11 @@ abstract class SAW_Base_Controller
             'order' => $order
         ];
         
-        // ✅ AUTOMATICKÝ FILTR PODLE CUSTOMER_ID
         if (!empty($this->config['filter_by_customer'])) {
             $customer = $this->get_current_customer_data();
             $filters['customer_id'] = $customer['id'] ?? 0;
         }
         
-        // Ostatní filtry z GET parametrů
         foreach ($this->config['list_config']['filters'] ?? [] as $filter_key => $enabled) {
             if ($enabled && isset($_GET[$filter_key]) && $filter_key !== 'customer_id') {
                 $filters[$filter_key] = sanitize_text_field($_GET[$filter_key]);
@@ -107,7 +105,6 @@ abstract class SAW_Base_Controller
             wp_die($this->config['singular'] . ' not found', 'Not Found', ['response' => 404]);
         }
         
-        // ✅ OVĚŘ PŘÍSTUP K ZÁZNAMU (pokud je filter_by_customer)
         if (!empty($this->config['filter_by_customer'])) {
             $customer = $this->get_current_customer_data();
             if (isset($item['customer_id']) && $item['customer_id'] != $customer['id']) {
@@ -132,7 +129,6 @@ abstract class SAW_Base_Controller
             $data['id'] = $id;
         }
         
-        // ✅ AUTOMATICKY PŘIDEJ CUSTOMER_ID PRO NOVÉ ZÁZNAMY
         if ($id === 0 && !empty($this->config['filter_by_customer'])) {
             $customer = $this->get_current_customer_data();
             $data['customer_id'] = $customer['id'] ?? 0;
@@ -176,6 +172,13 @@ abstract class SAW_Base_Controller
         $data = [];
         
         foreach ($this->config['fields'] as $field_key => $field_config) {
+            $field_type = $field_config['type'] ?? 'text';
+            
+            if ($field_type === 'checkbox') {
+                $data[$field_key] = isset($_POST[$field_key]) ? 1 : 0;
+                continue;
+            }
+            
             if (!isset($_POST[$field_key])) {
                 if (isset($field_config['default'])) {
                     $data[$field_key] = $field_config['default'];

@@ -2,7 +2,7 @@
  * Account Types Module Styles
  * 
  * @package SAW_Visitors
- * @version 5.0.0
+ * @version 5.1.0
  */
 
 /* ============================================
@@ -97,7 +97,7 @@
 }
 
 /* ============================================
-   TABLE ROW
+   TABLE ROW & COLUMNS
    ============================================ */
 .saw-module-account-types .saw-account-type-row:hover {
     background-color: #f9fafb;
@@ -106,6 +106,66 @@
 .saw-module-account-types .saw-account-type-name strong {
     font-size: 15px;
     color: #111827;
+}
+
+/* Column width constraints - zabraňuje zalamování */
+.saw-module-account-types .saw-admin-table th,
+.saw-module-account-types .saw-admin-table td {
+    white-space: nowrap;
+}
+
+/* Barva */
+.saw-module-account-types .saw-admin-table th:nth-child(1),
+.saw-module-account-types .saw-admin-table td:nth-child(1) {
+    min-width: 80px;
+    width: 80px;
+}
+
+/* Název */
+.saw-module-account-types .saw-admin-table th:nth-child(2),
+.saw-module-account-types .saw-admin-table td:nth-child(2) {
+    min-width: 200px;
+}
+
+/* Interní název */
+.saw-module-account-types .saw-admin-table th:nth-child(3),
+.saw-module-account-types .saw-admin-table td:nth-child(3) {
+    min-width: 150px;
+}
+
+/* Cena */
+.saw-module-account-types .saw-admin-table th:nth-child(4),
+.saw-module-account-types .saw-admin-table td:nth-child(4) {
+    min-width: 140px;
+    width: 140px;
+}
+
+/* Funkce */
+.saw-module-account-types .saw-admin-table th:nth-child(5),
+.saw-module-account-types .saw-admin-table td:nth-child(5) {
+    min-width: 100px;
+    width: 100px;
+}
+
+/* Pořadí */
+.saw-module-account-types .saw-admin-table th:nth-child(6),
+.saw-module-account-types .saw-admin-table td:nth-child(6) {
+    min-width: 100px;
+    width: 100px;
+}
+
+/* Status */
+.saw-module-account-types .saw-admin-table th:nth-child(7),
+.saw-module-account-types .saw-admin-table td:nth-child(7) {
+    min-width: 120px;
+    width: 120px;
+}
+
+/* Akce */
+.saw-module-account-types .saw-admin-table th:nth-child(8),
+.saw-module-account-types .saw-admin-table td:nth-child(8) {
+    min-width: 120px;
+    width: 120px;
 }
 
 /* ============================================
@@ -162,6 +222,12 @@
    RESPONSIVE
    ============================================ */
 @media (max-width: 768px) {
+    /* Na mobilu povolíme zalamování */
+    .saw-module-account-types .saw-admin-table th,
+    .saw-module-account-types .saw-admin-table td {
+        white-space: normal;
+    }
+    
     .saw-module-account-types .saw-action-btn {
         width: 32px;
         height: 32px;

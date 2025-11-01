@@ -14,7 +14,7 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
 {
     use SAW_AJAX_Handlers;
     
-    private $media_uploader;
+    private $file_uploader;
     
     public function __construct() {
         $this->config = require __DIR__ . '/config.php';
@@ -24,10 +24,8 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         require_once __DIR__ . '/model.php';
         $this->model = new SAW_Module_Branches_Model($this->config);
         
-        if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/components/media-uploader/class-saw-media-uploader.php')) {
-            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/media-uploader/class-saw-media-uploader.php';
-            $this->media_uploader = new SAW_Media_Uploader();
-        }
+        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/class-saw-file-uploader.php';
+        $this->file_uploader = new SAW_File_Uploader();
         
         add_action('wp_ajax_saw_get_branches_detail', [$this, 'ajax_get_detail']);
         add_action('wp_ajax_saw_search_branches', [$this, 'ajax_search']);
@@ -37,9 +35,40 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
     }
     
     public function enqueue_assets() {
-        if ($this->media_uploader) {
-            $this->media_uploader->enqueue_assets();
+        $this->file_uploader->enqueue_assets();
+    }
+    
+    protected function before_save($data) {
+        if ($this->file_uploader->should_remove_file('image_url')) {
+            if (!empty($data['id'])) {
+                $existing = $this->model->get_by_id($data['id']);
+                if (!empty($existing['image_url'])) {
+                    $this->file_uploader->delete($existing['image_url']);
+                }
+            }
+            $data['image_url'] = '';
+            $data['image_thumbnail'] = '';
         }
+        
+        if (!empty($_FILES['image_url']['name'])) {
+            $upload = $this->file_uploader->upload($_FILES['image_url'], 'customers');
+            
+            if (is_wp_error($upload)) {
+                wp_die($upload->get_error_message());
+            }
+            
+            $data['image_url'] = $upload['url'];
+            $data['image_thumbnail'] = $upload['url'];
+            
+            if (!empty($data['id'])) {
+                $existing = $this->model->get_by_id($data['id']);
+                if (!empty($existing['image_url']) && $existing['image_url'] !== $data['image_url']) {
+                    $this->file_uploader->delete($existing['image_url']);
+                }
+            }
+        }
+        
+        return $data;
     }
     
     protected function format_detail_data($item) {
@@ -63,11 +92,12 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
             );
         }
         
-        $item['is_active_label'] = !empty($item['is_active']) ? 'Aktivní' : 'Neaktivní';
-        $item['is_active_badge_class'] = !empty($item['is_active']) ? 'saw-badge-success' : 'saw-badge-secondary';
+        // ✅ FIX: Explicitní == 1 check místo !empty() kvůli string "0" vs int 0
+        $item['is_active_label'] = ($item['is_active'] == 1) ? 'Aktivní' : 'Neaktivní';
+        $item['is_active_badge_class'] = ($item['is_active'] == 1) ? 'saw-badge-success' : 'saw-badge-secondary';
         
-        $item['is_headquarters_label'] = !empty($item['is_headquarters']) ? 'Ano' : 'Ne';
-        $item['is_headquarters_badge_class'] = !empty($item['is_headquarters']) ? 'saw-badge-info' : 'saw-badge-secondary';
+        $item['is_headquarters_label'] = ($item['is_headquarters'] == 1) ? 'Ano' : 'Ne';
+        $item['is_headquarters_badge_class'] = ($item['is_headquarters'] == 1) ? 'saw-badge-info' : 'saw-badge-secondary';
         
         $item['country_name'] = $this->get_country_name($item['country'] ?? 'CZ');
         
@@ -98,7 +128,6 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
     }
     
     protected function after_save($id) {
-        // ✅ OPRAVA - smazání cache BEZ volání neexistující funkce
         global $wpdb;
         $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_branches_%'");
         $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_timeout_branches_%'");

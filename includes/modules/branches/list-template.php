@@ -13,6 +13,37 @@ if (!defined('ABSPATH')) {
 if (!class_exists('SAW_Component_Search')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/search/class-saw-component-search.php';
 }
+
+$current_is_active = $_GET['is_active'] ?? '';
+$current_is_headquarters = $_GET['is_headquarters'] ?? '';
+
+function build_filter_url($params = []) {
+    $base_params = [];
+    
+    if (!empty($_GET['s'])) {
+        $base_params['s'] = sanitize_text_field($_GET['s']);
+    }
+    
+    if (!empty($_GET['is_active']) && !isset($params['is_active'])) {
+        $base_params['is_active'] = sanitize_text_field($_GET['is_active']);
+    }
+    
+    if (!empty($_GET['is_headquarters']) && !isset($params['is_headquarters'])) {
+        $base_params['is_headquarters'] = sanitize_text_field($_GET['is_headquarters']);
+    }
+    
+    if (!empty($_GET['orderby'])) {
+        $base_params['orderby'] = sanitize_text_field($_GET['orderby']);
+    }
+    
+    if (!empty($_GET['order'])) {
+        $base_params['order'] = sanitize_text_field($_GET['order']);
+    }
+    
+    $all_params = array_merge($base_params, $params);
+    
+    return '?' . http_build_query($all_params);
+}
 ?>
 
 <div class="saw-page-header">
@@ -48,16 +79,16 @@ if (!class_exists('SAW_Component_Search')) {
         </div>
         
         <div class="saw-filters">
-            <select name="status" class="saw-select-responsive" onchange="window.location.href='?status=' + this.value">
+            <select name="is_active" class="saw-select-responsive" onchange="window.location.href='<?php echo build_filter_url(['is_active' => '']); ?>'.replace('is_active=', 'is_active=' + this.value)">
                 <option value="">Všechny statusy</option>
-                <option value="active" <?php selected($_GET['status'] ?? '', 'active'); ?>>Aktivní</option>
-                <option value="inactive" <?php selected($_GET['status'] ?? '', 'inactive'); ?>>Neaktivní</option>
+                <option value="1" <?php selected($current_is_active, '1'); ?>>Aktivní</option>
+                <option value="0" <?php selected($current_is_active, '0'); ?>>Neaktivní</option>
             </select>
             
-            <select name="headquarters" class="saw-select-responsive" onchange="window.location.href='?headquarters=' + this.value">
+            <select name="is_headquarters" class="saw-select-responsive" onchange="window.location.href='<?php echo build_filter_url(['is_headquarters' => '']); ?>'.replace('is_headquarters=', 'is_headquarters=' + this.value)">
                 <option value="">Všechny pobočky</option>
-                <option value="yes" <?php selected($_GET['headquarters'] ?? '', 'yes'); ?>>Jen hlavní sídla</option>
-                <option value="no" <?php selected($_GET['headquarters'] ?? '', 'no'); ?>>Bez hlavních sídel</option>
+                <option value="1" <?php selected($current_is_headquarters, '1'); ?>>Jen hlavní sídla</option>
+                <option value="0" <?php selected($current_is_headquarters, '0'); ?>>Bez hlavních sídel</option>
             </select>
         </div>
     </div>
@@ -76,13 +107,41 @@ if (!class_exists('SAW_Component_Search')) {
             <table class="saw-admin-table saw-branches-table">
                 <thead>
                     <tr>
-                        <th>Název</th>
-                        <th style="width: 100px;">Kód</th>
-                        <th style="width: 150px;">Město</th>
+                        <th>
+                            <a href="<?php echo build_filter_url(['orderby' => 'name', 'order' => ($orderby === 'name' && $order === 'ASC') ? 'DESC' : 'ASC']); ?>">
+                                Název
+                                <?php if ($orderby === 'name'): ?>
+                                    <span class="dashicons dashicons-arrow-<?php echo $order === 'ASC' ? 'up' : 'down'; ?>"></span>
+                                <?php endif; ?>
+                            </a>
+                        </th>
+                        <th style="width: 100px;">
+                            <a href="<?php echo build_filter_url(['orderby' => 'code', 'order' => ($orderby === 'code' && $order === 'ASC') ? 'DESC' : 'ASC']); ?>">
+                                Kód
+                                <?php if ($orderby === 'code'): ?>
+                                    <span class="dashicons dashicons-arrow-<?php echo $order === 'ASC' ? 'up' : 'down'; ?>"></span>
+                                <?php endif; ?>
+                            </a>
+                        </th>
+                        <th style="width: 150px;">
+                            <a href="<?php echo build_filter_url(['orderby' => 'city', 'order' => ($orderby === 'city' && $order === 'ASC') ? 'DESC' : 'ASC']); ?>">
+                                Město
+                                <?php if ($orderby === 'city'): ?>
+                                    <span class="dashicons dashicons-arrow-<?php echo $order === 'ASC' ? 'up' : 'down'; ?>"></span>
+                                <?php endif; ?>
+                            </a>
+                        </th>
                         <th style="width: 120px;">Telefon</th>
                         <th style="width: 100px; text-align: center;">Hlavní</th>
                         <th style="width: 100px; text-align: center;">Status</th>
-                        <th style="width: 80px; text-align: center;">Pořadí</th>
+                        <th style="width: 80px; text-align: center;">
+                            <a href="<?php echo build_filter_url(['orderby' => 'sort_order', 'order' => ($orderby === 'sort_order' && $order === 'ASC') ? 'DESC' : 'ASC']); ?>">
+                                Pořadí
+                                <?php if ($orderby === 'sort_order'): ?>
+                                    <span class="dashicons dashicons-arrow-<?php echo $order === 'ASC' ? 'up' : 'down'; ?>"></span>
+                                <?php endif; ?>
+                            </a>
+                        </th>
                         <th style="width: 120px; text-align: center;">Akce</th>
                     </tr>
                 </thead>
@@ -179,7 +238,7 @@ if (!class_exists('SAW_Component_Search')) {
         <?php if ($total_pages > 1): ?>
             <div class="saw-pagination">
                 <?php if ($page > 1): ?>
-                    <a href="?paged=<?php echo ($page - 1); ?><?php echo $search ? '&s=' . urlencode($search) : ''; ?>" class="saw-pagination-link">
+                    <a href="<?php echo build_filter_url(['paged' => $page - 1]); ?>" class="saw-pagination-link">
                         « Předchozí
                     </a>
                 <?php endif; ?>
@@ -188,14 +247,14 @@ if (!class_exists('SAW_Component_Search')) {
                     <?php if ($i == $page): ?>
                         <span class="saw-pagination-link current"><?php echo $i; ?></span>
                     <?php else: ?>
-                        <a href="?paged=<?php echo $i; ?><?php echo $search ? '&s=' . urlencode($search) : ''; ?>" class="saw-pagination-link">
+                        <a href="<?php echo build_filter_url(['paged' => $i]); ?>" class="saw-pagination-link">
                             <?php echo $i; ?>
                         </a>
                     <?php endif; ?>
                 <?php endfor; ?>
                 
                 <?php if ($page < $total_pages): ?>
-                    <a href="?paged=<?php echo ($page + 1); ?><?php echo $search ? '&s=' . urlencode($search) : ''; ?>" class="saw-pagination-link">
+                    <a href="<?php echo build_filter_url(['paged' => $page + 1]); ?>" class="saw-pagination-link">
                         Další »
                     </a>
                 <?php endif; ?>

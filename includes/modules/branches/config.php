@@ -1,26 +1,17 @@
 <?php
-/**
- * Branches Module Config
- * 
- * @package SAW_Visitors
- * @version 1.0.0
- */
-
 if (!defined('ABSPATH')) {
     exit;
 }
 
 return [
-    // === ZÁKLADNÍ KONFIGURACE ===
     'entity' => 'branches',
     'table' => 'saw_branches',
     'singular' => 'Pobočka',
     'plural' => 'Pobočky',
     'route' => 'admin/branches',
     'icon' => '🏢',
-    'filter_by_customer' => true,  // ← Filtrovat podle customer_id
+    'filter_by_customer' => true,
     
-    // === CAPABILITIES ===
     'capabilities' => [
         'list' => 'manage_options',
         'view' => 'manage_options',
@@ -29,7 +20,6 @@ return [
         'delete' => 'manage_options',
     ],
     
-    // === FIELDS DEFINITION ===
     'fields' => [
         'name' => [
             'type' => 'text',
@@ -122,7 +112,7 @@ return [
         ],
         
         'image_url' => [
-            'type' => 'media',
+            'type' => 'file',
             'label' => 'Obrázek pobočky',
             'required' => false,
             'sanitize' => 'esc_url_raw',
@@ -191,7 +181,6 @@ return [
         ],
     ],
     
-    // === LIST CONFIGURATION ===
     'list_config' => [
         'columns' => ['name', 'code', 'city', 'phone', 'is_headquarters', 'is_active', 'sort_order'],
         'searchable' => ['name', 'code', 'city', 'street'],
@@ -199,13 +188,12 @@ return [
         'filters' => [
             'is_active' => true,
             'is_headquarters' => true,
-            'customer_id' => true,  // ← POVOLENÍ FILTRU
+            'customer_id' => true,
         ],
         'per_page' => 20,
         'enable_detail_modal' => true,
     ],
     
-    // === CACHE SETTINGS ===
     'cache' => [
         'enabled' => true,
         'ttl' => 1800,

@@ -11,7 +11,7 @@
  * module-specific nonce, aby fungoval pro všechny moduly (customers, account-types, atd.)
  * 
  * @package SAW_Visitors
- * @version 1.0.2
+ * @version 1.1.0
  * @since   4.9.0
  */
 
@@ -91,7 +91,13 @@ trait SAW_AJAX_Handlers
         }
         
         // Before delete hook (lze overridnout v controlleru)
-        if (!$this->before_delete($id)) {
+        $before_delete_result = $this->before_delete($id);
+        
+        if (is_wp_error($before_delete_result)) {
+            wp_send_json_error(['message' => $before_delete_result->get_error_message()]);
+        }
+        
+        if ($before_delete_result === false) {
             wp_send_json_error(['message' => 'Cannot delete ' . $this->entity]);
         }
         
@@ -111,10 +117,14 @@ trait SAW_AJAX_Handlers
     /**
      * AJAX: Get item detail for modal
      * 
-     * Načte detail záznamu a pošle ho jako JSON pro modal.
-     * Volá format_detail_data() pro formátování.
+     * Načte detail záznamu a vrátí buď:
+     * 1. HTML z detail-modal-template.php (pokud existuje)
+     * 2. JSON data (fallback)
      * 
-     * ✅ OPRAVA: Používá univerzální nonce 'saw_ajax_nonce' místo 'saw_customer_modal_nonce'
+     * Automaticky hledá template v modulu: {module}/detail-modal-template.php
+     * Volá format_detail_data() pro formátování před renderováním.
+     * 
+     * ✅ UNIVERZÁLNÍ: Funguje pro všechny moduly
      */
     public function ajax_get_detail() {
         // ✅ UNIVERZÁLNÍ NONCE - funguje pro account-types, customers, i další moduly
@@ -142,13 +152,27 @@ trait SAW_AJAX_Handlers
         // Formátuj data pro modal (např. přidej formatted dates)
         $item = $this->format_detail_data($item);
         
-        // Pošli data jako JSON
-        // Posíláme item pod více klíči pro kompatibilitu s různými modal templates
-        wp_send_json_success([
-            $this->entity => $item,      // Pro account-types: 'account-types' => $item
-            'customer' => $item,          // Pro backwards compatibility s customers
-            'item' => $item,              // Univerzální klíč
-        ]);
+        // ✅ NOVINKA: Pokus se renderovat HTML template
+        $template_path = $this->config['path'] . 'detail-modal-template.php';
+        
+        if (file_exists($template_path)) {
+            // Template existuje - renderuj HTML
+            ob_start();
+            include $template_path;
+            $html = ob_get_clean();
+            
+            wp_send_json_success([
+                'html' => $html,
+                'item' => $item,
+            ]);
+        } else {
+            // Template neexistuje - pošli jen JSON (fallback)
+            wp_send_json_success([
+                $this->entity => $item,
+                'customer' => $item,
+                'item' => $item,
+            ]);
+        }
     }
     
     /**

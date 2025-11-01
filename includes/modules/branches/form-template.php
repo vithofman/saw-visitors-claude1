@@ -1,13 +1,4 @@
 <?php
-/**
- * Branches Form Template
- * 
- * Formulář pro vytvoření/editaci pobočky.
- * 
- * @package SAW_Visitors
- * @version 1.0.0
- */
-
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -44,7 +35,6 @@ if (!empty($item['opening_hours'])) {
             <input type="hidden" name="id" value="<?php echo esc_attr($item['id']); ?>">
         <?php endif; ?>
         
-        <!-- ZÁKLADNÍ INFORMACE -->
         <details class="saw-form-section" open>
             <summary>
                 <span class="dashicons dashicons-admin-generic"></span>
@@ -92,7 +82,6 @@ if (!empty($item['opening_hours'])) {
             </div>
         </details>
         
-        <!-- ADRESA -->
         <details class="saw-form-section" open>
             <summary>
                 <span class="dashicons dashicons-location"></span>
@@ -200,10 +189,9 @@ if (!empty($item['opening_hours'])) {
             </div>
         </details>
         
-        <!-- KONTAKTNÍ ÚDAJE -->
         <details class="saw-form-section" open>
             <summary>
-                <span class="dashicons dashicons-phone"></span>
+                <span class="dashicons dashicons-email"></span>
                 <strong>Kontaktní údaje</strong>
             </summary>
             <div class="saw-form-section-content">
@@ -221,6 +209,9 @@ if (!empty($item['opening_hours'])) {
                             value="<?php echo esc_attr($item['phone'] ?? ''); ?>"
                             placeholder="+420 123 456 789"
                         >
+                        <span class="saw-help-text">
+                            Telefonní číslo pobočky
+                        </span>
                     </div>
                     
                     <div class="saw-form-group saw-col-6">
@@ -235,49 +226,8 @@ if (!empty($item['opening_hours'])) {
                             value="<?php echo esc_attr($item['email'] ?? ''); ?>"
                             placeholder="pobocka@firma.cz"
                         >
-                    </div>
-                </div>
-                
-            </div>
-        </details>
-        
-        <!-- OBRÁZEK -->
-        <details class="saw-form-section">
-            <summary>
-                <span class="dashicons dashicons-format-image"></span>
-                <strong>Obrázek pobočky</strong>
-            </summary>
-            <div class="saw-form-section-content">
-                
-                <div class="saw-form-row">
-                    <div class="saw-form-group">
-                        <label class="saw-label">
-                            Fotografie pobočky
-                        </label>
-                        
-                        <?php if (!empty($item['image_url'])): ?>
-                            <div class="saw-current-image">
-                                <img src="<?php echo esc_url($item['image_url']); ?>" alt="Současný obrázek" style="max-width: 300px; border-radius: 8px;">
-                            </div>
-                        <?php endif; ?>
-                        
-                        <input type="hidden" id="image_url" name="image_url" value="<?php echo esc_attr($item['image_url'] ?? ''); ?>">
-                        <input type="hidden" id="image_thumbnail" name="image_thumbnail" value="<?php echo esc_attr($item['image_thumbnail'] ?? ''); ?>">
-                        
-                        <button type="button" class="saw-button saw-button-secondary saw-upload-image-btn">
-                            <span class="dashicons dashicons-upload"></span>
-                            <?php echo !empty($item['image_url']) ? 'Změnit obrázek' : 'Nahrát obrázek'; ?>
-                        </button>
-                        
-                        <?php if (!empty($item['image_url'])): ?>
-                            <button type="button" class="saw-button saw-button-secondary saw-remove-image-btn">
-                                <span class="dashicons dashicons-no"></span>
-                                Odebrat obrázek
-                            </button>
-                        <?php endif; ?>
-                        
                         <span class="saw-help-text">
-                            Obrázek pobočky (doporučeno 800x600px)
+                            Emailová adresa pobočky
                         </span>
                     </div>
                 </div>
@@ -285,7 +235,24 @@ if (!empty($item['opening_hours'])) {
             </div>
         </details>
         
-        <!-- POPIS A POZNÁMKY -->
+        <details class="saw-form-section" open>
+            <summary>
+                <span class="dashicons dashicons-format-image"></span>
+                <strong>Obrázek pobočky</strong>
+            </summary>
+            <div class="saw-form-section-content">
+                <?php
+                require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/class-saw-file-uploader.php';
+                $id = 'image_url';
+                $name = 'image_url';
+                $current_file_url = $item['image_url'] ?? '';
+                $label = 'Nahrát nový obrázek';
+                $current_label = 'Současný obrázek';
+                include SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/file-upload-input.php';
+                ?>
+            </div>
+        </details>
+        
         <details class="saw-form-section">
             <summary>
                 <span class="dashicons dashicons-edit"></span>
@@ -332,7 +299,6 @@ if (!empty($item['opening_hours'])) {
             </div>
         </details>
         
-        <!-- PROVOZNÍ DOBA -->
         <details class="saw-form-section">
             <summary>
                 <span class="dashicons dashicons-clock"></span>
@@ -361,7 +327,6 @@ if (!empty($item['opening_hours'])) {
             </div>
         </details>
         
-        <!-- NASTAVENÍ -->
         <details class="saw-form-section" open>
             <summary>
                 <span class="dashicons dashicons-admin-settings"></span>
@@ -426,7 +391,6 @@ if (!empty($item['opening_hours'])) {
             </div>
         </details>
         
-        <!-- ACTION BUTTONS -->
         <div class="saw-form-actions">
             <button type="submit" class="saw-button saw-button-primary">
                 <span class="dashicons dashicons-yes"></span>
@@ -440,48 +404,3 @@ if (!empty($item['opening_hours'])) {
         
     </form>
 </div>
-
-<script>
-jQuery(document).ready(function($) {
-    // Image upload
-    $('.saw-upload-image-btn').on('click', function(e) {
-        e.preventDefault();
-        
-        if (typeof wp !== 'undefined' && wp.media) {
-            const frame = wp.media({
-                title: 'Vyberte obrázek pobočky',
-                button: {
-                    text: 'Použít tento obrázek'
-                },
-                multiple: false
-            });
-            
-            frame.on('select', function() {
-                const attachment = frame.state().get('selection').first().toJSON();
-                $('#image_url').val(attachment.url);
-                $('#image_thumbnail').val(attachment.sizes && attachment.sizes.thumbnail ? attachment.sizes.thumbnail.url : attachment.url);
-                
-                $('.saw-current-image').remove();
-                $('.saw-upload-image-btn').before('<div class="saw-current-image"><img src="' + attachment.url + '" alt="Nový obrázek" style="max-width: 300px; border-radius: 8px;"></div>');
-                $('.saw-upload-image-btn').text('Změnit obrázek').prepend('<span class="dashicons dashicons-upload"></span> ');
-                
-                if ($('.saw-remove-image-btn').length === 0) {
-                    $('.saw-upload-image-btn').after('<button type="button" class="saw-button saw-button-secondary saw-remove-image-btn"><span class="dashicons dashicons-no"></span> Odebrat obrázek</button>');
-                }
-            });
-            
-            frame.open();
-        }
-    });
-    
-    // Remove image
-    $(document).on('click', '.saw-remove-image-btn', function(e) {
-        e.preventDefault();
-        $('#image_url').val('');
-        $('#image_thumbnail').val('');
-        $('.saw-current-image').remove();
-        $('.saw-remove-image-btn').remove();
-        $('.saw-upload-image-btn').text('Nahrát obrázek').prepend('<span class="dashicons dashicons-upload"></span> ');
-    });
-});
-</script>
