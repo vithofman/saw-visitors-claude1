@@ -44,6 +44,10 @@ class SAW_Database {
         'department_documents',
         'contact_persons',
 	'branches',
+
+	//Training language
+	'training_languages',
+	'training_language_branches',
         
         // Visitor Management (8)
         'companies',
@@ -236,6 +240,11 @@ class SAW_Database {
 
 	    // branches
 	    array('table' => 'branches', 'constraint' => 'fk_branch_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+
+// Language - training content
+array('table' => 'training_languages', 'constraint' => 'fk_training_lang_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+array('table' => 'training_language_branches', 'constraint' => 'fk_training_lang_branch_lang', 'column' => 'language_id', 'ref_table' => 'training_languages', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+array('table' => 'training_language_branches', 'constraint' => 'fk_training_lang_branch_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
             // companies
             array('table' => 'companies', 'constraint' => 'fk_company_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),

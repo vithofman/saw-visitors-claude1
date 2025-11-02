@@ -48,6 +48,10 @@ class SAW_Database_Helper {
             'department_documents',
             'contact_persons',
   	    'branches',
+
+            //Training language
+	    'training_languages',
+	    'training_language_branches',
             
             // Visitor Management (8)
             'companies',

@@ -1,0 +1,289 @@
+.saw-module-training-languages .saw-language-flag {
+    font-size: 32px;
+    line-height: 1;
+}
+
+.saw-module-training-languages .saw-language-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.saw-module-training-languages .saw-language-name strong {
+    font-size: 15px;
+    color: #111827;
+}
+
+.saw-module-training-languages .saw-badge-sm {
+    font-size: 11px;
+    padding: 2px 8px;
+}
+
+.saw-module-training-languages .saw-code-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    letter-spacing: 0.5px;
+}
+
+.saw-module-training-languages .saw-language-row:hover {
+    background-color: #f9fafb;
+}
+
+.saw-module-training-languages .saw-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    margin: 0 4px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.saw-module-training-languages .saw-action-btn .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: #6b7280;
+}
+
+.saw-module-training-languages .saw-action-edit:hover {
+    background: #eff6ff;
+}
+
+.saw-module-training-languages .saw-action-edit:hover .dashicons {
+    color: #2563eb;
+}
+
+.saw-module-training-languages .saw-action-delete:hover {
+    background: #fef2f2;
+}
+
+.saw-module-training-languages .saw-action-delete:hover .dashicons {
+    color: #dc2626;
+}
+
+.saw-module-training-languages .saw-action-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.saw-module-training-languages .saw-action-btn:disabled:hover {
+    background: transparent;
+}
+
+.saw-module-training-languages .saw-text-muted {
+    color: #9ca3af;
+    font-size: 13px;
+}
+
+.saw-branches-grid {
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.saw-branches-header {
+    display: grid;
+    grid-template-columns: 1fr 120px 120px 100px;
+    gap: 16px;
+    padding: 16px 20px;
+    background: #f9fafb;
+    border-bottom: 2px solid #e5e7eb;
+    font-weight: 700;
+    font-size: 13px;
+    color: #374151;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.saw-branch-row {
+    display: grid;
+    grid-template-columns: 1fr 120px 120px 100px;
+    gap: 16px;
+    padding: 16px 20px;
+    border-bottom: 1px solid #f3f4f6;
+    align-items: center;
+    transition: background 0.2s ease;
+}
+
+.saw-branch-row:last-child {
+    border-bottom: none;
+}
+
+.saw-branch-row:hover {
+    background: #fafbfc;
+}
+
+.saw-branch-col-name {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.saw-branch-col-name strong {
+    font-size: 15px;
+    color: #111827;
+}
+
+.saw-branch-code {
+    display: inline-block;
+    padding: 2px 8px;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    font-family: monospace;
+    margin-right: 8px;
+}
+
+.saw-branch-city {
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.saw-branch-col-active,
+.saw-branch-col-default {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.saw-checkbox-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.saw-checkbox-wrapper input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+.saw-checkbox-wrapper input[type="checkbox"]:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.saw-checkbox-label {
+    font-size: 13px;
+    color: #374151;
+    font-weight: 500;
+}
+
+.saw-order-input {
+    width: 80px;
+    text-align: center;
+    font-weight: 600;
+}
+
+.saw-order-input:disabled {
+    background: #f9fafb;
+    opacity: 0.5;
+}
+
+.saw-flag-input {
+    font-size: 24px;
+    text-align: center;
+}
+
+.saw-language-flag-large {
+    width: 88px;
+    height: 88px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 14px;
+    border: 2px solid #e2e8f0;
+    font-size: 48px;
+}
+
+.saw-branches-detail-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.saw-branch-detail-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.saw-branch-detail-name {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.saw-branch-detail-name strong {
+    font-size: 15px;
+    color: #111827;
+}
+
+.saw-branch-detail-meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+@media (max-width: 768px) {
+    .saw-module-training-languages .saw-action-btn {
+        width: 32px;
+        height: 32px;
+        margin: 0 2px;
+    }
+    
+    .saw-module-training-languages .saw-action-btn .dashicons {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+    }
+    
+    .saw-module-training-languages .saw-language-flag {
+        font-size: 24px;
+    }
+    
+    .saw-branches-header,
+    .saw-branch-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .saw-branches-header {
+        display: none;
+    }
+    
+    .saw-branch-col-active,
+    .saw-branch-col-default {
+        justify-content: flex-start;
+    }
+    
+    .saw-branch-detail-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+}

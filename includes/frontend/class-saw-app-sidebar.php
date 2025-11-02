@@ -206,32 +206,8 @@ class SAW_App_Sidebar {
                 ),
             ),
             array(
-                'heading' => 'Nastavení',
+                'heading' => 'Organizace',
                 'items' => array(
-                    array(
-                        'id' => 'customers',
-                        'label' => 'Zákazníci',
-                        'url' => '/admin/settings/customers',
-                        'icon' => '🏢',
-                    ),
-                    array(
-                        'id' => 'account-types',
-                        'label' => 'Typy účtů',
-                        'url' => '/admin/settings/account-types',
-                        'icon' => '💳',
-                    ),
-                    array(
-                        'id' => 'company',
-                        'label' => 'Nastavení firmy',
-                        'url' => '/admin/settings/company',
-                        'icon' => '⚙️',
-                    ),
-                    array(
-                        'id' => 'users',
-                        'label' => 'Uživatelé',
-                        'url' => '/admin/settings/users',
-                        'icon' => '👤',
-                    ),
                     array(
                         'id' => 'branches',
                         'label' => 'Pobočky',
@@ -242,19 +218,59 @@ class SAW_App_Sidebar {
                         'id' => 'departments',
                         'label' => 'Oddělení',
                         'url' => '/admin/departments',
-                        'icon' => '🏢',
+                        'icon' => '📂',
+                    ),
+                    array(
+                        'id' => 'users',
+                        'label' => 'Uživatelé',
+                        'url' => '/admin/settings/users',
+                        'icon' => '👤',
+                    ),
+                ),
+            ),
+            array(
+                'heading' => 'Školení',
+                'items' => array(
+                    array(
+                        'id' => 'training-languages',
+                        'label' => 'Jazyky',
+                        'url' => '/admin/training-languages',
+                        'icon' => '🌐',
                     ),
                     array(
                         'id' => 'content',
-                        'label' => 'Školicí obsah',
+                        'label' => 'Obsah',
                         'url' => '/admin/settings/content',
                         'icon' => '📚',
                     ),
                     array(
                         'id' => 'training',
-                        'label' => 'Verze školení',
+                        'label' => 'Verze',
                         'url' => '/admin/settings/training',
                         'icon' => '🎓',
+                    ),
+                ),
+            ),
+            array(
+                'heading' => 'Systém',
+                'items' => array(
+                    array(
+                        'id' => 'customers',
+                        'label' => 'Zákazníci',
+                        'url' => '/admin/settings/customers',
+                        'icon' => '🏬',
+                    ),
+                    array(
+                        'id' => 'account-types',
+                        'label' => 'Typy účtů',
+                        'url' => '/admin/settings/account-types',
+                        'icon' => '💳',
+                    ),
+                    array(
+                        'id' => 'company',
+                        'label' => 'Firma',
+                        'url' => '/admin/settings/company',
+                        'icon' => '⚙️',
                     ),
                     array(
                         'id' => 'about',
