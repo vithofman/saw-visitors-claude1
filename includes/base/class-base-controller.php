@@ -3,7 +3,7 @@
  * Base Controller Class
  * 
  * @package SAW_Visitors
- * @version 4.0.1 - OPRAVENO: Flash messages místo wp_die()
+ * @version 4.0.4 - OPRAVENO: Output buffering v handle_save() pro prevenci "headers already sent"
  */
 
 if (!defined('ABSPATH')) {
@@ -136,6 +136,11 @@ abstract class SAW_Base_Controller
     }
     
     protected function handle_save($id = 0) {
+        // ✅ OPRAVA: Zapni output buffering na začátku
+        // Toto zachytí VŠECHNY výstupy (včetně těch z wp_mail() v after_save())
+        // a zabrání "headers already sent" chybě
+        ob_start();
+        
         $this->verify_nonce();
         
         $data = $this->collect_form_data();
@@ -154,6 +159,9 @@ abstract class SAW_Base_Controller
         $validation = $this->model->validate($data, $id);
         
         if (is_wp_error($validation)) {
+            // Zahoď zachycený výstup
+            ob_end_clean();
+            
             $errors = $validation->get_error_data();
             
             if (is_array($errors)) {
@@ -184,6 +192,9 @@ abstract class SAW_Base_Controller
         }
         
         if (is_wp_error($result)) {
+            // Zahoď zachycený výstup
+            ob_end_clean();
+            
             $this->set_flash_message($result->get_error_message(), 'error');
             
             if ($id > 0) {
@@ -196,7 +207,39 @@ abstract class SAW_Base_Controller
             exit;
         }
         
-        $this->after_save($id);
+        // ✅ OPRAVA: Zabal after_save() do try-catch
+        // Toto zachytí případné výjimky a umožní elegantní error handling
+        try {
+            $this->after_save($id);
+        } catch (Exception $e) {
+            // Zahoď zachycený výstup
+            ob_end_clean();
+            
+            error_log('SAW: after_save() exception: ' . $e->getMessage());
+            error_log('SAW: Stack trace: ' . $e->getTraceAsString());
+            
+            $this->set_flash_message('Záznam byl uložen, ale došlo k chybě: ' . $e->getMessage(), 'error');
+            
+            $redirect_url = home_url($this->config['route'] . '/');
+            wp_redirect($redirect_url);
+            exit;
+        } catch (Error $e) {
+            // Zachytí i PHP 7+ Error (např. TypeError)
+            ob_end_clean();
+            
+            error_log('SAW: after_save() error: ' . $e->getMessage());
+            error_log('SAW: Stack trace: ' . $e->getTraceAsString());
+            
+            $this->set_flash_message('Záznam byl uložen, ale došlo k chybě: ' . $e->getMessage(), 'error');
+            
+            $redirect_url = home_url($this->config['route'] . '/');
+            wp_redirect($redirect_url);
+            exit;
+        }
+        
+        // ✅ OPRAVA: Zahoď zachycený výstup PŘED redirectem
+        // Toto zajistí, že žádné headers nebyly odeslány a wp_redirect() funguje
+        ob_end_clean();
         
         $this->set_flash_message('Záznam byl úspěšně uložen', 'success');
         
@@ -232,6 +275,14 @@ abstract class SAW_Base_Controller
             }
             
             $data[$field_key] = $value;
+        }
+        
+        if (isset($_POST['customer_id'])) {
+            $data['customer_id'] = intval($_POST['customer_id']);
+        }
+        
+        if (isset($_POST['branch_id'])) {
+            $data['branch_id'] = !empty($_POST['branch_id']) ? intval($_POST['branch_id']) : null;
         }
         
         return $data;
@@ -332,19 +383,20 @@ abstract class SAW_Base_Controller
     }
     
     protected function get_filtered_customer_id() {
-        $role = $this->get_current_user_role();
-        
-        if ($role === 'super_admin') {
-            if (session_status() === PHP_SESSION_NONE) {
-                session_start();
-            }
-            return $_SESSION['saw_current_customer_id'] ?? null;
-        }
-        
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
-        return $_SESSION['saw_customer_id'] ?? null;
+        
+        $customer_id = $_SESSION['saw_current_customer_id'] ?? null;
+        
+        if (!$customer_id && is_user_logged_in()) {
+            $customer_id = get_user_meta(get_current_user_id(), 'saw_current_customer_id', true);
+            if ($customer_id) {
+                $_SESSION['saw_current_customer_id'] = intval($customer_id);
+            }
+        }
+        
+        return $customer_id ? intval($customer_id) : null;
     }
     
     protected function get_filtered_branch_id() {

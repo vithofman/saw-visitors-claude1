@@ -1,7 +1,10 @@
 <?php
 /**
  * SAW Authentication Controller
- * Handles login, logout, forgot password, and reset password for all roles
+ * Handles login, logout, forgot password, set password, and reset password
+ * 
+ * All users authenticate via WordPress (wp_signon)
+ * Custom UI for all auth pages
  * 
  * @package SAW_Visitors
  * @since 4.6.1
@@ -13,212 +16,139 @@ if (!defined('ABSPATH')) {
 
 class SAW_Controller_Auth {
 
-    /**
-     * Auth handler
-     */
-    private $auth;
-
-    /**
-     * Password handler
-     */
     private $password;
 
-    /**
-     * Constructor
-     */
     public function __construct() {
-        $this->auth = new SAW_Auth();
         $this->password = new SAW_Password();
     }
 
     /**
-     * Admin login handler
+     * Main login page
      * 
-     * URL: /admin/login/
+     * URL: /login/
+     * 
+     * Uses WordPress authentication (wp_signon)
+     * Works for ALL roles (super_admin, admin, manager, terminal)
      */
-    public function admin_login() {
-        if ($this->auth->check_auth() && $this->auth->is_admin()) {
-            wp_safe_redirect(home_url('/admin/dashboard/'));
-            exit;
+    public function login() {
+        // Already logged in? Redirect
+        if (is_user_logged_in()) {
+            $this->redirect_after_login();
+            return;
         }
 
         $error = '';
         $success = '';
         $email = '';
 
-        if (isset($_GET['action']) && $_GET['action'] === 'forgot-password') {
-            return $this->forgot_password('admin');
-        }
-
-        if (isset($_GET['action']) && $_GET['action'] === 'reset_password' && isset($_GET['token'])) {
-            return $this->reset_password('admin', $_GET['token']);
-        }
-
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            if (!wp_verify_nonce($_POST['saw_nonce'] ?? '', 'saw_login_admin')) {
-                $error = __('Bezpečnostní kontrola selhala. Zkuste to znovu.', 'saw-visitors');
+            // Verify nonce
+            if (!wp_verify_nonce($_POST['saw_nonce'] ?? '', 'saw_login')) {
+                $error = 'Bezpečnostní kontrola selhala';
             } else {
                 $email = sanitize_email($_POST['email'] ?? '');
                 $password = $_POST['password'] ?? '';
 
-                $result = $this->auth->login($email, $password, 'admin');
+                // WordPress authentication
+                $credentials = [
+                    'user_login' => $email,
+                    'user_password' => $password,
+                    'remember' => !empty($_POST['remember_me']),
+                ];
 
-                if (is_wp_error($result)) {
-                    $error = $result->get_error_message();
+                $user = wp_signon($credentials, is_ssl());
+
+                if (is_wp_error($user)) {
+                    $error = 'Neplatné přihlašovací údaje';
                 } else {
-                    $redirect_url = $result['redirect_url'];
+                    // Find SAW user record
+                    global $wpdb;
+                    $saw_user = $wpdb->get_row($wpdb->prepare(
+                        "SELECT * FROM {$wpdb->prefix}saw_users 
+                         WHERE wp_user_id = %d AND is_active = 1",
+                        $user->ID
+                    ), ARRAY_A);
 
-                    if (!empty($_GET['redirect_to'])) {
-                        $redirect_url = esc_url_raw($_GET['redirect_to']);
+                    if (!$saw_user) {
+                        wp_logout();
+                        $error = 'Účet není aktivní nebo neexistuje';
+                    } elseif ($saw_user['password_set_at'] === null) {
+                        wp_logout();
+                        $error = 'Nejprve si musíte nastavit heslo přes odkaz z emailu';
+                    } else {
+                        // Setup session
+                        if (session_status() === PHP_SESSION_NONE) {
+                            session_start();
+                        }
+                        session_regenerate_id(true);
+                        
+                        $_SESSION['saw_user_id'] = $saw_user['id'];
+                        $_SESSION['saw_customer_id'] = $saw_user['customer_id'];
+                        $_SESSION['saw_branch_id'] = $saw_user['branch_id'];
+                        $_SESSION['saw_role'] = $saw_user['role'];
+
+                        // Update last login
+                        $wpdb->update(
+                            $wpdb->prefix . 'saw_users',
+                            ['last_login' => current_time('mysql')],
+                            ['id' => $saw_user['id']],
+                            ['%s'],
+                            ['%d']
+                        );
+
+                        // Audit log
+                        if (class_exists('SAW_Audit')) {
+                            SAW_Audit::log([
+                                'action' => 'user_login',
+                                'user_id' => $saw_user['id'],
+                                'details' => 'Uživatel se přihlásil',
+                            ]);
+                        }
+
+                        // Redirect
+                        $this->redirect_after_login($saw_user['role']);
+                        return;
                     }
-
-                    wp_safe_redirect($redirect_url);
-                    exit;
                 }
             }
         }
 
-        $this->render_login_template(array(
-            'page_title'           => __('Přihlášení administrátora', 'saw-visitors'),
-            'role'                 => 'admin',
-            'form_action'          => home_url('/admin/login/'),
-            'forgot_password_url'  => home_url('/admin/login/?action=forgot-password'),
-            'redirect_to'          => $_GET['redirect_to'] ?? home_url('/admin/dashboard/'),
-            'error'                => $error,
-            'success'              => $success,
-            'email'                => $email,
-            'show_other_roles'     => true,
-        ));
+        // Render login template
+        $this->render_template('login', [
+            'error' => $error,
+            'success' => $success,
+            'email' => $email,
+        ]);
     }
 
     /**
-     * Manager login handler
+     * Forgot password page
      * 
-     * URL: /manager/login/
+     * URL: /forgot-password/
      */
-    public function manager_login() {
-        if ($this->auth->check_auth() && $this->auth->is_manager()) {
-            wp_safe_redirect(home_url('/manager/dashboard/'));
-            exit;
-        }
-
-        $error = '';
-        $success = '';
-        $email = '';
-
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            if (!wp_verify_nonce($_POST['saw_nonce'] ?? '', 'saw_login_manager')) {
-                $error = __('Bezpečnostní kontrola selhala. Zkuste to znovu.', 'saw-visitors');
-            } else {
-                $email = sanitize_email($_POST['email'] ?? '');
-                $password = $_POST['password'] ?? '';
-
-                $result = $this->auth->login($email, $password, 'manager');
-
-                if (is_wp_error($result)) {
-                    $error = $result->get_error_message();
-                } else {
-                    $redirect_url = $result['redirect_url'];
-
-                    if (!empty($_GET['redirect_to'])) {
-                        $redirect_url = esc_url_raw($_GET['redirect_to']);
-                    }
-
-                    wp_safe_redirect($redirect_url);
-                    exit;
-                }
-            }
-        }
-
-        $this->render_login_template(array(
-            'page_title'           => __('Přihlášení manažera', 'saw-visitors'),
-            'role'                 => 'manager',
-            'form_action'          => home_url('/manager/login/'),
-            'forgot_password_url'  => wp_lostpassword_url(home_url('/manager/login/')),
-            'redirect_to'          => $_GET['redirect_to'] ?? home_url('/manager/dashboard/'),
-            'error'                => $error,
-            'success'              => $success,
-            'email'                => $email,
-            'show_other_roles'     => false,
-        ));
-    }
-
-    /**
-     * Terminal login handler
-     * 
-     * URL: /terminal/login/
-     */
-    public function terminal_login() {
-        if ($this->auth->check_auth() && $this->auth->is_terminal()) {
-            wp_safe_redirect(home_url('/terminal/checkin/'));
-            exit;
-        }
-
-        $error = '';
-        $success = '';
-        $email = '';
-
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            if (!wp_verify_nonce($_POST['saw_nonce'] ?? '', 'saw_login_terminal')) {
-                $error = __('Bezpečnostní kontrola selhala. Zkuste to znovu.', 'saw-visitors');
-            } else {
-                $email = sanitize_email($_POST['email'] ?? '');
-                $password = $_POST['password'] ?? '';
-
-                $result = $this->auth->login($email, $password, 'terminal');
-
-                if (is_wp_error($result)) {
-                    $error = $result->get_error_message();
-                } else {
-                    $redirect_url = $result['redirect_url'];
-
-                    wp_safe_redirect($redirect_url);
-                    exit;
-                }
-            }
-        }
-
-        $this->render_login_template(array(
-            'page_title'  => __('Přihlášení terminálu', 'saw-visitors'),
-            'role'        => 'terminal',
-            'form_action' => home_url('/terminal/login/'),
-            'redirect_to' => home_url('/terminal/checkin/'),
-            'error'       => $error,
-            'success'     => $success,
-            'email'       => $email,
-        ));
-    }
-
-    /**
-     * Forgot password handler
-     * 
-     * URL: /admin/login/?action=forgot-password
-     * 
-     * @param string $role Role
-     */
-    private function forgot_password($role) {
-        if ($role === 'manager') {
-            wp_safe_redirect(wp_lostpassword_url(home_url('/manager/login/')));
-            exit;
-        }
-
+    public function forgot_password() {
         $error = '';
         $success = false;
         $email = '';
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            if (!wp_verify_nonce($_POST['saw_nonce'] ?? '', 'saw_forgot_password_' . $role)) {
-                $error = __('Bezpečnostní kontrola selhala. Zkuste to znovu.', 'saw-visitors');
+            if (!wp_verify_nonce($_POST['saw_nonce'] ?? '', 'saw_forgot_password')) {
+                $error = 'Bezpečnostní kontrola selhala';
             } else {
                 $email = sanitize_email($_POST['email'] ?? '');
 
                 if (empty($email)) {
-                    $error = __('Zadejte emailovou adresu.', 'saw-visitors');
+                    $error = 'Zadejte emailovou adresu';
                 } else {
-                    $result = $this->password->send_reset_email($email, $role);
+                    $result = $this->password->create_reset_token($email);
 
                     if (is_wp_error($result)) {
-                        $error = $result->get_error_message();
+                        // Pro security: i když user neexistuje, ukážeme success
+                        if ($result->get_error_code() === 'email_sent') {
+                            $success = true;
+                        } else {
+                            $error = $result->get_error_message();
+                        }
                     } else {
                         $success = true;
                     }
@@ -226,47 +156,45 @@ class SAW_Controller_Auth {
             }
         }
 
-        $this->render_forgot_password_template(array(
-            'role'        => $role,
-            'form_action' => home_url('/' . $role . '/login/?action=forgot-password'),
-            'back_url'    => home_url('/' . $role . '/login/'),
-            'error'       => $error,
-            'success'     => $success,
-            'email'       => $email,
-        ));
+        $this->render_template('forgot-password', [
+            'error' => $error,
+            'success' => $success,
+            'email' => $email,
+        ]);
     }
 
     /**
-     * Reset password handler
+     * Set password page (first-time setup)
      * 
-     * URL: /admin/login/?action=reset_password&token=xxx
-     * 
-     * @param string $role  Role
-     * @param string $token Reset token
+     * URL: /set-password/?token=xxx
      */
-    private function reset_password($role, $token) {
+    public function set_password() {
+        $token = $_GET['token'] ?? '';
         $error = '';
         $success = false;
         $token_invalid = false;
 
-        $user_id = $this->password->validate_reset_token($token);
+        // Validate token
+        $user = $this->password->validate_setup_token($token);
 
-        if (!$user_id) {
+        if (!$user) {
             $token_invalid = true;
         } else {
             if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-                if (!wp_verify_nonce($_POST['saw_nonce'] ?? '', 'saw_reset_password_' . $role)) {
-                    $error = __('Bezpečnostní kontrola selhala. Zkuste to znovu.', 'saw-visitors');
+                if (!wp_verify_nonce($_POST['saw_nonce'] ?? '', 'saw_set_password')) {
+                    $error = 'Bezpečnostní kontrola selhala';
                 } else {
-                    $new_password = $_POST['new_password'] ?? '';
+                    $password = $_POST['password'] ?? '';
                     $confirm_password = $_POST['confirm_password'] ?? '';
 
-                    if ($new_password !== $confirm_password) {
-                        $error = __('Hesla se neshodují.', 'saw-visitors');
-                    } elseif (empty($new_password)) {
-                        $error = __('Zadejte nové heslo.', 'saw-visitors');
+                    if ($password !== $confirm_password) {
+                        $error = 'Hesla se neshodují';
+                    } elseif (empty($password)) {
+                        $error = 'Zadejte heslo';
+                    } elseif (strlen($password) < 8) {
+                        $error = 'Heslo musí mít alespoň 8 znaků';
                     } else {
-                        $result = $this->password->reset_password($token, $new_password);
+                        $result = $this->password->set_password($token, $password);
 
                         if (is_wp_error($result)) {
                             $error = $result->get_error_message();
@@ -278,63 +206,113 @@ class SAW_Controller_Auth {
             }
         }
 
-        $this->render_reset_password_template(array(
-            'role'                => $role,
-            'token'               => $token,
-            'form_action'         => add_query_arg(
-                array(
-                    'action' => 'reset_password',
-                    'token'  => $token,
-                ),
-                home_url('/' . $role . '/login/')
-            ),
-            'login_url'           => home_url('/' . $role . '/login/'),
-            'forgot_password_url' => home_url('/' . $role . '/login/?action=forgot-password'),
-            'error'               => $error,
-            'success'             => $success,
-            'token_invalid'       => $token_invalid,
-        ));
+        $this->render_template('set-password', [
+            'token' => $token,
+            'user' => $user,
+            'error' => $error,
+            'success' => $success,
+            'token_invalid' => $token_invalid,
+        ]);
     }
 
     /**
-     * Logout handler
+     * Reset password page
      * 
-     * URL: /logout/ or /{role}/logout/
+     * URL: /reset-password/?token=xxx
+     */
+    public function reset_password() {
+        $token = $_GET['token'] ?? '';
+        $error = '';
+        $success = false;
+        $token_invalid = false;
+
+        // Validate token
+        $user = $this->password->validate_reset_token($token);
+
+        if (!$user) {
+            $token_invalid = true;
+        } else {
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                if (!wp_verify_nonce($_POST['saw_nonce'] ?? '', 'saw_reset_password')) {
+                    $error = 'Bezpečnostní kontrola selhala';
+                } else {
+                    $password = $_POST['password'] ?? '';
+                    $confirm_password = $_POST['confirm_password'] ?? '';
+
+                    if ($password !== $confirm_password) {
+                        $error = 'Hesla se neshodují';
+                    } elseif (empty($password)) {
+                        $error = 'Zadejte nové heslo';
+                    } elseif (strlen($password) < 8) {
+                        $error = 'Heslo musí mít alespoň 8 znaků';
+                    } else {
+                        $result = $this->password->reset_password($token, $password);
+
+                        if (is_wp_error($result)) {
+                            $error = $result->get_error_message();
+                        } else {
+                            $success = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        $this->render_template('reset-password', [
+            'token' => $token,
+            'user' => $user,
+            'error' => $error,
+            'success' => $success,
+            'token_invalid' => $token_invalid,
+        ]);
+    }
+
+    /**
+     * Logout
+     * 
+     * URL: /logout/
      */
     public function logout() {
-        $this->auth->logout();
+        // Destroy PHP session
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        session_destroy();
 
-        wp_safe_redirect(home_url());
+        // WordPress logout
+        wp_logout();
+
+        // Redirect
+        wp_safe_redirect(home_url('/login/'));
         exit;
     }
 
     /**
-     * Render login template
-     * 
-     * @param array $data Template data
+     * Redirect after successful login
      */
-    private function render_login_template($data) {
-        extract($data);
-        include SAW_VISITORS_PLUGIN_DIR . 'templates/pages/auth/login.php';
+    private function redirect_after_login($role = null) {
+        if ($role === null && isset($_SESSION['saw_role'])) {
+            $role = $_SESSION['saw_role'];
+        }
+
+        $redirects = [
+            'super_admin' => '/wp-admin/',
+            'admin' => '/admin/dashboard/',
+            'super_manager' => '/admin/dashboard/',
+            'manager' => '/manager/dashboard/',
+            'terminal' => '/terminal/',
+        ];
+
+        $url = $redirects[$role] ?? '/login/';
+        wp_safe_redirect(home_url($url));
+        exit;
     }
 
     /**
-     * Render forgot password template
-     * 
-     * @param array $data Template data
+     * Render template
      */
-    private function render_forgot_password_template($data) {
+    private function render_template($template, $data = []) {
         extract($data);
-        include SAW_VISITORS_PLUGIN_DIR . 'templates/pages/auth/forgot-password.php';
-    }
-
-    /**
-     * Render reset password template
-     * 
-     * @param array $data Template data
-     */
-    private function render_reset_password_template($data) {
-        extract($data);
-        include SAW_VISITORS_PLUGIN_DIR . 'templates/pages/auth/reset-password.php';
+        include SAW_VISITORS_PLUGIN_DIR . 'templates/auth/' . $template . '.php';
     }
 }

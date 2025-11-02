@@ -31,8 +31,8 @@ class SAW_Visitors {
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-module-loader.php';
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-asset-manager.php';
         
-        if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-auth.php')) {
-            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-auth.php';
+        if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-auth.php')) {
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-auth.php';
         }
         
         if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-session.php')) {

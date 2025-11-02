@@ -53,27 +53,6 @@
             line-height: 1.5;
         }
 
-        .role-badge {
-            display: inline-block;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-top: 12px;
-        }
-
-        .role-admin {
-            background: #e3f2fd;
-            color: #1976d2;
-        }
-
-        .role-manager {
-            background: #f3e5f5;
-            color: #7b1fa2;
-        }
-
         .alert {
             padding: 12px 16px;
             border-radius: 8px;
@@ -91,12 +70,6 @@
             background: #e8f5e9;
             color: #2e7d32;
             border: 1px solid #66bb6a;
-        }
-
-        .alert-info {
-            background: #e3f2fd;
-            color: #1565c0;
-            border: 1px solid #42a5f5;
         }
 
         .form-group {
@@ -123,6 +96,7 @@
         input[type="email"]:focus {
             outline: none;
             border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
         .btn {
@@ -134,8 +108,6 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
 
         .btn-primary {
@@ -203,18 +175,6 @@
             <div class="forgot-subtitle">
                 Zadejte svůj email a my vám pošleme odkaz pro reset hesla
             </div>
-            
-            <?php if (isset($role)): ?>
-                <span class="role-badge role-<?php echo esc_attr($role); ?>">
-                    <?php
-                    $role_names = array(
-                        'admin'   => 'Administrátor',
-                        'manager' => 'Manažer',
-                    );
-                    echo esc_html($role_names[$role] ?? $role);
-                    ?>
-                </span>
-            <?php endif; ?>
         </div>
 
         <?php if (isset($error) && $error): ?>
@@ -225,17 +185,11 @@
 
         <?php if (isset($success) && $success): ?>
             <div class="alert alert-success">
-                <?php echo esc_html($success); ?>
+                <strong>📧 Email byl odeslán!</strong><br>
+                Zkontrolujte svou emailovou schránku a postupujte podle instrukcí v emailu.
+                Pokud email neobdržíte do 5 minut, zkontrolujte spam folder.
             </div>
-        <?php endif; ?>
-
-        <?php if (isset($info) && $info): ?>
-            <div class="alert alert-info">
-                <?php echo esc_html($info); ?>
-            </div>
-        <?php endif; ?>
-
-        <?php if (!isset($success) || !$success): ?>
+        <?php else: ?>
             <div class="instructions">
                 <strong>ℹ️ Jak to funguje:</strong><br>
                 1. Zadejte svůj emailovou adresu<br>
@@ -244,8 +198,8 @@
                 4. Po resetu se můžete přihlásit s novým heslem
             </div>
 
-            <form method="post" action="<?php echo esc_url($form_action ?? ''); ?>">
-                <?php wp_nonce_field('saw_forgot_password_' . ($role ?? 'user'), 'saw_nonce'); ?>
+            <form method="post" action="<?php echo esc_url(home_url('/forgot-password/')); ?>">
+                <?php wp_nonce_field('saw_forgot_password', 'saw_nonce'); ?>
 
                 <div class="form-group">
                     <label for="email">Emailová adresa</label>
@@ -254,29 +208,21 @@
                         id="email" 
                         name="email" 
                         required 
+                        autofocus
                         autocomplete="email"
                         value="<?php echo esc_attr($email ?? ''); ?>"
                         placeholder="vas@email.cz"
                     >
                 </div>
 
-                <input type="hidden" name="role" value="<?php echo esc_attr($role ?? ''); ?>">
-                <input type="hidden" name="action" value="forgot_password">
-
                 <button type="submit" class="btn btn-primary">
                     Odeslat reset odkaz
                 </button>
             </form>
-        <?php else: ?>
-            <div class="alert alert-info">
-                <strong>📧 Email byl odeslán!</strong><br>
-                Zkontrolujte svou emailovou schránku a postupujte podle instrukcí v emailu.
-                Pokud email neobdržíte do 5 minut, zkontrolujte spam folder.
-            </div>
         <?php endif; ?>
 
         <div class="forgot-footer">
-            <a href="<?php echo esc_url($back_url ?? home_url()); ?>" class="back-link">
+            <a href="<?php echo esc_url(home_url('/login/')); ?>" class="back-link">
                 <span>←</span>
                 <span>Zpět na přihlášení</span>
             </a>
@@ -284,20 +230,3 @@
     </div>
 </body>
 </html>
-<?php
-/**
- * USAGE IN CONTROLLER:
- * 
- * $data = array(
- *     'role' => 'admin',
- *     'form_action' => home_url('/admin/login/?action=forgot-password'),
- *     'back_url' => home_url('/admin/login/'),
- *     'error' => '',
- *     'success' => false,
- *     'email' => '',
- * );
- * 
- * extract($data);
- * include(plugin_dir_path(__FILE__) . '../templates/auth/forgot-password.php');
- */
-?>

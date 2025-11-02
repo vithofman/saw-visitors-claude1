@@ -53,27 +53,6 @@
             line-height: 1.5;
         }
 
-        .role-badge {
-            display: inline-block;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-top: 12px;
-        }
-
-        .role-admin {
-            background: #e3f2fd;
-            color: #1976d2;
-        }
-
-        .role-manager {
-            background: #f3e5f5;
-            color: #7b1fa2;
-        }
-
         .alert {
             padding: 12px 16px;
             border-radius: 8px;
@@ -91,12 +70,6 @@
             background: #e8f5e9;
             color: #2e7d32;
             border: 1px solid #66bb6a;
-        }
-
-        .alert-info {
-            background: #e3f2fd;
-            color: #1565c0;
-            border: 1px solid #42a5f5;
         }
 
         .form-group {
@@ -123,6 +96,7 @@
         input[type="password"]:focus {
             outline: none;
             border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
         .btn {
@@ -134,8 +108,6 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
 
         .btn-primary {
@@ -183,45 +155,6 @@
             color: #333;
         }
 
-        .password-requirements ul {
-            margin-left: 20px;
-            margin-top: 8px;
-        }
-
-        .password-requirements li {
-            margin-bottom: 4px;
-        }
-
-        .password-strength {
-            height: 4px;
-            background: #e0e0e0;
-            border-radius: 2px;
-            margin-top: 8px;
-            overflow: hidden;
-        }
-
-        .password-strength-bar {
-            height: 100%;
-            width: 0;
-            transition: all 0.3s;
-            border-radius: 2px;
-        }
-
-        .strength-weak {
-            background: #f44336;
-            width: 33%;
-        }
-
-        .strength-medium {
-            background: #ff9800;
-            width: 66%;
-        }
-
-        .strength-strong {
-            background: #4caf50;
-            width: 100%;
-        }
-
         .success-message {
             text-align: center;
             padding: 40px 20px;
@@ -246,6 +179,7 @@
 <body>
     <div class="reset-container">
         <?php if (isset($success) && $success): ?>
+            <!-- Success State -->
             <div class="success-message">
                 <div class="success-icon">✅</div>
                 <div class="reset-title">Heslo bylo resetováno</div>
@@ -254,30 +188,42 @@
                 </div>
                 
                 <div style="margin-top: 32px;">
-                    <a href="<?php echo esc_url($login_url ?? home_url()); ?>" class="btn btn-primary">
+                    <a href="<?php echo esc_url(home_url('/login/')); ?>" class="btn btn-primary">
                         Přejít na přihlášení
                     </a>
                 </div>
             </div>
-        <?php else: ?>
+
+        <?php elseif (isset($token_invalid) && $token_invalid): ?>
+            <!-- Invalid Token State -->
             <div class="reset-header">
-                <div class="reset-icon">🔑</div>
+                <div class="reset-icon">❌</div>
+                <div class="reset-title">Neplatný odkaz</div>
+                <div class="reset-subtitle">
+                    Odkaz pro reset hesla vypršel nebo je neplatný
+                </div>
+            </div>
+
+            <div class="alert alert-error">
+                <strong>Neplatný nebo expirovaný odkaz</strong><br>
+                Tento odkaz pro reset hesla je neplatný nebo již vypršela jeho platnost (1 hodina).
+                Prosím, požádejte o nový reset hesla.
+            </div>
+            
+            <div class="reset-footer">
+                <a href="<?php echo esc_url(home_url('/forgot-password/')); ?>">
+                    Požádat o nový reset hesla
+                </a>
+            </div>
+
+        <?php else: ?>
+            <!-- Reset Password Form -->
+            <div class="reset-header">
+                <div class="reset-icon">🔐</div>
                 <div class="reset-title">Nastavení nového hesla</div>
                 <div class="reset-subtitle">
                     Zadejte své nové heslo
                 </div>
-                
-                <?php if (isset($role)): ?>
-                    <span class="role-badge role-<?php echo esc_attr($role); ?>">
-                        <?php
-                        $role_names = array(
-                            'admin'   => 'Administrátor',
-                            'manager' => 'Manažer',
-                        );
-                        echo esc_html($role_names[$role] ?? $role);
-                        ?>
-                    </span>
-                <?php endif; ?>
             </div>
 
             <?php if (isset($error) && $error): ?>
@@ -286,144 +232,76 @@
                 </div>
             <?php endif; ?>
 
-            <?php if (isset($token_invalid) && $token_invalid): ?>
-                <div class="alert alert-error">
-                    <strong>Neplatný nebo expirovaný odkaz</strong><br>
-                    Tento odkaz pro reset hesla je neplatný nebo již vypršela jeho platnost (1 hodina).
-                    Prosím, požádejte o nový reset hesla.
+            <div class="password-requirements">
+                <strong>Požadavky na heslo:</strong>
+                • Minimálně 8 znaků<br>
+                • Alespoň 1 písmeno<br>
+                • Alespoň 1 číslo
+            </div>
+
+            <form method="post" id="resetForm">
+                <?php wp_nonce_field('saw_reset_password', 'saw_nonce'); ?>
+                <input type="hidden" name="token" value="<?php echo esc_attr($token ?? ''); ?>">
+
+                <div class="form-group">
+                    <label for="password">Nové heslo</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        required 
+                        minlength="8"
+                        autocomplete="new-password"
+                        placeholder="Zadejte nové heslo"
+                    >
                 </div>
-                
-                <div class="reset-footer">
-                    <a href="<?php echo esc_url($forgot_password_url ?? '#'); ?>">
-                        Požádat o nový reset hesla
-                    </a>
-                </div>
-            <?php else: ?>
-                <div class="password-requirements">
-                    <strong>Požadavky na heslo:</strong>
-                    <ul>
-                        <li>Minimálně 12 znaků</li>
-                        <li>Alespoň 1 velké písmeno (A-Z)</li>
-                        <li>Alespoň 1 malé písmeno (a-z)</li>
-                        <li>Alespoň 1 číslice (0-9)</li>
-                        <li>Alespoň 1 speciální znak (!@#$%^&*)</li>
-                    </ul>
+
+                <div class="form-group">
+                    <label for="confirm_password">Potvrzení hesla</label>
+                    <input 
+                        type="password" 
+                        id="confirm_password" 
+                        name="confirm_password" 
+                        required 
+                        minlength="8"
+                        autocomplete="new-password"
+                        placeholder="Zadejte heslo znovu"
+                    >
                 </div>
 
-                <form method="post" action="<?php echo esc_url($form_action ?? ''); ?>" id="resetForm">
-                    <?php wp_nonce_field('saw_reset_password_' . ($role ?? 'user'), 'saw_nonce'); ?>
+                <button type="submit" class="btn btn-primary">
+                    Nastavit nové heslo
+                </button>
+            </form>
 
-                    <div class="form-group">
-                        <label for="new_password">Nové heslo</label>
-                        <input 
-                            type="password" 
-                            id="new_password" 
-                            name="new_password" 
-                            required 
-                            autocomplete="new-password"
-                            placeholder="Zadejte nové heslo"
-                            minlength="12"
-                        >
-                        <div class="password-strength">
-                            <div class="password-strength-bar" id="strengthBar"></div>
-                        </div>
-                        <small id="strengthText" style="color: #999; font-size: 12px;"></small>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="confirm_password">Potvrzení hesla</label>
-                        <input 
-                            type="password" 
-                            id="confirm_password" 
-                            name="confirm_password" 
-                            required 
-                            autocomplete="new-password"
-                            placeholder="Zadejte heslo znovu"
-                            minlength="12"
-                        >
-                    </div>
-
-                    <input type="hidden" name="token" value="<?php echo esc_attr($token ?? ''); ?>">
-                    <input type="hidden" name="role" value="<?php echo esc_attr($role ?? ''); ?>">
-                    <input type="hidden" name="action" value="reset_password">
-
-                    <button type="submit" class="btn btn-primary">
-                        Nastavit nové heslo
-                    </button>
-                </form>
-
-                <div class="reset-footer">
-                    <a href="<?php echo esc_url($login_url ?? home_url()); ?>">
-                        Zpět na přihlášení
-                    </a>
-                </div>
-            <?php endif; ?>
+            <div class="reset-footer">
+                <a href="<?php echo esc_url(home_url('/login/')); ?>">
+                    Zpět na přihlášení
+                </a>
+            </div>
         <?php endif; ?>
     </div>
 
     <script>
-        const newPasswordInput = document.getElementById('new_password');
-        const confirmPasswordInput = document.getElementById('confirm_password');
-        const strengthBar = document.getElementById('strengthBar');
-        const strengthText = document.getElementById('strengthText');
         const form = document.getElementById('resetForm');
-
-        if (newPasswordInput && strengthBar) {
-            newPasswordInput.addEventListener('input', function() {
-                const password = this.value;
-                const strength = calculatePasswordStrength(password);
-                
-                strengthBar.className = 'password-strength-bar';
-                
-                if (strength.score === 0) {
-                    strengthBar.classList.remove('strength-weak', 'strength-medium', 'strength-strong');
-                    strengthText.textContent = '';
-                } else if (strength.score < 3) {
-                    strengthBar.classList.add('strength-weak');
-                    strengthText.textContent = 'Slabé heslo';
-                    strengthText.style.color = '#f44336';
-                } else if (strength.score < 5) {
-                    strengthBar.classList.add('strength-medium');
-                    strengthText.textContent = 'Střední heslo';
-                    strengthText.style.color = '#ff9800';
-                } else {
-                    strengthBar.classList.add('strength-strong');
-                    strengthText.textContent = 'Silné heslo';
-                    strengthText.style.color = '#4caf50';
-                }
-            });
-        }
-
+        
         if (form) {
             form.addEventListener('submit', function(e) {
-                const newPassword = newPasswordInput.value;
-                const confirmPassword = confirmPasswordInput.value;
+                const password = document.getElementById('password').value;
+                const confirmPassword = document.getElementById('confirm_password').value;
 
-                if (newPassword !== confirmPassword) {
+                if (password !== confirmPassword) {
                     e.preventDefault();
                     alert('Hesla se neshodují!');
                     return false;
                 }
 
-                if (newPassword.length < 12) {
+                if (password.length < 8) {
                     e.preventDefault();
-                    alert('Heslo musí mít alespoň 12 znaků!');
+                    alert('Heslo musí mít alespoň 8 znaků!');
                     return false;
                 }
             });
-        }
-
-        function calculatePasswordStrength(password) {
-            let score = 0;
-            
-            if (password.length >= 12) score++;
-            if (password.length >= 16) score++;
-            if (/[a-z]/.test(password)) score++;
-            if (/[A-Z]/.test(password)) score++;
-            if (/[0-9]/.test(password)) score++;
-            if (/[^A-Za-z0-9]/.test(password)) score++;
-            
-            return { score: score, max: 6 };
         }
     </script>
 </body>

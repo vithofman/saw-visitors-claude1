@@ -47,32 +47,6 @@
             font-size: 14px;
         }
 
-        .role-badge {
-            display: inline-block;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-top: 12px;
-        }
-
-        .role-admin {
-            background: #e3f2fd;
-            color: #1976d2;
-        }
-
-        .role-manager {
-            background: #f3e5f5;
-            color: #7b1fa2;
-        }
-
-        .role-terminal {
-            background: #e8f5e9;
-            color: #388e3c;
-        }
-
         .alert {
             padding: 12px 16px;
             border-radius: 8px;
@@ -111,8 +85,7 @@
         }
 
         input[type="email"],
-        input[type="password"],
-        input[type="text"] {
+        input[type="password"] {
             width: 100%;
             padding: 12px 16px;
             border: 2px solid #e0e0e0;
@@ -122,10 +95,29 @@
         }
 
         input[type="email"]:focus,
-        input[type="password"]:focus,
-        input[type="text"]:focus {
+        input[type="password"]:focus {
             outline: none;
             border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .remember-me input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-right: 8px;
+            cursor: pointer;
+        }
+
+        .remember-me label {
+            margin: 0;
+            font-weight: 400;
+            cursor: pointer;
         }
 
         .btn {
@@ -137,8 +129,6 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
 
         .btn-primary {
@@ -171,46 +161,6 @@
             text-decoration: underline;
         }
 
-        .divider {
-            margin: 20px 0;
-            text-align: center;
-            position: relative;
-        }
-
-        .divider::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 50%;
-            width: 100%;
-            height: 1px;
-            background: #e0e0e0;
-        }
-
-        .divider span {
-            background: white;
-            padding: 0 10px;
-            position: relative;
-            color: #999;
-            font-size: 12px;
-        }
-
-        .remember-me {
-            display: flex;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .remember-me input {
-            margin-right: 8px;
-        }
-
-        .remember-me label {
-            margin: 0;
-            font-weight: 400;
-            cursor: pointer;
-        }
-
         @media (max-width: 480px) {
             .login-container {
                 padding: 30px 20px;
@@ -227,19 +177,6 @@
         <div class="login-header">
             <div class="login-logo">SAW Visitors</div>
             <div class="login-subtitle">Správa návštěv</div>
-            
-            <?php if (isset($role)): ?>
-                <span class="role-badge role-<?php echo esc_attr($role); ?>">
-                    <?php
-                    $role_names = array(
-                        'admin'    => 'Administrátor',
-                        'manager'  => 'Manažer',
-                        'terminal' => 'Terminál',
-                    );
-                    echo esc_html($role_names[$role] ?? $role);
-                    ?>
-                </span>
-            <?php endif; ?>
         </div>
 
         <?php if (isset($error) && $error): ?>
@@ -254,14 +191,8 @@
             </div>
         <?php endif; ?>
 
-        <?php if (isset($info) && $info): ?>
-            <div class="alert alert-info">
-                <?php echo esc_html($info); ?>
-            </div>
-        <?php endif; ?>
-
-        <form method="post" action="<?php echo esc_url($form_action ?? ''); ?>">
-            <?php wp_nonce_field('saw_login_' . ($role ?? 'user'), 'saw_nonce'); ?>
+        <form method="post" action="<?php echo esc_url(home_url('/login/')); ?>">
+            <?php wp_nonce_field('saw_login', 'saw_nonce'); ?>
 
             <div class="form-group">
                 <label for="email">Email</label>
@@ -270,6 +201,7 @@
                     id="email" 
                     name="email" 
                     required 
+                    autofocus
                     autocomplete="username"
                     value="<?php echo esc_attr($email ?? ''); ?>"
                     placeholder="vas@email.cz"
@@ -277,73 +209,32 @@
             </div>
 
             <div class="form-group">
-                <label for="password">
-                    <?php echo $role === 'terminal' ? 'PIN' : 'Heslo'; ?>
-                </label>
+                <label for="password">Heslo</label>
                 <input 
                     type="password" 
                     id="password" 
                     name="password" 
                     required 
                     autocomplete="current-password"
-                    placeholder="<?php echo $role === 'terminal' ? 'Zadejte PIN' : 'Zadejte heslo'; ?>"
+                    placeholder="Zadejte heslo"
                 >
             </div>
 
-            <?php if ($role !== 'terminal'): ?>
-                <div class="remember-me">
-                    <input type="checkbox" id="remember" name="remember" value="1">
-                    <label for="remember">Zapamatovat přihlášení</label>
-                </div>
-            <?php endif; ?>
-
-            <input type="hidden" name="role" value="<?php echo esc_attr($role ?? ''); ?>">
-            <input type="hidden" name="redirect_to" value="<?php echo esc_url($redirect_to ?? ''); ?>">
+            <div class="remember-me">
+                <input type="checkbox" id="remember_me" name="remember_me" value="1">
+                <label for="remember_me">Zapamatovat přihlášení</label>
+            </div>
 
             <button type="submit" class="btn btn-primary">
                 Přihlásit se
             </button>
         </form>
 
-        <?php if ($role !== 'terminal'): ?>
-            <div class="login-footer">
-                <a href="<?php echo esc_url($forgot_password_url ?? '#'); ?>">
-                    Zapomněli jste heslo?
-                </a>
-            </div>
-        <?php endif; ?>
-
-        <?php if ($role === 'admin' && isset($show_other_roles) && $show_other_roles): ?>
-            <div class="divider">
-                <span>nebo</span>
-            </div>
-            <div class="login-footer">
-                <a href="<?php echo esc_url(home_url('/manager/login/')); ?>">
-                    Přihlásit se jako manažer
-                </a>
-            </div>
-        <?php endif; ?>
+        <div class="login-footer">
+            <a href="<?php echo esc_url(home_url('/forgot-password/')); ?>">
+                Zapomněli jste heslo?
+            </a>
+        </div>
     </div>
 </body>
 </html>
-<?php
-/**
- * USAGE IN CONTROLLER:
- * 
- * $data = array(
- *     'page_title' => 'Přihlášení administrátora',
- *     'role' => 'admin',
- *     'form_action' => home_url('/admin/login/'),
- *     'forgot_password_url' => home_url('/admin/login/?action=forgot-password'),
- *     'redirect_to' => home_url('/admin/dashboard/'),
- *     'error' => '',
- *     'success' => '',
- *     'info' => '',
- *     'email' => '',
- *     'show_other_roles' => true,
- * );
- * 
- * extract($data);
- * include(plugin_dir_path(__FILE__) . '../templates/auth/login.php');
- */
-?>

@@ -6,7 +6,7 @@
  * Child modely jen přidávají custom validaci a vztahy.
  * 
  * @package SAW_Visitors
- * @version 2.0.1 - OPRAVENO: delete() metoda
+ * @version 2.0.2 - OPRAVENO: customer_id a branch_id filtering
  * @since   4.8.0
  */
 
@@ -34,7 +34,20 @@ abstract class SAW_Base_Model
         }
         
         $sql = "SELECT * FROM {$this->table} WHERE 1=1";
+        $params = [];
         
+        // KRITICKÁ OPRAVA: customer_id a branch_id filtrování
+        if (!empty($filters['customer_id'])) {
+            $sql .= " AND customer_id = %d";
+            $params[] = intval($filters['customer_id']);
+        }
+        
+        if (isset($filters['branch_id']) && $filters['branch_id'] !== '') {
+            $sql .= " AND branch_id = %d";
+            $params[] = intval($filters['branch_id']);
+        }
+        
+        // Search filtering
         if (!empty($filters['search'])) {
             $search_fields = $this->config['list_config']['searchable'] ?? ['name'];
             $search_conditions = [];
@@ -44,18 +57,28 @@ abstract class SAW_Base_Model
             }
             
             $search_value = '%' . $wpdb->esc_like($filters['search']) . '%';
-            $search_params = array_fill(0, count($search_fields), $search_value);
+            
+            foreach ($search_fields as $field) {
+                $params[] = $search_value;
+            }
             
             $sql .= " AND (" . implode(' OR ', $search_conditions) . ")";
-            $sql = $wpdb->prepare($sql, ...$search_params);
         }
         
+        // Other filters from config
         foreach ($this->config['list_config']['filters'] ?? [] as $filter_key => $enabled) {
             if ($enabled && isset($filters[$filter_key]) && $filters[$filter_key] !== '') {
-                $sql .= $wpdb->prepare(" AND {$filter_key} = %s", $filters[$filter_key]);
+                $sql .= " AND {$filter_key} = %s";
+                $params[] = $filters[$filter_key];
             }
         }
         
+        // Apply prepare if we have params
+        if (!empty($params)) {
+            $sql = $wpdb->prepare($sql, ...$params);
+        }
+        
+        // Ordering
         $orderby = $filters['orderby'] ?? 'id';
         $order = strtoupper($filters['order'] ?? 'DESC');
         
@@ -63,9 +86,11 @@ abstract class SAW_Base_Model
             $sql .= " ORDER BY {$orderby} {$order}";
         }
         
+        // Get total count
         $total_sql = "SELECT COUNT(*) FROM ({$sql}) as count_table";
         $total = $wpdb->get_var($total_sql);
         
+        // Pagination
         $limit = intval($filters['per_page'] ?? 20);
         $offset = ($filters['page'] ?? 1) - 1;
         $offset = $offset * $limit;
@@ -215,6 +240,18 @@ abstract class SAW_Base_Model
         global $wpdb;
         
         $sql = "SELECT COUNT(*) FROM {$this->table} WHERE 1=1";
+        $params = [];
+        
+        // KRITICKÁ OPRAVA: customer_id filtrování pro count
+        if (!empty($filters['customer_id'])) {
+            $sql .= " AND customer_id = %d";
+            $params[] = intval($filters['customer_id']);
+        }
+        
+        if (isset($filters['branch_id']) && $filters['branch_id'] !== '') {
+            $sql .= " AND branch_id = %d";
+            $params[] = intval($filters['branch_id']);
+        }
         
         if (!empty($filters['search'])) {
             $search_fields = $this->config['list_config']['searchable'] ?? ['name'];
@@ -225,10 +262,16 @@ abstract class SAW_Base_Model
             }
             
             $search_value = '%' . $wpdb->esc_like($filters['search']) . '%';
-            $search_params = array_fill(0, count($search_fields), $search_value);
+            
+            foreach ($search_fields as $field) {
+                $params[] = $search_value;
+            }
             
             $sql .= " AND (" . implode(' OR ', $search_conditions) . ")";
-            $sql = $wpdb->prepare($sql, ...$search_params);
+        }
+        
+        if (!empty($params)) {
+            $sql = $wpdb->prepare($sql, ...$params);
         }
         
         return $wpdb->get_var($sql);
