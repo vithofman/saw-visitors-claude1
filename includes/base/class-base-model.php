@@ -6,7 +6,7 @@
  * Child modely jen přidávají custom validaci a vztahy.
  * 
  * @package SAW_Visitors
- * @version 2.0.0
+ * @version 2.0.1 - OPRAVENO: delete() metoda
  * @since   4.8.0
  */
 
@@ -166,17 +166,41 @@ abstract class SAW_Base_Model
     
     /**
      * Delete item
+     * 
+     * ✅ OPRAVENO: Správná kontrola výsledku delete operace
+     * $wpdb->delete() vrací:
+     * - počet smazaných řádků (obvykle 1) při úspěchu
+     * - false při SQL chybě
+     * - 0 pokud záznam neexistuje
      */
     public function delete($id) {
         global $wpdb;
         
+        // Zkontroluj jestli záznam existuje
+        $exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$this->table} WHERE id = %d",
+            $id
+        ));
+        
+        if (!$exists) {
+            return new WP_Error('not_found', 'Záznam nenalezen');
+        }
+        
+        // Proveď delete
         $result = $wpdb->delete(
             $this->table,
-            ['id' => $id]
+            ['id' => $id],
+            ['%d']
         );
         
+        // ✅ OPRAVA: $result je false jen při SQL chybě, ne při úspěchu!
         if ($result === false) {
-            return new WP_Error('db_error', 'Database delete failed: ' . $wpdb->last_error);
+            return new WP_Error('db_error', 'Chyba databáze: ' . $wpdb->last_error);
+        }
+        
+        // ✅ Pokud result === 0, záznam nebyl smazán (ale není to chyba)
+        if ($result === 0) {
+            return new WP_Error('delete_failed', 'Záznam se nepodařilo smazat');
         }
         
         $this->invalidate_cache();

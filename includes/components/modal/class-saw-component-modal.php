@@ -6,7 +6,7 @@
  * Podporuje statický obsah i dynamické načítání přes AJAX.
  * 
  * @package SAW_Visitors
- * @version 3.0.0
+ * @version 3.0.1 - OPRAVENO: nonce pro delete (řádek 145)
  * @since 4.6.1
  */
 
@@ -130,10 +130,10 @@ class SAW_Component_Modal {
             true
         );
         
-        // Localize script with AJAX settings
+        // ✅ OPRAVENO: Používá saw_ajax_nonce místo saw_modal_nonce
         $localized_data = array(
             'ajaxurl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('saw_modal_nonce'),
+            'nonce' => wp_create_nonce('saw_ajax_nonce'),  // ✅ ZMĚNĚNO
         );
         
         // Add custom nonce if provided

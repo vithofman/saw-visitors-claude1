@@ -3,7 +3,7 @@
  * Customers List Template
  * 
  * @package SAW_Visitors
- * @version 6.0.0 - NO CLEANUP, FULL PAGE RELOAD ONLY
+ * @version 6.0.1 - OPRAVENO: Nonce pro delete tlačítka
  */
 
 if (!defined('ABSPATH')) {
@@ -17,6 +17,9 @@ if (!class_exists('SAW_Component_Search')) {
 if (!class_exists('SAW_Component_Selectbox')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/selectbox/class-saw-component-selectbox.php';
 }
+
+// ✅ PŘIDÁNO: Globální nonce pro AJAX delete
+$ajax_nonce = wp_create_nonce('saw_ajax_nonce');
 ?>
 
 <div class="saw-page-header">
@@ -169,6 +172,7 @@ if (!class_exists('SAW_Component_Selectbox')) {
                                             data-id="<?php echo esc_attr($item['id']); ?>" 
                                             data-name="<?php echo esc_attr($item['name']); ?>" 
                                             data-entity="customers" 
+                                            data-nonce="<?php echo $ajax_nonce; ?>"
                                             title="Smazat" 
                                             onclick="event.stopPropagation();">
                                         <span class="dashicons dashicons-trash"></span>
@@ -217,8 +221,6 @@ if (!class_exists('SAW_Component_Modal')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/modal/class-saw-component-modal.php';
 }
 
-$ajax_nonce = wp_create_nonce('saw_ajax_nonce');
-
 $customer_modal = new SAW_Component_Modal('customer-detail', array(
     'title' => 'Detail zákazníka',
     'ajax_enabled' => true,
@@ -248,6 +250,9 @@ $customer_modal->render();
 ?>
 
 <script>
+// ✅ Globální nonce pro SAWModal delete
+window.sawAjaxNonce = '<?php echo $ajax_nonce; ?>';
+
 jQuery(document).ready(function($) {
     console.log('[CUSTOMERS] Initializing');
     

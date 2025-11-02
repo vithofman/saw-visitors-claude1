@@ -3,7 +3,7 @@
  * Base Controller Class
  * 
  * @package SAW_Visitors
- * @version 4.0.0
+ * @version 4.0.1 - OPRAVENO: Flash messages místo wp_die()
  */
 
 if (!defined('ABSPATH')) {
@@ -67,6 +67,10 @@ abstract class SAW_Base_Controller
         echo $style_manager->inject_module_css($this->entity);
         
         echo '<div class="saw-module-' . esc_attr($this->entity) . '">';
+        
+        // ✅ Flash messages
+        $this->render_flash_messages();
+        
         include $template_path;
         echo '</div>';
         
@@ -120,6 +124,9 @@ abstract class SAW_Base_Controller
         $this->render_form($item);
     }
     
+    /**
+     * ✅ OPRAVENO: Flash messages místo wp_die()
+     */
     protected function handle_save($id = 0) {
         $this->verify_nonce();
         
@@ -138,14 +145,28 @@ abstract class SAW_Base_Controller
         
         $validation = $this->model->validate($data, $id);
         
+        // ✅ OPRAVA: Validační chyby jako flash message s redirect zpět
         if (is_wp_error($validation)) {
             $errors = $validation->get_error_data();
+            
             if (is_array($errors)) {
                 $error_messages = implode('<br>', array_values($errors));
-                wp_die($error_messages);
             } else {
-                wp_die($validation->get_error_message());
+                $error_messages = $validation->get_error_message();
             }
+            
+            // Ulož error do session
+            $this->set_flash_message($error_messages, 'error');
+            
+            // Redirect zpět na formulář
+            if ($id > 0) {
+                $redirect_url = home_url($this->config['route'] . '/edit/' . $id . '/');
+            } else {
+                $redirect_url = home_url($this->config['route'] . '/new/');
+            }
+            
+            wp_redirect($redirect_url);
+            exit;
         }
         
         unset($data['id']);
@@ -158,12 +179,23 @@ abstract class SAW_Base_Controller
         }
         
         if (is_wp_error($result)) {
-            wp_die($result->get_error_message());
+            $this->set_flash_message($result->get_error_message(), 'error');
+            
+            if ($id > 0) {
+                $redirect_url = home_url($this->config['route'] . '/edit/' . $id . '/');
+            } else {
+                $redirect_url = home_url($this->config['route'] . '/new/');
+            }
+            
+            wp_redirect($redirect_url);
+            exit;
         }
         
         $this->after_save($id);
         
-        $redirect_url = home_url($this->config['route'] . '/?saved=1');
+        $this->set_flash_message('Záznam byl úspěšně uložen', 'success');
+        
+        $redirect_url = home_url($this->config['route'] . '/');
         wp_redirect($redirect_url);
         exit;
     }
@@ -224,6 +256,10 @@ abstract class SAW_Base_Controller
         echo $style_manager->inject_module_css($this->entity);
         
         echo '<div class="saw-module-' . esc_attr($this->entity) . '">';
+        
+        // ✅ Flash messages ve formuláři
+        $this->render_flash_messages();
+        
         include $template_path;
         echo '</div>';
         
@@ -304,41 +340,93 @@ abstract class SAW_Base_Controller
         
         $customer_id = isset($_SESSION['saw_current_customer_id']) ? absint($_SESSION['saw_current_customer_id']) : 0;
         
-        if (!$customer_id) {
-            global $wpdb;
-            $customer = $wpdb->get_row(
-                "SELECT * FROM {$wpdb->prefix}saw_customers ORDER BY id ASC LIMIT 1",
-                ARRAY_A
-            );
+        global $wpdb;
+        
+        // ✅ Pokud máme ID, zkontroluj jestli zákazník existuje
+        if ($customer_id > 0) {
+            $customer = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM {$wpdb->prefix}saw_customers WHERE id = %d",
+                $customer_id
+            ), ARRAY_A);
             
+            // ✅ Pokud existuje, vrať ho
             if ($customer) {
-                $_SESSION['saw_current_customer_id'] = $customer['id'];
                 return $customer;
             }
             
-            return array(
-                'id' => 1,
-                'name' => 'Demo Firma s.r.o.',
-                'ico' => '12345678',
-            );
+            // ❌ Zákazník byl smazán → vyčisti session a najdi jiného
+            unset($_SESSION['saw_current_customer_id']);
         }
         
-        global $wpdb;
-        $customer = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_customers WHERE id = %d",
-            $customer_id
-        ), ARRAY_A);
-        
-        return $customer ?: array(
-            'id' => 1,
-            'name' => 'Demo Firma s.r.o.',
-            'ico' => '12345678',
+        // ✅ Najdi prvního dostupného zákazníka
+        $customer = $wpdb->get_row(
+            "SELECT * FROM {$wpdb->prefix}saw_customers ORDER BY id ASC LIMIT 1",
+            ARRAY_A
         );
+        
+        if ($customer) {
+            $_SESSION['saw_current_customer_id'] = $customer['id'];
+            return $customer;
+        }
+        
+        // ❌ ŽÁDNÝ ZÁKAZNÍK NEEXISTUJE → Redirect na customers s upozorněním
+        if (!headers_sent()) {
+            $this->set_flash_message('Nejprve vytvořte zákazníka', 'error');
+            wp_redirect(home_url('/admin/settings/customers/'));
+            exit;
+        }
+        
+        // Fallback pro AJAX requesty (nemělo by nastat)
+        return null;
     }
     
     protected function register_ajax_handlers() {
         add_action('wp_ajax_saw_search_' . $this->entity, [$this, 'ajax_search']);
         add_action('wp_ajax_saw_delete_' . $this->entity, [$this, 'ajax_delete']);
         add_action('wp_ajax_saw_get_' . $this->entity . '_detail', [$this, 'ajax_get_detail']);
+    }
+    
+    /**
+     * ✅ NOVÉ: Flash message system
+     */
+    protected function set_flash_message($message, $type = 'success') {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        $_SESSION['saw_flash_message'] = [
+            'message' => $message,
+            'type' => $type
+        ];
+    }
+    
+    protected function get_flash_message() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        if (isset($_SESSION['saw_flash_message'])) {
+            $flash = $_SESSION['saw_flash_message'];
+            unset($_SESSION['saw_flash_message']);
+            return $flash;
+        }
+        
+        return null;
+    }
+    
+    protected function render_flash_messages() {
+        $flash = $this->get_flash_message();
+        
+        if (!$flash) {
+            return;
+        }
+        
+        $type_class = $flash['type'] === 'error' ? 'saw-alert-error' : 'saw-alert-success';
+        $icon = $flash['type'] === 'error' ? 'dashicons-warning' : 'dashicons-yes-alt';
+        
+        echo '<div class="saw-alert ' . esc_attr($type_class) . '" style="margin-bottom: 20px;">';
+        echo '<span class="dashicons ' . esc_attr($icon) . '"></span>';
+        echo '<span>' . wp_kses_post($flash['message']) . '</span>';
+        echo '</div>';
     }
 }

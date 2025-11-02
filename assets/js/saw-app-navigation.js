@@ -4,7 +4,7 @@
  * OPRAVENÁ VERZE s brutálním modal cleanupem
  *
  * @package SAW_Visitors
- * @version 5.2.0 - BRUTAL CLEANUP
+ * @version 5.2.1 - OPRAVENO: nonce pro delete (řádek 293)
  */
 
 (function($) {
@@ -290,20 +290,40 @@
     }
 
     function deleteItem(itemId, entity) {
+        console.log('[DELETE] Deleting item:', itemId, 'Entity:', entity);
+        
+        // ✅ KONTROLA: sawGlobal musí existovat
+        if (typeof sawGlobal === 'undefined') {
+            console.error('[DELETE] sawGlobal is not defined!');
+            alert('Chyba: sawGlobal není definován. Zkontrolujte Asset Manager.');
+            return;
+        }
+        
+        console.log('[DELETE] Using nonce:', sawGlobal.nonce);
+        
         $.ajax({
-            url: '/wp-admin/admin-ajax.php',
+            url: sawGlobal.ajaxurl || '/wp-admin/admin-ajax.php',
             method: 'POST',
             data: {
                 action: 'saw_delete_' + entity,
                 id: itemId,
-                nonce: $('#saw_nonce').val()
+                nonce: sawGlobal.nonce  // ✅ OPRAVENO: sawGlobal.nonce místo $('#saw_nonce').val()
             },
             success: function(response) {
+                console.log('[DELETE] Response:', response);
                 if (response.success) {
                     window.location.reload();
                 } else {
-                    alert('Chyba při mazání');
+                    alert('Chyba při mazání: ' + (response.data?.message || 'Neznámá chyba'));
                 }
+            },
+            error: function(xhr, status, error) {
+                console.error('[DELETE] AJAX Error:', {
+                    status: status,
+                    error: error,
+                    response: xhr.responseText
+                });
+                alert('Chyba při mazání');
             }
         });
     }

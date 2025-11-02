@@ -75,6 +75,90 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         delete_transient('customers_for_switcher');
     }
     
+    /**
+     * ✅ PŘIDÁNO: Kontrola před smazáním zákazníka
+     * 
+     * Zákazníka nelze smazat pokud má:
+     * - Branches (pobočky)
+     * - Users (uživatele) 
+     * - Visits (návštěvy)
+     * - Invitations (pozvánky)
+     * 
+     * CASCADE by smazal vše, ale to je nebezpečné → raději blokujeme.
+     */
+    protected function before_delete($id) {
+        global $wpdb;
+        
+        // Kontrola branches
+        $branches_count = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}saw_branches WHERE customer_id = %d",
+            $id
+        ));
+        
+        if ($branches_count > 0) {
+            return new WP_Error(
+                'customer_has_branches',
+                sprintf('Zákazníka nelze smazat. Má %d poboček. Nejprve je smažte.', $branches_count)
+            );
+        }
+        
+        // Kontrola users
+        $users_count = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}saw_users WHERE customer_id = %d",
+            $id
+        ));
+        
+        if ($users_count > 0) {
+            return new WP_Error(
+                'customer_has_users',
+                sprintf('Zákazníka nelze smazat. Má %d uživatelů. Nejprve je smažte.', $users_count)
+            );
+        }
+        
+        // Kontrola visits
+        $visits_count = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}saw_visits WHERE customer_id = %d",
+            $id
+        ));
+        
+        if ($visits_count > 0) {
+            return new WP_Error(
+                'customer_has_visits',
+                sprintf('Zákazníka nelze smazat. Má %d návštěv v historii.', $visits_count)
+            );
+        }
+        
+        // Kontrola invitations
+        $invitations_count = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}saw_invitations WHERE customer_id = %d",
+            $id
+        ));
+        
+        if ($invitations_count > 0) {
+            return new WP_Error(
+                'customer_has_invitations',
+                sprintf('Zákazníka nelze smazat. Má %d pozvánek.', $invitations_count)
+            );
+        }
+        
+        return true;
+    }
+    
+    /**
+     * ✅ PŘIDÁNO: Cleanup po smazání
+     */
+    protected function after_delete($id) {
+        // Smaž logo pokud existuje
+        $customer = $this->model->get_by_id($id);
+        if (!empty($customer['logo_url'])) {
+            $this->file_uploader->delete($customer['logo_url']);
+        }
+        
+        // Invaliduj cache
+        delete_transient('customers_list');
+        delete_transient('customers_for_switcher');
+    }
+    
     public function ajax_get_customers_for_switcher() {
         delete_transient('customers_for_switcher');
         
