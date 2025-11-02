@@ -83,7 +83,7 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
     }
     
     /**
-     * Override: Create - automaticky přidá customer_id
+     * Override: Create - automaticky přidá customer_id + spustí WordPress akci
      */
     public function create($data) {
         // ✅ ZÍSKEJ CUSTOMER_ID ZE SESSION
@@ -103,7 +103,13 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         $data = $this->process_opening_hours_for_save($data);
         $data = $this->ensure_single_headquarters($data);
         
-        return parent::create($data);
+        $branch_id = parent::create($data);
+        
+        if ($branch_id) {
+            do_action('saw_branch_created', $branch_id, $customer_id);
+        }
+        
+        return $branch_id;
     }
     
     /**

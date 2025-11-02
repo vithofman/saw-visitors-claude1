@@ -14,6 +14,8 @@ class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller
         
         require_once __DIR__ . '/model.php';
         $this->model = new SAW_Module_Training_Languages_Model($this->config);
+
+	require_once __DIR__ . '/class-auto-setup.php';
         
         add_action('wp_ajax_saw_get_training_languages_detail', [$this, 'ajax_get_detail']);
         add_action('wp_ajax_saw_search_training_languages', [$this, 'ajax_search']);

@@ -71,6 +71,19 @@ class SAW_Module_Customers_Model extends SAW_Base_Model
     }
     
     /**
+     * Override: Create - přidá WordPress akci pro auto-setup
+     */
+    public function create($data) {
+        $customer_id = parent::create($data);
+        
+        if ($customer_id) {
+            do_action('saw_customer_created', $customer_id);
+        }
+        
+        return $customer_id;
+    }
+    
+    /**
      * Override: Get all (s caching ale bez JOINů - ty nejsou potřeba)
      */
     public function get_all($filters = []) {
