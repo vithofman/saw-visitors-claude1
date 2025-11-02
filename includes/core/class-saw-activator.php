@@ -29,6 +29,7 @@ class SAW_Activator {
         error_log('========================================');
         
         self::check_requirements();
+        self::create_custom_roles();
         self::create_database_tables();
         self::insert_default_data();
         self::create_upload_directories();
@@ -61,6 +62,37 @@ class SAW_Activator {
         }
         
         error_log('[SAW Activator] ✓ Požadavky splněny (PHP ' . PHP_VERSION . ', WP ' . $wp_version . ')');
+    }
+
+    /**
+     * Vytvoření custom WP rolí
+     * 
+     * @return void
+     */
+    private static function create_custom_roles() {
+        error_log('[SAW Activator] Vytváření custom WP rolí...');
+        
+        add_role('saw_admin', 'SAW Admin', [
+            'read' => true,
+            'saw_access' => true
+        ]);
+        
+        add_role('saw_super_manager', 'SAW Super Manager', [
+            'read' => true,
+            'saw_access' => true
+        ]);
+        
+        add_role('saw_manager', 'SAW Manager', [
+            'read' => true,
+            'saw_access' => true
+        ]);
+        
+        add_role('saw_terminal', 'SAW Terminal', [
+            'read' => true,
+            'saw_access' => true
+        ]);
+        
+        error_log('[SAW Activator] ✓ Custom WP role vytvořeny');
     }
 
     /**
@@ -114,7 +146,6 @@ class SAW_Activator {
         global $wpdb;
         $prefix = $wpdb->prefix . 'saw_';
         
-        // Kontrola existence tabulky customers
         $table_exists = $wpdb->get_var($wpdb->prepare(
             "SHOW TABLES LIKE %s",
             $prefix . 'customers'
@@ -127,7 +158,6 @@ class SAW_Activator {
         
         error_log('[SAW Activator] ✓ Tabulka customers existuje');
         
-        // Kontrola, zda už existují zákazníci
         $customers_count = $wpdb->get_var("SELECT COUNT(*) FROM `{$prefix}customers`");
         
         if ($customers_count > 0) {
@@ -137,7 +167,6 @@ class SAW_Activator {
         
         error_log('[SAW Activator] Vkládám demo zákazníka...');
         
-        // Vložení demo zákazníka
         $result = $wpdb->insert(
             $prefix . 'customers',
             array(

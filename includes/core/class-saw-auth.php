@@ -90,6 +90,53 @@ class SAW_Auth {
     }
     
     /**
+     * Get current user role
+     * 
+     * @return string|null
+     */
+    public function get_current_user_role() {
+        if (current_user_can('manage_options')) {
+            return 'super_admin';
+        }
+        
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        if (!empty($_SESSION['saw_role'])) {
+            return $_SESSION['saw_role'];
+        }
+        
+        global $wpdb;
+        $saw_user = $wpdb->get_row($wpdb->prepare(
+            "SELECT role FROM {$wpdb->prefix}saw_users 
+             WHERE wp_user_id = %d AND is_active = 1",
+            get_current_user_id()
+        ));
+        
+        return $saw_user ? $saw_user->role : null;
+    }
+    
+    /**
+     * Get current branch ID
+     * 
+     * @return int|null
+     */
+    public function get_current_branch_id() {
+        $role = $this->get_current_user_role();
+        
+        if ($role === 'super_admin' || $role === 'admin') {
+            return null;
+        }
+        
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        return isset($_SESSION['saw_branch_id']) ? intval($_SESSION['saw_branch_id']) : null;
+    }
+    
+    /**
      * Switch customer (SuperAdmin only)
      * 
      * @param int $customer_id Customer ID to switch to

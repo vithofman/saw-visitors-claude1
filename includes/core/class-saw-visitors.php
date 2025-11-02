@@ -17,6 +17,7 @@ class SAW_Visitors {
         $this->load_dependencies();
         $this->init_router();
         $this->init_session();
+        $this->block_wp_admin_for_saw_roles();
         $this->init_ajax_controllers();
         $this->define_hooks();
     }
@@ -63,6 +64,18 @@ class SAW_Visitors {
         if (!session_id() && !headers_sent()) {
             session_start();
         }
+    }
+    
+    private function block_wp_admin_for_saw_roles() {
+        add_action('admin_init', function() {
+            $user = wp_get_current_user();
+            $saw_roles = ['saw_admin', 'saw_super_manager', 'saw_manager', 'saw_terminal'];
+            
+            if (array_intersect($saw_roles, $user->roles)) {
+                wp_redirect(home_url('/login/'));
+                exit;
+            }
+        });
     }
     
     private function init_ajax_controllers() {

@@ -1,0 +1,132 @@
+/**
+ * Users Module Styles
+ * 
+ * @package SAW_Visitors
+ * @version 1.0.0
+ */
+
+.saw-module-users .saw-user-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    margin-right: 12px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 8px;
+    font-size: 24px;
+    vertical-align: middle;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.saw-module-users .saw-user-name {
+    display: flex;
+    align-items: center;
+}
+
+.saw-module-users .saw-user-name strong {
+    font-size: 15px;
+    color: #111827;
+}
+
+.saw-module-users .saw-role-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.saw-module-users .saw-role-admin {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.saw-module-users .saw-role-super_manager {
+    background: #e0e7ff;
+    color: #4338ca;
+}
+
+.saw-module-users .saw-role-manager {
+    background: #f3e8ff;
+    color: #7c3aed;
+}
+
+.saw-module-users .saw-role-terminal {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.saw-module-users .saw-role-super_admin {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.saw-module-users .saw-text-muted {
+    color: #9ca3af;
+    font-size: 13px;
+}
+
+.saw-module-users .saw-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    margin: 0 4px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.saw-module-users .saw-action-btn .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: #6b7280;
+}
+
+.saw-module-users .saw-action-edit:hover {
+    background: #eff6ff;
+}
+
+.saw-module-users .saw-action-edit:hover .dashicons {
+    color: #2563eb;
+}
+
+.saw-module-users .saw-action-delete:hover {
+    background: #fef2f2;
+}
+
+.saw-module-users .saw-action-delete:hover .dashicons {
+    color: #dc2626;
+}
+
+.saw-module-users .saw-user-row:hover {
+    background-color: #f9fafb;
+}
+
+@media (max-width: 768px) {
+    .saw-module-users .saw-action-btn {
+        width: 32px;
+        height: 32px;
+        margin: 0 2px;
+    }
+    
+    .saw-module-users .saw-action-btn .dashicons {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+    }
+    
+    .saw-module-users .saw-user-icon {
+        width: 40px;
+        height: 40px;
+        margin-right: 8px;
+        font-size: 20px;
+    }
+}

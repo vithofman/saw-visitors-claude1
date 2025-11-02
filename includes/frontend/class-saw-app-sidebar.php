@@ -264,7 +264,7 @@ class SAW_App_Sidebar {
                     array(
                         'id' => 'users',
                         'label' => 'Uživatelé',
-                        'url' => '/admin/settings/users',
+                        'url' => '/admin/users',
                         'icon' => '👤',
                     ),
                 ),
