@@ -5,6 +5,7 @@
  * - Delete confirmations
  * - Toast notifications
  * - User menu dropdown
+ * - Sidebar accordion navigation
  * - Form validation helpers
  * - Loading state helpers
  * 
@@ -15,6 +16,21 @@
 
 (function($) {
     'use strict';
+    
+    // ========================================
+    // SIDEBAR ACCORDION NAVIGATION
+    // ========================================
+    
+    function initSidebarAccordion() {
+        // Click handler for accordion toggle
+        $(document).on('click', '.saw-nav-heading', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const $section = $(this).closest('.saw-nav-section');
+            $section.toggleClass('collapsed');
+        });
+    }
     
     // ========================================
     // DELETE CONFIRMATION
@@ -47,12 +63,9 @@
             },
             success: function(response) {
                 if (response.success) {
-                    // Show success message
                     if (typeof sawShowToast === 'function') {
                         sawShowToast('Úspěšně smazáno', 'success');
                     }
-                    
-                    // Reload page after short delay
                     setTimeout(function() {
                         location.reload();
                     }, 500);
@@ -77,20 +90,12 @@
     // TOAST NOTIFICATIONS
     // ========================================
     
-    /**
-     * Show toast notification
-     * 
-     * @param {string} message - Message to display
-     * @param {string} type - Type: success, danger, warning, info
-     */
     window.sawShowToast = function(message, type = 'success') {
-        // Remove existing toasts
         $('.saw-toast').remove();
         
         const $toast = $('<div class="saw-toast saw-toast-' + type + '">' + sawEscapeHtml(message) + '</div>');
         $('body').append($toast);
         
-        // Trigger reflow for animation
         $toast[0].offsetHeight;
         
         setTimeout(function() {
@@ -105,12 +110,6 @@
         }, 3000);
     };
     
-    /**
-     * Escape HTML to prevent XSS
-     * 
-     * @param {string} text - Text to escape
-     * @return {string} Escaped text
-     */
     window.sawEscapeHtml = function(text) {
         if (!text) return '';
         const map = {
@@ -153,23 +152,11 @@
     // FORM VALIDATION HELPERS
     // ========================================
     
-    /**
-     * Validate email format
-     * 
-     * @param {string} email - Email to validate
-     * @return {boolean} Is valid
-     */
     window.sawValidateEmail = function(email) {
         const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return re.test(String(email).toLowerCase());
     };
     
-    /**
-     * Validate phone format (Czech)
-     * 
-     * @param {string} phone - Phone to validate
-     * @return {boolean} Is valid
-     */
     window.sawValidatePhone = function(phone) {
         const re = /^(\+420)?[0-9]{9}$/;
         return re.test(String(phone).replace(/\s/g, ''));
@@ -179,12 +166,6 @@
     // LOADING STATE HELPERS
     // ========================================
     
-    /**
-     * Show loading state on button
-     * 
-     * @param {jQuery} $button - Button element
-     * @param {string} text - Loading text (optional)
-     */
     window.sawButtonLoading = function($button, text = 'Načítám...') {
         if (!$button.data('original-text')) {
             $button.data('original-text', $button.html());
@@ -194,11 +175,6 @@
         );
     };
     
-    /**
-     * Reset button to original state
-     * 
-     * @param {jQuery} $button - Button element
-     */
     window.sawButtonReset = function($button) {
         const originalText = $button.data('original-text');
         if (originalText) {
@@ -210,13 +186,6 @@
     // CONFIRMATION DIALOGS
     // ========================================
     
-    /**
-     * Show confirmation dialog using native confirm
-     * In future, this can be replaced with a custom modal
-     * 
-     * @param {string} message - Confirmation message
-     * @param {function} callback - Callback if confirmed
-     */
     window.sawConfirm = function(message, callback) {
         if (confirm(message)) {
             callback();
@@ -227,9 +196,6 @@
     // TABLE HELPERS
     // ========================================
     
-    /**
-     * Highlight table row on hover
-     */
     function initTableRowHover() {
         $('.saw-admin-table tbody tr').hover(
             function() {
@@ -246,13 +212,12 @@
     // ========================================
     
     $(document).ready(function() {
+        initSidebarAccordion();
         initUserMenu();
         initTableRowHover();
         
-        // Add loaded class to body for animations
         document.body.classList.add('loaded');
         
-        // Debug log
         if (sawGlobal.debug) {
             console.log('🚀 SAW App initialized', {
                 sawGlobal: typeof sawGlobal !== 'undefined',

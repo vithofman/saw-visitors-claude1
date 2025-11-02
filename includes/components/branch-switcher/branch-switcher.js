@@ -158,7 +158,10 @@
                 return;
             }
             
+            // Zobrazit loading state v buttonu
             this.button.prop('disabled', true);
+            const originalText = this.button.find('.saw-branch-name').text();
+            this.button.find('.saw-branch-name').text('Přepínání...');
             
             $.ajax({
                 url: sawBranchSwitcher.ajaxurl,
@@ -170,21 +173,22 @@
                 },
                 success: (response) => {
                     if (response.success) {
-                        const branch = this.branches.find(b => b.id === branchId);
-                        if (branch) {
-                            this.button.find('.saw-branch-name').text(branch.name);
-                            this.currentBranchId = branchId;
-                        }
-                        this.close();
+                        // ✅ OPRAVA: Po přepnutí pobočky refreshnout stránku
+                        // aby se načetla nová pobočka ze session a aktualizoval sidebar
+                        window.location.reload();
                     } else {
+                        // Vrátit původní text při chybě
+                        this.button.find('.saw-branch-name').text(originalText);
+                        this.button.prop('disabled', false);
                         alert(response.data?.message || 'Chyba při přepínání pobočky');
                     }
-                    this.button.prop('disabled', false);
                 },
                 error: (xhr, status, error) => {
                     console.error('Branch Switch Error:', status, error);
-                    alert('Chyba serveru při přepínání pobočky');
+                    // Vrátit původní text při chybě
+                    this.button.find('.saw-branch-name').text(originalText);
                     this.button.prop('disabled', false);
+                    alert('Chyba serveru při přepínání pobočky');
                 }
             });
         }

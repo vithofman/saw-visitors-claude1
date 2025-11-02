@@ -32,6 +32,23 @@ if ($is_edit) {
         ];
     }
 }
+
+// Načteme databázi jazyků
+$languages_file = __DIR__ . '/languages-data.php';
+if (file_exists($languages_file)) {
+    $languages = require $languages_file;
+} else {
+    // Fallback na základní jazyky
+    $languages = [
+        'cs' => ['name' => 'Čeština', 'flag' => '🇨🇿'],
+        'en' => ['name' => 'English', 'flag' => '🇬🇧'],
+        'sk' => ['name' => 'Slovenčina', 'flag' => '🇸🇰'],
+        'de' => ['name' => 'Deutsch', 'flag' => '🇩🇪'],
+        'pl' => ['name' => 'Polski', 'flag' => '🇵🇱'],
+        'uk' => ['name' => 'Українська', 'flag' => '🇺🇦'],
+        'ru' => ['name' => 'Русский', 'flag' => '🇷🇺'],
+    ];
+}
 ?>
 
 <div class="saw-page-header">
@@ -60,20 +77,21 @@ if ($is_edit) {
                     <label for="language_code" class="saw-label">
                         Kód jazyka <span class="saw-required">*</span>
                     </label>
-                    <select name="language_code" id="language_code" class="saw-input" required <?php echo $is_edit ? 'disabled' : ''; ?>>
-                        <option value="">-- Vyberte kód --</option>
-                        <option value="cs" <?php selected($item['language_code'] ?? '', 'cs'); ?>>cs - Čeština</option>
-                        <option value="en" <?php selected($item['language_code'] ?? '', 'en'); ?>>en - English</option>
-                        <option value="sk" <?php selected($item['language_code'] ?? '', 'sk'); ?>>sk - Slovenčina</option>
-                        <option value="de" <?php selected($item['language_code'] ?? '', 'de'); ?>>de - Deutsch</option>
-                        <option value="pl" <?php selected($item['language_code'] ?? '', 'pl'); ?>>pl - Polski</option>
-                        <option value="uk" <?php selected($item['language_code'] ?? '', 'uk'); ?>>uk - Українська</option>
-                        <option value="ru" <?php selected($item['language_code'] ?? '', 'ru'); ?>>ru - Русский</option>
+                    <select name="language_code" id="language_code" class="saw-input saw-language-select" required <?php echo $is_edit ? 'disabled' : ''; ?>>
+                        <option value="">-- Vyberte jazyk --</option>
+                        <?php foreach ($languages as $code => $lang): ?>
+                            <option value="<?php echo esc_attr($code); ?>" 
+                                    data-flag="<?php echo esc_attr($lang['flag']); ?>"
+                                    data-name="<?php echo esc_attr($lang['name']); ?>"
+                                    <?php selected($item['language_code'] ?? '', $code); ?>>
+                                <?php echo esc_html($lang['flag']); ?> <?php echo esc_html($code); ?> - <?php echo esc_html($lang['name']); ?><?php if (!empty($lang['name_cs']) && $lang['name_cs'] !== $lang['name']): ?> (<?php echo esc_html($lang['name_cs']); ?>)<?php endif; ?>
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                     <?php if ($is_edit): ?>
                         <input type="hidden" name="language_code" value="<?php echo esc_attr($item['language_code']); ?>">
                     <?php endif; ?>
-                    <p class="saw-help-text">ISO 639-1 kód jazyka</p>
+                    <p class="saw-help-text">Vyhledejte jazyk podle názvu nebo kódu</p>
                 </div>
                 
                 <div class="saw-form-group saw-col-4">
@@ -94,15 +112,20 @@ if ($is_edit) {
                     <label for="flag_emoji" class="saw-label">
                         Vlajka <span class="saw-required">*</span>
                     </label>
-                    <input type="text" 
-                           name="flag_emoji" 
-                           id="flag_emoji" 
-                           class="saw-input saw-flag-input" 
-                           value="<?php echo esc_attr($item['flag_emoji'] ?? ''); ?>" 
-                           required
-                           maxlength="10"
-                           placeholder="🇨🇿">
-                    <p class="saw-help-text">Emoji vlajky</p>
+                    <div class="saw-flag-input-wrapper">
+                        <input type="text" 
+                               name="flag_emoji" 
+                               id="flag_emoji" 
+                               class="saw-input saw-flag-input" 
+                               value="<?php echo esc_attr($item['flag_emoji'] ?? ''); ?>" 
+                               required
+                               maxlength="10"
+                               placeholder="🇨🇿">
+                        <div class="saw-flag-preview <?php echo !empty($item['flag_emoji']) ? 'has-flag' : ''; ?>" id="flag_preview">
+                            <?php if (!empty($item['flag_emoji'])) echo esc_html($item['flag_emoji']); ?>
+                        </div>
+                    </div>
+                    <p class="saw-help-text">Emoji vlajky (např. 🇨🇿)</p>
                 </div>
                 
             </div>
@@ -122,7 +145,12 @@ if ($is_edit) {
                     
                     <div class="saw-branches-header">
                         <div class="saw-branch-col-name">Pobočka</div>
-                        <div class="saw-branch-col-active">Aktivní</div>
+                        <div class="saw-branch-col-active">
+                            <label class="saw-checkbox-wrapper saw-select-all-wrapper">
+                                <input type="checkbox" id="select_all_branches" class="saw-select-all-checkbox">
+                                <span class="saw-checkbox-label">Vybrat vše</span>
+                            </label>
+                        </div>
                         <div class="saw-branch-col-default">Výchozí</div>
                         <div class="saw-branch-col-order">Pořadí</div>
                     </div>
@@ -209,143 +237,139 @@ if ($is_edit) {
     
 </div>
 
+<!-- SELECT2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+<!-- INLINE CSS -->
 <style>
-.saw-branches-grid {
-    border: 2px solid #e5e7eb;
-    border-radius: 12px;
-    overflow: hidden;
-    background: #fff;
+<?php 
+$css_file = __DIR__ . '/styles.css';
+if (file_exists($css_file)) {
+    echo file_get_contents($css_file);
+}
+?>
+
+/* Select2 custom styling */
+.select2-container--default .select2-selection--single {
+    height: 44px !important;
+    border: 2px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    padding: 0 !important;
 }
 
-.saw-branches-header {
-    display: grid;
-    grid-template-columns: 1fr 120px 120px 100px;
-    gap: 16px;
-    padding: 16px 20px;
-    background: #f9fafb;
-    border-bottom: 2px solid #e5e7eb;
-    font-weight: 700;
-    font-size: 13px;
-    color: #374151;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 40px !important;
+    padding-left: 12px !important;
+    font-size: 15px !important;
+    color: #0f172a !important;
 }
 
-.saw-branch-row {
-    display: grid;
-    grid-template-columns: 1fr 120px 120px 100px;
-    gap: 16px;
-    padding: 16px 20px;
-    border-bottom: 1px solid #f3f4f6;
-    align-items: center;
-    transition: background 0.2s ease;
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 42px !important;
+    right: 8px !important;
 }
 
-.saw-branch-row:last-child {
-    border-bottom: none;
+.select2-container--default.select2-container--focus .select2-selection--single {
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
 }
 
-.saw-branch-row:hover {
-    background: #fafbfc;
+.select2-dropdown {
+    border: 2px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
 }
 
-.saw-branch-col-name {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+.select2-results__option {
+    padding: 10px 12px !important;
+    font-size: 15px !important;
 }
 
-.saw-branch-col-name strong {
-    font-size: 15px;
-    color: #111827;
-}
-
-.saw-branch-code {
-    display: inline-block;
-    padding: 2px 8px;
-    background: #f3f4f6;
-    border: 1px solid #e5e7eb;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 600;
-    color: #6b7280;
-    font-family: monospace;
-    margin-right: 8px;
-}
-
-.saw-branch-city {
-    font-size: 13px;
-    color: #6b7280;
-}
-
-.saw-branch-col-active,
-.saw-branch-col-default {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.saw-checkbox-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-}
-
-.saw-checkbox-wrapper input[type="checkbox"] {
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
-}
-
-.saw-checkbox-wrapper input[type="checkbox"]:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-}
-
-.saw-checkbox-label {
-    font-size: 13px;
-    color: #374151;
-    font-weight: 500;
-}
-
-.saw-order-input {
-    width: 80px;
-    text-align: center;
-    font-weight: 600;
-}
-
-.saw-order-input:disabled {
-    background: #f9fafb;
-    opacity: 0.5;
-}
-
-.saw-flag-input {
-    font-size: 24px;
-    text-align: center;
-}
-
-@media (max-width: 768px) {
-    .saw-branches-header,
-    .saw-branch-row {
-        grid-template-columns: 1fr;
-        gap: 12px;
-    }
-    
-    .saw-branches-header {
-        display: none;
-    }
-    
-    .saw-branch-col-active,
-    .saw-branch-col-default {
-        justify-content: flex-start;
-    }
+.select2-results__option--highlighted {
+    background: #eff6ff !important;
+    color: #1e40af !important;
 }
 </style>
 
+<!-- SELECT2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<!-- INLINE JAVASCRIPT -->
 <script>
 jQuery(document).ready(function($) {
     
+    // === INICIALIZACE SELECT2 ===
+    $('#language_code').select2({
+        placeholder: '🔍 Vyhledejte jazyk...',
+        allowClear: true,
+        width: '100%',
+        language: {
+            noResults: function() {
+                return 'Jazyk nenalezen';
+            },
+            searching: function() {
+                return 'Hledám...';
+            }
+        }
+    });
+    
+    // === LIVE NÁHLED VLAJKY ===
+    $('#flag_emoji').on('input', function() {
+        const flag = $(this).val().trim();
+        const $preview = $('#flag_preview');
+        
+        if (flag) {
+            $preview.text(flag).addClass('has-flag');
+        } else {
+            $preview.text('').removeClass('has-flag');
+        }
+    });
+    
+    // === AUTO-FILL PŘI VÝBĚRU JAZYKA (OPRAVENO) ===
+    $('#language_code').on('change', function() {
+        const $selected = $(this).find('option:selected');
+        const flag = $selected.data('flag');
+        const name = $selected.data('name');
+        
+        // VŽDY přepsat hodnoty (i když už tam něco je)
+        if (name) {
+            $('#language_name').val(name);
+        }
+        
+        if (flag) {
+            $('#flag_emoji').val(flag).trigger('input'); // Trigger input pro live preview
+        }
+    });
+    
+    // === BRANCH CHECKBOXY ===
+    
+    // "Vybrat vše" checkbox
+    $('#select_all_branches').on('change', function() {
+        const isChecked = $(this).is(':checked');
+        
+        $('.saw-branch-active-checkbox').each(function() {
+            $(this).prop('checked', isChecked).trigger('change');
+        });
+        
+        // Aktualizovat stav "Vybrat vše" checkboxu
+        updateSelectAllState();
+    });
+    
+    // Funkce pro aktualizaci stavu "Vybrat vše" checkboxu
+    function updateSelectAllState() {
+        const totalCheckboxes = $('.saw-branch-active-checkbox').length;
+        const checkedCheckboxes = $('.saw-branch-active-checkbox:checked').length;
+        
+        if (checkedCheckboxes === 0) {
+            $('#select_all_branches').prop('checked', false).prop('indeterminate', false);
+        } else if (checkedCheckboxes === totalCheckboxes) {
+            $('#select_all_branches').prop('checked', true).prop('indeterminate', false);
+        } else {
+            $('#select_all_branches').prop('checked', false).prop('indeterminate', true);
+        }
+    }
+    
+    // Jednotlivé checkboxy
     $('.saw-branch-active-checkbox').on('change', function() {
         const branchId = $(this).data('branch-id');
         const isActive = $(this).is(':checked');
@@ -360,48 +384,21 @@ jQuery(document).ready(function($) {
             $defaultCheckbox.prop('checked', false).prop('disabled', true);
             $orderInput.val(0).prop('disabled', true);
         }
+        
+        // Aktualizovat "Vybrat vše" checkbox
+        updateSelectAllState();
     });
+    
+    // Inicializovat stav "Vybrat vše" při načtení stránky
+    updateSelectAllState();
     
     $('.saw-branch-default-checkbox').on('change', function() {
         if ($(this).is(':checked')) {
-            const currentBranchId = $(this).data('branch-id');
-            
-            $('.saw-branch-default-checkbox').not(this).each(function() {
-                $(this).prop('checked', false);
-            });
+            $('.saw-branch-default-checkbox').not(this).prop('checked', false);
         }
     });
     
-    $('#language_code').on('change', function() {
-        const code = $(this).val();
-        const languageNames = {
-            'cs': 'Čeština',
-            'en': 'English',
-            'sk': 'Slovenčina',
-            'de': 'Deutsch',
-            'pl': 'Polski',
-            'uk': 'Українська',
-            'ru': 'Русский'
-        };
-        const flags = {
-            'cs': '🇨🇿',
-            'en': '🇬🇧',
-            'sk': '🇸🇰',
-            'de': '🇩🇪',
-            'pl': '🇵🇱',
-            'uk': '🇺🇦',
-            'ru': '🇷🇺'
-        };
-        
-        if (languageNames[code] && !$('#language_name').val()) {
-            $('#language_name').val(languageNames[code]);
-        }
-        
-        if (flags[code] && !$('#flag_emoji').val()) {
-            $('#flag_emoji').val(flags[code]);
-        }
-    });
-    
+    // === VALIDACE FORMULÁŘE ===
     $('.saw-language-form').on('submit', function(e) {
         const name = $('#language_name').val().trim();
         const code = $('#language_code').val();

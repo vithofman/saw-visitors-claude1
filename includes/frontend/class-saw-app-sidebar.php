@@ -112,6 +112,20 @@ class SAW_App_Sidebar {
         return null;
     }
     
+    private function section_has_active_item($section) {
+        if (!isset($section['items'])) {
+            return false;
+        }
+        
+        foreach ($section['items'] as $item) {
+            if ($this->active_menu === $item['id']) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
     public function render() {
         $menu = $this->get_menu_items();
         $logo_url = $this->get_logo_url();
@@ -145,21 +159,48 @@ class SAW_App_Sidebar {
             <?php $this->render_branch_switcher(); ?>
             
             <nav class="saw-sidebar-nav">
-                <?php foreach ($menu as $section): ?>
+                <?php 
+                $first_section = true;
+                foreach ($menu as $index => $section): 
+                    $has_active = $this->section_has_active_item($section);
+                    $is_collapsed = !$first_section && !$has_active;
+                ?>
                     <?php if (isset($section['heading'])): ?>
-                        <div class="saw-nav-heading"><?php echo esc_html($section['heading']); ?></div>
+                        <div class="saw-nav-section <?php echo $is_collapsed ? 'collapsed' : ''; ?>">
+                            <div class="saw-nav-heading">
+                                <?php echo esc_html($section['heading']); ?>
+                                <span class="saw-nav-heading-toggle">
+                                    <svg viewBox="0 0 24 24">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                </span>
+                            </div>
+                            <div class="saw-nav-items">
+                                <?php foreach ($section['items'] as $item): ?>
+                                    <a 
+                                        href="<?php echo esc_url($item['url']); ?>" 
+                                        class="saw-nav-item <?php echo ($this->active_menu === $item['id']) ? 'active' : ''; ?>"
+                                        data-menu="<?php echo esc_attr($item['id']); ?>"
+                                    >
+                                        <span class="saw-nav-icon"><?php echo $item['icon']; ?></span>
+                                        <span class="saw-nav-label"><?php echo esc_html($item['label']); ?></span>
+                                    </a>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                        <?php $first_section = false; ?>
+                    <?php else: ?>
+                        <?php foreach ($section['items'] as $item): ?>
+                            <a 
+                                href="<?php echo esc_url($item['url']); ?>" 
+                                class="saw-nav-item <?php echo ($this->active_menu === $item['id']) ? 'active' : ''; ?>"
+                                data-menu="<?php echo esc_attr($item['id']); ?>"
+                            >
+                                <span class="saw-nav-icon"><?php echo $item['icon']; ?></span>
+                                <span class="saw-nav-label"><?php echo esc_html($item['label']); ?></span>
+                            </a>
+                        <?php endforeach; ?>
                     <?php endif; ?>
-                    
-                    <?php foreach ($section['items'] as $item): ?>
-                        <a 
-                            href="<?php echo esc_url($item['url']); ?>" 
-                            class="saw-nav-item <?php echo ($this->active_menu === $item['id']) ? 'active' : ''; ?>"
-                            data-menu="<?php echo esc_attr($item['id']); ?>"
-                        >
-                            <span class="saw-nav-icon"><?php echo $item['icon']; ?></span>
-                            <span class="saw-nav-label"><?php echo esc_html($item['label']); ?></span>
-                        </a>
-                    <?php endforeach; ?>
                 <?php endforeach; ?>
             </nav>
         </aside>

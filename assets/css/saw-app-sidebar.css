@@ -2,7 +2,7 @@
  * SAW App Sidebar - Global Component Styles
  * 
  * Navigation sidebar component for frontend application layout
- * Responzivní design s mobilním overlay menu
+ * Responsivní design s mobilním overlay menu
  * 
  * @package SAW_Visitors
  * @since   4.6.1
@@ -95,13 +95,60 @@
     padding: 16px 0;
 }
 
+.saw-nav-section {
+    margin-bottom: 8px;
+}
+
 .saw-nav-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     padding: 16px 24px 8px;
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: #9ca3af;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.2s;
+}
+
+.saw-nav-heading:hover {
+    color: #6b7280;
+}
+
+.saw-nav-heading-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    transition: transform 0.2s ease;
+}
+
+.saw-nav-heading-toggle svg {
+    width: 12px;
+    height: 12px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+}
+
+.saw-nav-section.collapsed .saw-nav-heading-toggle {
+    transform: rotate(-90deg);
+}
+
+.saw-nav-items {
+    max-height: 1000px;
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    opacity: 1;
+}
+
+.saw-nav-section.collapsed .saw-nav-items {
+    max-height: 0;
+    opacity: 0;
 }
 
 .saw-nav-item {

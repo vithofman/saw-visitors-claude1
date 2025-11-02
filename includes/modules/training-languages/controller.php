@@ -15,7 +15,7 @@ class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller
         require_once __DIR__ . '/model.php';
         $this->model = new SAW_Module_Training_Languages_Model($this->config);
 
-	require_once __DIR__ . '/class-auto-setup.php';
+        require_once __DIR__ . '/class-auto-setup.php';
         
         add_action('wp_ajax_saw_get_training_languages_detail', [$this, 'ajax_get_detail']);
         add_action('wp_ajax_saw_search_training_languages', [$this, 'ajax_search']);
@@ -25,7 +25,40 @@ class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller
         add_action('admin_enqueue_scripts', [$this, 'enqueue_assets']);
     }
     
+    /**
+     * Načítá CSS a JS assets pro training languages modul
+     */
     public function enqueue_assets() {
+        // Načíst pouze pokud jsme v admin sekci
+        if (!is_admin()) {
+            return;
+        }
+        
+        // === CSS STYLES ===
+        wp_register_style(
+            'saw-training-languages-styles',
+            plugin_dir_url(__FILE__) . 'styles.css',
+            [],
+            filemtime(__DIR__ . '/styles.css'),
+            'all'
+        );
+        wp_enqueue_style('saw-training-languages-styles');
+        
+        // === JAVASCRIPT ===
+        wp_register_script(
+            'saw-training-languages-scripts',
+            plugin_dir_url(__FILE__) . 'scripts.js',
+            ['jquery'],
+            filemtime(__DIR__ . '/scripts.js'),
+            true
+        );
+        wp_enqueue_script('saw-training-languages-scripts');
+        
+        // Předat PHP proměnné do JavaScriptu
+        wp_localize_script('saw-training-languages-scripts', 'sawTrainingLanguages', [
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('saw_ajax_nonce'),
+        ]);
     }
     
     protected function before_save($data) {

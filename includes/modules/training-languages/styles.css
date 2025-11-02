@@ -1,180 +1,311 @@
-.saw-module-training-languages .saw-language-flag {
-    font-size: 32px;
-    line-height: 1;
+/* =================================================================
+   TRAINING LANGUAGES - COMPLETE FIXED STYLES
+   ================================================================= */
+
+/* --- RESET & OVERRIDES --- */
+/* Odstraníme nežádoucí bordery z parent elementů */
+.saw-form-section {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin-bottom: 32px !important;
 }
 
-.saw-module-training-languages .saw-language-name {
+.saw-form-container {
+    background: #ffffff;
+    padding: 0 !important;
+    max-width: 100% !important;
+}
+
+/* --- ZÁKLADNÍ FORMULÁŘOVÉ SEKCE --- */
+.saw-section-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #0f172a;
+    margin-bottom: 8px;
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
-.saw-module-training-languages .saw-language-name strong {
-    font-size: 15px;
-    color: #111827;
+.saw-section-description {
+    color: #64748b;
+    font-size: 14px;
+    margin-bottom: 20px;
+    line-height: 1.5;
 }
 
-.saw-module-training-languages .saw-badge-sm {
-    font-size: 11px;
-    padding: 2px 8px;
+/* --- FORM ROW --- */
+.saw-form-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-bottom: 24px;
 }
 
-.saw-module-training-languages .saw-code-badge {
-    display: inline-block;
-    padding: 4px 10px;
-    background: #f3f4f6;
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
-    font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
-    font-size: 13px;
+/* --- FORM GROUPS --- */
+.saw-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.saw-label {
+    font-size: 14px;
     font-weight: 600;
     color: #374151;
-    letter-spacing: 0.5px;
-}
-
-.saw-module-training-languages .saw-language-row:hover {
-    background-color: #f9fafb;
-}
-
-.saw-module-training-languages .saw-action-btn {
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    padding: 0;
-    margin: 0 4px;
-    border: none;
-    border-radius: 8px;
-    background: transparent;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    text-decoration: none;
+    gap: 4px;
 }
 
-.saw-module-training-languages .saw-action-btn .dashicons {
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
-    color: #6b7280;
-}
-
-.saw-module-training-languages .saw-action-edit:hover {
-    background: #eff6ff;
-}
-
-.saw-module-training-languages .saw-action-edit:hover .dashicons {
-    color: #2563eb;
-}
-
-.saw-module-training-languages .saw-action-delete:hover {
-    background: #fef2f2;
-}
-
-.saw-module-training-languages .saw-action-delete:hover .dashicons {
+.saw-required {
     color: #dc2626;
 }
 
-.saw-module-training-languages .saw-action-btn:disabled {
-    opacity: 0.4;
+/* --- INPUTY - JEDNOTNÁ VÝŠKA --- */
+.saw-input,
+.saw-input[type="text"],
+.saw-input[type="number"],
+select.saw-input {
+    width: 100%;
+    height: 44px !important; /* Fixní výška pro všechny inputy */
+    padding: 0 12px !important;
+    border: 2px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    font-size: 15px !important;
+    font-weight: 500;
+    color: #0f172a !important;
+    background: #ffffff !important;
+    transition: all 0.2s ease !important;
+    box-shadow: none !important;
+    line-height: normal !important;
+}
+
+.saw-input:focus {
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+    outline: none !important;
+}
+
+.saw-input:disabled {
+    background: #f8fafc !important;
+    opacity: 0.6;
     cursor: not-allowed;
 }
 
-.saw-module-training-languages .saw-action-btn:disabled:hover {
-    background: transparent;
+/* --- VLAJKA INPUT S NÁHLEDEM --- */
+.saw-flag-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
-.saw-module-training-languages .saw-text-muted {
-    color: #9ca3af;
-    font-size: 13px;
+.saw-flag-input {
+    flex: 1;
+    height: 44px !important;
+    font-size: 15px !important;
+    padding: 0 12px !important;
+    text-align: left !important;
 }
+
+/* Náhled vlajky vedle inputu */
+.saw-flag-preview {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 28px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.saw-flag-preview:empty::before {
+    content: '🏳️';
+    opacity: 0.3;
+}
+
+.saw-flag-preview.has-flag {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: #667eea;
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
+}
+
+/* --- HELP TEXT --- */
+.saw-help-text {
+    font-size: 13px;
+    color: #64748b;
+    margin: 0;
+    line-height: 1.4;
+}
+
+/* =================================================================
+   BRANCHES GRID - MODERNÍ CARD DESIGN
+   ================================================================= */
 
 .saw-branches-grid {
-    border: 2px solid #e5e7eb;
-    border-radius: 12px;
+    border-radius: 16px;
     overflow: hidden;
-    background: #fff;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: box-shadow 0.3s ease;
+    margin-top: 20px;
+}
+
+.saw-branches-grid:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .saw-branches-header {
     display: grid;
-    grid-template-columns: 1fr 120px 120px 100px;
+    grid-template-columns: 1fr 140px 140px 120px;
     gap: 16px;
-    padding: 16px 20px;
-    background: #f9fafb;
-    border-bottom: 2px solid #e5e7eb;
+    padding: 20px 24px;
+    background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
     font-weight: 700;
-    font-size: 13px;
-    color: #374151;
+    font-size: 12px;
+    color: #475569;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.8px;
 }
 
 .saw-branch-row {
     display: grid;
-    grid-template-columns: 1fr 120px 120px 100px;
+    grid-template-columns: 1fr 140px 140px 120px;
     gap: 16px;
-    padding: 16px 20px;
-    border-bottom: 1px solid #f3f4f6;
+    padding: 20px 24px;
+    position: relative;
     align-items: center;
-    transition: background 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.saw-branch-row:last-child {
-    border-bottom: none;
+.saw-branch-row::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 24px;
+    right: 24px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #e2e8f0 20%, #e2e8f0 80%, transparent);
+}
+
+.saw-branch-row:last-child::after {
+    display: none;
 }
 
 .saw-branch-row:hover {
-    background: #fafbfc;
+    background: #f8fafc;
+    transform: translateX(4px);
 }
 
+.saw-branch-row:hover::after {
+    opacity: 0;
+}
+
+/* --- BRANCH COLUMNS --- */
 .saw-branch-col-name {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
 }
 
 .saw-branch-col-name strong {
     font-size: 15px;
-    color: #111827;
+    font-weight: 600;
+    color: #0f172a;
+    letter-spacing: -0.01em;
 }
 
 .saw-branch-code {
     display: inline-block;
-    padding: 2px 8px;
-    background: #f3f4f6;
-    border: 1px solid #e5e7eb;
-    border-radius: 4px;
+    padding: 4px 10px;
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    border-radius: 6px;
     font-size: 11px;
-    font-weight: 600;
-    color: #6b7280;
-    font-family: monospace;
+    font-weight: 700;
+    color: #475569;
+    font-family: 'SF Mono', 'Monaco', monospace;
+    letter-spacing: 0.5px;
+    transition: all 0.2s ease;
     margin-right: 8px;
+}
+
+.saw-branch-code:hover {
+    background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+    transform: translateY(-1px);
 }
 
 .saw-branch-city {
     font-size: 13px;
-    color: #6b7280;
+    color: #64748b;
+    font-weight: 500;
 }
 
 .saw-branch-col-active,
-.saw-branch-col-default {
+.saw-branch-col-default,
+.saw-branch-col-order {
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
+/* --- CHECKBOXY --- */
 .saw-checkbox-wrapper {
     display: flex;
     align-items: center;
     gap: 8px;
     cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 8px;
+    transition: background 0.2s ease;
+}
+
+.saw-checkbox-wrapper:hover {
+    background: #f1f5f9;
+}
+
+/* "Vybrat vše" checkbox v headeru */
+.saw-select-all-wrapper {
+    font-weight: 700;
+    padding: 4px 8px;
+    background: rgba(37, 99, 235, 0.05);
+    border-radius: 6px;
+}
+
+.saw-select-all-wrapper:hover {
+    background: rgba(37, 99, 235, 0.1);
+}
+
+.saw-select-all-checkbox {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: #2563eb;
+}
+
+/* Indeterminate stav (částečně zaškrtnuto) */
+.saw-select-all-checkbox:indeterminate {
+    opacity: 0.7;
 }
 
 .saw-checkbox-wrapper input[type="checkbox"] {
     width: 20px;
     height: 20px;
     cursor: pointer;
+    accent-color: #2563eb;
+    transition: transform 0.2s ease;
+    margin: 0;
+}
+
+.saw-checkbox-wrapper input[type="checkbox"]:checked {
+    transform: scale(1.1);
 }
 
 .saw-checkbox-wrapper input[type="checkbox"]:disabled {
@@ -184,25 +315,163 @@
 
 .saw-checkbox-label {
     font-size: 13px;
-    color: #374151;
+    color: #475569;
     font-weight: 500;
+    user-select: none;
 }
 
+/* --- ORDER INPUT --- */
 .saw-order-input {
-    width: 80px;
-    text-align: center;
-    font-weight: 600;
+    width: 80px !important;
+    height: 40px !important;
+    text-align: center !important;
+    font-weight: 600 !important;
+    border: 2px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    padding: 8px !important;
+    font-size: 14px !important;
+}
+
+.saw-order-input:focus {
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+    outline: none !important;
 }
 
 .saw-order-input:disabled {
-    background: #f9fafb;
+    background: #f8fafc !important;
     opacity: 0.5;
+    cursor: not-allowed;
 }
 
-.saw-flag-input {
-    font-size: 24px;
-    text-align: center;
+/* --- NOTICES --- */
+.saw-notice {
+    padding: 14px 16px;
+    border-radius: 10px;
+    font-size: 14px;
+    line-height: 1.5;
 }
+
+.saw-notice-info {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1e40af;
+}
+
+.saw-notice-warning {
+    background: #fef3c7;
+    border: 1px solid #fde68a;
+    color: #92400e;
+}
+
+.saw-notice p {
+    margin: 0;
+}
+
+/* --- FORM ACTIONS --- */
+.saw-form-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    padding-top: 24px;
+    margin-top: 32px;
+    border-top: 2px solid #f1f5f9;
+}
+
+.saw-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    text-decoration: none;
+}
+
+.saw-button-primary {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+.saw-button-primary:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.saw-button-secondary {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+}
+
+.saw-button-secondary:hover {
+    background: #e2e8f0;
+    transform: translateY(-1px);
+}
+
+/* =================================================================
+   RESPONSIVE DESIGN
+   ================================================================= */
+
+@media (max-width: 1024px) {
+    .saw-form-row {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+}
+
+@media (max-width: 768px) {
+    /* Grid na jeden sloupec */
+    .saw-branches-header,
+    .saw-branch-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .saw-branches-header {
+        display: none;
+    }
+    
+    /* Zarovnání */
+    .saw-branch-col-active,
+    .saw-branch-col-default,
+    .saw-branch-col-order {
+        justify-content: flex-start;
+    }
+    
+    /* Padding pro mobilní zařízení */
+    .saw-branches-grid {
+        border-radius: 12px;
+    }
+    
+    .saw-branches-header,
+    .saw-branch-row {
+        padding: 16px;
+    }
+    
+    .saw-branch-row::after {
+        left: 16px;
+        right: 16px;
+    }
+    
+    .saw-form-actions {
+        flex-direction: column;
+    }
+    
+    .saw-button {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* =================================================================
+   DETAIL VIEW - PRO MODAL
+   ================================================================= */
 
 .saw-language-flag-large {
     width: 88px;
@@ -211,9 +480,10 @@
     align-items: center;
     justify-content: center;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 14px;
-    border: 2px solid #e2e8f0;
+    border-radius: 16px;
     font-size: 48px;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .saw-branches-detail-list {
@@ -226,64 +496,40 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 14px 16px;
-    background: #f8fafc;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
+    padding: 16px 20px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.saw-branch-detail-name {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+.saw-branch-detail-item:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
 }
 
-.saw-branch-detail-name strong {
-    font-size: 15px;
-    color: #111827;
+/* =================================================================
+   ANIMATIONS
+   ================================================================= */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
-.saw-branch-detail-meta {
-    display: flex;
-    gap: 8px;
-    align-items: center;
+.saw-branch-row {
+    animation: fadeIn 0.3s ease-out;
 }
 
-@media (max-width: 768px) {
-    .saw-module-training-languages .saw-action-btn {
-        width: 32px;
-        height: 32px;
-        margin: 0 2px;
-    }
-    
-    .saw-module-training-languages .saw-action-btn .dashicons {
-        font-size: 16px;
-        width: 16px;
-        height: 16px;
-    }
-    
-    .saw-module-training-languages .saw-language-flag {
-        font-size: 24px;
-    }
-    
-    .saw-branches-header,
-    .saw-branch-row {
-        grid-template-columns: 1fr;
-        gap: 12px;
-    }
-    
-    .saw-branches-header {
-        display: none;
-    }
-    
-    .saw-branch-col-active,
-    .saw-branch-col-default {
-        justify-content: flex-start;
-    }
-    
-    .saw-branch-detail-item {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-    }
+/* Focus visible pro přístupnost */
+*:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+    border-radius: 4px;
 }
