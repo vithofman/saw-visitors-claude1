@@ -26,6 +26,7 @@ if ( ! defined( 'SAW_DEBUG' ) ) {
 /** Aktivátor/Deaktivátor – jen registrovat hooky, nic nevypisovat */
 require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-activator.php';
 require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-deactivator.php';
+
 /** Tichý wrapper aktivace – zahodí případný výstup z tříd */
 function saw_activate_plugin_silent() {
 	if ( function_exists( 'ob_start' ) ) { ob_start(); }

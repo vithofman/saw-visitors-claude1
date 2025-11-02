@@ -1,12 +1,13 @@
 <?php
 /**
- * SAW App Header Component
+ * SAW App Header Component - OPRAVENÁ VERZE
  * 
- * Updated version with customer switcher integrated into logo/name area
- * Customer switcher available only for SuperAdmins
+ * ✅ Dynamicky načítá přihlášeného uživatele z WP + SAW
+ * ✅ Zobrazuje skutečné jméno, email, roli
+ * ✅ Customer switcher pro SuperAdminy
  * 
  * @package SAW_Visitors
- * @since 4.7.0
+ * @version 2.0.0
  */
 
 if (!defined('ABSPATH')) {
@@ -19,18 +20,102 @@ class SAW_App_Header {
     private $customer;
     
     public function __construct($user = null, $customer = null) {
-        $this->user = $user ?: array(
-            'id' => 1,
-            'name' => 'Demo Admin',
-            'email' => 'admin@demo.cz',
-            'role' => 'admin',
-        );
+        // ✅ OPRAVENO: Načti skutečného přihlášeného uživatele
+        if (!$user && is_user_logged_in()) {
+            $wp_user = wp_get_current_user();
+            
+            // 🐛 DEBUG
+            error_log('HEADER CONSTRUCT: WP User ID = ' . $wp_user->ID);
+            error_log('HEADER CONSTRUCT: WP Email = ' . $wp_user->user_email);
+            
+            // Načti SAW user data
+            global $wpdb;
+            $saw_user = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM {$wpdb->prefix}saw_users WHERE wp_user_id = %d AND is_active = 1",
+                $wp_user->ID
+            ), ARRAY_A);
+            
+            // 🐛 DEBUG
+            error_log('HEADER CONSTRUCT: SAW User = ' . print_r($saw_user, true));
+            error_log('HEADER CONSTRUCT: SAW Role = ' . ($saw_user['role'] ?? 'NULL'));
+            
+            if ($saw_user) {
+                $this->user = [
+                    'id' => $saw_user['id'],
+                    'name' => $saw_user['first_name'] . ' ' . $saw_user['last_name'],
+                    'email' => $wp_user->user_email,
+                    'role' => $saw_user['role'],
+                    'first_name' => $saw_user['first_name'],
+                    'last_name' => $saw_user['last_name'],
+                ];
+            } else {
+                // Fallback - jen WP data
+                error_log('HEADER CONSTRUCT: ⚠️ SAW User NOT FOUND - using fallback!');
+                $this->user = [
+                    'id' => $wp_user->ID,
+                    'name' => $wp_user->display_name,
+                    'email' => $wp_user->user_email,
+                    'role' => 'admin',  // ❌ FALLBACK = 'admin'
+                ];
+            }
+            
+            // 🐛 DEBUG
+            error_log('HEADER CONSTRUCT: Final user role = ' . $this->user['role']);
+        } else {
+            $this->user = $user ?: [
+                'id' => 1,
+                'name' => 'Demo Admin',
+                'email' => 'admin@demo.cz',
+                'role' => 'admin',
+            ];
+        }
         
-        $this->customer = $customer ?: array(
+        // ✅ OPRAVENO: Načti skutečného zákazníka
+        if (!$customer) {
+            if ($this->is_super_admin()) {
+                // Super admin - načti vybraného zákazníka z user meta
+                $customer_id = get_user_meta(get_current_user_id(), 'saw_selected_customer_id', true);
+                
+                if ($customer_id) {
+                    global $wpdb;
+                    $customer = $wpdb->get_row($wpdb->prepare(
+                        "SELECT * FROM {$wpdb->prefix}saw_customers WHERE id = %d",
+                        $customer_id
+                    ), ARRAY_A);
+                }
+            } else {
+                // Admin/Manager - načti jejich zákazníka
+                if (isset($this->user['role']) && $this->user['role'] !== 'super_admin') {
+                    global $wpdb;
+                    $saw_user = $wpdb->get_row($wpdb->prepare(
+                        "SELECT customer_id FROM {$wpdb->prefix}saw_users WHERE wp_user_id = %d",
+                        get_current_user_id()
+                    ), ARRAY_A);
+                    
+                    if ($saw_user && $saw_user['customer_id']) {
+                        $customer = $wpdb->get_row($wpdb->prepare(
+                            "SELECT * FROM {$wpdb->prefix}saw_customers WHERE id = %d",
+                            $saw_user['customer_id']
+                        ), ARRAY_A);
+                    }
+                }
+            }
+            
+            // Fallback pokud zákazník nebyl nalezen
+            if (!$customer) {
+                global $wpdb;
+                $customer = $wpdb->get_row(
+                    "SELECT * FROM {$wpdb->prefix}saw_customers ORDER BY id ASC LIMIT 1",
+                    ARRAY_A
+                );
+            }
+        }
+        
+        $this->customer = $customer ?: [
             'id' => 1,
             'name' => 'Demo Firma s.r.o.',
             'ico' => '12345678',
-        );
+        ];
     }
     
     /**
@@ -179,7 +264,7 @@ class SAW_App_Header {
                         
                         <div class="saw-user-divider"></div>
                         
-                        <a href="<?php echo wp_logout_url(home_url('/')); ?>" class="saw-user-menu-item saw-user-logout">
+                        <a href="<?php echo wp_logout_url(home_url('/login/')); ?>" class="saw-user-menu-item saw-user-logout">
                             <span class="dashicons dashicons-exit"></span>
                             <span>Odhlásit se</span>
                         </a>
@@ -187,6 +272,156 @@ class SAW_App_Header {
                 </div>
             </div>
         </header>
+        
+        <style>
+            /* ✅ PŘIDÁNO: Základní styly pro user menu (pokud chybí) */
+            .saw-user-menu {
+                position: relative;
+            }
+            
+            .saw-user-button {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 8px 16px;
+                background: transparent;
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            
+            .saw-user-button:hover {
+                background: #f9fafb;
+                border-color: #d1d5db;
+            }
+            
+            .saw-user-icon {
+                font-size: 20px;
+            }
+            
+            .saw-user-name {
+                font-size: 14px;
+                font-weight: 500;
+                color: #374151;
+            }
+            
+            .saw-user-dropdown-arrow {
+                transition: transform 0.2s;
+            }
+            
+            .saw-user-button[aria-expanded="true"] .saw-user-dropdown-arrow {
+                transform: rotate(180deg);
+            }
+            
+            .saw-user-dropdown {
+                position: absolute;
+                top: calc(100% + 8px);
+                right: 0;
+                min-width: 250px;
+                background: white;
+                border: 1px solid #e5e7eb;
+                border-radius: 12px;
+                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+                padding: 8px;
+                display: none;
+                z-index: 1000;
+            }
+            
+            .saw-user-dropdown.show {
+                display: block;
+            }
+            
+            .saw-user-info {
+                padding: 12px;
+                text-align: center;
+            }
+            
+            .saw-user-name-full {
+                font-size: 16px;
+                font-weight: 600;
+                color: #111827;
+                margin-bottom: 4px;
+            }
+            
+            .saw-user-email {
+                font-size: 13px;
+                color: #6b7280;
+                margin-bottom: 4px;
+            }
+            
+            .saw-user-role {
+                display: inline-block;
+                font-size: 12px;
+                padding: 4px 12px;
+                background: #eff6ff;
+                color: #1e40af;
+                border-radius: 6px;
+                font-weight: 500;
+            }
+            
+            .saw-user-divider {
+                height: 1px;
+                background: #e5e7eb;
+                margin: 8px 0;
+            }
+            
+            .saw-user-menu-item {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 10px 12px;
+                color: #374151;
+                text-decoration: none;
+                border-radius: 8px;
+                transition: all 0.2s;
+            }
+            
+            .saw-user-menu-item:hover {
+                background: #f9fafb;
+                color: #111827;
+            }
+            
+            .saw-user-menu-item .dashicons {
+                font-size: 18px;
+                width: 18px;
+                height: 18px;
+            }
+            
+            .saw-user-logout {
+                color: #dc2626;
+            }
+            
+            .saw-user-logout:hover {
+                background: #fef2f2;
+                color: #991b1b;
+            }
+        </style>
+        
+        <script>
+        // ✅ PŘIDÁNO: JavaScript pro dropdown menu
+        document.addEventListener('DOMContentLoaded', function() {
+            const userButton = document.getElementById('sawUserMenuToggle');
+            const userDropdown = document.getElementById('sawUserDropdown');
+            
+            if (userButton && userDropdown) {
+                userButton.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const isOpen = userDropdown.classList.contains('show');
+                    userDropdown.classList.toggle('show', !isOpen);
+                    userButton.setAttribute('aria-expanded', !isOpen);
+                });
+                
+                // Close when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!userButton.contains(e.target) && !userDropdown.contains(e.target)) {
+                        userDropdown.classList.remove('show');
+                        userButton.setAttribute('aria-expanded', 'false');
+                    }
+                });
+            }
+        });
+        </script>
         <?php
     }
     
@@ -257,16 +492,16 @@ class SAW_App_Header {
      * Get user role label in Czech
      */
     private function get_role_label() {
-        if ($this->is_super_admin()) {
-            return 'Super Administrátor';
-        }
-        
+        // ✅ OPRAVENO: Prioritně používej SAW roli, ne WP capabilities
         $role = $this->user['role'] ?? 'admin';
-        $labels = array(
+        
+        $labels = [
+            'super_admin' => 'Super Administrátor',
             'admin' => 'Administrátor',
+            'super_manager' => 'Super Manažer',
             'manager' => 'Manažer',
             'terminal' => 'Terminál',
-        );
+        ];
         
         return $labels[$role] ?? 'Uživatel';
     }

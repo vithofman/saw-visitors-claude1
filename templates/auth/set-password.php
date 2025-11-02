@@ -1,10 +1,104 @@
-<!DOCTYPE html>
-<html lang="cs">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nastavení hesla - SAW Visitors</title>
+<?php
+/**
+ * Set Password Template
+ * 
+ * Umožňuje novému uživateli nastavit si heslo poprvé po registraci.
+ * URL: /set-password/?token=xyz
+ * 
+ * @package SAW_Visitors
+ * @version 1.0.0
+ */
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+// ================================================
+// ZPRACOVÁNÍ FORMULÁŘE (POST)
+// ================================================
+
+$error = '';
+$success = false;
+$user = null;
+
+// Získej token z URL
+$token = isset($_GET['token']) ? sanitize_text_field($_GET['token']) : '';
+
+if (empty($token)) {
+    $error = 'Chybí token pro nastavení hesla.';
+} else {
+    // Načti SAW_Password handler
+    if (!class_exists('SAW_Password')) {
+        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-password.php';
+    }
     
+    $password_handler = new SAW_Password();
+    
+    // Validuj token a získej uživatele
+    $user = $password_handler->validate_setup_token($token);
+    
+    if (!$user) {
+        $error = 'Odkaz je neplatný nebo již expiroval. Platnost odkazu je 7 dní.';
+    }
+}
+
+// Pokud je formulář odeslán (POST)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$error && $user) {
+    
+    // Ověř nonce
+    if (!isset($_POST['saw_nonce']) || !wp_verify_nonce($_POST['saw_nonce'], 'saw_set_password')) {
+        $error = 'Bezpečnostní kontrola selhala. Zkuste to znovu.';
+    } else {
+        
+        // Získej hesla z formuláře
+        $password = isset($_POST['password']) ? $_POST['password'] : '';
+        $confirm_password = isset($_POST['confirm_password']) ? $_POST['confirm_password'] : '';
+        
+        // Validace
+        if (empty($password)) {
+            $error = 'Prosím vyplňte heslo.';
+        } elseif (strlen($password) < 8) {
+            $error = 'Heslo musí mít alespoň 8 znaků.';
+        } elseif (!preg_match('/[a-zA-Z]/', $password)) {
+            $error = 'Heslo musí obsahovat alespoň jedno písmeno.';
+        } elseif (!preg_match('/[0-9]/', $password)) {
+            $error = 'Heslo musí obsahovat alespoň jedno číslo.';
+        } elseif ($password !== $confirm_password) {
+            $error = 'Hesla se neshodují.';
+        } else {
+            // Vše je v pořádku - nastav heslo
+            $result = $password_handler->set_password($token, $password);
+            
+            if (is_wp_error($result)) {
+                $error = $result->get_error_message();
+            } else {
+                // Úspěch!
+                $success = true;
+                
+                // Audit log
+                if (class_exists('SAW_Audit')) {
+                    SAW_Audit::log([
+                        'action' => 'password_set_success',
+                        'user_id' => $user['id'],
+                        'details' => 'Uživatel ' . $user['user_email'] . ' si úspěšně nastavil heslo',
+                    ]);
+                }
+            }
+        }
+    }
+}
+
+// ================================================
+// HTML VÝSTUP
+// ================================================
+
+?>
+<!DOCTYPE html>
+<html <?php language_attributes(); ?>>
+<head>
+    <meta charset="<?php bloginfo('charset'); ?>">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nastavte si heslo - SAW Visitors</title>
     <style>
         * {
             margin: 0;
@@ -13,7 +107,7 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
@@ -37,20 +131,13 @@
         }
 
         .icon {
-            width: 80px;
-            height: 80px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 20px;
-            font-size: 40px;
+            font-size: 64px;
+            margin-bottom: 16px;
         }
 
         h1 {
-            font-size: 24px;
-            color: #111827;
+            color: #1f2937;
+            font-size: 28px;
             margin-bottom: 8px;
         }
 
@@ -60,7 +147,7 @@
         }
 
         .alert {
-            padding: 12px 16px;
+            padding: 16px;
             border-radius: 8px;
             margin-bottom: 24px;
             font-size: 14px;
@@ -147,28 +234,29 @@
             transition: all 0.2s;
         }
 
-        .btn:hover {
+        .btn:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active:not(:disabled) {
+            transform: translateY(0);
         }
 
         .btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-            transform: none;
         }
 
         .footer {
             text-align: center;
             margin-top: 24px;
-            padding-top: 24px;
-            border-top: 1px solid #e5e7eb;
+            font-size: 14px;
         }
 
         .footer a {
             color: #667eea;
             text-decoration: none;
-            font-size: 14px;
             font-weight: 500;
         }
 
@@ -176,66 +264,56 @@
             text-decoration: underline;
         }
 
-        .success-content {
+        .success-icon {
+            font-size: 72px;
             text-align: center;
-        }
-
-        .success-content .icon {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        }
-
-        @media (max-width: 480px) {
-            .container {
-                padding: 30px 20px;
-            }
-
-            h1 {
-                font-size: 20px;
-            }
+            margin-bottom: 24px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <?php if ($token_invalid): ?>
-            <!-- Invalid Token -->
+        
+        <?php if ($success): ?>
+            <!-- Úspěšné nastavení hesla -->
+            <div class="success-icon">✅</div>
+            
             <div class="header">
-                <div class="icon">❌</div>
-                <h1>Neplatný odkaz</h1>
-                <div class="subtitle">Odkaz pro nastavení hesla vypršel nebo je neplatný</div>
+                <h1>Heslo bylo nastaveno!</h1>
+                <div class="subtitle">
+                    Nyní se můžete přihlásit
+                </div>
+            </div>
+
+            <div class="alert alert-success">
+                <strong>Úspěch!</strong><br>
+                Vaše heslo bylo úspěšně nastaveno.<br>
+                Můžete se přihlásit pomocí svého emailu a hesla.
+            </div>
+
+            <a href="<?php echo home_url('/login/'); ?>" class="btn">
+                Přejít na přihlášení
+            </a>
+
+        <?php elseif ($error): ?>
+            <!-- Chyba (neplatný token, apod.) -->
+            <div class="header">
+                <div class="icon">⚠️</div>
+                <h1>Nelze nastavit heslo</h1>
             </div>
 
             <div class="alert alert-error">
-                Odkaz je již neplatný. Platnost odkazu je 7 dní od vytvoření účtu.
+                <?php echo esc_html($error); ?>
             </div>
 
             <div class="footer">
-                <p style="color: #6b7280; margin-bottom: 12px;">
-                    Potřebujete pomoc?
-                </p>
-                <a href="mailto:support@sawvisitors.com">Kontaktujte podporu</a>
-            </div>
-
-        <?php elseif ($success): ?>
-            <!-- Success -->
-            <div class="success-content">
-                <div class="icon">✓</div>
-                <h1>Heslo nastaveno!</h1>
-                <div class="subtitle" style="margin-bottom: 24px;">
-                    Nyní se můžete přihlásit
-                </div>
-
-                <div class="alert alert-success">
-                    Vaše heslo bylo úspěšně nastaveno. Můžete se přihlásit pomocí svého emailu a hesla.
-                </div>
-
-                <a href="<?php echo home_url('/login/'); ?>" class="btn">
-                    Přejít na přihlášení
+                <a href="<?php echo home_url('/login/'); ?>">
+                    Zpět na přihlášení
                 </a>
             </div>
 
         <?php else: ?>
-            <!-- Set Password Form -->
+            <!-- Formulář pro nastavení hesla -->
             <div class="header">
                 <div class="icon">🔐</div>
                 <h1>Nastavte si heslo</h1>
@@ -244,14 +322,11 @@
                 </div>
             </div>
 
-            <?php if ($error): ?>
-                <div class="alert alert-error">
-                    <?php echo esc_html($error); ?>
-                </div>
-            <?php endif; ?>
-
             <form method="post" id="set-password-form">
                 <?php wp_nonce_field('saw_set_password', 'saw_nonce'); ?>
+                
+                <!-- Hidden input pro zachování tokenu při POST -->
+                <input type="hidden" name="token" value="<?php echo esc_attr($token); ?>">
 
                 <div class="form-group">
                     <label for="password">Nové heslo</label>
@@ -264,9 +339,9 @@
                         autocomplete="new-password"
                     >
                     <div class="password-requirements">
-                        <div class="requirement" id="req-length">Alespoň 8 znaků</div>
-                        <div class="requirement" id="req-letter">Obsahuje písmeno</div>
-                        <div class="requirement" id="req-number">Obsahuje číslo</div>
+                        <div class="requirement invalid" id="req-length">Alespoň 8 znaků</div>
+                        <div class="requirement invalid" id="req-letter">Obsahuje písmeno</div>
+                        <div class="requirement invalid" id="req-number">Obsahuje číslo</div>
                     </div>
                 </div>
 
@@ -277,11 +352,12 @@
                         id="confirm_password" 
                         name="confirm_password" 
                         required 
+                        minlength="8"
                         autocomplete="new-password"
                     >
                 </div>
 
-                <button type="submit" class="btn" id="submit-btn">
+                <button type="submit" class="btn" id="submit-btn" disabled>
                     Nastavit heslo
                 </button>
             </form>
@@ -294,6 +370,8 @@
         <?php endif; ?>
     </div>
 
+    <?php if (!$success && !$error): ?>
+    <!-- JavaScript pro real-time validaci -->
     <script>
         const passwordInput = document.getElementById('password');
         const confirmInput = document.getElementById('confirm_password');
@@ -304,7 +382,7 @@
             passwordInput.addEventListener('input', function() {
                 const password = this.value;
                 
-                // Length
+                // Length check
                 const reqLength = document.getElementById('req-length');
                 if (password.length >= 8) {
                     reqLength.classList.remove('invalid');
@@ -314,7 +392,7 @@
                     reqLength.classList.add('invalid');
                 }
                 
-                // Letter
+                // Letter check
                 const reqLetter = document.getElementById('req-letter');
                 if (/[a-zA-Z]/.test(password)) {
                     reqLetter.classList.remove('invalid');
@@ -324,7 +402,7 @@
                     reqLetter.classList.add('invalid');
                 }
                 
-                // Number
+                // Number check
                 const reqNumber = document.getElementById('req-number');
                 if (/[0-9]/.test(password)) {
                     reqNumber.classList.remove('invalid');
@@ -358,6 +436,17 @@
 
         // Initial validation
         validateForm();
+        
+        // Před odesláním formuláře zobrazit loading stav
+        document.getElementById('set-password-form')?.addEventListener('submit', function() {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Nastavuji heslo...';
+        });
     </script>
+    <?php endif; ?>
 </body>
 </html>
+<?php
+// KRITICKÉ: Zastav další vykonávání kódu!
+exit;
+?>

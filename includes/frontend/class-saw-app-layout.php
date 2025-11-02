@@ -1,9 +1,12 @@
 <?php
 /**
- * SAW App Layout Manager
+ * SAW App Layout Manager - OPRAVENÁ VERZE
+ * 
+ * ✅ Načítá skutečnou SAW roli z cwp_saw_users
+ * ✅ Předává správná data do headeru
  * 
  * @package SAW_Visitors
- * @since 4.6.1
+ * @version 4.6.2
  */
 
 if (!defined('ABSPATH')) {
@@ -202,7 +205,7 @@ class SAW_App_Layout {
     }
     
     /**
-     * Get current user data
+     * Get current user data - ✅ OPRAVENO
      * 
      * @return array
      */
@@ -210,20 +213,41 @@ class SAW_App_Layout {
         if (is_user_logged_in()) {
             $wp_user = wp_get_current_user();
             
-            return array(
+            // ✅ OPRAVENO: Načti SAW user data z databáze
+            global $wpdb;
+            $saw_user = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM {$wpdb->prefix}saw_users WHERE wp_user_id = %d AND is_active = 1",
+                $wp_user->ID
+            ), ARRAY_A);
+            
+            if ($saw_user) {
+                return [
+                    'id' => $saw_user['id'],
+                    'name' => $saw_user['first_name'] . ' ' . $saw_user['last_name'],
+                    'email' => $wp_user->user_email,
+                    'role' => $saw_user['role'],  // ✅ SKUTEČNÁ SAW ROLE!
+                    'first_name' => $saw_user['first_name'],
+                    'last_name' => $saw_user['last_name'],
+                    'customer_id' => $saw_user['customer_id'],
+                    'branch_id' => $saw_user['branch_id'],
+                ];
+            }
+            
+            // Fallback pokud SAW user neexistuje
+            return [
                 'id' => $wp_user->ID,
                 'name' => $wp_user->display_name,
                 'email' => $wp_user->user_email,
                 'role' => current_user_can('manage_options') ? 'super_admin' : 'admin',
-            );
+            ];
         }
         
-        return array(
+        return [
             'id' => 0,
             'name' => 'Guest',
             'email' => '',
             'role' => 'guest',
-        );
+        ];
     }
     
     /**

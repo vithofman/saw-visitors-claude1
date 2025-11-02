@@ -39,8 +39,8 @@ class SAW_Visitors {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-session.php';
         }
         
-        if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-password.php')) {
-            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-password.php';
+        if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-password.php')) {
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-password.php';
         }
         
         if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/database/class-saw-database.php')) {

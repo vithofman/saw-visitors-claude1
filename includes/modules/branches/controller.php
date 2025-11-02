@@ -10,6 +10,9 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// ✅ DEBUG - zkontroluj že se soubor načítá
+error_log('🔥 BRANCHES CONTROLLER: File loaded at ' . date('H:i:s'));
+
 class SAW_Module_Branches_Controller extends SAW_Base_Controller 
 {
     use SAW_AJAX_Handlers;
@@ -17,6 +20,8 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
     private $file_uploader;
     
     public function __construct() {
+        error_log('🔥 BRANCHES CONTROLLER: __construct() called');
+        
         $this->config = require __DIR__ . '/config.php';
         $this->entity = $this->config['entity'];
         $this->config['path'] = __DIR__ . '/';
@@ -32,6 +37,8 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         add_action('wp_ajax_saw_get_branches_detail', [$this, 'ajax_get_detail']);
         add_action('wp_ajax_saw_search_branches', [$this, 'ajax_search']);
         add_action('wp_ajax_saw_delete_branches', [$this, 'ajax_delete']);
+        
+        error_log('🔥 BRANCHES CONTROLLER: AJAX actions registered');
         
         add_action('admin_enqueue_scripts', [$this, 'enqueue_assets']);
     }
@@ -80,19 +87,28 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
     }
     
     public function ajax_get_branches_for_switcher() {
+        error_log('🔥 BRANCHES CONTROLLER: ajax_get_branches_for_switcher() CALLED');
+        error_log('🔥 BRANCHES CONTROLLER: customer_id = ' . ($_POST['customer_id'] ?? 'MISSING'));
+        error_log('🔥 BRANCHES CONTROLLER: nonce = ' . ($_POST['nonce'] ?? 'MISSING'));
+        
         if (!current_user_can('read')) {
+            error_log('❌ BRANCHES CONTROLLER: Permission denied');
             wp_send_json_error(['message' => 'Nedostatečná oprávnění']);
         }
         
         if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'saw_branch_switcher')) {
+            error_log('❌ BRANCHES CONTROLLER: Invalid nonce');
             wp_send_json_error(['message' => 'Neplatný bezpečnostní token']);
         }
         
         $customer_id = isset($_POST['customer_id']) ? intval($_POST['customer_id']) : 0;
         
         if (!$customer_id) {
+            error_log('❌ BRANCHES CONTROLLER: Missing customer_id');
             wp_send_json_error(['message' => 'Chybí ID zákazníka']);
         }
+        
+        error_log('✅ BRANCHES CONTROLLER: All checks passed, querying database...');
         
         global $wpdb;
         $table = $wpdb->prefix . 'saw_branches';
@@ -106,7 +122,10 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
             $customer_id
         ), ARRAY_A);
         
+        error_log('✅ BRANCHES CONTROLLER: Found ' . count($branches) . ' branches');
+        
         if (!$branches) {
+            error_log('✅ BRANCHES CONTROLLER: Returning empty array');
             wp_send_json_success([
                 'branches' => [],
                 'current_branch_id' => $this->get_current_branch_id()
@@ -132,6 +151,8 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
             ];
         }, $branches);
         
+        error_log('✅ BRANCHES CONTROLLER: Sending success response');
+        
         wp_send_json_success([
             'branches' => $formatted,
             'current_branch_id' => $this->get_current_branch_id()
@@ -139,6 +160,8 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
     }
     
     public function ajax_switch_branch() {
+        error_log('🔥 BRANCHES CONTROLLER: ajax_switch_branch() CALLED');
+        
         if (!current_user_can('read')) {
             wp_send_json_error(['message' => 'Nedostatečná oprávnění']);
         }
@@ -183,6 +206,8 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         }
         
         $_SESSION['saw_current_branch_id'] = $branch_id;
+        
+        error_log('✅ BRANCHES CONTROLLER: Branch switched to ' . $branch_id);
         
         wp_send_json_success([
             'message' => 'Pobočka byla úspěšně přepnuta',
