@@ -235,4 +235,54 @@ class SAW_Module_Training_Languages_Model extends SAW_Base_Model
             $language_id
         ));
     }
+    
+    /**
+     * Override: Get all s počtem poboček přímo v SQL
+     */
+    public function get_all($filters = []) {
+        global $wpdb;
+        
+        // Základní WHERE podmínky
+        $where = ['1=1'];
+        $params = [];
+        
+        // Customer filter
+        if (!empty($filters['customer_id'])) {
+            $where[] = 'l.customer_id = %d';
+            $params[] = intval($filters['customer_id']);
+        }
+        
+        // Search
+        if (!empty($filters['search'])) {
+            $where[] = '(l.language_name LIKE %s OR l.language_code LIKE %s)';
+            $search_term = '%' . $wpdb->esc_like($filters['search']) . '%';
+            $params[] = $search_term;
+            $params[] = $search_term;
+        }
+        
+        // ORDER BY
+        $orderby = !empty($filters['orderby']) ? sanitize_text_field($filters['orderby']) : 'language_name';
+        $order = !empty($filters['order']) && strtoupper($filters['order']) === 'DESC' ? 'DESC' : 'ASC';
+        
+        // LIMIT
+        $per_page = !empty($filters['per_page']) ? intval($filters['per_page']) : 20;
+        $page = !empty($filters['page']) ? intval($filters['page']) : 1;
+        $offset = ($page - 1) * $per_page;
+        
+        // SQL dotaz s LEFT JOIN pro počet poboček
+        $sql = "SELECT l.*, 
+                COUNT(CASE WHEN lb.is_active = 1 THEN 1 END) as branches_count
+                FROM {$this->table} l
+                LEFT JOIN {$this->branches_table} lb ON l.id = lb.language_id
+                WHERE " . implode(' AND ', $where) . "
+                GROUP BY l.id
+                ORDER BY l.{$orderby} {$order}
+                LIMIT {$per_page} OFFSET {$offset}";
+        
+        if (!empty($params)) {
+            $sql = $wpdb->prepare($sql, $params);
+        }
+        
+        return $wpdb->get_results($sql, ARRAY_A);
+    }
 }

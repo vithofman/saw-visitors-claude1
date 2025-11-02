@@ -9,29 +9,23 @@
  * Requires at least: 6.0
  * Requires PHP: 8.1
  */
-
 define( 'SAW_DEBUG', true );
 define( 'WP_DEBUG', true );
 define( 'WP_DEBUG_LOG', true );
-
 if ( ! defined( 'ABSPATH' ) ) { exit; }
-
 /** Konstanta verze a cesty */
 define( 'SAW_VISITORS_VERSION', '4.7.0' );
 define( 'SAW_VISITORS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SAW_VISITORS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SAW_VISITORS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 define( 'SAW_DB_PREFIX', 'saw_' );
-
 /** V produkci měj vypnuto */
 if ( ! defined( 'SAW_DEBUG' ) ) {
 	define( 'SAW_DEBUG', false );
 }
-
 /** Aktivátor/Deaktivátor – jen registrovat hooky, nic nevypisovat */
 require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-activator.php';
 require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-deactivator.php';
-
 /** Tichý wrapper aktivace – zahodí případný výstup z tříd */
 function saw_activate_plugin_silent() {
 	if ( function_exists( 'ob_start' ) ) { ob_start(); }
@@ -39,14 +33,12 @@ function saw_activate_plugin_silent() {
 	if ( function_exists( 'ob_get_level' ) && ob_get_level() ) { ob_end_clean(); }
 }
 register_activation_hook( __FILE__, 'saw_activate_plugin_silent' );
-
 function saw_deactivate_plugin_silent() {
 	if ( function_exists( 'ob_start' ) ) { ob_start(); }
 	SAW_Deactivator::deactivate();
 	if ( function_exists( 'ob_get_level' ) && ob_get_level() ) { ob_end_clean(); }
 }
 register_deactivation_hook( __FILE__, 'saw_deactivate_plugin_silent' );
-
 /** Jednoduchý logger do debug.log */
 if ( ! function_exists( 'saw_log_error' ) ) {
 	function saw_log_error( $msg, $ctx = [] ) {
@@ -57,12 +49,16 @@ if ( ! function_exists( 'saw_log_error' ) ) {
 		}
 	}
 }
-
 /** Bezpečný bootstrap až po načtení všech pluginů */
 add_action( 'plugins_loaded', function () {
 	try {
 		require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-module-style-manager.php';
 		SAW_Module_Style_Manager::get_instance();
+		
+		// ✅ NAČÍST AUTO-SETUP TADY - uvnitř plugins_loaded
+		if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/modules/training-languages/class-auto-setup.php')) {
+			require_once SAW_VISITORS_PLUGIN_DIR . 'includes/modules/training-languages/class-auto-setup.php';
+		}
 		
 		$main = SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-visitors.php';
 		if ( ! file_exists( $main ) ) {
@@ -70,12 +66,10 @@ add_action( 'plugins_loaded', function () {
 			return;
 		}
 		require_once $main;
-
 		if ( ! class_exists( 'SAW_Visitors' ) ) {
 			saw_log_error( 'Class SAW_Visitors not found after require' );
 			return;
 		}
-
 		$instance = new SAW_Visitors();
 		if ( method_exists( $instance, 'run' ) ) {
 			$instance->run();

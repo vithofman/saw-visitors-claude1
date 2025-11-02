@@ -50,7 +50,7 @@ class SAW_Training_Languages_Auto_Setup {
             return;
         }
         
-        // Vytvořit češtinu
+        // ✅ OPRAVENO - pouze sloupce které skutečně existují v tabulce
         $result = $wpdb->insert(
             $wpdb->prefix . 'saw_training_languages',
             [
@@ -58,12 +58,9 @@ class SAW_Training_Languages_Auto_Setup {
                 'language_code' => 'cs',
                 'language_name' => 'Čeština',
                 'flag_emoji' => '🇨🇿',
-                'is_default' => 1,
-                'is_active' => 1,
-                'display_order' => 0,
                 'created_at' => current_time('mysql'),
             ],
-            ['%d', '%s', '%s', '%s', '%d', '%d', '%d', '%s']
+            ['%d', '%s', '%s', '%s', '%s']
         );
         
         if ($result) {
@@ -143,7 +140,7 @@ class SAW_Training_Languages_Auto_Setup {
             [
                 'language_id' => $czech_lang->id,
                 'branch_id' => $branch_id,
-                'is_default' => $is_first_branch ? 1 : 0, // První pobočka má češtinu jako výchozí
+                'is_default' => $is_first_branch ? 1 : 0,
                 'is_active' => 1,
                 'display_order' => 0,
                 'created_at' => current_time('mysql'),
