@@ -233,15 +233,15 @@ class SAW_App_Sidebar {
                         'icon' => '👤',
                     ),
                     array(
-                        'id' => 'departments',
-                        'label' => 'Oddělení',
-                        'url' => '/admin/settings/departments',
-                        'icon' => '🏛️',
-                    ),
-                    array(
                         'id' => 'branches',
                         'label' => 'Pobočky',
                         'url' => '/admin/branches',
+                        'icon' => '🏢',
+                    ),
+                    array(
+                        'id' => 'departments',
+                        'label' => 'Oddělení',
+                        'url' => '/admin/departments',
                         'icon' => '🏢',
                     ),
                     array(

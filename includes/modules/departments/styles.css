@@ -1,0 +1,359 @@
+/**
+ * Departments Module Styles - Modern Design
+ * 
+ * @package SAW_Visitors
+ * @version 1.0.0
+ */
+
+/* ============================================
+   MODERN FORM STYLES
+   ============================================ */
+.saw-form-modern .saw-form-card {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 24px;
+    overflow: hidden;
+}
+
+.saw-form-modern .saw-form-card-header {
+    padding: 24px 32px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+}
+
+.saw-form-modern .saw-form-card-header h2 {
+    margin: 0 0 4px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.saw-form-modern .saw-form-card-header p {
+    margin: 0;
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.saw-form-modern .saw-form-card-body {
+    padding: 32px;
+}
+
+.saw-form-modern .saw-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.saw-form-modern .saw-form-grid:last-child {
+    margin-bottom: 0;
+}
+
+.saw-form-modern .saw-form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.saw-form-modern .saw-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    line-height: 1;
+}
+
+.saw-form-modern .saw-required-mark {
+    color: #ef4444;
+    margin-left: 2px;
+}
+
+.saw-form-modern .saw-input,
+.saw-form-modern .saw-select,
+.saw-form-modern .saw-textarea {
+    width: 100%;
+    height: 44px;
+    padding: 0 16px;
+    font-size: 15px;
+    color: #111827;
+    background: #ffffff;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.saw-form-modern .saw-textarea {
+    height: auto;
+    padding: 12px 16px;
+    resize: vertical;
+    line-height: 1.5;
+}
+
+.saw-form-modern .saw-input:focus,
+.saw-form-modern .saw-select:focus,
+.saw-form-modern .saw-textarea:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.saw-form-modern .saw-input::placeholder,
+.saw-form-modern .saw-textarea::placeholder {
+    color: #9ca3af;
+}
+
+.saw-form-modern .saw-field-hint {
+    font-size: 13px;
+    color: #6b7280;
+    line-height: 1.4;
+}
+
+/* ============================================
+   CHECKBOX CARD
+   ============================================ */
+.saw-form-modern .saw-checkbox-card {
+    display: flex;
+    align-items: stretch;
+    min-height: 44px;
+}
+
+.saw-form-modern .saw-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 12px 16px;
+    background: #f9fafb;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.saw-form-modern .saw-checkbox-label:hover {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+}
+
+.saw-form-modern .saw-checkbox {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    cursor: pointer;
+    accent-color: #2563eb;
+    flex-shrink: 0;
+}
+
+.saw-form-modern .saw-checkbox-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.saw-form-modern .saw-checkbox-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #111827;
+    line-height: 1.2;
+}
+
+.saw-form-modern .saw-checkbox-desc {
+    font-size: 13px;
+    color: #6b7280;
+    line-height: 1.3;
+}
+
+.saw-form-modern .saw-checkbox:checked + .saw-checkbox-content .saw-checkbox-title {
+    color: #2563eb;
+}
+
+/* ============================================
+   FORM ACTIONS
+   ============================================ */
+.saw-form-modern .saw-form-actions {
+    display: flex;
+    gap: 12px;
+    padding-top: 8px;
+}
+
+.saw-form-modern .saw-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    font-size: 15px;
+    font-weight: 600;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    line-height: 1;
+}
+
+.saw-form-modern .saw-btn-primary {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+.saw-form-modern .saw-btn-primary:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.saw-form-modern .saw-btn-secondary {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.saw-form-modern .saw-btn-secondary:hover {
+    background: #e5e7eb;
+}
+
+/* ============================================
+   LIST TABLE STYLES
+   ============================================ */
+.saw-module-departments .saw-department-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    margin-right: 12px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 8px;
+    font-size: 24px;
+    vertical-align: middle;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.saw-module-departments .saw-department-name {
+    display: flex;
+    align-items: center;
+}
+
+.saw-module-departments .saw-department-name strong {
+    font-size: 15px;
+    color: #111827;
+}
+
+.saw-module-departments .saw-department-description {
+    color: #6b7280;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.saw-module-departments .saw-version-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    background: #eff6ff;
+    border: 2px solid #bfdbfe;
+    border-radius: 8px;
+    font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e40af;
+}
+
+.saw-module-departments .saw-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    margin: 0 4px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.saw-module-departments .saw-action-btn .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: #6b7280;
+}
+
+.saw-module-departments .saw-action-edit:hover {
+    background: #eff6ff;
+}
+
+.saw-module-departments .saw-action-edit:hover .dashicons {
+    color: #2563eb;
+}
+
+.saw-module-departments .saw-action-delete:hover {
+    background: #fef2f2;
+}
+
+.saw-module-departments .saw-action-delete:hover .dashicons {
+    color: #dc2626;
+}
+
+.saw-module-departments .saw-department-row:hover {
+    background-color: #f9fafb;
+}
+
+.saw-module-departments .saw-text-muted {
+    color: #9ca3af;
+    font-size: 13px;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+    .saw-form-modern .saw-form-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .saw-form-modern .saw-form-card-header {
+        padding: 20px 24px;
+    }
+    
+    .saw-form-modern .saw-form-card-body {
+        padding: 24px;
+    }
+    
+    .saw-form-modern .saw-form-actions {
+        flex-direction: column;
+    }
+    
+    .saw-form-modern .saw-btn {
+        justify-content: center;
+        width: 100%;
+    }
+    
+    .saw-module-departments .saw-action-btn {
+        width: 32px;
+        height: 32px;
+        margin: 0 2px;
+    }
+    
+    .saw-module-departments .saw-action-btn .dashicons {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+    }
+    
+    .saw-module-departments .saw-department-icon {
+        width: 40px;
+        height: 40px;
+        margin-right: 8px;
+        font-size: 20px;
+    }
+    
+    .saw-module-departments .saw-version-badge {
+        font-size: 11px;
+        padding: 4px 8px;
+    }
+}
