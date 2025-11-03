@@ -1,11 +1,4 @@
 <?php
-/**
- * SAW App Sidebar Component - UPDATED with Permissions
- * 
- * @package SAW_Visitors
- * @version 4.10.0
- */
-
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -19,12 +12,12 @@ class SAW_App_Sidebar {
     private $saw_role;
     
     public function __construct($user = null, $customer = null, $active_menu = '', $current_branch = null) {
-        $this->user = $user ?: array('role' => 'admin');
-        $this->customer = $customer ?: array(
+        $this->user = $user ?: ['role' => 'admin'];
+        $this->customer = $customer ?: [
             'id' => 0,
             'name' => 'Demo zákazník',
             'logo_url' => '',
-        );
+        ];
         $this->active_menu = $active_menu;
         $this->current_branch = $current_branch ?: $this->load_current_branch();
         $this->saw_role = $this->get_current_saw_role();
@@ -88,7 +81,7 @@ class SAW_App_Sidebar {
     }
     
     private function load_current_branch() {
-        $branch_id = $this->get_current_branch_id();
+        $branch_id = SAW_Context::get_branch_id();
         
         if (!$branch_id || !$this->customer['id']) {
             return null;
@@ -107,55 +100,7 @@ class SAW_App_Sidebar {
             $this->customer['id']
         ), ARRAY_A);
         
-        if (!$branch) {
-            $this->clear_invalid_branch();
-            return null;
-        }
-        
-        return $branch;
-    }
-    
-    private function clear_invalid_branch() {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        unset($_SESSION['saw_current_branch_id']);
-        
-        if (is_user_logged_in()) {
-            delete_user_meta(get_current_user_id(), 'saw_current_branch_id');
-        }
-    }
-    
-    private function get_current_branch_id() {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        
-        if (isset($_SESSION['saw_current_branch_id'])) {
-            return intval($_SESSION['saw_current_branch_id']);
-        }
-        
-        if (is_user_logged_in()) {
-            $user_id = get_current_user_id();
-            
-            if (isset($_SESSION['saw_current_customer_id'])) {
-                $customer_id = intval($_SESSION['saw_current_customer_id']);
-                $branch_id = get_user_meta($user_id, 'saw_branch_customer_' . $customer_id, true);
-                
-                if ($branch_id) {
-                    $_SESSION['saw_current_branch_id'] = intval($branch_id);
-                    return intval($branch_id);
-                }
-            }
-            
-            $branch_id = get_user_meta($user_id, 'saw_current_branch_id', true);
-            if ($branch_id) {
-                $_SESSION['saw_current_branch_id'] = intval($branch_id);
-                return intval($branch_id);
-            }
-        }
-        
-        return null;
+        return $branch ?: null;
     }
     
     private function section_has_active_item($section) {
@@ -202,7 +147,9 @@ class SAW_App_Sidebar {
                 </button>
             </div>
             
-            <?php $this->render_branch_switcher(); ?>
+            <?php if ($this->saw_role === 'super_admin' || $this->saw_role === 'admin'): ?>
+                <?php $this->render_branch_switcher(); ?>
+            <?php endif; ?>
             
             <nav class="saw-sidebar-nav">
                 <?php 
@@ -274,118 +221,41 @@ class SAW_App_Sidebar {
     }
     
     private function get_menu_items() {
-        $menu = array(
-            array(
-                'items' => array(
-                    array(
-                        'id' => 'dashboard',
-                        'label' => 'Dashboard',
-                        'url' => '/admin/',
-                        'icon' => '📊',
-                    ),
-                    array(
-                        'id' => 'invitations',
-                        'label' => 'Pozvánky',
-                        'url' => '/admin/invitations',
-                        'icon' => '📧',
-                    ),
-                    array(
-                        'id' => 'visits',
-                        'label' => 'Přehled návštěv',
-                        'url' => '/admin/visits',
-                        'icon' => '👥',
-                    ),
-                    array(
-                        'id' => 'statistics',
-                        'label' => 'Statistiky',
-                        'url' => '/admin/statistics',
-                        'icon' => '📈',
-                    ),
-                ),
-            ),
-            array(
+        return [
+            [
+                'items' => [
+                    ['id' => 'dashboard', 'label' => 'Dashboard', 'url' => '/admin/', 'icon' => '📊'],
+                    ['id' => 'invitations', 'label' => 'Pozvánky', 'url' => '/admin/invitations', 'icon' => '📧'],
+                    ['id' => 'visits', 'label' => 'Přehled návštěv', 'url' => '/admin/visits', 'icon' => '👥'],
+                    ['id' => 'statistics', 'label' => 'Statistiky', 'url' => '/admin/statistics', 'icon' => '📈'],
+                ],
+            ],
+            [
                 'heading' => 'Organizace',
-                'items' => array(
-                    array(
-                        'id' => 'branches',
-                        'label' => 'Pobočky',
-                        'url' => '/admin/branches',
-                        'icon' => '🏢',
-                    ),
-                    array(
-                        'id' => 'departments',
-                        'label' => 'Oddělení',
-                        'url' => '/admin/departments',
-                        'icon' => '📂',
-                    ),
-                    array(
-                        'id' => 'users',
-                        'label' => 'Uživatelé',
-                        'url' => '/admin/users',
-                        'icon' => '👤',
-                    ),
-                ),
-            ),
-            array(
+                'items' => [
+                    ['id' => 'branches', 'label' => 'Pobočky', 'url' => '/admin/branches', 'icon' => '🏢'],
+                    ['id' => 'departments', 'label' => 'Oddělení', 'url' => '/admin/departments', 'icon' => '📂'],
+                    ['id' => 'users', 'label' => 'Uživatelé', 'url' => '/admin/users', 'icon' => '👤'],
+                ],
+            ],
+            [
                 'heading' => 'Školení',
-                'items' => array(
-                    array(
-                        'id' => 'training-languages',
-                        'label' => 'Jazyky',
-                        'url' => '/admin/training-languages',
-                        'icon' => '🌐',
-                    ),
-                    array(
-                        'id' => 'content',
-                        'label' => 'Obsah',
-                        'url' => '/admin/settings/content',
-                        'icon' => '📚',
-                    ),
-                    array(
-                        'id' => 'training',
-                        'label' => 'Verze',
-                        'url' => '/admin/settings/training',
-                        'icon' => '🎓',
-                    ),
-                ),
-            ),
-            array(
+                'items' => [
+                    ['id' => 'training-languages', 'label' => 'Jazyky', 'url' => '/admin/training-languages', 'icon' => '🌍'],
+                    ['id' => 'content', 'label' => 'Obsah', 'url' => '/admin/settings/content', 'icon' => '📚'],
+                    ['id' => 'training', 'label' => 'Verze', 'url' => '/admin/settings/training', 'icon' => '🎓'],
+                ],
+            ],
+            [
                 'heading' => 'Systém',
-                'items' => array(
-                    array(
-                        'id' => 'permissions',
-                        'label' => 'Oprávnění',
-                        'url' => '/admin/permissions',
-                        'icon' => '🔐',
-                    ),
-                    array(
-                        'id' => 'customers',
-                        'label' => 'Zákazníci',
-                        'url' => '/admin/settings/customers',
-                        'icon' => '🏬',
-                    ),
-                    array(
-                        'id' => 'account-types',
-                        'label' => 'Typy účtů',
-                        'url' => '/admin/settings/account-types',
-                        'icon' => '💳',
-                    ),
-                    array(
-                        'id' => 'company',
-                        'label' => 'Firma',
-                        'url' => '/admin/settings/company',
-                        'icon' => '⚙️',
-                    ),
-                    array(
-                        'id' => 'about',
-                        'label' => 'O aplikaci',
-                        'url' => '/admin/settings/about',
-                        'icon' => 'ℹ️',
-                    ),
-                ),
-            ),
-        );
-        
-        return $menu;
+                'items' => [
+                    ['id' => 'permissions', 'label' => 'Oprávnění', 'url' => '/admin/permissions', 'icon' => '🔐'],
+                    ['id' => 'customers', 'label' => 'Zákazníci', 'url' => '/admin/settings/customers', 'icon' => '🏬'],
+                    ['id' => 'account-types', 'label' => 'Typy účtů', 'url' => '/admin/settings/account-types', 'icon' => '💳'],
+                    ['id' => 'company', 'label' => 'Firma', 'url' => '/admin/settings/company', 'icon' => '⚙️'],
+                    ['id' => 'about', 'label' => 'O aplikaci', 'url' => '/admin/settings/about', 'icon' => 'ℹ️'],
+                ],
+            ],
+        ];
     }
 }

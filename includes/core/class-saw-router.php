@@ -3,11 +3,11 @@
  * SAW Router - KOMPLETNÍ OPRAVENÁ VERZE
  * 
  * ✅ ZACHOVÁNO: Vše co fungovalo
- * ✅ PŘIDÁNO: Auth routy (login, set-password, reset-password, logout)
- * ✅ OPRAVENO: get_current_user_data() a get_current_customer_data()
+ * ✅ PŘIDÁNO: SAW_Context inicializace na začátku
+ * ✅ OPRAVENO: get_current_customer_data() používá SAW_Context
  * 
  * @package SAW_Visitors
- * @version 2.0.2
+ * @version 2.0.3
  */
 
 if (!defined('ABSPATH')) {
@@ -17,38 +17,28 @@ if (!defined('ABSPATH')) {
 class SAW_Router {
     
     public function register_routes() {
-        // ================================================
         // AUTENTIZAČNÍ ROUTY
-        // ================================================
         add_rewrite_rule('^login/?$', 'index.php?saw_route=auth&saw_action=login', 'top');
         add_rewrite_rule('^set-password/?$', 'index.php?saw_route=auth&saw_action=set-password', 'top');
         add_rewrite_rule('^reset-password/?$', 'index.php?saw_route=auth&saw_action=reset-password', 'top');
         add_rewrite_rule('^logout/?$', 'index.php?saw_route=auth&saw_action=logout', 'top');
         
-        // ================================================
         // ADMIN ROUTY
-        // ================================================
         add_rewrite_rule('^admin/?$', 'index.php?saw_route=admin', 'top');
         add_rewrite_rule('^admin/([^/]+)/?$', 'index.php?saw_route=admin&saw_path=$matches[1]', 'top');
         add_rewrite_rule('^admin/([^/]+)/(.+)', 'index.php?saw_route=admin&saw_path=$matches[1]/$matches[2]', 'top');
         
-        // ================================================
         // MANAGER ROUTY
-        // ================================================
         add_rewrite_rule('^manager/?$', 'index.php?saw_route=manager', 'top');
         add_rewrite_rule('^manager/([^/]+)/?$', 'index.php?saw_route=manager&saw_path=$matches[1]', 'top');
         add_rewrite_rule('^manager/([^/]+)/(.+)', 'index.php?saw_route=manager&saw_path=$matches[1]/$matches[2]', 'top');
         
-        // ================================================
         // TERMINAL ROUTY
-        // ================================================
         add_rewrite_rule('^terminal/?$', 'index.php?saw_route=terminal', 'top');
         add_rewrite_rule('^terminal/([^/]+)/?$', 'index.php?saw_route=terminal&saw_path=$matches[1]', 'top');
         add_rewrite_rule('^terminal/([^/]+)/(.+)', 'index.php?saw_route=terminal&saw_path=$matches[1]/$matches[2]', 'top');
         
-        // ================================================
         // VISITOR ROUTY
-        // ================================================
         add_rewrite_rule('^visitor/?$', 'index.php?saw_route=visitor', 'top');
         add_rewrite_rule('^visitor/([^/]+)/?$', 'index.php?saw_route=visitor&saw_path=$matches[1]', 'top');
         add_rewrite_rule('^visitor/([^/]+)/(.+)', 'index.php?saw_route=visitor&saw_path=$matches[1]/$matches[2]', 'top');
@@ -62,7 +52,34 @@ class SAW_Router {
     }
     
     public function dispatch($route = '', $path = '') {
-        if (empty($route)) {
+
+ // ✅ KRITICKÁ OPRAVA: Pro AJAX requesty NIC NEDĚLEJ!
+    if (wp_doing_ajax()) {
+        return;
+    }
+    
+    if (empty($route)) {
+        $route = get_query_var('saw_route');
+    }
+    
+    if (empty($path)) {
+        $path = get_query_var('saw_path');
+    }
+    
+    if (empty($route)) {
+        return;
+    }
+    
+    // ✅ Inicializuj SAW_Context HNED na začátku!
+    if (class_exists('SAW_Context') && is_user_logged_in()) {
+        SAW_Context::instance();
+    }
+    
+    $this->load_frontend_components();
+
+
+        
+if (empty($route)) {
             $route = get_query_var('saw_route');
         }
         
@@ -72,6 +89,11 @@ class SAW_Router {
         
         if (empty($route)) {
             return;
+        }
+        
+        // ✅ KRITICKÁ OPRAVA: Inicializuj SAW_Context HNED na začátku!
+        if (class_exists('SAW_Context') && is_user_logged_in()) {
+            SAW_Context::instance();
         }
         
         $this->load_frontend_components();
@@ -105,9 +127,6 @@ class SAW_Router {
         exit;
     }
     
-    // ================================================
-    // AUTH ROUTES
-    // ================================================
     private function handle_auth_route() {
         $action = get_query_var('saw_action');
         
@@ -193,9 +212,6 @@ class SAW_Router {
         }
     }
     
-    // ================================================
-    // MODULE HANDLING
-    // ================================================
     public function get_active_module() {
         $path = get_query_var('saw_path');
         
@@ -297,9 +313,6 @@ class SAW_Router {
         exit;
     }
     
-    // ================================================
-    // ROUTE HANDLERS
-    // ================================================
     private function handle_admin_route($path) {
         if (!$this->is_logged_in()) {
             $this->redirect_to_login('admin');
@@ -449,9 +462,6 @@ class SAW_Router {
         $this->render_page('404 - Stránka nenalezena', '404', 'error', '');
     }
     
-    // ================================================
-    // ✅ OPRAVENO: GET CURRENT USER DATA
-    // ================================================
     private function get_current_user_data() {
         if (is_user_logged_in()) {
             $wp_user = wp_get_current_user();
@@ -461,12 +471,6 @@ class SAW_Router {
                 "SELECT * FROM {$wpdb->prefix}saw_users WHERE wp_user_id = %d AND is_active = 1",
                 $wp_user->ID
             ), ARRAY_A);
-            
-            // Debug log
-            if (defined('SAW_DEBUG') && SAW_DEBUG) {
-                error_log('Router get_current_user_data: wp_user_id=' . $wp_user->ID);
-                error_log('Router get_current_user_data: saw_user=' . print_r($saw_user, true));
-            }
             
             if ($saw_user) {
                 return array(
@@ -481,7 +485,6 @@ class SAW_Router {
                 );
             }
             
-            // Fallback pokud SAW user neexistuje
             return array(
                 'id' => $wp_user->ID,
                 'name' => $wp_user->display_name,
@@ -502,10 +505,21 @@ class SAW_Router {
         );
     }
     
-    // ================================================
-    // ✅ OPRAVENO: GET CURRENT CUSTOMER DATA
-    // ================================================
     private function get_current_customer_data() {
+        // ✅ OPRAVA: Použij SAW_Context jako prioritu
+        if (class_exists('SAW_Context')) {
+            $customer = SAW_Context::get_customer_data();
+            if ($customer) {
+                return array(
+                    'id' => $customer['id'],
+                    'name' => $customer['name'],
+                    'ico' => $customer['ico'] ?? '',
+                    'address' => $customer['address'] ?? '',
+                    'logo_url' => $customer['logo_url'] ?? '',
+                );
+            }
+        }
+        
         global $wpdb;
         
         if (!is_user_logged_in()) {
@@ -519,11 +533,6 @@ class SAW_Router {
         }
         
         $wp_user = wp_get_current_user();
-        
-        // Debug log
-        if (defined('SAW_DEBUG') && SAW_DEBUG) {
-            error_log('Router get_current_customer_data: START for wp_user_id=' . $wp_user->ID);
-        }
         
         // Super Admin - ze session
         if (current_user_can('manage_options')) {
@@ -544,10 +553,6 @@ class SAW_Router {
                 }
             }
             
-            if (defined('SAW_DEBUG') && SAW_DEBUG) {
-                error_log('Router: Super Admin customer_id from session/meta = ' . $customer_id);
-            }
-            
             if ($customer_id) {
                 $customer = $wpdb->get_row($wpdb->prepare(
                     "SELECT * FROM {$wpdb->prefix}saw_customers WHERE id = %d",
@@ -555,9 +560,6 @@ class SAW_Router {
                 ), ARRAY_A);
                 
                 if ($customer) {
-                    if (defined('SAW_DEBUG') && SAW_DEBUG) {
-                        error_log('Router: Super Admin loaded customer: ' . $customer['name']);
-                    }
                     return array(
                         'id' => $customer['id'],
                         'name' => $customer['name'],
@@ -575,10 +577,6 @@ class SAW_Router {
             $wp_user->ID
         ), ARRAY_A);
         
-        if (defined('SAW_DEBUG') && SAW_DEBUG) {
-            error_log('Router: Admin/Manager saw_user = ' . print_r($saw_user, true));
-        }
-        
         if ($saw_user && !empty($saw_user['customer_id'])) {
             $customer = $wpdb->get_row($wpdb->prepare(
                 "SELECT * FROM {$wpdb->prefix}saw_customers WHERE id = %d",
@@ -586,9 +584,6 @@ class SAW_Router {
             ), ARRAY_A);
             
             if ($customer) {
-                if (defined('SAW_DEBUG') && SAW_DEBUG) {
-                    error_log('Router: Admin/Manager loaded customer: ' . $customer['name'] . ' (ID: ' . $customer['id'] . ')');
-                }
                 return array(
                     'id' => $customer['id'],
                     'name' => $customer['name'],
@@ -600,10 +595,6 @@ class SAW_Router {
         }
         
         // Fallback - první zákazník
-        if (defined('SAW_DEBUG') && SAW_DEBUG) {
-            error_log('Router: Falling back to first customer');
-        }
-        
         $customer = $wpdb->get_row(
             "SELECT * FROM {$wpdb->prefix}saw_customers ORDER BY id ASC LIMIT 1",
             ARRAY_A
@@ -616,10 +607,6 @@ class SAW_Router {
             $_SESSION['saw_current_customer_id'] = intval($customer['id']);
             update_user_meta($wp_user->ID, 'saw_current_customer_id', intval($customer['id']));
             
-            if (defined('SAW_DEBUG') && SAW_DEBUG) {
-                error_log('Router: Fallback loaded: ' . $customer['name'] . ' (ID: ' . $customer['id'] . ')');
-            }
-            
             return array(
                 'id' => $customer['id'],
                 'name' => $customer['name'],
@@ -627,10 +614,6 @@ class SAW_Router {
                 'address' => $customer['address'] ?? '',
                 'logo_url' => $customer['logo_url'] ?? '',
             );
-        }
-        
-        if (defined('SAW_DEBUG') && SAW_DEBUG) {
-            error_log('Router: NO CUSTOMER FOUND!');
         }
         
         return array(

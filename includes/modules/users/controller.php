@@ -111,29 +111,53 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
         // ===================================
         // 2. AKTUALIZACE EXISTUJÍCÍHO UŽIVATELE
         // ===================================
-        else {
-            $existing_user = $this->model->get_by_id($data['id']);
-            
-            if (!$existing_user) {
-                wp_die('Uživatel nenalezen');
-            }
-            
-            // Pokud se změnila role, aktualizuj WP roli
-            if (!empty($existing_user['wp_user_id']) && $existing_user['role'] !== $data['role']) {
-                $wp_user = new WP_User($existing_user['wp_user_id']);
-                $new_wp_role = $this->map_saw_to_wp_role($data['role']);
-                
-                $wp_user->set_role($new_wp_role);
-                
-                // Pro super_admina přidej i administrator capability
-                if ($data['role'] === 'super_admin') {
-                    $wp_user->add_cap('manage_options');
-                }
-            }
-            
-            // Zachovej wp_user_id
-            $data['wp_user_id'] = $existing_user['wp_user_id'];
+        // ===================================
+// 2. AKTUALIZACE EXISTUJÍCÍHO UŽIVATELE
+// ===================================
+else {
+    $existing_user = $this->model->get_by_id($data['id']);
+    
+    if (!$existing_user) {
+        wp_die('Uživatel nenalezen');
+    }
+    
+    // ✅ NEW: Pokud se role změnila z manager na jinou, vymaž branch_id
+    if ($existing_user['role'] === 'manager' && $data['role'] !== 'manager') {
+        $data['branch_id'] = null;
+        
+        // Vymaž departments assignments hned
+        global $wpdb;
+        $wpdb->delete(
+            $wpdb->prefix . 'saw_user_departments',
+            ['user_id' => $data['id']],
+            ['%d']
+        );
+        
+        // Nastav pending_departments na prázdné pole aby se nevolal after_save
+        $this->pending_departments = [];
+    }
+    
+    // ✅ NEW: Pokud se role změnila z (super_manager/terminal) na admin, vymaž branch_id
+    if (in_array($existing_user['role'], ['super_manager', 'terminal']) && $data['role'] === 'admin') {
+        $data['branch_id'] = null;
+    }
+    
+    // Pokud se změnila role, aktualizuj WP roli
+    if (!empty($existing_user['wp_user_id']) && $existing_user['role'] !== $data['role']) {
+        $wp_user = new WP_User($existing_user['wp_user_id']);
+        $new_wp_role = $this->map_saw_to_wp_role($data['role']);
+        
+        $wp_user->set_role($new_wp_role);
+        
+        // Pro super_admina přidej i administrator capability
+        if ($data['role'] === 'super_admin') {
+            $wp_user->add_cap('manage_options');
         }
+    }
+    
+    // Zachovej wp_user_id
+    $data['wp_user_id'] = $existing_user['wp_user_id'];
+}
         
         // ===================================
         // 3. PIN PRO TERMINAL

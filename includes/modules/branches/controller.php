@@ -1,11 +1,9 @@
 <?php
 /**
- * Branches Module Controller - CLEANED
- * 
- * ✅ NO HARDCODED FILTERS - only permissions-based scope
+ * Branches Module Controller
  * 
  * @package SAW_Visitors
- * @version 1.0.2
+ * @since 4.8.0
  */
 
 if (!defined('ABSPATH')) {
@@ -29,7 +27,6 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/class-saw-file-uploader.php';
         $this->file_uploader = new SAW_File_Uploader();
         
-        // AJAX handlers
         add_action('wp_ajax_saw_get_branches_for_switcher', [$this, 'ajax_get_branches_for_switcher']);
         add_action('wp_ajax_saw_switch_branch', [$this, 'ajax_switch_branch']);
         add_action('wp_ajax_saw_get_branches_detail', [$this, 'ajax_get_detail']);
@@ -44,7 +41,6 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
     }
     
     protected function before_save($data) {
-        // Handle image upload/removal
         if ($this->file_uploader->should_remove_file('image_url')) {
             if (!empty($data['id'])) {
                 $existing = $this->model->get_by_id($data['id']);
@@ -108,7 +104,7 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         if ($cached !== false) {
             wp_send_json_success([
                 'branches' => $cached,
-                'current_branch_id' => $this->get_current_branch_id(),
+                'current_branch_id' => SAW_Context::get_branch_id(),
                 'cached' => true
             ]);
             return;
@@ -148,7 +144,7 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         
         wp_send_json_success([
             'branches' => $formatted,
-            'current_branch_id' => $this->get_current_branch_id()
+            'current_branch_id' => SAW_Context::get_branch_id()
         ]);
     }
     
@@ -166,7 +162,7 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         $branch_id = isset($_POST['branch_id']) ? intval($_POST['branch_id']) : 0;
         
         if ($branch_id <= 0) {
-            $this->clear_branch_session();
+            SAW_Context::set_branch_id(null);
             wp_send_json_success([
                 'message' => 'Pobočka byla odstraněna',
                 'branch_id' => null
@@ -187,56 +183,12 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
             return;
         }
         
-        if (is_user_logged_in()) {
-            $user_id = get_current_user_id();
-            $customer_id = $branch['customer_id'];
-            
-            update_user_meta($user_id, 'saw_current_branch_id', $branch_id);
-            update_user_meta($user_id, 'saw_branch_customer_' . $customer_id, $branch_id);
-        }
-        
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        
-        $_SESSION['saw_current_branch_id'] = $branch_id;
+        SAW_Context::set_branch_id($branch_id);
         
         wp_send_json_success([
             'message' => 'Pobočka byla úspěšně přepnuta',
             'branch_id' => $branch_id,
             'branch_name' => $branch['name']
         ]);
-    }
-    
-    private function get_current_branch_id() {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        
-        if (isset($_SESSION['saw_current_branch_id'])) {
-            return intval($_SESSION['saw_current_branch_id']);
-        }
-        
-        if (is_user_logged_in()) {
-            $meta_id = get_user_meta(get_current_user_id(), 'saw_current_branch_id', true);
-            if ($meta_id) {
-                $_SESSION['saw_current_branch_id'] = intval($meta_id);
-                return intval($meta_id);
-            }
-        }
-        
-        return null;
-    }
-    
-    private function clear_branch_session() {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        
-        unset($_SESSION['saw_current_branch_id']);
-        
-        if (is_user_logged_in()) {
-            delete_user_meta(get_current_user_id(), 'saw_current_branch_id');
-        }
     }
 }

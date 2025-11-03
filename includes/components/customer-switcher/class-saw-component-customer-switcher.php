@@ -1,11 +1,4 @@
 <?php
-/**
- * Customer Switcher Component - FIXED
- * 
- * @package SAW_Visitors
- * @since 4.7.0
- */
-
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -16,73 +9,73 @@ class SAW_Component_Customer_Switcher {
     private $current_user;
     
     public function __construct($customer = null, $user = null) {
-        // ✅ OPRAVA: Pokud není customer zadán, načti ho ze session
         if (!$customer) {
-            $customer = $this->get_customer_from_session();
+            $customer_id = $this->get_customer_id_from_context();
+            if ($customer_id) {
+                global $wpdb;
+                $customer = $wpdb->get_row($wpdb->prepare(
+                    "SELECT * FROM {$wpdb->prefix}saw_customers WHERE id = %d",
+                    $customer_id
+                ), ARRAY_A);
+            }
         }
         
-        $this->current_customer = $customer ?: array(
-            'id' => 1,
-            'name' => 'Demo Firma s.r.o.',
-            'ico' => '12345678',
-            'logo_url' => '',
-        );
+        if (!$customer) {
+            wp_die('KRITICKÁ CHYBA: Nepodařilo se načíst zákazníka. Customer ID: ' . ($customer_id ?? 'NULL'));
+        }
         
-        $this->current_user = $user ?: array(
-            'id' => 1,
-            'role' => 'admin',
-        );
+        $this->current_customer = $customer;
+        
+        $this->current_user = $user ?: [
+            'id' => get_current_user_id(),
+            'role' => current_user_can('manage_options') ? 'super_admin' : 'admin',
+        ];
     }
     
-    /**
-     * ✅ NOVÁ METODA: Získej správný customer ze session
-     */
-    private function get_customer_from_session() {
+    private function get_customer_id_from_context() {
+        // 1. SAW_Context (priorita)
+        if (class_exists('SAW_Context')) {
+            $context_id = SAW_Context::get_customer_id();
+            if ($context_id) {
+                return $context_id;
+            }
+        }
+        
+        // 2. Session
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
         
-        // Získej customer_id ze session
-        $customer_id = isset($_SESSION['saw_current_customer_id']) 
-            ? intval($_SESSION['saw_current_customer_id']) 
-            : 0;
-        
-        // Fallback na user meta
-        if (!$customer_id && is_user_logged_in()) {
-            $customer_id = get_user_meta(get_current_user_id(), 'saw_current_customer_id', true);
-            $customer_id = $customer_id ? intval($customer_id) : 0;
+        if (isset($_SESSION['saw_current_customer_id'])) {
+            return intval($_SESSION['saw_current_customer_id']);
         }
         
-        // Fallback na DB (pro non-super admins)
-        if (!$customer_id && is_user_logged_in()) {
+        // 3. User meta
+        if (is_user_logged_in()) {
+            $meta = get_user_meta(get_current_user_id(), 'saw_current_customer_id', true);
+            if ($meta) {
+                return intval($meta);
+            }
+        }
+        
+        // 4. DB pro non-super admins
+        if (is_user_logged_in() && !current_user_can('manage_options')) {
             global $wpdb;
             $saw_user = $wpdb->get_row($wpdb->prepare(
                 "SELECT customer_id FROM {$wpdb->prefix}saw_users WHERE wp_user_id = %d AND is_active = 1",
                 get_current_user_id()
             ), ARRAY_A);
             
-            if ($saw_user) {
+            if ($saw_user && $saw_user['customer_id']) {
                 $customer_id = intval($saw_user['customer_id']);
+                $_SESSION['saw_current_customer_id'] = $customer_id;
+                return $customer_id;
             }
         }
         
-        if (!$customer_id) {
-            return null;
-        }
-        
-        // Načti customer z DB
-        global $wpdb;
-        $customer = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_customers WHERE id = %d",
-            $customer_id
-        ), ARRAY_A);
-        
-        return $customer ?: null;
+        return null;
     }
     
-    /**
-     * Render customer switcher
-     */
     public function render() {
         if (!$this->is_super_admin()) {
             $this->render_static_info();
@@ -136,9 +129,6 @@ class SAW_Component_Customer_Switcher {
         <?php
     }
     
-    /**
-     * Render static info (pro non-superadminy)
-     */
     private function render_static_info() {
         $logo_url = $this->get_logo_url();
         ?>
@@ -165,21 +155,18 @@ class SAW_Component_Customer_Switcher {
         <?php
     }
     
-    /**
-     * Enqueue assets
-     */
     private function enqueue_assets() {
         wp_enqueue_style(
             'saw-customer-switcher',
             SAW_VISITORS_PLUGIN_URL . 'includes/components/customer-switcher/customer-switcher.css',
-            array(),
+            [],
             SAW_VISITORS_VERSION
         );
         
         wp_enqueue_script(
             'saw-customer-switcher',
             SAW_VISITORS_PLUGIN_URL . 'includes/components/customer-switcher/customer-switcher.js',
-            array('jquery'),
+            ['jquery'],
             SAW_VISITORS_VERSION,
             true
         );
@@ -187,18 +174,15 @@ class SAW_Component_Customer_Switcher {
         wp_localize_script(
             'saw-customer-switcher',
             'sawCustomerSwitcher',
-            array(
+            [
                 'ajaxurl' => admin_url('admin-ajax.php'),
                 'nonce' => wp_create_nonce('saw_customer_switcher'),
                 'currentCustomerId' => $this->current_customer['id'],
                 'currentCustomerName' => $this->current_customer['name'],
-            )
+            ]
         );
     }
     
-    /**
-     * Get logo URL
-     */
     private function get_logo_url() {
         if (!empty($this->current_customer['logo_url_full'])) {
             return $this->current_customer['logo_url_full'];
@@ -214,60 +198,7 @@ class SAW_Component_Customer_Switcher {
         return '';
     }
     
-    /**
-     * Check if current user is super admin
-     */
     private function is_super_admin() {
         return current_user_can('manage_options');
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

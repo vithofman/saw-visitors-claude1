@@ -1,13 +1,9 @@
 <?php
 /**
  * SAW Authentication Controller
- * Handles login, logout, forgot password, set password, and reset password
- * 
- * All users authenticate via WordPress (wp_signon)
- * Custom UI for all auth pages
  * 
  * @package SAW_Visitors
- * @since 4.6.1
+ * @since 4.8.0
  */
 
 if (!defined('ABSPATH')) {
@@ -22,16 +18,7 @@ class SAW_Controller_Auth {
         $this->password = new SAW_Password();
     }
 
-    /**
-     * Main login page
-     * 
-     * URL: /login/
-     * 
-     * Uses WordPress authentication (wp_signon)
-     * Works for ALL roles (super_admin, admin, manager, terminal)
-     */
     public function login() {
-        // Already logged in? Redirect
         if (is_user_logged_in()) {
             $this->redirect_after_login();
             return;
@@ -42,14 +29,12 @@ class SAW_Controller_Auth {
         $email = '';
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            // Verify nonce
             if (!wp_verify_nonce($_POST['saw_nonce'] ?? '', 'saw_login')) {
                 $error = 'Bezpečnostní kontrola selhala';
             } else {
                 $email = sanitize_email($_POST['email'] ?? '');
                 $password = $_POST['password'] ?? '';
 
-                // WordPress authentication
                 $credentials = [
                     'user_login' => $email,
                     'user_password' => $password,
@@ -61,7 +46,6 @@ class SAW_Controller_Auth {
                 if (is_wp_error($user)) {
                     $error = 'Neplatné přihlašovací údaje';
                 } else {
-                    // Find SAW user record
                     global $wpdb;
                     $saw_user = $wpdb->get_row($wpdb->prepare(
                         "SELECT * FROM {$wpdb->prefix}saw_users 
@@ -76,20 +60,19 @@ class SAW_Controller_Auth {
                         wp_logout();
                         $error = 'Nejprve si musíte nastavit heslo přes odkaz z emailu';
                     } else {
-                        // ✅ OPRAVA: Správně nastav session
-                        if (session_status() === PHP_SESSION_NONE) {
-                            session_start();
+                        // ✅ OPRAVA: Vyčisti starou session před vytvořením nové
+                        if (session_status() !== PHP_SESSION_NONE) {
+                            session_destroy();
                         }
+                        
+                        session_start();
                         session_regenerate_id(true);
                         
                         $_SESSION['saw_user_id'] = $saw_user['id'];
                         $_SESSION['saw_role'] = $saw_user['role'];
-                        
-                        // ✅ OPRAVENO: saw_current_customer_id místo saw_customer_id
                         $_SESSION['saw_current_customer_id'] = $saw_user['customer_id'];
                         $_SESSION['saw_current_branch_id'] = $saw_user['branch_id'];
                         
-                        // ✅ OPRAVENO: Ulož customer_id i do user meta (pro persistenci)
                         if ($saw_user['customer_id']) {
                             update_user_meta($user->ID, 'saw_current_customer_id', $saw_user['customer_id']);
                         }
@@ -97,7 +80,6 @@ class SAW_Controller_Auth {
                             update_user_meta($user->ID, 'saw_current_branch_id', $saw_user['branch_id']);
                         }
 
-                        // Update last login
                         $wpdb->update(
                             $wpdb->prefix . 'saw_users',
                             ['last_login' => current_time('mysql')],
@@ -106,7 +88,6 @@ class SAW_Controller_Auth {
                             ['%d']
                         );
 
-                        // Audit log
                         if (class_exists('SAW_Audit')) {
                             SAW_Audit::log([
                                 'action' => 'user_login',
@@ -116,7 +97,6 @@ class SAW_Controller_Auth {
                             ]);
                         }
 
-                        // Redirect
                         $this->redirect_after_login($saw_user['role']);
                         return;
                     }
@@ -124,7 +104,6 @@ class SAW_Controller_Auth {
             }
         }
 
-        // Render login template
         $this->render_template('login', [
             'error' => $error,
             'success' => $success,
@@ -132,11 +111,6 @@ class SAW_Controller_Auth {
         ]);
     }
 
-    /**
-     * Forgot password page
-     * 
-     * URL: /forgot-password/
-     */
     public function forgot_password() {
         $error = '';
         $success = false;
@@ -154,7 +128,6 @@ class SAW_Controller_Auth {
                     $result = $this->password->create_reset_token($email);
 
                     if (is_wp_error($result)) {
-                        // Pro security: i když user neexistuje, ukážeme success
                         if ($result->get_error_code() === 'email_sent') {
                             $success = true;
                         } else {
@@ -174,18 +147,12 @@ class SAW_Controller_Auth {
         ]);
     }
 
-    /**
-     * Set password page (first-time setup)
-     * 
-     * URL: /set-password/?token=xxx
-     */
     public function set_password() {
         $token = $_GET['token'] ?? '';
         $error = '';
         $success = false;
         $token_invalid = false;
 
-        // Validate token
         $user = $this->password->validate_setup_token($token);
 
         if (!$user) {
@@ -226,18 +193,12 @@ class SAW_Controller_Auth {
         ]);
     }
 
-    /**
-     * Reset password page
-     * 
-     * URL: /reset-password/?token=xxx
-     */
     public function reset_password() {
         $token = $_GET['token'] ?? '';
         $error = '';
         $success = false;
         $token_invalid = false;
 
-        // Validate token
         $user = $this->password->validate_reset_token($token);
 
         if (!$user) {
@@ -278,29 +239,28 @@ class SAW_Controller_Auth {
         ]);
     }
 
-    /**
-     * Logout
-     * 
-     * URL: /logout/
-     */
     public function logout() {
-        // Destroy PHP session
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
+        // ✅ OPRAVA: Kompletní vyčištění session
+        if (session_status() !== PHP_SESSION_NONE) {
+            $_SESSION = array();
+            
+            if (ini_get("session.use_cookies")) {
+                $params = session_get_cookie_params();
+                setcookie(session_name(), '', time() - 42000,
+                    $params["path"], $params["domain"],
+                    $params["secure"], $params["httponly"]
+                );
+            }
+            
+            session_destroy();
         }
-        session_destroy();
 
-        // WordPress logout
         wp_logout();
 
-        // Redirect
         wp_safe_redirect(home_url('/login/'));
         exit;
     }
 
-    /**
-     * Redirect after successful login
-     */
     private function redirect_after_login($role = null) {
         if ($role === null && isset($_SESSION['saw_role'])) {
             $role = $_SESSION['saw_role'];
@@ -319,9 +279,6 @@ class SAW_Controller_Auth {
         exit;
     }
 
-    /**
-     * Render template
-     */
     private function render_template($template, $data = []) {
         extract($data);
         include SAW_VISITORS_PLUGIN_DIR . 'templates/auth/' . $template . '.php';

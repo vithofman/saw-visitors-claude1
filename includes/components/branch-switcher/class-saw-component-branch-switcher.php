@@ -4,14 +4,18 @@ if (!defined('ABSPATH')) exit;
 class SAW_Component_Branch_Switcher {
     private $customer_id;
     private $current_branch;
+    private static $ajax_registered = false;
     
     public function __construct($customer_id = null, $current_branch = null) {
         $this->customer_id = $customer_id;
         $this->current_branch = $current_branch;
         
-        add_action('wp_ajax_saw_get_branches_for_switcher', [$this, 'ajax_get_branches']);
-        add_action('wp_ajax_nopriv_saw_get_branches_for_switcher', [$this, 'ajax_get_branches']);
-        add_action('wp_ajax_saw_switch_branch', [$this, 'ajax_switch_branch']);
+        // ✅ OPRAVA: Registruj AJAX akce jen JEDNOU
+        if (!self::$ajax_registered) {
+            add_action('wp_ajax_saw_get_branches_for_switcher', [$this, 'ajax_get_branches']);
+            add_action('wp_ajax_saw_switch_branch', [$this, 'ajax_switch_branch']);
+            self::$ajax_registered = true;
+        }
     }
     
     public function ajax_get_branches() {
@@ -44,12 +48,9 @@ class SAW_Component_Branch_Switcher {
             ];
         }
         
-        session_start();
-        $current_branch_id = $_SESSION['saw_current_branch_id'] ?? null;
-        
         wp_send_json_success([
             'branches' => $formatted,
-            'current_branch_id' => $current_branch_id
+            'current_branch_id' => SAW_Context::get_branch_id()
         ]);
     }
     
@@ -71,19 +72,20 @@ class SAW_Component_Branch_Switcher {
             wp_send_json_error(['message' => 'Pobočka nenalezena']);
         }
         
-        session_start();
-        $_SESSION['saw_current_branch_id'] = $branch_id;
-        
-        if (is_user_logged_in()) {
-            update_user_meta(get_current_user_id(), 'saw_current_branch_id', $branch_id);
-            update_user_meta(get_current_user_id(), 'saw_branch_customer_' . $branch->customer_id, $branch_id);
-        }
+        SAW_Context::set_branch_id($branch_id);
         
         wp_send_json_success(['branch_id' => $branch_id, 'branch_name' => $branch->name]);
     }
     
     public function render() {
-        if (!$this->customer_id) return;
+        if (!$this->can_see_branch_switcher()) {
+            return;
+        }
+        
+        if (!$this->customer_id) {
+            return;
+        }
+        
         $this->enqueue_assets();
         ?>
         <div class="saw-branch-switcher" id="sawBranchSwitcher" data-customer-id="<?php echo esc_attr($this->customer_id); ?>">
@@ -91,7 +93,7 @@ class SAW_Component_Branch_Switcher {
                 <span class="saw-branch-icon">🏢</span>
                 <div class="saw-branch-info">
                     <span class="saw-branch-label">Pobočka</span>
-                    <span class="saw-branch-name"><?php echo esc_html($this->current_branch['name'] ?? 'Vyberte pobočku'); ?></span>
+                    <span class="saw-branch-name"><?php echo esc_html($this->current_branch['name'] ?? 'Všechny pobočky'); ?></span>
                 </div>
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" class="saw-branch-arrow"><path d="M8 10.5l-4-4h8l-4 4z"/></svg>
             </button>
@@ -102,6 +104,31 @@ class SAW_Component_Branch_Switcher {
             </div>
         </div>
         <?php
+    }
+    
+    private function can_see_branch_switcher() {
+        if (current_user_can('manage_options')) {
+            return true;
+        }
+        
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        $saw_role = $_SESSION['saw_role'] ?? null;
+        
+        if (!$saw_role) {
+            global $wpdb;
+            $saw_user = $wpdb->get_row($wpdb->prepare(
+                "SELECT role FROM {$wpdb->prefix}saw_users 
+                 WHERE wp_user_id = %d AND is_active = 1",
+                get_current_user_id()
+            ));
+            
+            $saw_role = $saw_user->role ?? null;
+        }
+        
+        return $saw_role === 'admin';
     }
     
     private function enqueue_assets() {

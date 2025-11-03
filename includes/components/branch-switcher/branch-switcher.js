@@ -24,34 +24,25 @@
         }
         
         init() {
-            console.log('🚀 Branch Switcher: init() called');
-            
             if (!this.button.length || !this.dropdown.length) {
-                console.error('❌ Branch Switcher: Button or dropdown not found');
                 return;
             }
             
             if (typeof sawBranchSwitcher === 'undefined') {
-                console.error('❌ Branch Switcher: sawBranchSwitcher object not found');
                 return;
             }
             
             this.customerId = parseInt(this.container.data('customer-id'));
             this.currentBranchId = parseInt(this.button.data('current-branch-id')) || null;
             
-            console.log('✅ Branch Switcher: customerId =', this.customerId);
-            console.log('✅ Branch Switcher: currentBranchId =', this.currentBranchId);
-            
-            // ✅ Validation
+            // ✅ OPRAVA: Přidán customer_id do data atributu
             if (!this.customerId || this.customerId === 0 || isNaN(this.customerId)) {
-                console.error('❌ Branch Switcher: Invalid customer ID:', this.customerId);
                 this.showError('Neplatné ID zákazníka');
                 return;
             }
             
             this.button.on('click', (e) => {
                 e.stopPropagation();
-                console.log('🖱️ Branch Switcher: Button clicked');
                 this.toggle();
             });
             
@@ -66,8 +57,6 @@
                     this.close();
                 }
             });
-            
-            console.log('✅ Branch Switcher: Initialized successfully');
         }
         
         toggle() {
@@ -79,30 +68,25 @@
         }
         
         open() {
-            console.log('📂 Branch Switcher: Opening dropdown');
             this.isOpen = true;
             this.dropdown.addClass('active');
             
             if (this.branches.length === 0) {
-                console.log('📥 Branch Switcher: Loading branches...');
                 this.loadBranches();
             }
         }
         
         close() {
-            console.log('📁 Branch Switcher: Closing dropdown');
             this.isOpen = false;
             this.dropdown.removeClass('active');
         }
         
         loadBranches() {
             if (this.isLoading) {
-                console.log('⚠️ Branch Switcher: Already loading');
                 return;
             }
             
             if (!this.customerId) {
-                console.error('❌ Branch Switcher: No customer ID');
                 this.showError('Chybí ID zákazníka');
                 return;
             }
@@ -110,81 +94,42 @@
             this.isLoading = true;
             this.showLoading();
             
-            console.log('🌐 Branch Switcher: Calling AJAX...');
-            console.log('  URL:', sawBranchSwitcher.ajaxurl);
-            console.log('  Customer ID:', this.customerId);
-            console.log('  Nonce:', sawBranchSwitcher.nonce);
-            
             $.ajax({
                 url: sawBranchSwitcher.ajaxurl,
                 type: 'POST',
                 data: {
                     action: 'saw_get_branches_for_switcher',
-                    customer_id: this.customerId,
+                    customer_id: this.customerId, // ✅ customer_id added
                     nonce: sawBranchSwitcher.nonce
                 },
                 success: (response) => {
-                    console.log('✅ Branch Switcher: AJAX Success', response);
                     this.isLoading = false;
                     
-                    // ✅ OPRAVENÁ VALIDACE
-                    if (!response.success) {
-                        console.error('❌ Branch Switcher: Server returned error', response);
-                        this.showError(response.data?.message || 'Chyba serveru');
+                    if (!response.success || !response.data || !Array.isArray(response.data.branches)) {
+                        this.showError('Chyba načítání poboček');
                         return;
                     }
                     
-                    if (!response.data) {
-                        console.error('❌ Branch Switcher: No data in response', response);
-                        this.showError('Prázdná odpověď ze serveru');
-                        return;
-                    }
-                    
-                    // ✅ Zkontroluj, zda branches existuje a je to array
-                    if (!response.data.branches) {
-                        console.error('❌ Branch Switcher: No branches property', response.data);
-                        this.showError('Chybí seznam poboček v odpovědi');
-                        return;
-                    }
-                    
-                    if (!Array.isArray(response.data.branches)) {
-                        console.error('❌ Branch Switcher: branches is not an array', 
-                                     typeof response.data.branches, response.data.branches);
-                        this.showError('Neplatný formát dat poboček');
-                        return;
-                    }
-                    
-                    // ✅ Vše OK - zpracuj data
                     this.branches = response.data.branches;
                     
                     if (response.data.current_branch_id) {
                         this.currentBranchId = parseInt(response.data.current_branch_id);
                     }
                     
-                    console.log('📋 Branch Switcher: Loaded', this.branches.length, 'branches');
-                    console.log('📋 Branch Switcher: Branches data:', this.branches);
-                    
                     this.renderBranches();
                 },
-                error: (xhr, status, error) => {
-                    console.error('❌ Branch Switcher: AJAX Error', status, error);
-                    console.error('❌ Branch Switcher: XHR:', xhr);
+                error: () => {
                     this.isLoading = false;
-                    this.showError('Chyba serveru při načítání poboček');
+                    this.showError('Chyba serveru');
                 }
             });
         }
         
         renderBranches() {
-            console.log('🎨 Branch Switcher: Rendering', this.branches.length, 'branches');
-            
             if (this.branches.length === 0) {
                 this.list.html(`
                     <div class="saw-branch-empty">
                         <p>Zákazník nemá žádné pobočky</p>
-                        <a href="${window.location.origin}/admin/branches/new/" class="saw-branch-create-button">
-                            ➕ Vytvořit pobočku
-                        </a>
                     </div>
                 `);
                 return;
@@ -212,21 +157,15 @@
             
             this.list.find('.saw-branch-item').on('click', (e) => {
                 const branchId = parseInt($(e.currentTarget).data('branch-id'));
-                console.log('🖱️ Branch clicked:', branchId);
                 this.switchBranch(branchId);
             });
-            
-            console.log('✅ Branch Switcher: Branches rendered');
         }
         
         switchBranch(branchId) {
             if (branchId === this.currentBranchId) {
-                console.log('ℹ️ Branch Switcher: Already on this branch');
                 this.close();
                 return;
             }
-            
-            console.log('🔄 Branch Switcher: Switching to branch', branchId);
             
             this.button.prop('disabled', true);
             const originalText = this.button.find('.saw-branch-name').text();
@@ -241,8 +180,6 @@
                     nonce: sawBranchSwitcher.nonce
                 },
                 success: (response) => {
-                    console.log('✅ Branch Switcher: Switch success', response);
-                    
                     if (response.success) {
                         window.location.reload();
                     } else {
@@ -251,11 +188,10 @@
                         alert(response.data?.message || 'Chyba při přepínání pobočky');
                     }
                 },
-                error: (xhr, status, error) => {
-                    console.error('❌ Branch Switcher: Switch error', status, error);
+                error: () => {
                     this.button.find('.saw-branch-name').text(originalText);
                     this.button.prop('disabled', false);
-                    alert('Chyba serveru při přepínání pobočky');
+                    alert('Chyba serveru');
                 }
             });
         }
@@ -291,20 +227,14 @@
     
 })(jQuery);
 
-// ✅ INICIALIZACE VNĚ CLOSURE
 jQuery(document).ready(function($) {
-    console.log('🚀 Branch Switcher: Document ready');
-    
     if ($('#sawBranchSwitcher').length === 0) {
-        console.warn('⚠️ Branch Switcher: Container not found in DOM');
         return;
     }
     
     if (typeof sawBranchSwitcher === 'undefined') {
-        console.error('❌ Branch Switcher: sawBranchSwitcher object not found');
         return;
     }
     
-    console.log('✅ Branch Switcher: Creating instance...');
     new BranchSwitcher();
 });

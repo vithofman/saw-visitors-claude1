@@ -75,21 +75,9 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         delete_transient('customers_for_switcher');
     }
     
-    /**
-     * ✅ PŘIDÁNO: Kontrola před smazáním zákazníka
-     * 
-     * Zákazníka nelze smazat pokud má:
-     * - Branches (pobočky)
-     * - Users (uživatele) 
-     * - Visits (návštěvy)
-     * - Invitations (pozvánky)
-     * 
-     * CASCADE by smazal vše, ale to je nebezpečné → raději blokujeme.
-     */
     protected function before_delete($id) {
         global $wpdb;
         
-        // Kontrola branches
         $branches_count = $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$wpdb->prefix}saw_branches WHERE customer_id = %d",
             $id
@@ -102,7 +90,6 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             );
         }
         
-        // Kontrola users
         $users_count = $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$wpdb->prefix}saw_users WHERE customer_id = %d",
             $id
@@ -115,7 +102,6 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             );
         }
         
-        // Kontrola visits
         $visits_count = $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$wpdb->prefix}saw_visits WHERE customer_id = %d",
             $id
@@ -128,7 +114,6 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             );
         }
         
-        // Kontrola invitations
         $invitations_count = $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$wpdb->prefix}saw_invitations WHERE customer_id = %d",
             $id
@@ -137,31 +122,24 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         if ($invitations_count > 0) {
             return new WP_Error(
                 'customer_has_invitations',
-                sprintf('Zákazníka nelze smazat. Má %d pozvánek.', $invitations_count)
+                sprintf('Zákazníka nelze smazat. Má %d pozvá nek.', $invitations_count)
             );
         }
         
         return true;
     }
     
-    /**
-     * ✅ PŘIDÁNO: Cleanup po smazání
-     */
     protected function after_delete($id) {
-        // Smaž logo pokud existuje
         $customer = $this->model->get_by_id($id);
         if (!empty($customer['logo_url'])) {
             $this->file_uploader->delete($customer['logo_url']);
         }
         
-        // Invaliduj cache
         delete_transient('customers_list');
         delete_transient('customers_for_switcher');
     }
     
     public function ajax_get_customers_for_switcher() {
-        delete_transient('customers_for_switcher');
-        
         if (!current_user_can('manage_options')) {
             wp_send_json_error(['message' => 'Nedostatečná oprávnění']);
         }
@@ -184,7 +162,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         if (!$customers) {
             wp_send_json_success([
                 'customers' => [],
-                'current_customer_id' => $this->get_current_customer_id()
+                'current_customer_id' => SAW_Context::get_customer_id()
             ]);
             return;
         }
@@ -211,7 +189,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         
         wp_send_json_success([
             'customers' => $formatted,
-            'current_customer_id' => $this->get_current_customer_id()
+            'current_customer_id' => SAW_Context::get_customer_id()
         ]);
     }
     
@@ -241,93 +219,15 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             wp_send_json_error(['message' => 'Zákazník nebyl nalezen']);
         }
         
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        
-        $_SESSION['saw_current_customer_id'] = $customer_id;
-        
-        if (is_user_logged_in()) {
-            update_user_meta(get_current_user_id(), 'saw_current_customer_id', $customer_id);
-        }
+        SAW_Context::set_customer_id($customer_id);
         
         delete_transient('branches_for_switcher_' . $customer_id);
-        
-        $this->handle_branch_on_customer_switch($customer_id);
         
         wp_send_json_success([
             'message' => 'Zákazník byl úspěšně přepnut',
             'customer_id' => $customer_id,
             'customer_name' => $customer['name']
         ]);
-    }
-    
-    private function handle_branch_on_customer_switch($customer_id) {
-        global $wpdb;
-        $branches_table = $wpdb->prefix . 'saw_branches';
-        
-        $branches = $wpdb->get_results($wpdb->prepare(
-            "SELECT id FROM {$branches_table} WHERE customer_id = %d AND is_active = 1 LIMIT 2",
-            $customer_id
-        ), ARRAY_A);
-        
-        $branch_count = count($branches);
-        
-        if ($branch_count === 1) {
-            $branch_id = intval($branches[0]['id']);
-            
-            if (session_status() === PHP_SESSION_NONE) {
-                session_start();
-            }
-            $_SESSION['saw_current_branch_id'] = $branch_id;
-            
-            if (is_user_logged_in()) {
-                $user_id = get_current_user_id();
-                update_user_meta($user_id, 'saw_current_branch_id', $branch_id);
-                update_user_meta($user_id, 'saw_branch_customer_' . $customer_id, $branch_id);
-            }
-        } else {
-            if (session_status() === PHP_SESSION_NONE) {
-                session_start();
-            }
-            unset($_SESSION['saw_current_branch_id']);
-            
-            if (is_user_logged_in()) {
-                $user_id = get_current_user_id();
-                delete_user_meta($user_id, 'saw_current_branch_id');
-            }
-        }
-    }
-    
-    private function get_current_customer_id() {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        
-        if (isset($_SESSION['saw_current_customer_id'])) {
-            return intval($_SESSION['saw_current_customer_id']);
-        }
-        
-        if (is_user_logged_in()) {
-            $meta_id = get_user_meta(get_current_user_id(), 'saw_current_customer_id', true);
-            if ($meta_id) {
-                $_SESSION['saw_current_customer_id'] = intval($meta_id);
-                return intval($meta_id);
-            }
-        }
-        
-        global $wpdb;
-        $table = $wpdb->prefix . 'saw_customers';
-        $first_customer = $wpdb->get_var(
-            "SELECT id FROM {$table} WHERE status = 'active' ORDER BY name ASC LIMIT 1"
-        );
-        
-        if ($first_customer) {
-            $_SESSION['saw_current_customer_id'] = intval($first_customer);
-            return intval($first_customer);
-        }
-        
-        return null;
     }
     
     public function ajax_switch_language() {
