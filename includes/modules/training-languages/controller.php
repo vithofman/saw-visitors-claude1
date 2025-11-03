@@ -1,4 +1,13 @@
 <?php
+/**
+ * Training Languages Module Controller - CLEANED
+ * 
+ * ✅ NO HARDCODED FILTERS - only permissions-based scope
+ * 
+ * @package SAW_Visitors
+ * @version 1.0.1
+ */
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -25,16 +34,7 @@ class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller
         add_action('admin_enqueue_scripts', [$this, 'enqueue_assets']);
     }
     
-    /**
-     * Načítá CSS a JS assets pro training languages modul
-     */
     public function enqueue_assets() {
-        // Načíst pouze pokud jsme v admin sekci
-        if (!is_admin()) {
-            return;
-        }
-        
-        // === CSS STYLES ===
         wp_register_style(
             'saw-training-languages-styles',
             plugin_dir_url(__FILE__) . 'styles.css',
@@ -44,7 +44,6 @@ class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller
         );
         wp_enqueue_style('saw-training-languages-styles');
         
-        // === JAVASCRIPT ===
         wp_register_script(
             'saw-training-languages-scripts',
             plugin_dir_url(__FILE__) . 'scripts.js',
@@ -54,7 +53,6 @@ class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller
         );
         wp_enqueue_script('saw-training-languages-scripts');
         
-        // Předat PHP proměnné do JavaScriptu
         wp_localize_script('saw-training-languages-scripts', 'sawTrainingLanguages', [
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('saw_ajax_nonce'),
@@ -82,8 +80,9 @@ class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller
     }
     
     protected function after_save($id) {
-        if (!empty($this->config['customer_id'])) {
-            delete_transient('training_languages_customer_' . $this->config['customer_id']);
+        $language = $this->model->get_by_id($id);
+        if (!empty($language['customer_id'])) {
+            delete_transient('training_languages_customer_' . $language['customer_id']);
         }
     }
     

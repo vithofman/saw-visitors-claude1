@@ -37,19 +37,8 @@ abstract class SAW_Base_Controller
             'order' => $order
         ];
         
-        if (!empty($this->config['filter_by_customer'])) {
-            $customer_id = $this->get_filtered_customer_id();
-            if ($customer_id) {
-                $filters['customer_id'] = $customer_id;
-            }
-        }
-        
-        if (!empty($this->config['filter_by_branch'])) {
-            $branch_id = $this->get_filtered_branch_id();
-            if ($branch_id !== null) {
-                $filters['branch_id'] = $branch_id;
-            }
-        }
+        // ✅ NO HARDCODED FILTERS - only permissions-based scope filtering via Base Model
+        // Scope is applied in Base Model's apply_data_scope() method
         
         foreach ($this->config['list_config']['filters'] ?? [] as $filter_key => $enabled) {
             if ($enabled && isset($_GET[$filter_key]) && $filter_key !== 'customer_id') {
@@ -111,20 +100,19 @@ abstract class SAW_Base_Controller
         
         $id = intval($id);
         if ($id <= 0) {
-            wp_die('Invalid ID', 'Bad Request', ['response' => 400]);
+            if (!class_exists('SAW_Error_Handler_Component')) {
+                require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/class-saw-error-handler-component.php';
+            }
+            SAW_Error_Handler_Component::render_not_found($this->config['singular']);
         }
         
         $item = $this->model->get_by_id($id);
         
         if (!$item) {
-            wp_die($this->config['singular'] . ' not found', 'Not Found', ['response' => 404]);
-        }
-        
-        if (!empty($this->config['filter_by_customer'])) {
-            $customer = $this->get_current_customer_data();
-            if (isset($item['customer_id']) && $item['customer_id'] != $customer['id']) {
-                wp_die('Nemáte oprávnění upravovat tento záznam', 'Forbidden', ['response' => 403]);
+            if (!class_exists('SAW_Error_Handler_Component')) {
+                require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/class-saw-error-handler-component.php';
             }
+            SAW_Error_Handler_Component::render_not_found($this->config['singular'], $id);
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -136,47 +124,85 @@ abstract class SAW_Base_Controller
     }
     
     protected function handle_save($id = 0) {
-        ob_start();
+        error_log('=== BASE CONTROLLER handle_save START ===');
+        error_log('ID: ' . $id);
         
-        $this->verify_nonce();
-        
-        $data = $this->collect_form_data();
-        
-        if ($id > 0) {
-            $data['id'] = $id;
-        }
-        
-        if ($id === 0 && !empty($this->config['filter_by_customer'])) {
-            $customer = $this->get_current_customer_data();
-            $data['customer_id'] = $customer['id'] ?? null;
-        }
-        
-        $data = $this->before_save($data);
-        
-        if ($id > 0) {
-            $result = $this->model->update($id, $data);
-        } else {
-            $result = $this->model->create($data);
-        }
-        
-        if (is_wp_error($result)) {
-            $this->set_flash_message('error', $result->get_error_message());
+        try {
+            // ✅ REMOVED ob_start() - it hides fatal errors!
+            
+            $this->verify_nonce();
+            error_log('✅ Nonce verified');
+            
+            $data = $this->collect_form_data();
+            error_log('✅ Form data collected: ' . implode(', ', array_keys($data)));
+            
             if ($id > 0) {
-                wp_redirect($this->get_edit_url($id));
-            } else {
-                wp_redirect($this->get_create_url());
+                $data['id'] = $id;
             }
+            
+            error_log('Calling before_save()...');
+            $data = $this->before_save($data);
+            error_log('✅ before_save() completed');
+            
+            if ($id > 0) {
+                error_log('Calling model->update()...');
+                $result = $this->model->update($id, $data);
+            } else {
+                error_log('Calling model->create()...');
+                $result = $this->model->create($data);
+            }
+            
+            if (is_wp_error($result)) {
+                error_log('❌ Model operation failed: ' . $result->get_error_message());
+                $this->set_flash_message('error', $result->get_error_message());
+                if ($id > 0) {
+                    wp_redirect($this->get_edit_url($id));
+                } else {
+                    wp_redirect($this->get_create_url());
+                }
+                exit;
+            }
+            
+            error_log('✅ Model operation success. Result: ' . print_r($result, true));
+            
+            $saved_id = $id > 0 ? $id : $result;
+            
+            error_log('Calling after_save()...');
+            $this->after_save($saved_id);
+            error_log('✅ after_save() completed');
+            
+            $action = $id > 0 ? 'updated' : 'created';
+            $this->set_flash_message('success', $this->config['singular'] . ' ' . ($action === 'updated' ? 'upraven' : 'vytvořen'));
+            
+            error_log('✅ Redirecting to list...');
+            wp_redirect($this->get_list_url());
             exit;
+            
+        } catch (Error $e) {
+            error_log('❌ FATAL ERROR in handle_save:');
+            error_log('Message: ' . $e->getMessage());
+            error_log('File: ' . $e->getFile() . ':' . $e->getLine());
+            error_log('Stack: ' . $e->getTraceAsString());
+            
+            wp_die(
+                '<h1>Chyba při ukládání</h1>' .
+                '<p><strong>Chyba:</strong> ' . esc_html($e->getMessage()) . '</p>' .
+                '<p><strong>Soubor:</strong> ' . esc_html($e->getFile()) . ':' . $e->getLine() . '</p>' .
+                '<pre>' . esc_html($e->getTraceAsString()) . '</pre>',
+                'Chyba',
+                ['response' => 500]
+            );
+        } catch (Exception $e) {
+            error_log('❌ EXCEPTION in handle_save:');
+            error_log('Message: ' . $e->getMessage());
+            
+            wp_die(
+                '<h1>Chyba při ukládání</h1>' .
+                '<p>' . esc_html($e->getMessage()) . '</p>',
+                'Chyba',
+                ['response' => 500]
+            );
         }
-        
-        $saved_id = $id > 0 ? $id : $result;
-        $this->after_save($saved_id);
-        
-        $action = $id > 0 ? 'updated' : 'created';
-        $this->set_flash_message('success', $this->config['singular'] . ' ' . ($action === 'updated' ? 'upraven' : 'vytvořen'));
-        
-        wp_redirect($this->get_list_url());
-        exit;
     }
     
     public function delete($id) {
@@ -185,20 +211,19 @@ abstract class SAW_Base_Controller
         
         $id = intval($id);
         if ($id <= 0) {
-            wp_die('Invalid ID', 'Bad Request', ['response' => 400]);
+            if (!class_exists('SAW_Error_Handler_Component')) {
+                require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/class-saw-error-handler-component.php';
+            }
+            SAW_Error_Handler_Component::render_not_found($this->config['singular']);
         }
         
         $item = $this->model->get_by_id($id);
         
         if (!$item) {
-            wp_die($this->config['singular'] . ' not found', 'Not Found', ['response' => 404]);
-        }
-        
-        if (!empty($this->config['filter_by_customer'])) {
-            $customer = $this->get_current_customer_data();
-            if (isset($item['customer_id']) && $item['customer_id'] != $customer['id']) {
-                wp_die('Nemáte oprávnění smazat tento záznam', 'Forbidden', ['response' => 403]);
+            if (!class_exists('SAW_Error_Handler_Component')) {
+                require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/class-saw-error-handler-component.php';
             }
+            SAW_Error_Handler_Component::render_not_found($this->config['singular'], $id);
         }
         
         if (!$this->before_delete($id)) {
@@ -296,7 +321,10 @@ abstract class SAW_Base_Controller
         $saw_role = $this->get_current_user_role();
         
         if (!$saw_role) {
-            wp_die('Insufficient permissions - no SAW role', 'Forbidden', ['response' => 403]);
+            if (!class_exists('SAW_Error_Handler_Component')) {
+                require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/class-saw-error-handler-component.php';
+            }
+            SAW_Error_Handler_Component::render_permission_denied($action, $this->config['plural']);
         }
         
         if (!class_exists('SAW_Permissions')) {
@@ -308,13 +336,24 @@ abstract class SAW_Base_Controller
         
         if (!class_exists('SAW_Permissions')) {
             error_log('[Base Controller] ERROR: SAW_Permissions class not found');
-            wp_die('Permissions system not available', 'Error', ['response' => 500]);
+            if (!class_exists('SAW_Error_Handler_Component')) {
+                require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/class-saw-error-handler-component.php';
+            }
+            SAW_Error_Handler_Component::render_error_page([
+                'icon' => '⚠️',
+                'title' => 'Systémová chyba',
+                'message' => 'Systém oprávnění není dostupný.',
+                'type' => 'error'
+            ]);
         }
         
         $allowed = SAW_Permissions::check($saw_role, $this->entity, $action);
         
         if (!$allowed) {
-            wp_die('Insufficient permissions for ' . $action . ' on ' . $this->entity, 'Forbidden', ['response' => 403]);
+            if (!class_exists('SAW_Error_Handler_Component')) {
+                require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/class-saw-error-handler-component.php';
+            }
+            SAW_Error_Handler_Component::render_permission_denied($action, $this->config['plural'], $this->get_list_url());
         }
     }
     

@@ -117,16 +117,21 @@
         handleScopeChange: function(e) {
             const $select = $(e.target);
             const module = $select.data('module');
-            const action = $select.data('action');
             const scope = $select.val();
             
-            console.log('[Permissions] Scope changed:', {module, action, scope});
+            console.log('[Permissions] Scope changed for module:', module, 'to:', scope);
             
             const $row = $select.closest('tr');
-            const $checkbox = $row.find('.permission-checkbox[data-action="' + action + '"]');
-            const allowed = $checkbox.is(':checked');
+            const actions = ['list', 'view', 'create', 'edit', 'delete'];
             
-            this.updatePermission(module, action, allowed, scope);
+            // Update scope for ALL actions of this module
+            actions.forEach(action => {
+                const $checkbox = $row.find('.permission-checkbox[data-action="' + action + '"]');
+                const allowed = $checkbox.is(':checked');
+                
+                console.log('[Permissions] Updating scope for', module, action, 'to', scope);
+                this.updatePermission(module, action, allowed, scope);
+            });
         },
         
         handleRoleChange: function(e) {

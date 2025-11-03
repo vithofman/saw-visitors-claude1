@@ -29,16 +29,7 @@ abstract class SAW_Base_Model
         $sql = "SELECT * FROM {$this->table} WHERE 1=1";
         $params = [];
         
-        if (!empty($filters['customer_id'])) {
-            $sql .= " AND customer_id = %d";
-            $params[] = intval($filters['customer_id']);
-        }
-        
-        if (isset($filters['branch_id']) && $filters['branch_id'] !== '') {
-            $sql .= " AND branch_id = %d";
-            $params[] = intval($filters['branch_id']);
-        }
-        
+        // ✅ NO HARDCODED FILTERS - only permissions-based scope
         $scope_sql = $this->apply_data_scope();
         if (!empty($scope_sql)) {
             $sql .= $scope_sql;

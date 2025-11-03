@@ -96,14 +96,17 @@ if (!defined('ABSPATH')) {
                         <?php endforeach; ?>
                         
                         <td class="scope-cell">
+                            <?php
+                            // Scope se vztahuje na celý modul, čteme ho z 'list' akce
+                            $module_scope = $permissions[$module_slug]['list']['scope'] ?? 'all';
+                            ?>
                             <select class="scope-select" 
-                                    data-module="<?php echo esc_attr($module_slug); ?>"
-                                    data-action="list">
-                                <option value="all" <?php selected($current_scope, 'all'); ?>>🌐 Všechno</option>
-                                <option value="customer" <?php selected($current_scope, 'customer'); ?>>🏢 Zákazník</option>
-                                <option value="branch" <?php selected($current_scope, 'branch'); ?>>🏪 Pobočka</option>
-                                <option value="department" <?php selected($current_scope, 'department'); ?>>📁 Oddělení</option>
-                                <option value="own" <?php selected($current_scope, 'own'); ?>>👤 Jen já</option>
+                                    data-module="<?php echo esc_attr($module_slug); ?>">
+                                <option value="all" <?php selected($module_scope, 'all'); ?>>🌐 Všechno</option>
+                                <option value="customer" <?php selected($module_scope, 'customer'); ?>>🏢 Zákazník</option>
+                                <option value="branch" <?php selected($module_scope, 'branch'); ?>>🏪 Pobočka</option>
+                                <option value="department" <?php selected($module_scope, 'department'); ?>>📁 Oddělení</option>
+                                <option value="own" <?php selected($module_scope, 'own'); ?>>👤 Jen já</option>
                             </select>
                         </td>
                     </tr>

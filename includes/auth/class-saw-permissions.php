@@ -191,7 +191,8 @@ class SAW_Permissions {
         global $wpdb;
         $table = $wpdb->prefix . 'saw_permissions';
         
-        self::clear_cache("{$role}:{$module}:{$action}");
+        // ✅ CRITICAL: Clear ALL permission cache on any change
+        self::clear_cache();
         
         $exists = $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$table} 
@@ -243,7 +244,8 @@ class SAW_Permissions {
         global $wpdb;
         $table = $wpdb->prefix . 'saw_permissions';
         
-        self::clear_cache("{$role}:{$module}:{$action}");
+        // ✅ CRITICAL: Clear ALL permission cache on delete
+        self::clear_cache();
         
         return $wpdb->delete(
             $table,
@@ -286,11 +288,37 @@ class SAW_Permissions {
     
     public static function clear_cache($key = null) {
         if ($key === null) {
+            // ✅ Clear ALL SAW permission cache (not entire WP cache)
             self::$cache = [];
             
             if (self::$use_object_cache) {
-                wp_cache_flush();
+                // Clear all saw_perm_* keys from object cache
+                global $wpdb;
+                $table = $wpdb->prefix . 'saw_permissions';
+                
+                // Get all unique role:module:action combinations
+                $permissions = $wpdb->get_results(
+                    "SELECT DISTINCT role, module, action FROM {$table}",
+                    ARRAY_A
+                );
+                
+                foreach ($permissions as $perm) {
+                    $cache_key = "{$perm['role']}:{$perm['module']}:{$perm['action']}";
+                    wp_cache_delete("saw_perm_{$cache_key}");
+                }
             }
+            
+            // ✅ CRITICAL: Also clear Base Model cache for all entities
+            delete_transient('saw_cache_users_list');
+            delete_transient('saw_cache_branches_list');
+            delete_transient('saw_cache_departments_list');
+            delete_transient('saw_cache_customers_list');
+            
+            // Clear all SAW transients
+            global $wpdb;
+            $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_saw_%'");
+            $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_timeout_saw_%'");
+            
         } else {
             unset(self::$cache[$key]);
             

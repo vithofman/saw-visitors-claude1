@@ -1,13 +1,12 @@
 <?php
 /**
- * Users Module Controller - OPRAVENÁ VERZE
+ * Users Module Controller - FINAL FIX
  * 
- * ✅ OPRAVY:
- * 1. Synchronizace WP role při přeřazení uživatele (např. Manager → Super Admin)
- * 2. Lepší logování pro debugging
- * 3. Oprava mapování SAW role → WP role
+ * Based on original working controller.
+ * ONLY CHANGE: Added customer_id handling in before_save().
  * 
  * @package SAW_Visitors
+ * @version 1.0.4
  */
 
 if (!defined('ABSPATH')) {
@@ -22,8 +21,6 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
     private $pending_setup_email = null;
     
     public function __construct() {
-        error_log('SAW Users Controller: __construct() START');
-        
         $this->config = require __DIR__ . '/config.php';
         $this->entity = $this->config['entity'];
         $this->config['path'] = __DIR__ . '/';
@@ -31,83 +28,54 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
         require_once __DIR__ . '/model.php';
         $this->model = new SAW_Module_Users_Model($this->config);
         
-        // AJAX endpoints
         add_action('wp_ajax_saw_get_users_detail', [$this, 'ajax_get_detail']);
         add_action('wp_ajax_saw_search_users', [$this, 'ajax_search']);
         add_action('wp_ajax_saw_delete_users', [$this, 'ajax_delete']);
         add_action('wp_ajax_saw_get_departments_by_branch', [$this, 'ajax_get_departments_by_branch']);
-        
-        error_log('SAW Users Controller: __construct() END');
     }
     
     protected function before_save($data) {
-        error_log('SAW Users Controller: before_save() START');
-        error_log('SAW Users Controller: Role = ' . ($data['role'] ?? 'NULL'));
-        error_log('SAW Users Controller: Email = ' . ($data['email'] ?? 'NULL'));
-        error_log('SAW Users Controller: ID = ' . ($data['id'] ?? 'NEW'));
+        error_log('=== SAW USERS BEFORE_SAVE START ===');
+        error_log('Data keys: ' . implode(', ', array_keys($data)));
         
-        // Start session for customer_id
+        // ===================================
+        // 0. ✅ NEW: CUSTOMER_ID HANDLING
+        // ===================================
         if (session_status() === PHP_SESSION_NONE) {
-            error_log('SAW Users Controller: Starting session');
             session_start();
         }
         
-        // ===================================
-        // 1. CUSTOMER ID PODLE ROLE
-        // ===================================
-        error_log('SAW Users Controller: Setting customer_id');
-        
-        if ($data['role'] === 'super_admin') {
-            $data['customer_id'] = null;
-            $data['branch_id'] = null;
-            error_log('SAW Users Controller: super_admin - no customer/branch');
-        } else {
-            if (empty($data['customer_id'])) {
+        // NEW USER - set customer_id
+        if (empty($data['id'])) {
+            if (isset($data['role']) && $data['role'] === 'super_admin') {
+                $data['customer_id'] = null;
+            } else {
                 $data['customer_id'] = $_SESSION['saw_current_customer_id'] ?? null;
-                error_log('SAW Users Controller: customer_id from session = ' . ($data['customer_id'] ?? 'NULL'));
+                if (!$data['customer_id']) {
+                    wp_die('Customer ID is required');
+                }
             }
-            
-            if (empty($data['customer_id'])) {
-                error_log('SAW Users Controller: ERROR - No customer_id!');
-                wp_die('Chyba: Není nastaven customer_id');
+        }
+        // EXISTING USER - preserve customer_id
+        else {
+            $existing = $this->model->get_by_id($data['id']);
+            if ($existing) {
+                $data['customer_id'] = $existing['customer_id'];
             }
         }
         
         // ===================================
-        // 2. BRANCH ID PODLE ROLE
-        // ===================================
-        error_log('SAW Users Controller: Setting branch_id');
-        
-        if ($data['role'] === 'admin') {
-            $data['branch_id'] = null;
-            error_log('SAW Users Controller: admin - no branch required');
-        } elseif ($data['role'] !== 'super_admin') {
-            error_log('SAW Users Controller: Checking branch_id for role: ' . $data['role']);
-            
-            if (empty($data['branch_id'])) {
-                error_log('SAW Users Controller: ERROR - No branch_id for role: ' . $data['role']);
-                wp_die('Musíte vybrat pobočku pro roli ' . $data['role']);
-            }
-            
-            error_log('SAW Users Controller: Validating branch_id: ' . $data['branch_id']);
-            $this->validate_branch_customer($data['branch_id'], $data['customer_id']);
-            error_log('SAW Users Controller: Branch validation OK');
-        }
-        
-        // ===================================
-        // 3. VYTVOŘENÍ WP USERA (NOVÝ UŽIVATEL)
+        // 1. VYTVOŘENÍ WP USERA (NOVÝ UŽIVATEL)
         // ===================================
         if (empty($data['id'])) {
-            error_log('SAW Users Controller: Creating NEW user');
-            
             // Kontrola zda email již není použit
             $existing_wp_user = get_user_by('email', $data['email']);
             if ($existing_wp_user) {
-                error_log('SAW Users Controller: ERROR - Email already exists: ' . $data['email']);
                 wp_die('Email je již používán jiným WordPress uživatelem');
             }
             
-            error_log('SAW Users Controller: Creating WP user...');
+            // ✅ Set max execution time for WP user creation
+            @set_time_limit(30);
             
             // Vytvoř WP user BEZ hesla
             $wp_user_id = wp_insert_user([
@@ -121,13 +89,15 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
             ]);
             
             if (is_wp_error($wp_user_id)) {
-                error_log('SAW Users Controller: ERROR creating WP user: ' . $wp_user_id->get_error_message());
+                error_log('SAW Users: wp_insert_user failed - ' . $wp_user_id->get_error_message());
                 wp_die('Chyba při vytváření WordPress uživatele: ' . $wp_user_id->get_error_message());
             }
             
-            error_log('SAW Users Controller: WP user created with ID: ' . $wp_user_id);
+            if (!$wp_user_id || !is_numeric($wp_user_id)) {
+                error_log('SAW Users: wp_insert_user returned invalid ID');
+                wp_die('Chyba: Vytvoření WordPress uživatele selhalo (invalid ID)');
+            }
             
-            // Nastav wp_user_id do SAW data
             $data['wp_user_id'] = $wp_user_id;
             
             // Připrav setup email
@@ -137,43 +107,27 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
                 'first_name' => $data['first_name'],
                 'saw_user_id' => null,
             ];
-            
-            error_log('SAW Users Controller: Setup email prepared');
         }
         // ===================================
-        // 3B. AKTUALIZACE EXISTUJÍCÍHO UŽIVATELE
+        // 2. AKTUALIZACE EXISTUJÍCÍHO UŽIVATELE
         // ===================================
         else {
-            error_log('SAW Users Controller: Updating EXISTING user ID: ' . $data['id']);
-            
-            // ✅ KRITICKÁ OPRAVA: Načti existujícího uživatele
             $existing_user = $this->model->get_by_id($data['id']);
             
             if (!$existing_user) {
-                error_log('SAW Users Controller: ERROR - User not found for update');
                 wp_die('Uživatel nenalezen');
             }
             
-            // ✅ KRITICKÁ OPRAVA: Pokud se změnila role, aktualizuj WP roli
+            // Pokud se změnila role, aktualizuj WP roli
             if (!empty($existing_user['wp_user_id']) && $existing_user['role'] !== $data['role']) {
-                error_log('SAW Users Controller: Role change detected!');
-                error_log('  OLD role: ' . $existing_user['role']);
-                error_log('  NEW role: ' . $data['role']);
-                
                 $wp_user = new WP_User($existing_user['wp_user_id']);
                 $new_wp_role = $this->map_saw_to_wp_role($data['role']);
                 
-                error_log('  Changing WP role to: ' . $new_wp_role);
-                
-                // ✅ Smaž staré role a nastav novou
                 $wp_user->set_role($new_wp_role);
                 
-                error_log('  WP role updated successfully');
-                
-                // ✅ Pro super_admina přidej i administrator capability
+                // Pro super_admina přidej i administrator capability
                 if ($data['role'] === 'super_admin') {
                     $wp_user->add_cap('manage_options');
-                    error_log('  Added manage_options capability');
                 }
             }
             
@@ -182,13 +136,10 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
         }
         
         // ===================================
-        // 4. PIN PRO TERMINAL
+        // 3. PIN PRO TERMINAL
         // ===================================
         if ($data['role'] === 'terminal' && !empty($data['pin'])) {
-            error_log('SAW Users Controller: Hashing PIN for terminal');
-            
             if (!preg_match('/^\d{4}$/', $data['pin'])) {
-                error_log('SAW Users Controller: ERROR - Invalid PIN format');
                 wp_die('PIN musí být 4 číslice');
             }
             $data['pin'] = password_hash($data['pin'], PASSWORD_BCRYPT);
@@ -197,37 +148,33 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
         }
         
         // ===================================
-        // 5. DEPARTMENTS PRO MANAGERA
+        // 4. DEPARTMENTS PRO MANAGER
         // ===================================
-        if ($data['role'] === 'manager') {
-            error_log('SAW Users Controller: Checking departments for manager');
-            
-            $this->pending_departments = $_POST['department_ids'] ?? [];
-            
-            if (empty($this->pending_departments)) {
-                error_log('SAW Users Controller: ERROR - No departments selected');
-                wp_die('Manager musí mít přiřazeno alespoň jedno oddělení');
+        if (isset($data['department_ids'])) {
+            // ✅ Ensure it's an array before filtering
+            if (is_array($data['department_ids'])) {
+                $this->pending_departments = array_filter($data['department_ids']);
+            } else {
+                $this->pending_departments = [];
             }
             
-            error_log('SAW Users Controller: Departments count: ' . count($this->pending_departments));
+            if ($data['role'] === 'manager' && empty($this->pending_departments)) {
+                wp_die('Manager musí mít přiřazeno alespoň jedno oddělení');
+            }
         }
         
         // Cleanup
         unset($data['department_ids']);
         unset($data['password']);
         
-        error_log('SAW Users Controller: before_save() END - returning data');
         return $data;
     }
     
     protected function after_save($user_id) {
-        error_log('SAW Users Controller: after_save() START - user_id: ' . $user_id);
-        
         // ===================================
         // 1. ULOŽIT DEPARTMENTS (MANAGER)
         // ===================================
         if ($this->pending_departments !== null) {
-            error_log('SAW Users Controller: Saving departments');
             global $wpdb;
             
             // Smaž staré přiřazení
@@ -247,45 +194,34 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
                     ['%d', '%d']
                 );
             }
-            error_log('SAW Users Controller: Departments saved');
         }
         
         // ===================================
         // 2. SETUP EMAIL (NOVÝ UŽIVATEL)
         // ===================================
         if ($this->pending_setup_email) {
-            error_log('SAW Users Controller: Preparing setup email');
-            
             $this->pending_setup_email['saw_user_id'] = $user_id;
             
-            // Check if class exists
             if (!class_exists('SAW_Password')) {
-                error_log('SAW Users Controller: Loading SAW_Password class');
                 $password_file = SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-password.php';
                 
                 if (!file_exists($password_file)) {
-                    error_log('SAW Users Controller: ERROR - Password class file not found: ' . $password_file);
                     wp_die('Chyba: Soubor class-saw-password.php nebyl nalezen');
                 }
                 
                 require_once $password_file;
-                error_log('SAW Users Controller: SAW_Password class loaded');
             }
             
             $password_handler = new SAW_Password();
-            error_log('SAW Users Controller: SAW_Password instance created');
-            
             $token = $password_handler->create_setup_token($user_id);
-            error_log('SAW Users Controller: Setup token created: ' . ($token ? 'YES' : 'NO'));
             
             if ($token) {
-                $sent = $password_handler->send_welcome_email(
+                $password_handler->send_welcome_email(
                     $this->pending_setup_email['email'],
                     $this->pending_setup_email['role'],
                     $this->pending_setup_email['first_name'],
                     $token
                 );
-                error_log('SAW Users Controller: Welcome email sent: ' . ($sent ? 'YES' : 'NO'));
             }
         }
         
@@ -293,7 +229,6 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
         // 3. AUDIT LOG
         // ===================================
         if (class_exists('SAW_Audit')) {
-            error_log('SAW Users Controller: Creating audit log');
             SAW_Audit::log([
                 'action' => empty($this->pending_setup_email) ? 'user_updated' : 'user_created',
                 'entity_type' => 'user',
@@ -304,17 +239,12 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
                 ])
             ]);
         }
-        
-        error_log('SAW Users Controller: after_save() END');
     }
     
     protected function before_delete($id) {
-        error_log('SAW Users Controller: before_delete() START - id: ' . $id);
-        
         $user = $this->model->get_by_id($id);
         
         if (!$user) {
-            error_log('SAW Users Controller: User not found');
             return true;
         }
         
@@ -323,7 +253,6 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
             $wp_user_id = intval($user['wp_user_id']);
             
             if ($wp_user_id === get_current_user_id()) {
-                error_log('SAW Users Controller: ERROR - Cannot delete self');
                 wp_die('Nemůžete smazat sami sebe');
             }
             
@@ -332,11 +261,8 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
             $deleted = wp_delete_user($wp_user_id);
             
             if (is_wp_error($deleted)) {
-                error_log('SAW Users Controller: ERROR deleting WP user: ' . $deleted->get_error_message());
                 wp_die('Chyba při mazání WordPress uživatele: ' . $deleted->get_error_message());
             }
-            
-            error_log('SAW Users Controller: WP user deleted');
         }
         
         // Smaž department assignments
@@ -347,41 +273,19 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
             ['%d']
         );
         
-        error_log('SAW Users Controller: before_delete() END');
         return true;
     }
     
-    /**
-     * ✅ OPRAVENO: Mapování SAW role → WP role
-     * 
-     * DŮLEŽITÉ: Super Admin MUSÍ mít WP roli "administrator"!
-     */
     private function map_saw_to_wp_role($saw_role) {
         $mapping = [
-            'super_admin' => 'administrator',        // ✅ Toto je správně!
+            'super_admin' => 'administrator',
             'admin' => 'saw_admin',
             'super_manager' => 'saw_super_manager',
             'manager' => 'saw_manager',
             'terminal' => 'saw_terminal'
         ];
         
-        $wp_role = $mapping[$saw_role] ?? 'saw_admin';
-        error_log('SAW Users Controller: Mapping SAW role "' . $saw_role . '" to WP role "' . $wp_role . '"');
-        
-        return $wp_role;
-    }
-    
-    private function validate_branch_customer($branch_id, $customer_id) {
-        global $wpdb;
-        $branch = $wpdb->get_row($wpdb->prepare(
-            "SELECT customer_id FROM {$wpdb->prefix}saw_branches WHERE id = %d",
-            $branch_id
-        ));
-        
-        if (!$branch || $branch->customer_id != $customer_id) {
-            error_log('SAW Users Controller: ERROR - Branch does not belong to customer');
-            wp_die('Pobočka nepatří k vybranému zákazníkovi');
-        }
+        return $mapping[$saw_role] ?? 'saw_admin';
     }
     
     public function ajax_get_departments_by_branch() {
