@@ -1,8 +1,9 @@
 <?php
 /**
- * SAW Authentication Controller
+ * SAW Authentication Controller - Database-First Login
  * 
  * @package SAW_Visitors
+ * @version 5.0.0
  * @since 4.8.0
  */
 
@@ -18,6 +19,11 @@ class SAW_Controller_Auth {
         $this->password = new SAW_Password();
     }
 
+    /**
+     * Login handler
+     * 
+     * ✅ CRITICAL FIX: Writes context to DATABASE, then initializes SAW_Context
+     */
     public function login() {
         if (is_user_logged_in()) {
             $this->redirect_after_login();
@@ -60,34 +66,52 @@ class SAW_Controller_Auth {
                         wp_logout();
                         $error = 'Nejprve si musíte nastavit heslo přes odkaz z emailu';
                     } else {
-                        // ✅ OPRAVA: Vyčisti starou session před vytvořením nové
-                        if (session_status() !== PHP_SESSION_NONE) {
-                            session_destroy();
-                        }
+                        // ================================================
+                        // ✅ CRITICAL: WRITE CONTEXT TO DATABASE FIRST!
+                        // ================================================
                         
-                        session_start();
-                        session_regenerate_id(true);
+                        // Determine default branch for context
+                        $default_branch_id = $this->get_default_branch_for_login($saw_user);
                         
-                        $_SESSION['saw_user_id'] = $saw_user['id'];
-                        $_SESSION['saw_role'] = $saw_user['role'];
-                        $_SESSION['saw_current_customer_id'] = $saw_user['customer_id'];
-                        $_SESSION['saw_current_branch_id'] = $saw_user['branch_id'];
-                        
-                        if ($saw_user['customer_id']) {
-                            update_user_meta($user->ID, 'saw_current_customer_id', $saw_user['customer_id']);
-                        }
-                        if ($saw_user['branch_id']) {
-                            update_user_meta($user->ID, 'saw_current_branch_id', $saw_user['branch_id']);
-                        }
-
+                        // UPDATE database with context
                         $wpdb->update(
                             $wpdb->prefix . 'saw_users',
-                            ['last_login' => current_time('mysql')],
+                            [
+                                'context_customer_id' => $saw_user['customer_id'],
+                                'context_branch_id' => $default_branch_id,
+                                'last_login' => current_time('mysql')
+                            ],
                             ['id' => $saw_user['id']],
-                            ['%s'],
+                            ['%d', '%d', '%s'],
                             ['%d']
                         );
+                        
+                        // ================================================
+                        // INITIALIZE SESSION (for backwards compatibility)
+                        // ================================================
+                        if (class_exists('SAW_Session_Manager')) {
+                            $session = SAW_Session_Manager::instance();
+                            $session->regenerate();
+                            $session->set('saw_user_id', $saw_user['id']);
+                            $session->set('saw_role', $saw_user['role']);
+                        } else {
+                            if (session_status() !== PHP_SESSION_NONE) {
+                                session_destroy();
+                            }
+                            session_start();
+                            session_regenerate_id(true);
+                            $_SESSION['saw_user_id'] = $saw_user['id'];
+                            $_SESSION['saw_role'] = $saw_user['role'];
+                        }
+                        
+                        // ================================================
+                        // INITIALIZE SAW_CONTEXT (loads from DB)
+                        // ================================================
+                        if (class_exists('SAW_Context')) {
+                            SAW_Context::reload();
+                        }
 
+                        // Audit log
                         if (class_exists('SAW_Audit')) {
                             SAW_Audit::log([
                                 'action' => 'user_login',
@@ -109,6 +133,40 @@ class SAW_Controller_Auth {
             'success' => $success,
             'email' => $email,
         ]);
+    }
+    
+    /**
+     * Get default branch for login based on role
+     * 
+     * Logic:
+     * - super_admin: null (can switch)
+     * - admin: null (can switch)
+     * - super_manager: first assigned branch or null
+     * - manager: null (no switching)
+     * - terminal: null (no switching)
+     * 
+     * @param array $saw_user
+     * @return int|null
+     */
+    private function get_default_branch_for_login($saw_user) {
+        $role = $saw_user['role'];
+        
+        // Super admin and admin don't have default branch
+        if (in_array($role, ['super_admin', 'admin'])) {
+            return null;
+        }
+        
+        // Super manager: get first assigned branch
+        if ($role === 'super_manager') {
+            if (class_exists('SAW_User_Branches')) {
+                $branches = SAW_User_Branches::get_branch_ids_for_user($saw_user['id']);
+                return !empty($branches) ? $branches[0] : null;
+            }
+            return null;
+        }
+        
+        // Manager and terminal: no default branch in context (they have fixed branch)
+        return null;
     }
 
     public function forgot_password() {
@@ -239,20 +297,28 @@ class SAW_Controller_Auth {
         ]);
     }
 
+    /**
+     * Logout handler
+     * 
+     * ✅ UPDATED: Uses SAW_Session_Manager
+     */
     public function logout() {
-        // ✅ OPRAVA: Kompletní vyčištění session
-        if (session_status() !== PHP_SESSION_NONE) {
-            $_SESSION = array();
-            
-            if (ini_get("session.use_cookies")) {
-                $params = session_get_cookie_params();
-                setcookie(session_name(), '', time() - 42000,
-                    $params["path"], $params["domain"],
-                    $params["secure"], $params["httponly"]
-                );
+        if (class_exists('SAW_Session_Manager')) {
+            SAW_Session_Manager::instance()->destroy();
+        } else {
+            if (session_status() !== PHP_SESSION_NONE) {
+                $_SESSION = array();
+                
+                if (ini_get("session.use_cookies")) {
+                    $params = session_get_cookie_params();
+                    setcookie(session_name(), '', time() - 42000,
+                        $params["path"], $params["domain"],
+                        $params["secure"], $params["httponly"]
+                    );
+                }
+                
+                session_destroy();
             }
-            
-            session_destroy();
         }
 
         wp_logout();
@@ -262,8 +328,10 @@ class SAW_Controller_Auth {
     }
 
     private function redirect_after_login($role = null) {
-        if ($role === null && isset($_SESSION['saw_role'])) {
-            $role = $_SESSION['saw_role'];
+        if ($role === null) {
+            if (class_exists('SAW_Context')) {
+                $role = SAW_Context::get_role();
+            }
         }
 
         $redirects = [

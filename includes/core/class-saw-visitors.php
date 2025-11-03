@@ -21,7 +21,7 @@ class SAW_Visitors {
         $this->init_context_and_components();
         $this->block_wp_admin_for_saw_roles();
         $this->init_ajax_controllers();
-        $this->define_hooks();
+        // NOTE: define_hooks() moved to run() to prevent duplicate hook registration
     }
     
     private function load_dependencies() {
@@ -276,6 +276,8 @@ class SAW_Visitors {
     }
     
     public function run() {
+        // Register hooks ONLY ONCE when run() is called
+        $this->define_hooks();
         $this->loader->run();
     }
 }

@@ -1,8 +1,9 @@
 <?php
 /**
- * SAW Authentication System
+ * SAW Authentication System - Database-First
  * 
  * @package SAW_Visitors
+ * @version 5.0.0
  * @since 4.8.0
  */
 
@@ -32,17 +33,20 @@ class SAW_Auth {
         return SAW_Context::get_customer_id();
     }
     
+    /**
+     * Get current user role
+     * 
+     * ✅ UPDATED: Uses SAW_Context, no session fallback
+     * 
+     * @return string|null
+     */
     public function get_current_user_role() {
         if (current_user_can('manage_options')) {
             return 'super_admin';
         }
         
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        
-        if (!empty($_SESSION['saw_role'])) {
-            return $_SESSION['saw_role'];
+        if (class_exists('SAW_Context')) {
+            return SAW_Context::get_role();
         }
         
         global $wpdb;

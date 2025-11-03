@@ -1,10 +1,9 @@
 <?php
 /**
- * SAW Router - FIXED VERSION
+ * SAW Router - FIXED VERSION v5.0.0
  * 
  * CRITICAL FIXES:
- * - ✅ REMOVED wp_doing_ajax() check - was preventing SAW_Context initialization for AJAX
- * - ✅ SAW_Context is now initialized BEFORE any routing logic
+ * - ✅ REMOVED duplicate SAW_Context initialization (now handled by SAW_Visitors)
  * - ✅ get_current_customer_data() uses SAW_Context as primary source
  * 
  * PRESERVED:
@@ -14,7 +13,7 @@
  * - ✅ Page rendering
  * 
  * @package SAW_Visitors
- * @version 2.1.0 - FIXED
+ * @version 5.0.0 - Database Revolution
  */
 
 if (!defined('ABSPATH')) {
@@ -71,9 +70,8 @@ class SAW_Router {
     /**
      * Main dispatch method
      * 
-     * ✅ CRITICAL FIX: Removed wp_doing_ajax() check
-     * This was preventing SAW_Context initialization for AJAX requests,
-     * causing modals and branch switcher to fail for non-super admin users.
+     * ✅ FIXED v5.0.0: Removed duplicate SAW_Context initialization
+     * Context is now initialized in SAW_Visitors::init_context_and_components()
      */
     public function dispatch($route = '', $path = '') {
         // ================================================
@@ -87,28 +85,15 @@ class SAW_Router {
             $path = get_query_var('saw_path');
         }
         
-        // If no SAW route, return early (but DON'T skip for AJAX)
+        // If no SAW route, return early
         if (empty($route)) {
             return;
         }
         
         // ================================================
-        // ✅ CRITICAL FIX: INITIALIZE SAW_CONTEXT FIRST
+        // NOTE: SAW_Context is already initialized in SAW_Visitors
+        // No duplicate initialization needed here
         // ================================================
-        // This MUST happen before any routing logic
-        // to ensure customer_id is available for AJAX handlers
-        if (class_exists('SAW_Context')) {
-            SAW_Context::instance();
-            
-            // Debug logging
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log(sprintf(
-                    '[SAW_Router] Context initialized - Customer ID: %s, AJAX: %s',
-                    SAW_Context::get_customer_id() ?? 'NULL',
-                    wp_doing_ajax() ? 'YES' : 'NO'
-                ));
-            }
-        }
         
         // ================================================
         // NAČTENÍ FRONTEND KOMPONENT
@@ -552,12 +537,12 @@ class SAW_Router {
     /**
      * Get current customer data
      * 
-     * ✅ FIXED: Uses SAW_Context as PRIMARY source
+     * ✅ UPDATED v5.0.0: Uses SAW_Context as PRIMARY source
      * This ensures consistent customer_id across the application
      */
     private function get_current_customer_data() {
         // ================================================
-        // ✅ PRIORITY 1: SAW_CONTEXT (ALWAYS TRY THIS FIRST)
+        // PRIORITY 1: SAW_CONTEXT (database-first)
         // ================================================
         if (class_exists('SAW_Context')) {
             $customer = SAW_Context::get_customer_data();
@@ -573,11 +558,7 @@ class SAW_Router {
             }
         }
         
-        // If we reach here, SAW_Context failed to load customer
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('[SAW_Router] WARNING: SAW_Context failed to load customer data, using fallback');
-        }
-        
+        // Fallback if SAW_Context failed
         global $wpdb;
         
         if (!is_user_logged_in()) {
@@ -593,18 +574,13 @@ class SAW_Router {
         
         $wp_user = wp_get_current_user();
         
-        // ================================================
-        // FALLBACK FOR SUPER ADMIN - SESSION
-        // ================================================
+        // For super admin - try session
         if (current_user_can('manage_options')) {
-            if (session_status() === PHP_SESSION_NONE) {
-                session_start();
-            }
+            $session = class_exists('SAW_Session_Manager') ? SAW_Session_Manager::instance() : null;
             
             $customer_id = null;
-            
-            if (isset($_SESSION['saw_current_customer_id'])) {
-                $customer_id = intval($_SESSION['saw_current_customer_id']);
+            if ($session && $session->has('saw_current_customer_id')) {
+                $customer_id = intval($session->get('saw_current_customer_id'));
             }
             
             if (!$customer_id) {
@@ -633,9 +609,7 @@ class SAW_Router {
             }
         }
         
-        // ================================================
-        // FALLBACK FOR ADMIN/MANAGER - FROM DATABASE
-        // ================================================
+        // For admin/manager - from database
         $saw_user = $wpdb->get_row($wpdb->prepare(
             "SELECT customer_id FROM {$wpdb->prefix}saw_users WHERE wp_user_id = %d AND is_active = 1",
             $wp_user->ID
@@ -659,21 +633,13 @@ class SAW_Router {
             }
         }
         
-        // ================================================
-        // LAST RESORT - FIRST CUSTOMER IN DATABASE
-        // ================================================
+        // Last resort - first customer
         $customer = $wpdb->get_row(
             "SELECT * FROM {$wpdb->prefix}saw_customers WHERE status = 'active' ORDER BY id ASC LIMIT 1",
             ARRAY_A
         );
         
         if ($customer) {
-            if (session_status() === PHP_SESSION_NONE) {
-                session_start();
-            }
-            $_SESSION['saw_current_customer_id'] = intval($customer['id']);
-            update_user_meta($wp_user->ID, 'saw_current_customer_id', intval($customer['id']));
-            
             return array(
                 'id' => $customer['id'],
                 'name' => $customer['name'],

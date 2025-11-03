@@ -1,9 +1,9 @@
 <?php
 /**
- * Base Model Class - UPDATED with Data Scope
+ * Base Model Class - Database-First with Multi-Branch Support
  * 
  * @package SAW_Visitors
- * @version 4.10.0
+ * @version 5.0.0
  */
 
 if (!defined('ABSPATH')) {
@@ -29,7 +29,6 @@ abstract class SAW_Base_Model
         $sql = "SELECT * FROM {$this->table} WHERE 1=1";
         $params = [];
         
-        // ✅ NO HARDCODED FILTERS - only permissions-based scope
         $scope_sql = $this->apply_data_scope();
         if (!empty($scope_sql)) {
             $sql .= $scope_sql;
@@ -238,6 +237,13 @@ abstract class SAW_Base_Model
         return $wpdb->get_var($sql);
     }
     
+    /**
+     * Apply data scope based on user role and permissions
+     * 
+     * ✅ UPDATED: Uses SAW_Context for customer/branch, validates multi-branch for super_manager
+     * 
+     * @return string SQL WHERE clause
+     */
     protected function apply_data_scope() {
         if (!class_exists('SAW_Permissions')) {
             return '';
@@ -266,9 +272,10 @@ abstract class SAW_Base_Model
                 break;
                 
             case 'branch':
-                $branch_id = $this->get_current_branch_id();
-                if ($branch_id) {
-                    return " AND branch_id = " . intval($branch_id);
+                $branch_ids = $this->get_accessible_branch_ids();
+                if (!empty($branch_ids)) {
+                    $ids = implode(',', array_map('intval', $branch_ids));
+                    return " AND branch_id IN ({$ids})";
                 }
                 break;
                 
@@ -291,75 +298,113 @@ abstract class SAW_Base_Model
         return '';
     }
     
+    /**
+     * Get accessible branch IDs based on role
+     * 
+     * ✅ NEW: Handles multi-branch for super_manager
+     * 
+     * @return array Branch IDs
+     */
+    protected function get_accessible_branch_ids() {
+        $role = $this->get_current_user_role();
+        $current_branch_id = $this->get_current_branch_id();
+        
+        if ($role === 'super_manager') {
+            if (!class_exists('SAW_User_Branches')) {
+                return $current_branch_id ? [$current_branch_id] : [];
+            }
+            
+            $saw_user_id = SAW_Context::get_saw_user_id();
+            if (!$saw_user_id) {
+                return $current_branch_id ? [$current_branch_id] : [];
+            }
+            
+            $branch_ids = SAW_User_Branches::get_branch_ids_for_user($saw_user_id);
+            
+            if (empty($branch_ids)) {
+                return $current_branch_id ? [$current_branch_id] : [];
+            }
+            
+            if ($current_branch_id && in_array($current_branch_id, $branch_ids)) {
+                return [$current_branch_id];
+            }
+            
+            return $branch_ids;
+        }
+        
+        return $current_branch_id ? [$current_branch_id] : [];
+    }
+    
+    /**
+     * Get current user role
+     * 
+     * ✅ UPDATED: Uses SAW_Context, no session fallback
+     * 
+     * @return string|null
+     */
     protected function get_current_user_role() {
         if (current_user_can('manage_options')) {
             return 'super_admin';
         }
         
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
+        if (class_exists('SAW_Context')) {
+            return SAW_Context::get_role();
         }
         
-        $session_role = $_SESSION['saw_role'] ?? null;
-        
-        if (!empty($session_role)) {
-            return $session_role;
-        }
-        
-        static $role = null;
-        if ($role === null) {
-            global $wpdb;
-            
-            $saw_user = $wpdb->get_row($wpdb->prepare(
-                "SELECT role FROM {$wpdb->prefix}saw_users 
-                 WHERE wp_user_id = %d AND is_active = 1",
-                get_current_user_id()
-            ));
-            
-            $role = $saw_user->role ?? null;
-        }
-        
-        return $role;
+        return null;
     }
     
+    /**
+     * Get current customer ID
+     * 
+     * ✅ UPDATED: Uses SAW_Context instead of sessions
+     * 
+     * @return int|null
+     */
     protected function get_current_customer_id() {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
+        if (class_exists('SAW_Context')) {
+            return SAW_Context::get_customer_id();
         }
         
-        return $_SESSION['saw_current_customer_id'] ?? null;
+        return null;
     }
     
+    /**
+     * Get current branch ID
+     * 
+     * ✅ UPDATED: Uses SAW_Context instead of sessions
+     * 
+     * @return int|null
+     */
     protected function get_current_branch_id() {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
+        if (class_exists('SAW_Context')) {
+            return SAW_Context::get_branch_id();
         }
         
-        return $_SESSION['saw_current_branch_id'] ?? null;
+        return null;
     }
     
+    /**
+     * Get current user's department IDs
+     * 
+     * @return array
+     */
     protected function get_current_department_ids() {
         global $wpdb;
         
-        $user_id = get_current_user_id();
-        if (!$user_id) {
+        if (!class_exists('SAW_Context')) {
             return [];
         }
         
-        $saw_user = $wpdb->get_row($wpdb->prepare(
-            "SELECT id FROM {$wpdb->prefix}saw_users 
-             WHERE wp_user_id = %d AND is_active = 1",
-            $user_id
-        ));
-        
-        if (!$saw_user) {
+        $saw_user_id = SAW_Context::get_saw_user_id();
+        if (!$saw_user_id) {
             return [];
         }
         
         $department_ids = $wpdb->get_col($wpdb->prepare(
             "SELECT department_id FROM {$wpdb->prefix}saw_user_departments 
              WHERE user_id = %d",
-            $saw_user->id
+            $saw_user_id
         ));
         
         return array_map('intval', $department_ids);
