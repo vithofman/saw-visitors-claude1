@@ -229,10 +229,14 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
         // 3. AUDIT LOG
         // ===================================
         if (class_exists('SAW_Audit')) {
+            // Get customer_id from newly created user
+            $user = $this->model->get_by_id($user_id);
+            
             SAW_Audit::log([
                 'action' => empty($this->pending_setup_email) ? 'user_updated' : 'user_created',
                 'entity_type' => 'user',
                 'entity_id' => $user_id,
+                'customer_id' => $user['customer_id'] ?? null, // ✅ FIXED
                 'details' => json_encode([
                     'role' => $this->pending_setup_email['role'] ?? 'updated',
                     'email' => $this->pending_setup_email['email'] ?? '',

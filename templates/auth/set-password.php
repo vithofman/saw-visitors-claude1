@@ -80,6 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$error && $user) {
                     SAW_Audit::log([
                         'action' => 'password_set_success',
                         'user_id' => $user['id'],
+                        'customer_id' => $user['customer_id'] ?? null, // ✅ FIXED
                         'details' => 'Uživatel ' . $user['user_email'] . ' si úspěšně nastavil heslo',
                     ]);
                 }

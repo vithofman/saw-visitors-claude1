@@ -216,6 +216,7 @@ class SAW_Password {
             SAW_Audit::log([
                 'action' => 'password_set',
                 'user_id' => $user['id'],
+                'customer_id' => $user['customer_id'] ?? null, // ✅ FIXED
                 'details' => 'Uživatel si nastavil heslo poprvé',
             ]);
         }
@@ -298,6 +299,7 @@ class SAW_Password {
             SAW_Audit::log([
                 'action' => 'password_reset_requested',
                 'user_id' => $user['id'],
+                'customer_id' => $user['customer_id'] ?? null, // ✅ FIXED
                 'details' => "Reset hesla požádán pro email: {$email}",
             ]);
         }
@@ -383,6 +385,7 @@ class SAW_Password {
             SAW_Audit::log([
                 'action' => 'password_reset_completed',
                 'user_id' => $user['id'],
+                'customer_id' => $user['customer_id'] ?? null, // ✅ FIXED
                 'details' => 'Heslo bylo úspěšně resetováno',
             ]);
         }
