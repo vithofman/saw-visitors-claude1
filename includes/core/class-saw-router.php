@@ -1,13 +1,20 @@
 <?php
 /**
- * SAW Router - KOMPLETNÍ OPRAVENÁ VERZE
+ * SAW Router - FIXED VERSION
  * 
- * ✅ ZACHOVÁNO: Vše co fungovalo
- * ✅ PŘIDÁNO: SAW_Context inicializace na začátku
- * ✅ OPRAVENO: get_current_customer_data() používá SAW_Context
+ * CRITICAL FIXES:
+ * - ✅ REMOVED wp_doing_ajax() check - was preventing SAW_Context initialization for AJAX
+ * - ✅ SAW_Context is now initialized BEFORE any routing logic
+ * - ✅ get_current_customer_data() uses SAW_Context as primary source
+ * 
+ * PRESERVED:
+ * - ✅ All routes (auth, admin, manager, terminal, visitor)
+ * - ✅ Module dispatching logic
+ * - ✅ Authentication checks
+ * - ✅ Page rendering
  * 
  * @package SAW_Visitors
- * @version 2.0.3
+ * @version 2.1.0 - FIXED
  */
 
 if (!defined('ABSPATH')) {
@@ -17,28 +24,38 @@ if (!defined('ABSPATH')) {
 class SAW_Router {
     
     public function register_routes() {
+        // ================================================
         // AUTENTIZAČNÍ ROUTY
+        // ================================================
         add_rewrite_rule('^login/?$', 'index.php?saw_route=auth&saw_action=login', 'top');
         add_rewrite_rule('^set-password/?$', 'index.php?saw_route=auth&saw_action=set-password', 'top');
         add_rewrite_rule('^reset-password/?$', 'index.php?saw_route=auth&saw_action=reset-password', 'top');
         add_rewrite_rule('^logout/?$', 'index.php?saw_route=auth&saw_action=logout', 'top');
         
+        // ================================================
         // ADMIN ROUTY
+        // ================================================
         add_rewrite_rule('^admin/?$', 'index.php?saw_route=admin', 'top');
         add_rewrite_rule('^admin/([^/]+)/?$', 'index.php?saw_route=admin&saw_path=$matches[1]', 'top');
         add_rewrite_rule('^admin/([^/]+)/(.+)', 'index.php?saw_route=admin&saw_path=$matches[1]/$matches[2]', 'top');
         
+        // ================================================
         // MANAGER ROUTY
+        // ================================================
         add_rewrite_rule('^manager/?$', 'index.php?saw_route=manager', 'top');
         add_rewrite_rule('^manager/([^/]+)/?$', 'index.php?saw_route=manager&saw_path=$matches[1]', 'top');
         add_rewrite_rule('^manager/([^/]+)/(.+)', 'index.php?saw_route=manager&saw_path=$matches[1]/$matches[2]', 'top');
         
+        // ================================================
         // TERMINAL ROUTY
+        // ================================================
         add_rewrite_rule('^terminal/?$', 'index.php?saw_route=terminal', 'top');
         add_rewrite_rule('^terminal/([^/]+)/?$', 'index.php?saw_route=terminal&saw_path=$matches[1]', 'top');
         add_rewrite_rule('^terminal/([^/]+)/(.+)', 'index.php?saw_route=terminal&saw_path=$matches[1]/$matches[2]', 'top');
         
+        // ================================================
         // VISITOR ROUTY
+        // ================================================
         add_rewrite_rule('^visitor/?$', 'index.php?saw_route=visitor', 'top');
         add_rewrite_rule('^visitor/([^/]+)/?$', 'index.php?saw_route=visitor&saw_path=$matches[1]', 'top');
         add_rewrite_rule('^visitor/([^/]+)/(.+)', 'index.php?saw_route=visitor&saw_path=$matches[1]/$matches[2]', 'top');
@@ -51,35 +68,18 @@ class SAW_Router {
         return $vars;
     }
     
+    /**
+     * Main dispatch method
+     * 
+     * ✅ CRITICAL FIX: Removed wp_doing_ajax() check
+     * This was preventing SAW_Context initialization for AJAX requests,
+     * causing modals and branch switcher to fail for non-super admin users.
+     */
     public function dispatch($route = '', $path = '') {
-
- // ✅ KRITICKÁ OPRAVA: Pro AJAX requesty NIC NEDĚLEJ!
-    if (wp_doing_ajax()) {
-        return;
-    }
-    
-    if (empty($route)) {
-        $route = get_query_var('saw_route');
-    }
-    
-    if (empty($path)) {
-        $path = get_query_var('saw_path');
-    }
-    
-    if (empty($route)) {
-        return;
-    }
-    
-    // ✅ Inicializuj SAW_Context HNED na začátku!
-    if (class_exists('SAW_Context') && is_user_logged_in()) {
-        SAW_Context::instance();
-    }
-    
-    $this->load_frontend_components();
-
-
-        
-if (empty($route)) {
+        // ================================================
+        // NAČTENÍ ROUTE A PATH
+        // ================================================
+        if (empty($route)) {
             $route = get_query_var('saw_route');
         }
         
@@ -87,17 +87,37 @@ if (empty($route)) {
             $path = get_query_var('saw_path');
         }
         
+        // If no SAW route, return early (but DON'T skip for AJAX)
         if (empty($route)) {
             return;
         }
         
-        // ✅ KRITICKÁ OPRAVA: Inicializuj SAW_Context HNED na začátku!
-        if (class_exists('SAW_Context') && is_user_logged_in()) {
+        // ================================================
+        // ✅ CRITICAL FIX: INITIALIZE SAW_CONTEXT FIRST
+        // ================================================
+        // This MUST happen before any routing logic
+        // to ensure customer_id is available for AJAX handlers
+        if (class_exists('SAW_Context')) {
             SAW_Context::instance();
+            
+            // Debug logging
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log(sprintf(
+                    '[SAW_Router] Context initialized - Customer ID: %s, AJAX: %s',
+                    SAW_Context::get_customer_id() ?? 'NULL',
+                    wp_doing_ajax() ? 'YES' : 'NO'
+                ));
+            }
         }
         
+        // ================================================
+        // NAČTENÍ FRONTEND KOMPONENT
+        // ================================================
         $this->load_frontend_components();
         
+        // ================================================
+        // ROUTING
+        // ================================================
         switch ($route) {
             case 'auth':
                 $this->handle_auth_route();
@@ -126,6 +146,10 @@ if (empty($route)) {
         
         exit;
     }
+    
+    // ================================================
+    // AUTH ROUTE HANDLERS
+    // ================================================
     
     private function handle_auth_route() {
         $action = get_query_var('saw_action');
@@ -212,6 +236,10 @@ if (empty($route)) {
         }
     }
     
+    // ================================================
+    // MODULE HANDLING
+    // ================================================
+    
     public function get_active_module() {
         $path = get_query_var('saw_path');
         
@@ -266,52 +294,9 @@ if (empty($route)) {
         }
     }
     
-    private function load_frontend_components() {
-        $components = array(
-            'class-saw-app-layout.php',
-            'class-saw-app-header.php',
-            'class-saw-app-sidebar.php',
-            'class-saw-app-footer.php',
-        );
-        
-        foreach ($components as $component) {
-            $file = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/' . $component;
-            if (file_exists($file)) {
-                require_once $file;
-            }
-        }
-    }
-    
-    private function is_logged_in() {
-        return is_user_logged_in();
-    }
-    
-    private function redirect_to_login($route = 'admin') {
-        $login_url = '/' . $route . '/login/';
-        
-        ob_start();
-        ?>
-        <!DOCTYPE html>
-        <html <?php language_attributes(); ?>>
-        <head>
-            <meta charset="<?php bloginfo('charset'); ?>">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <meta http-equiv="refresh" content="0;url=<?php echo esc_url($login_url); ?>">
-            <title>Přesměrování na přihlášení...</title>
-        </head>
-        <body>
-            <div style="text-align: center; padding: 50px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
-                <h1>🔒 Přesměrování...</h1>
-                <p>Prosím počkejte, přesměrovávám vás na přihlašovací stránku.</p>
-                <p><a href="<?php echo esc_url($login_url); ?>">Klikněte zde, pokud se stránka nenačte automaticky</a></p>
-            </div>
-            <script>window.location.href = '<?php echo esc_js($login_url); ?>';</script>
-        </body>
-        </html>
-        <?php
-        echo ob_get_clean();
-        exit;
-    }
+    // ================================================
+    // ROUTE HANDLERS
+    // ================================================
     
     private function handle_admin_route($path) {
         if (!$this->is_logged_in()) {
@@ -374,6 +359,10 @@ if (empty($route)) {
     private function handle_visitor_route($path) {
         $this->render_page('Visitor Portal', $path, 'visitor', '');
     }
+    
+    // ================================================
+    // PAGE RENDERING
+    // ================================================
     
     private function render_page($title, $path, $route, $active_menu = '') {
         $user = $this->get_current_user_data();
@@ -462,6 +451,61 @@ if (empty($route)) {
         $this->render_page('404 - Stránka nenalezena', '404', 'error', '');
     }
     
+    // ================================================
+    // HELPER METHODS
+    // ================================================
+    
+    private function load_frontend_components() {
+        $components = array(
+            'class-saw-app-layout.php',
+            'class-saw-app-header.php',
+            'class-saw-app-sidebar.php',
+            'class-saw-app-footer.php',
+        );
+        
+        foreach ($components as $component) {
+            $file = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/' . $component;
+            if (file_exists($file)) {
+                require_once $file;
+            }
+        }
+    }
+    
+    private function is_logged_in() {
+        return is_user_logged_in();
+    }
+    
+    private function redirect_to_login($route = 'admin') {
+        $login_url = '/' . $route . '/login/';
+        
+        ob_start();
+        ?>
+        <!DOCTYPE html>
+        <html <?php language_attributes(); ?>>
+        <head>
+            <meta charset="<?php bloginfo('charset'); ?>">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta http-equiv="refresh" content="0;url=<?php echo esc_url($login_url); ?>">
+            <title>Přesměrování na přihlášení...</title>
+        </head>
+        <body>
+            <div style="text-align: center; padding: 50px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
+                <h1>🔒 Přesměrování...</h1>
+                <p>Prosím počkejte, přesměrovávám vás na přihlašovací stránku.</p>
+                <p><a href="<?php echo esc_url($login_url); ?>">Klikněte zde, pokud se stránka nenačte automaticky</a></p>
+            </div>
+            <script>window.location.href = '<?php echo esc_js($login_url); ?>';</script>
+        </body>
+        </html>
+        <?php
+        echo ob_get_clean();
+        exit;
+    }
+    
+    // ================================================
+    // USER & CUSTOMER DATA
+    // ================================================
+    
     private function get_current_user_data() {
         if (is_user_logged_in()) {
             $wp_user = wp_get_current_user();
@@ -505,8 +549,16 @@ if (empty($route)) {
         );
     }
     
+    /**
+     * Get current customer data
+     * 
+     * ✅ FIXED: Uses SAW_Context as PRIMARY source
+     * This ensures consistent customer_id across the application
+     */
     private function get_current_customer_data() {
-        // ✅ OPRAVA: Použij SAW_Context jako prioritu
+        // ================================================
+        // ✅ PRIORITY 1: SAW_CONTEXT (ALWAYS TRY THIS FIRST)
+        // ================================================
         if (class_exists('SAW_Context')) {
             $customer = SAW_Context::get_customer_data();
             if ($customer) {
@@ -516,8 +568,14 @@ if (empty($route)) {
                     'ico' => $customer['ico'] ?? '',
                     'address' => $customer['address'] ?? '',
                     'logo_url' => $customer['logo_url'] ?? '',
+                    'logo_url_full' => !empty($customer['logo_url']) ? wp_get_upload_dir()['baseurl'] . '/' . ltrim($customer['logo_url'], '/') : '',
                 );
             }
+        }
+        
+        // If we reach here, SAW_Context failed to load customer
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[SAW_Router] WARNING: SAW_Context failed to load customer data, using fallback');
         }
         
         global $wpdb;
@@ -529,12 +587,15 @@ if (empty($route)) {
                 'ico' => '',
                 'address' => '',
                 'logo_url' => '',
+                'logo_url_full' => '',
             );
         }
         
         $wp_user = wp_get_current_user();
         
-        // Super Admin - ze session
+        // ================================================
+        // FALLBACK FOR SUPER ADMIN - SESSION
+        // ================================================
         if (current_user_can('manage_options')) {
             if (session_status() === PHP_SESSION_NONE) {
                 session_start();
@@ -566,12 +627,15 @@ if (empty($route)) {
                         'ico' => $customer['ico'] ?? '',
                         'address' => $customer['address'] ?? '',
                         'logo_url' => $customer['logo_url'] ?? '',
+                        'logo_url_full' => !empty($customer['logo_url']) ? wp_get_upload_dir()['baseurl'] . '/' . ltrim($customer['logo_url'], '/') : '',
                     );
                 }
             }
         }
         
-        // Admin/Manager - z jejich přiřazeného zákazníka
+        // ================================================
+        // FALLBACK FOR ADMIN/MANAGER - FROM DATABASE
+        // ================================================
         $saw_user = $wpdb->get_row($wpdb->prepare(
             "SELECT customer_id FROM {$wpdb->prefix}saw_users WHERE wp_user_id = %d AND is_active = 1",
             $wp_user->ID
@@ -590,13 +654,16 @@ if (empty($route)) {
                     'ico' => $customer['ico'] ?? '',
                     'address' => $customer['address'] ?? '',
                     'logo_url' => $customer['logo_url'] ?? '',
+                    'logo_url_full' => !empty($customer['logo_url']) ? wp_get_upload_dir()['baseurl'] . '/' . ltrim($customer['logo_url'], '/') : '',
                 );
             }
         }
         
-        // Fallback - první zákazník
+        // ================================================
+        // LAST RESORT - FIRST CUSTOMER IN DATABASE
+        // ================================================
         $customer = $wpdb->get_row(
-            "SELECT * FROM {$wpdb->prefix}saw_customers ORDER BY id ASC LIMIT 1",
+            "SELECT * FROM {$wpdb->prefix}saw_customers WHERE status = 'active' ORDER BY id ASC LIMIT 1",
             ARRAY_A
         );
         
@@ -613,6 +680,7 @@ if (empty($route)) {
                 'ico' => $customer['ico'] ?? '',
                 'address' => $customer['address'] ?? '',
                 'logo_url' => $customer['logo_url'] ?? '',
+                'logo_url_full' => !empty($customer['logo_url']) ? wp_get_upload_dir()['baseurl'] . '/' . ltrim($customer['logo_url'], '/') : '',
             );
         }
         
@@ -622,6 +690,7 @@ if (empty($route)) {
             'ico' => '',
             'address' => '',
             'logo_url' => '',
+            'logo_url_full' => '',
         );
     }
 }

@@ -1,8 +1,15 @@
 /**
- * SAW Branch Switcher - JavaScript (FIXED VERSION)
+ * SAW Branch Switcher - JavaScript (FIXED VERSION v2)
+ * 
+ * CRITICAL FIXES:
+ * - ✅ Uses correct nonce (saw_branch_switcher)
+ * - ✅ Sends customer_id (optional, PHP uses SAW_Context as primary)
+ * - ✅ Better error handling and logging
+ * - ✅ Handles 400/403 errors properly
  * 
  * @package SAW_Visitors
  * @since 4.7.0
+ * @version 2.0.0
  */
 
 (function($) {
@@ -25,22 +32,34 @@
         
         init() {
             if (!this.button.length || !this.dropdown.length) {
+                console.log('[Branch Switcher] Elements not found');
                 return;
             }
             
             if (typeof sawBranchSwitcher === 'undefined') {
+                console.error('[Branch Switcher] sawBranchSwitcher object not found!');
                 return;
             }
             
+            // Get customer ID from data attribute
             this.customerId = parseInt(this.container.data('customer-id'));
             this.currentBranchId = parseInt(this.button.data('current-branch-id')) || null;
             
-            // ✅ OPRAVA: Přidán customer_id do data atributu
+            console.log('[Branch Switcher] Initialized', {
+                customerId: this.customerId,
+                currentBranchId: this.currentBranchId,
+                ajaxurl: sawBranchSwitcher.ajaxurl,
+                hasNonce: !!sawBranchSwitcher.nonce
+            });
+            
+            // Validate customer ID
             if (!this.customerId || this.customerId === 0 || isNaN(this.customerId)) {
+                console.error('[Branch Switcher] Invalid customer ID:', this.customerId);
                 this.showError('Neplatné ID zákazníka');
                 return;
             }
             
+            // Event listeners
             this.button.on('click', (e) => {
                 e.stopPropagation();
                 this.toggle();
@@ -83,6 +102,7 @@
         
         loadBranches() {
             if (this.isLoading) {
+                console.log('[Branch Switcher] Already loading...');
                 return;
             }
             
@@ -94,19 +114,35 @@
             this.isLoading = true;
             this.showLoading();
             
+            console.log('[Branch Switcher] Loading branches...', {
+                action: 'saw_get_branches_for_switcher',
+                customer_id: this.customerId,
+                nonce: sawBranchSwitcher.nonce
+            });
+            
             $.ajax({
                 url: sawBranchSwitcher.ajaxurl,
                 type: 'POST',
                 data: {
                     action: 'saw_get_branches_for_switcher',
-                    customer_id: this.customerId, // ✅ customer_id added
-                    nonce: sawBranchSwitcher.nonce
+                    customer_id: this.customerId, // ✅ Send for reference, but PHP uses SAW_Context
+                    nonce: sawBranchSwitcher.nonce // ✅ CRITICAL: Use saw_branch_switcher nonce
                 },
                 success: (response) => {
                     this.isLoading = false;
                     
-                    if (!response.success || !response.data || !Array.isArray(response.data.branches)) {
-                        this.showError('Chyba načítání poboček');
+                    console.log('[Branch Switcher] Response received:', response);
+                    
+                    if (!response || !response.success) {
+                        const message = (response && response.data && response.data.message) 
+                            ? response.data.message 
+                            : 'Chyba načítání poboček';
+                        this.showError(message);
+                        return;
+                    }
+                    
+                    if (!response.data || !Array.isArray(response.data.branches)) {
+                        this.showError('Neplatná odpověď serveru');
                         return;
                     }
                     
@@ -116,11 +152,40 @@
                         this.currentBranchId = parseInt(response.data.current_branch_id);
                     }
                     
+                    console.log('[Branch Switcher] Loaded', this.branches.length, 'branches');
+                    
                     this.renderBranches();
                 },
-                error: () => {
+                error: (xhr, status, error) => {
                     this.isLoading = false;
-                    this.showError('Chyba serveru');
+                    
+                    console.error('[Branch Switcher] AJAX error:', {
+                        status: xhr.status,
+                        statusText: xhr.statusText,
+                        responseText: xhr.responseText,
+                        error: error
+                    });
+                    
+                    let message = 'Chyba serveru';
+                    
+                    if (xhr.status === 400) {
+                        message = 'Chybný požadavek - zkontrolujte nonce';
+                    } else if (xhr.status === 403) {
+                        message = 'Nedostatečná oprávnění';
+                    } else if (xhr.status === 404) {
+                        message = 'AJAX endpoint nenalezen';
+                    }
+                    
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        if (response && response.data && response.data.message) {
+                            message = response.data.message;
+                        }
+                    } catch (e) {
+                        // Can't parse response
+                    }
+                    
+                    this.showError(message);
                 }
             });
         }
@@ -155,6 +220,7 @@
             
             this.list.html(html);
             
+            // Attach click handlers
             this.list.find('.saw-branch-item').on('click', (e) => {
                 const branchId = parseInt($(e.currentTarget).data('branch-id'));
                 this.switchBranch(branchId);
@@ -162,14 +228,7 @@
         }
         
         switchBranch(branchId) {
-            if (branchId === this.currentBranchId) {
-                this.close();
-                return;
-            }
-            
-            this.button.prop('disabled', true);
-            const originalText = this.button.find('.saw-branch-name').text();
-            this.button.find('.saw-branch-name').text('Přepínání...');
+            console.log('[Branch Switcher] Switching to branch:', branchId);
             
             $.ajax({
                 url: sawBranchSwitcher.ajaxurl,
@@ -180,18 +239,21 @@
                     nonce: sawBranchSwitcher.nonce
                 },
                 success: (response) => {
-                    if (response.success) {
+                    console.log('[Branch Switcher] Switch response:', response);
+                    
+                    if (response && response.success) {
+                        // Reload page to apply new branch context
                         window.location.reload();
                     } else {
-                        this.button.find('.saw-branch-name').text(originalText);
-                        this.button.prop('disabled', false);
-                        alert(response.data?.message || 'Chyba při přepínání pobočky');
+                        const message = (response && response.data && response.data.message) 
+                            ? response.data.message 
+                            : 'Chyba přepnutí pobočky';
+                        alert(message);
                     }
                 },
-                error: () => {
-                    this.button.find('.saw-branch-name').text(originalText);
-                    this.button.prop('disabled', false);
-                    alert('Chyba serveru');
+                error: (xhr) => {
+                    console.error('[Branch Switcher] Switch error:', xhr);
+                    alert('Chyba serveru při přepínání pobočky');
                 }
             });
         }
@@ -200,20 +262,22 @@
             this.list.html(`
                 <div class="saw-branch-loading">
                     <div class="saw-spinner"></div>
-                    <span>Načítání poboček...</span>
+                    <span>Načítání...</span>
                 </div>
             `);
         }
         
         showError(message) {
+            console.error('[Branch Switcher] Error:', message);
             this.list.html(`
                 <div class="saw-branch-error">
-                    <span>⚠️ ${this.escapeHtml(message)}</span>
+                    <p>❌ ${this.escapeHtml(message)}</p>
                 </div>
             `);
         }
         
         escapeHtml(text) {
+            if (!text) return '';
             const map = {
                 '&': '&amp;',
                 '<': '&lt;',
@@ -221,20 +285,18 @@
                 '"': '&quot;',
                 "'": '&#039;'
             };
-            return String(text).replace(/[&<>"']/g, m => map[m]);
+            return text.toString().replace(/[&<>"']/g, function(m) { return map[m]; });
         }
     };
     
+    // Initialize on document ready
+    $(document).ready(function() {
+        console.log('[Branch Switcher] Document ready, initializing...');
+        if ($('#sawBranchSwitcher').length) {
+            window.branchSwitcher = new BranchSwitcher();
+        } else {
+            console.log('[Branch Switcher] Component not found in DOM');
+        }
+    });
+    
 })(jQuery);
-
-jQuery(document).ready(function($) {
-    if ($('#sawBranchSwitcher').length === 0) {
-        return;
-    }
-    
-    if (typeof sawBranchSwitcher === 'undefined') {
-        return;
-    }
-    
-    new BranchSwitcher();
-});

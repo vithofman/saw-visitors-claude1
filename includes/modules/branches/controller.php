@@ -1,8 +1,19 @@
 <?php
 /**
- * Branches Module Controller
+ * Branches Module Controller - FIXED VERSION
+ * 
+ * CRITICAL FIXES:
+ * - ✅ REMOVED duplicate AJAX handlers (ajax_get_branches_for_switcher, ajax_switch_branch)
+ *   These are now handled ONLY by SAW_Component_Branch_Switcher
+ * - ✅ Kept only module-specific handlers (detail, search, delete)
+ * 
+ * PRESERVED:
+ * - ✅ All module functionality (list, create, edit, delete)
+ * - ✅ File upload handling
+ * - ✅ Cache invalidation
  * 
  * @package SAW_Visitors
+ * @version 1.1.0 - FIXED
  * @since 4.8.0
  */
 
@@ -27,8 +38,14 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/class-saw-file-uploader.php';
         $this->file_uploader = new SAW_File_Uploader();
         
-        add_action('wp_ajax_saw_get_branches_for_switcher', [$this, 'ajax_get_branches_for_switcher']);
-        add_action('wp_ajax_saw_switch_branch', [$this, 'ajax_switch_branch']);
+        // ================================================
+        // ✅ CRITICAL FIX: REMOVED DUPLICATE AJAX HANDLERS
+        // ================================================
+        // These are now handled by SAW_Component_Branch_Switcher:
+        // - ajax_get_branches_for_switcher (REMOVED)
+        // - ajax_switch_branch (REMOVED)
+        //
+        // Only module-specific handlers remain:
         add_action('wp_ajax_saw_get_branches_detail', [$this, 'ajax_get_detail']);
         add_action('wp_ajax_saw_search_branches', [$this, 'ajax_search']);
         add_action('wp_ajax_saw_delete_branches', [$this, 'ajax_delete']);
@@ -36,11 +53,22 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         add_action('admin_enqueue_scripts', [$this, 'enqueue_assets']);
     }
     
+    /**
+     * Enqueue assets
+     */
     public function enqueue_assets() {
         $this->file_uploader->enqueue_assets();
     }
     
+    /**
+     * Before save hook
+     * Handle file uploads
+     * 
+     * @param array $data
+     * @return array
+     */
     protected function before_save($data) {
+        // Handle file removal
         if ($this->file_uploader->should_remove_file('image_url')) {
             if (!empty($data['id'])) {
                 $existing = $this->model->get_by_id($data['id']);
@@ -52,6 +80,7 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
             $data['image_thumbnail'] = '';
         }
         
+        // Handle file upload
         if (!empty($_FILES['image_url']['name'])) {
             $upload = $this->file_uploader->upload($_FILES['image_url'], 'branches');
             
@@ -62,6 +91,7 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
             $data['image_url'] = $upload['url'];
             $data['image_thumbnail'] = $upload['url'];
             
+            // Delete old file if exists
             if (!empty($data['id'])) {
                 $existing = $this->model->get_by_id($data['id']);
                 if (!empty($existing['image_url']) && $existing['image_url'] !== $data['image_url']) {
@@ -73,122 +103,27 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         return $data;
     }
     
+    /**
+     * After save hook
+     * Invalidate cache for branch switcher
+     * 
+     * @param int $id
+     */
     protected function after_save($id) {
         $branch = $this->model->get_by_id($id);
+        
         if (!empty($branch['customer_id'])) {
+            // Invalidate branch switcher cache
             delete_transient('branches_for_switcher_' . $branch['customer_id']);
-        }
-    }
-    
-    public function ajax_get_branches_for_switcher() {
-        if (!is_user_logged_in()) {
-            wp_send_json_error(['message' => 'Musíte být přihlášeni']);
-            return;
-        }
-        
-        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'saw_branch_switcher')) {
-            wp_send_json_error(['message' => 'Neplatný bezpečnostní token']);
-            return;
-        }
-        
-        $customer_id = isset($_POST['customer_id']) ? intval($_POST['customer_id']) : 0;
-        
-        if (!$customer_id) {
-            wp_send_json_error(['message' => 'Chybí ID zákazníka']);
-            return;
-        }
-        
-        $cache_key = 'branches_for_switcher_' . $customer_id;
-        $cached = get_transient($cache_key);
-        
-        if ($cached !== false) {
-            wp_send_json_success([
-                'branches' => $cached,
-                'current_branch_id' => SAW_Context::get_branch_id(),
-                'cached' => true
-            ]);
-            return;
-        }
-        
-        global $wpdb;
-        $table = $wpdb->prefix . 'saw_branches';
-        
-        $branches = $wpdb->get_results($wpdb->prepare(
-            "SELECT id, name, code, city, street, is_headquarters, sort_order 
-             FROM {$table} 
-             WHERE customer_id = %d 
-             AND is_active = 1 
-             ORDER BY sort_order ASC, is_headquarters DESC, name ASC",
-            $customer_id
-        ), ARRAY_A);
-        
-        $formatted = array_map(function($branch) {
-            $address = '';
-            if (!empty($branch['street']) && !empty($branch['city'])) {
-                $address = $branch['street'] . ', ' . $branch['city'];
-            } elseif (!empty($branch['city'])) {
-                $address = $branch['city'];
-            }
             
-            return [
-                'id' => intval($branch['id']),
-                'name' => $branch['name'],
-                'code' => $branch['code'] ?? '',
-                'city' => $branch['city'] ?? '',
-                'address' => $address,
-                'is_headquarters' => (bool)$branch['is_headquarters']
-            ];
-        }, $branches);
-        
-        set_transient($cache_key, $formatted, 1800);
-        
-        wp_send_json_success([
-            'branches' => $formatted,
-            'current_branch_id' => SAW_Context::get_branch_id()
-        ]);
-    }
-    
-    public function ajax_switch_branch() {
-        if (!is_user_logged_in()) {
-            wp_send_json_error(['message' => 'Musíte být přihlášeni']);
-            return;
+            // Debug logging
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log(sprintf(
+                    '[Branches Controller] Cache invalidated for customer %d after saving branch %d',
+                    $branch['customer_id'],
+                    $id
+                ));
+            }
         }
-        
-        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'saw_branch_switcher')) {
-            wp_send_json_error(['message' => 'Neplatný bezpečnostní token']);
-            return;
-        }
-        
-        $branch_id = isset($_POST['branch_id']) ? intval($_POST['branch_id']) : 0;
-        
-        if ($branch_id <= 0) {
-            SAW_Context::set_branch_id(null);
-            wp_send_json_success([
-                'message' => 'Pobočka byla odstraněna',
-                'branch_id' => null
-            ]);
-            return;
-        }
-        
-        global $wpdb;
-        $table = $wpdb->prefix . 'saw_branches';
-        
-        $branch = $wpdb->get_row($wpdb->prepare(
-            "SELECT id, name, customer_id FROM {$table} WHERE id = %d AND is_active = 1",
-            $branch_id
-        ), ARRAY_A);
-        
-        if (!$branch) {
-            wp_send_json_error(['message' => 'Pobočka nebyla nalezena']);
-            return;
-        }
-        
-        SAW_Context::set_branch_id($branch_id);
-        
-        wp_send_json_success([
-            'message' => 'Pobočka byla úspěšně přepnuta',
-            'branch_id' => $branch_id,
-            'branch_name' => $branch['name']
-        ]);
     }
 }

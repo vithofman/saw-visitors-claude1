@@ -1,5 +1,26 @@
 <?php
-if (!defined('ABSPATH')) exit;
+/**
+ * SAW Branch Switcher Component - FIXED VERSION
+ * 
+ * CRITICAL FIXES:
+ * - ✅ ajax_get_branches() now uses SAW_Context::get_customer_id() as PRIMARY source
+ * - ✅ Fallback to $_POST['customer_id'] only for super admin
+ * - ✅ Added customer isolation validation
+ * - ✅ Better error handling and logging
+ * 
+ * PRESERVED:
+ * - ✅ Single AJAX handler registration (static flag)
+ * - ✅ All rendering logic
+ * - ✅ Permission checks
+ * 
+ * @package SAW_Visitors
+ * @version 1.1.0 - FIXED
+ * @since 4.7.0
+ */
+
+if (!defined('ABSPATH')) {
+    exit;
+}
 
 class SAW_Component_Branch_Switcher {
     private $customer_id;
@@ -10,7 +31,7 @@ class SAW_Component_Branch_Switcher {
         $this->customer_id = $customer_id;
         $this->current_branch = $current_branch;
         
-        // ✅ OPRAVA: Registruj AJAX akce jen JEDNOU
+        // ✅ Register AJAX actions only once (singleton pattern)
         if (!self::$ajax_registered) {
             add_action('wp_ajax_saw_get_branches_for_switcher', [$this, 'ajax_get_branches']);
             add_action('wp_ajax_saw_switch_branch', [$this, 'ajax_switch_branch']);
@@ -18,14 +39,81 @@ class SAW_Component_Branch_Switcher {
         }
     }
     
+    /**
+     * AJAX: Get branches for current customer
+     * 
+     * ✅ CRITICAL FIX: Uses SAW_Context::get_customer_id() as PRIMARY source
+     * This ensures non-super admin users get the correct customer_id
+     */
     public function ajax_get_branches() {
         check_ajax_referer('saw_branch_switcher', 'nonce');
         
-        $customer_id = isset($_POST['customer_id']) ? intval($_POST['customer_id']) : 0;
-        if (!$customer_id) {
-            wp_send_json_error(['message' => 'Chybí ID zákazníka']);
+        // ================================================
+        // ✅ CRITICAL FIX: DETERMINE CUSTOMER_ID
+        // ================================================
+        $customer_id = null;
+        
+        // For non-super admin: ALWAYS use SAW_Context
+        if (!current_user_can('manage_options')) {
+            if (class_exists('SAW_Context')) {
+                $customer_id = SAW_Context::get_customer_id();
+            }
+            
+            if (!$customer_id) {
+                // Fallback: Load from database directly
+                global $wpdb;
+                $saw_user = $wpdb->get_row($wpdb->prepare(
+                    "SELECT customer_id FROM {$wpdb->prefix}saw_users WHERE wp_user_id = %d AND is_active = 1",
+                    get_current_user_id()
+                ), ARRAY_A);
+                
+                if ($saw_user && $saw_user['customer_id']) {
+                    $customer_id = intval($saw_user['customer_id']);
+                }
+            }
+            
+            // Debug logging
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log(sprintf(
+                    '[Branch Switcher] Non-super admin - Customer ID: %s',
+                    $customer_id ?? 'NULL'
+                ));
+            }
         }
         
+        // For super admin: Can use $_POST or SAW_Context
+        if (current_user_can('manage_options')) {
+            // Try SAW_Context first
+            if (class_exists('SAW_Context')) {
+                $customer_id = SAW_Context::get_customer_id();
+            }
+            
+            // Fallback to POST data (for manual customer switching)
+            if (!$customer_id && isset($_POST['customer_id'])) {
+                $customer_id = intval($_POST['customer_id']);
+            }
+            
+            // Debug logging
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log(sprintf(
+                    '[Branch Switcher] Super admin - Customer ID: %s',
+                    $customer_id ?? 'NULL'
+                ));
+            }
+        }
+        
+        // Validate customer_id
+        if (!$customer_id) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[Branch Switcher] ERROR: No customer_id available');
+            }
+            wp_send_json_error(['message' => 'Chybí ID zákazníka']);
+            return;
+        }
+        
+        // ================================================
+        // LOAD BRANCHES FROM DATABASE
+        // ================================================
         global $wpdb;
         $branches = $wpdb->get_results($wpdb->prepare(
             "SELECT id, name, city, street, code, is_headquarters
@@ -35,6 +123,7 @@ class SAW_Component_Branch_Switcher {
             $customer_id
         ), ARRAY_A);
         
+        // Format branches for response
         $formatted = [];
         foreach ($branches as $b) {
             $address = array_filter([$b['street'] ?? '', $b['city'] ?? '']);
@@ -48,35 +137,112 @@ class SAW_Component_Branch_Switcher {
             ];
         }
         
+        // Get current branch_id
+        $current_branch_id = null;
+        if (class_exists('SAW_Context')) {
+            $current_branch_id = SAW_Context::get_branch_id();
+        }
+        
+        // Debug logging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log(sprintf(
+                '[Branch Switcher] Loaded %d branches for customer %d',
+                count($formatted),
+                $customer_id
+            ));
+        }
+        
         wp_send_json_success([
             'branches' => $formatted,
-            'current_branch_id' => SAW_Context::get_branch_id()
+            'current_branch_id' => $current_branch_id,
+            'customer_id' => $customer_id, // Include for debugging
         ]);
     }
     
+    /**
+     * AJAX: Switch branch
+     * 
+     * ✅ FIXED: Added customer isolation validation
+     */
     public function ajax_switch_branch() {
         check_ajax_referer('saw_branch_switcher', 'nonce');
         
         $branch_id = isset($_POST['branch_id']) ? intval($_POST['branch_id']) : 0;
+        
         if (!$branch_id) {
             wp_send_json_error(['message' => 'Chybí ID pobočky']);
+            return;
         }
         
+        // ================================================
+        // VALIDATE BRANCH EXISTS
+        // ================================================
         global $wpdb;
         $branch = $wpdb->get_row($wpdb->prepare(
             "SELECT id, customer_id, name FROM {$wpdb->prefix}saw_branches WHERE id = %d AND is_active = 1",
             $branch_id
-        ));
+        ), ARRAY_A);
         
         if (!$branch) {
             wp_send_json_error(['message' => 'Pobočka nenalezena']);
+            return;
         }
         
-        SAW_Context::set_branch_id($branch_id);
+        // ================================================
+        // ✅ CRITICAL: VALIDATE CUSTOMER ISOLATION
+        // ================================================
+        // Make sure the branch belongs to the current customer
+        $current_customer_id = null;
+        if (class_exists('SAW_Context')) {
+            $current_customer_id = SAW_Context::get_customer_id();
+        }
         
-        wp_send_json_success(['branch_id' => $branch_id, 'branch_name' => $branch->name]);
+        if (!current_user_can('manage_options')) {
+            // Non-super admin: MUST match customer
+            if ($branch['customer_id'] != $current_customer_id) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log(sprintf(
+                        '[Branch Switcher] SECURITY: Customer isolation violation - Branch customer: %d, User customer: %d',
+                        $branch['customer_id'],
+                        $current_customer_id
+                    ));
+                }
+                wp_send_json_error(['message' => 'Nemáte oprávnění k této pobočce']);
+                return;
+            }
+        }
+        
+        // ================================================
+        // SET BRANCH ID
+        // ================================================
+        if (class_exists('SAW_Context')) {
+            SAW_Context::set_branch_id($branch_id);
+        } else {
+            // Fallback: Set in session
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
+            $_SESSION['saw_current_branch_id'] = $branch_id;
+        }
+        
+        // Debug logging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log(sprintf(
+                '[Branch Switcher] Branch switched to: %d (%s)',
+                $branch_id,
+                $branch['name']
+            ));
+        }
+        
+        wp_send_json_success([
+            'branch_id' => $branch_id,
+            'branch_name' => $branch['name']
+        ]);
     }
     
+    /**
+     * Render branch switcher UI
+     */
     public function render() {
         if (!$this->can_see_branch_switcher()) {
             return;
@@ -106,11 +272,18 @@ class SAW_Component_Branch_Switcher {
         <?php
     }
     
+    /**
+     * Check if current user can see branch switcher
+     * 
+     * @return bool
+     */
     private function can_see_branch_switcher() {
+        // Super admin can always see it
         if (current_user_can('manage_options')) {
             return true;
         }
         
+        // Get SAW role
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
@@ -128,12 +301,29 @@ class SAW_Component_Branch_Switcher {
             $saw_role = $saw_user->role ?? null;
         }
         
+        // Only admin role can see branch switcher
         return $saw_role === 'admin';
     }
     
+    /**
+     * Enqueue assets (CSS + JS)
+     */
     private function enqueue_assets() {
-        wp_enqueue_style('saw-branch-switcher', SAW_VISITORS_PLUGIN_URL . 'includes/components/branch-switcher/branch-switcher.css', [], SAW_VISITORS_VERSION);
-        wp_enqueue_script('saw-branch-switcher', SAW_VISITORS_PLUGIN_URL . 'includes/components/branch-switcher/branch-switcher.js', ['jquery'], SAW_VISITORS_VERSION, true);
+        wp_enqueue_style(
+            'saw-branch-switcher',
+            SAW_VISITORS_PLUGIN_URL . 'includes/components/branch-switcher/branch-switcher.css',
+            [],
+            SAW_VISITORS_VERSION
+        );
+        
+        wp_enqueue_script(
+            'saw-branch-switcher',
+            SAW_VISITORS_PLUGIN_URL . 'includes/components/branch-switcher/branch-switcher.js',
+            ['jquery'],
+            SAW_VISITORS_VERSION,
+            true
+        );
+        
         wp_localize_script('saw-branch-switcher', 'sawBranchSwitcher', [
             'ajaxurl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('saw_branch_switcher')
