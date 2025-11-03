@@ -252,32 +252,67 @@ class SAW_Router {
     }
     
     private function dispatch_module($slug, $segments) {
-        $config = SAW_Module_Loader::load($slug);
-        
-        if (!$config) {
-            $this->handle_404();
-            return;
-        }
-        
-        $controller_class = 'SAW_Module_' . ucfirst(str_replace('-', '_', $slug)) . '_Controller';
-        
-        if (!class_exists($controller_class)) {
-            $this->handle_404();
-            return;
-        }
-        
-        $controller = new $controller_class();
-        
-        if (empty($segments[0])) {
-            $controller->index();
-        } elseif ($segments[0] === 'create' || $segments[0] === 'new') {
-            $controller->create();
-        } elseif (($segments[0] === 'edit' || $segments[0] === 'upravit') && !empty($segments[1])) {
-            $controller->edit(intval($segments[1]));
-        } else {
-            $this->handle_404();
-        }
+    // ✅ DEBUG: Log začátek
+    error_log('=== DISPATCH_MODULE START ===');
+    error_log('Slug: ' . $slug);
+    error_log('Segments: ' . print_r($segments, true));
+    
+    // Load module config
+    $config = SAW_Module_Loader::load($slug);
+    
+    error_log('Config loaded: ' . ($config ? 'YES' : 'NO'));
+    
+    if (!$config) {
+        error_log('ERROR: Config not found for slug: ' . $slug);
+        $this->handle_404();
+        return;
     }
+    
+    // Generate controller class name
+    $parts = explode('-', $slug);
+    $parts = array_map('ucfirst', $parts);
+    $class_name = implode('_', $parts);
+    $controller_class = 'SAW_Module_' . $class_name . '_Controller';
+    
+    error_log('Controller class: ' . $controller_class);
+    error_log('Class exists: ' . (class_exists($controller_class) ? 'YES' : 'NO'));
+    
+    if (!class_exists($controller_class)) {
+        error_log('ERROR: Controller class not found: ' . $controller_class);
+        error_log('Loaded classes: ' . print_r(get_declared_classes(), true));
+        $this->handle_404();
+        return;
+    }
+    
+    // Instantiate controller
+    try {
+        error_log('Creating controller instance...');
+        $controller = new $controller_class();
+        error_log('Controller created successfully');
+    } catch (Exception $e) {
+        error_log('ERROR creating controller: ' . $e->getMessage());
+        error_log('Stack trace: ' . $e->getTraceAsString());
+        wp_die('Error creating controller: ' . $e->getMessage());
+        return;
+    }
+    
+    // Dispatch to action
+    if (empty($segments[0])) {
+        error_log('Calling index()');
+        $controller->index();
+    } elseif ($segments[0] === 'create' || $segments[0] === 'new') {
+        error_log('Calling create()');
+        $controller->create();
+    } elseif (($segments[0] === 'edit' || $segments[0] === 'upravit') && !empty($segments[1])) {
+        error_log('Calling edit(' . $segments[1] . ')');
+        $controller->edit(intval($segments[1]));
+    } else {
+        error_log('ERROR: Unknown action: ' . $segments[0]);
+        $this->handle_404();
+    }
+    
+    error_log('=== DISPATCH_MODULE END ===');
+}
     
     // ================================================
     // ROUTE HANDLERS

@@ -112,7 +112,7 @@ class SAW_Module_Loader
         $path = $config['path'];
         
         // Load base classes first
-        self::load_base_classes();
+        //self::load_base_classes();
         
         // Load model
         $model_file = $path . 'model.php';

@@ -1,10 +1,11 @@
 <?php
 /**
- * Branches Module Controller - FIXED VERSION
+ * Branches Module Controller - FIXED VERSION v1.2.0
  * 
  * CRITICAL FIXES:
  * - ✅ REMOVED duplicate AJAX handlers (ajax_get_branches_for_switcher, ajax_switch_branch)
  *   These are now handled ONLY by SAW_Component_Branch_Switcher
+ * - ✅ Fixed __DIR__ issue for lazy loading
  * - ✅ Kept only module-specific handlers (detail, search, delete)
  * 
  * PRESERVED:
@@ -13,7 +14,7 @@
  * - ✅ Cache invalidation
  * 
  * @package SAW_Visitors
- * @version 1.1.0 - FIXED
+ * @version 1.2.0 - LAZY LOADING FIX
  * @since 4.8.0
  */
 
@@ -28,11 +29,14 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
     private $file_uploader;
     
     public function __construct() {
-        $this->config = require __DIR__ . '/config.php';
-        $this->entity = $this->config['entity'];
-        $this->config['path'] = __DIR__ . '/';
+        // ✅ FIX: Use absolute path instead of __DIR__ for lazy loading
+        $module_path = SAW_VISITORS_PLUGIN_DIR . 'includes/modules/branches/';
         
-        require_once __DIR__ . '/model.php';
+        $this->config = require $module_path . 'config.php';
+        $this->entity = $this->config['entity'];
+        $this->config['path'] = $module_path;
+        
+        require_once $module_path . 'model.php';
         $this->model = new SAW_Module_Branches_Model($this->config);
         
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/class-saw-file-uploader.php';
