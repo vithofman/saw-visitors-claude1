@@ -1,20 +1,15 @@
 <?php
 /**
- * SAW Branch Switcher Component - FIXED VERSION
+ * SAW Branch Switcher Component - COMPLETE FIXED VERSION
  * 
  * CRITICAL FIXES:
- * - ✅ ajax_get_branches() now uses SAW_Context::get_customer_id() as PRIMARY source
- * - ✅ Fallback to $_POST['customer_id'] only for super admin
- * - ✅ Added customer isolation validation
- * - ✅ Better error handling and logging
- * 
- * PRESERVED:
+ * - ✅ Uses SAW_Context::get_customer_id() as PRIMARY source
+ * - ✅ Proper customer isolation validation
  * - ✅ Single AJAX handler registration (static flag)
- * - ✅ All rendering logic
- * - ✅ Permission checks
+ * - ✅ Comprehensive error handling and logging
  * 
  * @package SAW_Visitors
- * @version 1.1.0 - FIXED
+ * @version 2.0.0 - COMPLETE
  * @since 4.7.0
  */
 
@@ -36,20 +31,30 @@ class SAW_Component_Branch_Switcher {
             add_action('wp_ajax_saw_get_branches_for_switcher', [$this, 'ajax_get_branches']);
             add_action('wp_ajax_saw_switch_branch', [$this, 'ajax_switch_branch']);
             self::$ajax_registered = true;
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[Branch Switcher] AJAX handlers registered');
+            }
         }
     }
     
     /**
      * AJAX: Get branches for current customer
-     * 
-     * ✅ CRITICAL FIX: Uses SAW_Context::get_customer_id() as PRIMARY source
-     * This ensures non-super admin users get the correct customer_id
      */
     public function ajax_get_branches() {
         check_ajax_referer('saw_branch_switcher', 'nonce');
         
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log(sprintf(
+                '[Branch Switcher] AJAX get_branches - User: %d, Logged: %s, Super: %s',
+                get_current_user_id(),
+                is_user_logged_in() ? 'YES' : 'NO',
+                current_user_can('manage_options') ? 'YES' : 'NO'
+            ));
+        }
+        
         // ================================================
-        // ✅ CRITICAL FIX: DETERMINE CUSTOMER_ID
+        // DETERMINE CUSTOMER_ID
         // ================================================
         $customer_id = null;
         
@@ -72,31 +77,27 @@ class SAW_Component_Branch_Switcher {
                 }
             }
             
-            // Debug logging
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log(sprintf(
-                    '[Branch Switcher] Non-super admin - Customer ID: %s',
+                    '[Branch Switcher] Non-super admin - Customer: %s',
                     $customer_id ?? 'NULL'
                 ));
             }
         }
         
-        // For super admin: Can use $_POST or SAW_Context
+        // For super admin: Use SAW_Context or POST
         if (current_user_can('manage_options')) {
-            // Try SAW_Context first
             if (class_exists('SAW_Context')) {
                 $customer_id = SAW_Context::get_customer_id();
             }
             
-            // Fallback to POST data (for manual customer switching)
             if (!$customer_id && isset($_POST['customer_id'])) {
                 $customer_id = intval($_POST['customer_id']);
             }
             
-            // Debug logging
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log(sprintf(
-                    '[Branch Switcher] Super admin - Customer ID: %s',
+                    '[Branch Switcher] Super admin - Customer: %s',
                     $customer_id ?? 'NULL'
                 ));
             }
@@ -123,7 +124,7 @@ class SAW_Component_Branch_Switcher {
             $customer_id
         ), ARRAY_A);
         
-        // Format branches for response
+        // Format branches
         $formatted = [];
         foreach ($branches as $b) {
             $address = array_filter([$b['street'] ?? '', $b['city'] ?? '']);
@@ -143,10 +144,9 @@ class SAW_Component_Branch_Switcher {
             $current_branch_id = SAW_Context::get_branch_id();
         }
         
-        // Debug logging
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log(sprintf(
-                '[Branch Switcher] Loaded %d branches for customer %d',
+                '[Branch Switcher] SUCCESS - Loaded %d branches for customer %d',
                 count($formatted),
                 $customer_id
             ));
@@ -155,14 +155,12 @@ class SAW_Component_Branch_Switcher {
         wp_send_json_success([
             'branches' => $formatted,
             'current_branch_id' => $current_branch_id,
-            'customer_id' => $customer_id, // Include for debugging
+            'customer_id' => $customer_id,
         ]);
     }
     
     /**
      * AJAX: Switch branch
-     * 
-     * ✅ FIXED: Added customer isolation validation
      */
     public function ajax_switch_branch() {
         check_ajax_referer('saw_branch_switcher', 'nonce');
@@ -174,9 +172,7 @@ class SAW_Component_Branch_Switcher {
             return;
         }
         
-        // ================================================
-        // VALIDATE BRANCH EXISTS
-        // ================================================
+        // Validate branch exists
         global $wpdb;
         $branch = $wpdb->get_row($wpdb->prepare(
             "SELECT id, customer_id, name FROM {$wpdb->prefix}saw_branches WHERE id = %d AND is_active = 1",
@@ -188,21 +184,17 @@ class SAW_Component_Branch_Switcher {
             return;
         }
         
-        // ================================================
-        // ✅ CRITICAL: VALIDATE CUSTOMER ISOLATION
-        // ================================================
-        // Make sure the branch belongs to the current customer
+        // Validate customer isolation
         $current_customer_id = null;
         if (class_exists('SAW_Context')) {
             $current_customer_id = SAW_Context::get_customer_id();
         }
         
         if (!current_user_can('manage_options')) {
-            // Non-super admin: MUST match customer
             if ($branch['customer_id'] != $current_customer_id) {
                 if (defined('WP_DEBUG') && WP_DEBUG) {
                     error_log(sprintf(
-                        '[Branch Switcher] SECURITY: Customer isolation violation - Branch customer: %d, User customer: %d',
+                        '[Branch Switcher] SECURITY: Isolation violation - Branch customer: %d, User customer: %d',
                         $branch['customer_id'],
                         $current_customer_id
                     ));
@@ -212,20 +204,16 @@ class SAW_Component_Branch_Switcher {
             }
         }
         
-        // ================================================
-        // SET BRANCH ID
-        // ================================================
+        // Set branch ID
         if (class_exists('SAW_Context')) {
             SAW_Context::set_branch_id($branch_id);
         } else {
-            // Fallback: Set in session
             if (session_status() === PHP_SESSION_NONE) {
                 session_start();
             }
             $_SESSION['saw_current_branch_id'] = $branch_id;
         }
         
-        // Debug logging
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log(sprintf(
                 '[Branch Switcher] Branch switched to: %d (%s)',
@@ -274,16 +262,12 @@ class SAW_Component_Branch_Switcher {
     
     /**
      * Check if current user can see branch switcher
-     * 
-     * @return bool
      */
     private function can_see_branch_switcher() {
-        // Super admin can always see it
         if (current_user_can('manage_options')) {
             return true;
         }
         
-        // Get SAW role
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
@@ -301,12 +285,11 @@ class SAW_Component_Branch_Switcher {
             $saw_role = $saw_user->role ?? null;
         }
         
-        // Only admin role can see branch switcher
         return $saw_role === 'admin';
     }
     
     /**
-     * Enqueue assets (CSS + JS)
+     * Enqueue assets
      */
     private function enqueue_assets() {
         wp_enqueue_style(
