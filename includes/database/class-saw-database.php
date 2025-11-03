@@ -23,6 +23,7 @@ class SAW_Database {
         'customers',
         'customer_api_keys',
         'users',
+	'permissions',
         'training_config',
         'account_types',
         
