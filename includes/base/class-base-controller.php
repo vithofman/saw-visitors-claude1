@@ -1,9 +1,9 @@
 <?php
 /**
- * Base Controller Class - Database-First with Error Handler
+ * Base Controller Class - Database-First with Multi-Branch Support
  * 
  * @package SAW_Visitors
- * @version 5.0.0
+ * @version 5.1.0
  */
 
 if (!defined('ABSPATH')) {
@@ -85,6 +85,111 @@ abstract class SAW_Base_Controller
     }
     
     /**
+     * Get accessible branches for current user
+     * 
+     * ✅ NEW: Multi-branch support for super_manager
+     * 
+     * @return array Branch objects
+     */
+    protected function get_accessible_branches() {
+        $role = $this->get_current_user_role();
+        
+        if ($role === 'super_admin' || $role === 'admin') {
+            global $wpdb;
+            $customer_id = $this->get_current_customer_id();
+            
+            if (!$customer_id) {
+                return [];
+            }
+            
+            return $wpdb->get_results($wpdb->prepare(
+                "SELECT * FROM {$wpdb->prefix}saw_branches 
+                 WHERE customer_id = %d AND is_active = 1 
+                 ORDER BY is_headquarters DESC, name ASC",
+                $customer_id
+            ), ARRAY_A);
+        }
+        
+        if ($role === 'super_manager') {
+            if (!class_exists('SAW_User_Branches') || !class_exists('SAW_Context')) {
+                return [];
+            }
+            
+            $saw_user_id = SAW_Context::get_saw_user_id();
+            if (!$saw_user_id) {
+                return [];
+            }
+            
+            return SAW_User_Branches::get_branches_for_user($saw_user_id);
+        }
+        
+        return [];
+    }
+    
+    /**
+     * Get accessible branch IDs for current user
+     * 
+     * ✅ NEW: Multi-branch support
+     * 
+     * @return array Branch IDs
+     */
+    protected function get_accessible_branch_ids() {
+        $branches = $this->get_accessible_branches();
+        return array_map(function($branch) {
+            return intval($branch['id']);
+        }, $branches);
+    }
+    
+    /**
+     * Check if user can access specific branch
+     * 
+     * ✅ NEW: Branch access validation
+     * 
+     * @param int $branch_id
+     * @return bool
+     */
+    protected function can_access_branch($branch_id) {
+        $role = $this->get_current_user_role();
+        
+        if ($role === 'super_admin') {
+            return true;
+        }
+        
+        if ($role === 'admin') {
+            global $wpdb;
+            $customer_id = $this->get_current_customer_id();
+            
+            if (!$customer_id) {
+                return false;
+            }
+            
+            $branch = $wpdb->get_row($wpdb->prepare(
+                "SELECT id FROM {$wpdb->prefix}saw_branches 
+                 WHERE id = %d AND customer_id = %d AND is_active = 1",
+                $branch_id,
+                $customer_id
+            ), ARRAY_A);
+            
+            return !empty($branch);
+        }
+        
+        if ($role === 'super_manager') {
+            if (!class_exists('SAW_User_Branches') || !class_exists('SAW_Context')) {
+                return false;
+            }
+            
+            $saw_user_id = SAW_Context::get_saw_user_id();
+            if (!$saw_user_id) {
+                return false;
+            }
+            
+            return SAW_User_Branches::is_user_allowed_branch($saw_user_id, $branch_id);
+        }
+        
+        return false;
+    }
+    
+    /**
      * Get current customer
      * 
      * ✅ UPDATED: Uses SAW_Context instead of sessions
@@ -128,6 +233,36 @@ abstract class SAW_Base_Controller
         
         if (class_exists('SAW_Context')) {
             return SAW_Context::get_role();
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Get current customer ID
+     * 
+     * ✅ NEW: Direct access helper
+     * 
+     * @return int|null
+     */
+    protected function get_current_customer_id() {
+        if (class_exists('SAW_Context')) {
+            return SAW_Context::get_customer_id();
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Get current branch ID
+     * 
+     * ✅ NEW: Direct access helper
+     * 
+     * @return int|null
+     */
+    protected function get_current_branch_id() {
+        if (class_exists('SAW_Context')) {
+            return SAW_Context::get_branch_id();
         }
         
         return null;
@@ -240,6 +375,56 @@ abstract class SAW_Base_Controller
     protected function redirect($url) {
         wp_redirect($url);
         exit;
+    }
+    
+    /**
+     * Before save hook
+     * Override in child controller if needed
+     * 
+     * @param array $data
+     * @return array|WP_Error
+     */
+    protected function before_save($data) {
+        return $data;
+    }
+    
+    /**
+     * After save hook
+     * Override in child controller if needed
+     * 
+     * @param int $id
+     */
+    protected function after_save($id) {
+        // Override in child controller
+    }
+    
+    /**
+     * Before delete hook
+     * Override in child controller if needed
+     * 
+     * @param int $id
+     * @return bool|WP_Error
+     */
+    protected function before_delete($id) {
+        return true;
+    }
+    
+    /**
+     * After delete hook
+     * Override in child controller if needed
+     * 
+     * @param int $id
+     */
+    protected function after_delete($id) {
+        // Override in child controller
+    }
+    
+    /**
+     * Enqueue assets
+     * Override in child controller if needed
+     */
+    protected function enqueue_assets() {
+        // Override in child controller
     }
     
     abstract public function index();

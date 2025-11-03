@@ -3,7 +3,7 @@
  * Base Model Class - Database-First with Multi-Branch Support
  * 
  * @package SAW_Visitors
- * @version 5.0.0
+ * @version 5.1.0
  */
 
 if (!defined('ABSPATH')) {
@@ -237,6 +237,37 @@ abstract class SAW_Base_Model
         return $wpdb->get_var($sql);
     }
     
+    public function search($query, $limit = 10) {
+        global $wpdb;
+        
+        if (empty($query)) {
+            return [];
+        }
+        
+        $search_fields = $this->config['list_config']['searchable'] ?? ['name'];
+        $search_conditions = [];
+        $params = [];
+        
+        foreach ($search_fields as $field) {
+            $search_conditions[] = "{$field} LIKE %s";
+            $params[] = '%' . $wpdb->esc_like($query) . '%';
+        }
+        
+        $sql = "SELECT * FROM {$this->table} WHERE (" . implode(' OR ', $search_conditions) . ")";
+        
+        $scope_sql = $this->apply_data_scope();
+        if (!empty($scope_sql)) {
+            $sql .= $scope_sql;
+        }
+        
+        $sql .= " LIMIT %d";
+        $params[] = intval($limit);
+        
+        $sql = $wpdb->prepare($sql, ...$params);
+        
+        return $wpdb->get_results($sql, ARRAY_A);
+    }
+    
     /**
      * Apply data scope based on user role and permissions
      * 
@@ -301,7 +332,7 @@ abstract class SAW_Base_Model
     /**
      * Get accessible branch IDs based on role
      * 
-     * ✅ NEW: Handles multi-branch for super_manager
+     * ✅ UPDATED: Handles multi-branch for super_manager
      * 
      * @return array Branch IDs
      */
@@ -309,8 +340,25 @@ abstract class SAW_Base_Model
         $role = $this->get_current_user_role();
         $current_branch_id = $this->get_current_branch_id();
         
+        if ($role === 'admin') {
+            global $wpdb;
+            $customer_id = $this->get_current_customer_id();
+            
+            if (!$customer_id) {
+                return [];
+            }
+            
+            $branch_ids = $wpdb->get_col($wpdb->prepare(
+                "SELECT id FROM {$wpdb->prefix}saw_branches 
+                 WHERE customer_id = %d AND is_active = 1",
+                $customer_id
+            ));
+            
+            return array_map('intval', $branch_ids);
+        }
+        
         if ($role === 'super_manager') {
-            if (!class_exists('SAW_User_Branches')) {
+            if (!class_exists('SAW_User_Branches') || !class_exists('SAW_Context')) {
                 return $current_branch_id ? [$current_branch_id] : [];
             }
             

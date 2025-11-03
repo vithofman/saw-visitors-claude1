@@ -24,8 +24,10 @@ class SAW_Visitors {
         $this->init_router();
         $this->init_session();
         $this->init_context();
-        $this->init_customer_switcher();  // ← PŘIDÁNO!
+        $this->init_customer_switcher();
         $this->init_branch_switcher();
+        $this->register_module_ajax_handlers();
+        $this->block_wp_admin_for_saw_roles();
     }
     
     private function load_dependencies() {
@@ -36,18 +38,23 @@ class SAW_Visitors {
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/class-base-model.php';
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/class-base-controller.php';
         
-        // Module Loader
+        // Core Infrastructure
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-module-loader.php';
-        
-        // Asset Manager
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-asset-manager.php';
         
-        // Router
-        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-router.php';
+        // User Branches Helper
+        if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-user-branches.php')) {
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-user-branches.php';
+        }
         
         // Session Manager
         if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-session-manager.php')) {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-session-manager.php';
+        }
+        
+        // Error Handler
+        if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-error-handler.php')) {
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-error-handler.php';
         }
         
         // Context
@@ -55,10 +62,33 @@ class SAW_Visitors {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-context.php';
         }
         
-        // User Branches
-        if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-user-branches.php')) {
-            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-user-branches.php';
+        // Auth
+        if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-auth.php')) {
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-auth.php';
         }
+        
+        // Session (legacy)
+        if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-session.php')) {
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-session.php';
+        }
+        
+        // Password
+        if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-password.php')) {
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-password.php';
+        }
+        
+        // Database
+        if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/database/class-saw-database.php')) {
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/database/class-saw-database.php';
+        }
+        
+        // Audit
+        if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-audit.php')) {
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-audit.php';
+        }
+        
+        // Router
+        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-router.php';
         
         $this->loader = new SAW_Loader();
     }
@@ -76,6 +106,14 @@ class SAW_Visitors {
     private function init_context() {
         if (class_exists('SAW_Context')) {
             SAW_Context::instance();
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log(sprintf(
+                    '[SAW_Visitors] Context initialized - Customer: %s, Branch: %s',
+                    SAW_Context::get_customer_id() ?? 'NULL',
+                    SAW_Context::get_branch_id() ?? 'NULL'
+                ));
+            }
         }
     }
     
@@ -85,6 +123,10 @@ class SAW_Visitors {
             
             if (class_exists('SAW_Component_Customer_Switcher')) {
                 new SAW_Component_Customer_Switcher();
+                
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('[SAW_Visitors] Customer Switcher registered');
+                }
             }
         }
     }
@@ -95,7 +137,140 @@ class SAW_Visitors {
             
             if (class_exists('SAW_Component_Branch_Switcher')) {
                 new SAW_Component_Branch_Switcher();
+                
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('[SAW_Visitors] Branch Switcher registered');
+                }
             }
+        }
+    }
+    
+    private function block_wp_admin_for_saw_roles() {
+        add_action('admin_init', function() {
+            $user = wp_get_current_user();
+            $saw_roles = ['saw_admin', 'saw_super_manager', 'saw_manager', 'saw_terminal'];
+            
+            if (array_intersect($saw_roles, $user->roles)) {
+                wp_redirect(home_url('/login/'));
+                exit;
+            }
+        });
+    }
+    
+    /**
+     * Register AJAX handlers for all modules
+     * 
+     * CRITICAL: AJAX handlers must be registered early, not in controller __construct
+     */
+    private function register_module_ajax_handlers() {
+        // Get all modules
+        $modules = SAW_Module_Loader::get_all();
+        
+        foreach ($modules as $slug => $config) {
+            $entity = $config['entity'];
+            
+            // Register generic AJAX handlers for each module
+            add_action('wp_ajax_saw_get_' . $entity . '_detail', function() use ($slug) {
+                $this->handle_module_ajax_detail($slug);
+            });
+            
+            add_action('wp_ajax_saw_search_' . $entity, function() use ($slug) {
+                $this->handle_module_ajax_search($slug);
+            });
+            
+            add_action('wp_ajax_saw_delete_' . $entity, function() use ($slug) {
+                $this->handle_module_ajax_delete($slug);
+            });
+        }
+    }
+    
+    /**
+     * Handle AJAX detail request for module
+     */
+    private function handle_module_ajax_detail($slug) {
+        $config = SAW_Module_Loader::load($slug);
+        
+        if (!$config) {
+            wp_send_json_error(['message' => 'Module not found']);
+            return;
+        }
+        
+        $parts = explode('-', $slug);
+        $parts = array_map('ucfirst', $parts);
+        $class_name = implode('_', $parts);
+        $controller_class = 'SAW_Module_' . $class_name . '_Controller';
+        
+        if (!class_exists($controller_class)) {
+            wp_send_json_error(['message' => 'Controller not found']);
+            return;
+        }
+        
+        $controller = new $controller_class();
+        
+        if (method_exists($controller, 'ajax_get_detail')) {
+            $controller->ajax_get_detail();
+        } else {
+            wp_send_json_error(['message' => 'Method not found']);
+        }
+    }
+    
+    /**
+     * Handle AJAX search request for module
+     */
+    private function handle_module_ajax_search($slug) {
+        $config = SAW_Module_Loader::load($slug);
+        
+        if (!$config) {
+            wp_send_json_error(['message' => 'Module not found']);
+            return;
+        }
+        
+        $parts = explode('-', $slug);
+        $parts = array_map('ucfirst', $parts);
+        $class_name = implode('_', $parts);
+        $controller_class = 'SAW_Module_' . $class_name . '_Controller';
+        
+        if (!class_exists($controller_class)) {
+            wp_send_json_error(['message' => 'Controller not found']);
+            return;
+        }
+        
+        $controller = new $controller_class();
+        
+        if (method_exists($controller, 'ajax_search')) {
+            $controller->ajax_search();
+        } else {
+            wp_send_json_error(['message' => 'Method not found']);
+        }
+    }
+    
+    /**
+     * Handle AJAX delete request for module
+     */
+    private function handle_module_ajax_delete($slug) {
+        $config = SAW_Module_Loader::load($slug);
+        
+        if (!$config) {
+            wp_send_json_error(['message' => 'Module not found']);
+            return;
+        }
+        
+        $parts = explode('-', $slug);
+        $parts = array_map('ucfirst', $parts);
+        $class_name = implode('_', $parts);
+        $controller_class = 'SAW_Module_' . $class_name . '_Controller';
+        
+        if (!class_exists($controller_class)) {
+            wp_send_json_error(['message' => 'Controller not found']);
+            return;
+        }
+        
+        $controller = new $controller_class();
+        
+        if (method_exists($controller, 'ajax_delete')) {
+            $controller->ajax_delete();
+        } else {
+            wp_send_json_error(['message' => 'Method not found']);
         }
     }
     
@@ -106,6 +281,40 @@ class SAW_Visitors {
         
         $this->loader->add_action('wp_enqueue_scripts', $this, 'enqueue_public_styles');
         $this->loader->add_action('wp_enqueue_scripts', $this, 'enqueue_public_scripts');
+        
+        $this->loader->add_action('admin_menu', $this, 'add_minimal_admin_menu');
+    }
+    
+    public function add_minimal_admin_menu() {
+        add_menu_page(
+            'SAW Visitors',
+            'SAW Visitors',
+            'manage_options',
+            'saw-visitors-about',
+            array($this, 'display_about_page'),
+            'dashicons-groups',
+            30
+        );
+    }
+    
+    public function display_about_page() {
+        ?>
+        <div class="wrap">
+            <h1>SAW Visitors <?php echo esc_html($this->version); ?></h1>
+            <p>Plugin verze: <strong><?php echo esc_html($this->version); ?></strong></p>
+            <p>Používá modulární architekturu v2.</p>
+            
+            <h2>Aktivní moduly</h2>
+            <ul>
+                <?php
+                $modules = SAW_Module_Loader::get_all();
+                foreach ($modules as $slug => $config) {
+                    echo '<li>' . esc_html($config['plural']) . ' (' . esc_html($slug) . ')</li>';
+                }
+                ?>
+            </ul>
+        </div>
+        <?php
     }
     
     public function enqueue_public_styles() {
@@ -154,7 +363,8 @@ class SAW_Visitors {
     
     private function is_saw_url() {
         $request_uri = $_SERVER['REQUEST_URI'] ?? '';
-        return strpos($request_uri, '/admin/') !== false;
+        return strpos($request_uri, '/admin/') !== false || 
+               strpos($request_uri, '/app/') !== false;
     }
     
     public function run() {

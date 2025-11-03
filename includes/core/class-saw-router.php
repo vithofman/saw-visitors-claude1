@@ -1,19 +1,9 @@
 <?php
 /**
- * SAW Router - FIXED VERSION v5.0.0
- * 
- * CRITICAL FIXES:
- * - ✅ REMOVED duplicate SAW_Context initialization (now handled by SAW_Visitors)
- * - ✅ get_current_customer_data() uses SAW_Context as primary source
- * 
- * PRESERVED:
- * - ✅ All routes (auth, admin, manager, terminal, visitor)
- * - ✅ Module dispatching logic
- * - ✅ Authentication checks
- * - ✅ Page rendering
+ * SAW Router - FIXED VERSION v5.1.0
  * 
  * @package SAW_Visitors
- * @version 5.0.0 - Database Revolution
+ * @version 5.1.0
  */
 
 if (!defined('ABSPATH')) {
@@ -23,38 +13,23 @@ if (!defined('ABSPATH')) {
 class SAW_Router {
     
     public function register_routes() {
-        // ================================================
-        // AUTENTIZAČNÍ ROUTY
-        // ================================================
         add_rewrite_rule('^login/?$', 'index.php?saw_route=auth&saw_action=login', 'top');
         add_rewrite_rule('^set-password/?$', 'index.php?saw_route=auth&saw_action=set-password', 'top');
         add_rewrite_rule('^reset-password/?$', 'index.php?saw_route=auth&saw_action=reset-password', 'top');
         add_rewrite_rule('^logout/?$', 'index.php?saw_route=auth&saw_action=logout', 'top');
         
-        // ================================================
-        // ADMIN ROUTY
-        // ================================================
         add_rewrite_rule('^admin/?$', 'index.php?saw_route=admin', 'top');
         add_rewrite_rule('^admin/([^/]+)/?$', 'index.php?saw_route=admin&saw_path=$matches[1]', 'top');
         add_rewrite_rule('^admin/([^/]+)/(.+)', 'index.php?saw_route=admin&saw_path=$matches[1]/$matches[2]', 'top');
         
-        // ================================================
-        // MANAGER ROUTY
-        // ================================================
         add_rewrite_rule('^manager/?$', 'index.php?saw_route=manager', 'top');
         add_rewrite_rule('^manager/([^/]+)/?$', 'index.php?saw_route=manager&saw_path=$matches[1]', 'top');
         add_rewrite_rule('^manager/([^/]+)/(.+)', 'index.php?saw_route=manager&saw_path=$matches[1]/$matches[2]', 'top');
         
-        // ================================================
-        // TERMINAL ROUTY
-        // ================================================
         add_rewrite_rule('^terminal/?$', 'index.php?saw_route=terminal', 'top');
         add_rewrite_rule('^terminal/([^/]+)/?$', 'index.php?saw_route=terminal&saw_path=$matches[1]', 'top');
         add_rewrite_rule('^terminal/([^/]+)/(.+)', 'index.php?saw_route=terminal&saw_path=$matches[1]/$matches[2]', 'top');
         
-        // ================================================
-        // VISITOR ROUTY
-        // ================================================
         add_rewrite_rule('^visitor/?$', 'index.php?saw_route=visitor', 'top');
         add_rewrite_rule('^visitor/([^/]+)/?$', 'index.php?saw_route=visitor&saw_path=$matches[1]', 'top');
         add_rewrite_rule('^visitor/([^/]+)/(.+)', 'index.php?saw_route=visitor&saw_path=$matches[1]/$matches[2]', 'top');
@@ -67,16 +42,7 @@ class SAW_Router {
         return $vars;
     }
     
-    /**
-     * Main dispatch method
-     * 
-     * ✅ FIXED v5.0.0: Removed duplicate SAW_Context initialization
-     * Context is now initialized in SAW_Visitors::init_context_and_components()
-     */
     public function dispatch($route = '', $path = '') {
-        // ================================================
-        // NAČTENÍ ROUTE A PATH
-        // ================================================
         if (empty($route)) {
             $route = get_query_var('saw_route');
         }
@@ -85,24 +51,12 @@ class SAW_Router {
             $path = get_query_var('saw_path');
         }
         
-        // If no SAW route, return early
         if (empty($route)) {
             return;
         }
         
-        // ================================================
-        // NOTE: SAW_Context is already initialized in SAW_Visitors
-        // No duplicate initialization needed here
-        // ================================================
-        
-        // ================================================
-        // NAČTENÍ FRONTEND KOMPONENT
-        // ================================================
         $this->load_frontend_components();
         
-        // ================================================
-        // ROUTING
-        // ================================================
         switch ($route) {
             case 'auth':
                 $this->handle_auth_route();
@@ -131,10 +85,6 @@ class SAW_Router {
         
         exit;
     }
-    
-    // ================================================
-    // AUTH ROUTE HANDLERS
-    // ================================================
     
     private function handle_auth_route() {
         $action = get_query_var('saw_action');
@@ -170,60 +120,9 @@ class SAW_Router {
             require $template;
             exit;
         } else {
-            ob_start();
-            ?>
-            <!DOCTYPE html>
-            <html <?php language_attributes(); ?>>
-            <head>
-                <meta charset="<?php bloginfo('charset'); ?>">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title><?php echo esc_html(ucfirst(str_replace('-', ' ', $page))); ?></title>
-                <style>
-                    body {
-                        margin: 0;
-                        padding: 50px;
-                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                        background: #f3f4f6;
-                        text-align: center;
-                    }
-                    .container {
-                        max-width: 500px;
-                        margin: 0 auto;
-                        background: white;
-                        padding: 40px;
-                        border-radius: 12px;
-                        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                    }
-                    h1 { color: #111827; }
-                    .error {
-                        background: #fee2e2;
-                        color: #991b1b;
-                        padding: 16px;
-                        border-radius: 8px;
-                        margin: 20px 0;
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <h1>⚠️ Template nenalezen</h1>
-                    <div class="error">
-                        <strong>Chyba:</strong> Template soubor nebyl nalezen:<br>
-                        <code><?php echo esc_html($template); ?></code>
-                    </div>
-                    <p><a href="<?php echo home_url('/'); ?>">← Zpět na hlavní stránku</a></p>
-                </div>
-            </body>
-            </html>
-            <?php
-            echo ob_get_clean();
-            exit;
+            wp_die('Template not found: ' . $template);
         }
     }
-    
-    // ================================================
-    // MODULE HANDLING
-    // ================================================
     
     public function get_active_module() {
         $path = get_query_var('saw_path');
@@ -252,71 +151,85 @@ class SAW_Router {
     }
     
     private function dispatch_module($slug, $segments) {
-    // ✅ DEBUG: Log začátek
-    error_log('=== DISPATCH_MODULE START ===');
-    error_log('Slug: ' . $slug);
-    error_log('Segments: ' . print_r($segments, true));
-    
-    // Load module config
-    $config = SAW_Module_Loader::load($slug);
-    
-    error_log('Config loaded: ' . ($config ? 'YES' : 'NO'));
-    
-    if (!$config) {
-        error_log('ERROR: Config not found for slug: ' . $slug);
-        $this->handle_404();
-        return;
+        error_log('=== DISPATCH_MODULE START ===');
+        error_log('Slug: ' . $slug);
+        error_log('Segments: ' . print_r($segments, true));
+        
+        $config = SAW_Module_Loader::load($slug);
+        
+        if (!$config) {
+            error_log('ERROR: Config not found for slug: ' . $slug);
+            $this->handle_404();
+            return;
+        }
+        
+        error_log('Config loaded successfully');
+        
+        $parts = explode('-', $slug);
+        $parts = array_map('ucfirst', $parts);
+        $class_name = implode('_', $parts);
+        $controller_class = 'SAW_Module_' . $class_name . '_Controller';
+        
+        error_log('Looking for controller class: ' . $controller_class);
+        
+        if (!class_exists($controller_class)) {
+            error_log('ERROR: Controller class does not exist: ' . $controller_class);
+            error_log('Available SAW_Module classes: ' . print_r(array_filter(get_declared_classes(), function($c) {
+                return strpos($c, 'SAW_Module_') === 0;
+            }), true));
+            
+            wp_die('Controller class not found: ' . $controller_class . '<br>Slug: ' . $slug . '<br>Check if controller.php exists and class name matches.');
+            return;
+        }
+        
+        error_log('Controller class found: ' . $controller_class);
+        
+        try {
+            $controller = new $controller_class();
+            error_log('Controller instance created successfully');
+        } catch (Exception $e) {
+            error_log('ERROR creating controller instance: ' . $e->getMessage());
+            wp_die('Error creating controller: ' . $e->getMessage());
+            return;
+        }
+        
+        if (empty($segments[0])) {
+            error_log('Calling index() method');
+            
+            if (!method_exists($controller, 'index')) {
+                error_log('ERROR: index() method does not exist on controller');
+                wp_die('Controller does not have index() method: ' . $controller_class);
+                return;
+            }
+            
+            $controller->index();
+        } elseif ($segments[0] === 'create' || $segments[0] === 'new') {
+            error_log('Calling create() method');
+            
+            if (!method_exists($controller, 'create')) {
+                error_log('ERROR: create() method does not exist on controller');
+                wp_die('Controller does not have create() method: ' . $controller_class);
+                return;
+            }
+            
+            $controller->create();
+        } elseif (($segments[0] === 'edit' || $segments[0] === 'upravit') && !empty($segments[1])) {
+            error_log('Calling edit(' . $segments[1] . ') method');
+            
+            if (!method_exists($controller, 'edit')) {
+                error_log('ERROR: edit() method does not exist on controller');
+                wp_die('Controller does not have edit() method: ' . $controller_class);
+                return;
+            }
+            
+            $controller->edit(intval($segments[1]));
+        } else {
+            error_log('ERROR: Unknown segment: ' . $segments[0]);
+            $this->handle_404();
+        }
+        
+        error_log('=== DISPATCH_MODULE END ===');
     }
-    
-    // Generate controller class name
-    $parts = explode('-', $slug);
-    $parts = array_map('ucfirst', $parts);
-    $class_name = implode('_', $parts);
-    $controller_class = 'SAW_Module_' . $class_name . '_Controller';
-    
-    error_log('Controller class: ' . $controller_class);
-    error_log('Class exists: ' . (class_exists($controller_class) ? 'YES' : 'NO'));
-    
-    if (!class_exists($controller_class)) {
-        error_log('ERROR: Controller class not found: ' . $controller_class);
-        error_log('Loaded classes: ' . print_r(get_declared_classes(), true));
-        $this->handle_404();
-        return;
-    }
-    
-    // Instantiate controller
-    try {
-        error_log('Creating controller instance...');
-        $controller = new $controller_class();
-        error_log('Controller created successfully');
-    } catch (Exception $e) {
-        error_log('ERROR creating controller: ' . $e->getMessage());
-        error_log('Stack trace: ' . $e->getTraceAsString());
-        wp_die('Error creating controller: ' . $e->getMessage());
-        return;
-    }
-    
-    // Dispatch to action
-    if (empty($segments[0])) {
-        error_log('Calling index()');
-        $controller->index();
-    } elseif ($segments[0] === 'create' || $segments[0] === 'new') {
-        error_log('Calling create()');
-        $controller->create();
-    } elseif (($segments[0] === 'edit' || $segments[0] === 'upravit') && !empty($segments[1])) {
-        error_log('Calling edit(' . $segments[1] . ')');
-        $controller->edit(intval($segments[1]));
-    } else {
-        error_log('ERROR: Unknown action: ' . $segments[0]);
-        $this->handle_404();
-    }
-    
-    error_log('=== DISPATCH_MODULE END ===');
-}
-    
-    // ================================================
-    // ROUTE HANDLERS
-    // ================================================
     
     private function handle_admin_route($path) {
         if (!$this->is_logged_in()) {
@@ -380,10 +293,6 @@ class SAW_Router {
         $this->render_page('Visitor Portal', $path, 'visitor', '');
     }
     
-    // ================================================
-    // PAGE RENDERING
-    // ================================================
-    
     private function render_page($title, $path, $route, $active_menu = '') {
         $user = $this->get_current_user_data();
         $customer = $this->get_current_customer_data();
@@ -403,8 +312,7 @@ class SAW_Router {
                 <div class="saw-card-body">
                     <div class="saw-alert saw-alert-success">
                         <strong>🔒 Úspěšně přihlášen!</strong><br>
-                        Tuto stránku vidíš, protože jsi prošel autentizační kontrolou.<br>
-                        Zkus otevřít v anonymním okně - měl bys vidět login screen.
+                        Tuto stránku vidíš, protože jsi prošel autentizační kontrolou.
                     </div>
                     
                     <table class="saw-info-table" style="margin-top: 16px;">
@@ -418,41 +326,17 @@ class SAW_Router {
                         </tr>
                         <tr>
                             <th>User:</th>
-                            <td><code><?php echo esc_html($user['name'] . ' (' . $user['email'] . ')'); ?></code></td>
+                            <td><code><?php echo esc_html($user['name']); ?></code></td>
                         </tr>
                         <tr>
                             <th>Role:</th>
                             <td><code><?php echo esc_html($user['role']); ?></code></td>
                         </tr>
                         <tr>
-                            <th>Customer ID:</th>
-                            <td><code><?php echo esc_html($customer['id']); ?></code></td>
-                        </tr>
-                        <tr>
                             <th>Customer:</th>
                             <td><code><?php echo esc_html($customer['name']); ?></code></td>
                         </tr>
-                        <tr>
-                            <th>WordPress User:</th>
-                            <td><?php echo is_user_logged_in() ? '✅ Ano' : '❌ Ne'; ?></td>
-                        </tr>
                     </table>
-                </div>
-            </div>
-            
-            <div class="saw-card">
-                <div class="saw-card-header">
-                    <h3>🚀 Quick Links</h3>
-                </div>
-                <div class="saw-card-body">
-                    <div class="saw-button-group">
-                        <a href="/admin/" class="saw-button saw-button-primary">Admin Dashboard</a>
-                        <a href="/admin/invitations" class="saw-button saw-button-primary">Pozvánky</a>
-                        <a href="/admin/visits" class="saw-button saw-button-primary">Návštěvy</a>
-                        <a href="/admin/statistics" class="saw-button saw-button-primary">Statistiky</a>
-                        <a href="/admin/settings/customers" class="saw-button saw-button-success">👥 Správa zákazníků</a>
-                        <a href="/admin/settings/account-types" class="saw-button saw-button-success">💳 Account Types</a>
-                    </div>
                 </div>
             </div>
         </div>
@@ -470,10 +354,6 @@ class SAW_Router {
     private function handle_404() {
         $this->render_page('404 - Stránka nenalezena', '404', 'error', '');
     }
-    
-    // ================================================
-    // HELPER METHODS
-    // ================================================
     
     private function load_frontend_components() {
         $components = array(
@@ -496,35 +376,9 @@ class SAW_Router {
     }
     
     private function redirect_to_login($route = 'admin') {
-        $login_url = '/' . $route . '/login/';
-        
-        ob_start();
-        ?>
-        <!DOCTYPE html>
-        <html <?php language_attributes(); ?>>
-        <head>
-            <meta charset="<?php bloginfo('charset'); ?>">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <meta http-equiv="refresh" content="0;url=<?php echo esc_url($login_url); ?>">
-            <title>Přesměrování na přihlášení...</title>
-        </head>
-        <body>
-            <div style="text-align: center; padding: 50px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
-                <h1>🔒 Přesměrování...</h1>
-                <p>Prosím počkejte, přesměrovávám vás na přihlašovací stránku.</p>
-                <p><a href="<?php echo esc_url($login_url); ?>">Klikněte zde, pokud se stránka nenačte automaticky</a></p>
-            </div>
-            <script>window.location.href = '<?php echo esc_js($login_url); ?>';</script>
-        </body>
-        </html>
-        <?php
-        echo ob_get_clean();
+        wp_redirect(home_url('/login/'));
         exit;
     }
-    
-    // ================================================
-    // USER & CUSTOMER DATA
-    // ================================================
     
     private function get_current_user_data() {
         if (is_user_logged_in()) {
@@ -554,31 +408,18 @@ class SAW_Router {
                 'name' => $wp_user->display_name,
                 'email' => $wp_user->user_email,
                 'role' => 'admin',
-                'customer_id' => null,
-                'branch_id' => null,
             );
         }
         
         return array(
-            'id' => 1,
-            'name' => 'Demo Admin',
-            'email' => 'admin@demo.cz',
-            'role' => 'admin',
-            'customer_id' => null,
-            'branch_id' => null,
+            'id' => 0,
+            'name' => 'Guest',
+            'email' => '',
+            'role' => 'guest',
         );
     }
     
-    /**
-     * Get current customer data
-     * 
-     * ✅ UPDATED v5.0.0: Uses SAW_Context as PRIMARY source
-     * This ensures consistent customer_id across the application
-     */
     private function get_current_customer_data() {
-        // ================================================
-        // PRIORITY 1: SAW_CONTEXT (database-first)
-        // ================================================
         if (class_exists('SAW_Context')) {
             $customer = SAW_Context::get_customer_data();
             if ($customer) {
@@ -593,82 +434,8 @@ class SAW_Router {
             }
         }
         
-        // Fallback if SAW_Context failed
         global $wpdb;
         
-        if (!is_user_logged_in()) {
-            return array(
-                'id' => 0,
-                'name' => 'Žádný zákazník',
-                'ico' => '',
-                'address' => '',
-                'logo_url' => '',
-                'logo_url_full' => '',
-            );
-        }
-        
-        $wp_user = wp_get_current_user();
-        
-        // For super admin - try session
-        if (current_user_can('manage_options')) {
-            $session = class_exists('SAW_Session_Manager') ? SAW_Session_Manager::instance() : null;
-            
-            $customer_id = null;
-            if ($session && $session->has('saw_current_customer_id')) {
-                $customer_id = intval($session->get('saw_current_customer_id'));
-            }
-            
-            if (!$customer_id) {
-                $customer_id = get_user_meta($wp_user->ID, 'saw_current_customer_id', true);
-                if ($customer_id) {
-                    $customer_id = intval($customer_id);
-                }
-            }
-            
-            if ($customer_id) {
-                $customer = $wpdb->get_row($wpdb->prepare(
-                    "SELECT * FROM {$wpdb->prefix}saw_customers WHERE id = %d",
-                    $customer_id
-                ), ARRAY_A);
-                
-                if ($customer) {
-                    return array(
-                        'id' => $customer['id'],
-                        'name' => $customer['name'],
-                        'ico' => $customer['ico'] ?? '',
-                        'address' => $customer['address'] ?? '',
-                        'logo_url' => $customer['logo_url'] ?? '',
-                        'logo_url_full' => !empty($customer['logo_url']) ? wp_get_upload_dir()['baseurl'] . '/' . ltrim($customer['logo_url'], '/') : '',
-                    );
-                }
-            }
-        }
-        
-        // For admin/manager - from database
-        $saw_user = $wpdb->get_row($wpdb->prepare(
-            "SELECT customer_id FROM {$wpdb->prefix}saw_users WHERE wp_user_id = %d AND is_active = 1",
-            $wp_user->ID
-        ), ARRAY_A);
-        
-        if ($saw_user && !empty($saw_user['customer_id'])) {
-            $customer = $wpdb->get_row($wpdb->prepare(
-                "SELECT * FROM {$wpdb->prefix}saw_customers WHERE id = %d",
-                $saw_user['customer_id']
-            ), ARRAY_A);
-            
-            if ($customer) {
-                return array(
-                    'id' => $customer['id'],
-                    'name' => $customer['name'],
-                    'ico' => $customer['ico'] ?? '',
-                    'address' => $customer['address'] ?? '',
-                    'logo_url' => $customer['logo_url'] ?? '',
-                    'logo_url_full' => !empty($customer['logo_url']) ? wp_get_upload_dir()['baseurl'] . '/' . ltrim($customer['logo_url'], '/') : '',
-                );
-            }
-        }
-        
-        // Last resort - first customer
         $customer = $wpdb->get_row(
             "SELECT * FROM {$wpdb->prefix}saw_customers WHERE status = 'active' ORDER BY id ASC LIMIT 1",
             ARRAY_A

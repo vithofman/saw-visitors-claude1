@@ -6,7 +6,7 @@
  * Načte config.php, vytvoří manifest, cachuje ho.
  * 
  * @package SAW_Visitors
- * @version 2.0.0
+ * @version 2.1.0
  * @since   4.8.0
  */
 
@@ -18,7 +18,7 @@ class SAW_Module_Loader
 {
     private static $modules = [];
     private static $manifest_cache_key = 'saw_module_manifest_v2';
-    private static $cache_ttl = 86400; // 24 hodin
+    private static $cache_ttl = 86400;
     
     /**
      * Discover all modules
@@ -29,7 +29,6 @@ class SAW_Module_Loader
      * @return array Module manifest
      */
     public static function discover() {
-        // Check cache first
         $cached = get_transient(self::$manifest_cache_key);
         if ($cached !== false && is_array($cached)) {
             self::$modules = $cached;
@@ -42,13 +41,11 @@ class SAW_Module_Loader
             return [];
         }
         
-        // Scan for module directories
         $module_folders = array_diff(scandir($modules_dir), ['.', '..']);
         
         foreach ($module_folders as $folder) {
             $folder_path = $modules_dir . $folder;
             
-            // Skip files
             if (!is_dir($folder_path)) {
                 continue;
             }
@@ -58,11 +55,9 @@ class SAW_Module_Loader
             if (file_exists($config_file)) {
                 $config = require $config_file;
                 
-                // Add metadata
                 $config['slug'] = $folder;
                 $config['path'] = $folder_path . '/';
                 
-                // Default capabilities
                 if (!isset($config['capabilities'])) {
                     $config['capabilities'] = [
                         'list' => 'manage_options',
@@ -73,7 +68,6 @@ class SAW_Module_Loader
                     ];
                 }
                 
-                // Default cache settings
                 if (!isset($config['cache'])) {
                     $config['cache'] = [
                         'enabled' => true,
@@ -85,7 +79,6 @@ class SAW_Module_Loader
             }
         }
         
-        // Cache manifest
         set_transient(self::$manifest_cache_key, self::$modules, self::$cache_ttl);
         
         return self::$modules;
@@ -111,16 +104,11 @@ class SAW_Module_Loader
         $config = self::$modules[$slug];
         $path = $config['path'];
         
-        // Load base classes first
-        //self::load_base_classes();
-        
-        // Load model
         $model_file = $path . 'model.php';
         if (file_exists($model_file)) {
             require_once $model_file;
         }
         
-        // Load controller
         $controller_file = $path . 'controller.php';
         if (file_exists($controller_file)) {
             require_once $controller_file;
@@ -150,7 +138,6 @@ class SAW_Module_Loader
         delete_transient(self::$manifest_cache_key);
         self::$modules = [];
         
-        // Clear module-specific caches
         global $wpdb;
         $wpdb->query(
             "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_saw_%'"
@@ -158,41 +145,6 @@ class SAW_Module_Loader
         $wpdb->query(
             "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_timeout_saw_%'"
         );
-    }
-    
-    /**
-     * Load base classes
-     * 
-     * Načte Base Controller, Base Model, AJAX Handlers.
-     */
-    private static function load_base_classes() {
-        static $loaded = false;
-        
-        if ($loaded) {
-            return;
-        }
-        
-        $base_dir = SAW_VISITORS_PLUGIN_DIR . 'includes/base/';
-        
-        // Base Model
-        $base_model = $base_dir . 'class-base-model.php';
-        if (file_exists($base_model)) {
-            require_once $base_model;
-        }
-        
-        // AJAX Handlers Trait
-        $ajax_trait = $base_dir . 'trait-ajax-handlers.php';
-        if (file_exists($ajax_trait)) {
-            require_once $ajax_trait;
-        }
-        
-        // Base Controller
-        $base_controller = $base_dir . 'class-base-controller.php';
-        if (file_exists($base_controller)) {
-            require_once $base_controller;
-        }
-        
-        $loaded = true;
     }
     
     /**
