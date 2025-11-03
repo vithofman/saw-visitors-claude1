@@ -41,6 +41,7 @@ class SAW_Database {
         // Multi-tenant Core (5)
         'departments',
         'user_departments',
+	'user_branches',
         'department_materials',
         'department_documents',
         'contact_persons',
@@ -228,6 +229,10 @@ class SAW_Database {
             array('table' => 'user_departments', 'constraint' => 'fk_userdept_user', 'column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'user_departments', 'constraint' => 'fk_userdept_dept', 'column' => 'department_id', 'ref_table' => 'departments', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
+	    // user_branches
+ 	    array('table' => 'user_branches', 'constraint' => 'fk_userbranch_user', 'column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+	    array('table' => 'user_branches', 'constraint' => 'fk_userbranch_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+
             // department_materials
             array('table' => 'department_materials', 'constraint' => 'fk_deptmat_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'department_materials', 'constraint' => 'fk_deptmat_dept', 'column' => 'department_id', 'ref_table' => 'departments', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),

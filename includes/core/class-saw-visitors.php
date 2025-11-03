@@ -18,7 +18,7 @@ class SAW_Visitors {
         $this->load_dependencies();
         $this->init_router();
         $this->init_session();
-        $this->init_context_and_components(); // ✅ NEW: Initialize context + components EARLY
+        $this->init_context_and_components();
         $this->block_wp_admin_for_saw_roles();
         $this->init_ajax_controllers();
         $this->define_hooks();
@@ -32,6 +32,18 @@ class SAW_Visitors {
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/class-base-controller.php';
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-module-loader.php';
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-asset-manager.php';
+        
+        if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-user-branches.php')) {
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-user-branches.php';
+        }
+        
+        if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-session-manager.php')) {
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-session-manager.php';
+        }
+        
+        if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-error-handler.php')) {
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-error-handler.php';
+        }
         
         if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-context.php')) {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-context.php';
@@ -67,46 +79,30 @@ class SAW_Visitors {
     }
     
     private function init_session() {
-        if (!session_id() && !headers_sent()) {
-            session_start();
-        }
+        SAW_Session_Manager::instance();
     }
     
-    /**
-     * ✅ NEW METHOD: Initialize SAW_Context and global components EARLY
-     * This ensures context and AJAX handlers are available before module controllers load
-     */
     private function init_context_and_components() {
-        // ================================================
-        // INITIALIZE SAW_CONTEXT FIRST
-        // ================================================
         if (class_exists('SAW_Context')) {
             SAW_Context::instance();
             
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log(sprintf(
-                    '[SAW_Visitors] Context initialized EARLY - Customer: %s, Branch: %s, User: %s',
+                    '[SAW_Visitors] Context initialized - Customer: %s, Branch: %s',
                     SAW_Context::get_customer_id() ?? 'NULL',
-                    SAW_Context::get_branch_id() ?? 'NULL',
-                    get_current_user_id()
+                    SAW_Context::get_branch_id() ?? 'NULL'
                 ));
             }
         }
         
-        // ================================================
-        // ✅ CRITICAL FIX: REGISTER BRANCH SWITCHER AJAX HANDLERS EARLY
-        // This must happen BEFORE any AJAX requests arrive
-        // ================================================
         if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/components/branch-switcher/class-saw-component-branch-switcher.php')) {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/branch-switcher/class-saw-component-branch-switcher.php';
             
-            // Create dummy instance just to register AJAX handlers
-            // The static flag in the component ensures handlers are only registered once
             if (class_exists('SAW_Component_Branch_Switcher')) {
                 new SAW_Component_Branch_Switcher();
                 
                 if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('[SAW_Visitors] Branch Switcher AJAX handlers registered');
+                    error_log('[SAW_Visitors] Branch Switcher registered');
                 }
             }
         }

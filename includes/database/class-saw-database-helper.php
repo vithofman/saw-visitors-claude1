@@ -45,6 +45,7 @@ class SAW_Database_Helper {
             // Multi-tenant Core (5)
             'departments',
             'user_departments',
+	    'user_branches',
             'department_materials',
             'department_documents',
             'contact_persons',
