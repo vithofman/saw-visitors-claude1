@@ -1,6 +1,11 @@
 <?php
 /**
- * Users Module Controller - DEBUG VERSION
+ * Users Module Controller - OPRAVENÁ VERZE
+ * 
+ * ✅ OPRAVY:
+ * 1. Synchronizace WP role při přeřazení uživatele (např. Manager → Super Admin)
+ * 2. Lepší logování pro debugging
+ * 3. Oprava mapování SAW role → WP role
  * 
  * @package SAW_Visitors
  */
@@ -134,6 +139,46 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
             ];
             
             error_log('SAW Users Controller: Setup email prepared');
+        }
+        // ===================================
+        // 3B. AKTUALIZACE EXISTUJÍCÍHO UŽIVATELE
+        // ===================================
+        else {
+            error_log('SAW Users Controller: Updating EXISTING user ID: ' . $data['id']);
+            
+            // ✅ KRITICKÁ OPRAVA: Načti existujícího uživatele
+            $existing_user = $this->model->get_by_id($data['id']);
+            
+            if (!$existing_user) {
+                error_log('SAW Users Controller: ERROR - User not found for update');
+                wp_die('Uživatel nenalezen');
+            }
+            
+            // ✅ KRITICKÁ OPRAVA: Pokud se změnila role, aktualizuj WP roli
+            if (!empty($existing_user['wp_user_id']) && $existing_user['role'] !== $data['role']) {
+                error_log('SAW Users Controller: Role change detected!');
+                error_log('  OLD role: ' . $existing_user['role']);
+                error_log('  NEW role: ' . $data['role']);
+                
+                $wp_user = new WP_User($existing_user['wp_user_id']);
+                $new_wp_role = $this->map_saw_to_wp_role($data['role']);
+                
+                error_log('  Changing WP role to: ' . $new_wp_role);
+                
+                // ✅ Smaž staré role a nastav novou
+                $wp_user->set_role($new_wp_role);
+                
+                error_log('  WP role updated successfully');
+                
+                // ✅ Pro super_admina přidej i administrator capability
+                if ($data['role'] === 'super_admin') {
+                    $wp_user->add_cap('manage_options');
+                    error_log('  Added manage_options capability');
+                }
+            }
+            
+            // Zachovej wp_user_id
+            $data['wp_user_id'] = $existing_user['wp_user_id'];
         }
         
         // ===================================
@@ -306,9 +351,14 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
         return true;
     }
     
+    /**
+     * ✅ OPRAVENO: Mapování SAW role → WP role
+     * 
+     * DŮLEŽITÉ: Super Admin MUSÍ mít WP roli "administrator"!
+     */
     private function map_saw_to_wp_role($saw_role) {
         $mapping = [
-            'super_admin' => 'administrator',
+            'super_admin' => 'administrator',        // ✅ Toto je správně!
             'admin' => 'saw_admin',
             'super_manager' => 'saw_super_manager',
             'manager' => 'saw_manager',

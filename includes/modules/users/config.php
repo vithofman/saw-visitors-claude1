@@ -16,12 +16,13 @@ return [
     'filter_by_customer' => true,
     'filter_by_branch' => false,
     
+    // ✅ OPRAVENO: 'read' místo 'saw_manage_users'
     'capabilities' => [
-        'list' => 'manage_options',
-        'view' => 'manage_options',
-        'create' => 'manage_options',
-        'edit' => 'manage_options',
-        'delete' => 'manage_options',
+        'list' => 'read',
+        'view' => 'read',
+        'create' => 'read',
+        'edit' => 'read',
+        'delete' => 'read',
     ],
     
     'fields' => [

@@ -1,9 +1,9 @@
 <?php
 /**
- * Base Controller Class
+ * Base Controller Class - DEBUG VERSION
  * 
  * @package SAW_Visitors
- * @version 4.0.4 - OPRAVENO: Output buffering v handle_save() pro prevenci "headers already sent"
+ * @version 4.0.5-DEBUG
  */
 
 if (!defined('ABSPATH')) {
@@ -19,6 +19,16 @@ abstract class SAW_Base_Controller
     protected $entity;
     
     public function index() {
+        // ✅ DEBUG START
+        error_log('====================================');
+        error_log('🔥 BASE CONTROLLER: index() START');
+        error_log('Entity: ' . ($this->entity ?? 'NULL'));
+        error_log('Current user ID: ' . get_current_user_id());
+        error_log('Is logged in: ' . (is_user_logged_in() ? 'YES' : 'NO'));
+        error_log('Has manage_options: ' . (current_user_can('manage_options') ? 'YES' : 'NO'));
+        error_log('Has read: ' . (current_user_can('read') ? 'YES' : 'NO'));
+        error_log('====================================');
+        
         $this->verify_module_access();
         $this->verify_capability('list');
         $this->enqueue_assets();
@@ -136,9 +146,6 @@ abstract class SAW_Base_Controller
     }
     
     protected function handle_save($id = 0) {
-        // ✅ OPRAVA: Zapni output buffering na začátku
-        // Toto zachytí VŠECHNY výstupy (včetně těch z wp_mail() v after_save())
-        // a zabrání "headers already sent" chybě
         ob_start();
         
         $this->verify_nonce();
@@ -159,7 +166,6 @@ abstract class SAW_Base_Controller
         $validation = $this->model->validate($data, $id);
         
         if (is_wp_error($validation)) {
-            // Zahoď zachycený výstup
             ob_end_clean();
             
             $errors = $validation->get_error_data();
@@ -192,7 +198,6 @@ abstract class SAW_Base_Controller
         }
         
         if (is_wp_error($result)) {
-            // Zahoď zachycený výstup
             ob_end_clean();
             
             $this->set_flash_message($result->get_error_message(), 'error');
@@ -207,12 +212,9 @@ abstract class SAW_Base_Controller
             exit;
         }
         
-        // ✅ OPRAVA: Zabal after_save() do try-catch
-        // Toto zachytí případné výjimky a umožní elegantní error handling
         try {
             $this->after_save($id);
         } catch (Exception $e) {
-            // Zahoď zachycený výstup
             ob_end_clean();
             
             error_log('SAW: after_save() exception: ' . $e->getMessage());
@@ -224,7 +226,6 @@ abstract class SAW_Base_Controller
             wp_redirect($redirect_url);
             exit;
         } catch (Error $e) {
-            // Zachytí i PHP 7+ Error (např. TypeError)
             ob_end_clean();
             
             error_log('SAW: after_save() error: ' . $e->getMessage());
@@ -237,8 +238,6 @@ abstract class SAW_Base_Controller
             exit;
         }
         
-        // ✅ OPRAVA: Zahoď zachycený výstup PŘED redirectem
-        // Toto zajistí, že žádné headers nebyly odeslány a wp_redirect() funguje
         ob_end_clean();
         
         $this->set_flash_message('Záznam byl úspěšně uložen', 'success');
@@ -251,38 +250,27 @@ abstract class SAW_Base_Controller
     protected function collect_form_data() {
         $data = [];
         
-        foreach ($this->config['fields'] as $field_key => $field_config) {
-            $field_type = $field_config['type'] ?? 'text';
-            
-            if ($field_type === 'checkbox') {
-                $data[$field_key] = isset($_POST[$field_key]) ? 1 : 0;
-                continue;
-            }
-            
-            if (!isset($_POST[$field_key])) {
-                if (isset($field_config['default'])) {
-                    $data[$field_key] = $field_config['default'];
+        if (empty($this->config['fields'])) {
+            foreach ($_POST as $key => $value) {
+                if ($key !== 'saw_nonce' && $key !== '_wp_http_referer') {
+                    $data[$key] = sanitize_text_field($value);
                 }
-                continue;
             }
-            
-            $value = $_POST[$field_key];
-            
-            $sanitize_fn = $field_config['sanitize'] ?? 'sanitize_text_field';
-            
-            if (function_exists($sanitize_fn)) {
-                $value = $sanitize_fn($value);
-            }
-            
-            $data[$field_key] = $value;
+            return $data;
         }
         
-        if (isset($_POST['customer_id'])) {
-            $data['customer_id'] = intval($_POST['customer_id']);
-        }
-        
-        if (isset($_POST['branch_id'])) {
-            $data['branch_id'] = !empty($_POST['branch_id']) ? intval($_POST['branch_id']) : null;
+        foreach ($this->config['fields'] as $field_name => $field_config) {
+            if (isset($_POST[$field_name])) {
+                $value = $_POST[$field_name];
+                
+                if (isset($field_config['sanitize']) && is_callable($field_config['sanitize'])) {
+                    $data[$field_name] = call_user_func($field_config['sanitize'], $value);
+                } else {
+                    $data[$field_name] = sanitize_text_field($value);
+                }
+            } elseif ($field_config['type'] === 'checkbox') {
+                $data[$field_name] = 0;
+            }
         }
         
         return $data;
@@ -296,10 +284,10 @@ abstract class SAW_Base_Controller
         }
         
         $account_types = [];
-        if (class_exists('SAW_Module_Account_Types_Model')) {
+        if ($this->entity === 'customers') {
             global $wpdb;
             $account_types = $wpdb->get_results(
-                "SELECT id, display_name FROM {$wpdb->prefix}saw_account_types ORDER BY sort_order ASC",
+                "SELECT id, name FROM {$wpdb->prefix}saw_account_types WHERE is_active = 1 ORDER BY sort_order ASC, name ASC",
                 ARRAY_A
             );
         }
@@ -342,21 +330,46 @@ abstract class SAW_Base_Controller
     }
     
     protected function verify_module_access() {
+        // ✅ DEBUG
+        error_log('====================================');
+        error_log('🔒 VERIFY_MODULE_ACCESS START');
+        
         $allowed_roles = $this->config['allowed_roles'] ?? [];
+        error_log('Allowed roles: ' . json_encode($allowed_roles));
         
         if (empty($allowed_roles)) {
+            error_log('✅ No allowed_roles defined - PASS');
+            error_log('====================================');
             return;
         }
         
         $current_role = $this->get_current_user_role();
+        error_log('Current role: ' . ($current_role ?? 'NULL'));
         
-        if (!in_array($current_role, $allowed_roles)) {
+        $in_array = in_array($current_role, $allowed_roles);
+        error_log('Role in allowed_roles: ' . ($in_array ? 'YES' : 'NO'));
+        
+        if (!$in_array) {
+            error_log('❌ FAILED: Role not in allowed_roles!');
+            error_log('====================================');
             wp_die('Nemáte oprávnění k tomuto modulu', 'Forbidden', ['response' => 403]);
         }
+        
+        error_log('✅ PASSED: Module access OK');
+        error_log('====================================');
     }
     
     protected function get_current_user_role() {
-        if (current_user_can('manage_options')) {
+        // ✅ DEBUG
+        error_log('------------------------------------');
+        error_log('🔍 GET_CURRENT_USER_ROLE START');
+        
+        $has_manage_options = current_user_can('manage_options');
+        error_log('Has manage_options: ' . ($has_manage_options ? 'YES' : 'NO'));
+        
+        if ($has_manage_options) {
+            error_log('✅ Returning: super_admin');
+            error_log('------------------------------------');
             return 'super_admin';
         }
         
@@ -364,21 +377,32 @@ abstract class SAW_Base_Controller
             session_start();
         }
         
-        if (!empty($_SESSION['saw_role'])) {
-            return $_SESSION['saw_role'];
+        $session_role = $_SESSION['saw_role'] ?? null;
+        error_log('Session role: ' . ($session_role ?? 'NULL'));
+        
+        if (!empty($session_role)) {
+            error_log('✅ Returning from session: ' . $session_role);
+            error_log('------------------------------------');
+            return $session_role;
         }
         
         static $role = null;
         if ($role === null) {
             global $wpdb;
+            error_log('Querying DB for user: ' . get_current_user_id());
+            
             $saw_user = $wpdb->get_row($wpdb->prepare(
                 "SELECT role FROM {$wpdb->prefix}saw_users 
                  WHERE wp_user_id = %d AND is_active = 1",
                 get_current_user_id()
             ));
+            
             $role = $saw_user->role ?? null;
+            error_log('DB role: ' . ($role ?? 'NULL'));
         }
         
+        error_log('✅ Returning from DB: ' . ($role ?? 'NULL'));
+        error_log('------------------------------------');
         return $role;
     }
     
@@ -413,11 +437,25 @@ abstract class SAW_Base_Controller
     }
     
     protected function verify_capability($action) {
-        $cap = $this->config['capabilities'][$action] ?? 'manage_options';
+        // ✅ DEBUG
+        error_log('====================================');
+        error_log('🔐 VERIFY_CAPABILITY START');
+        error_log('Action: ' . $action);
         
-        if (!current_user_can($cap)) {
+        $cap = $this->config['capabilities'][$action] ?? 'manage_options';
+        error_log('Required capability: ' . $cap);
+        
+        $has_cap = current_user_can($cap);
+        error_log('User has capability: ' . ($has_cap ? 'YES' : 'NO'));
+        
+        if (!$has_cap) {
+            error_log('❌ FAILED: User does NOT have capability!');
+            error_log('====================================');
             wp_die('Insufficient permissions', 'Forbidden', ['response' => 403]);
         }
+        
+        error_log('✅ PASSED: Capability check OK');
+        error_log('====================================');
     }
     
     protected function verify_nonce() {

@@ -1,12 +1,11 @@
 <?php
 /**
- * SAW Activator
+ * SAW Activator - OPRAVENÁ VERZE
  * 
- * Třída pro aktivaci pluginu - kontrola požadavků, vytvoření DB, složek
+ * ✅ PŘIDÁNO: saw_manage_users capability pro saw_admin roli
  * 
  * @package SAW_Visitors
- * @version 4.6.1
- * @since 4.6.1
+ * @version 4.6.2
  */
 
 if (!defined('ABSPATH')) {
@@ -15,14 +14,6 @@ if (!defined('ABSPATH')) {
 
 class SAW_Activator {
 
-    /**
-     * Aktivace pluginu
-     * 
-     * KRITICKÉ: Veškerý výstup je zachycen v saw-visitors.php pomocí ob_start/ob_end_clean
-     * Proto můžeme bezpečně volat metody, které by mohly produkovat output
-     * 
-     * @return void
-     */
     public static function activate() {
         error_log('========================================');
         error_log('[SAW Activator] START AKTIVACE');
@@ -42,11 +33,6 @@ class SAW_Activator {
         error_log('========================================');
     }
 
-    /**
-     * Kontrola požadavků
-     * 
-     * @return void
-     */
     private static function check_requirements() {
         error_log('[SAW Activator] Kontrola požadavků...');
         
@@ -65,16 +51,20 @@ class SAW_Activator {
     }
 
     /**
-     * Vytvoření custom WP rolí
+     * ✅ OPRAVENO: Vytvoření custom WP rolí
      * 
-     * @return void
+     * ZMĚNY:
+     * - saw_admin má nově capability "saw_manage_users"
+     * - Aktualizuje i existující role
      */
     private static function create_custom_roles() {
         error_log('[SAW Activator] Vytváření custom WP rolí...');
         
+        // ✅ SAW Admin - s capabilities pro správu uživatelů
         add_role('saw_admin', 'SAW Admin', [
             'read' => true,
-            'saw_access' => true
+            'saw_access' => true,
+            'saw_manage_users' => true,  // ← NOVÉ!
         ]);
         
         add_role('saw_super_manager', 'SAW Super Manager', [
@@ -92,14 +82,16 @@ class SAW_Activator {
             'saw_access' => true
         ]);
         
+        // ✅ Aktualizuj existující role (pokud už existují)
+        $role = get_role('saw_admin');
+        if ($role && !$role->has_cap('saw_manage_users')) {
+            $role->add_cap('saw_manage_users');
+            error_log('[SAW Activator] ✓ Přidána capability saw_manage_users do saw_admin');
+        }
+        
         error_log('[SAW Activator] ✓ Custom WP role vytvořeny');
     }
 
-    /**
-     * Vytvoření databázových tabulek
-     * 
-     * @return void
-     */
     private static function create_database_tables() {
         error_log('[SAW Activator] Vytváření databázových tabulek...');
         
@@ -135,11 +127,6 @@ class SAW_Activator {
         }
     }
 
-    /**
-     * Vložení výchozích dat
-     * 
-     * @return void
-     */
     private static function insert_default_data() {
         error_log('[SAW Activator] Vkládání výchozích dat...');
         
@@ -185,11 +172,6 @@ class SAW_Activator {
         }
     }
 
-    /**
-     * Vytvoření upload složek
-     * 
-     * @return void
-     */
     private static function create_upload_directories() {
         error_log('[SAW Activator] Vytváření upload složek...');
         
@@ -228,11 +210,6 @@ class SAW_Activator {
         }
     }
 
-    /**
-     * Nastavení výchozích options
-     * 
-     * @return void
-     */
     private static function set_default_options() {
         error_log('[SAW Activator] Nastavuji výchozí options...');
         
@@ -242,14 +219,6 @@ class SAW_Activator {
         error_log('[SAW Activator] ✓ Options nastaveny (saw_db_version: ' . SAW_VISITORS_VERSION . ')');
     }
 
-    /**
-     * Registrace a flush rewrite rules
-     * 
-     * KRITICKÉ: Musíme manuálně zaregistrovat rewrite rules před flush,
-     * protože 'init' hook se při aktivaci ještě nespustil
-     * 
-     * @return void
-     */
     private static function register_and_flush_rewrite_rules() {
         error_log('[SAW Activator] Registrace rewrite rules...');
         
