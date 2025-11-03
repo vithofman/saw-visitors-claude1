@@ -1,11 +1,9 @@
 <?php
 /**
- * SAW Activator - OPRAVENÁ VERZE
- * 
- * ✅ PŘIDÁNO: saw_manage_users capability pro saw_admin roli
+ * SAW Activator - UPDATED with Permissions System
  * 
  * @package SAW_Visitors
- * @version 4.6.2
+ * @version 4.10.0
  */
 
 if (!defined('ABSPATH')) {
@@ -23,6 +21,7 @@ class SAW_Activator {
         self::create_custom_roles();
         self::create_database_tables();
         self::insert_default_data();
+        self::insert_default_permissions();
         self::create_upload_directories();
         self::set_default_options();
         self::register_and_flush_rewrite_rules();
@@ -50,21 +49,13 @@ class SAW_Activator {
         error_log('[SAW Activator] ✓ Požadavky splněny (PHP ' . PHP_VERSION . ', WP ' . $wp_version . ')');
     }
 
-    /**
-     * ✅ OPRAVENO: Vytvoření custom WP rolí
-     * 
-     * ZMĚNY:
-     * - saw_admin má nově capability "saw_manage_users"
-     * - Aktualizuje i existující role
-     */
     private static function create_custom_roles() {
         error_log('[SAW Activator] Vytváření custom WP rolí...');
         
-        // ✅ SAW Admin - s capabilities pro správu uživatelů
         add_role('saw_admin', 'SAW Admin', [
             'read' => true,
             'saw_access' => true,
-            'saw_manage_users' => true,  // ← NOVÉ!
+            'saw_manage_users' => true,
         ]);
         
         add_role('saw_super_manager', 'SAW Super Manager', [
@@ -82,7 +73,6 @@ class SAW_Activator {
             'saw_access' => true
         ]);
         
-        // ✅ Aktualizuj existující role (pokud už existují)
         $role = get_role('saw_admin');
         if ($role && !$role->has_cap('saw_manage_users')) {
             $role->add_cap('saw_manage_users');
@@ -169,6 +159,47 @@ class SAW_Activator {
             error_log('[SAW Activator] ERROR: Chyba při vkládání demo zákazníka: ' . $wpdb->last_error);
         } else {
             error_log('[SAW Activator] ✓ Demo zákazník vložen (ID: ' . $wpdb->insert_id . ')');
+        }
+    }
+
+    private static function insert_default_permissions() {
+        error_log('[SAW Activator] Vkládání výchozích oprávnění...');
+        
+        $permissions_class = SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-permissions.php';
+        $schema_file = SAW_VISITORS_PLUGIN_DIR . 'includes/auth/permissions-schema.php';
+        
+        if (!file_exists($permissions_class)) {
+            error_log('[SAW Activator] ERROR: Soubor class-saw-permissions.php NEEXISTUJE!');
+            return;
+        }
+        
+        if (!file_exists($schema_file)) {
+            error_log('[SAW Activator] ERROR: Soubor permissions-schema.php NEEXISTUJE!');
+            return;
+        }
+        
+        require_once $permissions_class;
+        
+        if (!class_exists('SAW_Permissions')) {
+            error_log('[SAW Activator] ERROR: Třída SAW_Permissions neexistuje!');
+            return;
+        }
+        
+        $schema = require $schema_file;
+        
+        if (empty($schema)) {
+            error_log('[SAW Activator] ERROR: Permissions schema je prázdná!');
+            return;
+        }
+        
+        error_log('[SAW Activator] Načítám permissions schema...');
+        
+        $inserted = SAW_Permissions::bulk_insert_from_schema($schema);
+        
+        if ($inserted > 0) {
+            error_log('[SAW Activator] ✓ Vloženo ' . $inserted . ' oprávnění');
+        } else {
+            error_log('[SAW Activator] ⚠ Žádná nová oprávnění nebyla vložena (již existují)');
         }
     }
 

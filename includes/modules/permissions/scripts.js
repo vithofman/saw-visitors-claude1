@@ -1,10 +1,8 @@
 /**
- * Permissions Module - JavaScript
- * 
- * Handles live AJAX updates for permissions matrix.
+ * Permissions Module - JavaScript FIXED
  * 
  * @package SAW_Visitors
- * @version 1.0.0
+ * @version 1.0.1
  * @since 4.10.0
  */
 
@@ -14,9 +12,15 @@
     const PermissionsManager = {
         
         nonce: sawPermissionsData?.nonce || '',
+        ajaxUrl: sawPermissionsData?.ajaxUrl || ajaxurl,
+        homeUrl: sawPermissionsData?.homeUrl || '',
         saveTimeout: null,
         
         init: function() {
+            console.log('[Permissions] Initializing...', {
+                nonce: this.nonce,
+                ajaxUrl: this.ajaxUrl
+            });
             this.bindEvents();
         },
         
@@ -27,6 +31,7 @@
             $(document).on('click', '#btn-allow-all', this.allowAll.bind(this));
             $(document).on('click', '#btn-deny-all', this.denyAll.bind(this));
             $(document).on('click', '#btn-reset', this.resetToDefaults.bind(this));
+            console.log('[Permissions] Events bound');
         },
         
         getCurrentRole: function() {
@@ -61,26 +66,33 @@
             const self = this;
             const role = this.getCurrentRole();
             
-            $.post(ajaxurl, {
+            const postData = {
                 action: 'saw_update_permission',
                 nonce: this.nonce,
                 role: role,
                 module: module,
-                action: action,
+                permission_action: action,  // CRITICAL FIX: was 'action'
                 allowed: allowed ? 1 : 0,
                 scope: scope || 'all'
-            })
+            };
+            
+            console.log('[Permissions] Updating permission:', postData);
+            
+            $.post(this.ajaxUrl, postData)
             .done(function(response) {
+                console.log('[Permissions] Response:', response);
                 if (response.success) {
                     self.showSaveIndicator(true);
                 } else {
                     self.showSaveIndicator(false);
-                    console.error('Permission update failed:', response.data);
+                    console.error('[Permissions] Update failed:', response.data);
+                    alert('Chyba: ' + (response.data?.message || 'Neznámá chyba'));
                 }
             })
             .fail(function(xhr, status, error) {
                 self.showSaveIndicator(false);
-                console.error('AJAX error:', error);
+                console.error('[Permissions] AJAX error:', {xhr, status, error});
+                alert('AJAX chyba: ' + error);
             });
         },
         
@@ -89,6 +101,8 @@
             const module = $checkbox.data('module');
             const action = $checkbox.data('action');
             const allowed = $checkbox.is(':checked');
+            
+            console.log('[Permissions] Checkbox changed:', {module, action, allowed});
             
             const $indicator = $checkbox.siblings('.toggle-indicator');
             $indicator.toggleClass('active', allowed);
@@ -106,6 +120,8 @@
             const action = $select.data('action');
             const scope = $select.val();
             
+            console.log('[Permissions] Scope changed:', {module, action, scope});
+            
             const $row = $select.closest('tr');
             const $checkbox = $row.find('.permission-checkbox[data-action="' + action + '"]');
             const allowed = $checkbox.is(':checked');
@@ -115,8 +131,8 @@
         
         handleRoleChange: function(e) {
             const role = $(e.target).val();
-            const currentUrl = window.location.href.split('?')[0];
-            window.location.href = currentUrl + '?role=' + role;
+            console.log('[Permissions] Role changed:', role);
+            window.location.href = this.homeUrl + '?role=' + role;
         },
         
         allowAll: function(e) {
@@ -126,6 +142,7 @@
                 return;
             }
             
+            console.log('[Permissions] Allowing all...');
             $('.permission-checkbox:not(:checked)').each(function() {
                 $(this).prop('checked', true).trigger('change');
             });
@@ -138,6 +155,7 @@
                 return;
             }
             
+            console.log('[Permissions] Denying all...');
             $('.permission-checkbox:checked').each(function() {
                 $(this).prop('checked', false).trigger('change');
             });
@@ -153,12 +171,15 @@
             const self = this;
             const role = this.getCurrentRole();
             
-            $.post(ajaxurl, {
+            console.log('[Permissions] Resetting to defaults for role:', role);
+            
+            $.post(this.ajaxUrl, {
                 action: 'saw_reset_permissions',
                 nonce: this.nonce,
                 role: role
             })
             .done(function(response) {
+                console.log('[Permissions] Reset response:', response);
                 if (response.success) {
                     location.reload();
                 } else {
@@ -166,12 +187,14 @@
                 }
             })
             .fail(function(xhr, status, error) {
+                console.error('[Permissions] Reset AJAX error:', {xhr, status, error});
                 alert('Chyba při resetování: ' + error);
             });
         }
     };
     
     $(document).ready(function() {
+        console.log('[Permissions] DOM ready, initializing manager...');
         PermissionsManager.init();
     });
     

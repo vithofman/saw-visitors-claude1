@@ -3,15 +3,13 @@
  * Permissions Module - Matrix View Template
  * 
  * @package SAW_Visitors
- * @version 1.0.0
+ * @version 1.0.1
  * @since 4.10.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
-
-$ajax_nonce = wp_create_nonce('saw_ajax_nonce');
 ?>
 
 <div class="saw-page-header">
@@ -76,7 +74,7 @@ $ajax_nonce = wp_create_nonce('saw_ajax_nonce');
                 <?php foreach ($modules as $module_slug => $module_config): ?>
                     <tr data-module="<?php echo esc_attr($module_slug); ?>">
                         <td class="module-name">
-                            <span class="module-icon"><?php echo $module_config['icon'] ?? '📁'; ?></span>
+                            <span class="module-icon"><?php echo $module_config['icon'] ?? '📦'; ?></span>
                             <strong><?php echo esc_html($module_config['plural'] ?? $module_slug); ?></strong>
                         </td>
                         
@@ -101,7 +99,7 @@ $ajax_nonce = wp_create_nonce('saw_ajax_nonce');
                             <select class="scope-select" 
                                     data-module="<?php echo esc_attr($module_slug); ?>"
                                     data-action="list">
-                                <option value="all" <?php selected($current_scope, 'all'); ?>>🌍 Všechno</option>
+                                <option value="all" <?php selected($current_scope, 'all'); ?>>🌐 Všechno</option>
                                 <option value="customer" <?php selected($current_scope, 'customer'); ?>>🏢 Zákazník</option>
                                 <option value="branch" <?php selected($current_scope, 'branch'); ?>>🏪 Pobočka</option>
                                 <option value="department" <?php selected($current_scope, 'department'); ?>>📁 Oddělení</option>
@@ -122,120 +120,10 @@ $ajax_nonce = wp_create_nonce('saw_ajax_nonce');
 </div>
 
 <script>
-jQuery(document).ready(function($) {
-    const nonce = '<?php echo $ajax_nonce; ?>';
-    let saveTimeout = null;
-    
-    function getCurrentRole() {
-        return $('#role-select').val();
-    }
-    
-    function showSaveIndicator() {
-        clearTimeout(saveTimeout);
-        $('#save-indicator').fadeIn(200);
-        
-        saveTimeout = setTimeout(function() {
-            $('#save-indicator').fadeOut(200);
-        }, 2000);
-    }
-    
-    function updatePermission(module, action, allowed, scope) {
-        const role = getCurrentRole();
-        
-        $.post(ajaxurl, {
-            action: 'saw_update_permission',
-            nonce: nonce,
-            role: role,
-            module: module,
-            permission_action: action,
-            allowed: allowed ? 1 : 0,
-            scope: scope || 'all'
-        }, function(response) {
-            if (response.success) {
-                showSaveIndicator();
-            } else {
-                alert('Chyba při ukládání: ' + (response.data.message || 'Neznámá chyba'));
-            }
-        });
-    }
-    
-    $('.permission-checkbox').on('change', function() {
-        const $checkbox = $(this);
-        const module = $checkbox.data('module');
-        const action = $checkbox.data('action');
-        const allowed = $checkbox.is(':checked');
-        const $indicator = $checkbox.siblings('.toggle-indicator');
-        
-        if (allowed) {
-            $indicator.addClass('active');
-        } else {
-            $indicator.removeClass('active');
-        }
-        
-        const $scopeSelect = $checkbox.closest('tr').find('.scope-select');
-        const scope = $scopeSelect.val();
-        
-        updatePermission(module, action, allowed, scope);
-    });
-    
-    $('.scope-select').on('change', function() {
-        const $select = $(this);
-        const module = $select.data('module');
-        const action = $select.data('action');
-        const scope = $select.val();
-        
-        const $checkbox = $select.closest('tr').find('.permission-checkbox[data-action="' + action + '"]');
-        const allowed = $checkbox.is(':checked');
-        
-        updatePermission(module, action, allowed, scope);
-    });
-    
-    $('#role-select').on('change', function() {
-        window.location.href = '<?php echo home_url('/admin/settings/permissions/'); ?>?role=' + $(this).val();
-    });
-    
-    $('#btn-allow-all').on('click', function() {
-        if (!confirm('Opravdu chcete povolit všechna oprávnění pro tuto roli?')) {
-            return;
-        }
-        
-        $('.permission-checkbox').each(function() {
-            if (!$(this).is(':checked')) {
-                $(this).prop('checked', true).trigger('change');
-            }
-        });
-    });
-    
-    $('#btn-deny-all').on('click', function() {
-        if (!confirm('Opravdu chcete zakázat všechna oprávnění pro tuto roli?')) {
-            return;
-        }
-        
-        $('.permission-checkbox').each(function() {
-            if ($(this).is(':checked')) {
-                $(this).prop('checked', false).trigger('change');
-            }
-        });
-    });
-    
-    $('#btn-reset').on('click', function() {
-        if (!confirm('Opravdu chcete resetovat oprávnění na výchozí hodnoty?')) {
-            return;
-        }
-        
-        const role = getCurrentRole();
-        
-        $.post(ajaxurl, {
-            action: 'saw_reset_permissions',
-            nonce: nonce,
-            role: role
-        }, function(response) {
-            if (response.success) {
-                location.reload();
-            } else {
-                alert('Chyba při resetování: ' + (response.data.message || 'Neznámá chyba'));
-            }
-        });
-    });
-});
+// Pass PHP data to external JS
+var sawPermissionsData = {
+    nonce: '<?php echo esc_js($ajax_nonce); ?>',
+    ajaxUrl: '<?php echo esc_js(admin_url('admin-ajax.php')); ?>',
+    homeUrl: '<?php echo esc_js(home_url('/admin/permissions/')); ?>'
+};
 </script>

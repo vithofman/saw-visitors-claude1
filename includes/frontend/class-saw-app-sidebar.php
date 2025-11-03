@@ -1,10 +1,9 @@
 <?php
 /**
- * SAW App Sidebar Component
+ * SAW App Sidebar Component - UPDATED with Permissions
  * 
  * @package SAW_Visitors
- * @version 4.7.0
- * @since 4.6.1
+ * @version 4.10.0
  */
 
 if (!defined('ABSPATH')) {
@@ -17,6 +16,7 @@ class SAW_App_Sidebar {
     private $customer;
     private $active_menu;
     private $current_branch;
+    private $saw_role;
     
     public function __construct($user = null, $customer = null, $active_menu = '', $current_branch = null) {
         $this->user = $user ?: array('role' => 'admin');
@@ -27,6 +27,52 @@ class SAW_App_Sidebar {
         );
         $this->active_menu = $active_menu;
         $this->current_branch = $current_branch ?: $this->load_current_branch();
+        $this->saw_role = $this->get_current_saw_role();
+    }
+    
+    private function get_current_saw_role() {
+        if (current_user_can('manage_options')) {
+            return 'super_admin';
+        }
+        
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        $session_role = $_SESSION['saw_role'] ?? null;
+        
+        if (!empty($session_role)) {
+            return $session_role;
+        }
+        
+        global $wpdb;
+        
+        $saw_user = $wpdb->get_row($wpdb->prepare(
+            "SELECT role FROM {$wpdb->prefix}saw_users 
+             WHERE wp_user_id = %d AND is_active = 1",
+            get_current_user_id()
+        ));
+        
+        return $saw_user->role ?? 'admin';
+    }
+    
+    private function can_access_module($module_slug) {
+        if (!class_exists('SAW_Permissions')) {
+            $permissions_file = SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-permissions.php';
+            if (file_exists($permissions_file)) {
+                require_once $permissions_file;
+            }
+        }
+        
+        if (!class_exists('SAW_Permissions')) {
+            return true;
+        }
+        
+        if ($this->saw_role === 'super_admin') {
+            return true;
+        }
+        
+        return SAW_Permissions::check($this->saw_role, $module_slug, 'list');
     }
     
     private function get_logo_url() {
@@ -164,6 +210,17 @@ class SAW_App_Sidebar {
                 foreach ($menu as $index => $section): 
                     $has_active = $this->section_has_active_item($section);
                     $is_collapsed = !$first_section && !$has_active;
+                    
+                    $visible_items = [];
+                    foreach ($section['items'] as $item) {
+                        if ($this->can_access_module($item['id'])) {
+                            $visible_items[] = $item;
+                        }
+                    }
+                    
+                    if (empty($visible_items)) {
+                        continue;
+                    }
                 ?>
                     <?php if (isset($section['heading'])): ?>
                         <div class="saw-nav-section <?php echo $is_collapsed ? 'collapsed' : ''; ?>">
@@ -176,7 +233,7 @@ class SAW_App_Sidebar {
                                 </span>
                             </div>
                             <div class="saw-nav-items">
-                                <?php foreach ($section['items'] as $item): ?>
+                                <?php foreach ($visible_items as $item): ?>
                                     <a 
                                         href="<?php echo esc_url($item['url']); ?>" 
                                         class="saw-nav-item <?php echo ($this->active_menu === $item['id']) ? 'active' : ''; ?>"
@@ -190,7 +247,7 @@ class SAW_App_Sidebar {
                         </div>
                         <?php $first_section = false; ?>
                     <?php else: ?>
-                        <?php foreach ($section['items'] as $item): ?>
+                        <?php foreach ($visible_items as $item): ?>
                             <a 
                                 href="<?php echo esc_url($item['url']); ?>" 
                                 class="saw-nav-item <?php echo ($this->active_menu === $item['id']) ? 'active' : ''; ?>"
@@ -295,6 +352,12 @@ class SAW_App_Sidebar {
             array(
                 'heading' => 'Systém',
                 'items' => array(
+                    array(
+                        'id' => 'permissions',
+                        'label' => 'Oprávnění',
+                        'url' => '/admin/permissions',
+                        'icon' => '🔐',
+                    ),
                     array(
                         'id' => 'customers',
                         'label' => 'Zákazníci',

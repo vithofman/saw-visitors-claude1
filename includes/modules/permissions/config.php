@@ -2,8 +2,6 @@
 /**
  * Permissions Module Config
  * 
- * Admin UI for managing role-based permissions with matrix view.
- * 
  * @package SAW_Visitors
  * @version 1.0.0
  * @since 4.10.0
@@ -18,7 +16,7 @@ return [
     'table' => 'saw_permissions',
     'singular' => 'Oprávnění',
     'plural' => 'Správa oprávnění',
-    'route' => 'admin/settings/permissions',
+    'route' => 'admin/permissions',
     'icon' => '🔐',
     
     'allowed_roles' => ['super_admin'],

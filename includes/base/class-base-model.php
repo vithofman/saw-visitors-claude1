@@ -1,13 +1,9 @@
 <?php
 /**
- * Base Model Class
- * 
- * Univerzální DB operace pro všechny moduly.
- * Child modely jen přidávají custom validaci a vztahy.
+ * Base Model Class - UPDATED with Data Scope
  * 
  * @package SAW_Visitors
- * @version 2.0.2 - OPRAVENO: customer_id a branch_id filtering
- * @since   4.8.0
+ * @version 4.10.0
  */
 
 if (!defined('ABSPATH')) {
@@ -20,9 +16,6 @@ abstract class SAW_Base_Model
     protected $config;
     protected $cache_ttl = 300;
     
-    /**
-     * Get all items
-     */
     public function get_all($filters = []) {
         global $wpdb;
         
@@ -36,7 +29,6 @@ abstract class SAW_Base_Model
         $sql = "SELECT * FROM {$this->table} WHERE 1=1";
         $params = [];
         
-        // KRITICKÁ OPRAVA: customer_id a branch_id filtrování
         if (!empty($filters['customer_id'])) {
             $sql .= " AND customer_id = %d";
             $params[] = intval($filters['customer_id']);
@@ -47,7 +39,11 @@ abstract class SAW_Base_Model
             $params[] = intval($filters['branch_id']);
         }
         
-        // Search filtering
+        $scope_sql = $this->apply_data_scope();
+        if (!empty($scope_sql)) {
+            $sql .= $scope_sql;
+        }
+        
         if (!empty($filters['search'])) {
             $search_fields = $this->config['list_config']['searchable'] ?? ['name'];
             $search_conditions = [];
@@ -65,7 +61,6 @@ abstract class SAW_Base_Model
             $sql .= " AND (" . implode(' OR ', $search_conditions) . ")";
         }
         
-        // Other filters from config
         foreach ($this->config['list_config']['filters'] ?? [] as $filter_key => $enabled) {
             if ($enabled && isset($filters[$filter_key]) && $filters[$filter_key] !== '') {
                 $sql .= " AND {$filter_key} = %s";
@@ -73,12 +68,10 @@ abstract class SAW_Base_Model
             }
         }
         
-        // Apply prepare if we have params
         if (!empty($params)) {
             $sql = $wpdb->prepare($sql, ...$params);
         }
         
-        // Ordering
         $orderby = $filters['orderby'] ?? 'id';
         $order = strtoupper($filters['order'] ?? 'DESC');
         
@@ -86,11 +79,9 @@ abstract class SAW_Base_Model
             $sql .= " ORDER BY {$orderby} {$order}";
         }
         
-        // Get total count
         $total_sql = "SELECT COUNT(*) FROM ({$sql}) as count_table";
         $total = $wpdb->get_var($total_sql);
         
-        // Pagination
         $limit = intval($filters['per_page'] ?? 20);
         $offset = ($filters['page'] ?? 1) - 1;
         $offset = $offset * $limit;
@@ -109,9 +100,6 @@ abstract class SAW_Base_Model
         return $data;
     }
     
-    /**
-     * Get by ID
-     */
     public function get_by_id($id) {
         global $wpdb;
         
@@ -134,9 +122,6 @@ abstract class SAW_Base_Model
         return $item;
     }
     
-    /**
-     * Create new item
-     */
     public function create($data) {
         global $wpdb;
         
@@ -160,9 +145,6 @@ abstract class SAW_Base_Model
         return $wpdb->insert_id;
     }
     
-    /**
-     * Update item
-     */
     public function update($id, $data) {
         global $wpdb;
         
@@ -189,19 +171,9 @@ abstract class SAW_Base_Model
         return true;
     }
     
-    /**
-     * Delete item
-     * 
-     * ✅ OPRAVENO: Správná kontrola výsledku delete operace
-     * $wpdb->delete() vrací:
-     * - počet smazaných řádků (obvykle 1) při úspěchu
-     * - false při SQL chybě
-     * - 0 pokud záznam neexistuje
-     */
     public function delete($id) {
         global $wpdb;
         
-        // Zkontroluj jestli záznam existuje
         $exists = $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$this->table} WHERE id = %d",
             $id
@@ -211,19 +183,16 @@ abstract class SAW_Base_Model
             return new WP_Error('not_found', 'Záznam nenalezen');
         }
         
-        // Proveď delete
         $result = $wpdb->delete(
             $this->table,
             ['id' => $id],
             ['%d']
         );
         
-        // ✅ OPRAVA: $result je false jen při SQL chybě, ne při úspěchu!
         if ($result === false) {
             return new WP_Error('db_error', 'Chyba databáze: ' . $wpdb->last_error);
         }
         
-        // ✅ Pokud result === 0, záznam nebyl smazán (ale není to chyba)
         if ($result === 0) {
             return new WP_Error('delete_failed', 'Záznam se nepodařilo smazat');
         }
@@ -233,16 +202,12 @@ abstract class SAW_Base_Model
         return true;
     }
     
-    /**
-     * Count items
-     */
     public function count($filters = []) {
         global $wpdb;
         
         $sql = "SELECT COUNT(*) FROM {$this->table} WHERE 1=1";
         $params = [];
         
-        // KRITICKÁ OPRAVA: customer_id filtrování pro count
         if (!empty($filters['customer_id'])) {
             $sql .= " AND customer_id = %d";
             $params[] = intval($filters['customer_id']);
@@ -251,6 +216,11 @@ abstract class SAW_Base_Model
         if (isset($filters['branch_id']) && $filters['branch_id'] !== '') {
             $sql .= " AND branch_id = %d";
             $params[] = intval($filters['branch_id']);
+        }
+        
+        $scope_sql = $this->apply_data_scope();
+        if (!empty($scope_sql)) {
+            $sql .= $scope_sql;
         }
         
         if (!empty($filters['search'])) {
@@ -277,14 +247,135 @@ abstract class SAW_Base_Model
         return $wpdb->get_var($sql);
     }
     
-    /**
-     * Validate data (override in child class)
-     */
+    protected function apply_data_scope() {
+        if (!class_exists('SAW_Permissions')) {
+            return '';
+        }
+        
+        $role = $this->get_current_user_role();
+        
+        if (empty($role) || $role === 'super_admin') {
+            return '';
+        }
+        
+        $permission = SAW_Permissions::get_permission($role, $this->config['entity'], 'list');
+        
+        if (!$permission || !isset($permission['scope'])) {
+            return '';
+        }
+        
+        $scope = $permission['scope'];
+        
+        switch ($scope) {
+            case 'customer':
+                $customer_id = $this->get_current_customer_id();
+                if ($customer_id) {
+                    return " AND customer_id = " . intval($customer_id);
+                }
+                break;
+                
+            case 'branch':
+                $branch_id = $this->get_current_branch_id();
+                if ($branch_id) {
+                    return " AND branch_id = " . intval($branch_id);
+                }
+                break;
+                
+            case 'department':
+                $department_ids = $this->get_current_department_ids();
+                if (!empty($department_ids)) {
+                    $ids = implode(',', array_map('intval', $department_ids));
+                    return " AND department_id IN ({$ids})";
+                }
+                break;
+                
+            case 'own':
+                $user_id = get_current_user_id();
+                if ($user_id) {
+                    return " AND wp_user_id = " . intval($user_id);
+                }
+                break;
+        }
+        
+        return '';
+    }
+    
+    protected function get_current_user_role() {
+        if (current_user_can('manage_options')) {
+            return 'super_admin';
+        }
+        
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        $session_role = $_SESSION['saw_role'] ?? null;
+        
+        if (!empty($session_role)) {
+            return $session_role;
+        }
+        
+        static $role = null;
+        if ($role === null) {
+            global $wpdb;
+            
+            $saw_user = $wpdb->get_row($wpdb->prepare(
+                "SELECT role FROM {$wpdb->prefix}saw_users 
+                 WHERE wp_user_id = %d AND is_active = 1",
+                get_current_user_id()
+            ));
+            
+            $role = $saw_user->role ?? null;
+        }
+        
+        return $role;
+    }
+    
+    protected function get_current_customer_id() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        return $_SESSION['saw_current_customer_id'] ?? null;
+    }
+    
+    protected function get_current_branch_id() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        return $_SESSION['saw_current_branch_id'] ?? null;
+    }
+    
+    protected function get_current_department_ids() {
+        global $wpdb;
+        
+        $user_id = get_current_user_id();
+        if (!$user_id) {
+            return [];
+        }
+        
+        $saw_user = $wpdb->get_row($wpdb->prepare(
+            "SELECT id FROM {$wpdb->prefix}saw_users 
+             WHERE wp_user_id = %d AND is_active = 1",
+            $user_id
+        ));
+        
+        if (!$saw_user) {
+            return [];
+        }
+        
+        $department_ids = $wpdb->get_col($wpdb->prepare(
+            "SELECT department_id FROM {$wpdb->prefix}saw_user_departments 
+             WHERE user_id = %d",
+            $saw_user->id
+        ));
+        
+        return array_map('intval', $department_ids);
+    }
+    
     abstract public function validate($data, $id = 0);
     
-    /**
-     * Cache helpers
-     */
     protected function get_cache_key($type, $identifier = '') {
         $key = 'saw_' . $this->config['entity'] . '_' . $type;
         

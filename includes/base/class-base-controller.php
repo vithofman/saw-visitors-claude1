@@ -1,9 +1,9 @@
 <?php
 /**
- * Base Controller Class - DEBUG VERSION
+ * Base Controller Class - UPDATED with Permissions System
  * 
  * @package SAW_Visitors
- * @version 4.0.5-DEBUG
+ * @version 4.10.0
  */
 
 if (!defined('ABSPATH')) {
@@ -19,16 +19,6 @@ abstract class SAW_Base_Controller
     protected $entity;
     
     public function index() {
-        // ✅ DEBUG START
-        error_log('====================================');
-        error_log('🔥 BASE CONTROLLER: index() START');
-        error_log('Entity: ' . ($this->entity ?? 'NULL'));
-        error_log('Current user ID: ' . get_current_user_id());
-        error_log('Is logged in: ' . (is_user_logged_in() ? 'YES' : 'NO'));
-        error_log('Has manage_options: ' . (current_user_can('manage_options') ? 'YES' : 'NO'));
-        error_log('Has read: ' . (current_user_can('read') ? 'YES' : 'NO'));
-        error_log('====================================');
-        
         $this->verify_module_access();
         $this->verify_capability('list');
         $this->enqueue_assets();
@@ -158,218 +148,87 @@ abstract class SAW_Base_Controller
         
         if ($id === 0 && !empty($this->config['filter_by_customer'])) {
             $customer = $this->get_current_customer_data();
-            $data['customer_id'] = $customer['id'] ?? 0;
+            $data['customer_id'] = $customer['id'] ?? null;
         }
         
         $data = $this->before_save($data);
-        
-        $validation = $this->model->validate($data, $id);
-        
-        if (is_wp_error($validation)) {
-            ob_end_clean();
-            
-            $errors = $validation->get_error_data();
-            
-            if (is_array($errors)) {
-                $error_messages = implode('<br>', array_values($errors));
-            } else {
-                $error_messages = $validation->get_error_message();
-            }
-            
-            $this->set_flash_message($error_messages, 'error');
-            
-            if ($id > 0) {
-                $redirect_url = home_url($this->config['route'] . '/edit/' . $id . '/');
-            } else {
-                $redirect_url = home_url($this->config['route'] . '/new/');
-            }
-            
-            wp_redirect($redirect_url);
-            exit;
-        }
-        
-        unset($data['id']);
         
         if ($id > 0) {
             $result = $this->model->update($id, $data);
         } else {
             $result = $this->model->create($data);
-            $id = $result;
         }
         
         if (is_wp_error($result)) {
-            ob_end_clean();
-            
-            $this->set_flash_message($result->get_error_message(), 'error');
-            
+            $this->set_flash_message('error', $result->get_error_message());
             if ($id > 0) {
-                $redirect_url = home_url($this->config['route'] . '/edit/' . $id . '/');
+                wp_redirect($this->get_edit_url($id));
             } else {
-                $redirect_url = home_url($this->config['route'] . '/new/');
+                wp_redirect($this->get_create_url());
             }
-            
-            wp_redirect($redirect_url);
             exit;
         }
         
-        try {
-            $this->after_save($id);
-        } catch (Exception $e) {
-            ob_end_clean();
-            
-            error_log('SAW: after_save() exception: ' . $e->getMessage());
-            error_log('SAW: Stack trace: ' . $e->getTraceAsString());
-            
-            $this->set_flash_message('Záznam byl uložen, ale došlo k chybě: ' . $e->getMessage(), 'error');
-            
-            $redirect_url = home_url($this->config['route'] . '/');
-            wp_redirect($redirect_url);
-            exit;
-        } catch (Error $e) {
-            ob_end_clean();
-            
-            error_log('SAW: after_save() error: ' . $e->getMessage());
-            error_log('SAW: Stack trace: ' . $e->getTraceAsString());
-            
-            $this->set_flash_message('Záznam byl uložen, ale došlo k chybě: ' . $e->getMessage(), 'error');
-            
-            $redirect_url = home_url($this->config['route'] . '/');
-            wp_redirect($redirect_url);
-            exit;
-        }
+        $saved_id = $id > 0 ? $id : $result;
+        $this->after_save($saved_id);
         
-        ob_end_clean();
+        $action = $id > 0 ? 'updated' : 'created';
+        $this->set_flash_message('success', $this->config['singular'] . ' ' . ($action === 'updated' ? 'upraven' : 'vytvořen'));
         
-        $this->set_flash_message('Záznam byl úspěšně uložen', 'success');
-        
-        $redirect_url = home_url($this->config['route'] . '/');
-        wp_redirect($redirect_url);
+        wp_redirect($this->get_list_url());
         exit;
     }
     
-    protected function collect_form_data() {
-        $data = [];
+    public function delete($id) {
+        $this->verify_module_access();
+        $this->verify_capability('delete');
         
-        if (empty($this->config['fields'])) {
-            foreach ($_POST as $key => $value) {
-                if ($key !== 'saw_nonce' && $key !== '_wp_http_referer') {
-                    $data[$key] = sanitize_text_field($value);
-                }
-            }
-            return $data;
+        $id = intval($id);
+        if ($id <= 0) {
+            wp_die('Invalid ID', 'Bad Request', ['response' => 400]);
         }
         
-        foreach ($this->config['fields'] as $field_name => $field_config) {
-            if (isset($_POST[$field_name])) {
-                $value = $_POST[$field_name];
-                
-                if (isset($field_config['sanitize']) && is_callable($field_config['sanitize'])) {
-                    $data[$field_name] = call_user_func($field_config['sanitize'], $value);
-                } else {
-                    $data[$field_name] = sanitize_text_field($value);
-                }
-            } elseif ($field_config['type'] === 'checkbox') {
-                $data[$field_name] = 0;
-            }
+        $item = $this->model->get_by_id($id);
+        
+        if (!$item) {
+            wp_die($this->config['singular'] . ' not found', 'Not Found', ['response' => 404]);
         }
         
-        return $data;
-    }
-    
-    protected function render_form($item) {
-        $template_path = $this->config['path'] . 'form-template.php';
-        
-        if (!file_exists($template_path)) {
-            wp_die('Form template not found: ' . $template_path);
-        }
-        
-        $account_types = [];
-        if ($this->entity === 'customers') {
-            global $wpdb;
-            $account_types = $wpdb->get_results(
-                "SELECT id, name FROM {$wpdb->prefix}saw_account_types WHERE is_active = 1 ORDER BY sort_order ASC, name ASC",
-                ARRAY_A
-            );
-        }
-        
-        extract(compact('item', 'account_types'));
-        
-        ob_start();
-        
-        $style_manager = SAW_Module_Style_Manager::get_instance();
-        echo $style_manager->inject_module_css($this->entity);
-        
-        echo '<div class="saw-module-' . esc_attr($this->entity) . '">';
-        
-        $this->render_flash_messages();
-        
-        include $template_path;
-        echo '</div>';
-        
-        echo '<script>document.dispatchEvent(new Event("sawModuleChanged"));</script>';
-        
-        $content = ob_get_clean();
-        
-        $title = $item ? 'Edit ' . $this->config['singular'] : 'New ' . $this->config['singular'];
-        $this->render_with_layout($content, $title);
-    }
-    
-    protected function render_with_layout($content, $title) {
-        if (class_exists('SAW_App_Layout')) {
-            $layout = new SAW_App_Layout();
-            $user = $this->get_current_user_data();
+        if (!empty($this->config['filter_by_customer'])) {
             $customer = $this->get_current_customer_data();
-            $layout->render($content, $title, $this->entity, $user, $customer);
-        } else {
-            echo $content;
+            if (isset($item['customer_id']) && $item['customer_id'] != $customer['id']) {
+                wp_die('Nemáte oprávnění smazat tento záznam', 'Forbidden', ['response' => 403]);
+            }
         }
-    }
-    
-    protected function enqueue_assets() {
-        SAW_Asset_Manager::enqueue_global();
+        
+        if (!$this->before_delete($id)) {
+            $this->set_flash_message('error', 'Nelze smazat tento záznam');
+            wp_redirect($this->get_list_url());
+            exit;
+        }
+        
+        $result = $this->model->delete($id);
+        
+        if (is_wp_error($result)) {
+            $this->set_flash_message('error', $result->get_error_message());
+        } else {
+            $this->after_delete($id);
+            $this->set_flash_message('success', $this->config['singular'] . ' smazán');
+        }
+        
+        wp_redirect($this->get_list_url());
+        exit;
     }
     
     protected function verify_module_access() {
-        // ✅ DEBUG
-        error_log('====================================');
-        error_log('🔒 VERIFY_MODULE_ACCESS START');
-        
-        $allowed_roles = $this->config['allowed_roles'] ?? [];
-        error_log('Allowed roles: ' . json_encode($allowed_roles));
-        
-        if (empty($allowed_roles)) {
-            error_log('✅ No allowed_roles defined - PASS');
-            error_log('====================================');
-            return;
+        if (!is_user_logged_in()) {
+            wp_redirect(home_url('/login/'));
+            exit;
         }
-        
-        $current_role = $this->get_current_user_role();
-        error_log('Current role: ' . ($current_role ?? 'NULL'));
-        
-        $in_array = in_array($current_role, $allowed_roles);
-        error_log('Role in allowed_roles: ' . ($in_array ? 'YES' : 'NO'));
-        
-        if (!$in_array) {
-            error_log('❌ FAILED: Role not in allowed_roles!');
-            error_log('====================================');
-            wp_die('Nemáte oprávnění k tomuto modulu', 'Forbidden', ['response' => 403]);
-        }
-        
-        error_log('✅ PASSED: Module access OK');
-        error_log('====================================');
     }
     
     protected function get_current_user_role() {
-        // ✅ DEBUG
-        error_log('------------------------------------');
-        error_log('🔍 GET_CURRENT_USER_ROLE START');
-        
-        $has_manage_options = current_user_can('manage_options');
-        error_log('Has manage_options: ' . ($has_manage_options ? 'YES' : 'NO'));
-        
-        if ($has_manage_options) {
-            error_log('✅ Returning: super_admin');
-            error_log('------------------------------------');
+        if (current_user_can('manage_options')) {
             return 'super_admin';
         }
         
@@ -378,18 +237,14 @@ abstract class SAW_Base_Controller
         }
         
         $session_role = $_SESSION['saw_role'] ?? null;
-        error_log('Session role: ' . ($session_role ?? 'NULL'));
         
         if (!empty($session_role)) {
-            error_log('✅ Returning from session: ' . $session_role);
-            error_log('------------------------------------');
             return $session_role;
         }
         
         static $role = null;
         if ($role === null) {
             global $wpdb;
-            error_log('Querying DB for user: ' . get_current_user_id());
             
             $saw_user = $wpdb->get_row($wpdb->prepare(
                 "SELECT role FROM {$wpdb->prefix}saw_users 
@@ -398,11 +253,8 @@ abstract class SAW_Base_Controller
             ));
             
             $role = $saw_user->role ?? null;
-            error_log('DB role: ' . ($role ?? 'NULL'));
         }
         
-        error_log('✅ Returning from DB: ' . ($role ?? 'NULL'));
-        error_log('------------------------------------');
         return $role;
     }
     
@@ -437,25 +289,33 @@ abstract class SAW_Base_Controller
     }
     
     protected function verify_capability($action) {
-        // ✅ DEBUG
-        error_log('====================================');
-        error_log('🔐 VERIFY_CAPABILITY START');
-        error_log('Action: ' . $action);
-        
-        $cap = $this->config['capabilities'][$action] ?? 'manage_options';
-        error_log('Required capability: ' . $cap);
-        
-        $has_cap = current_user_can($cap);
-        error_log('User has capability: ' . ($has_cap ? 'YES' : 'NO'));
-        
-        if (!$has_cap) {
-            error_log('❌ FAILED: User does NOT have capability!');
-            error_log('====================================');
-            wp_die('Insufficient permissions', 'Forbidden', ['response' => 403]);
+        if (current_user_can('manage_options')) {
+            return;
         }
         
-        error_log('✅ PASSED: Capability check OK');
-        error_log('====================================');
+        $saw_role = $this->get_current_user_role();
+        
+        if (!$saw_role) {
+            wp_die('Insufficient permissions - no SAW role', 'Forbidden', ['response' => 403]);
+        }
+        
+        if (!class_exists('SAW_Permissions')) {
+            $permissions_file = SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-permissions.php';
+            if (file_exists($permissions_file)) {
+                require_once $permissions_file;
+            }
+        }
+        
+        if (!class_exists('SAW_Permissions')) {
+            error_log('[Base Controller] ERROR: SAW_Permissions class not found');
+            wp_die('Permissions system not available', 'Error', ['response' => 500]);
+        }
+        
+        $allowed = SAW_Permissions::check($saw_role, $this->entity, $action);
+        
+        if (!$allowed) {
+            wp_die('Insufficient permissions for ' . $action . ' on ' . $this->entity, 'Forbidden', ['response' => 403]);
+        }
     }
     
     protected function verify_nonce() {
@@ -502,60 +362,144 @@ abstract class SAW_Base_Controller
             session_start();
         }
         
-        $customer_id = isset($_SESSION['saw_current_customer_id']) ? absint($_SESSION['saw_current_customer_id']) : 0;
+        $customer_id = isset($_SESSION['saw_current_customer_id']) ? intval($_SESSION['saw_current_customer_id']) : null;
+        
+        if (!$customer_id && is_user_logged_in()) {
+            $customer_id = get_user_meta(get_current_user_id(), 'saw_current_customer_id', true);
+            if ($customer_id) {
+                $_SESSION['saw_current_customer_id'] = intval($customer_id);
+            }
+        }
+        
+        if (!$customer_id) {
+            return array(
+                'id' => 0,
+                'name' => 'Demo zákazník',
+            );
+        }
         
         global $wpdb;
+        $customer = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}saw_customers WHERE id = %d",
+            $customer_id
+        ), ARRAY_A);
         
-        if ($customer_id > 0) {
-            $customer = $wpdb->get_row($wpdb->prepare(
-                "SELECT * FROM {$wpdb->prefix}saw_customers WHERE id = %d",
-                $customer_id
-            ), ARRAY_A);
-            
-            if ($customer) {
-                return $customer;
-            }
-            
-            unset($_SESSION['saw_current_customer_id']);
-        }
-        
-        $customer = $wpdb->get_row(
-            "SELECT * FROM {$wpdb->prefix}saw_customers ORDER BY id ASC LIMIT 1",
-            ARRAY_A
+        return $customer ?: array(
+            'id' => 0,
+            'name' => 'Demo zákazník',
         );
-        
-        if ($customer) {
-            $_SESSION['saw_current_customer_id'] = $customer['id'];
-            return $customer;
-        }
-        
-        if (!headers_sent()) {
-            $this->set_flash_message('Nejprve vytvořte zákazníka', 'error');
-            wp_redirect(home_url('/admin/settings/customers/'));
-            exit;
-        }
-        
-        return null;
     }
     
-    protected function register_ajax_handlers() {
-        add_action('wp_ajax_saw_search_' . $this->entity, [$this, 'ajax_search']);
-        add_action('wp_ajax_saw_delete_' . $this->entity, [$this, 'ajax_delete']);
-        add_action('wp_ajax_saw_get_' . $this->entity . '_detail', [$this, 'ajax_get_detail']);
+    protected function collect_form_data() {
+        $data = array();
+        
+        foreach ($this->config['fields'] as $field_key => $field_config) {
+            if ($field_config['type'] === 'checkbox') {
+                $data[$field_key] = isset($_POST[$field_key]) ? 1 : 0;
+            } else {
+                $value = $_POST[$field_key] ?? '';
+                
+                if (!empty($field_config['sanitize'])) {
+                    $sanitize_func = $field_config['sanitize'];
+                    if (function_exists($sanitize_func)) {
+                        $data[$field_key] = $sanitize_func($value);
+                    } else {
+                        $data[$field_key] = sanitize_text_field($value);
+                    }
+                } else {
+                    $data[$field_key] = sanitize_text_field($value);
+                }
+            }
+        }
+        
+        return $data;
     }
     
-    protected function set_flash_message($message, $type = 'success') {
+    protected function render_form($item) {
+        $form_template = $this->config['path'] . 'form-template.php';
+        
+        if (!file_exists($form_template)) {
+            wp_die('Form template not found: ' . $form_template);
+        }
+        
+        $is_edit = !empty($item);
+        $page_title = $is_edit ? 'Upravit ' . $this->config['singular'] : 'Nový ' . $this->config['singular'];
+        
+        ob_start();
+        
+        $style_manager = SAW_Module_Style_Manager::get_instance();
+        echo $style_manager->inject_module_css($this->entity);
+        
+        echo '<div class="saw-module-' . esc_attr($this->entity) . '">';
+        
+        $this->render_flash_messages();
+        
+        include $form_template;
+        echo '</div>';
+        
+        $content = ob_get_clean();
+        
+        $this->render_with_layout($content, $page_title);
+    }
+    
+    protected function render_with_layout($content, $page_title) {
+        if (!class_exists('SAW_App_Layout')) {
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/class-saw-app-layout.php';
+        }
+        
+        $layout = new SAW_App_Layout();
+        $layout->render($content, $page_title, $this->entity);
+    }
+    
+    protected function enqueue_assets() {
+        $module_css = $this->config['path'] . 'styles.css';
+        if (file_exists($module_css)) {
+            $version = filemtime($module_css);
+            $css_url = str_replace(SAW_VISITORS_PLUGIN_DIR, SAW_VISITORS_PLUGIN_URL, $module_css);
+            wp_enqueue_style('saw-module-' . $this->entity, $css_url, [], $version);
+        }
+        
+        $module_js = $this->config['path'] . 'scripts.js';
+        if (file_exists($module_js)) {
+            $version = filemtime($module_js);
+            $js_url = str_replace(SAW_VISITORS_PLUGIN_DIR, SAW_VISITORS_PLUGIN_URL, $module_js);
+            wp_enqueue_script('saw-module-' . $this->entity, $js_url, ['jquery'], $version, true);
+            
+            wp_localize_script('saw-module-' . $this->entity, 'sawModuleConfig', [
+                'entity' => $this->entity,
+                'ajaxUrl' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('saw_ajax_nonce'),
+            ]);
+        }
+    }
+    
+    protected function get_list_url() {
+        return home_url('/' . $this->config['route'] . '/');
+    }
+    
+    protected function get_create_url() {
+        return home_url('/' . $this->config['route'] . '/new/');
+    }
+    
+    protected function get_edit_url($id) {
+        return home_url('/' . $this->config['route'] . '/edit/' . $id . '/');
+    }
+    
+    protected function get_delete_url($id) {
+        return home_url('/' . $this->config['route'] . '/delete/' . $id . '/');
+    }
+    
+    protected function set_flash_message($type, $message) {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
-        
-        $_SESSION['saw_flash_message'] = [
-            'message' => $message,
-            'type' => $type
-        ];
+        $_SESSION['saw_flash_message'] = array(
+            'type' => $type,
+            'message' => $message
+        );
     }
     
-    protected function get_flash_message() {
+    protected function render_flash_messages() {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
@@ -563,25 +507,11 @@ abstract class SAW_Base_Controller
         if (isset($_SESSION['saw_flash_message'])) {
             $flash = $_SESSION['saw_flash_message'];
             unset($_SESSION['saw_flash_message']);
-            return $flash;
+            
+            $class = $flash['type'] === 'success' ? 'notice-success' : 'notice-error';
+            echo '<div class="notice ' . esc_attr($class) . ' is-dismissible">';
+            echo '<p>' . esc_html($flash['message']) . '</p>';
+            echo '</div>';
         }
-        
-        return null;
-    }
-    
-    protected function render_flash_messages() {
-        $flash = $this->get_flash_message();
-        
-        if (!$flash) {
-            return;
-        }
-        
-        $type_class = $flash['type'] === 'error' ? 'saw-alert-error' : 'saw-alert-success';
-        $icon = $flash['type'] === 'error' ? 'dashicons-warning' : 'dashicons-yes-alt';
-        
-        echo '<div class="saw-alert ' . esc_attr($type_class) . '" style="margin-bottom: 20px;">';
-        echo '<span class="dashicons ' . esc_attr($icon) . '"></span>';
-        echo '<span>' . wp_kses_post($flash['message']) . '</span>';
-        echo '</div>';
     }
 }

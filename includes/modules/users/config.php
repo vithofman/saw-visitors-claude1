@@ -16,7 +16,6 @@ return [
     'filter_by_customer' => true,
     'filter_by_branch' => false,
     
-    // ✅ OPRAVENO: 'read' místo 'saw_manage_users'
     'capabilities' => [
         'list' => 'read',
         'view' => 'read',

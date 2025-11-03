@@ -1,12 +1,9 @@
 <?php
 /**
- * SAW Permissions Manager
- * 
- * Role-based access control system with data isolation.
- * Provides methods to check, set, and manage permissions at database level.
+ * SAW Permissions Manager - FIXED UPDATE LOGIC
  * 
  * @package SAW_Visitors
- * @version 1.0.0
+ * @version 1.0.1
  * @since 4.10.0
  */
 
@@ -16,32 +13,10 @@ if (!defined('ABSPATH')) {
 
 class SAW_Permissions {
     
-    /**
-     * Static cache for permissions
-     * @var array
-     */
     private static $cache = [];
-    
-    /**
-     * Object cache enabled
-     * @var bool
-     */
     private static $use_object_cache = true;
-    
-    /**
-     * Cache TTL (1 hour)
-     * @var int
-     */
     private static $cache_ttl = 3600;
     
-    /**
-     * Check if role has permission
-     * 
-     * @param string $role SAW role (admin, manager, etc.)
-     * @param string $module Module slug (users, branches, etc.)
-     * @param string $action Action (list, view, create, edit, delete)
-     * @return bool
-     */
     public static function check($role, $module, $action) {
         if (empty($role) || empty($module) || empty($action)) {
             return false;
@@ -128,14 +103,6 @@ class SAW_Permissions {
         return false;
     }
     
-    /**
-     * Get permission details including scope
-     * 
-     * @param string $role SAW role
-     * @param string $module Module slug
-     * @param string $action Action
-     * @return array|null ['allowed' => bool, 'scope' => string]
-     */
     public static function get_permission($role, $module, $action) {
         if (empty($role) || empty($module) || empty($action)) {
             return null;
@@ -182,12 +149,6 @@ class SAW_Permissions {
         return null;
     }
     
-    /**
-     * Get all permissions for a role
-     * 
-     * @param string $role SAW role
-     * @return array ['module' => ['action' => ['allowed' => bool, 'scope' => string]]]
-     */
     public static function get_all_for_role($role) {
         if (empty($role)) {
             return [];
@@ -222,16 +183,6 @@ class SAW_Permissions {
         return $result;
     }
     
-    /**
-     * Set permission
-     * 
-     * @param string $role SAW role
-     * @param string $module Module slug
-     * @param string $action Action
-     * @param bool $allowed Allowed or denied
-     * @param string $scope Data scope
-     * @return bool
-     */
     public static function set($role, $module, $action, $allowed, $scope = 'all') {
         if (empty($role) || empty($module) || empty($action)) {
             return false;
@@ -251,7 +202,7 @@ class SAW_Permissions {
         ));
         
         if ($exists) {
-            return $wpdb->update(
+            $result = $wpdb->update(
                 $table,
                 [
                     'allowed' => $allowed ? 1 : 0,
@@ -264,7 +215,11 @@ class SAW_Permissions {
                 ],
                 ['%d', '%s'],
                 ['%s', '%s', '%s']
-            ) !== false;
+            );
+            
+            // CRITICAL FIX: update() returns number of rows updated (0 or 1), or false on error
+            // 0 means no change needed (value already correct), which is NOT an error!
+            return $result !== false;
         }
         
         return $wpdb->insert(
@@ -280,14 +235,6 @@ class SAW_Permissions {
         ) !== false;
     }
     
-    /**
-     * Delete permission
-     * 
-     * @param string $role SAW role
-     * @param string $module Module slug
-     * @param string $action Action
-     * @return bool
-     */
     public static function delete($role, $module, $action) {
         if (empty($role) || empty($module) || empty($action)) {
             return false;
@@ -309,12 +256,6 @@ class SAW_Permissions {
         ) !== false;
     }
     
-    /**
-     * Get modules that role has access to
-     * 
-     * @param string $role SAW role
-     * @return array ['users', 'branches', ...]
-     */
     public static function get_allowed_modules($role) {
         if ($role === 'super_admin') {
             $all_modules = SAW_Module_Loader::get_all();
@@ -335,12 +276,6 @@ class SAW_Permissions {
         return $modules;
     }
     
-    /**
-     * Set cache
-     * 
-     * @param string $key Cache key
-     * @param mixed $value Value
-     */
     private static function set_cache($key, $value) {
         self::$cache[$key] = $value;
         
@@ -349,11 +284,6 @@ class SAW_Permissions {
         }
     }
     
-    /**
-     * Clear cache
-     * 
-     * @param string|null $key Specific key or all if null
-     */
     public static function clear_cache($key = null) {
         if ($key === null) {
             self::$cache = [];
@@ -370,12 +300,6 @@ class SAW_Permissions {
         }
     }
     
-    /**
-     * Bulk insert permissions from schema
-     * 
-     * @param array $schema Permissions schema
-     * @return int Number of inserted permissions
-     */
     public static function bulk_insert_from_schema($schema) {
         if (empty($schema)) {
             return 0;
