@@ -1,9 +1,6 @@
 <?php
 /**
- * Customer Switcher Component
- * 
- * Globální komponenta pro přepínání zákazníků (pouze pro superadminy)
- * Zobrazuje se místo loga+názvu zákazníka v headeru
+ * Customer Switcher Component - FIXED
  * 
  * @package SAW_Visitors
  * @since 4.7.0
@@ -19,6 +16,11 @@ class SAW_Component_Customer_Switcher {
     private $current_user;
     
     public function __construct($customer = null, $user = null) {
+        // ✅ OPRAVA: Pokud není customer zadán, načti ho ze session
+        if (!$customer) {
+            $customer = $this->get_customer_from_session();
+        }
+        
         $this->current_customer = $customer ?: array(
             'id' => 1,
             'name' => 'Demo Firma s.r.o.',
@@ -30,6 +32,52 @@ class SAW_Component_Customer_Switcher {
             'id' => 1,
             'role' => 'admin',
         );
+    }
+    
+    /**
+     * ✅ NOVÁ METODA: Získej správný customer ze session
+     */
+    private function get_customer_from_session() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        // Získej customer_id ze session
+        $customer_id = isset($_SESSION['saw_current_customer_id']) 
+            ? intval($_SESSION['saw_current_customer_id']) 
+            : 0;
+        
+        // Fallback na user meta
+        if (!$customer_id && is_user_logged_in()) {
+            $customer_id = get_user_meta(get_current_user_id(), 'saw_current_customer_id', true);
+            $customer_id = $customer_id ? intval($customer_id) : 0;
+        }
+        
+        // Fallback na DB (pro non-super admins)
+        if (!$customer_id && is_user_logged_in()) {
+            global $wpdb;
+            $saw_user = $wpdb->get_row($wpdb->prepare(
+                "SELECT customer_id FROM {$wpdb->prefix}saw_users WHERE wp_user_id = %d AND is_active = 1",
+                get_current_user_id()
+            ), ARRAY_A);
+            
+            if ($saw_user) {
+                $customer_id = intval($saw_user['customer_id']);
+            }
+        }
+        
+        if (!$customer_id) {
+            return null;
+        }
+        
+        // Načti customer z DB
+        global $wpdb;
+        $customer = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}saw_customers WHERE id = %d",
+            $customer_id
+        ), ARRAY_A);
+        
+        return $customer ?: null;
     }
     
     /**
@@ -173,3 +221,53 @@ class SAW_Component_Customer_Switcher {
         return current_user_can('manage_options');
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

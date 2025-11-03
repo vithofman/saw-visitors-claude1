@@ -76,16 +76,26 @@ class SAW_Controller_Auth {
                         wp_logout();
                         $error = 'Nejprve si musíte nastavit heslo přes odkaz z emailu';
                     } else {
-                        // Setup session
+                        // ✅ OPRAVA: Správně nastav session
                         if (session_status() === PHP_SESSION_NONE) {
                             session_start();
                         }
                         session_regenerate_id(true);
                         
                         $_SESSION['saw_user_id'] = $saw_user['id'];
-                        $_SESSION['saw_customer_id'] = $saw_user['customer_id'];
-                        $_SESSION['saw_branch_id'] = $saw_user['branch_id'];
                         $_SESSION['saw_role'] = $saw_user['role'];
+                        
+                        // ✅ OPRAVENO: saw_current_customer_id místo saw_customer_id
+                        $_SESSION['saw_current_customer_id'] = $saw_user['customer_id'];
+                        $_SESSION['saw_current_branch_id'] = $saw_user['branch_id'];
+                        
+                        // ✅ OPRAVENO: Ulož customer_id i do user meta (pro persistenci)
+                        if ($saw_user['customer_id']) {
+                            update_user_meta($user->ID, 'saw_current_customer_id', $saw_user['customer_id']);
+                        }
+                        if ($saw_user['branch_id']) {
+                            update_user_meta($user->ID, 'saw_current_branch_id', $saw_user['branch_id']);
+                        }
 
                         // Update last login
                         $wpdb->update(
@@ -101,6 +111,7 @@ class SAW_Controller_Auth {
                             SAW_Audit::log([
                                 'action' => 'user_login',
                                 'user_id' => $saw_user['id'],
+                                'customer_id' => $saw_user['customer_id'],
                                 'details' => 'Uživatel se přihlásil',
                             ]);
                         }
