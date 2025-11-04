@@ -120,6 +120,13 @@ class SAW_Asset_Manager
             ['saw-variables'],
             SAW_VISITORS_VERSION
         );
+
+wp_enqueue_style(
+    'saw-table-column-types',
+    SAW_VISITORS_PLUGIN_URL . 'assets/css/components/table-column-types.css',
+    ['saw-variables'],
+    SAW_VISITORS_VERSION
+);
         
         // APP (header, sidebar, footer - pokud existují)
         $app_files = ['saw-app-header.css', 'saw-app-sidebar.css', 'saw-app-footer.css', 'saw-app-responsive.css'];

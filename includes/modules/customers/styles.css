@@ -1,130 +1,13 @@
 /**
  * Customers Module Styles
+ * Pouze form-specific styly
  * 
  * @package SAW_Visitors
- * @version 6.0.0
+ * @version 7.0.0
  */
 
 /* ============================================
-   CUSTOMER LOGO
-   ============================================ */
-.saw-module-customers .saw-customer-logo {
-    width: 44px;
-    height: 44px;
-    border-radius: 8px;
-    overflow: hidden;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: #f9fafb;
-    border: 2px solid #e5e7eb;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.saw-module-customers .saw-customer-logo img {
-    max-width: 40px;
-    max-height: 40px;
-    object-fit: contain;
-    padding: 3px;
-}
-
-.saw-module-customers .saw-customer-logo-placeholder {
-    width: 44px;
-    height: 44px;
-    border-radius: 8px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border: 2px solid #e5e7eb;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.saw-module-customers .saw-customer-logo-placeholder .dashicons {
-    color: #ffffff;
-    font-size: 22px;
-    width: 22px;
-    height: 22px;
-}
-
-/* ============================================
-   ACTION BUTTONS
-   ============================================ */
-.saw-module-customers .saw-action-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    padding: 0;
-    margin: 0 4px;
-    border: none;
-    border-radius: 8px;
-    background: transparent;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    text-decoration: none;
-}
-
-.saw-module-customers .saw-action-btn .dashicons {
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
-    color: #6b7280;
-}
-
-.saw-module-customers .saw-action-edit:hover {
-    background: #eff6ff;
-}
-
-.saw-module-customers .saw-action-edit:hover .dashicons {
-    color: #2563eb;
-}
-
-.saw-module-customers .saw-action-delete:hover {
-    background: #fef2f2;
-}
-
-.saw-module-customers .saw-action-delete:hover .dashicons {
-    color: #dc2626;
-}
-
-.saw-module-customers .saw-customer-row:hover {
-    background-color: #f9fafb;
-}
-
-/* ============================================
-   LOGO PREVIEW
-   ============================================ */
-.saw-module-customers .saw-logo-preview-current {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: #fafafa;
-    border: 2px dashed #d0d0d0;
-    border-radius: 12px;
-    padding: 16px;
-    min-height: 120px;
-    width: 100%;
-    transition: all 0.3s ease;
-}
-
-.saw-module-customers .saw-logo-preview-current img {
-    max-width: 100%;
-    max-height: 100px;
-    object-fit: contain;
-}
-
-.saw-module-customers .saw-logo-placeholder {
-    color: #9ca3af;
-    font-size: 14px;
-    font-weight: 500;
-}
-
-/* ============================================
-   BRANDING GRID
+   BRANDING GRID (FORM ONLY)
    ============================================ */
 .saw-branding-grid {
     display: grid;
@@ -142,38 +25,55 @@
 }
 
 /* ============================================
-   ADDRESS FIELDS
+   LOGO PREVIEW (FORM ONLY)
    ============================================ */
-.saw-module-customers .saw-address-fields {
+.saw-logo-preview-current {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #fafafa;
+    border: 2px dashed #d0d0d0;
+    border-radius: 12px;
+    padding: 16px;
+    min-height: 120px;
+    width: 100%;
+    transition: all 0.3s ease;
+}
+
+.saw-logo-preview-current img {
+    max-width: 100%;
+    max-height: 100px;
+    object-fit: contain;
+}
+
+.saw-logo-placeholder {
+    color: #9ca3af;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* ============================================
+   ADDRESS FIELDS (FORM ONLY)
+   ============================================ */
+.saw-address-fields {
     display: grid;
     grid-template-columns: 3fr 1fr;
     gap: 16px;
 }
 
-.saw-module-customers .saw-address-city-zip {
+.saw-address-city-zip {
     display: flex;
     gap: 16px;
 }
 
-.saw-module-customers .saw-address-city-zip .saw-form-group:first-child {
+.saw-address-city-zip .saw-form-group:first-child {
     flex: 2;
 }
 
-.saw-module-customers .saw-address-city-zip .saw-form-group:last-child {
+.saw-address-city-zip .saw-form-group:last-child {
     flex: 1;
-}
-
-/* ============================================
-   COLOR BADGE
-   ============================================ */
-.saw-module-customers .saw-color-badge {
-    display: inline-block;
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    vertical-align: middle;
-    border: 3px solid #fff;
-    box-shadow: 0 0 0 1px #e5e7eb, 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* ============================================
@@ -192,19 +92,7 @@
 }
 
 @media (max-width: 768px) {
-    .saw-module-customers .saw-action-btn {
-        width: 32px;
-        height: 32px;
-        margin: 0 2px;
-    }
-    
-    .saw-module-customers .saw-action-btn .dashicons {
-        font-size: 16px;
-        width: 16px;
-        height: 16px;
-    }
-    
-    .saw-module-customers .saw-address-fields {
+    .saw-address-fields {
         grid-template-columns: 1fr;
     }
 }

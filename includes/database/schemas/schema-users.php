@@ -2,7 +2,6 @@
 if (!defined('ABSPATH')) { 
     exit; 
 }
-
 function saw_get_schema_users($table_name, $prefix, $wp_users_table, $charset_collate) {
     $customers_table = $prefix . 'saw_customers';
     $branches_table = $prefix . 'saw_branches';
@@ -18,6 +17,7 @@ function saw_get_schema_users($table_name, $prefix, $wp_users_table, $charset_co
         first_name VARCHAR(100) NULL,
         last_name VARCHAR(100) NULL,
         role ENUM('super_admin', 'admin', 'super_manager', 'manager', 'terminal') NOT NULL,
+        language VARCHAR(5) DEFAULT 'cs' COMMENT 'Jazyk uživatelského rozhraní (cs, en)',
         pin VARCHAR(255) NULL COMMENT 'Hashed PIN pro terminál',
         password_setup_token VARCHAR(64) NULL COMMENT 'Token pro první nastavení hesla',
         password_setup_expires DATETIME NULL COMMENT 'Platnost setup tokenu',

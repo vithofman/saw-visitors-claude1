@@ -9,7 +9,7 @@
  * - ✅ Comprehensive error handling and logging
  * 
  * @package SAW_Visitors
- * @version 2.0.0 - COMPLETE
+ * @version 2.1.0 - COMPLETE
  * @since 4.7.0
  */
 
@@ -245,10 +245,7 @@ class SAW_Component_Branch_Switcher {
         <div class="saw-branch-switcher" id="sawBranchSwitcher" data-customer-id="<?php echo esc_attr($this->customer_id); ?>">
             <button class="saw-branch-switcher-button" id="sawBranchSwitcherButton" data-current-branch-id="<?php echo esc_attr($this->current_branch['id'] ?? 0); ?>">
                 <span class="saw-branch-icon">🏢</span>
-                <div class="saw-branch-info">
-                    <span class="saw-branch-label">Pobočka</span>
-                    <span class="saw-branch-name"><?php echo esc_html($this->current_branch['name'] ?? 'Všechny pobočky'); ?></span>
-                </div>
+                <span class="saw-branch-name"><?php echo esc_html($this->current_branch['name'] ?? 'Všechny pobočky'); ?></span>
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" class="saw-branch-arrow"><path d="M8 10.5l-4-4h8l-4 4z"/></svg>
             </button>
             <div class="saw-branch-switcher-dropdown" id="sawBranchSwitcherDropdown">

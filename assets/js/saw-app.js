@@ -1,28 +1,34 @@
 /**
  * SAW App JavaScript - VYČIŠTĚNÁ VERZE
  * 
- * Utility funkce pro aplikaci:
- * - Delete confirmations
- * - Toast notifications
- * - User menu dropdown
- * - Sidebar accordion navigation
- * - Form validation helpers
- * - Loading state helpers
- * 
  * @package SAW_Visitors
- * @version 5.3.0
- * @since   4.6.1
+ * @version 5.4.0
  */
 
 (function($) {
     'use strict';
     
     // ========================================
+    // MOBILE MENU TOGGLE
+    // ========================================
+    
+    function initMobileMenu() {
+        $('#sawMobileMenuToggle').on('click', function() {
+            $('#sawAppSidebar').toggleClass('open');
+            $('#sawSidebarOverlay').toggleClass('active');
+        });
+        
+        $('#sawSidebarClose, #sawSidebarOverlay').on('click', function() {
+            $('#sawAppSidebar').removeClass('open');
+            $('#sawSidebarOverlay').removeClass('active');
+        });
+    }
+    
+    // ========================================
     // SIDEBAR ACCORDION NAVIGATION
     // ========================================
     
     function initSidebarAccordion() {
-        // Click handler for accordion toggle
         $(document).on('click', '.saw-nav-heading', function(e) {
             e.preventDefault();
             e.stopPropagation();
@@ -212,6 +218,7 @@
     // ========================================
     
     $(document).ready(function() {
+        initMobileMenu();
         initSidebarAccordion();
         initUserMenu();
         initTableRowHover();

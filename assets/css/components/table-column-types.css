@@ -1,0 +1,151 @@
+/**
+ * Table Column Types
+ * Globální styly pro různé typy sloupců v tabulkách
+ * 
+ * @package SAW_Visitors
+ * @version 1.0.0
+ */
+
+/* ============================================
+   IMAGE/LOGO COLUMN
+   ============================================ */
+.saw-table-logo-wrapper {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--saw-border-radius-md);
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--saw-gray-50);
+    border: 2px solid var(--saw-border-color);
+    box-shadow: var(--saw-shadow-sm);
+}
+
+.saw-table-logo-wrapper img {
+    max-width: 40px;
+    max-height: 40px;
+    object-fit: contain;
+    padding: 3px;
+}
+
+.saw-table-logo-placeholder {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--saw-border-radius-md);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: 2px solid var(--saw-border-color);
+    box-shadow: var(--saw-shadow-sm);
+}
+
+.saw-table-logo-placeholder .dashicons {
+    color: #ffffff;
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+}
+
+/* ============================================
+   ACTION BUTTONS
+   ============================================ */
+.saw-action-buttons {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: nowrap;
+}
+
+.saw-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    margin: 0;
+    border: none;
+    border-radius: var(--saw-border-radius-md);
+    background: transparent;
+    cursor: pointer;
+    transition: all var(--saw-transition-base);
+    text-decoration: none;
+}
+
+.saw-action-btn .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: var(--saw-gray-500);
+}
+
+.saw-action-edit:hover {
+    background: var(--saw-primary-light);
+}
+
+.saw-action-edit:hover .dashicons {
+    color: var(--saw-primary);
+}
+
+.saw-action-delete:hover {
+    background: var(--saw-danger-light);
+}
+
+.saw-action-delete:hover .dashicons {
+    color: var(--saw-danger);
+}
+
+.saw-action-view:hover {
+    background: var(--saw-info-light);
+}
+
+.saw-action-view:hover .dashicons {
+    color: var(--saw-info);
+}
+
+/* ============================================
+   COLOR BADGE
+   ============================================ */
+.saw-table-color-badge {
+    display: inline-block;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--saw-border-radius-md);
+    vertical-align: middle;
+    border: 3px solid #ffffff;
+    box-shadow: 0 0 0 1px var(--saw-border-color), var(--saw-shadow-sm);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+    .saw-action-btn {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .saw-action-btn .dashicons {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+    }
+    
+    .saw-table-logo-wrapper,
+    .saw-table-logo-placeholder {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .saw-table-logo-wrapper img {
+        max-width: 32px;
+        max-height: 32px;
+    }
+}
+
+.saw-admin-table td strong {
+    font-weight: 600;
+}

@@ -2,7 +2,7 @@
  * SAW App - Main Application Styles
  * 
  * @package SAW_Visitors
- * @version 5.1.0
+ * @version 5.2.0
  */
 
 /* ============================================
@@ -56,9 +56,35 @@ body.saw-app-body {
 }
 
 /* ============================================
-   LAYOUT - DO NOT OVERRIDE
-   Layout is controlled by saw-app-responsive.css
+   APP LAYOUT
    ============================================ */
+.saw-app-body {
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.saw-app-container {
+    display: flex;
+    min-height: 100vh;
+    padding-top: 25px;
+}
+
+.saw-app-main {
+    flex: 1;
+    margin-left: 260px;
+    min-width: 0;
+    transition: margin-left 0.3s ease;
+    background: #fff;
+}
+
+.saw-app-content {
+    padding: 24px; /* Žádný padding */
+    max-width: 1600px;
+    margin: 0 auto;
+    background: #fff;
+}
 
 /* ============================================
    PAGE WRAPPER
@@ -224,4 +250,63 @@ body.saw-app-body {
 
 .saw-button-purple:hover {
     background: #6d28d9;
+}
+
+/* ============================================
+   STATS & CARDS
+   ============================================ */
+.saw-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+.saw-stat-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.saw-stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 4px;
+}
+
+.saw-stat-label {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+/* ============================================
+   DASHBOARD
+   ============================================ */
+.saw-dashboard-row {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.saw-dashboard-col {
+    flex: 1;
+}
+
+/* ============================================
+   UTILITIES
+   ============================================ */
+.saw-hide-mobile {
+    display: block;
+}
+
+.saw-show-mobile {
+    display: none;
+}
+
+.saw-text-truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }

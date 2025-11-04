@@ -3,7 +3,7 @@
  * All button styles and variants
  * 
  * @package SAW_Visitors
- * @version 1.0.0
+ * @version 1.1.0
  */
 
 .saw-btn {
@@ -208,4 +208,59 @@
     display: flex;
     gap: var(--saw-space-md);
     flex-wrap: wrap;
+}
+
+/* ============================================
+   FLOATING ACTION BUTTON
+   ============================================ */
+.saw-floating-btn {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--saw-primary);
+    border: none;
+    border-radius: 50%;
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4);
+    cursor: pointer;
+    transition: all var(--saw-transition-base);
+    z-index: 1000;
+    text-decoration: none;
+}
+
+.saw-floating-btn .dashicons {
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
+    color: #ffffff;
+}
+
+.saw-floating-btn:hover {
+    background: var(--saw-primary-hover);
+    transform: scale(1.1);
+    box-shadow: 0 6px 24px rgba(37, 99, 235, 0.5);
+}
+
+.saw-floating-btn:active {
+    transform: scale(0.95);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .saw-floating-btn {
+        bottom: 20px;
+        right: 20px;
+        width: 56px;
+        height: 56px;
+    }
+    
+    .saw-floating-btn .dashicons {
+        font-size: 24px;
+        width: 24px;
+        height: 24px;
+    }
 }

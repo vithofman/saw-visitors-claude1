@@ -1,11 +1,9 @@
 /**
  * Customers Module Scripts
- * 
  * IČO validace, PSČ formátování
  * 
  * @package SAW_Visitors
  * @version 2.0.0
- * @since   4.8.0
  */
 
 (function($) {

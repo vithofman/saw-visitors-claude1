@@ -68,18 +68,6 @@ class SAW_App_Sidebar {
         return SAW_Permissions::check($this->saw_role, $module_slug, 'list');
     }
     
-    private function get_logo_url() {
-        if (!empty($this->customer['logo_url_full'])) {
-            return $this->customer['logo_url_full'];
-        }
-        
-        if (!empty($this->customer['logo_url'])) {
-            return $this->customer['logo_url'];
-        }
-        
-        return '';
-    }
-    
     private function load_current_branch() {
         $branch_id = SAW_Context::get_branch_id();
         
@@ -119,34 +107,9 @@ class SAW_App_Sidebar {
     
     public function render() {
         $menu = $this->get_menu_items();
-        $logo_url = $this->get_logo_url();
         ?>
         <div class="saw-sidebar-overlay" id="sawSidebarOverlay"></div>
         <aside class="saw-app-sidebar" id="sawAppSidebar">
-            <div class="saw-sidebar-header">
-                <div class="saw-sidebar-mobile-customer">
-                    <div class="saw-sidebar-mobile-logo">
-                        <?php if ($logo_url): ?>
-                            <img src="<?php echo esc_url($logo_url); ?>" alt="<?php echo esc_attr($this->customer['name']); ?>" class="saw-sidebar-logo-image">
-                        <?php else: ?>
-                            <svg width="32" height="32" viewBox="0 0 40 40" fill="none" class="saw-sidebar-logo-fallback">
-                                <rect width="40" height="40" rx="8" fill="#2563eb"/>
-                                <text x="20" y="28" font-size="20" font-weight="bold" fill="white" text-anchor="middle">SAW</text>
-                            </svg>
-                        <?php endif; ?>
-                    </div>
-                    <div class="saw-sidebar-mobile-customer-name">
-                        <?php echo esc_html($this->customer['name']); ?>
-                    </div>
-                </div>
-                <button class="saw-sidebar-close" id="sawSidebarClose" aria-label="Zavřít menu">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
-            </div>
-            
             <?php if ($this->saw_role === 'super_admin' || $this->saw_role === 'admin'): ?>
                 <?php $this->render_branch_switcher(); ?>
             <?php endif; ?>
@@ -249,7 +212,7 @@ class SAW_App_Sidebar {
             [
                 'heading' => 'Systém',
                 'items' => [
-                    ['id' => 'permissions', 'label' => 'Oprávnění', 'url' => '/admin/permissions', 'icon' => '🔐'],
+                    ['id' => 'permissions', 'label' => 'Oprávnění', 'url' => '/admin/permissions', 'icon' => '🔒'],
                     ['id' => 'customers', 'label' => 'Zákazníci', 'url' => '/admin/settings/customers', 'icon' => '🏬'],
                     ['id' => 'account-types', 'label' => 'Typy účtů', 'url' => '/admin/settings/account-types', 'icon' => '💳'],
                     ['id' => 'company', 'label' => 'Firma', 'url' => '/admin/settings/company', 'icon' => '⚙️'],

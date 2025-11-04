@@ -83,29 +83,50 @@ class SAW_App_Header {
                 <div class="saw-user-menu">
                     <button class="saw-user-menu-toggle" id="sawUserMenuToggle">
                         <div class="saw-user-avatar">
-                            <?php echo esc_html(substr($this->user['name'], 0, 1)); ?>
+                            <?php echo esc_html(strtoupper(substr($this->user['name'], 0, 1))); ?>
                         </div>
                         <div class="saw-user-info">
                             <div class="saw-user-name"><?php echo esc_html($this->user['name']); ?></div>
                             <div class="saw-user-role"><?php echo esc_html($this->get_role_label()); ?></div>
                         </div>
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" class="saw-user-arrow">
-                            <path d="M8 10.5l-4-4h8l-4 4z"/>
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" class="saw-user-arrow">
+                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
                         </svg>
                     </button>
                     
                     <div class="saw-user-dropdown" id="sawUserDropdown">
+                        <div class="saw-user-dropdown-header">
+                            <div class="saw-user-dropdown-avatar">
+                                <?php echo esc_html(strtoupper(substr($this->user['name'], 0, 1))); ?>
+                            </div>
+                            <div class="saw-user-dropdown-info">
+                                <div class="saw-user-dropdown-name"><?php echo esc_html($this->user['name']); ?></div>
+                                <div class="saw-user-dropdown-email"><?php echo esc_html($this->user['email']); ?></div>
+                            </div>
+                        </div>
+                        
+                        <div class="saw-user-dropdown-divider"></div>
+                        
                         <a href="/admin/profile" class="saw-dropdown-item">
-                            <span class="saw-dropdown-icon">👤</span>
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
+                            </svg>
                             <span>Můj profil</span>
                         </a>
+                        
                         <a href="/admin/settings" class="saw-dropdown-item">
-                            <span class="saw-dropdown-icon">⚙️</span>
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
+                            </svg>
                             <span>Nastavení</span>
                         </a>
-                        <div class="saw-dropdown-divider"></div>
-                        <a href="/logout/" class="saw-dropdown-item">
-                            <span class="saw-dropdown-icon">🚪</span>
+                        
+                        <div class="saw-user-dropdown-divider"></div>
+                        
+                        <a href="/logout/" class="saw-dropdown-item saw-dropdown-item-danger">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1V4a1 1 0 00-1-1H3zm11 4.414l-4.293 4.293a1 1 0 01-1.414 0L4 7.414 5.414 6l3.293 3.293L13.586 5 15 6.414z" clip-rule="evenodd"/>
+                            </svg>
                             <span>Odhlásit se</span>
                         </a>
                     </div>
