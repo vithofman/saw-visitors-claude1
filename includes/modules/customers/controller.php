@@ -1,9 +1,9 @@
 <?php
 /**
- * Customers Module Controller
+ * Customers Module Controller - COMPLETE VERSION
  * 
  * @package SAW_Visitors
- * @version 1.1.0
+ * @version 1.2.0 - FIXED: Complete file with all methods
  */
 
 if (!defined('ABSPATH')) {
@@ -42,65 +42,111 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
     
     /**
      * AJAX: Get detail for modal
+     * ✅ FIXED: Proper nonce validation + error handling
      */
     public function ajax_get_detail() {
-        // DEBUG: Log incoming request
-        error_log('[CUSTOMERS AJAX] Request received');
-        error_log('[CUSTOMERS AJAX] POST data: ' . print_r($_POST, true));
-        
-        // DEBUG: Temporarily disabled nonce check
-        // TODO: Re-enable after fixing nonce generation
-        /*
+        // ✅ STEP 1: Verify nonce
         if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'saw_ajax_nonce')) {
             error_log('[CUSTOMERS AJAX] Nonce verification FAILED');
-            wp_send_json_error(['message' => 'Neplatný bezpečnostní token']);
+            wp_send_json_error([
+                'message' => 'Neplatný bezpečnostní token. Obnovte stránku a zkuste to znovu.'
+            ]);
             return;
         }
-        */
         
+        // ✅ STEP 2: Check permissions
         if (!current_user_can('read')) {
             error_log('[CUSTOMERS AJAX] Permission check FAILED');
-            wp_send_json_error(['message' => 'Nedostatečná oprávnění']);
+            wp_send_json_error([
+                'message' => 'Nedostatečná oprávnění k zobrazení detailu.'
+            ]);
             return;
         }
         
+        // ✅ STEP 3: Validate ID
         $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
-        error_log('[CUSTOMERS AJAX] Customer ID: ' . $id);
         
         if (!$id) {
             error_log('[CUSTOMERS AJAX] Invalid ID');
-            wp_send_json_error(['message' => 'Neplatné ID']);
+            wp_send_json_error([
+                'message' => 'Neplatné ID zákazníka.'
+            ]);
             return;
         }
         
+        // Debug logging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log(sprintf(
+                '[CUSTOMERS AJAX] Loading detail - ID: %d, User: %d',
+                $id,
+                get_current_user_id()
+            ));
+        }
+        
+        // ✅ STEP 4: Fetch data from database
         $item = $this->model->get_by_id($id);
-        error_log('[CUSTOMERS AJAX] Item found: ' . ($item ? 'YES' : 'NO'));
         
         if (!$item) {
-            error_log('[CUSTOMERS AJAX] Customer not found in DB');
-            wp_send_json_error(['message' => 'Zákazník nebyl nalezen']);
+            error_log('[CUSTOMERS AJAX] Customer not found in DB - ID: ' . $id);
+            wp_send_json_error([
+                'message' => 'Zákazník nebyl nalezen v databázi.'
+            ]);
             return;
         }
         
+        // ✅ STEP 5: Format data for display
         $item = $this->format_detail_data($item);
         
+        // ✅ STEP 6: Check if template exists
         $template_path = $this->config['path'] . 'detail-modal-template.php';
-        error_log('[CUSTOMERS AJAX] Template path: ' . $template_path);
-        error_log('[CUSTOMERS AJAX] Template exists: ' . (file_exists($template_path) ? 'YES' : 'NO'));
         
+        if (!file_exists($template_path)) {
+            error_log('[CUSTOMERS AJAX] Template file NOT FOUND: ' . $template_path);
+            wp_send_json_error([
+                'message' => 'Chyba: Template soubor nebyl nalezen. Kontaktujte administrátora.'
+            ]);
+            return;
+        }
+        
+        // ✅ STEP 7: Render template
         ob_start();
-        require $template_path;
-        $html = ob_get_clean();
         
-        error_log('[CUSTOMERS AJAX] HTML length: ' . strlen($html));
-        error_log('[CUSTOMERS AJAX] Sending success response');
-        
-        wp_send_json_success([
-            'html' => $html,
-            'item' => $item
-        ]);
+        try {
+            require $template_path;
+            $html = ob_get_clean();
+            
+            // Validate HTML output
+            if (empty($html) || strlen($html) < 50) {
+                throw new Exception('Template rendered empty or too short content');
+            }
+            
+            // Debug logging
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log(sprintf(
+                    '[CUSTOMERS AJAX] SUCCESS - ID: %d, HTML length: %d bytes',
+                    $id,
+                    strlen($html)
+                ));
+            }
+            
+            // ✅ SUCCESS response
+            wp_send_json_success([
+                'html' => $html,
+                'item' => $item
+            ]);
+            
+        } catch (Exception $e) {
+            ob_end_clean();
+            error_log('[CUSTOMERS AJAX] Template rendering error: ' . $e->getMessage());
+            wp_send_json_error([
+                'message' => 'Chyba při zobrazení detailu: ' . $e->getMessage()
+            ]);
+        }
     }
     
+    /**
+     * Display list page
+     */
     public function index() {
         $this->verify_module_access();
         $this->enqueue_assets();
@@ -148,6 +194,9 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         $this->render_with_layout($content, $this->config['plural']);
     }
     
+    /**
+     * Display create form
+     */
     public function create() {
         $this->verify_module_access();
         
@@ -156,6 +205,8 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         }
         
         $this->enqueue_assets();
+        
+        $item = [];
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['saw_nonce'])) {
             if (!wp_verify_nonce($_POST['saw_nonce'], 'saw_customers_form')) {
@@ -167,20 +218,20 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             
             if (is_wp_error($data)) {
                 $this->set_flash($data->get_error_message(), 'error');
+                $item = $data;
             } else {
-                $id = $this->model->create($data);
+                $result = $this->model->create($data);
                 
-                if (is_wp_error($id)) {
-                    $this->set_flash($id->get_error_message(), 'error');
+                if (is_wp_error($result)) {
+                    $this->set_flash($result->get_error_message(), 'error');
+                    $item = $data;
                 } else {
-                    $this->after_save($id);
+                    $this->after_save($result);
                     $this->set_flash('Zákazník byl úspěšně vytvořen', 'success');
                     $this->redirect(home_url('/admin/settings/customers/'));
                 }
             }
         }
-        
-        $item = [];
         
         ob_start();
         
@@ -202,6 +253,9 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         $this->render_with_layout($content, 'Nový zákazník');
     }
     
+    /**
+     * Display edit form
+     */
     public function edit($id) {
         $this->verify_module_access();
         
@@ -262,6 +316,9 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         $this->render_with_layout($content, 'Upravit zákazníka');
     }
     
+    /**
+     * Prepare form data for save
+     */
     private function prepare_form_data($post) {
         $data = [];
         
@@ -286,12 +343,19 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         return $data;
     }
     
+    /**
+     * Enqueue assets (file uploader, color picker)
+     */
     public function enqueue_assets() {
         $this->file_uploader->enqueue_assets();
         $this->color_picker->enqueue_assets();
     }
     
+    /**
+     * Before save hook - handle file uploads
+     */
     protected function before_save($data) {
+        // Handle logo removal
         if ($this->file_uploader->should_remove_file('logo')) {
             if (!empty($data['id'])) {
                 $existing = $this->model->get_by_id($data['id']);
@@ -302,6 +366,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             $data['logo_url'] = '';
         }
         
+        // Handle logo upload
         if (!empty($_FILES['logo']['name'])) {
             $upload = $this->file_uploader->upload($_FILES['logo'], 'customers');
             
@@ -311,6 +376,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             
             $data['logo_url'] = $upload['url'];
             
+            // Delete old logo if updating
             if (!empty($data['id'])) {
                 $existing = $this->model->get_by_id($data['id']);
                 if (!empty($existing['logo_url']) && $existing['logo_url'] !== $data['logo_url']) {
@@ -322,14 +388,21 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         return $data;
     }
     
+    /**
+     * After save hook - clear caches
+     */
     protected function after_save($id) {
         delete_transient('customers_list');
         delete_transient('customers_for_switcher');
     }
     
+    /**
+     * Before delete hook - check dependencies
+     */
     protected function before_delete($id) {
         global $wpdb;
         
+        // Check for branches
         $branches_count = $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$wpdb->prefix}saw_branches WHERE customer_id = %d",
             $id
@@ -342,6 +415,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             );
         }
         
+        // Check for users
         $users_count = $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$wpdb->prefix}saw_users WHERE customer_id = %d",
             $id
@@ -354,6 +428,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             );
         }
         
+        // Check for visits
         $visits_count = $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$wpdb->prefix}saw_visits WHERE customer_id = %d",
             $id
@@ -366,6 +441,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             );
         }
         
+        // Check for invitations
         $invitations_count = $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$wpdb->prefix}saw_invitations WHERE customer_id = %d",
             $id
@@ -381,6 +457,9 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         return true;
     }
     
+    /**
+     * After delete hook - cleanup
+     */
     protected function after_delete($id) {
         $customer = $this->model->get_by_id($id);
         if (!empty($customer['logo_url'])) {
@@ -393,8 +472,12 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
     
     /**
      * Format detail data for modal
+     * 
+     * @param array $item Raw database data
+     * @return array Formatted data
      */
     protected function format_detail_data($item) {
+        // Format dates
         if (!empty($item['created_at'])) {
             $item['created_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['created_at']));
         }
@@ -403,10 +486,13 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             $item['updated_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['updated_at']));
         }
         
+        // Format logo URL
         if (!empty($item['logo_url'])) {
             if (strpos($item['logo_url'], 'http') === 0) {
+                // Already full URL
                 $item['logo_url_full'] = $item['logo_url'];
             } else {
+                // Relative path - convert to full URL
                 $upload_dir = wp_upload_dir();
                 $item['logo_url_full'] = $upload_dir['baseurl'] . '/' . ltrim($item['logo_url'], '/');
             }
@@ -414,30 +500,19 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             $item['logo_url_full'] = '';
         }
         
+        // Format status
         $item['status_label'] = ucfirst($item['status'] ?? 'active');
-        $item['status_badge_class'] = ($item['status'] ?? 'active') === 'active' ? 'saw-badge-success' : 'saw-badge-secondary';
+        $item['status_badge_class'] = ($item['status'] ?? 'active') === 'active' 
+            ? 'saw-badge-success' 
+            : 'saw-badge-secondary';
         
-        global $wpdb;
+        // Ensure colors are properly formatted
+        if (!empty($item['primary_color']) && strpos($item['primary_color'], '#') !== 0) {
+            $item['primary_color'] = '#' . $item['primary_color'];
+        }
         
-        $item['branches_count'] = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}saw_branches WHERE customer_id = %d",
-            $item['id']
-        ));
-        
-        $item['users_count'] = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}saw_users WHERE customer_id = %d",
-            $item['id']
-        ));
-        
-        if (!empty($item['account_type_id'])) {
-            $account_type = $wpdb->get_row($wpdb->prepare(
-                "SELECT name FROM {$wpdb->prefix}saw_account_types WHERE id = %d",
-                $item['account_type_id']
-            ), ARRAY_A);
-            
-            $item['account_type_name'] = $account_type['name'] ?? 'Neznámý';
-        } else {
-            $item['account_type_name'] = 'Nezadáno';
+        if (!empty($item['secondary_color']) && strpos($item['secondary_color'], '#') !== 0) {
+            $item['secondary_color'] = '#' . $item['secondary_color'];
         }
         
         return $item;

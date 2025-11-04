@@ -33,61 +33,49 @@ class SAW_Visitors {
     private function load_dependencies() {
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-loader.php';
         
-        // Base Classes
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/trait-ajax-handlers.php';
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/class-base-model.php';
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/class-base-controller.php';
         
-        // Core Infrastructure
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-module-loader.php';
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-asset-manager.php';
         
-        // User Branches Helper
         if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-user-branches.php')) {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-user-branches.php';
         }
         
-        // Session Manager
         if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-session-manager.php')) {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-session-manager.php';
         }
         
-        // Error Handler
         if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-error-handler.php')) {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-error-handler.php';
         }
         
-        // Context
         if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-context.php')) {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-context.php';
         }
         
-        // Auth
         if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-auth.php')) {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-auth.php';
         }
         
-        // Session (legacy)
         if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-session.php')) {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-session.php';
         }
         
-        // Password
         if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-password.php')) {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-password.php';
         }
         
-        // Database
         if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/database/class-saw-database.php')) {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/database/class-saw-database.php';
         }
         
-        // Audit
         if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-audit.php')) {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-audit.php';
         }
         
-        // Router
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-router.php';
         
         $this->loader = new SAW_Loader();
@@ -161,25 +149,25 @@ class SAW_Visitors {
      * Register AJAX handlers for all modules
      * 
      * CRITICAL: AJAX handlers must be registered early, not in controller __construct
+     * FIX: Use $instance variable to avoid $this context loss in closures
      */
     private function register_module_ajax_handlers() {
-        // Get all modules
         $modules = SAW_Module_Loader::get_all();
+        $instance = $this;
         
         foreach ($modules as $slug => $config) {
             $entity = $config['entity'];
             
-            // Register generic AJAX handlers for each module
-            add_action('wp_ajax_saw_get_' . $entity . '_detail', function() use ($slug) {
-                $this->handle_module_ajax_detail($slug);
+            add_action('wp_ajax_saw_get_' . $entity . '_detail', function() use ($slug, $instance) {
+                $instance->handle_module_ajax_detail($slug);
             });
             
-            add_action('wp_ajax_saw_search_' . $entity, function() use ($slug) {
-                $this->handle_module_ajax_search($slug);
+            add_action('wp_ajax_saw_search_' . $entity, function() use ($slug, $instance) {
+                $instance->handle_module_ajax_search($slug);
             });
             
-            add_action('wp_ajax_saw_delete_' . $entity, function() use ($slug) {
-                $this->handle_module_ajax_delete($slug);
+            add_action('wp_ajax_saw_delete_' . $entity, function() use ($slug, $instance) {
+                $instance->handle_module_ajax_delete($slug);
             });
         }
     }
