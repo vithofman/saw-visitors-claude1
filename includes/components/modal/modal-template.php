@@ -2,12 +2,8 @@
 /**
  * SAW Modal Template
  * 
- * Template pro zobrazení modálního okna s podporou header akcí.
- * Používá proměnné $id a $config z class-saw-component-modal.php
- * 
  * @package SAW_Visitors
- * @version 3.0.0
- * @since 4.6.1
+ * @version 4.0.1
  */
 
 if (!defined('ABSPATH')) {
@@ -17,7 +13,7 @@ if (!defined('ABSPATH')) {
 // Extract config variables
 $title = $config['title'] ?? '';
 $content = $config['content'] ?? '';
-$size = $config['size'] ?? 'medium';
+$size = $config['size'] ?? 'md';
 $show_close = $config['show_close'] ?? true;
 $show_footer = $config['show_footer'] ?? false;
 $footer_buttons = $config['footer_buttons'] ?? array();
@@ -35,12 +31,19 @@ $modal_classes = array('saw-modal');
 if (!empty($custom_class)) {
     $modal_classes[] = $custom_class;
 }
+// ✅ OPRAVENO: Používá 'active' místo 'saw-modal-open'
 if ($auto_open) {
-    $modal_classes[] = 'saw-modal-open';
+    $modal_classes[] = 'active';
 }
 
-$panel_classes = array('saw-modal-panel');
-$panel_classes[] = 'saw-modal-' . $size;
+// Size mapping
+$size_map = array(
+    'small' => 'sm',
+    'medium' => 'md',
+    'large' => 'lg',
+    'fullscreen' => 'xl',
+);
+$size_class = $size_map[$size] ?? $size;
 ?>
 
 <div id="saw-modal-<?php echo esc_attr($id); ?>" 
@@ -52,15 +55,13 @@ $panel_classes[] = 'saw-modal-' . $size;
      data-ajax-action="<?php echo esc_attr($ajax_action); ?>"
      data-ajax-data="<?php echo esc_attr(wp_json_encode($ajax_data)); ?>">
     
-    <div class="saw-modal-overlay"></div>
-    
-    <div class="<?php echo esc_attr(implode(' ', $panel_classes)); ?>">
+    <div class="saw-modal-content saw-modal-content-<?php echo esc_attr($size_class); ?>">
         
         <!-- Modal Header -->
         <div class="saw-modal-header">
             <h2 class="saw-modal-title"><?php echo esc_html($title); ?></h2>
             
-            <div class="saw-modal-header-actions">
+            <div class="saw-modal-actions">
                 <?php if (!empty($header_actions)): ?>
                     <?php foreach ($header_actions as $action): ?>
                         <?php
@@ -74,7 +75,6 @@ $panel_classes[] = 'saw-modal-' . $size;
                         $action_callback = $action['callback'] ?? '';
                         $action_class = $action['class'] ?? '';
                         
-                        // Build data attributes
                         $data_attrs = array(
                             'data-action-type' => $action_type,
                         );
@@ -96,15 +96,12 @@ $panel_classes[] = 'saw-modal-' . $size;
                             $data_attrs['data-action-callback'] = $action_callback;
                         }
                         
-                        // Build data attributes string
                         $data_attrs_string = '';
                         foreach ($data_attrs as $attr => $value) {
                             $data_attrs_string .= ' ' . $attr . '="' . esc_attr($value) . '"';
                         }
                         
-                        // CSS classes
-                        $btn_classes = array('saw-modal-action-btn');
-                        $btn_classes[] = 'saw-modal-action-' . $action_type;
+                        $btn_classes = array('saw-modal-action-btn', $action_type);
                         if ($action_class) {
                             $btn_classes[] = $action_class;
                         }
@@ -113,17 +110,14 @@ $panel_classes[] = 'saw-modal-' . $size;
                         <button type="button" 
                                 class="<?php echo esc_attr(implode(' ', $btn_classes)); ?>"
                                 <?php echo $data_attrs_string; ?>
-                                title="<?php echo esc_attr($action_label); ?>">
+                                title="<?php echo esc_attr($action_label ?: ucfirst($action_type)); ?>">
                             <span class="dashicons <?php echo esc_attr($action_icon); ?>"></span>
-                            <?php if ($action_label): ?>
-                                <span class="saw-modal-action-label"><?php echo esc_html($action_label); ?></span>
-                            <?php endif; ?>
                         </button>
                     <?php endforeach; ?>
                 <?php endif; ?>
                 
                 <?php if ($show_close): ?>
-                    <button type="button" class="saw-modal-close" data-modal-close>
+                    <button type="button" class="saw-modal-close">
                         <span class="dashicons dashicons-no-alt"></span>
                     </button>
                 <?php endif; ?>
@@ -148,7 +142,7 @@ $panel_classes[] = 'saw-modal-' . $size;
                 <?php foreach ($footer_buttons as $button): ?>
                     <?php
                     $btn_label = $button['label'] ?? 'Button';
-                    $btn_class = $button['class'] ?? 'saw-button';
+                    $btn_class = $button['class'] ?? 'saw-btn saw-btn-secondary';
                     $btn_action = $button['action'] ?? '';
                     ?>
                     <button type="button" 

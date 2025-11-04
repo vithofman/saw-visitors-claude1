@@ -3,7 +3,7 @@
  * Departments List Template
  * 
  * @package SAW_Visitors
- * @version 1.0.0
+ * @version 1.0.1
  */
 
 if (!defined('ABSPATH')) {
@@ -126,7 +126,8 @@ function build_filter_url($params = []) {
                         $branch_name = '';
                         if (!empty($item['branch_id'])) {
                             $branch = $wpdb->get_row($wpdb->prepare(
-                                "SELECT name, code FROM {$wpdb->prefix}saw_branches WHERE id = %d",
+                                "SELECT name, code FROM %i WHERE id = %d",
+                                $wpdb->prefix . 'saw_branches',
                                 $item['branch_id']
                             ), ARRAY_A);
                             if ($branch) {
@@ -137,7 +138,7 @@ function build_filter_url($params = []) {
                             }
                         }
                     ?>
-                        <tr class="saw-department-row" data-id="<?php echo esc_attr($item['id']); ?>" style="cursor: pointer;">
+                        <tr class="saw-department-row" data-id="<?php echo esc_attr($item['id']); ?>">
                             <td class="saw-department-name">
                                 <span class="saw-department-icon">🏢</span>
                                 <strong><?php echo esc_html($item['name']); ?></strong>
@@ -245,7 +246,7 @@ $department_modal = new SAW_Component_Modal('department-detail', array(
     'title' => 'Detail oddělení',
     'ajax_enabled' => true,
     'ajax_action' => 'saw_get_departments_detail',
-    'size' => 'large',
+    'size' => 'lg',
     'show_close' => true,
     'close_on_backdrop' => true,
     'close_on_escape' => true,
@@ -270,39 +271,38 @@ $department_modal->render();
 ?>
 
 <script>
-jQuery(document).ready(function($) {
-    $('.saw-department-row').on('click', function(e) {
-        if ($(e.target).closest('button, a, .saw-action-buttons').length > 0) {
-            return;
-        }
+(function($) {
+    'use strict';
+    
+    $(document).ready(function() {
+        console.log('✅ Departments list initialized');
         
-        const departmentId = $(this).data('id');
-        
-        if (!departmentId) {
-            return;
-        }
-        
-        if (typeof SAWModal !== 'undefined') {
+        // Click handler pro řádky
+        $('.saw-department-row').on('click', function(e) {
+            // Ignoruj klik na tlačítka
+            if ($(e.target).closest('button, a, .saw-action-buttons').length > 0) {
+                return;
+            }
+            
+            const departmentId = $(this).data('id');
+            
+            if (!departmentId) {
+                console.error('Missing department ID');
+                return;
+            }
+            
+            if (typeof SAWModal === 'undefined') {
+                console.error('SAWModal not loaded');
+                return;
+            }
+            
+            console.log('Opening modal for department:', departmentId);
+            
             SAWModal.open('department-detail', {
                 id: departmentId,
                 nonce: '<?php echo $ajax_nonce; ?>'
             });
-        }
+        });
     });
-});
+})(jQuery);
 </script>
-
-<style>
-.saw-code-badge {
-    display: inline-block;
-    padding: 4px 10px;
-    background: #f3f4f6;
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
-    font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
-    font-size: 13px;
-    font-weight: 600;
-    color: #374151;
-    letter-spacing: 0.5px;
-}
-</style>

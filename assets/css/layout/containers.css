@@ -1,0 +1,109 @@
+/**
+ * SAW Containers
+ * Page wrappers and containers
+ * 
+ * @package SAW_Visitors
+ * @version 1.0.0
+ */
+
+.saw-container {
+    width: 100%;
+    max-width: var(--saw-max-width-2xl);
+    margin: 0 auto;
+    padding: 0 var(--saw-space-3xl);
+}
+
+.saw-container-sm {
+    max-width: var(--saw-max-width-sm);
+}
+
+.saw-container-md {
+    max-width: var(--saw-max-width-md);
+}
+
+.saw-container-lg {
+    max-width: var(--saw-max-width-lg);
+}
+
+.saw-container-xl {
+    max-width: var(--saw-max-width-xl);
+}
+
+.saw-container-fluid {
+    max-width: 100%;
+}
+
+.saw-page-header {
+    background: #ffffff;
+    border-bottom: var(--saw-border-width) solid var(--saw-border-color);
+    padding: var(--saw-space-xl) 0;
+    margin-bottom: var(--saw-space-2xl);
+}
+
+.saw-page-header-content {
+    max-width: var(--saw-max-width-3xl);
+    margin: 0 auto;
+    padding: 0 var(--saw-space-3xl);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--saw-space-xl);
+}
+
+.saw-page-title {
+    margin: 0;
+    font-size: var(--saw-font-size-3xl);
+    font-weight: var(--saw-font-weight-semibold);
+    color: var(--saw-gray-900);
+    line-height: var(--saw-line-height-tight);
+}
+
+.saw-page-actions {
+    display: flex;
+    gap: var(--saw-space-md);
+    flex-wrap: wrap;
+}
+
+.saw-section {
+    margin-bottom: var(--saw-space-4xl);
+}
+
+.saw-section-header {
+    margin-bottom: var(--saw-space-2xl);
+}
+
+.saw-section-title {
+    font-size: var(--saw-font-size-2xl);
+    font-weight: var(--saw-font-weight-semibold);
+    color: var(--saw-gray-900);
+    margin-bottom: var(--saw-space-xs);
+}
+
+.saw-section-subtitle {
+    font-size: var(--saw-font-size-base);
+    color: var(--saw-gray-500);
+}
+
+@media (max-width: 768px) {
+    .saw-container {
+        padding: 0 var(--saw-space-lg);
+    }
+    
+    .saw-page-header {
+        padding: var(--saw-space-lg) 0;
+    }
+    
+    .saw-page-header-content {
+        padding: 0 var(--saw-space-lg);
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .saw-page-title {
+        font-size: var(--saw-font-size-xl);
+    }
+    
+    .saw-page-actions {
+        width: 100%;
+    }
+}

@@ -6,7 +6,7 @@
  * Podporuje statický obsah i dynamické načítání přes AJAX.
  * 
  * @package SAW_Visitors
- * @version 3.0.1 - OPRAVENO: nonce pro delete (řádek 145)
+ * @version 4.0.0
  * @since 4.6.1
  */
 
@@ -57,29 +57,16 @@ class SAW_Component_Modal {
             'ajax_data' => array(),
             'ajax_nonce' => '',
             
-            // Size options: small, medium, large, fullscreen
-            'size' => 'medium',
+            // Size options: sm, md, lg, xl
+            'size' => 'md',
             
             // UI options
             'show_close' => true,
             'show_footer' => false,
             'footer_buttons' => array(),
             
-            // Header actions (NEW!)
+            // Header actions
             'header_actions' => array(),
-            // Format: array(
-            //     array(
-            //         'type' => 'edit',           // edit, delete, custom
-            //         'label' => 'Upravit',       // Optional label
-            //         'icon' => 'dashicons-edit', // Dashicon class
-            //         'url' => '',                // URL for edit (can use {id} placeholder)
-            //         'confirm' => false,         // Show confirm dialog?
-            //         'confirm_message' => '',    // Confirm message
-            //         'ajax_action' => '',        // AJAX action for delete
-            //         'callback' => '',           // JS callback function name
-            //         'class' => '',              // Additional CSS class
-            //     )
-            // )
             
             // Behavior
             'close_on_backdrop' => true,
@@ -110,18 +97,10 @@ class SAW_Component_Modal {
     }
     
     /**
-     * Enqueue modal assets (CSS + JS)
+     * Enqueue modal assets (JS only - CSS is global)
      */
     private function enqueue_assets() {
-        // Enqueue modal CSS
-        wp_enqueue_style(
-            'saw-modal-component',
-            SAW_VISITORS_PLUGIN_URL . 'includes/components/modal/saw-modal.css',
-            array(),
-            SAW_VISITORS_VERSION
-        );
-        
-        // Enqueue modal JS
+        // Modal JS
         wp_enqueue_script(
             'saw-modal-component',
             SAW_VISITORS_PLUGIN_URL . 'includes/components/modal/saw-modal.js',
@@ -130,13 +109,12 @@ class SAW_Component_Modal {
             true
         );
         
-        // ✅ OPRAVENO: Používá saw_ajax_nonce místo saw_modal_nonce
+        // Localize script
         $localized_data = array(
             'ajaxurl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('saw_ajax_nonce'),  // ✅ ZMĚNĚNO
+            'nonce' => wp_create_nonce('saw_ajax_nonce'),
         );
         
-        // Add custom nonce if provided
         if (!empty($this->config['ajax_nonce'])) {
             $localized_data['customNonce'] = $this->config['ajax_nonce'];
         }

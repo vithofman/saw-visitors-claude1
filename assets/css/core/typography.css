@@ -1,0 +1,97 @@
+/**
+ * SAW Typography
+ * Font styles, headings, text utilities
+ * 
+ * @package SAW_Visitors
+ * @version 1.0.0
+ */
+
+.saw-text-xs {
+    font-size: var(--saw-font-size-xs);
+}
+
+.saw-text-sm {
+    font-size: var(--saw-font-size-sm);
+}
+
+.saw-text-base {
+    font-size: var(--saw-font-size-base);
+}
+
+.saw-text-md {
+    font-size: var(--saw-font-size-md);
+}
+
+.saw-text-lg {
+    font-size: var(--saw-font-size-lg);
+}
+
+.saw-text-xl {
+    font-size: var(--saw-font-size-xl);
+}
+
+.saw-text-2xl {
+    font-size: var(--saw-font-size-2xl);
+}
+
+.saw-text-3xl {
+    font-size: var(--saw-font-size-3xl);
+}
+
+.saw-font-normal {
+    font-weight: var(--saw-font-weight-normal);
+}
+
+.saw-font-medium {
+    font-weight: var(--saw-font-weight-medium);
+}
+
+.saw-font-semibold {
+    font-weight: var(--saw-font-weight-semibold);
+}
+
+.saw-font-bold {
+    font-weight: var(--saw-font-weight-bold);
+}
+
+.saw-text-center {
+    text-align: center;
+}
+
+.saw-text-left {
+    text-align: left;
+}
+
+.saw-text-right {
+    text-align: right;
+}
+
+.saw-text-muted {
+    color: var(--saw-gray-500);
+}
+
+.saw-text-primary {
+    color: var(--saw-primary);
+}
+
+.saw-text-success {
+    color: var(--saw-success);
+}
+
+.saw-text-danger {
+    color: var(--saw-danger);
+}
+
+.saw-text-warning {
+    color: var(--saw-warning);
+}
+
+.saw-text-truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.saw-text-mono {
+    font-family: var(--saw-font-mono);
+}

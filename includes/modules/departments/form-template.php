@@ -1,9 +1,9 @@
 <?php
 /**
- * Departments Form Template - Modern Clean Design
+ * Departments Form Template
  * 
  * @package SAW_Visitors
- * @version 1.0.0
+ * @version 1.0.1
  */
 
 if (!defined('ABSPATH')) {
@@ -14,26 +14,22 @@ $is_edit = !empty($item['id']);
 $page_title = $is_edit ? 'Upravit oddělení' : 'Nové oddělení';
 
 global $wpdb;
-$customer_id = 0;
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-if (isset($_SESSION['saw_current_customer_id'])) {
-    $customer_id = intval($_SESSION['saw_current_customer_id']);
-}
+
+// ✅ OPRAVENO: SAW_Context místo session
+$customer_id = SAW_Context::get_customer_id();
 
 $branches = [];
-if ($customer_id > 0) {
+if ($customer_id) {
     $branches = $wpdb->get_results($wpdb->prepare(
         "SELECT id, name, code, city, is_headquarters 
-         FROM {$wpdb->prefix}saw_branches 
+         FROM %i 
          WHERE customer_id = %d AND is_active = 1 
          ORDER BY is_headquarters DESC, name ASC",
+        $wpdb->prefix . 'saw_branches',
         $customer_id
     ), ARRAY_A);
 }
 ?>
-
 <div class="saw-page-header">
     <div class="saw-page-header-content">
         <h1 class="saw-page-title">

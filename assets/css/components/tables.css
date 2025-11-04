@@ -1,0 +1,221 @@
+/**
+ * SAW Tables
+ * Data tables, admin tables, responsive wrappers
+ * 
+ * @package SAW_Visitors
+ * @version 1.0.0
+ */
+
+.saw-list-container {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 0;
+}
+
+.saw-table-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--saw-space-xl);
+    gap: var(--saw-space-xl);
+    flex-wrap: wrap;
+}
+
+.saw-filters {
+    display: flex;
+    gap: var(--saw-space-md);
+    flex-wrap: wrap;
+}
+
+.saw-table-responsive-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    border-radius: var(--saw-border-radius-lg);
+}
+
+.saw-table-responsive-wrapper::-webkit-scrollbar {
+    height: 12px;
+}
+
+.saw-table-responsive-wrapper::-webkit-scrollbar-track {
+    background: var(--saw-gray-100);
+    border-radius: var(--saw-border-radius-md);
+}
+
+.saw-table-responsive-wrapper::-webkit-scrollbar-thumb {
+    background: var(--saw-gray-400);
+    border-radius: var(--saw-border-radius-md);
+}
+
+.saw-table-responsive-wrapper::-webkit-scrollbar-thumb:hover {
+    background: var(--saw-gray-500);
+}
+
+.saw-admin-table {
+    width: 100%;
+    background: #ffffff;
+    border: var(--saw-border-width) solid var(--saw-border-color);
+    border-radius: var(--saw-border-radius-lg);
+    overflow: hidden;
+}
+
+.saw-admin-table table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 1000px;
+}
+
+.saw-admin-table thead {
+    background: var(--saw-gray-50);
+    border-bottom: var(--saw-border-width-thick) solid var(--saw-border-color);
+}
+
+.saw-admin-table th {
+    padding: var(--saw-space-lg);
+    text-align: left;
+    font-size: var(--saw-font-size-base);
+    font-weight: var(--saw-font-weight-semibold);
+    color: var(--saw-gray-900);
+    white-space: nowrap;
+}
+
+.saw-admin-table th a {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-xs);
+    color: var(--saw-gray-900);
+    text-decoration: none;
+    transition: color var(--saw-transition-base);
+}
+
+.saw-admin-table th a:hover {
+    color: var(--saw-primary);
+}
+
+.saw-admin-table th a .dashicons {
+    font-size: var(--saw-icon-size-sm);
+    width: var(--saw-icon-size-sm);
+    height: var(--saw-icon-size-sm);
+}
+
+.saw-admin-table td {
+    padding: var(--saw-space-lg);
+    border-top: var(--saw-border-width) solid var(--saw-border-color-light);
+    font-size: var(--saw-font-size-base);
+    color: var(--saw-gray-700);
+}
+
+.saw-admin-table tbody tr {
+    transition: background-color var(--saw-transition-base);
+}
+
+.saw-admin-table tbody tr:hover {
+    background: var(--saw-gray-50);
+    cursor: pointer;
+}
+
+.saw-admin-table thead th:last-child,
+.saw-admin-table tbody td:last-child {
+    position: sticky;
+    right: 0;
+    background: inherit;
+    box-shadow: -2px 0 4px rgba(0, 0, 0, 0.05);
+    z-index: 2;
+}
+
+.saw-admin-table thead th:last-child {
+    background: var(--saw-gray-50);
+}
+
+.saw-admin-table tbody td:last-child {
+    background: #ffffff;
+}
+
+.saw-admin-table tbody tr:hover td:last-child {
+    background: var(--saw-gray-50);
+}
+
+.saw-action-buttons {
+    display: flex;
+    gap: var(--saw-space-xs);
+    align-items: center;
+    justify-content: center;
+    flex-wrap: nowrap;
+}
+
+.saw-empty-state {
+    text-align: center;
+    padding: var(--saw-space-5xl) var(--saw-space-xl);
+    background: #ffffff;
+    border: var(--saw-border-width) solid var(--saw-border-color);
+    border-radius: var(--saw-border-radius-lg);
+}
+
+.saw-empty-state .dashicons {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    color: var(--saw-gray-400);
+    margin: 0 auto var(--saw-space-lg);
+}
+
+.saw-empty-state p {
+    font-size: var(--saw-font-size-lg);
+    color: var(--saw-gray-500);
+    margin-bottom: var(--saw-space-2xl);
+}
+
+.saw-pagination {
+    display: flex;
+    justify-content: center;
+    gap: var(--saw-space-sm);
+    padding: var(--saw-space-xl);
+    border-top: var(--saw-border-width) solid var(--saw-border-color);
+}
+
+.saw-pagination-link {
+    padding: var(--saw-space-sm) var(--saw-space-md);
+    border: var(--saw-border-width) solid var(--saw-border-color);
+    border-radius: var(--saw-border-radius-md);
+    font-size: var(--saw-font-size-base);
+    font-weight: var(--saw-font-weight-medium);
+    color: var(--saw-gray-700);
+    text-decoration: none;
+    transition: all var(--saw-transition-base);
+}
+
+.saw-pagination-link:hover {
+    background: var(--saw-primary);
+    color: #ffffff;
+    border-color: var(--saw-primary);
+}
+
+.saw-pagination-link.current {
+    background: var(--saw-primary);
+    color: #ffffff;
+    border-color: var(--saw-primary);
+}
+
+@media (max-width: 768px) {
+    .saw-table-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .saw-filters {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    
+    .saw-admin-table table {
+        font-size: var(--saw-font-size-sm);
+        min-width: 900px;
+    }
+    
+    .saw-admin-table th,
+    .saw-admin-table td {
+        padding: var(--saw-space-sm) var(--saw-space-md);
+    }
+}

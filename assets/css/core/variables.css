@@ -1,0 +1,134 @@
+/**
+ * SAW Design Tokens - CSS Variables
+ * Centrální definice barev, spacing, radius, shadows
+ * 
+ * @package SAW_Visitors
+ * @version 1.0.0
+ */
+
+:root {
+    /* Primary Colors */
+    --saw-primary: #2563eb;
+    --saw-primary-hover: #1d4ed8;
+    --saw-primary-light: #eff6ff;
+    --saw-primary-dark: #1e40af;
+    
+    /* Status Colors */
+    --saw-success: #10b981;
+    --saw-success-hover: #059669;
+    --saw-success-light: #d1fae5;
+    --saw-success-dark: #065f46;
+    
+    --saw-danger: #ef4444;
+    --saw-danger-hover: #dc2626;
+    --saw-danger-light: #fee2e2;
+    --saw-danger-dark: #991b1b;
+    
+    --saw-warning: #f59e0b;
+    --saw-warning-hover: #d97706;
+    --saw-warning-light: #fef3c7;
+    --saw-warning-dark: #92400e;
+    
+    --saw-info: #3b82f6;
+    --saw-info-hover: #2563eb;
+    --saw-info-light: #dbeafe;
+    --saw-info-dark: #1e40af;
+    
+    /* Gray Scale */
+    --saw-gray-50: #f9fafb;
+    --saw-gray-100: #f3f4f6;
+    --saw-gray-200: #e5e7eb;
+    --saw-gray-300: #d1d5db;
+    --saw-gray-400: #9ca3af;
+    --saw-gray-500: #6b7280;
+    --saw-gray-600: #4b5563;
+    --saw-gray-700: #374151;
+    --saw-gray-800: #1f2937;
+    --saw-gray-900: #111827;
+    
+    /* Typography */
+    --saw-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --saw-font-mono: 'SF Mono', 'Monaco', 'Courier New', monospace;
+    
+    --saw-font-size-xs: 12px;
+    --saw-font-size-sm: 13px;
+    --saw-font-size-base: 14px;
+    --saw-font-size-md: 15px;
+    --saw-font-size-lg: 16px;
+    --saw-font-size-xl: 18px;
+    --saw-font-size-2xl: 20px;
+    --saw-font-size-3xl: 24px;
+    --saw-font-size-4xl: 28px;
+    
+    --saw-font-weight-normal: 400;
+    --saw-font-weight-medium: 500;
+    --saw-font-weight-semibold: 600;
+    --saw-font-weight-bold: 700;
+    
+    --saw-line-height-tight: 1.2;
+    --saw-line-height-normal: 1.5;
+    --saw-line-height-relaxed: 1.8;
+    
+    /* Spacing */
+    --saw-space-xs: 4px;
+    --saw-space-sm: 8px;
+    --saw-space-md: 12px;
+    --saw-space-lg: 16px;
+    --saw-space-xl: 20px;
+    --saw-space-2xl: 24px;
+    --saw-space-3xl: 32px;
+    --saw-space-4xl: 40px;
+    --saw-space-5xl: 48px;
+    
+    /* Borders */
+    --saw-border-width: 1px;
+    --saw-border-width-thick: 2px;
+    --saw-border-width-thicker: 3px;
+    
+    --saw-border-color: var(--saw-gray-200);
+    --saw-border-color-dark: var(--saw-gray-300);
+    --saw-border-color-light: var(--saw-gray-100);
+    
+    --saw-border-radius-sm: 4px;
+    --saw-border-radius-md: 6px;
+    --saw-border-radius-lg: 8px;
+    --saw-border-radius-xl: 12px;
+    --saw-border-radius-full: 9999px;
+    
+    /* Shadows */
+    --saw-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --saw-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --saw-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --saw-shadow-lg: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --saw-shadow-xl: 0 4px 12px rgba(0, 0, 0, 0.15);
+    --saw-shadow-2xl: 0 8px 24px rgba(0, 0, 0, 0.2);
+    
+    /* Transitions */
+    --saw-transition-fast: 150ms ease;
+    --saw-transition-base: 200ms ease;
+    --saw-transition-slow: 300ms ease;
+    
+    /* Z-index Layers */
+    --saw-z-dropdown: 1000;
+    --saw-z-sticky: 1001;
+    --saw-z-modal: 9999;
+    --saw-z-tooltip: 10000;
+    
+    /* Layout */
+    --saw-max-width-sm: 640px;
+    --saw-max-width-md: 768px;
+    --saw-max-width-lg: 1024px;
+    --saw-max-width-xl: 1280px;
+    --saw-max-width-2xl: 1400px;
+    --saw-max-width-3xl: 1600px;
+    
+    /* Component Specific */
+    --saw-input-height: 42px;
+    --saw-input-padding: 10px 14px;
+    --saw-button-height: 42px;
+    --saw-button-padding: 10px 24px;
+    --saw-icon-size-sm: 16px;
+    --saw-icon-size-base: 18px;
+    --saw-icon-size-lg: 20px;
+    --saw-icon-size-xl: 24px;
+}

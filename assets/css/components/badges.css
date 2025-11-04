@@ -1,0 +1,85 @@
+/**
+ * SAW Badges
+ * Status badges, tags, labels
+ * 
+ * @package SAW_Visitors
+ * @version 1.0.0
+ */
+
+.saw-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--saw-space-xs);
+    padding: 4px 12px;
+    border-radius: var(--saw-border-radius-md);
+    font-size: var(--saw-font-size-xs);
+    font-weight: var(--saw-font-weight-semibold);
+    line-height: var(--saw-line-height-tight);
+    white-space: nowrap;
+}
+
+.saw-badge-success {
+    background: var(--saw-success-light);
+    color: var(--saw-success-dark);
+}
+
+.saw-badge-danger {
+    background: var(--saw-danger-light);
+    color: var(--saw-danger-dark);
+}
+
+.saw-badge-warning {
+    background: var(--saw-warning-light);
+    color: var(--saw-warning-dark);
+}
+
+.saw-badge-info {
+    background: var(--saw-info-light);
+    color: var(--saw-info-dark);
+}
+
+.saw-badge-secondary {
+    background: var(--saw-gray-100);
+    color: var(--saw-gray-700);
+}
+
+.saw-badge-primary {
+    background: var(--saw-primary-light);
+    color: var(--saw-primary-dark);
+}
+
+.saw-badge-lg {
+    padding: 6px 14px;
+    font-size: var(--saw-font-size-sm);
+}
+
+.saw-badge-sm {
+    padding: 2px 8px;
+    font-size: 11px;
+}
+
+.saw-badge .dashicons {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+}
+
+.saw-color-badge {
+    display: inline-block;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--saw-border-radius-lg);
+    vertical-align: middle;
+    border: var(--saw-border-width-thicker) solid #ffffff;
+    box-shadow: 0 0 0 1px var(--saw-border-color), var(--saw-shadow-sm);
+}
+
+.saw-color-badge-sm {
+    width: 24px;
+    height: 24px;
+}
+
+.saw-color-badge-lg {
+    width: 40px;
+    height: 40px;
+}

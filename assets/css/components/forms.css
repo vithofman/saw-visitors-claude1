@@ -1,0 +1,261 @@
+/**
+ * SAW Forms
+ * Inputs, selects, textareas, labels, form layouts
+ * 
+ * @package SAW_Visitors
+ * @version 1.0.0
+ */
+
+.saw-form-container {
+    max-width: var(--saw-max-width-2xl);
+    margin: 0 auto;
+    padding: 0 var(--saw-space-xl);
+}
+
+.saw-form-section {
+    background: #ffffff;
+    border: var(--saw-border-width) solid var(--saw-border-color);
+    border-radius: var(--saw-border-radius-lg);
+    margin-bottom: var(--saw-space-xl);
+    overflow: hidden;
+}
+
+.saw-form-section summary {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-md);
+    padding: 18px var(--saw-space-2xl);
+    cursor: pointer;
+    user-select: none;
+    background: var(--saw-gray-50);
+    border-bottom: var(--saw-border-width) solid transparent;
+    transition: all var(--saw-transition-base);
+    font-size: var(--saw-font-size-lg);
+    font-weight: var(--saw-font-weight-semibold);
+    color: var(--saw-gray-900);
+}
+
+.saw-form-section summary:hover {
+    background: var(--saw-gray-100);
+}
+
+.saw-form-section summary .dashicons {
+    font-size: var(--saw-icon-size-lg);
+    width: var(--saw-icon-size-lg);
+    height: var(--saw-icon-size-lg);
+    color: var(--saw-primary);
+}
+
+.saw-form-section[open] summary {
+    border-bottom-color: var(--saw-border-color);
+}
+
+.saw-form-section-content {
+    padding: var(--saw-space-2xl);
+}
+
+.saw-form-row {
+    display: flex;
+    gap: var(--saw-space-xl);
+    margin-bottom: var(--saw-space-xl);
+}
+
+.saw-form-row:last-child {
+    margin-bottom: 0;
+}
+
+.saw-form-group {
+    margin-bottom: 0;
+    width: 100%;
+}
+
+.saw-col-3 {
+    flex: 1 1 calc(25% - var(--saw-space-lg));
+    min-width: 0;
+}
+
+.saw-col-4 {
+    flex: 1 1 calc(33.333% - var(--saw-space-lg));
+    min-width: 0;
+}
+
+.saw-col-6 {
+    flex: 1 1 calc(50% - var(--saw-space-sm));
+    min-width: 0;
+}
+
+.saw-col-8 {
+    flex: 1 1 calc(66.666% - var(--saw-space-sm));
+    min-width: 0;
+}
+
+.saw-label {
+    display: block;
+    margin-bottom: var(--saw-space-sm);
+    font-size: var(--saw-font-size-base);
+    font-weight: var(--saw-font-weight-semibold);
+    color: var(--saw-gray-900);
+}
+
+.saw-label.saw-required::after {
+    content: " *";
+    color: var(--saw-danger);
+}
+
+.saw-input,
+.saw-select,
+.saw-textarea {
+    width: 100%;
+    padding: var(--saw-input-padding);
+    border: var(--saw-border-width) solid var(--saw-border-color-dark);
+    border-radius: var(--saw-border-radius-md);
+    font-size: var(--saw-font-size-base);
+    line-height: var(--saw-line-height-normal);
+    color: var(--saw-gray-900);
+    background: #ffffff;
+    transition: border-color var(--saw-transition-base), box-shadow var(--saw-transition-base);
+    box-sizing: border-box;
+}
+
+.saw-input:focus,
+.saw-select:focus,
+.saw-textarea:focus {
+    outline: none;
+    border-color: var(--saw-primary);
+    box-shadow: 0 0 0 3px var(--saw-primary-light);
+}
+
+.saw-input:disabled,
+.saw-select:disabled,
+.saw-textarea:disabled {
+    background: var(--saw-gray-100);
+    color: var(--saw-gray-500);
+    cursor: not-allowed;
+}
+
+.saw-input::placeholder,
+.saw-textarea::placeholder {
+    color: var(--saw-gray-400);
+}
+
+.saw-textarea {
+    resize: vertical;
+    font-family: inherit;
+    min-height: 80px;
+}
+
+.saw-select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2720%27 height=%2720%27 viewBox=%270 0 20 20%27%3E%3Cpath fill=%27%232563eb%27 d=%27M10 12.5l-5-5h10z%27/%3E%3C/svg%3E');
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 18px;
+    padding-right: 40px;
+}
+
+.saw-help-text {
+    display: block;
+    margin-top: var(--saw-space-sm);
+    font-size: var(--saw-font-size-sm);
+    color: var(--saw-gray-500);
+    line-height: var(--saw-line-height-normal);
+}
+
+.saw-form-error {
+    display: block;
+    margin-top: var(--saw-space-sm);
+    font-size: var(--saw-font-size-sm);
+    color: var(--saw-danger);
+}
+
+.saw-form-group.has-error .saw-input,
+.saw-form-group.has-error .saw-select,
+.saw-form-group.has-error .saw-textarea {
+    border-color: var(--saw-danger);
+}
+
+.saw-form-group.has-error .saw-input:focus,
+.saw-form-group.has-error .saw-select:focus,
+.saw-form-group.has-error .saw-textarea:focus {
+    box-shadow: 0 0 0 3px var(--saw-danger-light);
+}
+
+.saw-form-actions {
+    display: flex;
+    gap: var(--saw-space-md);
+    padding-top: var(--saw-space-3xl);
+    border-top: var(--saw-border-width-thick) solid var(--saw-gray-200);
+    margin-top: var(--saw-space-5xl);
+}
+
+.saw-checkbox-wrapper {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-sm);
+}
+
+.saw-checkbox {
+    width: 18px;
+    height: 18px;
+    border: var(--saw-border-width-thick) solid var(--saw-border-color-dark);
+    border-radius: var(--saw-border-radius-sm);
+    cursor: pointer;
+    transition: all var(--saw-transition-base);
+}
+
+.saw-checkbox:checked {
+    background: var(--saw-primary);
+    border-color: var(--saw-primary);
+}
+
+.saw-checkbox:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--saw-primary-light);
+}
+
+.saw-checkbox-label {
+    font-size: var(--saw-font-size-base);
+    color: var(--saw-gray-700);
+    cursor: pointer;
+}
+
+.saw-input-group {
+    display: flex;
+    align-items: stretch;
+}
+
+.saw-input-group .saw-input {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-right: none;
+    flex: 1;
+}
+
+.saw-input-addon {
+    display: flex;
+    align-items: center;
+    padding: 0 var(--saw-space-lg);
+    background: var(--saw-gray-50);
+    border: var(--saw-border-width) solid var(--saw-border-color-dark);
+    border-left: none;
+    border-top-right-radius: var(--saw-border-radius-md);
+    border-bottom-right-radius: var(--saw-border-radius-md);
+    font-size: var(--saw-font-size-base);
+    font-weight: var(--saw-font-weight-semibold);
+    color: var(--saw-gray-600);
+}
+
+@media (max-width: 1024px) {
+    .saw-form-row {
+        flex-direction: column;
+        gap: var(--saw-space-xl);
+    }
+    
+    .saw-col-3,
+    .saw-col-4,
+    .saw-col-6,
+    .saw-col-8 {
+        flex: 1 1 100%;
+    }
+}
