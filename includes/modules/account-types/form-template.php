@@ -1,24 +1,34 @@
 <?php
 /**
- * Account Types Form Template - REFACTORED
- * 
- * ✅ CHANGES:
- * - No inline styles
- * - Global form classes (.saw-form-card, .saw-input, etc.)
- * - Proper escapování
+ * Account Types Form Template - REFACTORED v2.1
  * 
  * @package SAW_Visitors
- * @version 2.0.0 - REFACTORED
+ * @version 2.1.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+// ✅ FORCE LOAD COLOR PICKER CSS
+wp_enqueue_style(
+    'saw-color-picker-component',
+    SAW_VISITORS_PLUGIN_URL . 'includes/components/color-picker/color-picker.css',
+    [],
+    SAW_VISITORS_VERSION
+);
+
+wp_enqueue_script(
+    'saw-color-picker-component',
+    SAW_VISITORS_PLUGIN_URL . 'includes/components/color-picker/color-picker.js',
+    ['jquery'],
+    SAW_VISITORS_VERSION,
+    true
+);
+
 $is_edit = !empty($item);
 $item = $item ?? [];
 
-// Convert features from JSON to textarea
 $features_text = '';
 if (!empty($item['features'])) {
     $features_array = json_decode($item['features'], true);
@@ -33,7 +43,7 @@ if (!empty($item['features'])) {
         <h1 class="saw-page-title">
             <?php echo $is_edit ? 'Upravit typ účtu' : 'Nový typ účtu'; ?>
         </h1>
-        <a href="<?php echo home_url('/admin/settings/account-types/'); ?>" class="saw-back-button">
+        <a href="<?php echo esc_url(home_url('/admin/settings/account-types/')); ?>" class="saw-back-button">
             <span class="dashicons dashicons-arrow-left-alt2"></span>
             Zpět na seznam
         </a>
@@ -48,7 +58,6 @@ if (!empty($item['features'])) {
             <input type="hidden" name="id" value="<?php echo esc_attr($item['id']); ?>">
         <?php endif; ?>
         
-        <!-- ZÁKLADNÍ INFORMACE -->
         <details class="saw-form-section" open>
             <summary>
                 <span class="dashicons dashicons-admin-generic"></span>
@@ -141,7 +150,6 @@ if (!empty($item['features'])) {
             </div>
         </details>
         
-        <!-- BRANDING -->
         <details class="saw-form-section" open>
             <summary>
                 <span class="dashicons dashicons-art"></span>
@@ -167,7 +175,6 @@ if (!empty($item['features'])) {
             </div>
         </details>
         
-        <!-- FUNKCE -->
         <details class="saw-form-section">
             <summary>
                 <span class="dashicons dashicons-list-view"></span>
@@ -196,7 +203,6 @@ if (!empty($item['features'])) {
             </div>
         </details>
         
-        <!-- NASTAVENÍ -->
         <details class="saw-form-section" open>
             <summary>
                 <span class="dashicons dashicons-admin-settings"></span>
@@ -225,13 +231,12 @@ if (!empty($item['features'])) {
             </div>
         </details>
         
-        <!-- ACTION BUTTONS -->
         <div class="saw-form-actions">
             <button type="submit" class="saw-button saw-button-primary">
                 <span class="dashicons dashicons-yes"></span>
                 <?php echo $is_edit ? 'Uložit změny' : 'Vytvořit typ účtu'; ?>
             </button>
-            <a href="<?php echo home_url('/admin/settings/account-types/'); ?>" class="saw-button saw-button-secondary">
+            <a href="<?php echo esc_url(home_url('/admin/settings/account-types/')); ?>" class="saw-button saw-button-secondary">
                 <span class="dashicons dashicons-no-alt"></span>
                 Zrušit
             </a>

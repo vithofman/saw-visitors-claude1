@@ -3,7 +3,7 @@
  * Account Types Module Controller - COMPLETE
  * 
  * @package SAW_Visitors
- * @version 2.2.0 - COMPLETE: Full CRUD implementation
+ * @version 2.3.0 - FIXED: Color picker assets loading
  */
 
 if (!defined('ABSPATH')) {
@@ -14,6 +14,8 @@ class SAW_Module_Account_Types_Controller extends SAW_Base_Controller
 {
     use SAW_AJAX_Handlers;
     
+    private $color_picker;
+    
     public function __construct() {
         $module_path = SAW_VISITORS_PLUGIN_DIR . 'includes/modules/account-types/';
         
@@ -23,11 +25,17 @@ class SAW_Module_Account_Types_Controller extends SAW_Base_Controller
         
         require_once $module_path . 'model.php';
         $this->model = new SAW_Module_Account_Types_Model($this->config);
+        
+        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/color-picker/class-saw-color-picker.php';
+        $this->color_picker = new SAW_Color_Picker();
+        
+        add_action('admin_enqueue_scripts', [$this, 'enqueue_color_picker_assets']);
     }
     
-    /**
-     * List view
-     */
+    public function enqueue_color_picker_assets() {
+        $this->color_picker->enqueue_assets();
+    }
+    
     public function index() {
         $this->verify_module_access();
         
@@ -69,9 +77,6 @@ class SAW_Module_Account_Types_Controller extends SAW_Base_Controller
         $this->render_with_layout($content, $this->config['plural']);
     }
     
-    /**
-     * Create new account type
-     */
     public function create() {
         $this->verify_module_access();
         
@@ -79,7 +84,6 @@ class SAW_Module_Account_Types_Controller extends SAW_Base_Controller
             wp_die('Nemáte oprávnění vytvářet typy účtů');
         }
         
-        // Handle POST
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!wp_verify_nonce($_POST['saw_nonce'] ?? '', 'saw_account_types_form')) {
                 wp_die('Neplatný bezpečnostní token');
@@ -113,7 +117,6 @@ class SAW_Module_Account_Types_Controller extends SAW_Base_Controller
             $this->redirect(home_url('/admin/settings/account-types/'));
         }
         
-        // Render form
         $item = [];
         
         ob_start();
@@ -136,9 +139,6 @@ class SAW_Module_Account_Types_Controller extends SAW_Base_Controller
         $this->render_with_layout($content, 'Nový typ účtu');
     }
     
-    /**
-     * Edit existing account type
-     */
     public function edit($id) {
         $this->verify_module_access();
         
@@ -157,7 +157,6 @@ class SAW_Module_Account_Types_Controller extends SAW_Base_Controller
             }
         }
         
-        // Handle POST
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!wp_verify_nonce($_POST['saw_nonce'] ?? '', 'saw_account_types_form')) {
                 wp_die('Neplatný bezpečnostní token');
@@ -192,7 +191,6 @@ class SAW_Module_Account_Types_Controller extends SAW_Base_Controller
             $this->redirect(home_url('/admin/settings/account-types/'));
         }
         
-        // Render form
         ob_start();
         
         if (class_exists('SAW_Module_Style_Manager')) {
@@ -213,13 +211,9 @@ class SAW_Module_Account_Types_Controller extends SAW_Base_Controller
         $this->render_with_layout($content, 'Upravit typ účtu');
     }
     
-    /**
-     * Prepare form data for save
-     */
     private function prepare_form_data($post) {
         $data = [];
         
-        // Text fields
         $text_fields = ['name', 'display_name', 'description', 'color'];
         foreach ($text_fields as $field) {
             if (isset($post[$field])) {
@@ -227,12 +221,10 @@ class SAW_Module_Account_Types_Controller extends SAW_Base_Controller
             }
         }
         
-        // Price
         if (isset($post['price'])) {
             $data['price'] = floatval($post['price']);
         }
         
-        // Features (textarea to array)
         if (isset($post['features'])) {
             $features_text = sanitize_textarea_field($post['features']);
             $features_array = array_filter(
@@ -244,22 +236,16 @@ class SAW_Module_Account_Types_Controller extends SAW_Base_Controller
             $data['features'] = $features_array;
         }
         
-        // Sort order
         if (isset($post['sort_order'])) {
             $data['sort_order'] = intval($post['sort_order']);
         }
         
-        // Is active (checkbox)
         $data['is_active'] = isset($post['is_active']) ? 1 : 0;
         
         return $data;
     }
     
-    /**
-     * Before save hook
-     */
     protected function before_save($data) {
-        // Validate color format
         if (!empty($data['color']) && !preg_match('/^#[0-9a-f]{6}$/i', $data['color'])) {
             return new WP_Error('invalid_color', 'Neplatný formát barvy');
         }
@@ -267,11 +253,7 @@ class SAW_Module_Account_Types_Controller extends SAW_Base_Controller
         return $data;
     }
     
-    /**
-     * After save hook
-     */
     protected function after_save($id) {
-        // Clear cache
         delete_transient('account_types_list');
     }
 }

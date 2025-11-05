@@ -1,63 +1,91 @@
 /**
- * SAW Forms
- * Inputs, selects, textareas, labels, form layouts
+ * SAW Forms - v4.0 FINAL
  * 
  * @package SAW_Visitors
- * @version 1.0.0
+ * @version 4.0.0
  */
 
 .saw-form-container {
-    max-width: var(--saw-max-width-2xl);
-    margin: 0 auto;
-    padding: 0 var(--saw-space-xl);
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
 }
 
 .saw-form-section {
     background: #ffffff;
-    border: var(--saw-border-width) solid var(--saw-border-color);
-    border-radius: var(--saw-border-radius-lg);
-    margin-bottom: var(--saw-space-xl);
+    border: none;
+    border-radius: 12px;
+    margin-bottom: 20px;
     overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
+}
+
+.saw-form-section:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .saw-form-section summary {
     display: flex;
     align-items: center;
-    gap: var(--saw-space-md);
-    padding: 18px var(--saw-space-2xl);
+    gap: 14px;
+    padding: 18px 28px;
     cursor: pointer;
     user-select: none;
-    background: var(--saw-gray-50);
-    border-bottom: var(--saw-border-width) solid transparent;
-    transition: all var(--saw-transition-base);
-    font-size: var(--saw-font-size-lg);
-    font-weight: var(--saw-font-weight-semibold);
-    color: var(--saw-gray-900);
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
+    font-size: 17px;
+    font-weight: 600;
+    color: #111827;
 }
 
 .saw-form-section summary:hover {
-    background: var(--saw-gray-100);
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
 }
 
 .saw-form-section summary .dashicons {
-    font-size: var(--saw-icon-size-lg);
-    width: var(--saw-icon-size-lg);
-    height: var(--saw-icon-size-lg);
-    color: var(--saw-primary);
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+    color: #2563eb;
+    background: #eff6ff;
+    border-radius: 10px;
+    padding: 8px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.saw-form-section summary:hover .dashicons {
+    background: #2563eb;
+    color: #ffffff;
+    transform: scale(1.1);
+}
+
+.saw-form-section[open] {
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.12);
 }
 
 .saw-form-section[open] summary {
-    border-bottom-color: var(--saw-border-color);
+    border-bottom-color: #2563eb;
+    background: #ffffff;
+}
+
+.saw-form-section[open] summary .dashicons {
+    background: #2563eb;
+    color: #ffffff;
 }
 
 .saw-form-section-content {
-    padding: var(--saw-space-2xl);
+    padding: 28px;
+    background: #ffffff;
 }
 
 .saw-form-row {
-    display: flex;
-    gap: var(--saw-space-xl);
-    margin-bottom: var(--saw-space-xl);
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    margin-bottom: 20px;
 }
 
 .saw-form-row:last-child {
@@ -66,82 +94,76 @@
 
 .saw-form-group {
     margin-bottom: 0;
-    width: 100%;
-}
-
-.saw-col-3 {
-    flex: 1 1 calc(25% - var(--saw-space-lg));
-    min-width: 0;
-}
-
-.saw-col-4 {
-    flex: 1 1 calc(33.333% - var(--saw-space-lg));
-    min-width: 0;
 }
 
 .saw-col-6 {
-    flex: 1 1 calc(50% - var(--saw-space-sm));
-    min-width: 0;
+    grid-column: span 1;
 }
 
-.saw-col-8 {
-    flex: 1 1 calc(66.666% - var(--saw-space-sm));
-    min-width: 0;
+.saw-col-12 {
+    grid-column: span 2;
 }
 
 .saw-label {
     display: block;
-    margin-bottom: var(--saw-space-sm);
-    font-size: var(--saw-font-size-base);
-    font-weight: var(--saw-font-weight-semibold);
-    color: var(--saw-gray-900);
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
 }
 
 .saw-label.saw-required::after {
     content: " *";
-    color: var(--saw-danger);
+    color: #ef4444;
+    font-weight: 700;
 }
 
 .saw-input,
 .saw-select,
 .saw-textarea {
     width: 100%;
-    padding: var(--saw-input-padding);
-    border: var(--saw-border-width) solid var(--saw-border-color-dark);
-    border-radius: var(--saw-border-radius-md);
-    font-size: var(--saw-font-size-base);
-    line-height: var(--saw-line-height-normal);
-    color: var(--saw-gray-900);
+    padding: 12px 14px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 15px;
+    line-height: 1.5;
+    color: #111827;
     background: #ffffff;
-    transition: border-color var(--saw-transition-base), box-shadow var(--saw-transition-base);
+    transition: all 0.2s ease;
     box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.saw-input:hover,
+.saw-select:hover,
+.saw-textarea:hover {
+    border-color: #d1d5db;
 }
 
 .saw-input:focus,
 .saw-select:focus,
 .saw-textarea:focus {
     outline: none;
-    border-color: var(--saw-primary);
-    box-shadow: 0 0 0 3px var(--saw-primary-light);
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px #eff6ff;
 }
 
 .saw-input:disabled,
 .saw-select:disabled,
 .saw-textarea:disabled {
-    background: var(--saw-gray-100);
-    color: var(--saw-gray-500);
+    background: #f9fafb;
+    color: #6b7280;
     cursor: not-allowed;
 }
 
 .saw-input::placeholder,
 .saw-textarea::placeholder {
-    color: var(--saw-gray-400);
+    color: #9ca3af;
 }
 
 .saw-textarea {
     resize: vertical;
-    font-family: inherit;
-    min-height: 80px;
+    min-height: 100px;
 }
 
 .saw-select {
@@ -150,82 +172,18 @@
     background-image: url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2720%27 height=%2720%27 viewBox=%270 0 20 20%27%3E%3Cpath fill=%27%232563eb%27 d=%27M10 12.5l-5-5h10z%27/%3E%3C/svg%3E');
     background-repeat: no-repeat;
     background-position: right 12px center;
-    background-size: 18px;
-    padding-right: 40px;
+    background-size: 20px;
+    padding-right: 44px;
 }
 
-.saw-help-text {
-    display: block;
-    margin-top: var(--saw-space-sm);
-    font-size: var(--saw-font-size-sm);
-    color: var(--saw-gray-500);
-    line-height: var(--saw-line-height-normal);
-}
-
-.saw-form-error {
-    display: block;
-    margin-top: var(--saw-space-sm);
-    font-size: var(--saw-font-size-sm);
-    color: var(--saw-danger);
-}
-
-.saw-form-group.has-error .saw-input,
-.saw-form-group.has-error .saw-select,
-.saw-form-group.has-error .saw-textarea {
-    border-color: var(--saw-danger);
-}
-
-.saw-form-group.has-error .saw-input:focus,
-.saw-form-group.has-error .saw-select:focus,
-.saw-form-group.has-error .saw-textarea:focus {
-    box-shadow: 0 0 0 3px var(--saw-danger-light);
-}
-
-.saw-form-actions {
-    display: flex;
-    gap: var(--saw-space-md);
-    padding-top: var(--saw-space-3xl);
-    border-top: var(--saw-border-width-thick) solid var(--saw-gray-200);
-    margin-top: var(--saw-space-5xl);
-}
-
-.saw-checkbox-wrapper {
-    display: flex;
-    align-items: center;
-    gap: var(--saw-space-sm);
-}
-
-.saw-checkbox {
-    width: 18px;
-    height: 18px;
-    border: var(--saw-border-width-thick) solid var(--saw-border-color-dark);
-    border-radius: var(--saw-border-radius-sm);
-    cursor: pointer;
-    transition: all var(--saw-transition-base);
-}
-
-.saw-checkbox:checked {
-    background: var(--saw-primary);
-    border-color: var(--saw-primary);
-}
-
-.saw-checkbox:focus {
-    outline: none;
-    box-shadow: 0 0 0 3px var(--saw-primary-light);
-}
-
-.saw-checkbox-label {
-    font-size: var(--saw-font-size-base);
-    color: var(--saw-gray-700);
-    cursor: pointer;
-}
-
-.saw-input-group {
+.saw-input-with-addon {
     display: flex;
     align-items: stretch;
+    border-radius: 8px;
+    overflow: hidden;
 }
 
-.saw-input-group .saw-input {
+.saw-input-with-addon .saw-input {
     border-top-right-radius: 0;
     border-bottom-right-radius: 0;
     border-right: none;
@@ -235,27 +193,271 @@
 .saw-input-addon {
     display: flex;
     align-items: center;
-    padding: 0 var(--saw-space-lg);
-    background: var(--saw-gray-50);
-    border: var(--saw-border-width) solid var(--saw-border-color-dark);
+    padding: 0 18px;
+    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+    border: 2px solid #e5e7eb;
     border-left: none;
-    border-top-right-radius: var(--saw-border-radius-md);
-    border-bottom-right-radius: var(--saw-border-radius-md);
-    font-size: var(--saw-font-size-base);
-    font-weight: var(--saw-font-weight-semibold);
-    color: var(--saw-gray-600);
+    font-size: 15px;
+    font-weight: 700;
+    color: #374151;
+    min-width: 60px;
+    justify-content: center;
 }
 
-@media (max-width: 1024px) {
+.saw-input-with-addon:focus-within .saw-input-addon {
+    border-color: #2563eb;
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+.saw-checkbox-label {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 16px;
+    cursor: pointer;
+    padding: 18px 22px;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    background: #fafafa;
+    transition: all 0.2s ease;
+    min-width: 400px;
+}
+
+.saw-checkbox-label:hover {
+    background: #ffffff;
+    border-color: #2563eb;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+    transform: translateY(-1px);
+}
+
+.saw-checkbox-label input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+    border: 2px solid #d1d5db;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    margin-top: 1px;
+    appearance: none;
+    background: #ffffff;
+    position: relative;
+}
+
+.saw-checkbox-label input[type="checkbox"]:checked {
+    background: #2563eb;
+    border-color: #2563eb;
+}
+
+.saw-checkbox-label input[type="checkbox"]:checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.saw-checkbox-label input[type="checkbox"]:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px #eff6ff;
+}
+
+.saw-checkbox-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.saw-checkbox-text strong {
+    font-size: 15px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.saw-checkbox-text small {
+    font-size: 13px;
+    color: #6b7280;
+    line-height: 1.4;
+}
+
+.saw-help-text {
+    display: block;
+    margin-top: 6px;
+    font-size: 13px;
+    color: #6b7280;
+    line-height: 1.4;
+}
+
+.saw-form-error {
+    display: block;
+    margin-top: 6px;
+    font-size: 13px;
+    color: #ef4444;
+    font-weight: 600;
+}
+
+.saw-form-group.has-error .saw-input,
+.saw-form-group.has-error .saw-select,
+.saw-form-group.has-error .saw-textarea {
+    border-color: #ef4444;
+}
+
+.saw-form-group.has-error .saw-input:focus,
+.saw-form-group.has-error .saw-select:focus,
+.saw-form-group.has-error .saw-textarea:focus {
+    box-shadow: 0 0 0 3px #fee2e2;
+}
+
+.saw-form-actions {
+    display: flex;
+    gap: 14px;
+    padding-top: 32px;
+    border-top: 2px solid #f3f4f6;
+    margin-top: 40px;
+}
+
+.saw-page-header {
+    margin-bottom: 28px;
+}
+
+.saw-page-header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.saw-page-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+}
+
+.saw-back-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: #ffffff;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.saw-back-button:hover {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+
+.saw-back-button .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+.saw-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px 24px;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.saw-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.saw-button-primary {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: #ffffff;
+}
+
+.saw-button-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+}
+
+.saw-button-secondary {
+    background: #ffffff;
+    color: #374151;
+    border-color: #d1d5db;
+}
+
+.saw-button-secondary:hover:not(:disabled) {
+    background: #f9fafb;
+    border-color: #9ca3af;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.saw-button .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+@media (max-width: 768px) {
     .saw-form-row {
-        flex-direction: column;
-        gap: var(--saw-space-xl);
+        grid-template-columns: 1fr;
     }
     
-    .saw-col-3,
-    .saw-col-4,
     .saw-col-6,
-    .saw-col-8 {
-        flex: 1 1 100%;
+    .saw-col-12 {
+        grid-column: span 1;
+    }
+    
+    .saw-form-section summary {
+        padding: 16px 20px;
+        font-size: 16px;
+        gap: 12px;
+    }
+    
+    .saw-form-section-content {
+        padding: 20px;
+    }
+    
+    .saw-form-actions {
+        flex-direction: column;
+    }
+    
+    .saw-button {
+        width: 100%;
+    }
+    
+    .saw-page-title {
+        font-size: 24px;
+    }
+    
+    .saw-page-header-content {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .saw-checkbox-label {
+        min-width: auto;
+        width: 100%;
     }
 }
