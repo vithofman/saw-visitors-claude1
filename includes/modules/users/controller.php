@@ -443,17 +443,23 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
                 
                 if (file_exists($password_file)) {
                     require_once $password_file;
-                    
-                    $password_handler = new SAW_Password();
-                    $token = $password_handler->create_setup_token($user_id);
-                    
-                    if ($token) {
-                        $password_handler->send_welcome_email(
-                            $this->pending_setup_email['email'],
-                            $this->pending_setup_email['role'],
-                            $this->pending_setup_email['first_name'],
-                            $token
-                        );
+                }
+            }
+            
+            if (class_exists('SAW_Password')) {
+                $password_handler = new SAW_Password();
+                $token = $password_handler->create_setup_token($user_id);
+                
+                if ($token) {
+                    $password_handler->send_welcome_email(
+                        $this->pending_setup_email['email'],
+                        $this->pending_setup_email['role'],
+                        $this->pending_setup_email['first_name'],
+                        $token
+                    );
+                } else {
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('[Users] Failed to create setup token for user: ' . $user_id);
                     }
                 }
             }
