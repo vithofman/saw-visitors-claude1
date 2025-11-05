@@ -23,9 +23,9 @@ class SAW_Module_Permissions_Controller extends SAW_Base_Controller {
         require_once __DIR__ . '/model.php';
         $this->model = new SAW_Module_Permissions_Model($this->config);
         
-        add_action('wp_ajax_saw_update_permission', [$this, 'ajax_update_permission']);
-        add_action('wp_ajax_saw_get_permissions_for_role', [$this, 'ajax_get_permissions_for_role']);
-        add_action('wp_ajax_saw_reset_permissions', [$this, 'ajax_reset_permissions']);
+        // ✅ NOTE: Custom AJAX actions are now registered in SAW_Visitors::register_module_ajax_handlers()
+        // This ensures they're hooked BEFORE WordPress processes AJAX requests
+        // Controllers load on-demand (lazy loading), so registration here would be TOO LATE
     }
     
     public function index() {

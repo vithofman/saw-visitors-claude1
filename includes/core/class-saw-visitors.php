@@ -207,6 +207,90 @@ class SAW_Visitors {
                 $instance->handle_module_ajax_delete($slug);
             });
         }
+        
+        // ✅ CRITICAL FIX: Register custom AJAX actions for permissions module
+        // Permissions module has custom business logic (not standard CRUD) so needs explicit registration
+        add_action('wp_ajax_saw_update_permission', [$this, 'handle_permissions_update']);
+        add_action('wp_ajax_saw_get_permissions_for_role', [$this, 'handle_permissions_get_for_role']);
+        add_action('wp_ajax_saw_reset_permissions', [$this, 'handle_permissions_reset']);
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[AJAX Registration] Custom permissions actions registered: saw_update_permission, saw_get_permissions_for_role, saw_reset_permissions');
+        }
+    }
+    
+    /**
+     * Handle permissions update AJAX
+     */
+    public function handle_permissions_update() {
+        $config = SAW_Module_Loader::load('permissions');
+        
+        if (!$config) {
+            wp_send_json_error(['message' => 'Permissions module not found']);
+            return;
+        }
+        
+        if (!class_exists('SAW_Module_Permissions_Controller')) {
+            wp_send_json_error(['message' => 'Permissions controller not found']);
+            return;
+        }
+        
+        $controller = new SAW_Module_Permissions_Controller();
+        
+        if (method_exists($controller, 'ajax_update_permission')) {
+            $controller->ajax_update_permission();
+        } else {
+            wp_send_json_error(['message' => 'Method ajax_update_permission not found']);
+        }
+    }
+    
+    /**
+     * Handle get permissions for role AJAX
+     */
+    public function handle_permissions_get_for_role() {
+        $config = SAW_Module_Loader::load('permissions');
+        
+        if (!$config) {
+            wp_send_json_error(['message' => 'Permissions module not found']);
+            return;
+        }
+        
+        if (!class_exists('SAW_Module_Permissions_Controller')) {
+            wp_send_json_error(['message' => 'Permissions controller not found']);
+        }
+        
+        $controller = new SAW_Module_Permissions_Controller();
+        
+        if (method_exists($controller, 'ajax_get_permissions_for_role')) {
+            $controller->ajax_get_permissions_for_role();
+        } else {
+            wp_send_json_error(['message' => 'Method ajax_get_permissions_for_role not found']);
+        }
+    }
+    
+    /**
+     * Handle reset permissions AJAX
+     */
+    public function handle_permissions_reset() {
+        $config = SAW_Module_Loader::load('permissions');
+        
+        if (!$config) {
+            wp_send_json_error(['message' => 'Permissions module not found']);
+            return;
+        }
+        
+        if (!class_exists('SAW_Module_Permissions_Controller')) {
+            wp_send_json_error(['message' => 'Permissions controller not found']);
+            return;
+        }
+        
+        $controller = new SAW_Module_Permissions_Controller();
+        
+        if (method_exists($controller, 'ajax_reset_permissions')) {
+            $controller->ajax_reset_permissions();
+        } else {
+            wp_send_json_error(['message' => 'Method ajax_reset_permissions not found']);
+        }
     }
     
     private function handle_module_ajax_detail($slug) {
