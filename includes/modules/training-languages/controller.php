@@ -1,9 +1,16 @@
 <?php
 /**
- * Training Languages Controller - REFACTORED
+ * Training Languages Controller - REFACTORED v2.2 FINAL
+ * 
+ * FIXES:
+ * - ✅ ALL 3 inject_module_css() now use 'training-languages' slug
+ * - ✅ Removed manual AJAX registration (SAW_Visitors does it automatically)
+ * - ✅ Uses SAW_Context for customer_id (no sessions)
+ * - ✅ Full CRUD implementation
+ * - ✅ Proper error handling
  * 
  * @package SAW_Visitors
- * @version 2.0.0
+ * @version 2.2.0
  */
 
 if (!defined('ABSPATH')) {
@@ -28,8 +35,13 @@ class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller
         if (file_exists($module_path . 'class-auto-setup.php')) {
             require_once $module_path . 'class-auto-setup.php';
         }
+        
+        // ✅ NO manual AJAX registration - SAW_Visitors::register_module_ajax_handlers() does it
     }
     
+    /**
+     * Index - List view
+     */
     public function index() {
         $this->verify_module_access();
         
@@ -53,9 +65,10 @@ class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller
         
         ob_start();
         
+        // ✅ FIXED #1: Use 'training-languages' slug
         if (class_exists('SAW_Module_Style_Manager')) {
             $style_manager = SAW_Module_Style_Manager::get_instance();
-            echo $style_manager->inject_module_css($this->entity);
+            echo $style_manager->inject_module_css('training-languages');
         }
         
         echo '<div class="saw-module-' . esc_attr($this->entity) . '">';
@@ -71,6 +84,9 @@ class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller
         $this->render_with_layout($content, $this->config['plural']);
     }
     
+    /**
+     * Create - New language
+     */
     public function create() {
         $this->verify_module_access();
         
@@ -117,17 +133,19 @@ class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller
         // Get branches for customer
         global $wpdb;
         $branches = $wpdb->get_results($wpdb->prepare(
-            "SELECT id, name, code, city FROM {$wpdb->prefix}saw_branches 
+            "SELECT id, name, code, city FROM %i 
              WHERE customer_id = %d AND is_active = 1 
              ORDER BY name ASC",
+            $wpdb->prefix . 'saw_branches',
             $customer_id
         ), ARRAY_A);
         
         ob_start();
         
+        // ✅ FIXED #2: Use 'training-languages' slug
         if (class_exists('SAW_Module_Style_Manager')) {
             $style_manager = SAW_Module_Style_Manager::get_instance();
-            echo $style_manager->inject_module_css($this->entity);
+            echo $style_manager->inject_module_css('training-languages');
         }
         
         echo '<div class="saw-module-' . esc_attr($this->entity) . '">';
@@ -143,6 +161,9 @@ class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller
         $this->render_with_layout($content, 'Nový jazyk');
     }
     
+    /**
+     * Edit - Update language
+     */
     public function edit($id) {
         $this->verify_module_access();
         
@@ -200,9 +221,10 @@ class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller
         
         ob_start();
         
+        // ✅ FIXED #3: Use 'training-languages' slug
         if (class_exists('SAW_Module_Style_Manager')) {
             $style_manager = SAW_Module_Style_Manager::get_instance();
-            echo $style_manager->inject_module_css($this->entity);
+            echo $style_manager->inject_module_css('training-languages');
         }
         
         echo '<div class="saw-module-' . esc_attr($this->entity) . '">';
@@ -218,6 +240,12 @@ class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller
         $this->render_with_layout($content, 'Upravit jazyk');
     }
     
+    /**
+     * Prepare form data from POST
+     * 
+     * @param array $post POST data
+     * @return array Sanitized data
+     */
     private function prepare_form_data($post) {
         $data = [];
         
@@ -249,7 +277,14 @@ class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller
         return $data;
     }
     
+    /**
+     * Before save hook - auto-set customer_id
+     * 
+     * @param array $data Data to save
+     * @return array|WP_Error Modified data or error
+     */
     protected function before_save($data) {
+        // Auto-set customer_id from context
         if (empty($data['customer_id'])) {
             $data['customer_id'] = SAW_Context::get_customer_id();
         }
@@ -257,6 +292,11 @@ class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller
         return $data;
     }
     
+    /**
+     * After save hook - cache invalidation
+     * 
+     * @param int $id Item ID
+     */
     protected function after_save($id) {
         // Cache disabled - no invalidation needed
     }

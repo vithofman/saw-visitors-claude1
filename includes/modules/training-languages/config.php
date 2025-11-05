@@ -1,16 +1,31 @@
 <?php
+/**
+ * Training Languages Module Configuration
+ * 
+ * CRITICAL FIX: Entity must use UNDERSCORES for AJAX to work!
+ * 
+ * @package SAW_Visitors
+ * @version 2.1.0 - FIXED: entity name with underscore
+ */
+
 if (!defined('ABSPATH')) {
     exit;
 }
 
 return [
-    'entity' => 'training-languages',
+    // ✅ CRITICAL: Use UNDERSCORES, not dashes!
+    'slug' => 'training-languages',
+    'entity' => 'training_languages',
+    
     'table' => 'saw_training_languages',
     'singular' => 'Jazyk',
     'plural' => 'Jazyky školení',
     'route' => 'admin/training-languages',
     'icon' => '🌐',
     'filter_by_customer' => true,
+    
+    // ✅ Customer isolation enabled
+    'has_customer_isolation' => true,
     
     'capabilities' => [
         'list' => 'read',
@@ -68,7 +83,7 @@ return [
     ],
     
     'cache' => [
-        'enabled' => true,
+        'enabled' => false,  // Disabled for development
         'ttl' => 1800,
         'invalidate_on' => ['save', 'delete'],
     ],

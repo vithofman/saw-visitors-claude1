@@ -1,286 +1,97 @@
-/* =================================================================
-   TRAINING LANGUAGES - COMPLETE FIXED STYLES
-   ================================================================= */
+/* ===================================
+   TRAINING LANGUAGES - MODULE SPECIFIC STYLES
+   =================================== */
 
-/* --- RESET & OVERRIDES --- */
-/* Odstraníme nežádoucí bordery z parent elementů */
-.saw-form-section {
-    border: none !important;
-    box-shadow: none !important;
-    background: transparent !important;
-    padding: 0 !important;
-    margin-bottom: 32px !important;
-}
-
-.saw-form-container {
-    background: #ffffff;
-    padding: 0 !important;
-    max-width: 100% !important;
-}
-
-/* --- ZÁKLADNÍ FORMULÁŘOVÉ SEKCE --- */
-.saw-section-title {
-    font-size: 18px;
-    font-weight: 600;
-    color: #0f172a;
-    margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.saw-section-description {
-    color: #64748b;
-    font-size: 14px;
-    margin-bottom: 20px;
-    line-height: 1.5;
-}
-
-/* --- FORM ROW --- */
-.saw-form-row {
+/* Language Basic Row - Horizontal Layout */
+.saw-language-basic-row {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
-    margin-bottom: 24px;
+    grid-template-columns: 1fr 320px;
+    gap: 24px;
+    align-items: start;
 }
 
-/* --- FORM GROUPS --- */
-.saw-form-group {
+.saw-language-select-col {
     display: flex;
     flex-direction: column;
     gap: 8px;
 }
 
-.saw-label {
-    font-size: 14px;
-    font-weight: 600;
-    color: #374151;
+.saw-language-preview-col {
     display: flex;
-    align-items: center;
-    gap: 4px;
+    flex-direction: column;
+    gap: 8px;
 }
 
-.saw-required {
-    color: #dc2626;
-}
-
-/* --- INPUTY - JEDNOTNÁ VÝŠKA --- */
-.saw-input,
-.saw-input[type="text"],
-.saw-input[type="number"],
-select.saw-input {
+/* Flag Preview Large */
+.saw-flag-preview-large {
     width: 100%;
-    height: 44px !important; /* Fixní výška pro všechny inputy */
-    padding: 0 12px !important;
-    border: 2px solid #e2e8f0 !important;
-    border-radius: 8px !important;
-    font-size: 15px !important;
-    font-weight: 500;
-    color: #0f172a !important;
-    background: #ffffff !important;
-    transition: all 0.2s ease !important;
-    box-shadow: none !important;
-    line-height: normal !important;
-}
-
-.saw-input:focus {
-    border-color: #2563eb !important;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
-    outline: none !important;
-}
-
-.saw-input:disabled {
-    background: #f8fafc !important;
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-/* --- VLAJKA INPUT S NÁHLEDEM --- */
-.saw-flag-input-wrapper {
-    position: relative;
+    min-height: 160px;
     display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.saw-flag-input {
-    flex: 1;
-    height: 44px !important;
-    font-size: 15px !important;
-    padding: 0 12px !important;
-    text-align: left !important;
-}
-
-/* Náhled vlajky vedle inputu */
-.saw-flag-preview {
-    width: 48px;
-    height: 48px;
-    display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    border: 2px solid #e2e8f0;
-    border-radius: 10px;
-    font-size: 28px;
-    transition: all 0.2s ease;
-    flex-shrink: 0;
+    gap: 12px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: 3px solid #667eea;
+    border-radius: 16px;
+    padding: 24px;
+    transition: all 0.3s ease;
 }
 
-.saw-flag-preview:empty::before {
+.saw-flag-preview-large:empty {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-color: #e2e8f0;
+}
+
+.saw-flag-preview-large:empty::before {
     content: '🏳️';
+    font-size: 64px;
     opacity: 0.3;
 }
 
-.saw-flag-preview.has-flag {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-color: #667eea;
-    transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
+.saw-flag-emoji {
+    font-size: 72px;
+    line-height: 1;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-/* --- HELP TEXT --- */
-.saw-help-text {
-    font-size: 13px;
-    color: #64748b;
-    margin: 0;
-    line-height: 1.4;
-}
-
-/* =================================================================
-   BRANCHES GRID - MODERNÍ CARD DESIGN
-   ================================================================= */
-
-.saw-branches-grid {
-    border-radius: 16px;
-    overflow: hidden;
-    background: #ffffff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    transition: box-shadow 0.3s ease;
-    margin-top: 20px;
-}
-
-.saw-branches-grid:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
-.saw-branches-header {
-    display: grid;
-    grid-template-columns: 1fr 140px 140px 120px;
-    gap: 16px;
-    padding: 20px 24px;
-    background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+.saw-flag-name {
+    font-size: 20px;
     font-weight: 700;
-    font-size: 12px;
-    color: #475569;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    text-align: center;
 }
 
-.saw-branch-row {
-    display: grid;
-    grid-template-columns: 1fr 140px 140px 120px;
-    gap: 16px;
-    padding: 20px 24px;
-    position: relative;
-    align-items: center;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.saw-branch-row::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 24px;
-    right: 24px;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, #e2e8f0 20%, #e2e8f0 80%, transparent);
-}
-
-.saw-branch-row:last-child::after {
-    display: none;
-}
-
-.saw-branch-row:hover {
-    background: #f8fafc;
-    transform: translateX(4px);
-}
-
-.saw-branch-row:hover::after {
-    opacity: 0;
-}
-
-/* --- BRANCH COLUMNS --- */
-.saw-branch-col-name {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.saw-branch-col-name strong {
-    font-size: 15px;
+.saw-flag-code {
+    font-size: 14px;
     font-weight: 600;
-    color: #0f172a;
-    letter-spacing: -0.01em;
-}
-
-.saw-branch-code {
-    display: inline-block;
-    padding: 4px 10px;
-    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    color: rgba(255, 255, 255, 0.85);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    padding: 4px 12px;
+    background: rgba(0, 0, 0, 0.15);
     border-radius: 6px;
-    font-size: 11px;
-    font-weight: 700;
-    color: #475569;
-    font-family: 'SF Mono', 'Monaco', monospace;
-    letter-spacing: 0.5px;
-    transition: all 0.2s ease;
-    margin-right: 8px;
+    backdrop-filter: blur(10px);
 }
 
-.saw-branch-code:hover {
-    background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
-    transform: translateY(-1px);
-}
-
-.saw-branch-city {
-    font-size: 13px;
-    color: #64748b;
-    font-weight: 500;
-}
-
-.saw-branch-col-active,
-.saw-branch-col-default,
-.saw-branch-col-order {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* --- CHECKBOXY --- */
-.saw-checkbox-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    padding: 6px 10px;
-    border-radius: 8px;
-    transition: background 0.2s ease;
-}
-
-.saw-checkbox-wrapper:hover {
-    background: #f1f5f9;
-}
-
-/* "Vybrat vše" checkbox v headeru */
+/* Select All Wrapper */
 .saw-select-all-wrapper {
-    font-weight: 700;
-    padding: 4px 8px;
-    background: rgba(37, 99, 235, 0.05);
-    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 2px solid #bfdbfe;
+    border-radius: 10px;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s ease;
 }
 
 .saw-select-all-wrapper:hover {
-    background: rgba(37, 99, 235, 0.1);
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    border-color: #93c5fd;
 }
 
 .saw-select-all-checkbox {
@@ -290,246 +101,267 @@ select.saw-input {
     accent-color: #2563eb;
 }
 
-/* Indeterminate stav (částečně zaškrtnuto) */
-.saw-select-all-checkbox:indeterminate {
-    opacity: 0.7;
+/* ===================================
+   BRANCHES ACTIVATION GRID
+   =================================== */
+
+.saw-branches-activation-grid {
+    background: #ffffff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
-.saw-checkbox-wrapper input[type="checkbox"] {
-    width: 20px;
-    height: 20px;
+.saw-branches-activation-header {
+    display: grid;
+    grid-template-columns: 1fr 100px 100px 100px;
+    gap: 16px;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+    font-weight: 600;
+    font-size: 13px;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    align-items: center;
+}
+
+.saw-branches-activation-header > div {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.saw-branches-activation-header .saw-branch-col-name {
+    justify-content: flex-start;
+}
+
+.saw-branch-activation-row {
+    display: grid;
+    grid-template-columns: 1fr 100px 100px 100px;
+    gap: 16px;
+    padding: 18px 20px;
+    border-bottom: 1px solid #f1f5f9;
+    align-items: center;
+    transition: background 0.2s ease;
+}
+
+.saw-branch-activation-row:hover {
+    background: #f8fafc;
+}
+
+.saw-branch-activation-row:last-child {
+    border-bottom: none;
+}
+
+/* Branch Name Column */
+.saw-branch-col-name {
+    display: flex;
+    align-items: center;
+}
+
+.saw-branch-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.saw-branch-name-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.saw-branch-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.saw-branch-code {
+    display: inline-block;
+    padding: 2px 8px;
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #475569;
+    font-family: 'SF Mono', 'Monaco', monospace;
+    letter-spacing: 0.3px;
+}
+
+.saw-branch-city {
+    font-size: 13px;
+    color: #64748b;
+}
+
+/* Active Column - Toggle Switch */
+.saw-branch-col-active,
+.saw-branch-col-default,
+.saw-branch-col-order {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.saw-switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 26px;
+}
+
+.saw-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.saw-switch-slider {
+    position: absolute;
     cursor: pointer;
-    accent-color: #2563eb;
-    transition: transform 0.2s ease;
-    margin: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #cbd5e1;
+    transition: 0.3s;
+    border-radius: 26px;
 }
 
-.saw-checkbox-wrapper input[type="checkbox"]:checked {
-    transform: scale(1.1);
+.saw-switch-slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.saw-checkbox-wrapper input[type="checkbox"]:disabled {
-    opacity: 0.4;
+.saw-switch input:checked + .saw-switch-slider {
+    background-color: #2563eb;
+}
+
+.saw-switch input:checked + .saw-switch-slider:before {
+    transform: translateX(22px);
+}
+
+.saw-switch:hover .saw-switch-slider {
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Default Column - Radio Button */
+.saw-radio-wrapper {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+}
+
+.saw-radio-wrapper input[type="radio"] {
+    opacity: 0;
+    position: absolute;
+    width: 0;
+    height: 0;
+}
+
+.saw-radio-mark {
+    display: block;
+    width: 22px;
+    height: 22px;
+    border: 2px solid #cbd5e1;
+    border-radius: 50%;
+    background: white;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.saw-radio-mark:after {
+    content: "";
+    position: absolute;
+    display: none;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #2563eb;
+}
+
+.saw-radio-wrapper input:checked ~ .saw-radio-mark {
+    border-color: #2563eb;
+}
+
+.saw-radio-wrapper input:checked ~ .saw-radio-mark:after {
+    display: block;
+}
+
+.saw-radio-wrapper input:disabled ~ .saw-radio-mark {
+    background: #f1f5f9;
+    border-color: #e2e8f0;
     cursor: not-allowed;
 }
 
-.saw-checkbox-label {
-    font-size: 13px;
-    color: #475569;
-    font-weight: 500;
-    user-select: none;
+.saw-radio-wrapper:not(:has(input:disabled)):hover .saw-radio-mark {
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
-/* --- ORDER INPUT --- */
+/* Order Input */
 .saw-order-input {
-    width: 80px !important;
-    height: 40px !important;
-    text-align: center !important;
-    font-weight: 600 !important;
-    border: 2px solid #e2e8f0 !important;
-    border-radius: 8px !important;
-    padding: 8px !important;
-    font-size: 14px !important;
+    width: 70px;
+    height: 36px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 14px;
+    border: 2px solid #e2e8f0;
+    border-radius: 6px;
+    background: white;
+    color: #0f172a;
+    transition: all 0.2s ease;
 }
 
 .saw-order-input:focus {
-    border-color: #2563eb !important;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
-    outline: none !important;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    outline: none;
 }
 
 .saw-order-input:disabled {
-    background: #f8fafc !important;
-    opacity: 0.5;
+    background: #f8fafc;
+    color: #94a3b8;
     cursor: not-allowed;
 }
 
-/* --- NOTICES --- */
-.saw-notice {
-    padding: 14px 16px;
-    border-radius: 10px;
-    font-size: 14px;
-    line-height: 1.5;
-}
-
-.saw-notice-info {
-    background: #eff6ff;
-    border: 1px solid #bfdbfe;
-    color: #1e40af;
-}
-
-.saw-notice-warning {
-    background: #fef3c7;
-    border: 1px solid #fde68a;
-    color: #92400e;
-}
-
-.saw-notice p {
-    margin: 0;
-}
-
-/* --- FORM ACTIONS --- */
-.saw-form-actions {
-    display: flex;
-    gap: 12px;
-    justify-content: flex-end;
-    padding-top: 24px;
-    margin-top: 32px;
-    border-top: 2px solid #f1f5f9;
-}
-
-.saw-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border: none;
-    text-decoration: none;
-}
-
-.saw-button-primary {
-    background: #2563eb;
-    color: #ffffff;
-}
-
-.saw-button-primary:hover {
-    background: #1d4ed8;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-}
-
-.saw-button-secondary {
-    background: #f1f5f9;
-    color: #475569;
-    border: 1px solid #e2e8f0;
-}
-
-.saw-button-secondary:hover {
-    background: #e2e8f0;
-    transform: translateY(-1px);
-}
-
-/* =================================================================
-   RESPONSIVE DESIGN
-   ================================================================= */
-
+/* Responsive */
 @media (max-width: 1024px) {
-    .saw-form-row {
+    .saw-language-basic-row {
         grid-template-columns: 1fr;
-        gap: 16px;
+    }
+    
+    .saw-language-preview-col {
+        order: -1;
     }
 }
 
 @media (max-width: 768px) {
-    /* Grid na jeden sloupec */
-    .saw-branches-header,
-    .saw-branch-row {
+    .saw-branches-activation-header,
+    .saw-branch-activation-row {
         grid-template-columns: 1fr;
         gap: 12px;
     }
     
-    .saw-branches-header {
-        display: none;
+    .saw-branches-activation-header > div {
+        justify-content: flex-start;
     }
     
-    /* Zarovnání */
     .saw-branch-col-active,
     .saw-branch-col-default,
     .saw-branch-col-order {
         justify-content: flex-start;
+        padding-left: 20px;
     }
-    
-    /* Padding pro mobilní zařízení */
-    .saw-branches-grid {
-        border-radius: 12px;
-    }
-    
-    .saw-branches-header,
-    .saw-branch-row {
-        padding: 16px;
-    }
-    
-    .saw-branch-row::after {
-        left: 16px;
-        right: 16px;
-    }
-    
-    .saw-form-actions {
-        flex-direction: column;
-    }
-    
-    .saw-button {
-        width: 100%;
-        justify-content: center;
-    }
-}
-
-/* =================================================================
-   DETAIL VIEW - PRO MODAL
-   ================================================================= */
-
-.saw-language-flag-large {
-    width: 88px;
-    height: 88px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 16px;
-    font-size: 48px;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.saw-branches-detail-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.saw-branch-detail-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px 20px;
-    background: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.saw-branch-detail-item:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    transform: translateY(-2px);
-}
-
-/* =================================================================
-   ANIMATIONS
-   ================================================================= */
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.saw-branch-row {
-    animation: fadeIn 0.3s ease-out;
-}
-
-/* Focus visible pro přístupnost */
-*:focus-visible {
-    outline: 2px solid #2563eb;
-    outline-offset: 2px;
-    border-radius: 4px;
 }

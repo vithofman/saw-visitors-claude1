@@ -34,8 +34,10 @@ class SAW_Module_Departments_Controller extends SAW_Base_Controller
         $orderby = isset($_GET['orderby']) ? sanitize_text_field($_GET['orderby']) : 'name';
         $order = isset($_GET['order']) ? strtoupper(sanitize_text_field($_GET['order'])) : 'ASC';
         $page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
-        $branch_id = isset($_GET['branch_id']) ? intval($_GET['branch_id']) : 0;
         $is_active = isset($_GET['is_active']) ? sanitize_text_field($_GET['is_active']) : '';
+        
+        // Get current branch from context
+        $current_branch_id = SAW_Context::get_branch_id();
         
         $filters = [
             'search' => $search,
@@ -43,11 +45,8 @@ class SAW_Module_Departments_Controller extends SAW_Base_Controller
             'order' => $order,
             'page' => $page,
             'per_page' => 20,
+            'branch_id' => $current_branch_id,  // Filter by current branch
         ];
-        
-        if ($branch_id > 0) {
-            $filters['branch_id'] = $branch_id;
-        }
         
         if ($is_active !== '') {
             $filters['is_active'] = intval($is_active);
