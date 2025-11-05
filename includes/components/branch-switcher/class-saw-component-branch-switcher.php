@@ -1,15 +1,19 @@
 <?php
+
+
+
+
+
 /**
- * SAW Branch Switcher Component - COMPLETE FIXED VERSION
+ * SAW Branch Switcher Component - GLOBAL AJAX FIX v7.0.0
  * 
- * CRITICAL FIXES:
- * - ✅ Uses SAW_Context::get_customer_id() as PRIMARY source
- * - ✅ Proper customer isolation validation
- * - ✅ Single AJAX handler registration (static flag)
- * - ✅ Comprehensive error handling and logging
+ * CRITICAL FIX:
+ * - ✅ AJAX handlers registered GLOBALLY (not in constructor)
+ * - ✅ Works even if component doesn't render
+ * - ✅ Fixes "HTML response instead of JSON" issue
  * 
  * @package SAW_Visitors
- * @version 2.1.0 - COMPLETE
+ * @version 7.0.0 - GLOBAL AJAX FIX
  * @since 4.7.0
  */
 
@@ -20,29 +24,52 @@ if (!defined('ABSPATH')) {
 class SAW_Component_Branch_Switcher {
     private $customer_id;
     private $current_branch;
-    private static $ajax_registered = false;
+    
+    /**
+     * ✅ CRITICAL FIX: Register AJAX handlers GLOBALLY (static, always registered)
+     * 
+     * This MUST be called EARLY (in plugin init), NOT in constructor!
+     */
+    public static function register_ajax_handlers() {
+        add_action('wp_ajax_saw_get_branches_for_switcher', [__CLASS__, 'ajax_get_branches']);
+        add_action('wp_ajax_saw_switch_branch', [__CLASS__, 'ajax_switch_branch']);
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[Branch Switcher] AJAX handlers registered GLOBALLY');
+        }
+    }
     
     public function __construct($customer_id = null, $current_branch = null) {
-        $this->customer_id = $customer_id;
-        $this->current_branch = $current_branch;
-        
-        // ✅ Register AJAX actions only once (singleton pattern)
-        if (!self::$ajax_registered) {
-            add_action('wp_ajax_saw_get_branches_for_switcher', [$this, 'ajax_get_branches']);
-            add_action('wp_ajax_saw_switch_branch', [$this, 'ajax_switch_branch']);
-            self::$ajax_registered = true;
-            
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[Branch Switcher] AJAX handlers registered');
-            }
+        // Auto-load from SAW_Context if not provided
+        if ($customer_id === null && class_exists('SAW_Context')) {
+            $customer_id = SAW_Context::get_customer_id();
         }
+        
+        $this->customer_id = $customer_id;
+        
+        if ($current_branch === null && class_exists('SAW_Context')) {
+            $current_branch = SAW_Context::get_branch_data();
+        }
+        
+        $this->current_branch = $current_branch;
     }
     
     /**
      * AJAX: Get branches for current customer
+     * 
+     * ✅ STATIC method - can be called without instance
      */
-    public function ajax_get_branches() {
-        check_ajax_referer('saw_branch_switcher', 'nonce');
+    public static function ajax_get_branches() {
+        // ✅ Use wp_verify_nonce() with custom error handling
+        $nonce = isset($_POST['nonce']) ? $_POST['nonce'] : '';
+        
+        if (!wp_verify_nonce($nonce, 'saw_branch_switcher')) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[Branch Switcher] ERROR: Invalid nonce');
+            }
+            wp_send_json_error(['message' => 'Neplatný bezpečnostní token']);
+            return;
+        }
         
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log(sprintf(
@@ -53,13 +80,20 @@ class SAW_Component_Branch_Switcher {
             ));
         }
         
-        // ================================================
-        // DETERMINE CUSTOMER_ID
-        // ================================================
+        // Determine customer_id
         $customer_id = null;
         
-        // For non-super admin: ALWAYS use SAW_Context
-        if (!current_user_can('manage_options')) {
+        if (current_user_can('manage_options')) {
+            // Super admin: Try SAW_Context first, then POST
+            if (class_exists('SAW_Context')) {
+                $customer_id = SAW_Context::get_customer_id();
+            }
+            
+            if (!$customer_id && isset($_POST['customer_id'])) {
+                $customer_id = intval($_POST['customer_id']);
+            }
+        } else {
+            // Non-super admin: ALWAYS use SAW_Context
             if (class_exists('SAW_Context')) {
                 $customer_id = SAW_Context::get_customer_id();
             }
@@ -76,31 +110,6 @@ class SAW_Component_Branch_Switcher {
                     $customer_id = intval($saw_user['customer_id']);
                 }
             }
-            
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log(sprintf(
-                    '[Branch Switcher] Non-super admin - Customer: %s',
-                    $customer_id ?? 'NULL'
-                ));
-            }
-        }
-        
-        // For super admin: Use SAW_Context or POST
-        if (current_user_can('manage_options')) {
-            if (class_exists('SAW_Context')) {
-                $customer_id = SAW_Context::get_customer_id();
-            }
-            
-            if (!$customer_id && isset($_POST['customer_id'])) {
-                $customer_id = intval($_POST['customer_id']);
-            }
-            
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log(sprintf(
-                    '[Branch Switcher] Super admin - Customer: %s',
-                    $customer_id ?? 'NULL'
-                ));
-            }
         }
         
         // Validate customer_id
@@ -112,9 +121,7 @@ class SAW_Component_Branch_Switcher {
             return;
         }
         
-        // ================================================
-        // LOAD BRANCHES FROM DATABASE
-        // ================================================
+        // Load branches from database
         global $wpdb;
         $branches = $wpdb->get_results($wpdb->prepare(
             "SELECT id, name, city, street, code, is_headquarters
@@ -152,6 +159,7 @@ class SAW_Component_Branch_Switcher {
             ));
         }
         
+        // ✅ CRITICAL: wp_send_json_success automatically sets correct headers
         wp_send_json_success([
             'branches' => $formatted,
             'current_branch_id' => $current_branch_id,
@@ -161,9 +169,17 @@ class SAW_Component_Branch_Switcher {
     
     /**
      * AJAX: Switch branch
+     * 
+     * ✅ STATIC method - can be called without instance
      */
-    public function ajax_switch_branch() {
-        check_ajax_referer('saw_branch_switcher', 'nonce');
+    public static function ajax_switch_branch() {
+        // ✅ Use wp_verify_nonce() with custom error handling
+        $nonce = isset($_POST['nonce']) ? $_POST['nonce'] : '';
+        
+        if (!wp_verify_nonce($nonce, 'saw_branch_switcher')) {
+            wp_send_json_error(['message' => 'Neplatný bezpečnostní token']);
+            return;
+        }
         
         $branch_id = isset($_POST['branch_id']) ? intval($_POST['branch_id']) : 0;
         
@@ -232,15 +248,28 @@ class SAW_Component_Branch_Switcher {
      * Render branch switcher UI
      */
     public function render() {
+        // Check access FIRST
         if (!$this->can_see_branch_switcher()) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[Branch Switcher] User cannot see branch switcher - render() aborted');
+            }
             return;
         }
         
-        if (!$this->customer_id) {
-            return;
-        }
-        
+        // Always enqueue assets
         $this->enqueue_assets();
+        
+        // Show error if customer_id missing
+        if (!$this->customer_id) {
+            ?>
+            <div class="saw-branch-switcher">
+                <div class="saw-branch-error">⚠️ Chybí ID zákazníka</div>
+            </div>
+            <?php
+            return;
+        }
+        
+        // Normal render
         ?>
         <div class="saw-branch-switcher" id="sawBranchSwitcher" data-customer-id="<?php echo esc_attr($this->customer_id); ?>">
             <button class="saw-branch-switcher-button" id="sawBranchSwitcherButton" data-current-branch-id="<?php echo esc_attr($this->current_branch['id'] ?? 0); ?>">
@@ -261,28 +290,18 @@ class SAW_Component_Branch_Switcher {
      * Check if current user can see branch switcher
      */
     private function can_see_branch_switcher() {
+        // Super admin always sees branch switcher
         if (current_user_can('manage_options')) {
             return true;
         }
         
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
+        // Check SAW role
+        if (class_exists('SAW_Context')) {
+            $role = SAW_Context::get_role();
+            return $role === 'admin';
         }
         
-        $saw_role = $_SESSION['saw_role'] ?? null;
-        
-        if (!$saw_role) {
-            global $wpdb;
-            $saw_user = $wpdb->get_row($wpdb->prepare(
-                "SELECT role FROM {$wpdb->prefix}saw_users 
-                 WHERE wp_user_id = %d AND is_active = 1",
-                get_current_user_id()
-            ));
-            
-            $saw_role = $saw_user->role ?? null;
-        }
-        
-        return $saw_role === 'admin';
+        return false;
     }
     
     /**
@@ -310,3 +329,7 @@ class SAW_Component_Branch_Switcher {
         ]);
     }
 }
+
+// ✅ CRITICAL: Register AJAX handlers GLOBALLY when class is loaded
+// This ensures handlers work even if component doesn't render
+SAW_Component_Branch_Switcher::register_ajax_handlers();

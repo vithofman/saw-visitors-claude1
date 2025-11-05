@@ -1,15 +1,12 @@
 <?php
 /**
- * SAW Customer Switcher Component - COMPLETE FIXED VERSION
+ * SAW Customer Switcher Component - CSS LOADING FIXED
  * 
- * CRITICAL FIXES:
- * - ✅ Added missing AJAX handlers (ajax_get_customers, ajax_switch_customer)
- * - ✅ Proper AJAX handler registration in constructor
- * - ✅ Uses SAW_Context for customer management
- * - ✅ Comprehensive error handling and logging
+ * CRITICAL FIX v2.0.1:
+ * - ✅ CSS loads for BOTH super_admin AND admin (enqueue_assets moved before render check)
  * 
  * @package SAW_Visitors
- * @version 2.0.0 - COMPLETE
+ * @version 2.0.1 - CSS FIX
  * @since 4.7.0
  */
 
@@ -255,14 +252,21 @@ class SAW_Component_Customer_Switcher {
     
     /**
      * Render customer switcher UI
+     * 
+     * ✅ CRITICAL FIX v2.0.1: CSS loads for BOTH roles
      */
     public function render() {
+        // ✅ FIX: Enqueue CSS FIRST (before any render logic)
+        // This ensures CSS loads for BOTH super_admin AND admin
+        $this->enqueue_assets();
+        
+        // Then decide which UI to render
         if (!$this->is_super_admin()) {
             $this->render_static_info();
             return;
         }
         
-        $this->enqueue_assets();
+        // Super admin gets full switcher
         $logo_url = $this->get_logo_url();
         ?>
         <div class="saw-customer-switcher" id="sawCustomerSwitcher">
@@ -340,6 +344,8 @@ class SAW_Component_Customer_Switcher {
     
     /**
      * Enqueue assets
+     * 
+     * ✅ Now called BEFORE render logic to ensure CSS loads for all roles
      */
     private function enqueue_assets() {
         wp_enqueue_style(
@@ -349,24 +355,27 @@ class SAW_Component_Customer_Switcher {
             SAW_VISITORS_VERSION
         );
         
-        wp_enqueue_script(
-            'saw-customer-switcher',
-            SAW_VISITORS_PLUGIN_URL . 'includes/components/customer-switcher/customer-switcher.js',
-            ['jquery'],
-            SAW_VISITORS_VERSION,
-            true
-        );
-        
-        wp_localize_script(
-            'saw-customer-switcher',
-            'sawCustomerSwitcher',
-            [
-                'ajaxurl' => admin_url('admin-ajax.php'),
-                'nonce' => wp_create_nonce('saw_customer_switcher'),
-                'currentCustomerId' => $this->current_customer['id'],
-                'currentCustomerName' => $this->current_customer['name'],
-            ]
-        );
+        // JS only needed for super admin (has interactive switcher)
+        if ($this->is_super_admin()) {
+            wp_enqueue_script(
+                'saw-customer-switcher',
+                SAW_VISITORS_PLUGIN_URL . 'includes/components/customer-switcher/customer-switcher.js',
+                ['jquery'],
+                SAW_VISITORS_VERSION,
+                true
+            );
+            
+            wp_localize_script(
+                'saw-customer-switcher',
+                'sawCustomerSwitcher',
+                [
+                    'ajaxurl' => admin_url('admin-ajax.php'),
+                    'nonce' => wp_create_nonce('saw_customer_switcher'),
+                    'currentCustomerId' => $this->current_customer['id'],
+                    'currentCustomerName' => $this->current_customer['name'],
+                ]
+            );
+        }
     }
     
     /**

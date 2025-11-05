@@ -1,4 +1,17 @@
 <?php
+/**
+ * SAW App Layout - AJAX FIXED v2.0.0
+ * 
+ * CRITICAL FIX:
+ * - ✅ WordPress AJAX requests are NOT intercepted
+ * - ✅ Only custom XHR requests go through layout
+ * - ✅ Prevents layout from breaking wp_ajax_* handlers
+ * 
+ * @package SAW_Visitors
+ * @version 2.0.0 - AJAX FIX
+ * @since 4.6.1
+ */
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -16,6 +29,18 @@ class SAW_App_Layout {
         }
     }
     
+    /**
+     * Render page with layout
+     * 
+     * ✅ FIX: Don't intercept WordPress AJAX requests
+     * 
+     * @param string $content Page content
+     * @param string $page_title Page title
+     * @param string $active_menu Active menu ID
+     * @param array|null $user User data
+     * @param array|null $customer Customer data
+     * @return void
+     */
     public function render($content, $page_title = '', $active_menu = '', $user = null, $customer = null) {
         $this->page_title = $page_title;
         $this->active_menu = $active_menu;
@@ -23,15 +48,38 @@ class SAW_App_Layout {
         $this->current_user = $user ?: $this->get_current_user_data();
         $this->current_customer = $customer ?: $this->get_current_customer_data();
         
+        // ✅ CRITICAL FIX: Don't intercept WordPress AJAX requests!
+        // WordPress AJAX handlers (wp_ajax_*) must handle their own responses
+        if (wp_doing_ajax()) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[SAW_App_Layout] WordPress AJAX detected - skipping layout render');
+            }
+            // Let WordPress AJAX handlers do their thing
+            return;
+        }
+        
+        // ✅ Handle custom XHR requests (for SPA-like navigation)
         if ($this->is_ajax_request()) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[SAW_App_Layout] Custom AJAX detected - rendering content only');
+            }
             $this->render_content_only($content);
             exit;
         }
         
+        // ✅ Normal page request - render complete page
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[SAW_App_Layout] Normal request - rendering complete page');
+        }
         $this->render_complete_page($content);
         exit;
     }
     
+    /**
+     * Get current customer data
+     * 
+     * @return array
+     */
     private function get_current_customer_data() {
         $customer_id = SAW_Context::get_customer_id();
         
@@ -62,6 +110,11 @@ class SAW_App_Layout {
         ];
     }
     
+    /**
+     * Get current user data
+     * 
+     * @return array
+     */
     private function get_current_user_data() {
         if (is_user_logged_in()) {
             $wp_user = wp_get_current_user();
@@ -101,11 +154,22 @@ class SAW_App_Layout {
         ];
     }
     
+    /**
+     * Check if request is custom AJAX (not WordPress AJAX)
+     * 
+     * @return bool
+     */
     private function is_ajax_request() {
         return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
                strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
     }
     
+    /**
+     * Render content only (for AJAX requests)
+     * 
+     * @param string $content Page content
+     * @return void
+     */
     private function render_content_only($content) {
         header('Content-Type: application/json');
         
@@ -116,6 +180,12 @@ class SAW_App_Layout {
         ]);
     }
     
+    /**
+     * Render complete page
+     * 
+     * @param string $content Page content
+     * @return void
+     */
     private function render_complete_page($content) {
         ?>
         <!DOCTYPE html>
@@ -164,6 +234,11 @@ class SAW_App_Layout {
         <?php
     }
     
+    /**
+     * Render header component
+     * 
+     * @return void
+     */
     private function render_header() {
         if (class_exists('SAW_App_Header')) {
             $header = new SAW_App_Header($this->current_user, $this->current_customer);
@@ -171,6 +246,11 @@ class SAW_App_Layout {
         }
     }
     
+    /**
+     * Render sidebar component
+     * 
+     * @return void
+     */
     private function render_sidebar() {
         if (class_exists('SAW_App_Sidebar')) {
             $sidebar = new SAW_App_Sidebar($this->current_user, $this->current_customer, $this->active_menu);
@@ -178,6 +258,11 @@ class SAW_App_Layout {
         }
     }
     
+    /**
+     * Render footer component
+     * 
+     * @return void
+     */
     private function render_footer() {
         if (class_exists('SAW_App_Footer')) {
             $footer = new SAW_App_Footer();

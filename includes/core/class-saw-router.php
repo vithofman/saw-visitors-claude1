@@ -1,9 +1,13 @@
 <?php
 /**
- * SAW Router - FIXED VERSION v5.1.0
+ * SAW Router - AJAX PROTECTION v6.0.0
+ * 
+ * CRITICAL FIX:
+ * - ✅ WordPress AJAX requests are NEVER dispatched
+ * - ✅ Prevents router from killing wp_ajax_* handlers
  * 
  * @package SAW_Visitors
- * @version 5.1.0
+ * @version 6.0.0 - AJAX PROTECTION
  */
 
 if (!defined('ABSPATH')) {
@@ -42,7 +46,25 @@ class SAW_Router {
         return $vars;
     }
     
+    /**
+     * Dispatch SAW routes
+     * 
+     * ✅ CRITICAL FIX: Never dispatch WordPress AJAX requests!
+     * 
+     * @param string $route Route name
+     * @param string $path Route path
+     * @return void
+     */
     public function dispatch($route = '', $path = '') {
+        // ✅ CRITICAL FIX: NEVER intercept WordPress AJAX!
+        if (wp_doing_ajax()) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[SAW_Router] WordPress AJAX detected - skipping dispatch');
+            }
+            // Let WordPress handle its AJAX
+            return;
+        }
+        
         if (empty($route)) {
             $route = get_query_var('saw_route');
         }
@@ -53,6 +75,10 @@ class SAW_Router {
         
         if (empty($route)) {
             return;
+        }
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log(sprintf('[SAW_Router] Dispatching route: %s, path: %s', $route, $path));
         }
         
         $this->load_frontend_components();

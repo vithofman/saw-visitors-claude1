@@ -251,19 +251,30 @@ class SAW_Component_Admin_Table {
         ?>
         <td style="width: 120px; text-align: center;">
             <div class="saw-action-buttons">
-                <?php if (in_array('edit', $this->config['actions']) && !empty($this->config['edit_url'])): ?>
-                    <?php
-                    $edit_url = str_replace('{id}', $row['id'] ?? '', $this->config['edit_url']);
-                    ?>
+                <?php 
+                // ✅ PERMISSION CHECK: Edit button
+                if (in_array('edit', $this->config['actions']) && !empty($this->config['edit_url'])) {
+                    $can_edit = function_exists('saw_can') ? saw_can('edit', $this->entity) : true;
+                    if ($can_edit):
+                        $edit_url = str_replace('{id}', $row['id'] ?? '', $this->config['edit_url']);
+                ?>
                     <a href="<?php echo esc_url($edit_url); ?>" 
                        class="saw-action-btn saw-action-edit" 
                        title="Upravit" 
                        onclick="event.stopPropagation();">
                         <span class="dashicons dashicons-edit"></span>
                     </a>
-                <?php endif; ?>
+                <?php 
+                    endif;
+                }
+                ?>
                 
-                <?php if (in_array('delete', $this->config['actions'])): ?>
+                <?php 
+                // ✅ PERMISSION CHECK: Delete button
+                if (in_array('delete', $this->config['actions'])) {
+                    $can_delete = function_exists('saw_can') ? saw_can('delete', $this->entity) : true;
+                    if ($can_delete):
+                ?>
                     <button type="button" 
                             class="saw-action-btn saw-action-delete" 
                             data-id="<?php echo esc_attr($row['id'] ?? ''); ?>" 
@@ -272,7 +283,10 @@ class SAW_Component_Admin_Table {
                             onclick="event.stopPropagation(); sawAdminTableDelete(this); return false;">
                         <span class="dashicons dashicons-trash"></span>
                     </button>
-                <?php endif; ?>
+                <?php 
+                    endif;
+                }
+                ?>
             </div>
         </td>
         <?php
@@ -315,6 +329,12 @@ class SAW_Component_Admin_Table {
     
     private function render_floating_button() {
         if (empty($this->config['create_url'])) {
+            return;
+        }
+        
+        // ✅ PERMISSION CHECK: Create button
+        $can_create = function_exists('saw_can') ? saw_can('create', $this->entity) : true;
+        if (!$can_create) {
             return;
         }
         ?>

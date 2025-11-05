@@ -1,9 +1,15 @@
 <?php
 /**
- * SAW Middleware Functions
+ * SAW Middleware Functions - AJAX FIXED v2.0.0
  * Route protection and permission checking
  * 
+ * CRITICAL FIX:
+ * - ✅ AJAX requests are NOT redirected
+ * - ✅ Returns JSON errors for AJAX
+ * - ✅ Prevents middleware from breaking AJAX handlers
+ * 
  * @package SAW_Visitors
+ * @version 2.0.0 - AJAX FIX
  * @since 4.6.1
  */
 
@@ -13,6 +19,8 @@ if (!defined('ABSPATH')) {
 
 /**
  * Require authentication (any SAW role)
+ * 
+ * ✅ FIX: Don't redirect AJAX requests
  * 
  * @param string $role Optional - check specific role
  * @return void
@@ -25,6 +33,19 @@ function saw_require_auth($role = null) {
     }
 
     if (!$saw_auth->check_auth()) {
+        // ✅ CRITICAL FIX: Handle AJAX requests differently
+        if (wp_doing_ajax()) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[Middleware] AJAX request not authenticated - returning JSON error');
+            }
+            
+            wp_send_json_error([
+                'message' => 'Nejste přihlášen',
+                'code' => 'not_authenticated'
+            ]);
+            exit;
+        }
+        
         $redirect_url = saw_get_login_url($role);
         
         if (!empty($_SERVER['REQUEST_URI'])) {
@@ -40,6 +61,23 @@ function saw_require_auth($role = null) {
         $current_user = $saw_auth->get_current_user();
         
         if ($current_user->role !== $role) {
+            // ✅ CRITICAL FIX: Handle AJAX requests differently
+            if (wp_doing_ajax()) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log(sprintf(
+                        '[Middleware] AJAX request wrong role - Expected: %s, Got: %s',
+                        $role,
+                        $current_user->role ?? 'NULL'
+                    ));
+                }
+                
+                wp_send_json_error([
+                    'message' => 'Nemáte oprávnění k této akci',
+                    'code' => 'insufficient_permissions'
+                ]);
+                exit;
+            }
+            
             wp_die(
                 __('Nemáte oprávnění k přístupu na tuto stránku.', 'saw-visitors'),
                 __('Přístup zamítnut', 'saw-visitors'),
@@ -64,6 +102,15 @@ function saw_require_admin() {
     saw_require_auth('admin');
 
     if (!$saw_auth->is_admin()) {
+        // ✅ CRITICAL FIX: Handle AJAX requests differently
+        if (wp_doing_ajax()) {
+            wp_send_json_error([
+                'message' => 'Tato akce je dostupná pouze pro administrátory',
+                'code' => 'admin_required'
+            ]);
+            exit;
+        }
+        
         wp_die(
             __('Tato stránka je dostupná pouze pro administrátory.', 'saw-visitors'),
             __('Přístup zamítnut', 'saw-visitors'),
@@ -87,6 +134,15 @@ function saw_require_manager() {
     saw_require_auth('manager');
 
     if (!$saw_auth->is_manager()) {
+        // ✅ CRITICAL FIX: Handle AJAX requests differently
+        if (wp_doing_ajax()) {
+            wp_send_json_error([
+                'message' => 'Tato akce je dostupná pouze pro manažery',
+                'code' => 'manager_required'
+            ]);
+            exit;
+        }
+        
         wp_die(
             __('Tato stránka je dostupná pouze pro manažery.', 'saw-visitors'),
             __('Přístup zamítnut', 'saw-visitors'),
@@ -110,6 +166,15 @@ function saw_require_terminal() {
     saw_require_auth('terminal');
 
     if (!$saw_auth->is_terminal()) {
+        // ✅ CRITICAL FIX: Handle AJAX requests differently
+        if (wp_doing_ajax()) {
+            wp_send_json_error([
+                'message' => 'Tato akce je dostupná pouze pro terminály',
+                'code' => 'terminal_required'
+            ]);
+            exit;
+        }
+        
         wp_die(
             __('Tato stránka je dostupná pouze pro terminály.', 'saw-visitors'),
             __('Přístup zamítnut', 'saw-visitors'),
@@ -125,6 +190,15 @@ function saw_require_terminal() {
  */
 function saw_require_super_admin() {
     if (!current_user_can('manage_options')) {
+        // ✅ CRITICAL FIX: Handle AJAX requests differently
+        if (wp_doing_ajax()) {
+            wp_send_json_error([
+                'message' => 'Tato akce je dostupná pouze pro Super Adminy',
+                'code' => 'super_admin_required'
+            ]);
+            exit;
+        }
+        
         wp_die(
             __('Tato stránka je dostupná pouze pro Super Adminy.', 'saw-visitors'),
             __('Přístup zamítnut', 'saw-visitors'),
@@ -161,6 +235,15 @@ function saw_require_customer($customer_id) {
                 'details'     => sprintf('Pokus o přístup k datům zákazníka %d', $customer_id),
                 'ip_address'  => $_SERVER['REMOTE_ADDR'],
             ));
+        }
+
+        // ✅ CRITICAL FIX: Handle AJAX requests differently
+        if (wp_doing_ajax()) {
+            wp_send_json_error([
+                'message' => 'Nemáte oprávnění k přístupu k těmto datům',
+                'code' => 'customer_isolation_violation'
+            ]);
+            exit;
         }
 
         wp_die(
@@ -213,6 +296,15 @@ function saw_require_department_access($department_id) {
                 ));
             }
 
+            // ✅ CRITICAL FIX: Handle AJAX requests differently
+            if (wp_doing_ajax()) {
+                wp_send_json_error([
+                    'message' => 'Nemáte oprávnění k přístupu k tomuto oddělení',
+                    'code' => 'department_access_violation'
+                ]);
+                exit;
+            }
+
             wp_die(
                 __('Nemáte oprávnění k přístupu k tomuto oddělení.', 'saw-visitors'),
                 __('Přístup zamítnut', 'saw-visitors'),
@@ -221,6 +313,15 @@ function saw_require_department_access($department_id) {
         }
 
         return;
+    }
+
+    // ✅ CRITICAL FIX: Handle AJAX requests differently
+    if (wp_doing_ajax()) {
+        wp_send_json_error([
+            'message' => 'Nemáte oprávnění k přístupu k oddělením',
+            'code' => 'departments_access_denied'
+        ]);
+        exit;
     }
 
     wp_die(

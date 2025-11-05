@@ -3,7 +3,10 @@
  * Base Controller Class - Database-First with Multi-Branch Support
  * 
  * @package SAW_Visitors
- * @version 5.1.0
+ * @version 5.1.1
+ * 
+ * CHANGELOG:
+ * - FIXED: Permission check používá $this->entity místo $this->config['entity']
  */
 
 if (!defined('ABSPATH')) {
@@ -19,13 +22,25 @@ abstract class SAW_Base_Controller
     /**
      * Verify module access based on permissions
      * 
+     * ✅ FIXED v5.1.1: Uses $this->entity instead of $this->config['entity']
+     * ✅ FIXED v5.1.1: Explicit SAW_Permissions class loading
      * ✅ UPDATED: Uses SAW_Error_Handler instead of wp_die
      */
     protected function verify_module_access() {
+        // Super admin má vždy přístup
         if (current_user_can('manage_options')) {
             return true;
         }
         
+        // ✅ FIX: Explicit load SAW_Permissions if not loaded
+        if (!class_exists('SAW_Permissions')) {
+            $permissions_file = SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-permissions.php';
+            if (file_exists($permissions_file)) {
+                require_once $permissions_file;
+            }
+        }
+        
+        // Kontrola že třída existuje
         if (!class_exists('SAW_Permissions')) {
             if (class_exists('SAW_Error_Handler')) {
                 SAW_Error_Handler::permission_denied('Permissions system not available');
@@ -35,6 +50,7 @@ abstract class SAW_Base_Controller
             return false;
         }
         
+        // Získání role uživatele
         $role = $this->get_current_user_role();
         
         if (empty($role)) {
@@ -46,7 +62,8 @@ abstract class SAW_Base_Controller
             return false;
         }
         
-        $has_access = SAW_Permissions::check($role, $this->config['entity'], 'list');
+        // ✅ CRITICAL FIX: Používáme $this->entity místo $this->config['entity']
+        $has_access = SAW_Permissions::check($role, $this->entity, 'list');
         
         if (!$has_access) {
             if (class_exists('SAW_Error_Handler')) {
@@ -63,25 +80,40 @@ abstract class SAW_Base_Controller
     /**
      * Check if user can perform action
      * 
+     * ✅ FIXED v5.1.1: Uses $this->entity instead of $this->config['entity']
+     * ✅ FIXED v5.1.1: Explicit SAW_Permissions class loading
+     * 
      * @param string $action
      * @return bool
      */
     protected function can($action) {
+        // Super admin má vždy přístup
         if (current_user_can('manage_options')) {
             return true;
         }
         
+        // ✅ FIX: Explicit load SAW_Permissions if not loaded
+        if (!class_exists('SAW_Permissions')) {
+            $permissions_file = SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-permissions.php';
+            if (file_exists($permissions_file)) {
+                require_once $permissions_file;
+            }
+        }
+        
+        // Kontrola existence permission systému
         if (!class_exists('SAW_Permissions')) {
             return false;
         }
         
+        // Získání role uživatele
         $role = $this->get_current_user_role();
         
         if (empty($role)) {
             return false;
         }
         
-        return SAW_Permissions::check($role, $this->config['entity'], $action);
+        // ✅ CRITICAL FIX: Používáme $this->entity místo $this->config['entity']
+        return SAW_Permissions::check($role, $this->entity, $action);
     }
     
     /**
@@ -103,9 +135,10 @@ abstract class SAW_Base_Controller
             }
             
             return $wpdb->get_results($wpdb->prepare(
-                "SELECT * FROM {$wpdb->prefix}saw_branches 
+                "SELECT * FROM %i 
                  WHERE customer_id = %d AND is_active = 1 
                  ORDER BY is_headquarters DESC, name ASC",
+                $wpdb->prefix . 'saw_branches',
                 $customer_id
             ), ARRAY_A);
         }
@@ -164,8 +197,9 @@ abstract class SAW_Base_Controller
             }
             
             $branch = $wpdb->get_row($wpdb->prepare(
-                "SELECT id FROM {$wpdb->prefix}saw_branches 
+                "SELECT id FROM %i 
                  WHERE id = %d AND customer_id = %d AND is_active = 1",
+                $wpdb->prefix . 'saw_branches',
                 $branch_id,
                 $customer_id
             ), ARRAY_A);
@@ -306,7 +340,8 @@ abstract class SAW_Base_Controller
         global $wpdb;
         
         $saw_user = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_users WHERE wp_user_id = %d AND is_active = 1",
+            "SELECT * FROM %i WHERE wp_user_id = %d AND is_active = 1",
+            $wpdb->prefix . 'saw_users',
             $wp_user->ID
         ), ARRAY_A);
         
