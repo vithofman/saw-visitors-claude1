@@ -1,47 +1,31 @@
 /**
- * Account Types Module Styles
+ * Account Types Module Styles - REFACTORED
+ * 
+ * ✅ MINIMALIZED: Pouze module-specific styly
+ * ✅ Vše ostatní je v globálních CSS souborech
  * 
  * @package SAW_Visitors
- * @version 5.1.0
+ * @version 2.0.0 - REFACTORED
  */
 
 /* ============================================
-   COLOR BADGE
-   ============================================ */
-.saw-module-account-types .saw-color-badge {
-    display: inline-block;
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    vertical-align: middle;
-    border: 3px solid #fff;
-    box-shadow: 0 0 0 1px #e5e7eb, 0 2px 4px rgba(0, 0, 0, 0.1);
-    transition: all 0.2s ease;
-}
-
-.saw-module-account-types .saw-color-badge:hover {
-    transform: scale(1.2);
-    box-shadow: 0 0 0 2px #e5e7eb, 0 4px 8px rgba(0, 0, 0, 0.15);
-}
-
-/* ============================================
-   CODE BADGE
+   CODE BADGE (module-specific)
    ============================================ */
 .saw-module-account-types .saw-code-badge {
     display: inline-block;
     padding: 4px 10px;
-    background: #f3f4f6;
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
+    background: var(--saw-gray-50);
+    border: 1px solid var(--saw-gray-200);
+    border-radius: var(--saw-border-radius-sm);
     font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
-    font-size: 13px;
+    font-size: var(--saw-font-size-xs);
     font-weight: 600;
-    color: #374151;
+    color: var(--saw-gray-700);
     letter-spacing: 0.5px;
 }
 
 /* ============================================
-   SORT ORDER BADGE
+   SORT ORDER BADGE (module-specific)
    ============================================ */
 .saw-module-account-types .saw-sort-order-badge {
     display: inline-flex;
@@ -49,16 +33,16 @@
     justify-content: center;
     width: 32px;
     height: 32px;
-    background: #f9fafb;
-    border: 2px solid #e5e7eb;
+    background: var(--saw-gray-50);
+    border: 2px solid var(--saw-gray-200);
     border-radius: 50%;
     font-weight: 600;
-    font-size: 13px;
-    color: #6b7280;
+    font-size: var(--saw-font-size-xs);
+    color: var(--saw-gray-500);
 }
 
 /* ============================================
-   INPUT WITH ADDON
+   INPUT WITH ADDON (module-specific)
    ============================================ */
 .saw-module-account-types .saw-input-with-addon {
     display: flex;
@@ -76,172 +60,66 @@
 .saw-module-account-types .saw-input-addon {
     display: flex;
     align-items: center;
-    padding: 0 16px;
-    background: #f9fafb;
+    padding: 0 var(--saw-space-lg);
+    background: var(--saw-gray-50);
     border: 2px solid #dcdcde;
     border-left: none;
-    border-top-right-radius: 8px;
-    border-bottom-right-radius: 8px;
+    border-top-right-radius: var(--saw-border-radius-md);
+    border-bottom-right-radius: var(--saw-border-radius-md);
     font-weight: 600;
-    color: #6b7280;
-    font-size: 14px;
+    color: var(--saw-gray-500);
+    font-size: var(--saw-font-size-sm);
 }
 
 /* ============================================
-   FEATURES TEXTAREA
+   FEATURES TEXTAREA (monospace font)
    ============================================ */
-.saw-module-account-types #features {
+.saw-module-account-types .saw-features-textarea {
     font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
-    font-size: 13px;
+    font-size: var(--saw-font-size-xs);
     line-height: 1.8;
 }
 
 /* ============================================
-   TABLE ROW & COLUMNS
+   FEATURES LIST IN MODAL
    ============================================ */
-.saw-module-account-types .saw-account-type-row:hover {
-    background-color: #f9fafb;
-}
-
-.saw-module-account-types .saw-account-type-name strong {
-    font-size: 15px;
-    color: #111827;
-}
-
-/* Column width constraints - zabraňuje zalamování */
-.saw-module-account-types .saw-admin-table th,
-.saw-module-account-types .saw-admin-table td {
-    white-space: nowrap;
-}
-
-/* Barva */
-.saw-module-account-types .saw-admin-table th:nth-child(1),
-.saw-module-account-types .saw-admin-table td:nth-child(1) {
-    min-width: 80px;
-    width: 80px;
-}
-
-/* Název */
-.saw-module-account-types .saw-admin-table th:nth-child(2),
-.saw-module-account-types .saw-admin-table td:nth-child(2) {
-    min-width: 200px;
-}
-
-/* Interní název */
-.saw-module-account-types .saw-admin-table th:nth-child(3),
-.saw-module-account-types .saw-admin-table td:nth-child(3) {
-    min-width: 150px;
-}
-
-/* Cena */
-.saw-module-account-types .saw-admin-table th:nth-child(4),
-.saw-module-account-types .saw-admin-table td:nth-child(4) {
-    min-width: 140px;
-    width: 140px;
-}
-
-/* Funkce */
-.saw-module-account-types .saw-admin-table th:nth-child(5),
-.saw-module-account-types .saw-admin-table td:nth-child(5) {
-    min-width: 100px;
-    width: 100px;
-}
-
-/* Pořadí */
-.saw-module-account-types .saw-admin-table th:nth-child(6),
-.saw-module-account-types .saw-admin-table td:nth-child(6) {
-    min-width: 100px;
-    width: 100px;
-}
-
-/* Status */
-.saw-module-account-types .saw-admin-table th:nth-child(7),
-.saw-module-account-types .saw-admin-table td:nth-child(7) {
-    min-width: 120px;
-    width: 120px;
-}
-
-/* Akce */
-.saw-module-account-types .saw-admin-table th:nth-child(8),
-.saw-module-account-types .saw-admin-table td:nth-child(8) {
-    min-width: 120px;
-    width: 120px;
-}
-
-/* ============================================
-   ACTION BUTTONS
-   ============================================ */
-.saw-module-account-types .saw-action-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
+.saw-features-list {
+    margin: 0;
     padding: 0;
-    margin: 0 4px;
-    border: none;
-    border-radius: 8px;
-    background: transparent;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    text-decoration: none;
+    list-style: none;
 }
 
-.saw-module-account-types .saw-action-btn .dashicons {
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
-    color: #6b7280;
+.saw-features-list li {
+    padding: var(--saw-space-sm) 0;
+    border-bottom: 1px solid var(--saw-gray-100);
+    font-size: var(--saw-font-size-sm);
+    color: var(--saw-gray-700);
 }
 
-.saw-module-account-types .saw-action-edit:hover {
-    background: #eff6ff;
+.saw-features-list li:last-child {
+    border-bottom: none;
 }
 
-.saw-module-account-types .saw-action-edit:hover .dashicons {
-    color: #2563eb;
-}
-
-.saw-module-account-types .saw-action-delete:hover {
-    background: #fef2f2;
-}
-
-.saw-module-account-types .saw-action-delete:hover .dashicons {
-    color: #dc2626;
-}
-
-/* ============================================
-   UTILITIES
-   ============================================ */
-.saw-module-account-types .saw-text-muted {
-    color: #9ca3af;
-    font-size: 13px;
+.saw-features-list li::before {
+    content: '✓';
+    display: inline-block;
+    margin-right: var(--saw-space-sm);
+    color: var(--saw-success);
+    font-weight: bold;
 }
 
 /* ============================================
    RESPONSIVE
    ============================================ */
 @media (max-width: 768px) {
-    /* Na mobilu povolíme zalamování */
-    .saw-module-account-types .saw-admin-table th,
-    .saw-module-account-types .saw-admin-table td {
-        white-space: normal;
-    }
-    
-    .saw-module-account-types .saw-action-btn {
-        width: 32px;
-        height: 32px;
-        margin: 0 2px;
-    }
-    
-    .saw-module-account-types .saw-action-btn .dashicons {
-        font-size: 16px;
-        width: 16px;
-        height: 16px;
-    }
-    
     .saw-module-account-types .saw-code-badge {
         font-size: 11px;
         padding: 3px 8px;
+    }
+    
+    .saw-module-account-types .saw-sort-order-badge {
+        width: 28px;
+        height: 28px;
+        font-size: 11px;
     }
 }

@@ -3,7 +3,7 @@
  * Language Switcher Component
  * 
  * @package SAW_Visitors
- * @version 2.0.0
+ * @version 2.2.0
  * @since 4.7.0
  */
 
@@ -15,12 +15,11 @@ class SAW_Component_Language_Switcher {
     
     private $current_language;
     private $available_languages;
-    private static $ajax_registered = false;
     
     public function __construct($current_language = 'cs') {
         $this->current_language = $current_language;
         
-        // Dostupné jazyky (lze rozšířit)
+        // Dostupné jazyky
         $this->available_languages = array(
             'cs' => array(
                 'code' => 'cs',
@@ -33,90 +32,6 @@ class SAW_Component_Language_Switcher {
                 'flag' => '🇬🇧',
             ),
         );
-        
-        // Register AJAX handler (singleton)
-        if (!self::$ajax_registered) {
-            add_action('wp_ajax_saw_switch_language', [$this, 'ajax_switch_language']);
-            self::$ajax_registered = true;
-            
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[Language Switcher] AJAX handler registered');
-            }
-        }
-    }
-    
-    /**
-     * AJAX: Switch language
-     */
-    public function ajax_switch_language() {
-        check_ajax_referer('saw_language_switcher', 'nonce');
-        
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log(sprintf(
-                '[Language Switcher] AJAX request - User: %d',
-                get_current_user_id()
-            ));
-        }
-        
-        $language = isset($_POST['language']) ? sanitize_text_field($_POST['language']) : '';
-        
-        // Validate language
-        $valid_languages = array_keys($this->available_languages);
-        if (!in_array($language, $valid_languages)) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log(sprintf(
-                    '[Language Switcher] Invalid language: %s',
-                    $language
-                ));
-            }
-            wp_send_json_error(['message' => 'Neplatný jazyk']);
-            return;
-        }
-        
-        global $wpdb;
-        
-        // Update language in saw_users table
-        $updated = $wpdb->update(
-            $wpdb->prefix . 'saw_users',
-            ['language' => $language],
-            ['wp_user_id' => get_current_user_id()],
-            ['%s'],
-            ['%d']
-        );
-        
-        if ($updated === false) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log(sprintf(
-                    '[Language Switcher] DB update failed: %s',
-                    $wpdb->last_error
-                ));
-            }
-            wp_send_json_error(['message' => 'Chyba při ukládání jazyka']);
-            return;
-        }
-        
-        // Backup to session
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        $_SESSION['saw_current_language'] = $language;
-        
-        // Backup to WordPress user meta
-        update_user_meta(get_current_user_id(), 'saw_current_language', $language);
-        
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log(sprintf(
-                '[Language Switcher] Language switched to: %s for user %d',
-                $language,
-                get_current_user_id()
-            ));
-        }
-        
-        wp_send_json_success([
-            'language' => $language,
-            'language_name' => $this->available_languages[$language]['name'],
-            'message' => 'Jazyk byl změněn'
-        ]);
     }
     
     /**

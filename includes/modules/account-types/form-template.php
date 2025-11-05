@@ -1,29 +1,24 @@
 <?php
 /**
- * Account Types Form Template
+ * Account Types Form Template - REFACTORED
  * 
- * Formulář pro vytvoření/editaci typu účtu.
- * Obsahuje:
- * - Základní info (name, display_name)
- * - Branding (color)
- * - Cena
- * - Features (textarea - každý řádek = 1 feature)
- * - Nastavení (sort_order, is_active)
+ * ✅ CHANGES:
+ * - No inline styles
+ * - Global form classes (.saw-form-card, .saw-input, etc.)
+ * - Proper escapování
  * 
  * @package SAW_Visitors
- * @version 1.0.0
- * @since   4.9.0
+ * @version 2.0.0 - REFACTORED
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-// Zjisti zda editujeme nebo vytváříme nový
 $is_edit = !empty($item);
 $item = $item ?? [];
 
-// Převeď features z JSON na textarea (každý feature na řádek)
+// Convert features from JSON to textarea
 $features_text = '';
 if (!empty($item['features'])) {
     $features_array = json_decode($item['features'], true);
@@ -33,7 +28,6 @@ if (!empty($item['features'])) {
 }
 ?>
 
-<!-- PAGE HEADER -->
 <div class="saw-page-header">
     <div class="saw-page-header-content">
         <h1 class="saw-page-title">
@@ -46,22 +40,15 @@ if (!empty($item['features'])) {
     </div>
 </div>
 
-<!-- FORM CONTAINER -->
 <div class="saw-form-container">
     <form method="post" class="saw-account-type-form">
-        <?php 
-        // Security nonce
-        wp_nonce_field('saw_account-types_form', 'saw_nonce'); 
-        ?>
+        <?php wp_nonce_field('saw_account_types_form', 'saw_nonce'); ?>
         
         <?php if ($is_edit): ?>
-            <!-- Hidden ID pro editaci -->
             <input type="hidden" name="id" value="<?php echo esc_attr($item['id']); ?>">
         <?php endif; ?>
         
-        <!-- ========================================
-             ZÁKLADNÍ INFORMACE
-             ======================================== -->
+        <!-- ZÁKLADNÍ INFORMACE -->
         <details class="saw-form-section" open>
             <summary>
                 <span class="dashicons dashicons-admin-generic"></span>
@@ -69,7 +56,6 @@ if (!empty($item['features'])) {
             </summary>
             <div class="saw-form-section-content">
                 
-                <!-- Interní název (slug) -->
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-6">
                         <label for="name" class="saw-label saw-required">
@@ -91,7 +77,6 @@ if (!empty($item['features'])) {
                         </span>
                     </div>
                     
-                    <!-- Zobrazovaný název -->
                     <div class="saw-form-group saw-col-6">
                         <label for="display_name" class="saw-label saw-required">
                             Zobrazovaný název
@@ -111,7 +96,6 @@ if (!empty($item['features'])) {
                     </div>
                 </div>
                 
-                <!-- Cena -->
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-6">
                         <label for="price" class="saw-label">
@@ -135,7 +119,6 @@ if (!empty($item['features'])) {
                         </span>
                     </div>
                     
-                    <!-- Sort order -->
                     <div class="saw-form-group saw-col-6">
                         <label for="sort_order" class="saw-label">
                             Pořadí řazení
@@ -158,9 +141,7 @@ if (!empty($item['features'])) {
             </div>
         </details>
         
-        <!-- ========================================
-             BRANDING (BARVA)
-             ======================================== -->
+        <!-- BRANDING -->
         <details class="saw-form-section" open>
             <summary>
                 <span class="dashicons dashicons-art"></span>
@@ -186,9 +167,7 @@ if (!empty($item['features'])) {
             </div>
         </details>
         
-        <!-- ========================================
-             FUNKCE (FEATURES)
-             ======================================== -->
+        <!-- FUNKCE -->
         <details class="saw-form-section">
             <summary>
                 <span class="dashicons dashicons-list-view"></span>
@@ -204,7 +183,7 @@ if (!empty($item['features'])) {
                         <textarea 
                             id="features" 
                             name="features" 
-                            class="saw-textarea" 
+                            class="saw-textarea saw-features-textarea" 
                             rows="10"
                             placeholder="Každou funkci napište na nový řádek, např.:&#10;✓ 10 návštěvníků měsíčně&#10;✓ Základní reporty&#10;✓ Email notifikace"
                         ><?php echo esc_textarea($features_text); ?></textarea>
@@ -217,9 +196,7 @@ if (!empty($item['features'])) {
             </div>
         </details>
         
-        <!-- ========================================
-             NASTAVENÍ
-             ======================================== -->
+        <!-- NASTAVENÍ -->
         <details class="saw-form-section" open>
             <summary>
                 <span class="dashicons dashicons-admin-settings"></span>
@@ -248,9 +225,7 @@ if (!empty($item['features'])) {
             </div>
         </details>
         
-        <!-- ========================================
-             ACTION BUTTONS
-             ======================================== -->
+        <!-- ACTION BUTTONS -->
         <div class="saw-form-actions">
             <button type="submit" class="saw-button saw-button-primary">
                 <span class="dashicons dashicons-yes"></span>
@@ -264,13 +239,3 @@ if (!empty($item['features'])) {
         
     </form>
 </div>
-
-<script>
-// Sync display_name do preview badge
-jQuery(document).ready(function($) {
-    $('#display_name').on('input', function() {
-        const name = $(this).val() || 'Název';
-        $('#color-preview-badge').text(name);
-    });
-});
-</script>

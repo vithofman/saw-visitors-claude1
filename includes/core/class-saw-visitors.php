@@ -26,6 +26,7 @@ class SAW_Visitors {
         $this->init_context();
         $this->init_customer_switcher();
         $this->init_branch_switcher();
+        $this->init_language_switcher();  // ← PŘIDÁNO
         $this->register_module_ajax_handlers();
         $this->block_wp_admin_for_saw_roles();
     }
@@ -133,6 +134,18 @@ class SAW_Visitors {
         }
     }
     
+    // ← PŘIDEJ TUTO NOVOU METODU
+    private function init_language_switcher() {
+        // Load AJAX handler
+        if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/components/language-switcher/ajax-handler.php')) {
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/language-switcher/ajax-handler.php';
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[SAW_Visitors] Language Switcher AJAX handler loaded');
+            }
+        }
+    }
+    
     private function block_wp_admin_for_saw_roles() {
         add_action('admin_init', function() {
             $user = wp_get_current_user();
@@ -145,12 +158,6 @@ class SAW_Visitors {
         });
     }
     
-    /**
-     * Register AJAX handlers for all modules
-     * 
-     * CRITICAL: AJAX handlers must be registered early, not in controller __construct
-     * FIX: Use $instance variable to avoid $this context loss in closures
-     */
     private function register_module_ajax_handlers() {
         $modules = SAW_Module_Loader::get_all();
         $instance = $this;
@@ -172,9 +179,6 @@ class SAW_Visitors {
         }
     }
     
-    /**
-     * Handle AJAX detail request for module
-     */
     private function handle_module_ajax_detail($slug) {
         $config = SAW_Module_Loader::load($slug);
         
@@ -202,9 +206,6 @@ class SAW_Visitors {
         }
     }
     
-    /**
-     * Handle AJAX search request for module
-     */
     private function handle_module_ajax_search($slug) {
         $config = SAW_Module_Loader::load($slug);
         
@@ -232,9 +233,6 @@ class SAW_Visitors {
         }
     }
     
-    /**
-     * Handle AJAX delete request for module
-     */
     private function handle_module_ajax_delete($slug) {
         $config = SAW_Module_Loader::load($slug);
         
