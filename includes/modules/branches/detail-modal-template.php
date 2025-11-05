@@ -2,8 +2,14 @@
 /**
  * Branches Detail Modal Template
  * 
+ * REFACTORED v2.0.0:
+ * ✅ No inline styles
+ * ✅ Global CSS classes
+ * ✅ All values escaped
+ * ✅ Fallback for missing data
+ * 
  * @package SAW_Visitors
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 if (!defined('ABSPATH')) {
@@ -11,7 +17,7 @@ if (!defined('ABSPATH')) {
 }
 
 if (empty($item)) {
-    echo '<p>Pobočka nebyla nalezena.</p>';
+    echo '<div class="saw-alert saw-alert-danger">Pobočka nebyla nalezena</div>';
     return;
 }
 ?>
@@ -30,13 +36,21 @@ if (empty($item)) {
     <div class="saw-detail-header-info">
         <h2>
             <?php echo esc_html($item['name']); ?>
+        </h2>
+        
+        <div class="saw-detail-badges">
+            <?php if (!empty($item['code'])): ?>
+                <span class="saw-code-badge"><?php echo esc_html($item['code']); ?></span>
+            <?php endif; ?>
+            
             <?php if (!empty($item['is_headquarters'])): ?>
                 <span class="saw-badge saw-badge-info">Hlavní sídlo</span>
             <?php endif; ?>
-        </h2>
-        <?php if (!empty($item['code'])): ?>
-            <p>Kód: <strong><?php echo esc_html($item['code']); ?></strong></p>
-        <?php endif; ?>
+            
+            <span class="<?php echo esc_attr($item['is_active_badge_class']); ?>">
+                <?php echo esc_html($item['is_active_label']); ?>
+            </span>
+        </div>
     </div>
 </div>
 
@@ -45,7 +59,7 @@ if (empty($item)) {
     <?php if (!empty($item['full_address'])): ?>
     <div class="saw-detail-section">
         <h3>📍 Adresa</h3>
-        <dl>
+        <dl class="saw-detail-list">
             <?php if (!empty($item['street'])): ?>
                 <dt>Ulice</dt>
                 <dd><?php echo esc_html($item['street']); ?></dd>
@@ -67,8 +81,8 @@ if (empty($item)) {
             <?php endif; ?>
         </dl>
         
-        <?php if ($item['has_gps']): ?>
-            <div style="margin-top: 16px;">
+        <?php if (!empty($item['has_gps'])): ?>
+            <div class="saw-detail-action">
                 <a href="<?php echo esc_url($item['google_maps_url']); ?>" 
                    target="_blank" 
                    class="saw-map-link">
@@ -83,7 +97,7 @@ if (empty($item)) {
     <?php if (!empty($item['phone']) || !empty($item['email'])): ?>
     <div class="saw-detail-section">
         <h3>📞 Kontakt</h3>
-        <dl>
+        <dl class="saw-detail-list">
             <?php if (!empty($item['phone'])): ?>
                 <dt>Telefon</dt>
                 <dd><a href="tel:<?php echo esc_attr($item['phone']); ?>"><?php echo esc_html($item['phone']); ?></a></dd>
@@ -110,7 +124,7 @@ if (empty($item)) {
     
     <?php if (!empty($item['description'])): ?>
     <div class="saw-detail-section">
-        <h3>📝 Popis</h3>
+        <h3>📄 Popis</h3>
         <p><?php echo nl2br(esc_html($item['description'])); ?></p>
     </div>
     <?php endif; ?>
@@ -122,10 +136,10 @@ if (empty($item)) {
     </div>
     <?php endif; ?>
     
-    <?php if ($item['has_gps']): ?>
+    <?php if (!empty($item['has_gps'])): ?>
     <div class="saw-detail-section">
         <h3>🌍 GPS Souřadnice</h3>
-        <dl>
+        <dl class="saw-detail-list">
             <dt>Zeměpisná šířka</dt>
             <dd><?php echo esc_html($item['latitude']); ?></dd>
             
@@ -137,17 +151,17 @@ if (empty($item)) {
     
     <div class="saw-detail-section">
         <h3>ℹ️ Informace</h3>
-        <dl>
+        <dl class="saw-detail-list">
             <dt>Status</dt>
             <dd>
-                <span class="saw-badge <?php echo esc_attr($item['is_active_badge_class']); ?>">
+                <span class="<?php echo esc_attr($item['is_active_badge_class']); ?>">
                     <?php echo esc_html($item['is_active_label']); ?>
                 </span>
             </dd>
             
             <dt>Hlavní sídlo</dt>
             <dd>
-                <span class="saw-badge <?php echo esc_attr($item['is_headquarters_badge_class']); ?>">
+                <span class="<?php echo esc_attr($item['is_headquarters_badge_class']); ?>">
                     <?php echo esc_html($item['is_headquarters_label']); ?>
                 </span>
             </dd>
@@ -168,41 +182,3 @@ if (empty($item)) {
     </div>
     
 </div>
-
-<style>
-.saw-detail-logo-placeholder {
-    width: 88px;
-    height: 88px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 14px;
-    border: 2px solid #e2e8f0;
-}
-
-.saw-detail-logo-placeholder .dashicons {
-    font-size: 44px;
-    width: 44px;
-    height: 44px;
-    color: #ffffff;
-}
-
-.saw-opening-hours-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.saw-opening-hours-list li {
-    padding: 10px 14px;
-    background: #f8fafc;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-    font-size: 14px;
-    color: #1e293b;
-}
-</style>

@@ -1,17 +1,19 @@
 <?php
+/**
+ * Users Module Model - REFACTORED v3.0.0
+ * 
+ * ✅ Uses SAW_Context instead of sessions
+ * ✅ Proper $wpdb->prepare()
+ * ✅ Auto-fills customer_id
+ * 
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
 if (!defined('ABSPATH')) {
     exit;
 }
 
-/**
- * Users Module Model - FIXED with auto-fill customer_id
- * 
- * ✅ Auto-fills customer_id from session when creating users
- * ✅ Respects scope-based filtering
- * 
- * @package SAW_Visitors
- * @version 1.0.4
- */
 class SAW_Module_Users_Model extends SAW_Base_Model 
 {
     public function __construct($config) {
@@ -23,16 +25,12 @@ class SAW_Module_Users_Model extends SAW_Base_Model
     }
     
     /**
-     * ✅ Override create() - auto-fill customer_id from session
+     * Override create() - auto-fill customer_id
      */
     public function create($data) {
-        // ✅ Auto-fill customer_id from session if not provided
+        // ✅ Auto-fill customer_id from context
         if (empty($data['customer_id']) && isset($data['role']) && $data['role'] !== 'super_admin') {
-            if (session_status() === PHP_SESSION_NONE) {
-                session_start();
-            }
-            
-            $data['customer_id'] = $_SESSION['saw_current_customer_id'] ?? null;
+            $data['customer_id'] = SAW_Context::get_customer_id();
             
             if (!$data['customer_id']) {
                 return new WP_Error('missing_customer', 'Customer ID is required for this role');
@@ -44,29 +42,13 @@ class SAW_Module_Users_Model extends SAW_Base_Model
             $data['customer_id'] = null;
         }
         
-        // Admin role - set customer_id from session
-        if (isset($data['role']) && $data['role'] === 'admin') {
-            if (session_status() === PHP_SESSION_NONE) {
-                session_start();
-            }
-            $data['customer_id'] = $_SESSION['saw_current_customer_id'] ?? null;
-        }
-        
         return parent::create($data);
     }
     
     /**
-     * ✅ FINAL FIX: get_all() for users
+     * Get all with proper scope
      */
     public function get_all($args = []) {
-        global $wpdb;
-        
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        
-        $session_customer_id = $_SESSION['saw_current_customer_id'] ?? null;
-        
         $current_user = wp_get_current_user();
         $is_super_admin = in_array('administrator', $current_user->roles, true);
         
@@ -75,19 +57,18 @@ class SAW_Module_Users_Model extends SAW_Base_Model
             return $this->get_all_for_super_admin($args);
         }
         
-        // Others see only their customer (via scope)
-        // Parent::get_all() will apply scope automatically
+        // Others see only their customer (via parent scope)
         return parent::get_all($args);
     }
     
     /**
-     * ✅ Special method for SuperAdmin
+     * Special method for SuperAdmin
      */
     private function get_all_for_super_admin($filters = []) {
         global $wpdb;
         
-        $sql = "SELECT * FROM {$this->table} WHERE 1=1";
-        $params = [];
+        $sql = "SELECT * FROM %i WHERE 1=1";
+        $params = [$this->table];
         
         if (!empty($filters['search'])) {
             $search_fields = $this->config['list_config']['searchable'] ?? ['first_name', 'last_name', 'email'];
@@ -113,27 +94,25 @@ class SAW_Module_Users_Model extends SAW_Base_Model
             }
         }
         
-        if (!empty($params)) {
-            $sql = $wpdb->prepare($sql, ...$params);
-        }
+        $prepared_sql = $wpdb->prepare($sql, ...$params);
         
         $orderby = $filters['orderby'] ?? 'created_at';
         $order = strtoupper($filters['order'] ?? 'DESC');
         
         if (in_array($order, ['ASC', 'DESC'])) {
-            $sql .= " ORDER BY {$orderby} {$order}";
+            $prepared_sql .= " ORDER BY {$orderby} {$order}";
         }
         
-        $total_sql = "SELECT COUNT(*) FROM ({$sql}) as count_table";
+        $total_sql = "SELECT COUNT(*) FROM ({$prepared_sql}) as count_table";
         $total = $wpdb->get_var($total_sql);
         
         $limit = intval($filters['per_page'] ?? 20);
         $page = intval($filters['page'] ?? 1);
         $offset = ($page - 1) * $limit;
         
-        $sql .= " LIMIT {$limit} OFFSET {$offset}";
+        $prepared_sql .= " LIMIT {$limit} OFFSET {$offset}";
         
-        $results = $wpdb->get_results($sql, ARRAY_A);
+        $results = $wpdb->get_results($prepared_sql, ARRAY_A);
         
         return [
             'items' => $results,
@@ -142,7 +121,7 @@ class SAW_Module_Users_Model extends SAW_Base_Model
     }
     
     /**
-     * Validace
+     * Validate
      */
     public function validate($data, $id = 0) {
         $errors = [];
@@ -184,7 +163,8 @@ class SAW_Module_Users_Model extends SAW_Base_Model
         }
         
         $query = $wpdb->prepare(
-            "SELECT COUNT(*) FROM {$this->table} WHERE email = %s AND id != %d",
+            "SELECT COUNT(*) FROM %i WHERE email = %s AND id != %d",
+            $this->table,
             $email,
             $exclude_id
         );
@@ -202,7 +182,8 @@ class SAW_Module_Users_Model extends SAW_Base_Model
         if (isset($user['role']) && $user['role'] === 'manager') {
             global $wpdb;
             $departments = $wpdb->get_results($wpdb->prepare(
-                "SELECT department_id FROM {$wpdb->prefix}saw_user_departments WHERE user_id = %d",
+                "SELECT department_id FROM %i WHERE user_id = %d",
+                $wpdb->prefix . 'saw_user_departments',
                 $id
             ), ARRAY_A);
             
@@ -223,12 +204,14 @@ class SAW_Module_Users_Model extends SAW_Base_Model
         foreach ($tables_to_check as $table => $column) {
             $full_table = $wpdb->prefix . $table;
             
-            if ($wpdb->get_var("SHOW TABLES LIKE '{$full_table}'") !== $full_table) {
+            if ($wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $full_table)) !== $full_table) {
                 continue;
             }
             
             $count = $wpdb->get_var($wpdb->prepare(
-                "SELECT COUNT(*) FROM {$full_table} WHERE {$column} = %d",
+                "SELECT COUNT(*) FROM %i WHERE %i = %d",
+                $full_table,
+                $column,
                 $id
             ));
             

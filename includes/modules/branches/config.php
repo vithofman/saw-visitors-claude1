@@ -1,4 +1,11 @@
 <?php
+/**
+ * Branches Module Config
+ * 
+ * @package SAW_Visitors
+ * @version 2.0.0 - REFACTORED
+ */
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -10,17 +17,22 @@ return [
     'plural' => 'Pobočky',
     'route' => 'admin/branches',
     'icon' => '🏢',
-    'filter_by_customer' => true,
+    
+    'has_customer_isolation' => true,
     
     'capabilities' => [
-        'list' => 'read',
-        'view' => 'read',
-        'create' => 'read',
-        'edit' => 'read',
-        'delete' => 'read',
+        'list' => 'saw_view_branches',
+        'view' => 'saw_view_branches',
+        'create' => 'saw_manage_branches',
+        'edit' => 'saw_manage_branches',
+        'delete' => 'saw_manage_branches',
     ],
     
     'fields' => [
+        'customer_id' => [
+            'type' => 'hidden',
+            'required' => true,
+        ],
         'name' => [
             'type' => 'text',
             'label' => 'Název pobočky',
@@ -28,7 +40,6 @@ return [
             'sanitize' => 'sanitize_text_field',
             'help' => 'Název pobočky (např. "Pobočka Praha")',
         ],
-        
         'code' => [
             'type' => 'text',
             'label' => 'Kód pobočky',
@@ -36,7 +47,6 @@ return [
             'sanitize' => 'sanitize_text_field',
             'help' => 'Interní kód pro identifikaci (např. "PR001")',
         ],
-        
         'street' => [
             'type' => 'text',
             'label' => 'Ulice a číslo',
@@ -44,7 +54,6 @@ return [
             'sanitize' => 'sanitize_text_field',
             'help' => 'Ulice a číslo popisné',
         ],
-        
         'city' => [
             'type' => 'text',
             'label' => 'Město',
@@ -52,7 +61,6 @@ return [
             'sanitize' => 'sanitize_text_field',
             'help' => 'Město',
         ],
-        
         'postal_code' => [
             'type' => 'text',
             'label' => 'PSČ',
@@ -60,7 +68,6 @@ return [
             'sanitize' => 'sanitize_text_field',
             'help' => 'Poštovní směrovací číslo',
         ],
-        
         'country' => [
             'type' => 'select',
             'label' => 'Země',
@@ -76,7 +83,6 @@ return [
             ],
             'help' => 'Země',
         ],
-        
         'latitude' => [
             'type' => 'number',
             'label' => 'Zeměpisná šířka',
@@ -85,7 +91,6 @@ return [
             'step' => '0.00000001',
             'help' => 'GPS - zeměpisná šířka (např. 50.0755)',
         ],
-        
         'longitude' => [
             'type' => 'number',
             'label' => 'Zeměpisná délka',
@@ -94,7 +99,6 @@ return [
             'step' => '0.00000001',
             'help' => 'GPS - zeměpisná délka (např. 14.4378)',
         ],
-        
         'phone' => [
             'type' => 'text',
             'label' => 'Telefon',
@@ -102,7 +106,6 @@ return [
             'sanitize' => 'sanitize_text_field',
             'help' => 'Telefonní číslo pobočky',
         ],
-        
         'email' => [
             'type' => 'email',
             'label' => 'Email',
@@ -110,7 +113,6 @@ return [
             'sanitize' => 'sanitize_email',
             'help' => 'Emailová adresa pobočky',
         ],
-        
         'image_url' => [
             'type' => 'file',
             'label' => 'Obrázek pobočky',
@@ -118,14 +120,12 @@ return [
             'sanitize' => 'esc_url_raw',
             'help' => 'Hlavní obrázek pobočky',
         ],
-        
         'image_thumbnail' => [
             'type' => 'hidden',
             'label' => 'Náhled obrázku',
             'required' => false,
             'sanitize' => 'esc_url_raw',
         ],
-        
         'description' => [
             'type' => 'textarea',
             'label' => 'Popis',
@@ -134,7 +134,6 @@ return [
             'help' => 'Veřejný popis pobočky',
             'rows' => 5,
         ],
-        
         'notes' => [
             'type' => 'textarea',
             'label' => 'Interní poznámky',
@@ -143,7 +142,6 @@ return [
             'help' => 'Interní poznámky (neviditelné pro návštěvníky)',
             'rows' => 3,
         ],
-        
         'opening_hours' => [
             'type' => 'textarea',
             'label' => 'Provozní doba',
@@ -152,7 +150,6 @@ return [
             'help' => 'Každý den na nový řádek (např. "Po-Pá: 8:00-16:00")',
             'rows' => 7,
         ],
-        
         'is_active' => [
             'type' => 'checkbox',
             'label' => 'Aktivní',
@@ -161,7 +158,6 @@ return [
             'sanitize' => 'absint',
             'help' => 'Pouze aktivní pobočky jsou viditelné',
         ],
-        
         'is_headquarters' => [
             'type' => 'checkbox',
             'label' => 'Hlavní sídlo',
@@ -170,7 +166,6 @@ return [
             'sanitize' => 'absint',
             'help' => 'Je toto hlavní sídlo společnosti?',
         ],
-        
         'sort_order' => [
             'type' => 'number',
             'label' => 'Pořadí řazení',
@@ -188,7 +183,6 @@ return [
         'filters' => [
             'is_active' => true,
             'is_headquarters' => true,
-            'customer_id' => true,
         ],
         'per_page' => 20,
         'enable_detail_modal' => true,

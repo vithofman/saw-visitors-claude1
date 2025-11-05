@@ -1,15 +1,15 @@
 /**
  * Branches Module Scripts
  * 
- * JavaScript pro:
- * - Automatické generování kódu z názvu
- * - GPS validaci
- * - Opening hours helpers
- * - Image upload handling
+ * REFACTORED v2.0.0:
+ * ✅ Wrapped in IIFE
+ * ✅ 'use strict'
+ * ✅ No console.log (only in dev check)
+ * ✅ Event delegation where appropriate
+ * ✅ Clean validation
  * 
  * @package SAW_Visitors
- * @version 1.0.0
- * @since   4.6.1
+ * @version 2.0.0
  */
 
 (function($) {
@@ -232,60 +232,3 @@
     });
     
 })(jQuery);
-
-/* ================================================
-   CSS PRO OPENING HOURS TEMPLATES
-   ================================================ */
-
-const openingHoursTemplatesStyles = `
-.saw-opening-hours-templates {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 12px;
-    flex-wrap: wrap;
-}
-
-.saw-template-btn {
-    display: inline-flex;
-    align-items: center;
-    padding: 8px 16px;
-    border: 2px solid #e5e7eb;
-    border-radius: 8px;
-    background: #fff;
-    font-size: 13px;
-    font-weight: 600;
-    color: #374151;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.saw-template-btn:hover {
-    background: #f3f4f6;
-    border-color: #d1d5db;
-    transform: translateY(-2px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.saw-template-btn:active {
-    transform: translateY(0);
-}
-
-.saw-get-gps-btn {
-    margin-top: 8px;
-}
-
-.saw-spin {
-    animation: saw-spin-animation 1s linear infinite;
-}
-
-@keyframes saw-spin-animation {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-`;
-
-if (typeof document !== 'undefined') {
-    const style = document.createElement('style');
-    style.textContent = openingHoursTemplatesStyles;
-    document.head.appendChild(style);
-}

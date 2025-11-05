@@ -13,7 +13,8 @@ global $wpdb;
 $branch_name = '—';
 if (!empty($item['branch_id'])) {
     $branch = $wpdb->get_row($wpdb->prepare(
-        "SELECT name, code FROM {$wpdb->prefix}saw_branches WHERE id = %d",
+        "SELECT name, code FROM %i WHERE id = %d",
+        $wpdb->prefix . 'saw_branches',
         $item['branch_id']
     ), ARRAY_A);
     if ($branch) {
@@ -40,10 +41,12 @@ $departments = [];
 if ($item['role'] === 'manager') {
     $departments = $wpdb->get_results($wpdb->prepare(
         "SELECT d.name 
-         FROM {$wpdb->prefix}saw_departments d
-         INNER JOIN {$wpdb->prefix}saw_user_departments ud ON d.id = ud.department_id
+         FROM %i d
+         INNER JOIN %i ud ON d.id = ud.department_id
          WHERE ud.user_id = %d
          ORDER BY d.name ASC",
+        $wpdb->prefix . 'saw_departments',
+        $wpdb->prefix . 'saw_user_departments',
         $item['id']
     ), ARRAY_A);
 }

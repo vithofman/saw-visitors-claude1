@@ -1,15 +1,22 @@
 <?php
 /**
- * AJAX Handlers Trait - FIXED VERSION v1.5.0
+ * AJAX Handlers Trait - ENHANCED VERSION v2.0.0
  * 
- * CRITICAL FIXES:
+ * WHAT'S NEW in v2.0.0:
+ * - ✅ Try-catch for template rendering (prevents 500 errors)
+ * - ✅ HTML length validation (min 50 bytes)
+ * - ✅ Enhanced debug logging for troubleshooting
+ * - ✅ Better error messages for template issues
+ * - ✅ Backwards compatible with all existing modules
+ * 
+ * PREVIOUS FIXES (v1.5.0):
  * - ✅ ajax_get_detail() validates customer isolation ONLY if entity has it
  * - ✅ Checks config['has_customer_isolation'] flag before validation
  * - ✅ Global entities (account-types, etc.) skip isolation check
- * - ✅ FIXED: Uses SAW_Auth directly instead of $this->get_current_user_role()
+ * - ✅ Uses SAW_Auth directly instead of $this->get_current_user_role()
  * 
  * @package SAW_Visitors
- * @version 1.5.0
+ * @version 2.0.0
  */
 
 if (!defined('ABSPATH')) {
@@ -18,6 +25,9 @@ if (!defined('ABSPATH')) {
 
 trait SAW_AJAX_Handlers 
 {
+    /**
+     * AJAX: Search handler
+     */
     public function ajax_search() {
         check_ajax_referer('saw_ajax_nonce', 'nonce');
         
@@ -50,6 +60,9 @@ trait SAW_AJAX_Handlers
         ]);
     }
     
+    /**
+     * AJAX: Delete handler
+     */
     public function ajax_delete() {
         check_ajax_referer('saw_ajax_nonce', 'nonce');
         
@@ -116,14 +129,21 @@ trait SAW_AJAX_Handlers
         wp_send_json_success(['message' => ucfirst($this->entity) . ' deleted successfully']);
     }
     
+    /**
+     * AJAX: Get detail for modal
+     * 
+     * ✅ NEW in v2.0.0: Enhanced error handling and validation
+     */
     public function ajax_get_detail() {
         check_ajax_referer('saw_ajax_nonce', 'nonce');
         
+        // Permission check
         if (!$this->can_view_detail()) {
             wp_send_json_error(['message' => 'Nedostatečná oprávnění']);
             return;
         }
         
+        // Validate ID
         $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
         
         if (!$id) {
@@ -131,6 +151,7 @@ trait SAW_AJAX_Handlers
             return;
         }
         
+        // Debug logging
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log(sprintf(
                 '[AJAX Detail] Request - ID: %d, Entity: %s, User: %d, Has Isolation: %s',
@@ -141,6 +162,7 @@ trait SAW_AJAX_Handlers
             ));
         }
         
+        // Load item from database
         $item = $this->model->get_by_id($id);
         
         if (!$item) {
@@ -155,6 +177,7 @@ trait SAW_AJAX_Handlers
             return;
         }
         
+        // Customer isolation check
         if (!$this->can_access_item($item)) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log(sprintf(
@@ -169,48 +192,94 @@ trait SAW_AJAX_Handlers
             return;
         }
         
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log(sprintf(
-                '[AJAX Detail] SUCCESS - ID: %d, Entity: %s',
-                $id,
-                $this->entity
-            ));
-        }
-        
+        // Format data (dates, badges, etc.)
         $item = $this->format_detail_data($item);
         
+        // Check template existence
         $template_path = $this->config['path'] . 'detail-modal-template.php';
         
-        if (file_exists($template_path)) {
-            ob_start();
-            include $template_path;
+        if (!file_exists($template_path)) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log(sprintf(
+                    '[AJAX Detail] Template NOT FOUND: %s',
+                    $template_path
+                ));
+            }
+            wp_send_json_error(['message' => 'Template nebyl nalezen']);
+            return;
+        }
+        
+        // ✅ NEW: Try-catch for template rendering
+        ob_start();
+        
+        try {
+            require $template_path;
             $html = ob_get_clean();
+            
+            // ✅ NEW: Validate HTML output
+            if (empty($html)) {
+                throw new Exception('Template rendered empty content');
+            }
+            
+            // ✅ NEW: Check minimum HTML length (prevents partial renders)
+            if (strlen($html) < 50) {
+                throw new Exception('Template rendered too short content (less than 50 bytes)');
+            }
+            
+            // Success logging
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log(sprintf(
+                    '[AJAX Detail] SUCCESS - ID: %d, Entity: %s, HTML: %d bytes',
+                    $id,
+                    $this->entity,
+                    strlen($html)
+                ));
+            }
             
             wp_send_json_success([
                 'html' => $html,
                 'item' => $item,
             ]);
-        } else {
-            wp_send_json_success([
-                $this->entity => $item,
-                'customer' => $item,
-                'item' => $item,
+            
+        } catch (Exception $e) {
+            // Clean output buffer on error
+            ob_end_clean();
+            
+            // Error logging
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log(sprintf(
+                    '[AJAX Detail] Template rendering error - ID: %d, Entity: %s, Error: %s',
+                    $id,
+                    $this->entity,
+                    $e->getMessage()
+                ));
+            }
+            
+            // User-friendly error message
+            wp_send_json_error([
+                'message' => 'Chyba při zobrazení detailu: ' . $e->getMessage()
             ]);
         }
     }
     
     /**
-     * ✅ CRITICAL FIX: Check access with has_customer_isolation support
+     * Check if user can access specific item (customer isolation)
+     * 
+     * @param array $item
+     * @return bool
      */
     protected function can_access_item($item) {
+        // Super admin can access everything
         if (current_user_can('manage_options')) {
             return true;
         }
         
+        // Check if entity has customer isolation
         $has_isolation = isset($this->config['has_customer_isolation']) 
             ? $this->config['has_customer_isolation'] 
             : true;
         
+        // Global entities (no isolation) - allow access
         if (!$has_isolation) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log(sprintf(
@@ -221,6 +290,7 @@ trait SAW_AJAX_Handlers
             return true;
         }
         
+        // Check customer_id match
         if (isset($item['customer_id'])) {
             $current_customer_id = null;
             
@@ -238,9 +308,15 @@ trait SAW_AJAX_Handlers
             return (int)$item['customer_id'] === (int)$current_customer_id;
         }
         
+        // No customer_id field - allow access
         return true;
     }
     
+    /**
+     * Check if user can view detail
+     * 
+     * @return bool
+     */
     protected function can_view_detail() {
         if (current_user_can('manage_options')) {
             return true;
@@ -260,6 +336,11 @@ trait SAW_AJAX_Handlers
         return SAW_Permissions::check($role, $this->entity, 'view');
     }
     
+    /**
+     * Check if user can search
+     * 
+     * @return bool
+     */
     protected function can_search() {
         if (current_user_can('manage_options')) {
             return true;
@@ -279,6 +360,11 @@ trait SAW_AJAX_Handlers
         return SAW_Permissions::check($role, $this->entity, 'list');
     }
     
+    /**
+     * Check if user can delete
+     * 
+     * @return bool
+     */
     protected function can_delete() {
         if (current_user_can('manage_options')) {
             return true;
@@ -298,11 +384,20 @@ trait SAW_AJAX_Handlers
         return SAW_Permissions::check($role, $this->entity, 'delete');
     }
     
+    /**
+     * Format detail data (dates, badges, etc.)
+     * Override in controller if needed
+     * 
+     * @param array $item
+     * @return array
+     */
     protected function format_detail_data($item) {
+        // Format created_at
         if (!empty($item['created_at'])) {
             $item['created_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['created_at']));
         }
         
+        // Format updated_at
         if (!empty($item['updated_at'])) {
             $item['updated_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['updated_at']));
         }
@@ -310,6 +405,13 @@ trait SAW_AJAX_Handlers
         return $item;
     }
     
+    /**
+     * Format search result
+     * Override in controller if needed
+     * 
+     * @param array $item
+     * @return array
+     */
     protected function format_search_result($item) {
         return $item;
     }
