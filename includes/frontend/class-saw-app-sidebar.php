@@ -119,7 +119,8 @@ class SAW_App_Sidebar {
                 $first_section = true;
                 foreach ($menu as $index => $section): 
                     $has_active = $this->section_has_active_item($section);
-                    $is_collapsed = !$first_section && !$has_active;
+                    // ✅ FIX: Sekce s aktivní položkou NIKDY nebudou collapsed
+                    $is_collapsed = false; // Vypnuto: !$first_section && !$has_active;
                     
                     $visible_items = [];
                     foreach ($section['items'] as $item) {
@@ -155,7 +156,6 @@ class SAW_App_Sidebar {
                                 <?php endforeach; ?>
                             </div>
                         </div>
-                        <?php $first_section = false; ?>
                     <?php else: ?>
                         <?php foreach ($visible_items as $item): ?>
                             <a 
@@ -168,6 +168,12 @@ class SAW_App_Sidebar {
                             </a>
                         <?php endforeach; ?>
                     <?php endif; ?>
+                    
+                    <?php 
+                    // ✅ OPRAVENO: Reset first_section MIMO if blok
+                    // Tím zajistíme že se reset provede pro VŠECHNY sekce (i ty bez headingu)
+                    $first_section = false; 
+                    ?>
                 <?php endforeach; ?>
             </nav>
         </aside>

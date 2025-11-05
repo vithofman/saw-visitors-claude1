@@ -17,131 +17,142 @@ class SAW_Module_Departments_Model extends SAW_Base_Model
         
         $this->table = $wpdb->prefix . $config['table'];
         $this->config = $config;
-        $this->cache_ttl = $config['cache']['ttl'] ?? 1800;
+        $this->cache_ttl = $config['cache']['ttl'] ?? 300;
     }
     
+    /**
+     * Validate data
+     */
     public function validate($data, $id = 0) {
         $errors = [];
         
+        if (empty($data['customer_id'])) {
+            $errors['customer_id'] = 'Customer ID is required';
+        }
+        
+        if (empty($data['branch_id'])) {
+            $errors['branch_id'] = 'Branch is required';
+        }
+        
         if (empty($data['name'])) {
-            $errors['name'] = 'Název oddělení je povinný';
+            $errors['name'] = 'Department name is required';
         }
         
-        if (!empty($data['name']) && $this->name_exists($data['name'], $id, $data['customer_id'] ?? 0)) {
-            $errors['name'] = 'Oddělení s tímto názvem již existuje';
+        if (!empty($data['department_number']) && $this->department_number_exists($data['customer_id'], $data['branch_id'], $data['department_number'], $id)) {
+            $errors['department_number'] = 'Department with this number already exists in this branch';
         }
         
-        if (isset($data['training_version'])) {
-            $version = intval($data['training_version']);
-            if ($version < 1) {
-                $errors['training_version'] = 'Verze školení musí být alespoň 1';
-            }
-        }
-        
-        return empty($errors) ? true : new WP_Error('validation_error', 'Validace selhala', $errors);
+        return empty($errors) ? true : new WP_Error('validation_error', 'Validation failed', $errors);
     }
     
-    private function name_exists($name, $exclude_id = 0, $customer_id = 0) {
+    /**
+     * Check if department number exists
+     */
+    private function department_number_exists($customer_id, $branch_id, $department_number, $exclude_id = 0) {
         global $wpdb;
         
-        if (empty($name)) {
+        if (empty($department_number)) {
             return false;
         }
         
         $query = $wpdb->prepare(
-            "SELECT COUNT(*) FROM {$this->table} WHERE name = %s AND customer_id = %d AND id != %d",
-            $name,
+            "SELECT COUNT(*) FROM %i WHERE customer_id = %d AND branch_id = %d AND department_number = %s AND id != %d",
+            $this->table,
             $customer_id,
+            $branch_id,
+            $department_number,
             $exclude_id
         );
         
         return (bool) $wpdb->get_var($query);
     }
     
-    public function create($data) {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
+    /**
+     * Get by ID with formatting
+     */
+    public function get_by_id($id) {
+        $item = parent::get_by_id($id);
+        
+        if (!$item) {
+            return null;
         }
         
-        $customer_id = isset($_SESSION['saw_current_customer_id']) ? absint($_SESSION['saw_current_customer_id']) : 0;
+        // Customer isolation check
+        $current_customer_id = SAW_Context::get_customer_id();
         
-        if (!$customer_id) {
+        // Super admin can see all
+        if (!current_user_can('manage_options')) {
+            if (empty($item['customer_id']) || $item['customer_id'] != $current_customer_id) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log(sprintf(
+                        '[DEPARTMENTS] Isolation violation - Item customer: %s, Current: %s',
+                        $item['customer_id'] ?? 'NULL',
+                        $current_customer_id ?? 'NULL'
+                    ));
+                }
+                return null;
+            }
+        }
+        
+        // Get branch name
+        if (!empty($item['branch_id'])) {
             global $wpdb;
-            $customer_id = $wpdb->get_var("SELECT id FROM {$wpdb->prefix}saw_customers ORDER BY id ASC LIMIT 1");
+            $branch = $wpdb->get_row($wpdb->prepare(
+                "SELECT name FROM {$wpdb->prefix}saw_branches WHERE id = %d",
+                $item['branch_id']
+            ), ARRAY_A);
+            
+            $item['branch_name'] = $branch['name'] ?? 'N/A';
         }
         
-        $data['customer_id'] = $customer_id;
+        // Format status
+        $item['is_active_label'] = !empty($item['is_active']) ? 'Aktivní' : 'Neaktivní';
+        $item['is_active_badge_class'] = !empty($item['is_active']) ? 'saw-badge-success' : 'saw-badge-secondary';
         
+        // Format dates
+        if (!empty($item['created_at'])) {
+            $item['created_at_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['created_at']));
+        }
+        
+        if (!empty($item['updated_at'])) {
+            $item['updated_at_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['updated_at']));
+        }
+        
+        return $item;
+    }
+    
+    /**
+     * Get all with customer isolation - CACHE DISABLED FOR DEBUG
+     */
+    public function get_all($filters = []) {
+        $customer_id = SAW_Context::get_customer_id();
+        
+        if (!isset($filters['customer_id'])) {
+            $filters['customer_id'] = $customer_id;
+        }
+        
+        // TEMPORARILY DISABLED CACHE FOR DEBUG
+        return parent::get_all($filters);
+    }
+    
+    /**
+     * Create with cache disabled
+     */
+    public function create($data) {
         return parent::create($data);
     }
     
+    /**
+     * Update with cache disabled
+     */
     public function update($id, $data) {
-        if (empty($data['customer_id'])) {
-            $existing = $this->get_by_id($id);
-            $data['customer_id'] = $existing['customer_id'] ?? 1;
-        }
-        
         return parent::update($id, $data);
     }
     
-    public function is_used_in_system($id) {
-        global $wpdb;
-        
-        $tables_to_check = [
-            'saw_visits' => 'department_id',
-            'saw_invitations' => 'department_id',
-            'saw_users' => 'department_id',
-        ];
-        
-        foreach ($tables_to_check as $table => $column) {
-            $full_table = $wpdb->prefix . $table;
-            
-            if ($wpdb->get_var("SHOW TABLES LIKE '{$full_table}'") !== $full_table) {
-                continue;
-            }
-            
-            $column_exists = $wpdb->get_var($wpdb->prepare(
-                "SHOW COLUMNS FROM `{$full_table}` LIKE %s",
-                $column
-            ));
-            
-            if (!$column_exists) {
-                continue;
-            }
-            
-            $count = $wpdb->get_var($wpdb->prepare(
-                "SELECT COUNT(*) FROM {$full_table} WHERE {$column} = %d",
-                $id
-            ));
-            
-            if ($count > 0) {
-                return true;
-            }
-        }
-        
-        return false;
-    }
-    
-    public function get_by_customer($customer_id, $active_only = false) {
-        $filters = [
-            'customer_id' => $customer_id,
-            'orderby' => 'name',
-            'order' => 'ASC',
-        ];
-        
-        if ($active_only) {
-            $filters['is_active'] = 1;
-        }
-        
-        return $this->get_all($filters);
-    }
-    
-    public function get_all($filters = []) {
-        if (!isset($filters['orderby'])) {
-            $filters['orderby'] = 'name';
-            $filters['order'] = 'ASC';
-        }
-        
-        return parent::get_all($filters);
+    /**
+     * Delete with cache disabled
+     */
+    public function delete($id) {
+        return parent::delete($id);
     }
 }

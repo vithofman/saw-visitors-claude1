@@ -1,4 +1,11 @@
 <?php
+/**
+ * Departments Module Config
+ * 
+ * @package SAW_Visitors
+ * @version 1.0.0
+ */
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -10,25 +17,28 @@ return [
     'plural' => 'Oddělení',
     'route' => 'admin/departments',
     'icon' => '🏢',
-    'filter_by_customer' => true,
+    
+    'has_customer_isolation' => true,
     
     'capabilities' => [
-        'list' => 'read',
-        'view' => 'read',
-        'create' => 'read',
-        'edit' => 'read',
-        'delete' => 'read',
+        'list' => 'saw_view_departments',
+        'view' => 'saw_view_departments',
+        'create' => 'saw_manage_departments',
+        'edit' => 'saw_manage_departments',
+        'delete' => 'saw_manage_departments',
     ],
     
     'fields' => [
+        'customer_id' => [
+            'type' => 'hidden',
+            'required' => true,
+        ],
         'branch_id' => [
-            'type' => 'number',
+            'type' => 'select',
             'label' => 'Pobočka',
             'required' => true,
-            'sanitize' => 'absint',
-            'help' => 'Pod kterou pobočku oddělení spadá',
+            'help' => 'Pobočka ke které oddělení patří',
         ],
-        
         'department_number' => [
             'type' => 'text',
             'label' => 'Číslo oddělení',
@@ -36,51 +46,44 @@ return [
             'sanitize' => 'sanitize_text_field',
             'help' => 'Interní číslo oddělení (volitelné)',
         ],
-        
         'name' => [
             'type' => 'text',
             'label' => 'Název oddělení',
             'required' => true,
             'sanitize' => 'sanitize_text_field',
-            'help' => 'Název oddělení (např. "IT", "Marketing")',
+            'help' => 'Název oddělení',
         ],
-        
         'description' => [
             'type' => 'textarea',
             'label' => 'Popis',
             'required' => false,
             'sanitize' => 'sanitize_textarea_field',
-            'help' => 'Popis oddělení a jeho náplně práce',
-            'rows' => 5,
+            'help' => 'Volitelný popis oddělení',
         ],
-        
         'training_version' => [
             'type' => 'number',
             'label' => 'Verze školení',
-            'required' => true,
-            'default' => 1,
-            'sanitize' => 'absint',
-            'min' => 1,
-            'help' => 'Verze aktuálního bezpečnostního školení',
-        ],
-        
-        'is_active' => [
-            'type' => 'checkbox',
-            'label' => 'Aktivní',
             'required' => false,
             'default' => 1,
-            'sanitize' => 'absint',
-            'help' => 'Pouze aktivní oddělení jsou viditelná',
+            'sanitize' => 'intval',
+            'help' => 'Aktuální verze školení pro oddělení',
+        ],
+        'is_active' => [
+            'type' => 'checkbox',
+            'label' => 'Aktivní oddělení',
+            'required' => false,
+            'default' => 1,
+            'help' => 'Pouze aktivní oddělení jsou dostupná pro výběr',
         ],
     ],
     
     'list_config' => [
-        'columns' => ['name', 'description', 'training_version', 'is_active'],
-        'searchable' => ['name', 'description'],
-        'sortable' => ['name', 'training_version', 'created_at'],
+        'columns' => ['department_number', 'name', 'branch_id', 'training_version', 'is_active'],
+        'searchable' => ['name', 'department_number', 'description'],
+        'sortable' => ['name', 'department_number', 'training_version', 'created_at'],
         'filters' => [
             'is_active' => true,
-            'customer_id' => true,
+            'branch_id' => true,
         ],
         'per_page' => 20,
         'enable_detail_modal' => true,
@@ -88,7 +91,7 @@ return [
     
     'cache' => [
         'enabled' => true,
-        'ttl' => 1800,
+        'ttl' => 300,
         'invalidate_on' => ['save', 'delete'],
     ],
 ];

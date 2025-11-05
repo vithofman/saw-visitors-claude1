@@ -11,156 +11,96 @@ if (!defined('ABSPATH')) {
 }
 
 if (empty($item)) {
-    echo '<p>Oddělení nebylo nalezeno.</p>';
+    echo '<div class="saw-alert saw-alert-danger">Oddělení nebylo nalezeno</div>';
     return;
-}
-
-$branch_name = '';
-if (!empty($item['branch_id'])) {
-    global $wpdb;
-    $branch = $wpdb->get_row($wpdb->prepare(
-        "SELECT name, code, city FROM {$wpdb->prefix}saw_branches WHERE id = %d",
-        $item['branch_id']
-    ), ARRAY_A);
-    
-    if ($branch) {
-        $branch_name = $branch['name'];
-        if (!empty($branch['code'])) {
-            $branch_name .= ' (' . $branch['code'] . ')';
-        }
-        if (!empty($branch['city'])) {
-            $branch_name .= ' - ' . $branch['city'];
-        }
-    }
 }
 ?>
 
 <div class="saw-detail-header">
-    <div class="saw-detail-logo-placeholder">
-        <span class="dashicons dashicons-building"></span>
-    </div>
-    
-    <div class="saw-detail-header-info">
-        <h2><?php echo esc_html($item['name']); ?></h2>
-        <?php if (!empty($item['department_number'])): ?>
-            <p style="margin: 4px 0 8px 0; color: #6b7280; font-size: 14px;">
-                Číslo: <strong><?php echo esc_html($item['department_number']); ?></strong>
-            </p>
-        <?php endif; ?>
-        <?php if (!empty($item['is_active'])): ?>
-            <span class="saw-badge saw-badge-success">Aktivní</span>
-        <?php else: ?>
-            <span class="saw-badge saw-badge-secondary">Neaktivní</span>
+    <div class="saw-detail-header-info" style="flex: 1;">
+        <h2 style="margin: 0 0 10px 0; font-size: 24px; font-weight: 700; color: #0f172a;">
+            <?php echo esc_html($item['name']); ?>
+        </h2>
+        
+        <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 8px;">
+            <?php if (!empty($item['department_number'])): ?>
+                <span class="saw-code-badge"><?php echo esc_html($item['department_number']); ?></span>
+            <?php endif; ?>
+            
+            <?php if (!empty($item['is_active'])): ?>
+                <span class="saw-badge saw-badge-success">Aktivní</span>
+            <?php else: ?>
+                <span class="saw-badge saw-badge-secondary">Neaktivní</span>
+            <?php endif; ?>
+            
+            <?php if (!empty($item['training_version'])): ?>
+                <span class="saw-badge saw-badge-info">Školení v<?php echo esc_html($item['training_version']); ?></span>
+            <?php endif; ?>
+        </div>
+        
+        <?php if (!empty($item['branch_name'])): ?>
+            <div style="font-size: 15px; color: #64748b;">
+                <span class="dashicons dashicons-building" style="font-size: 16px; vertical-align: middle;"></span>
+                <?php echo esc_html($item['branch_name']); ?>
+            </div>
         <?php endif; ?>
     </div>
 </div>
 
 <div class="saw-detail-sections">
     
-    <div class="saw-detail-section">
-        <h3>🏢 Pobočka</h3>
-        <dl>
-            <?php if ($branch_name): ?>
-                <dt>Pobočka</dt>
-                <dd><?php echo esc_html($branch_name); ?></dd>
-            <?php else: ?>
-                <dd><span class="saw-text-muted">Pobočka nebyla nalezena</span></dd>
-            <?php endif; ?>
-            
-            <?php if (!empty($item['department_number'])): ?>
-                <dt>Číslo oddělení</dt>
-                <dd><span class="saw-code-badge"><?php echo esc_html($item['department_number']); ?></span></dd>
-            <?php endif; ?>
-        </dl>
-    </div>
-    
     <?php if (!empty($item['description'])): ?>
     <div class="saw-detail-section">
-        <h3>📝 Popis</h3>
-        <p><?php echo nl2br(esc_html($item['description'])); ?></p>
+        <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 700; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
+            Popis
+        </h3>
+        <p style="margin: 0; color: #475569; line-height: 1.6;">
+            <?php echo nl2br(esc_html($item['description'])); ?>
+        </p>
     </div>
     <?php endif; ?>
     
     <div class="saw-detail-section">
-        <h3>📚 Školení</h3>
-        <dl>
-            <dt>Verze školení</dt>
-            <dd><span class="saw-version-badge-large">v<?php echo esc_html($item['training_version'] ?? 1); ?></span></dd>
-        </dl>
-    </div>
-    
-    <div class="saw-detail-section">
-        <h3>ℹ️ Informace</h3>
-        <dl>
-            <dt>Status</dt>
-            <dd>
-                <?php if (!empty($item['is_active'])): ?>
-                    <span class="saw-badge saw-badge-success">Aktivní</span>
-                <?php else: ?>
-                    <span class="saw-badge saw-badge-secondary">Neaktivní</span>
-                <?php endif; ?>
-            </dd>
-            
-            <?php if (!empty($item['created_at'])): ?>
-                <dt>Vytvořeno</dt>
-                <dd><?php echo esc_html(date_i18n('j. n. Y H:i', strtotime($item['created_at']))); ?></dd>
+        <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 700; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
+            Informace
+        </h3>
+        <dl style="margin: 0; display: grid; grid-template-columns: 140px 1fr; gap: 12px 20px; font-size: 14px;">
+            <?php if (!empty($item['branch_name'])): ?>
+                <dt style="font-weight: 700; color: #64748b;">Pobočka</dt>
+                <dd style="margin: 0; color: #1e293b;"><?php echo esc_html($item['branch_name']); ?></dd>
             <?php endif; ?>
             
-            <?php if (!empty($item['updated_at'])): ?>
-                <dt>Naposledy upraveno</dt>
-                <dd><?php echo esc_html(date_i18n('j. n. Y H:i', strtotime($item['updated_at']))); ?></dd>
+            <?php if (!empty($item['department_number'])): ?>
+                <dt style="font-weight: 700; color: #64748b;">Číslo oddělení</dt>
+                <dd style="margin: 0; color: #1e293b;">
+                    <code style="font-family: monospace; font-size: 13px; color: #475569; background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">
+                        <?php echo esc_html($item['department_number']); ?>
+                    </code>
+                </dd>
+            <?php endif; ?>
+            
+            <?php if (!empty($item['training_version'])): ?>
+                <dt style="font-weight: 700; color: #64748b;">Verze školení</dt>
+                <dd style="margin: 0; color: #1e293b;">v<?php echo esc_html($item['training_version']); ?></dd>
+            <?php endif; ?>
+            
+            <dt style="font-weight: 700; color: #64748b;">Status</dt>
+            <dd style="margin: 0;">
+                <span class="<?php echo esc_attr($item['is_active_badge_class']); ?>">
+                    <?php echo esc_html($item['is_active_label']); ?>
+                </span>
+            </dd>
+            
+            <?php if (!empty($item['created_at_formatted'])): ?>
+                <dt style="font-weight: 700; color: #64748b;">Vytvořeno</dt>
+                <dd style="margin: 0; color: #1e293b; font-family: monospace;"><?php echo esc_html($item['created_at_formatted']); ?></dd>
+            <?php endif; ?>
+            
+            <?php if (!empty($item['updated_at_formatted'])): ?>
+                <dt style="font-weight: 700; color: #64748b;">Aktualizováno</dt>
+                <dd style="margin: 0; color: #1e293b; font-family: monospace;"><?php echo esc_html($item['updated_at_formatted']); ?></dd>
             <?php endif; ?>
         </dl>
     </div>
     
 </div>
-
-<style>
-.saw-detail-logo-placeholder {
-    width: 88px;
-    height: 88px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 14px;
-    border: 2px solid #e2e8f0;
-}
-
-.saw-detail-logo-placeholder .dashicons {
-    font-size: 44px;
-    width: 44px;
-    height: 44px;
-    color: #ffffff;
-}
-
-.saw-version-badge-large {
-    display: inline-block;
-    padding: 8px 16px;
-    background: #eff6ff;
-    border: 2px solid #bfdbfe;
-    border-radius: 8px;
-    font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
-    font-size: 16px;
-    font-weight: 600;
-    color: #1e40af;
-}
-
-.saw-code-badge {
-    display: inline-block;
-    padding: 4px 10px;
-    background: #f3f4f6;
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
-    font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
-    font-size: 13px;
-    font-weight: 600;
-    color: #374151;
-    letter-spacing: 0.5px;
-}
-
-.saw-text-muted {
-    color: #9ca3af;
-    font-size: 14px;
-}
-</style>

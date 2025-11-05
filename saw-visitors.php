@@ -71,7 +71,8 @@ add_action( 'plugins_loaded', function () {
 			saw_log_error( 'Class SAW_Visitors not found after require' );
 			return;
 		}
-		$instance = new SAW_Visitors();
+		// ✅ ZMĚNA: Použij singleton místo new
+		$instance = SAW_Visitors::get_instance();
 		if ( method_exists( $instance, 'run' ) ) {
 			$instance->run();
 		}

@@ -1,18 +1,18 @@
 /**
- * SAW App Sidebar - Global Component Styles
+ * SAW App Sidebar - Global Component Styles (COMPACT VERTICAL)
  * 
  * Navigation sidebar component for frontend application layout
  * Responsivní design s mobilním overlay menu
  * 
  * @package SAW_Visitors
- * @since   4.6.1
+ * @since   4.7.0 - COMPACT: Menší mezery mezi položkami (výška)
  */
 
 .saw-app-sidebar {
     position: fixed;
     top: 60px;
     left: 0;
-    width: 260px;
+    width: 260px; /* ✅ PŮVODNÍ šířka zachována */
     height: calc(100vh - 60px);
     background: white;
     border-right: 1px solid #e5e7eb;
@@ -23,7 +23,7 @@
 
 .saw-sidebar-header {
     display: none;
-    padding: 16px;
+    padding: 12px 16px; /* Menší padding */
     border-bottom: 1px solid #e5e7eb;
     align-items: center;
     justify-content: space-between;
@@ -92,18 +92,18 @@
 }
 
 .saw-sidebar-nav {
-    padding: 16px 0;
+    padding: 8px 0; /* PŘED: 16px - menší padding nahoře/dole */
 }
 
 .saw-nav-section {
-    margin-bottom: 8px;
+    margin-bottom: 2px; /* PŘED: 8px - menší mezera mezi sekcemi */
 }
 
 .saw-nav-heading {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 24px 8px;
+    padding: 8px 24px 4px; /* PŘED: 16px 24px 8px - menší padding */
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
@@ -155,7 +155,7 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 12px 24px;
+    padding: 6px 24px; /* PŘED: 12px 24px - MENŠÍ výška položek */
     color: #4b5563;
     text-decoration: none;
     transition: all 0.2s;

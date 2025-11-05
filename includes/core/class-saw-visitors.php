@@ -5,18 +5,27 @@ if (!defined('ABSPATH')) {
 
 class SAW_Visitors {
     
+    private static $instance = null;
+    
     protected $loader;
     protected $plugin_name;
     protected $version;
     protected $router;
-    private static $instance_created = false;
     
-    public function __construct() {
-        if (self::$instance_created) {
-            return;
+    /**
+     * Singleton pattern - ONLY way to create instance
+     */
+    public static function get_instance() {
+        if (self::$instance === null) {
+            self::$instance = new self();
         }
-        self::$instance_created = true;
-        
+        return self::$instance;
+    }
+    
+    /**
+     * Private constructor - prevents direct instantiation
+     */
+    private function __construct() {
         $this->plugin_name = 'saw-visitors';
         $this->version = SAW_VISITORS_VERSION;
         
@@ -29,6 +38,18 @@ class SAW_Visitors {
         $this->init_language_switcher();
         $this->register_module_ajax_handlers();
         $this->block_wp_admin_for_saw_roles();
+    }
+    
+    /**
+     * Prevent cloning
+     */
+    private function __clone() {}
+    
+    /**
+     * Prevent unserialization
+     */
+    public function __wakeup() {
+        throw new Exception("Cannot unserialize singleton");
     }
     
     private function load_dependencies() {

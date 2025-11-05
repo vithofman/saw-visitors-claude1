@@ -1,9 +1,9 @@
 <?php
 /**
- * Departments Module Controller - COMPLETE
+ * Departments Module Controller
  * 
  * @package SAW_Visitors
- * @version 1.1.0 - FIXED: Added all CRUD methods
+ * @version 1.0.0
  */
 
 if (!defined('ABSPATH')) {
@@ -15,29 +15,27 @@ class SAW_Module_Departments_Controller extends SAW_Base_Controller
     use SAW_AJAX_Handlers;
     
     public function __construct() {
-        $this->config = require __DIR__ . '/config.php';
-        $this->entity = $this->config['entity'];
-        $this->config['path'] = __DIR__ . '/';
+        $module_path = SAW_VISITORS_PLUGIN_DIR . 'includes/modules/departments/';
         
-        require_once __DIR__ . '/model.php';
+        $this->config = require $module_path . 'config.php';
+        $this->entity = $this->config['entity'];
+        $this->config['path'] = $module_path;
+        
+        require_once $module_path . 'model.php';
         $this->model = new SAW_Module_Departments_Model($this->config);
         
-        add_action('wp_ajax_saw_get_departments_detail', [$this, 'ajax_get_detail']);
-        add_action('wp_ajax_saw_search_departments', [$this, 'ajax_search']);
-        add_action('wp_ajax_saw_delete_departments', [$this, 'ajax_delete']);
+        // AJAX handlers registered automatically by SAW_Visitors core
     }
     
-    /**
-     * Index - List view
-     */
     public function index() {
         $this->verify_module_access();
         
         $search = isset($_GET['s']) ? sanitize_text_field($_GET['s']) : '';
-        $is_active = isset($_GET['is_active']) ? sanitize_text_field($_GET['is_active']) : '';
         $orderby = isset($_GET['orderby']) ? sanitize_text_field($_GET['orderby']) : 'name';
         $order = isset($_GET['order']) ? strtoupper(sanitize_text_field($_GET['order'])) : 'ASC';
         $page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
+        $branch_id = isset($_GET['branch_id']) ? intval($_GET['branch_id']) : 0;
+        $is_active = isset($_GET['is_active']) ? sanitize_text_field($_GET['is_active']) : '';
         
         $filters = [
             'search' => $search,
@@ -47,8 +45,12 @@ class SAW_Module_Departments_Controller extends SAW_Base_Controller
             'per_page' => 20,
         ];
         
+        if ($branch_id > 0) {
+            $filters['branch_id'] = $branch_id;
+        }
+        
         if ($is_active !== '') {
-            $filters['is_active'] = $is_active;
+            $filters['is_active'] = intval($is_active);
         }
         
         $data = $this->model->get_all($filters);
@@ -76,9 +78,6 @@ class SAW_Module_Departments_Controller extends SAW_Base_Controller
         $this->render_with_layout($content, $this->config['plural']);
     }
     
-    /**
-     * Create - New department form
-     */
     public function create() {
         $this->verify_module_access();
         
@@ -86,32 +85,40 @@ class SAW_Module_Departments_Controller extends SAW_Base_Controller
             wp_die('Nemáte oprávnění vytvářet oddělení');
         }
         
-        $item = [];
-        
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['saw_nonce'])) {
-            if (!wp_verify_nonce($_POST['saw_nonce'], 'saw_departments_form')) {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!wp_verify_nonce($_POST['saw_nonce'] ?? '', 'saw_departments_form')) {
                 wp_die('Neplatný bezpečnostní token');
             }
             
             $data = $this->prepare_form_data($_POST);
-            $data = $this->before_save($data);
             
+            $data = $this->before_save($data);
             if (is_wp_error($data)) {
                 $this->set_flash($data->get_error_message(), 'error');
-                $item = $data;
-            } else {
-                $result = $this->model->create($data);
-                
-                if (is_wp_error($result)) {
-                    $this->set_flash($result->get_error_message(), 'error');
-                    $item = $data;
-                } else {
-                    $this->after_save($result);
-                    $this->set_flash('Oddělení bylo úspěšně vytvořeno', 'success');
-                    $this->redirect(home_url('/admin/departments/'));
-                }
+                $this->redirect($_SERVER['REQUEST_URI']);
             }
+            
+            $validation = $this->model->validate($data);
+            if (is_wp_error($validation)) {
+                $errors = $validation->get_error_data();
+                $this->set_flash(implode('<br>', $errors), 'error');
+                $this->redirect($_SERVER['REQUEST_URI']);
+            }
+            
+            $result = $this->model->create($data);
+            
+            if (is_wp_error($result)) {
+                $this->set_flash($result->get_error_message(), 'error');
+                $this->redirect($_SERVER['REQUEST_URI']);
+            }
+            
+            $this->after_save($result);
+            
+            $this->set_flash('Oddělení bylo úspěšně vytvořeno', 'success');
+            $this->redirect(home_url('/admin/departments/'));
         }
+        
+        $item = [];
         
         ob_start();
         
@@ -133,9 +140,6 @@ class SAW_Module_Departments_Controller extends SAW_Base_Controller
         $this->render_with_layout($content, 'Nové oddělení');
     }
     
-    /**
-     * Edit - Update department form
-     */
     public function edit($id) {
         $this->verify_module_access();
         
@@ -143,35 +147,49 @@ class SAW_Module_Departments_Controller extends SAW_Base_Controller
             wp_die('Nemáte oprávnění upravovat oddělení');
         }
         
+        $id = intval($id);
         $item = $this->model->get_by_id($id);
         
         if (!$item) {
-            wp_die('Oddělení nebylo nalezeno');
+            if (class_exists('SAW_Error_Handler')) {
+                SAW_Error_Handler::not_found('Oddělení');
+            } else {
+                wp_die('Oddělení nebylo nalezeno');
+            }
         }
         
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['saw_nonce'])) {
-            if (!wp_verify_nonce($_POST['saw_nonce'], 'saw_departments_form')) {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!wp_verify_nonce($_POST['saw_nonce'] ?? '', 'saw_departments_form')) {
                 wp_die('Neplatný bezpečnostní token');
             }
             
             $data = $this->prepare_form_data($_POST);
-            $data = $this->before_save($data);
+            $data['id'] = $id;
             
+            $data = $this->before_save($data);
             if (is_wp_error($data)) {
                 $this->set_flash($data->get_error_message(), 'error');
-            } else {
-                $result = $this->model->update($id, $data);
-                
-                if (is_wp_error($result)) {
-                    $this->set_flash($result->get_error_message(), 'error');
-                } else {
-                    $this->after_save($id);
-                    $this->set_flash('Oddělení bylo úspěšně aktualizováno', 'success');
-                    $this->redirect(home_url('/admin/departments/'));
-                }
+                $this->redirect($_SERVER['REQUEST_URI']);
             }
             
-            $item = $this->model->get_by_id($id);
+            $validation = $this->model->validate($data, $id);
+            if (is_wp_error($validation)) {
+                $errors = $validation->get_error_data();
+                $this->set_flash(implode('<br>', $errors), 'error');
+                $this->redirect($_SERVER['REQUEST_URI']);
+            }
+            
+            $result = $this->model->update($id, $data);
+            
+            if (is_wp_error($result)) {
+                $this->set_flash($result->get_error_message(), 'error');
+                $this->redirect($_SERVER['REQUEST_URI']);
+            }
+            
+            $this->after_save($id);
+            
+            $this->set_flash('Oddělení bylo úspěšně aktualizováno', 'success');
+            $this->redirect(home_url('/admin/departments/'));
         }
         
         ob_start();
@@ -194,76 +212,50 @@ class SAW_Module_Departments_Controller extends SAW_Base_Controller
         $this->render_with_layout($content, 'Upravit oddělení');
     }
     
-    /**
-     * Prepare form data for save
-     */
     private function prepare_form_data($post) {
         $data = [];
         
-        foreach ($this->config['fields'] as $field_name => $field_config) {
-            if (isset($post[$field_name])) {
-                $value = $post[$field_name];
-                
-                if (isset($field_config['sanitize']) && is_callable($field_config['sanitize'])) {
-                    $value = call_user_func($field_config['sanitize'], $value);
-                }
-                
-                $data[$field_name] = $value;
-            } elseif ($field_config['type'] === 'checkbox') {
-                $data[$field_name] = 0;
+        if (isset($post['customer_id'])) {
+            $data['customer_id'] = intval($post['customer_id']);
+        }
+        
+        if (isset($post['branch_id'])) {
+            $data['branch_id'] = intval($post['branch_id']);
+        }
+        
+        $text_fields = ['department_number', 'name', 'description'];
+        foreach ($text_fields as $field) {
+            if (isset($post[$field])) {
+                $data[$field] = sanitize_text_field($post[$field]);
             }
         }
         
-        if (isset($post['id'])) {
-            $data['id'] = intval($post['id']);
+        if (isset($post['training_version'])) {
+            $data['training_version'] = intval($post['training_version']);
         }
+        
+        $data['is_active'] = isset($post['is_active']) ? 1 : 0;
         
         return $data;
     }
     
-    /**
-     * Before save hook
-     */
     protected function before_save($data) {
-        // Auto-set customer_id if not present
         if (empty($data['customer_id'])) {
-            if (class_exists('SAW_Context')) {
-                $customer_id = SAW_Context::get_customer_id();
-                if ($customer_id) {
-                    $data['customer_id'] = $customer_id;
-                }
-            }
+            $data['customer_id'] = SAW_Context::get_customer_id();
         }
         
         return $data;
     }
     
-    /**
-     * After save hook
-     */
     protected function after_save($id) {
-        // Clear any cached departments list
-        delete_transient('departments_list');
+        // Cache disabled - no invalidation needed
     }
     
     /**
-     * Before delete hook
+     * Format detail data for AJAX modal
      */
-    protected function before_delete($id) {
-        if ($this->model->is_used_in_system($id)) {
-            return new WP_Error(
-                'department_in_use',
-                'Toto oddělení nelze smazat, protože je používáno v systému (návštěvy, pozvánky nebo uživatelé).'
-            );
-        }
-        
-        return true;
-    }
-    
-    /**
-     * After delete hook
-     */
-    protected function after_delete($id) {
-        delete_transient('departments_list');
+    protected function format_detail_data($item) {
+        // Model already formats everything in get_by_id()
+        return $item;
     }
 }
