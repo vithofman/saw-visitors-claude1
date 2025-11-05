@@ -3,7 +3,7 @@
  * Base Model Class - Database-First with Multi-Branch Support
  * 
  * @package SAW_Visitors
- * @version 5.1.0
+ * @version 5.2.0
  */
 
 if (!defined('ABSPATH')) {
@@ -266,6 +266,15 @@ abstract class SAW_Base_Model
         $sql = $wpdb->prepare($sql, ...$params);
         
         return $wpdb->get_results($sql, ARRAY_A);
+    }
+    
+    /**
+     * Check if this entity has customer isolation
+     * 
+     * @return bool
+     */
+    public function has_customer_isolation() {
+        return $this->config['has_customer_isolation'] ?? true;
     }
     
     /**

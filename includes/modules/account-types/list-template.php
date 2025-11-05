@@ -5,7 +5,7 @@
  * SAME AS CUSTOMERS - uses SAW_Component_Admin_Table
  * 
  * @package SAW_Visitors
- * @version 7.0.0
+ * @version 7.0.1 - FIXED: Added modal click handler
  */
 
 if (!defined('ABSPATH')) {
@@ -195,5 +195,41 @@ $account_type_modal->render();
 ?>
 
 <script>
-window.sawAjaxNonce = '<?php echo $ajax_nonce; ?>';
+(function($) {
+    'use strict';
+    
+    $(document).ready(function() {
+        console.log('[ACCOUNT TYPES] Initializing modal handlers');
+        
+        // Row click handler - delegated to table body
+        $('table.saw-admin-table tbody').on('click', 'tr[data-id]', function(e) {
+            // Ignore clicks on action buttons
+            if ($(e.target).closest('button, a, .saw-action-buttons').length > 0) {
+                console.log('[ACCOUNT TYPES] Click on action button, ignoring');
+                return;
+            }
+            
+            const accountTypeId = $(this).data('id');
+            
+            if (!accountTypeId) {
+                console.error('[ACCOUNT TYPES] Row ID not found');
+                return;
+            }
+            
+            console.log('[ACCOUNT TYPES] Opening modal for ID:', accountTypeId);
+            
+            if (typeof SAWModal === 'undefined') {
+                console.error('[ACCOUNT TYPES] SAWModal not defined');
+                return;
+            }
+            
+            SAWModal.open('account-type-detail', {
+                id: accountTypeId,
+                nonce: '<?php echo $ajax_nonce; ?>'
+            });
+        });
+        
+        console.log('[ACCOUNT TYPES] Modal handlers registered');
+    });
+})(jQuery);
 </script>

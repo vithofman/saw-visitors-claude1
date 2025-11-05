@@ -26,7 +26,7 @@ class SAW_Visitors {
         $this->init_context();
         $this->init_customer_switcher();
         $this->init_branch_switcher();
-        $this->init_language_switcher();  // ← PŘIDÁNO
+        $this->init_language_switcher();
         $this->register_module_ajax_handlers();
         $this->block_wp_admin_for_saw_roles();
     }
@@ -134,9 +134,7 @@ class SAW_Visitors {
         }
     }
     
-    // ← PŘIDEJ TUTO NOVOU METODU
     private function init_language_switcher() {
-        // Load AJAX handler
         if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/components/language-switcher/ajax-handler.php')) {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/language-switcher/ajax-handler.php';
             

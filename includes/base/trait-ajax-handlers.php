@@ -1,21 +1,14 @@
 <?php
 /**
- * AJAX Handlers Trait - FIXED VERSION
+ * AJAX Handlers Trait - FIXED VERSION v1.4.0
  * 
  * CRITICAL FIXES:
- * - ✅ ajax_get_detail() now validates customer isolation for non-super admin
- * - ✅ Added explicit check that fetched record belongs to user's customer
- * - ✅ Better error messages and logging
- * - ✅ All permission checks use SAW_Permissions instead of manage_options
- * 
- * PRESERVED:
- * - ✅ All existing handlers (search, delete, detail)
- * - ✅ Permission check methods
- * - ✅ Format methods
+ * - ✅ ajax_get_detail() validates customer isolation ONLY if entity has it
+ * - ✅ Checks config['has_customer_isolation'] flag before validation
+ * - ✅ Global entities (account-types, etc.) skip isolation check
  * 
  * @package SAW_Visitors
- * @version 1.3.0 - FIXED
- * @since 4.9.0
+ * @version 1.4.0
  */
 
 if (!defined('ABSPATH')) {
@@ -24,16 +17,9 @@ if (!defined('ABSPATH')) {
 
 trait SAW_AJAX_Handlers 
 {
-    /**
-     * AJAX: Search items
-     * 
-     * Vyhledá záznamy podle query stringu.
-     * Používá model->search() metodu.
-     */
     public function ajax_search() {
         check_ajax_referer('saw_ajax_nonce', 'nonce');
         
-        // Check permissions
         if (!$this->can_search()) {
             wp_send_json_error(['message' => 'Nedostatečná oprávnění']);
             return;
@@ -63,16 +49,9 @@ trait SAW_AJAX_Handlers
         ]);
     }
     
-    /**
-     * AJAX: Delete item
-     * 
-     * Smaže záznam přes model->delete().
-     * Volá before_delete() a after_delete() hooks.
-     */
     public function ajax_delete() {
         check_ajax_referer('saw_ajax_nonce', 'nonce');
         
-        // Check permissions
         if (!$this->can_delete()) {
             wp_send_json_error(['message' => 'Nedostatečná oprávnění']);
             return;
@@ -92,13 +71,10 @@ trait SAW_AJAX_Handlers
             return;
         }
         
-        // ================================================
-        // ✅ CRITICAL: VALIDATE CUSTOMER ISOLATION
-        // ================================================
         if (!$this->can_access_item($item)) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log(sprintf(
-                    '[AJAX Delete] SECURITY: Customer isolation violation - Item ID: %d, Entity: %s',
+                    '[AJAX Delete] SECURITY: Access denied - Item ID: %d, Entity: %s',
                     $id,
                     $this->entity
                 ));
@@ -128,7 +104,6 @@ trait SAW_AJAX_Handlers
         
         $this->after_delete($id);
         
-        // Debug logging
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log(sprintf(
                 '[AJAX Delete] Success - Item ID: %d, Entity: %s',
@@ -140,15 +115,9 @@ trait SAW_AJAX_Handlers
         wp_send_json_success(['message' => ucfirst($this->entity) . ' deleted successfully']);
     }
     
-    /**
-     * AJAX: Get item detail for modal
-     * 
-     * ✅ CRITICAL FIX: Now validates customer isolation
-     */
     public function ajax_get_detail() {
         check_ajax_referer('saw_ajax_nonce', 'nonce');
         
-        // Check permissions
         if (!$this->can_view_detail()) {
             wp_send_json_error(['message' => 'Nedostatečná oprávnění']);
             return;
@@ -161,19 +130,16 @@ trait SAW_AJAX_Handlers
             return;
         }
         
-        // Debug logging
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log(sprintf(
-                '[AJAX Detail] Request - ID: %d, Entity: %s, User: %d',
+                '[AJAX Detail] Request - ID: %d, Entity: %s, User: %d, Has Isolation: %s',
                 $id,
                 $this->entity,
-                get_current_user_id()
+                get_current_user_id(),
+                isset($this->config['has_customer_isolation']) ? ($this->config['has_customer_isolation'] ? 'YES' : 'NO') : 'DEFAULT'
             ));
         }
         
-        // ================================================
-        // ✅ CRITICAL FIX: FETCH WITH SCOPE VALIDATION
-        // ================================================
         $item = $this->model->get_by_id($id);
         
         if (!$item) {
@@ -188,16 +154,13 @@ trait SAW_AJAX_Handlers
             return;
         }
         
-        // ================================================
-        // ✅ CRITICAL: VALIDATE CUSTOMER ISOLATION
-        // ================================================
         if (!$this->can_access_item($item)) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log(sprintf(
-                    '[AJAX Detail] SECURITY: Customer isolation violation - ID: %d, Entity: %s, Item Customer: %d, User Customer: %d',
+                    '[AJAX Detail] SECURITY: Access denied - ID: %d, Entity: %s, Item Customer: %s, User Customer: %s',
                     $id,
                     $this->entity,
-                    $item['customer_id'] ?? 'NULL',
+                    isset($item['customer_id']) ? $item['customer_id'] : 'NONE',
                     class_exists('SAW_Context') ? SAW_Context::get_customer_id() : 'NULL'
                 ));
             }
@@ -205,7 +168,6 @@ trait SAW_AJAX_Handlers
             return;
         }
         
-        // Debug logging
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log(sprintf(
                 '[AJAX Detail] SUCCESS - ID: %d, Entity: %s',
@@ -214,10 +176,8 @@ trait SAW_AJAX_Handlers
             ));
         }
         
-        // Format data
         $item = $this->format_detail_data($item);
         
-        // Check for custom template
         $template_path = $this->config['path'] . 'detail-modal-template.php';
         
         if (file_exists($template_path)) {
@@ -230,7 +190,6 @@ trait SAW_AJAX_Handlers
                 'item' => $item,
             ]);
         } else {
-            // Return raw data if no template
             wp_send_json_success([
                 $this->entity => $item,
                 'customer' => $item,
@@ -240,19 +199,27 @@ trait SAW_AJAX_Handlers
     }
     
     /**
-     * ✅ NEW: Check if current user can access this specific item
-     * Validates customer isolation for non-super admin users
-     * 
-     * @param array $item
-     * @return bool
+     * ✅ CRITICAL FIX: Check access with has_customer_isolation support
      */
     protected function can_access_item($item) {
-        // Super admin can access everything
         if (current_user_can('manage_options')) {
             return true;
         }
         
-        // If item has customer_id, validate it matches current user's customer
+        $has_isolation = isset($this->config['has_customer_isolation']) 
+            ? $this->config['has_customer_isolation'] 
+            : true;
+        
+        if (!$has_isolation) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log(sprintf(
+                    '[AJAX Handlers] Entity %s has NO customer isolation - allowing access',
+                    $this->entity
+                ));
+            }
+            return true;
+        }
+        
         if (isset($item['customer_id'])) {
             $current_customer_id = null;
             
@@ -260,7 +227,6 @@ trait SAW_AJAX_Handlers
                 $current_customer_id = SAW_Context::get_customer_id();
             }
             
-            // If no customer_id available, deny access (better safe than sorry)
             if (!$current_customer_id) {
                 if (defined('WP_DEBUG') && WP_DEBUG) {
                     error_log('[AJAX Handlers] WARNING: No customer_id available for isolation check');
@@ -268,20 +234,12 @@ trait SAW_AJAX_Handlers
                 return false;
             }
             
-            // Check if item belongs to user's customer
             return (int)$item['customer_id'] === (int)$current_customer_id;
         }
         
-        // If item doesn't have customer_id field, allow access
-        // (might be a non-isolated entity)
         return true;
     }
     
-    /**
-     * Check if current user can view detail
-     * 
-     * @return bool
-     */
     protected function can_view_detail() {
         if (current_user_can('manage_options')) {
             return true;
@@ -295,11 +253,6 @@ trait SAW_AJAX_Handlers
         return SAW_Permissions::check($role, $this->entity, 'view');
     }
     
-    /**
-     * Check if current user can search
-     * 
-     * @return bool
-     */
     protected function can_search() {
         if (current_user_can('manage_options')) {
             return true;
@@ -313,11 +266,6 @@ trait SAW_AJAX_Handlers
         return SAW_Permissions::check($role, $this->entity, 'list');
     }
     
-    /**
-     * Check if current user can delete
-     * 
-     * @return bool
-     */
     protected function can_delete() {
         if (current_user_can('manage_options')) {
             return true;
@@ -331,12 +279,6 @@ trait SAW_AJAX_Handlers
         return SAW_Permissions::check($role, $this->entity, 'delete');
     }
     
-    /**
-     * Format detail data for modal
-     * 
-     * @param array $item
-     * @return array
-     */
     protected function format_detail_data($item) {
         if (!empty($item['created_at'])) {
             $item['created_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['created_at']));
@@ -349,13 +291,6 @@ trait SAW_AJAX_Handlers
         return $item;
     }
     
-    /**
-     * Format search result
-     * Override this in controller if needed
-     * 
-     * @param array $item
-     * @return array
-     */
     protected function format_search_result($item) {
         return $item;
     }

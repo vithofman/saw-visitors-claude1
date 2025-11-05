@@ -77,14 +77,9 @@ class SAW_Module_Account_Types_Controller extends SAW_Base_Controller
         // Empty for now
     }
     
-    /**
-     * Format detail data for modal
-     * CRITICAL: This is called by ajax_get_detail from trait
-     */
     protected function format_detail_data($item) {
         $item = parent::format_detail_data($item);
         
-        // Format features
         if (!empty($item['features'])) {
             $features = json_decode($item['features'], true);
             $item['features_array'] = is_array($features) ? $features : [];
@@ -92,12 +87,10 @@ class SAW_Module_Account_Types_Controller extends SAW_Base_Controller
             $item['features_array'] = [];
         }
         
-        // Format price
         if (isset($item['price'])) {
             $item['price_formatted'] = number_format($item['price'], 2, ',', ' ') . ' Kc';
         }
         
-        // Format status
         $item['is_active_label'] = !empty($item['is_active']) ? 'Aktivni' : 'Neaktivni';
         $item['is_active_badge_class'] = !empty($item['is_active']) ? 'saw-badge-success' : 'saw-badge-secondary';
         

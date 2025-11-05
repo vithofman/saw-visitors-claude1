@@ -11,6 +11,8 @@ return [
     'route' => 'admin/settings/account-types',
     'icon' => '💳',
     
+    'has_customer_isolation' => false,
+    
     'capabilities' => [
         'list' => 'manage_options',
         'view' => 'manage_options',
@@ -40,7 +42,7 @@ return [
         'sortable' => ['name', 'display_name'],
         'filters' => [],
         'per_page' => 20,
-        'enable_detail_modal' => true,  // ✅ ZMĚNĚNO NA TRUE!
+        'enable_detail_modal' => true,
     ],
     
     'cache' => [
