@@ -3,7 +3,7 @@
  * Account Types List Template
  * 
  * @package SAW_Visitors
- * @version 7.1.0 - REFACTORED: Removed duplicate JS handler
+ * @version 7.2.0 - FIXED: Correct AJAX action names
  */
 
 if (!defined('ABSPATH')) {

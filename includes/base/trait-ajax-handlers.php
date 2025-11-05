@@ -1,14 +1,15 @@
 <?php
 /**
- * AJAX Handlers Trait - FIXED VERSION v1.4.0
+ * AJAX Handlers Trait - FIXED VERSION v1.5.0
  * 
  * CRITICAL FIXES:
  * - ✅ ajax_get_detail() validates customer isolation ONLY if entity has it
  * - ✅ Checks config['has_customer_isolation'] flag before validation
  * - ✅ Global entities (account-types, etc.) skip isolation check
+ * - ✅ FIXED: Uses SAW_Auth directly instead of $this->get_current_user_role()
  * 
  * @package SAW_Visitors
- * @version 1.4.0
+ * @version 1.5.0
  */
 
 if (!defined('ABSPATH')) {
@@ -249,7 +250,13 @@ trait SAW_AJAX_Handlers
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-permissions.php';
         }
         
-        $role = $this->get_current_user_role();
+        if (!class_exists('SAW_Auth')) {
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-auth.php';
+        }
+        
+        $auth = new SAW_Auth();
+        $role = $auth->get_current_user_role();
+        
         return SAW_Permissions::check($role, $this->entity, 'view');
     }
     
@@ -262,7 +269,13 @@ trait SAW_AJAX_Handlers
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-permissions.php';
         }
         
-        $role = $this->get_current_user_role();
+        if (!class_exists('SAW_Auth')) {
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-auth.php';
+        }
+        
+        $auth = new SAW_Auth();
+        $role = $auth->get_current_user_role();
+        
         return SAW_Permissions::check($role, $this->entity, 'list');
     }
     
@@ -275,7 +288,13 @@ trait SAW_AJAX_Handlers
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-permissions.php';
         }
         
-        $role = $this->get_current_user_role();
+        if (!class_exists('SAW_Auth')) {
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-auth.php';
+        }
+        
+        $auth = new SAW_Auth();
+        $role = $auth->get_current_user_role();
+        
         return SAW_Permissions::check($role, $this->entity, 'delete');
     }
     

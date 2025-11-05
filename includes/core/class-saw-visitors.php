@@ -163,6 +163,17 @@ class SAW_Visitors {
         foreach ($modules as $slug => $config) {
             $entity = $config['entity'];
             
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log(sprintf(
+                    '[AJAX Registration] Module: %s, Entity: %s, Actions: saw_get_%s_detail, saw_search_%s, saw_delete_%s',
+                    $slug,
+                    $entity,
+                    $entity,
+                    $entity,
+                    $entity
+                ));
+            }
+            
             add_action('wp_ajax_saw_get_' . $entity . '_detail', function() use ($slug, $instance) {
                 $instance->handle_module_ajax_detail($slug);
             });
@@ -181,6 +192,9 @@ class SAW_Visitors {
         $config = SAW_Module_Loader::load($slug);
         
         if (!$config) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[AJAX Detail] ERROR: Module not found - Slug: ' . $slug);
+            }
             wp_send_json_error(['message' => 'Module not found']);
             return;
         }
@@ -191,6 +205,9 @@ class SAW_Visitors {
         $controller_class = 'SAW_Module_' . $class_name . '_Controller';
         
         if (!class_exists($controller_class)) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[AJAX Detail] ERROR: Controller not found - Class: ' . $controller_class);
+            }
             wp_send_json_error(['message' => 'Controller not found']);
             return;
         }
@@ -200,6 +217,9 @@ class SAW_Visitors {
         if (method_exists($controller, 'ajax_get_detail')) {
             $controller->ajax_get_detail();
         } else {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[AJAX Detail] ERROR: Method ajax_get_detail not found in ' . $controller_class);
+            }
             wp_send_json_error(['message' => 'Method not found']);
         }
     }
@@ -208,6 +228,9 @@ class SAW_Visitors {
         $config = SAW_Module_Loader::load($slug);
         
         if (!$config) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[AJAX Search] ERROR: Module not found - Slug: ' . $slug);
+            }
             wp_send_json_error(['message' => 'Module not found']);
             return;
         }
@@ -218,6 +241,9 @@ class SAW_Visitors {
         $controller_class = 'SAW_Module_' . $class_name . '_Controller';
         
         if (!class_exists($controller_class)) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[AJAX Search] ERROR: Controller not found - Class: ' . $controller_class);
+            }
             wp_send_json_error(['message' => 'Controller not found']);
             return;
         }
@@ -227,6 +253,9 @@ class SAW_Visitors {
         if (method_exists($controller, 'ajax_search')) {
             $controller->ajax_search();
         } else {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[AJAX Search] ERROR: Method ajax_search not found in ' . $controller_class);
+            }
             wp_send_json_error(['message' => 'Method not found']);
         }
     }
@@ -235,6 +264,9 @@ class SAW_Visitors {
         $config = SAW_Module_Loader::load($slug);
         
         if (!$config) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[AJAX Delete] ERROR: Module not found - Slug: ' . $slug);
+            }
             wp_send_json_error(['message' => 'Module not found']);
             return;
         }
@@ -245,6 +277,9 @@ class SAW_Visitors {
         $controller_class = 'SAW_Module_' . $class_name . '_Controller';
         
         if (!class_exists($controller_class)) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[AJAX Delete] ERROR: Controller not found - Class: ' . $controller_class . ', Slug: ' . $slug);
+            }
             wp_send_json_error(['message' => 'Controller not found']);
             return;
         }
@@ -252,8 +287,14 @@ class SAW_Visitors {
         $controller = new $controller_class();
         
         if (method_exists($controller, 'ajax_delete')) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[AJAX Delete] Calling ajax_delete on ' . $controller_class);
+            }
             $controller->ajax_delete();
         } else {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[AJAX Delete] ERROR: Method ajax_delete not found in ' . $controller_class);
+            }
             wp_send_json_error(['message' => 'Method not found']);
         }
     }

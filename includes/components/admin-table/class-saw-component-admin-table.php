@@ -1,9 +1,9 @@
 <?php
 /**
- * Admin Table Component - REFACTORED v3.1.0
+ * Admin Table Component - REFACTORED v3.3.1
  * 
  * @package SAW_Visitors
- * @version 3.1.0
+ * @version 3.3.1 - FIXED: Syntax error + single confirm
  */
 
 if (!defined('ABSPATH')) {
@@ -58,6 +58,7 @@ class SAW_Component_Admin_Table {
         $this->render_pagination();
         $this->render_modal();
         $this->render_floating_button();
+        $this->render_delete_script();
     }
     
     private function enqueue_assets() {
@@ -98,49 +99,48 @@ class SAW_Component_Admin_Table {
     }
     
     private function render_header() {
-    if (empty($this->config['title'])) {
-        return;
-    }
-    
-    $has_controls = !empty($this->config['search']) || !empty($this->config['filters']);
-    
-    ?>
-    <div class="saw-page-header">
-        <div class="saw-page-header-content">
-            <h1 class="saw-page-title"><?php echo esc_html($this->config['title']); ?></h1>
-            
-            <?php if ($has_controls): ?>
-                <div class="saw-table-controls">
-                    <?php if (!empty($this->config['filters'])): ?>
-                        <div class="saw-filters">
-                            <?php echo $this->config['filters']; ?>
-                        </div>
-                    <?php endif; ?>
-                    
-                    <?php if ($this->config['search']): ?>
-                        <div class="saw-search-form">
-                            <?php echo $this->config['search']; ?>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            <?php endif; ?>
+        if (empty($this->config['title'])) {
+            return;
+        }
+        
+        $has_controls = !empty($this->config['search']) || !empty($this->config['filters']);
+        
+        ?>
+        <div class="saw-page-header">
+            <div class="saw-page-header-content">
+                <h1 class="saw-page-title"><?php echo esc_html($this->config['title']); ?></h1>
+                
+                <?php if ($has_controls): ?>
+                    <div class="saw-table-controls">
+                        <?php if (!empty($this->config['filters'])): ?>
+                            <div class="saw-filters">
+                                <?php echo $this->config['filters']; ?>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <?php if ($this->config['search']): ?>
+                            <div class="saw-search-form">
+                                <?php echo $this->config['search']; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
         </div>
-    </div>
-    <?php
-}
-
-private function render_controls() {
-    // Prázdná - už je v headeru
-}
-
-private function render_table_or_empty() {
-    if (empty($this->config['rows'])) {
-        $this->render_empty_state();
-    } else {
-        $this->render_table();
+        <?php
     }
-    // ODSTRANIT closing </div> - už není wrapper .saw-list-container
-}
+    
+    private function render_controls() {
+        // Prázdná - už je v headeru
+    }
+    
+    private function render_table_or_empty() {
+        if (empty($this->config['rows'])) {
+            $this->render_empty_state();
+        } else {
+            $this->render_table();
+        }
+    }
     
     private function render_empty_state() {
         ?>
@@ -265,12 +265,11 @@ private function render_table_or_empty() {
                 
                 <?php if (in_array('delete', $this->config['actions'])): ?>
                     <button type="button" 
-                            class="saw-action-btn saw-action-delete saw-delete-btn" 
+                            class="saw-action-btn saw-action-delete" 
                             data-id="<?php echo esc_attr($row['id'] ?? ''); ?>" 
-                            data-name="<?php echo esc_attr($row['name'] ?? $row['title'] ?? 'záznam'); ?>" 
-                            data-entity="<?php echo esc_attr($this->entity); ?>" 
+                            data-ajax-action="saw_delete_<?php echo esc_attr(str_replace('-', '_', $this->entity)); ?>"
                             title="Smazat" 
-                            onclick="event.stopPropagation();">
+                            onclick="event.stopPropagation(); sawAdminTableDelete(this); return false;">
                         <span class="dashicons dashicons-trash"></span>
                     </button>
                 <?php endif; ?>
@@ -362,12 +361,70 @@ private function render_table_or_empty() {
                 'icon' => 'dashicons-trash',
                 'confirm' => true,
                 'confirm_message' => 'Opravdu chcete smazat tento záznam?',
-                'ajax_action' => 'saw_delete_' . $this->entity,
+                'ajax_action' => 'saw_delete_' . str_replace('-', '_', $this->entity),
             );
         }
         
         $modal = new SAW_Component_Modal($this->config['modal_id'], $modal_config);
         $modal->render();
+    }
+    
+    private function render_delete_script() {
+        static $script_added = false;
+        
+        if ($script_added) {
+            return;
+        }
+        
+        $script_added = true;
+        
+        ?>
+        <script>
+        if (typeof sawAdminTableDelete === 'undefined') {
+            window.sawAdminTableDelete = function(btn) {
+                console.log('[Admin Table Delete] Button clicked', btn);
+                
+                const id = btn.dataset.id;
+                const ajaxAction = btn.dataset.ajaxAction;
+                
+                console.log('[Admin Table Delete] ID:', id, 'Action:', ajaxAction);
+                
+                if (!confirm('Opravdu chcete smazat tento záznam?')) {
+                    console.log('[Admin Table Delete] Cancelled by user');
+                    return false;
+                }
+                
+                console.log('[Admin Table Delete] Starting AJAX...');
+                
+                jQuery.ajax({
+                    url: '<?php echo admin_url('admin-ajax.php'); ?>',
+                    type: 'POST',
+                    data: {
+                        action: ajaxAction,
+                        nonce: '<?php echo wp_create_nonce('saw_ajax_nonce'); ?>',
+                        id: id
+                    },
+                    success: function(response) {
+                        console.log('[Admin Table Delete] Response:', response);
+                        if (response.success) {
+                            location.reload();
+                        } else {
+                            alert(response.data.message || 'Chyba při mazání');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('[Admin Table Delete] AJAX Error:', error, xhr);
+                        alert('Chyba spojení se serverem');
+                    }
+                });
+                
+                return false;
+            };
+            
+            console.log('[Admin Table] sawAdminTableDelete function registered');
+        }
+        </script>
+        <?php
     }
     
     public static function get_sort_url($column, $current_orderby, $current_order) {
