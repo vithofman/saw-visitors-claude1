@@ -3,7 +3,7 @@
  * Customers List Template
  * 
  * @package SAW_Visitors
- * @version 7.0.0 - Refactored with SAW_Component_Admin_Table
+ * @version 8.0.0 - PRODUCTION: account_type_id column with colored badge
  */
 
 if (!defined('ABSPATH')) {
@@ -103,14 +103,31 @@ $table = new SAW_Component_Admin_Table('customers', [
             ]
         ],
         'subscription_type' => [
-            'label' => 'Předplatné',
-            'type' => 'enum',
-            'map' => [
-                'free' => 'Zdarma',
-                'basic' => 'Basic',
-                'pro' => 'Pro',
-                'enterprise' => 'Enterprise'
-            ]
+            'label' => 'Typ účtu',
+            'type' => 'custom',
+            'width' => '150px',
+            'callback' => function($value) {
+                if (empty($value)) {
+                    return '<span class="saw-text-muted">—</span>';
+                }
+                
+                global $wpdb;
+                $type = $wpdb->get_row($wpdb->prepare(
+                    "SELECT display_name, color FROM {$wpdb->prefix}saw_account_types WHERE id = %d",
+                    $value
+                ), ARRAY_A);
+                
+                if (!$type) {
+                    return '<span class="saw-text-muted">—</span>';
+                }
+                
+                return sprintf(
+                    '<span class="saw-badge" style="background-color: %s; color: #fff; border-color: %s;">%s</span>',
+                    esc_attr($type['color']),
+                    esc_attr($type['color']),
+                    esc_html($type['display_name'])
+                );
+            }
         ],
         'primary_color' => [
             'label' => 'Barva',

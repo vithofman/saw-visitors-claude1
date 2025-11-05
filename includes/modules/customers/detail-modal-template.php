@@ -260,9 +260,32 @@ if (empty($item)) {
             Obchodní informace
         </h3>
         <dl style="margin: 0; display: grid; grid-template-columns: 160px 1fr; gap: 16px 24px; font-size: 15px;">
-            <?php if (!empty($item['account_type_id'])): ?>
+            <?php if (!empty($item['subscription_type'])): ?>
+                <?php
+                // ✅ Fetch account type details from database
+                global $wpdb;
+                $account_type = $wpdb->get_row($wpdb->prepare(
+                    "SELECT display_name, color, price FROM %i WHERE id = %d",
+                    $wpdb->prefix . 'saw_account_types',
+                    $item['subscription_type']
+                ), ARRAY_A);
+                ?>
+                
                 <dt style="font-size: 13px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em;">Typ účtu</dt>
-                <dd style="margin: 0; color: #1e293b; font-weight: 500;">ID: <?php echo esc_html($item['account_type_id']); ?></dd>
+                <dd style="margin: 0; color: #1e293b; font-weight: 500;">
+                    <?php if ($account_type): ?>
+                        <span class="saw-badge" style="background-color: <?php echo esc_attr($account_type['color']); ?>; color: #fff; border-color: <?php echo esc_attr($account_type['color']); ?>;">
+                            <?php echo esc_html($account_type['display_name']); ?>
+                        </span>
+                        <?php if (!empty($account_type['price']) && $account_type['price'] > 0): ?>
+                            <span style="color: #64748b; font-size: 13px; margin-left: 8px;">
+                                (<?php echo number_format($account_type['price'], 0, ',', ' '); ?> Kč/měs.)
+                            </span>
+                        <?php endif; ?>
+                    <?php else: ?>
+                        <span style="color: #ef4444;">Typ účtu nenalezen</span>
+                    <?php endif; ?>
+                </dd>
             <?php endif; ?>
             
             <?php if (!empty($item['acquisition_source'])): ?>

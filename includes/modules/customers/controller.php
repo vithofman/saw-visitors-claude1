@@ -3,7 +3,7 @@
  * Customers Module Controller - COMPLETE VERSION
  * 
  * @package SAW_Visitors
- * @version 1.2.0 - FIXED: Complete file with all methods
+ * @version 3.1.0 - FIXED: Cache invalidation for modal + list
  */
 
 if (!defined('ABSPATH')) {
@@ -42,10 +42,8 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
     
     /**
      * AJAX: Get detail for modal
-     * ✅ FIXED: Proper nonce validation + error handling
      */
     public function ajax_get_detail() {
-        // ✅ STEP 1: Verify nonce
         if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'saw_ajax_nonce')) {
             error_log('[CUSTOMERS AJAX] Nonce verification FAILED');
             wp_send_json_error([
@@ -54,7 +52,6 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             return;
         }
         
-        // ✅ STEP 2: Check permissions
         if (!current_user_can('read')) {
             error_log('[CUSTOMERS AJAX] Permission check FAILED');
             wp_send_json_error([
@@ -63,7 +60,6 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             return;
         }
         
-        // ✅ STEP 3: Validate ID
         $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
         
         if (!$id) {
@@ -74,7 +70,6 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             return;
         }
         
-        // Debug logging
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log(sprintf(
                 '[CUSTOMERS AJAX] Loading detail - ID: %d, User: %d',
@@ -83,7 +78,6 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             ));
         }
         
-        // ✅ STEP 4: Fetch data from database
         $item = $this->model->get_by_id($id);
         
         if (!$item) {
@@ -94,10 +88,8 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             return;
         }
         
-        // ✅ STEP 5: Format data for display
         $item = $this->format_detail_data($item);
         
-        // ✅ STEP 6: Check if template exists
         $template_path = $this->config['path'] . 'detail-modal-template.php';
         
         if (!file_exists($template_path)) {
@@ -108,19 +100,16 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             return;
         }
         
-        // ✅ STEP 7: Render template
         ob_start();
         
         try {
             require $template_path;
             $html = ob_get_clean();
             
-            // Validate HTML output
             if (empty($html) || strlen($html) < 50) {
                 throw new Exception('Template rendered empty or too short content');
             }
             
-            // Debug logging
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log(sprintf(
                     '[CUSTOMERS AJAX] SUCCESS - ID: %d, HTML length: %d bytes',
@@ -129,7 +118,6 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
                 ));
             }
             
-            // ✅ SUCCESS response
             wp_send_json_success([
                 'html' => $html,
                 'item' => $item
@@ -206,6 +194,19 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         
         $this->enqueue_assets();
         
+        // ✅ LOAD ACCOUNT TYPES FOR DROPDOWN
+        global $wpdb;
+        $account_types = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT id, display_name, color, price 
+                 FROM %i 
+                 WHERE is_active = 1 
+                 ORDER BY sort_order ASC, display_name ASC",
+                $wpdb->prefix . 'saw_account_types'
+            ),
+            ARRAY_A
+        );
+        
         $item = [];
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['saw_nonce'])) {
@@ -265,10 +266,36 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         
         $this->enqueue_assets();
         
+        // ✅ LOAD ACCOUNT TYPES FOR DROPDOWN
+        global $wpdb;
+        $account_types = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT id, display_name, color, price 
+                 FROM %i 
+                 WHERE is_active = 1 
+                 ORDER BY sort_order ASC, display_name ASC",
+                $wpdb->prefix . 'saw_account_types'
+            ),
+            ARRAY_A
+        );
+        
         $item = $this->model->get_by_id($id);
         
         if (!$item) {
             wp_die('Zákazník nenalezen');
+        }
+        
+        // ✅ REVERSE MAPPING: subscription_type → account_type_id
+        // Databáze má sloupeček 'subscription_type', ale formulář očekává 'account_type_id'
+        if (isset($item['subscription_type'])) {
+            $item['account_type_id'] = $item['subscription_type'];
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log(sprintf(
+                    '[CUSTOMERS] Reverse mapping for edit: subscription_type (%s) → account_type_id',
+                    $item['subscription_type'] ?? 'NULL'
+                ));
+            }
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['saw_nonce'])) {
@@ -340,6 +367,20 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             $data['id'] = intval($post['id']);
         }
         
+        // ✅ FIELD MAPPING: account_type_id → subscription_type
+        // Formulář posílá 'account_type_id', ale databáze má sloupeček 'subscription_type'
+        if (isset($data['account_type_id'])) {
+            $data['subscription_type'] = $data['account_type_id'];
+            unset($data['account_type_id']); // Odstraníme původní klíč
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log(sprintf(
+                    '[CUSTOMERS] Field mapping: account_type_id (%s) → subscription_type',
+                    $data['subscription_type'] ?? 'NULL'
+                ));
+            }
+        }
+        
         return $data;
     }
     
@@ -389,11 +430,29 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
     }
     
     /**
-     * After save hook - clear caches
+     * After save hook - clear ALL caches
+     * ✅ FIXED: Proper cache invalidation for modal + list
      */
     protected function after_save($id) {
+        // ✅ Invalidate transient caches
         delete_transient('customers_list');
         delete_transient('customers_for_switcher');
+        delete_transient(sprintf('customers_item_%d', $id));
+        
+        // ✅ Invalidate SAW_Cache if available
+        if (class_exists('SAW_Cache')) {
+            SAW_Cache::forget(sprintf('customers_item_%d', $id));
+            SAW_Cache::forget_pattern('customers_*');
+        }
+        
+        // ✅ Invalidate WordPress object cache
+        wp_cache_delete($id, 'saw_customers');
+        wp_cache_delete('saw_customers_all', 'saw_customers');
+        
+        // ✅ Debug logging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log(sprintf('[CUSTOMERS] Cache invalidated for ID: %d', $id));
+        }
     }
     
     /**
@@ -466,15 +525,22 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             $this->file_uploader->delete($customer['logo_url']);
         }
         
+        // ✅ Full cache cleanup
         delete_transient('customers_list');
         delete_transient('customers_for_switcher');
+        delete_transient(sprintf('customers_item_%d', $id));
+        
+        if (class_exists('SAW_Cache')) {
+            SAW_Cache::forget(sprintf('customers_item_%d', $id));
+            SAW_Cache::forget_pattern('customers_*');
+        }
+        
+        wp_cache_delete($id, 'saw_customers');
+        wp_cache_delete('saw_customers_all', 'saw_customers');
     }
     
     /**
      * Format detail data for modal
-     * 
-     * @param array $item Raw database data
-     * @return array Formatted data
      */
     protected function format_detail_data($item) {
         // Format dates
@@ -489,10 +555,8 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         // Format logo URL
         if (!empty($item['logo_url'])) {
             if (strpos($item['logo_url'], 'http') === 0) {
-                // Already full URL
                 $item['logo_url_full'] = $item['logo_url'];
             } else {
-                // Relative path - convert to full URL
                 $upload_dir = wp_upload_dir();
                 $item['logo_url_full'] = $upload_dir['baseurl'] . '/' . ltrim($item['logo_url'], '/');
             }

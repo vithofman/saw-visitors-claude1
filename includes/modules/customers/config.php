@@ -3,6 +3,7 @@
  * Customers Module Config
  * 
  * @package SAW_Visitors
+ * @version 3.0.0 - PRODUCTION: account_type_id integration
  */
 
 if (!defined('ABSPATH')) {
@@ -75,6 +76,7 @@ return [
             'required' => false,
             'default' => 'free',
             'sanitize' => 'sanitize_text_field',
+            'deprecated' => true,
         ],
         'contact_email' => [
             'type' => 'email',
@@ -158,12 +160,12 @@ return [
     ],
     
     'list_config' => [
-        'columns' => ['name', 'ico', 'status', 'account_type', 'created_at'],
+        'columns' => ['logo_url', 'name', 'ico', 'status', 'subscription_type', 'primary_color', 'created_at'],
         'searchable' => ['name', 'ico', 'contact_email'],
         'sortable' => ['name', 'ico', 'created_at'],
         'filters' => [
             'status' => true,
-            'account_type' => true,
+            'account_type' => false,
         ],
         'per_page' => 20,
         'enable_detail_modal' => true,

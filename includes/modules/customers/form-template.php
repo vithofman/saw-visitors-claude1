@@ -5,8 +5,7 @@
  * Create/Edit formulář pro zákazníky
  * 
  * @package SAW_Visitors
- * @version 2.0.0
- * @since   4.8.0
+ * @version 3.0.0 - PRODUCTION: Dynamic account_types dropdown
  */
 
 if (!defined('ABSPATH')) {
@@ -22,7 +21,7 @@ $item = $item ?? [];
         <h1 class="saw-page-title">
             <?php echo $is_edit ? 'Upravit zákazníka' : 'Nový zákazník'; ?>
         </h1>
-        <a href="<?php echo home_url('/admin/settings/customers/'); ?>" class="saw-back-button">
+        <a href="<?php echo esc_url(home_url('/admin/settings/customers/')); ?>" class="saw-back-button">
             <span class="dashicons dashicons-arrow-left-alt2"></span>
             Zpět na seznam
         </a>
@@ -78,13 +77,24 @@ $item = $item ?? [];
                     </div>
                     
                     <div class="saw-form-group saw-col-4">
-                        <label for="subscription_type" class="saw-label">Typ předplatného</label>
-                        <select id="subscription_type" name="subscription_type" class="saw-input">
-                            <option value="free" <?php selected($item['subscription_type'] ?? 'free', 'free'); ?>>Zdarma</option>
-                            <option value="basic" <?php selected($item['subscription_type'] ?? '', 'basic'); ?>>Basic</option>
-                            <option value="pro" <?php selected($item['subscription_type'] ?? '', 'pro'); ?>>Pro</option>
-                            <option value="enterprise" <?php selected($item['subscription_type'] ?? '', 'enterprise'); ?>>Enterprise</option>
+                        <label for="account_type_id" class="saw-label">Typ předplatného</label>
+                        <select id="account_type_id" name="account_type_id" class="saw-input">
+                            <option value="">-- Vyberte typ --</option>
+                            <?php if (!empty($account_types)): ?>
+                                <?php foreach ($account_types as $type): ?>
+                                    <option 
+                                        value="<?php echo esc_attr($type['id']); ?>"
+                                        <?php selected($item['account_type_id'] ?? '', $type['id']); ?>
+                                    >
+                                        <?php echo esc_html($type['display_name']); ?>
+                                        <?php if (!empty($type['price']) && $type['price'] > 0): ?>
+                                            (<?php echo number_format($type['price'], 0, ',', ' '); ?> Kč/měs.)
+                                        <?php endif; ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         </select>
+                        <span class="saw-help-text">Výběr typu předplatného pro zákazníka</span>
                     </div>
                 </div>
             </div>
@@ -263,7 +273,7 @@ $item = $item ?? [];
                 <span class="dashicons dashicons-yes"></span>
                 <?php echo $is_edit ? 'Uložit změny' : 'Vytvořit zákazníka'; ?>
             </button>
-            <a href="<?php echo home_url('/admin/settings/customers/'); ?>" class="saw-button saw-button-secondary">
+            <a href="<?php echo esc_url(home_url('/admin/settings/customers/')); ?>" class="saw-button saw-button-secondary">
                 <span class="dashicons dashicons-no-alt"></span>
                 Zrušit
             </a>
