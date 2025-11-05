@@ -2,10 +2,8 @@
 /**
  * Account Types List Template
  * 
- * SAME AS CUSTOMERS - uses SAW_Component_Admin_Table
- * 
  * @package SAW_Visitors
- * @version 7.0.1 - FIXED: Added modal click handler
+ * @version 7.1.0 - REFACTORED: Removed duplicate JS handler
  */
 
 if (!defined('ABSPATH')) {
@@ -28,19 +26,16 @@ if (!class_exists('SAW_Component_Modal')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/modal/class-saw-component-modal.php';
 }
 
-// Global nonce for AJAX
-$ajax_nonce = wp_create_nonce('saw_ajax_nonce');
-
 // Prepare search component HTML
 ob_start();
 $search_component = new SAW_Component_Search('account-types', array(
-    'placeholder' => 'Hledat typ uctu...',
+    'placeholder' => 'Hledat typ účtu...',
     'search_value' => $search,
     'ajax_enabled' => false,
     'ajax_action' => 'saw_search_account_types',
     'show_button' => true,
     'show_info_banner' => true,
-    'info_banner_label' => 'Vyhledavani:',
+    'info_banner_label' => 'Vyhledávání:',
     'clear_url' => home_url('/admin/settings/account-types/'),
 ));
 $search_component->render();
@@ -51,9 +46,9 @@ ob_start();
 if (!empty($this->config['list_config']['filters']['is_active'])) {
     $status_filter = new SAW_Component_Selectbox('is_active-filter', array(
         'options' => array(
-            '' => 'Vsechny statusy',
-            '1' => 'Aktivni',
-            '0' => 'Neaktivni',
+            '' => 'Všechny statusy',
+            '1' => 'Aktivní',
+            '0' => 'Neaktivní',
         ),
         'selected' => $_GET['is_active'] ?? '',
         'on_change' => 'redirect',
@@ -67,7 +62,7 @@ $filters_html = ob_get_clean();
 
 // Initialize admin table component
 $table = new SAW_Component_Admin_Table('account-types', [
-    'title' => 'Typy uctu',
+    'title' => 'Typy účtu',
     'create_url' => home_url('/admin/settings/account-types/new/'),
     'edit_url' => home_url('/admin/settings/account-types/edit/{id}/'),
     
@@ -79,13 +74,13 @@ $table = new SAW_Component_Admin_Table('account-types', [
             'align' => 'center'
         ],
         'display_name' => [
-            'label' => 'Nazev',
+            'label' => 'Název',
             'type' => 'text',
             'sortable' => true,
             'bold' => true
         ],
         'name' => [
-            'label' => 'Interni nazev',
+            'label' => 'Interní název',
             'type' => 'custom',
             'callback' => function($value) {
                 return '<span class="saw-code-badge">' . esc_html($value) . '</span>';
@@ -99,7 +94,7 @@ $table = new SAW_Component_Admin_Table('account-types', [
             'callback' => function($value) {
                 $price = floatval($value ?? 0);
                 if ($price > 0) {
-                    return number_format($price, 2, ',', ' ') . ' Kc/mesic';
+                    return number_format($price, 2, ',', ' ') . ' Kč/měsíc';
                 }
                 return '<span class="saw-text-muted">Zdarma</span>';
             }
@@ -112,11 +107,11 @@ $table = new SAW_Component_Admin_Table('account-types', [
             'callback' => function($value) {
                 $features = !empty($value) ? json_decode($value, true) : [];
                 $count = is_array($features) ? count($features) : 0;
-                return '<span class="saw-badge saw-badge-info">' . $count . ' funkci</span>';
+                return '<span class="saw-badge saw-badge-info">' . $count . ' funkcí</span>';
             }
         ],
         'sort_order' => [
-            'label' => 'Poradi',
+            'label' => 'Pořadí',
             'type' => 'custom',
             'align' => 'center',
             'width' => '100px',
@@ -134,12 +129,12 @@ $table = new SAW_Component_Admin_Table('account-types', [
                 '0' => 'secondary'
             ],
             'labels' => [
-                '1' => 'Aktivni',
-                '0' => 'Neaktivni'
+                '1' => 'Aktivní',
+                '0' => 'Neaktivní'
             ]
         ],
         'created_at' => [
-            'label' => 'Vytvoreno',
+            'label' => 'Vytvořeno',
             'type' => 'date',
             'format' => 'd.m.Y'
         ]
@@ -154,8 +149,8 @@ $table = new SAW_Component_Admin_Table('account-types', [
     'search' => $search_html,
     'filters' => $filters_html,
     'actions' => ['edit', 'delete'],
-    'empty_message' => 'Zadne typy uctu nenalezeny',
-    'add_new' => 'Novy typ uctu',
+    'empty_message' => 'Žádné typy účtu nenalezeny',
+    'add_new' => 'Nový typ účtu',
     
     'enable_modal' => true,
     'modal_id' => 'account-type-detail',
@@ -167,7 +162,7 @@ $table->render();
 
 // Modal component
 $account_type_modal = new SAW_Component_Modal('account-type-detail', array(
-    'title' => 'Detail typu uctu',
+    'title' => 'Detail typu účtu',
     'ajax_enabled' => true,
     'ajax_action' => 'saw_get_account_types_detail',
     'size' => 'large',
@@ -186,50 +181,9 @@ $account_type_modal = new SAW_Component_Modal('account-type-detail', array(
             'label' => '',
             'icon' => 'dashicons-trash',
             'confirm' => true,
-            'confirm_message' => 'Opravdu chcete smazat tento typ uctu?',
+            'confirm_message' => 'Opravdu chcete smazat tento typ účtu?',
             'ajax_action' => 'saw_delete_account_types',
         ),
     ),
 ));
 $account_type_modal->render();
-?>
-
-<script>
-(function($) {
-    'use strict';
-    
-    $(document).ready(function() {
-        console.log('[ACCOUNT TYPES] Initializing modal handlers');
-        
-        // Row click handler - delegated to table body
-        $('table.saw-admin-table tbody').on('click', 'tr[data-id]', function(e) {
-            // Ignore clicks on action buttons
-            if ($(e.target).closest('button, a, .saw-action-buttons').length > 0) {
-                console.log('[ACCOUNT TYPES] Click on action button, ignoring');
-                return;
-            }
-            
-            const accountTypeId = $(this).data('id');
-            
-            if (!accountTypeId) {
-                console.error('[ACCOUNT TYPES] Row ID not found');
-                return;
-            }
-            
-            console.log('[ACCOUNT TYPES] Opening modal for ID:', accountTypeId);
-            
-            if (typeof SAWModal === 'undefined') {
-                console.error('[ACCOUNT TYPES] SAWModal not defined');
-                return;
-            }
-            
-            SAWModal.open('account-type-detail', {
-                id: accountTypeId,
-                nonce: '<?php echo $ajax_nonce; ?>'
-            });
-        });
-        
-        console.log('[ACCOUNT TYPES] Modal handlers registered');
-    });
-})(jQuery);
-</script>

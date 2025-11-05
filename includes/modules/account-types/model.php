@@ -3,7 +3,7 @@
  * Account Types Module Model
  * 
  * @package SAW_Visitors
- * @version 2.0.0 - FIXED: Added customer isolation + format methods
+ * @version 2.1.0 - REFACTORED: Complete formatting in get_by_id()
  */
 
 if (!defined('ABSPATH')) {
@@ -61,7 +61,7 @@ class SAW_Module_Account_Types_Model extends SAW_Base_Model
     }
     
     /**
-     * Get by ID - override to add features formatting
+     * Get by ID - COMPLETE formatting happens here
      */
     public function get_by_id($id) {
         $item = parent::get_by_id($id);
@@ -74,6 +74,8 @@ class SAW_Module_Account_Types_Model extends SAW_Base_Model
         if (!empty($item['features'])) {
             $features = json_decode($item['features'], true);
             $item['features_array'] = is_array($features) ? $features : [];
+        } else {
+            $item['features_array'] = [];
         }
         
         // Format price
@@ -83,6 +85,10 @@ class SAW_Module_Account_Types_Model extends SAW_Base_Model
         } else {
             $item['price_formatted'] = 'Zdarma';
         }
+        
+        // Format status
+        $item['is_active_label'] = !empty($item['is_active']) ? 'Aktivní' : 'Neaktivní';
+        $item['is_active_badge_class'] = !empty($item['is_active']) ? 'saw-badge-success' : 'saw-badge-secondary';
         
         // Format dates
         if (!empty($item['created_at'])) {

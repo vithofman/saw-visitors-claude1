@@ -4,7 +4,7 @@ if (!defined('ABSPATH')) {
 }
 
 return [
-    'entity' => 'account-types',
+    'entity' => 'account_types',
     'table' => 'saw_account_types',
     'singular' => 'Account Type',
     'plural' => 'Account Types',
