@@ -3,10 +3,7 @@
  * Base Controller Class - Database-First with Multi-Branch Support
  * 
  * @package SAW_Visitors
- * @version 5.1.1
- * 
- * CHANGELOG:
- * - FIXED: Permission check používá $this->entity místo $this->config['entity']
+ * @version 5.3.1 - Permissions Fix for All Roles
  */
 
 if (!defined('ABSPATH')) {
@@ -19,80 +16,47 @@ abstract class SAW_Base_Controller
     protected $config;
     protected $entity;
     
-    /**
-     * Verify module access based on permissions
-     * 
-     * ✅ FIXED v5.1.1: Uses $this->entity instead of $this->config['entity']
-     * ✅ FIXED v5.1.1: Explicit SAW_Permissions class loading
-     * ✅ UPDATED: Uses SAW_Error_Handler instead of wp_die
-     */
     protected function verify_module_access() {
-        // Super admin má vždy přístup
-        if (current_user_can('manage_options')) {
-            return true;
-        }
-        
-        // ✅ FIX: Explicit load SAW_Permissions if not loaded
-        if (!class_exists('SAW_Permissions')) {
-            $permissions_file = SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-permissions.php';
-            if (file_exists($permissions_file)) {
-                require_once $permissions_file;
-            }
-        }
-        
-        // Kontrola že třída existuje
-        if (!class_exists('SAW_Permissions')) {
-            if (class_exists('SAW_Error_Handler')) {
-                SAW_Error_Handler::permission_denied('Permissions system not available');
-            } else {
-                wp_die('Permissions system not available');
-            }
-            return false;
-        }
-        
-        // Získání role uživatele
-        $role = $this->get_current_user_role();
-        
-        if (empty($role)) {
-            if (class_exists('SAW_Error_Handler')) {
-                SAW_Error_Handler::permission_denied('User role not found');
-            } else {
-                wp_die('User role not found');
-            }
-            return false;
-        }
-        
-        // ✅ CRITICAL FIX: Používáme $this->entity místo $this->config['entity']
-        $has_access = SAW_Permissions::check($role, $this->entity, 'list');
-        
-        if (!$has_access) {
-            if (class_exists('SAW_Error_Handler')) {
-                SAW_Error_Handler::permission_denied('Nemáte oprávnění k tomuto modulu');
-            } else {
-                wp_die('Nemáte oprávnění k tomuto modulu');
-            }
-            return false;
-        }
-        
+    $role = $this->get_current_user_role();
+    
+    if ($role === 'super_admin') {
         return true;
     }
     
-    /**
-     * Check if user can perform action
-     * 
-     * ✅ FIXED v5.1.1: Uses $this->entity instead of $this->config['entity']
-     * ✅ FIXED v5.1.1: Explicit SAW_Permissions class loading
-     * 
-     * @param string $action
-     * @return bool
-     */
+    if (!class_exists('SAW_Permissions')) {
+        $permissions_file = SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-permissions.php';
+        if (file_exists($permissions_file)) {
+            require_once $permissions_file;
+        }
+    }
+    
+    if (!class_exists('SAW_Permissions')) {
+        $this->set_flash('Permissions system not available', 'error');
+        $this->redirect(home_url('/admin/'));
+    }
+    
+    if (empty($role)) {
+        $this->set_flash('User role not found', 'error');
+        $this->redirect(home_url('/admin/'));
+    }
+    
+    $has_access = SAW_Permissions::check($role, $this->entity, 'list');
+    
+    if (!$has_access) {
+        $this->set_flash('Nemáte oprávnění k tomuto modulu', 'error');
+        $this->redirect(home_url('/admin/'));
+    }
+    
+    return true;
+}
+    
     protected function can($action) {
-        // Super admin má vždy přístup
-        if (current_user_can('manage_options')) {
+        $role = $this->get_current_user_role();
+        
+        if ($role === 'super_admin') {
             return true;
         }
         
-        // ✅ FIX: Explicit load SAW_Permissions if not loaded
         if (!class_exists('SAW_Permissions')) {
             $permissions_file = SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-permissions.php';
             if (file_exists($permissions_file)) {
@@ -100,29 +64,105 @@ abstract class SAW_Base_Controller
             }
         }
         
-        // Kontrola existence permission systému
         if (!class_exists('SAW_Permissions')) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log(sprintf('[Base Controller] SAW_Permissions not found for action: %s', $action));
+            }
             return false;
         }
-        
-        // Získání role uživatele
-        $role = $this->get_current_user_role();
         
         if (empty($role)) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log(sprintf('[Base Controller] No role found for action: %s', $action));
+            }
             return false;
         }
         
-        // ✅ CRITICAL FIX: Používáme $this->entity místo $this->config['entity']
-        return SAW_Permissions::check($role, $this->entity, $action);
+        $has_permission = SAW_Permissions::check($role, $this->entity, $action);
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log(sprintf(
+                '[Base Controller] Permission check - Role: %s, Entity: %s, Action: %s, Result: %s',
+                $role,
+                $this->entity,
+                $action,
+                $has_permission ? 'ALLOWED' : 'DENIED'
+            ));
+        }
+        
+        return $has_permission;
     }
     
-    /**
-     * Get accessible branches for current user
-     * 
-     * ✅ NEW: Multi-branch support for super_manager
-     * 
-     * @return array Branch objects
-     */
+    protected function validate_scope_access($data, $action = 'create') {
+        $role = $this->get_current_user_role();
+        
+        if ($role === 'super_admin') {
+            return true;
+        }
+        
+        if (!$role || !class_exists('SAW_Permissions')) {
+            return new WP_Error('no_permission', 'Nelze ověřit oprávnění');
+        }
+        
+        $permission = SAW_Permissions::get_permission($role, $this->entity, $action);
+        
+        if (!$permission || !isset($permission['scope'])) {
+            return new WP_Error('no_permission', 'Nemáte oprávnění k této akci');
+        }
+        
+        $scope = $permission['scope'];
+        
+        switch ($scope) {
+            case 'all':
+                return true;
+                
+            case 'customer':
+                if (isset($data['customer_id'])) {
+                    $current_customer_id = $this->get_current_customer_id();
+                    if ($data['customer_id'] != $current_customer_id) {
+                        return new WP_Error(
+                            'scope_violation',
+                            'Nemůžete vytvořit/upravit záznam pro jiného zákazníka'
+                        );
+                    }
+                }
+                return true;
+                
+            case 'branch':
+                if (isset($data['branch_id'])) {
+                    $accessible_branch_ids = $this->get_accessible_branch_ids();
+                    if (!in_array($data['branch_id'], $accessible_branch_ids)) {
+                        return new WP_Error(
+                            'scope_violation',
+                            'Nemůžete vytvořit/upravit záznam pro tuto pobočku'
+                        );
+                    }
+                }
+                return true;
+                
+            case 'department':
+                if (isset($data['department_id'])) {
+                    $accessible_dept_ids = $this->get_current_department_ids();
+                    if (!in_array($data['department_id'], $accessible_dept_ids)) {
+                        return new WP_Error(
+                            'scope_violation',
+                            'Nemůžete vytvořit/upravit záznam pro toto oddělení'
+                        );
+                    }
+                }
+                return true;
+                
+            case 'own':
+                if ($action === 'create') {
+                    return true;
+                }
+                return true;
+                
+            default:
+                return new WP_Error('unknown_scope', 'Neznámý scope');
+        }
+    }
+    
     protected function get_accessible_branches() {
         $role = $this->get_current_user_role();
         
@@ -159,13 +199,6 @@ abstract class SAW_Base_Controller
         return [];
     }
     
-    /**
-     * Get accessible branch IDs for current user
-     * 
-     * ✅ NEW: Multi-branch support
-     * 
-     * @return array Branch IDs
-     */
     protected function get_accessible_branch_ids() {
         $branches = $this->get_accessible_branches();
         return array_map(function($branch) {
@@ -173,14 +206,6 @@ abstract class SAW_Base_Controller
         }, $branches);
     }
     
-    /**
-     * Check if user can access specific branch
-     * 
-     * ✅ NEW: Branch access validation
-     * 
-     * @param int $branch_id
-     * @return bool
-     */
     protected function can_access_branch($branch_id) {
         $role = $this->get_current_user_role();
         
@@ -223,13 +248,25 @@ abstract class SAW_Base_Controller
         return false;
     }
     
-    /**
-     * Get current customer
-     * 
-     * ✅ UPDATED: Uses SAW_Context instead of sessions
-     * 
-     * @return array|null
-     */
+    protected function can_access_item($item) {
+        if (!isset($item['customer_id'])) {
+            return true;
+        }
+        
+        $role = $this->get_current_user_role();
+        
+        if ($role === 'super_admin') {
+            return true;
+        }
+        
+        $current_customer_id = $this->get_current_customer_id();
+        if (!$current_customer_id) {
+            return false;
+        }
+        
+        return (int)$item['customer_id'] === (int)$current_customer_id;
+    }
+    
     protected function get_current_customer() {
         if (class_exists('SAW_Context')) {
             return SAW_Context::get_customer_data();
@@ -238,13 +275,6 @@ abstract class SAW_Base_Controller
         return null;
     }
     
-    /**
-     * Get current branch
-     * 
-     * ✅ UPDATED: Uses SAW_Context instead of sessions
-     * 
-     * @return array|null
-     */
     protected function get_current_branch() {
         if (class_exists('SAW_Context')) {
             return SAW_Context::get_branch_data();
@@ -253,32 +283,21 @@ abstract class SAW_Base_Controller
         return null;
     }
     
-    /**
-     * Get current user role
-     * 
-     * ✅ UPDATED: Uses SAW_Context
-     * 
-     * @return string|null
-     */
     protected function get_current_user_role() {
-        if (current_user_can('manage_options')) {
-            return 'super_admin';
+        if (class_exists('SAW_Context')) {
+            $role = SAW_Context::get_role();
+            if ($role) {
+                return $role;
+            }
         }
         
-        if (class_exists('SAW_Context')) {
-            return SAW_Context::get_role();
+        if (current_user_can('manage_options')) {
+            return 'super_admin';
         }
         
         return null;
     }
     
-    /**
-     * Get current customer ID
-     * 
-     * ✅ NEW: Direct access helper
-     * 
-     * @return int|null
-     */
     protected function get_current_customer_id() {
         if (class_exists('SAW_Context')) {
             return SAW_Context::get_customer_id();
@@ -287,13 +306,6 @@ abstract class SAW_Base_Controller
         return null;
     }
     
-    /**
-     * Get current branch ID
-     * 
-     * ✅ NEW: Direct access helper
-     * 
-     * @return int|null
-     */
     protected function get_current_branch_id() {
         if (class_exists('SAW_Context')) {
             return SAW_Context::get_branch_id();
@@ -302,12 +314,27 @@ abstract class SAW_Base_Controller
         return null;
     }
     
-    /**
-     * Render with layout
-     * 
-     * @param string $content
-     * @param string $title
-     */
+    protected function get_current_department_ids() {
+        global $wpdb;
+        
+        if (!class_exists('SAW_Context')) {
+            return [];
+        }
+        
+        $saw_user_id = SAW_Context::get_saw_user_id();
+        if (!$saw_user_id) {
+            return [];
+        }
+        
+        $department_ids = $wpdb->get_col($wpdb->prepare(
+            "SELECT department_id FROM {$wpdb->prefix}saw_user_departments 
+             WHERE user_id = %d",
+            $saw_user_id
+        ));
+        
+        return array_map('intval', $department_ids);
+    }
+    
     protected function render_with_layout($content, $title = '') {
         $user = $this->get_current_user_data();
         $customer = $this->get_current_customer();
@@ -320,11 +347,6 @@ abstract class SAW_Base_Controller
         }
     }
     
-    /**
-     * Get current user data
-     * 
-     * @return array
-     */
     protected function get_current_user_data() {
         $wp_user = wp_get_current_user();
         
@@ -366,9 +388,6 @@ abstract class SAW_Base_Controller
         ];
     }
     
-    /**
-     * Render flash messages
-     */
     protected function render_flash_messages() {
         if (!class_exists('SAW_Session_Manager')) {
             return;
@@ -387,12 +406,6 @@ abstract class SAW_Base_Controller
         }
     }
     
-    /**
-     * Set flash message
-     * 
-     * @param string $message
-     * @param string $type success|error
-     */
     protected function set_flash($message, $type = 'success') {
         if (!class_exists('SAW_Session_Manager')) {
             return;
@@ -402,64 +415,26 @@ abstract class SAW_Base_Controller
         $session->set('flash_' . $type, $message);
     }
     
-    /**
-     * Redirect helper
-     * 
-     * @param string $url
-     */
     protected function redirect($url) {
         wp_redirect($url);
         exit;
     }
     
-    /**
-     * Before save hook
-     * Override in child controller if needed
-     * 
-     * @param array $data
-     * @return array|WP_Error
-     */
     protected function before_save($data) {
         return $data;
     }
     
-    /**
-     * After save hook
-     * Override in child controller if needed
-     * 
-     * @param int $id
-     */
     protected function after_save($id) {
-        // Override in child controller
     }
     
-    /**
-     * Before delete hook
-     * Override in child controller if needed
-     * 
-     * @param int $id
-     * @return bool|WP_Error
-     */
     protected function before_delete($id) {
         return true;
     }
     
-    /**
-     * After delete hook
-     * Override in child controller if needed
-     * 
-     * @param int $id
-     */
     protected function after_delete($id) {
-        // Override in child controller
     }
     
-    /**
-     * Enqueue assets
-     * Override in child controller if needed
-     */
     protected function enqueue_assets() {
-        // Override in child controller
     }
     
     abstract public function index();

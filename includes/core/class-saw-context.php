@@ -2,16 +2,17 @@
 /**
  * SAW Context - Database-First Architecture
  * 
- * REVOLUTION v5.0.0:
+ * REVOLUTION v5.0.1:
  * ✅ Customer & Branch context stored in DATABASE (saw_users table)
  * ✅ NO sessions for customer/branch (only for user_id & role)
  * ✅ Multi-branch support for super_manager via SAW_User_Branches
  * ✅ Single source of truth: Database
  * ✅ Fast: 1 SQL query instead of 3 data sources
  * ✅ Reliable: No race conditions, no session expiry issues
+ * ✅ FIX v5.0.1: WordPress super admin can switch without SAW record
  * 
  * @package SAW_Visitors
- * @version 5.0.0 - Database Revolution
+ * @version 5.0.1 - WordPress Admin Fix
  * @since 4.8.0
  */
 
@@ -28,16 +29,13 @@ class SAW_Context {
     private $role = null;
     private $initialized = false;
     
-    /**
-     * Private constructor - Singleton pattern
-     */
     private function __construct() {
         $this->load_from_database();
         $this->initialized = true;
         
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log(sprintf(
-                '[SAW_Context v5.0] Loaded from DB - Customer: %s, Branch: %s, User: %d, Role: %s',
+                '[SAW_Context v5.0.1] Loaded from DB - Customer: %s, Branch: %s, User: %d, Role: %s',
                 $this->customer_id ?? 'NULL',
                 $this->branch_id ?? 'NULL',
                 get_current_user_id(),
@@ -46,11 +44,6 @@ class SAW_Context {
         }
     }
     
-    /**
-     * Singleton instance
-     * 
-     * @return SAW_Context
-     */
     public static function instance() {
         if (self::$instance === null) {
             self::$instance = new self();
@@ -64,12 +57,6 @@ class SAW_Context {
         return self::$instance;
     }
     
-    /**
-     * ✅ CORE METHOD: Load everything from DATABASE
-     * 
-     * This is the ONLY source of truth.
-     * No sessions, no user_meta, just clean DB query.
-     */
     private function load_from_database() {
         if (!is_user_logged_in()) {
             $this->load_fallback_customer();
@@ -86,11 +73,22 @@ class SAW_Context {
         ), ARRAY_A);
         
         if (!$saw_user) {
+            if (current_user_can('manage_options')) {
+                $this->role = 'super_admin';
+                
+                $meta_customer = get_user_meta(get_current_user_id(), 'saw_context_customer_id', true);
+                if ($meta_customer) {
+                    $this->customer_id = intval($meta_customer);
+                    
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log(sprintf('[SAW_Context] WP admin loaded from user_meta - Customer: %d', $this->customer_id));
+                    }
+                    return;
+                }
+            }
+            
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log(sprintf(
-                    '[SAW_Context] No saw_users record for wp_user_id: %d',
-                    get_current_user_id()
-                ));
+                error_log(sprintf('[SAW_Context] No saw_users record for wp_user_id: %d', get_current_user_id()));
             }
             $this->load_fallback_customer();
             return;
@@ -101,20 +99,8 @@ class SAW_Context {
         
         $this->customer_id = $this->resolve_customer_id($saw_user);
         $this->branch_id = $this->resolve_branch_id($saw_user);
-        
-        //$this->cache_to_session();
     }
     
-    /**
-     * Resolve customer_id based on role
-     * 
-     * Logic:
-     * - super_admin: Uses context_customer_id (switchable)
-     * - Others: Use fixed customer_id
-     * 
-     * @param array $saw_user
-     * @return int|null
-     */
     private function resolve_customer_id($saw_user) {
         if ($saw_user['role'] === 'super_admin') {
             return $saw_user['context_customer_id'] 
@@ -125,19 +111,6 @@ class SAW_Context {
         return $saw_user['customer_id'] ? intval($saw_user['customer_id']) : null;
     }
     
-    /**
-     * Resolve branch_id based on role
-     * 
-     * Logic:
-     * - super_admin: Uses context_branch_id (switchable)
-     * - admin: Uses context_branch_id (switchable, all branches)
-     * - super_manager: Uses context_branch_id (switchable, limited branches via user_branches)
-     * - manager: Uses fixed branch_id (NOT switchable)
-     * - terminal: Uses fixed branch_id (NOT switchable)
-     * 
-     * @param array $saw_user
-     * @return int|null
-     */
     private function resolve_branch_id($saw_user) {
         if (in_array($saw_user['role'], ['super_admin', 'admin', 'super_manager'])) {
             return $saw_user['context_branch_id'] ? intval($saw_user['context_branch_id']) : null;
@@ -146,10 +119,6 @@ class SAW_Context {
         return null;
     }
     
-    /**
-     * Cache to session (for backwards compatibility only)
-     * Sessions are NO LONGER the source of truth!
-     */
     private function cache_to_session() {
         if (!class_exists('SAW_Session_Manager')) {
             return;
@@ -176,9 +145,6 @@ class SAW_Context {
         }
     }
     
-    /**
-     * Fallback: Load first active customer (for super_admin setup or non-SAW users)
-     */
     private function load_fallback_customer() {
         global $wpdb;
         
@@ -197,50 +163,22 @@ class SAW_Context {
         }
     }
     
-    /**
-     * Get current customer ID
-     * 
-     * @return int|null
-     */
     public static function get_customer_id() {
         return self::instance()->customer_id;
     }
     
-    /**
-     * Get current branch ID
-     * 
-     * @return int|null
-     */
     public static function get_branch_id() {
         return self::instance()->branch_id;
     }
     
-    /**
-     * Get current SAW user ID
-     * 
-     * @return int|null
-     */
     public static function get_saw_user_id() {
         return self::instance()->saw_user_id;
     }
     
-    /**
-     * Get current SAW role
-     * 
-     * @return string|null
-     */
     public static function get_role() {
         return self::instance()->role;
     }
     
-    /**
-     * ✅ SET CUSTOMER (for super_admin switcher)
-     * 
-     * Updates DATABASE, then reloads context
-     * 
-     * @param int $customer_id
-     * @return bool
-     */
     public static function set_customer_id($customer_id) {
         $customer_id = intval($customer_id);
         
@@ -248,18 +186,36 @@ class SAW_Context {
             return false;
         }
         
-        $instance = self::instance();
-        
-        if (!$instance->saw_user_id) {
+        if (!current_user_can('manage_options')) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[SAW_Context] Cannot set_customer_id - no saw_user_id');
+                error_log('[SAW_Context] Cannot set_customer_id - not WordPress admin');
             }
             return false;
         }
         
+        $instance = self::instance();
+        
+        if (!$instance->saw_user_id) {
+            $instance->customer_id = $customer_id;
+            
+            if (is_user_logged_in()) {
+                update_user_meta(get_current_user_id(), 'saw_context_customer_id', $customer_id);
+            }
+            
+            $instance->cache_to_session();
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log(sprintf('[SAW_Context] Customer switched (WP admin fallback): %d', $customer_id));
+            }
+            
+            self::handle_branch_on_customer_switch($customer_id);
+            
+            return true;
+        }
+        
         if ($instance->role !== 'super_admin') {
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[SAW_Context] Cannot set_customer_id - not super_admin');
+                error_log('[SAW_Context] Cannot set_customer_id - not super_admin role');
             }
             return false;
         }
@@ -290,21 +246,6 @@ class SAW_Context {
         return false;
     }
     
-    /**
-     * ✅ SET BRANCH (for switchers)
-     * 
-     * Updates DATABASE with validation, then reloads context
-     * 
-     * Validation:
-     * - super_admin: Can switch to any branch
-     * - admin: Can switch to any branch of their customer
-     * - super_manager: Can switch ONLY to assigned branches (via user_branches)
-     * - manager: CANNOT switch (fixed branch)
-     * - terminal: CANNOT switch (fixed branch)
-     * 
-     * @param int $branch_id
-     * @return bool
-     */
     public static function set_branch_id($branch_id) {
         $branch_id = $branch_id ? intval($branch_id) : null;
         
@@ -357,12 +298,6 @@ class SAW_Context {
         return false;
     }
     
-    /**
-     * Validate if user has access to branch
-     * 
-     * @param int $branch_id
-     * @return bool
-     */
     private static function validate_branch_access($branch_id) {
         global $wpdb;
         
@@ -399,11 +334,6 @@ class SAW_Context {
         return false;
     }
     
-    /**
-     * Handle branch selection when customer switches
-     * 
-     * @param int $customer_id
-     */
     private static function handle_branch_on_customer_switch($customer_id) {
         global $wpdb;
         
@@ -421,11 +351,6 @@ class SAW_Context {
         }
     }
     
-    /**
-     * Get full customer data
-     * 
-     * @return array|null
-     */
     public static function get_customer_data() {
         $customer_id = self::get_customer_id();
         
@@ -441,11 +366,6 @@ class SAW_Context {
         ), ARRAY_A);
     }
     
-    /**
-     * Get full branch data
-     * 
-     * @return array|null
-     */
     public static function get_branch_data() {
         $branch_id = self::get_branch_id();
         
@@ -461,11 +381,6 @@ class SAW_Context {
         ), ARRAY_A);
     }
     
-    /**
-     * Reload context from database (after external changes)
-     * 
-     * @return bool
-     */
     public static function reload() {
         $instance = self::instance();
         $instance->load_from_database();

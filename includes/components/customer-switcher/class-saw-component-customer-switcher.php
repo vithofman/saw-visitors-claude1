@@ -1,12 +1,9 @@
 <?php
 /**
- * SAW Customer Switcher Component - CSS LOADING FIXED
- * 
- * CRITICAL FIX v2.0.1:
- * - ✅ CSS loads for BOTH super_admin AND admin (enqueue_assets moved before render check)
+ * SAW Customer Switcher Component
  * 
  * @package SAW_Visitors
- * @version 2.0.1 - CSS FIX
+ * @version 2.1.0 - Context Integration Fix
  * @since 4.7.0
  */
 
@@ -21,7 +18,6 @@ class SAW_Component_Customer_Switcher {
     private static $ajax_registered = false;
     
     public function __construct($customer = null, $user = null) {
-        // Load customer
         if (!$customer) {
             $customer_id = $this->get_customer_id_from_context();
             if ($customer_id) {
@@ -44,7 +40,6 @@ class SAW_Component_Customer_Switcher {
             'role' => current_user_can('manage_options') ? 'super_admin' : 'admin',
         ];
         
-        // ✅ Register AJAX handlers only once
         if (!self::$ajax_registered) {
             add_action('wp_ajax_saw_get_customers_for_switcher', [$this, 'ajax_get_customers']);
             add_action('wp_ajax_saw_switch_customer', [$this, 'ajax_switch_customer']);
@@ -56,13 +51,9 @@ class SAW_Component_Customer_Switcher {
         }
     }
     
-    /**
-     * ✅ NEW: AJAX handler - Get all customers for switcher dropdown
-     */
     public function ajax_get_customers() {
         check_ajax_referer('saw_customer_switcher', 'nonce');
         
-        // Only super admin can switch customers
         if (!current_user_can('manage_options')) {
             wp_send_json_error(['message' => 'Nedostatečná oprávnění']);
             return;
@@ -70,7 +61,6 @@ class SAW_Component_Customer_Switcher {
         
         global $wpdb;
         
-        // Load all active customers
         $customers = $wpdb->get_results(
             "SELECT id, name, ico, logo_url, primary_color, status
              FROM {$wpdb->prefix}saw_customers 
@@ -79,7 +69,6 @@ class SAW_Component_Customer_Switcher {
             ARRAY_A
         );
         
-        // Format customers for response
         $formatted = [];
         foreach ($customers as $c) {
             $logo_url = '';
@@ -100,7 +89,6 @@ class SAW_Component_Customer_Switcher {
             ];
         }
         
-        // Get current customer_id
         $current_customer_id = null;
         if (class_exists('SAW_Context')) {
             $current_customer_id = SAW_Context::get_customer_id();
@@ -120,13 +108,9 @@ class SAW_Component_Customer_Switcher {
         ]);
     }
     
-    /**
-     * ✅ NEW: AJAX handler - Switch to different customer
-     */
     public function ajax_switch_customer() {
         check_ajax_referer('saw_customer_switcher', 'nonce');
         
-        // Only super admin can switch customers
         if (!current_user_can('manage_options')) {
             wp_send_json_error(['message' => 'Nedostatečná oprávnění']);
             return;
@@ -139,7 +123,6 @@ class SAW_Component_Customer_Switcher {
             return;
         }
         
-        // Validate customer exists
         global $wpdb;
         $customer = $wpdb->get_row($wpdb->prepare(
             "SELECT id, name FROM {$wpdb->prefix}saw_customers WHERE id = %d AND status = 'active'",
@@ -151,25 +134,32 @@ class SAW_Component_Customer_Switcher {
             return;
         }
         
-        // Switch customer using SAW_Context
+        $switch_result = false;
+        
         if (class_exists('SAW_Context')) {
-            SAW_Context::set_customer_id($customer_id);
-        } else {
-            // Fallback: Set in session
+            $switch_result = SAW_Context::set_customer_id($customer_id);
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log(sprintf(
+                    '[Customer Switcher] SAW_Context::set_customer_id(%d) returned: %s',
+                    $customer_id,
+                    $switch_result ? 'true' : 'false'
+                ));
+            }
+        }
+        
+        if (!$switch_result) {
             if (session_status() === PHP_SESSION_NONE) {
                 session_start();
             }
             $_SESSION['saw_current_customer_id'] = $customer_id;
+            
+            if (is_user_logged_in()) {
+                update_user_meta(get_current_user_id(), 'saw_current_customer_id', $customer_id);
+            }
         }
         
-        // Update user meta
-        if (is_user_logged_in()) {
-            update_user_meta(get_current_user_id(), 'saw_current_customer_id', $customer_id);
-        }
-        
-        // Log the switch
         if (class_exists('SAW_Audit')) {
-            global $wpdb;
             $wpdb->insert(
                 $wpdb->prefix . 'saw_audit_log',
                 [
@@ -203,11 +193,7 @@ class SAW_Component_Customer_Switcher {
         ]);
     }
     
-    /**
-     * Get customer_id from various sources
-     */
     private function get_customer_id_from_context() {
-        // 1. SAW_Context (priority)
         if (class_exists('SAW_Context')) {
             $context_id = SAW_Context::get_customer_id();
             if ($context_id) {
@@ -215,7 +201,6 @@ class SAW_Component_Customer_Switcher {
             }
         }
         
-        // 2. Session
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
@@ -224,7 +209,6 @@ class SAW_Component_Customer_Switcher {
             return intval($_SESSION['saw_current_customer_id']);
         }
         
-        // 3. User meta
         if (is_user_logged_in()) {
             $meta = get_user_meta(get_current_user_id(), 'saw_current_customer_id', true);
             if ($meta) {
@@ -232,7 +216,6 @@ class SAW_Component_Customer_Switcher {
             }
         }
         
-        // 4. DB for non-super admins
         if (is_user_logged_in() && !current_user_can('manage_options')) {
             global $wpdb;
             $saw_user = $wpdb->get_row($wpdb->prepare(
@@ -250,23 +233,14 @@ class SAW_Component_Customer_Switcher {
         return null;
     }
     
-    /**
-     * Render customer switcher UI
-     * 
-     * ✅ CRITICAL FIX v2.0.1: CSS loads for BOTH roles
-     */
     public function render() {
-        // ✅ FIX: Enqueue CSS FIRST (before any render logic)
-        // This ensures CSS loads for BOTH super_admin AND admin
         $this->enqueue_assets();
         
-        // Then decide which UI to render
         if (!$this->is_super_admin()) {
             $this->render_static_info();
             return;
         }
         
-        // Super admin gets full switcher
         $logo_url = $this->get_logo_url();
         ?>
         <div class="saw-customer-switcher" id="sawCustomerSwitcher">
@@ -313,9 +287,6 @@ class SAW_Component_Customer_Switcher {
         <?php
     }
     
-    /**
-     * Render static info for non-super admin
-     */
     private function render_static_info() {
         $logo_url = $this->get_logo_url();
         ?>
@@ -342,11 +313,6 @@ class SAW_Component_Customer_Switcher {
         <?php
     }
     
-    /**
-     * Enqueue assets
-     * 
-     * ✅ Now called BEFORE render logic to ensure CSS loads for all roles
-     */
     private function enqueue_assets() {
         wp_enqueue_style(
             'saw-customer-switcher',
@@ -355,7 +321,6 @@ class SAW_Component_Customer_Switcher {
             SAW_VISITORS_VERSION
         );
         
-        // JS only needed for super admin (has interactive switcher)
         if ($this->is_super_admin()) {
             wp_enqueue_script(
                 'saw-customer-switcher',
@@ -378,9 +343,6 @@ class SAW_Component_Customer_Switcher {
         }
     }
     
-    /**
-     * Get logo URL
-     */
     private function get_logo_url() {
         if (!empty($this->current_customer['logo_url_full'])) {
             return $this->current_customer['logo_url_full'];
@@ -396,10 +358,17 @@ class SAW_Component_Customer_Switcher {
         return '';
     }
     
-    /**
-     * Check if super admin
-     */
     private function is_super_admin() {
-        return current_user_can('manage_options');
+    if (class_exists('SAW_Context')) {
+        $role = SAW_Context::get_role();
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log(sprintf('[Customer Switcher] Checking role for switcher visibility - Role: %s', $role ?? 'NULL'));
+        }
+        
+        return $role === 'super_admin';
     }
+    
+    return current_user_can('manage_options');
+}
 }

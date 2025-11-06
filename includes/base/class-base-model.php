@@ -3,7 +3,7 @@
  * Base Model Class - Database-First with Multi-Branch Support
  * 
  * @package SAW_Visitors
- * @version 5.2.0
+ * @version 5.3.0
  */
 
 if (!defined('ABSPATH')) {
@@ -19,7 +19,7 @@ abstract class SAW_Base_Model
     public function get_all($filters = []) {
         global $wpdb;
         
-        $cache_key = $this->get_cache_key('list', $filters);
+        $cache_key = $this->get_cache_key_with_scope('list', $filters);
         $cached = $this->get_cache($cache_key);
         
         if ($cached !== false) {
@@ -29,9 +29,10 @@ abstract class SAW_Base_Model
         $sql = "SELECT * FROM {$this->table} WHERE 1=1";
         $params = [];
         
-        $scope_sql = $this->apply_data_scope();
-        if (!empty($scope_sql)) {
-            $sql .= $scope_sql;
+        list($scope_where, $scope_params) = $this->apply_data_scope();
+        if (!empty($scope_where)) {
+            $sql .= $scope_where;
+            $params = array_merge($params, $scope_params);
         }
         
         if (!empty($filters['search'])) {
@@ -208,9 +209,10 @@ abstract class SAW_Base_Model
             $params[] = intval($filters['branch_id']);
         }
         
-        $scope_sql = $this->apply_data_scope();
-        if (!empty($scope_sql)) {
-            $sql .= $scope_sql;
+        list($scope_where, $scope_params) = $this->apply_data_scope();
+        if (!empty($scope_where)) {
+            $sql .= $scope_where;
+            $params = array_merge($params, $scope_params);
         }
         
         if (!empty($filters['search'])) {
@@ -255,9 +257,10 @@ abstract class SAW_Base_Model
         
         $sql = "SELECT * FROM {$this->table} WHERE (" . implode(' OR ', $search_conditions) . ")";
         
-        $scope_sql = $this->apply_data_scope();
-        if (!empty($scope_sql)) {
-            $sql .= $scope_sql;
+        list($scope_where, $scope_params) = $this->apply_data_scope();
+        if (!empty($scope_where)) {
+            $sql .= $scope_where;
+            $params = array_merge($params, $scope_params);
         }
         
         $sql .= " LIMIT %d";
@@ -268,83 +271,120 @@ abstract class SAW_Base_Model
         return $wpdb->get_results($sql, ARRAY_A);
     }
     
-    /**
-     * Check if this entity has customer isolation
-     * 
-     * @return bool
-     */
     public function has_customer_isolation() {
         return $this->config['has_customer_isolation'] ?? true;
     }
     
-    /**
-     * Apply data scope based on user role and permissions
-     * 
-     * ✅ UPDATED: Uses SAW_Context for customer/branch, validates multi-branch for super_manager
-     * 
-     * @return string SQL WHERE clause
-     */
     protected function apply_data_scope() {
         if (!class_exists('SAW_Permissions')) {
-            return '';
+            return ['', []];
         }
         
         $role = $this->get_current_user_role();
         
         if (empty($role) || $role === 'super_admin') {
-            return '';
+            return ['', []];
         }
         
         $permission = SAW_Permissions::get_permission($role, $this->config['entity'], 'list');
         
         if (!$permission || !isset($permission['scope'])) {
-            return '';
+            return ['', []];
         }
         
         $scope = $permission['scope'];
+        $sql_where = '';
+        $params = [];
         
         switch ($scope) {
+            case 'all':
+                break;
+                
             case 'customer':
-                $customer_id = $this->get_current_customer_id();
-                if ($customer_id) {
-                    return " AND customer_id = " . intval($customer_id);
+                if ($this->table_has_column('customer_id')) {
+                    $customer_id = $this->get_current_customer_id();
+                    if ($customer_id) {
+                        $sql_where = " AND customer_id = %d";
+                        $params[] = $customer_id;
+                    }
                 }
                 break;
                 
             case 'branch':
-                $branch_ids = $this->get_accessible_branch_ids();
-                if (!empty($branch_ids)) {
-                    $ids = implode(',', array_map('intval', $branch_ids));
-                    return " AND branch_id IN ({$ids})";
+                if ($this->table_has_column('branch_id')) {
+                    $branch_ids = $this->get_accessible_branch_ids();
+                    if (!empty($branch_ids)) {
+                        $placeholders = implode(',', array_fill(0, count($branch_ids), '%d'));
+                        $sql_where = " AND branch_id IN ($placeholders)";
+                        $params = array_merge($params, $branch_ids);
+                    }
                 }
                 break;
                 
             case 'department':
-                $department_ids = $this->get_current_department_ids();
-                if (!empty($department_ids)) {
-                    $ids = implode(',', array_map('intval', $department_ids));
-                    return " AND department_id IN ({$ids})";
+                if ($this->table_has_column('department_id')) {
+                    $department_ids = $this->get_current_department_ids();
+                    if (!empty($department_ids)) {
+                        $placeholders = implode(',', array_fill(0, count($department_ids), '%d'));
+                        $sql_where = " AND department_id IN ($placeholders)";
+                        $params = array_merge($params, $department_ids);
+                    }
                 }
                 break;
                 
             case 'own':
-                $user_id = get_current_user_id();
-                if ($user_id) {
-                    return " AND wp_user_id = " . intval($user_id);
+                if ($this->table_has_column('created_by')) {
+                    $user_id = get_current_user_id();
+                    if ($user_id) {
+                        $sql_where = " AND created_by = %d";
+                        $params[] = $user_id;
+                    }
+                } elseif ($this->table_has_column('user_id')) {
+                    $user_id = get_current_user_id();
+                    if ($user_id) {
+                        $sql_where = " AND user_id = %d";
+                        $params[] = $user_id;
+                    }
+                } elseif ($this->table_has_column('wp_user_id')) {
+                    $user_id = get_current_user_id();
+                    if ($user_id) {
+                        $sql_where = " AND wp_user_id = %d";
+                        $params[] = $user_id;
+                    }
                 }
                 break;
         }
         
-        return '';
+        return [$sql_where, $params];
     }
     
-    /**
-     * Get accessible branch IDs based on role
-     * 
-     * ✅ UPDATED: Handles multi-branch for super_manager
-     * 
-     * @return array Branch IDs
-     */
+    protected function table_has_column($column_name) {
+        static $column_cache = [];
+        
+        $cache_key = $this->table . '_' . $column_name;
+        
+        if (isset($column_cache[$cache_key])) {
+            return $column_cache[$cache_key];
+        }
+        
+        global $wpdb;
+        
+        $result = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) 
+             FROM INFORMATION_SCHEMA.COLUMNS 
+             WHERE TABLE_SCHEMA = %s 
+             AND TABLE_NAME = %s 
+             AND COLUMN_NAME = %s",
+            DB_NAME,
+            $this->table,
+            $column_name
+        ));
+        
+        $column_cache[$cache_key] = (bool) $result;
+        
+        return $column_cache[$cache_key];
+    }
+    
     protected function get_accessible_branch_ids() {
         $role = $this->get_current_user_role();
         $current_branch_id = $this->get_current_branch_id();
@@ -392,13 +432,6 @@ abstract class SAW_Base_Model
         return $current_branch_id ? [$current_branch_id] : [];
     }
     
-    /**
-     * Get current user role
-     * 
-     * ✅ UPDATED: Uses SAW_Context, no session fallback
-     * 
-     * @return string|null
-     */
     protected function get_current_user_role() {
         if (current_user_can('manage_options')) {
             return 'super_admin';
@@ -411,13 +444,6 @@ abstract class SAW_Base_Model
         return null;
     }
     
-    /**
-     * Get current customer ID
-     * 
-     * ✅ UPDATED: Uses SAW_Context instead of sessions
-     * 
-     * @return int|null
-     */
     protected function get_current_customer_id() {
         if (class_exists('SAW_Context')) {
             return SAW_Context::get_customer_id();
@@ -426,13 +452,6 @@ abstract class SAW_Base_Model
         return null;
     }
     
-    /**
-     * Get current branch ID
-     * 
-     * ✅ UPDATED: Uses SAW_Context instead of sessions
-     * 
-     * @return int|null
-     */
     protected function get_current_branch_id() {
         if (class_exists('SAW_Context')) {
             return SAW_Context::get_branch_id();
@@ -441,11 +460,6 @@ abstract class SAW_Base_Model
         return null;
     }
     
-    /**
-     * Get current user's department IDs
-     * 
-     * @return array
-     */
     protected function get_current_department_ids() {
         global $wpdb;
         
@@ -465,6 +479,62 @@ abstract class SAW_Base_Model
         ));
         
         return array_map('intval', $department_ids);
+    }
+    
+    protected function get_cache_key_with_scope($type, $identifier = '') {
+        $key = 'saw_' . $this->config['entity'] . '_' . $type;
+        
+        $role = $this->get_current_user_role();
+        if ($role && $role !== 'super_admin') {
+            $key .= '_role_' . $role;
+            
+            if (class_exists('SAW_Permissions')) {
+                $permission = SAW_Permissions::get_permission($role, $this->config['entity'], 'list');
+                if ($permission && isset($permission['scope'])) {
+                    $key .= '_scope_' . $permission['scope'];
+                    
+                    switch ($permission['scope']) {
+                        case 'customer':
+                            $customer_id = $this->get_current_customer_id();
+                            if ($customer_id) {
+                                $key .= '_c' . $customer_id;
+                            }
+                            break;
+                            
+                        case 'branch':
+                            $branch_ids = $this->get_accessible_branch_ids();
+                            if (!empty($branch_ids)) {
+                                sort($branch_ids);
+                                $key .= '_b' . implode('_', $branch_ids);
+                            }
+                            break;
+                            
+                        case 'department':
+                            $dept_ids = $this->get_current_department_ids();
+                            if (!empty($dept_ids)) {
+                                sort($dept_ids);
+                                $key .= '_d' . implode('_', $dept_ids);
+                            }
+                            break;
+                            
+                        case 'own':
+                            $user_id = get_current_user_id();
+                            if ($user_id) {
+                                $key .= '_u' . $user_id;
+                            }
+                            break;
+                    }
+                }
+            }
+        }
+        
+        if (is_array($identifier)) {
+            $key .= '_' . md5(serialize($identifier));
+        } elseif ($identifier) {
+            $key .= '_' . $identifier;
+        }
+        
+        return $key;
     }
     
     abstract public function validate($data, $id = 0);

@@ -2,13 +2,8 @@
 /**
  * Branches List Template
  * 
- * REFACTORED v3.0.0:
- * ✅ Filters side by side (inline display)
- * ✅ Uses SAW_Component_Admin_Table
- * ✅ All values escaped
- * 
  * @package SAW_Visitors
- * @version 3.0.0
+ * @version 3.1.0 - Permissions Fix
  */
 
 if (!defined('ABSPATH')) {
@@ -46,11 +41,10 @@ $search_component = new SAW_Component_Search('branches', array(
 $search_component->render();
 $search_html = ob_get_clean();
 
-// Prepare filters - INLINE STYLE FOR SIDE BY SIDE
+// Prepare filters
 ob_start();
 echo '<div style="display: flex; gap: 12px; flex-wrap: wrap;">';
 
-// Status filter
 if (!empty($this->config['list_config']['filters']['is_active'])) {
     echo '<div style="flex: 0 0 auto;">';
     $status_filter = new SAW_Component_Selectbox('is_active-filter', array(
@@ -69,7 +63,6 @@ if (!empty($this->config['list_config']['filters']['is_active'])) {
     echo '</div>';
 }
 
-// Headquarters filter
 if (!empty($this->config['list_config']['filters']['is_headquarters'])) {
     echo '<div style="flex: 0 0 auto;">';
     $headquarters_filter = new SAW_Component_Selectbox('is_headquarters-filter', array(
@@ -91,11 +84,26 @@ if (!empty($this->config['list_config']['filters']['is_headquarters'])) {
 echo '</div>';
 $filters_html = ob_get_clean();
 
+// Check permissions for actions
+$can_create = $this->can('create');
+$can_edit = $this->can('edit');
+$can_delete = $this->can('delete');
+$can_view = $this->can('view');
+
+// Build actions array
+$actions = [];
+if ($can_edit) {
+    $actions[] = 'edit';
+}
+if ($can_delete) {
+    $actions[] = 'delete';
+}
+
 // Initialize admin table
 $table = new SAW_Component_Admin_Table('branches', [
     'title' => 'Pobočky',
-    'create_url' => home_url('/admin/branches/new/'),
-    'edit_url' => home_url('/admin/branches/edit/{id}/'),
+    'create_url' => $can_create ? home_url('/admin/branches/new/') : null,
+    'edit_url' => $can_edit ? home_url('/admin/branches/edit/{id}/') : null,
     
     'columns' => [
         'name' => [
@@ -106,17 +114,14 @@ $table = new SAW_Component_Admin_Table('branches', [
             'callback' => function($value, $item) {
                 $html = '';
                 
-                // Thumbnail or icon
                 if (!empty($item['image_thumbnail'])) {
                     $html .= '<img src="' . esc_url($item['image_thumbnail']) . '" alt="' . esc_attr($value) . '" class="saw-branch-thumbnail">';
                 } else {
                     $html .= '<span class="saw-branch-icon">🏢</span>';
                 }
                 
-                // Name
                 $html .= '<strong>' . esc_html($value) . '</strong>';
                 
-                // Headquarters badge
                 if (!empty($item['is_headquarters'])) {
                     $html .= ' <span class="saw-badge saw-badge-info saw-badge-sm">HQ</span>';
                 }
@@ -201,41 +206,50 @@ $table = new SAW_Component_Admin_Table('branches', [
     'order' => $order,
     'search' => $search_html,
     'filters' => $filters_html,
-    'actions' => ['edit', 'delete'],
+    'actions' => $actions,
     'empty_message' => 'Žádné pobočky nenalezeny',
-    'add_new' => 'Nová pobočka',
+    'add_new' => $can_create ? 'Nová pobočka' : null,
     
-    'enable_modal' => true,
+    'enable_modal' => $can_view,
     'modal_id' => 'branch-detail',
     'modal_ajax_action' => 'saw_get_branches_detail',
 ]);
 
 $table->render();
 
-// Modal component
-$branch_modal = new SAW_Component_Modal('branch-detail', array(
-    'title' => 'Detail pobočky',
-    'ajax_enabled' => true,
-    'ajax_action' => 'saw_get_branches_detail',
-    'size' => 'large',
-    'show_close' => true,
-    'close_on_backdrop' => true,
-    'close_on_escape' => true,
-    'header_actions' => array(
-        array(
+// Modal component (only if user can view details)
+if ($can_view) {
+    $modal_actions = [];
+    
+    if ($can_edit) {
+        $modal_actions[] = [
             'type' => 'edit',
             'label' => '',
             'icon' => 'dashicons-edit',
             'url' => home_url('/admin/branches/edit/{id}/'),
-        ),
-        array(
+        ];
+    }
+    
+    if ($can_delete) {
+        $modal_actions[] = [
             'type' => 'delete',
             'label' => '',
             'icon' => 'dashicons-trash',
             'confirm' => true,
             'confirm_message' => 'Opravdu chcete smazat tuto pobočku?',
             'ajax_action' => 'saw_delete_branches',
-        ),
-    ),
-));
-$branch_modal->render();
+        ];
+    }
+    
+    $branch_modal = new SAW_Component_Modal('branch-detail', array(
+        'title' => 'Detail pobočky',
+        'ajax_enabled' => true,
+        'ajax_action' => 'saw_get_branches_detail',
+        'size' => 'large',
+        'show_close' => true,
+        'close_on_backdrop' => true,
+        'close_on_escape' => true,
+        'header_actions' => $modal_actions,
+    ));
+    $branch_modal->render();
+}

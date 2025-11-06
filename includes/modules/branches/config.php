@@ -3,7 +3,7 @@
  * Branches Module Config
  * 
  * @package SAW_Visitors
- * @version 2.0.0 - REFACTORED
+ * @version 2.1.0 - Customer Filter Fix
  */
 
 if (!defined('ABSPATH')) {
@@ -181,6 +181,7 @@ return [
         'searchable' => ['name', 'code', 'city', 'street'],
         'sortable' => ['name', 'code', 'city', 'sort_order', 'created_at'],
         'filters' => [
+            'customer_id' => true,      // ✅ CRITICAL FIX - enables customer filtering
             'is_active' => true,
             'is_headquarters' => true,
         ],

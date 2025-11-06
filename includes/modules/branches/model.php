@@ -2,15 +2,8 @@
 /**
  * Branches Module Model
  * 
- * REFACTORED v3.0.0:
- * ✅ NO duplicate customer isolation (trait handles it)
- * ✅ get_by_id() only formats data
- * ✅ Uses SAW_Context instead of sessions
- * ✅ Proper $wpdb->prepare() everywhere
- * ✅ Cache enabled with invalidation
- * 
  * @package SAW_Visitors
- * @version 3.0.0
+ * @version 3.1.0 - Customer Isolation Fix
  */
 
 if (!defined('ABSPATH')) {
@@ -27,9 +20,6 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         $this->cache_ttl = $config['cache']['ttl'] ?? 1800;
     }
     
-    /**
-     * Validate data
-     */
     public function validate($data, $id = 0) {
         $errors = [];
         
@@ -73,9 +63,6 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         return empty($errors) ? true : new WP_Error('validation_error', 'Validace selhala', $errors);
     }
     
-    /**
-     * Check if code exists
-     */
     private function code_exists($code, $exclude_id = 0, $customer_id = 0) {
         global $wpdb;
         
@@ -94,12 +81,6 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         return (bool) $wpdb->get_var($query);
     }
     
-    /**
-     * Get by ID with formatting
-     * 
-     * ✅ NO customer isolation check - trait handles it in AJAX
-     * ✅ ONLY formatting logic here
-     */
     public function get_by_id($id) {
         $item = parent::get_by_id($id);
         
@@ -107,15 +88,12 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
             return null;
         }
         
-        // ✅ Format opening hours (JSON → array)
         if (!empty($item['opening_hours'])) {
             $item['opening_hours_array'] = $this->get_opening_hours_as_array($item['opening_hours']);
         }
         
-        // ✅ Format full address
         $item['full_address'] = $this->get_full_address($item);
         
-        // ✅ GPS check
         $item['has_gps'] = !empty($item['latitude']) && !empty($item['longitude']);
         
         if ($item['has_gps']) {
@@ -126,14 +104,12 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
             );
         }
         
-        // ✅ Status labels and badges
         $item['is_active_label'] = !empty($item['is_active']) ? 'Aktivní' : 'Neaktivní';
         $item['is_active_badge_class'] = !empty($item['is_active']) ? 'saw-badge saw-badge-success' : 'saw-badge saw-badge-secondary';
         
         $item['is_headquarters_label'] = !empty($item['is_headquarters']) ? 'Ano' : 'Ne';
         $item['is_headquarters_badge_class'] = !empty($item['is_headquarters']) ? 'saw-badge saw-badge-info' : 'saw-badge saw-badge-secondary';
         
-        // ✅ Country name
         $countries = [
             'CZ' => 'Česká republika',
             'SK' => 'Slovensko',
@@ -146,7 +122,6 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
             $item['country_name'] = $countries[$item['country']] ?? $item['country'];
         }
         
-        // ✅ Format dates
         if (!empty($item['created_at'])) {
             $item['created_at_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['created_at']));
         }
@@ -158,59 +133,37 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         return $item;
     }
     
-    /**
-     * Get all with customer isolation and caching
-     */
     public function get_all($filters = []) {
+        // ✅ CRITICAL FIX - Same pattern as departments
         $customer_id = SAW_Context::get_customer_id();
         
         if (!isset($filters['customer_id'])) {
             $filters['customer_id'] = $customer_id;
         }
         
-        // Default ordering
         if (!isset($filters['orderby'])) {
             $filters['orderby'] = 'sort_order';
             $filters['order'] = 'ASC';
         }
         
-        // Cache key
-        $cache_key = sprintf(
-            'branches_list_%d_%s',
-            $customer_id,
-            md5(serialize($filters))
-        );
-        
-        // Try cache
-        if (class_exists('SAW_Cache')) {
-            return SAW_Cache::remember($cache_key, function() use ($filters) {
-                return parent::get_all($filters);
-            }, $this->cache_ttl);
-        }
-        
         return parent::get_all($filters);
     }
     
-    /**
-     * Create with cache invalidation
-     */
     public function create($data) {
-        // Process opening hours
         $data = $this->process_opening_hours_for_save($data);
         
-        // Ensure single headquarters
         $data = $this->ensure_single_headquarters($data);
         
         $result = parent::create($data);
         
         if (!is_wp_error($result)) {
-            // Invalidate cache
             if (class_exists('SAW_Cache')) {
                 SAW_Cache::forget_pattern('branches_list_*');
+                SAW_Cache::forget_pattern('branches_*');
             }
             
-            // Fire action
             if (!empty($data['customer_id'])) {
+                delete_transient('branches_for_switcher_' . $data['customer_id']);
                 do_action('saw_branch_created', $result, $data['customer_id']);
             }
         }
@@ -218,49 +171,49 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         return $result;
     }
     
-    /**
-     * Update with cache invalidation
-     */
     public function update($id, $data) {
-        // Process opening hours
         $data = $this->process_opening_hours_for_save($data);
         
-        // Ensure single headquarters
         $data = $this->ensure_single_headquarters($data, $id);
         
         $result = parent::update($id, $data);
         
         if (!is_wp_error($result)) {
-            // Invalidate cache
             if (class_exists('SAW_Cache')) {
                 SAW_Cache::forget(sprintf('branches_item_%d', $id));
                 SAW_Cache::forget_pattern('branches_list_*');
+                SAW_Cache::forget_pattern('branches_*');
+            }
+            
+            $branch = $this->get_by_id($id);
+            if ($branch && !empty($branch['customer_id'])) {
+                delete_transient('branches_for_switcher_' . $branch['customer_id']);
             }
         }
         
         return $result;
     }
     
-    /**
-     * Delete with cache invalidation
-     */
     public function delete($id) {
+        $branch = $this->get_by_id($id);
+        
         $result = parent::delete($id);
         
         if (!is_wp_error($result)) {
-            // Invalidate cache
             if (class_exists('SAW_Cache')) {
                 SAW_Cache::forget(sprintf('branches_item_%d', $id));
                 SAW_Cache::forget_pattern('branches_list_*');
+                SAW_Cache::forget_pattern('branches_*');
+            }
+            
+            if ($branch && !empty($branch['customer_id'])) {
+                delete_transient('branches_for_switcher_' . $branch['customer_id']);
             }
         }
         
         return $result;
     }
     
-    /**
-     * Ensure only one headquarters per customer
-     */
     private function ensure_single_headquarters($data, $exclude_id = 0) {
         if (!empty($data['is_headquarters']) && !empty($data['customer_id'])) {
             global $wpdb;
@@ -286,9 +239,6 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         return $data;
     }
     
-    /**
-     * Process opening hours for save
-     */
     private function process_opening_hours_for_save($data) {
         if (isset($data['opening_hours']) && is_string($data['opening_hours'])) {
             $lines = explode("\n", $data['opening_hours']);
@@ -299,9 +249,6 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         return $data;
     }
     
-    /**
-     * Get opening hours as array
-     */
     public function get_opening_hours_as_array($hours_json) {
         if (empty($hours_json)) {
             return [];
@@ -312,9 +259,6 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         return is_array($hours) ? $hours : [];
     }
     
-    /**
-     * Get full address string
-     */
     public function get_full_address($item) {
         $parts = [];
         
@@ -340,9 +284,6 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         return implode(', ', $parts);
     }
     
-    /**
-     * Check if branch is used in system
-     */
     public function is_used_in_system($id) {
         global $wpdb;
         
@@ -386,9 +327,6 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         return false;
     }
     
-    /**
-     * Get branches by customer
-     */
     public function get_by_customer($customer_id, $active_only = false) {
         $filters = [
             'customer_id' => $customer_id,
@@ -404,9 +342,6 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         return $data['items'] ?? [];
     }
     
-    /**
-     * Get headquarters for customer
-     */
     public function get_headquarters($customer_id) {
         global $wpdb;
         

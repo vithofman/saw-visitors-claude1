@@ -21,21 +21,28 @@ class SAW_App_Sidebar {
         $this->active_menu = $active_menu;
         $this->current_branch = $current_branch ?: $this->load_current_branch();
         $this->saw_role = $this->get_current_saw_role();
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log(sprintf('[Sidebar] Role: %s, Active menu: %s', $this->saw_role ?? 'NULL', $active_menu));
+        }
     }
     
     private function get_current_saw_role() {
         if (current_user_can('manage_options')) {
+            if (class_exists('SAW_Context')) {
+                $role = SAW_Context::get_role();
+                if ($role) {
+                    return $role;
+                }
+            }
             return 'super_admin';
         }
         
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        
-        $session_role = $_SESSION['saw_role'] ?? null;
-        
-        if (!empty($session_role)) {
-            return $session_role;
+        if (class_exists('SAW_Context')) {
+            $role = SAW_Context::get_role();
+            if ($role) {
+                return $role;
+            }
         }
         
         global $wpdb;
@@ -58,6 +65,9 @@ class SAW_App_Sidebar {
         }
         
         if (!class_exists('SAW_Permissions')) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[Sidebar] SAW_Permissions class not found');
+            }
             return true;
         }
         
@@ -65,10 +75,25 @@ class SAW_App_Sidebar {
             return true;
         }
         
-        return SAW_Permissions::check($this->saw_role, $module_slug, 'list');
+        $has_access = SAW_Permissions::check($this->saw_role, $module_slug, 'list');
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log(sprintf(
+                '[Sidebar] Permission check - Role: %s, Module: %s, Access: %s',
+                $this->saw_role,
+                $module_slug,
+                $has_access ? 'YES' : 'NO'
+            ));
+        }
+        
+        return $has_access;
     }
     
     private function load_current_branch() {
+        if (!class_exists('SAW_Context')) {
+            return null;
+        }
+        
         $branch_id = SAW_Context::get_branch_id();
         
         if (!$branch_id || !$this->customer['id']) {
@@ -119,8 +144,7 @@ class SAW_App_Sidebar {
                 $first_section = true;
                 foreach ($menu as $index => $section): 
                     $has_active = $this->section_has_active_item($section);
-                    // ✅ FIX: Sekce s aktivní položkou NIKDY nebudou collapsed
-                    $is_collapsed = false; // Vypnuto: !$first_section && !$has_active;
+                    $is_collapsed = false;
                     
                     $visible_items = [];
                     foreach ($section['items'] as $item) {
@@ -169,11 +193,7 @@ class SAW_App_Sidebar {
                         <?php endforeach; ?>
                     <?php endif; ?>
                     
-                    <?php 
-                    // ✅ OPRAVENO: Reset first_section MIMO if blok
-                    // Tím zajistíme že se reset provede pro VŠECHNY sekce (i ty bez headingu)
-                    $first_section = false; 
-                    ?>
+                    <?php $first_section = false; ?>
                 <?php endforeach; ?>
             </nav>
         </aside>
@@ -218,7 +238,7 @@ class SAW_App_Sidebar {
             [
                 'heading' => 'Systém',
                 'items' => [
-                    ['id' => 'permissions', 'label' => 'Oprávnění', 'url' => '/admin/permissions', 'icon' => '🔒'],
+                    ['id' => 'permissions', 'label' => 'Oprávnění', 'url' => '/admin/permissions', 'icon' => '🔐'],
                     ['id' => 'customers', 'label' => 'Zákazníci', 'url' => '/admin/settings/customers', 'icon' => '🏬'],
                     ['id' => 'account-types', 'label' => 'Typy účtů', 'url' => '/admin/settings/account-types', 'icon' => '💳'],
                     ['id' => 'company', 'label' => 'Firma', 'url' => '/admin/settings/company', 'icon' => '⚙️'],

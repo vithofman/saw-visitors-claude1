@@ -2,15 +2,8 @@
 /**
  * Branches Module Controller
  * 
- * REFACTORED v3.0.0:
- * ✅ NO manual AJAX registration (SAW_Visitors handles it)
- * ✅ NO custom ajax_get_detail (trait handles it)
- * ✅ Uses SAW_Context instead of sessions
- * ✅ Full CRUD implementation
- * ✅ Cache invalidation
- * 
  * @package SAW_Visitors
- * @version 3.0.0
+ * @version 3.1.0 - Permissions & Scope Fix
  */
 
 if (!defined('ABSPATH')) {
@@ -33,18 +26,12 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         require_once $module_path . 'model.php';
         $this->model = new SAW_Module_Branches_Model($this->config);
         
-        // File uploader for images
         if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/class-saw-file-uploader.php')) {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/class-saw-file-uploader.php';
             $this->file_uploader = new SAW_File_Uploader();
         }
-        
-        // ✅ NO manual AJAX registration - SAW_Visitors does it automatically
     }
     
-    /**
-     * Index - List view
-     */
     public function index() {
         $this->verify_module_access();
         
@@ -96,14 +83,12 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         $this->render_with_layout($content, $this->config['plural']);
     }
     
-    /**
-     * Create - New branch form
-     */
     public function create() {
         $this->verify_module_access();
         
         if (!$this->can('create')) {
-            wp_die('Nemáte oprávnění vytvářet pobočky');
+            $this->set_flash('Nemáte oprávnění vytvářet pobočky', 'error');
+            $this->redirect(home_url('/admin/branches/'));
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -112,6 +97,12 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
             }
             
             $data = $this->prepare_form_data($_POST);
+            
+            $scope_validation = $this->validate_scope_access($data, 'create');
+            if (is_wp_error($scope_validation)) {
+                $this->set_flash($scope_validation->get_error_message(), 'error');
+                $this->redirect(home_url('/admin/branches/'));
+            }
             
             $data = $this->before_save($data);
             if (is_wp_error($data)) {
@@ -161,25 +152,25 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         $this->render_with_layout($content, 'Nová pobočka');
     }
     
-    /**
-     * Edit - Edit branch form
-     */
     public function edit($id) {
         $this->verify_module_access();
         
         if (!$this->can('edit')) {
-            wp_die('Nemáte oprávnění upravovat pobočky');
+            $this->set_flash('Nemáte oprávnění upravovat pobočky', 'error');
+            $this->redirect(home_url('/admin/branches/'));
         }
         
         $id = intval($id);
         $item = $this->model->get_by_id($id);
         
         if (!$item) {
-            if (class_exists('SAW_Error_Handler')) {
-                SAW_Error_Handler::not_found('Pobočka');
-            } else {
-                wp_die('Pobočka nebyla nalezena');
-            }
+            $this->set_flash('Pobočka nebyla nalezena', 'error');
+            $this->redirect(home_url('/admin/branches/'));
+        }
+        
+        if (!$this->can_access_item($item)) {
+            $this->set_flash('Nemáte oprávnění k tomuto záznamu', 'error');
+            $this->redirect(home_url('/admin/branches/'));
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -189,6 +180,12 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
             
             $data = $this->prepare_form_data($_POST);
             $data['id'] = $id;
+            
+            $scope_validation = $this->validate_scope_access($data, 'edit');
+            if (is_wp_error($scope_validation)) {
+                $this->set_flash($scope_validation->get_error_message(), 'error');
+                $this->redirect(home_url('/admin/branches/edit/' . $id));
+            }
             
             $data = $this->before_save($data);
             if (is_wp_error($data)) {
@@ -236,9 +233,6 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         $this->render_with_layout($content, 'Upravit pobočku');
     }
     
-    /**
-     * Prepare form data
-     */
     private function prepare_form_data($post) {
         $data = [];
         
@@ -263,16 +257,11 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         return $data;
     }
     
-    /**
-     * Before save hook
-     */
     protected function before_save($data) {
-        // Auto-set customer_id from context
         if (empty($data['customer_id'])) {
             $data['customer_id'] = SAW_Context::get_customer_id();
         }
         
-        // Handle file upload removal
         if ($this->file_uploader && $this->file_uploader->should_remove_file('image_url')) {
             if (!empty($data['id'])) {
                 $existing = $this->model->get_by_id($data['id']);
@@ -284,7 +273,6 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
             $data['image_thumbnail'] = '';
         }
         
-        // Handle file upload
         if ($this->file_uploader && !empty($_FILES['image_url']['name'])) {
             $upload = $this->file_uploader->upload($_FILES['image_url'], 'branches');
             
@@ -295,7 +283,6 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
             $data['image_url'] = $upload['url'];
             $data['image_thumbnail'] = $upload['url'];
             
-            // Delete old image
             if (!empty($data['id'])) {
                 $existing = $this->model->get_by_id($data['id']);
                 if (!empty($existing['image_url']) && $existing['image_url'] !== $data['image_url']) {
@@ -307,14 +294,10 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         return $data;
     }
     
-    /**
-     * After save hook - Cache invalidation
-     */
     protected function after_save($id) {
         $branch = $this->model->get_by_id($id);
         
         if (!empty($branch['customer_id'])) {
-            // Invalidate branch switcher cache
             delete_transient('branches_for_switcher_' . $branch['customer_id']);
             
             if (defined('WP_DEBUG') && WP_DEBUG) {

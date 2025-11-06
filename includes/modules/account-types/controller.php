@@ -1,9 +1,9 @@
 <?php
 /**
- * Account Types Module Controller - COMPLETE
+ * Account Types Module Controller
  * 
  * @package SAW_Visitors
- * @version 2.3.0 - FIXED: Color picker assets loading
+ * @version 2.4.0 - Permissions & Scope Fix
  */
 
 if (!defined('ABSPATH')) {
@@ -81,7 +81,8 @@ class SAW_Module_Account_Types_Controller extends SAW_Base_Controller
         $this->verify_module_access();
         
         if (!$this->can('create')) {
-            wp_die('Nemáte oprávnění vytvářet typy účtů');
+            $this->set_flash('Nemáte oprávnění vytvářet typy účtů', 'error');
+            $this->redirect(home_url('/admin/settings/account-types/'));
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -90,6 +91,12 @@ class SAW_Module_Account_Types_Controller extends SAW_Base_Controller
             }
             
             $data = $this->prepare_form_data($_POST);
+            
+            $scope_validation = $this->validate_scope_access($data, 'create');
+            if (is_wp_error($scope_validation)) {
+                $this->set_flash($scope_validation->get_error_message(), 'error');
+                $this->redirect(home_url('/admin/settings/account-types/'));
+            }
             
             $data = $this->before_save($data);
             if (is_wp_error($data)) {
@@ -143,18 +150,21 @@ class SAW_Module_Account_Types_Controller extends SAW_Base_Controller
         $this->verify_module_access();
         
         if (!$this->can('edit')) {
-            wp_die('Nemáte oprávnění upravovat typy účtů');
+            $this->set_flash('Nemáte oprávnění upravovat typy účtů', 'error');
+            $this->redirect(home_url('/admin/settings/account-types/'));
         }
         
         $id = intval($id);
         $item = $this->model->get_by_id($id);
         
         if (!$item) {
-            if (class_exists('SAW_Error_Handler')) {
-                SAW_Error_Handler::not_found('Typ účtu');
-            } else {
-                wp_die('Typ účtu nebyl nalezen');
-            }
+            $this->set_flash('Typ účtu nebyl nalezen', 'error');
+            $this->redirect(home_url('/admin/settings/account-types/'));
+        }
+        
+        if (isset($item['customer_id']) && !$this->can_access_item($item)) {
+            $this->set_flash('Nemáte oprávnění k tomuto záznamu', 'error');
+            $this->redirect(home_url('/admin/settings/account-types/'));
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -164,6 +174,12 @@ class SAW_Module_Account_Types_Controller extends SAW_Base_Controller
             
             $data = $this->prepare_form_data($_POST);
             $data['id'] = $id;
+            
+            $scope_validation = $this->validate_scope_access($data, 'edit');
+            if (is_wp_error($scope_validation)) {
+                $this->set_flash($scope_validation->get_error_message(), 'error');
+                $this->redirect(home_url('/admin/settings/account-types/edit/' . $id));
+            }
             
             $data = $this->before_save($data);
             if (is_wp_error($data)) {

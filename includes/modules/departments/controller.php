@@ -3,7 +3,7 @@
  * Departments Module Controller
  * 
  * @package SAW_Visitors
- * @version 1.0.0
+ * @version 1.1.0
  */
 
 if (!defined('ABSPATH')) {
@@ -23,8 +23,6 @@ class SAW_Module_Departments_Controller extends SAW_Base_Controller
         
         require_once $module_path . 'model.php';
         $this->model = new SAW_Module_Departments_Model($this->config);
-        
-        // AJAX handlers registered automatically by SAW_Visitors core
     }
     
     public function index() {
@@ -36,7 +34,6 @@ class SAW_Module_Departments_Controller extends SAW_Base_Controller
         $page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
         $is_active = isset($_GET['is_active']) ? sanitize_text_field($_GET['is_active']) : '';
         
-        // Get current branch from context
         $current_branch_id = SAW_Context::get_branch_id();
         
         $filters = [
@@ -45,7 +42,7 @@ class SAW_Module_Departments_Controller extends SAW_Base_Controller
             'order' => $order,
             'page' => $page,
             'per_page' => 20,
-            'branch_id' => $current_branch_id,  // Filter by current branch
+            'branch_id' => $current_branch_id,
         ];
         
         if ($is_active !== '') {
@@ -81,8 +78,9 @@ class SAW_Module_Departments_Controller extends SAW_Base_Controller
         $this->verify_module_access();
         
         if (!$this->can('create')) {
-            wp_die('Nemáte oprávnění vytvářet oddělení');
-        }
+    $this->set_flash('Nemáte oprávnění vytvářet oddělení', 'error');
+    $this->redirect(home_url('/admin/departments/'));
+}
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!wp_verify_nonce($_POST['saw_nonce'] ?? '', 'saw_departments_form')) {
@@ -90,6 +88,12 @@ class SAW_Module_Departments_Controller extends SAW_Base_Controller
             }
             
             $data = $this->prepare_form_data($_POST);
+            
+            $scope_validation = $this->validate_scope_access($data, 'create');
+            if (is_wp_error($scope_validation)) {
+                $this->set_flash($scope_validation->get_error_message(), 'error');
+                $this->redirect(home_url('/admin/departments/'));
+            }
             
             $data = $this->before_save($data);
             if (is_wp_error($data)) {
@@ -143,8 +147,9 @@ class SAW_Module_Departments_Controller extends SAW_Base_Controller
         $this->verify_module_access();
         
         if (!$this->can('edit')) {
-            wp_die('Nemáte oprávnění upravovat oddělení');
-        }
+    $this->set_flash('Nemáte oprávnění upravovat oddělení', 'error');
+    $this->redirect(home_url('/admin/departments/'));
+}
         
         $id = intval($id);
         $item = $this->model->get_by_id($id);
@@ -164,6 +169,12 @@ class SAW_Module_Departments_Controller extends SAW_Base_Controller
             
             $data = $this->prepare_form_data($_POST);
             $data['id'] = $id;
+            
+            $scope_validation = $this->validate_scope_access($data, 'edit');
+            if (is_wp_error($scope_validation)) {
+                $this->set_flash($scope_validation->get_error_message(), 'error');
+                $this->redirect(home_url('/admin/departments/edit/' . $id));
+            }
             
             $data = $this->before_save($data);
             if (is_wp_error($data)) {
@@ -247,14 +258,9 @@ class SAW_Module_Departments_Controller extends SAW_Base_Controller
     }
     
     protected function after_save($id) {
-        // Cache disabled - no invalidation needed
     }
     
-    /**
-     * Format detail data for AJAX modal
-     */
     protected function format_detail_data($item) {
-        // Model already formats everything in get_by_id()
         return $item;
     }
 }
