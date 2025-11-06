@@ -1,21 +1,72 @@
 <?php
 /**
- * Base Model Class - Database-First with Multi-Branch Support
- * 
- * @package SAW_Visitors
- * @version 5.3.0
+ * Base Model Class
+ *
+ * Parent class for all entity models.
+ * Provides CRUD operations, scope filtering, caching, and validation.
+ * Implements role-based data access control.
+ *
+ * @package    SAW_Visitors
+ * @subpackage Base
+ * @version    5.4.0
+ * @since      1.0.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * SAW_Base_Model Class
+ *
+ * Abstract base model with scope-aware data access and caching.
+ * All entity models must extend this class.
+ *
+ * @since 1.0.0
+ */
 abstract class SAW_Base_Model 
 {
+    /**
+     * Database table name
+     *
+     * @since 1.0.0
+     * @var string
+     */
     protected $table;
+    
+    /**
+     * Module configuration
+     *
+     * @since 1.0.0
+     * @var array
+     */
     protected $config;
+    
+    /**
+     * Cache TTL in seconds
+     *
+     * @since 1.0.0
+     * @var int
+     */
     protected $cache_ttl = 300;
     
+    /**
+     * Allowed ORDER BY columns (whitelist for security)
+     *
+     * @since 5.4.0
+     * @var array
+     */
+    protected $allowed_orderby = ['id', 'name', 'created_at', 'updated_at'];
+    
+    /**
+     * Get all records with filters
+     *
+     * Returns paginated list with scope filtering applied.
+     *
+     * @since 1.0.0
+     * @param array $filters Query filters
+     * @return array ['items' => array, 'total' => int]
+     */
     public function get_all($filters = []) {
         global $wpdb;
         
@@ -26,53 +77,69 @@ abstract class SAW_Base_Model
             return $cached;
         }
         
-        $sql = "SELECT * FROM {$this->table} WHERE 1=1";
+        $sql = $wpdb->prepare("SELECT * FROM %i WHERE 1=1", $this->table);
         $params = [];
         
+        // Apply scope filtering
         list($scope_where, $scope_params) = $this->apply_data_scope();
         if (!empty($scope_where)) {
             $sql .= $scope_where;
             $params = array_merge($params, $scope_params);
         }
         
+        // Search filtering
         if (!empty($filters['search'])) {
             $search_fields = $this->config['list_config']['searchable'] ?? ['name'];
             $search_conditions = [];
             
             foreach ($search_fields as $field) {
-                $search_conditions[] = "{$field} LIKE %s";
+                // Validate field name to prevent SQL injection
+                if ($this->is_valid_column($field)) {
+                    $search_conditions[] = "`{$field}` LIKE %s";
+                }
             }
             
-            $search_value = '%' . $wpdb->esc_like($filters['search']) . '%';
-            
-            foreach ($search_fields as $field) {
-                $params[] = $search_value;
+            if (!empty($search_conditions)) {
+                $search_value = '%' . $wpdb->esc_like($filters['search']) . '%';
+                
+                foreach ($search_conditions as $condition) {
+                    $params[] = $search_value;
+                }
+                
+                $sql .= " AND (" . implode(' OR ', $search_conditions) . ")";
             }
-            
-            $sql .= " AND (" . implode(' OR ', $search_conditions) . ")";
         }
         
+        // Additional filters
         foreach ($this->config['list_config']['filters'] ?? [] as $filter_key => $enabled) {
             if ($enabled && isset($filters[$filter_key]) && $filters[$filter_key] !== '') {
-                $sql .= " AND {$filter_key} = %s";
-                $params[] = $filters[$filter_key];
+                // Validate column name
+                if ($this->is_valid_column($filter_key)) {
+                    $sql .= " AND `{$filter_key}` = %s";
+                    $params[] = $filters[$filter_key];
+                }
             }
         }
         
+        // Prepare SQL with params
         if (!empty($params)) {
             $sql = $wpdb->prepare($sql, ...$params);
         }
         
+        // Ordering
         $orderby = $filters['orderby'] ?? 'id';
         $order = strtoupper($filters['order'] ?? 'DESC');
         
-        if (in_array($order, ['ASC', 'DESC'])) {
-            $sql .= " ORDER BY {$orderby} {$order}";
+        // Whitelist validation for ORDER BY
+        if ($this->is_valid_orderby($orderby) && in_array($order, ['ASC', 'DESC'], true)) {
+            $sql .= " ORDER BY `{$orderby}` {$order}";
         }
         
+        // Count total
         $total_sql = "SELECT COUNT(*) FROM ({$sql}) as count_table";
         $total = $wpdb->get_var($total_sql);
         
+        // Pagination
         $limit = intval($filters['per_page'] ?? 20);
         $offset = ($filters['page'] ?? 1) - 1;
         $offset = $offset * $limit;
@@ -91,6 +158,13 @@ abstract class SAW_Base_Model
         return $data;
     }
     
+    /**
+     * Get record by ID
+     *
+     * @since 1.0.0
+     * @param int $id Record ID
+     * @return array|null Record data or null
+     */
     public function get_by_id($id) {
         global $wpdb;
         
@@ -102,7 +176,8 @@ abstract class SAW_Base_Model
         }
         
         $item = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$this->table} WHERE id = %d",
+            "SELECT * FROM %i WHERE id = %d",
+            $this->table,
             $id
         ), ARRAY_A);
         
@@ -113,6 +188,13 @@ abstract class SAW_Base_Model
         return $item;
     }
     
+    /**
+     * Create new record
+     *
+     * @since 1.0.0
+     * @param array $data Record data
+     * @return int|WP_Error Insert ID or error
+     */
     public function create($data) {
         global $wpdb;
         
@@ -128,7 +210,10 @@ abstract class SAW_Base_Model
         $result = $wpdb->insert($this->table, $data);
         
         if ($result === false) {
-            return new WP_Error('db_error', 'Database insert failed: ' . $wpdb->last_error);
+            return new WP_Error(
+                'db_error',
+                __('Database insert failed', 'saw-visitors') . ': ' . $wpdb->last_error
+            );
         }
         
         $this->invalidate_cache();
@@ -136,6 +221,14 @@ abstract class SAW_Base_Model
         return $wpdb->insert_id;
     }
     
+    /**
+     * Update existing record
+     *
+     * @since 1.0.0
+     * @param int   $id   Record ID
+     * @param array $data Updated data
+     * @return bool|WP_Error True on success, error otherwise
+     */
     public function update($id, $data) {
         global $wpdb;
         
@@ -154,7 +247,10 @@ abstract class SAW_Base_Model
         );
         
         if ($result === false) {
-            return new WP_Error('db_error', 'Database update failed: ' . $wpdb->last_error);
+            return new WP_Error(
+                'db_error',
+                __('Database update failed', 'saw-visitors') . ': ' . $wpdb->last_error
+            );
         }
         
         $this->invalidate_cache();
@@ -162,16 +258,27 @@ abstract class SAW_Base_Model
         return true;
     }
     
+    /**
+     * Delete record
+     *
+     * @since 1.0.0
+     * @param int $id Record ID
+     * @return bool|WP_Error True on success, error otherwise
+     */
     public function delete($id) {
         global $wpdb;
         
         $exists = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$this->table} WHERE id = %d",
+            "SELECT COUNT(*) FROM %i WHERE id = %d",
+            $this->table,
             $id
         ));
         
         if (!$exists) {
-            return new WP_Error('not_found', 'Záznam nenalezen');
+            return new WP_Error(
+                'not_found',
+                __('Záznam nenalezen', 'saw-visitors')
+            );
         }
         
         $result = $wpdb->delete(
@@ -181,11 +288,17 @@ abstract class SAW_Base_Model
         );
         
         if ($result === false) {
-            return new WP_Error('db_error', 'Chyba databáze: ' . $wpdb->last_error);
+            return new WP_Error(
+                'db_error',
+                __('Chyba databáze', 'saw-visitors') . ': ' . $wpdb->last_error
+            );
         }
         
         if ($result === 0) {
-            return new WP_Error('delete_failed', 'Záznam se nepodařilo smazat');
+            return new WP_Error(
+                'delete_failed',
+                __('Záznam se nepodařilo smazat', 'saw-visitors')
+            );
         }
         
         $this->invalidate_cache();
@@ -193,10 +306,17 @@ abstract class SAW_Base_Model
         return true;
     }
     
+    /**
+     * Count records with filters
+     *
+     * @since 1.0.0
+     * @param array $filters Query filters
+     * @return int Record count
+     */
     public function count($filters = []) {
         global $wpdb;
         
-        $sql = "SELECT COUNT(*) FROM {$this->table} WHERE 1=1";
+        $sql = $wpdb->prepare("SELECT COUNT(*) FROM %i WHERE 1=1", $this->table);
         $params = [];
         
         if (!empty($filters['customer_id'])) {
@@ -209,27 +329,33 @@ abstract class SAW_Base_Model
             $params[] = intval($filters['branch_id']);
         }
         
+        // Apply scope filtering
         list($scope_where, $scope_params) = $this->apply_data_scope();
         if (!empty($scope_where)) {
             $sql .= $scope_where;
             $params = array_merge($params, $scope_params);
         }
         
+        // Search filtering
         if (!empty($filters['search'])) {
             $search_fields = $this->config['list_config']['searchable'] ?? ['name'];
             $search_conditions = [];
             
             foreach ($search_fields as $field) {
-                $search_conditions[] = "{$field} LIKE %s";
+                if ($this->is_valid_column($field)) {
+                    $search_conditions[] = "`{$field}` LIKE %s";
+                }
             }
             
-            $search_value = '%' . $wpdb->esc_like($filters['search']) . '%';
-            
-            foreach ($search_fields as $field) {
-                $params[] = $search_value;
+            if (!empty($search_conditions)) {
+                $search_value = '%' . $wpdb->esc_like($filters['search']) . '%';
+                
+                foreach ($search_conditions as $condition) {
+                    $params[] = $search_value;
+                }
+                
+                $sql .= " AND (" . implode(' OR ', $search_conditions) . ")";
             }
-            
-            $sql .= " AND (" . implode(' OR ', $search_conditions) . ")";
         }
         
         if (!empty($params)) {
@@ -239,6 +365,14 @@ abstract class SAW_Base_Model
         return $wpdb->get_var($sql);
     }
     
+    /**
+     * Search records
+     *
+     * @since 1.0.0
+     * @param string $query  Search query
+     * @param int    $limit  Result limit
+     * @return array Search results
+     */
     public function search($query, $limit = 10) {
         global $wpdb;
         
@@ -251,12 +385,20 @@ abstract class SAW_Base_Model
         $params = [];
         
         foreach ($search_fields as $field) {
-            $search_conditions[] = "{$field} LIKE %s";
-            $params[] = '%' . $wpdb->esc_like($query) . '%';
+            if ($this->is_valid_column($field)) {
+                $search_conditions[] = "`{$field}` LIKE %s";
+                $params[] = '%' . $wpdb->esc_like($query) . '%';
+            }
         }
         
-        $sql = "SELECT * FROM {$this->table} WHERE (" . implode(' OR ', $search_conditions) . ")";
+        if (empty($search_conditions)) {
+            return [];
+        }
         
+        $sql = $wpdb->prepare("SELECT * FROM %i WHERE ", $this->table);
+        $sql .= "(" . implode(' OR ', $search_conditions) . ")";
+        
+        // Apply scope filtering
         list($scope_where, $scope_params) = $this->apply_data_scope();
         if (!empty($scope_where)) {
             $sql .= $scope_where;
@@ -271,25 +413,29 @@ abstract class SAW_Base_Model
         return $wpdb->get_results($sql, ARRAY_A);
     }
     
-    public function has_customer_isolation() {
-        return $this->config['has_customer_isolation'] ?? true;
-    }
-    
+    /**
+     * Apply data scope filtering
+     *
+     * Filters query based on user's role and scope permissions.
+     *
+     * @since 1.0.0
+     * @return array [sql_where, params]
+     */
     protected function apply_data_scope() {
-        if (!class_exists('SAW_Permissions')) {
+        $role = $this->get_current_user_role();
+        
+        if ($role === 'super_admin') {
             return ['', []];
         }
         
-        $role = $this->get_current_user_role();
-        
-        if (empty($role) || $role === 'super_admin') {
+        if (!$role || !class_exists('SAW_Permissions')) {
             return ['', []];
         }
         
         $permission = SAW_Permissions::get_permission($role, $this->config['entity'], 'list');
         
         if (!$permission || !isset($permission['scope'])) {
-            return ['', []];
+            return [' AND 1=0', []];
         }
         
         $scope = $permission['scope'];
@@ -298,6 +444,7 @@ abstract class SAW_Base_Model
         
         switch ($scope) {
             case 'all':
+                // No filtering needed
                 break;
                 
             case 'customer':
@@ -358,6 +505,15 @@ abstract class SAW_Base_Model
         return [$sql_where, $params];
     }
     
+    /**
+     * Check if table has column
+     *
+     * Uses static cache to avoid repeated queries.
+     *
+     * @since 1.0.0
+     * @param string $column_name Column name to check
+     * @return bool True if column exists
+     */
     protected function table_has_column($column_name) {
         static $column_cache = [];
         
@@ -385,6 +541,44 @@ abstract class SAW_Base_Model
         return $column_cache[$cache_key];
     }
     
+    /**
+     * Validate column name
+     *
+     * Security check to prevent SQL injection via column names.
+     * Checks if column exists in table.
+     *
+     * @since 5.4.0
+     * @param string $column_name Column name to validate
+     * @return bool True if valid
+     */
+    protected function is_valid_column($column_name) {
+        // Basic format validation
+        if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $column_name)) {
+            return false;
+        }
+        
+        return $this->table_has_column($column_name);
+    }
+    
+    /**
+     * Validate ORDER BY column
+     *
+     * Checks against whitelist to prevent SQL injection.
+     *
+     * @since 5.4.0
+     * @param string $column Column name
+     * @return bool True if valid
+     */
+    protected function is_valid_orderby($column) {
+        return in_array($column, $this->allowed_orderby, true);
+    }
+    
+    /**
+     * Get accessible branch IDs for current user
+     *
+     * @since 1.0.0
+     * @return array Branch IDs
+     */
     protected function get_accessible_branch_ids() {
         $role = $this->get_current_user_role();
         $current_branch_id = $this->get_current_branch_id();
@@ -398,8 +592,8 @@ abstract class SAW_Base_Model
             }
             
             $branch_ids = $wpdb->get_col($wpdb->prepare(
-                "SELECT id FROM {$wpdb->prefix}saw_branches 
-                 WHERE customer_id = %d AND is_active = 1",
+                "SELECT id FROM %i WHERE customer_id = %d AND is_active = 1",
+                $wpdb->prefix . 'saw_branches',
                 $customer_id
             ));
             
@@ -432,6 +626,12 @@ abstract class SAW_Base_Model
         return $current_branch_id ? [$current_branch_id] : [];
     }
     
+    /**
+     * Get current user role
+     *
+     * @since 1.0.0
+     * @return string|null Role name or null
+     */
     protected function get_current_user_role() {
         if (current_user_can('manage_options')) {
             return 'super_admin';
@@ -444,6 +644,12 @@ abstract class SAW_Base_Model
         return null;
     }
     
+    /**
+     * Get current customer ID
+     *
+     * @since 1.0.0
+     * @return int|null Customer ID or null
+     */
     protected function get_current_customer_id() {
         if (class_exists('SAW_Context')) {
             return SAW_Context::get_customer_id();
@@ -452,6 +658,12 @@ abstract class SAW_Base_Model
         return null;
     }
     
+    /**
+     * Get current branch ID
+     *
+     * @since 1.0.0
+     * @return int|null Branch ID or null
+     */
     protected function get_current_branch_id() {
         if (class_exists('SAW_Context')) {
             return SAW_Context::get_branch_id();
@@ -460,6 +672,12 @@ abstract class SAW_Base_Model
         return null;
     }
     
+    /**
+     * Get current user's department IDs
+     *
+     * @since 1.0.0
+     * @return array Department IDs
+     */
     protected function get_current_department_ids() {
         global $wpdb;
         
@@ -473,14 +691,24 @@ abstract class SAW_Base_Model
         }
         
         $department_ids = $wpdb->get_col($wpdb->prepare(
-            "SELECT department_id FROM {$wpdb->prefix}saw_user_departments 
-             WHERE user_id = %d",
+            "SELECT department_id FROM %i WHERE user_id = %d",
+            $wpdb->prefix . 'saw_user_departments',
             $saw_user_id
         ));
         
         return array_map('intval', $department_ids);
     }
     
+    /**
+     * Get cache key with scope context
+     *
+     * Generates unique cache key including user's scope context.
+     *
+     * @since 1.0.0
+     * @param string $type       Cache type
+     * @param mixed  $identifier Additional identifier
+     * @return string Cache key
+     */
     protected function get_cache_key_with_scope($type, $identifier = '') {
         $key = 'saw_' . $this->config['entity'] . '_' . $type;
         
@@ -537,8 +765,26 @@ abstract class SAW_Base_Model
         return $key;
     }
     
+    /**
+     * Validate data
+     *
+     * Must be implemented by child classes.
+     *
+     * @since 1.0.0
+     * @param array $data Data to validate
+     * @param int   $id   Record ID (0 for create)
+     * @return true|WP_Error True if valid, error otherwise
+     */
     abstract public function validate($data, $id = 0);
     
+    /**
+     * Get cache key
+     *
+     * @since 1.0.0
+     * @param string $type       Cache type
+     * @param mixed  $identifier Identifier
+     * @return string Cache key
+     */
     protected function get_cache_key($type, $identifier = '') {
         $key = 'saw_' . $this->config['entity'] . '_' . $type;
         
@@ -551,6 +797,13 @@ abstract class SAW_Base_Model
         return $key;
     }
     
+    /**
+     * Get cached data
+     *
+     * @since 1.0.0
+     * @param string $key Cache key
+     * @return mixed Cached data or false
+     */
     protected function get_cache($key) {
         if (!$this->config['cache']['enabled'] ?? true) {
             return false;
@@ -559,6 +812,14 @@ abstract class SAW_Base_Model
         return get_transient($key);
     }
     
+    /**
+     * Set cache data
+     *
+     * @since 1.0.0
+     * @param string $key  Cache key
+     * @param mixed  $data Data to cache
+     * @return bool Success
+     */
     protected function set_cache($key, $data) {
         if (!$this->config['cache']['enabled'] ?? true) {
             return false;
@@ -569,18 +830,28 @@ abstract class SAW_Base_Model
         return set_transient($key, $data, $ttl);
     }
     
+    /**
+     * Invalidate all cache for entity
+     *
+     * Removes all transients matching entity pattern.
+     *
+     * @since 1.0.0
+     * @return void
+     */
     protected function invalidate_cache() {
         global $wpdb;
         
-        $pattern = 'saw_' . $this->config['entity'] . '_%';
+        $pattern = $wpdb->esc_like('saw_' . $this->config['entity'] . '_') . '%';
         
         $wpdb->query($wpdb->prepare(
-            "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
+            "DELETE FROM %i WHERE option_name LIKE %s",
+            $wpdb->options,
             '_transient_' . $pattern
         ));
         
         $wpdb->query($wpdb->prepare(
-            "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
+            "DELETE FROM %i WHERE option_name LIKE %s",
+            $wpdb->options,
             '_transient_timeout_' . $pattern
         ));
     }

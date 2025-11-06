@@ -1,29 +1,51 @@
 <?php
 /**
  * AJAX Handlers Trait
- * 
- * @package SAW_Visitors
- * @version 2.1.0 - Permissions Fix for All Roles
+ *
+ * Provides common AJAX handlers for module controllers.
+ * Includes search, delete, and detail view handlers with permission checks.
+ *
+ * @package    SAW_Visitors
+ * @subpackage Base
+ * @version    2.2.0
+ * @since      1.0.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * SAW_AJAX_Handlers Trait
+ *
+ * Reusable AJAX handlers with security and permission checks.
+ * Used by module controllers via 'use SAW_AJAX_Handlers'.
+ *
+ * @since 1.0.0
+ */
 trait SAW_AJAX_Handlers 
 {
+    /**
+     * AJAX search handler
+     *
+     * Handles search requests for module entities.
+     * Requires 'list' permission.
+     *
+     * @since 1.0.0
+     * @return void
+     */
     public function ajax_search() {
         check_ajax_referer('saw_ajax_nonce', 'nonce');
         
-        if (!$this->can_search()) {
-            wp_send_json_error(['message' => 'Nedostatečná oprávnění']);
+        if (!$this->can_perform_action('list')) {
+            wp_send_json_error(['message' => __('Nedostatečná oprávnění', 'saw-visitors')]);
             return;
         }
         
-        $search = isset($_POST['search']) ? sanitize_text_field($_POST['search']) : '';
+        $search = isset($_POST['search']) ? sanitize_text_field(wp_unslash($_POST['search'])) : '';
         
         if (empty($search)) {
-            wp_send_json_error(['message' => 'Prázdný vyhledávací dotaz']);
+            wp_send_json_error(['message' => __('Prázdný vyhledávací dotaz', 'saw-visitors')]);
             return;
         }
         
@@ -44,37 +66,45 @@ trait SAW_AJAX_Handlers
         ]);
     }
     
+    /**
+     * AJAX delete handler
+     *
+     * Handles delete requests for module entities.
+     * Requires 'delete' permission and validates item access.
+     *
+     * @since 1.0.0
+     * @return void
+     */
     public function ajax_delete() {
         check_ajax_referer('saw_ajax_nonce', 'nonce');
         
-        if (!$this->can_delete()) {
-            wp_send_json_error(['message' => 'Nedostatečná oprávnění']);
+        if (!$this->can_perform_action('delete')) {
+            wp_send_json_error(['message' => __('Nedostatečná oprávnění', 'saw-visitors')]);
             return;
         }
         
         $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
         
         if (!$id) {
-            wp_send_json_error(['message' => 'Neplatné ID']);
+            wp_send_json_error(['message' => __('Neplatné ID', 'saw-visitors')]);
             return;
         }
         
         $item = $this->model->get_by_id($id);
         
         if (!$item) {
-            wp_send_json_error(['message' => ucfirst($this->entity) . ' not found']);
+            wp_send_json_error([
+                'message' => sprintf(
+                    /* translators: %s: entity name */
+                    __('%s nenalezen', 'saw-visitors'),
+                    ucfirst($this->entity)
+                )
+            ]);
             return;
         }
         
         if (!$this->can_access_item($item)) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log(sprintf(
-                    '[AJAX Delete] SECURITY: Access denied - Item ID: %d, Entity: %s',
-                    $id,
-                    $this->entity
-                ));
-            }
-            wp_send_json_error(['message' => 'Nemáte oprávnění k tomuto záznamu']);
+            wp_send_json_error(['message' => __('Nemáte oprávnění k tomuto záznamu', 'saw-visitors')]);
             return;
         }
         
@@ -86,7 +116,13 @@ trait SAW_AJAX_Handlers
         }
         
         if ($before_delete_result === false) {
-            wp_send_json_error(['message' => 'Cannot delete ' . $this->entity]);
+            wp_send_json_error([
+                'message' => sprintf(
+                    /* translators: %s: entity name */
+                    __('Nelze smazat %s', 'saw-visitors'),
+                    $this->entity
+                )
+            ]);
             return;
         }
         
@@ -99,67 +135,55 @@ trait SAW_AJAX_Handlers
         
         $this->after_delete($id);
         
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log(sprintf(
-                '[AJAX Delete] Success - Item ID: %d, Entity: %s',
-                $id,
-                $this->entity
-            ));
-        }
-        
-        wp_send_json_success(['message' => ucfirst($this->entity) . ' deleted successfully']);
+        wp_send_json_success([
+            'message' => sprintf(
+                /* translators: %s: entity name */
+                __('%s byl úspěšně smazán', 'saw-visitors'),
+                ucfirst($this->entity)
+            )
+        ]);
     }
     
+    /**
+     * AJAX get detail handler
+     *
+     * Handles detail view requests for module entities.
+     * Requires 'view' permission and validates item access.
+     * Renders detail modal template.
+     *
+     * @since 1.0.0
+     * @return void
+     */
     public function ajax_get_detail() {
         check_ajax_referer('saw_ajax_nonce', 'nonce');
         
-        if (!$this->can_view_detail()) {
-            wp_send_json_error(['message' => 'Nedostatečná oprávnění']);
+        if (!$this->can_perform_action('view')) {
+            wp_send_json_error(['message' => __('Nedostatečná oprávnění', 'saw-visitors')]);
             return;
         }
         
         $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
         
         if (!$id) {
-            wp_send_json_error(['message' => 'Neplatné ID']);
+            wp_send_json_error(['message' => __('Neplatné ID', 'saw-visitors')]);
             return;
-        }
-        
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log(sprintf(
-                '[AJAX Detail] Request - ID: %d, Entity: %s, User: %d, Has Isolation: %s',
-                $id,
-                $this->entity,
-                get_current_user_id(),
-                isset($this->config['has_customer_isolation']) ? ($this->config['has_customer_isolation'] ? 'YES' : 'NO') : 'DEFAULT'
-            ));
         }
         
         $item = $this->model->get_by_id($id);
         
         if (!$item) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log(sprintf(
-                    '[AJAX Detail] NOT FOUND - ID: %d, Entity: %s',
-                    $id,
-                    $this->entity
-                ));
-            }
-            wp_send_json_error(['message' => ucfirst($this->entity) . ' nenalezen']);
+            wp_send_json_error([
+                'message' => sprintf(
+                    /* translators: %s: entity name */
+                    __('%s nenalezen', 'saw-visitors'),
+                    ucfirst($this->entity)
+                )
+            ]);
             return;
         }
         
         if (!$this->can_access_item($item)) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log(sprintf(
-                    '[AJAX Detail] SECURITY: Access denied - ID: %d, Entity: %s, Item Customer: %s, User Customer: %s',
-                    $id,
-                    $this->entity,
-                    isset($item['customer_id']) ? $item['customer_id'] : 'NONE',
-                    class_exists('SAW_Context') ? SAW_Context::get_customer_id() : 'NULL'
-                ));
-            }
-            wp_send_json_error(['message' => 'Nemáte oprávnění k tomuto záznamu']);
+            wp_send_json_error(['message' => __('Nemáte oprávnění k tomuto záznamu', 'saw-visitors')]);
             return;
         }
         
@@ -168,13 +192,7 @@ trait SAW_AJAX_Handlers
         $template_path = $this->config['path'] . 'detail-modal-template.php';
         
         if (!file_exists($template_path)) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log(sprintf(
-                    '[AJAX Detail] Template NOT FOUND: %s',
-                    $template_path
-                ));
-            }
-            wp_send_json_error(['message' => 'Template nebyl nalezen']);
+            wp_send_json_error(['message' => __('Template nebyl nalezen', 'saw-visitors')]);
             return;
         }
         
@@ -185,20 +203,11 @@ trait SAW_AJAX_Handlers
             $html = ob_get_clean();
             
             if (empty($html)) {
-                throw new Exception('Template rendered empty content');
+                throw new Exception(__('Template vygeneroval prázdný obsah', 'saw-visitors'));
             }
             
             if (strlen($html) < 50) {
-                throw new Exception('Template rendered too short content (less than 50 bytes)');
-            }
-            
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log(sprintf(
-                    '[AJAX Detail] SUCCESS - ID: %d, Entity: %s, HTML: %d bytes',
-                    $id,
-                    $this->entity,
-                    strlen($html)
-                ));
+                throw new Exception(__('Template vygeneroval příliš krátký obsah', 'saw-visitors'));
             }
             
             wp_send_json_success([
@@ -209,21 +218,26 @@ trait SAW_AJAX_Handlers
         } catch (Exception $e) {
             ob_end_clean();
             
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log(sprintf(
-                    '[AJAX Detail] Template rendering error - ID: %d, Entity: %s, Error: %s',
-                    $id,
-                    $this->entity,
-                    $e->getMessage()
-                ));
-            }
-            
             wp_send_json_error([
-                'message' => 'Chyba při zobrazení detailu: ' . $e->getMessage()
+                'message' => sprintf(
+                    /* translators: %s: error message */
+                    __('Chyba při zobrazení detailu: %s', 'saw-visitors'),
+                    $e->getMessage()
+                )
             ]);
         }
     }
     
+    /**
+     * Check if user can access item
+     *
+     * Validates customer isolation if enabled for entity.
+     * Super admins bypass this check.
+     *
+     * @since 1.0.0
+     * @param array $item Item data
+     * @return bool True if accessible
+     */
     protected function can_access_item($item) {
         $role = $this->get_current_user_role();
         
@@ -231,20 +245,16 @@ trait SAW_AJAX_Handlers
             return true;
         }
         
+        // Check if entity has customer isolation
         $has_isolation = isset($this->config['has_customer_isolation']) 
             ? $this->config['has_customer_isolation'] 
             : true;
         
         if (!$has_isolation) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log(sprintf(
-                    '[AJAX Handlers] Entity %s has NO customer isolation - allowing access',
-                    $this->entity
-                ));
-            }
             return true;
         }
         
+        // Validate customer isolation
         if (isset($item['customer_id'])) {
             $current_customer_id = null;
             
@@ -253,9 +263,6 @@ trait SAW_AJAX_Handlers
             }
             
             if (!$current_customer_id) {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('[AJAX Handlers] WARNING: No customer_id available for isolation check');
-                }
                 return false;
             }
             
@@ -265,7 +272,17 @@ trait SAW_AJAX_Handlers
         return true;
     }
     
-    protected function can_view_detail() {
+    /**
+     * Check if user can perform action
+     *
+     * Universal permission check method.
+     * Loads SAW_Permissions if not available.
+     *
+     * @since 2.2.0
+     * @param string $action Action name (list, view, create, edit, delete)
+     * @return bool True if allowed
+     */
+    protected function can_perform_action($action) {
         $role = $this->get_current_user_role();
         
         if ($role === 'super_admin') {
@@ -273,115 +290,29 @@ trait SAW_AJAX_Handlers
         }
         
         if (!class_exists('SAW_Permissions')) {
-            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-permissions.php';
+            $permissions_file = SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-permissions.php';
+            if (file_exists($permissions_file)) {
+                require_once $permissions_file;
+            }
         }
         
-        if (!class_exists('SAW_Permissions')) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[AJAX Handlers] SAW_Permissions not found for can_view_detail');
-            }
+        if (!class_exists('SAW_Permissions') || empty($role)) {
             return false;
         }
         
-        if (empty($role)) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[AJAX Handlers] No role found for can_view_detail');
-            }
-            return false;
-        }
-        
-        $has_permission = SAW_Permissions::check($role, $this->entity, 'view');
-        
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log(sprintf(
-                '[AJAX Handlers] can_view_detail - Role: %s, Entity: %s, Result: %s',
-                $role,
-                $this->entity,
-                $has_permission ? 'ALLOWED' : 'DENIED'
-            ));
-        }
-        
-        return $has_permission;
+        return SAW_Permissions::check($role, $this->entity, $action);
     }
     
-    protected function can_search() {
-        $role = $this->get_current_user_role();
-        
-        if ($role === 'super_admin') {
-            return true;
-        }
-        
-        if (!class_exists('SAW_Permissions')) {
-            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-permissions.php';
-        }
-        
-        if (!class_exists('SAW_Permissions')) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[AJAX Handlers] SAW_Permissions not found for can_search');
-            }
-            return false;
-        }
-        
-        if (empty($role)) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[AJAX Handlers] No role found for can_search');
-            }
-            return false;
-        }
-        
-        $has_permission = SAW_Permissions::check($role, $this->entity, 'list');
-        
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log(sprintf(
-                '[AJAX Handlers] can_search - Role: %s, Entity: %s, Result: %s',
-                $role,
-                $this->entity,
-                $has_permission ? 'ALLOWED' : 'DENIED'
-            ));
-        }
-        
-        return $has_permission;
-    }
-    
-    protected function can_delete() {
-        $role = $this->get_current_user_role();
-        
-        if ($role === 'super_admin') {
-            return true;
-        }
-        
-        if (!class_exists('SAW_Permissions')) {
-            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-permissions.php';
-        }
-        
-        if (!class_exists('SAW_Permissions')) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[AJAX Handlers] SAW_Permissions not found for can_delete');
-            }
-            return false;
-        }
-        
-        if (empty($role)) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[AJAX Handlers] No role found for can_delete');
-            }
-            return false;
-        }
-        
-        $has_permission = SAW_Permissions::check($role, $this->entity, 'delete');
-        
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log(sprintf(
-                '[AJAX Handlers] can_delete - Role: %s, Entity: %s, Result: %s',
-                $role,
-                $this->entity,
-                $has_permission ? 'ALLOWED' : 'DENIED'
-            ));
-        }
-        
-        return $has_permission;
-    }
-    
+    /**
+     * Format detail data
+     *
+     * Formats dates and other data for detail view.
+     * Override in controller for custom formatting.
+     *
+     * @since 1.0.0
+     * @param array $item Item data
+     * @return array Formatted item data
+     */
     protected function format_detail_data($item) {
         if (!empty($item['created_at'])) {
             $item['created_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['created_at']));
@@ -394,6 +325,16 @@ trait SAW_AJAX_Handlers
         return $item;
     }
     
+    /**
+     * Format search result
+     *
+     * Formats single search result item.
+     * Override in controller for custom formatting.
+     *
+     * @since 1.0.0
+     * @param array $item Item data
+     * @return array Formatted item data
+     */
     protected function format_search_result($item) {
         return $item;
     }

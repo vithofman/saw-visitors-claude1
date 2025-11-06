@@ -1,85 +1,100 @@
 <?php
 /**
- * SAW Password Manager
- * 
- * Bcrypt hashing, validace, reset tokeny, změna hesel
- * 
- * @package SAW_Visitors
- * @version 4.6.1
- * @since 4.6.1
+ * SAW Password Manager - Password Security and Reset System
+ *
+ * Handles bcrypt hashing, password validation, reset tokens,
+ * password changes, and PIN generation for terminals.
+ *
+ * @package    SAW_Visitors
+ * @subpackage Auth
+ * @since      1.0.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Password manager class
+ *
+ * @since 1.0.0
+ */
 class SAW_Password {
 
     /**
-     * Bcrypt cost parametr
+     * Bcrypt cost parameter
+     *
+     * @since 1.0.0
+     * @var int
      */
     const BCRYPT_COST = 12;
 
     /**
-     * Platnost reset tokenu (1 hodina)
+     * Reset token expiry time in seconds (1 hour)
+     *
+     * @since 1.0.0
+     * @var int
      */
     const RESET_TOKEN_EXPIRY = 3600;
 
     /**
-     * Hash hesla pomocí bcrypt
+     * Hash password using bcrypt
      *
-     * @param string $password Plaintext heslo
+     * @since 1.0.0
+     * @param string $password Plaintext password
      * @return string Bcrypt hash
      */
     public function hash($password) {
-        return password_hash($password, PASSWORD_BCRYPT, array('cost' => self::BCRYPT_COST));
+        return password_hash($password, PASSWORD_BCRYPT, ['cost' => self::BCRYPT_COST]);
     }
 
     /**
-     * Ověření hesla proti hashu
+     * Verify password against hash
      *
-     * @param string $password Plaintext heslo
+     * @since 1.0.0
+     * @param string $password Plaintext password
      * @param string $hash     Bcrypt hash
-     * @return bool
+     * @return bool True if password matches
      */
     public function verify($password, $hash) {
         return password_verify($password, $hash);
     }
 
     /**
-     * Validace síly hesla
+     * Validate password strength
      *
-     * @param string $password Heslo k validaci
-     * @return bool|array True pokud je silné, jinak pole s chybami
+     * @since 1.0.0
+     * @param string $password Password to validate
+     * @return bool|array True if strong, array of errors otherwise
      */
     public function validate($password) {
-        $errors = array();
+        $errors = [];
 
         if (strlen($password) < 12) {
-            $errors[] = __('Heslo musí mít alespoň 12 znaků', 'saw-visitors');
+            $errors[] = __('Password must be at least 12 characters long', 'saw-visitors');
         }
 
         if (strlen($password) > 128) {
-            $errors[] = __('Heslo nesmí být delší než 128 znaků', 'saw-visitors');
+            $errors[] = __('Password must not exceed 128 characters', 'saw-visitors');
         }
 
         if (!preg_match('/[A-Z]/', $password)) {
-            $errors[] = __('Heslo musí obsahovat alespoň jedno velké písmeno', 'saw-visitors');
+            $errors[] = __('Password must contain at least one uppercase letter', 'saw-visitors');
         }
 
         if (!preg_match('/[a-z]/', $password)) {
-            $errors[] = __('Heslo musí obsahovat alespoň jedno malé písmeno', 'saw-visitors');
+            $errors[] = __('Password must contain at least one lowercase letter', 'saw-visitors');
         }
 
         if (!preg_match('/[0-9]/', $password)) {
-            $errors[] = __('Heslo musí obsahovat alespoň jednu číslici', 'saw-visitors');
+            $errors[] = __('Password must contain at least one digit', 'saw-visitors');
         }
 
         if (!preg_match('/[^A-Za-z0-9]/', $password)) {
-            $errors[] = __('Heslo musí obsahovat alespoň jeden speciální znak (!@#$%^&*)', 'saw-visitors');
+            $errors[] = __('Password must contain at least one special character (!@#$%^&*)', 'saw-visitors');
         }
 
-        $common_passwords = array(
+        $common_passwords = [
             'password123',
             'password1234',
             'admin123',
@@ -90,29 +105,30 @@ class SAW_Password {
             'qwerty123',
             'abc123456',
             'password!',
-            'Admin123!',
-        );
+            'Admin123!'
+        ];
 
         if (in_array(strtolower($password), array_map('strtolower', $common_passwords), true)) {
-            $errors[] = __('Toto heslo je příliš běžné. Zvolte složitější heslo.', 'saw-visitors');
+            $errors[] = __('This password is too common. Please choose a more complex password.', 'saw-visitors');
         }
 
         if (preg_match('/(.)\1{2,}/', $password)) {
-            $errors[] = __('Heslo obsahuje příliš mnoho opakujících se znaků', 'saw-visitors');
+            $errors[] = __('Password contains too many repeating characters', 'saw-visitors');
         }
 
         if (preg_match('/(abc|bcd|cde|123|234|345|456|567|678|789)/i', $password)) {
-            $errors[] = __('Heslo obsahuje jednoduchou sekvenci znaků', 'saw-visitors');
+            $errors[] = __('Password contains simple character sequences', 'saw-visitors');
         }
 
         return empty($errors) ? true : $errors;
     }
 
     /**
-     * Generování náhodného hesla
+     * Generate random password
      *
-     * @param int $length Délka hesla (default: 16)
-     * @return string
+     * @since 1.0.0
+     * @param int $length Password length (default: 16)
+     * @return string Generated password
      */
     public function generate($length = 16) {
         $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
@@ -131,20 +147,22 @@ class SAW_Password {
     }
 
     /**
-     * Získání náhodného znaku ze stringu
+     * Get random character from string
      *
-     * @param string $chars String znaků
-     * @return string
+     * @since 1.0.0
+     * @param string $chars String of characters
+     * @return string Random character
      */
     private function get_random_char($chars) {
         return $chars[random_int(0, strlen($chars) - 1)];
     }
 
     /**
-     * Vytvoření reset tokenu pro uživatele
+     * Generate reset token for user
      *
+     * @since 1.0.0
      * @param int $user_id SAW user ID
-     * @return string|false Reset token nebo false při chybě
+     * @return string|false Reset token or false on failure
      */
     public function generate_reset_token($user_id) {
         global $wpdb;
@@ -155,39 +173,42 @@ class SAW_Password {
 
         $wpdb->delete(
             $wpdb->prefix . 'saw_password_resets',
-            array('user_id' => $user_id),
-            array('%d')
+            ['user_id' => $user_id],
+            ['%d']
         );
 
         $result = $wpdb->insert(
             $wpdb->prefix . 'saw_password_resets',
-            array(
+            [
                 'user_id'    => $user_id,
                 'token'      => $token_hash,
                 'expires_at' => $expires_at,
-                'created_at' => current_time('mysql'),
-            ),
-            array('%d', '%s', '%s', '%s')
+                'created_at' => current_time('mysql')
+            ],
+            ['%d', '%s', '%s', '%s']
         );
 
         if (!$result) {
             return false;
         }
 
-        SAW_Audit::log(array(
-            'action'  => 'password_reset_requested',
-            'user_id' => $user_id,
-            'details' => 'Reset token vygenerován',
-        ));
+        if (class_exists('SAW_Audit')) {
+            SAW_Audit::log([
+                'action'  => 'password_reset_requested',
+                'user_id' => $user_id,
+                'details' => 'Reset token generated'
+            ]);
+        }
 
         return $token;
     }
 
     /**
-     * Validace reset tokenu
+     * Validate reset token
      *
+     * @since 1.0.0
      * @param string $token Reset token
-     * @return int|false User ID nebo false pokud je token neplatný
+     * @return int|false User ID or false if token is invalid
      */
     public function validate_reset_token($token) {
         global $wpdb;
@@ -195,8 +216,8 @@ class SAW_Password {
         $token_hash = hash('sha256', $token);
 
         $reset = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_password_resets 
-             WHERE token = %s AND expires_at > NOW() AND used_at IS NULL",
+            "SELECT * FROM %i WHERE token = %s AND expires_at > NOW() AND used_at IS NULL",
+            $wpdb->prefix . 'saw_password_resets',
             $token_hash
         ));
 
@@ -204,15 +225,16 @@ class SAW_Password {
             return false;
         }
 
-        return (int) $reset->user_id;
+        return absint($reset->user_id);
     }
 
     /**
-     * Reset hesla pomocí tokenu
+     * Reset password using token
      *
+     * @since 1.0.0
      * @param string $token        Reset token
-     * @param string $new_password Nové heslo
-     * @return bool|WP_Error
+     * @param string $new_password New password
+     * @return bool|WP_Error True on success, WP_Error on failure
      */
     public function reset_password($token, $new_password) {
         global $wpdb;
@@ -220,7 +242,7 @@ class SAW_Password {
         $user_id = $this->validate_reset_token($token);
 
         if (!$user_id) {
-            return new WP_Error('invalid_token', __('Neplatný nebo expirovaný token', 'saw-visitors'));
+            return new WP_Error('invalid_token', __('Invalid or expired token', 'saw-visitors'));
         }
 
         $password_validation = $this->validate($new_password);
@@ -229,22 +251,23 @@ class SAW_Password {
         }
 
         $user = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_users WHERE id = %d",
+            "SELECT * FROM %i WHERE id = %d",
+            $wpdb->prefix . 'saw_users',
             $user_id
         ));
 
         if (!$user) {
-            return new WP_Error('user_not_found', __('Uživatel nenalezen', 'saw-visitors'));
+            return new WP_Error('user_not_found', __('User not found', 'saw-visitors'));
         }
 
         $password_hash = $this->hash($new_password);
 
         $wpdb->update(
             $wpdb->prefix . 'saw_users',
-            array('password' => $password_hash),
-            array('id' => $user_id),
-            array('%s'),
-            array('%d')
+            ['password' => $password_hash],
+            ['id' => $user_id],
+            ['%s'],
+            ['%d']
         );
 
         if ($user->role === 'manager' && $user->wp_user_id) {
@@ -254,54 +277,62 @@ class SAW_Password {
         $token_hash = hash('sha256', $token);
         $wpdb->update(
             $wpdb->prefix . 'saw_password_resets',
-            array('used_at' => current_time('mysql')),
-            array('token' => $token_hash),
-            array('%s'),
-            array('%s')
+            ['used_at' => current_time('mysql')],
+            ['token' => $token_hash],
+            ['%s'],
+            ['%s']
         );
 
-        $session = new SAW_Session();
-        $session->destroy_all_user_sessions($user_id);
+        if (class_exists('SAW_Session')) {
+            $session = new SAW_Session();
+            $session->destroy_all_user_sessions($user_id);
+        }
 
-        SAW_Audit::log(array(
-            'action'      => 'password_reset_completed',
-            'user_id'     => $user_id,
-            'customer_id' => $user->customer_id,
-            'details'     => 'Heslo bylo resetováno',
-        ));
+        if (class_exists('SAW_Audit')) {
+            SAW_Audit::log([
+                'action'      => 'password_reset_completed',
+                'user_id'     => $user_id,
+                'customer_id' => $user->customer_id,
+                'details'     => 'Password was reset'
+            ]);
+        }
 
         return true;
     }
 
     /**
-     * Změna hesla (vyžaduje staré heslo)
+     * Change password (requires old password)
      *
+     * @since 1.0.0
      * @param int    $user_id      SAW user ID
-     * @param string $old_password Staré heslo
-     * @param string $new_password Nové heslo
-     * @return bool|WP_Error
+     * @param string $old_password Old password
+     * @param string $new_password New password
+     * @return bool|WP_Error True on success, WP_Error on failure
      */
     public function change_password($user_id, $old_password, $new_password) {
         global $wpdb;
 
         $user = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_users WHERE id = %d",
+            "SELECT * FROM %i WHERE id = %d",
+            $wpdb->prefix . 'saw_users',
             $user_id
         ));
 
         if (!$user) {
-            return new WP_Error('user_not_found', __('Uživatel nenalezen', 'saw-visitors'));
+            return new WP_Error('user_not_found', __('User not found', 'saw-visitors'));
         }
 
         if (!$this->verify($old_password, $user->password)) {
-            SAW_Audit::log(array(
-                'action'      => 'password_change_failed',
-                'user_id'     => $user_id,
-                'customer_id' => $user->customer_id,
-                'details'     => 'Nesprávné staré heslo',
-            ));
+            if (class_exists('SAW_Audit')) {
+                SAW_Audit::log([
+                    'action'      => 'password_change_failed',
+                    'user_id'     => $user_id,
+                    'customer_id' => $user->customer_id,
+                    'details'     => 'Incorrect old password'
+                ]);
+            }
 
-            return new WP_Error('incorrect_password', __('Nesprávné staré heslo', 'saw-visitors'));
+            return new WP_Error('incorrect_password', __('Incorrect old password', 'saw-visitors'));
         }
 
         $password_validation = $this->validate($new_password);
@@ -310,29 +341,31 @@ class SAW_Password {
         }
 
         if ($old_password === $new_password) {
-            return new WP_Error('same_password', __('Nové heslo musí být odlišné od starého', 'saw-visitors'));
+            return new WP_Error('same_password', __('New password must be different from the old one', 'saw-visitors'));
         }
 
         $password_hash = $this->hash($new_password);
 
         $wpdb->update(
             $wpdb->prefix . 'saw_users',
-            array('password' => $password_hash),
-            array('id' => $user_id),
-            array('%s'),
-            array('%d')
+            ['password' => $password_hash],
+            ['id' => $user_id],
+            ['%s'],
+            ['%d']
         );
 
         if ($user->role === 'manager' && $user->wp_user_id) {
             wp_set_password($new_password, $user->wp_user_id);
         }
 
-        SAW_Audit::log(array(
-            'action'      => 'password_changed',
-            'user_id'     => $user_id,
-            'customer_id' => $user->customer_id,
-            'details'     => 'Heslo bylo změněno',
-        ));
+        if (class_exists('SAW_Audit')) {
+            SAW_Audit::log([
+                'action'      => 'password_changed',
+                'user_id'     => $user_id,
+                'customer_id' => $user->customer_id,
+                'details'     => 'Password was changed'
+            ]);
+        }
 
         $this->send_password_change_notification($user->email, $user->first_name);
 
@@ -340,24 +373,25 @@ class SAW_Password {
     }
 
     /**
-     * Odeslání reset emailu
+     * Send password reset email
      *
-     * @param string $email Email uživatele
-     * @param string $role  Role uživatele
-     * @return bool|WP_Error
+     * @since 1.0.0
+     * @param string $email User email
+     * @param string $role  User role
+     * @return bool|WP_Error True on success, WP_Error on failure
      */
     public function send_reset_email($email, $role) {
         global $wpdb;
 
-        $allowed_roles = array('admin', 'manager', 'terminal');
+        $allowed_roles = ['admin', 'manager', 'terminal'];
         if (!in_array($role, $allowed_roles, true)) {
-            return new WP_Error('invalid_role', __('Neplatná role', 'saw-visitors'));
+            return new WP_Error('invalid_role', __('Invalid role', 'saw-visitors'));
         }
 
         if ($role === 'manager') {
             $wp_user = get_user_by('email', $email);
             if (!$wp_user) {
-                return new WP_Error('user_not_found', __('Uživatel s tímto emailem nenalezen', 'saw-visitors'));
+                return new WP_Error('user_not_found', __('User with this email not found', 'saw-visitors'));
             }
 
             $result = retrieve_password($email);
@@ -370,47 +404,48 @@ class SAW_Password {
         }
 
         $user = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_users 
-             WHERE email = %s AND role = %s AND is_active = 1",
-            $email,
-            $role
+            "SELECT * FROM %i WHERE email = %s AND role = %s AND is_active = 1",
+            $wpdb->prefix . 'saw_users',
+            sanitize_email($email),
+            sanitize_text_field($role)
         ));
 
         if (!$user) {
-            return new WP_Error('user_not_found', __('Uživatel s tímto emailem nenalezen', 'saw-visitors'));
+            return new WP_Error('user_not_found', __('User with this email not found', 'saw-visitors'));
         }
 
         $token = $this->generate_reset_token($user->id);
 
         if (!$token) {
-            return new WP_Error('token_generation_failed', __('Nepodařilo se vygenerovat reset token', 'saw-visitors'));
+            return new WP_Error('token_generation_failed', __('Failed to generate reset token', 'saw-visitors'));
         }
 
         $reset_url = add_query_arg(
-            array(
+            [
                 'action' => 'reset_password',
                 'token'  => $token,
-                'role'   => $role,
-            ),
+                'role'   => $role
+            ],
             home_url('/' . $role . '/login/')
         );
 
-        $subject = __('Reset hesla - SAW Visitors', 'saw-visitors');
+        $subject = __('Password Reset - SAW Visitors', 'saw-visitors');
         
         $message = sprintf(
-            __('Dobrý den %s,
+            /* translators: 1: User first name, 2: Reset URL */
+            __('Hello %1$s,
 
-Obdrželi jsme požadavek na reset Vašeho hesla.
+We received a request to reset your password.
 
-Pro reset hesla klikněte na následující odkaz:
-%s
+To reset your password, click the following link:
+%2$s
 
-Odkaz je platný 1 hodinu.
+This link is valid for 1 hour.
 
-Pokud jste o reset hesla nežádali, tento email ignorujte.
+If you did not request a password reset, please ignore this email.
 
-S pozdravem,
-SAW Visitors tým', 'saw-visitors'),
+Best regards,
+SAW Visitors Team', 'saw-visitors'),
             $user->first_name,
             $reset_url
         );
@@ -418,31 +453,32 @@ SAW Visitors tým', 'saw-visitors'),
         $sent = wp_mail($email, $subject, $message);
 
         if (!$sent) {
-            return new WP_Error('email_failed', __('Nepodařilo se odeslat email', 'saw-visitors'));
+            return new WP_Error('email_failed', __('Failed to send email', 'saw-visitors'));
         }
 
         return true;
     }
 
     /**
-     * Odeslání notifikace o změně hesla
+     * Send password change notification
      *
-     * @param string $email      Email uživatele
-     * @param string $first_name Jméno uživatele
-     * @return void
+     * @since 1.0.0
+     * @param string $email      User email
+     * @param string $first_name User first name
      */
     private function send_password_change_notification($email, $first_name) {
-        $subject = __('Vaše heslo bylo změněno', 'saw-visitors');
+        $subject = __('Your password has been changed', 'saw-visitors');
         
         $message = sprintf(
-            __('Dobrý den %s,
+            /* translators: %s: User first name */
+            __('Hello %s,
 
-Vaše heslo bylo úspěšně změněno.
+Your password has been successfully changed.
 
-Pokud jste heslo neměnili Vy, okamžitě nás kontaktujte.
+If you did not make this change, please contact us immediately.
 
-S pozdravem,
-SAW Visitors tým', 'saw-visitors'),
+Best regards,
+SAW Visitors Team', 'saw-visitors'),
             $first_name
         );
 
@@ -450,42 +486,49 @@ SAW Visitors tým', 'saw-visitors'),
     }
 
     /**
-     * Cleanup starých reset tokenů (voláno cronem)
+     * Cleanup expired reset tokens (called by cron)
      *
-     * @return int Počet smazaných tokenů
+     * @since 1.0.0
+     * @return int Number of deleted tokens
      */
     public function cleanup_expired_tokens() {
         global $wpdb;
 
-        $deleted = $wpdb->query(
-            "DELETE FROM {$wpdb->prefix}saw_password_resets 
-             WHERE expires_at < NOW() OR used_at IS NOT NULL"
-        );
+        $deleted = $wpdb->query($wpdb->prepare(
+            "DELETE FROM %i WHERE expires_at < NOW() OR used_at IS NOT NULL",
+            $wpdb->prefix . 'saw_password_resets'
+        ));
 
-        if ($deleted > 0) {
-            SAW_Audit::log(array(
+        if ($deleted > 0 && class_exists('SAW_Audit')) {
+            SAW_Audit::log([
                 'action'  => 'password_tokens_cleanup',
-                'details' => sprintf('Smazáno %d expirovaných tokenů', $deleted),
-            ));
+                'details' => sprintf(
+                    /* translators: %d: number of deleted tokens */
+                    __('Deleted %d expired tokens', 'saw-visitors'),
+                    $deleted
+                )
+            ]);
         }
 
         return $deleted;
     }
 
     /**
-     * Generování bezpečného PINu pro terminal (6 číslic)
+     * Generate secure PIN for terminal (6 digits)
      *
-     * @return string
+     * @since 1.0.0
+     * @return string 6-digit PIN
      */
     public function generate_pin() {
         return str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
     }
 
     /**
-     * Hash PINu (stejný způsob jako heslo)
+     * Hash PIN (same method as password)
      *
-     * @param string $pin PIN
-     * @return string
+     * @since 1.0.0
+     * @param string $pin PIN to hash
+     * @return string Hashed PIN
      */
     public function hash_pin($pin) {
         return $this->hash($pin);

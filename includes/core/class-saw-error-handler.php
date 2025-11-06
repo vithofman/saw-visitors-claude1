@@ -1,27 +1,49 @@
 <?php
 /**
- * SAW Error Handler
- * 
- * Centralized error handling with user-friendly messages and DB logging.
+ * SAW Error Handler - Centralized Error Management
+ *
+ * Provides user-friendly error messages, database logging,
+ * and helper methods for common error scenarios.
  * Replaces scattered wp_die() calls throughout the plugin.
- * 
- * @package SAW_Visitors
- * @since 5.0.0
+ *
+ * @package    SAW_Visitors
+ * @subpackage Core
+ * @since      1.0.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Error handler class
+ *
+ * @since 1.0.0
+ */
 class SAW_Error_Handler {
     
     /**
+     * Error context title mappings
+     *
+     * @since 1.0.0
+     * @var array
+     */
+    private static $title_map = [
+        'database'       => 'Database Error',
+        'permission'     => 'Insufficient Permissions',
+        'validation'     => 'Validation Error',
+        'authentication' => 'Authentication Error',
+        'not_found'      => 'Not Found',
+        'default'        => 'An Error Occurred'
+    ];
+    
+    /**
      * Handle error with user-friendly message
-     * 
-     * @param string|WP_Error $error Error message or WP_Error object
-     * @param string $context Where the error occurred
-     * @param array $data Additional data for logging
-     * @return void
+     *
+     * @since 1.0.0
+     * @param string|WP_Error $error   Error message or WP_Error object
+     * @param string          $context Where the error occurred
+     * @param array           $data    Additional data for logging
      */
     public static function handle($error, $context = '', $data = []) {
         self::log_to_db($error, $context, $data);
@@ -36,46 +58,40 @@ class SAW_Error_Handler {
     
     /**
      * Render user-friendly error page
-     * 
-     * @param string|WP_Error $error
-     * @param string $context
-     * @return void (dies after rendering)
+     *
+     * @since 1.0.0
+     * @param string|WP_Error $error   Error message or WP_Error object
+     * @param string          $context Error context
      */
     public static function render_user_friendly_error($error, $context = '') {
         $message = is_wp_error($error) ? $error->get_error_message() : $error;
         
-        $title_map = [
-            'database' => 'Chyba databáze',
-            'permission' => 'Nedostatečná oprávnění',
-            'validation' => 'Chyba validace',
-            'authentication' => 'Chyba přihlášení',
-            'not_found' => 'Nenalezeno',
-            'default' => 'Došlo k chybě'
-        ];
-        
-        $title = $title_map[$context] ?? $title_map['default'];
+        $title = isset(self::$title_map[$context]) 
+            ? __(self::$title_map[$context], 'saw-visitors')
+            : __(self::$title_map['default'], 'saw-visitors');
         
         if (wp_doing_ajax()) {
             wp_send_json_error([
-                'message' => $message,
-                'context' => $context
+                'message' => esc_html($message),
+                'context' => sanitize_text_field($context)
             ]);
             exit;
         }
         
         wp_die(
             self::get_error_html($message, $title),
-            $title,
+            esc_html($title),
             ['response' => 500, 'back_link' => true]
         );
     }
     
     /**
      * Get HTML for error page
-     * 
-     * @param string $message
-     * @param string $title
-     * @return string
+     *
+     * @since 1.0.0
+     * @param string $message Error message
+     * @param string $title   Error title
+     * @return string HTML content
      */
     private static function get_error_html($message, $title) {
         ob_start();
@@ -88,10 +104,10 @@ class SAW_Error_Handler {
             
             <div style="margin-top: 20px; text-align: center;">
                 <a href="javascript:history.back()" style="display: inline-block; padding: 10px 20px; background: #2563eb; color: white; text-decoration: none; border-radius: 6px;">
-                    ← Zpět
+                    ← <?php esc_html_e('Back', 'saw-visitors'); ?>
                 </a>
-                <a href="/admin/" style="display: inline-block; padding: 10px 20px; background: #6b7280; color: white; text-decoration: none; border-radius: 6px; margin-left: 10px;">
-                    🏠 Dashboard
+                <a href="<?php echo esc_url(home_url('/admin/')); ?>" style="display: inline-block; padding: 10px 20px; background: #6b7280; color: white; text-decoration: none; border-radius: 6px; margin-left: 10px;">
+                    🏠 <?php esc_html_e('Dashboard', 'saw-visitors'); ?>
                 </a>
             </div>
         </div>
@@ -101,11 +117,12 @@ class SAW_Error_Handler {
     
     /**
      * Log error to database
-     * 
-     * @param string|WP_Error $error
-     * @param string $context
-     * @param array $data
-     * @return bool
+     *
+     * @since 1.0.0
+     * @param string|WP_Error $error   Error message or WP_Error object
+     * @param string          $context Error context
+     * @param array           $data    Additional data
+     * @return bool Success status
      */
     public static function log_to_db($error, $context = '', $data = []) {
         global $wpdb;
@@ -117,12 +134,20 @@ class SAW_Error_Handler {
             $customer_id = SAW_Context::get_customer_id();
         }
         
+        $request_uri = isset($_SERVER['REQUEST_URI']) 
+            ? sanitize_text_field(wp_unslash($_SERVER['REQUEST_URI'])) 
+            : '';
+        
+        $request_method = isset($_SERVER['REQUEST_METHOD']) 
+            ? sanitize_text_field($_SERVER['REQUEST_METHOD']) 
+            : '';
+        
         $context_data = [
-            'context' => $context,
-            'data' => $data,
+            'context' => sanitize_text_field($context),
+            'data'    => $data,
             'user_id' => get_current_user_id(),
-            'url' => $_SERVER['REQUEST_URI'] ?? '',
-            'method' => $_SERVER['REQUEST_METHOD'] ?? '',
+            'url'     => $request_uri,
+            'method'  => $request_method
         ];
         
         $stack_trace = null;
@@ -130,51 +155,77 @@ class SAW_Error_Handler {
             $stack_trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 5);
         }
         
-        $wpdb->insert(
+        $result = $wpdb->insert(
             $wpdb->prefix . 'saw_error_log',
             [
                 'customer_id' => $customer_id,
                 'error_level' => 'error',
-                'message' => substr($message, 0, 500),
-                'context' => wp_json_encode($context_data),
+                'message'     => substr(sanitize_text_field($message), 0, 500),
+                'context'     => wp_json_encode($context_data),
                 'stack_trace' => wp_json_encode($stack_trace),
-                'file' => __FILE__,
-                'line' => __LINE__,
-                'created_at' => current_time('mysql')
+                'file'        => sanitize_text_field(__FILE__),
+                'line'        => absint(__LINE__),
+                'created_at'  => current_time('mysql')
             ],
             ['%d', '%s', '%s', '%s', '%s', '%s', '%d', '%s']
         );
         
-        return true;
+        return $result !== false;
     }
     
     /**
      * Quick helper for permission errors
-     * 
-     * @param string $message
-     * @return void
+     *
+     * @since 1.0.0
+     * @param string $message Optional custom message
      */
-    public static function permission_denied($message = 'Nemáte oprávnění k této akci') {
+    public static function permission_denied($message = '') {
+        if (empty($message)) {
+            $message = __('You do not have permission to perform this action.', 'saw-visitors');
+        }
         self::handle($message, 'permission');
     }
     
     /**
      * Quick helper for not found errors
-     * 
+     *
+     * @since 1.0.0
      * @param string $what What was not found
-     * @return void
      */
-    public static function not_found($what = 'Záznam') {
-        self::handle($what . ' nebyl nalezen', 'not_found');
+    public static function not_found($what = '') {
+        if (empty($what)) {
+            $what = __('Record', 'saw-visitors');
+        }
+        
+        $message = sprintf(
+            /* translators: %s: what was not found (e.g., "Record", "Customer") */
+            __('%s was not found.', 'saw-visitors'),
+            $what
+        );
+        
+        self::handle($message, 'not_found');
     }
     
     /**
      * Quick helper for validation errors
-     * 
-     * @param string $message
-     * @return void
+     *
+     * @since 1.0.0
+     * @param string $message Validation error message
      */
     public static function validation_error($message) {
         self::handle($message, 'validation');
+    }
+    
+    /**
+     * Quick helper for database errors
+     *
+     * @since 1.0.0
+     * @param string $message Database error message
+     */
+    public static function database_error($message = '') {
+        if (empty($message)) {
+            $message = __('A database error occurred. Please try again.', 'saw-visitors');
+        }
+        self::handle($message, 'database');
     }
 }

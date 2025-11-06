@@ -1,22 +1,34 @@
 <?php
 /**
- * SAW Activator - UPDATED with Permissions System
- * 
- * @package SAW_Visitors
- * @version 4.10.0
+ * SAW Activator - Plugin Activation Handler
+ *
+ * Handles plugin activation tasks including database setup,
+ * role creation, default data insertion, and permissions initialization.
+ *
+ * @package    SAW_Visitors
+ * @subpackage Core
+ * @since      1.0.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Plugin activator class
+ *
+ * @since 1.0.0
+ */
 class SAW_Activator {
 
+    /**
+     * Activation handler
+     *
+     * Runs all necessary setup tasks when plugin is activated.
+     *
+     * @since 1.0.0
+     */
     public static function activate() {
-        error_log('========================================');
-        error_log('[SAW Activator] START AKTIVACE');
-        error_log('========================================');
-        
         self::check_requirements();
         self::create_custom_roles();
         self::create_database_tables();
@@ -25,263 +37,236 @@ class SAW_Activator {
         self::create_upload_directories();
         self::set_default_options();
         self::register_and_flush_rewrite_rules();
-        
-        error_log('[SAW Activator] Plugin aktivován v ' . SAW_VISITORS_VERSION);
-        error_log('========================================');
-        error_log('[SAW Activator] KONEC AKTIVACE');
-        error_log('========================================');
     }
 
+    /**
+     * Check system requirements
+     *
+     * Verifies PHP and WordPress versions meet minimum requirements.
+     *
+     * @since 1.0.0
+     */
     private static function check_requirements() {
-        error_log('[SAW Activator] Kontrola požadavků...');
-        
         if (version_compare(PHP_VERSION, '8.1.0', '<')) {
-            error_log('[SAW Activator] ERROR: PHP verze ' . PHP_VERSION . ' je příliš stará');
-            wp_die('SAW Visitors vyžaduje PHP 8.1+. Vaše verze: ' . PHP_VERSION);
+            wp_die(
+                sprintf(
+                    /* translators: %s: Current PHP version */
+                    esc_html__('SAW Visitors requires PHP 8.1 or higher. Your version: %s', 'saw-visitors'),
+                    esc_html(PHP_VERSION)
+                ),
+                esc_html__('Plugin Activation Error', 'saw-visitors'),
+                ['back_link' => true]
+            );
         }
         
         global $wp_version;
         if (version_compare($wp_version, '6.0', '<')) {
-            error_log('[SAW Activator] ERROR: WordPress verze ' . $wp_version . ' je příliš stará');
-            wp_die('SAW Visitors vyžaduje WordPress 6.0+. Vaše verze: ' . $wp_version);
+            wp_die(
+                sprintf(
+                    /* translators: %s: Current WordPress version */
+                    esc_html__('SAW Visitors requires WordPress 6.0 or higher. Your version: %s', 'saw-visitors'),
+                    esc_html($wp_version)
+                ),
+                esc_html__('Plugin Activation Error', 'saw-visitors'),
+                ['back_link' => true]
+            );
         }
-        
-        error_log('[SAW Activator] ✓ Požadavky splněny (PHP ' . PHP_VERSION . ', WP ' . $wp_version . ')');
     }
 
+    /**
+     * Create custom WordPress roles
+     *
+     * Creates SAW-specific roles with appropriate capabilities.
+     *
+     * @since 1.0.0
+     */
     private static function create_custom_roles() {
-        error_log('[SAW Activator] Vytváření custom WP rolí...');
-        
-        add_role('saw_admin', 'SAW Admin', [
-            'read' => true,
-            'saw_access' => true,
-            'saw_manage_users' => true,
+        add_role('saw_admin', __('SAW Admin', 'saw-visitors'), [
+            'read'              => true,
+            'saw_access'        => true,
+            'saw_manage_users'  => true
         ]);
         
-        add_role('saw_super_manager', 'SAW Super Manager', [
-            'read' => true,
+        add_role('saw_super_manager', __('SAW Super Manager', 'saw-visitors'), [
+            'read'       => true,
             'saw_access' => true
         ]);
         
-        add_role('saw_manager', 'SAW Manager', [
-            'read' => true,
+        add_role('saw_manager', __('SAW Manager', 'saw-visitors'), [
+            'read'       => true,
             'saw_access' => true
         ]);
         
-        add_role('saw_terminal', 'SAW Terminal', [
-            'read' => true,
+        add_role('saw_terminal', __('SAW Terminal', 'saw-visitors'), [
+            'read'       => true,
             'saw_access' => true
         ]);
         
         $role = get_role('saw_admin');
         if ($role && !$role->has_cap('saw_manage_users')) {
             $role->add_cap('saw_manage_users');
-            error_log('[SAW Activator] ✓ Přidána capability saw_manage_users do saw_admin');
         }
-        
-        error_log('[SAW Activator] ✓ Custom WP role vytvořeny');
     }
 
+    /**
+     * Create database tables
+     *
+     * Uses SAW_Database class to create all required tables.
+     *
+     * @since 1.0.0
+     */
     private static function create_database_tables() {
-        error_log('[SAW Activator] Vytváření databázových tabulek...');
-        
         $db_file = SAW_VISITORS_PLUGIN_DIR . 'includes/database/class-saw-database.php';
         
-        error_log('[SAW Activator] Hledám soubor: ' . $db_file);
-        
         if (!file_exists($db_file)) {
-            error_log('[SAW Activator] ERROR: Soubor class-saw-database.php NEEXISTUJE!');
-            error_log('[SAW Activator] Plugin dir: ' . SAW_VISITORS_PLUGIN_DIR);
-            error_log('[SAW Activator] Hledaný soubor: ' . $db_file);
             return;
         }
-        
-        error_log('[SAW Activator] ✓ Soubor existuje, načítám...');
         
         require_once $db_file;
         
-        if (!class_exists('SAW_Database')) {
-            error_log('[SAW Activator] ERROR: Třída SAW_Database neexistuje po načtení souboru!');
-            return;
-        }
-        
-        error_log('[SAW Activator] ✓ Třída SAW_Database načtena');
-        error_log('[SAW Activator] Volám SAW_Database::create_tables()...');
-        
-        $result = SAW_Database::create_tables();
-        
-        if ($result) {
-            error_log('[SAW Activator] ✓ Tabulky vytvořeny úspěšně');
-        } else {
-            error_log('[SAW Activator] ✗ Chyba při vytváření tabulek');
+        if (class_exists('SAW_Database')) {
+            SAW_Database::create_tables();
         }
     }
 
+    /**
+     * Insert default data
+     *
+     * Creates demo customer if database is empty.
+     *
+     * @since 1.0.0
+     */
     private static function insert_default_data() {
-        error_log('[SAW Activator] Vkládání výchozích dat...');
-        
         global $wpdb;
-        $prefix = $wpdb->prefix . 'saw_';
+        $table = $wpdb->prefix . 'saw_customers';
         
         $table_exists = $wpdb->get_var($wpdb->prepare(
             "SHOW TABLES LIKE %s",
-            $prefix . 'customers'
+            $wpdb->esc_like($table)
         ));
         
-        if ($table_exists !== $prefix . 'customers') {
-            error_log('[SAW Activator] ERROR: Tabulka customers neexistuje!');
+        if ($table_exists !== $table) {
             return;
         }
         
-        error_log('[SAW Activator] ✓ Tabulka customers existuje');
-        
-        $customers_count = $wpdb->get_var("SELECT COUNT(*) FROM `{$prefix}customers`");
+        $customers_count = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM %i",
+            $table
+        ));
         
         if ($customers_count > 0) {
-            error_log('[SAW Activator] ✓ Zákazníci již existují (' . $customers_count . '), přeskakuji vložení demo dat');
             return;
         }
         
-        error_log('[SAW Activator] Vkládám demo zákazníka...');
-        
-        $result = $wpdb->insert(
-            $prefix . 'customers',
-            array(
-                'name'          => 'Demo Zákazník',
+        $wpdb->insert(
+            $table,
+            [
+                'name'          => __('Demo Customer', 'saw-visitors'),
                 'ico'           => '12345678',
-                'address'       => 'Demo ulice 123, Praha',
-                'primary_color' => '#0073aa',
-            ),
-            array('%s', '%s', '%s', '%s')
+                'address'       => __('Demo Street 123, Prague', 'saw-visitors'),
+                'primary_color' => '#0073aa'
+            ],
+            ['%s', '%s', '%s', '%s']
         );
-        
-        if ($result === false) {
-            error_log('[SAW Activator] ERROR: Chyba při vkládání demo zákazníka: ' . $wpdb->last_error);
-        } else {
-            error_log('[SAW Activator] ✓ Demo zákazník vložen (ID: ' . $wpdb->insert_id . ')');
-        }
     }
 
+    /**
+     * Insert default permissions
+     *
+     * Loads and inserts permissions from schema file.
+     *
+     * @since 1.0.0
+     */
     private static function insert_default_permissions() {
-        error_log('[SAW Activator] Vkládání výchozích oprávnění...');
-        
         $permissions_class = SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-permissions.php';
         $schema_file = SAW_VISITORS_PLUGIN_DIR . 'includes/auth/permissions-schema.php';
         
-        if (!file_exists($permissions_class)) {
-            error_log('[SAW Activator] ERROR: Soubor class-saw-permissions.php NEEXISTUJE!');
-            return;
-        }
-        
-        if (!file_exists($schema_file)) {
-            error_log('[SAW Activator] ERROR: Soubor permissions-schema.php NEEXISTUJE!');
+        if (!file_exists($permissions_class) || !file_exists($schema_file)) {
             return;
         }
         
         require_once $permissions_class;
         
         if (!class_exists('SAW_Permissions')) {
-            error_log('[SAW Activator] ERROR: Třída SAW_Permissions neexistuje!');
             return;
         }
         
         $schema = require $schema_file;
         
-        if (empty($schema)) {
-            error_log('[SAW Activator] ERROR: Permissions schema je prázdná!');
+        if (empty($schema) || !is_array($schema)) {
             return;
         }
         
-        error_log('[SAW Activator] Načítám permissions schema...');
-        
-        $inserted = SAW_Permissions::bulk_insert_from_schema($schema);
-        
-        if ($inserted > 0) {
-            error_log('[SAW Activator] ✓ Vloženo ' . $inserted . ' oprávnění');
-        } else {
-            error_log('[SAW Activator] ⚠ Žádná nová oprávnění nebyla vložena (již existují)');
-        }
+        SAW_Permissions::bulk_insert_from_schema($schema);
     }
 
+    /**
+     * Create upload directories
+     *
+     * Creates necessary directories for file uploads.
+     *
+     * @since 1.0.0
+     */
     private static function create_upload_directories() {
-        error_log('[SAW Activator] Vytváření upload složek...');
-        
         $upload_dir = wp_upload_dir();
         $base_dir = $upload_dir['basedir'] . '/saw-visitor-docs';
         
-        error_log('[SAW Activator] Base dir: ' . $base_dir);
-        
         if (!file_exists($base_dir)) {
-            $result = wp_mkdir_p($base_dir);
-            if ($result) {
-                error_log('[SAW Activator] ✓ Base složka vytvořena: ' . $base_dir);
-            } else {
-                error_log('[SAW Activator] ERROR: Nelze vytvořit base složku: ' . $base_dir);
-            }
-        } else {
-            error_log('[SAW Activator] ✓ Base složka již existuje');
+            wp_mkdir_p($base_dir);
         }
         
-        $subdirs = array('materials', 'visitor-uploads', 'risk-docs', 'saw-customers');
+        $subdirs = ['materials', 'visitor-uploads', 'risk-docs'];
+        
         foreach ($subdirs as $subdir) {
-            $path = $subdir === 'saw-customers' 
-                ? $upload_dir['basedir'] . '/' . $subdir
-                : $base_dir . '/' . $subdir;
-                
+            $path = $base_dir . '/' . $subdir;
+            
             if (!file_exists($path)) {
-                $result = wp_mkdir_p($path);
-                if ($result) {
-                    error_log('[SAW Activator] ✓ Podsložka vytvořena: ' . $subdir);
-                } else {
-                    error_log('[SAW Activator] ERROR: Nelze vytvořit podsložku: ' . $subdir);
-                }
-            } else {
-                error_log('[SAW Activator] ✓ Podsložka již existuje: ' . $subdir);
+                wp_mkdir_p($path);
             }
+        }
+        
+        $customers_dir = $upload_dir['basedir'] . '/saw-customers';
+        if (!file_exists($customers_dir)) {
+            wp_mkdir_p($customers_dir);
         }
     }
 
+    /**
+     * Set default WordPress options
+     *
+     * @since 1.0.0
+     */
     private static function set_default_options() {
-        error_log('[SAW Activator] Nastavuji výchozí options...');
-        
         add_option('saw_db_version', SAW_VISITORS_VERSION);
         add_option('saw_plugin_activated', current_time('mysql'));
-        
-        error_log('[SAW Activator] ✓ Options nastaveny (saw_db_version: ' . SAW_VISITORS_VERSION . ')');
     }
 
+    /**
+     * Register and flush rewrite rules
+     *
+     * Sets up custom URL routing for the plugin.
+     *
+     * @since 1.0.0
+     */
     private static function register_and_flush_rewrite_rules() {
-        error_log('[SAW Activator] Registrace rewrite rules...');
-        
         $router_file = SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-router.php';
         
         if (!file_exists($router_file)) {
-            error_log('[SAW Activator] Router file neexistuje: ' . $router_file);
             return;
         }
-        
-        error_log('[SAW Activator] ✓ Router file existuje');
         
         require_once $router_file;
         
         if (!class_exists('SAW_Router')) {
-            error_log('[SAW Activator] ERROR: Třída SAW_Router neexistuje');
             return;
         }
-        
-        error_log('[SAW Activator] ✓ Třída SAW_Router načtena');
         
         $router = new SAW_Router();
         
         if (method_exists($router, 'register_routes')) {
             $router->register_routes();
-            error_log('[SAW Activator] ✓ Routes zaregistrovány');
-        } else {
-            error_log('[SAW Activator] ERROR: Metoda register_routes() neexistuje');
         }
         
         flush_rewrite_rules();
-        
-        error_log('[SAW Activator] ✓ Rewrite rules flushnuto');
     }
 }

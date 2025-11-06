@@ -1,113 +1,175 @@
 <?php
 /**
- * SAW Permissions Manager - FIXED UPDATE LOGIC
- * 
- * @package SAW_Visitors
- * @version 1.0.1
- * @since 4.10.0
+ * SAW Permissions Manager
+ *
+ * Manages role-based access control (RBAC) for modules and actions.
+ * Implements hierarchical permission checking with caching for performance.
+ *
+ * @package    SAW_Visitors
+ * @subpackage Permissions
+ * @version    1.1.0
+ * @since      1.0.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * SAW_Permissions Class
+ *
+ * Handles permission checking, storage, and cache management.
+ * Supports wildcard permissions and scope-based access control.
+ *
+ * @since 1.0.0
+ */
 class SAW_Permissions {
     
+    /**
+     * Runtime permission cache
+     *
+     * @since 1.0.0
+     * @var array
+     */
     private static $cache = [];
+    
+    /**
+     * Use WordPress object cache
+     *
+     * @since 1.0.0
+     * @var bool
+     */
     private static $use_object_cache = true;
+    
+    /**
+     * Cache time-to-live in seconds (1 hour)
+     *
+     * @since 1.0.0
+     * @var int
+     */
     private static $cache_ttl = 3600;
     
+    /**
+     * Cache key prefix
+     *
+     * @since 1.1.0
+     * @var string
+     */
+    const CACHE_PREFIX = 'saw_perm_';
+    
+    /**
+     * Transient prefix for SAW cache
+     *
+     * @since 1.1.0
+     * @var string
+     */
+    const TRANSIENT_PREFIX = 'saw_cache_';
+    
+    /**
+     * Check if role has permission for module action
+     *
+     * Implements hierarchical permission checking:
+     * 1. Exact match (role, module, action)
+     * 2. Module wildcard (role, module, *)
+     * 3. Action wildcard (role, *, action)
+     * 4. Full wildcard (role, *, *)
+     *
+     * @since 1.0.0
+     * @param string $role   User role
+     * @param string $module Module name
+     * @param string $action Action name
+     * @return bool True if allowed
+     */
     public static function check($role, $module, $action) {
         if (empty($role) || empty($module) || empty($action)) {
             return false;
         }
         
+        // Super admin has all permissions
         if ($role === 'super_admin') {
             return true;
         }
         
+        // Check runtime cache
         $cache_key = "{$role}:{$module}:{$action}";
         
         if (isset(self::$cache[$cache_key])) {
             return self::$cache[$cache_key];
         }
         
+        // Check object cache
         if (self::$use_object_cache) {
-            $cached = wp_cache_get("saw_perm_{$cache_key}");
+            $cached = wp_cache_get(self::CACHE_PREFIX . $cache_key);
             if ($cached !== false) {
                 self::$cache[$cache_key] = $cached;
                 return $cached;
             }
         }
         
+        // Check database with hierarchical fallback
+        $result = self::check_database($role, $module, $action);
+        
+        self::set_cache($cache_key, $result);
+        return $result;
+    }
+    
+    /**
+     * Check permission in database with hierarchical fallback
+     *
+     * @since 1.1.0
+     * @param string $role   User role
+     * @param string $module Module name
+     * @param string $action Action name
+     * @return bool True if allowed
+     */
+    private static function check_database($role, $module, $action) {
         global $wpdb;
         $table = $wpdb->prefix . 'saw_permissions';
         
-        $permission = $wpdb->get_var($wpdb->prepare(
-            "SELECT allowed FROM {$table} 
-             WHERE role = %s AND module = %s AND action = %s 
-             LIMIT 1",
-            $role,
-            $module,
-            $action
-        ));
+        // Priority order: exact → module wildcard → action wildcard → full wildcard
+        $checks = [
+            [$role, $module, $action],
+            [$role, $module, '*'],
+            [$role, '*', $action],
+            [$role, '*', '*'],
+        ];
         
-        if ($permission !== null) {
-            $result = (bool) $permission;
-            self::set_cache($cache_key, $result);
-            return $result;
+        foreach ($checks as $check) {
+            $permission = $wpdb->get_var($wpdb->prepare(
+                "SELECT allowed FROM %i 
+                 WHERE role = %s AND module = %s AND action = %s 
+                 LIMIT 1",
+                $table,
+                $check[0],
+                $check[1],
+                $check[2]
+            ));
+            
+            if ($permission !== null) {
+                return (bool) $permission;
+            }
         }
         
-        $permission = $wpdb->get_var($wpdb->prepare(
-            "SELECT allowed FROM {$table} 
-             WHERE role = %s AND module = %s AND action = '*' 
-             LIMIT 1",
-            $role,
-            $module
-        ));
-        
-        if ($permission !== null) {
-            $result = (bool) $permission;
-            self::set_cache($cache_key, $result);
-            return $result;
-        }
-        
-        $permission = $wpdb->get_var($wpdb->prepare(
-            "SELECT allowed FROM {$table} 
-             WHERE role = %s AND module = '*' AND action = %s 
-             LIMIT 1",
-            $role,
-            $action
-        ));
-        
-        if ($permission !== null) {
-            $result = (bool) $permission;
-            self::set_cache($cache_key, $result);
-            return $result;
-        }
-        
-        $permission = $wpdb->get_var($wpdb->prepare(
-            "SELECT allowed FROM {$table} 
-             WHERE role = %s AND module = '*' AND action = '*' 
-             LIMIT 1",
-            $role
-        ));
-        
-        if ($permission !== null) {
-            $result = (bool) $permission;
-            self::set_cache($cache_key, $result);
-            return $result;
-        }
-        
-        self::set_cache($cache_key, false);
         return false;
     }
     
+    /**
+     * Get permission details for role, module, and action
+     *
+     * Returns both allowed status and scope.
+     *
+     * @since 1.0.0
+     * @param string $role   User role
+     * @param string $module Module name
+     * @param string $action Action name
+     * @return array|null Permission data or null
+     */
     public static function get_permission($role, $module, $action) {
         if (empty($role) || empty($module) || empty($action)) {
             return null;
         }
         
+        // Super admin has all permissions
         if ($role === 'super_admin') {
             return ['allowed' => true, 'scope' => 'all'];
         }
@@ -115,10 +177,12 @@ class SAW_Permissions {
         global $wpdb;
         $table = $wpdb->prefix . 'saw_permissions';
         
+        // Check exact match first
         $permission = $wpdb->get_row($wpdb->prepare(
-            "SELECT allowed, scope FROM {$table} 
+            "SELECT allowed, scope FROM %i 
              WHERE role = %s AND module = %s AND action = %s 
              LIMIT 1",
+            $table,
             $role,
             $module,
             $action
@@ -131,10 +195,12 @@ class SAW_Permissions {
             ];
         }
         
+        // Check module wildcard
         $permission = $wpdb->get_row($wpdb->prepare(
-            "SELECT allowed, scope FROM {$table} 
+            "SELECT allowed, scope FROM %i 
              WHERE role = %s AND module = %s AND action = '*' 
              LIMIT 1",
+            $table,
             $role,
             $module
         ), ARRAY_A);
@@ -149,11 +215,21 @@ class SAW_Permissions {
         return null;
     }
     
+    /**
+     * Get all permissions for role
+     *
+     * Returns nested array: [module][action] => [allowed, scope]
+     *
+     * @since 1.0.0
+     * @param string $role User role
+     * @return array Permissions array
+     */
     public static function get_all_for_role($role) {
         if (empty($role)) {
             return [];
         }
         
+        // Super admin has all permissions
         if ($role === 'super_admin') {
             return ['*' => ['*' => ['allowed' => true, 'scope' => 'all']]];
         }
@@ -163,9 +239,10 @@ class SAW_Permissions {
         
         $permissions = $wpdb->get_results($wpdb->prepare(
             "SELECT module, action, allowed, scope 
-             FROM {$table} 
+             FROM %i 
              WHERE role = %s 
              ORDER BY module, action",
+            $table,
             $role
         ), ARRAY_A);
         
@@ -183,6 +260,20 @@ class SAW_Permissions {
         return $result;
     }
     
+    /**
+     * Set permission for role, module, and action
+     *
+     * Updates existing permission or creates new one.
+     * Clears all permission cache on success.
+     *
+     * @since 1.0.0
+     * @param string $role    User role
+     * @param string $module  Module name
+     * @param string $action  Action name
+     * @param bool   $allowed Whether action is allowed
+     * @param string $scope   Access scope (default: 'all')
+     * @return bool Success
+     */
     public static function set($role, $module, $action, $allowed, $scope = 'all') {
         if (empty($role) || empty($module) || empty($action)) {
             return false;
@@ -191,18 +282,21 @@ class SAW_Permissions {
         global $wpdb;
         $table = $wpdb->prefix . 'saw_permissions';
         
-        // ✅ CRITICAL: Clear ALL permission cache on any change
+        // Clear cache before modification
         self::clear_cache();
         
+        // Check if permission exists
         $exists = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$table} 
+            "SELECT COUNT(*) FROM %i 
              WHERE role = %s AND module = %s AND action = %s",
+            $table,
             $role,
             $module,
             $action
         ));
         
         if ($exists) {
+            // Update existing permission
             $result = $wpdb->update(
                 $table,
                 [
@@ -218,11 +312,11 @@ class SAW_Permissions {
                 ['%s', '%s', '%s']
             );
             
-            // CRITICAL FIX: update() returns number of rows updated (0 or 1), or false on error
-            // 0 means no change needed (value already correct), which is NOT an error!
+            // Returns false on error, 0 or 1 on success
             return $result !== false;
         }
         
+        // Insert new permission
         return $wpdb->insert(
             $table,
             [
@@ -236,6 +330,17 @@ class SAW_Permissions {
         ) !== false;
     }
     
+    /**
+     * Delete permission
+     *
+     * Removes permission record and clears cache.
+     *
+     * @since 1.0.0
+     * @param string $role   User role
+     * @param string $module Module name
+     * @param string $action Action name
+     * @return bool Success
+     */
     public static function delete($role, $module, $action) {
         if (empty($role) || empty($module) || empty($action)) {
             return false;
@@ -244,7 +349,7 @@ class SAW_Permissions {
         global $wpdb;
         $table = $wpdb->prefix . 'saw_permissions';
         
-        // ✅ CRITICAL: Clear ALL permission cache on delete
+        // Clear cache before deletion
         self::clear_cache();
         
         return $wpdb->delete(
@@ -258,7 +363,17 @@ class SAW_Permissions {
         ) !== false;
     }
     
+    /**
+     * Get allowed modules for role
+     *
+     * Returns list of module slugs that role has 'list' permission for.
+     *
+     * @since 1.0.0
+     * @param string $role User role
+     * @return array Module slugs
+     */
     public static function get_allowed_modules($role) {
+        // Super admin has access to all modules
         if ($role === 'super_admin') {
             $all_modules = SAW_Module_Loader::get_all();
             return array_keys($all_modules);
@@ -269,65 +384,120 @@ class SAW_Permissions {
         
         $modules = $wpdb->get_col($wpdb->prepare(
             "SELECT DISTINCT module 
-             FROM {$table} 
+             FROM %i 
              WHERE role = %s AND allowed = 1 AND module != '*' AND action = 'list'
              ORDER BY module",
+            $table,
             $role
         ));
         
         return $modules;
     }
     
+    /**
+     * Set cache value
+     *
+     * @since 1.0.0
+     * @param string $key   Cache key
+     * @param mixed  $value Cache value
+     * @return void
+     */
     private static function set_cache($key, $value) {
         self::$cache[$key] = $value;
         
         if (self::$use_object_cache) {
-            wp_cache_set("saw_perm_{$key}", $value, '', self::$cache_ttl);
+            wp_cache_set(self::CACHE_PREFIX . $key, $value, '', self::$cache_ttl);
         }
     }
     
+    /**
+     * Clear permission cache
+     *
+     * Clears runtime cache, object cache, and related transients.
+     * Safe implementation that only clears SAW-specific cache.
+     *
+     * @since 1.0.0
+     * @param string|null $key Specific key to clear, or null for all
+     * @return void
+     */
     public static function clear_cache($key = null) {
         if ($key === null) {
-            // ✅ Clear ALL SAW permission cache (not entire WP cache)
+            // Clear all SAW permission cache
             self::$cache = [];
             
             if (self::$use_object_cache) {
-                // Clear all saw_perm_* keys from object cache
                 global $wpdb;
                 $table = $wpdb->prefix . 'saw_permissions';
                 
-                // Get all unique role:module:action combinations
-                $permissions = $wpdb->get_results(
-                    "SELECT DISTINCT role, module, action FROM {$table}",
-                    ARRAY_A
-                );
+                // Get all unique cache keys and delete them
+                $permissions = $wpdb->get_results($wpdb->prepare(
+                    "SELECT DISTINCT role, module, action FROM %i",
+                    $table
+                ), ARRAY_A);
                 
                 foreach ($permissions as $perm) {
                     $cache_key = "{$perm['role']}:{$perm['module']}:{$perm['action']}";
-                    wp_cache_delete("saw_perm_{$cache_key}");
+                    wp_cache_delete(self::CACHE_PREFIX . $cache_key);
                 }
             }
             
-            // ✅ CRITICAL: Also clear Base Model cache for all entities
-            delete_transient('saw_cache_users_list');
-            delete_transient('saw_cache_branches_list');
-            delete_transient('saw_cache_departments_list');
-            delete_transient('saw_cache_customers_list');
-            
-            // Clear all SAW transients
-            global $wpdb;
-            $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_saw_%'");
-            $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_timeout_saw_%'");
+            // Clear SAW-specific transients safely
+            self::clear_saw_transients();
             
         } else {
+            // Clear specific key
             unset(self::$cache[$key]);
             
             if (self::$use_object_cache) {
-                wp_cache_delete("saw_perm_{$key}");
+                wp_cache_delete(self::CACHE_PREFIX . $key);
             }
         }
     }
     
+    /**
+     * Clear SAW-specific transients
+     *
+     * Safely removes only SAW cache transients without affecting other plugins.
+     *
+     * @since 1.1.0
+     * @return void
+     */
+    private static function clear_saw_transients() {
+        global $wpdb;
+        
+        // Clear known SAW entity caches
+        $known_transients = [
+            'saw_cache_users_list',
+            'saw_cache_branches_list',
+            'saw_cache_departments_list',
+            'saw_cache_customers_list',
+        ];
+        
+        foreach ($known_transients as $transient) {
+            delete_transient($transient);
+        }
+        
+        // Clear all SAW transients using safe pattern matching
+        $wpdb->query($wpdb->prepare(
+            "DELETE FROM %i 
+             WHERE option_name LIKE %s 
+             OR option_name LIKE %s",
+            $wpdb->options,
+            $wpdb->esc_like('_transient_' . self::TRANSIENT_PREFIX) . '%',
+            $wpdb->esc_like('_transient_timeout_' . self::TRANSIENT_PREFIX) . '%'
+        ));
+    }
+    
+    /**
+     * Bulk insert permissions from schema
+     *
+     * Inserts multiple permissions at once from configuration array.
+     * Skips existing permissions.
+     *
+     * @since 1.0.0
+     * @param array $schema Permission schema array
+     * @return int Number of permissions inserted
+     */
     public static function bulk_insert_from_schema($schema) {
         if (empty($schema)) {
             return 0;
@@ -348,9 +518,11 @@ class SAW_Permissions {
                 }
                 
                 foreach ($actions as $action) {
+                    // Check if permission already exists
                     $exists = $wpdb->get_var($wpdb->prepare(
-                        "SELECT COUNT(*) FROM {$table} 
+                        "SELECT COUNT(*) FROM %i 
                          WHERE role = %s AND module = %s AND action = %s",
+                        $table,
                         $role,
                         $module,
                         $action
@@ -377,6 +549,7 @@ class SAW_Permissions {
             }
         }
         
+        // Clear cache after bulk insert
         self::clear_cache();
         
         return $inserted;

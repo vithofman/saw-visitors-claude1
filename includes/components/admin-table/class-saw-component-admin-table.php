@@ -1,25 +1,64 @@
 <?php
 /**
- * Admin Table Component - REFACTORED v3.3.1
- * 
- * @package SAW_Visitors
- * @version 3.3.1 - FIXED: Syntax error + single confirm
+ * Admin Table Component
+ *
+ * Modern table component with OOP structure, modal support, and permissions
+ *
+ * @package     SAW_Visitors
+ * @subpackage  Components
+ * @version     3.3.1
+ * @since       1.0.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * SAW Component Admin Table
+ *
+ * Handles rendering of admin data tables with sorting, filtering,
+ * pagination, modal integration, and permission checks
+ *
+ * @since 1.0.0
+ */
 class SAW_Component_Admin_Table {
     
+    /**
+     * Entity name
+     *
+     * @since 1.0.0
+     * @var string
+     */
     private $entity;
+    
+    /**
+     * Table configuration
+     *
+     * @since 1.0.0
+     * @var array
+     */
     private $config;
     
+    /**
+     * Constructor
+     *
+     * @since 1.0.0
+     * @param string $entity Entity name (e.g. 'customer', 'branch')
+     * @param array  $config Table configuration
+     */
     public function __construct($entity, $config = array()) {
         $this->entity = sanitize_key($entity);
         $this->config = $this->parse_config($config);
     }
     
+    /**
+     * Parse and merge configuration with defaults
+     *
+     * @since 1.0.0
+     * @param array $config User-provided configuration
+     * @return array Merged configuration
+     */
     private function parse_config($config) {
         $defaults = array(
             'columns' => array(),
@@ -50,6 +89,12 @@ class SAW_Component_Admin_Table {
         return wp_parse_args($config, $defaults);
     }
     
+    /**
+     * Render complete table with all components
+     *
+     * @since 1.0.0
+     * @return void Outputs HTML directly
+     */
     public function render() {
         $this->enqueue_assets();
         $this->render_header();
@@ -61,6 +106,12 @@ class SAW_Component_Admin_Table {
         $this->render_delete_script();
     }
     
+    /**
+     * Enqueue component CSS and JS assets
+     *
+     * @since 1.0.0
+     * @return void
+     */
     private function enqueue_assets() {
         wp_enqueue_style(
             'saw-tables',
@@ -98,6 +149,12 @@ class SAW_Component_Admin_Table {
         }
     }
     
+    /**
+     * Render page header with title and controls
+     *
+     * @since 1.0.0
+     * @return void Outputs HTML directly
+     */
     private function render_header() {
         if (empty($this->config['title'])) {
             return;
@@ -130,10 +187,23 @@ class SAW_Component_Admin_Table {
         <?php
     }
     
+    /**
+     * Render controls (legacy placeholder)
+     *
+     * @since 1.0.0
+     * @deprecated Controls now rendered in header
+     * @return void
+     */
     private function render_controls() {
-        // Prázdná - už je v headeru
+        // Empty - controls moved to header
     }
     
+    /**
+     * Render table or empty state
+     *
+     * @since 1.0.0
+     * @return void Outputs HTML directly
+     */
     private function render_table_or_empty() {
         if (empty($this->config['rows'])) {
             $this->render_empty_state();
@@ -142,6 +212,12 @@ class SAW_Component_Admin_Table {
         }
     }
     
+    /**
+     * Render empty state message
+     *
+     * @since 1.0.0
+     * @return void Outputs HTML directly
+     */
     private function render_empty_state() {
         ?>
         <div class="saw-empty-state">
@@ -151,6 +227,12 @@ class SAW_Component_Admin_Table {
         <?php
     }
     
+    /**
+     * Render data table with rows
+     *
+     * @since 1.0.0
+     * @return void Outputs HTML directly
+     */
     private function render_table() {
         $modal_attrs = '';
         if ($this->config['enable_modal'] && !empty($this->config['modal_id'])) {
@@ -188,6 +270,14 @@ class SAW_Component_Admin_Table {
         <?php
     }
     
+    /**
+     * Render table header cell
+     *
+     * @since 1.0.0
+     * @param string $key    Column key
+     * @param array  $column Column configuration
+     * @return void Outputs HTML directly
+     */
     private function render_th($key, $column) {
         $label = $column['label'] ?? ucfirst($key);
         $sortable = $column['sortable'] ?? false;
@@ -220,6 +310,15 @@ class SAW_Component_Admin_Table {
         echo '</th>';
     }
     
+    /**
+     * Render table data cell
+     *
+     * @since 1.0.0
+     * @param string $key    Column key
+     * @param array  $column Column configuration
+     * @param array  $row    Row data
+     * @return void Outputs HTML directly
+     */
     private function render_td($key, $column, $row) {
         $value = $row[$key] ?? null;
         $type = $column['type'] ?? 'text';
@@ -247,12 +346,19 @@ class SAW_Component_Admin_Table {
         echo '</td>';
     }
     
+    /**
+     * Render action buttons for row
+     *
+     * @since 1.0.0
+     * @param array $row Row data
+     * @return void Outputs HTML directly
+     */
     private function render_actions($row) {
         ?>
         <td style="width: 120px; text-align: center;">
             <div class="saw-action-buttons">
                 <?php 
-                // ✅ PERMISSION CHECK: Edit button
+                // Edit button with permission check
                 if (in_array('edit', $this->config['actions']) && !empty($this->config['edit_url'])) {
                     $can_edit = function_exists('saw_can') ? saw_can('edit', $this->entity) : true;
                     if ($can_edit):
@@ -270,7 +376,7 @@ class SAW_Component_Admin_Table {
                 ?>
                 
                 <?php 
-                // ✅ PERMISSION CHECK: Delete button
+                // Delete button with permission check
                 if (in_array('delete', $this->config['actions'])) {
                     $can_delete = function_exists('saw_can') ? saw_can('delete', $this->entity) : true;
                     if ($can_delete):
@@ -292,6 +398,12 @@ class SAW_Component_Admin_Table {
         <?php
     }
     
+    /**
+     * Render pagination controls
+     *
+     * @since 1.0.0
+     * @return void Outputs HTML directly
+     */
     private function render_pagination() {
         if ($this->config['total_pages'] <= 1) {
             return;
@@ -327,12 +439,18 @@ class SAW_Component_Admin_Table {
         <?php
     }
     
+    /**
+     * Render floating action button
+     *
+     * @since 1.0.0
+     * @return void Outputs HTML directly
+     */
     private function render_floating_button() {
         if (empty($this->config['create_url'])) {
             return;
         }
         
-        // ✅ PERMISSION CHECK: Create button
+        // Permission check for create
         $can_create = function_exists('saw_can') ? saw_can('create', $this->entity) : true;
         if (!$can_create) {
             return;
@@ -346,6 +464,12 @@ class SAW_Component_Admin_Table {
         <?php
     }
     
+    /**
+     * Render modal component if enabled
+     *
+     * @since 1.0.0
+     * @return void Outputs HTML directly
+     */
     private function render_modal() {
         if (!$this->config['enable_modal'] || empty($this->config['modal_id'])) {
             return;
@@ -389,6 +513,14 @@ class SAW_Component_Admin_Table {
         $modal->render();
     }
     
+    /**
+     * Render inline delete script
+     *
+     * Only renders once per page to avoid duplicates.
+     *
+     * @since 1.0.0
+     * @return void Outputs HTML directly
+     */
     private function render_delete_script() {
         static $script_added = false;
         
@@ -402,19 +534,12 @@ class SAW_Component_Admin_Table {
         <script>
         if (typeof sawAdminTableDelete === 'undefined') {
             window.sawAdminTableDelete = function(btn) {
-                console.log('[Admin Table Delete] Button clicked', btn);
-                
                 const id = btn.dataset.id;
                 const ajaxAction = btn.dataset.ajaxAction;
                 
-                console.log('[Admin Table Delete] ID:', id, 'Action:', ajaxAction);
-                
                 if (!confirm('Opravdu chcete smazat tento záznam?')) {
-                    console.log('[Admin Table Delete] Cancelled by user');
                     return false;
                 }
-                
-                console.log('[Admin Table Delete] Starting AJAX...');
                 
                 jQuery.ajax({
                     url: '<?php echo admin_url('admin-ajax.php'); ?>',
@@ -425,7 +550,6 @@ class SAW_Component_Admin_Table {
                         id: id
                     },
                     success: function(response) {
-                        console.log('[Admin Table Delete] Response:', response);
                         if (response.success) {
                             location.reload();
                         } else {
@@ -433,20 +557,26 @@ class SAW_Component_Admin_Table {
                         }
                     },
                     error: function(xhr, status, error) {
-                        console.error('[Admin Table Delete] AJAX Error:', error, xhr);
                         alert('Chyba spojení se serverem');
                     }
                 });
                 
                 return false;
             };
-            
-            console.log('[Admin Table] sawAdminTableDelete function registered');
         }
         </script>
         <?php
     }
     
+    /**
+     * Get sort URL for column
+     *
+     * @since 1.0.0
+     * @param string $column          Column key
+     * @param string $current_orderby Current order by column
+     * @param string $current_order   Current order direction
+     * @return string Sort URL
+     */
     public static function get_sort_url($column, $current_orderby, $current_order) {
         $new_order = 'ASC';
         
@@ -468,7 +598,7 @@ class SAW_Component_Admin_Table {
         }
         
         foreach ($_GET as $key => $value) {
-            if (!in_array($key, ['orderby', 'order', 's', 'paged'])) {
+            if (!in_array($key, array('orderby', 'order', 's', 'paged'))) {
                 $query_args[$key] = sanitize_text_field($value);
             }
         }
@@ -476,6 +606,15 @@ class SAW_Component_Admin_Table {
         return add_query_arg($query_args);
     }
     
+    /**
+     * Get sort icon HTML for column
+     *
+     * @since 1.0.0
+     * @param string $column          Column key
+     * @param string $current_orderby Current order by column
+     * @param string $current_order   Current order direction
+     * @return string Icon HTML
+     */
     public static function get_sort_icon($column, $current_orderby, $current_order) {
         if ($column !== $current_orderby) {
             return '<span class="dashicons dashicons-sort saw-sort-icon"></span>';

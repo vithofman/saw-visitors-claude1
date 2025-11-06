@@ -1,49 +1,75 @@
 <?php
 /**
  * SAW Context - Database-First Architecture
- * 
- * REVOLUTION v5.0.1:
- * ✅ Customer & Branch context stored in DATABASE (saw_users table)
- * ✅ NO sessions for customer/branch (only for user_id & role)
- * ✅ Multi-branch support for super_manager via SAW_User_Branches
- * ✅ Single source of truth: Database
- * ✅ Fast: 1 SQL query instead of 3 data sources
- * ✅ Reliable: No race conditions, no session expiry issues
- * ✅ FIX v5.0.1: WordPress super admin can switch without SAW record
- * 
- * @package SAW_Visitors
- * @version 5.0.1 - WordPress Admin Fix
- * @since 4.8.0
+ *
+ * Customer & Branch context stored in DATABASE (saw_users table).
+ * NO sessions for customer/branch (only for user_id & role).
+ * Single source of truth: Database.
+ * Fast: 1 SQL query instead of multiple data sources.
+ * Reliable: No race conditions, no session expiry issues.
+ *
+ * @package    SAW_Visitors
+ * @subpackage Core
+ * @since      1.0.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Context manager class - handles customer and branch context
+ *
+ * @since 1.0.0
+ */
 class SAW_Context {
     
+    /**
+     * @var SAW_Context|null Singleton instance
+     */
     private static $instance = null;
+    
+    /**
+     * @var int|null Current customer ID
+     */
     private $customer_id = null;
+    
+    /**
+     * @var int|null Current branch ID
+     */
     private $branch_id = null;
+    
+    /**
+     * @var int|null SAW user ID
+     */
     private $saw_user_id = null;
+    
+    /**
+     * @var string|null User role
+     */
     private $role = null;
+    
+    /**
+     * @var bool Initialization flag
+     */
     private $initialized = false;
     
+    /**
+     * Private constructor
+     *
+     * @since 1.0.0
+     */
     private function __construct() {
         $this->load_from_database();
         $this->initialized = true;
-        
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log(sprintf(
-                '[SAW_Context v5.0.1] Loaded from DB - Customer: %s, Branch: %s, User: %d, Role: %s',
-                $this->customer_id ?? 'NULL',
-                $this->branch_id ?? 'NULL',
-                get_current_user_id(),
-                $this->role ?? 'NULL'
-            ));
-        }
     }
     
+    /**
+     * Get singleton instance
+     *
+     * @since 1.0.0
+     * @return SAW_Context
+     */
     public static function instance() {
         if (self::$instance === null) {
             self::$instance = new self();
@@ -57,6 +83,11 @@ class SAW_Context {
         return self::$instance;
     }
     
+    /**
+     * Load context from database
+     *
+     * @since 1.0.0
+     */
     private function load_from_database() {
         if (!is_user_logged_in()) {
             $this->load_fallback_customer();
@@ -67,8 +98,9 @@ class SAW_Context {
         
         $saw_user = $wpdb->get_row($wpdb->prepare(
             "SELECT id, customer_id, context_customer_id, context_branch_id, role 
-             FROM {$wpdb->prefix}saw_users 
+             FROM %i 
              WHERE wp_user_id = %d AND is_active = 1",
+            $wpdb->prefix . 'saw_users',
             get_current_user_id()
         ), ARRAY_A);
         
@@ -78,118 +110,128 @@ class SAW_Context {
                 
                 $meta_customer = get_user_meta(get_current_user_id(), 'saw_context_customer_id', true);
                 if ($meta_customer) {
-                    $this->customer_id = intval($meta_customer);
-                    
-                    if (defined('WP_DEBUG') && WP_DEBUG) {
-                        error_log(sprintf('[SAW_Context] WP admin loaded from user_meta - Customer: %d', $this->customer_id));
-                    }
+                    $this->customer_id = absint($meta_customer);
                     return;
                 }
             }
             
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log(sprintf('[SAW_Context] No saw_users record for wp_user_id: %d', get_current_user_id()));
-            }
             $this->load_fallback_customer();
             return;
         }
         
-        $this->saw_user_id = intval($saw_user['id']);
+        $this->saw_user_id = absint($saw_user['id']);
         $this->role = $saw_user['role'];
         
         $this->customer_id = $this->resolve_customer_id($saw_user);
         $this->branch_id = $this->resolve_branch_id($saw_user);
     }
     
+    /**
+     * Resolve customer ID based on role
+     *
+     * @since 1.0.0
+     * @param array $saw_user User data from database
+     * @return int|null
+     */
     private function resolve_customer_id($saw_user) {
         if ($saw_user['role'] === 'super_admin') {
             return $saw_user['context_customer_id'] 
-                ? intval($saw_user['context_customer_id']) 
-                : ($saw_user['customer_id'] ? intval($saw_user['customer_id']) : null);
+                ? absint($saw_user['context_customer_id']) 
+                : ($saw_user['customer_id'] ? absint($saw_user['customer_id']) : null);
         }
         
-        return $saw_user['customer_id'] ? intval($saw_user['customer_id']) : null;
+        return $saw_user['customer_id'] ? absint($saw_user['customer_id']) : null;
     }
     
+    /**
+     * Resolve branch ID based on role
+     *
+     * @since 1.0.0
+     * @param array $saw_user User data from database
+     * @return int|null
+     */
     private function resolve_branch_id($saw_user) {
         if (in_array($saw_user['role'], ['super_admin', 'admin', 'super_manager'])) {
-            return $saw_user['context_branch_id'] ? intval($saw_user['context_branch_id']) : null;
+            return $saw_user['context_branch_id'] ? absint($saw_user['context_branch_id']) : null;
         }
         
         return null;
     }
     
-    private function cache_to_session() {
-        if (!class_exists('SAW_Session_Manager')) {
-            return;
-        }
-        
-        $session = SAW_Session_Manager::instance();
-        
-        if ($this->customer_id) {
-            $session->set('saw_current_customer_id', $this->customer_id);
-            $session->set('saw_customer_id', $this->customer_id);
-        }
-        
-        if ($this->branch_id) {
-            $session->set('saw_current_branch_id', $this->branch_id);
-            $session->set('saw_branch_id', $this->branch_id);
-        }
-        
-        if ($this->saw_user_id) {
-            $session->set('saw_user_id', $this->saw_user_id);
-        }
-        
-        if ($this->role) {
-            $session->set('saw_role', $this->role);
-        }
-    }
-    
+    /**
+     * Load fallback customer when no user context exists
+     *
+     * @since 1.0.0
+     */
     private function load_fallback_customer() {
         global $wpdb;
         
-        $first_customer = $wpdb->get_var(
-            "SELECT id FROM {$wpdb->prefix}saw_customers 
-             WHERE status = 'active' 
-             ORDER BY id ASC LIMIT 1"
-        );
+        $first_customer = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM %i WHERE status = %s ORDER BY id ASC LIMIT 1",
+            $wpdb->prefix . 'saw_customers',
+            'active'
+        ));
         
         if ($first_customer) {
-            $this->customer_id = intval($first_customer);
-            
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log(sprintf('[SAW_Context] Using fallback customer: %d', $this->customer_id));
-            }
+            $this->customer_id = absint($first_customer);
         }
     }
     
+    /**
+     * Get current customer ID
+     *
+     * @since 1.0.0
+     * @return int|null
+     */
     public static function get_customer_id() {
         return self::instance()->customer_id;
     }
     
+    /**
+     * Get current branch ID
+     *
+     * @since 1.0.0
+     * @return int|null
+     */
     public static function get_branch_id() {
         return self::instance()->branch_id;
     }
     
+    /**
+     * Get SAW user ID
+     *
+     * @since 1.0.0
+     * @return int|null
+     */
     public static function get_saw_user_id() {
         return self::instance()->saw_user_id;
     }
     
+    /**
+     * Get user role
+     *
+     * @since 1.0.0
+     * @return string|null
+     */
     public static function get_role() {
         return self::instance()->role;
     }
     
+    /**
+     * Set customer ID (super admin only)
+     *
+     * @since 1.0.0
+     * @param int $customer_id Customer ID to set
+     * @return bool Success status
+     */
     public static function set_customer_id($customer_id) {
-        $customer_id = intval($customer_id);
+        $customer_id = absint($customer_id);
         
         if (!$customer_id) {
             return false;
         }
         
         if (!current_user_can('manage_options')) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[SAW_Context] Cannot set_customer_id - not WordPress admin');
-            }
             return false;
         }
         
@@ -202,21 +244,12 @@ class SAW_Context {
                 update_user_meta(get_current_user_id(), 'saw_context_customer_id', $customer_id);
             }
             
-            $instance->cache_to_session();
-            
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log(sprintf('[SAW_Context] Customer switched (WP admin fallback): %d', $customer_id));
-            }
-            
             self::handle_branch_on_customer_switch($customer_id);
             
             return true;
         }
         
         if ($instance->role !== 'super_admin') {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[SAW_Context] Cannot set_customer_id - not super_admin role');
-            }
             return false;
         }
         
@@ -232,11 +265,6 @@ class SAW_Context {
         
         if ($result !== false) {
             $instance->customer_id = $customer_id;
-            $instance->cache_to_session();
-            
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log(sprintf('[SAW_Context] Customer switched to: %d', $customer_id));
-            }
             
             self::handle_branch_on_customer_switch($customer_id);
             
@@ -246,30 +274,28 @@ class SAW_Context {
         return false;
     }
     
+    /**
+     * Set branch ID
+     *
+     * @since 1.0.0
+     * @param int|null $branch_id Branch ID to set (null to clear)
+     * @return bool Success status
+     */
     public static function set_branch_id($branch_id) {
-        $branch_id = $branch_id ? intval($branch_id) : null;
+        $branch_id = $branch_id ? absint($branch_id) : null;
         
         $instance = self::instance();
         
         if (!$instance->saw_user_id) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[SAW_Context] Cannot set_branch_id - no saw_user_id');
-            }
             return false;
         }
         
         if (in_array($instance->role, ['manager', 'terminal'])) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log(sprintf('[SAW_Context] Cannot set_branch_id - role %s has fixed branch', $instance->role));
-            }
             return false;
         }
         
         if ($branch_id) {
             if (!self::validate_branch_access($branch_id)) {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log(sprintf('[SAW_Context] Access denied to branch: %d', $branch_id));
-                }
                 return false;
             }
         }
@@ -286,18 +312,19 @@ class SAW_Context {
         
         if ($result !== false) {
             $instance->branch_id = $branch_id;
-            $instance->cache_to_session();
-            
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log(sprintf('[SAW_Context] Branch switched to: %s', $branch_id ?? 'NULL'));
-            }
-            
             return true;
         }
         
         return false;
     }
     
+    /**
+     * Validate if user has access to branch
+     *
+     * @since 1.0.0
+     * @param int $branch_id Branch ID to validate
+     * @return bool
+     */
     private static function validate_branch_access($branch_id) {
         global $wpdb;
         
@@ -308,7 +335,8 @@ class SAW_Context {
         }
         
         $branch = $wpdb->get_row($wpdb->prepare(
-            "SELECT customer_id FROM {$wpdb->prefix}saw_branches WHERE id = %d AND is_active = 1",
+            "SELECT customer_id FROM %i WHERE id = %d AND is_active = 1",
+            $wpdb->prefix . 'saw_branches',
             $branch_id
         ), ARRAY_A);
         
@@ -334,23 +362,34 @@ class SAW_Context {
         return false;
     }
     
+    /**
+     * Handle branch selection when customer is switched
+     *
+     * @since 1.0.0
+     * @param int $customer_id New customer ID
+     */
     private static function handle_branch_on_customer_switch($customer_id) {
         global $wpdb;
         
         $branches = $wpdb->get_results($wpdb->prepare(
-            "SELECT id FROM {$wpdb->prefix}saw_branches 
-             WHERE customer_id = %d AND is_active = 1 
-             LIMIT 2",
+            "SELECT id FROM %i WHERE customer_id = %d AND is_active = 1 LIMIT 2",
+            $wpdb->prefix . 'saw_branches',
             $customer_id
         ), ARRAY_A);
         
         if (count($branches) === 1) {
-            self::set_branch_id($branches[0]['id']);
+            self::set_branch_id(absint($branches[0]['id']));
         } else {
             self::set_branch_id(null);
         }
     }
     
+    /**
+     * Get current customer data
+     *
+     * @since 1.0.0
+     * @return array|null
+     */
     public static function get_customer_data() {
         $customer_id = self::get_customer_id();
         
@@ -361,11 +400,18 @@ class SAW_Context {
         global $wpdb;
         
         return $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_customers WHERE id = %d",
+            "SELECT * FROM %i WHERE id = %d",
+            $wpdb->prefix . 'saw_customers',
             $customer_id
         ), ARRAY_A);
     }
     
+    /**
+     * Get current branch data
+     *
+     * @since 1.0.0
+     * @return array|null
+     */
     public static function get_branch_data() {
         $branch_id = self::get_branch_id();
         
@@ -376,19 +422,21 @@ class SAW_Context {
         global $wpdb;
         
         return $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_branches WHERE id = %d AND is_active = 1",
+            "SELECT * FROM %i WHERE id = %d AND is_active = 1",
+            $wpdb->prefix . 'saw_branches',
             $branch_id
         ), ARRAY_A);
     }
     
+    /**
+     * Reload context from database
+     *
+     * @since 1.0.0
+     * @return bool
+     */
     public static function reload() {
         $instance = self::instance();
         $instance->load_from_database();
-        
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('[SAW_Context] Context reloaded from DB');
-        }
-        
         return true;
     }
 }

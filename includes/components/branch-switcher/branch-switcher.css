@@ -1,8 +1,11 @@
 /**
  * SAW Branch Switcher - Styles
- * 
+ *
+ * Modern branch selector component with dropdown and responsive design.
+ * Uses design tokens from variables.css for consistency.
+ *
  * @package SAW_Visitors
- * @since 4.7.0
+ * @since   4.7.0
  */
 
 /* ============================================
@@ -10,25 +13,25 @@
    ============================================ */
 .saw-branch-switcher {
     position: relative;
-    margin: 12px 16px;
+    margin: var(--saw-space-md) var(--saw-space-lg);
 }
 
 .saw-branch-switcher-button {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--saw-space-md);
     width: 100%;
-    padding: 12px;
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
+    padding: var(--saw-space-md);
+    background: #ffffff;
+    border: var(--saw-border-width) solid var(--saw-border-color);
+    border-radius: var(--saw-border-radius-md);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all var(--saw-transition-base);
 }
 
 .saw-branch-switcher-button:hover {
-    background: #f9fafb;
-    border-color: #d1d5db;
+    background: var(--saw-gray-50);
+    border-color: var(--saw-gray-300);
 }
 
 .saw-branch-switcher-button:disabled {
@@ -54,13 +57,13 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: #6b7280;
+    color: var(--saw-gray-500);
 }
 
 .saw-branch-name {
-    font-size: 14px;
+    font-size: var(--saw-font-size-sm);
     font-weight: 500;
-    color: #111827;
+    color: var(--saw-gray-900);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -68,12 +71,12 @@
 
 .saw-branch-arrow {
     flex-shrink: 0;
-    color: #6b7280;
-    transition: transform 0.2s;
+    color: var(--saw-gray-500);
+    transition: transform var(--saw-transition-base);
 }
 
 .saw-branch-switcher-button:hover .saw-branch-arrow {
-    color: #111827;
+    color: var(--saw-gray-900);
 }
 
 /* ============================================
@@ -81,14 +84,14 @@
    ============================================ */
 .saw-branch-switcher-dropdown {
     position: absolute;
-    top: calc(100% + 4px);
+    top: calc(100% + var(--saw-space-xs));
     left: 0;
     right: 0;
     max-height: 360px;
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    background: #ffffff;
+    border: var(--saw-border-width) solid var(--saw-border-color);
+    border-radius: var(--saw-border-radius-md);
+    box-shadow: var(--saw-shadow-lg);
     display: none;
     flex-direction: column;
     z-index: 1000;
@@ -100,7 +103,7 @@
 
 .saw-branch-list {
     overflow-y: auto;
-    padding: 8px;
+    padding: var(--saw-space-sm);
 }
 
 .saw-branch-list::-webkit-scrollbar {
@@ -112,12 +115,12 @@
 }
 
 .saw-branch-list::-webkit-scrollbar-thumb {
-    background: #d1d5db;
+    background: var(--saw-gray-300);
     border-radius: 3px;
 }
 
 .saw-branch-list::-webkit-scrollbar-thumb:hover {
-    background: #9ca3af;
+    background: var(--saw-gray-400);
 }
 
 /* ============================================
@@ -126,19 +129,19 @@
 .saw-branch-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 10px 12px;
-    border-radius: 6px;
+    gap: var(--saw-space-md);
+    padding: 10px var(--saw-space-md);
+    border-radius: var(--saw-border-radius-sm);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all var(--saw-transition-base);
 }
 
 .saw-branch-item:hover {
-    background: #f3f4f6;
+    background: var(--saw-gray-100);
 }
 
 .saw-branch-item.active {
-    background: #eff6ff;
+    background: var(--saw-primary-light);
 }
 
 .saw-branch-item-icon {
@@ -152,9 +155,9 @@
 }
 
 .saw-branch-item-name {
-    font-size: 14px;
+    font-size: var(--saw-font-size-sm);
     font-weight: 500;
-    color: #111827;
+    color: var(--saw-gray-900);
     line-height: 1.3;
     white-space: nowrap;
     overflow: hidden;
@@ -163,7 +166,7 @@
 
 .saw-branch-item-address {
     font-size: 11px;
-    color: #6b7280;
+    color: var(--saw-gray-500);
     margin-top: 2px;
     white-space: nowrap;
     overflow: hidden;
@@ -172,7 +175,7 @@
 
 .saw-branch-item-check {
     font-size: 16px;
-    color: #2563eb;
+    color: var(--saw-primary);
     flex-shrink: 0;
 }
 
@@ -186,48 +189,50 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    padding: 24px 16px;
+    gap: var(--saw-space-md);
+    padding: var(--saw-space-2xl) var(--saw-space-lg);
     text-align: center;
-    color: #6b7280;
-    font-size: 13px;
+    color: var(--saw-gray-500);
+    font-size: var(--saw-font-size-xs);
 }
 
 .saw-branch-error {
-    color: #ef4444;
+    color: var(--saw-danger);
 }
 
 .saw-branch-create-button {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    margin-top: 8px;
-    padding: 8px 16px;
-    background: #2563eb;
-    color: white;
-    border-radius: 6px;
-    font-size: 13px;
+    gap: var(--saw-space-sm);
+    margin-top: var(--saw-space-sm);
+    padding: var(--saw-space-sm) var(--saw-space-lg);
+    background: var(--saw-primary);
+    color: #ffffff;
+    border-radius: var(--saw-border-radius-sm);
+    font-size: var(--saw-font-size-xs);
     font-weight: 500;
     text-decoration: none;
-    transition: background 0.2s;
+    transition: background var(--saw-transition-base);
 }
 
 .saw-branch-create-button:hover {
-    background: #1d4ed8;
-    color: white;
+    background: var(--saw-primary-hover);
+    color: #ffffff;
 }
 
 .saw-spinner {
     width: 20px;
     height: 20px;
-    border: 3px solid #e5e7eb;
-    border-top-color: #2563eb;
+    border: 3px solid var(--saw-border-color);
+    border-top-color: var(--saw-primary);
     border-radius: 50%;
     animation: saw-spin 0.8s linear infinite;
 }
 
 @keyframes saw-spin {
-    to { transform: rotate(360deg); }
+    to { 
+        transform: rotate(360deg); 
+    }
 }
 
 /* ============================================
@@ -235,6 +240,6 @@
    ============================================ */
 @media (max-width: 768px) {
     .saw-branch-switcher {
-        margin: 12px 12px;
+        margin: var(--saw-space-md);
     }
 }

@@ -1,21 +1,33 @@
 /**
- * SAW Branch Switcher - JavaScript (ULTIMATE DEBUG v3.0.0)
- * 
- * CRITICAL FIXES:
- * - ✅ Uses correct nonce (saw_branch_switcher)
- * - ✅ Complete DEBUG logging
- * - ✅ Handles empty arrays properly
- * - ✅ Better error messages
- * 
+ * SAW Branch Switcher - JavaScript
+ *
+ * Handles branch selection dropdown with AJAX loading and context switching.
+ * Manages dropdown state, event handlers, and branch switching logic.
+ *
  * @package SAW_Visitors
- * @since 4.7.0
- * @version 3.0.0 - ULTIMATE DEBUG
+ * @since   4.7.0
+ * @version 3.0.1
  */
 
 (function($) {
     'use strict';
     
+    /**
+     * Branch Switcher Class
+     *
+     * Manages the branch selection dropdown component in the admin sidebar.
+     *
+     * @since 4.7.0
+     */
     window.BranchSwitcher = class BranchSwitcher {
+        
+        /**
+         * Constructor
+         *
+         * Initializes the branch switcher component and sets up properties.
+         *
+         * @since 4.7.0
+         */
         constructor() {
             this.container = $('#sawBranchSwitcher');
             this.button = $('#sawBranchSwitcherButton');
@@ -30,14 +42,20 @@
             this.init();
         }
         
+        /**
+         * Initialize component
+         *
+         * Sets up event listeners and validates configuration.
+         *
+         * @since 4.7.0
+         * @return {void}
+         */
         init() {
             if (!this.button.length || !this.dropdown.length) {
-                console.log('[Branch Switcher] Elements not found');
                 return;
             }
             
             if (typeof sawBranchSwitcher === 'undefined') {
-                console.error('[Branch Switcher] sawBranchSwitcher object not found!');
                 return;
             }
             
@@ -45,16 +63,8 @@
             this.customerId = parseInt(this.container.data('customer-id'));
             this.currentBranchId = parseInt(this.button.data('current-branch-id')) || null;
             
-            console.log('[Branch Switcher] Initialized', {
-                customerId: this.customerId,
-                currentBranchId: this.currentBranchId,
-                ajaxurl: sawBranchSwitcher.ajaxurl,
-                hasNonce: !!sawBranchSwitcher.nonce
-            });
-            
             // Validate customer ID
             if (!this.customerId || this.customerId === 0 || isNaN(this.customerId)) {
-                console.error('[Branch Switcher] Invalid customer ID:', this.customerId);
                 this.showError('Neplatné ID zákazníka');
                 return;
             }
@@ -78,6 +88,14 @@
             });
         }
         
+        /**
+         * Toggle dropdown
+         *
+         * Opens or closes the dropdown based on current state.
+         *
+         * @since 4.7.0
+         * @return {void}
+         */
         toggle() {
             if (this.isOpen) {
                 this.close();
@@ -86,6 +104,14 @@
             }
         }
         
+        /**
+         * Open dropdown
+         *
+         * Shows the dropdown and loads branches if not already loaded.
+         *
+         * @since 4.7.0
+         * @return {void}
+         */
         open() {
             this.isOpen = true;
             this.dropdown.addClass('active');
@@ -95,14 +121,29 @@
             }
         }
         
+        /**
+         * Close dropdown
+         *
+         * Hides the dropdown.
+         *
+         * @since 4.7.0
+         * @return {void}
+         */
         close() {
             this.isOpen = false;
             this.dropdown.removeClass('active');
         }
         
+        /**
+         * Load branches via AJAX
+         *
+         * Fetches branches for current customer from server.
+         *
+         * @since 4.7.0
+         * @return {void}
+         */
         loadBranches() {
             if (this.isLoading) {
-                console.log('[Branch Switcher] Already loading...');
                 return;
             }
             
@@ -113,12 +154,6 @@
             
             this.isLoading = true;
             this.showLoading();
-            
-            console.log('[Branch Switcher] Loading branches...', {
-                action: 'saw_get_branches_for_switcher',
-                customer_id: this.customerId,
-                nonce: sawBranchSwitcher.nonce
-            });
             
             $.ajax({
                 url: sawBranchSwitcher.ajaxurl,
@@ -131,67 +166,31 @@
                 success: (response) => {
                     this.isLoading = false;
                     
-                    // ========================================
-                    // ULTIMATE DEBUG
-                    // ========================================
-                    console.log('%c[Branch Switcher] RAW RESPONSE:', 'background: blue; color: white; padding: 2px 5px;', response);
-                    console.log('[Branch Switcher] Response type:', typeof response);
-                    console.log('[Branch Switcher] response.success:', response ? response.success : 'NO RESPONSE');
-                    console.log('[Branch Switcher] response.data:', response ? response.data : 'NO RESPONSE');
-                    
-                    if (response && response.data) {
-                        console.log('[Branch Switcher] response.data.branches:', response.data.branches);
-                        console.log('[Branch Switcher] Type of branches:', typeof response.data.branches);
-                        console.log('[Branch Switcher] Is array?', Array.isArray(response.data.branches));
-                        console.log('[Branch Switcher] Constructor:', response.data.branches ? response.data.branches.constructor.name : 'N/A');
-                        
-                        // Try to iterate
-                        if (response.data.branches) {
-                            console.log('[Branch Switcher] Keys:', Object.keys(response.data.branches));
-                            console.log('[Branch Switcher] Length:', response.data.branches.length);
-                        }
-                    }
-                    console.log('%c[Branch Switcher] DEBUG END', 'background: blue; color: white; padding: 2px 5px;');
-                    // ========================================
-                    
-                    // Check response exists and has success
+                    // Validate response structure
                     if (!response || !response.success) {
                         const message = (response && response.data && response.data.message) 
                             ? response.data.message 
                             : 'Chyba načítání poboček';
-                        console.error('[Branch Switcher] Response not successful:', message);
                         this.showError(message);
                         return;
                     }
                     
-                    // Check data exists
                     if (!response.data) {
-                        console.error('[Branch Switcher] No response.data!');
                         this.showError('Chybí data v odpovědi');
                         return;
                     }
                     
-                    // Check branches exists
                     if (!response.data.branches) {
-                        console.error('[Branch Switcher] No response.data.branches!');
                         this.showError('Chybí seznam poboček');
                         return;
                     }
                     
-                    // Check if branches is array
+                    // Ensure branches is an array
                     if (!Array.isArray(response.data.branches)) {
-                        console.error('[Branch Switcher] branches is NOT an array!');
-                        console.error('[Branch Switcher] Type:', typeof response.data.branches);
-                        console.error('[Branch Switcher] Constructor:', response.data.branches.constructor.name);
-                        console.error('[Branch Switcher] Value:', response.data.branches);
-                        
-                        // Try to convert to array
                         if (typeof response.data.branches === 'object') {
-                            console.warn('[Branch Switcher] Attempting to convert object to array...');
                             response.data.branches = Object.values(response.data.branches);
-                            console.log('[Branch Switcher] Converted to array:', response.data.branches);
                         } else {
-                            this.showError('Neplatný formát dat (není pole)');
+                            this.showError('Neplatný formát dat');
                             return;
                         }
                     }
@@ -202,29 +201,19 @@
                         this.currentBranchId = parseInt(response.data.current_branch_id);
                     }
                     
-                    console.log('%c[Branch Switcher] SUCCESS!', 'background: green; color: white; padding: 2px 5px;');
-                    console.log('[Branch Switcher] Loaded', this.branches.length, 'branches');
-                    
                     this.renderBranches();
                 },
                 error: (xhr, status, error) => {
                     this.isLoading = false;
                     
-                    console.error('[Branch Switcher] AJAX error:', {
-                        status: xhr.status,
-                        statusText: xhr.statusText,
-                        responseText: xhr.responseText,
-                        error: error
-                    });
-                    
                     let message = 'Chyba serveru';
                     
                     if (xhr.status === 400) {
-                        message = 'Chybný požadavek - zkontrolujte nonce';
+                        message = 'Chybný požadavek';
                     } else if (xhr.status === 403) {
                         message = 'Nedostatečná oprávnění';
                     } else if (xhr.status === 404) {
-                        message = 'AJAX endpoint nenalezen';
+                        message = 'Endpoint nenalezen';
                     } else if (xhr.status === 0) {
                         message = 'Nelze se připojit k serveru';
                     }
@@ -235,7 +224,7 @@
                             message = response.data.message;
                         }
                     } catch (e) {
-                        // Can't parse response
+                        // Cannot parse response
                     }
                     
                     this.showError(message);
@@ -243,6 +232,14 @@
             });
         }
         
+        /**
+         * Render branches list
+         *
+         * Generates HTML for branches dropdown and attaches event handlers.
+         *
+         * @since 4.7.0
+         * @return {void}
+         */
         renderBranches() {
             if (this.branches.length === 0) {
                 this.list.html(`
@@ -280,9 +277,16 @@
             });
         }
         
+        /**
+         * Switch to different branch
+         *
+         * Changes active branch via AJAX and reloads page.
+         *
+         * @since 4.7.0
+         * @param {number} branchId Branch ID to switch to
+         * @return {void}
+         */
         switchBranch(branchId) {
-            console.log('[Branch Switcher] Switching to branch:', branchId);
-            
             $.ajax({
                 url: sawBranchSwitcher.ajaxurl,
                 type: 'POST',
@@ -292,25 +296,29 @@
                     nonce: sawBranchSwitcher.nonce
                 },
                 success: (response) => {
-                    console.log('[Branch Switcher] Switch response:', response);
-                    
                     if (response && response.success) {
-                        // Reload page to apply new branch context
                         window.location.reload();
                     } else {
                         const message = (response && response.data && response.data.message) 
                             ? response.data.message 
                             : 'Chyba přepnutí pobočky';
-                        alert(message);
+                        this.showNotification(message, 'error');
                     }
                 },
                 error: (xhr) => {
-                    console.error('[Branch Switcher] Switch error:', xhr);
-                    alert('Chyba serveru při přepínání pobočky');
+                    this.showNotification('Chyba serveru při přepínání pobočky', 'error');
                 }
             });
         }
         
+        /**
+         * Show loading state
+         *
+         * Displays loading spinner in dropdown.
+         *
+         * @since 4.7.0
+         * @return {void}
+         */
         showLoading() {
             this.list.html(`
                 <div class="saw-branch-loading">
@@ -320,15 +328,48 @@
             `);
         }
         
+        /**
+         * Show error state
+         *
+         * Displays error message in dropdown.
+         *
+         * @since 4.7.0
+         * @param {string} message Error message to display
+         * @return {void}
+         */
         showError(message) {
-            console.error('[Branch Switcher] Error:', message);
             this.list.html(`
                 <div class="saw-branch-error">
-                    <p>❌ ${this.escapeHtml(message)}</p>
+                    <p>✕ ${this.escapeHtml(message)}</p>
                 </div>
             `);
         }
         
+        /**
+         * Show notification
+         *
+         * Displays notification message (uses alert as fallback).
+         * Override this method to use custom notification system.
+         *
+         * @since 4.7.0
+         * @param {string} message Notification message
+         * @param {string} type    Notification type (success, error, warning)
+         * @return {void}
+         */
+        showNotification(message, type) {
+            // TODO: Replace with custom notification system
+            alert(message);
+        }
+        
+        /**
+         * Escape HTML
+         *
+         * Prevents XSS by escaping HTML special characters.
+         *
+         * @since 4.7.0
+         * @param {string} text Text to escape
+         * @return {string} Escaped text
+         */
         escapeHtml(text) {
             if (!text) return '';
             const map = {
@@ -342,13 +383,14 @@
         }
     };
     
-    // Initialize on document ready
+    /**
+     * Initialize on document ready
+     *
+     * @since 4.7.0
+     */
     $(document).ready(function() {
-        console.log('[Branch Switcher] Document ready, initializing...');
         if ($('#sawBranchSwitcher').length) {
             window.branchSwitcher = new BranchSwitcher();
-        } else {
-            console.log('[Branch Switcher] Component not found in DOM');
         }
     });
     

@@ -1,16 +1,14 @@
 <?php
 /**
- * SAW Middleware Functions - AJAX FIXED v2.0.0
- * Route protection and permission checking
- * 
- * CRITICAL FIX:
- * - ✅ AJAX requests are NOT redirected
- * - ✅ Returns JSON errors for AJAX
- * - ✅ Prevents middleware from breaking AJAX handlers
- * 
- * @package SAW_Visitors
- * @version 2.0.0 - AJAX FIX
- * @since 4.6.1
+ * SAW Middleware Functions
+ *
+ * Route protection and permission checking with AJAX support.
+ * Handles authentication, authorization, and customer isolation.
+ *
+ * @package    SAW_Visitors
+ * @subpackage Middleware
+ * @version    2.1.0
+ * @since      1.0.0
  */
 
 if (!defined('ABSPATH')) {
@@ -18,61 +16,90 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Require authentication (any SAW role)
- * 
- * ✅ FIX: Don't redirect AJAX requests
- * 
- * @param string $role Optional - check specific role
- * @return void
+ * Get or initialize SAW_Auth instance
+ *
+ * Helper to avoid repeated global declarations and initialization.
+ *
+ * @since 2.1.0
+ * @return SAW_Auth
  */
-function saw_require_auth($role = null) {
+function saw_get_auth_instance() {
     global $saw_auth;
 
     if (!isset($saw_auth)) {
         $saw_auth = new SAW_Auth();
     }
 
+    return $saw_auth;
+}
+
+/**
+ * Get sanitized IP address
+ *
+ * @since 2.1.0
+ * @return string Sanitized IP address
+ */
+function saw_get_client_ip() {
+    return isset($_SERVER['REMOTE_ADDR']) 
+        ? sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'])) 
+        : '';
+}
+
+/**
+ * Get sanitized request URI
+ *
+ * @since 2.1.0
+ * @return string Sanitized request URI
+ */
+function saw_get_request_uri() {
+    return isset($_SERVER['REQUEST_URI']) 
+        ? sanitize_text_field(wp_unslash($_SERVER['REQUEST_URI'])) 
+        : '';
+}
+
+/**
+ * Require authentication (any SAW role)
+ *
+ * Checks if user is authenticated. For AJAX requests, returns JSON error.
+ * For regular requests, redirects to login page.
+ *
+ * @since 1.0.0
+ * @param string|null $role Optional specific role to check
+ * @return void
+ */
+function saw_require_auth($role = null) {
+    $saw_auth = saw_get_auth_instance();
+
     if (!$saw_auth->check_auth()) {
-        // ✅ CRITICAL FIX: Handle AJAX requests differently
+        // Handle AJAX requests with JSON response
         if (wp_doing_ajax()) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[Middleware] AJAX request not authenticated - returning JSON error');
-            }
-            
             wp_send_json_error([
-                'message' => 'Nejste přihlášen',
+                'message' => __('Nejste přihlášen', 'saw-visitors'),
                 'code' => 'not_authenticated'
             ]);
             exit;
         }
         
+        // Handle regular requests with redirect
         $redirect_url = saw_get_login_url($role);
         
-        if (!empty($_SERVER['REQUEST_URI'])) {
-            $return_url = esc_url_raw($_SERVER['REQUEST_URI']);
-            $redirect_url = add_query_arg('redirect_to', urlencode($return_url), $redirect_url);
+        $request_uri = saw_get_request_uri();
+        if (!empty($request_uri)) {
+            $redirect_url = add_query_arg('redirect_to', urlencode($request_uri), $redirect_url);
         }
 
         wp_safe_redirect($redirect_url);
         exit;
     }
 
+    // Check specific role if provided
     if ($role !== null) {
         $current_user = $saw_auth->get_current_user();
         
         if ($current_user->role !== $role) {
-            // ✅ CRITICAL FIX: Handle AJAX requests differently
             if (wp_doing_ajax()) {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log(sprintf(
-                        '[Middleware] AJAX request wrong role - Expected: %s, Got: %s',
-                        $role,
-                        $current_user->role ?? 'NULL'
-                    ));
-                }
-                
                 wp_send_json_error([
-                    'message' => 'Nemáte oprávnění k této akci',
+                    'message' => __('Nemáte oprávnění k této akci', 'saw-visitors'),
                     'code' => 'insufficient_permissions'
                 ]);
                 exit;
@@ -81,7 +108,7 @@ function saw_require_auth($role = null) {
             wp_die(
                 __('Nemáte oprávnění k přístupu na tuto stránku.', 'saw-visitors'),
                 __('Přístup zamítnut', 'saw-visitors'),
-                array('response' => 403)
+                ['response' => 403]
             );
         }
     }
@@ -89,23 +116,19 @@ function saw_require_auth($role = null) {
 
 /**
  * Require admin role
- * 
+ *
+ * @since 1.0.0
  * @return void
  */
 function saw_require_admin() {
-    global $saw_auth;
-
-    if (!isset($saw_auth)) {
-        $saw_auth = new SAW_Auth();
-    }
+    $saw_auth = saw_get_auth_instance();
 
     saw_require_auth('admin');
 
     if (!$saw_auth->is_admin()) {
-        // ✅ CRITICAL FIX: Handle AJAX requests differently
         if (wp_doing_ajax()) {
             wp_send_json_error([
-                'message' => 'Tato akce je dostupná pouze pro administrátory',
+                'message' => __('Tato akce je dostupná pouze pro administrátory', 'saw-visitors'),
                 'code' => 'admin_required'
             ]);
             exit;
@@ -114,30 +137,26 @@ function saw_require_admin() {
         wp_die(
             __('Tato stránka je dostupná pouze pro administrátory.', 'saw-visitors'),
             __('Přístup zamítnut', 'saw-visitors'),
-            array('response' => 403)
+            ['response' => 403]
         );
     }
 }
 
 /**
  * Require manager role
- * 
+ *
+ * @since 1.0.0
  * @return void
  */
 function saw_require_manager() {
-    global $saw_auth;
-
-    if (!isset($saw_auth)) {
-        $saw_auth = new SAW_Auth();
-    }
+    $saw_auth = saw_get_auth_instance();
 
     saw_require_auth('manager');
 
     if (!$saw_auth->is_manager()) {
-        // ✅ CRITICAL FIX: Handle AJAX requests differently
         if (wp_doing_ajax()) {
             wp_send_json_error([
-                'message' => 'Tato akce je dostupná pouze pro manažery',
+                'message' => __('Tato akce je dostupná pouze pro manažery', 'saw-visitors'),
                 'code' => 'manager_required'
             ]);
             exit;
@@ -146,30 +165,26 @@ function saw_require_manager() {
         wp_die(
             __('Tato stránka je dostupná pouze pro manažery.', 'saw-visitors'),
             __('Přístup zamítnut', 'saw-visitors'),
-            array('response' => 403)
+            ['response' => 403]
         );
     }
 }
 
 /**
  * Require terminal role
- * 
+ *
+ * @since 1.0.0
  * @return void
  */
 function saw_require_terminal() {
-    global $saw_auth;
-
-    if (!isset($saw_auth)) {
-        $saw_auth = new SAW_Auth();
-    }
+    $saw_auth = saw_get_auth_instance();
 
     saw_require_auth('terminal');
 
     if (!$saw_auth->is_terminal()) {
-        // ✅ CRITICAL FIX: Handle AJAX requests differently
         if (wp_doing_ajax()) {
             wp_send_json_error([
-                'message' => 'Tato akce je dostupná pouze pro terminály',
+                'message' => __('Tato akce je dostupná pouze pro terminály', 'saw-visitors'),
                 'code' => 'terminal_required'
             ]);
             exit;
@@ -178,22 +193,22 @@ function saw_require_terminal() {
         wp_die(
             __('Tato stránka je dostupná pouze pro terminály.', 'saw-visitors'),
             __('Přístup zamítnut', 'saw-visitors'),
-            array('response' => 403)
+            ['response' => 403]
         );
     }
 }
 
 /**
  * Require Super Admin (WordPress admin)
- * 
+ *
+ * @since 1.0.0
  * @return void
  */
 function saw_require_super_admin() {
     if (!current_user_can('manage_options')) {
-        // ✅ CRITICAL FIX: Handle AJAX requests differently
         if (wp_doing_ajax()) {
             wp_send_json_error([
-                'message' => 'Tato akce je dostupná pouze pro Super Adminy',
+                'message' => __('Tato akce je dostupná pouze pro Super Adminy', 'saw-visitors'),
                 'code' => 'super_admin_required'
             ]);
             exit;
@@ -202,23 +217,23 @@ function saw_require_super_admin() {
         wp_die(
             __('Tato stránka je dostupná pouze pro Super Adminy.', 'saw-visitors'),
             __('Přístup zamítnut', 'saw-visitors'),
-            array('response' => 403)
+            ['response' => 403]
         );
     }
 }
 
 /**
  * Check customer isolation
- * 
- * @param int $customer_id Customer ID
+ *
+ * Ensures user can only access data from their customer.
+ * Super admins bypass this check.
+ *
+ * @since 1.0.0
+ * @param int $customer_id Customer ID to check access for
  * @return void
  */
 function saw_require_customer($customer_id) {
-    global $saw_auth;
-
-    if (!isset($saw_auth)) {
-        $saw_auth = new SAW_Auth();
-    }
+    $saw_auth = saw_get_auth_instance();
 
     saw_require_auth();
 
@@ -228,19 +243,18 @@ function saw_require_customer($customer_id) {
 
     if (!$saw_auth->check_customer_isolation($customer_id)) {
         if (class_exists('SAW_Audit')) {
-            SAW_Audit::log(array(
+            SAW_Audit::log([
                 'action'      => 'customer_isolation_violation',
                 'user_id'     => $saw_auth->get_current_user()->id ?? null,
                 'customer_id' => $saw_auth->get_current_customer_id(),
                 'details'     => sprintf('Pokus o přístup k datům zákazníka %d', $customer_id),
-                'ip_address'  => $_SERVER['REMOTE_ADDR'],
-            ));
+                'ip_address'  => saw_get_client_ip(),
+            ]);
         }
 
-        // ✅ CRITICAL FIX: Handle AJAX requests differently
         if (wp_doing_ajax()) {
             wp_send_json_error([
-                'message' => 'Nemáte oprávnění k přístupu k těmto datům',
+                'message' => __('Nemáte oprávnění k přístupu k těmto datům', 'saw-visitors'),
                 'code' => 'customer_isolation_violation'
             ]);
             exit;
@@ -249,57 +263,58 @@ function saw_require_customer($customer_id) {
         wp_die(
             __('Nemáte oprávnění k přístupu k těmto datům.', 'saw-visitors'),
             __('Přístup zamítnut', 'saw-visitors'),
-            array('response' => 403)
+            ['response' => 403]
         );
     }
 }
 
 /**
  * Check department access for managers
- * 
- * @param int $department_id Department ID
+ *
+ * Ensures managers can only access their assigned departments.
+ * Admins and super admins bypass this check.
+ *
+ * @since 1.0.0
+ * @param int $department_id Department ID to check access for
  * @return void
  */
 function saw_require_department_access($department_id) {
-    global $saw_auth;
-
-    if (!isset($saw_auth)) {
-        $saw_auth = new SAW_Auth();
-    }
+    global $wpdb;
+    
+    $saw_auth = saw_get_auth_instance();
 
     saw_require_auth();
 
     $current_user = $saw_auth->get_current_user();
 
+    // Admins and super admins have full access
     if ($saw_auth->is_super_admin() || $saw_auth->is_admin()) {
         return;
     }
 
+    // Check manager's department access
     if ($saw_auth->is_manager()) {
-        global $wpdb;
-
         $has_access = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}saw_user_departments 
-             WHERE user_id = %d AND department_id = %d",
+            "SELECT COUNT(*) FROM %i WHERE user_id = %d AND department_id = %d",
+            $wpdb->prefix . 'saw_user_departments',
             $current_user->id,
             $department_id
         ));
 
         if (!$has_access) {
             if (class_exists('SAW_Audit')) {
-                SAW_Audit::log(array(
+                SAW_Audit::log([
                     'action'      => 'department_access_violation',
                     'user_id'     => $current_user->id,
                     'customer_id' => $current_user->customer_id,
                     'details'     => sprintf('Manager nemá přístup k oddělení %d', $department_id),
-                    'ip_address'  => $_SERVER['REMOTE_ADDR'],
-                ));
+                    'ip_address'  => saw_get_client_ip(),
+                ]);
             }
 
-            // ✅ CRITICAL FIX: Handle AJAX requests differently
             if (wp_doing_ajax()) {
                 wp_send_json_error([
-                    'message' => 'Nemáte oprávnění k přístupu k tomuto oddělení',
+                    'message' => __('Nemáte oprávnění k přístupu k tomuto oddělení', 'saw-visitors'),
                     'code' => 'department_access_violation'
                 ]);
                 exit;
@@ -308,17 +323,17 @@ function saw_require_department_access($department_id) {
             wp_die(
                 __('Nemáte oprávnění k přístupu k tomuto oddělení.', 'saw-visitors'),
                 __('Přístup zamítnut', 'saw-visitors'),
-                array('response' => 403)
+                ['response' => 403]
             );
         }
 
         return;
     }
 
-    // ✅ CRITICAL FIX: Handle AJAX requests differently
+    // Other roles don't have department access
     if (wp_doing_ajax()) {
         wp_send_json_error([
-            'message' => 'Nemáte oprávnění k přístupu k oddělením',
+            'message' => __('Nemáte oprávnění k přístupu k oddělením', 'saw-visitors'),
             'code' => 'departments_access_denied'
         ]);
         exit;
@@ -327,28 +342,31 @@ function saw_require_department_access($department_id) {
     wp_die(
         __('Nemáte oprávnění k přístupu k oddělením.', 'saw-visitors'),
         __('Přístup zamítnut', 'saw-visitors'),
-        array('response' => 403)
+        ['response' => 403]
     );
 }
 
 /**
  * Get login URL for role
- * 
- * @param string|null $role Role
- * @return string
+ *
+ * Returns appropriate login URL based on role or current request URI.
+ *
+ * @since 1.0.0
+ * @param string|null $role Role name
+ * @return string Login URL
  */
 function saw_get_login_url($role = null) {
-    $urls = array(
+    $urls = [
         'admin'    => home_url('/admin/login/'),
         'manager'  => home_url('/manager/login/'),
         'terminal' => home_url('/terminal/login/'),
-    );
+    ];
 
     if ($role && isset($urls[$role])) {
         return $urls[$role];
     }
 
-    $request_uri = $_SERVER['REQUEST_URI'] ?? '';
+    $request_uri = saw_get_request_uri();
 
     if (strpos($request_uri, '/admin/') !== false) {
         return $urls['admin'];
@@ -365,150 +383,137 @@ function saw_get_login_url($role = null) {
 
 /**
  * Verify AJAX nonce
- * 
- * @param string $action Action name
+ *
+ * Validates nonce for AJAX requests and logs failures.
+ *
+ * @since 1.0.0
+ * @param string $action Action name for nonce verification
  * @return void
  */
 function saw_verify_ajax_nonce($action) {
-    $nonce = isset($_POST['nonce']) ? sanitize_text_field($_POST['nonce']) : '';
+    $nonce = isset($_POST['nonce']) 
+        ? sanitize_text_field(wp_unslash($_POST['nonce'])) 
+        : '';
 
     if (!wp_verify_nonce($nonce, $action)) {
         if (class_exists('SAW_Audit')) {
-            SAW_Audit::log(array(
+            SAW_Audit::log([
                 'action'     => 'ajax_nonce_failed',
                 'details'    => sprintf('Neplatný nonce pro akci: %s', $action),
-                'ip_address' => $_SERVER['REMOTE_ADDR'],
-            ));
+                'ip_address' => saw_get_client_ip(),
+            ]);
         }
 
-        wp_send_json_error(array(
+        wp_send_json_error([
             'message' => __('Bezpečnostní kontrola selhala. Obnovte stránku a zkuste to znovu.', 'saw-visitors'),
             'code'    => 'nonce_failed',
-        ));
+        ]);
     }
 }
 
 /**
  * Verify POST nonce
- * 
- * @param string $action Action name
- * @param string $name   Nonce field name
+ *
+ * Validates nonce for POST requests and logs failures.
+ *
+ * @since 1.0.0
+ * @param string $action Action name for nonce verification
+ * @param string $name   Nonce field name (default: '_wpnonce')
  * @return void
  */
 function saw_verify_post_nonce($action, $name = '_wpnonce') {
-    $nonce = isset($_POST[$name]) ? sanitize_text_field($_POST[$name]) : '';
+    $nonce = isset($_POST[$name]) 
+        ? sanitize_text_field(wp_unslash($_POST[$name])) 
+        : '';
 
     if (!wp_verify_nonce($nonce, $action)) {
         if (class_exists('SAW_Audit')) {
-            SAW_Audit::log(array(
+            SAW_Audit::log([
                 'action'     => 'post_nonce_failed',
                 'details'    => sprintf('Neplatný nonce pro akci: %s', $action),
-                'ip_address' => $_SERVER['REMOTE_ADDR'],
-            ));
+                'ip_address' => saw_get_client_ip(),
+            ]);
         }
 
         wp_die(
             __('Bezpečnostní kontrola selhala.', 'saw-visitors'),
             __('Chyba', 'saw-visitors'),
-            array('response' => 403)
+            ['response' => 403]
         );
     }
 }
 
 /**
  * Get current SAW user
- * 
- * @return object|null
+ *
+ * @since 1.0.0
+ * @return object|null User object or null
  */
 function saw_get_current_user() {
-    global $saw_auth;
-
-    if (!isset($saw_auth)) {
-        $saw_auth = new SAW_Auth();
-    }
-
+    $saw_auth = saw_get_auth_instance();
     return $saw_auth->get_current_user();
 }
 
 /**
  * Get current customer ID
- * 
- * @return int|null
+ *
+ * @since 1.0.0
+ * @return int|null Customer ID or null
  */
 function saw_get_current_customer_id() {
-    global $saw_auth;
-
-    if (!isset($saw_auth)) {
-        $saw_auth = new SAW_Auth();
-    }
-
+    $saw_auth = saw_get_auth_instance();
     return $saw_auth->get_current_customer_id();
 }
 
 /**
  * Check if user is logged in
- * 
- * @return bool
+ *
+ * @since 1.0.0
+ * @return bool True if authenticated
  */
 function saw_is_logged_in() {
-    global $saw_auth;
-
-    if (!isset($saw_auth)) {
-        $saw_auth = new SAW_Auth();
-    }
-
+    $saw_auth = saw_get_auth_instance();
     return $saw_auth->check_auth();
 }
 
 /**
  * Check if user is admin
- * 
- * @return bool
+ *
+ * @since 1.0.0
+ * @return bool True if admin
  */
 function saw_is_admin() {
-    global $saw_auth;
-
-    if (!isset($saw_auth)) {
-        $saw_auth = new SAW_Auth();
-    }
-
+    $saw_auth = saw_get_auth_instance();
     return $saw_auth->is_admin();
 }
 
 /**
  * Check if user is manager
- * 
- * @return bool
+ *
+ * @since 1.0.0
+ * @return bool True if manager
  */
 function saw_is_manager() {
-    global $saw_auth;
-
-    if (!isset($saw_auth)) {
-        $saw_auth = new SAW_Auth();
-    }
-
+    $saw_auth = saw_get_auth_instance();
     return $saw_auth->is_manager();
 }
 
 /**
  * Check if user is terminal
- * 
- * @return bool
+ *
+ * @since 1.0.0
+ * @return bool True if terminal
  */
 function saw_is_terminal() {
-    global $saw_auth;
-
-    if (!isset($saw_auth)) {
-        $saw_auth = new SAW_Auth();
-    }
-
+    $saw_auth = saw_get_auth_instance();
     return $saw_auth->is_terminal();
 }
 
 /**
  * Check if user is Super Admin
- * 
- * @return bool
+ *
+ * @since 1.0.0
+ * @return bool True if super admin
  */
 function saw_is_super_admin() {
     return current_user_can('manage_options');
@@ -516,31 +521,35 @@ function saw_is_super_admin() {
 
 /**
  * Rate limit check for AJAX
- * 
- * @param string $action Action name
- * @param int    $max    Maximum requests
- * @param int    $window Time window in seconds
+ *
+ * Implements simple rate limiting using transients.
+ * Logs rate limit violations for security monitoring.
+ *
+ * @since 1.0.0
+ * @param string $action Action name to rate limit
+ * @param int    $max    Maximum requests allowed (default: 10)
+ * @param int    $window Time window in seconds (default: 60)
  * @return void
  */
 function saw_ajax_rate_limit($action, $max = 10, $window = 60) {
-    $ip = $_SERVER['REMOTE_ADDR'];
+    $ip = saw_get_client_ip();
     $key = 'saw_rate_limit_' . md5($ip . $action);
     
     $count = (int) get_transient($key);
 
     if ($count >= $max) {
         if (class_exists('SAW_Audit')) {
-            SAW_Audit::log(array(
+            SAW_Audit::log([
                 'action'     => 'ajax_rate_limit_exceeded',
                 'details'    => sprintf('Rate limit překročen pro akci: %s', $action),
                 'ip_address' => $ip,
-            ));
+            ]);
         }
 
-        wp_send_json_error(array(
+        wp_send_json_error([
             'message' => __('Příliš mnoho requestů. Zkuste to za chvíli.', 'saw-visitors'),
             'code'    => 'rate_limit_exceeded',
-        ));
+        ]);
     }
 
     set_transient($key, $count + 1, $window);
@@ -548,9 +557,10 @@ function saw_ajax_rate_limit($action, $max = 10, $window = 60) {
 
 /**
  * Escape helper for templates
- * 
+ *
+ * @since 1.0.0
  * @param string $text Text to escape
- * @return string
+ * @return string Escaped text
  */
 function saw_esc($text) {
     return esc_html($text);
@@ -558,19 +568,21 @@ function saw_esc($text) {
 
 /**
  * URL helper for templates
- * 
+ *
+ * @since 1.0.0
  * @param string $url URL to escape
- * @return string
+ * @return string Escaped URL
  */
 function saw_esc_url($url) {
     return esc_url($url);
 }
 
 /**
- * Attr helper for templates
- * 
+ * Attribute helper for templates
+ *
+ * @since 1.0.0
  * @param string $attr Attribute to escape
- * @return string
+ * @return string Escaped attribute
  */
 function saw_esc_attr($attr) {
     return esc_attr($attr);

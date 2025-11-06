@@ -1,149 +1,147 @@
 <?php
 /**
- * Asset Manager
- * 
- * @package SAW_Visitors
- * @version 8.0.0
+ * Asset Manager - Centralized CSS/JS Asset Loading
+ *
+ * @package    SAW_Visitors
+ * @subpackage Core
+ * @since      1.0.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-class SAW_Asset_Manager 
-{
+/**
+ * Manages asset enqueueing for global and module-specific resources
+ *
+ * @since 1.0.0
+ */
+class SAW_Asset_Manager {
+    
+    /**
+     * Core CSS files to enqueue
+     *
+     * @since 1.0.0
+     * @var array
+     */
+    const CORE_STYLES = [
+        'saw-variables'  => 'core/variables.css',
+        'saw-reset'      => 'core/reset.css',
+        'saw-typography' => 'core/typography.css'
+    ];
+    
+    /**
+     * Component CSS files to enqueue
+     *
+     * @since 1.0.0
+     * @var array
+     */
+    const COMPONENT_STYLES = [
+        'saw-buttons'             => 'components/buttons.css',
+        'saw-forms'               => 'components/forms.css',
+        'saw-tables'              => 'components/tables.css',
+        'saw-badges'              => 'components/badges.css',
+        'saw-modals'              => 'components/modals.css',
+        'saw-alerts'              => 'components/alerts.css',
+        'saw-cards'               => 'components/cards.css',
+        'saw-search'              => 'components/search.css',
+        'saw-pagination'          => 'components/pagination.css',
+        'saw-table-column-types'  => 'components/table-column-types.css'
+    ];
+    
+    /**
+     * Layout CSS files to enqueue
+     *
+     * @since 1.0.0
+     * @var array
+     */
+    const LAYOUT_STYLES = [
+        'saw-grid'       => 'layout/grid.css',
+        'saw-containers' => 'layout/containers.css',
+        'saw-spacing'    => 'layout/spacing.css'
+    ];
+    
+    /**
+     * Optional app-level CSS files
+     *
+     * @since 1.0.0
+     * @var array
+     */
+    const APP_STYLES = [
+        'saw-app-header'     => 'saw-app-header.css',
+        'saw-app-sidebar'    => 'saw-app-sidebar.css',
+        'saw-app-footer'     => 'saw-app-footer.css',
+        'saw-app-responsive' => 'saw-app-responsive.css'
+    ];
+    
+    /**
+     * Enqueue global assets (CSS and JS)
+     *
+     * @since 1.0.0
+     */
     public static function enqueue_global() {
-        // CORE
-        wp_enqueue_style(
-            'saw-variables',
-            SAW_VISITORS_PLUGIN_URL . 'assets/css/core/variables.css',
-            [],
-            SAW_VISITORS_VERSION
-        );
-        
-        wp_enqueue_style(
-            'saw-reset',
-            SAW_VISITORS_PLUGIN_URL . 'assets/css/core/reset.css',
-            ['saw-variables'],
-            SAW_VISITORS_VERSION
-        );
-        
-        wp_enqueue_style(
-            'saw-typography',
-            SAW_VISITORS_PLUGIN_URL . 'assets/css/core/typography.css',
-            ['saw-variables'],
-            SAW_VISITORS_VERSION
-        );
-        
-        // COMPONENTS
-        wp_enqueue_style(
-            'saw-buttons',
-            SAW_VISITORS_PLUGIN_URL . 'assets/css/components/buttons.css',
-            ['saw-variables'],
-            SAW_VISITORS_VERSION
-        );
-        
-        wp_enqueue_style(
-            'saw-forms',
-            SAW_VISITORS_PLUGIN_URL . 'assets/css/components/forms.css',
-            ['saw-variables'],
-            SAW_VISITORS_VERSION
-        );
-        
-        wp_enqueue_style(
-            'saw-tables',
-            SAW_VISITORS_PLUGIN_URL . 'assets/css/components/tables.css',
-            ['saw-variables'],
-            SAW_VISITORS_VERSION
-        );
-        
-        wp_enqueue_style(
-            'saw-badges',
-            SAW_VISITORS_PLUGIN_URL . 'assets/css/components/badges.css',
-            ['saw-variables'],
-            SAW_VISITORS_VERSION
-        );
-        
-        wp_enqueue_style(
-    'saw-modals',
-    SAW_VISITORS_PLUGIN_URL . 'assets/css/components/modals.css',
-    ['saw-variables'],
-    time() // ← DOČASNĚ time() místo SAW_VISITORS_VERSION
-);
-        
-        wp_enqueue_style(
-            'saw-alerts',
-            SAW_VISITORS_PLUGIN_URL . 'assets/css/components/alerts.css',
-            ['saw-variables'],
-            SAW_VISITORS_VERSION
-        );
-        
-        wp_enqueue_style(
-            'saw-cards',
-            SAW_VISITORS_PLUGIN_URL . 'assets/css/components/cards.css',
-            ['saw-variables'],
-            SAW_VISITORS_VERSION
-        );
-        
-        wp_enqueue_style(
-            'saw-search',
-            SAW_VISITORS_PLUGIN_URL . 'assets/css/components/search.css',
-            ['saw-variables'],
-            SAW_VISITORS_VERSION
-        );
-        
-        wp_enqueue_style(
-            'saw-pagination',
-            SAW_VISITORS_PLUGIN_URL . 'assets/css/components/pagination.css',
-            ['saw-variables'],
-            SAW_VISITORS_VERSION
-        );
-        
-        // LAYOUT
-        wp_enqueue_style(
-            'saw-grid',
-            SAW_VISITORS_PLUGIN_URL . 'assets/css/layout/grid.css',
-            ['saw-variables'],
-            SAW_VISITORS_VERSION
-        );
-        
-        wp_enqueue_style(
-            'saw-containers',
-            SAW_VISITORS_PLUGIN_URL . 'assets/css/layout/containers.css',
-            ['saw-variables'],
-            SAW_VISITORS_VERSION
-        );
-        
-        wp_enqueue_style(
-            'saw-spacing',
-            SAW_VISITORS_PLUGIN_URL . 'assets/css/layout/spacing.css',
-            ['saw-variables'],
-            SAW_VISITORS_VERSION
-        );
-
-wp_enqueue_style(
-    'saw-table-column-types',
-    SAW_VISITORS_PLUGIN_URL . 'assets/css/components/table-column-types.css',
-    ['saw-variables'],
-    SAW_VISITORS_VERSION
-);
-        
-        // APP (header, sidebar, footer - pokud existují)
-        $app_files = ['saw-app-header.css', 'saw-app-sidebar.css', 'saw-app-footer.css', 'saw-app-responsive.css'];
-        foreach ($app_files as $file) {
+        self::enqueue_core_styles();
+        self::enqueue_component_styles();
+        self::enqueue_layout_styles();
+        self::enqueue_app_styles();
+        self::enqueue_global_scripts();
+    }
+    
+    /**
+     * Enqueue core CSS files
+     *
+     * @since 1.0.0
+     */
+    private static function enqueue_core_styles() {
+        foreach (self::CORE_STYLES as $handle => $path) {
+            $deps = ($handle === 'saw-variables') ? [] : ['saw-variables'];
+            self::enqueue_style($handle, 'css/' . $path, $deps);
+        }
+    }
+    
+    /**
+     * Enqueue component CSS files
+     *
+     * @since 1.0.0
+     */
+    private static function enqueue_component_styles() {
+        foreach (self::COMPONENT_STYLES as $handle => $path) {
+            self::enqueue_style($handle, 'css/' . $path, ['saw-variables']);
+        }
+    }
+    
+    /**
+     * Enqueue layout CSS files
+     *
+     * @since 1.0.0
+     */
+    private static function enqueue_layout_styles() {
+        foreach (self::LAYOUT_STYLES as $handle => $path) {
+            self::enqueue_style($handle, 'css/' . $path, ['saw-variables']);
+        }
+    }
+    
+    /**
+     * Enqueue optional app-level CSS files
+     *
+     * @since 1.0.0
+     */
+    private static function enqueue_app_styles() {
+        foreach (self::APP_STYLES as $handle => $file) {
             $file_path = SAW_VISITORS_PLUGIN_DIR . 'assets/css/' . $file;
+            
             if (file_exists($file_path)) {
-                $handle = str_replace('.css', '', $file);
-                wp_enqueue_style(
-                    $handle,
-                    SAW_VISITORS_PLUGIN_URL . 'assets/css/' . $file,
-                    ['saw-variables'],
-                    SAW_VISITORS_VERSION
-                );
+                self::enqueue_style($handle, 'css/' . $file, ['saw-variables']);
             }
         }
-        
-        // JAVASCRIPT
+    }
+    
+    /**
+     * Enqueue global JavaScript
+     *
+     * @since 1.0.0
+     */
+    private static function enqueue_global_scripts() {
         wp_enqueue_script('jquery');
         
         wp_enqueue_script(
@@ -155,16 +153,22 @@ wp_enqueue_style(
         );
         
         wp_localize_script('saw-app', 'sawGlobal', [
-            'ajaxurl' => admin_url('admin-ajax.php'),
-            'homeUrl' => home_url(),
-            'pluginUrl' => SAW_VISITORS_PLUGIN_URL,
-            'debug' => defined('SAW_DEBUG') && SAW_DEBUG,
-            'nonce' => wp_create_nonce('saw_ajax_nonce'),
-            'customerModalNonce' => wp_create_nonce('saw_customer_modal_nonce'),
-            'deleteNonce' => wp_create_nonce('saw_admin_table_nonce'),
+            'ajaxurl'             => admin_url('admin-ajax.php'),
+            'homeUrl'             => home_url(),
+            'pluginUrl'           => SAW_VISITORS_PLUGIN_URL,
+            'debug'               => defined('SAW_DEBUG') && SAW_DEBUG,
+            'nonce'               => wp_create_nonce('saw_ajax_nonce'),
+            'customerModalNonce'  => wp_create_nonce('saw_customer_modal_nonce'),
+            'deleteNonce'         => wp_create_nonce('saw_admin_table_nonce')
         ]);
     }
     
+    /**
+     * Enqueue module-specific assets
+     *
+     * @since 1.0.0
+     * @param string $slug Module slug
+     */
     public static function enqueue_module($slug) {
         $modules = SAW_Module_Loader::get_all();
         
@@ -180,30 +184,43 @@ wp_enqueue_style(
             $module_path
         );
         
-        // POUZE JavaScript (CSS už není potřeba)
         $js_file = $module_path . 'scripts.js';
-        if (file_exists($js_file)) {
-            wp_enqueue_script(
-                'saw-module-' . $slug,
-                $module_url . 'scripts.js',
-                ['jquery', 'saw-app'],
-                SAW_VISITORS_VERSION,
-                true
-            );
-            
-            wp_localize_script('saw-module-' . $slug, 'sawModule', [
-                'ajaxurl' => admin_url('admin-ajax.php'),
-                'nonce' => wp_create_nonce('saw_' . $slug . '_ajax'),
-                'entity' => $slug,
-                'singular' => $config['singular'] ?? ucfirst($slug),
-                'plural' => $config['plural'] ?? ucfirst($slug) . 's',
-                'config' => $config,
-            ]);
+        
+        if (!file_exists($js_file)) {
+            return;
         }
+        
+        wp_enqueue_script(
+            'saw-module-' . $slug,
+            $module_url . 'scripts.js',
+            ['jquery', 'saw-app'],
+            SAW_VISITORS_VERSION,
+            true
+        );
+        
+        wp_localize_script('saw-module-' . $slug, 'sawModule', [
+            'ajaxurl'  => admin_url('admin-ajax.php'),
+            'nonce'    => wp_create_nonce('saw_' . $slug . '_ajax'),
+            'entity'   => esc_js($slug),
+            'singular' => esc_js($config['singular'] ?? ucfirst($slug)),
+            'plural'   => esc_js($config['plural'] ?? ucfirst($slug) . 's')
+        ]);
     }
     
-    public static function is_saw_page() {
-        $route = get_query_var('saw_route');
-        return !empty($route);
+    /**
+     * Helper method to enqueue a style
+     *
+     * @since 1.0.0
+     * @param string $handle Style handle
+     * @param string $path   Relative path from assets directory
+     * @param array  $deps   Dependencies
+     */
+    private static function enqueue_style($handle, $path, $deps = []) {
+        wp_enqueue_style(
+            $handle,
+            SAW_VISITORS_PLUGIN_URL . 'assets/' . $path,
+            $deps,
+            SAW_VISITORS_VERSION
+        );
     }
 }

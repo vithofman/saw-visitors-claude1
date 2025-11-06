@@ -1,32 +1,39 @@
 <?php
 /**
- * SAW Audit Logger
- * 
- * Logování všech důležitých akcí do audit_log tabulky
- * 
- * @package SAW_Visitors
- * @version 4.6.1
- * @since 4.6.1
+ * SAW Audit Logger - Action Logging and Tracking System
+ *
+ * Logs all important actions to audit_log table with filtering,
+ * statistics, search, and CSV export capabilities.
+ *
+ * @package    SAW_Visitors
+ * @subpackage Core
+ * @since      1.0.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Audit logging class
+ *
+ * @since 1.0.0
+ */
 class SAW_Audit {
 
     /**
-     * Zalogování akce
+     * Log an action
      *
+     * @since 1.0.0
      * @param array $data {
-     *     @type string $action       Název akce (povinné)
-     *     @type int    $user_id      SAW user ID (volitelné)
-     *     @type int    $customer_id  Customer ID (volitelné)
-     *     @type string $ip_address   IP adresa (volitelné, auto-detect)
-     *     @type string $user_agent   User agent (volitelné, auto-detect)
-     *     @type string $details      Detaily akce (volitelné, JSON nebo text)
+     *     @type string $action       Action name (required)
+     *     @type int    $user_id      SAW user ID (optional)
+     *     @type int    $customer_id  Customer ID (optional)
+     *     @type string $ip_address   IP address (optional, auto-detect)
+     *     @type string $user_agent   User agent (optional, auto-detect)
+     *     @type string $details      Action details (optional, JSON or text)
      * }
-     * @return int|false ID záznamu nebo false při chybě
+     * @return int|false Log entry ID or false on failure
      */
     public static function log($data) {
         global $wpdb;
@@ -40,24 +47,27 @@ class SAW_Audit {
         }
 
         if (empty($data['user_agent'])) {
-            $data['user_agent'] = substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 255);
+            $user_agent = isset($_SERVER['HTTP_USER_AGENT']) 
+                ? sanitize_text_field(wp_unslash($_SERVER['HTTP_USER_AGENT'])) 
+                : '';
+            $data['user_agent'] = substr($user_agent, 0, 255);
         }
 
         if (isset($data['details']) && is_array($data['details'])) {
             $data['details'] = wp_json_encode($data['details']);
         }
 
-        $insert_data = array(
+        $insert_data = [
             'action'      => sanitize_text_field($data['action']),
-            'user_id'     => isset($data['user_id']) ? (int) $data['user_id'] : null,
-            'customer_id' => isset($data['customer_id']) ? (int) $data['customer_id'] : null,
+            'user_id'     => isset($data['user_id']) ? absint($data['user_id']) : null,
+            'customer_id' => isset($data['customer_id']) ? absint($data['customer_id']) : null,
             'ip_address'  => sanitize_text_field($data['ip_address']),
             'user_agent'  => sanitize_text_field($data['user_agent']),
             'details'     => $data['details'] ?? null,
-            'created_at'  => current_time('mysql'),
-        );
+            'created_at'  => current_time('mysql')
+        ];
 
-        $format = array('%s', '%d', '%d', '%s', '%s', '%s', '%s');
+        $format = ['%s', '%d', '%d', '%s', '%s', '%s', '%s'];
 
         $result = $wpdb->insert(
             $wpdb->prefix . 'saw_audit_log',
@@ -65,37 +75,29 @@ class SAW_Audit {
             $format
         );
 
-        if (!$result) {
-            error_log(sprintf(
-                '[SAW Audit] Failed to log action: %s - %s',
-                $data['action'],
-                $data['details'] ?? ''
-            ));
-            return false;
-        }
-
-        return $wpdb->insert_id;
+        return $result ? $wpdb->insert_id : false;
     }
 
     /**
-     * Získání audit logů s filtrováním
+     * Get audit logs with filtering
      *
+     * @since 1.0.0
      * @param array $args {
-     *     @type int    $user_id      Filtrovat podle user ID
-     *     @type int    $customer_id  Filtrovat podle customer ID
-     *     @type string $action       Filtrovat podle akce
-     *     @type string $date_from    Datum od (Y-m-d)
-     *     @type string $date_to      Datum do (Y-m-d)
-     *     @type int    $limit        Limit záznamů (default: 100)
+     *     @type int    $user_id      Filter by user ID
+     *     @type int    $customer_id  Filter by customer ID
+     *     @type string $action       Filter by action
+     *     @type string $date_from    Date from (Y-m-d)
+     *     @type string $date_to      Date to (Y-m-d)
+     *     @type int    $limit        Results limit (default: 100)
      *     @type int    $offset       Offset (default: 0)
      *     @type string $order        Order (default: DESC)
      * }
      * @return array
      */
-    public static function get_logs($args = array()) {
+    public static function get_logs($args = []) {
         global $wpdb;
 
-        $defaults = array(
+        $defaults = [
             'user_id'     => null,
             'customer_id' => null,
             'action'      => null,
@@ -103,155 +105,164 @@ class SAW_Audit {
             'date_to'     => null,
             'limit'       => 100,
             'offset'      => 0,
-            'order'       => 'DESC',
-        );
+            'order'       => 'DESC'
+        ];
 
         $args = wp_parse_args($args, $defaults);
 
-        $where = array('1=1');
-        $where_values = array();
+        $where = ['1=1'];
+        $where_values = [];
 
         if ($args['user_id']) {
             $where[] = 'user_id = %d';
-            $where_values[] = $args['user_id'];
+            $where_values[] = absint($args['user_id']);
         }
 
         if ($args['customer_id']) {
             $where[] = 'customer_id = %d';
-            $where_values[] = $args['customer_id'];
+            $where_values[] = absint($args['customer_id']);
         }
 
         if ($args['action']) {
             $where[] = 'action = %s';
-            $where_values[] = $args['action'];
+            $where_values[] = sanitize_text_field($args['action']);
         }
 
         if ($args['date_from']) {
             $where[] = 'DATE(created_at) >= %s';
-            $where_values[] = $args['date_from'];
+            $where_values[] = sanitize_text_field($args['date_from']);
         }
 
         if ($args['date_to']) {
             $where[] = 'DATE(created_at) <= %s';
-            $where_values[] = $args['date_to'];
+            $where_values[] = sanitize_text_field($args['date_to']);
         }
 
         $where_sql = implode(' AND ', $where);
         $order = strtoupper($args['order']) === 'ASC' ? 'ASC' : 'DESC';
 
-        $sql = "SELECT * FROM {$wpdb->prefix}saw_audit_log 
-                WHERE {$where_sql} 
-                ORDER BY created_at {$order} 
-                LIMIT %d OFFSET %d";
-
-        $where_values[] = $args['limit'];
-        $where_values[] = $args['offset'];
+        $sql = $wpdb->prepare(
+            "SELECT * FROM %i WHERE {$where_sql} ORDER BY created_at {$order} LIMIT %d OFFSET %d",
+            $wpdb->prefix . 'saw_audit_log',
+            absint($args['limit']),
+            absint($args['offset'])
+        );
 
         if (!empty($where_values)) {
-            $sql = $wpdb->prepare($sql, $where_values);
+            array_unshift($where_values, $wpdb->prefix . 'saw_audit_log');
+            $where_values[] = absint($args['limit']);
+            $where_values[] = absint($args['offset']);
+            
+            $sql = $wpdb->prepare(
+                "SELECT * FROM %i WHERE {$where_sql} ORDER BY created_at {$order} LIMIT %d OFFSET %d",
+                ...$where_values
+            );
         }
 
         return $wpdb->get_results($sql, ARRAY_A);
     }
 
     /**
-     * Počet logů (pro pagination)
+     * Count logs (for pagination)
      *
-     * @param array $args Stejné jako get_logs()
+     * @since 1.0.0
+     * @param array $args Same as get_logs()
      * @return int
      */
-    public static function count_logs($args = array()) {
+    public static function count_logs($args = []) {
         global $wpdb;
 
-        $where = array('1=1');
-        $where_values = array();
+        $where = ['1=1'];
+        $where_values = [$wpdb->prefix . 'saw_audit_log'];
 
         if (!empty($args['user_id'])) {
             $where[] = 'user_id = %d';
-            $where_values[] = $args['user_id'];
+            $where_values[] = absint($args['user_id']);
         }
 
         if (!empty($args['customer_id'])) {
             $where[] = 'customer_id = %d';
-            $where_values[] = $args['customer_id'];
+            $where_values[] = absint($args['customer_id']);
         }
 
         if (!empty($args['action'])) {
             $where[] = 'action = %s';
-            $where_values[] = $args['action'];
+            $where_values[] = sanitize_text_field($args['action']);
         }
 
         if (!empty($args['date_from'])) {
             $where[] = 'DATE(created_at) >= %s';
-            $where_values[] = $args['date_from'];
+            $where_values[] = sanitize_text_field($args['date_from']);
         }
 
         if (!empty($args['date_to'])) {
             $where[] = 'DATE(created_at) <= %s';
-            $where_values[] = $args['date_to'];
+            $where_values[] = sanitize_text_field($args['date_to']);
         }
 
         $where_sql = implode(' AND ', $where);
-        $sql = "SELECT COUNT(*) FROM {$wpdb->prefix}saw_audit_log WHERE {$where_sql}";
 
-        if (!empty($where_values)) {
-            $sql = $wpdb->prepare($sql, $where_values);
-        }
-
-        return (int) $wpdb->get_var($sql);
+        return (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM %i WHERE {$where_sql}",
+            ...$where_values
+        ));
     }
 
     /**
-     * Získání audit logů pro uživatele
+     * Get audit logs for user
      *
+     * @since 1.0.0
      * @param int $user_id SAW user ID
-     * @param int $limit   Limit záznamů
+     * @param int $limit   Results limit
      * @param int $offset  Offset
      * @return array
      */
     public static function get_user_logs($user_id, $limit = 50, $offset = 0) {
-        return self::get_logs(array(
+        return self::get_logs([
             'user_id' => $user_id,
             'limit'   => $limit,
-            'offset'  => $offset,
-        ));
+            'offset'  => $offset
+        ]);
     }
 
     /**
-     * Získání audit logů pro zákazníka
+     * Get audit logs for customer
      *
+     * @since 1.0.0
      * @param int $customer_id Customer ID
-     * @param int $limit       Limit záznamů
+     * @param int $limit       Results limit
      * @param int $offset      Offset
      * @return array
      */
     public static function get_customer_logs($customer_id, $limit = 100, $offset = 0) {
-        return self::get_logs(array(
+        return self::get_logs([
             'customer_id' => $customer_id,
             'limit'       => $limit,
-            'offset'      => $offset,
-        ));
+            'offset'      => $offset
+        ]);
     }
 
     /**
-     * Získání logů podle akce
+     * Get logs by action
      *
-     * @param string $action Název akce
-     * @param int    $limit  Limit záznamů
+     * @since 1.0.0
+     * @param string $action Action name
+     * @param int    $limit  Results limit
      * @return array
      */
     public static function get_logs_by_action($action, $limit = 100) {
-        return self::get_logs(array(
+        return self::get_logs([
             'action' => $action,
-            'limit'  => $limit,
-        ));
+            'limit'  => $limit
+        ]);
     }
 
     /**
-     * Cleanup starých audit logů (voláno cronem)
+     * Cleanup old audit logs (called by cron)
      *
-     * @param int $days Počet dní k uchování (default: 90)
-     * @return int Počet smazaných záznamů
+     * @since 1.0.0
+     * @param int $days Days to keep (default: 90)
+     * @return int Number of deleted records
      */
     public static function cleanup_old_logs($days = 90) {
         global $wpdb;
@@ -259,28 +270,35 @@ class SAW_Audit {
         $date_threshold = date('Y-m-d H:i:s', strtotime("-{$days} days"));
 
         $deleted = $wpdb->query($wpdb->prepare(
-            "DELETE FROM {$wpdb->prefix}saw_audit_log WHERE created_at < %s",
+            "DELETE FROM %i WHERE created_at < %s",
+            $wpdb->prefix . 'saw_audit_log',
             $date_threshold
         ));
 
         if ($deleted > 0) {
-            self::log(array(
+            self::log([
                 'action'  => 'audit_log_cleanup',
-                'details' => sprintf('Smazáno %d starých audit logů (starší než %d dní)', $deleted, $days),
-            ));
+                'details' => sprintf(
+                    /* translators: 1: number of deleted logs, 2: number of days */
+                    __('Deleted %1$d old audit logs (older than %2$d days)', 'saw-visitors'),
+                    $deleted,
+                    $days
+                )
+            ]);
         }
 
         return $deleted;
     }
 
     /**
-     * Export audit logů do CSV
+     * Export audit logs to CSV
      *
-     * @param array $args Filtry (stejné jako get_logs)
-     * @return string CSV obsah
+     * @since 1.0.0
+     * @param array $args Filters (same as get_logs)
+     * @return string CSV content
      */
-    public static function export_to_csv($args = array()) {
-        $logs = self::get_logs(array_merge($args, array('limit' => 10000)));
+    public static function export_to_csv($args = []) {
+        $logs = self::get_logs(array_merge($args, ['limit' => 10000]));
 
         $csv = "ID,Action,User ID,Customer ID,IP Address,User Agent,Details,Created At\n";
 
@@ -302,55 +320,95 @@ class SAW_Audit {
     }
 
     /**
-     * Statistiky audit logů
+     * Get audit log statistics
      *
-     * @param int|null $customer_id Volitelně filtrovat podle zákazníka
+     * @since 1.0.0
+     * @param int|null $customer_id Optional customer filter
      * @return array
      */
     public static function get_stats($customer_id = null) {
         global $wpdb;
 
-        $where = $customer_id ? $wpdb->prepare('WHERE customer_id = %d', $customer_id) : '';
+        $table = $wpdb->prefix . 'saw_audit_log';
+        $where = $customer_id ? $wpdb->prepare('WHERE customer_id = %d', absint($customer_id)) : '';
 
-        $stats = array(
-            'total_logs' => $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}saw_audit_log {$where}"),
+        return [
+            'total_logs' => $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM %i {$where}",
+                $table
+            )),
             
-            'logs_by_action' => $wpdb->get_results(
-                "SELECT action, COUNT(*) as count 
-                 FROM {$wpdb->prefix}saw_audit_log 
-                 {$where}
-                 GROUP BY action 
-                 ORDER BY count DESC 
-                 LIMIT 20",
-                ARRAY_A
-            ),
+            'logs_by_action' => $wpdb->get_results($wpdb->prepare(
+                "SELECT action, COUNT(*) as count FROM %i {$where} GROUP BY action ORDER BY count DESC LIMIT 20",
+                $table
+            ), ARRAY_A),
             
-            'logs_last_24h' => $wpdb->get_var(
-                "SELECT COUNT(*) FROM {$wpdb->prefix}saw_audit_log 
-                 {$where}" . ($where ? ' AND' : ' WHERE') . " created_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)"
-            ),
+            'logs_last_24h' => $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM %i {$where}" . ($where ? ' AND' : ' WHERE') . " created_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)",
+                $table
+            )),
             
-            'logs_last_7d' => $wpdb->get_var(
-                "SELECT COUNT(*) FROM {$wpdb->prefix}saw_audit_log 
-                 {$where}" . ($where ? ' AND' : ' WHERE') . " created_at > DATE_SUB(NOW(), INTERVAL 7 DAY)"
-            ),
+            'logs_last_7d' => $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM %i {$where}" . ($where ? ' AND' : ' WHERE') . " created_at > DATE_SUB(NOW(), INTERVAL 7 DAY)",
+                $table
+            )),
             
-            'logs_last_30d' => $wpdb->get_var(
-                "SELECT COUNT(*) FROM {$wpdb->prefix}saw_audit_log 
-                 {$where}" . ($where ? ' AND' : ' WHERE') . " created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)"
-            ),
-        );
-
-        return $stats;
+            'logs_last_30d' => $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM %i {$where}" . ($where ? ' AND' : ' WHERE') . " created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)",
+                $table
+            ))
+        ];
     }
 
     /**
-     * Získání IP adresy klienta
+     * Get all unique actions (for dropdown filters)
      *
+     * @since 1.0.0
+     * @param int|null $customer_id Optional customer filter
+     * @return array
+     */
+    public static function get_all_actions($customer_id = null) {
+        global $wpdb;
+
+        $where = $customer_id ? $wpdb->prepare('WHERE customer_id = %d', absint($customer_id)) : '';
+
+        return $wpdb->get_col($wpdb->prepare(
+            "SELECT DISTINCT action FROM %i {$where} ORDER BY action ASC",
+            $wpdb->prefix . 'saw_audit_log'
+        ));
+    }
+
+    /**
+     * Search in audit log
+     *
+     * @since 1.0.0
+     * @param string $search_term Search term
+     * @param int    $limit       Results limit
+     * @return array
+     */
+    public static function search($search_term, $limit = 100) {
+        global $wpdb;
+
+        $search_term = '%' . $wpdb->esc_like(sanitize_text_field($search_term)) . '%';
+
+        return $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM %i WHERE action LIKE %s OR details LIKE %s OR ip_address LIKE %s ORDER BY created_at DESC LIMIT %d",
+            $wpdb->prefix . 'saw_audit_log',
+            $search_term,
+            $search_term,
+            $search_term,
+            absint($limit)
+        ), ARRAY_A);
+    }
+
+    /**
+     * Get client IP address
+     *
+     * @since 1.0.0
      * @return string
      */
     private static function get_client_ip() {
-        $ip_keys = array(
+        $ip_keys = [
             'HTTP_CLIENT_IP',
             'HTTP_X_FORWARDED_FOR',
             'HTTP_X_FORWARDED',
@@ -358,10 +416,10 @@ class SAW_Audit {
             'HTTP_FORWARDED_FOR',
             'HTTP_FORWARDED',
             'REMOTE_ADDR'
-        );
+        ];
 
         foreach ($ip_keys as $key) {
-            if (array_key_exists($key, $_SERVER) === true) {
+            if (array_key_exists($key, $_SERVER)) {
                 foreach (explode(',', $_SERVER[$key]) as $ip) {
                     $ip = trim($ip);
 
@@ -376,9 +434,10 @@ class SAW_Audit {
     }
 
     /**
-     * Escape hodnoty pro CSV
+     * Escape value for CSV
      *
-     * @param string $value Hodnota
+     * @since 1.0.0
+     * @param string $value Value to escape
      * @return string
      */
     private static function escape_csv($value) {
@@ -389,49 +448,5 @@ class SAW_Audit {
         }
         
         return $value;
-    }
-
-    /**
-     * Seznam všech akcí (pro dropdown filtry)
-     *
-     * @param int|null $customer_id Volitelně filtrovat podle zákazníka
-     * @return array
-     */
-    public static function get_all_actions($customer_id = null) {
-        global $wpdb;
-
-        $where = $customer_id ? $wpdb->prepare('WHERE customer_id = %d', $customer_id) : '';
-
-        return $wpdb->get_col(
-            "SELECT DISTINCT action FROM {$wpdb->prefix}saw_audit_log 
-             {$where}
-             ORDER BY action ASC"
-        );
-    }
-
-    /**
-     * Vyhledávání v audit logu
-     *
-     * @param string $search_term Vyhledávací term
-     * @param int    $limit       Limit výsledků
-     * @return array
-     */
-    public static function search($search_term, $limit = 100) {
-        global $wpdb;
-
-        $search_term = '%' . $wpdb->esc_like($search_term) . '%';
-
-        return $wpdb->get_results($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_audit_log 
-             WHERE action LIKE %s 
-                OR details LIKE %s 
-                OR ip_address LIKE %s 
-             ORDER BY created_at DESC 
-             LIMIT %d",
-            $search_term,
-            $search_term,
-            $search_term,
-            $limit
-        ), ARRAY_A);
     }
 }

@@ -1,21 +1,38 @@
 <?php
 /**
- * SAW Router - AJAX PROTECTION v6.0.0
- * 
- * CRITICAL FIX:
- * - ✅ WordPress AJAX requests are NEVER dispatched
- * - ✅ Prevents router from killing wp_ajax_* handlers
- * 
- * @package SAW_Visitors
- * @version 6.0.0 - AJAX PROTECTION
+ * SAW Router
+ *
+ * Handles custom routing for SAW Visitors plugin with AJAX protection.
+ * Manages authentication routes, admin routes, and module dispatching.
+ *
+ * @package     SAW_Visitors
+ * @subpackage  Core
+ * @version     6.0.1
+ * @since       1.0.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * SAW Router Class
+ *
+ * Custom routing system with WordPress rewrite rules integration.
+ * Protects AJAX requests from being intercepted.
+ *
+ * @since 1.0.0
+ */
 class SAW_Router {
     
+    /**
+     * Register rewrite rules
+     *
+     * Adds custom URL patterns for SAW routes.
+     *
+     * @since 1.0.0
+     * @return void
+     */
     public function register_routes() {
         add_rewrite_rule('^login/?$', 'index.php?saw_route=auth&saw_action=login', 'top');
         add_rewrite_rule('^set-password/?$', 'index.php?saw_route=auth&saw_action=set-password', 'top');
@@ -39,6 +56,15 @@ class SAW_Router {
         add_rewrite_rule('^visitor/([^/]+)/(.+)', 'index.php?saw_route=visitor&saw_path=$matches[1]/$matches[2]', 'top');
     }
     
+    /**
+     * Register query variables
+     *
+     * Makes SAW query vars available to WordPress.
+     *
+     * @since 1.0.0
+     * @param array $vars Existing query vars
+     * @return array Modified query vars
+     */
     public function register_query_vars($vars) {
         $vars[] = 'saw_route';
         $vars[] = 'saw_path';
@@ -48,20 +74,17 @@ class SAW_Router {
     
     /**
      * Dispatch SAW routes
-     * 
-     * ✅ CRITICAL FIX: Never dispatch WordPress AJAX requests!
-     * 
+     *
+     * CRITICAL: Never dispatches WordPress AJAX requests.
+     *
+     * @since 1.0.0
      * @param string $route Route name
-     * @param string $path Route path
+     * @param string $path  Route path
      * @return void
      */
     public function dispatch($route = '', $path = '') {
-        // ✅ CRITICAL FIX: NEVER intercept WordPress AJAX!
+        // CRITICAL: Never intercept WordPress AJAX
         if (wp_doing_ajax()) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[SAW_Router] WordPress AJAX detected - skipping dispatch');
-            }
-            // Let WordPress handle its AJAX
             return;
         }
         
@@ -75,10 +98,6 @@ class SAW_Router {
         
         if (empty($route)) {
             return;
-        }
-        
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log(sprintf('[SAW_Router] Dispatching route: %s, path: %s', $route, $path));
         }
         
         $this->load_frontend_components();
@@ -112,6 +131,14 @@ class SAW_Router {
         exit;
     }
     
+    /**
+     * Handle authentication routes
+     *
+     * Processes login, logout, password set/reset actions.
+     *
+     * @since 1.0.0
+     * @return void
+     */
     private function handle_auth_route() {
         $action = get_query_var('saw_action');
         
@@ -139,6 +166,13 @@ class SAW_Router {
         }
     }
     
+    /**
+     * Render authentication page
+     *
+     * @since 1.0.0
+     * @param string $page Page template name
+     * @return void
+     */
     private function render_auth_page($page) {
         $template = SAW_VISITORS_PLUGIN_DIR . 'templates/auth/' . $page . '.php';
         
@@ -150,6 +184,12 @@ class SAW_Router {
         }
     }
     
+    /**
+     * Get active module from current path
+     *
+     * @since 1.0.0
+     * @return string|null Module slug or null
+     */
     public function get_active_module() {
         $path = get_query_var('saw_path');
         
@@ -176,87 +216,78 @@ class SAW_Router {
         return null;
     }
     
+    /**
+     * Dispatch module controller
+     *
+     * Loads and executes appropriate controller method based on URL segments.
+     *
+     * @since 1.0.0
+     * @param string $slug     Module slug
+     * @param array  $segments URL path segments
+     * @return void
+     */
     private function dispatch_module($slug, $segments) {
-        error_log('=== DISPATCH_MODULE START ===');
-        error_log('Slug: ' . $slug);
-        error_log('Segments: ' . print_r($segments, true));
-        
         $config = SAW_Module_Loader::load($slug);
         
         if (!$config) {
-            error_log('ERROR: Config not found for slug: ' . $slug);
             $this->handle_404();
             return;
         }
         
-        error_log('Config loaded successfully');
-        
+        // Build controller class name from slug
         $parts = explode('-', $slug);
         $parts = array_map('ucfirst', $parts);
         $class_name = implode('_', $parts);
         $controller_class = 'SAW_Module_' . $class_name . '_Controller';
         
-        error_log('Looking for controller class: ' . $controller_class);
-        
         if (!class_exists($controller_class)) {
-            error_log('ERROR: Controller class does not exist: ' . $controller_class);
-            error_log('Available SAW_Module classes: ' . print_r(array_filter(get_declared_classes(), function($c) {
-                return strpos($c, 'SAW_Module_') === 0;
-            }), true));
-            
             wp_die('Controller class not found: ' . $controller_class . '<br>Slug: ' . $slug . '<br>Check if controller.php exists and class name matches.');
             return;
         }
         
-        error_log('Controller class found: ' . $controller_class);
-        
         try {
             $controller = new $controller_class();
-            error_log('Controller instance created successfully');
         } catch (Exception $e) {
-            error_log('ERROR creating controller instance: ' . $e->getMessage());
             wp_die('Error creating controller: ' . $e->getMessage());
             return;
         }
         
+        // Route to appropriate controller method
         if (empty($segments[0])) {
-            error_log('Calling index() method');
-            
             if (!method_exists($controller, 'index')) {
-                error_log('ERROR: index() method does not exist on controller');
                 wp_die('Controller does not have index() method: ' . $controller_class);
                 return;
             }
             
             $controller->index();
         } elseif ($segments[0] === 'create' || $segments[0] === 'new') {
-            error_log('Calling create() method');
-            
             if (!method_exists($controller, 'create')) {
-                error_log('ERROR: create() method does not exist on controller');
                 wp_die('Controller does not have create() method: ' . $controller_class);
                 return;
             }
             
             $controller->create();
         } elseif (($segments[0] === 'edit' || $segments[0] === 'upravit') && !empty($segments[1])) {
-            error_log('Calling edit(' . $segments[1] . ') method');
-            
             if (!method_exists($controller, 'edit')) {
-                error_log('ERROR: edit() method does not exist on controller');
                 wp_die('Controller does not have edit() method: ' . $controller_class);
                 return;
             }
             
             $controller->edit(intval($segments[1]));
         } else {
-            error_log('ERROR: Unknown segment: ' . $segments[0]);
             $this->handle_404();
         }
-        
-        error_log('=== DISPATCH_MODULE END ===');
     }
     
+    /**
+     * Handle admin routes
+     *
+     * Processes admin interface routing with authentication check.
+     *
+     * @since 1.0.0
+     * @param string $path URL path
+     * @return void
+     */
     private function handle_admin_route($path) {
         if (!$this->is_logged_in()) {
             $this->redirect_to_login('admin');
@@ -297,6 +328,13 @@ class SAW_Router {
         $this->render_page('Admin Interface', $path, 'admin', $active_section);
     }
     
+    /**
+     * Handle manager routes
+     *
+     * @since 1.0.0
+     * @param string $path URL path
+     * @return void
+     */
     private function handle_manager_route($path) {
         if (!$this->is_logged_in()) {
             $this->redirect_to_login('manager');
@@ -306,6 +344,13 @@ class SAW_Router {
         $this->render_page('Manager Interface', $path, 'manager', '');
     }
     
+    /**
+     * Handle terminal routes
+     *
+     * @since 1.0.0
+     * @param string $path URL path
+     * @return void
+     */
     private function handle_terminal_route($path) {
         if (!$this->is_logged_in()) {
             $this->redirect_to_login('terminal');
@@ -315,10 +360,27 @@ class SAW_Router {
         $this->render_page('Terminal Interface', $path, 'terminal', '');
     }
     
+    /**
+     * Handle visitor routes
+     *
+     * @since 1.0.0
+     * @param string $path URL path
+     * @return void
+     */
     private function handle_visitor_route($path) {
         $this->render_page('Visitor Portal', $path, 'visitor', '');
     }
     
+    /**
+     * Render page with layout
+     *
+     * @since 1.0.0
+     * @param string $title       Page title
+     * @param string $path        Current path
+     * @param string $route       Route name
+     * @param string $active_menu Active menu item
+     * @return void
+     */
     private function render_page($title, $path, $route, $active_menu = '') {
         $user = $this->get_current_user_data();
         $customer = $this->get_current_customer_data();
@@ -377,10 +439,22 @@ class SAW_Router {
         }
     }
     
+    /**
+     * Handle 404 errors
+     *
+     * @since 1.0.0
+     * @return void
+     */
     private function handle_404() {
         $this->render_page('404 - Stránka nenalezena', '404', 'error', '');
     }
     
+    /**
+     * Load frontend components
+     *
+     * @since 1.0.0
+     * @return void
+     */
     private function load_frontend_components() {
         $components = array(
             'class-saw-app-layout.php',
@@ -397,22 +471,42 @@ class SAW_Router {
         }
     }
     
+    /**
+     * Check if user is logged in
+     *
+     * @since 1.0.0
+     * @return bool
+     */
     private function is_logged_in() {
         return is_user_logged_in();
     }
     
+    /**
+     * Redirect to login page
+     *
+     * @since 1.0.0
+     * @param string $route Original route attempting to access
+     * @return void
+     */
     private function redirect_to_login($route = 'admin') {
         wp_redirect(home_url('/login/'));
         exit;
     }
     
+    /**
+     * Get current user data
+     *
+     * @since 1.0.0
+     * @return array User data array
+     */
     private function get_current_user_data() {
         if (is_user_logged_in()) {
             $wp_user = wp_get_current_user();
             
             global $wpdb;
             $saw_user = $wpdb->get_row($wpdb->prepare(
-                "SELECT * FROM {$wpdb->prefix}saw_users WHERE wp_user_id = %d AND is_active = 1",
+                "SELECT * FROM %i WHERE wp_user_id = %d AND is_active = 1",
+                $wpdb->prefix . 'saw_users',
                 $wp_user->ID
             ), ARRAY_A);
             
@@ -445,6 +539,12 @@ class SAW_Router {
         );
     }
     
+    /**
+     * Get current customer data
+     *
+     * @since 1.0.0
+     * @return array Customer data array
+     */
     private function get_current_customer_data() {
         if (class_exists('SAW_Context')) {
             $customer = SAW_Context::get_customer_data();
@@ -462,10 +562,10 @@ class SAW_Router {
         
         global $wpdb;
         
-        $customer = $wpdb->get_row(
-            "SELECT * FROM {$wpdb->prefix}saw_customers WHERE status = 'active' ORDER BY id ASC LIMIT 1",
-            ARRAY_A
-        );
+        $customer = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM %i WHERE status = 'active' ORDER BY id ASC LIMIT 1",
+            $wpdb->prefix . 'saw_customers'
+        ), ARRAY_A);
         
         if ($customer) {
             return array(
