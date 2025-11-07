@@ -1,12 +1,12 @@
 /**
  * Admin Table Component JavaScript
  *
- * Handles clickable table rows and modal integration.
+ * Handles clickable table rows for both modal and sidebar modes.
  * Uses event delegation for dynamic content support.
  *
  * @package    SAW_Visitors
  * @subpackage Components
- * @version    1.1.0
+ * @version    2.0.0 - SIDEBAR SUPPORT
  * @since      1.0.0
  */
 
@@ -17,33 +17,43 @@
      * Initialize admin table component
      *
      * Sets up event delegation for clickable table rows.
-     * Integrates with SAWModal system for detail views.
+     * Integrates with both SAWModal and sidebar navigation.
      *
      * @since 1.0.0
      * @return {void}
      */
     function initAdminTable() {
         // Row click handler (delegated for dynamic content)
-        $(document).on('click', '[data-clickable-row]', function(e) {
+        $(document).on('click', '.saw-admin-table tbody tr', function(e) {
             // Ignore clicks on interactive elements
             if ($(e.target).closest('.saw-action-buttons, button, a, input, select').length) {
                 return;
             }
             
-            const modalId = $(this).data('modal');
-            const itemId = $(this).data('id');
+            const $row = $(this);
+            const itemId = $row.data('id');
             
-            // Validate required data attributes
-            if (!modalId || !itemId) {
+            if (!itemId) {
                 return;
             }
             
-            // Open modal using SAWModal system
-            if (typeof SAWModal !== 'undefined') {
-                SAWModal.open(modalId, {
-                    id: itemId,
-                    nonce: window.sawAjaxNonce || (window.sawGlobal && window.sawGlobal.nonce)
-                });
+            // Check if we have data-clickable-row (modal mode)
+            if ($row.attr('data-clickable-row')) {
+                const modalId = $row.data('modal');
+                
+                if (modalId && typeof SAWModal !== 'undefined') {
+                    SAWModal.open(modalId, {
+                        id: itemId,
+                        nonce: window.sawAjaxNonce || (window.sawGlobal && window.sawGlobal.nonce)
+                    });
+                }
+                return;
+            }
+            
+            // Check if we have data-detail-url (sidebar mode)
+            const detailUrl = $row.data('detail-url');
+            if (detailUrl) {
+                window.location.href = detailUrl;
             }
         });
     }

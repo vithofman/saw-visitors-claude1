@@ -1,21 +1,11 @@
 <?php
 /**
- * Customers List Template
- * 
- * Displays paginated list of customers with:
- * - Search functionality
- * - Status filter (potential/active/inactive)
- * - Sortable columns
- * - Logo display
- * - Account type badge (dynamic from database)
- * - Primary color preview
- * - AJAX modal for detail view
- * - Edit/Delete actions
+ * Customers List Template - SIDEBAR VERSION
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Customers/Templates
  * @since       1.0.0
- * @version     8.0.0
+ * @version     9.0.0 - SIDEBAR SUPPORT + FIXED URLS
  */
 
 if (!defined('ABSPATH')) {
@@ -77,11 +67,12 @@ if (!empty($this->config['list_config']['filters']['status'])) {
 }
 $filters_html = ob_get_clean();
 
-// Initialize admin table component
+// Initialize admin table component with sidebar support
 $table = new SAW_Component_Admin_Table('customers', array(
     'title' => __('Zákazníci', 'saw-visitors'),
-    'create_url' => home_url('/admin/settings/customers/new/'),
-    'edit_url' => home_url('/admin/settings/customers/edit/{id}/'),
+    'create_url' => home_url('/admin/settings/customers/create'),    // FIXED: was /new/
+    'edit_url' => home_url('/admin/settings/customers/{id}/edit'),
+    'detail_url' => home_url('/admin/settings/customers/{id}/'),    // NEW: For sidebar navigation
     
     'columns' => array(
         'logo_url' => array(
@@ -168,7 +159,14 @@ $table = new SAW_Component_Admin_Table('customers', array(
     'empty_message' => __('Žádní zákazníci nenalezeni', 'saw-visitors'),
     'add_new' => __('Nový zákazník', 'saw-visitors'),
     
-    'enable_modal' => true,
+    // Sidebar support
+    'detail_item' => $detail_item ?? null,
+    'detail_tab' => $detail_tab ?? 'overview',
+    'form_item' => $form_item ?? null,
+    'sidebar_mode' => $sidebar_mode ?? null,
+    
+    // Modal fallback (backward compatible)
+    'enable_modal' => empty($sidebar_mode),
     'modal_id' => 'customer-detail',
     'modal_ajax_action' => 'saw_get_customers_detail',
 ));
@@ -176,33 +174,35 @@ $table = new SAW_Component_Admin_Table('customers', array(
 // Render table
 $table->render();
 
-// Modal component
-$customer_modal = new SAW_Component_Modal('customer-detail', array(
-    'title' => __('Detail zákazníka', 'saw-visitors'),
-    'ajax_enabled' => true,
-    'ajax_action' => 'saw_get_customers_detail',
-    'size' => 'large',
-    'show_close' => true,
-    'close_on_backdrop' => true,
-    'close_on_escape' => true,
-    'header_actions' => array(
-        array(
-            'type' => 'edit',
-            'label' => '',
-            'icon' => 'dashicons-edit',
-            'url' => home_url('/admin/settings/customers/edit/{id}/'),
+// Modal component (backward compatible - only when sidebar not active)
+if (empty($sidebar_mode)) {
+    $customer_modal = new SAW_Component_Modal('customer-detail', array(
+        'title' => __('Detail zákazníka', 'saw-visitors'),
+        'ajax_enabled' => true,
+        'ajax_action' => 'saw_get_customers_detail',
+        'size' => 'large',
+        'show_close' => true,
+        'close_on_backdrop' => true,
+        'close_on_escape' => true,
+        'header_actions' => array(
+            array(
+                'type' => 'edit',
+                'label' => '',
+                'icon' => 'dashicons-edit',
+                'url' => home_url('/admin/settings/customers/{id}/edit'),
+            ),
+            array(
+                'type' => 'delete',
+                'label' => '',
+                'icon' => 'dashicons-trash',
+                'confirm' => true,
+                'confirm_message' => __('Opravdu chcete smazat tohoto zákazníka?', 'saw-visitors'),
+                'ajax_action' => 'saw_delete_customers',
+            ),
         ),
-        array(
-            'type' => 'delete',
-            'label' => '',
-            'icon' => 'dashicons-trash',
-            'confirm' => true,
-            'confirm_message' => __('Opravdu chcete smazat tohoto zákazníka?', 'saw-visitors'),
-            'ajax_action' => 'saw_delete_customers',
-        ),
-    ),
-));
-$customer_modal->render();
+    ));
+    $customer_modal->render();
+}
 ?>
 
 <script>

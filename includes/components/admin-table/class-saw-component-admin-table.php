@@ -6,7 +6,7 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Components
- * @version     4.0.0
+ * @version     4.1.0 - FINAL SIDEBAR
  * @since       1.0.0
  */
 
@@ -75,6 +75,7 @@ class SAW_Component_Admin_Table {
             'actions' => array('edit', 'delete'),
             'create_url' => '',
             'edit_url' => '',
+            'detail_url' => '',
             'title' => '',
             'subtitle' => '',
             'singular' => '',
@@ -346,8 +347,14 @@ class SAW_Component_Admin_Table {
                             $is_active = true;
                         }
                         $active_class = $is_active ? ' saw-row-active' : '';
+                        
+                        // Sidebar navigation data attribute
+                        $detail_url_attr = '';
+                        if (!empty($this->config['detail_url'])) {
+                            $detail_url_attr = ' data-detail-url="' . esc_attr(str_replace('{id}', $row['id'] ?? '', $this->config['detail_url'])) . '"';
+                        }
                         ?>
-                        <tr<?php echo $modal_attrs; ?> 
+                        <tr<?php echo $modal_attrs . $detail_url_attr; ?> 
                             data-id="<?php echo esc_attr($row['id'] ?? ''); ?>" 
                             class="<?php echo $active_class; ?>"
                             style="cursor: pointer;">

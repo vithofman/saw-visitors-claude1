@@ -8,7 +8,7 @@
  *
  * @package    SAW_Visitors
  * @subpackage Base
- * @version    5.5.0
+ * @version    7.0.0
  * @since      1.0.0
  */
 
@@ -51,44 +51,56 @@ abstract class SAW_Base_Controller
     protected $entity;
     
     /**
-     * Get sidebar data from query vars
+     * Get sidebar context from router
      * 
-     * Helper pro moduly - vrací data pro sidebar z routeru
+     * Returns parsed sidebar context from router's query var.
+     * Compatible with router v7.0.0
      * 
-     * @since 5.5.0
-     * @return array
+     * @since 7.0.0
+     * @return array {
+     *     Sidebar context data
+     *     
+     *     @type string|null $mode Sidebar mode: null, 'detail', 'create', 'edit'
+     *     @type int         $id   Record ID for detail/edit
+     *     @type string      $tab  Active tab for detail view
+     * }
      */
-    protected function get_sidebar_data() {
-        return array(
-            'detail_id' => get_query_var('saw_detail_id'),
-            'detail_tab' => get_query_var('saw_detail_tab'),
-            'form_mode' => get_query_var('saw_form_mode'),
-            'form_id' => get_query_var('saw_form_id'),
-        );
+    protected function get_sidebar_context() {
+        $context = get_query_var('saw_sidebar_context');
+        
+        // Default context if not set
+        if (empty($context) || !is_array($context)) {
+            return array(
+                'mode' => null,
+                'id' => 0,
+                'tab' => 'overview',
+            );
+        }
+        
+        return $context;
     }
     
     /**
-     * Determine sidebar mode from query vars
+     * Get sidebar mode
      * 
-     * @since 5.5.0
+     * Quick helper to get just the mode from sidebar context.
+     * 
+     * @since 7.0.0
      * @return string|null 'detail', 'create', 'edit', or null
      */
     protected function get_sidebar_mode() {
-        $data = $this->get_sidebar_data();
-        
-        if ($data['detail_id']) {
-            return 'detail';
-        }
-        
-        if ($data['form_mode'] === 'create') {
-            return 'create';
-        }
-        
-        if ($data['form_mode'] === 'edit' && $data['form_id']) {
-            return 'edit';
-        }
-        
-        return null;
+        $context = $this->get_sidebar_context();
+        return $context['mode'] ?? null;
+    }
+    
+    /**
+     * Check if sidebar is active
+     * 
+     * @since 7.0.0
+     * @return bool True if any sidebar mode is active
+     */
+    protected function has_sidebar() {
+        return !empty($this->get_sidebar_mode());
     }
     
     /**

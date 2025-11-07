@@ -1,22 +1,14 @@
 <?php
 /**
- * Customers Detail Modal Template - COMPLETE VERSION
+ * Customers Detail Template - SIDEBAR OPTIMIZED
  * 
- * Displays ALL data from wp_saw_customers table including:
- * - Company logo and basic info
- * - Company address (headquarters)
- * - Billing address
- * - Contact person details
- * - Website and online presence
- * - Business information (subscription, account type, payment info)
- * - Settings and branding (colors, language)
- * - Notes
- * - Metadata (created/updated timestamps)
+ * Displays customer detail information.
+ * Optimized for both modal and sidebar display.
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Customers/Templates
  * @since       1.0.0
- * @version     2.0.0
+ * @version     3.0.0 - SIDEBAR SUPPORT
  */
 
 if (!defined('ABSPATH')) {
@@ -25,84 +17,64 @@ if (!defined('ABSPATH')) {
 
 // Validate data
 if (empty($item)) {
-    echo '<div class="saw-alert saw-alert-danger" style="padding: var(--saw-space-xl); border-radius: var(--saw-border-radius-md); background: var(--saw-danger-light); color: var(--saw-danger); border-left: 4px solid var(--saw-danger);">';
-    echo '<strong>' . esc_html__('Chyba:', 'saw-visitors') . '</strong> ' . esc_html__('Zákazník nebyl nalezen nebo data nejsou dostupná.', 'saw-visitors');
+    echo '<div class="saw-alert saw-alert-danger">';
+    echo '<strong>' . esc_html__('Chyba:', 'saw-visitors') . '</strong> ';
+    echo esc_html__('Zákazník nebyl nalezen nebo data nejsou dostupná.', 'saw-visitors');
     echo '</div>';
     return;
 }
 ?>
 
-<!-- ========================================
-     HEADER WITH LOGO AND BASIC INFO
-     ======================================== -->
-<div class="saw-detail-header">
+<!-- HEADER WITH LOGO -->
+<div class="saw-detail-header" style="display: flex; gap: 20px; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 2px solid #e5e7eb;">
     <?php if (!empty($item['logo_url_full'])): ?>
         <img src="<?php echo esc_url($item['logo_url_full']); ?>" 
              alt="<?php echo esc_attr($item['name']); ?>" 
-             class="saw-detail-logo"
-             style="max-width: 120px; max-height: 120px; object-fit: contain; border-radius: var(--saw-border-radius-lg); border: 2px solid var(--saw-border-color); padding: var(--saw-space-md); background: #ffffff; box-shadow: var(--saw-shadow-sm);">
+             style="max-width: 100px; max-height: 100px; object-fit: contain; border-radius: 8px; border: 2px solid #e5e7eb; padding: 12px; background: #fff;">
     <?php else: ?>
-        <div class="saw-detail-logo-placeholder" style="width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--saw-gray-50) 0%, var(--saw-gray-100) 100%); border-radius: var(--saw-border-radius-lg); border: 2px solid var(--saw-border-color);">
-            <span class="dashicons dashicons-building" style="font-size: 56px; color: var(--saw-gray-500); width: 56px; height: 56px;"></span>
+        <div style="width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 8px; border: 2px solid #e5e7eb;">
+            <span class="dashicons dashicons-building" style="font-size: 48px; color: #9ca3af; width: 48px; height: 48px;"></span>
         </div>
     <?php endif; ?>
     
-    <div class="saw-detail-header-info" style="flex: 1; min-width: 0;">
-        <h2 style="margin: 0 0 10px 0; font-size: 26px; font-weight: 700; color: var(--saw-gray-900); letter-spacing: -0.02em; line-height: 1.2;">
+    <div style="flex: 1; min-width: 0;">
+        <h2 style="margin: 0 0 8px 0; font-size: 22px; font-weight: 700; color: #111827;">
             <?php echo esc_html($item['name']); ?>
         </h2>
         
-        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: var(--saw-space-md); margin-bottom: var(--saw-space-sm);">
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;">
             <?php if (!empty($item['id'])): ?>
-                <span style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: var(--saw-gray-50); border: var(--saw-border-width) solid var(--saw-gray-200); border-radius: var(--saw-border-radius-md); font-size: var(--saw-font-size-sm); font-weight: 600; color: var(--saw-gray-700); font-family: 'SF Mono', Monaco, monospace;">
-                    <span style="color: var(--saw-gray-500);"><?php echo esc_html__('ID:', 'saw-visitors'); ?></span>
-                    <?php echo esc_html($item['id']); ?>
+                <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 12px; font-weight: 600; color: #6b7280;">
+                    ID: <?php echo esc_html($item['id']); ?>
                 </span>
             <?php endif; ?>
             
             <?php if (isset($item['status'])): ?>
                 <?php
-                $status_badges = array(
-                    'potential' => array(esc_html__('Potenciální', 'saw-visitors'), '#fbbf24', '#78350f'),
-                    'active' => array(esc_html__('Aktivní', 'saw-visitors'), '#10b981', '#065f46'),
-                    'inactive' => array(esc_html__('Neaktivní', 'saw-visitors'), '#94a3b8', '#475569'),
-                    'suspended' => array(esc_html__('Pozastaveno', 'saw-visitors'), '#f59e0b', '#92400e'),
+                $status_config = array(
+                    'potential' => array('Potenciální', '#fbbf24', '#78350f'),
+                    'active' => array('Aktivní', '#10b981', '#065f46'),
+                    'inactive' => array('Neaktivní', '#94a3b8', '#475569'),
                 );
-                $status_info = isset($status_badges[$item['status']]) ? $status_badges[$item['status']] : array(esc_html__('Neznámý', 'saw-visitors'), '#94a3b8', '#475569');
+                $status = $status_config[$item['status']] ?? array('Neznámý', '#94a3b8', '#475569');
                 ?>
-                <span style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: <?php echo esc_attr($status_info[1]); ?>22; color: <?php echo esc_attr($status_info[2]); ?>; border-radius: 20px; font-size: var(--saw-font-size-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">
-                    <span style="font-size: 10px;">●</span>
-                    <?php echo esc_html($status_info[0]); ?>
-                </span>
-            <?php endif; ?>
-            
-            <?php if (!empty($item['subscription_type'])): ?>
-                <?php
-                $sub_badges = array(
-                    'monthly' => array(esc_html__('Měsíční', 'saw-visitors'), '#3b82f6'),
-                    'yearly' => array(esc_html__('Roční', 'saw-visitors'), '#8b5cf6'),
-                    'trial' => array(esc_html__('Zkušební', 'saw-visitors'), '#ec4899'),
-                );
-                $sub_info = isset($sub_badges[$item['subscription_type']]) ? $sub_badges[$item['subscription_type']] : array(esc_html__('Jiný', 'saw-visitors'), '#64748b');
-                ?>
-                <span style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: <?php echo esc_attr($sub_info[1]); ?>22; color: <?php echo esc_attr($sub_info[1]); ?>; border-radius: 20px; font-size: var(--saw-font-size-xs); font-weight: 700; letter-spacing: 0.05em;">
-                    <?php echo esc_html($sub_info[0]); ?>
+                <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: <?php echo esc_attr($status[1]); ?>22; color: <?php echo esc_attr($status[2]); ?>; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase;">
+                    <span style="font-size: 8px;">●</span>
+                    <?php echo esc_html($status[0]); ?>
                 </span>
             <?php endif; ?>
         </div>
         
         <?php if (!empty($item['ico']) || !empty($item['dic'])): ?>
-            <div style="font-size: var(--saw-font-size-sm); color: var(--saw-gray-500); font-weight: 500;">
+            <div style="font-size: 13px; color: #6b7280;">
                 <?php if (!empty($item['ico'])): ?>
-                    <span style="margin-right: var(--saw-space-lg);">
-                        <strong style="color: var(--saw-gray-500);"><?php echo esc_html__('IČO:', 'saw-visitors'); ?></strong> 
-                        <span style="font-family: monospace; color: var(--saw-gray-700);"><?php echo esc_html($item['ico']); ?></span>
+                    <span style="margin-right: 12px;">
+                        <strong>IČO:</strong> <code><?php echo esc_html($item['ico']); ?></code>
                     </span>
                 <?php endif; ?>
                 <?php if (!empty($item['dic'])): ?>
                     <span>
-                        <strong style="color: var(--saw-gray-500);"><?php echo esc_html__('DIČ:', 'saw-visitors'); ?></strong> 
-                        <span style="font-family: monospace; color: var(--saw-gray-700);"><?php echo esc_html($item['dic']); ?></span>
+                        <strong>DIČ:</strong> <code><?php echo esc_html($item['dic']); ?></code>
                     </span>
                 <?php endif; ?>
             </div>
@@ -110,324 +82,200 @@ if (empty($item)) {
     </div>
 </div>
 
-<!-- ========================================
-     DETAIL SECTIONS
-     ======================================== -->
+<!-- DETAIL SECTIONS -->
 <div class="saw-detail-sections">
     
-    <!-- COMPANY ADDRESS (HEADQUARTERS) -->
-    <?php if (!empty($item['address_street']) || !empty($item['address_city']) || !empty($item['address_zip'])): ?>
-    <div class="saw-detail-section">
-        <h3 style="display: flex; align-items: center; gap: 10px; margin: 0 0 var(--saw-space-xl) 0; font-size: var(--saw-font-size-lg); font-weight: 700; color: var(--saw-gray-900); padding-bottom: var(--saw-space-lg); border-bottom: 2px solid var(--saw-border-color);">
-            <span style="font-size: 20px;">🏢</span>
+    <!-- COMPANY ADDRESS -->
+    <?php if (!empty($item['address_street']) || !empty($item['address_city'])): ?>
+    <div class="saw-detail-section" style="margin-bottom: 20px; padding: 16px; background: #fafbfc; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <h3 style="display: flex; align-items: center; gap: 8px; margin: 0 0 12px 0; font-size: 14px; font-weight: 700; color: #374151; text-transform: uppercase; letter-spacing: 0.05em;">
+            <span>🏢</span>
             <?php echo esc_html__('Sídlo společnosti', 'saw-visitors'); ?>
         </h3>
-        <dl style="margin: 0; display: grid; grid-template-columns: 140px 1fr; gap: var(--saw-space-lg) var(--saw-space-2xl); font-size: var(--saw-font-size-base);">
+        <div style="font-size: 14px; line-height: 1.6; color: #111827;">
             <?php if (!empty($item['address_street']) || !empty($item['address_number'])): ?>
-                <dt style="font-size: var(--saw-font-size-sm); font-weight: 700; color: var(--saw-gray-500); text-transform: uppercase; letter-spacing: 0.06em;"><?php echo esc_html__('Ulice a číslo', 'saw-visitors'); ?></dt>
-                <dd style="margin: 0; color: var(--saw-gray-900); font-weight: 500;">
-                    <?php 
-                    echo esc_html($item['address_street']);
-                    if (!empty($item['address_number'])) {
-                        echo ' ' . esc_html($item['address_number']);
-                    }
-                    ?>
-                </dd>
+                <div><?php echo esc_html(trim(($item['address_street'] ?? '') . ' ' . ($item['address_number'] ?? ''))); ?></div>
             <?php endif; ?>
-            
-            <?php if (!empty($item['address_city'])): ?>
-                <dt style="font-size: var(--saw-font-size-sm); font-weight: 700; color: var(--saw-gray-500); text-transform: uppercase; letter-spacing: 0.06em;"><?php echo esc_html__('Město', 'saw-visitors'); ?></dt>
-                <dd style="margin: 0; color: var(--saw-gray-900); font-weight: 500;"><?php echo esc_html($item['address_city']); ?></dd>
+            <?php if (!empty($item['address_city']) || !empty($item['address_zip'])): ?>
+                <div><?php echo esc_html(trim(($item['address_zip'] ?? '') . ' ' . ($item['address_city'] ?? ''))); ?></div>
             <?php endif; ?>
-            
-            <?php if (!empty($item['address_zip'])): ?>
-                <dt style="font-size: var(--saw-font-size-sm); font-weight: 700; color: var(--saw-gray-500); text-transform: uppercase; letter-spacing: 0.06em;"><?php echo esc_html__('PSČ', 'saw-visitors'); ?></dt>
-                <dd style="margin: 0; color: var(--saw-gray-900); font-weight: 500; font-family: monospace;"><?php echo esc_html($item['address_zip']); ?></dd>
-            <?php endif; ?>
-            
             <?php if (!empty($item['address_country'])): ?>
-                <dt style="font-size: var(--saw-font-size-sm); font-weight: 700; color: var(--saw-gray-500); text-transform: uppercase; letter-spacing: 0.06em;"><?php echo esc_html__('Stát', 'saw-visitors'); ?></dt>
-                <dd style="margin: 0; color: var(--saw-gray-900); font-weight: 500;"><?php echo esc_html($item['address_country']); ?></dd>
+                <div><?php echo esc_html($item['address_country']); ?></div>
+            <?php endif; ?>
+        </div>
+    </div>
+    <?php endif; ?>
+    
+    <!-- CONTACT INFORMATION -->
+    <?php if (!empty($item['contact_person']) || !empty($item['contact_email']) || !empty($item['contact_phone'])): ?>
+    <div class="saw-detail-section" style="margin-bottom: 20px; padding: 16px; background: #fafbfc; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <h3 style="display: flex; align-items: center; gap: 8px; margin: 0 0 12px 0; font-size: 14px; font-weight: 700; color: #374151; text-transform: uppercase; letter-spacing: 0.05em;">
+            <span>👤</span>
+            <?php echo esc_html__('Kontaktní údaje', 'saw-visitors'); ?>
+        </h3>
+        <dl style="margin: 0; display: grid; gap: 8px; font-size: 14px;">
+            <?php if (!empty($item['contact_person'])): ?>
+                <div>
+                    <dt style="display: inline; font-weight: 600; color: #6b7280;"><?php echo esc_html__('Osoba:', 'saw-visitors'); ?></dt>
+                    <dd style="display: inline; margin: 0 0 0 4px; color: #111827;"><?php echo esc_html($item['contact_person']); ?></dd>
+                </div>
+            <?php endif; ?>
+            
+            <?php if (!empty($item['contact_email'])): ?>
+                <div>
+                    <dt style="display: inline; font-weight: 600; color: #6b7280;"><?php echo esc_html__('Email:', 'saw-visitors'); ?></dt>
+                    <dd style="display: inline; margin: 0 0 0 4px;">
+                        <a href="mailto:<?php echo esc_attr($item['contact_email']); ?>" style="color: #3b82f6; text-decoration: none;">
+                            <?php echo esc_html($item['contact_email']); ?>
+                        </a>
+                    </dd>
+                </div>
+            <?php endif; ?>
+            
+            <?php if (!empty($item['contact_phone'])): ?>
+                <div>
+                    <dt style="display: inline; font-weight: 600; color: #6b7280;"><?php echo esc_html__('Telefon:', 'saw-visitors'); ?></dt>
+                    <dd style="display: inline; margin: 0 0 0 4px;">
+                        <a href="tel:<?php echo esc_attr($item['contact_phone']); ?>" style="color: #3b82f6; text-decoration: none;">
+                            <?php echo esc_html($item['contact_phone']); ?>
+                        </a>
+                    </dd>
+                </div>
+            <?php endif; ?>
+            
+            <?php if (!empty($item['website'])): ?>
+                <div>
+                    <dt style="display: inline; font-weight: 600; color: #6b7280;"><?php echo esc_html__('Web:', 'saw-visitors'); ?></dt>
+                    <dd style="display: inline; margin: 0 0 0 4px;">
+                        <a href="<?php echo esc_url($item['website']); ?>" target="_blank" style="color: #3b82f6; text-decoration: none;">
+                            <?php echo esc_html($item['website']); ?> ↗
+                        </a>
+                    </dd>
+                </div>
             <?php endif; ?>
         </dl>
     </div>
     <?php endif; ?>
     
     <!-- BILLING ADDRESS -->
-    <?php if (!empty($item['billing_address_street']) || !empty($item['billing_address_city']) || !empty($item['billing_address_zip'])): ?>
-    <div class="saw-detail-section">
-        <h3 style="display: flex; align-items: center; gap: 10px; margin: 0 0 var(--saw-space-xl) 0; font-size: var(--saw-font-size-lg); font-weight: 700; color: var(--saw-gray-900); padding-bottom: var(--saw-space-lg); border-bottom: 2px solid var(--saw-border-color);">
-            <span style="font-size: 20px;">🧾</span>
+    <?php if (!empty($item['billing_address_street']) || !empty($item['billing_address_city'])): ?>
+    <div class="saw-detail-section" style="margin-bottom: 20px; padding: 16px; background: #fafbfc; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <h3 style="display: flex; align-items: center; gap: 8px; margin: 0 0 12px 0; font-size: 14px; font-weight: 700; color: #374151; text-transform: uppercase; letter-spacing: 0.05em;">
+            <span>📄</span>
             <?php echo esc_html__('Fakturační adresa', 'saw-visitors'); ?>
         </h3>
-        <dl style="margin: 0; display: grid; grid-template-columns: 140px 1fr; gap: var(--saw-space-lg) var(--saw-space-2xl); font-size: var(--saw-font-size-base);">
+        <div style="font-size: 14px; line-height: 1.6; color: #111827;">
             <?php if (!empty($item['billing_address_street']) || !empty($item['billing_address_number'])): ?>
-                <dt style="font-size: var(--saw-font-size-sm); font-weight: 700; color: var(--saw-gray-500); text-transform: uppercase; letter-spacing: 0.06em;"><?php echo esc_html__('Ulice a číslo', 'saw-visitors'); ?></dt>
-                <dd style="margin: 0; color: var(--saw-gray-900); font-weight: 500;">
-                    <?php 
-                    echo esc_html($item['billing_address_street']);
-                    if (!empty($item['billing_address_number'])) {
-                        echo ' ' . esc_html($item['billing_address_number']);
-                    }
-                    ?>
-                </dd>
+                <div><?php echo esc_html(trim(($item['billing_address_street'] ?? '') . ' ' . ($item['billing_address_number'] ?? ''))); ?></div>
             <?php endif; ?>
-            
-            <?php if (!empty($item['billing_address_city'])): ?>
-                <dt style="font-size: var(--saw-font-size-sm); font-weight: 700; color: var(--saw-gray-500); text-transform: uppercase; letter-spacing: 0.06em;"><?php echo esc_html__('Město', 'saw-visitors'); ?></dt>
-                <dd style="margin: 0; color: var(--saw-gray-900); font-weight: 500;"><?php echo esc_html($item['billing_address_city']); ?></dd>
+            <?php if (!empty($item['billing_address_city']) || !empty($item['billing_address_zip'])): ?>
+                <div><?php echo esc_html(trim(($item['billing_address_zip'] ?? '') . ' ' . ($item['billing_address_city'] ?? ''))); ?></div>
             <?php endif; ?>
-            
-            <?php if (!empty($item['billing_address_zip'])): ?>
-                <dt style="font-size: var(--saw-font-size-sm); font-weight: 700; color: var(--saw-gray-500); text-transform: uppercase; letter-spacing: 0.06em;"><?php echo esc_html__('PSČ', 'saw-visitors'); ?></dt>
-                <dd style="margin: 0; color: var(--saw-gray-900); font-weight: 500; font-family: monospace;"><?php echo esc_html($item['billing_address_zip']); ?></dd>
-            <?php endif; ?>
-            
-            <?php if (!empty($item['billing_address_country'])): ?>
-                <dt style="font-size: var(--saw-font-size-sm); font-weight: 700; color: var(--saw-gray-500); text-transform: uppercase; letter-spacing: 0.06em;"><?php echo esc_html__('Stát', 'saw-visitors'); ?></dt>
-                <dd style="margin: 0; color: var(--saw-gray-900); font-weight: 500;"><?php echo esc_html($item['billing_address_country']); ?></dd>
-            <?php endif; ?>
-        </dl>
-    </div>
-    <?php endif; ?>
-    
-    <!-- CONTACT PERSON -->
-    <?php if (!empty($item['contact_person']) || !empty($item['contact_email']) || !empty($item['contact_phone'])): ?>
-    <div class="saw-detail-section">
-        <h3 style="display: flex; align-items: center; gap: 10px; margin: 0 0 var(--saw-space-xl) 0; font-size: var(--saw-font-size-lg); font-weight: 700; color: var(--saw-gray-900); padding-bottom: var(--saw-space-lg); border-bottom: 2px solid var(--saw-border-color);">
-            <span style="font-size: 20px;">👤</span>
-            <?php echo esc_html__('Kontaktní osoba', 'saw-visitors'); ?>
-        </h3>
-        <dl style="margin: 0; display: grid; grid-template-columns: 140px 1fr; gap: var(--saw-space-lg) var(--saw-space-2xl); font-size: var(--saw-font-size-base);">
-            <?php if (!empty($item['contact_person'])): ?>
-                <dt style="font-size: var(--saw-font-size-sm); font-weight: 700; color: var(--saw-gray-500); text-transform: uppercase; letter-spacing: 0.06em;"><?php echo esc_html__('Jméno', 'saw-visitors'); ?></dt>
-                <dd style="margin: 0; color: var(--saw-gray-900); font-weight: 500;"><?php echo esc_html($item['contact_person']); ?></dd>
-            <?php endif; ?>
-            
-            <?php if (!empty($item['contact_position'])): ?>
-                <dt style="font-size: var(--saw-font-size-sm); font-weight: 700; color: var(--saw-gray-500); text-transform: uppercase; letter-spacing: 0.06em;"><?php echo esc_html__('Pozice', 'saw-visitors'); ?></dt>
-                <dd style="margin: 0; color: var(--saw-gray-900); font-weight: 500;"><?php echo esc_html($item['contact_position']); ?></dd>
-            <?php endif; ?>
-            
-            <?php if (!empty($item['contact_email'])): ?>
-                <dt style="font-size: var(--saw-font-size-sm); font-weight: 700; color: var(--saw-gray-500); text-transform: uppercase; letter-spacing: 0.06em;"><?php echo esc_html__('Email', 'saw-visitors'); ?></dt>
-                <dd style="margin: 0; color: var(--saw-gray-900); font-weight: 500;">
-                    <a href="<?php echo esc_url('mailto:' . $item['contact_email']); ?>" 
-                       style="color: var(--saw-primary); text-decoration: none; font-weight: 600; transition: var(--saw-transition-base); border-bottom: 2px solid transparent;"
-                       onmouseover="this.style.color='var(--saw-primary-hover)'; this.style.borderBottomColor='var(--saw-primary-hover)';"
-                       onmouseout="this.style.color='var(--saw-primary)'; this.style.borderBottomColor='transparent';">
-                        <?php echo esc_html($item['contact_email']); ?>
-                    </a>
-                </dd>
-            <?php endif; ?>
-            
-            <?php if (!empty($item['contact_phone'])): ?>
-                <dt style="font-size: var(--saw-font-size-sm); font-weight: 700; color: var(--saw-gray-500); text-transform: uppercase; letter-spacing: 0.06em;"><?php echo esc_html__('Telefon', 'saw-visitors'); ?></dt>
-                <dd style="margin: 0; color: var(--saw-gray-900); font-weight: 500;">
-                    <a href="<?php echo esc_url('tel:' . preg_replace('/[^0-9+]/', '', $item['contact_phone'])); ?>" 
-                       style="color: var(--saw-primary); text-decoration: none; font-weight: 600; transition: var(--saw-transition-base); border-bottom: 2px solid transparent;"
-                       onmouseover="this.style.color='var(--saw-primary-hover)'; this.style.borderBottomColor='var(--saw-primary-hover)';"
-                       onmouseout="this.style.color='var(--saw-primary)'; this.style.borderBottomColor='transparent';">
-                        <?php echo esc_html($item['contact_phone']); ?>
-                    </a>
-                </dd>
-            <?php endif; ?>
-        </dl>
-    </div>
-    <?php endif; ?>
-    
-    <!-- WEBSITE AND ONLINE PRESENCE -->
-    <?php if (!empty($item['website'])): ?>
-    <div class="saw-detail-section">
-        <h3 style="display: flex; align-items: center; gap: 10px; margin: 0 0 var(--saw-space-xl) 0; font-size: var(--saw-font-size-lg); font-weight: 700; color: var(--saw-gray-900); padding-bottom: var(--saw-space-lg); border-bottom: 2px solid var(--saw-border-color);">
-            <span style="font-size: 20px;">🌐</span>
-            <?php echo esc_html__('Online presence', 'saw-visitors'); ?>
-        </h3>
-        <dl style="margin: 0; display: grid; grid-template-columns: 140px 1fr; gap: var(--saw-space-lg) var(--saw-space-2xl); font-size: var(--saw-font-size-base);">
-            <dt style="font-size: var(--saw-font-size-sm); font-weight: 700; color: var(--saw-gray-500); text-transform: uppercase; letter-spacing: 0.06em;"><?php echo esc_html__('Webové stránky', 'saw-visitors'); ?></dt>
-            <dd style="margin: 0; color: var(--saw-gray-900); font-weight: 500;">
-                <a href="<?php echo esc_url($item['website']); ?>" 
-                   target="_blank" 
-                   rel="noopener noreferrer"
-                   style="color: var(--saw-primary); text-decoration: none; font-weight: 600; transition: var(--saw-transition-base); border-bottom: 2px solid transparent; display: inline-flex; align-items: center; gap: 6px;"
-                   onmouseover="this.style.color='var(--saw-primary-hover)'; this.style.borderBottomColor='var(--saw-primary-hover)';"
-                   onmouseout="this.style.color='var(--saw-primary)'; this.style.borderBottomColor='transparent';">
-                    <?php 
-                    $parsed_url = parse_url($item['website']);
-                    $domain = isset($parsed_url['host']) ? $parsed_url['host'] : $item['website'];
-                    echo esc_html($domain); 
-                    ?>
-                    <span style="font-size: var(--saw-font-size-xs); opacity: 0.7;">↗</span>
-                </a>
-            </dd>
-        </dl>
-    </div>
-    <?php endif; ?>
-    
-    <!-- BUSINESS INFORMATION -->
-    <div class="saw-detail-section">
-        <h3 style="display: flex; align-items: center; gap: 10px; margin: 0 0 var(--saw-space-xl) 0; font-size: var(--saw-font-size-lg); font-weight: 700; color: var(--saw-gray-900); padding-bottom: var(--saw-space-lg); border-bottom: 2px solid var(--saw-border-color);">
-            <span style="font-size: 20px;">💼</span>
-            <?php echo esc_html__('Obchodní informace', 'saw-visitors'); ?>
-        </h3>
-        <dl style="margin: 0; display: grid; grid-template-columns: 160px 1fr; gap: var(--saw-space-lg) var(--saw-space-2xl); font-size: var(--saw-font-size-base);">
-            <?php if (!empty($item['subscription_type'])): ?>
-                <?php
-                // Fetch account type details from database
-                global $wpdb;
-                $account_type = $wpdb->get_row($wpdb->prepare(
-                    "SELECT display_name, color, price FROM %i WHERE id = %d",
-                    $wpdb->prefix . 'saw_account_types',
-                    $item['subscription_type']
-                ), ARRAY_A);
-                ?>
-                
-                <dt style="font-size: var(--saw-font-size-sm); font-weight: 700; color: var(--saw-gray-500); text-transform: uppercase; letter-spacing: 0.06em;"><?php echo esc_html__('Typ účtu', 'saw-visitors'); ?></dt>
-                <dd style="margin: 0; color: var(--saw-gray-900); font-weight: 500;">
-                    <?php if ($account_type): ?>
-                        <span class="saw-badge" style="background-color: <?php echo esc_attr($account_type['color']); ?>; color: #fff; border-color: <?php echo esc_attr($account_type['color']); ?>;">
-                            <?php echo esc_html($account_type['display_name']); ?>
-                        </span>
-                        <?php if (!empty($account_type['price']) && $account_type['price'] > 0): ?>
-                            <span style="color: var(--saw-gray-500); font-size: var(--saw-font-size-sm); margin-left: var(--saw-space-sm);">
-                                (<?php echo esc_html(number_format($account_type['price'], 0, ',', ' ')); ?> <?php echo esc_html__('Kč/měs.', 'saw-visitors'); ?>)
-                            </span>
-                        <?php endif; ?>
-                    <?php else: ?>
-                        <span style="color: var(--saw-danger);"><?php echo esc_html__('Typ účtu nenalezen', 'saw-visitors'); ?></span>
-                    <?php endif; ?>
-                </dd>
-            <?php endif; ?>
-            
-            <?php if (!empty($item['acquisition_source'])): ?>
-                <dt style="font-size: var(--saw-font-size-sm); font-weight: 700; color: var(--saw-gray-500); text-transform: uppercase; letter-spacing: 0.06em;"><?php echo esc_html__('Zdroj akvizice', 'saw-visitors'); ?></dt>
-                <dd style="margin: 0; color: var(--saw-gray-900); font-weight: 500;"><?php echo esc_html($item['acquisition_source']); ?></dd>
-            <?php endif; ?>
-            
-            <?php if (!empty($item['subscription_type'])): ?>
-                <dt style="font-size: var(--saw-font-size-sm); font-weight: 700; color: var(--saw-gray-500); text-transform: uppercase; letter-spacing: 0.06em;"><?php echo esc_html__('Typ předplatného', 'saw-visitors'); ?></dt>
-                <dd style="margin: 0; color: var(--saw-gray-900); font-weight: 500;">
-                    <?php
-                    $sub_names = array(
-                        'monthly' => esc_html__('Měsíční', 'saw-visitors'),
-                        'yearly' => esc_html__('Roční', 'saw-visitors'),
-                        'trial' => esc_html__('Zkušební', 'saw-visitors'),
-                    );
-                    echo isset($sub_names[$item['subscription_type']]) ? esc_html($sub_names[$item['subscription_type']]) : esc_html($item['subscription_type']);
-                    ?>
-                </dd>
-            <?php endif; ?>
-            
-            <?php if (!empty($item['last_payment_date']) && $item['last_payment_date'] != '0000-00-00'): ?>
-                <dt style="font-size: var(--saw-font-size-sm); font-weight: 700; color: var(--saw-gray-500); text-transform: uppercase; letter-spacing: 0.06em;"><?php echo esc_html__('Poslední platba', 'saw-visitors'); ?></dt>
-                <dd style="margin: 0; color: var(--saw-gray-900); font-weight: 500; font-family: monospace;">
-                    <?php echo esc_html(date_i18n('d.m.Y', strtotime($item['last_payment_date']))); ?>
-                </dd>
-            <?php endif; ?>
-        </dl>
-    </div>
-    
-    <!-- SETTINGS AND BRANDING -->
-    <div class="saw-detail-section">
-        <h3 style="display: flex; align-items: center; gap: 10px; margin: 0 0 var(--saw-space-xl) 0; font-size: var(--saw-font-size-lg); font-weight: 700; color: var(--saw-gray-900); padding-bottom: var(--saw-space-lg); border-bottom: 2px solid var(--saw-border-color);">
-            <span style="font-size: 20px;">🎨</span>
-            <?php echo esc_html__('Nastavení a branding', 'saw-visitors'); ?>
-        </h3>
-        <dl style="margin: 0; display: grid; grid-template-columns: 160px 1fr; gap: var(--saw-space-lg) var(--saw-space-2xl); font-size: var(--saw-font-size-base);">
-            <?php if (!empty($item['primary_color'])): ?>
-                <dt style="font-size: var(--saw-font-size-sm); font-weight: 700; color: var(--saw-gray-500); text-transform: uppercase; letter-spacing: 0.06em;"><?php echo esc_html__('Primární barva', 'saw-visitors'); ?></dt>
-                <dd style="margin: 0; color: var(--saw-gray-900); font-weight: 500; display: flex; align-items: center; gap: 14px;">
-                    <span style="display: inline-block; width: 40px; height: 40px; border-radius: var(--saw-border-radius-md); border: 2px solid var(--saw-gray-200); background-color: <?php echo esc_attr($item['primary_color']); ?>; box-shadow: var(--saw-shadow-md);"></span>
-                    <code style="font-family: 'SF Mono', Monaco, monospace; font-size: var(--saw-font-size-sm); font-weight: 600; color: var(--saw-gray-700); background: var(--saw-gray-50); padding: 6px var(--saw-space-md); border-radius: var(--saw-border-radius-sm); letter-spacing: 0.5px;">
-                        <?php echo esc_html(strtoupper($item['primary_color'])); ?>
-                    </code>
-                </dd>
-            <?php endif; ?>
-            
-            <?php if (!empty($item['admin_language_default'])): ?>
-                <dt style="font-size: var(--saw-font-size-sm); font-weight: 700; color: var(--saw-gray-500); text-transform: uppercase; letter-spacing: 0.06em;"><?php echo esc_html__('Výchozí jazyk', 'saw-visitors'); ?></dt>
-                <dd style="margin: 0; color: var(--saw-gray-900); font-weight: 500;">
-                    <?php
-                    $lang_names = array(
-                        'cs' => '🇨🇿 ' . esc_html__('Čeština', 'saw-visitors'),
-                        'en' => '🇬🇧 ' . esc_html__('Angličtina', 'saw-visitors'),
-                        'de' => '🇩🇪 ' . esc_html__('Němčina', 'saw-visitors'),
-                        'sk' => '🇸🇰 ' . esc_html__('Slovenština', 'saw-visitors'),
-                    );
-                    echo isset($lang_names[$item['admin_language_default']]) ? $lang_names[$item['admin_language_default']] : esc_html(strtoupper($item['admin_language_default']));
-                    ?>
-                </dd>
-            <?php endif; ?>
-        </dl>
-    </div>
-    
-    <!-- NOTES -->
-    <?php if (!empty($item['notes'])): ?>
-    <div class="saw-detail-section">
-        <h3 style="display: flex; align-items: center; gap: 10px; margin: 0 0 var(--saw-space-xl) 0; font-size: var(--saw-font-size-lg); font-weight: 700; color: var(--saw-gray-900); padding-bottom: var(--saw-space-lg); border-bottom: 2px solid var(--saw-border-color);">
-            <span style="font-size: 20px;">📝</span>
-            <?php echo esc_html__('Poznámky', 'saw-visitors'); ?>
-        </h3>
-        <div style="padding: var(--saw-space-lg) var(--saw-space-xl); background: var(--saw-gray-50); border-radius: var(--saw-border-radius-md); border: var(--saw-border-width) solid var(--saw-border-color);">
-            <p style="margin: 0; color: var(--saw-gray-700); line-height: 1.7; font-size: var(--saw-font-size-base); white-space: pre-wrap; word-wrap: break-word;">
-                <?php echo nl2br(esc_html($item['notes'])); ?>
-            </p>
         </div>
     </div>
     <?php endif; ?>
     
-    <!-- METADATA (CREATION DATE, ID) -->
-    <div class="saw-detail-section saw-detail-meta" style="background: #fafbfc; border: var(--saw-border-width) solid var(--saw-border-color);">
-        <dl style="margin: 0; display: grid; grid-template-columns: 160px 1fr; gap: var(--saw-space-md) var(--saw-space-2xl); font-size: var(--saw-font-size-sm);">
+    <!-- BUSINESS INFO -->
+    <?php if (!empty($item['subscription_type']) || !empty($item['account_type_id'])): ?>
+    <div class="saw-detail-section" style="margin-bottom: 20px; padding: 16px; background: #fafbfc; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <h3 style="display: flex; align-items: center; gap: 8px; margin: 0 0 12px 0; font-size: 14px; font-weight: 700; color: #374151; text-transform: uppercase; letter-spacing: 0.05em;">
+            <span>💼</span>
+            <?php echo esc_html__('Obchodní informace', 'saw-visitors'); ?>
+        </h3>
+        <dl style="margin: 0; display: grid; gap: 8px; font-size: 14px;">
+            <?php if (!empty($item['subscription_type'])): ?>
+                <div>
+                    <dt style="display: inline; font-weight: 600; color: #6b7280;"><?php echo esc_html__('Předplatné:', 'saw-visitors'); ?></dt>
+                    <dd style="display: inline; margin: 0 0 0 4px; color: #111827;">
+                        <?php
+                        $sub_names = array(
+                            'monthly' => __('Měsíční', 'saw-visitors'),
+                            'yearly' => __('Roční', 'saw-visitors'),
+                            'trial' => __('Zkušební', 'saw-visitors'),
+                        );
+                        echo esc_html($sub_names[$item['subscription_type']] ?? $item['subscription_type']);
+                        ?>
+                    </dd>
+                </div>
+            <?php endif; ?>
+            
+            <?php if (!empty($item['last_payment_date']) && $item['last_payment_date'] != '0000-00-00'): ?>
+                <div>
+                    <dt style="display: inline; font-weight: 600; color: #6b7280;"><?php echo esc_html__('Poslední platba:', 'saw-visitors'); ?></dt>
+                    <dd style="display: inline; margin: 0 0 0 4px; color: #111827;">
+                        <?php echo esc_html(date_i18n('d.m.Y', strtotime($item['last_payment_date']))); ?>
+                    </dd>
+                </div>
+            <?php endif; ?>
+        </dl>
+    </div>
+    <?php endif; ?>
+    
+    <!-- BRANDING -->
+    <?php if (!empty($item['primary_color']) || !empty($item['admin_language_default'])): ?>
+    <div class="saw-detail-section" style="margin-bottom: 20px; padding: 16px; background: #fafbfc; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <h3 style="display: flex; align-items: center; gap: 8px; margin: 0 0 12px 0; font-size: 14px; font-weight: 700; color: #374151; text-transform: uppercase; letter-spacing: 0.05em;">
+            <span>🎨</span>
+            <?php echo esc_html__('Branding', 'saw-visitors'); ?>
+        </h3>
+        <dl style="margin: 0; display: grid; gap: 8px; font-size: 14px;">
+            <?php if (!empty($item['primary_color'])): ?>
+                <div>
+                    <dt style="display: inline; font-weight: 600; color: #6b7280;"><?php echo esc_html__('Primární barva:', 'saw-visitors'); ?></dt>
+                    <dd style="display: inline; margin: 0 0 0 4px; color: #111827;">
+                        <span style="display: inline-flex; align-items: center; gap: 8px;">
+                            <span style="display: inline-block; width: 24px; height: 24px; border-radius: 4px; border: 1px solid #e5e7eb; background-color: <?php echo esc_attr($item['primary_color']); ?>;"></span>
+                            <code><?php echo esc_html(strtoupper($item['primary_color'])); ?></code>
+                        </span>
+                    </dd>
+                </div>
+            <?php endif; ?>
+            
+            <?php if (!empty($item['admin_language_default'])): ?>
+                <div>
+                    <dt style="display: inline; font-weight: 600; color: #6b7280;"><?php echo esc_html__('Jazyk:', 'saw-visitors'); ?></dt>
+                    <dd style="display: inline; margin: 0 0 0 4px; color: #111827;">
+                        <?php
+                        $langs = array('cs' => '🇨🇿 Čeština', 'en' => '🇬🇧 English', 'de' => '🇩🇪 Deutsch');
+                        echo $langs[$item['admin_language_default']] ?? esc_html(strtoupper($item['admin_language_default']));
+                        ?>
+                    </dd>
+                </div>
+            <?php endif; ?>
+        </dl>
+    </div>
+    <?php endif; ?>
+    
+    <!-- NOTES -->
+    <?php if (!empty($item['notes'])): ?>
+    <div class="saw-detail-section" style="margin-bottom: 20px; padding: 16px; background: #fafbfc; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <h3 style="display: flex; align-items: center; gap: 8px; margin: 0 0 12px 0; font-size: 14px; font-weight: 700; color: #374151; text-transform: uppercase; letter-spacing: 0.05em;">
+            <span>📝</span>
+            <?php echo esc_html__('Poznámky', 'saw-visitors'); ?>
+        </h3>
+        <div style="font-size: 14px; line-height: 1.6; color: #374151; white-space: pre-wrap;">
+            <?php echo nl2br(esc_html($item['notes'])); ?>
+        </div>
+    </div>
+    <?php endif; ?>
+    
+    <!-- METADATA -->
+    <div class="saw-detail-section" style="padding: 12px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;">
+        <dl style="margin: 0; display: grid; gap: 6px; font-size: 12px; color: #6b7280;">
             <?php if (!empty($item['created_at_formatted'])): ?>
-                <dt style="font-weight: 700; color: var(--saw-gray-500); text-transform: uppercase; letter-spacing: 0.06em;"><?php echo esc_html__('Vytvořeno', 'saw-visitors'); ?></dt>
-                <dd style="margin: 0; color: var(--saw-gray-500); font-weight: 500; font-family: monospace;">
-                    <?php echo esc_html($item['created_at_formatted']); ?>
-                </dd>
+                <div>
+                    <dt style="display: inline; font-weight: 600;"><?php echo esc_html__('Vytvořeno:', 'saw-visitors'); ?></dt>
+                    <dd style="display: inline; margin: 0 0 0 4px;"><?php echo esc_html($item['created_at_formatted']); ?></dd>
+                </div>
             <?php endif; ?>
             
             <?php if (!empty($item['updated_at_formatted'])): ?>
-                <dt style="font-weight: 700; color: var(--saw-gray-500); text-transform: uppercase; letter-spacing: 0.06em;"><?php echo esc_html__('Aktualizováno', 'saw-visitors'); ?></dt>
-                <dd style="margin: 0; color: var(--saw-gray-500); font-weight: 500; font-family: monospace;">
-                    <?php echo esc_html($item['updated_at_formatted']); ?>
-                </dd>
-            <?php endif; ?>
-            
-            <?php if (!empty($item['id'])): ?>
-                <dt style="font-weight: 700; color: var(--saw-gray-500); text-transform: uppercase; letter-spacing: 0.06em;"><?php echo esc_html__('ID záznamu', 'saw-visitors'); ?></dt>
-                <dd style="margin: 0; color: var(--saw-gray-500); font-weight: 500; font-family: monospace;">
-                    #<?php echo esc_html($item['id']); ?>
-                </dd>
+                <div>
+                    <dt style="display: inline; font-weight: 600;"><?php echo esc_html__('Aktualizováno:', 'saw-visitors'); ?></dt>
+                    <dd style="display: inline; margin: 0 0 0 4px;"><?php echo esc_html($item['updated_at_formatted']); ?></dd>
+                </div>
             <?php endif; ?>
         </dl>
     </div>
     
 </div>
-
-<style>
-/* Responsive adjustments for mobile devices */
-@media screen and (max-width: 782px) {
-    .saw-detail-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: var(--saw-space-lg);
-    }
-    
-    .saw-detail-section dl {
-        grid-template-columns: 1fr !important;
-        gap: var(--saw-space-sm) !important;
-    }
-    
-    .saw-detail-section dt {
-        margin-top: var(--saw-space-md);
-        padding-top: var(--saw-space-md);
-        border-top: var(--saw-border-width) solid var(--saw-gray-200);
-    }
-    
-    .saw-detail-section dt:first-child {
-        margin-top: 0;
-        padding-top: 0;
-        border-top: none;
-    }
-}
-</style>

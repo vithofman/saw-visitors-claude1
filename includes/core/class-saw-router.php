@@ -4,10 +4,11 @@
  *
  * Handles custom routing for SAW Visitors plugin with AJAX protection.
  * Manages authentication routes, admin routes, and module dispatching.
+ * Includes sidebar context parsing for split-layout detail/form views.
  *
  * @package     SAW_Visitors
  * @subpackage  Core
- * @version     6.0.1
+ * @version     7.0.0
  * @since       1.0.0
  */
 
@@ -20,6 +21,7 @@ if (!defined('ABSPATH')) {
  *
  * Custom routing system with WordPress rewrite rules integration.
  * Protects AJAX requests from being intercepted.
+ * Parses URL segments for sidebar context (detail view, create/edit forms).
  *
  * @since 1.0.0
  */
@@ -60,6 +62,7 @@ class SAW_Router {
      * Register query variables
      *
      * Makes SAW query vars available to WordPress.
+     * Uses single query var for sidebar context to avoid conflicts.
      *
      * @since 1.0.0
      * @param array $vars Existing query vars
@@ -69,7 +72,79 @@ class SAW_Router {
         $vars[] = 'saw_route';
         $vars[] = 'saw_path';
         $vars[] = 'saw_action';
+        $vars[] = 'saw_sidebar_context';  // Single var for all sidebar data
         return $vars;
+    }
+    
+    /**
+     * Parse sidebar context from URL segments
+     *
+     * Analyzes URL segments to determine sidebar state:
+     * - /admin/customers/          → null (list only)
+     * - /admin/customers/5/        → detail mode
+     * - /admin/customers/5/branches → detail mode with tab
+     * - /admin/customers/create    → create form mode
+     * - /admin/customers/5/edit    → edit form mode
+     * - /admin/customers/edit/5    → edit form mode (alternative)
+     *
+     * @since 7.0.0
+     * @param array $segments URL path segments after module route
+     * @return array Sidebar context array or empty array
+     */
+    private function parse_sidebar_context($segments) {
+        // Default: no sidebar
+        $context = array(
+            'mode' => null,        // null, 'detail', 'create', 'edit'
+            'id' => 0,            // Record ID for detail/edit
+            'tab' => 'overview',  // Tab for detail view
+        );
+        
+        if (empty($segments) || empty($segments[0])) {
+            return $context;
+        }
+        
+        // CREATE MODE: /admin/customers/create
+        if ($segments[0] === 'create' || $segments[0] === 'new') {
+            $context['mode'] = 'create';
+            return $context;
+        }
+        
+        // EDIT MODE (alternative): /admin/customers/edit/5
+        if (($segments[0] === 'edit' || $segments[0] === 'upravit') && !empty($segments[1]) && is_numeric($segments[1])) {
+            $context['mode'] = 'edit';
+            $context['id'] = intval($segments[1]);
+            return $context;
+        }
+        
+        // NUMERIC ID: Could be detail or edit
+        if (is_numeric($segments[0])) {
+            $id = intval($segments[0]);
+            
+            // EDIT MODE: /admin/customers/5/edit
+            if (isset($segments[1]) && ($segments[1] === 'edit' || $segments[1] === 'upravit')) {
+                $context['mode'] = 'edit';
+                $context['id'] = $id;
+                return $context;
+            }
+            
+            // DETAIL MODE: /admin/customers/5/ or /admin/customers/5/branches
+            $context['mode'] = 'detail';
+            $context['id'] = $id;
+            
+            // Parse tab if present
+            if (isset($segments[1]) && !empty($segments[1])) {
+                $context['tab'] = sanitize_key($segments[1]);
+            }
+            
+            return $context;
+        }
+        
+        // No sidebar context found
+        return array(
+            'mode' => null,
+            'id' => 0,
+            'tab' => 'overview',
+        );
     }
     
     /**
@@ -220,6 +295,7 @@ class SAW_Router {
      * Dispatch module controller
      *
      * Loads and executes appropriate controller method based on URL segments.
+     * Parses sidebar context and stores it in query var for controller access.
      *
      * @since 1.0.0
      * @param string $slug     Module slug
@@ -252,31 +328,40 @@ class SAW_Router {
             return;
         }
         
-        // Route to appropriate controller method
-        if (empty($segments[0])) {
-            if (!method_exists($controller, 'index')) {
-                wp_die('Controller does not have index() method: ' . $controller_class);
-                return;
-            }
-            
-            $controller->index();
-        } elseif ($segments[0] === 'create' || $segments[0] === 'new') {
-            if (!method_exists($controller, 'create')) {
-                wp_die('Controller does not have create() method: ' . $controller_class);
-                return;
-            }
-            
-            $controller->create();
-        } elseif (($segments[0] === 'edit' || $segments[0] === 'upravit') && !empty($segments[1])) {
-            if (!method_exists($controller, 'edit')) {
-                wp_die('Controller does not have edit() method: ' . $controller_class);
-                return;
-            }
-            
-            $controller->edit(intval($segments[1]));
-        } else {
-            $this->handle_404();
+        // Parse sidebar context from segments
+        $sidebar_context = $this->parse_sidebar_context($segments);
+        
+        // Store in single query var (serialized array)
+        set_query_var('saw_sidebar_context', $sidebar_context);
+        
+        // Route to controller - always call index() for sidebar system
+        if (!method_exists($controller, 'index')) {
+            wp_die('Controller does not have index() method: ' . $controller_class);
+            return;
         }
+        
+        // BACKWARD COMPATIBILITY: If no sidebar context, check for old-style routing
+        if ($sidebar_context['mode'] === null && !empty($segments[0])) {
+            
+            // Old create route: /admin/customers/create
+            if ($segments[0] === 'create' || $segments[0] === 'new') {
+                if (method_exists($controller, 'create')) {
+                    $controller->create();
+                    return;
+                }
+            }
+            
+            // Old edit route: /admin/customers/edit/5
+            if (($segments[0] === 'edit' || $segments[0] === 'upravit') && !empty($segments[1])) {
+                if (method_exists($controller, 'edit')) {
+                    $controller->edit(intval($segments[1]));
+                    return;
+                }
+            }
+        }
+        
+        // Call index() - it will handle sidebar context internally
+        $controller->index();
     }
     
     /**

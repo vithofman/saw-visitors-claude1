@@ -1,19 +1,14 @@
 <?php
 /**
- * Customers Form Template
+ * Customers Form Template - SIDEBAR OPTIMIZED
  * 
- * Create/Edit form for customers with complete data structure:
- * - Basic information (name, status, IČO, DIČ, account type)
- * - Branding (logo upload, primary color picker)
- * - Contact details (person, email, phone)
- * - Operating address (street, number, city, ZIP)
- * - Billing address (street, number, city, ZIP)
- * - Settings (admin language, notes)
+ * Create/Edit form for customers with complete data structure.
+ * Optimized for both standalone page and sidebar display.
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Customers/Templates
  * @since       1.0.0
- * @version     3.0.0
+ * @version     4.0.0 - SIDEBAR SUPPORT
  */
 
 if (!defined('ABSPATH')) {
@@ -22,8 +17,10 @@ if (!defined('ABSPATH')) {
 
 $is_edit = !empty($item);
 $item = $item ?? array();
+$in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'];
 ?>
 
+<?php if (!$in_sidebar): ?>
 <div class="saw-page-header">
     <div class="saw-page-header-content">
         <h1 class="saw-page-title">
@@ -35,6 +32,7 @@ $item = $item ?? array();
         </a>
     </div>
 </div>
+<?php endif; ?>
 
 <div class="saw-form-container">
     <form method="post" enctype="multipart/form-data" class="saw-customer-form">
@@ -102,7 +100,7 @@ $item = $item ?? array();
                                 <?php endforeach; ?>
                             <?php endif; ?>
                         </select>
-                        <span class="saw-help-text"><?php echo esc_html__('Výběr typu předplatného pro zákazníka', 'saw-visitors'); ?></span>
+                        <span class="saw-help-text"><?php echo esc_html__('Výběr typu předplatného', 'saw-visitors'); ?></span>
                     </div>
                 </div>
             </div>
@@ -141,7 +139,7 @@ $item = $item ?? array();
             </div>
         </details>
         
-        <!-- CONTACT DETAILS -->
+        <!-- CONTACT INFORMATION -->
         <details class="saw-form-section">
             <summary>
                 <span class="dashicons dashicons-email"></span>
@@ -281,10 +279,13 @@ $item = $item ?? array();
                 <span class="dashicons dashicons-yes"></span>
                 <?php echo $is_edit ? esc_html__('Uložit změny', 'saw-visitors') : esc_html__('Vytvořit zákazníka', 'saw-visitors'); ?>
             </button>
+            
+            <?php if (!$in_sidebar): ?>
             <a href="<?php echo esc_url(home_url('/admin/settings/customers/')); ?>" class="saw-button saw-button-secondary">
                 <span class="dashicons dashicons-no-alt"></span>
                 <?php echo esc_html__('Zrušit', 'saw-visitors'); ?>
             </a>
+            <?php endif; ?>
         </div>
     </form>
 </div>
