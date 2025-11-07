@@ -1,67 +1,112 @@
 <?php
 /**
  * SAW App Header Component
- * 
+ *
+ * Renders application header with branding, user menu, customer switcher,
+ * and language switcher.
+ *
  * @package SAW_Visitors
- * @since 4.8.0
+ * @since   4.8.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * SAW App Header Class
+ *
+ * Main header component for the application.
+ * Displays navigation, user info, customer switcher, and language selection.
+ *
+ * @since 4.8.0
+ */
 class SAW_App_Header {
     
+    /**
+     * Current user data
+     *
+     * @since 4.8.0
+     * @var array
+     */
     private $user;
+    
+    /**
+     * Current customer data
+     *
+     * @since 4.8.0
+     * @var array
+     */
     private $customer;
     
+    /**
+     * Constructor
+     *
+     * Initializes user and customer data.
+     * If not provided, loads from current WordPress user and SAW context.
+     *
+     * @since 4.8.0
+     * @param array|null $user     Optional user data override
+     * @param array|null $customer Optional customer data override
+     */
     public function __construct($user = null, $customer = null) {
         if (!$user && is_user_logged_in()) {
             $wp_user = wp_get_current_user();
             
             global $wpdb;
             $saw_user = $wpdb->get_row($wpdb->prepare(
-                "SELECT * FROM {$wpdb->prefix}saw_users WHERE wp_user_id = %d AND is_active = 1",
+                "SELECT * FROM %i WHERE wp_user_id = %d AND is_active = 1",
+                $wpdb->prefix . 'saw_users',
                 $wp_user->ID
             ), ARRAY_A);
             
             if ($saw_user) {
-                $this->user = [
+                $this->user = array(
                     'id' => $saw_user['id'],
                     'name' => $saw_user['first_name'] . ' ' . $saw_user['last_name'],
                     'email' => $wp_user->user_email,
                     'role' => $saw_user['role'],
                     'first_name' => $saw_user['first_name'],
                     'last_name' => $saw_user['last_name'],
-                ];
+                );
             } else {
-                $this->user = [
+                $this->user = array(
                     'id' => $wp_user->ID,
                     'name' => $wp_user->display_name,
                     'email' => $wp_user->user_email,
                     'role' => 'admin',
-                ];
+                );
             }
         } else {
-            $this->user = $user ?: [
+            $this->user = $user ?: array(
                 'id' => 1,
                 'name' => 'Demo Admin',
                 'email' => 'admin@demo.cz',
                 'role' => 'admin',
-            ];
+            );
         }
         
+        // Get customer data from context
         if (!$customer) {
             $customer = SAW_Context::get_customer_data();
         }
         
-        $this->customer = $customer ?: [
+        $this->customer = $customer ?: array(
             'id' => 1,
             'name' => 'Demo Firma s.r.o.',
             'ico' => '12345678',
-        ];
+        );
     }
     
+    /**
+     * Render header
+     *
+     * Outputs complete header HTML including mobile menu toggle,
+     * customer switcher, language switcher, and user menu.
+     *
+     * @since 4.8.0
+     * @return void
+     */
     public function render() {
         ?>
         <header class="saw-app-header" id="sawAppHeader">
@@ -136,6 +181,14 @@ class SAW_App_Header {
         <?php
     }
     
+    /**
+     * Render customer switcher component
+     *
+     * Loads and renders the customer switcher component.
+     *
+     * @since 4.8.0
+     * @return void
+     */
     private function render_customer_switcher() {
         if (!class_exists('SAW_Component_Customer_Switcher')) {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/customer-switcher/class-saw-component-customer-switcher.php';
@@ -145,41 +198,63 @@ class SAW_App_Header {
         $switcher->render();
     }
     
+    /**
+     * Render language switcher component
+     *
+     * Loads and renders the language switcher component.
+     *
+     * @since 4.8.0
+     * @return void
+     */
     private function render_language_switcher() {
         if (!class_exists('SAW_Component_Language_Switcher')) {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/language-switcher/class-saw-component-language-switcher.php';
         }
+        
         $current_language = $this->get_current_language();
         $switcher = new SAW_Component_Language_Switcher($current_language);
         $switcher->render();
     }
     
+    /**
+     * Get current language
+     *
+     * Returns current language from user meta.
+     * Defaults to 'cs' if not set.
+     *
+     * @since 4.8.0
+     * @return string Language code (e.g. 'cs', 'en')
+     */
     private function get_current_language() {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        if (isset($_SESSION['saw_current_language'])) {
-            return $_SESSION['saw_current_language'];
-        }
         if (is_user_logged_in()) {
             $lang = get_user_meta(get_current_user_id(), 'saw_current_language', true);
             if ($lang) {
-                $_SESSION['saw_current_language'] = $lang;
                 return $lang;
             }
         }
+        
         return 'cs';
     }
     
+    /**
+     * Get role label
+     *
+     * Translates role code to human-readable label.
+     *
+     * @since 4.8.0
+     * @return string Translated role label
+     */
     private function get_role_label() {
         $role = $this->user['role'] ?? 'admin';
-        $labels = [
+        
+        $labels = array(
             'super_admin' => 'Super Administrátor',
             'admin' => 'Administrátor',
             'super_manager' => 'Super Manažer',
             'manager' => 'Manažer',
             'terminal' => 'Terminál',
-        ];
+        );
+        
         return $labels[$role] ?? 'Uživatel';
     }
 }

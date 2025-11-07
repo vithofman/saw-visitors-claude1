@@ -1,109 +1,124 @@
 <?php
 /**
- * Account Types Module Config
+ * Account Types Module Configuration
  * 
- * @package SAW_Visitors
- * @version 2.0.0 - PRODUCTION: Complete fields definition
+ * Defines complete module structure including:
+ * - Database table and entity name
+ * - Field definitions with validation rules
+ * - List view configuration (columns, filters, sorting)
+ * - Cache settings
+ * - Capabilities and permissions
+ * 
+ * @package     SAW_Visitors
+ * @subpackage  Modules/AccountTypes
+ * @since       1.0.0
+ * @version     2.0.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-return [
+return array(
+    // Basic module identification
     'entity' => 'account_types',
     'table' => 'saw_account_types',
-    'singular' => 'Typ účtu',
-    'plural' => 'Typy účtů',
+    'singular' => __('Typ účtu', 'saw-visitors'),
+    'plural' => __('Typy účtů', 'saw-visitors'),
     'route' => 'admin/settings/account-types',
     'icon' => '💳',
     
+    // Customer isolation disabled (account types are global)
     'has_customer_isolation' => false,
     
-    'capabilities' => [
+    // Capabilities required for each action
+    'capabilities' => array(
         'list' => 'manage_options',
         'view' => 'manage_options',
         'create' => 'manage_options',
         'edit' => 'manage_options',
         'delete' => 'manage_options',
-    ],
+    ),
     
-    'fields' => [
-        'name' => [
+    // Field definitions
+    'fields' => array(
+        'name' => array(
             'type' => 'text',
-            'label' => 'Interní název',
+            'label' => __('Interní název', 'saw-visitors'),
             'required' => true,
             'sanitize' => 'sanitize_text_field',
-            'help' => 'Unikátní slug (jen malá písmena, číslice a pomlčky)',
-        ],
-        'display_name' => [
+            'help' => __('Unikátní slug (jen malá písmena, číslice a pomlčky)', 'saw-visitors'),
+        ),
+        'display_name' => array(
             'type' => 'text',
-            'label' => 'Zobrazovaný název',
+            'label' => __('Zobrazovaný název', 'saw-visitors'),
             'required' => true,
             'sanitize' => 'sanitize_text_field',
-            'help' => 'Název který uvidí uživatelé',
-        ],
-        'description' => [
+            'help' => __('Název který uvidí uživatelé', 'saw-visitors'),
+        ),
+        'description' => array(
             'type' => 'textarea',
-            'label' => 'Popis',
+            'label' => __('Popis', 'saw-visitors'),
             'required' => false,
             'sanitize' => 'sanitize_textarea_field',
-            'help' => 'Volitelný popis typu účtu',
-        ],
-        'price' => [
+            'help' => __('Volitelný popis typu účtu', 'saw-visitors'),
+        ),
+        'price' => array(
             'type' => 'number',
-            'label' => 'Cena (Kč/měsíc)',
+            'label' => __('Cena (Kč/měsíc)', 'saw-visitors'),
             'required' => false,
             'default' => 0.00,
             'sanitize' => 'floatval',
-            'help' => 'Měsíční cena v Kč (0 = zdarma)',
-        ],
-        'color' => [
+            'help' => __('Měsíční cena v Kč (0 = zdarma)', 'saw-visitors'),
+        ),
+        'color' => array(
             'type' => 'color',
-            'label' => 'Barva',
+            'label' => __('Barva', 'saw-visitors'),
             'required' => false,
             'default' => '#6b7280',
             'sanitize' => 'sanitize_hex_color',
-            'help' => 'Barva pro vizuální označení typu účtu',
-        ],
-        'features' => [
+            'help' => __('Barva pro vizuální označení typu účtu', 'saw-visitors'),
+        ),
+        'features' => array(
             'type' => 'textarea',
-            'label' => 'Seznam funkcí',
+            'label' => __('Seznam funkcí', 'saw-visitors'),
             'required' => false,
             'sanitize' => 'sanitize_textarea_field',
-            'help' => 'Každá funkce na nový řádek',
-        ],
-        'sort_order' => [
+            'help' => __('Každá funkce na nový řádek', 'saw-visitors'),
+        ),
+        'sort_order' => array(
             'type' => 'number',
-            'label' => 'Pořadí řazení',
+            'label' => __('Pořadí řazení', 'saw-visitors'),
             'required' => false,
             'default' => 0,
             'sanitize' => 'intval',
-            'help' => 'Nižší číslo = vyšší v seznamu',
-        ],
-        'is_active' => [
+            'help' => __('Nižší číslo = vyšší v seznamu', 'saw-visitors'),
+        ),
+        'is_active' => array(
             'type' => 'checkbox',
-            'label' => 'Aktivní typ účtu',
+            'label' => __('Aktivní typ účtu', 'saw-visitors'),
             'required' => false,
             'default' => 1,
-            'help' => 'Pouze aktivní typy jsou dostupné pro výběr',
-        ],
-    ],
+            'help' => __('Pouze aktivní typy jsou dostupné pro výběr', 'saw-visitors'),
+        ),
+    ),
     
-    'list_config' => [
-        'columns' => ['color', 'display_name', 'name', 'price', 'is_active'],
-        'searchable' => ['name', 'display_name', 'description'],
-        'sortable' => ['name', 'display_name', 'price', 'sort_order'],
-        'filters' => [
+    // List view configuration
+    'list_config' => array(
+        'columns' => array('color', 'display_name', 'name', 'price', 'is_active'),
+        'searchable' => array('name', 'display_name', 'description'),
+        'sortable' => array('name', 'display_name', 'price', 'sort_order'),
+        'filters' => array(
             'is_active' => true,
-        ],
+        ),
         'per_page' => 20,
         'enable_detail_modal' => true,
-    ],
+    ),
     
-    'cache' => [
+    // Cache configuration
+    'cache' => array(
         'enabled' => true,
         'ttl' => 300,
-        'invalidate_on' => ['save', 'delete'],
-    ],
-];
+        'invalidate_on' => array('save', 'delete'),
+    ),
+);

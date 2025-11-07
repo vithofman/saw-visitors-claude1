@@ -2,24 +2,59 @@
 /**
  * Language Switcher Component
  * 
- * @package SAW_Visitors
- * @version 2.2.0
- * @since 4.7.0
+ * Provides a dropdown interface for users to switch between available
+ * languages. Updates language preference in the database and reloads
+ * the page to apply changes.
+ * 
+ * @package     SAW_Visitors
+ * @subpackage  Components/LanguageSwitcher
+ * @version     2.2.0
+ * @since       4.7.0
+ * @author      SAW Visitors Team
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * SAW Language Switcher Component Class
+ * 
+ * Handles language selection UI and user language preference retrieval.
+ * 
+ * @since 4.7.0
+ */
 class SAW_Component_Language_Switcher {
     
+    /**
+     * Current language code
+     * 
+     * @since 4.7.0
+     * @var string
+     */
     private $current_language;
+    
+    /**
+     * Available languages configuration
+     * 
+     * @since 4.7.0
+     * @var array
+     */
     private $available_languages;
     
+    /**
+     * Constructor
+     * 
+     * Initializes the language switcher with current language and
+     * available language options.
+     * 
+     * @since 4.7.0
+     * @param string $current_language Current language code (default: 'cs')
+     */
     public function __construct($current_language = 'cs') {
         $this->current_language = $current_language;
         
-        // Dostupné jazyky
+        // Available languages
         $this->available_languages = array(
             'cs' => array(
                 'code' => 'cs',
@@ -36,6 +71,12 @@ class SAW_Component_Language_Switcher {
     
     /**
      * Get current user language from database
+     * 
+     * Retrieves the user's language preference from the saw_users table.
+     * Falls back to 'cs' if not found or user not logged in.
+     * 
+     * @since 4.7.0
+     * @return string Language code (cs or en)
      */
     public static function get_user_language() {
         if (!is_user_logged_in()) {
@@ -45,7 +86,8 @@ class SAW_Component_Language_Switcher {
         global $wpdb;
         
         $language = $wpdb->get_var($wpdb->prepare(
-            "SELECT language FROM {$wpdb->prefix}saw_users WHERE wp_user_id = %d AND is_active = 1",
+            "SELECT language FROM %i WHERE wp_user_id = %d AND is_active = 1",
+            $wpdb->prefix . 'saw_users',
             get_current_user_id()
         ));
         
@@ -53,26 +95,17 @@ class SAW_Component_Language_Switcher {
             return $language;
         }
         
-        // Fallback to session
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        
-        if (isset($_SESSION['saw_current_language'])) {
-            return $_SESSION['saw_current_language'];
-        }
-        
-        // Fallback to user meta
-        $meta_language = get_user_meta(get_current_user_id(), 'saw_current_language', true);
-        if ($meta_language) {
-            return $meta_language;
-        }
-        
+        // Default fallback
         return 'cs';
     }
     
     /**
      * Render language switcher
+     * 
+     * Outputs the complete language switcher HTML with dropdown menu.
+     * 
+     * @since 4.7.0
+     * @return void
      */
     public function render() {
         $this->enqueue_assets();
@@ -110,7 +143,12 @@ class SAW_Component_Language_Switcher {
     }
     
     /**
-     * Enqueue assets
+     * Enqueue component assets
+     * 
+     * Loads CSS, JavaScript, and localizes script data for AJAX.
+     * 
+     * @since 4.7.0
+     * @return void
      */
     private function enqueue_assets() {
         wp_enqueue_style(

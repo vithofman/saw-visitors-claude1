@@ -1,8 +1,14 @@
 /**
  * File Upload Component Styles - Modern & Elegant
  * 
- * @package SAW_Visitors
- * @version 1.0.0
+ * Elegant file upload component with preview, drag-and-drop support,
+ * and comprehensive file information display.
+ * 
+ * @package     SAW_Visitors
+ * @subpackage  Components/FileUpload
+ * @version     1.0.0
+ * @since       1.0.0
+ * @author      SAW Visitors Team
  */
 
 /* ============================================
@@ -15,7 +21,7 @@
 .saw-file-upload-area {
     display: grid;
     grid-template-columns: 200px 1fr;
-    gap: 24px;
+    gap: var(--saw-space-2xl);
     align-items: start;
 }
 
@@ -25,26 +31,26 @@
 .saw-file-preview-section {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--saw-space-sm);
 }
 
 .saw-file-preview-box {
     position: relative;
     width: 200px;
     height: 200px;
-    border: 2px solid #e5e7eb;
-    border-radius: 12px;
+    border: var(--saw-border-width-thick) solid var(--saw-border-color);
+    border-radius: var(--saw-border-radius-lg);
     background: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    transition: all 0.3s ease;
+    transition: all var(--saw-transition-base);
 }
 
 .saw-file-preview-box:hover {
-    border-color: #d1d5db;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-color: var(--saw-gray-300);
+    box-shadow: var(--saw-shadow-md);
 }
 
 .saw-file-preview-box.has-file {
@@ -55,7 +61,7 @@
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
-    padding: 12px;
+    padding: var(--saw-space-md);
 }
 
 /* Empty State */
@@ -64,8 +70,8 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    padding: 24px;
+    gap: var(--saw-space-md);
+    padding: var(--saw-space-2xl);
     text-align: center;
 }
 
@@ -73,24 +79,24 @@
     width: 64px;
     height: 64px;
     border-radius: 50%;
-    background: #f3f4f6;
+    background: var(--saw-gray-100);
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.3s ease;
+    transition: all var(--saw-transition-base);
 }
 
 .saw-file-icon-wrapper .dashicons {
     font-size: 32px;
     width: 32px;
     height: 32px;
-    color: #9ca3af;
+    color: var(--saw-gray-400);
 }
 
 .saw-file-empty-text {
     margin: 0;
-    font-size: 13px;
-    color: #6b7280;
+    font-size: var(--saw-font-size-sm);
+    color: var(--saw-gray-500);
     font-weight: 500;
 }
 
@@ -106,7 +112,7 @@
     align-items: center;
     justify-content: center;
     opacity: 0;
-    transition: opacity 0.2s ease;
+    transition: opacity var(--saw-transition-fast);
     border: none;
     cursor: pointer;
 }
@@ -128,7 +134,7 @@
 .saw-file-upload-controls {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--saw-space-md);
 }
 
 .saw-file-input {
@@ -144,23 +150,23 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: var(--saw-space-sm);
     padding: 10px 20px;
     background: #ffffff;
-    color: #374151;
-    border: 2px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 14px;
+    color: var(--saw-gray-700);
+    border: var(--saw-border-width-thick) solid var(--saw-gray-300);
+    border-radius: var(--saw-border-radius-md);
+    font-size: var(--saw-font-size-sm);
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all var(--saw-transition-fast);
     align-self: flex-start;
 }
 
 .saw-file-upload-trigger:hover {
-    background: #f9fafb;
-    border-color: #2271b1;
-    color: #2271b1;
+    background: var(--saw-gray-50);
+    border-color: var(--saw-primary);
+    color: var(--saw-primary);
 }
 
 .saw-file-upload-trigger:active {
@@ -168,7 +174,7 @@
 }
 
 .saw-file-input:focus + .saw-file-upload-trigger {
-    outline: 2px solid #2271b1;
+    outline: 2px solid var(--saw-primary);
     outline-offset: 2px;
 }
 
@@ -184,12 +190,12 @@
 .saw-file-selected-info {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    background: #f0fdf4;
-    border: 1px solid #bbf7d0;
-    border-radius: 8px;
-    transition: all 0.2s ease;
+    gap: var(--saw-space-md);
+    padding: var(--saw-space-md) var(--saw-space-lg);
+    background: var(--saw-success-light);
+    border: var(--saw-border-width) solid #bbf7d0;
+    border-radius: var(--saw-border-radius-md);
+    transition: all var(--saw-transition-fast);
 }
 
 .saw-file-selected-info.hidden {
@@ -211,7 +217,7 @@
     font-size: 20px;
     width: 20px;
     height: 20px;
-    color: #16a34a;
+    color: var(--saw-success);
 }
 
 .saw-file-selected-details {
@@ -220,7 +226,7 @@
 }
 
 .saw-file-selected-name {
-    font-size: 14px;
+    font-size: var(--saw-font-size-sm);
     font-weight: 600;
     color: #166534;
     white-space: nowrap;
@@ -229,7 +235,7 @@
 }
 
 .saw-file-selected-meta {
-    font-size: 12px;
+    font-size: var(--saw-font-size-xs);
     color: #15803d;
     margin-top: 2px;
 }
@@ -245,7 +251,7 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all var(--saw-transition-fast);
     color: #15803d;
 }
 
@@ -263,14 +269,14 @@
    HELP TEXT
    ============================================ */
 .saw-help-text {
-    font-size: 13px;
-    color: #6b7280;
+    font-size: var(--saw-font-size-sm);
+    color: var(--saw-gray-500);
     line-height: 1.5;
     margin: 0;
 }
 
 .saw-help-text.error {
-    color: #dc2626;
+    color: var(--saw-danger);
     font-weight: 500;
 }
 

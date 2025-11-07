@@ -2,7 +2,11 @@
 /**
  * Branches List Template
  * 
+ * Displays list of branches with search, filters, pagination, and modal details.
+ * Uses SAW component system for consistent UI and functionality.
+ * 
  * @package SAW_Visitors
+ * @since 2.0.0
  * @version 3.1.0 - Permissions Fix
  */
 
@@ -43,10 +47,9 @@ $search_html = ob_get_clean();
 
 // Prepare filters
 ob_start();
-echo '<div style="display: flex; gap: 12px; flex-wrap: wrap;">';
+echo '<div class="saw-filters-row">';
 
 if (!empty($this->config['list_config']['filters']['is_active'])) {
-    echo '<div style="flex: 0 0 auto;">';
     $status_filter = new SAW_Component_Selectbox('is_active-filter', array(
         'options' => array(
             '' => 'Všechny statusy',
@@ -60,11 +63,9 @@ if (!empty($this->config['list_config']['filters']['is_active'])) {
         'name' => 'is_active',
     ));
     $status_filter->render();
-    echo '</div>';
 }
 
 if (!empty($this->config['list_config']['filters']['is_headquarters'])) {
-    echo '<div style="flex: 0 0 auto;">';
     $headquarters_filter = new SAW_Component_Selectbox('is_headquarters-filter', array(
         'options' => array(
             '' => 'Všechny pobočky',
@@ -78,7 +79,6 @@ if (!empty($this->config['list_config']['filters']['is_headquarters'])) {
         'name' => 'is_headquarters',
     ));
     $headquarters_filter->render();
-    echo '</div>';
 }
 
 echo '</div>';
@@ -91,7 +91,7 @@ $can_delete = $this->can('delete');
 $can_view = $this->can('view');
 
 // Build actions array
-$actions = [];
+$actions = array();
 if ($can_edit) {
     $actions[] = 'edit';
 }
@@ -100,13 +100,13 @@ if ($can_delete) {
 }
 
 // Initialize admin table
-$table = new SAW_Component_Admin_Table('branches', [
+$table = new SAW_Component_Admin_Table('branches', array(
     'title' => 'Pobočky',
     'create_url' => $can_create ? home_url('/admin/branches/new/') : null,
     'edit_url' => $can_edit ? home_url('/admin/branches/edit/{id}/') : null,
     
-    'columns' => [
-        'name' => [
+    'columns' => array(
+        'name' => array(
             'label' => 'Název pobočky',
             'type' => 'custom',
             'sortable' => true,
@@ -128,8 +128,8 @@ $table = new SAW_Component_Admin_Table('branches', [
                 
                 return $html;
             }
-        ],
-        'code' => [
+        ),
+        'code' => array(
             'label' => 'Kód',
             'type' => 'custom',
             'width' => '100px',
@@ -140,14 +140,14 @@ $table = new SAW_Component_Admin_Table('branches', [
                 }
                 return '<span class="saw-text-muted">—</span>';
             }
-        ],
-        'city' => [
+        ),
+        'city' => array(
             'label' => 'Město',
             'type' => 'text',
             'width' => '150px',
             'sortable' => true
-        ],
-        'phone' => [
+        ),
+        'phone' => array(
             'label' => 'Telefon',
             'type' => 'custom',
             'width' => '120px',
@@ -157,36 +157,36 @@ $table = new SAW_Component_Admin_Table('branches', [
                 }
                 return '<span class="saw-text-muted">—</span>';
             }
-        ],
-        'is_headquarters' => [
+        ),
+        'is_headquarters' => array(
             'label' => 'Hlavní',
             'type' => 'badge',
             'width' => '100px',
             'align' => 'center',
-            'map' => [
+            'map' => array(
                 '1' => 'info',
                 '0' => 'secondary'
-            ],
-            'labels' => [
+            ),
+            'labels' => array(
                 '1' => 'Ano',
                 '0' => 'Ne'
-            ]
-        ],
-        'is_active' => [
+            )
+        ),
+        'is_active' => array(
             'label' => 'Status',
             'type' => 'badge',
             'width' => '100px',
             'align' => 'center',
-            'map' => [
+            'map' => array(
                 '1' => 'success',
                 '0' => 'secondary'
-            ],
-            'labels' => [
+            ),
+            'labels' => array(
                 '1' => 'Aktivní',
                 '0' => 'Neaktivní'
-            ]
-        ],
-        'sort_order' => [
+            )
+        ),
+        'sort_order' => array(
             'label' => 'Pořadí',
             'type' => 'custom',
             'width' => '80px',
@@ -195,8 +195,8 @@ $table = new SAW_Component_Admin_Table('branches', [
             'callback' => function($value) {
                 return '<span class="saw-sort-order-badge">' . esc_html($value ?? 0) . '</span>';
             }
-        ]
-    ],
+        )
+    ),
     
     'rows' => $items,
     'total_items' => $total,
@@ -213,32 +213,32 @@ $table = new SAW_Component_Admin_Table('branches', [
     'enable_modal' => $can_view,
     'modal_id' => 'branch-detail',
     'modal_ajax_action' => 'saw_get_branches_detail',
-]);
+));
 
 $table->render();
 
 // Modal component (only if user can view details)
 if ($can_view) {
-    $modal_actions = [];
+    $modal_actions = array();
     
     if ($can_edit) {
-        $modal_actions[] = [
+        $modal_actions[] = array(
             'type' => 'edit',
             'label' => '',
             'icon' => 'dashicons-edit',
             'url' => home_url('/admin/branches/edit/{id}/'),
-        ];
+        );
     }
     
     if ($can_delete) {
-        $modal_actions[] = [
+        $modal_actions[] = array(
             'type' => 'delete',
             'label' => '',
             'icon' => 'dashicons-trash',
             'confirm' => true,
             'confirm_message' => 'Opravdu chcete smazat tuto pobočku?',
             'ajax_action' => 'saw_delete_branches',
-        ];
+        );
     }
     
     $branch_modal = new SAW_Component_Modal('branch-detail', array(

@@ -1,7 +1,37 @@
+/**
+ * SAW Selectbox Component
+ * 
+ * Custom selectbox with search functionality, AJAX loading, keyboard navigation,
+ * and optional icon display. Supports URL-based redirect on change.
+ * 
+ * @package     SAW_Visitors
+ * @subpackage  Components/Selectbox
+ * @version     4.6.1
+ * @since       4.6.1
+ * @author      SAW Visitors Team
+ */
+
 (function($) {
     'use strict';
 
+    /**
+     * SAW Selectbox Component Class
+     * 
+     * Manages selectbox interactions including dropdown toggle, option selection,
+     * search filtering, and AJAX option loading.
+     * 
+     * @class
+     * @since 4.6.1
+     */
     class SAWSelectboxComponent {
+        /**
+         * Constructor
+         * 
+         * Initializes the selectbox component with DOM elements and configuration.
+         * 
+         * @since 4.6.1
+         * @param {jQuery} $container - Selectbox container element
+         */
         constructor($container) {
             this.$container = $container;
             this.$trigger = $container.find('.saw-selectbox-trigger');
@@ -23,6 +53,14 @@
             this.init();
         }
         
+        /**
+         * Initialize component
+         * 
+         * Sets up event bindings and loads options if AJAX enabled.
+         * 
+         * @since 4.6.1
+         * @return {void}
+         */
         init() {
             this.bindEvents();
             
@@ -31,6 +69,14 @@
             }
         }
         
+        /**
+         * Bind event handlers
+         * 
+         * Attaches event listeners for trigger, options, search, and keyboard interactions.
+         * 
+         * @since 4.6.1
+         * @return {void}
+         */
         bindEvents() {
             this.$trigger.on('click', (e) => {
                 e.stopPropagation();
@@ -67,6 +113,14 @@
             });
         }
         
+        /**
+         * Toggle dropdown
+         * 
+         * Opens dropdown if closed, closes if open.
+         * 
+         * @since 4.6.1
+         * @return {void}
+         */
         toggle() {
             if (this.$container.hasClass('open')) {
                 this.close();
@@ -75,6 +129,14 @@
             }
         }
         
+        /**
+         * Open dropdown
+         * 
+         * Displays the dropdown and focuses search input if searchable.
+         * 
+         * @since 4.6.1
+         * @return {void}
+         */
         open() {
             this.$container.addClass('open');
             
@@ -89,6 +151,14 @@
             }
         }
         
+        /**
+         * Close dropdown
+         * 
+         * Hides the dropdown and clears search input.
+         * 
+         * @since 4.6.1
+         * @return {void}
+         */
         close() {
             this.$container.removeClass('open');
             
@@ -98,6 +168,15 @@
             }
         }
         
+        /**
+         * Select option
+         * 
+         * Updates trigger text, hidden input value, and triggers change handler.
+         * 
+         * @since 4.6.1
+         * @param {jQuery} $option - Selected option element
+         * @return {void}
+         */
         selectOption($option) {
             const value = $option.data('value');
             const label = $option.find('.saw-selectbox-option-label').text();
@@ -115,6 +194,15 @@
             this.handleChange(value);
         }
         
+        /**
+         * Handle change event
+         * 
+         * Triggers custom event and handles redirect or callback if configured.
+         * 
+         * @since 4.6.1
+         * @param {string|number} value - Selected value
+         * @return {void}
+         */
         handleChange(value) {
             $(document).trigger('saw:selectbox:change', {
                 id: this.id,
@@ -138,6 +226,15 @@
             }
         }
         
+        /**
+         * Handle search input
+         * 
+         * Filters options based on search query.
+         * 
+         * @since 4.6.1
+         * @param {string} query - Search query string
+         * @return {void}
+         */
         handleSearch(query) {
             query = query.toLowerCase().trim();
             
@@ -165,6 +262,15 @@
             }
         }
         
+        /**
+         * Load options via AJAX
+         * 
+         * Fetches options from server and renders them.
+         * 
+         * @since 4.6.1
+         * @param {string} query - Optional search query
+         * @return {void}
+         */
         loadOptions(query = '') {
             if (!this.ajaxEnabled || !this.ajaxAction) {
                 return;
@@ -190,12 +296,20 @@
                     }
                 },
                 error: (xhr, status, error) => {
-                    console.error('Selectbox AJAX error:', xhr.status, xhr.responseText);
                     this.$options.html('<div class="saw-selectbox-empty">Chyba serveru (' + xhr.status + ')</div>');
                 }
             });
         }
         
+        /**
+         * Render options HTML
+         * 
+         * Generates HTML for options list from data array.
+         * 
+         * @since 4.6.1
+         * @param {Array} options - Array of option objects
+         * @return {void}
+         */
         renderOptions(options) {
             const currentValue = this.$valueInput.val();
             let html = '';
@@ -239,6 +353,15 @@
             this.$options.html(html);
         }
         
+        /**
+         * Escape HTML entities
+         * 
+         * Prevents XSS by escaping special characters.
+         * 
+         * @since 4.6.1
+         * @param {string} text - Text to escape
+         * @return {string} Escaped text
+         */
         escapeHtml(text) {
             const map = {
                 '&': '&amp;',
@@ -251,6 +374,11 @@
         }
     }
 
+    /**
+     * Initialize all selectbox components on document ready
+     * 
+     * @since 4.6.1
+     */
     $(document).ready(function() {
         $('.saw-selectbox-component').each(function() {
             new SAWSelectboxComponent($(this));

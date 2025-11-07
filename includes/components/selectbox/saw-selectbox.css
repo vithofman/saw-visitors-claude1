@@ -1,9 +1,14 @@
 /**
  * SAW Selectbox Component CSS
- * Univerzální selectbox s podporou vyhledávání a AJAX
  * 
- * @package SAW_Visitors
- * @version 4.6.1
+ * Universal selectbox with search support and AJAX loading capabilities.
+ * Features custom styling, keyboard navigation, and responsive design.
+ * 
+ * @package     SAW_Visitors
+ * @subpackage  Components/Selectbox
+ * @version     4.6.1
+ * @since       4.6.1
+ * @author      SAW Visitors Team
  */
 
 /* Container */
@@ -18,34 +23,34 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: var(--saw-space-sm);
     width: 100%;
-    padding: 8px 12px;
-    background: white;
-    border: 1px solid #dcdcde;
-    border-radius: 6px;
-    font-size: 14px;
+    padding: var(--saw-space-sm) var(--saw-space-md);
+    background: #ffffff;
+    border: var(--saw-border-width) solid var(--saw-border-color);
+    border-radius: var(--saw-border-radius-sm);
+    font-size: var(--saw-font-size-sm);
     font-weight: 400;
-    color: #111827;
+    color: var(--saw-gray-900);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all var(--saw-transition-fast);
     text-align: left;
 }
 
 .saw-selectbox-trigger:hover {
-    border-color: #2271b1;
-    background: #f9fafb;
+    border-color: var(--saw-primary);
+    background: var(--saw-gray-50);
 }
 
 .saw-selectbox-trigger:focus {
     outline: none;
-    border-color: #2271b1;
-    box-shadow: 0 0 0 1px #2271b1;
+    border-color: var(--saw-primary);
+    box-shadow: 0 0 0 1px var(--saw-primary);
 }
 
 .saw-selectbox-component.open .saw-selectbox-trigger {
-    border-color: #2271b1;
-    box-shadow: 0 0 0 1px #2271b1;
+    border-color: var(--saw-primary);
+    box-shadow: 0 0 0 1px var(--saw-primary);
 }
 
 .saw-selectbox-trigger-text {
@@ -57,7 +62,7 @@
 
 .saw-selectbox-trigger-icon {
     flex-shrink: 0;
-    transition: transform 0.2s;
+    transition: transform var(--saw-transition-fast);
 }
 
 .saw-selectbox-component.open .saw-selectbox-trigger-icon {
@@ -67,13 +72,13 @@
 /* Dropdown */
 .saw-selectbox-dropdown {
     position: absolute;
-    top: calc(100% + 4px);
+    top: calc(100% + var(--saw-space-xs));
     left: 0;
     right: 0;
-    background: white;
-    border: 1px solid #dcdcde;
-    border-radius: 6px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    background: #ffffff;
+    border: var(--saw-border-width) solid var(--saw-border-color);
+    border-radius: var(--saw-border-radius-sm);
+    box-shadow: var(--saw-shadow-lg);
     display: none;
     flex-direction: column;
     max-height: 320px;
@@ -86,24 +91,24 @@
 
 /* Search */
 .saw-selectbox-search {
-    padding: 8px;
-    border-bottom: 1px solid #f0f0f1;
+    padding: var(--saw-space-sm);
+    border-bottom: var(--saw-border-width) solid var(--saw-gray-100);
     position: relative;
 }
 
 .saw-selectbox-search-input {
     width: 100%;
-    padding: 8px 12px 8px 36px;
-    border: 1px solid #dcdcde;
-    border-radius: 4px;
-    font-size: 13px;
-    transition: border-color 0.2s;
+    padding: var(--saw-space-sm) var(--saw-space-md) var(--saw-space-sm) 36px;
+    border: var(--saw-border-width) solid var(--saw-border-color);
+    border-radius: var(--saw-border-radius-sm);
+    font-size: var(--saw-font-size-xs);
+    transition: border-color var(--saw-transition-fast);
 }
 
 .saw-selectbox-search-input:focus {
     outline: none;
-    border-color: #2271b1;
-    box-shadow: 0 0 0 1px #2271b1;
+    border-color: var(--saw-primary);
+    box-shadow: 0 0 0 1px var(--saw-primary);
 }
 
 .saw-selectbox-search-icon {
@@ -111,7 +116,7 @@
     left: 16px;
     top: 50%;
     transform: translateY(-50%);
-    color: #646970;
+    color: var(--saw-gray-600);
     font-size: 16px;
     pointer-events: none;
 }
@@ -127,24 +132,24 @@
 }
 
 .saw-selectbox-options::-webkit-scrollbar-track {
-    background: #f9fafb;
+    background: var(--saw-gray-50);
 }
 
 .saw-selectbox-options::-webkit-scrollbar-thumb {
-    background: #d1d5db;
-    border-radius: 4px;
+    background: var(--saw-gray-300);
+    border-radius: var(--saw-border-radius-sm);
 }
 
 .saw-selectbox-options::-webkit-scrollbar-thumb:hover {
-    background: #9ca3af;
+    background: var(--saw-gray-400);
 }
 
 /* Option Item */
 .saw-selectbox-option {
-    padding: 10px 12px;
+    padding: 10px var(--saw-space-md);
     cursor: pointer;
-    transition: background 0.2s;
-    border-bottom: 1px solid #f9fafb;
+    transition: background var(--saw-transition-fast);
+    border-bottom: var(--saw-border-width) solid var(--saw-gray-50);
     display: flex;
     align-items: center;
     gap: 10px;
@@ -155,12 +160,12 @@
 }
 
 .saw-selectbox-option:hover {
-    background: #f9fafb;
+    background: var(--saw-gray-50);
 }
 
 .saw-selectbox-option.active {
-    background: #eff6ff;
-    color: #2271b1;
+    background: var(--saw-primary-light);
+    color: var(--saw-primary);
 }
 
 .saw-selectbox-option.hidden {
@@ -168,7 +173,7 @@
 }
 
 .saw-selectbox-option-check {
-    color: #2271b1;
+    color: var(--saw-primary);
     font-weight: bold;
     width: 16px;
     flex-shrink: 0;
@@ -177,7 +182,7 @@
 .saw-selectbox-option-icon {
     width: 24px;
     height: 24px;
-    border-radius: 4px;
+    border-radius: var(--saw-border-radius-sm);
     object-fit: contain;
     flex-shrink: 0;
 }
@@ -188,7 +193,7 @@
 }
 
 .saw-selectbox-option-label {
-    font-size: 14px;
+    font-size: var(--saw-font-size-sm);
     font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
@@ -196,36 +201,36 @@
 }
 
 .saw-selectbox-option-meta {
-    font-size: 12px;
-    color: #646970;
+    font-size: var(--saw-font-size-xs);
+    color: var(--saw-gray-600);
     margin-top: 2px;
 }
 
 /* Loading State */
 .saw-selectbox-loading {
-    padding: 32px 24px;
+    padding: 32px var(--saw-space-2xl);
     text-align: center;
-    color: #646970;
+    color: var(--saw-gray-600);
 }
 
 .saw-selectbox-loading .spinner {
-    margin: 0 auto 12px;
+    margin: 0 auto var(--saw-space-md);
     float: none;
 }
 
 /* Empty State */
 .saw-selectbox-empty {
-    padding: 32px 24px;
+    padding: 32px var(--saw-space-2xl);
     text-align: center;
-    color: #646970;
-    font-size: 14px;
+    color: var(--saw-gray-600);
+    font-size: var(--saw-font-size-sm);
 }
 
 /* Responsive */
 @media (max-width: 768px) {
     .saw-selectbox-trigger {
         font-size: 16px;
-        padding: 10px 12px;
+        padding: 10px var(--saw-space-md);
     }
     
     .saw-selectbox-dropdown {
@@ -245,6 +250,6 @@
         left: 0;
         right: 0;
         max-height: 70vh;
-        border-radius: 12px 12px 0 0;
+        border-radius: var(--saw-border-radius-lg) var(--saw-border-radius-lg) 0 0;
     }
 }

@@ -1,44 +1,94 @@
 <?php
 /**
  * SAW App Layout - AJAX FIXED v2.0.0
- * 
+ *
+ * Main layout manager for the application.
+ * Handles complete page rendering with header, sidebar, footer, and content.
+ * Supports AJAX requests for SPA-like navigation.
+ *
  * CRITICAL FIX:
  * - ✅ WordPress AJAX requests are NOT intercepted
  * - ✅ Only custom XHR requests go through layout
  * - ✅ Prevents layout from breaking wp_ajax_* handlers
- * 
+ *
  * @package SAW_Visitors
  * @version 2.0.0 - AJAX FIX
- * @since 4.6.1
+ * @since   4.6.1
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * SAW App Layout Class
+ *
+ * Manages complete page layout rendering including header, sidebar, footer.
+ * Handles both normal page requests and AJAX requests for dynamic content loading.
+ *
+ * @since 4.6.1
+ */
 class SAW_App_Layout {
     
+    /**
+     * Current user data
+     *
+     * @since 4.6.1
+     * @var array
+     */
     private $current_user;
+    
+    /**
+     * Current customer data
+     *
+     * @since 4.6.1
+     * @var array
+     */
     private $current_customer;
+    
+    /**
+     * Page title
+     *
+     * @since 4.6.1
+     * @var string
+     */
     private $page_title;
+    
+    /**
+     * Active menu item ID
+     *
+     * @since 4.6.1
+     * @var string
+     */
     private $active_menu;
     
+    /**
+     * Constructor
+     *
+     * Initializes layout manager.
+     *
+     * @since 4.6.1
+     */
     public function __construct() {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
+        // No session needed - using SAW_Context for state management
     }
     
     /**
      * Render page with layout
-     * 
+     *
+     * Main rendering method. Handles three request types:
+     * 1. WordPress AJAX (wp_ajax_*) - returns immediately without rendering
+     * 2. Custom AJAX (SPA navigation) - renders content only as JSON
+     * 3. Normal page request - renders complete HTML page
+     *
      * ✅ FIX: Don't intercept WordPress AJAX requests
-     * 
-     * @param string $content Page content
-     * @param string $page_title Page title
-     * @param string $active_menu Active menu ID
-     * @param array|null $user User data
-     * @param array|null $customer Customer data
+     *
+     * @since 4.6.1
+     * @param string     $content      Page content HTML
+     * @param string     $page_title   Page title
+     * @param string     $active_menu  Active menu ID
+     * @param array|null $user         Optional user data override
+     * @param array|null $customer     Optional customer data override
      * @return void
      */
     public function render($content, $page_title = '', $active_menu = '', $user = null, $customer = null) {
@@ -77,8 +127,12 @@ class SAW_App_Layout {
     
     /**
      * Get current customer data
-     * 
-     * @return array
+     *
+     * Loads customer data from database using SAW_Context.
+     * Returns default data if customer not found.
+     *
+     * @since 4.6.1
+     * @return array Customer data array
      */
     private function get_current_customer_data() {
         $customer_id = SAW_Context::get_customer_id();
@@ -86,34 +140,39 @@ class SAW_App_Layout {
         if ($customer_id) {
             global $wpdb;
             $customer = $wpdb->get_row($wpdb->prepare(
-                "SELECT * FROM {$wpdb->prefix}saw_customers WHERE id = %d",
+                "SELECT * FROM %i WHERE id = %d",
+                $wpdb->prefix . 'saw_customers',
                 $customer_id
             ), ARRAY_A);
             
             if ($customer) {
-                return [
+                return array(
                     'id' => $customer['id'],
                     'name' => $customer['name'],
                     'ico' => $customer['ico'] ?? '',
                     'address' => $customer['address'] ?? '',
                     'logo_url' => $customer['logo_url'] ?? '',
-                ];
+                );
             }
         }
         
-        return [
+        return array(
             'id' => 0,
             'name' => 'Žádný zákazník',
             'ico' => '',
             'address' => '',
             'logo_url' => '',
-        ];
+        );
     }
     
     /**
      * Get current user data
-     * 
-     * @return array
+     *
+     * Loads user data from WordPress and SAW users table.
+     * Returns guest data if not logged in.
+     *
+     * @since 4.6.1
+     * @return array User data array
      */
     private function get_current_user_data() {
         if (is_user_logged_in()) {
@@ -121,12 +180,13 @@ class SAW_App_Layout {
             
             global $wpdb;
             $saw_user = $wpdb->get_row($wpdb->prepare(
-                "SELECT * FROM {$wpdb->prefix}saw_users WHERE wp_user_id = %d AND is_active = 1",
+                "SELECT * FROM %i WHERE wp_user_id = %d AND is_active = 1",
+                $wpdb->prefix . 'saw_users',
                 $wp_user->ID
             ), ARRAY_A);
             
             if ($saw_user) {
-                return [
+                return array(
                     'id' => $saw_user['id'],
                     'name' => $saw_user['first_name'] . ' ' . $saw_user['last_name'],
                     'email' => $wp_user->user_email,
@@ -135,55 +195,71 @@ class SAW_App_Layout {
                     'last_name' => $saw_user['last_name'],
                     'customer_id' => $saw_user['customer_id'],
                     'branch_id' => $saw_user['branch_id'],
-                ];
+                );
             }
             
-            return [
+            return array(
                 'id' => $wp_user->ID,
                 'name' => $wp_user->display_name,
                 'email' => $wp_user->user_email,
                 'role' => current_user_can('manage_options') ? 'super_admin' : 'admin',
-            ];
+            );
         }
         
-        return [
+        return array(
             'id' => 0,
             'name' => 'Guest',
             'email' => '',
             'role' => 'guest',
-        ];
+        );
     }
     
     /**
      * Check if request is custom AJAX (not WordPress AJAX)
-     * 
-     * @return bool
+     *
+     * Detects custom XMLHttpRequest for SPA-like navigation.
+     * Does NOT detect WordPress admin-ajax.php requests.
+     *
+     * @since 4.6.1
+     * @return bool True if custom AJAX request
      */
     private function is_ajax_request() {
-        return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
-               strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+        $http_x_requested_with = isset($_SERVER['HTTP_X_REQUESTED_WITH']) 
+            ? sanitize_text_field(wp_unslash($_SERVER['HTTP_X_REQUESTED_WITH'])) 
+            : '';
+        
+        return !empty($http_x_requested_with) && 
+               strtolower($http_x_requested_with) === 'xmlhttprequest';
     }
     
     /**
      * Render content only (for AJAX requests)
-     * 
-     * @param string $content Page content
+     *
+     * Returns JSON response with content, title, and active menu.
+     * Used for SPA-like navigation without full page reload.
+     *
+     * @since 4.6.1
+     * @param string $content Page content HTML
      * @return void
      */
     private function render_content_only($content) {
         header('Content-Type: application/json');
         
-        wp_send_json_success([
+        wp_send_json_success(array(
             'content' => $content,
             'title' => $this->page_title,
             'active_menu' => $this->active_menu
-        ]);
+        ));
     }
     
     /**
      * Render complete page
-     * 
-     * @param string $content Page content
+     *
+     * Outputs full HTML page with header, sidebar, footer, and content.
+     * Used for normal page requests (not AJAX).
+     *
+     * @since 4.6.1
+     * @param string $content Page content HTML
      * @return void
      */
     private function render_complete_page($content) {
@@ -195,10 +271,10 @@ class SAW_App_Layout {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title><?php echo esc_html($this->page_title); ?> - SAW Visitors</title>
             
-            <link rel="stylesheet" href="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/css/saw-app.css?v=<?php echo SAW_VISITORS_VERSION; ?>">
-            <link rel="stylesheet" href="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/css/saw-app-header.css?v=<?php echo SAW_VISITORS_VERSION; ?>">
-            <link rel="stylesheet" href="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/css/saw-app-sidebar.css?v=<?php echo SAW_VISITORS_VERSION; ?>">
-            <link rel="stylesheet" href="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/css/saw-app-responsive.css?v=<?php echo SAW_VISITORS_VERSION; ?>">
+            <link rel="stylesheet" href="<?php echo esc_url(SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-app.css?v=' . SAW_VISITORS_VERSION); ?>">
+            <link rel="stylesheet" href="<?php echo esc_url(SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-app-header.css?v=' . SAW_VISITORS_VERSION); ?>">
+            <link rel="stylesheet" href="<?php echo esc_url(SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-app-sidebar.css?v=' . SAW_VISITORS_VERSION); ?>">
+            <link rel="stylesheet" href="<?php echo esc_url(SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-app-responsive.css?v=' . SAW_VISITORS_VERSION); ?>">
             
             <?php
             if (function_exists('wp_head')) {
@@ -228,7 +304,7 @@ class SAW_App_Layout {
             }
             ?>
             
-            <script src="<?php echo SAW_VISITORS_PLUGIN_URL; ?>assets/js/saw-app-navigation.js?v=<?php echo SAW_VISITORS_VERSION; ?>"></script>
+            <script src="<?php echo esc_url(SAW_VISITORS_PLUGIN_URL . 'assets/js/saw-app-navigation.js?v=' . SAW_VISITORS_VERSION); ?>"></script>
         </body>
         </html>
         <?php
@@ -236,7 +312,10 @@ class SAW_App_Layout {
     
     /**
      * Render header component
-     * 
+     *
+     * Loads and renders the header component with user and customer data.
+     *
+     * @since 4.6.1
      * @return void
      */
     private function render_header() {
@@ -248,7 +327,10 @@ class SAW_App_Layout {
     
     /**
      * Render sidebar component
-     * 
+     *
+     * Loads and renders the sidebar component with navigation menu.
+     *
+     * @since 4.6.1
      * @return void
      */
     private function render_sidebar() {
@@ -260,7 +342,10 @@ class SAW_App_Layout {
     
     /**
      * Render footer component
-     * 
+     *
+     * Loads and renders the footer component.
+     *
+     * @since 4.6.1
      * @return void
      */
     private function render_footer() {

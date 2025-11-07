@@ -1,18 +1,33 @@
 /**
  * Customers Module Styles
- * Pouze form-specific styly
+ * 
+ * Module-specific styles for the Customers module.
+ * Contains ONLY custom layouts and components that don't exist in global CSS.
+ * 
+ * Included Components:
+ * - Branding Grid: Two-column layout for logo upload and color picker
+ * - Logo Preview: Upload area with current logo display
+ * - Address Fields: Multi-column address form layout
+ * 
+ * Global Components Used:
+ * - .saw-form-card (from forms.css)
+ * - .saw-form-group (from forms.css)
+ * - .saw-input, .saw-select (from forms.css)
+ * - .saw-button-* (from buttons.css)
  * 
  * @package SAW_Visitors
  * @version 7.0.0
+ * @since   4.6.1
  */
 
 /* ============================================
    BRANDING GRID (FORM ONLY)
+   Two-column layout for logo upload and color picker
    ============================================ */
 .saw-branding-grid {
     display: grid;
     grid-template-columns: 1fr 280px;
-    gap: 40px;
+    gap: var(--saw-space-3xl, 40px);
     align-items: start;
 }
 
@@ -26,6 +41,7 @@
 
 /* ============================================
    LOGO PREVIEW (FORM ONLY)
+   Upload area with current logo display
    ============================================ */
 .saw-logo-preview-current {
     position: relative;
@@ -33,13 +49,13 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: #fafafa;
-    border: 2px dashed #d0d0d0;
-    border-radius: 12px;
-    padding: 16px;
+    background: var(--saw-gray-50, #fafafa);
+    border: 2px dashed var(--saw-gray-300, #d0d0d0);
+    border-radius: var(--saw-border-radius-lg, 12px);
+    padding: var(--saw-space-lg, 16px);
     min-height: 120px;
     width: 100%;
-    transition: all 0.3s ease;
+    transition: all var(--saw-transition-base, 0.3s ease);
 }
 
 .saw-logo-preview-current img {
@@ -49,23 +65,24 @@
 }
 
 .saw-logo-placeholder {
-    color: #9ca3af;
-    font-size: 14px;
+    color: var(--saw-gray-400, #9ca3af);
+    font-size: var(--saw-font-size-sm, 14px);
     font-weight: 500;
 }
 
 /* ============================================
    ADDRESS FIELDS (FORM ONLY)
+   Multi-column address form layout
    ============================================ */
 .saw-address-fields {
     display: grid;
     grid-template-columns: 3fr 1fr;
-    gap: 16px;
+    gap: var(--saw-space-lg, 16px);
 }
 
 .saw-address-city-zip {
     display: flex;
-    gap: 16px;
+    gap: var(--saw-space-lg, 16px);
 }
 
 .saw-address-city-zip .saw-form-group:first-child {
@@ -78,11 +95,12 @@
 
 /* ============================================
    RESPONSIVE
+   Mobile and tablet breakpoints
    ============================================ */
 @media (max-width: 1200px) {
     .saw-branding-grid {
         grid-template-columns: 1fr;
-        gap: 24px;
+        gap: var(--saw-space-2xl, 24px);
     }
     
     .saw-branding-color {

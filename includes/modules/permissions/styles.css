@@ -2,11 +2,19 @@
  * Permissions Module - Styles
  * 
  * Matrix view styling for permissions management UI.
+ * Provides a visual interface for managing role-based permissions
+ * across all modules with action types and scope selectors.
  * 
- * @package SAW_Visitors
- * @version 1.0.0
- * @since 4.10.0
+ * @package     SAW_Visitors
+ * @subpackage  Modules/Permissions
+ * @since       4.10.0
+ * @author      SAW Visitors Dev Team
+ * @version     1.0.0
  */
+
+/* ================================================
+   CONTAINER & LAYOUT
+   ================================================ */
 
 .saw-permissions-container {
     max-width: 100%;
@@ -14,27 +22,32 @@
     width: 100%;
 }
 
+/* ================================================
+   CONTROLS BAR
+   ================================================ */
+
 .saw-permissions-controls {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 20px;
-    margin-bottom: 24px;
-    padding: 20px;
-    background: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    gap: var(--saw-space-xl);
+    margin-bottom: var(--saw-space-2xl);
+    padding: var(--saw-space-xl);
+    background: var(--saw-white);
+    border-radius: var(--saw-border-radius-md);
+    box-shadow: var(--saw-shadow-sm);
 }
 
+/* Role Selector */
 .saw-role-selector {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--saw-space-md);
 }
 
 .saw-role-selector label {
     font-weight: 600;
-    color: #374151;
+    color: var(--saw-gray-700);
     margin: 0;
 }
 
@@ -42,38 +55,47 @@
     min-width: 200px;
 }
 
+/* Quick Actions */
 .saw-quick-actions {
     display: flex;
-    gap: 8px;
+    gap: var(--saw-space-sm);
 }
 
+/* ================================================
+   INFO BANNER
+   ================================================ */
+
 .saw-permissions-info {
-    margin-bottom: 20px;
+    margin-bottom: var(--saw-space-xl);
 }
 
 .saw-info-text {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 12px 16px;
-    background: #eff6ff;
-    border-left: 4px solid #3b82f6;
-    border-radius: 4px;
-    color: #1e40af;
+    gap: var(--saw-space-sm);
+    padding: var(--saw-space-md) var(--saw-space-lg);
+    background: var(--saw-primary-light);
+    border-left: 4px solid var(--saw-primary);
+    border-radius: var(--saw-border-radius-sm);
+    color: var(--saw-primary-dark);
     margin: 0;
 }
 
 .saw-info-text .dashicons {
-    color: #3b82f6;
+    color: var(--saw-primary);
     font-size: 20px;
     width: 20px;
     height: 20px;
 }
 
+/* ================================================
+   PERMISSIONS MATRIX TABLE
+   ================================================ */
+
 .saw-permissions-matrix {
-    background: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    background: var(--saw-white);
+    border-radius: var(--saw-border-radius-md);
+    box-shadow: var(--saw-shadow-sm);
     overflow: hidden;
 }
 
@@ -82,14 +104,15 @@
     border-collapse: collapse;
 }
 
+/* Table Header */
 .saw-permissions-table thead {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 .saw-permissions-table thead th {
-    padding: 16px 12px;
+    padding: var(--saw-space-lg) var(--saw-space-md);
     text-align: left;
-    font-size: 13px;
+    font-size: var(--saw-font-size-sm);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -111,13 +134,14 @@
     min-width: 200px;
 }
 
+/* Table Body */
 .saw-permissions-table tbody tr {
-    border-bottom: 1px solid #e5e7eb;
-    transition: background-color 0.2s ease;
+    border-bottom: var(--saw-border-width) solid var(--saw-border-color);
+    transition: background-color var(--saw-transition-base);
 }
 
 .saw-permissions-table tbody tr:hover {
-    background-color: #f9fafb;
+    background-color: var(--saw-gray-50);
 }
 
 .saw-permissions-table tbody tr:last-child {
@@ -125,22 +149,27 @@
 }
 
 .saw-permissions-table tbody td {
-    padding: 16px 12px;
+    padding: var(--saw-space-lg) var(--saw-space-md);
     vertical-align: middle;
 }
 
+/* Module Name Cell */
 .module-name {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--saw-space-md);
     font-weight: 500;
-    color: #111827;
+    color: var(--saw-gray-900);
 }
 
 .module-icon {
     font-size: 24px;
     line-height: 1;
 }
+
+/* ================================================
+   PERMISSION TOGGLE (Checkbox)
+   ================================================ */
 
 .permission-cell {
     text-align: center;
@@ -160,76 +189,88 @@
     height: 0;
 }
 
+/* Toggle Indicator */
 .toggle-indicator {
     display: flex;
     align-items: center;
     justify-content: center;
     width: 40px;
     height: 40px;
-    border-radius: 8px;
-    background: #f3f4f6;
-    transition: all 0.2s ease;
+    border-radius: var(--saw-border-radius-md);
+    background: var(--saw-gray-100);
+    transition: all var(--saw-transition-base);
     position: relative;
 }
 
+/* Unchecked State (Red X) */
 .toggle-indicator::before {
     content: '✕';
     font-size: 18px;
     font-weight: bold;
-    color: #ef4444;
+    color: var(--saw-danger);
 }
 
+/* Checked State (Green Check) */
 .toggle-indicator.active {
-    background: #dcfce7;
+    background: var(--saw-success-light);
 }
 
 .toggle-indicator.active::before {
     content: '✓';
-    color: #16a34a;
+    color: var(--saw-success);
 }
 
+/* Hover Effect */
 .permission-toggle:hover .toggle-indicator {
     transform: scale(1.05);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--saw-shadow-md);
 }
+
+/* ================================================
+   SCOPE SELECT DROPDOWN
+   ================================================ */
 
 .scope-cell {
     text-align: center;
 }
 
 .scope-select {
-    padding: 8px 12px;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    background: #ffffff;
-    font-size: 14px;
-    color: #374151;
+    padding: var(--saw-space-sm) var(--saw-space-md);
+    border: var(--saw-border-width) solid var(--saw-gray-300);
+    border-radius: var(--saw-border-radius-sm);
+    background: var(--saw-white);
+    font-size: var(--saw-font-size-sm);
+    color: var(--saw-gray-700);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all var(--saw-transition-base);
     min-width: 140px;
 }
 
 .scope-select:hover {
-    border-color: #9ca3af;
+    border-color: var(--saw-gray-500);
 }
 
 .scope-select:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: var(--saw-primary);
+    box-shadow: 0 0 0 3px var(--saw-primary-light);
 }
+
+/* ================================================
+   SAVE INDICATOR (Toast Notification)
+   ================================================ */
 
 .saw-save-indicator {
     position: fixed;
-    bottom: 24px;
-    right: 24px;
+    bottom: var(--saw-space-2xl);
+    right: var(--saw-space-2xl);
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 12px 20px;
-    background: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    gap: var(--saw-space-sm);
+    padding: var(--saw-space-md) var(--saw-space-xl);
+    background: var(--saw-white);
+    border-radius: var(--saw-border-radius-md);
+    box-shadow: var(--saw-shadow-lg);
     z-index: 9999;
     animation: slideInUp 0.3s ease;
 }
@@ -245,33 +286,42 @@
     }
 }
 
+/* Success State */
 .saw-save-indicator.success {
-    border-left: 4px solid #16a34a;
+    border-left: 4px solid var(--saw-success);
 }
 
+.saw-save-indicator.success .dashicons {
+    color: var(--saw-success);
+}
+
+/* Error State */
 .saw-save-indicator.error {
-    border-left: 4px solid #ef4444;
+    border-left: 4px solid var(--saw-danger);
 }
 
+.saw-save-indicator.error .dashicons {
+    color: var(--saw-danger);
+}
+
+/* Icon */
 .saw-save-indicator .dashicons {
     font-size: 20px;
     width: 20px;
     height: 20px;
 }
 
-.saw-save-indicator.success .dashicons {
-    color: #16a34a;
-}
-
-.saw-save-indicator.error .dashicons {
-    color: #ef4444;
-}
-
+/* Text */
 .saw-save-indicator .save-text {
     font-weight: 600;
-    color: #374151;
+    color: var(--saw-gray-700);
 }
 
+/* ================================================
+   RESPONSIVE DESIGN
+   ================================================ */
+
+/* Tablet & Below (1200px) */
 @media (max-width: 1200px) {
     .saw-permissions-controls {
         flex-direction: column;
@@ -292,9 +342,10 @@
     }
 }
 
+/* Mobile (768px) */
 @media (max-width: 768px) {
     .saw-permissions-controls {
-        padding: 16px;
+        padding: var(--saw-space-lg);
     }
     
     .saw-role-selector {
@@ -315,9 +366,9 @@
     }
     
     .saw-save-indicator {
-        bottom: 16px;
-        right: 16px;
-        left: 16px;
+        bottom: var(--saw-space-lg);
+        right: var(--saw-space-lg);
+        left: var(--saw-space-lg);
         justify-content: center;
     }
 }

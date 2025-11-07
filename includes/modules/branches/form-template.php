@@ -2,6 +2,9 @@
 /**
  * Branches Form Template
  * 
+ * Create/edit form for branches with all fields including basic info,
+ * address, GPS coordinates, contact details, opening hours, and settings.
+ * 
  * REFACTORED v3.0.0:
  * ✅ Professional file upload component
  * ✅ Global CSS classes
@@ -9,6 +12,7 @@
  * ✅ All values escaped
  * 
  * @package SAW_Visitors
+ * @since 2.0.0
  * @version 3.0.0
  */
 
@@ -17,7 +21,7 @@ if (!defined('ABSPATH')) {
 }
 
 $is_edit = !empty($item);
-$item = $item ?? [];
+$item = $item ?? array();
 
 $customer_id = SAW_Context::get_customer_id();
 
@@ -96,11 +100,11 @@ if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/class
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
                         <?php
-                        // ✅ Professional file upload component
+                        // Professional file upload component
                         if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/file-upload-input.php')) {
                             $id = 'image_url';
                             $name = 'image_url';
-                            $config = [];
+                            $config = array();
                             $current_file_url = $item['image_url'] ?? '';
                             $label = 'Nahrát obrázek';
                             $current_label = 'Současný obrázek';
@@ -174,13 +178,13 @@ if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/class
                         </label>
                         <select id="country" name="country" class="saw-select">
                             <?php
-                            $countries = [
+                            $countries = array(
                                 'CZ' => 'Česká republika',
                                 'SK' => 'Slovensko',
                                 'DE' => 'Německo',
                                 'AT' => 'Rakousko',
                                 'PL' => 'Polsko',
-                            ];
+                            );
                             $selected_country = $item['country'] ?? 'CZ';
                             foreach ($countries as $code => $name_country) {
                                 printf(
@@ -220,7 +224,7 @@ if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/class
                             placeholder="50.0755381"
                         >
                         <span class="saw-help-text">
-                            GPS souřadnice (např. 50.0755)
+                            GPS souřadnice (např. 50.0755381)
                         </span>
                     </div>
                     
@@ -238,7 +242,7 @@ if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/class
                             placeholder="14.4378005"
                         >
                         <span class="saw-help-text">
-                            GPS souřadnice (např. 14.4378)
+                            GPS souřadnice (např. 14.4378005)
                         </span>
                     </div>
                 </div>
@@ -246,7 +250,7 @@ if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/class
             </div>
         </details>
         
-        <details class="saw-form-section">
+        <details class="saw-form-section" open>
             <summary>
                 <span class="dashicons dashicons-phone"></span>
                 <strong>Kontaktní údaje</strong>

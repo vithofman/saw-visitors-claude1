@@ -2,27 +2,50 @@
 /**
  * Departments Detail Modal Template
  * 
- * @package SAW_Visitors
- * @version 1.0.0
+ * Displays detailed information about a department in a modal window.
+ * Loaded via AJAX when user clicks on the view icon in the list.
+ * 
+ * Available Variables:
+ * @var array $item Department data with the following keys:
+ *  - id: Department ID
+ *  - name: Department name
+ *  - department_number: Internal department code (optional)
+ *  - description: Department description (optional)
+ *  - training_version: Training version number
+ *  - is_active: Active status (1/0)
+ *  - is_active_label: Formatted status label
+ *  - is_active_badge_class: CSS class for status badge
+ *  - branch_name: Name of parent branch
+ *  - created_at_formatted: Formatted creation date
+ *  - updated_at_formatted: Formatted update date
+ * 
+ * @package     SAW_Visitors
+ * @subpackage  Modules/Departments
+ * @since       1.0.0
+ * @author      SAW Visitors Dev Team
+ * @version     1.0.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+// Check if item data exists
 if (empty($item)) {
     echo '<div class="saw-alert saw-alert-danger">Oddělení nebylo nalezeno</div>';
     return;
 }
 ?>
 
+<!-- Detail Header -->
 <div class="saw-detail-header">
-    <div class="saw-detail-header-info" style="flex: 1;">
-        <h2 style="margin: 0 0 10px 0; font-size: 24px; font-weight: 700; color: #0f172a;">
+    <div class="saw-detail-header-info">
+        <h2 class="saw-detail-title">
             <?php echo esc_html($item['name']); ?>
         </h2>
         
-        <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 8px;">
+        <!-- Badges Row -->
+        <div class="saw-detail-badges">
             <?php if (!empty($item['department_number'])): ?>
                 <span class="saw-code-badge"><?php echo esc_html($item['department_number']); ?></span>
             <?php endif; ?>
@@ -38,68 +61,78 @@ if (empty($item)) {
             <?php endif; ?>
         </div>
         
+        <!-- Branch Info -->
         <?php if (!empty($item['branch_name'])): ?>
-            <div style="font-size: 15px; color: #64748b;">
-                <span class="dashicons dashicons-building" style="font-size: 16px; vertical-align: middle;"></span>
+            <div class="saw-detail-subtitle">
+                <span class="dashicons dashicons-building"></span>
                 <?php echo esc_html($item['branch_name']); ?>
             </div>
         <?php endif; ?>
     </div>
 </div>
 
+<!-- Detail Sections -->
 <div class="saw-detail-sections">
     
+    <!-- Description Section -->
     <?php if (!empty($item['description'])): ?>
     <div class="saw-detail-section">
-        <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 700; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
-            Popis
-        </h3>
-        <p style="margin: 0; color: #475569; line-height: 1.6;">
+        <h3 class="saw-detail-section-title">Popis</h3>
+        <p class="saw-detail-text">
             <?php echo nl2br(esc_html($item['description'])); ?>
         </p>
     </div>
     <?php endif; ?>
     
+    <!-- Information Section -->
     <div class="saw-detail-section">
-        <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 700; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
-            Informace
-        </h3>
-        <dl style="margin: 0; display: grid; grid-template-columns: 140px 1fr; gap: 12px 20px; font-size: 14px;">
+        <h3 class="saw-detail-section-title">Informace</h3>
+        <dl class="saw-detail-list">
+            
+            <!-- Branch -->
             <?php if (!empty($item['branch_name'])): ?>
-                <dt style="font-weight: 700; color: #64748b;">Pobočka</dt>
-                <dd style="margin: 0; color: #1e293b;"><?php echo esc_html($item['branch_name']); ?></dd>
+                <dt class="saw-detail-label">Pobočka</dt>
+                <dd class="saw-detail-value"><?php echo esc_html($item['branch_name']); ?></dd>
             <?php endif; ?>
             
+            <!-- Department Number -->
             <?php if (!empty($item['department_number'])): ?>
-                <dt style="font-weight: 700; color: #64748b;">Číslo oddělení</dt>
-                <dd style="margin: 0; color: #1e293b;">
-                    <code style="font-family: monospace; font-size: 13px; color: #475569; background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">
-                        <?php echo esc_html($item['department_number']); ?>
-                    </code>
+                <dt class="saw-detail-label">Číslo oddělení</dt>
+                <dd class="saw-detail-value">
+                    <code class="saw-code"><?php echo esc_html($item['department_number']); ?></code>
                 </dd>
             <?php endif; ?>
             
+            <!-- Training Version -->
             <?php if (!empty($item['training_version'])): ?>
-                <dt style="font-weight: 700; color: #64748b;">Verze školení</dt>
-                <dd style="margin: 0; color: #1e293b;">v<?php echo esc_html($item['training_version']); ?></dd>
+                <dt class="saw-detail-label">Verze školení</dt>
+                <dd class="saw-detail-value">v<?php echo esc_html($item['training_version']); ?></dd>
             <?php endif; ?>
             
-            <dt style="font-weight: 700; color: #64748b;">Status</dt>
-            <dd style="margin: 0;">
+            <!-- Status -->
+            <dt class="saw-detail-label">Status</dt>
+            <dd class="saw-detail-value">
                 <span class="<?php echo esc_attr($item['is_active_badge_class']); ?>">
                     <?php echo esc_html($item['is_active_label']); ?>
                 </span>
             </dd>
             
+            <!-- Created At -->
             <?php if (!empty($item['created_at_formatted'])): ?>
-                <dt style="font-weight: 700; color: #64748b;">Vytvořeno</dt>
-                <dd style="margin: 0; color: #1e293b; font-family: monospace;"><?php echo esc_html($item['created_at_formatted']); ?></dd>
+                <dt class="saw-detail-label">Vytvořeno</dt>
+                <dd class="saw-detail-value saw-detail-date">
+                    <?php echo esc_html($item['created_at_formatted']); ?>
+                </dd>
             <?php endif; ?>
             
+            <!-- Updated At -->
             <?php if (!empty($item['updated_at_formatted'])): ?>
-                <dt style="font-weight: 700; color: #64748b;">Aktualizováno</dt>
-                <dd style="margin: 0; color: #1e293b; font-family: monospace;"><?php echo esc_html($item['updated_at_formatted']); ?></dd>
+                <dt class="saw-detail-label">Aktualizováno</dt>
+                <dd class="saw-detail-value saw-detail-date">
+                    <?php echo esc_html($item['updated_at_formatted']); ?>
+                </dd>
             <?php endif; ?>
+            
         </dl>
     </div>
     

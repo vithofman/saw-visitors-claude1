@@ -1,4 +1,21 @@
 <?php
+/**
+ * SAW Selectbox Input Template
+ * 
+ * Renders the complete selectbox interface including trigger button,
+ * dropdown with search, and options list (static or AJAX-loaded).
+ * 
+ * @package     SAW_Visitors
+ * @subpackage  Components/Selectbox
+ * @version     4.6.1
+ * @since       4.6.1
+ * @author      SAW Visitors Team
+ * 
+ * Variables:
+ * @var string $id     Selectbox identifier
+ * @var array  $config Selectbox configuration
+ */
+
 if (!defined('ABSPATH')) {
     exit;
 }

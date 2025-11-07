@@ -1,14 +1,22 @@
 /**
  * Branches Module Scripts
  * 
+ * Handles client-side functionality for Branches module including:
+ * - Auto-generation of branch codes from names
+ * - GPS coordinate validation and browser geolocation
+ * - Opening hours templates
+ * - Form validation and formatting
+ * 
  * REFACTORED v2.0.0:
  * ✅ Wrapped in IIFE
  * ✅ 'use strict'
  * ✅ No console.log (only in dev check)
  * ✅ Event delegation where appropriate
  * ✅ Clean validation
+ * ✅ JSDoc documentation
  * 
  * @package SAW_Visitors
+ * @since 2.0.0
  * @version 2.0.0
  */
 
@@ -34,7 +42,13 @@
         
         /**
          * Generate branch code from name
+         * 
+         * Converts branch name to standardized code format.
          * Example: "Pobočka Praha" → "PR001"
+         * 
+         * @since 2.0.0
+         * @param {string} text - Branch name
+         * @return {string} Generated code
          */
         function generateBranchCode(text) {
             if (!text) return '';
@@ -63,11 +77,18 @@
         // ================================================
         // GPS COORDINATES VALIDATION
         // ================================================
+        
+        /**
+         * Validate and format latitude input
+         * 
+         * @since 2.0.0
+         */
         $('#latitude').on('blur', function() {
             const lat = parseFloat($(this).val());
             
             if (!isNaN(lat)) {
                 if (lat < -90 || lat > 90) {
+                    // TODO: Replace alert with custom notification system
                     alert('Zeměpisná šířka musí být mezi -90 a 90!');
                     $(this).focus();
                 } else {
@@ -76,11 +97,17 @@
             }
         });
         
+        /**
+         * Validate and format longitude input
+         * 
+         * @since 2.0.0
+         */
         $('#longitude').on('blur', function() {
             const lon = parseFloat($(this).val());
             
             if (!isNaN(lon)) {
                 if (lon < -180 || lon > 180) {
+                    // TODO: Replace alert with custom notification system
                     alert('Zeměpisná délka musí být mezi -180 a 180!');
                     $(this).focus();
                 } else {
@@ -92,14 +119,24 @@
         // ================================================
         // GET GPS FROM BROWSER
         // ================================================
+        
+        /**
+         * Create and insert GPS button for browser geolocation
+         * 
+         * @since 2.0.0
+         */
         const $gpsButton = $('<button type="button" class="saw-button saw-button-secondary saw-get-gps-btn" title="Získat GPS z polohy zařízení"><span class="dashicons dashicons-location"></span> Získat GPS z polohy</button>');
         
         if ($('#latitude').length && navigator.geolocation) {
-            $('#longitude').closest('.saw-form-group').after(
-                '<div class="saw-form-group saw-col-12" style="margin-top: -12px;"></div>'
-            ).next().append($gpsButton);
+            const $gpsContainer = $('<div class="saw-form-group saw-col-12"></div>').append($gpsButton);
+            $('#longitude').closest('.saw-form-group').after($gpsContainer);
         }
         
+        /**
+         * Handle GPS button click - get coordinates from browser
+         * 
+         * @since 2.0.0
+         */
         $gpsButton.on('click', function(e) {
             e.preventDefault();
             
@@ -121,6 +158,7 @@
                 },
                 function(error) {
                     $btn.prop('disabled', false).html(originalText);
+                    // TODO: Replace alert with custom notification system
                     alert('Nepodařilo se získat GPS polohu: ' + error.message);
                 }
             );
@@ -129,6 +167,12 @@
         // ================================================
         // OPENING HOURS TEMPLATES
         // ================================================
+        
+        /**
+         * Insert opening hours template buttons
+         * 
+         * @since 2.0.0
+         */
         const $openingHoursField = $('#opening_hours');
         
         if ($openingHoursField.length) {
@@ -170,6 +214,12 @@
         // ================================================
         // POSTAL CODE FORMATTING
         // ================================================
+        
+        /**
+         * Format postal code to Czech format (XXX XX)
+         * 
+         * @since 2.0.0
+         */
         $('#postal_code').on('blur', function() {
             let value = $(this).val().replace(/\s+/g, '');
             
@@ -182,6 +232,12 @@
         // ================================================
         // PHONE FORMATTING
         // ================================================
+        
+        /**
+         * Format phone number to Czech format (XXX XXX XXX)
+         * 
+         * @since 2.0.0
+         */
         $('#phone').on('blur', function() {
             let value = $(this).val().replace(/\s+/g, '');
             
@@ -194,8 +250,15 @@
         // ================================================
         // HEADQUARTERS WARNING
         // ================================================
+        
+        /**
+         * Confirm before marking branch as headquarters
+         * 
+         * @since 2.0.0
+         */
         $('#is_headquarters').on('change', function() {
             if ($(this).is(':checked')) {
+                // TODO: Replace confirm with custom modal dialog
                 if (!confirm('Označením této pobočky jako hlavní sídlo bude zrušeno označení u všech ostatních poboček. Pokračovat?')) {
                     $(this).prop('checked', false);
                 }
@@ -205,11 +268,18 @@
         // ================================================
         // FORM VALIDATION
         // ================================================
+        
+        /**
+         * Validate branch form before submission
+         * 
+         * @since 2.0.0
+         */
         $('.saw-branch-form').on('submit', function(e) {
             const name = $('#name').val().trim();
             
             if (!name) {
                 e.preventDefault();
+                // TODO: Replace alert with custom notification system
                 alert('Vyplňte název pobočky!');
                 $('#name').focus();
                 return false;
@@ -220,6 +290,7 @@
                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                 if (!emailRegex.test(email)) {
                     e.preventDefault();
+                    // TODO: Replace alert with custom notification system
                     alert('Neplatná emailová adresa!');
                     $('#email').focus();
                     return false;

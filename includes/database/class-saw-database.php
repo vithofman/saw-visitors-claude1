@@ -1,7 +1,9 @@
 <?php
 /**
  * SAW Database Management
- * Utility functions for database operations
+ *
+ * Utility functions for database operations.
+ * Handles table creation in two phases: tables first, then foreign keys.
  *
  * @package SAW_Visitors
  * @since 4.6.1
@@ -11,19 +13,31 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * SAW Database Manager
+ *
+ * Manages database schema creation, foreign key relationships, and utility functions
+ * for database operations. Uses two-phase approach to avoid circular dependency issues.
+ *
+ * @since 4.6.1
+ */
 class SAW_Database {
 
     /**
      * All tables (without 'saw_' prefix)
-     * Ordered by dependencies (foreign keys)
-     * TOTAL: 34 tables
+     *
+     * Ordered by dependencies (foreign keys).
+     * Total: 34 tables
+     *
+     * @since 4.6.1
+     * @var array
      */
     private static $tables_order = array(
         // Core (4)
         'customers',
         'customer_api_keys',
         'users',
-	'permissions',
+        'permissions',
         'training_config',
         'account_types',
         
@@ -41,15 +55,15 @@ class SAW_Database {
         // Multi-tenant Core (5)
         'departments',
         'user_departments',
-	'user_branches',
+        'user_branches',
         'department_materials',
         'department_documents',
         'contact_persons',
-	'branches',
+        'branches',
 
-	//Training language
-	'training_languages',
-	'training_language_branches',
+        // Training language
+        'training_languages',
+        'training_language_branches',
         
         // Visitor Management (8)
         'companies',
@@ -72,9 +86,11 @@ class SAW_Database {
 
     /**
      * Create all tables in 2 phases
+     *
      * Phase 1: Tables without foreign keys
      * Phase 2: Add foreign keys via ALTER TABLE
-     * 
+     *
+     * @since 4.6.1
      * @return bool True on success, false on error
      */
     public static function create_tables() {
@@ -102,8 +118,12 @@ class SAW_Database {
 
     /**
      * Phase 1: Create tables without foreign keys (fast)
-     * 
-     * @return bool
+     *
+     * Iterates through all tables, loads schema, removes FK constraints,
+     * and creates tables using WordPress dbDelta().
+     *
+     * @since 4.6.1
+     * @return bool True if no errors occurred
      */
     private static function create_tables_without_fk() {
         global $wpdb;
@@ -170,8 +190,12 @@ class SAW_Database {
 
     /**
      * Phase 2: Add foreign keys via ALTER TABLE
-     * 
-     * @return bool
+     *
+     * Adds all foreign key constraints after tables are created.
+     * Prevents circular dependency issues during table creation.
+     *
+     * @since 4.6.1
+     * @return bool True if no errors occurred
      */
     private static function add_foreign_keys() {
         global $wpdb;
@@ -228,40 +252,41 @@ class SAW_Database {
             array('table' => 'user_departments', 'constraint' => 'fk_userdept_user', 'column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'user_departments', 'constraint' => 'fk_userdept_dept', 'column' => 'department_id', 'ref_table' => 'departments', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
-	    // user_branches
- 	    array('table' => 'user_branches', 'constraint' => 'fk_userbranch_user', 'column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-	    array('table' => 'user_branches', 'constraint' => 'fk_userbranch_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-
+            // user_branches
+            array('table' => 'user_branches', 'constraint' => 'fk_userbranch_user', 'column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'user_branches', 'constraint' => 'fk_userbranch_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            
             // department_materials
-            array('table' => 'department_materials', 'constraint' => 'fk_deptmat_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'department_materials', 'constraint' => 'fk_deptmat_dept', 'column' => 'department_id', 'ref_table' => 'departments', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'department_materials', 'constraint' => 'fk_deptmat_material', 'column' => 'material_id', 'ref_table' => 'materials', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
             // department_documents
-            array('table' => 'department_documents', 'constraint' => 'fk_deptdoc_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'department_documents', 'constraint' => 'fk_deptdoc_dept', 'column' => 'department_id', 'ref_table' => 'departments', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'department_documents', 'constraint' => 'fk_deptdoc_document', 'column' => 'document_id', 'ref_table' => 'documents', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
             // contact_persons
             array('table' => 'contact_persons', 'constraint' => 'fk_contact_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-
-	    // branches
-	    array('table' => 'branches', 'constraint' => 'fk_branch_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-
-// Language - training content
-array('table' => 'training_languages', 'constraint' => 'fk_training_lang_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-array('table' => 'training_language_branches', 'constraint' => 'fk_training_lang_branch_lang', 'column' => 'language_id', 'ref_table' => 'training_languages', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-array('table' => 'training_language_branches', 'constraint' => 'fk_training_lang_branch_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            
+            // branches
+            array('table' => 'branches', 'constraint' => 'fk_branch_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            
+            // training_languages
+            array('table' => 'training_languages', 'constraint' => 'fk_trainlang_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            
+            // training_language_branches
+            array('table' => 'training_language_branches', 'constraint' => 'fk_trainlangbranch_language', 'column' => 'language_id', 'ref_table' => 'training_languages', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'training_language_branches', 'constraint' => 'fk_trainlangbranch_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
             // companies
             array('table' => 'companies', 'constraint' => 'fk_company_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
             // invitations
-            array('table' => 'invitations', 'constraint' => 'fk_inv_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            array('table' => 'invitations', 'constraint' => 'fk_inv_company', 'column' => 'company_id', 'ref_table' => 'companies', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
-            array('table' => 'invitations', 'constraint' => 'fk_inv_manager', 'column' => 'responsible_manager_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
+            array('table' => 'invitations', 'constraint' => 'fk_invitation_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'invitations', 'constraint' => 'fk_invitation_company', 'column' => 'company_id', 'ref_table' => 'companies', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
+            array('table' => 'invitations', 'constraint' => 'fk_invitation_user', 'column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
             
             // invitation_departments
-            array('table' => 'invitation_departments', 'constraint' => 'fk_invdept_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            array('table' => 'invitation_departments', 'constraint' => 'fk_invdept_inv', 'column' => 'invitation_id', 'ref_table' => 'invitations', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'invitation_departments', 'constraint' => 'fk_invdept_invitation', 'column' => 'invitation_id', 'ref_table' => 'invitations', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'invitation_departments', 'constraint' => 'fk_invdept_dept', 'column' => 'department_id', 'ref_table' => 'departments', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
             // materials
@@ -271,30 +296,28 @@ array('table' => 'training_language_branches', 'constraint' => 'fk_training_lang
             array('table' => 'documents', 'constraint' => 'fk_document_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
             // uploaded_docs
-            array('table' => 'uploaded_docs', 'constraint' => 'fk_upload_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'uploaded_docs', 'constraint' => 'fk_uploaded_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'uploaded_docs', 'constraint' => 'fk_uploaded_visitor', 'column' => 'visitor_id', 'ref_table' => 'visitors', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
             // visitors
             array('table' => 'visitors', 'constraint' => 'fk_visitor_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'visitors', 'constraint' => 'fk_visitor_company', 'column' => 'company_id', 'ref_table' => 'companies', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
-            array('table' => 'visitors', 'constraint' => 'fk_visitor_riskdoc', 'column' => 'risk_document_id', 'ref_table' => 'uploaded_docs', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
             
             // visits
             array('table' => 'visits', 'constraint' => 'fk_visit_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'visits', 'constraint' => 'fk_visit_visitor', 'column' => 'visitor_id', 'ref_table' => 'visitors', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'visits', 'constraint' => 'fk_visit_invitation', 'column' => 'invitation_id', 'ref_table' => 'invitations', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
-            array('table' => 'visits', 'constraint' => 'fk_visit_checkinby', 'column' => 'check_in_by', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
-            array('table' => 'visits', 'constraint' => 'fk_visit_checkoutby', 'column' => 'check_out_by', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
             
             // audit_log
-            array('table' => 'audit_log', 'constraint' => 'fk_audit_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            array('table' => 'audit_log', 'constraint' => 'fk_audit_user', 'column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
+            array('table' => 'audit_log', 'constraint' => 'fk_audit_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
+            
+            // error_log
+            array('table' => 'error_log', 'constraint' => 'fk_error_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
             
             // sessions
-            array('table' => 'sessions', 'constraint' => 'fk_session_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'sessions', 'constraint' => 'fk_session_user', 'column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
             // password_resets
-            array('table' => 'password_resets', 'constraint' => 'fk_pwreset_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'password_resets', 'constraint' => 'fk_pwreset_user', 'column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
         );
         
@@ -303,30 +326,26 @@ array('table' => 'training_language_branches', 'constraint' => 'fk_training_lang
             $ref_table = $prefix . $fk['ref_table'];
             
             // Check if FK already exists
-            $exists = $wpdb->get_var($wpdb->prepare(
-                "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS 
-                WHERE CONSTRAINT_SCHEMA = %s 
-                AND TABLE_NAME = %s 
-                AND CONSTRAINT_NAME = %s 
-                AND CONSTRAINT_TYPE = 'FOREIGN KEY'",
-                DB_NAME,
-                $table,
-                $fk['constraint']
-            ));
-            
-            if ($exists > 0) {
+            if (self::foreign_key_exists($fk['table'], $fk['constraint'])) {
+                $added_count++;
                 continue;
             }
             
-            $sql = "ALTER TABLE `{$table}` 
-                    ADD CONSTRAINT `{$fk['constraint']}` 
-                    FOREIGN KEY (`{$fk['column']}`) 
-                    REFERENCES `{$ref_table}`(`{$fk['ref_column']}`) 
-                    ON DELETE {$fk['on_delete']}";
+            $sql = $wpdb->prepare(
+                "ALTER TABLE %i ADD CONSTRAINT %i 
+                 FOREIGN KEY (%i) REFERENCES %i(%i) 
+                 ON DELETE %s",
+                $table,
+                $fk['constraint'],
+                $fk['column'],
+                $ref_table,
+                $fk['ref_column'],
+                $fk['on_delete']
+            );
             
-            $result = $wpdb->query($sql);
+            $wpdb->query($sql);
             
-            if ($result !== false) {
+            if (self::foreign_key_exists($fk['table'], $fk['constraint'])) {
                 $added_count++;
             }
         }
@@ -338,9 +357,10 @@ array('table' => 'training_language_branches', 'constraint' => 'fk_training_lang
 
     /**
      * Check if table exists
-     * 
-     * @param string $table_name Table name (without prefix)
-     * @return bool
+     *
+     * @since 4.6.1
+     * @param string $table_name Table name without 'saw_' prefix
+     * @return bool True if table exists
      */
     public static function table_exists($table_name) {
         global $wpdb;
@@ -356,10 +376,40 @@ array('table' => 'training_language_branches', 'constraint' => 'fk_training_lang
     }
 
     /**
+     * Check if foreign key exists
+     *
+     * @since 4.6.1
+     * @param string $table_name   Table name without 'saw_' prefix
+     * @param string $constraint   Constraint name
+     * @return bool True if FK exists
+     */
+    public static function foreign_key_exists($table_name, $constraint) {
+        global $wpdb;
+        
+        $full_table_name = $wpdb->prefix . 'saw_' . $table_name;
+        $database = DB_NAME;
+        
+        $result = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) 
+             FROM information_schema.TABLE_CONSTRAINTS 
+             WHERE CONSTRAINT_SCHEMA = %s 
+             AND TABLE_NAME = %s 
+             AND CONSTRAINT_NAME = %s 
+             AND CONSTRAINT_TYPE = 'FOREIGN KEY'",
+            $database,
+            $full_table_name,
+            $constraint
+        ));
+        
+        return $result > 0;
+    }
+
+    /**
      * Get table version
-     * 
-     * @param string $table_name Table name
-     * @return int
+     *
+     * @since 4.6.1
+     * @param string $table_name Table name without prefix
+     * @return int Table version number
      */
     public static function get_table_version($table_name) {
         $option_name = 'saw_table_version_' . $table_name;
@@ -368,10 +418,11 @@ array('table' => 'training_language_branches', 'constraint' => 'fk_training_lang
 
     /**
      * Update table version
-     * 
-     * @param string $table_name Table name
-     * @param int $version New version
-     * @return bool
+     *
+     * @since 4.6.1
+     * @param string $table_name Table name without prefix
+     * @param int    $version    New version number
+     * @return bool True on success
      */
     public static function update_table_version($table_name, $version) {
         $option_name = 'saw_table_version_' . $table_name;
@@ -380,8 +431,9 @@ array('table' => 'training_language_branches', 'constraint' => 'fk_training_lang
 
     /**
      * Check all tables - which are missing
-     * 
-     * @return array Missing tables
+     *
+     * @since 4.6.1
+     * @return array Missing table names
      */
     public static function check_all_tables() {
         $missing_tables = array();
@@ -396,27 +448,39 @@ array('table' => 'training_language_branches', 'constraint' => 'fk_training_lang
     }
 
     /**
-     * Drop all tables (for uninstall)
-     * WARNING: Destructive operation!
-     * 
-     * @return bool
+     * Drop all plugin tables
+     *
+     * WARNING: Permanently deletes all plugin data!
+     * Used during plugin uninstallation.
+     *
+     * @since 4.6.1
+     * @return bool True on success
      */
     public static function drop_all_tables() {
         global $wpdb;
         
         $prefix = $wpdb->prefix . 'saw_';
         
+        // Disable foreign key checks
         $wpdb->query('SET FOREIGN_KEY_CHECKS=0');
         
+        // Drop in reverse order
         $tables_reverse = array_reverse(self::$tables_order);
         
         foreach ($tables_reverse as $table_name) {
             $full_table_name = $prefix . $table_name;
-            $wpdb->query("DROP TABLE IF EXISTS `{$full_table_name}`");
+            
+            // Use prepared statement for table name
+            $wpdb->query($wpdb->prepare(
+                "DROP TABLE IF EXISTS %i",
+                $full_table_name
+            ));
         }
         
+        // Re-enable foreign key checks
         $wpdb->query('SET FOREIGN_KEY_CHECKS=1');
         
+        // Delete version options
         foreach (self::$tables_order as $table_name) {
             delete_option('saw_table_version_' . $table_name);
         }
@@ -426,10 +490,13 @@ array('table' => 'training_language_branches', 'constraint' => 'fk_training_lang
 
     /**
      * Get row count in table
-     * 
-     * @param string $table_name Table name (without prefix)
-     * @param int $customer_id Optional filter by customer_id
-     * @return int
+     *
+     * Optionally filtered by customer_id if column exists.
+     *
+     * @since 4.6.1
+     * @param string   $table_name  Table name without prefix
+     * @param int|null $customer_id Optional customer ID filter
+     * @return int Row count
      */
     public static function get_table_count($table_name, $customer_id = null) {
         global $wpdb;
@@ -438,11 +505,15 @@ array('table' => 'training_language_branches', 'constraint' => 'fk_training_lang
         
         if ($customer_id && self::has_customer_id_column($table_name)) {
             $count = $wpdb->get_var($wpdb->prepare(
-                "SELECT COUNT(*) FROM `{$full_table_name}` WHERE customer_id = %d",
+                "SELECT COUNT(*) FROM %i WHERE customer_id = %d",
+                $full_table_name,
                 $customer_id
             ));
         } else {
-            $count = $wpdb->get_var("SELECT COUNT(*) FROM `{$full_table_name}`");
+            $count = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM %i",
+                $full_table_name
+            ));
         }
         
         return (int) $count;
@@ -450,9 +521,10 @@ array('table' => 'training_language_branches', 'constraint' => 'fk_training_lang
 
     /**
      * Check if table has customer_id column
-     * 
-     * @param string $table_name Table name (without prefix)
-     * @return bool
+     *
+     * @since 4.6.1
+     * @param string $table_name Table name without prefix
+     * @return bool True if column exists
      */
     public static function has_customer_id_column($table_name) {
         global $wpdb;
@@ -460,7 +532,8 @@ array('table' => 'training_language_branches', 'constraint' => 'fk_training_lang
         $full_table_name = $wpdb->prefix . 'saw_' . $table_name;
         
         $columns = $wpdb->get_col($wpdb->prepare(
-            "SHOW COLUMNS FROM `{$full_table_name}` LIKE %s",
+            "SHOW COLUMNS FROM %i LIKE %s",
+            $full_table_name,
             'customer_id'
         ));
         
@@ -469,7 +542,8 @@ array('table' => 'training_language_branches', 'constraint' => 'fk_training_lang
 
     /**
      * Get list of all tables
-     * 
+     *
+     * @since 4.6.1
      * @return array Table names (without prefix)
      */
     public static function get_all_tables() {
@@ -478,10 +552,12 @@ array('table' => 'training_language_branches', 'constraint' => 'fk_training_lang
 
     /**
      * Truncate table (delete all records)
-     * WARNING: Destructive operation!
-     * 
-     * @param string $table_name Table name (without prefix)
-     * @return bool
+     *
+     * WARNING: Destructive operation! Deletes all data.
+     *
+     * @since 4.6.1
+     * @param string $table_name Table name without prefix
+     * @return bool True on success, false if table doesn't exist
      */
     public static function truncate_table($table_name) {
         global $wpdb;
@@ -492,10 +568,15 @@ array('table' => 'training_language_branches', 'constraint' => 'fk_training_lang
             return false;
         }
         
+        // Disable foreign key checks temporarily
         $wpdb->query('SET FOREIGN_KEY_CHECKS=0');
         
-        $result = $wpdb->query("TRUNCATE TABLE `{$full_table_name}`");
+        $result = $wpdb->query($wpdb->prepare(
+            "TRUNCATE TABLE %i",
+            $full_table_name
+        ));
         
+        // Re-enable foreign key checks
         $wpdb->query('SET FOREIGN_KEY_CHECKS=1');
         
         return $result !== false;
@@ -503,9 +584,12 @@ array('table' => 'training_language_branches', 'constraint' => 'fk_training_lang
 
     /**
      * Get table information
-     * 
-     * @param string $table_name Table name (without prefix)
-     * @return array|null
+     *
+     * Returns comprehensive info about a table including row count, size, etc.
+     *
+     * @since 4.6.1
+     * @param string $table_name Table name without prefix
+     * @return array|null Table info or null if table doesn't exist
      */
     public static function get_table_info($table_name) {
         global $wpdb;
@@ -540,11 +624,14 @@ array('table' => 'training_language_branches', 'constraint' => 'fk_training_lang
             'version' => self::get_table_version($table_name),
         );
     }
-    
+
     /**
      * Get overview of all tables
-     * 
-     * @return array
+     *
+     * Returns comprehensive database status including all tables info.
+     *
+     * @since 4.6.1
+     * @return array Database status with all tables info
      */
     public static function get_database_status() {
         $status = array(

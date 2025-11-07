@@ -2,22 +2,36 @@
 /**
  * Departments Form Template
  * 
- * @package SAW_Visitors
- * @version 1.0.0
+ * Form for creating new departments or editing existing ones.
+ * Used by both create() and edit() controller methods.
+ * 
+ * Available Variables:
+ * @var array $item Department data (empty array for create, populated for edit)
+ * @var bool $is_edit True if editing existing department, false if creating new
+ * @var int $customer_id Current customer ID from context
+ * @var array $branches List of available branches for the current customer
+ * 
+ * @package     SAW_Visitors
+ * @subpackage  Modules/Departments
+ * @since       1.0.0
+ * @author      SAW Visitors Dev Team
+ * @version     1.0.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+// Determine if this is edit mode
 $is_edit = !empty($item);
-$item = $item ?? [];
+$item = $item ?? array();
 
+// Get current customer context
 $customer_id = SAW_Context::get_customer_id();
 
-// Get branches for dropdown
+// Fetch branches for dropdown (only active branches)
 global $wpdb;
-$branches = [];
+$branches = array();
 if ($customer_id) {
     $branches = $wpdb->get_results($wpdb->prepare(
         "SELECT id, name FROM %i WHERE customer_id = %d AND is_active = 1 ORDER BY name ASC",
@@ -27,6 +41,7 @@ if ($customer_id) {
 }
 ?>
 
+<!-- Page Header -->
 <div class="saw-page-header">
     <div class="saw-page-header-content">
         <h1 class="saw-page-title">
@@ -39,16 +54,23 @@ if ($customer_id) {
     </div>
 </div>
 
+<!-- Form Container -->
 <div class="saw-form-container">
     <form method="post" class="saw-department-form">
+        
+        <!-- CSRF Protection -->
         <?php wp_nonce_field('saw_departments_form', 'saw_nonce'); ?>
         
+        <!-- Hidden Fields -->
         <?php if ($is_edit): ?>
             <input type="hidden" name="id" value="<?php echo esc_attr($item['id']); ?>">
         <?php endif; ?>
         
         <input type="hidden" name="customer_id" value="<?php echo esc_attr($customer_id); ?>">
         
+        <!-- ================================================ -->
+        <!-- SECTION: Basic Information -->
+        <!-- ================================================ -->
         <details class="saw-form-section" open>
             <summary>
                 <span class="dashicons dashicons-admin-generic"></span>
@@ -56,7 +78,10 @@ if ($customer_id) {
             </summary>
             <div class="saw-form-section-content">
                 
+                <!-- Branch + Department Number Row -->
                 <div class="saw-form-row">
+                    
+                    <!-- Branch Selection -->
                     <div class="saw-form-group saw-col-6">
                         <label for="branch_id" class="saw-label saw-required">
                             Pobočka
@@ -82,6 +107,7 @@ if ($customer_id) {
                         </span>
                     </div>
                     
+                    <!-- Department Number (Optional) -->
                     <div class="saw-form-group saw-col-6">
                         <label for="department_number" class="saw-label">
                             Číslo oddělení
@@ -100,6 +126,7 @@ if ($customer_id) {
                     </div>
                 </div>
                 
+                <!-- Department Name Row -->
                 <div class="saw-form-row">
                     <div class="saw-form-group">
                         <label for="name" class="saw-label saw-required">
@@ -120,6 +147,7 @@ if ($customer_id) {
                     </div>
                 </div>
                 
+                <!-- Description Row -->
                 <div class="saw-form-row">
                     <div class="saw-form-group">
                         <label for="description" class="saw-label">
@@ -141,6 +169,9 @@ if ($customer_id) {
             </div>
         </details>
         
+        <!-- ================================================ -->
+        <!-- SECTION: Training -->
+        <!-- ================================================ -->
         <details class="saw-form-section" open>
             <summary>
                 <span class="dashicons dashicons-welcome-learn-more"></span>
@@ -148,6 +179,7 @@ if ($customer_id) {
             </summary>
             <div class="saw-form-section-content">
                 
+                <!-- Training Version Row -->
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-6">
                         <label for="training_version" class="saw-label">
@@ -160,6 +192,7 @@ if ($customer_id) {
                             class="saw-input"
                             value="<?php echo esc_attr($item['training_version'] ?? '1'); ?>"
                             min="1"
+                            max="999"
                             placeholder="1"
                         >
                         <span class="saw-help-text">
@@ -171,6 +204,9 @@ if ($customer_id) {
             </div>
         </details>
         
+        <!-- ================================================ -->
+        <!-- SECTION: Availability Settings -->
+        <!-- ================================================ -->
         <details class="saw-form-section" open>
             <summary>
                 <span class="dashicons dashicons-admin-settings"></span>
@@ -178,6 +214,7 @@ if ($customer_id) {
             </summary>
             <div class="saw-form-section-content">
                 
+                <!-- Active Status Checkbox -->
                 <div class="saw-form-row">
                     <div class="saw-form-group">
                         <label class="saw-checkbox-label">
@@ -199,6 +236,9 @@ if ($customer_id) {
             </div>
         </details>
         
+        <!-- ================================================ -->
+        <!-- FORM ACTIONS -->
+        <!-- ================================================ -->
         <div class="saw-form-actions">
             <button type="submit" class="saw-button saw-button-primary">
                 <span class="dashicons dashicons-yes"></span>

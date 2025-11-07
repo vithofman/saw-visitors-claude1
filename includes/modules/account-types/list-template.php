@@ -2,14 +2,28 @@
 /**
  * Account Types List Template
  * 
- * @package SAW_Visitors
- * @version 7.2.0 - FIXED: Correct AJAX action names
+ * Displays paginated list of account types with:
+ * - Search functionality
+ * - Active/Inactive filter
+ * - Sortable columns
+ * - Color badge display
+ * - Price formatting (Kč/měsíc or "Zdarma")
+ * - Features count badge
+ * - Sort order display
+ * - AJAX modal for detail view
+ * - Edit/Delete actions
+ * 
+ * @package     SAW_Visitors
+ * @subpackage  Modules/AccountTypes/Templates
+ * @since       1.0.0
+ * @version     7.2.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+// Load required components
 if (!class_exists('SAW_Component_Search')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/search/class-saw-component-search.php';
 }
@@ -29,13 +43,13 @@ if (!class_exists('SAW_Component_Modal')) {
 // Prepare search component HTML
 ob_start();
 $search_component = new SAW_Component_Search('account-types', array(
-    'placeholder' => 'Hledat typ účtu...',
+    'placeholder' => __('Hledat typ účtu...', 'saw-visitors'),
     'search_value' => $search,
     'ajax_enabled' => false,
     'ajax_action' => 'saw_search_account_types',
     'show_button' => true,
     'show_info_banner' => true,
-    'info_banner_label' => 'Vyhledávání:',
+    'info_banner_label' => __('Vyhledávání:', 'saw-visitors'),
     'clear_url' => home_url('/admin/settings/account-types/'),
 ));
 $search_component->render();
@@ -46,9 +60,9 @@ ob_start();
 if (!empty($this->config['list_config']['filters']['is_active'])) {
     $status_filter = new SAW_Component_Selectbox('is_active-filter', array(
         'options' => array(
-            '' => 'Všechny statusy',
-            '1' => 'Aktivní',
-            '0' => 'Neaktivní',
+            '' => __('Všechny statusy', 'saw-visitors'),
+            '1' => __('Aktivní', 'saw-visitors'),
+            '0' => __('Neaktivní', 'saw-visitors'),
         ),
         'selected' => $_GET['is_active'] ?? '',
         'on_change' => 'redirect',
@@ -61,84 +75,84 @@ if (!empty($this->config['list_config']['filters']['is_active'])) {
 $filters_html = ob_get_clean();
 
 // Initialize admin table component
-$table = new SAW_Component_Admin_Table('account-types', [
-    'title' => 'Typy účtu',
+$table = new SAW_Component_Admin_Table('account-types', array(
+    'title' => __('Typy účtu', 'saw-visitors'),
     'create_url' => home_url('/admin/settings/account-types/new/'),
     'edit_url' => home_url('/admin/settings/account-types/edit/{id}/'),
     
-    'columns' => [
-        'color' => [
-            'label' => 'Barva',
+    'columns' => array(
+        'color' => array(
+            'label' => __('Barva', 'saw-visitors'),
             'type' => 'color_badge',
             'width' => '80px',
             'align' => 'center'
-        ],
-        'display_name' => [
-            'label' => 'Název',
+        ),
+        'display_name' => array(
+            'label' => __('Název', 'saw-visitors'),
             'type' => 'text',
             'sortable' => true,
             'bold' => true
-        ],
-        'name' => [
-            'label' => 'Interní název',
+        ),
+        'name' => array(
+            'label' => __('Interní název', 'saw-visitors'),
             'type' => 'custom',
             'callback' => function($value) {
                 return '<span class="saw-code-badge">' . esc_html($value) . '</span>';
             }
-        ],
-        'price' => [
-            'label' => 'Cena',
+        ),
+        'price' => array(
+            'label' => __('Cena', 'saw-visitors'),
             'type' => 'custom',
             'align' => 'right',
             'width' => '120px',
             'callback' => function($value) {
                 $price = floatval($value ?? 0);
                 if ($price > 0) {
-                    return number_format($price, 2, ',', ' ') . ' Kč/měsíc';
+                    return number_format($price, 2, ',', ' ') . ' ' . __('Kč/měsíc', 'saw-visitors');
                 }
-                return '<span class="saw-text-muted">Zdarma</span>';
+                return '<span class="saw-text-muted">' . esc_html__('Zdarma', 'saw-visitors') . '</span>';
             }
-        ],
-        'features' => [
-            'label' => 'Funkce',
+        ),
+        'features' => array(
+            'label' => __('Funkce', 'saw-visitors'),
             'type' => 'custom',
             'align' => 'center',
             'width' => '100px',
             'callback' => function($value) {
-                $features = !empty($value) ? json_decode($value, true) : [];
+                $features = !empty($value) ? json_decode($value, true) : array();
                 $count = is_array($features) ? count($features) : 0;
-                return '<span class="saw-badge saw-badge-info">' . $count . ' funkcí</span>';
+                return '<span class="saw-badge saw-badge-info">' . $count . ' ' . esc_html__('funkcí', 'saw-visitors') . '</span>';
             }
-        ],
-        'sort_order' => [
-            'label' => 'Pořadí',
+        ),
+        'sort_order' => array(
+            'label' => __('Pořadí', 'saw-visitors'),
             'type' => 'custom',
             'align' => 'center',
             'width' => '100px',
             'callback' => function($value) {
                 return '<span class="saw-sort-order-badge">' . esc_html($value ?? 0) . '</span>';
             }
-        ],
-        'is_active' => [
-            'label' => 'Status',
+        ),
+        'is_active' => array(
+            'label' => __('Status', 'saw-visitors'),
             'type' => 'badge',
             'width' => '100px',
             'align' => 'center',
-            'map' => [
+            'map' => array(
                 '1' => 'success',
                 '0' => 'secondary'
-            ],
-            'labels' => [
-                '1' => 'Aktivní',
-                '0' => 'Neaktivní'
-            ]
-        ],
-        'created_at' => [
-            'label' => 'Vytvořeno',
+            ),
+            'labels' => array(
+                '1' => __('Aktivní', 'saw-visitors'),
+                '0' => __('Neaktivní', 'saw-visitors')
+            )
+        ),
+        'created_at' => array(
+            'label' => __('Vytvořeno', 'saw-visitors'),
             'type' => 'date',
             'format' => 'd.m.Y'
-        ]
-    ],
+        )
+    ),
     
     'rows' => $items,
     'total_items' => $total,
@@ -148,21 +162,21 @@ $table = new SAW_Component_Admin_Table('account-types', [
     'order' => $order,
     'search' => $search_html,
     'filters' => $filters_html,
-    'actions' => ['edit', 'delete'],
-    'empty_message' => 'Žádné typy účtu nenalezeny',
-    'add_new' => 'Nový typ účtu',
+    'actions' => array('edit', 'delete'),
+    'empty_message' => __('Žádné typy účtu nenalezeny', 'saw-visitors'),
+    'add_new' => __('Nový typ účtu', 'saw-visitors'),
     
     'enable_modal' => true,
     'modal_id' => 'account-type-detail',
     'modal_ajax_action' => 'saw_get_account_types_detail',
-]);
+));
 
 // Render table
 $table->render();
 
 // Modal component
 $account_type_modal = new SAW_Component_Modal('account-type-detail', array(
-    'title' => 'Detail typu účtu',
+    'title' => __('Detail typu účtu', 'saw-visitors'),
     'ajax_enabled' => true,
     'ajax_action' => 'saw_get_account_types_detail',
     'size' => 'large',
@@ -181,7 +195,7 @@ $account_type_modal = new SAW_Component_Modal('account-type-detail', array(
             'label' => '',
             'icon' => 'dashicons-trash',
             'confirm' => true,
-            'confirm_message' => 'Opravdu chcete smazat tento typ účtu?',
+            'confirm_message' => __('Opravdu chcete smazat tento typ účtu?', 'saw-visitors'),
             'ajax_action' => 'saw_delete_account_types',
         ),
     ),

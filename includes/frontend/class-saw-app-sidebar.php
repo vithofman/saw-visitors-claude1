@@ -1,23 +1,87 @@
 <?php
+/**
+ * SAW App Sidebar Component
+ *
+ * Renders application sidebar navigation with hierarchical menu,
+ * permission checks, and branch switcher.
+ *
+ * @package SAW_Visitors
+ * @since   4.6.1
+ */
+
 if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * SAW App Sidebar Class
+ *
+ * Main sidebar navigation component.
+ * Displays menu items based on user permissions and role.
+ * Includes branch switcher for admins and super admins.
+ *
+ * @since 4.6.1
+ */
 class SAW_App_Sidebar {
     
+    /**
+     * Current user data
+     *
+     * @since 4.6.1
+     * @var array
+     */
     private $user;
+    
+    /**
+     * Current customer data
+     *
+     * @since 4.6.1
+     * @var array
+     */
     private $customer;
+    
+    /**
+     * Active menu item ID
+     *
+     * @since 4.6.1
+     * @var string
+     */
     private $active_menu;
+    
+    /**
+     * Current branch data
+     *
+     * @since 4.6.1
+     * @var array|null
+     */
     private $current_branch;
+    
+    /**
+     * Current SAW user role
+     *
+     * @since 4.6.1
+     * @var string
+     */
     private $saw_role;
     
+    /**
+     * Constructor
+     *
+     * Initializes sidebar with user, customer, and menu state.
+     *
+     * @since 4.6.1
+     * @param array|null  $user           Optional user data
+     * @param array|null  $customer       Optional customer data
+     * @param string      $active_menu    Active menu item ID
+     * @param array|null  $current_branch Optional branch data
+     */
     public function __construct($user = null, $customer = null, $active_menu = '', $current_branch = null) {
-        $this->user = $user ?: ['role' => 'admin'];
-        $this->customer = $customer ?: [
+        $this->user = $user ?: array('role' => 'admin');
+        $this->customer = $customer ?: array(
             'id' => 0,
             'name' => 'Demo zákazník',
             'logo_url' => '',
-        ];
+        );
         $this->active_menu = $active_menu;
         $this->current_branch = $current_branch ?: $this->load_current_branch();
         $this->saw_role = $this->get_current_saw_role();
@@ -27,7 +91,17 @@ class SAW_App_Sidebar {
         }
     }
     
+    /**
+     * Get current SAW user role
+     *
+     * Determines user role from SAW_Context, WordPress capabilities,
+     * or database lookup.
+     *
+     * @since 4.6.1
+     * @return string User role (super_admin, admin, manager, etc.)
+     */
     private function get_current_saw_role() {
+        // Check WordPress super admin first
         if (current_user_can('manage_options')) {
             if (class_exists('SAW_Context')) {
                 $role = SAW_Context::get_role();
@@ -38,6 +112,7 @@ class SAW_App_Sidebar {
             return 'super_admin';
         }
         
+        // Check SAW Context
         if (class_exists('SAW_Context')) {
             $role = SAW_Context::get_role();
             if ($role) {
@@ -45,18 +120,31 @@ class SAW_App_Sidebar {
             }
         }
         
+        // Fallback: database lookup
         global $wpdb;
         
         $saw_user = $wpdb->get_row($wpdb->prepare(
-            "SELECT role FROM {$wpdb->prefix}saw_users 
+            "SELECT role FROM %i 
              WHERE wp_user_id = %d AND is_active = 1",
+            $wpdb->prefix . 'saw_users',
             get_current_user_id()
         ));
         
         return $saw_user->role ?? 'admin';
     }
     
+    /**
+     * Check if user can access module
+     *
+     * Uses SAW_Permissions class to verify access rights.
+     * Super admins have access to everything.
+     *
+     * @since 4.6.1
+     * @param string $module_slug Module identifier
+     * @return bool True if user has access
+     */
     private function can_access_module($module_slug) {
+        // Load permissions class if needed
         if (!class_exists('SAW_Permissions')) {
             $permissions_file = SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-permissions.php';
             if (file_exists($permissions_file)) {
@@ -64,6 +152,7 @@ class SAW_App_Sidebar {
             }
         }
         
+        // Fallback if permissions not available
         if (!class_exists('SAW_Permissions')) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('[Sidebar] SAW_Permissions class not found');
@@ -71,10 +160,12 @@ class SAW_App_Sidebar {
             return true;
         }
         
+        // Super admins have access to everything
         if ($this->saw_role === 'super_admin') {
             return true;
         }
         
+        // Check permission
         $has_access = SAW_Permissions::check($this->saw_role, $module_slug, 'list');
         
         if (defined('WP_DEBUG') && WP_DEBUG) {
@@ -89,6 +180,14 @@ class SAW_App_Sidebar {
         return $has_access;
     }
     
+    /**
+     * Load current branch data
+     *
+     * Retrieves branch information from database using SAW_Context.
+     *
+     * @since 4.6.1
+     * @return array|null Branch data or null if not found
+     */
     private function load_current_branch() {
         if (!class_exists('SAW_Context')) {
             return null;
@@ -105,10 +204,11 @@ class SAW_App_Sidebar {
         
         $branch = $wpdb->get_row($wpdb->prepare(
             "SELECT id, name, code, city 
-             FROM {$table} 
+             FROM %i 
              WHERE id = %d 
              AND customer_id = %d 
              AND is_active = 1",
+            $table,
             $branch_id,
             $this->customer['id']
         ), ARRAY_A);
@@ -116,6 +216,16 @@ class SAW_App_Sidebar {
         return $branch ?: null;
     }
     
+    /**
+     * Check if section has active item
+     *
+     * Determines if any menu item in section matches active menu.
+     * Used for highlighting active sections.
+     *
+     * @since 4.6.1
+     * @param array $section Menu section data
+     * @return bool True if section contains active item
+     */
     private function section_has_active_item($section) {
         if (!isset($section['items'])) {
             return false;
@@ -130,6 +240,15 @@ class SAW_App_Sidebar {
         return false;
     }
     
+    /**
+     * Render sidebar
+     *
+     * Outputs complete sidebar HTML including branch switcher
+     * and navigation menu with permission filtering.
+     *
+     * @since 4.6.1
+     * @return void
+     */
     public function render() {
         $menu = $this->get_menu_items();
         ?>
@@ -146,13 +265,15 @@ class SAW_App_Sidebar {
                     $has_active = $this->section_has_active_item($section);
                     $is_collapsed = false;
                     
-                    $visible_items = [];
+                    // Filter items by permissions
+                    $visible_items = array();
                     foreach ($section['items'] as $item) {
                         if ($this->can_access_module($item['id'])) {
                             $visible_items[] = $item;
                         }
                     }
                     
+                    // Skip empty sections
                     if (empty($visible_items)) {
                         continue;
                     }
@@ -200,6 +321,14 @@ class SAW_App_Sidebar {
         <?php
     }
     
+    /**
+     * Render branch switcher component
+     *
+     * Loads and renders branch switcher for admins/super admins.
+     *
+     * @since 4.6.1
+     * @return void
+     */
     private function render_branch_switcher() {
         if (!class_exists('SAW_Component_Branch_Switcher')) {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/branch-switcher/class-saw-component-branch-switcher.php';
@@ -209,42 +338,51 @@ class SAW_App_Sidebar {
         $switcher->render();
     }
     
+    /**
+     * Get menu items
+     *
+     * Returns complete menu structure with sections and items.
+     * Items are filtered by permissions during rendering.
+     *
+     * @since 4.6.1
+     * @return array Menu structure
+     */
     private function get_menu_items() {
-        return [
-            [
-                'items' => [
-                    ['id' => 'dashboard', 'label' => 'Dashboard', 'url' => '/admin/', 'icon' => '📊'],
-                    ['id' => 'invitations', 'label' => 'Pozvánky', 'url' => '/admin/invitations', 'icon' => '📧'],
-                    ['id' => 'visits', 'label' => 'Přehled návštěv', 'url' => '/admin/visits', 'icon' => '👥'],
-                    ['id' => 'statistics', 'label' => 'Statistiky', 'url' => '/admin/statistics', 'icon' => '📈'],
-                ],
-            ],
-            [
+        return array(
+            array(
+                'items' => array(
+                    array('id' => 'dashboard', 'label' => 'Dashboard', 'url' => '/admin/', 'icon' => '📊'),
+                    array('id' => 'invitations', 'label' => 'Pozvánky', 'url' => '/admin/invitations', 'icon' => '📧'),
+                    array('id' => 'visits', 'label' => 'Přehled návštěv', 'url' => '/admin/visits', 'icon' => '👥'),
+                    array('id' => 'statistics', 'label' => 'Statistiky', 'url' => '/admin/statistics', 'icon' => '📈'),
+                ),
+            ),
+            array(
                 'heading' => 'Organizace',
-                'items' => [
-                    ['id' => 'branches', 'label' => 'Pobočky', 'url' => '/admin/branches', 'icon' => '🏢'],
-                    ['id' => 'departments', 'label' => 'Oddělení', 'url' => '/admin/departments', 'icon' => '📂'],
-                    ['id' => 'users', 'label' => 'Uživatelé', 'url' => '/admin/users', 'icon' => '👤'],
-                ],
-            ],
-            [
+                'items' => array(
+                    array('id' => 'branches', 'label' => 'Pobočky', 'url' => '/admin/branches', 'icon' => '🏢'),
+                    array('id' => 'departments', 'label' => 'Oddělení', 'url' => '/admin/departments', 'icon' => '📂'),
+                    array('id' => 'users', 'label' => 'Uživatelé', 'url' => '/admin/users', 'icon' => '👤'),
+                ),
+            ),
+            array(
                 'heading' => 'Školení',
-                'items' => [
-                    ['id' => 'training-languages', 'label' => 'Jazyky', 'url' => '/admin/training-languages', 'icon' => '🌍'],
-                    ['id' => 'content', 'label' => 'Obsah', 'url' => '/admin/settings/content', 'icon' => '📚'],
-                    ['id' => 'training', 'label' => 'Verze', 'url' => '/admin/settings/training', 'icon' => '🎓'],
-                ],
-            ],
-            [
+                'items' => array(
+                    array('id' => 'training-languages', 'label' => 'Jazyky', 'url' => '/admin/training-languages', 'icon' => '🌍'),
+                    array('id' => 'content', 'label' => 'Obsah', 'url' => '/admin/settings/content', 'icon' => '📚'),
+                    array('id' => 'training', 'label' => 'Verze', 'url' => '/admin/settings/training', 'icon' => '🎓'),
+                ),
+            ),
+            array(
                 'heading' => 'Systém',
-                'items' => [
-                    ['id' => 'permissions', 'label' => 'Oprávnění', 'url' => '/admin/permissions', 'icon' => '🔐'],
-                    ['id' => 'customers', 'label' => 'Zákazníci', 'url' => '/admin/settings/customers', 'icon' => '🏬'],
-                    ['id' => 'account-types', 'label' => 'Typy účtů', 'url' => '/admin/settings/account-types', 'icon' => '💳'],
-                    ['id' => 'company', 'label' => 'Firma', 'url' => '/admin/settings/company', 'icon' => '⚙️'],
-                    ['id' => 'about', 'label' => 'O aplikaci', 'url' => '/admin/settings/about', 'icon' => 'ℹ️'],
-                ],
-            ],
-        ];
+                'items' => array(
+                    array('id' => 'permissions', 'label' => 'Oprávnění', 'url' => '/admin/permissions', 'icon' => '🔒'),
+                    array('id' => 'customers', 'label' => 'Zákazníci', 'url' => '/admin/settings/customers', 'icon' => '🏬'),
+                    array('id' => 'account-types', 'label' => 'Typy účtů', 'url' => '/admin/settings/account-types', 'icon' => '💳'),
+                    array('id' => 'company', 'label' => 'Firma', 'url' => '/admin/settings/company', 'icon' => '⚙️'),
+                    array('id' => 'about', 'label' => 'O aplikaci', 'url' => '/admin/settings/about', 'icon' => 'ℹ️'),
+                ),
+            ),
+        );
     }
 }

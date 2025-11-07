@@ -1,4 +1,21 @@
 <?php
+/**
+ * SAW Search Input Template
+ * 
+ * Renders the search input interface with optional clear button,
+ * submit button, and search result information banner.
+ * 
+ * @package     SAW_Visitors
+ * @subpackage  Components/Search
+ * @version     1.1.0
+ * @since       1.0.0
+ * @author      SAW Visitors Team
+ * 
+ * Variables:
+ * @var string $entity Entity identifier
+ * @var array  $config Search configuration
+ */
+
 if (!defined('ABSPATH')) {
     exit;
 }

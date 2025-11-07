@@ -2,8 +2,18 @@
 /**
  * SAW Modal Template
  * 
- * @package SAW_Visitors
- * @version 4.0.1
+ * Renders the complete modal structure including header with actions,
+ * body content (static or AJAX-loaded), and optional footer with buttons.
+ * 
+ * @package     SAW_Visitors
+ * @subpackage  Components/Modal
+ * @version     4.0.1
+ * @since       4.6.1
+ * @author      SAW Visitors Team
+ * 
+ * Variables:
+ * @var string $id     Modal ID
+ * @var array  $config Modal configuration
  */
 
 if (!defined('ABSPATH')) {
@@ -31,7 +41,7 @@ $modal_classes = array('saw-modal');
 if (!empty($custom_class)) {
     $modal_classes[] = $custom_class;
 }
-// ✅ OPRAVENO: Používá 'active' místo 'saw-modal-open'
+// Auto-open: Uses 'active' class instead of 'saw-modal-open'
 if ($auto_open) {
     $modal_classes[] = 'active';
 }

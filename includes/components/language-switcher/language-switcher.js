@@ -1,14 +1,35 @@
 /**
- * SAW Language Switcher - JavaScript (DEBUG VERSION)
+ * SAW Language Switcher - JavaScript
  * 
- * @package SAW_Visitors
- * @version 2.0.1
+ * Handles language switching with AJAX requests, dropdown interactions,
+ * and keyboard navigation support.
+ * 
+ * @package     SAW_Visitors
+ * @subpackage  Components/LanguageSwitcher
+ * @version     2.0.1
+ * @since       4.7.0
+ * @author      SAW Visitors Team
  */
 
 (function($) {
     'use strict';
     
+    /**
+     * Language Switcher Class
+     * 
+     * Manages language selection dropdown and AJAX-based language switching.
+     * 
+     * @class
+     * @since 4.7.0
+     */
     class LanguageSwitcher {
+        /**
+         * Constructor
+         * 
+         * Initializes the language switcher with DOM elements and state.
+         * 
+         * @since 4.7.0
+         */
         constructor() {
             this.button = $('#sawLanguageSwitcherButton');
             this.dropdown = $('#sawLanguageSwitcherDropdown');
@@ -18,43 +39,40 @@
             this.init();
         }
         
+        /**
+         * Initialize component
+         * 
+         * Sets up event listeners and validates required elements.
+         * 
+         * @since 4.7.0
+         * @return {void}
+         */
         init() {
-            console.log('[Language Switcher] Starting init...');
-            
             if (!this.button.length || !this.dropdown.length) {
-                console.error('[Language Switcher] Elements not found!', {
-                    button: this.button.length,
-                    dropdown: this.dropdown.length
-                });
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    // Elements not found
+                }
                 return;
             }
             
             if (typeof sawLanguageSwitcher === 'undefined') {
-                console.error('[Language Switcher] sawLanguageSwitcher object not found!');
-                console.log('Available global objects:', Object.keys(window));
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    // sawLanguageSwitcher object not found
+                }
                 return;
             }
             
             this.currentLanguage = this.button.data('current-language');
             
-            console.log('[Language Switcher] Initialized successfully', {
-                currentLanguage: this.currentLanguage,
-                ajaxurl: sawLanguageSwitcher.ajaxurl,
-                hasNonce: !!sawLanguageSwitcher.nonce,
-                nonce: sawLanguageSwitcher.nonce
-            });
-            
             // Button click
             this.button.on('click', (e) => {
                 e.stopPropagation();
-                console.log('[Language Switcher] Button clicked');
                 this.toggle();
             });
             
             // Language item click
             this.dropdown.find('.saw-language-item').on('click', (e) => {
                 const language = $(e.currentTarget).data('language');
-                console.log('[Language Switcher] Language item clicked:', language);
                 this.switchLanguage(language);
             });
             
@@ -73,6 +91,14 @@
             });
         }
         
+        /**
+         * Toggle dropdown
+         * 
+         * Opens dropdown if closed, closes if open.
+         * 
+         * @since 4.7.0
+         * @return {void}
+         */
         toggle() {
             if (this.isOpen) {
                 this.close();
@@ -81,32 +107,47 @@
             }
         }
         
+        /**
+         * Open dropdown
+         * 
+         * Displays the language selection dropdown.
+         * 
+         * @since 4.7.0
+         * @return {void}
+         */
         open() {
-            console.log('[Language Switcher] Opening dropdown');
             this.isOpen = true;
             this.dropdown.addClass('active');
         }
         
+        /**
+         * Close dropdown
+         * 
+         * Hides the language selection dropdown.
+         * 
+         * @since 4.7.0
+         * @return {void}
+         */
         close() {
-            console.log('[Language Switcher] Closing dropdown');
             this.isOpen = false;
             this.dropdown.removeClass('active');
         }
         
+        /**
+         * Switch language
+         * 
+         * Sends AJAX request to switch the current language and reloads
+         * the page on success.
+         * 
+         * @since 4.7.0
+         * @param {string} language - Language code to switch to
+         * @return {void}
+         */
         switchLanguage(language) {
             if (language === this.currentLanguage) {
-                console.log('[Language Switcher] Already on this language, closing');
                 this.close();
                 return;
             }
-            
-            console.log('[Language Switcher] Starting switch to:', language);
-            console.log('[Language Switcher] AJAX data:', {
-                url: sawLanguageSwitcher.ajaxurl,
-                action: 'saw_switch_language',
-                language: language,
-                nonce: sawLanguageSwitcher.nonce
-            });
             
             this.button.prop('disabled', true);
             
@@ -118,33 +159,18 @@
                     language: language,
                     nonce: sawLanguageSwitcher.nonce
                 },
-                beforeSend: function(xhr) {
-                    console.log('[Language Switcher] Sending AJAX request...');
-                },
                 success: (response) => {
-                    console.log('[Language Switcher] AJAX Success!', response);
-                    
                     if (response && response.success) {
-                        console.log('[Language Switcher] Language switched successfully, reloading...');
                         window.location.reload();
                     } else {
                         const message = (response && response.data && response.data.message) 
                             ? response.data.message 
                             : 'Chyba při přepínání jazyka';
-                        console.error('[Language Switcher] Server returned error:', message);
                         alert(message);
                         this.button.prop('disabled', false);
                     }
                 },
                 error: (xhr, status, error) => {
-                    console.error('[Language Switcher] AJAX ERROR!', {
-                        status: xhr.status,
-                        statusText: xhr.statusText,
-                        error: error,
-                        responseText: xhr.responseText,
-                        readyState: xhr.readyState
-                    });
-                    
                     let message = 'Chyba serveru (status: ' + xhr.status + ')';
                     
                     if (xhr.status === 0) {
@@ -159,12 +185,11 @@
                     
                     try {
                         const response = JSON.parse(xhr.responseText);
-                        console.log('[Language Switcher] Parsed error response:', response);
                         if (response && response.data && response.data.message) {
                             message = response.data.message;
                         }
                     } catch (e) {
-                        console.log('[Language Switcher] Could not parse error response');
+                        // Could not parse error response
                     }
                     
                     alert(message);
@@ -174,15 +199,14 @@
         }
     }
     
-    // Initialize
+    /**
+     * Initialize language switcher on document ready
+     * 
+     * @since 4.7.0
+     */
     $(document).ready(function() {
-        console.log('[Language Switcher] Document ready, searching for component...');
-        
         if ($('#sawLanguageSwitcher').length) {
-            console.log('[Language Switcher] Component found, initializing...');
             window.languageSwitcher = new LanguageSwitcher();
-        } else {
-            console.error('[Language Switcher] Component #sawLanguageSwitcher not found in DOM!');
         }
     });
     

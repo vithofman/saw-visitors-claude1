@@ -1,23 +1,43 @@
 /**
  * SAW Modal Component
  * 
- * @package SAW_Visitors
- * @version 4.0.0
+ * Comprehensive modal system with AJAX content loading, action buttons,
+ * toast notifications, and keyboard navigation support.
+ * 
+ * @package     SAW_Visitors
+ * @subpackage  Components/Modal
+ * @version     4.0.0
+ * @since       1.0.0
+ * @author      SAW Visitors Team
  */
 
 (function($) {
     'use strict';
     
+    /**
+     * SAW Modal Object
+     * 
+     * Main modal management object with methods for opening, closing,
+     * and loading content.
+     * 
+     * @since 1.0.0
+     */
     const SAWModal = {
         
         /**
          * Open modal
+         * 
+         * Opens the specified modal and optionally loads AJAX content.
+         * 
+         * @since 1.0.0
+         * @param {string} modalId - Modal identifier
+         * @param {Object} data - Optional data for AJAX loading and action buttons
+         * @return {void}
          */
         open: function(modalId, data = {}) {
             const $modal = $('#saw-modal-' + modalId);
             
             if (!$modal.length) {
-                console.error('Modal not found:', modalId);
                 return;
             }
             
@@ -39,6 +59,12 @@
         
         /**
          * Close modal
+         * 
+         * Closes the specified modal or the currently active modal.
+         * 
+         * @since 1.0.0
+         * @param {string} modalId - Optional modal identifier
+         * @return {void}
          */
         close: function(modalId) {
             const $modal = modalId ? $('#saw-modal-' + modalId) : $('.saw-modal.active');
@@ -56,13 +82,19 @@
         
         /**
          * Load AJAX content
+         * 
+         * Loads content via AJAX and displays it in the modal body.
+         * 
+         * @since 1.0.0
+         * @param {jQuery} $modal - Modal element
+         * @param {Object} data - Data to send with AJAX request
+         * @return {void}
          */
         loadAjaxContent: function($modal, data) {
             const ajaxAction = $modal.data('ajax-action');
             const $body = $modal.find('.saw-modal-body');
             
             if (!ajaxAction) {
-                console.error('No AJAX action defined');
                 return;
             }
             
@@ -97,6 +129,13 @@
         
         /**
          * Show toast notification
+         * 
+         * Displays a temporary toast message at the bottom of the screen.
+         * 
+         * @since 1.0.0
+         * @param {string} message - Message to display
+         * @param {string} type - Toast type (success, danger, warning)
+         * @return {void}
          */
         toast: function(message, type = 'success') {
             const $toast = $('<div class="saw-toast saw-toast-' + type + '">' + message + '</div>');
@@ -113,7 +152,11 @@
     // Make globally available
     window.SAWModal = SAWModal;
     
-    // Initialize on document ready
+    /**
+     * Initialize modal event handlers
+     * 
+     * @since 1.0.0
+     */
     $(document).ready(function() {
         
         // Close modal on X button
@@ -172,7 +215,6 @@
                 
                 const ajaxAction = $btn.data('action-ajax');
                 if (!ajaxAction || !itemId) {
-                    console.error('Missing AJAX action or item ID');
                     return;
                 }
                 
@@ -212,8 +254,6 @@
                 }
             }
         });
-        
-        console.log('✅ SAWModal initialized');
     });
     
 })(jQuery);

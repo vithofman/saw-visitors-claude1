@@ -2,6 +2,9 @@
 /**
  * Branches Detail Modal Template
  * 
+ * Displays branch details in a modal window including address, contact info,
+ * opening hours, GPS coordinates, and metadata.
+ * 
  * REFACTORED v2.0.0:
  * ✅ No inline styles
  * ✅ Global CSS classes
@@ -9,6 +12,7 @@
  * ✅ Fallback for missing data
  * 
  * @package SAW_Visitors
+ * @since 2.0.0
  * @version 2.0.0
  */
 

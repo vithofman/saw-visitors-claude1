@@ -2,7 +2,27 @@
 /**
  * File Upload Input Template
  * 
- * @package SAW_Visitors
+ * Renders a complete file upload interface with preview box, file selection
+ * controls, and file information display. Supports drag-and-drop and displays
+ * current file if available.
+ * 
+ * @package     SAW_Visitors
+ * @subpackage  Components/FileUpload
+ * @version     1.0.0
+ * @since       1.0.0
+ * @author      SAW Visitors Team
+ * 
+ * Variables:
+ * @var string $id                Field ID
+ * @var string $name              Field name
+ * @var array  $config            Upload configuration
+ * @var string $current_file_url  Current file URL (if exists)
+ * @var string $label             Upload label
+ * @var string $current_label     Current file label
+ * @var string $help_text         Help text
+ * @var string $accept            Accepted MIME types
+ * @var bool   $show_preview      Whether to show preview
+ * @var string $custom_class      Custom CSS class
  */
 
 if (!defined('ABSPATH')) {
@@ -11,7 +31,7 @@ if (!defined('ABSPATH')) {
 
 $id = $id ?? 'file';
 $name = $name ?? 'file';
-$config = $config ?? [];
+$config = $config ?? array();
 $current_file_url = $current_file_url ?? '';
 $label = $label ?? 'Nahrát soubor';
 $current_label = $current_label ?? 'Současný soubor';

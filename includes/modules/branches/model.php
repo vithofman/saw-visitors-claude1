@@ -2,7 +2,17 @@
 /**
  * Branches Module Model
  * 
+ * Handles all database operations for branches including:
+ * - CRUD operations with customer isolation
+ * - Validation and data processing
+ * - Opening hours JSON handling
+ * - Single headquarters enforcement
+ * - Cache invalidation
+ * - Address formatting
+ * - Usage detection in system
+ * 
  * @package SAW_Visitors
+ * @since 2.0.0
  * @version 3.1.0 - Customer Isolation Fix
  */
 
@@ -10,8 +20,19 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Branches Module Model
+ * 
+ * @since 2.0.0
+ */
 class SAW_Module_Branches_Model extends SAW_Base_Model 
 {
+    /**
+     * Constructor - Initialize model
+     * 
+     * @since 2.0.0
+     * @param array $config Module configuration
+     */
     public function __construct($config) {
         global $wpdb;
         
@@ -20,8 +41,23 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         $this->cache_ttl = $config['cache']['ttl'] ?? 1800;
     }
     
+    /**
+     * Validate branch data
+     * 
+     * Validates all branch fields including:
+     * - Required fields (customer_id, name)
+     * - Unique code per customer
+     * - Email format
+     * - GPS coordinates range
+     * - Sort order value
+     * 
+     * @since 2.0.0
+     * @param array $data Branch data to validate
+     * @param int $id Branch ID (0 for new branches)
+     * @return true|WP_Error True if valid, WP_Error with error details if invalid
+     */
     public function validate($data, $id = 0) {
-        $errors = [];
+        $errors = array();
         
         if (empty($data['customer_id'])) {
             $errors['customer_id'] = 'Customer ID is required';
@@ -63,6 +99,15 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         return empty($errors) ? true : new WP_Error('validation_error', 'Validace selhala', $errors);
     }
     
+    /**
+     * Check if branch code already exists for customer
+     * 
+     * @since 2.0.0
+     * @param string $code Branch code to check
+     * @param int $exclude_id Branch ID to exclude from check (for updates)
+     * @param int $customer_id Customer ID
+     * @return bool True if code exists, false otherwise
+     */
     private function code_exists($code, $exclude_id = 0, $customer_id = 0) {
         global $wpdb;
         
@@ -81,6 +126,22 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         return (bool) $wpdb->get_var($query);
     }
     
+    /**
+     * Get branch by ID with enriched data
+     * 
+     * Adds computed fields:
+     * - opening_hours_array: Parsed opening hours
+     * - full_address: Formatted address string
+     * - has_gps: Boolean if GPS coordinates exist
+     * - google_maps_url: Google Maps link
+     * - Status/headquarters labels and badge classes
+     * - Country name translation
+     * - Formatted dates
+     * 
+     * @since 2.0.0
+     * @param int $id Branch ID
+     * @return array|null Branch data with enriched fields or null if not found
+     */
     public function get_by_id($id) {
         $item = parent::get_by_id($id);
         
@@ -110,13 +171,13 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         $item['is_headquarters_label'] = !empty($item['is_headquarters']) ? 'Ano' : 'Ne';
         $item['is_headquarters_badge_class'] = !empty($item['is_headquarters']) ? 'saw-badge saw-badge-info' : 'saw-badge saw-badge-secondary';
         
-        $countries = [
+        $countries = array(
             'CZ' => 'Česká republika',
             'SK' => 'Slovensko',
             'DE' => 'Německo',
             'AT' => 'Rakousko',
             'PL' => 'Polsko',
-        ];
+        );
         
         if (!empty($item['country'])) {
             $item['country_name'] = $countries[$item['country']] ?? $item['country'];
@@ -133,8 +194,17 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         return $item;
     }
     
-    public function get_all($filters = []) {
-        // ✅ CRITICAL FIX - Same pattern as departments
+    /**
+     * Get all branches with filters and customer isolation
+     * 
+     * Automatically adds customer_id filter from context if not provided.
+     * Default ordering by sort_order ASC.
+     * 
+     * @since 2.0.0
+     * @param array $filters Filters to apply (search, orderby, order, page, etc.)
+     * @return array Array with 'items' and 'total' keys
+     */
+    public function get_all($filters = array()) {
         $customer_id = SAW_Context::get_customer_id();
         
         if (!isset($filters['customer_id'])) {
@@ -149,6 +219,16 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         return parent::get_all($filters);
     }
     
+    /**
+     * Create new branch
+     * 
+     * Processes opening hours, ensures single headquarters per customer,
+     * and invalidates related caches.
+     * 
+     * @since 2.0.0
+     * @param array $data Branch data
+     * @return int|WP_Error Branch ID on success, WP_Error on failure
+     */
     public function create($data) {
         $data = $this->process_opening_hours_for_save($data);
         
@@ -171,6 +251,17 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         return $result;
     }
     
+    /**
+     * Update existing branch
+     * 
+     * Processes opening hours, ensures single headquarters per customer,
+     * and invalidates related caches.
+     * 
+     * @since 2.0.0
+     * @param int $id Branch ID
+     * @param array $data Branch data
+     * @return bool|WP_Error True on success, WP_Error on failure
+     */
     public function update($id, $data) {
         $data = $this->process_opening_hours_for_save($data);
         
@@ -194,6 +285,15 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         return $result;
     }
     
+    /**
+     * Delete branch
+     * 
+     * Invalidates related caches after successful deletion.
+     * 
+     * @since 2.0.0
+     * @param int $id Branch ID
+     * @return bool|WP_Error True on success, WP_Error on failure
+     */
     public function delete($id) {
         $branch = $this->get_by_id($id);
         
@@ -214,6 +314,17 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         return $result;
     }
     
+    /**
+     * Ensure only one headquarters per customer
+     * 
+     * If this branch is being set as headquarters, removes headquarters
+     * flag from all other branches of the same customer.
+     * 
+     * @since 2.0.0
+     * @param array $data Branch data
+     * @param int $exclude_id Branch ID to exclude (for updates)
+     * @return array Modified branch data
+     */
     private function ensure_single_headquarters($data, $exclude_id = 0) {
         if (!empty($data['is_headquarters']) && !empty($data['customer_id'])) {
             global $wpdb;
@@ -228,10 +339,10 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
             } else {
                 $wpdb->update(
                     $this->table,
-                    ['is_headquarters' => 0],
-                    ['customer_id' => $data['customer_id']],
-                    ['%d'],
-                    ['%d']
+                    array('is_headquarters' => 0),
+                    array('customer_id' => $data['customer_id']),
+                    array('%d'),
+                    array('%d')
                 );
             }
         }
@@ -239,6 +350,15 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         return $data;
     }
     
+    /**
+     * Process opening hours for database storage
+     * 
+     * Converts textarea input (line-separated) to JSON array format.
+     * 
+     * @since 2.0.0
+     * @param array $data Branch data
+     * @return array Modified branch data with processed opening hours
+     */
     private function process_opening_hours_for_save($data) {
         if (isset($data['opening_hours']) && is_string($data['opening_hours'])) {
             $lines = explode("\n", $data['opening_hours']);
@@ -249,28 +369,44 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         return $data;
     }
     
+    /**
+     * Parse opening hours JSON to array
+     * 
+     * @since 2.0.0
+     * @param string $hours_json JSON-encoded opening hours
+     * @return array Parsed opening hours array
+     */
     public function get_opening_hours_as_array($hours_json) {
         if (empty($hours_json)) {
-            return [];
+            return array();
         }
         
         $hours = json_decode($hours_json, true);
         
-        return is_array($hours) ? $hours : [];
+        return is_array($hours) ? $hours : array();
     }
     
+    /**
+     * Build full address string from branch data
+     * 
+     * Format: "Street, PostalCode City, Country" (if not CZ)
+     * 
+     * @since 2.0.0
+     * @param array $item Branch data
+     * @return string Formatted address string
+     */
     public function get_full_address($item) {
-        $parts = [];
+        $parts = array();
         
         if (!empty($item['street'])) {
             $parts[] = $item['street'];
         }
         
         if (!empty($item['city']) || !empty($item['postal_code'])) {
-            $city_parts = array_filter([
+            $city_parts = array_filter(array(
                 $item['postal_code'] ?? '',
                 $item['city'] ?? ''
-            ]);
+            ));
             
             if (!empty($city_parts)) {
                 $parts[] = implode(' ', $city_parts);
@@ -284,15 +420,28 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         return implode(', ', $parts);
     }
     
+    /**
+     * Check if branch is used in system
+     * 
+     * Checks if branch is referenced in:
+     * - Visits
+     * - Invitations
+     * - Users
+     * - Departments
+     * 
+     * @since 2.0.0
+     * @param int $id Branch ID
+     * @return bool True if branch is used, false otherwise
+     */
     public function is_used_in_system($id) {
         global $wpdb;
         
-        $tables_to_check = [
+        $tables_to_check = array(
             'saw_visits',
             'saw_invitations',
             'saw_users',
             'saw_departments',
-        ];
+        );
         
         foreach ($tables_to_check as $table) {
             $full_table = $wpdb->prefix . $table;
@@ -327,21 +476,36 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         return false;
     }
     
+    /**
+     * Get all branches for specific customer
+     * 
+     * @since 2.0.0
+     * @param int $customer_id Customer ID
+     * @param bool $active_only Whether to return only active branches
+     * @return array Array of branches
+     */
     public function get_by_customer($customer_id, $active_only = false) {
-        $filters = [
+        $filters = array(
             'customer_id' => $customer_id,
             'orderby' => 'sort_order',
             'order' => 'ASC',
-        ];
+        );
         
         if ($active_only) {
             $filters['is_active'] = 1;
         }
         
         $data = $this->get_all($filters);
-        return $data['items'] ?? [];
+        return $data['items'] ?? array();
     }
     
+    /**
+     * Get headquarters branch for customer
+     * 
+     * @since 2.0.0
+     * @param int $customer_id Customer ID
+     * @return array|null Headquarters branch data or null if not found
+     */
     public function get_headquarters($customer_id) {
         global $wpdb;
         

@@ -1,8 +1,11 @@
 /**
  * SAW Customer Switcher - Styles
- * 
+ *
+ * Customer selector component with dropdown and static display modes.
+ * Uses design tokens from variables.css for consistency.
+ *
  * @package SAW_Visitors
- * @since 4.7.0
+ * @since   4.7.0
  */
 
 /* ============================================
@@ -15,18 +18,18 @@
 .saw-customer-switcher-button {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 6px 12px 6px 6px;
-    background: white;
-    border: 0px solid #e5e7eb;
-    border-radius: 8px;
+    gap: var(--saw-space-md);
+    padding: var(--saw-space-sm) var(--saw-space-md) var(--saw-space-sm) var(--saw-space-sm);
+    background: #ffffff;
+    border: 0px solid var(--saw-border-color);
+    border-radius: var(--saw-border-radius-md);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all var(--saw-transition-base);
 }
 
 .saw-customer-switcher-button:hover {
-    background: #f9fafb;
-    border-color: #d1d5db;
+    background: var(--saw-gray-50);
+    border-color: var(--saw-gray-300);
 }
 
 .saw-customer-switcher-button:disabled {
@@ -49,7 +52,7 @@
     width: auto;
     height: auto;
     object-fit: contain;
-    border-radius: 6px;
+    border-radius: var(--saw-border-radius-sm);
 }
 
 .saw-switcher-logo-fallback {
@@ -64,9 +67,9 @@
 }
 
 .saw-switcher-name {
-    font-size: 15px;
+    font-size: var(--saw-font-size-base);
     font-weight: 600;
-    color: #111827;
+    color: var(--saw-gray-900);
     line-height: 1.3;
     white-space: nowrap;
     overflow: hidden;
@@ -75,18 +78,18 @@
 
 .saw-switcher-ico {
     font-size: 11px;
-    color: #6b7280;
+    color: var(--saw-gray-500);
     white-space: nowrap;
 }
 
 .saw-switcher-arrow {
     flex-shrink: 0;
-    color: #6b7280;
-    transition: transform 0.2s;
+    color: var(--saw-gray-500);
+    transition: transform var(--saw-transition-base);
 }
 
 .saw-customer-switcher-button:hover .saw-switcher-arrow {
-    color: #111827;
+    color: var(--saw-gray-900);
 }
 
 /* ============================================
@@ -94,14 +97,14 @@
    ============================================ */
 .saw-customer-switcher-dropdown {
     position: absolute;
-    top: calc(100% + 8px);
+    top: calc(100% + var(--saw-space-sm));
     left: 0;
     width: 360px;
     max-height: 480px;
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    background: #ffffff;
+    border: var(--saw-border-width) solid var(--saw-border-color);
+    border-radius: var(--saw-border-radius-md);
+    box-shadow: var(--saw-shadow-lg);
     display: none;
     flex-direction: column;
     z-index: 1001;
@@ -112,28 +115,28 @@
 }
 
 .saw-switcher-search {
-    padding: 12px;
-    border-bottom: 1px solid #e5e7eb;
+    padding: var(--saw-space-md);
+    border-bottom: var(--saw-border-width) solid var(--saw-border-color);
 }
 
 .saw-switcher-search-input {
     width: 100%;
-    padding: 8px 12px;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-size: 14px;
-    transition: border-color 0.2s;
+    padding: var(--saw-space-sm) var(--saw-space-md);
+    border: var(--saw-border-width) solid var(--saw-gray-300);
+    border-radius: var(--saw-border-radius-sm);
+    font-size: var(--saw-font-size-sm);
+    transition: border-color var(--saw-transition-base);
 }
 
 .saw-switcher-search-input:focus {
     outline: none;
-    border-color: #2563eb;
+    border-color: var(--saw-primary);
 }
 
 .saw-switcher-list {
     flex: 1;
     overflow-y: auto;
-    padding: 8px;
+    padding: var(--saw-space-sm);
 }
 
 .saw-switcher-list::-webkit-scrollbar {
@@ -145,12 +148,12 @@
 }
 
 .saw-switcher-list::-webkit-scrollbar-thumb {
-    background: #d1d5db;
+    background: var(--saw-gray-300);
     border-radius: 3px;
 }
 
 .saw-switcher-list::-webkit-scrollbar-thumb:hover {
-    background: #9ca3af;
+    background: var(--saw-gray-400);
 }
 
 /* ============================================
@@ -159,19 +162,19 @@
 .saw-switcher-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 10px 12px;
-    border-radius: 6px;
+    gap: var(--saw-space-md);
+    padding: 10px var(--saw-space-md);
+    border-radius: var(--saw-border-radius-sm);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all var(--saw-transition-base);
 }
 
 .saw-switcher-item:hover {
-    background: #f3f4f6;
+    background: var(--saw-gray-100);
 }
 
 .saw-switcher-item.active {
-    background: #eff6ff;
+    background: var(--saw-primary-light);
 }
 
 .saw-switcher-item-logo {
@@ -189,7 +192,7 @@
     width: auto;
     height: auto;
     object-fit: contain;
-    border-radius: 4px;
+    border-radius: var(--saw-space-xs);
 }
 
 .saw-switcher-item-logo-fallback {
@@ -203,9 +206,9 @@
 }
 
 .saw-switcher-item-name {
-    font-size: 14px;
+    font-size: var(--saw-font-size-sm);
     font-weight: 500;
-    color: #111827;
+    color: var(--saw-gray-900);
     line-height: 1.3;
     white-space: nowrap;
     overflow: hidden;
@@ -214,13 +217,13 @@
 
 .saw-switcher-item-ico {
     font-size: 11px;
-    color: #6b7280;
+    color: var(--saw-gray-500);
     margin-top: 2px;
 }
 
 .saw-switcher-item-check {
     font-size: 16px;
-    color: #2563eb;
+    color: var(--saw-primary);
     flex-shrink: 0;
 }
 
@@ -234,28 +237,30 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    padding: 32px 16px;
+    gap: var(--saw-space-md);
+    padding: var(--saw-space-3xl) var(--saw-space-lg);
     text-align: center;
-    color: #6b7280;
-    font-size: 14px;
+    color: var(--saw-gray-500);
+    font-size: var(--saw-font-size-sm);
 }
 
 .saw-switcher-error {
-    color: #ef4444;
+    color: var(--saw-danger);
 }
 
 .saw-spinner {
     width: 24px;
     height: 24px;
-    border: 3px solid #e5e7eb;
-    border-top-color: #2563eb;
+    border: 3px solid var(--saw-border-color);
+    border-top-color: var(--saw-primary);
     border-radius: 50%;
     animation: saw-spin 0.8s linear infinite;
 }
 
 @keyframes saw-spin {
-    to { transform: rotate(360deg); }
+    to { 
+        transform: rotate(360deg); 
+    }
 }
 
 /* ============================================
@@ -264,7 +269,7 @@
 .saw-customer-info-static {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: var(--saw-space-lg);
 }
 
 .saw-customer-info-static .saw-logo {
@@ -289,15 +294,15 @@
 }
 
 .saw-customer-info-static .saw-customer-info {
-    border-left: 1px solid #e5e7eb;
-    padding-left: 16px;
+    border-left: var(--saw-border-width) solid var(--saw-border-color);
+    padding-left: var(--saw-space-lg);
     min-width: 0;
 }
 
 .saw-customer-info-static .saw-customer-name {
     font-size: 16px;
     font-weight: 600;
-    color: #111827;
+    color: var(--saw-gray-900);
     line-height: 1.3;
     white-space: nowrap;
     overflow: hidden;
@@ -305,8 +310,8 @@
 }
 
 .saw-customer-info-static .saw-customer-ico {
-    font-size: 12px;
-    color: #6b7280;
+    font-size: var(--saw-font-size-xs);
+    color: var(--saw-gray-500);
     white-space: nowrap;
 }
 
@@ -319,7 +324,7 @@
     }
     
     .saw-customer-switcher-button {
-        padding: 6px;
+        padding: var(--saw-space-sm);
     }
     
     .saw-customer-switcher-dropdown {

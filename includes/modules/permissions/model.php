@@ -2,19 +2,37 @@
 /**
  * Permissions Module Model
  * 
- * Database operations for permissions.
+ * Database operations for permissions management.
+ * Handles CRUD operations for the permissions table without customer filtering.
  * 
- * @package SAW_Visitors
- * @version 1.0.0
- * @since 4.10.0
+ * @package     SAW_Visitors
+ * @subpackage  Modules/Permissions
+ * @since       4.10.0
+ * @author      SAW Visitors Dev Team
+ * @version     1.0.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Permissions Model Class
+ * 
+ * Extends SAW_Base_Model to provide permissions-specific functionality.
+ * 
+ * @since 4.10.0
+ */
 class SAW_Module_Permissions_Model extends SAW_Base_Model {
     
+    /**
+     * Constructor - Initialize model with config
+     * 
+     * Sets up table name, configuration, and cache TTL.
+     * 
+     * @since 4.10.0
+     * @param array $config Module configuration array
+     */
     public function __construct($config) {
         global $wpdb;
         
@@ -24,84 +42,165 @@ class SAW_Module_Permissions_Model extends SAW_Base_Model {
     }
     
     /**
-     * Get all permissions (override parent to disable customer filtering)
+     * Get all permissions with filtering and pagination
+     * 
+     * Overrides parent method to disable customer filtering since permissions
+     * are global. Supports search, filters, sorting, and pagination.
+     * 
+     * SECURITY: All dynamic SQL values are properly escaped using $wpdb->prepare()
+     * 
+     * @since 4.10.0
+     * @param array $args Query arguments (search, filters, orderby, page, etc.)
+     * @return array Array with 'items' and 'total' keys
      */
-    public function get_all($args = []) {
+    public function get_all($args = array()) {
         global $wpdb;
         
-        $sql = "SELECT * FROM {$this->table} WHERE 1=1";
-        $params = [];
+        // Start building WHERE conditions
+        $where_conditions = array('1=1');
+        $prepare_params = array();
         
+        // ================================================
+        // SEARCH
+        // ================================================
         if (!empty($args['search'])) {
-            $search_fields = $this->config['list_config']['searchable'] ?? ['role', 'module', 'action'];
-            $search_conditions = [];
+            $search_fields = $this->config['list_config']['searchable'] ?? array('role', 'module', 'action');
+            $search_conditions = array();
             
             foreach ($search_fields as $field) {
-                $search_conditions[] = "{$field} LIKE %s";
+                // Validate field name (whitelist)
+                if (!in_array($field, array('role', 'module', 'action'), true)) {
+                    continue;
+                }
+                $search_conditions[] = $field . ' LIKE %s';
+                $prepare_params[] = '%' . $wpdb->esc_like($args['search']) . '%';
             }
             
-            $search_value = '%' . $wpdb->esc_like($args['search']) . '%';
-            
-            foreach ($search_fields as $field) {
-                $params[] = $search_value;
+            if (!empty($search_conditions)) {
+                $where_conditions[] = '(' . implode(' OR ', $search_conditions) . ')';
             }
-            
-            $sql .= " AND (" . implode(' OR ', $search_conditions) . ")";
         }
         
-        foreach ($this->config['list_config']['filters'] ?? [] as $filter_key => $enabled) {
+        // ================================================
+        // FILTERS
+        // ================================================
+        foreach ($this->config['list_config']['filters'] ?? array() as $filter_key => $enabled) {
             if ($enabled && isset($args[$filter_key]) && $args[$filter_key] !== '') {
-                $sql .= " AND {$filter_key} = %s";
-                $params[] = $args[$filter_key];
+                // Validate filter key (whitelist)
+                if (!in_array($filter_key, array('role', 'allowed'), true)) {
+                    continue;
+                }
+                $where_conditions[] = $filter_key . ' = %s';
+                $prepare_params[] = $args[$filter_key];
             }
         }
         
-        if (!empty($params)) {
-            $sql = $wpdb->prepare($sql, ...$params);
-        }
+        // Build WHERE clause
+        $where_clause = implode(' AND ', $where_conditions);
         
+        // ================================================
+        // ORDERING
+        // ================================================
         $orderby = $args['orderby'] ?? 'role';
         $order = strtoupper($args['order'] ?? 'ASC');
         
-        if (in_array($order, ['ASC', 'DESC'])) {
-            $sql .= " ORDER BY {$orderby} {$order}";
+        // Validate orderby (whitelist)
+        $allowed_orderby = array('role', 'module', 'action', 'allowed', 'scope');
+        if (!in_array($orderby, $allowed_orderby, true)) {
+            $orderby = 'role';
         }
         
-        $total_sql = "SELECT COUNT(*) FROM ({$sql}) as count_table";
-        $total = $wpdb->get_var($total_sql);
+        // Validate order direction
+        if (!in_array($order, array('ASC', 'DESC'), true)) {
+            $order = 'ASC';
+        }
         
+        // ================================================
+        // BUILD MAIN QUERY
+        // ================================================
+        $base_query = "SELECT * FROM %i WHERE {$where_clause}";
+        
+        // Prepare base query with table name and parameters
+        if (!empty($prepare_params)) {
+            $query = $wpdb->prepare(
+                $base_query,
+                $this->table,
+                ...$prepare_params
+            );
+        } else {
+            $query = $wpdb->prepare($base_query, $this->table);
+        }
+        
+        // Add ORDER BY (safe, already validated)
+        $query .= " ORDER BY {$orderby} {$order}";
+        
+        // ================================================
+        // COUNT TOTAL RECORDS
+        // ================================================
+        $count_query = "SELECT COUNT(*) FROM %i WHERE {$where_clause}";
+        
+        if (!empty($prepare_params)) {
+            $count_query_prepared = $wpdb->prepare(
+                $count_query,
+                $this->table,
+                ...$prepare_params
+            );
+        } else {
+            $count_query_prepared = $wpdb->prepare($count_query, $this->table);
+        }
+        
+        $total = (int) $wpdb->get_var($count_query_prepared);
+        
+        // ================================================
+        // PAGINATION
+        // ================================================
         $limit = intval($args['per_page'] ?? 50);
         $page = intval($args['page'] ?? 1);
         $offset = ($page - 1) * $limit;
         
-        $sql .= " LIMIT {$limit} OFFSET {$offset}";
+        // Add LIMIT and OFFSET (safe, already validated as integers)
+        $query .= " LIMIT {$limit} OFFSET {$offset}";
         
-        $results = $wpdb->get_results($sql, ARRAY_A);
+        // ================================================
+        // EXECUTE QUERY
+        // ================================================
+        $results = $wpdb->get_results($query, ARRAY_A);
         
-        return [
-            'items' => $results,
+        return array(
+            'items' => $results ?: array(),
             'total' => $total,
-        ];
+        );
     }
     
     /**
      * Validate permission data
+     * 
+     * Validates all required fields for permission records.
+     * 
+     * @since 4.10.0
+     * @param array $data Permission data to validate
+     * @param int $id Permission ID (for update validation, 0 for create)
+     * @return bool|WP_Error True if valid, WP_Error if validation fails
      */
     public function validate($data, $id = 0) {
-        $errors = [];
+        $errors = array();
         
+        // Role validation
         if (empty($data['role'])) {
             $errors['role'] = 'Role je povinná';
         }
         
+        // Module validation
         if (empty($data['module'])) {
             $errors['module'] = 'Modul je povinný';
         }
         
+        // Action validation
         if (empty($data['action'])) {
             $errors['action'] = 'Akce je povinná';
         }
         
+        // Scope validation
         if (empty($data['scope'])) {
             $errors['scope'] = 'Rozsah dat je povinný';
         }

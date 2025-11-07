@@ -1,6 +1,9 @@
 /**
  * Branches Module Styles
  * 
+ * Module-specific styles for Branches functionality including thumbnails,
+ * badges, opening hours display, and form components.
+ * 
  * REFACTORED v2.0.0:
  * ✅ Minimální velikost (jen module-specific)
  * ✅ CSS variables místo hard-coded hodnot
@@ -8,6 +11,7 @@
  * ✅ Responsive
  * 
  * @package SAW_Visitors
+ * @since 2.0.0
  * @version 2.0.0
  */
 
@@ -21,7 +25,7 @@
     border-radius: var(--saw-border-radius-md);
     margin-right: var(--saw-space-md);
     vertical-align: middle;
-    border: 2px solid #fff;
+    border: var(--saw-border-width-thick) solid var(--saw-gray-50);
     box-shadow: var(--saw-shadow-md);
 }
 
@@ -32,7 +36,7 @@
     width: 48px;
     height: 48px;
     margin-right: var(--saw-space-md);
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--saw-primary) 0%, var(--saw-primary-hover) 100%);
     border-radius: var(--saw-border-radius-md);
     font-size: 24px;
     vertical-align: middle;
@@ -65,7 +69,7 @@
     width: 32px;
     height: 32px;
     background: var(--saw-gray-50);
-    border: 2px solid var(--saw-border-color);
+    border: var(--saw-border-width-thick) solid var(--saw-border-color);
     border-radius: 50%;
     font-weight: 600;
     font-size: var(--saw-font-size-sm);
@@ -102,8 +106,8 @@
 }
 
 .saw-module-branches .saw-badge-sm {
-    font-size: 11px;
-    padding: 2px var(--saw-space-sm);
+    font-size: var(--saw-font-size-xs);
+    padding: var(--saw-space-xs) var(--saw-space-sm);
 }
 
 /* ============================================
@@ -115,16 +119,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--saw-primary) 0%, var(--saw-primary-hover) 100%);
     border-radius: var(--saw-border-radius-lg);
-    border: 2px solid var(--saw-border-color);
+    border: var(--saw-border-width-thick) solid var(--saw-border-color);
 }
 
 .saw-module-branches .saw-detail-logo-placeholder .dashicons {
     font-size: 44px;
     width: 44px;
     height: 44px;
-    color: #ffffff;
+    color: var(--saw-gray-50);
 }
 
 .saw-module-branches .saw-opening-hours-list {
@@ -151,19 +155,19 @@
     gap: var(--saw-space-sm);
     padding: var(--saw-space-sm) var(--saw-space-lg);
     background: var(--saw-primary-light);
-    border: 2px solid #bfdbfe;
+    border: var(--saw-border-width-thick) solid var(--saw-primary-light);
     border-radius: var(--saw-border-radius-md);
-    color: #1e40af;
+    color: var(--saw-primary-hover);
     text-decoration: none;
     font-weight: 600;
     transition: var(--saw-transition-base);
 }
 
 .saw-module-branches .saw-map-link:hover {
-    background: #dbeafe;
-    border-color: #93c5fd;
+    background: var(--saw-primary-light);
+    border-color: var(--saw-primary);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
 }
 
 .saw-module-branches .saw-map-link .dashicons {
@@ -182,7 +186,7 @@
 .saw-module-branches .saw-current-image img {
     max-width: 300px;
     border-radius: var(--saw-border-radius-md);
-    border: 3px solid #fff;
+    border: var(--saw-border-width-thick) solid var(--saw-gray-50);
     box-shadow: var(--saw-shadow-lg);
 }
 
@@ -191,7 +195,7 @@
 }
 
 .saw-module-branches .saw-get-gps-btn:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
 }
 
@@ -206,9 +210,9 @@
     display: inline-flex;
     align-items: center;
     padding: var(--saw-space-sm) var(--saw-space-lg);
-    border: 2px solid var(--saw-border-color);
+    border: var(--saw-border-width-thick) solid var(--saw-border-color);
     border-radius: var(--saw-border-radius-md);
-    background: #fff;
+    background: var(--saw-gray-50);
     font-size: var(--saw-font-size-sm);
     font-weight: 600;
     color: var(--saw-gray-700);
@@ -257,13 +261,13 @@
     }
     
     .saw-module-branches .saw-code-badge {
-        font-size: 11px;
-        padding: 3px var(--saw-space-sm);
+        font-size: var(--saw-font-size-xs);
+        padding: var(--saw-space-xs) var(--saw-space-sm);
     }
     
     .saw-module-branches .saw-template-btn {
-        font-size: 12px;
-        padding: 6px var(--saw-space-md);
+        font-size: var(--saw-font-size-xs);
+        padding: var(--saw-space-sm) var(--saw-space-md);
     }
 }
 

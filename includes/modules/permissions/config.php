@@ -1,17 +1,26 @@
 <?php
 /**
- * Permissions Module Config
+ * Permissions Module Configuration
  * 
- * @package SAW_Visitors
- * @version 1.0.0
- * @since 4.10.0
+ * Defines all settings, fields, capabilities, and behavior for the Permissions module.
+ * This module manages role-based access control (RBAC) across all modules.
+ * 
+ * @package     SAW_Visitors
+ * @subpackage  Modules/Permissions
+ * @since       4.10.0
+ * @author      SAW Visitors Dev Team
+ * @version     1.0.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-return [
+return array(
+    // ================================================
+    // BASIC MODULE INFO
+    // ================================================
+    
     'entity' => 'permissions',
     'table' => 'saw_permissions',
     'singular' => 'Oprávnění',
@@ -19,75 +28,107 @@ return [
     'route' => 'admin/permissions',
     'icon' => '🔐',
     
-    'allowed_roles' => ['super_admin'],
+    // ================================================
+    // ACCESS CONTROL
+    // ================================================
     
+    // Only super_admin can manage permissions
+    'allowed_roles' => array('super_admin'),
+    
+    // No customer/branch filtering (global module)
     'filter_by_customer' => false,
     'filter_by_branch' => false,
     
-    'capabilities' => [
+    // ================================================
+    // CAPABILITIES (WordPress permissions)
+    // ================================================
+    
+    'capabilities' => array(
         'list' => 'manage_options',
         'view' => 'manage_options',
         'create' => 'manage_options',
         'edit' => 'manage_options',
         'delete' => 'manage_options',
-    ],
+    ),
     
-    'fields' => [
-        'role' => [
+    // ================================================
+    // FIELD DEFINITIONS
+    // ================================================
+    
+    'fields' => array(
+        
+        // Role
+        'role' => array(
             'type' => 'select',
             'label' => 'Role',
             'required' => true,
-            'options' => [
+            'options' => array(
                 'admin' => 'Admin',
                 'super_manager' => 'Super Manager',
                 'manager' => 'Manager',
                 'terminal' => 'Terminál',
-            ],
-        ],
-        'module' => [
+            ),
+        ),
+        
+        // Module
+        'module' => array(
             'type' => 'text',
             'label' => 'Modul',
             'required' => true,
-        ],
-        'action' => [
+        ),
+        
+        // Action
+        'action' => array(
             'type' => 'text',
             'label' => 'Akce',
             'required' => true,
-        ],
-        'allowed' => [
+        ),
+        
+        // Allowed
+        'allowed' => array(
             'type' => 'checkbox',
             'label' => 'Povoleno',
             'default' => 1,
-        ],
-        'scope' => [
+        ),
+        
+        // Scope (data visibility)
+        'scope' => array(
             'type' => 'select',
             'label' => 'Rozsah dat',
             'required' => true,
-            'options' => [
+            'options' => array(
                 'all' => 'Všechna data',
                 'customer' => 'Jen můj zákazník',
                 'branch' => 'Jen má pobočka',
                 'department' => 'Jen má oddělení',
                 'own' => 'Jen já',
-            ],
-        ],
-    ],
+            ),
+        ),
+    ),
     
-    'list_config' => [
-        'columns' => ['role', 'module', 'action', 'allowed', 'scope'],
-        'searchable' => ['role', 'module', 'action'],
-        'sortable' => ['role', 'module', 'action'],
-        'filters' => [
+    // ================================================
+    // LIST VIEW CONFIGURATION
+    // ================================================
+    
+    'list_config' => array(
+        'columns' => array('role', 'module', 'action', 'allowed', 'scope'),
+        'searchable' => array('role', 'module', 'action'),
+        'sortable' => array('role', 'module', 'action'),
+        'filters' => array(
             'role' => true,
             'allowed' => true,
-        ],
+        ),
         'per_page' => 50,
         'enable_detail_modal' => false,
-    ],
+    ),
     
-    'cache' => [
+    // ================================================
+    // CACHING CONFIGURATION
+    // ================================================
+    
+    'cache' => array(
         'enabled' => true,
-        'ttl' => 3600,
-        'invalidate_on' => ['save', 'delete'],
-    ],
-];
+        'ttl' => 3600, // 1 hour (permissions change rarely)
+        'invalidate_on' => array('save', 'delete'),
+    ),
+);

@@ -2,28 +2,42 @@
 /**
  * SAW Modal Component
  * 
- * Globální komponenta pro modální okna v aplikaci.
- * Podporuje statický obsah i dynamické načítání přes AJAX.
+ * Global component for modal windows in the application.
+ * Supports static content and dynamic AJAX loading with configurable
+ * behavior, actions, and styling options.
  * 
- * @package SAW_Visitors
- * @version 4.0.0
- * @since 4.6.1
+ * @package     SAW_Visitors
+ * @subpackage  Components/Modal
+ * @version     4.0.0
+ * @since       4.6.1
+ * @author      SAW Visitors Team
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * SAW Modal Component Class
+ * 
+ * Handles modal creation, configuration, rendering, and asset management.
+ * 
+ * @since 4.6.1
+ */
 class SAW_Component_Modal {
     
     /**
      * Unique modal ID
+     * 
+     * @since 4.6.1
      * @var string
      */
     private $id;
     
     /**
      * Modal configuration
+     * 
+     * @since 4.6.1
      * @var array
      */
     private $config;
@@ -31,6 +45,9 @@ class SAW_Component_Modal {
     /**
      * Constructor
      * 
+     * Initializes the modal with a unique ID and configuration.
+     * 
+     * @since 4.6.1
      * @param string $id     Unique modal identifier
      * @param array  $config Configuration array
      */
@@ -42,6 +59,9 @@ class SAW_Component_Modal {
     /**
      * Parse and merge configuration with defaults
      * 
+     * Merges user-provided configuration with default values.
+     * 
+     * @since 4.6.1
      * @param array $config User configuration
      * @return array Merged configuration
      */
@@ -85,7 +105,10 @@ class SAW_Component_Modal {
     /**
      * Render the modal
      * 
-     * Enqueues assets and includes template
+     * Enqueues assets and includes the modal template.
+     * 
+     * @since 4.6.1
+     * @return void
      */
     public function render() {
         $this->enqueue_assets();
@@ -97,7 +120,13 @@ class SAW_Component_Modal {
     }
     
     /**
-     * Enqueue modal assets (JS only - CSS is global)
+     * Enqueue modal assets
+     * 
+     * Loads JavaScript and localizes script with AJAX configuration.
+     * CSS is loaded globally.
+     * 
+     * @since 4.6.1
+     * @return void
      */
     private function enqueue_assets() {
         // Modal JS
@@ -129,7 +158,10 @@ class SAW_Component_Modal {
     /**
      * Get modal ID
      * 
-     * @return string
+     * Returns the unique modal identifier.
+     * 
+     * @since 4.6.1
+     * @return string Modal ID
      */
     public function get_id() {
         return $this->id;
@@ -138,15 +170,21 @@ class SAW_Component_Modal {
     /**
      * Get modal configuration
      * 
-     * @return array
+     * Returns the complete modal configuration array.
+     * 
+     * @since 4.6.1
+     * @return array Modal configuration
      */
     public function get_config() {
         return $this->config;
     }
     
     /**
-     * Static helper: Open modal via JS
+     * Static helper: Open modal via JavaScript
      * 
+     * Generates JavaScript code to open a modal with optional data.
+     * 
+     * @since 4.6.1
      * @param string $modal_id Modal ID to open
      * @param array  $data     Optional data to pass
      * @return string JavaScript code
@@ -157,8 +195,11 @@ class SAW_Component_Modal {
     }
     
     /**
-     * Static helper: Close modal via JS
+     * Static helper: Close modal via JavaScript
      * 
+     * Generates JavaScript code to close a modal.
+     * 
+     * @since 4.6.1
      * @param string $modal_id Modal ID to close
      * @return string JavaScript code
      */

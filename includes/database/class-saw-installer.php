@@ -1,25 +1,38 @@
 <?php
 /**
  * SAW Database Installer
- * 
- * Automatická instalace všech tabulek pomocí WordPress dbDelta()
- * 2-fázová instalace: nejdříve tabulky bez FK, pak přidání FK
- * 
+ *
+ * Automatic installation of all database tables using WordPress dbDelta().
+ * Two-phase installation: tables without FK first, then add foreign keys.
+ *
  * @package SAW_Visitors
  * @version 4.6.1
- * @since 4.6.1
+ * @since   4.6.1
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * SAW Installer Class
+ *
+ * Handles plugin installation, database creation, seed data, and uninstallation.
+ * Uses two-phase approach to avoid circular foreign key dependencies.
+ *
+ * @since 4.6.1
+ */
 class SAW_Installer {
     
     /**
-     * Instalace databáze
-     * 
-     * @return bool
+     * Install plugin database
+     *
+     * Creates all tables in two phases:
+     * - Phase 1: Tables without foreign key constraints
+     * - Phase 2: Add foreign key constraints via ALTER TABLE
+     *
+     * @since 4.6.1
+     * @return bool True if installation successful, false on error
      */
     public static function install() {
         global $wpdb;
@@ -101,10 +114,13 @@ class SAW_Installer {
     }
     
     /**
-     * Pořadí tabulek podle závislostí
-     * TOTAL: 33 tables
-     * 
-     * @return array
+     * Get tables order based on dependencies
+     *
+     * Tables are ordered to respect foreign key dependencies.
+     * Total: 33 tables
+     *
+     * @since 4.6.1
+     * @return array Table names (without 'saw_' prefix)
      */
     private static function get_tables_order() {
         return array(
@@ -155,8 +171,12 @@ class SAW_Installer {
     
     /**
      * Add foreign keys via ALTER TABLE
-     * 
-     * @return bool
+     *
+     * Second phase of installation: adds all foreign key constraints
+     * after tables are created. Prevents circular dependency issues.
+     *
+     * @since 4.6.1
+     * @return bool True on success
      */
     private static function add_foreign_keys() {
         global $wpdb;
@@ -210,7 +230,6 @@ class SAW_Installer {
             array('table' => 'departments', 'constraint' => 'fk_dept_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
             // user_departments
-            array('table' => 'user_departments', 'constraint' => 'fk_userdept_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'user_departments', 'constraint' => 'fk_userdept_user', 'column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'user_departments', 'constraint' => 'fk_userdept_dept', 'column' => 'department_id', 'ref_table' => 'departments', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
@@ -289,14 +308,24 @@ class SAW_Installer {
             ));
             
             if ($exists > 0) {
+                $added_count++;
                 continue;
             }
             
-            $sql = "ALTER TABLE `{$table}` 
-                    ADD CONSTRAINT `{$fk['constraint']}` 
-                    FOREIGN KEY (`{$fk['column']}`) 
-                    REFERENCES `{$ref_table}`(`{$fk['ref_column']}`) 
-                    ON DELETE {$fk['on_delete']}";
+            // Use prepared statement for ALTER TABLE
+            $sql = $wpdb->prepare(
+                "ALTER TABLE %i 
+                ADD CONSTRAINT %i 
+                FOREIGN KEY (%i) 
+                REFERENCES %i(%i) 
+                ON DELETE %s",
+                $table,
+                $fk['constraint'],
+                $fk['column'],
+                $ref_table,
+                $fk['ref_column'],
+                $fk['on_delete']
+            );
             
             $result = $wpdb->query($sql);
             
@@ -311,20 +340,28 @@ class SAW_Installer {
     }
     
     /**
-     * Vložení výchozích dat (volitelné)
-     * 
+     * Insert default data (optional)
+     *
+     * Creates demo customer and training config if database is empty.
+     * Only runs if no customers exist.
+     *
+     * @since 4.6.1
      * @return void
      */
     private static function insert_default_data() {
         global $wpdb;
         $prefix = $wpdb->prefix . 'saw_';
         
-        $customer_exists = $wpdb->get_var("SELECT COUNT(*) FROM `{$prefix}customers`");
+        $customer_exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM %i",
+            $prefix . 'customers'
+        ));
         
         if ($customer_exists > 0) {
             return;
         }
         
+        // Insert demo customer
         $wpdb->insert(
             $prefix . 'customers',
             array(
@@ -338,6 +375,7 @@ class SAW_Installer {
         
         $customer_id = $wpdb->insert_id;
         
+        // Insert training config if table exists
         if ($customer_id && self::table_exists('training_config')) {
             $wpdb->insert(
                 $prefix . 'training_config',
@@ -353,9 +391,10 @@ class SAW_Installer {
     
     /**
      * Check if table exists
-     * 
-     * @param string $table_name Table name (without prefix)
-     * @return bool
+     *
+     * @since 4.6.1
+     * @param string $table_name Table name (without 'saw_' prefix)
+     * @return bool True if table exists
      */
     private static function table_exists($table_name) {
         global $wpdb;
@@ -371,10 +410,12 @@ class SAW_Installer {
     }
     
     /**
-     * Deinstalace (smaže všechny tabulky)
-     * 
-     * POZOR: Toto je destruktivní operace!
-     * 
+     * Uninstall plugin
+     *
+     * Drops all plugin tables from database.
+     * WARNING: This is a destructive operation that deletes all data!
+     *
+     * @since 4.6.1
      * @return void
      */
     public static function uninstall() {
@@ -383,15 +424,23 @@ class SAW_Installer {
         $prefix = $wpdb->prefix . 'saw_';
         $tables = array_reverse(self::get_tables_order());
         
+        // Disable foreign key checks temporarily
         $wpdb->query('SET FOREIGN_KEY_CHECKS=0');
         
         foreach ($tables as $table_name) {
             $full_table_name = $prefix . $table_name;
-            $wpdb->query("DROP TABLE IF EXISTS `{$full_table_name}`");
+            
+            // Use prepared statement for DROP TABLE
+            $wpdb->query($wpdb->prepare(
+                "DROP TABLE IF EXISTS %i",
+                $full_table_name
+            ));
         }
         
+        // Re-enable foreign key checks
         $wpdb->query('SET FOREIGN_KEY_CHECKS=1');
         
+        // Delete version option
         delete_option('saw_db_version');
     }
 }

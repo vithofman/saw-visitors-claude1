@@ -2,7 +2,15 @@
 /**
  * Branches Module Controller
  * 
+ * Handles all CRUD operations for branches including:
+ * - List view with filtering and pagination
+ * - Create/Edit forms with validation
+ * - File upload handling for branch images
+ * - Permission and scope validation
+ * - Cache invalidation
+ * 
  * @package SAW_Visitors
+ * @since 2.0.0
  * @version 3.1.0 - Permissions & Scope Fix
  */
 
@@ -10,12 +18,28 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Branches Module Controller
+ * 
+ * @since 2.0.0
+ */
 class SAW_Module_Branches_Controller extends SAW_Base_Controller 
 {
     use SAW_AJAX_Handlers;
     
+    /**
+     * File uploader instance
+     * 
+     * @since 2.0.0
+     * @var SAW_File_Uploader
+     */
     private $file_uploader;
     
+    /**
+     * Constructor - Initialize controller
+     * 
+     * @since 2.0.0
+     */
     public function __construct() {
         $module_path = SAW_VISITORS_PLUGIN_DIR . 'includes/modules/branches/';
         
@@ -32,6 +56,12 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         }
     }
     
+    /**
+     * Display branches list view
+     * 
+     * @since 2.0.0
+     * @return void
+     */
     public function index() {
         $this->verify_module_access();
         
@@ -42,13 +72,13 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         $order = isset($_GET['order']) ? strtoupper(sanitize_text_field($_GET['order'])) : 'ASC';
         $page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
         
-        $filters = [
+        $filters = array(
             'search' => $search,
             'orderby' => $orderby,
             'order' => $order,
             'page' => $page,
             'per_page' => 20,
-        ];
+        );
         
         if ($is_active !== '') {
             $filters['is_active'] = intval($is_active);
@@ -83,6 +113,12 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         $this->render_with_layout($content, $this->config['plural']);
     }
     
+    /**
+     * Display create branch form and handle submission
+     * 
+     * @since 2.0.0
+     * @return void
+     */
     public function create() {
         $this->verify_module_access();
         
@@ -130,7 +166,7 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
             $this->redirect(home_url('/admin/branches/'));
         }
         
-        $item = [];
+        $item = array();
         
         ob_start();
         
@@ -152,6 +188,13 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         $this->render_with_layout($content, 'Nová pobočka');
     }
     
+    /**
+     * Display edit branch form and handle submission
+     * 
+     * @since 2.0.0
+     * @param int $id Branch ID
+     * @return void
+     */
     public function edit($id) {
         $this->verify_module_access();
         
@@ -233,8 +276,17 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         $this->render_with_layout($content, 'Upravit pobočku');
     }
     
+    /**
+     * Prepare form data from POST request
+     * 
+     * Sanitizes and validates form data according to field configuration.
+     * 
+     * @since 2.0.0
+     * @param array $post POST data
+     * @return array Sanitized form data
+     */
     private function prepare_form_data($post) {
-        $data = [];
+        $data = array();
         
         foreach ($this->config['fields'] as $field_name => $field_config) {
             if (isset($post[$field_name])) {
@@ -257,6 +309,18 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         return $data;
     }
     
+    /**
+     * Process data before save
+     * 
+     * Handles:
+     * - Auto-set customer_id from context
+     * - File upload/removal for branch images
+     * - Old file cleanup
+     * 
+     * @since 2.0.0
+     * @param array $data Form data
+     * @return array|WP_Error Processed data or error
+     */
     protected function before_save($data) {
         if (empty($data['customer_id'])) {
             $data['customer_id'] = SAW_Context::get_customer_id();
@@ -294,12 +358,22 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         return $data;
     }
     
+    /**
+     * Process actions after successful save
+     * 
+     * Handles cache invalidation for branch switcher component.
+     * 
+     * @since 2.0.0
+     * @param int $id Branch ID
+     * @return void
+     */
     protected function after_save($id) {
         $branch = $this->model->get_by_id($id);
         
         if (!empty($branch['customer_id'])) {
             delete_transient('branches_for_switcher_' . $branch['customer_id']);
             
+            // Log cache invalidation in debug mode
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log(sprintf(
                     '[Branches] Cache invalidated for customer %d after saving branch %d',
