@@ -1,0 +1,169 @@
+/**
+ * Sidebar Styles - Detail & Form
+ *
+ * @package     SAW_Visitors
+ * @subpackage  Components/AdminTable
+ * @version     1.0.0
+ * @since       4.0.0
+ */
+
+/* Split Layout */
+.saw-admin-table-split {
+    display: flex;
+    gap: 0;
+    min-height: 600px;
+    height: calc(100vh - 200px);
+}
+
+.saw-table-panel {
+    flex: 1;
+    overflow-y: auto;
+    border-right: 1px solid #e5e7eb;
+    background: #fff;
+}
+
+.saw-table-panel tr.saw-row-active {
+    background: #eff6ff !important;
+    border-left: 3px solid #3b82f6;
+}
+
+/* Sidebar Wrapper */
+.saw-sidebar-wrapper {
+    width: 700px;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-left: 2px solid #3b82f6;
+    box-shadow: -2px 0 8px rgba(0,0,0,0.05);
+}
+
+.saw-sidebar {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* Header */
+.saw-sidebar-header {
+    padding: 20px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fafbfc;
+    flex-shrink: 0;
+}
+
+.saw-sidebar-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.saw-sidebar-title span {
+    font-size: 24px;
+}
+
+.saw-sidebar-title h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.saw-sidebar-close {
+    font-size: 24px;
+    color: #6b7280;
+    text-decoration: none;
+    cursor: pointer;
+    transition: color 0.2s;
+    padding: 4px 8px;
+}
+
+.saw-sidebar-close:hover {
+    color: #111827;
+}
+
+/* Content */
+.saw-sidebar-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+/* Footer */
+.saw-sidebar-footer {
+    padding: 16px 20px;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    gap: 8px;
+    background: #fafbfc;
+    flex-shrink: 0;
+}
+
+.saw-sidebar-footer .saw-button {
+    flex: 1;
+}
+
+/* Form specific */
+.saw-sidebar[data-mode="form"] .saw-form-container {
+    max-width: none;
+    padding: 0;
+}
+
+.saw-sidebar[data-mode="form"] .saw-page-header {
+    display: none;
+}
+
+/* Button styles */
+.saw-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.saw-button-primary {
+    background: #3b82f6;
+    color: #fff;
+}
+
+.saw-button-primary:hover {
+    background: #2563eb;
+}
+
+.saw-button-secondary {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.saw-button-secondary:hover {
+    background: #e5e7eb;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .saw-sidebar-wrapper {
+        width: 500px;
+    }
+}
+
+@media (max-width: 768px) {
+    .saw-admin-table-split {
+        flex-direction: column;
+    }
+    
+    .saw-table-panel {
+        display: none;
+    }
+    
+    .saw-sidebar-wrapper {
+        width: 100%;
+    }
+}

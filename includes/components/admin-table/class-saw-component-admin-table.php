@@ -2,11 +2,11 @@
 /**
  * Admin Table Component
  *
- * Modern table component with OOP structure, modal support, and permissions
+ * Modern table component with OOP structure, modal support, sidebar support, and permissions
  *
  * @package     SAW_Visitors
  * @subpackage  Components
- * @version     3.3.1
+ * @version     4.0.0
  * @since       1.0.0
  */
 
@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
  * SAW Component Admin Table
  *
  * Handles rendering of admin data tables with sorting, filtering,
- * pagination, modal integration, and permission checks
+ * pagination, modal integration, sidebar integration, and permission checks
  *
  * @since 1.0.0
  */
@@ -84,6 +84,10 @@ class SAW_Component_Admin_Table {
             'enable_modal' => false,
             'modal_id' => '',
             'modal_ajax_action' => '',
+            'detail_item' => null,
+            'detail_tab' => 'overview',
+            'form_item' => null,
+            'sidebar_mode' => null,
         );
         
         return wp_parse_args($config, $defaults);
@@ -97,13 +101,70 @@ class SAW_Component_Admin_Table {
      */
     public function render() {
         $this->enqueue_assets();
-        $this->render_header();
-        $this->render_controls();
-        $this->render_table_or_empty();
-        $this->render_pagination();
-        $this->render_modal();
-        $this->render_floating_button();
+        
+        $has_sidebar = !empty($this->config['sidebar_mode']);
+        
+        if ($has_sidebar) {
+            $this->render_split_layout();
+        } else {
+            $this->render_header();
+            $this->render_controls();
+            $this->render_table_or_empty();
+            $this->render_pagination();
+            $this->render_modal();
+            $this->render_floating_button();
+            $this->render_delete_script();
+        }
+    }
+    
+    /**
+     * Render split layout with sidebar
+     *
+     * @since 4.0.0
+     * @return void Outputs HTML directly
+     */
+    private function render_split_layout() {
+        ?>
+        <div class="saw-admin-table-split">
+            <div class="saw-table-panel">
+                <?php
+                $this->render_header();
+                $this->render_controls();
+                $this->render_table_or_empty();
+                $this->render_pagination();
+                $this->render_floating_button();
+                ?>
+            </div>
+            
+            <div class="saw-sidebar-wrapper">
+                <?php $this->render_sidebar(); ?>
+            </div>
+        </div>
+        <?php
         $this->render_delete_script();
+    }
+    
+    /**
+     * Render sidebar content
+     *
+     * @since 4.0.0
+     * @return void Outputs HTML directly
+     */
+    private function render_sidebar() {
+        $mode = $this->config['sidebar_mode'];
+        $config = $this->config;
+        $entity = $this->entity;
+        
+        if ($mode === 'detail') {
+            $item = $this->config['detail_item'];
+            $tab = $this->config['detail_tab'];
+            require __DIR__ . '/detail-sidebar.php';
+        } 
+        elseif ($mode === 'create' || $mode === 'edit') {
+            $item = $this->config['form_item'];
+            $is_edit = ($mode === 'edit');
+            require __DIR__ . '/form-sidebar.php';
+        }
     }
     
     /**
@@ -144,6 +205,28 @@ class SAW_Component_Admin_Table {
                 str_replace(SAW_VISITORS_PLUGIN_DIR, SAW_VISITORS_PLUGIN_URL, $component_js),
                 array('jquery', 'saw-app'),
                 filemtime($component_js),
+                true
+            );
+        }
+        
+        // Sidebar assets
+        $sidebar_css = __DIR__ . '/sidebar.css';
+        if (file_exists($sidebar_css)) {
+            wp_enqueue_style(
+                'saw-admin-table-sidebar',
+                str_replace(SAW_VISITORS_PLUGIN_DIR, SAW_VISITORS_PLUGIN_URL, $sidebar_css),
+                array('saw-admin-table-component'),
+                filemtime($sidebar_css)
+            );
+        }
+        
+        $sidebar_js = __DIR__ . '/sidebar.js';
+        if (file_exists($sidebar_js)) {
+            wp_enqueue_script(
+                'saw-admin-table-sidebar',
+                str_replace(SAW_VISITORS_PLUGIN_DIR, SAW_VISITORS_PLUGIN_URL, $sidebar_js),
+                array('jquery', 'saw-admin-table-component'),
+                filemtime($sidebar_js),
                 true
             );
         }
@@ -254,7 +337,20 @@ class SAW_Component_Admin_Table {
                 </thead>
                 <tbody>
                     <?php foreach ($this->config['rows'] as $row): ?>
-                        <tr<?php echo $modal_attrs; ?> data-id="<?php echo esc_attr($row['id'] ?? ''); ?>" style="cursor: pointer;">
+                        <?php
+                        $is_active = false;
+                        if (!empty($this->config['detail_item']) && $this->config['detail_item']['id'] == ($row['id'] ?? 0)) {
+                            $is_active = true;
+                        }
+                        if (!empty($this->config['form_item']) && $this->config['form_item']['id'] == ($row['id'] ?? 0)) {
+                            $is_active = true;
+                        }
+                        $active_class = $is_active ? ' saw-row-active' : '';
+                        ?>
+                        <tr<?php echo $modal_attrs; ?> 
+                            data-id="<?php echo esc_attr($row['id'] ?? ''); ?>" 
+                            class="<?php echo $active_class; ?>"
+                            style="cursor: pointer;">
                             <?php foreach ($this->config['columns'] as $key => $column): ?>
                                 <?php $this->render_td($key, $column, $row); ?>
                             <?php endforeach; ?>
@@ -284,30 +380,26 @@ class SAW_Component_Admin_Table {
         $width = $column['width'] ?? '';
         $align = $column['align'] ?? 'left';
         
-        $style = array();
+        $style = '';
         if ($width) {
-            $style[] = 'width: ' . esc_attr($width);
+            $style .= 'width: ' . esc_attr($width) . ';';
         }
         if ($align === 'center') {
-            $style[] = 'text-align: center';
+            $style .= 'text-align: center;';
         }
         
-        $style_attr = !empty($style) ? ' style="' . implode('; ', $style) . '"' : '';
-        
-        echo '<th' . $style_attr . '>';
-        
-        if ($sortable) {
-            $sort_url = self::get_sort_url($key, $this->config['orderby'], $this->config['order']);
-            $sort_icon = self::get_sort_icon($key, $this->config['orderby'], $this->config['order']);
-            echo '<a href="' . esc_url($sort_url) . '">';
-            echo esc_html($label);
-            echo ' ' . $sort_icon;
-            echo '</a>';
-        } else {
-            echo esc_html($label);
-        }
-        
-        echo '</th>';
+        ?>
+        <th style="<?php echo $style; ?>">
+            <?php if ($sortable): ?>
+                <a href="<?php echo esc_url($this->get_sort_url($key, $this->config['orderby'], $this->config['order'])); ?>">
+                    <?php echo esc_html($label); ?>
+                    <?php echo $this->get_sort_icon($key, $this->config['orderby'], $this->config['order']); ?>
+                </a>
+            <?php else: ?>
+                <?php echo esc_html($label); ?>
+            <?php endif; ?>
+        </th>
+        <?php
     }
     
     /**
@@ -320,34 +412,64 @@ class SAW_Component_Admin_Table {
      * @return void Outputs HTML directly
      */
     private function render_td($key, $column, $row) {
-        $value = $row[$key] ?? null;
+        $value = $row[$key] ?? '';
         $type = $column['type'] ?? 'text';
-        $width = $column['width'] ?? '';
         $align = $column['align'] ?? 'left';
         
-        $style = array();
-        if ($width) {
-            $style[] = 'width: ' . esc_attr($width);
-        }
+        $style = '';
         if ($align === 'center') {
-            $style[] = 'text-align: center';
-        }
-        if ($type === 'image') {
-            $style[] = 'padding: 8px';
+            $style = 'text-align: center;';
         }
         
-        $style_attr = !empty($style) ? ' style="' . implode('; ', $style) . '"' : '';
-        
-        echo '<td' . $style_attr . '>';
-        
-        require_once __DIR__ . '/column-types.php';
-        echo SAW_Table_Column_Types::render($type, $value, $column, $row);
-        
-        echo '</td>';
+        ?>
+        <td style="<?php echo $style; ?>">
+            <?php
+            if (isset($column['render']) && is_callable($column['render'])) {
+                echo $column['render']($value, $row);
+            } else {
+                switch ($type) {
+                    case 'badge':
+                        $color = $column['color'] ?? '#3b82f6';
+                        ?>
+                        <span class="saw-badge" style="background: <?php echo esc_attr($color); ?>;">
+                            <?php echo esc_html($value); ?>
+                        </span>
+                        <?php
+                        break;
+                        
+                    case 'status':
+                        $status_class = 'status-' . sanitize_html_class($value);
+                        ?>
+                        <span class="saw-status <?php echo $status_class; ?>">
+                            <?php echo esc_html($value); ?>
+                        </span>
+                        <?php
+                        break;
+                        
+                    case 'boolean':
+                        echo $value ? '✓' : '✗';
+                        break;
+                        
+                    case 'date':
+                        echo $value ? date_i18n(get_option('date_format'), strtotime($value)) : '';
+                        break;
+                        
+                    case 'datetime':
+                        echo $value ? date_i18n(get_option('date_format') . ' ' . get_option('time_format'), strtotime($value)) : '';
+                        break;
+                        
+                    default:
+                        echo esc_html($value);
+                        break;
+                }
+            }
+            ?>
+        </td>
+        <?php
     }
     
     /**
-     * Render action buttons for row
+     * Render action buttons
      *
      * @since 1.0.0
      * @param array $row Row data
@@ -355,31 +477,23 @@ class SAW_Component_Admin_Table {
      */
     private function render_actions($row) {
         ?>
-        <td style="width: 120px; text-align: center;">
+        <td class="saw-table-actions" onclick="event.stopPropagation();">
             <div class="saw-action-buttons">
-                <?php 
-                // Edit button with permission check
-                if (in_array('edit', $this->config['actions']) && !empty($this->config['edit_url'])) {
-                    $can_edit = function_exists('saw_can') ? saw_can('edit', $this->entity) : true;
-                    if ($can_edit):
+                <?php
+                foreach ($this->config['actions'] as $action) {
+                    if ($action === 'edit' && !empty($this->config['edit_url'])) {
                         $edit_url = str_replace('{id}', $row['id'] ?? '', $this->config['edit_url']);
-                ?>
-                    <a href="<?php echo esc_url($edit_url); ?>" 
-                       class="saw-action-btn saw-action-edit" 
-                       title="Upravit" 
-                       onclick="event.stopPropagation();">
-                        <span class="dashicons dashicons-edit"></span>
-                    </a>
-                <?php 
-                    endif;
-                }
-                ?>
-                
-                <?php 
-                // Delete button with permission check
-                if (in_array('delete', $this->config['actions'])) {
-                    $can_delete = function_exists('saw_can') ? saw_can('delete', $this->entity) : true;
-                    if ($can_delete):
+                        ?>
+                        <a href="<?php echo esc_url($edit_url); ?>" 
+                           class="saw-action-btn saw-action-edit" 
+                           title="Upravit"
+                           onclick="event.stopPropagation();">
+                            <span class="dashicons dashicons-edit"></span>
+                        </a>
+                        <?php
+                    }
+                    
+                    if ($action === 'delete') {
                 ?>
                     <button type="button" 
                             class="saw-action-btn saw-action-delete" 
@@ -390,7 +504,7 @@ class SAW_Component_Admin_Table {
                         <span class="dashicons dashicons-trash"></span>
                     </button>
                 <?php 
-                    endif;
+                    }
                 }
                 ?>
             </div>
@@ -450,7 +564,6 @@ class SAW_Component_Admin_Table {
             return;
         }
         
-        // Permission check for create
         $can_create = function_exists('saw_can') ? saw_can('create', $this->entity) : true;
         if (!$can_create) {
             return;

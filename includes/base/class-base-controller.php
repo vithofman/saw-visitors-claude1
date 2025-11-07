@@ -4,11 +4,11 @@
  *
  * Parent class for all module controllers.
  * Provides common functionality: permissions, scope validation, branch access,
- * rendering, flash messages, and data context helpers.
+ * rendering, flash messages, data context helpers, and sidebar helpers.
  *
  * @package    SAW_Visitors
  * @subpackage Base
- * @version    5.4.0
+ * @version    5.5.0
  * @since      1.0.0
  */
 
@@ -49,6 +49,47 @@ abstract class SAW_Base_Controller
      * @var string
      */
     protected $entity;
+    
+    /**
+     * Get sidebar data from query vars
+     * 
+     * Helper pro moduly - vrací data pro sidebar z routeru
+     * 
+     * @since 5.5.0
+     * @return array
+     */
+    protected function get_sidebar_data() {
+        return array(
+            'detail_id' => get_query_var('saw_detail_id'),
+            'detail_tab' => get_query_var('saw_detail_tab'),
+            'form_mode' => get_query_var('saw_form_mode'),
+            'form_id' => get_query_var('saw_form_id'),
+        );
+    }
+    
+    /**
+     * Determine sidebar mode from query vars
+     * 
+     * @since 5.5.0
+     * @return string|null 'detail', 'create', 'edit', or null
+     */
+    protected function get_sidebar_mode() {
+        $data = $this->get_sidebar_data();
+        
+        if ($data['detail_id']) {
+            return 'detail';
+        }
+        
+        if ($data['form_mode'] === 'create') {
+            return 'create';
+        }
+        
+        if ($data['form_mode'] === 'edit' && $data['form_id']) {
+            return 'edit';
+        }
+        
+        return null;
+    }
     
     /**
      * Verify user has access to module
@@ -287,73 +328,8 @@ abstract class SAW_Base_Controller
      * @return bool True if accessible
      */
     protected function can_access_branch($branch_id) {
-        $role = $this->get_current_user_role();
-        
-        if ($role === 'super_admin') {
-            return true;
-        }
-        
-        if ($role === 'admin') {
-            global $wpdb;
-            $customer_id = $this->get_current_customer_id();
-            
-            if (!$customer_id) {
-                return false;
-            }
-            
-            $branch = $wpdb->get_row($wpdb->prepare(
-                "SELECT id FROM %i 
-                 WHERE id = %d AND customer_id = %d AND is_active = 1",
-                $wpdb->prefix . 'saw_branches',
-                $branch_id,
-                $customer_id
-            ), ARRAY_A);
-            
-            return !empty($branch);
-        }
-        
-        if ($role === 'super_manager') {
-            if (!class_exists('SAW_User_Branches') || !class_exists('SAW_Context')) {
-                return false;
-            }
-            
-            $saw_user_id = SAW_Context::get_saw_user_id();
-            if (!$saw_user_id) {
-                return false;
-            }
-            
-            return SAW_User_Branches::is_user_allowed_branch($saw_user_id, $branch_id);
-        }
-        
-        return false;
-    }
-    
-    /**
-     * Check if user can access item
-     *
-     * Validates customer isolation for item.
-     *
-     * @since 1.0.0
-     * @param array $item Item data
-     * @return bool True if accessible
-     */
-    protected function can_access_item($item) {
-        if (!isset($item['customer_id'])) {
-            return true;
-        }
-        
-        $role = $this->get_current_user_role();
-        
-        if ($role === 'super_admin') {
-            return true;
-        }
-        
-        $current_customer_id = $this->get_current_customer_id();
-        if (!$current_customer_id) {
-            return false;
-        }
-        
-        return (int)$item['customer_id'] === (int)$current_customer_id;
+        $accessible_ids = $this->get_accessible_branch_ids();
+        return in_array(intval($branch_id), $accessible_ids);
     }
     
     /**
