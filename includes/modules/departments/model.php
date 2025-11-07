@@ -5,13 +5,11 @@
  * Handles all database operations for the Departments module including
  * CRUD operations, validation, customer isolation, and caching.
  * 
- * Note: Cache is currently disabled for debugging purposes.
- * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Departments
  * @since       1.0.0
  * @author      SAW Visitors Dev Team
- * @version     1.0.0
+ * @version     1.0.2
  */
 
 if (!defined('ABSPATH')) {
@@ -122,13 +120,26 @@ class SAW_Module_Departments_Model extends SAW_Base_Model
      * 
      * Retrieves a single department record by ID, validates customer isolation,
      * and formats the data for display (branch name, status labels, dates).
+     * Uses transient cache with 5 minute TTL.
      * 
      * @since 1.0.0
      * @param int $id Department ID
      * @return array|null Department data or null if not found/no access
      */
     public function get_by_id($id) {
-        $item = parent::get_by_id($id);
+        // Try cache first
+        $cache_key = sprintf('saw_departments_item_%d', $id);
+        $item = get_transient($cache_key);
+        
+        if ($item === false) {
+            // Cache miss - fetch from database
+            $item = parent::get_by_id($id);
+            
+            if ($item) {
+                // Cache for 5 minutes
+                set_transient($cache_key, $item, $this->cache_ttl);
+            }
+        }
         
         if (!$item) {
             return null;
@@ -151,7 +162,7 @@ class SAW_Module_Departments_Model extends SAW_Base_Model
             }
         }
         
-        // Get branch name (FIXED: SQL injection vulnerability)
+        // Get branch name
         if (!empty($item['branch_id'])) {
             global $wpdb;
             $branch = $wpdb->get_row($wpdb->prepare(
@@ -180,11 +191,10 @@ class SAW_Module_Departments_Model extends SAW_Base_Model
     }
     
     /**
-     * Get all departments with customer isolation
+     * Get all departments with customer isolation and caching
      * 
      * Retrieves a list of departments filtered by current customer context.
-     * 
-     * Note: Cache is temporarily disabled for debugging.
+     * Results are cached for 5 minutes using transients.
      * 
      * @since 1.0.0
      * @param array $filters Query filters (search, orderby, page, etc.)
@@ -198,30 +208,51 @@ class SAW_Module_Departments_Model extends SAW_Base_Model
             $filters['customer_id'] = $customer_id;
         }
         
-        // CACHE DISABLED FOR DEBUG
-        // TODO: Enable cache when debugging is complete
-        return parent::get_all($filters);
+        // Create cache key based on customer and filters
+        $cache_key = sprintf(
+            'saw_departments_list_%d_%s',
+            $customer_id,
+            md5(serialize($filters))
+        );
+        
+        // Try cache first
+        $data = get_transient($cache_key);
+        
+        if ($data === false) {
+            // Cache miss - fetch from database
+            $data = parent::get_all($filters);
+            
+            // Cache for 5 minutes
+            set_transient($cache_key, $data, $this->cache_ttl);
+        }
+        
+        return $data;
     }
     
     /**
-     * Create new department
+     * Create new department with cache invalidation
      * 
-     * Creates a new department record.
-     * Cache is disabled so no invalidation needed.
+     * Creates a new department record and invalidates relevant caches.
      * 
      * @since 1.0.0
      * @param array $data Department data
      * @return int|WP_Error New department ID or error
      */
     public function create($data) {
-        return parent::create($data);
+        $result = parent::create($data);
+        
+        // Invalidate list caches on success
+        if (!is_wp_error($result)) {
+            $this->invalidate_list_cache();
+        }
+        
+        return $result;
     }
     
     /**
-     * Update existing department
+     * Update existing department with cache invalidation
      * 
-     * Updates a department record.
-     * Cache is disabled so no invalidation needed.
+     * Updates a department record and invalidates relevant caches.
      * 
      * @since 1.0.0
      * @param int $id Department ID
@@ -229,20 +260,61 @@ class SAW_Module_Departments_Model extends SAW_Base_Model
      * @return bool|WP_Error True on success or error
      */
     public function update($id, $data) {
-        return parent::update($id, $data);
+        $result = parent::update($id, $data);
+        
+        // Invalidate caches on success
+        if (!is_wp_error($result)) {
+            delete_transient(sprintf('saw_departments_item_%d', $id));
+            $this->invalidate_list_cache();
+        }
+        
+        return $result;
     }
     
     /**
-     * Delete department
+     * Delete department with cache invalidation
      * 
-     * Deletes a department record.
-     * Cache is disabled so no invalidation needed.
+     * Deletes a department record and invalidates relevant caches.
      * 
      * @since 1.0.0
      * @param int $id Department ID
      * @return bool|WP_Error True on success or error
      */
     public function delete($id) {
-        return parent::delete($id);
+        $result = parent::delete($id);
+        
+        // Invalidate caches on success
+        if (!is_wp_error($result)) {
+            delete_transient(sprintf('saw_departments_item_%d', $id));
+            $this->invalidate_list_cache();
+        }
+        
+        return $result;
+    }
+    
+    /**
+     * Invalidate all list caches
+     * 
+     * Removes all cached department lists from transients.
+     * 
+     * @since 1.0.2
+     * @return void
+     */
+    private function invalidate_list_cache() {
+        global $wpdb;
+        
+        // Delete all department list transients
+        $wpdb->query($wpdb->prepare(
+            "DELETE FROM %i WHERE option_name LIKE %s",
+            $wpdb->options,
+            $wpdb->esc_like('_transient_saw_departments_list_') . '%'
+        ));
+        
+        // Also delete timeout records
+        $wpdb->query($wpdb->prepare(
+            "DELETE FROM %i WHERE option_name LIKE %s",
+            $wpdb->options,
+            $wpdb->esc_like('_transient_timeout_saw_departments_list_') . '%'
+        ));
     }
 }
