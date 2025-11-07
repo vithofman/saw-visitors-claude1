@@ -1,6 +1,6 @@
 <?php
 /**
- * SAW App Layout - AJAX FIXED v2.0.0
+ * SAW App Layout - AJAX FIXED v2.1.0
  *
  * Main layout manager for the application.
  * Handles complete page rendering with header, sidebar, footer, and content.
@@ -10,9 +10,10 @@
  * - ✅ WordPress AJAX requests are NOT intercepted
  * - ✅ Only custom XHR requests go through layout
  * - ✅ Prevents layout from breaking wp_ajax_* handlers
+ * - ✅ Fixed layout - eliminuje celostránkový scroll
  *
  * @package SAW_Visitors
- * @version 2.0.0 - AJAX FIX
+ * @version 2.1.0 - FIXED LAYOUT
  * @since   4.6.1
  */
 
@@ -275,6 +276,7 @@ class SAW_App_Layout {
             <link rel="stylesheet" href="<?php echo esc_url(SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-app-header.css?v=' . SAW_VISITORS_VERSION); ?>">
             <link rel="stylesheet" href="<?php echo esc_url(SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-app-sidebar.css?v=' . SAW_VISITORS_VERSION); ?>">
             <link rel="stylesheet" href="<?php echo esc_url(SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-app-responsive.css?v=' . SAW_VISITORS_VERSION); ?>">
+            <link rel="stylesheet" href="<?php echo esc_url(SAW_VISITORS_PLUGIN_URL . 'assets/css/fixed-layout.css?v=' . SAW_VISITORS_VERSION); ?>">
             
             <?php
             if (function_exists('wp_head')) {

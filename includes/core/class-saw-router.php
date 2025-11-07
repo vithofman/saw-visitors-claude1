@@ -8,7 +8,7 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Core
- * @version     7.0.0
+ * @version     7.1.0 - ROUTING FIXED
  * @since       1.0.0
  */
 
@@ -72,7 +72,7 @@ class SAW_Router {
         $vars[] = 'saw_route';
         $vars[] = 'saw_path';
         $vars[] = 'saw_action';
-        $vars[] = 'saw_sidebar_context';  // Single var for all sidebar data
+        $vars[] = 'saw_sidebar_context';
         return $vars;
     }
     
@@ -92,46 +92,39 @@ class SAW_Router {
      * @return array Sidebar context array or empty array
      */
     private function parse_sidebar_context($segments) {
-        // Default: no sidebar
         $context = array(
-            'mode' => null,        // null, 'detail', 'create', 'edit'
-            'id' => 0,            // Record ID for detail/edit
-            'tab' => 'overview',  // Tab for detail view
+            'mode' => null,
+            'id' => 0,
+            'tab' => 'overview',
         );
         
         if (empty($segments) || empty($segments[0])) {
             return $context;
         }
         
-        // CREATE MODE: /admin/customers/create
         if ($segments[0] === 'create' || $segments[0] === 'new') {
             $context['mode'] = 'create';
             return $context;
         }
         
-        // EDIT MODE (alternative): /admin/customers/edit/5
         if (($segments[0] === 'edit' || $segments[0] === 'upravit') && !empty($segments[1]) && is_numeric($segments[1])) {
             $context['mode'] = 'edit';
             $context['id'] = intval($segments[1]);
             return $context;
         }
         
-        // NUMERIC ID: Could be detail or edit
         if (is_numeric($segments[0])) {
             $id = intval($segments[0]);
             
-            // EDIT MODE: /admin/customers/5/edit
             if (isset($segments[1]) && ($segments[1] === 'edit' || $segments[1] === 'upravit')) {
                 $context['mode'] = 'edit';
                 $context['id'] = $id;
                 return $context;
             }
             
-            // DETAIL MODE: /admin/customers/5/ or /admin/customers/5/branches
             $context['mode'] = 'detail';
             $context['id'] = $id;
             
-            // Parse tab if present
             if (isset($segments[1]) && !empty($segments[1])) {
                 $context['tab'] = sanitize_key($segments[1]);
             }
@@ -139,7 +132,6 @@ class SAW_Router {
             return $context;
         }
         
-        // No sidebar context found
         return array(
             'mode' => null,
             'id' => 0,
@@ -158,7 +150,6 @@ class SAW_Router {
      * @return void
      */
     public function dispatch($route = '', $path = '') {
-        // CRITICAL: Never intercept WordPress AJAX
         if (wp_doing_ajax()) {
             return;
         }
@@ -272,18 +263,19 @@ class SAW_Router {
             return 'dashboard';
         }
         
+        $clean_path = trim($path, '/');
         $modules = SAW_Module_Loader::get_all();
         
         foreach ($modules as $slug => $config) {
-            $route = ltrim($config['route'] ?? '', '/');
-            $route_without_admin = str_replace('admin/', '', $route);
+            $module_route = ltrim($config['route'] ?? '', '/');
+            $module_route_without_admin = str_replace('admin/', '', $module_route);
             
-            if (strpos($path, $route_without_admin) === 0) {
+            if ($module_route_without_admin === $clean_path || strpos($clean_path . '/', $module_route_without_admin . '/') === 0) {
                 return $slug;
             }
         }
         
-        $segments = explode('/', trim($path, '/'));
+        $segments = explode('/', $clean_path);
         if (isset($segments[0])) {
             return $segments[0];
         }
@@ -310,7 +302,6 @@ class SAW_Router {
             return;
         }
         
-        // Build controller class name from slug
         $parts = explode('-', $slug);
         $parts = array_map('ucfirst', $parts);
         $class_name = implode('_', $parts);
@@ -328,22 +319,15 @@ class SAW_Router {
             return;
         }
         
-        // Parse sidebar context from segments
         $sidebar_context = $this->parse_sidebar_context($segments);
-        
-        // Store in single query var (serialized array)
         set_query_var('saw_sidebar_context', $sidebar_context);
         
-        // Route to controller - always call index() for sidebar system
         if (!method_exists($controller, 'index')) {
             wp_die('Controller does not have index() method: ' . $controller_class);
             return;
         }
         
-        // BACKWARD COMPATIBILITY: If no sidebar context, check for old-style routing
         if ($sidebar_context['mode'] === null && !empty($segments[0])) {
-            
-            // Old create route: /admin/customers/create
             if ($segments[0] === 'create' || $segments[0] === 'new') {
                 if (method_exists($controller, 'create')) {
                     $controller->create();
@@ -351,7 +335,6 @@ class SAW_Router {
                 }
             }
             
-            // Old edit route: /admin/customers/edit/5
             if (($segments[0] === 'edit' || $segments[0] === 'upravit') && !empty($segments[1])) {
                 if (method_exists($controller, 'edit')) {
                     $controller->edit(intval($segments[1]));
@@ -360,7 +343,6 @@ class SAW_Router {
             }
         }
         
-        // Call index() - it will handle sidebar context internally
         $controller->index();
     }
     
@@ -374,44 +356,60 @@ class SAW_Router {
      * @return void
      */
     private function handle_admin_route($path) {
-        if (!$this->is_logged_in()) {
-            $this->redirect_to_login('admin');
-            return;
-        }
-        
-        $clean_path = trim($path, '/');
-        
-        if (empty($clean_path)) {
-            $this->render_page('Admin Dashboard', $path, 'admin', 'dashboard');
-            return;
-        }
-        
-        $modules = SAW_Module_Loader::get_all();
-        
-        foreach ($modules as $slug => $config) {
-            $module_route = ltrim($config['route'] ?? '', '/');
-            $module_route_without_admin = str_replace('admin/', '', $module_route);
-            
-            if (strpos($clean_path, $module_route_without_admin) === 0) {
-                $route_parts = explode('/', $module_route_without_admin);
-                $path_parts = explode('/', $clean_path);
-                $remaining_segments = array_slice($path_parts, count($route_parts));
-                
-                $this->dispatch_module($slug, $remaining_segments);
-                return;
-            }
-        }
-        
-        $segments = explode('/', $clean_path);
-        
-        if ($segments[0] === 'settings' && isset($segments[1])) {
-            $this->render_page('Settings: ' . ucfirst($segments[1]), $path, 'admin', 'settings');
-            return;
-        }
-        
-        $active_section = isset($segments[0]) ? $segments[0] : '';
-        $this->render_page('Admin Interface', $path, 'admin', $active_section);
+    if (!$this->is_logged_in()) {
+        $this->redirect_to_login('admin');
+        return;
     }
+    
+    $clean_path = trim($path, '/');
+    
+    if (empty($clean_path)) {
+        $this->render_page('Admin Dashboard', $path, 'admin', 'dashboard');
+        return;
+    }
+    
+    $modules = SAW_Module_Loader::get_all();
+    
+    // CRITICAL FIX: Check modules FIRST before treating as admin dashboard
+    foreach ($modules as $slug => $config) {
+        $module_route = ltrim($config['route'] ?? '', '/');
+        $module_route_without_admin = str_replace('admin/', '', $module_route);
+        
+        // Match if path starts with module route
+        if ($module_route_without_admin === $clean_path || 
+            strpos($clean_path . '/', $module_route_without_admin . '/') === 0) {
+            
+            $route_parts = explode('/', $module_route_without_admin);
+            $path_parts = explode('/', $clean_path);
+            $remaining_segments = array_slice($path_parts, count($route_parts));
+            
+            $this->dispatch_module($slug, $remaining_segments);
+            return;
+        }
+    }
+    
+    // CRITICAL FIX: If path is numeric ID, it's likely a detail/edit for last visited module
+    // This handles shortcuts like /admin/19/edit -> /admin/settings/customers/19/edit
+    $segments = explode('/', $clean_path);
+    if (is_numeric($segments[0])) {
+        // Default to customers module for numeric IDs (can be made smarter with session)
+        $customers_config = SAW_Module_Loader::load('customers');
+        if ($customers_config) {
+            $this->dispatch_module('customers', $segments);
+            return;
+        }
+    }
+    
+    // Handle settings routes
+    if ($segments[0] === 'settings' && isset($segments[1])) {
+        $this->render_page('Settings: ' . ucfirst($segments[1]), $path, 'admin', 'settings');
+        return;
+    }
+    
+    // Default admin interface
+    $active_section = isset($segments[0]) ? $segments[0] : '';
+    $this->render_page('Admin Interface', $path, 'admin', $active_section);
+}
     
     /**
      * Handle manager routes

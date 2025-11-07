@@ -5,7 +5,7 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Components/AdminTable
- * @version     1.0.0
+ * @version     1.1.0
  * @since       4.0.0
  */
 
@@ -19,48 +19,68 @@
      */
     window.saw_navigate_sidebar = function(direction) {
         const $sidebar = $('.saw-sidebar');
-        if (!$sidebar.length) return;
-        
-        const mode = $sidebar.data('mode');
-        const currentId = parseInt($sidebar.data('current-id') || 0);
-        const $rows = $('.saw-table-panel tbody tr[data-id]');
-        
-        if (!$rows.length) return;
-        
-        let targetRow = null;
-        
-        if (direction === 'prev') {
-            for (let i = $rows.length - 1; i >= 0; i--) {
-                const rowId = parseInt($($rows[i]).data('id'));
-                if (currentId && rowId < currentId) {
-                    targetRow = $rows[i];
-                    break;
-                }
-            }
-        } else if (direction === 'next') {
-            for (let i = 0; i < $rows.length; i++) {
-                const rowId = parseInt($($rows[i]).data('id'));
-                if (currentId && rowId > currentId) {
-                    targetRow = $rows[i];
-                    break;
-                }
-            }
+        if (!$sidebar.length) {
+            console.log('No sidebar found');
+            return;
         }
         
-        if (targetRow) {
-            const targetId = $(targetRow).data('id');
+        const currentId = parseInt($sidebar.data('current-id') || 0);
+        
+        // CRITICAL: Get fresh list every time
+        const $rows = $('.saw-table-panel tbody tr[data-id]').toArray();
+        
+        console.log('Navigate', direction, '- Current ID:', currentId, '- Rows:', $rows.length);
+        
+        if (!$rows.length) {
+            console.log('No rows found');
+            return;
+        }
+        
+        if (!currentId) {
+            console.log('No current ID set');
+            return;
+        }
+        
+        // Build array of IDs in table order
+        const rowIds = $rows.map(row => parseInt($(row).data('id')));
+        const currentIndex = rowIds.indexOf(currentId);
+        
+        console.log('Row IDs:', rowIds);
+        console.log('Current index:', currentIndex);
+        
+        if (currentIndex === -1) {
+            console.log('Current ID not found in table');
+            return;
+        }
+        
+        let targetId = null;
+        
+        if (direction === 'prev' && currentIndex > 0) {
+            targetId = rowIds[currentIndex - 1];
+        } else if (direction === 'next' && currentIndex < rowIds.length - 1) {
+            targetId = rowIds[currentIndex + 1];
+        }
+        
+        if (targetId) {
+            console.log('Navigating to ID:', targetId);
+            
+            // Build new URL
             const url = new URL(window.location);
             const path = url.pathname.split('/').filter(p => p);
             
-            // Find and replace the ID in path
+            // Find and replace ID in path
             for (let i = path.length - 1; i >= 0; i--) {
-                if (!isNaN(path[i])) {
+                if (!isNaN(path[i]) && parseInt(path[i]) > 0) {
                     path[i] = targetId;
                     break;
                 }
             }
             
-            window.location.href = '/' + path.join('/') + '/';
+            const newUrl = '/' + path.join('/') + '/';
+            console.log('New URL:', newUrl);
+            window.location.href = newUrl;
+        } else {
+            console.log('Already at', direction === 'prev' ? 'first' : 'last', 'item');
         }
     };
     
@@ -96,14 +116,22 @@
     $(document).ready(function() {
         const $sidebar = $('.saw-sidebar');
         if ($sidebar.length) {
-            // Store current ID from URL for navigation
-            const path = window.location.pathname.split('/').filter(p => p);
-            for (let i = path.length - 1; i >= 0; i--) {
-                if (!isNaN(path[i])) {
-                    $sidebar.data('current-id', parseInt(path[i]));
-                    break;
+            // Get current ID from data attribute (set in PHP)
+            let currentId = parseInt($sidebar.data('current-id') || 0);
+            
+            // If not set, try to extract from URL
+            if (!currentId) {
+                const path = window.location.pathname.split('/').filter(p => p);
+                for (let i = path.length - 1; i >= 0; i--) {
+                    if (!isNaN(path[i]) && parseInt(path[i]) > 0) {
+                        currentId = parseInt(path[i]);
+                        $sidebar.data('current-id', currentId);
+                        break;
+                    }
                 }
             }
+            
+            console.log('Sidebar initialized with ID:', currentId);
         }
     });
     

@@ -1,0 +1,188 @@
+/**
+ * Fixed Layout Patch
+ * 
+ * Eliminuje celostránkový scroll a vytváří fixed layout:
+ * - Header nahoře (fixed)
+ * - Footer dole (fixed)  
+ * - Content scrolluje mezi nimi
+ * - Sidebar scrolluje samostatně
+ * 
+ * @package SAW_Visitors
+ * @version 1.0.0
+ */
+
+/* ============================================
+   FIXED BODY - NO PAGE SCROLL
+   ============================================ */
+body.saw-app-body {
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;  /* CRITICAL: Zakázat page scroll */
+    height: 100vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* ============================================
+   FIXED HEADER
+   ============================================ */
+.saw-app-header {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 1000 !important;
+    flex-shrink: 0 !important;
+}
+
+/* ============================================
+   CONTAINER - FULL HEIGHT
+   ============================================ */
+.saw-app-container {
+    flex: 1 !important;
+    display: flex !important;
+    min-height: 0 !important;  /* CRITICAL: Umožní flex shrink */
+    height: auto !important;
+    overflow: hidden !important;
+    padding-top: 0 !important;
+}
+
+/* ============================================
+   SIDEBAR - SAMOSTATNÝ SCROLL
+   ============================================ */
+.saw-app-sidebar {
+    flex-shrink: 0 !important;
+    height: 100% !important;
+    overflow-y: auto !important;
+}
+
+/* ============================================
+   MAIN CONTENT - SAMOSTATNÝ SCROLL
+   ============================================ */
+.saw-app-main {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-width: 0 !important;
+    height: 100% !important;
+    overflow: hidden !important;
+}
+
+.saw-app-content {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    padding: 0 !important;  /* CRITICAL: Odstranit padding */
+    max-width: none !important;
+}
+
+/* ============================================
+   ADMIN TABLE WRAPPER - FULL HEIGHT
+   ============================================ */
+.saw-module-customers,
+.saw-module-branches,
+.saw-module-organizations,
+.saw-module-contacts,
+.saw-module-account-types,
+.saw-module-tariffs,
+.saw-module-services,
+.saw-module-service-categories,
+.saw-module-tickets,
+.saw-module-ticket-categories,
+.saw-module-products,
+.saw-module-product-categories {
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 24px !important;
+}
+
+/* ============================================
+   SPLIT LAYOUT - FULL HEIGHT
+   ============================================ */
+.saw-admin-table-split {
+    flex: 1 !important;
+    display: flex !important;
+    gap: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;  /* CRITICAL: Auto místo calc() */
+    padding-right: 700px !important;
+    overflow: hidden !important;
+}
+
+.saw-table-panel {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    height: 100% !important;
+    border-right: 1px solid #e5e7eb !important;
+    background: #fff !important;
+}
+
+/* ============================================
+   SIDEBAR - FIXED FULLSCREEN (již funguje)
+   ============================================ */
+.saw-sidebar-wrapper {
+    position: fixed !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 700px !important;
+    z-index: 9999 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    background: #fff !important;
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.08), -2px 0 8px rgba(0, 0, 0, 0.04) !important;
+}
+
+.saw-sidebar-content {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    padding: 20px !important;
+}
+
+/* ============================================
+   FIXED FOOTER
+   ============================================ */
+.saw-app-footer {
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 999 !important;
+    flex-shrink: 0 !important;
+}
+
+/* ============================================
+   PAGE HEADER V MODULU - FLEX SHRINK
+   ============================================ */
+.saw-page-header {
+    flex-shrink: 0 !important;
+    margin-bottom: 20px !important;
+}
+
+/* ============================================
+   TABLE WRAPPER - FLEX GROW
+   ============================================ */
+.saw-table-responsive-wrapper {
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 1200px) {
+    .saw-admin-table-split {
+        padding-right: 500px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .saw-admin-table-split {
+        padding-right: 0 !important;
+    }
+    
+    .saw-table-panel {
+        display: none !important;
+    }
+    
+    .saw-sidebar-wrapper {
+        width: 100% !important;
+    }
+}

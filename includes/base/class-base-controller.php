@@ -8,7 +8,7 @@
  *
  * @package    SAW_Visitors
  * @subpackage Base
- * @version    7.0.0
+ * @version    7.1.0 - SIDEBAR SUPPORT ADDED
  * @since      1.0.0
  */
 
@@ -101,6 +101,256 @@ abstract class SAW_Base_Controller
      */
     protected function has_sidebar() {
         return !empty($this->get_sidebar_mode());
+    }
+    
+    /**
+     * Process sidebar context and return data for templates
+     * 
+     * Handles detail/create/edit modes including POST processing.
+     * Call this at start of index() method.
+     * 
+     * @since 7.1.0
+     * @return array|null Array with sidebar data, or null if POST redirect occurred
+     */
+    protected function process_sidebar_context() {
+        $ctx = $this->get_sidebar_context();
+        
+        $detail_item = null;
+        $form_item = null;
+        $sidebar_mode = $ctx['mode'];
+        $detail_tab = $ctx['tab'];
+        
+        // DETAIL MODE
+        if ($ctx['mode'] === 'detail' && $ctx['id']) {
+            if (!$this->can('view')) {
+                $this->set_flash('Nemáte oprávnění zobrazit detail', 'error');
+                wp_redirect(home_url('/admin/' . $this->config['route'] . '/'));
+                exit;
+            }
+            
+            $detail_item = $this->model->get_by_id($ctx['id']);
+            
+            if (!$detail_item) {
+                $this->set_flash('Záznam nenalezen', 'error');
+                wp_redirect(home_url('/admin/' . $this->config['route'] . '/'));
+                exit;
+            }
+            
+            if (method_exists($this, 'load_detail_related_data')) {
+                $detail_item = $this->load_detail_related_data($detail_item, $detail_tab);
+            }
+        }
+        
+        // CREATE MODE
+        elseif ($ctx['mode'] === 'create') {
+            if (!$this->can('create')) {
+                $this->set_flash('Nemáte oprávnění vytvářet záznamy', 'error');
+                wp_redirect(home_url('/admin/' . $this->config['route'] . '/'));
+                exit;
+            }
+            
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $this->handle_create_post();
+                return null;
+            }
+            
+            $form_item = array();
+        }
+        
+        // EDIT MODE
+        elseif ($ctx['mode'] === 'edit' && $ctx['id']) {
+            if (!$this->can('edit')) {
+                $this->set_flash('Nemáte oprávnění upravovat záznamy', 'error');
+                wp_redirect(home_url('/admin/' . $this->config['route'] . '/'));
+                exit;
+            }
+            
+            $form_item = $this->model->get_by_id($ctx['id']);
+            
+            if (!$form_item) {
+                $this->set_flash('Záznam nenalezen', 'error');
+                wp_redirect(home_url('/admin/' . $this->config['route'] . '/'));
+                exit;
+            }
+            
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $this->handle_edit_post($ctx['id']);
+                return null;
+            }
+        }
+        
+        return array(
+            'detail_item' => $detail_item,
+            'form_item' => $form_item,
+            'sidebar_mode' => $sidebar_mode,
+            'detail_tab' => $detail_tab
+        );
+    }
+    
+    /**
+     * Handle create POST request from sidebar form
+     * 
+     * @since 7.1.0
+     * @return void (redirects)
+     */
+    protected function handle_create_post() {
+        if (!wp_verify_nonce($_POST['saw_nonce'] ?? '', 'saw_' . $this->entity . '_form')) {
+            wp_die('Neplatný bezpečnostní token');
+        }
+        
+        $data = $this->prepare_form_data($_POST);
+        
+        $scope_validation = $this->validate_scope_access($data, 'create');
+        if (is_wp_error($scope_validation)) {
+            $this->set_flash($scope_validation->get_error_message(), 'error');
+            wp_redirect(home_url('/admin/' . $this->config['route'] . '/create'));
+            exit;
+        }
+        
+        $data = $this->before_save($data);
+        if (is_wp_error($data)) {
+            $this->set_flash($data->get_error_message(), 'error');
+            wp_redirect(home_url('/admin/' . $this->config['route'] . '/create'));
+            exit;
+        }
+        
+        $validation = $this->model->validate($data);
+        if (is_wp_error($validation)) {
+            $errors = $validation->get_error_data();
+            $this->set_flash(implode('<br>', $errors), 'error');
+            wp_redirect(home_url('/admin/' . $this->config['route'] . '/create'));
+            exit;
+        }
+        
+        $result = $this->model->create($data);
+        
+        if (is_wp_error($result)) {
+            $this->set_flash($result->get_error_message(), 'error');
+            wp_redirect(home_url('/admin/' . $this->config['route'] . '/create'));
+            exit;
+        }
+        
+        $this->after_save($result);
+        
+        $this->set_flash($this->config['singular'] . ' byl úspěšně vytvořen', 'success');
+        wp_redirect(home_url('/admin/' . $this->config['route'] . '/' . $result . '/'));
+        exit;
+    }
+    
+    /**
+     * Handle edit POST request from sidebar form
+     * 
+     * @since 7.1.0
+     * @param int $id Record ID
+     * @return void (redirects)
+     */
+    protected function handle_edit_post($id) {
+        if (!wp_verify_nonce($_POST['saw_nonce'] ?? '', 'saw_' . $this->entity . '_form')) {
+            wp_die('Neplatný bezpečnostní token');
+        }
+        
+        $data = $this->prepare_form_data($_POST);
+        $data['id'] = $id;
+        
+        $scope_validation = $this->validate_scope_access($data, 'edit');
+        if (is_wp_error($scope_validation)) {
+            $this->set_flash($scope_validation->get_error_message(), 'error');
+            wp_redirect(home_url('/admin/' . $this->config['route'] . '/' . $id . '/edit'));
+            exit;
+        }
+        
+        $data = $this->before_save($data);
+        if (is_wp_error($data)) {
+            $this->set_flash($data->get_error_message(), 'error');
+            wp_redirect(home_url('/admin/' . $this->config['route'] . '/' . $id . '/edit'));
+            exit;
+        }
+        
+        $validation = $this->model->validate($data, $id);
+        if (is_wp_error($validation)) {
+            $errors = $validation->get_error_data();
+            $this->set_flash(implode('<br>', $errors), 'error');
+            wp_redirect(home_url('/admin/' . $this->config['route'] . '/' . $id . '/edit'));
+            exit;
+        }
+        
+        $result = $this->model->update($id, $data);
+        
+        if (is_wp_error($result)) {
+            $this->set_flash($result->get_error_message(), 'error');
+            wp_redirect(home_url('/admin/' . $this->config['route'] . '/' . $id . '/edit'));
+            exit;
+        }
+        
+        $this->after_save($id);
+        
+        $this->set_flash($this->config['singular'] . ' byl úspěšně aktualizován', 'success');
+        wp_redirect(home_url('/admin/' . $this->config['route'] . '/' . $id . '/'));
+        exit;
+    }
+    
+    /**
+     * Prepare form data from POST
+     * 
+     * Override in child controller for custom field processing.
+     * 
+     * @since 7.1.0
+     * @param array $post POST data
+     * @return array Prepared data
+     */
+    protected function prepare_form_data($post) {
+        $data = array();
+        
+        if (!empty($this->config['form_config']['fields'])) {
+            foreach ($this->config['form_config']['fields'] as $key => $field) {
+                if (isset($post[$key])) {
+                    $data[$key] = $this->sanitize_field($post[$key], $field);
+                }
+            }
+        }
+        
+        return $data;
+    }
+    
+    /**
+     * Sanitize field value based on type
+     * 
+     * @since 7.1.0
+     * @param mixed $value Field value
+     * @param array $field Field configuration
+     * @return mixed Sanitized value
+     */
+    protected function sanitize_field($value, $field) {
+        $type = $field['type'] ?? 'text';
+        
+        switch ($type) {
+            case 'email':
+                return sanitize_email($value);
+            case 'url':
+                return esc_url_raw($value);
+            case 'number':
+                return intval($value);
+            case 'textarea':
+                return sanitize_textarea_field($value);
+            case 'checkbox':
+                return !empty($value) ? 1 : 0;
+            default:
+                return sanitize_text_field($value);
+        }
+    }
+    
+    /**
+     * Load related data for detail view
+     * 
+     * Override in child controller to load tabs, relationships, etc.
+     * 
+     * @since 7.1.0
+     * @param array  $item Detail item
+     * @param string $tab  Active tab
+     * @return array Modified item
+     */
+    protected function load_detail_related_data($item, $tab) {
+        return $item;
     }
     
     /**

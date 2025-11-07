@@ -16,7 +16,7 @@
  * - File upload handling (logo)
  *
  * @package SAW_Visitors
- * @version 8.0.0 - SIDEBAR SUPPORT
+ * @version 8.1.0 - ADDED account_types loading
  * @since   4.6.1
  */
 
@@ -110,6 +110,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         $detail_item = null;
         $form_item = null;
         $detail_tab = $sidebar_context['tab'] ?? 'overview';
+        $account_types = array();
         
         // DETAIL SIDEBAR MODE
         if ($sidebar_mode === 'detail') {
@@ -170,6 +171,18 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             }
         }
         
+        // Load account types for form dropdown (if in create/edit mode)
+        if ($sidebar_mode === 'create' || $sidebar_mode === 'edit') {
+            global $wpdb;
+            $account_types = $wpdb->get_results(
+                $wpdb->prepare(
+                    "SELECT id, display_name, price FROM %i WHERE is_active = 1 ORDER BY sort_order ASC, display_name ASC",
+                    $wpdb->prefix . 'saw_account_types'
+                ),
+                ARRAY_A
+            );
+        }
+        
         // Get list data
         $search = isset($_GET['s']) ? sanitize_text_field(wp_unslash($_GET['s'])) : '';
         $status = isset($_GET['status']) ? sanitize_text_field(wp_unslash($_GET['status'])) : '';
@@ -206,6 +219,15 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         
         echo '<div class="saw-module-' . esc_attr($this->entity) . '">';
         $this->render_flash_messages();
+        
+        // Extract variables for template
+        extract(array(
+            'detail_item' => $detail_item,
+            'form_item' => $form_item,
+            'sidebar_mode' => $sidebar_mode,
+            'detail_tab' => $detail_tab,
+            'account_types' => $account_types,
+        ));
         
         // Include list template with sidebar variables
         require $this->config['path'] . 'list-template.php';
@@ -312,7 +334,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
      * @return array Prepared data
      */
     protected function prepare_form_data($post) {
-        return array(
+        $data = array(
             'name' => sanitize_text_field($post['name'] ?? ''),
             'ico' => sanitize_text_field($post['ico'] ?? ''),
             'dic' => sanitize_text_field($post['dic'] ?? ''),
@@ -321,11 +343,69 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             'address_street' => sanitize_text_field($post['address_street'] ?? ''),
             'address_city' => sanitize_text_field($post['address_city'] ?? ''),
             'address_zip' => sanitize_text_field($post['address_zip'] ?? ''),
-            'email' => sanitize_email($post['email'] ?? ''),
-            'phone' => sanitize_text_field($post['phone'] ?? ''),
+            'contact_email' => sanitize_email($post['contact_email'] ?? ''),
+            'contact_phone' => sanitize_text_field($post['contact_phone'] ?? ''),
             'website' => esc_url_raw($post['website'] ?? ''),
             'notes' => sanitize_textarea_field($post['notes'] ?? ''),
         );
+        
+        // Add account_type_id if present
+        if (isset($post['account_type_id']) && !empty($post['account_type_id'])) {
+            $data['account_type_id'] = intval($post['account_type_id']);
+        }
+        
+        return $data;
+    }
+    
+    /**
+     * Get sidebar context from router
+     *
+     * @since 8.0.0
+     * @return array Sidebar context
+     */
+    protected function get_sidebar_context() {
+        $context = get_query_var('saw_sidebar_context');
+        
+        if (empty($context) || !is_array($context)) {
+            return array(
+                'mode' => null,
+                'id' => 0,
+                'tab' => 'overview',
+            );
+        }
+        
+        return $context;
+    }
+    
+    /**
+     * Format detail data
+     *
+     * @since 8.0.0
+     * @param array $item Raw item data
+     * @return array Formatted item
+     */
+    protected function format_detail_data($item) {
+        // Format dates if needed
+        if (!empty($item['created_at'])) {
+            $item['created_at_formatted'] = mysql2date(get_option('date_format'), $item['created_at']);
+        }
+        
+        if (!empty($item['updated_at'])) {
+            $item['updated_at_formatted'] = mysql2date(get_option('date_format'), $item['updated_at']);
+        }
+        
+        return $item;
+    }
+    
+    /**
+     * Enqueue module assets
+     *
+     * @since 8.0.0
+     * @return void
+     */
+    public function enqueue_assets() {
+        $this->color_picker->enqueue_assets();
+        $this->file_uploader->enqueue_assets();
     }
     
     /**
@@ -334,251 +414,113 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
      * Loads customer data and renders detail modal template.
      * Validates nonce, permissions, and item existence.
      *
-     * @since 3.1.0
-     * @return void
+     * @since 2.0.0
+     * @return void (outputs JSON)
      */
     public function ajax_get_detail() {
-        // Verify nonce
-        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'saw_ajax_nonce')) {
-            wp_send_json_error(array(
-                'message' => 'Neplatný bezpečnostní token. Obnovte stránku a zkuste to znovu.'
-            ));
-            return;
+        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        
+        $id = intval($_POST['id'] ?? 0);
+        
+        if (!$this->can('view')) {
+            wp_send_json_error(array('message' => 'Nedostatečná oprávnění'));
         }
         
-        // Check permissions
-        if (!current_user_can('read')) {
-            wp_send_json_error(array(
-                'message' => 'Nedostatečná oprávnění k zobrazení detailu.'
-            ));
-            return;
-        }
-        
-        // Validate ID
-        $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
-        
-        if (!$id) {
-            wp_send_json_error(array(
-                'message' => 'Neplatné ID zákazníka.'
-            ));
-            return;
-        }
-        
-        // Load customer data
         $item = $this->model->get_by_id($id);
         
         if (!$item) {
-            wp_send_json_error(array(
-                'message' => 'Zákazník nebyl nalezen v databázi.'
-            ));
-            return;
+            wp_send_json_error(array('message' => 'Záznam nenalezen'));
         }
         
-        // Format data for display
         $item = $this->format_detail_data($item);
         
-        // Load template
-        $template_path = $this->config['path'] . 'detail-modal-template.php';
-        
-        if (!file_exists($template_path)) {
-            wp_send_json_error(array(
-                'message' => 'Chyba: Template soubor nebyl nalezen.'
-            ));
-            return;
-        }
-        
-        // Render template
         ob_start();
+        require $this->config['path'] . 'detail-modal-template.php';
+        $html = ob_get_clean();
         
-        try {
-            require $template_path;
-            $html = ob_get_clean();
-            
-            wp_send_json_success(array(
-                'html' => $html,
-                'item' => $item
-            ));
-            
-        } catch (Exception $e) {
-            ob_end_clean();
-            
-            wp_send_json_error(array(
-                'message' => 'Chyba při zobrazení detailu: ' . $e->getMessage()
-            ));
-        }
+        wp_send_json_success(array('html' => $html));
     }
     
     /**
-     * Enqueue assets
+     * AJAX: Search customers
      *
-     * Enqueues file uploader and color picker assets.
-     *
-     * @since 3.1.0
-     * @return void
+     * @since 2.0.0
+     * @return void (outputs JSON)
      */
-    public function enqueue_assets() {
-        $this->file_uploader->enqueue_assets();
-        $this->color_picker->enqueue_assets();
+    public function ajax_search() {
+        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        
+        if (!$this->can('list')) {
+            wp_send_json_error(array('message' => 'Nedostatečná oprávnění'));
+        }
+        
+        $search = sanitize_text_field($_POST['search'] ?? '');
+        
+        $filters = array(
+            'search' => $search,
+            'per_page' => 10,
+        );
+        
+        $data = $this->model->get_all($filters);
+        
+        wp_send_json_success($data);
+    }
+    
+    /**
+     * AJAX: Delete customer
+     *
+     * @since 2.0.0
+     * @return void (outputs JSON)
+     */
+    public function ajax_delete() {
+        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        
+        $id = intval($_POST['id'] ?? 0);
+        
+        if (!$this->can('delete')) {
+            wp_send_json_error(array('message' => 'Nedostatečná oprávnění'));
+        }
+        
+        $result = $this->model->delete($id);
+        
+        if (is_wp_error($result)) {
+            wp_send_json_error(array('message' => $result->get_error_message()));
+        }
+        
+        $this->invalidate_caches();
+        
+        wp_send_json_success(array('message' => 'Zákazník byl úspěšně smazán'));
     }
     
     /**
      * Before save hook
      *
-     * Handles file uploads and removals before data is saved.
-     * Deletes old logo if replaced or removed.
-     *
-     * @since 4.6.1
-     * @param array $data Data to be saved
-     * @return array|WP_Error Modified data or error
+     * @since 8.0.0
+     * @param array $data Data to save
+     * @return array|WP_Error
      */
     protected function before_save($data) {
-        // Handle logo removal
-        if ($this->file_uploader->should_remove_file('logo')) {
-            if (!empty($data['id'])) {
-                $existing = $this->model->get_by_id($data['id']);
-                if (!empty($existing['logo_url'])) {
-                    $this->file_uploader->delete($existing['logo_url']);
-                }
-            }
-            $data['logo_url'] = '';
-        }
-        
-        // Handle logo upload
-        if (!empty($_FILES['logo']['name'])) {
-            $upload = $this->file_uploader->upload($_FILES['logo'], 'customers');
-            
-            if (is_wp_error($upload)) {
-                return $upload;
-            }
-            
-            $data['logo_url'] = $upload['url'];
-            
-            // Delete old logo if updating
-            if (!empty($data['id'])) {
-                $existing = $this->model->get_by_id($data['id']);
-                if (!empty($existing['logo_url']) && $existing['logo_url'] !== $data['logo_url']) {
-                    $this->file_uploader->delete($existing['logo_url']);
-                }
-            }
-        }
-        
         return $data;
     }
     
     /**
      * After save hook
      *
-     * Clears all caches after successful save.
-     *
-     * @since 3.1.0
-     * @param int $id Customer ID
+     * @since 8.0.0
+     * @param int $id Saved ID
      * @return void
      */
     protected function after_save($id) {
-        delete_transient('customers_list');
-        delete_transient('customers_for_switcher');
-        delete_transient(sprintf('customers_item_%d', $id));
-        
-        if (class_exists('SAW_Cache')) {
-            SAW_Cache::forget(sprintf('customers_item_%d', $id));
-            SAW_Cache::forget_pattern('customers_*');
-        }
-        
-        wp_cache_delete($id, 'saw_customers');
-        wp_cache_delete('saw_customers_all', 'saw_customers');
+        $this->invalidate_caches();
     }
     
     /**
-     * Before delete hook
+     * Invalidate caches
      *
-     * Checks for dependencies before allowing deletion.
-     *
-     * @since 4.6.1
-     * @param int $id Customer ID
-     * @return bool|WP_Error True if can delete, WP_Error if dependencies exist
-     */
-    protected function before_delete($id) {
-        global $wpdb;
-        
-        // Check for branches
-        $branches_count = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM %i WHERE customer_id = %d",
-            $wpdb->prefix . 'saw_branches',
-            $id
-        ));
-        
-        if ($branches_count > 0) {
-            return new WP_Error(
-                'customer_has_branches',
-                sprintf('Zákazníka nelze smazat. Má %d poboček.', $branches_count)
-            );
-        }
-        
-        return true;
-    }
-    
-    /**
-     * After delete hook
-     *
-     * Cleanup operations after successful deletion.
-     *
-     * @since 4.6.1
-     * @param int $id Customer ID
+     * @since 8.0.0
      * @return void
      */
-    protected function after_delete($id) {
-        $customer = $this->model->get_by_id($id);
-        if (!empty($customer['logo_url'])) {
-            $this->file_uploader->delete($customer['logo_url']);
-        }
-        
+    protected function invalidate_caches() {
         delete_transient('customers_list');
-        delete_transient('customers_for_switcher');
-        
-        if (class_exists('SAW_Cache')) {
-            SAW_Cache::forget_pattern('customers_*');
-        }
-        
-        wp_cache_delete($id, 'saw_customers');
-        wp_cache_delete('saw_customers_all', 'saw_customers');
-    }
-    
-    /**
-     * Format detail data
-     *
-     * Formats dates, URLs, status badges, and colors for display.
-     *
-     * @since 3.1.0
-     * @param array $item Raw customer data
-     * @return array Formatted customer data
-     */
-    protected function format_detail_data($item) {
-        // Format dates
-        if (!empty($item['created_at'])) {
-            $item['created_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['created_at']));
-        }
-        
-        if (!empty($item['updated_at'])) {
-            $item['updated_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['updated_at']));
-        }
-        
-        // Format logo URL
-        if (!empty($item['logo_url'])) {
-            if (strpos($item['logo_url'], 'http') === 0) {
-                $item['logo_url_full'] = $item['logo_url'];
-            } else {
-                $upload_dir = wp_upload_dir();
-                $item['logo_url_full'] = $upload_dir['baseurl'] . '/' . ltrim($item['logo_url'], '/');
-            }
-        } else {
-            $item['logo_url_full'] = '';
-        }
-        
-        // Ensure colors are properly formatted
-        if (!empty($item['primary_color']) && strpos($item['primary_color'], '#') !== 0) {
-            $item['primary_color'] = '#' . $item['primary_color'];
-        }
-        
-        return $item;
     }
 }

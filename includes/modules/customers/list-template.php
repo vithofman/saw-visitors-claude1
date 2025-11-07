@@ -5,7 +5,7 @@
  * @package     SAW_Visitors
  * @subpackage  Modules/Customers/Templates
  * @since       1.0.0
- * @version     9.0.0 - SIDEBAR SUPPORT + FIXED URLS
+ * @version     9.1.0 - ADDED account_types passthrough
  */
 
 if (!defined('ABSPATH')) {
@@ -70,9 +70,16 @@ $filters_html = ob_get_clean();
 // Initialize admin table component with sidebar support
 $table = new SAW_Component_Admin_Table('customers', array(
     'title' => __('Zákazníci', 'saw-visitors'),
-    'create_url' => home_url('/admin/settings/customers/create'),    // FIXED: was /new/
+    'create_url' => home_url('/admin/settings/customers/create'),
     'edit_url' => home_url('/admin/settings/customers/{id}/edit'),
-    'detail_url' => home_url('/admin/settings/customers/{id}/'),    // NEW: For sidebar navigation
+    'detail_url' => home_url('/admin/settings/customers/{id}/'),
+    
+    // CRITICAL: Sidebar support with account_types
+    'sidebar_mode' => $sidebar_mode ?? null,
+    'detail_item' => $detail_item ?? null,
+    'form_item' => $form_item ?? null,
+    'detail_tab' => $detail_tab ?? 'overview',
+    'account_types' => $account_types ?? array(),
     
     'columns' => array(
         'logo_url' => array(
@@ -106,7 +113,7 @@ $table = new SAW_Component_Admin_Table('customers', array(
                 'potential' => __('Potenciální', 'saw-visitors')
             )
         ),
-        'subscription_type' => array(
+        'account_type_id' => array(
             'label' => __('Typ účtu', 'saw-visitors'),
             'type' => 'custom',
             'width' => '150px',
@@ -126,85 +133,50 @@ $table = new SAW_Component_Admin_Table('customers', array(
                     return '<span class="saw-text-muted">—</span>';
                 }
                 
+                $color = !empty($type['color']) ? esc_attr($type['color']) : '#6b7280';
                 return sprintf(
-                    '<span class="saw-badge" style="background-color: %s; color: #fff; border-color: %s;">%s</span>',
-                    esc_attr($type['color']),
-                    esc_attr($type['color']),
+                    '<span class="saw-badge" style="background-color: %s; color: white;">%s</span>',
+                    $color,
                     esc_html($type['display_name'])
                 );
             }
         ),
         'primary_color' => array(
             'label' => __('Barva', 'saw-visitors'),
-            'type' => 'color_badge',
+            'type' => 'color',
             'width' => '80px',
             'align' => 'center'
         ),
         'created_at' => array(
             'label' => __('Vytvořeno', 'saw-visitors'),
             'type' => 'date',
-            'format' => 'd.m.Y'
-        )
+            'sortable' => true
+        ),
     ),
     
     'rows' => $items,
-    'total_items' => $total,
+    'total' => $total,
     'current_page' => $page,
     'total_pages' => $total_pages,
     'orderby' => $orderby,
     'order' => $order,
-    'search' => $search_html,
-    'filters' => $filters_html,
-    'actions' => array('edit', 'delete'),
-    'empty_message' => __('Žádní zákazníci nenalezeni', 'saw-visitors'),
-    'add_new' => __('Nový zákazník', 'saw-visitors'),
     
-    // Sidebar support
-    'detail_item' => $detail_item ?? null,
-    'detail_tab' => $detail_tab ?? 'overview',
-    'form_item' => $form_item ?? null,
-    'sidebar_mode' => $sidebar_mode ?? null,
+    'search_html' => $search_html,
+    'filters_html' => $filters_html,
     
-    // Modal fallback (backward compatible)
     'enable_modal' => empty($sidebar_mode),
     'modal_id' => 'customer-detail',
-    'modal_ajax_action' => 'saw_get_customers_detail',
+    'ajax_action' => 'saw_get_customers_detail',
+    'ajax_nonce' => $ajax_nonce,
 ));
 
-// Render table
 $table->render();
 
-// Modal component (backward compatible - only when sidebar not active)
+// Modal component (backward compatible)
 if (empty($sidebar_mode)) {
-    $customer_modal = new SAW_Component_Modal('customer-detail', array(
+    $modal = new SAW_Component_Modal('customer-detail', array(
         'title' => __('Detail zákazníka', 'saw-visitors'),
-        'ajax_enabled' => true,
-        'ajax_action' => 'saw_get_customers_detail',
         'size' => 'large',
-        'show_close' => true,
-        'close_on_backdrop' => true,
-        'close_on_escape' => true,
-        'header_actions' => array(
-            array(
-                'type' => 'edit',
-                'label' => '',
-                'icon' => 'dashicons-edit',
-                'url' => home_url('/admin/settings/customers/{id}/edit'),
-            ),
-            array(
-                'type' => 'delete',
-                'label' => '',
-                'icon' => 'dashicons-trash',
-                'confirm' => true,
-                'confirm_message' => __('Opravdu chcete smazat tohoto zákazníka?', 'saw-visitors'),
-                'ajax_action' => 'saw_delete_customers',
-            ),
-        ),
     ));
-    $customer_modal->render();
+    $modal->render();
 }
-?>
-
-<script>
-window.sawAjaxNonce = '<?php echo esc_js($ajax_nonce); ?>';
-</script>
