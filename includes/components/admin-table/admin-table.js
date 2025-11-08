@@ -6,7 +6,7 @@
  *
  * @package    SAW_Visitors
  * @subpackage Components
- * @version    3.0.0 - AJAX SIDEBAR LOADING
+ * @version    3.1.0 - FIXED SPA CONFLICT
  * @since      1.0.0
  */
 
@@ -65,7 +65,7 @@
                 }, 10);
                 
                 updateActiveRow(id);
-                updateUrl(buildUrl(entity, id, mode), {id: id, mode: mode});
+                updateUrl(buildUrl(entity, id, mode), {id: id, mode: mode, entity: entity});
             },
             error: function() {
                 hideLoadingOverlay();
@@ -109,7 +109,7 @@
         let $overlay = $('#saw-loading-overlay');
         
         if (!$overlay.length) {
-            $overlay = $('<div id="saw-loading-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.8);z-index:9998;display:flex;align-items:center;justify-content:center;"><div class="saw-spinner" style="width:40px;height:40px;border:4px solid #e5e7eb;border-top-color:#3b82f6;border-radius:50%;animation:spin 0.8s linear infinite;"></div></div>');
+            $overlay = $('<div id="saw-loading-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.8);z-index:99998;display:flex;align-items:center;justify-content:center;"><div class="saw-spinner" style="width:40px;height:40px;border:4px solid #e5e7eb;border-top-color:#3b82f6;border-radius:50%;animation:spin 0.8s linear infinite;"></div></div>');
             $('body').append($overlay);
             
             $('<style>@keyframes spin{to{transform:rotate(360deg);}}</style>').appendTo('head');
@@ -258,6 +258,7 @@
         
         $(document).on('click', '.saw-sidebar-close', function(e) {
             e.preventDefault();
+            e.stopPropagation();
             
             const listUrl = $(this).attr('href');
             closeSidebar(listUrl);
@@ -277,14 +278,13 @@
         $(window).on('popstate', function(e) {
             const state = e.originalEvent.state;
             
-            if (state && state.id && state.mode) {
-                const parsed = parseUrl(window.location.pathname);
-                
-                if (parsed.entity) {
-                    openSidebarAjax(state.id, state.mode, parsed.entity);
-                }
+            if (state && state.id && state.mode && state.entity) {
+                openSidebarAjax(state.id, state.mode, state.entity);
             } else {
-                closeSidebar(window.location.pathname);
+                const $wrapper = $('.saw-sidebar-wrapper');
+                if ($wrapper.length && $wrapper.hasClass('active')) {
+                    closeSidebar(window.location.pathname);
+                }
             }
         });
     }

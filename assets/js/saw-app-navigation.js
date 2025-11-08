@@ -1,10 +1,8 @@
 /**
  * SAW App Navigation - SPA (Single Page Application) Support
  * 
- * OPRAVENÁ VERZE s brutálním modal cleanupem
- *
  * @package SAW_Visitors
- * @version 5.2.1 - OPRAVENO: nonce pro delete (řádek 293)
+ * @version 5.3.0 - SPA ENABLED
  */
 
 (function($) {
@@ -21,12 +19,8 @@
     });
 
     function initSPANavigation() {
-        // 🔴 SPA NAVIGACE VYPNUTA - použij klasické page reloady
-        console.log('⚠️ SPA Navigation DISABLED - using full page reloads');
-        return;
+        console.log('✅ SPA Navigation ENABLED');
         
-        // Původní SPA kód zakomentován
-        /*
         $(document).on('click', '.saw-app-sidebar a, .saw-page-wrapper a[href^="/admin"], .saw-page-wrapper a[href^="/manager"]', function(e) {
             const $link = $(this);
             const href = $link.attr('href');
@@ -35,6 +29,7 @@
             if (href.startsWith('#')) return;
             if ($link.attr('target') === '_blank') return;
             if ($link.data('no-ajax') === true) return;
+            if ($link.hasClass('saw-sidebar-close')) return;
 
             console.log('🔗 SPA Navigation: Intercepted link:', href);
             e.preventDefault();
@@ -45,7 +40,6 @@
             
             navigateToPage(href);
         });
-        */
     }
 
     function initMobileSidebar() {
@@ -86,8 +80,6 @@
         $sidebar.addClass('open');
         $overlay.addClass('active');
         $('body').css('overflow', 'hidden');
-        
-        console.log('📱 Mobile sidebar opened');
     }
 
     function closeMobileSidebar() {
@@ -97,18 +89,14 @@
         $sidebar.removeClass('open');
         $overlay.removeClass('active');
         $('body').css('overflow', '');
-        
-        console.log('📱 Mobile sidebar closed');
     }
 
     function navigateToPage(url) {
         if (isNavigating) {
-            console.log('⏳ Navigation already in progress, ignoring');
             return;
         }
 
         isNavigating = true;
-        console.log('📡 Loading page:', url);
 
         showLoading();
         $('html, body').animate({ scrollTop: 0 }, 300);
@@ -119,10 +107,7 @@
             dataType: 'json',
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
             success: function(response) {
-                console.log('✅ Page loaded successfully');
-
                 if (response && response.success && response.data) {
-                    // 🔥 BRUTAL CLEANUP PŘED update contentu
                     brutalCleanupBeforeNavigate();
                     
                     cleanupPageScopedAssets();
@@ -134,13 +119,10 @@
                         reinitializePageScripts();
                     }, 200);
                 } else {
-                    console.error('❌ Invalid response format:', response);
                     fallbackToFullPageLoad(url);
                 }
             },
-            error: function(xhr, status, error) {
-                console.error('❌ AJAX Error:', error);
-                console.error('Response:', xhr && xhr.responseText);
+            error: function() {
                 fallbackToFullPageLoad(url);
             },
             complete: function() {
@@ -150,75 +132,37 @@
         });
     }
 
-    /**
-     * 🔥 BRUTAL CLEANUP BEFORE NAVIGATE
-     * 
-     * Odstraní VŠECHNY modaly a content z #saw-app-content
-     * PŘED tím než se vloží nový content
-     * 
-     * KRITICKY DŮLEŽITÉ: Cleanup běží na STARÉM contentu PŘED jeho nahrazením!
-     */
     function brutalCleanupBeforeNavigate() {
-        console.log('[BRUTAL-CLEANUP] Starting pre-navigation cleanup...');
-        
         const $content = $('#saw-app-content');
         if (!$content.length) {
-            console.log('[BRUTAL-CLEANUP] Content container not found, skipping');
             return;
         }
         
-        // 1. NAJDI všechny modaly UVNITŘ starého contentu
         const $oldModals = $content.find('[id*="saw-modal-"], .saw-modal');
         if ($oldModals.length > 0) {
-            console.log('[BRUTAL-CLEANUP] Removing ' + $oldModals.length + ' old modals from content');
             $oldModals.remove();
         }
         
-        // 2. ODSTRAŇ všechny overlays (ty jsou obvykle mimo content)
         const $overlays = $('.saw-modal-overlay, .modal-backdrop').not('#sawSidebarOverlay');
         if ($overlays.length > 0) {
-            console.log('[BRUTAL-CLEANUP] Removing ' + $overlays.length + ' overlays');
             $overlays.remove();
         }
         
-        // 3. VYČISTI body classes a styles
-        $('body').removeClass('modal-open saw-modal-open saw-modal-active');
-        $('body').css({
-            'overflow': '',
-            'padding-right': '',
-            'height': '',
-            'position': ''
-        });
-        console.log('[BRUTAL-CLEANUP] Cleaned body');
-        
-        // 4. ODSTRAŇ staré module wrappery
-        const $oldWrappers = $content.find('[class*="saw-module-"]');
-        if ($oldWrappers.length > 0) {
-            console.log('[BRUTAL-CLEANUP] Removing ' + $oldWrappers.length + ' old module wrappers');
-            $oldWrappers.remove();
-        }
-        
-        // 5. ODSTRAŇ staré module styles
         const $oldStyles = $('style[id*="saw-module-css-"]');
         if ($oldStyles.length > 0) {
-            console.log('[BRUTAL-CLEANUP] Removing ' + $oldStyles.length + ' old module styles');
             $oldStyles.remove();
         }
-        
-        console.log('[BRUTAL-CLEANUP] ✅ Cleanup complete!');
     }
 
     function updatePageContent(data) {
         const $content = $('#saw-app-content');
         if (!$content.length) {
-            console.error('❌ Content container #saw-app-content not found');
             return;
         }
 
         $content.css('opacity', '0');
 
         setTimeout(function() {
-            // POUŽIJ .html() AŽ PO BRUTAL CLEANUP
             $content.html(data.content || '');
 
             if (data.title) {
@@ -227,13 +171,10 @@
 
             $content.css('opacity', '1');
             $(document).trigger('saw:page-loaded', [data]);
-
-            console.log('✅ Content updated');
         }, 150);
     }
 
     function reinitializePageScripts() {
-        console.log('🔄 Reinitializing page scripts...');
         let scriptsExecuted = 0;
 
         $('#saw-app-content').find('script').each(function() {
@@ -245,16 +186,12 @@
                 script.text = scriptContent;
                 document.head.appendChild(script).parentNode.removeChild(script);
                 scriptsExecuted++;
-                console.log('  ↳ Executed inline script #' + scriptsExecuted);
             } catch (e) {
-                console.error('  ✗ Error executing script:', e);
+                console.error('Error executing script:', e);
             }
         });
 
-        console.log('✅ Total inline scripts executed:', scriptsExecuted);
-
         $(document).trigger('saw:scripts-reinitialized');
-        console.log('📢 Event triggered: saw:scripts-reinitialized');
         
         initTableInteractions();
     }
@@ -285,21 +222,13 @@
                 deleteItem(itemId, $(this).data('entity'));
             }
         });
-
-        console.log('✅ Table interactions reinitialized');
     }
 
     function deleteItem(itemId, entity) {
-        console.log('[DELETE] Deleting item:', itemId, 'Entity:', entity);
-        
-        // ✅ KONTROLA: sawGlobal musí existovat
         if (typeof sawGlobal === 'undefined') {
-            console.error('[DELETE] sawGlobal is not defined!');
-            alert('Chyba: sawGlobal není definován. Zkontrolujte Asset Manager.');
+            alert('Chyba: sawGlobal není definován.');
             return;
         }
-        
-        console.log('[DELETE] Using nonce:', sawGlobal.nonce);
         
         $.ajax({
             url: sawGlobal.ajaxurl || '/wp-admin/admin-ajax.php',
@@ -307,22 +236,16 @@
             data: {
                 action: 'saw_delete_' + entity,
                 id: itemId,
-                nonce: sawGlobal.nonce  // ✅ OPRAVENO: sawGlobal.nonce místo $('#saw_nonce').val()
+                nonce: sawGlobal.nonce
             },
             success: function(response) {
-                console.log('[DELETE] Response:', response);
                 if (response.success) {
                     window.location.reload();
                 } else {
                     alert('Chyba při mazání: ' + (response.data?.message || 'Neznámá chyba'));
                 }
             },
-            error: function(xhr, status, error) {
-                console.error('[DELETE] AJAX Error:', {
-                    status: status,
-                    error: error,
-                    response: xhr.responseText
-                });
+            error: function() {
                 alert('Chyba při mazání');
             }
         });
@@ -335,7 +258,6 @@
             fullTitle,
             url
         );
-        console.log('🔗 URL updated:', url);
     }
 
     function updateActiveMenuItem(activeMenu, urlFallback) {
@@ -346,7 +268,6 @@
             let $target = $items.filter('[data-menu="' + activeMenu + '"]');
             if ($target.length) {
                 $target.first().addClass('active');
-                console.log('📍 Active menu updated by active_menu:', activeMenu);
                 return;
             }
         }
@@ -356,7 +277,6 @@
             let $target = $items.filter('[data-menu="' + candidate + '"]');
             if ($target.length) {
                 $target.first().addClass('active');
-                console.log('📍 Active menu updated by URL fallback:', candidate);
                 return;
             }
             
@@ -366,7 +286,6 @@
             });
             if ($target.length) {
                 $target.first().addClass('active');
-                console.log('📍 Active menu updated by URL match:', candidate);
             }
         }
     }
@@ -381,7 +300,6 @@
             
             if ($target.length) {
                 $target.first().addClass('active');
-                console.log('📍 Initial active menu set:', candidate);
             }
         }
         
@@ -425,13 +343,11 @@
     }
 
     function fallbackToFullPageLoad(url) {
-        console.log('⚠️ Falling back to full page load');
         window.location.href = url;
     }
 
     function initBrowserBackButton() {
         window.addEventListener('popstate', function(event) {
-            console.log('⬅️ Browser back/forward button pressed');
             if (event.state && event.state.url) {
                 navigateToPage(event.state.url);
             } else {
