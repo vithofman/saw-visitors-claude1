@@ -38,6 +38,7 @@ return array(
     'plural' => 'Zákazníci',
     'route' => 'admin/settings/customers',
     'icon' => '🏢',
+'edit_url' => 'admin/settings/customers/{id}/edit',
     
     // ============================================
     // CAPABILITIES

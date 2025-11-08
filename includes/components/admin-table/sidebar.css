@@ -6,7 +6,7 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Components/AdminTable
- * @version     2.1.0 - FIXED BACKGROUND & Z-INDEX
+ * @version     2.2.0 - OPTIMIZED: Faster animation (200ms)
  * @since       4.0.0
  */
 
@@ -50,10 +50,9 @@
     box-shadow: -8px 0 24px rgba(0, 0, 0, 0.08), -2px 0 8px rgba(0, 0, 0, 0.04) !important;
     
     transform: translateX(100%);
-    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    /* transition: ODSTRANĚNO */
     pointer-events: none;
 }
-
 .saw-sidebar-wrapper.active {
     transform: translateX(0) !important;
     pointer-events: auto !important;
@@ -68,11 +67,10 @@
     bottom: 0;
     background: rgba(0, 0, 0, 0.2);
     opacity: 0;
-    transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    /* transition: ODSTRANĚNO */
     z-index: -1;
     pointer-events: none;
 }
-
 .saw-sidebar-wrapper.active::before {
     opacity: 1;
     pointer-events: auto;

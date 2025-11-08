@@ -6,7 +6,7 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Components/AdminTable
- * @version     3.1.0 - FIXED: Vertical alignment of nav buttons with span wrapper
+ * @version     3.3.0 - FIXED: Edit URL generation with home_url() like delete button
  * @since       4.0.0
  */
 
@@ -20,7 +20,8 @@ $detail_template = SAW_VISITORS_PLUGIN_DIR . "includes/modules/{$module_slug}/de
 // Close URL is now handled by JavaScript
 $close_url = '#';
 
-$edit_url = str_replace('{id}', intval($item['id']), $config['edit_url'] ?? '');
+// FIXED: Generate absolute URLs using home_url() like delete button
+$edit_url = home_url('/admin/' . str_replace('admin/', '', $config['route'] ?? '') . '/' . intval($item['id']) . '/edit');
 $delete_url = home_url('/admin/' . str_replace('admin/', '', $config['route'] ?? '') . '/delete/' . intval($item['id']));
 
 // Check permissions
@@ -53,7 +54,7 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
     
     <?php if ($can_edit || $can_delete): ?>
     <div class="saw-sidebar-floating-actions">
-        <?php if ($can_edit && !empty($edit_url)): ?>
+        <?php if ($can_edit): ?>
         <a href="<?php echo esc_url($edit_url); ?>" 
            class="saw-floating-action-btn edit" 
            title="Upravit">
@@ -61,7 +62,7 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
         </a>
         <?php endif; ?>
         
-        <?php if ($can_delete && !empty($delete_url)): ?>
+        <?php if ($can_delete): ?>
         <button type="button" 
                 class="saw-floating-action-btn delete saw-delete-btn" 
                 data-id="<?php echo intval($item['id']); ?>"
