@@ -68,7 +68,7 @@ body.saw-app-body {
 .saw-app-container {
     display: flex;
     min-height: 100vh;
-    padding-top: 25px;
+    padding-top: 20px;
 }
 
 .saw-app-main {
@@ -81,7 +81,7 @@ body.saw-app-body {
 
 .saw-app-content {
     padding: 24px; /* Žádný padding */
-    max-width: 1600px;
+    max-width: 100%;
     margin: 0 auto;
     background: #fff;
 }

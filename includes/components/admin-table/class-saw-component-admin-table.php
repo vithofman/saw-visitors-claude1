@@ -127,25 +127,29 @@ class SAW_Component_Admin_Table {
      * @return void Outputs HTML directly
      */
     private function render_split_layout() {
-        ?>
-        <div class="saw-admin-table-split">
-            <div class="saw-table-panel">
-                <?php
-                $this->render_header();
-                $this->render_controls();
-                $this->render_table_or_empty();
-                $this->render_pagination();
-                $this->render_floating_button();
-                ?>
-            </div>
-            
-            <div class="saw-sidebar-wrapper">
-                <?php $this->render_sidebar(); ?>
-            </div>
+    $has_sidebar = !empty($this->config['sidebar_mode']);
+    $sidebar_class = $has_sidebar ? ' has-sidebar' : '';
+    ?>
+    <div class="saw-admin-table-split<?php echo $sidebar_class; ?>">
+        <div class="saw-table-panel">
+            <?php
+            $this->render_header();
+            $this->render_controls();
+            $this->render_table_or_empty();
+            $this->render_pagination();
+            $this->render_floating_button();
+            ?>
         </div>
-        <?php
-        $this->render_delete_script();
-    }
+        
+        <?php if ($has_sidebar): ?>
+        <div class="saw-sidebar-wrapper">
+            <?php $this->render_sidebar(); ?>
+        </div>
+        <?php endif; ?>
+    </div>
+    <?php
+    $this->render_delete_script();
+}
     
     /**
      * Render sidebar content
