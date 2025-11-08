@@ -6,7 +6,7 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Components/AdminTable
- * @version     2.0.0
+ * @version     3.0.0 - REFACTORED: Close URL handled by JavaScript
  * @since       4.0.0
  */
 
@@ -17,12 +17,8 @@ if (!defined('ABSPATH')) {
 $module_slug = str_replace('_', '-', $entity);
 $form_template = SAW_VISITORS_PLUGIN_DIR . "includes/modules/{$module_slug}/form-template.php";
 
-if (!empty($config['create_url'])) {
-    $close_url = preg_replace('/\/(create|new)$/', '/', $config['create_url']);
-} else {
-    $route = str_replace('admin/', '', $config['route'] ?? '');
-    $close_url = home_url('/admin/' . $route . '/');
-}
+// Close URL is now handled by JavaScript
+$close_url = '#';
 ?>
 
 <div class="saw-sidebar" data-mode="form" data-entity="<?php echo esc_attr($entity); ?>">

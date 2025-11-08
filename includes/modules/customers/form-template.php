@@ -8,7 +8,7 @@
  * @package     SAW_Visitors
  * @subpackage  Modules/Customers/Templates
  * @since       1.0.0
- * @version     10.4.0 - Fixed back/cancel URLs to redirect to detail
+ * @version     11.0.0 - REFACTORED: Cancel button with .saw-form-cancel-btn
  */
 
 if (!defined('ABSPATH')) {
@@ -124,7 +124,6 @@ if (!isset($account_types)) {
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
                         <?php
-                        // File Upload Component - nastavení proměnných
                         $id = 'logo';
                         $name = 'logo';
                         $current_file_url = $item['logo_url'] ?? '';
@@ -135,7 +134,6 @@ if (!isset($account_types)) {
                         $show_preview = true;
                         $config = array();
                         
-                        // Include komponenty template
                         require SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/file-upload-input.php';
                         ?>
                     </div>
@@ -268,15 +266,10 @@ if (!isset($account_types)) {
                 <?php echo $is_edit ? esc_html__('Uložit změny', 'saw-visitors') : esc_html__('Vytvořit zákazníka', 'saw-visitors'); ?>
             </button>
             
-            <?php
-            $cancel_url = $is_edit 
-                ? home_url('/admin/settings/customers/' . $item['id'] . '/') 
-                : home_url('/admin/settings/customers/');
-            ?>
-            <a href="<?php echo esc_url($cancel_url); ?>" class="saw-button saw-button-secondary">
+            <button type="button" class="saw-button saw-button-secondary saw-form-cancel-btn">
                 <span class="dashicons dashicons-dismiss"></span>
                 <?php echo esc_html__('Zrušit', 'saw-visitors'); ?>
-            </a>
+            </button>
         </div>
     </form>
 </div>

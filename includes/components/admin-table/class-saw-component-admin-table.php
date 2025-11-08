@@ -6,7 +6,7 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Components
- * @version     4.1.1 - FIXED
+ * @version     5.1.0 - REFACTORED: Header with inline controls, no duplicates
  * @since       1.0.0
  */
 
@@ -49,7 +49,78 @@ class SAW_Component_Admin_Table {
      */
     public function __construct($entity, $config = array()) {
         $this->entity = sanitize_key($entity);
+        
+        // CRITICAL: Auto-generate columns from fields if not explicitly defined
+        if (empty($config['columns']) && !empty($config['module_config']['fields'])) {
+            $config['columns'] = $this->generate_columns_from_fields($config['module_config']['fields']);
+        }
+        
         $this->config = $this->parse_config($config);
+    }
+    
+    /**
+     * Generate columns from config fields if not explicitly defined
+     * 
+     * @since 5.0.0
+     * @param array $fields Fields configuration from module config
+     * @return array Columns configuration
+     */
+    private function generate_columns_from_fields($fields) {
+        $columns = array();
+        
+        foreach ($fields as $key => $field) {
+            // Skip hidden fields
+            if (isset($field['hidden']) && $field['hidden']) {
+                continue;
+            }
+            
+            // Skip deprecated fields
+            if (isset($field['deprecated']) && $field['deprecated']) {
+                continue;
+            }
+            
+            // Basic column config
+            $column = array(
+                'label' => $field['label'] ?? ucfirst($key),
+                'type' => $this->map_field_type_to_column_type($field['type']),
+            );
+            
+            // Auto-detect searchable fields
+            if (in_array($field['type'], array('text', 'email', 'textarea'))) {
+                $column['searchable'] = true;
+            }
+            
+            // Auto-detect sortable fields
+            if (in_array($field['type'], array('text', 'email', 'select', 'date', 'number'))) {
+                $column['sortable'] = true;
+            }
+            
+            $columns[$key] = $column;
+        }
+        
+        return $columns;
+    }
+    
+    /**
+     * Map field type to column display type
+     * 
+     * @since 5.0.0
+     * @param string $field_type Field type from config
+     * @return string Column type
+     */
+    private function map_field_type_to_column_type($field_type) {
+        $map = array(
+            'text' => 'text',
+            'email' => 'email',
+            'textarea' => 'text',
+            'select' => 'badge',
+            'file' => 'image',
+            'date' => 'date',
+            'checkbox' => 'boolean',
+            'number' => 'text',
+        );
+        
+        return $map[$field_type] ?? 'text';
     }
     
     /**
@@ -111,7 +182,6 @@ class SAW_Component_Admin_Table {
             $this->render_split_layout();
         } else {
             $this->render_header();
-            $this->render_controls();
             $this->render_table_or_empty();
             $this->render_pagination();
             $this->render_modal();
@@ -134,7 +204,6 @@ class SAW_Component_Admin_Table {
         <div class="saw-table-panel">
             <?php
             $this->render_header();
-            $this->render_controls();
             $this->render_table_or_empty();
             $this->render_pagination();
             $this->render_floating_button();
@@ -243,7 +312,7 @@ class SAW_Component_Admin_Table {
     }
     
     /**
-     * Render page header with title and controls
+     * Render page header with title and inline controls
      *
      * @since 1.0.0
      * @return void Outputs HTML directly
@@ -252,27 +321,33 @@ class SAW_Component_Admin_Table {
         if (empty($this->config['title'])) {
             return;
         }
-        
-        $has_controls = !empty($this->config['search']) || !empty($this->config['filters']);
-        
         ?>
         <div class="saw-page-header">
             <div class="saw-page-header-content">
-                <h1 class="saw-page-title"><?php echo esc_html($this->config['title']); ?></h1>
+                <?php if (!empty($this->config['title'])): ?>
+                    <h1 class="saw-page-title">
+                        <?php if (!empty($this->config['icon'])): ?>
+                            <span class="saw-page-icon"><?php echo esc_html($this->config['icon']); ?></span>
+                        <?php endif; ?>
+                        <?php echo esc_html($this->config['title']); ?>
+                    </h1>
+                <?php endif; ?>
                 
-                <?php if ($has_controls): ?>
-                    <div class="saw-table-controls">
-                        <?php if (!empty($this->config['filters'])): ?>
-                            <div class="saw-filters">
-                                <?php echo $this->config['filters']; ?>
-                            </div>
-                        <?php endif; ?>
-                        
-                        <?php if ($this->config['search']): ?>
-                            <div class="saw-search-form">
-                                <?php echo $this->config['search']; ?>
-                            </div>
-                        <?php endif; ?>
+                <?php if (!empty($this->config['subtitle'])): ?>
+                    <p class="saw-page-subtitle"><?php echo esc_html($this->config['subtitle']); ?></p>
+                <?php endif; ?>
+            </div>
+            
+            <div class="saw-page-header-controls">
+                <?php if (!empty($this->config['filters'])): ?>
+                    <div class="saw-filters-wrapper">
+                        <?php echo $this->config['filters']; ?>
+                    </div>
+                <?php endif; ?>
+                
+                <?php if (!empty($this->config['search'])): ?>
+                    <div class="saw-search-wrapper">
+                        <?php echo $this->config['search']; ?>
                     </div>
                 <?php endif; ?>
             </div>
@@ -281,18 +356,7 @@ class SAW_Component_Admin_Table {
     }
     
     /**
-     * Render controls (legacy placeholder)
-     *
-     * @since 1.0.0
-     * @deprecated Controls now rendered in header
-     * @return void
-     */
-    private function render_controls() {
-        // Empty - controls moved to header
-    }
-    
-    /**
-     * Render table or empty state
+     * Render table or empty message
      *
      * @since 1.0.0
      * @return void Outputs HTML directly
@@ -314,163 +378,183 @@ class SAW_Component_Admin_Table {
     private function render_empty_state() {
         ?>
         <div class="saw-empty-state">
-            <span class="dashicons dashicons-info"></span>
-            <p><?php echo esc_html($this->config['empty_message']); ?></p>
+            <div class="saw-empty-icon">
+                <span class="dashicons dashicons-search"></span>
+            </div>
+            <h3><?php echo esc_html($this->config['empty_message']); ?></h3>
+            <?php if (!empty($this->config['create_url'])): ?>
+                <?php
+                $can_create = function_exists('saw_can') ? saw_can('create', $this->entity) : true;
+                if ($can_create):
+                ?>
+                <a href="<?php echo esc_url($this->config['create_url']); ?>" class="saw-button saw-button-primary">
+                    <span class="dashicons dashicons-plus-alt"></span>
+                    <?php echo esc_html($this->config['add_new']); ?>
+                </a>
+                <?php endif; ?>
+            <?php endif; ?>
         </div>
         <?php
     }
     
     /**
-     * Render data table with rows
+     * Render data table
      *
      * @since 1.0.0
      * @return void Outputs HTML directly
      */
     private function render_table() {
-        $modal_attrs = '';
-        if ($this->config['enable_modal'] && !empty($this->config['modal_id'])) {
-            $modal_attrs = ' data-clickable-row data-modal="' . esc_attr($this->config['modal_id']) . '"';
-        }
         ?>
-        <div class="saw-table-responsive-wrapper">
-            <table class="saw-admin-table">
-                <thead>
-                    <tr>
+        <table class="saw-admin-table">
+            <thead>
+                <tr>
+                    <?php foreach ($this->config['columns'] as $key => $column): ?>
+                        <?php
+                        $label = is_array($column) ? ($column['label'] ?? ucfirst($key)) : $column;
+                        $sortable = is_array($column) && isset($column['sortable']) ? $column['sortable'] : false;
+                        $width = is_array($column) && isset($column['width']) ? $column['width'] : '';
+                        $align = is_array($column) && isset($column['align']) ? $column['align'] : 'left';
+                        ?>
+                        <th style="<?php echo $width ? 'width: ' . esc_attr($width) . ';' : ''; ?> text-align: <?php echo esc_attr($align); ?>;">
+                            <?php if ($sortable): ?>
+                                <a href="<?php echo esc_url($this->get_sort_url($key, $this->config['orderby'], $this->config['order'])); ?>" class="saw-sortable">
+                                    <?php echo esc_html($label); ?>
+                                    <?php echo $this->get_sort_icon($key, $this->config['orderby'], $this->config['order']); ?>
+                                </a>
+                            <?php else: ?>
+                                <?php echo esc_html($label); ?>
+                            <?php endif; ?>
+                        </th>
+                    <?php endforeach; ?>
+                    
+                    <?php if (!empty($this->config['actions'])): ?>
+                        <th class="saw-actions-column">Akce</th>
+                    <?php endif; ?>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($this->config['rows'] as $row): ?>
+                    <?php
+                    $detail_url = !empty($this->config['detail_url']) 
+                        ? str_replace('{id}', intval($row['id'] ?? 0), $this->config['detail_url'])
+                        : '';
+                    
+                    $row_class = 'saw-table-row';
+                    if (!empty($detail_url)) {
+                        $row_class .= ' saw-clickable-row';
+                    }
+                    ?>
+                    <tr class="<?php echo esc_attr($row_class); ?>" 
+                        data-id="<?php echo esc_attr($row['id'] ?? ''); ?>"
+                        <?php if (!empty($detail_url)): ?>
+                            data-detail-url="<?php echo esc_url($detail_url); ?>"
+                        <?php endif; ?>>
+                        
                         <?php foreach ($this->config['columns'] as $key => $column): ?>
-                            <?php $this->render_th($key, $column); ?>
+                            <?php $this->render_table_cell($row, $key, $column); ?>
                         <?php endforeach; ?>
                         
                         <?php if (!empty($this->config['actions'])): ?>
-                            <th style="width: 120px; text-align: center;">Akce</th>
+                            <?php $this->render_action_buttons($row); ?>
                         <?php endif; ?>
                     </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($this->config['rows'] as $row): ?>
-                        <?php
-                        $is_active = false;
-                        if (!empty($this->config['detail_item']) && $this->config['detail_item']['id'] == ($row['id'] ?? 0)) {
-                            $is_active = true;
-                        }
-                        if (!empty($this->config['form_item']) && $this->config['form_item']['id'] == ($row['id'] ?? 0)) {
-                            $is_active = true;
-                        }
-                        $active_class = $is_active ? ' saw-row-active' : '';
-                        
-                        // Sidebar navigation data attribute
-                        $detail_url_attr = '';
-                        if (!empty($this->config['detail_url'])) {
-                            $detail_url_attr = ' data-detail-url="' . esc_attr(str_replace('{id}', $row['id'] ?? '', $this->config['detail_url'])) . '"';
-                        }
-                        ?>
-                        <tr<?php echo $modal_attrs . $detail_url_attr; ?> 
-                            data-id="<?php echo esc_attr($row['id'] ?? ''); ?>" 
-                            class="<?php echo $active_class; ?>"
-                            style="cursor: pointer;">
-                            <?php foreach ($this->config['columns'] as $key => $column): ?>
-                                <?php $this->render_td($key, $column, $row); ?>
-                            <?php endforeach; ?>
-                            
-                            <?php if (!empty($this->config['actions'])): ?>
-                                <?php $this->render_actions($row); ?>
-                            <?php endif; ?>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
         <?php
     }
     
     /**
-     * Render table header cell
+     * Render table cell based on column type
      *
      * @since 1.0.0
-     * @param string $key    Column key
-     * @param array  $column Column configuration
-     * @return void Outputs HTML directly
-     */
-    private function render_th($key, $column) {
-        $label = $column['label'] ?? ucfirst($key);
-        $sortable = $column['sortable'] ?? false;
-        $width = $column['width'] ?? '';
-        $align = $column['align'] ?? 'left';
-        
-        $style = '';
-        if ($width) {
-            $style .= 'width: ' . esc_attr($width) . ';';
-        }
-        if ($align === 'center') {
-            $style .= 'text-align: center;';
-        }
-        
-        ?>
-        <th style="<?php echo $style; ?>">
-            <?php if ($sortable): ?>
-                <a href="<?php echo esc_url($this->get_sort_url($key, $this->config['orderby'], $this->config['order'])); ?>">
-                    <?php echo esc_html($label); ?>
-                    <?php echo $this->get_sort_icon($key, $this->config['orderby'], $this->config['order']); ?>
-                </a>
-            <?php else: ?>
-                <?php echo esc_html($label); ?>
-            <?php endif; ?>
-        </th>
-        <?php
-    }
-    
-    /**
-     * Render table data cell
-     *
-     * @since 1.0.0
-     * @param string $key    Column key
-     * @param array  $column Column configuration
      * @param array  $row    Row data
+     * @param string $key    Column key
+     * @param mixed  $column Column configuration
      * @return void Outputs HTML directly
      */
-    private function render_td($key, $column, $row) {
+    private function render_table_cell($row, $key, $column) {
         $value = $row[$key] ?? '';
-        $type = $column['type'] ?? 'text';
-        $width = $column['width'] ?? '';
-        $align = $column['align'] ?? 'left';
+        $type = is_array($column) ? ($column['type'] ?? 'text') : 'text';
+        $align = is_array($column) && isset($column['align']) ? $column['align'] : 'left';
+        $class = is_array($column) && isset($column['class']) ? $column['class'] : '';
         
-        $style = array();
-        if ($width) {
-            $style[] = 'width: ' . esc_attr($width);
+        $td_class = $class ? ' class="' . esc_attr($class) . '"' : '';
+        echo '<td' . $td_class . ' style="text-align: ' . esc_attr($align) . ';">';
+        
+        switch ($type) {
+            case 'image':
+                if (!empty($value)) {
+                    echo '<img src="' . esc_url($value) . '" alt="" class="saw-table-image">';
+                }
+                break;
+                
+            case 'badge':
+                if (!empty($value)) {
+                    $badge_class = 'saw-badge';
+                    if (is_array($column) && isset($column['map'][$value])) {
+                        $badge_class .= ' saw-badge-' . $column['map'][$value];
+                    }
+                    $label = is_array($column) && isset($column['labels'][$value]) 
+                        ? $column['labels'][$value] 
+                        : $value;
+                    echo '<span class="' . esc_attr($badge_class) . '">' . esc_html($label) . '</span>';
+                }
+                break;
+                
+            case 'date':
+                if (!empty($value) && $value !== '0000-00-00' && $value !== '0000-00-00 00:00:00') {
+                    $format = is_array($column) && isset($column['format']) ? $column['format'] : 'd.m.Y';
+                    echo esc_html(date_i18n($format, strtotime($value)));
+                }
+                break;
+                
+            case 'boolean':
+                echo $value ? '<span class="dashicons dashicons-yes-alt" style="color: #10b981;"></span>' 
+                            : '<span class="dashicons dashicons-dismiss" style="color: #ef4444;"></span>';
+                break;
+                
+            case 'email':
+                if (!empty($value)) {
+                    echo '<a href="mailto:' . esc_attr($value) . '">' . esc_html($value) . '</a>';
+                }
+                break;
+                
+            case 'custom':
+                if (is_array($column) && isset($column['callback']) && is_callable($column['callback'])) {
+                    echo $column['callback']($value);
+                } else {
+                    echo esc_html($value);
+                }
+                break;
+                
+            default:
+                echo esc_html($value);
+                break;
         }
-        if ($align === 'center') {
-            $style[] = 'text-align: center';
-        }
-        if ($type === 'image') {
-            $style[] = 'padding: 8px';
-        }
-        
-        $style_attr = !empty($style) ? ' style="' . implode('; ', $style) . '"' : '';
-        
-        echo '<td' . $style_attr . '>';
-        
-        require_once __DIR__ . '/column-types.php';
-        echo SAW_Table_Column_Types::render($type, $value, $column, $row);
         
         echo '</td>';
     }
     
     /**
-     * Render action buttons
+     * Render action buttons for row
      *
      * @since 1.0.0
      * @param array $row Row data
      * @return void Outputs HTML directly
      */
-    private function render_actions($row) {
+    private function render_action_buttons($row) {
         ?>
-        <td class="saw-table-actions" onclick="event.stopPropagation();">
+        <td class="saw-actions-cell">
             <div class="saw-action-buttons">
                 <?php
-                foreach ($this->config['actions'] as $action) {
-                    if ($action === 'edit' && !empty($this->config['edit_url'])) {
-                        $can_edit = function_exists('saw_can') ? saw_can('edit', $this->entity) : true;
-                        if ($can_edit) {
-                            $edit_url = str_replace('{id}', $row['id'] ?? '', $this->config['edit_url']);
+                $can_edit = function_exists('saw_can') ? saw_can('edit', $this->entity) : true;
+                $can_delete = function_exists('saw_can') ? saw_can('delete', $this->entity) : true;
+                
+                if (is_array($this->config['actions'])) {
+                    foreach ($this->config['actions'] as $action) {
+                        if ($action === 'edit' && $can_edit && !empty($this->config['edit_url'])) {
+                            $edit_url = str_replace('{id}', intval($row['id'] ?? 0), $this->config['edit_url']);
                             ?>
                             <a href="<?php echo esc_url($edit_url); ?>" 
                                class="saw-action-btn saw-action-edit" 
@@ -480,11 +564,8 @@ class SAW_Component_Admin_Table {
                             </a>
                             <?php
                         }
-                    }
-                    
-                    if ($action === 'delete') {
-                        $can_delete = function_exists('saw_can') ? saw_can('delete', $this->entity) : true;
-                        if ($can_delete) {
+                        
+                        if ($action === 'delete' && $can_delete) {
                             ?>
                             <button type="button" 
                                     class="saw-action-btn saw-action-delete" 

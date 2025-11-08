@@ -5,7 +5,7 @@
  * @package     SAW_Visitors
  * @subpackage  Modules/Customers/Templates
  * @since       1.0.0
- * @version     9.1.0 - ADDED account_types passthrough
+ * @version     11.0.0 - REFACTORED: Removed primary_color, fixed bold styling
  */
 
 if (!defined('ABSPATH')) {
@@ -74,6 +74,9 @@ $table = new SAW_Component_Admin_Table('customers', array(
     'edit_url' => home_url('/admin/settings/customers/{id}/edit'),
     'detail_url' => home_url('/admin/settings/customers/{id}/'),
     
+    // CRITICAL: Pass module config for auto-generation
+    'module_config' => $this->config,
+    
     // CRITICAL: Sidebar support with account_types
     'sidebar_mode' => $sidebar_mode ?? null,
     'detail_item' => $detail_item ?? null,
@@ -81,23 +84,23 @@ $table = new SAW_Component_Admin_Table('customers', array(
     'detail_tab' => $detail_tab ?? 'overview',
     'account_types' => $account_types ?? array(),
     
+    // Override auto-generated columns with custom display
     'columns' => array(
         'logo_url' => array(
             'label' => __('Logo', 'saw-visitors'),
             'type' => 'image',
             'width' => '60px',
             'align' => 'center',
-            'placeholder' => 'building'
         ),
         'name' => array(
             'label' => __('Název', 'saw-visitors'),
             'type' => 'text',
             'sortable' => true,
-            'bold' => true
+            'class' => 'saw-table-cell-bold',
         ),
         'ico' => array(
             'label' => __('IČO', 'saw-visitors'),
-            'type' => 'text'
+            'type' => 'text',
         ),
         'status' => array(
             'label' => __('Status', 'saw-visitors'),
@@ -141,33 +144,26 @@ $table = new SAW_Component_Admin_Table('customers', array(
                 );
             }
         ),
-        'primary_color' => array(
-            'label' => __('Barva', 'saw-visitors'),
-            'type' => 'color',
-            'width' => '80px',
-            'align' => 'center'
-        ),
         'created_at' => array(
             'label' => __('Vytvořeno', 'saw-visitors'),
             'type' => 'date',
-            'sortable' => true
+            'sortable' => true,
         ),
     ),
     
     'rows' => $items,
-    'total' => $total,
+    'total_items' => $total,
     'current_page' => $page,
     'total_pages' => $total_pages,
     'orderby' => $orderby,
     'order' => $order,
     
-    'search_html' => $search_html,
-    'filters_html' => $filters_html,
+    'search' => $search_html,
+    'filters' => $filters_html,
     
     'enable_modal' => empty($sidebar_mode),
     'modal_id' => 'customer-detail',
-    'ajax_action' => 'saw_get_customers_detail',
-    'ajax_nonce' => $ajax_nonce,
+    'modal_ajax_action' => 'saw_get_customers_detail',
 ));
 
 $table->render();

@@ -6,7 +6,7 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Components/AdminTable
- * @version     2.1.0 - Added close button handler
+ * @version     3.0.0 - REFACTORED: Universal close logic + cancel button
  * @since       4.0.0
  */
 
@@ -168,34 +168,67 @@
     }
     
     /**
+     * Handle cancel button in forms
+     *
+     * @return {void}
+     */
+    function initCancelButton() {
+        $(document).on('click', '.saw-form-cancel-btn', function(e) {
+            e.preventDefault();
+            handleSidebarClose();
+        });
+    }
+    
+    /**
      * Handle sidebar close logic
-     * If in edit mode, go to detail
-     * Otherwise go to list
+     * UNIVERSAL LOGIC:
+     * - If in EDIT mode -> go to DETAIL
+     * - If in DETAIL mode -> go to LIST
+     * - If in CREATE mode -> go to LIST
      *
      * @return {void}
      */
     function handleSidebarClose() {
-    const currentUrl = window.location.pathname;
-    const pathParts = currentUrl.split('/').filter(function(p) { return p; });
-    
-    // Pokud URL končí na /edit - jdi na detail
-    if (pathParts[pathParts.length - 1] === 'edit') {
-        pathParts.pop(); // odstranit 'edit'
-        window.location.href = '/' + pathParts.join('/') + '/';
-    } 
-    // Pokud URL obsahuje číselné ID (detail view) - jdi na list
-    else if (pathParts.length > 0 && !isNaN(pathParts[pathParts.length - 1])) {
-        pathParts.pop(); // odstranit ID
-        window.location.href = '/' + pathParts.join('/') + '/';
-    }
-    // Jinak použij href z tlačítka
-    else {
+        const $sidebar = $('.saw-sidebar');
+        
+        if (!$sidebar.length) {
+            return;
+        }
+        
+        const mode = $sidebar.attr('data-mode');
+        const entity = $sidebar.attr('data-entity');
+        const currentId = $sidebar.data('current-id');
+        
+        const currentUrl = window.location.pathname;
+        const pathParts = currentUrl.split('/').filter(function(p) { return p; });
+        
+        // EDIT MODE -> Go to DETAIL
+        if (pathParts[pathParts.length - 1] === 'edit' && currentId) {
+            pathParts.pop(); // Remove 'edit'
+            window.location.href = '/' + pathParts.join('/') + '/';
+            return;
+        }
+        
+        // CREATE MODE -> Go to LIST
+        if (pathParts[pathParts.length - 1] === 'create') {
+            pathParts.pop(); // Remove 'create'
+            window.location.href = '/' + pathParts.join('/') + '/';
+            return;
+        }
+        
+        // DETAIL MODE -> Go to LIST
+        if (currentId && !isNaN(pathParts[pathParts.length - 1])) {
+            pathParts.pop(); // Remove ID
+            window.location.href = '/' + pathParts.join('/') + '/';
+            return;
+        }
+        
+        // FALLBACK: Use close button href
         const closeUrl = $('.saw-sidebar-close').attr('href');
-        if (closeUrl) {
+        if (closeUrl && closeUrl !== '#') {
             window.location.href = closeUrl;
         }
     }
-}
     
     /**
      * Initialize sidebar on DOM ready
@@ -232,6 +265,7 @@
         initKeyboardNavigation();
         initNavigationButtons();
         initCloseButton();
+        initCancelButton();
     });
     
 })(jQuery);

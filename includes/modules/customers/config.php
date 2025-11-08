@@ -9,7 +9,7 @@
  * - Entity: Basic module identification (name, table, labels, route)
  * - Capabilities: WordPress capability checks for each action
  * - Fields: Complete field definitions with types, labels, validation
- * - List Config: Table columns, search, sorting, filtering, pagination
+ * - List Config: Filters and pagination (columns auto-generated from fields)
  * - Cache: Caching strategy and TTL settings
  *
  * Field Types Supported:
@@ -20,7 +20,7 @@
  * - file: File upload (logo)
  *
  * @package SAW_Visitors
- * @version 10.0.0 - REMOVED primary_color field
+ * @version 11.0.0 - REFACTORED: Removed redundant list_config (auto-generated)
  * @since   4.6.1
  */
 
@@ -103,7 +103,7 @@ return array(
             'required' => false,
             'default' => 'free',
             'sanitize' => 'sanitize_text_field',
-            'deprecated' => true, // Replaced by account_type_id
+            'deprecated' => true,
         ),
         
         // Contact Information
@@ -194,19 +194,28 @@ return array(
             'required' => false,
             'sanitize' => 'sanitize_textarea_field',
         ),
+        
+        // Timestamps (hidden from forms)
+        'created_at' => array(
+            'type' => 'date',
+            'label' => 'Vytvořeno',
+            'required' => false,
+            'hidden' => false,
+        ),
     ),
     
     // ============================================
     // LIST CONFIGURATION
-    // Table display settings for list view
+    // Columns are automatically generated from fields
+    // Only module-specific filters and settings here
     // ============================================
     'list_config' => array(
-        'columns' => array('logo_url', 'name', 'ico', 'status', 'subscription_type', 'created_at'),
-        'searchable' => array('name', 'ico', 'contact_email'),
-        'sortable' => array('name', 'ico', 'created_at'),
+        // Columns automatically generated from 'fields'
+        // To override, uncomment and specify:
+        // 'columns' => array('logo_url', 'name', 'ico', 'status', 'created_at'),
+        
         'filters' => array(
             'status' => true,
-            'account_type' => false,
         ),
         'per_page' => 20,
         'enable_detail_modal' => true,
@@ -218,7 +227,7 @@ return array(
     // ============================================
     'cache' => array(
         'enabled' => true,
-        'ttl' => 300, // 5 minutes
+        'ttl' => 300,
         'invalidate_on' => array('save', 'delete'),
     ),
 );

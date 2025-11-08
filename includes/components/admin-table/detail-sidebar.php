@@ -6,7 +6,7 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Components/AdminTable
- * @version     2.1.0 - ADDED FLOATING ACTION BUTTONS
+ * @version     3.0.0 - REFACTORED: Close URL handled by JavaScript
  * @since       4.0.0
  */
 
@@ -17,12 +17,8 @@ if (!defined('ABSPATH')) {
 $module_slug = str_replace('_', '-', $entity);
 $detail_template = SAW_VISITORS_PLUGIN_DIR . "includes/modules/{$module_slug}/detail-modal-template.php";
 
-if (!empty($config['detail_url'])) {
-    $close_url = preg_replace('/\{id\}.*$/', '', $config['detail_url']);
-} else {
-    $route = str_replace('admin/', '', $config['route'] ?? '');
-    $close_url = home_url('/admin/' . $route . '/');
-}
+// Close URL is now handled by JavaScript
+$close_url = '#';
 
 $edit_url = str_replace('{id}', intval($item['id']), $config['edit_url'] ?? '');
 $delete_url = home_url('/admin/' . str_replace('admin/', '', $config['route'] ?? '') . '/delete/' . intval($item['id']));
