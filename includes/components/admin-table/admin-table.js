@@ -6,7 +6,7 @@
  *
  * @package    SAW_Visitors
  * @subpackage Components
- * @version    3.3.0 - FIXED EVENT BUBBLING CONFLICT WITH SPA
+ * @version    3.4.0 - FIXED URL HISTORY
  * @since      1.0.0
  */
 
@@ -82,6 +82,15 @@
                     $wrapper.addClass('active');
                 }, 10);
                 
+                // CRITICAL FIX: Update URL via History API
+                const newUrl = buildUrl(entity, id, mode);
+                console.log('🔗 Updating URL to:', newUrl);
+                window.history.pushState(
+                    { id: id, mode: mode, entity: entity },
+                    '',
+                    newUrl
+                );
+                
                 updateActiveRow(id);
                 console.log('✅ Sidebar opened successfully');
             },
@@ -120,6 +129,12 @@
         }, 300);
         
         $('.saw-admin-table tbody tr').removeClass('saw-row-active');
+        
+        // CRITICAL FIX: Update URL back to list view
+        if (listUrl) {
+            console.log('🔗 Updating URL to:', listUrl);
+            window.history.pushState({}, '', listUrl);
+        }
     };
     
     /**
@@ -289,6 +304,29 @@
             
             const listUrl = $(this).attr('href');
             closeSidebar(listUrl);
+        });
+        
+        // CRITICAL FIX: Browser back/forward button support
+        window.addEventListener('popstate', function(e) {
+            console.log('🔙 Browser back/forward detected', e.state);
+            
+            if (e.state && e.state.id && e.state.entity) {
+                // Reopen sidebar via AJAX
+                console.log('📊 Reopening sidebar from history');
+                openSidebarAjax(e.state.id, e.state.mode, e.state.entity);
+            } else {
+                // Close sidebar (we're back at list view)
+                console.log('🚪 Closing sidebar from history');
+                const $wrapper = $('.saw-sidebar-wrapper');
+                if ($wrapper.length && $wrapper.hasClass('active')) {
+                    $wrapper.removeClass('active');
+                    $('.saw-admin-table-split').removeClass('has-sidebar');
+                    setTimeout(function() {
+                        $wrapper.html('');
+                    }, 300);
+                    $('.saw-admin-table tbody tr').removeClass('saw-row-active');
+                }
+            }
         });
         
         console.log('✅ Admin Table initialized');

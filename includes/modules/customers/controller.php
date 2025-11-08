@@ -17,7 +17,7 @@
  * - File upload handling (logo)
  *
  * @package SAW_Visitors
- * @version 9.1.0 - FIXED AJAX SIDEBAR (NO WRAPPER)
+ * @version 9.1.4 - FINAL FIX: SQL output in both index() and AJAX
  * @since   4.6.1
  */
 
@@ -91,12 +91,18 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
      * Shows paginated, searchable, filterable list of customers.
      * Supports sidebar for detail view, create form, and edit form.
      *
+     * CRITICAL FIX v9.1.4: Start output buffering BEFORE load_account_types()
+     *
      * @since 8.0.0
      * @return void
      */
     public function index() {
         $this->verify_module_access();
         $this->enqueue_assets();
+        
+        // CRITICAL FIX: Start output buffering at the very beginning
+        // to catch any SQL output from load_account_types()
+        ob_start();
         
         $sidebar_context = $this->get_sidebar_context();
         $sidebar_mode = $sidebar_context['mode'] ?? null;
@@ -108,6 +114,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         
         if ($sidebar_mode === 'detail') {
             if (!$this->can('view')) {
+                ob_end_clean(); // Clear buffer before redirect
                 $this->set_flash('Nemáte oprávnění zobrazit detail', 'error');
                 wp_redirect(home_url('/admin/settings/customers/'));
                 exit;
@@ -116,6 +123,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             $detail_item = $this->model->get_by_id($sidebar_context['id']);
             
             if (!$detail_item) {
+                ob_end_clean(); // Clear buffer before redirect
                 $this->set_flash('Zákazník nenalezen', 'error');
                 wp_redirect(home_url('/admin/settings/customers/'));
                 exit;
@@ -126,12 +134,14 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         
         elseif ($sidebar_mode === 'create') {
             if (!$this->can('create')) {
+                ob_end_clean(); // Clear buffer before redirect
                 $this->set_flash('Nemáte oprávnění vytvářet zákazníky', 'error');
                 wp_redirect(home_url('/admin/settings/customers/'));
                 exit;
             }
             
             if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                ob_end_clean(); // Clear buffer before POST handling
                 $this->handle_create_post();
                 return;
             }
@@ -141,6 +151,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         
         elseif ($sidebar_mode === 'edit') {
             if (!$this->can('edit')) {
+                ob_end_clean(); // Clear buffer before redirect
                 $this->set_flash('Nemáte oprávnění upravovat zákazníky', 'error');
                 wp_redirect(home_url('/admin/settings/customers/'));
                 exit;
@@ -149,17 +160,20 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             $form_item = $this->model->get_by_id($sidebar_context['id']);
             
             if (!$form_item) {
+                ob_end_clean(); // Clear buffer before redirect
                 $this->set_flash('Zákazník nenalezen', 'error');
                 wp_redirect(home_url('/admin/settings/customers/'));
                 exit;
             }
             
             if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                ob_end_clean(); // Clear buffer before POST handling
                 $this->handle_edit_post($sidebar_context['id']);
                 return;
             }
         }
         
+        // Load account types AFTER ob_start() - any SQL output will be caught
         if ($sidebar_mode === 'create' || $sidebar_mode === 'edit') {
             $account_types = $this->load_account_types();
         }
@@ -187,6 +201,10 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         $total = $data['total'];
         $total_pages = ceil($total / 20);
         
+        // Clear any captured SQL output before starting real output
+        $captured_junk = ob_get_clean();
+        
+        // Start fresh output buffer for actual content
         ob_start();
         
         if (class_exists('SAW_Module_Style_Manager')) {
@@ -260,7 +278,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
      * Handle edit POST request
      *
      * @since 8.0.0
-     * @param int $id Customer ID
+     * @param int $id Record ID
      * @return void (redirects)
      */
     protected function handle_edit_post($id) {
@@ -270,7 +288,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         
         $data = $this->prepare_form_data($_POST);
         
-        $data = $this->before_save($data, $id);
+        $data = $this->before_save($data);
         if (is_wp_error($data)) {
             $this->set_flash($data->get_error_message(), 'error');
             wp_redirect(home_url('/admin/settings/customers/' . $id . '/edit'));
@@ -303,6 +321,8 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
     /**
      * Prepare form data from POST
      *
+     * CRITICAL FIX v9.1.3: Changed 'color' to 'primary_color' to match DB schema
+     *
      * @since 8.0.0
      * @param array $post POST data
      * @return array Prepared data
@@ -313,14 +333,14 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             'ico' => sanitize_text_field($post['ico'] ?? ''),
             'status' => sanitize_text_field($post['status'] ?? 'potential'),
             'account_type_id' => !empty($post['account_type_id']) ? intval($post['account_type_id']) : null,
-            'color' => sanitize_hex_color($post['color'] ?? ''),
+            'primary_color' => sanitize_hex_color($post['color'] ?? ''),
         );
         
         if (isset($_FILES['logo']) && $_FILES['logo']['error'] !== UPLOAD_ERR_NO_FILE) {
             $upload_result = $this->file_uploader->upload($_FILES['logo'], 'customers');
             
             if (!is_wp_error($upload_result)) {
-                $data['logo'] = $upload_result['url'];
+                $data['logo_url'] = $upload_result['url'];
             }
         }
         
@@ -330,17 +350,22 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
     /**
      * Load account types from database
      *
+     * CRITICAL FIX v9.1.4: Use @ suppression to prevent any SQL output
+     *
      * @since 8.0.0
      * @return array Account types
      */
     protected function load_account_types() {
         global $wpdb;
         
-        $results = $wpdb->get_results(
-            $wpdb->prepare(
-                "SELECT id, name FROM %i WHERE deleted_at IS NULL ORDER BY name ASC",
-                $wpdb->prefix . 'saw_account_types'
-            ),
+        $table_name = $wpdb->prefix . 'saw_account_types';
+        
+        // Suppress any potential output using @ operator
+        $results = @$wpdb->get_results(
+            "SELECT id, name 
+             FROM {$table_name}
+             WHERE deleted_at IS NULL 
+             ORDER BY name ASC",
             ARRAY_A
         );
         
@@ -403,8 +428,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
      * Loads customer data and renders sidebar template (detail or edit).
      * Validates nonce, permissions, and item existence.
      *
-     * CRITICAL FIX v9.1.0: Returns ONLY sidebar content WITHOUT wrapper.
-     * The wrapper is created by admin-table.js on the frontend.
+     * CRITICAL FIX v9.1.4: Output buffering starts BEFORE load_account_types()
      *
      * @since 9.0.0
      * @return void (outputs JSON)
@@ -445,6 +469,9 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         
         error_log('Item loaded: ' . print_r($item, true));
         
+        // CRITICAL FIX: Start output buffering BEFORE load_account_types()
+        ob_start();
+        
         $account_types = array();
         
         if ($mode === 'edit') {
@@ -452,9 +479,13 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             error_log('Account types loaded: ' . count($account_types));
         }
         
-        $item = $this->format_detail_data($item);
+        // Clear any captured SQL output
+        $captured_junk = ob_get_clean();
         
+        // Start fresh buffer for actual content
         ob_start();
+        
+        $item = $this->format_detail_data($item);
         
         if ($mode === 'detail') {
             $tab = 'overview';
@@ -483,12 +514,6 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         error_log('Sidebar content length: ' . strlen($sidebar_content));
         error_log('First 200 chars: ' . substr($sidebar_content, 0, 200));
         error_log('=== AJAX LOAD SIDEBAR END ===');
-        
-        // CRITICAL FIX v9.1.0:
-        // Do NOT wrap in .saw-sidebar-wrapper div!
-        // Frontend admin-table.js already creates the wrapper
-        // and adds the 'active' class for animation.
-        // Wrapping here causes double nesting and visibility issues.
         
         wp_send_json_success(array(
             'html' => $sidebar_content,
@@ -583,6 +608,9 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
     
     /**
      * Before save hook
+     *
+     * CRITICAL: Signatura musí zůstat (array $data) bez druhého parametru
+     * pro kompatibilitu s existing code.
      *
      * @since 8.0.0
      * @param array $data Data to save
