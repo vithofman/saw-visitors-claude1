@@ -74,6 +74,9 @@
                 console.log('📝 Inserting HTML into wrapper');
                 $wrapper.html(response.data.html);
                 
+                // CRITICAL FIX: Add has-sidebar class to table for proper spacing
+                $('.saw-admin-table-split').addClass('has-sidebar');
+                
                 setTimeout(function() {
                     console.log('✨ Adding active class');
                     $wrapper.addClass('active');
@@ -107,6 +110,9 @@
         }
         
         $wrapper.removeClass('active');
+        
+        // CRITICAL FIX: Remove padding from table when sidebar closes
+        $('.saw-admin-table-split').removeClass('has-sidebar');
         
         setTimeout(function() {
             $wrapper.html('');

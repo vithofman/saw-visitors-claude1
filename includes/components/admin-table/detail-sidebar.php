@@ -2,11 +2,11 @@
 /**
  * Detail Sidebar Template
  *
- * Renders detail view in sidebar with navigation controls.
+ * Renders detail view in sidebar with navigation controls and floating action buttons.
  *
  * @package     SAW_Visitors
  * @subpackage  Components/AdminTable
- * @version     2.0.0
+ * @version     2.1.0 - ADDED FLOATING ACTION BUTTONS
  * @since       4.0.0
  */
 
@@ -26,6 +26,10 @@ if (!empty($config['detail_url'])) {
 
 $edit_url = str_replace('{id}', intval($item['id']), $config['edit_url'] ?? '');
 $delete_url = home_url('/admin/' . str_replace('admin/', '', $config['route'] ?? '') . '/delete/' . intval($item['id']));
+
+// Check permissions
+$can_edit = function_exists('saw_can') ? saw_can('edit', $entity) : true;
+$can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
 ?>
 
 <div class="saw-sidebar saw-sidebar-detail" data-mode="detail" data-entity="<?php echo esc_attr($entity); ?>" data-current-id="<?php echo esc_attr($item['id']); ?>">
@@ -40,6 +44,7 @@ $delete_url = home_url('/admin/' . str_replace('admin/', '', $config['route'] ??
         </div>
         <a href="<?php echo esc_url($close_url); ?>" class="saw-sidebar-close" title="Zavřít">×</a>
     </div>
+    
     <div class="saw-sidebar-content">
         <?php 
         if (file_exists($detail_template)) {
@@ -49,4 +54,27 @@ $delete_url = home_url('/admin/' . str_replace('admin/', '', $config['route'] ??
         }
         ?>
     </div>
+    
+    <?php if ($can_edit || $can_delete): ?>
+    <div class="saw-sidebar-floating-actions">
+        <?php if ($can_edit && !empty($edit_url)): ?>
+        <a href="<?php echo esc_url($edit_url); ?>" 
+           class="saw-floating-action-btn edit" 
+           title="Upravit">
+            <span class="dashicons dashicons-edit"></span>
+        </a>
+        <?php endif; ?>
+        
+        <?php if ($can_delete && !empty($delete_url)): ?>
+        <button type="button" 
+                class="saw-floating-action-btn delete saw-delete-btn" 
+                data-id="<?php echo intval($item['id']); ?>"
+                data-entity="<?php echo esc_attr($entity); ?>"
+                data-name="<?php echo esc_attr($item['name'] ?? '#' . $item['id']); ?>"
+                title="Smazat">
+            <span class="dashicons dashicons-trash"></span>
+        </button>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
 </div>

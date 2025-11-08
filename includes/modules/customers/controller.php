@@ -9,7 +9,7 @@
  * - List view with search, filtering, sorting, pagination
  * - Create/Edit forms in sidebar
  * - Detail view in sidebar
- * - AJAX sidebar loading (NEW)
+ * - AJAX sidebar loading (FIXED v9.1.0)
  * - AJAX detail modal (backward compatible)
  * - AJAX search and delete
  * - Dependency validation (branches, users, visits, invitations)
@@ -17,7 +17,7 @@
  * - File upload handling (logo)
  *
  * @package SAW_Visitors
- * @version 9.0.0 - AJAX SIDEBAR LOADING
+ * @version 9.1.0 - FIXED AJAX SIDEBAR (NO WRAPPER)
  * @since   4.6.1
  */
 
@@ -269,9 +269,8 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         }
         
         $data = $this->prepare_form_data($_POST);
-        $data['id'] = $id;
         
-        $data = $this->before_save($data);
+        $data = $this->before_save($data, $id);
         if (is_wp_error($data)) {
             $this->set_flash($data->get_error_message(), 'error');
             wp_redirect(home_url('/admin/settings/customers/' . $id . '/edit'));
@@ -296,7 +295,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         
         $this->after_save($id);
         
-        $this->set_flash('Zákazník byl úspěšně aktualizován', 'success');
+        $this->set_flash('Zákazník byl úspěšně upraven', 'success');
         wp_redirect(home_url('/admin/settings/customers/' . $id . '/'));
         exit;
     }
@@ -312,29 +311,26 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         $data = array(
             'name' => sanitize_text_field($post['name'] ?? ''),
             'ico' => sanitize_text_field($post['ico'] ?? ''),
-            'dic' => sanitize_text_field($post['dic'] ?? ''),
-            'status' => sanitize_text_field($post['status'] ?? 'active'),
-            'primary_color' => sanitize_hex_color($post['primary_color'] ?? '#3b82f6'),
-            'address_street' => sanitize_text_field($post['address_street'] ?? ''),
-            'address_city' => sanitize_text_field($post['address_city'] ?? ''),
-            'address_zip' => sanitize_text_field($post['address_zip'] ?? ''),
-            'contact_email' => sanitize_email($post['contact_email'] ?? ''),
-            'contact_phone' => sanitize_text_field($post['contact_phone'] ?? ''),
-            'website' => esc_url_raw($post['website'] ?? ''),
-            'notes' => sanitize_textarea_field($post['notes'] ?? ''),
+            'status' => sanitize_text_field($post['status'] ?? 'potential'),
+            'account_type_id' => !empty($post['account_type_id']) ? intval($post['account_type_id']) : null,
+            'color' => sanitize_hex_color($post['color'] ?? ''),
         );
         
-        if (isset($post['account_type_id']) && !empty($post['account_type_id'])) {
-            $data['account_type_id'] = intval($post['account_type_id']);
+        if (isset($_FILES['logo']) && $_FILES['logo']['error'] !== UPLOAD_ERR_NO_FILE) {
+            $upload_result = $this->file_uploader->upload($_FILES['logo'], 'customers');
+            
+            if (!is_wp_error($upload_result)) {
+                $data['logo'] = $upload_result['url'];
+            }
         }
         
         return $data;
     }
     
     /**
-     * Load account types for dropdown
+     * Load account types from database
      *
-     * @since 9.0.0
+     * @since 8.0.0
      * @return array Account types
      */
     protected function load_account_types() {
@@ -342,7 +338,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         
         $results = $wpdb->get_results(
             $wpdb->prepare(
-                "SELECT id, display_name, price FROM %i WHERE is_active = 1 ORDER BY sort_order ASC, display_name ASC",
+                "SELECT id, name FROM %i WHERE deleted_at IS NULL ORDER BY name ASC",
                 $wpdb->prefix . 'saw_account_types'
             ),
             ARRAY_A
@@ -406,6 +402,9 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
      *
      * Loads customer data and renders sidebar template (detail or edit).
      * Validates nonce, permissions, and item existence.
+     *
+     * CRITICAL FIX v9.1.0: Returns ONLY sidebar content WITHOUT wrapper.
+     * The wrapper is created by admin-table.js on the frontend.
      *
      * @since 9.0.0
      * @return void (outputs JSON)
@@ -483,15 +482,16 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         
         error_log('Sidebar content length: ' . strlen($sidebar_content));
         error_log('First 200 chars: ' . substr($sidebar_content, 0, 200));
-        
-        // Wrap in sidebar wrapper for proper CSS styling
-        $html = '<div class="saw-sidebar-wrapper active">' . $sidebar_content . '</div>';
-        
-        error_log('Final HTML length: ' . strlen($html));
         error_log('=== AJAX LOAD SIDEBAR END ===');
         
+        // CRITICAL FIX v9.1.0:
+        // Do NOT wrap in .saw-sidebar-wrapper div!
+        // Frontend admin-table.js already creates the wrapper
+        // and adds the 'active' class for animation.
+        // Wrapping here causes double nesting and visibility issues.
+        
         wp_send_json_success(array(
-            'html' => $html,
+            'html' => $sidebar_content,
             'mode' => $mode,
             'id' => $id
         ));

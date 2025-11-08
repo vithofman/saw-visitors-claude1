@@ -142,7 +142,7 @@ class SAW_Component_Admin_Table {
         </div>
         
         <?php if ($has_sidebar): ?>
-        <div class="saw-sidebar-wrapper">
+        <div class="saw-sidebar-wrapper active">
             <?php $this->render_sidebar(); ?>
         </div>
         <?php endif; ?>
