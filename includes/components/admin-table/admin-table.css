@@ -16,6 +16,10 @@
    @since 1.0.0
    ============================================ */
 .saw-page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
     margin-bottom: 20px;
     padding-bottom: 0;
     border-bottom: none;
@@ -276,18 +280,10 @@
     color: #111827;
 }
 
-.saw-page-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between; /* Změní z flex-start */
-    gap: 20px;
-    margin-bottom: 20px;
-}
-
 .saw-page-header-controls {
     display: flex;
     align-items: center;
     gap: 12px;
     flex-shrink: 0;
-    margin-left: auto; /* Přidej */
+    margin-left: auto;
 }

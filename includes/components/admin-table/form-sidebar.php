@@ -6,7 +6,7 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Components/AdminTable
- * @version     3.0.0 - REFACTORED: Close URL handled by JavaScript
+ * @version     3.1.0 - FIXED: Vertical alignment of close button with span wrapper
  * @since       4.0.0
  */
 
@@ -27,7 +27,7 @@ $close_url = '#';
             <span><?php echo esc_html($config['icon'] ?? '📝'); ?></span>
             <h2><?php echo $is_edit ? 'Upravit ' : 'Nový '; echo esc_html($config['singular'] ?? 'záznam'); ?></h2>
         </div>
-        <a href="<?php echo esc_url($close_url); ?>" class="saw-sidebar-close" title="Zavřít">×</a>
+        <a href="<?php echo esc_url($close_url); ?>" class="saw-sidebar-close" title="Zavřít">&times;</a>
     </div>
     <div class="saw-sidebar-content">
         <?php 

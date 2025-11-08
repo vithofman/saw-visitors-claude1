@@ -6,7 +6,7 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Components/AdminTable
- * @version     3.0.0 - REFACTORED: Close URL handled by JavaScript
+ * @version     3.1.0 - FIXED: Vertical alignment of nav buttons with span wrapper
  * @since       4.0.0
  */
 
@@ -35,10 +35,10 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
             <h2 class="saw-sidebar-heading"><?php echo esc_html($config['singular'] ?? 'Detail'); ?> #<?php echo intval($item['id']); ?></h2>
         </div>
         <div class="saw-sidebar-nav-controls">
-            <button type="button" class="saw-sidebar-nav-btn saw-sidebar-prev" title="Předchozí">‹</button>
-            <button type="button" class="saw-sidebar-nav-btn saw-sidebar-next" title="Další">›</button>
+            <button type="button" class="saw-sidebar-nav-btn saw-sidebar-prev" title="Předchozí">&lt;</button>
+            <button type="button" class="saw-sidebar-nav-btn saw-sidebar-next" title="Další">&gt;</button>
         </div>
-        <a href="<?php echo esc_url($close_url); ?>" class="saw-sidebar-close" title="Zavřít">×</a>
+        <a href="<?php echo esc_url($close_url); ?>" class="saw-sidebar-close" title="Zavřít">&times;</a>
     </div>
     
     <div class="saw-sidebar-content">
