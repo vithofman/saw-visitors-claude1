@@ -8,7 +8,7 @@
  * @package     SAW_Visitors
  * @subpackage  Modules/Customers/Templates
  * @since       1.0.0
- * @version     4.1.0 - ADDED action attribute
+ * @version     10.4.0 - Fixed back/cancel URLs to redirect to detail
  */
 
 if (!defined('ABSPATH')) {
@@ -18,6 +18,11 @@ if (!defined('ABSPATH')) {
 $is_edit = !empty($item);
 $item = $item ?? array();
 $in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'];
+
+// Ensure account_types exists
+if (!isset($account_types)) {
+    $account_types = array();
+}
 ?>
 
 <?php if (!$in_sidebar): ?>
@@ -26,7 +31,12 @@ $in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'
         <h1 class="saw-page-title">
             <?php echo $is_edit ? esc_html__('Upravit zákazníka', 'saw-visitors') : esc_html__('Nový zákazník', 'saw-visitors'); ?>
         </h1>
-        <a href="<?php echo esc_url(home_url('/admin/settings/customers/')); ?>" class="saw-back-button">
+        <?php
+        $back_url = $is_edit 
+            ? home_url('/admin/settings/customers/' . ($item['id'] ?? '') . '/') 
+            : home_url('/admin/settings/customers/');
+        ?>
+        <a href="<?php echo esc_url($back_url); ?>" class="saw-back-button">
             <span class="dashicons dashicons-arrow-left-alt2"></span>
             <?php echo esc_html__('Zpět na seznam', 'saw-visitors'); ?>
         </a>
@@ -67,29 +77,24 @@ $in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'
                 </div>
                 
                 <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-6">
+                    <div class="saw-form-group saw-col-12">
                         <label for="account_type_id" class="saw-label"><?php echo esc_html__('Typ účtu', 'saw-visitors'); ?></label>
                         <select id="account_type_id" name="account_type_id" class="saw-input">
                             <option value=""><?php echo esc_html__('-- Vyberte typ účtu --', 'saw-visitors'); ?></option>
-                            <?php if (!empty($account_types)): ?>
+                            <?php if (!empty($account_types) && is_array($account_types)): ?>
                                 <?php foreach ($account_types as $type): ?>
                                     <option value="<?php echo esc_attr($type['id']); ?>" 
                                             <?php selected($item['account_type_id'] ?? '', $type['id']); ?>>
-                                        <?php echo esc_html($type['display_name']); ?>
+                                        <?php echo esc_html($type['display_name'] ?? $type['name']); ?>
                                         <?php if (!empty($type['price'])): ?>
                                             (<?php echo esc_html(number_format($type['price'], 0, ',', ' ')); ?> Kč/měs)
                                         <?php endif; ?>
                                     </option>
                                 <?php endforeach; ?>
+                            <?php else: ?>
+                                <option value="" disabled><?php echo esc_html__('Žádné typy účtů k dispozici', 'saw-visitors'); ?></option>
                             <?php endif; ?>
                         </select>
-                    </div>
-                    
-                    <div class="saw-form-group saw-col-6">
-                        <label for="primary_color" class="saw-label"><?php echo esc_html__('Primární barva', 'saw-visitors'); ?></label>
-                        <input type="text" id="primary_color" name="primary_color" class="saw-input saw-color-picker"
-                               value="<?php echo esc_attr($item['primary_color'] ?? '#3b82f6'); ?>"
-                               data-default-color="#3b82f6">
                     </div>
                 </div>
             </div>
@@ -113,6 +118,26 @@ $in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'
                         <label for="dic" class="saw-label"><?php echo esc_html__('DIČ', 'saw-visitors'); ?></label>
                         <input type="text" id="dic" name="dic" class="saw-input"
                                value="<?php echo esc_attr($item['dic'] ?? ''); ?>">
+                    </div>
+                </div>
+                
+                <div class="saw-form-row">
+                    <div class="saw-form-group saw-col-12">
+                        <?php
+                        // File Upload Component - nastavení proměnných
+                        $id = 'logo';
+                        $name = 'logo';
+                        $current_file_url = $item['logo_url'] ?? '';
+                        $label = __('Nahrát logo', 'saw-visitors');
+                        $current_label = __('Současné logo', 'saw-visitors');
+                        $help_text = __('Nahrajte logo ve formátu JPG, PNG, SVG nebo WebP (max 2MB)', 'saw-visitors');
+                        $accept = 'image/jpeg,image/png,image/svg+xml,image/webp';
+                        $show_preview = true;
+                        $config = array();
+                        
+                        // Include komponenty template
+                        require SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/file-upload-input.php';
+                        ?>
                     </div>
                 </div>
             </div>
@@ -149,6 +174,37 @@ $in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'
             </div>
         </details>
         
+        <!-- BILLING ADDRESS -->
+        <details class="saw-form-section">
+            <summary>
+                <span class="dashicons dashicons-money-alt"></span>
+                <strong><?php echo esc_html__('Fakturační adresa', 'saw-visitors'); ?></strong>
+            </summary>
+            <div class="saw-form-section-content">
+                <div class="saw-form-row">
+                    <div class="saw-form-group saw-col-12">
+                        <label for="billing_address_street" class="saw-label"><?php echo esc_html__('Ulice a č.p.', 'saw-visitors'); ?></label>
+                        <input type="text" id="billing_address_street" name="billing_address_street" class="saw-input"
+                               value="<?php echo esc_attr($item['billing_address_street'] ?? ''); ?>">
+                    </div>
+                </div>
+                
+                <div class="saw-form-row">
+                    <div class="saw-form-group saw-col-8">
+                        <label for="billing_address_city" class="saw-label"><?php echo esc_html__('Město', 'saw-visitors'); ?></label>
+                        <input type="text" id="billing_address_city" name="billing_address_city" class="saw-input"
+                               value="<?php echo esc_attr($item['billing_address_city'] ?? ''); ?>">
+                    </div>
+                    
+                    <div class="saw-form-group saw-col-4">
+                        <label for="billing_address_zip" class="saw-label"><?php echo esc_html__('PSČ', 'saw-visitors'); ?></label>
+                        <input type="text" id="billing_address_zip" name="billing_address_zip" class="saw-input"
+                               value="<?php echo esc_attr($item['billing_address_zip'] ?? ''); ?>">
+                    </div>
+                </div>
+            </div>
+        </details>
+        
         <!-- CONTACT -->
         <details class="saw-form-section">
             <summary>
@@ -156,6 +212,14 @@ $in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'
                 <strong><?php echo esc_html__('Kontaktní údaje', 'saw-visitors'); ?></strong>
             </summary>
             <div class="saw-form-section-content">
+                <div class="saw-form-row">
+                    <div class="saw-form-group saw-col-12">
+                        <label for="contact_person" class="saw-label"><?php echo esc_html__('Kontaktní osoba', 'saw-visitors'); ?></label>
+                        <input type="text" id="contact_person" name="contact_person" class="saw-input"
+                               value="<?php echo esc_attr($item['contact_person'] ?? ''); ?>">
+                    </div>
+                </div>
+                
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-6">
                         <label for="contact_email" class="saw-label"><?php echo esc_html__('E-mail', 'saw-visitors'); ?></label>
@@ -174,7 +238,8 @@ $in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'
                     <div class="saw-form-group saw-col-12">
                         <label for="website" class="saw-label"><?php echo esc_html__('Webové stránky', 'saw-visitors'); ?></label>
                         <input type="url" id="website" name="website" class="saw-input"
-                               value="<?php echo esc_attr($item['website'] ?? ''); ?>">
+                               value="<?php echo esc_attr($item['website'] ?? ''); ?>"
+                               placeholder="https://">
                     </div>
                 </div>
             </div>
@@ -203,7 +268,12 @@ $in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'
                 <?php echo $is_edit ? esc_html__('Uložit změny', 'saw-visitors') : esc_html__('Vytvořit zákazníka', 'saw-visitors'); ?>
             </button>
             
-            <a href="<?php echo esc_url(home_url('/admin/settings/customers/')); ?>" class="saw-button saw-button-secondary">
+            <?php
+            $cancel_url = $is_edit 
+                ? home_url('/admin/settings/customers/' . $item['id'] . '/') 
+                : home_url('/admin/settings/customers/');
+            ?>
+            <a href="<?php echo esc_url($cancel_url); ?>" class="saw-button saw-button-secondary">
                 <span class="dashicons dashicons-dismiss"></span>
                 <?php echo esc_html__('Zrušit', 'saw-visitors'); ?>
             </a>

@@ -17,7 +17,7 @@
  * - File upload handling (logo)
  *
  * @package SAW_Visitors
- * @version 9.1.4 - FINAL FIX: SQL output in both index() and AJAX
+ * @version 10.0.0 - REMOVED color field, FIXED account_types with display_name
  * @since   4.6.1
  */
 
@@ -46,14 +46,6 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
     private $file_uploader;
     
     /**
-     * Color picker instance
-     *
-     * @since 3.1.0
-     * @var SAW_Color_Picker
-     */
-    private $color_picker;
-    
-    /**
      * Constructor
      *
      * Initializes controller, loads config, model, components,
@@ -73,9 +65,6 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/class-saw-file-uploader.php';
         $this->file_uploader = new SAW_File_Uploader();
-        
-        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/color-picker/class-saw-color-picker.php';
-        $this->color_picker = new SAW_Color_Picker();
         
         add_action('wp_ajax_saw_get_customers_detail', array($this, 'ajax_get_detail'));
         add_action('wp_ajax_saw_search_customers', array($this, 'ajax_search'));
@@ -114,7 +103,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         
         if ($sidebar_mode === 'detail') {
             if (!$this->can('view')) {
-                ob_end_clean(); // Clear buffer before redirect
+                ob_end_clean();
                 $this->set_flash('Nemáte oprávnění zobrazit detail', 'error');
                 wp_redirect(home_url('/admin/settings/customers/'));
                 exit;
@@ -123,7 +112,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             $detail_item = $this->model->get_by_id($sidebar_context['id']);
             
             if (!$detail_item) {
-                ob_end_clean(); // Clear buffer before redirect
+                ob_end_clean();
                 $this->set_flash('Zákazník nenalezen', 'error');
                 wp_redirect(home_url('/admin/settings/customers/'));
                 exit;
@@ -134,14 +123,14 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         
         elseif ($sidebar_mode === 'create') {
             if (!$this->can('create')) {
-                ob_end_clean(); // Clear buffer before redirect
+                ob_end_clean();
                 $this->set_flash('Nemáte oprávnění vytvářet zákazníky', 'error');
                 wp_redirect(home_url('/admin/settings/customers/'));
                 exit;
             }
             
             if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-                ob_end_clean(); // Clear buffer before POST handling
+                ob_end_clean();
                 $this->handle_create_post();
                 return;
             }
@@ -151,7 +140,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         
         elseif ($sidebar_mode === 'edit') {
             if (!$this->can('edit')) {
-                ob_end_clean(); // Clear buffer before redirect
+                ob_end_clean();
                 $this->set_flash('Nemáte oprávnění upravovat zákazníky', 'error');
                 wp_redirect(home_url('/admin/settings/customers/'));
                 exit;
@@ -160,14 +149,14 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             $form_item = $this->model->get_by_id($sidebar_context['id']);
             
             if (!$form_item) {
-                ob_end_clean(); // Clear buffer before redirect
+                ob_end_clean();
                 $this->set_flash('Zákazník nenalezen', 'error');
                 wp_redirect(home_url('/admin/settings/customers/'));
                 exit;
             }
             
             if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-                ob_end_clean(); // Clear buffer before POST handling
+                ob_end_clean();
                 $this->handle_edit_post($sidebar_context['id']);
                 return;
             }
@@ -278,7 +267,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
      * Handle edit POST request
      *
      * @since 8.0.0
-     * @param int $id Record ID
+     * @param int $id Customer ID
      * @return void (redirects)
      */
     protected function handle_edit_post($id) {
@@ -321,7 +310,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
     /**
      * Prepare form data from POST
      *
-     * CRITICAL FIX v9.1.3: Changed 'color' to 'primary_color' to match DB schema
+     * REMOVED: primary_color field (no longer in DB schema)
      *
      * @since 8.0.0
      * @param array $post POST data
@@ -333,7 +322,6 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             'ico' => sanitize_text_field($post['ico'] ?? ''),
             'status' => sanitize_text_field($post['status'] ?? 'potential'),
             'account_type_id' => !empty($post['account_type_id']) ? intval($post['account_type_id']) : null,
-            'primary_color' => sanitize_hex_color($post['color'] ?? ''),
         );
         
         if (isset($_FILES['logo']) && $_FILES['logo']['error'] !== UPLOAD_ERR_NO_FILE) {
@@ -350,24 +338,23 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
     /**
      * Load account types from database
      *
-     * CRITICAL FIX v9.1.4: Use @ suppression to prevent any SQL output
+     * FIXED v10.0.0: Added display_name and price to SELECT
      *
      * @since 8.0.0
-     * @return array Account types
+     * @return array Account types with id, name, display_name, price
      */
     protected function load_account_types() {
         global $wpdb;
         
         $table_name = $wpdb->prefix . 'saw_account_types';
         
-        // Suppress any potential output using @ operator
         $results = @$wpdb->get_results(
-            "SELECT id, name 
-             FROM {$table_name}
-             WHERE deleted_at IS NULL 
-             ORDER BY name ASC",
-            ARRAY_A
-        );
+    "SELECT id, name, display_name, price 
+     FROM {$table_name}
+     WHERE is_active = 1 
+     ORDER BY sort_order ASC, name ASC",
+    ARRAY_A
+);
         
         return is_array($results) ? $results : array();
     }
@@ -418,7 +405,6 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
      * @return void
      */
     public function enqueue_assets() {
-        $this->color_picker->enqueue_assets();
         $this->file_uploader->enqueue_assets();
     }
     
@@ -434,40 +420,28 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
      * @return void (outputs JSON)
      */
     public function ajax_load_sidebar() {
-        error_log('=== AJAX LOAD SIDEBAR START ===');
-        
         check_ajax_referer('saw_ajax_nonce', 'nonce');
         
         $id = intval($_POST['id'] ?? 0);
         $mode = sanitize_text_field($_POST['mode'] ?? 'detail');
         
-        error_log('ID: ' . $id);
-        error_log('Mode: ' . $mode);
-        error_log('Entity: ' . $this->entity);
-        
         if (!in_array($mode, array('detail', 'edit'), true)) {
-            error_log('ERROR: Invalid mode');
             wp_send_json_error(array('message' => 'Invalid mode'));
         }
         
         if ($mode === 'detail' && !$this->can('view')) {
-            error_log('ERROR: No view permission');
             wp_send_json_error(array('message' => 'Nemáte oprávnění zobrazit detail'));
         }
         
         if ($mode === 'edit' && !$this->can('edit')) {
-            error_log('ERROR: No edit permission');
             wp_send_json_error(array('message' => 'Nemáte oprávnění upravovat záznamy'));
         }
         
         $item = $this->model->get_by_id($id);
         
         if (!$item) {
-            error_log('ERROR: Item not found');
             wp_send_json_error(array('message' => 'Zákazník nenalezen'));
         }
-        
-        error_log('Item loaded: ' . print_r($item, true));
         
         // CRITICAL FIX: Start output buffering BEFORE load_account_types()
         ob_start();
@@ -476,7 +450,6 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         
         if ($mode === 'edit') {
             $account_types = $this->load_account_types();
-            error_log('Account types loaded: ' . count($account_types));
         }
         
         // Clear any captured SQL output
@@ -493,8 +466,6 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             $entity = $this->entity;
             
             $template_path = SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/detail-sidebar.php';
-            error_log('Template path: ' . $template_path);
-            error_log('Template exists: ' . (file_exists($template_path) ? 'YES' : 'NO'));
             
             require $template_path;
         } else {
@@ -502,18 +473,12 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             $GLOBALS['saw_sidebar_form'] = true;
             
             $form_path = $this->config['path'] . 'form-template.php';
-            error_log('Form path: ' . $form_path);
-            error_log('Form exists: ' . (file_exists($form_path) ? 'YES' : 'NO'));
             
             require $form_path;
             unset($GLOBALS['saw_sidebar_form']);
         }
         
         $sidebar_content = ob_get_clean();
-        
-        error_log('Sidebar content length: ' . strlen($sidebar_content));
-        error_log('First 200 chars: ' . substr($sidebar_content, 0, 200));
-        error_log('=== AJAX LOAD SIDEBAR END ===');
         
         wp_send_json_success(array(
             'html' => $sidebar_content,

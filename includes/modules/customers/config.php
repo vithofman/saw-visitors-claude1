@@ -17,11 +17,10 @@
  * - email: Email input with validation
  * - textarea: Multi-line text input
  * - select: Dropdown selection
- * - color: Color picker
  * - file: File upload (logo)
  *
  * @package SAW_Visitors
- * @version 3.0.0 - PRODUCTION: account_type_id integration
+ * @version 10.0.0 - REMOVED primary_color field
  * @since   4.6.1
  */
 
@@ -82,13 +81,6 @@ return array(
             'type' => 'file',
             'label' => 'Logo',
             'required' => false,
-        ),
-        'primary_color' => array(
-            'type' => 'color',
-            'label' => 'Hlavní barva',
-            'required' => false,
-            'default' => '#1e40af',
-            'sanitize' => 'sanitize_hex_color',
         ),
         
         // Account Status
@@ -209,7 +201,7 @@ return array(
     // Table display settings for list view
     // ============================================
     'list_config' => array(
-        'columns' => array('logo_url', 'name', 'ico', 'status', 'subscription_type', 'primary_color', 'created_at'),
+        'columns' => array('logo_url', 'name', 'ico', 'status', 'subscription_type', 'created_at'),
         'searchable' => array('name', 'ico', 'contact_email'),
         'sortable' => array('name', 'ico', 'created_at'),
         'filters' => array(

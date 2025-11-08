@@ -6,7 +6,7 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Components/AdminTable
- * @version     2.0.0 - AJAX NAVIGATION
+ * @version     2.1.0 - Added close button handler
  * @since       4.0.0
  */
 
@@ -133,13 +133,7 @@
             
             if (e.key === 'Escape') {
                 e.preventDefault();
-                const closeUrl = $('.saw-sidebar-close').attr('href');
-                
-                if (closeUrl && typeof window.closeSidebar === 'function') {
-                    window.closeSidebar(closeUrl);
-                } else if (closeUrl) {
-                    window.location.href = closeUrl;
-                }
+                handleSidebarClose();
             }
         });
     }
@@ -160,6 +154,48 @@
             saw_navigate_sidebar('next');
         });
     }
+    
+    /**
+     * Handle sidebar close button click
+     *
+     * @return {void}
+     */
+    function initCloseButton() {
+        $(document).on('click', '.saw-sidebar-close', function(e) {
+            e.preventDefault();
+            handleSidebarClose();
+        });
+    }
+    
+    /**
+     * Handle sidebar close logic
+     * If in edit mode, go to detail
+     * Otherwise go to list
+     *
+     * @return {void}
+     */
+    function handleSidebarClose() {
+    const currentUrl = window.location.pathname;
+    const pathParts = currentUrl.split('/').filter(function(p) { return p; });
+    
+    // Pokud URL končí na /edit - jdi na detail
+    if (pathParts[pathParts.length - 1] === 'edit') {
+        pathParts.pop(); // odstranit 'edit'
+        window.location.href = '/' + pathParts.join('/') + '/';
+    } 
+    // Pokud URL obsahuje číselné ID (detail view) - jdi na list
+    else if (pathParts.length > 0 && !isNaN(pathParts[pathParts.length - 1])) {
+        pathParts.pop(); // odstranit ID
+        window.location.href = '/' + pathParts.join('/') + '/';
+    }
+    // Jinak použij href z tlačítka
+    else {
+        const closeUrl = $('.saw-sidebar-close').attr('href');
+        if (closeUrl) {
+            window.location.href = closeUrl;
+        }
+    }
+}
     
     /**
      * Initialize sidebar on DOM ready
@@ -195,6 +231,7 @@
         initSidebar();
         initKeyboardNavigation();
         initNavigationButtons();
+        initCloseButton();
     });
     
 })(jQuery);
