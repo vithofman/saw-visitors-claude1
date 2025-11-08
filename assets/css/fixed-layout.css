@@ -1,26 +1,26 @@
 /**
  * Fixed Layout Patch
+ * 
+ * Global layout system for SAW Visitors application.
+ * Ensures proper flexbox layout, sidebar positioning, and responsive behavior.
+ * 
+ * @package     SAW_Visitors
+ * @subpackage  Assets/CSS
+ * @version     2.0.0 - REMOVED DEBUG CSS
+ * @since       1.0.0
  */
 
-
-/**
- * Fixed Layout Patch
- */
-
-/* DEBUG - ukáže barvu podle stavu */
-.saw-admin-table-split {
-    background: yellow !important; /* Bez sidebaru */
-}
-
-.saw-admin-table-split.has-sidebar {
-    background: green !important; /* Se sidebarem */
-}
-
-/* ... zbytek CSS ... */
+/* ============================================
+   WORDPRESS ADMIN BAR REMOVAL
+   ============================================ */
 
 #wpadminbar {
     display: none !important;
 }
+
+/* ============================================
+   BASE LAYOUT - FULL HEIGHT APP
+   ============================================ */
 
 html {
     margin: 0 !important;
@@ -39,6 +39,10 @@ body.saw-app-body {
     flex-direction: column !important;
     padding-top: 0px !important;
 }
+
+/* ============================================
+   APP STRUCTURE
+   ============================================ */
 
 .saw-app-header {
     position: fixed !important;
@@ -75,8 +79,17 @@ body.saw-app-body {
     flex: 1 !important;
     overflow-y: auto !important;
     padding: 0 !important;
-width:100%;
+    width: 100%;
 }
+
+.saw-app-footer {
+    flex-shrink: 0 !important;
+    margin-left: 260px !important;
+}
+
+/* ============================================
+   MODULE CONTAINERS
+   ============================================ */
 
 .saw-module-customers,
 .saw-module-branches,
@@ -89,7 +102,11 @@ width:100%;
     padding: 24px !important;
 }
 
-/* SPLIT LAYOUT - DEFAULT (bez sidebaru) */
+/* ============================================
+   SPLIT LAYOUT - TABLE + SIDEBAR
+   ============================================ */
+
+/* Default state - no sidebar */
 .saw-admin-table-split {
     flex: 1 !important;
     display: flex !important;
@@ -99,12 +116,16 @@ width:100%;
     transition: padding-right 0.3s ease !important;
 }
 
-/* SPLIT LAYOUT - SE SIDEBAREM */
+/* Active state - with sidebar */
 .saw-admin-table-split.has-sidebar {
     padding-right: 700px !important;
 }
 
-/* TABLE PANEL - DEFAULT */
+/* ============================================
+   TABLE PANEL
+   ============================================ */
+
+/* Default state */
 .saw-table-panel {
     flex: 1 !important;
     overflow-y: auto !important;
@@ -113,12 +134,15 @@ width:100%;
     transition: border-right 0.3s ease !important;
 }
 
-/* TABLE PANEL - SE SIDEBAREM */
+/* Active state - with sidebar */
 .saw-admin-table-split.has-sidebar .saw-table-panel {
     border-right: 1px solid #e5e7eb !important;
 }
 
-/* SIDEBAR WRAPPER */
+/* ============================================
+   SIDEBAR WRAPPER (AJAX)
+   ============================================ */
+
 .saw-sidebar-wrapper {
     position: fixed !important;
     top: 0 !important;
@@ -139,10 +163,9 @@ width:100%;
     padding: 20px !important;
 }
 
-.saw-app-footer {
-    flex-shrink: 0 !important;
-    margin-left: 260px !important;
-}
+/* ============================================
+   PAGE COMPONENTS
+   ============================================ */
 
 .saw-page-header {
     flex-shrink: 0 !important;
@@ -155,7 +178,11 @@ width:100%;
     overflow-y: auto !important;
 }
 
-/* RESPONSIVE */
+/* ============================================
+   RESPONSIVE LAYOUT
+   ============================================ */
+
+/* Tablet - 1200px and below */
 @media (max-width: 1200px) {
     .saw-admin-table-split.has-sidebar {
         padding-right: 500px !important;
@@ -166,6 +193,7 @@ width:100%;
     }
 }
 
+/* Mobile - 768px and below */
 @media (max-width: 768px) {
     .saw-admin-table-split.has-sidebar {
         padding-right: 0 !important;

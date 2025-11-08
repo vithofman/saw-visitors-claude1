@@ -6,7 +6,7 @@
  *
  * @package    SAW_Visitors
  * @subpackage Components
- * @version    3.1.0 - FIXED SPA CONFLICT
+ * @version    3.3.0 - FIXED EVENT BUBBLING CONFLICT WITH SPA
  * @since      1.0.0
  */
 
@@ -23,8 +23,11 @@
      */
     window.openSidebarAjax = function(id, mode, entity) {
         if (!id || !mode || !entity) {
+            console.error('openSidebarAjax: Missing required parameters', {id, mode, entity});
             return;
         }
+        
+        console.log('📊 Opening sidebar via AJAX:', {id, mode, entity});
         
         showLoadingOverlay();
         
@@ -39,35 +42,48 @@
                 mode: mode
             },
             success: function(response) {
+                console.log('✅ AJAX Success:', response);
                 hideLoadingOverlay();
                 
                 if (!response.success) {
+                    console.error('❌ AJAX returned success: false');
                     fallbackToFullReload(buildUrl(entity, id, mode));
                     return;
                 }
                 
                 if (!response.data || !response.data.html || response.data.html.length < 100) {
+                    console.error('❌ Invalid HTML response', {
+                        hasData: !!response.data,
+                        hasHtml: !!(response.data && response.data.html),
+                        htmlLength: response.data && response.data.html ? response.data.html.length : 0
+                    });
                     fallbackToFullReload(buildUrl(entity, id, mode));
                     return;
                 }
                 
+                console.log('📦 Received HTML length:', response.data.html.length);
+                
                 let $wrapper = $('.saw-sidebar-wrapper');
                 
                 if (!$wrapper.length) {
+                    console.log('🆕 Creating new sidebar wrapper');
                     $wrapper = $('<div class="saw-sidebar-wrapper"></div>');
                     $('body').append($wrapper);
                 }
                 
+                console.log('📝 Inserting HTML into wrapper');
                 $wrapper.html(response.data.html);
                 
                 setTimeout(function() {
+                    console.log('✨ Adding active class');
                     $wrapper.addClass('active');
                 }, 10);
                 
                 updateActiveRow(id);
-                updateUrl(buildUrl(entity, id, mode), {id: id, mode: mode, entity: entity});
+                console.log('✅ Sidebar opened successfully');
             },
-            error: function() {
+            error: function(xhr, status, error) {
+                console.error('❌ AJAX Error:', {xhr, status, error});
                 hideLoadingOverlay();
                 fallbackToFullReload(buildUrl(entity, id, mode));
             }
@@ -81,9 +97,12 @@
      * @return {void}
      */
     window.closeSidebar = function(listUrl) {
+        console.log('🚪 Closing sidebar');
+        
         const $wrapper = $('.saw-sidebar-wrapper');
         
         if (!$wrapper.length) {
+            console.log('⚠️ No wrapper found');
             return;
         }
         
@@ -91,13 +110,10 @@
         
         setTimeout(function() {
             $wrapper.html('');
+            console.log('✅ Sidebar closed');
         }, 300);
         
         $('.saw-admin-table tbody tr').removeClass('saw-row-active');
-        
-        if (listUrl) {
-            updateUrl(listUrl, {});
-        }
     };
     
     /**
@@ -139,19 +155,6 @@
     }
     
     /**
-     * Update browser URL without reload
-     *
-     * @param {string} url New URL
-     * @param {object} state State object
-     * @return {void}
-     */
-    function updateUrl(url, state) {
-        if (window.history && window.history.pushState) {
-            window.history.pushState(state, '', url);
-        }
-    }
-    
-    /**
      * Build URL from entity, id and mode
      *
      * @param {string} entity Entity name
@@ -177,6 +180,7 @@
      */
     function fallbackToFullReload(url) {
         if (url) {
+            console.log('🔄 Fallback to full reload:', url);
             window.location.href = url;
         }
     }
@@ -218,6 +222,7 @@
      */
     function initAdminTable() {
         $(document).on('click', '.saw-admin-table tbody tr', function(e) {
+            // Ignore clicks on action buttons
             if ($(e.target).closest('.saw-action-buttons, button, a, input, select').length) {
                 return;
             }
@@ -229,10 +234,21 @@
                 return;
             }
             
+            // ========================================
+            // CRITICAL FIX: Stop event propagation
+            // Prevents SPA navigation from intercepting this click
+            // ========================================
+            e.stopPropagation();
+            e.preventDefault();
+            
+            console.log('📊 Admin Table: Row clicked', {id: itemId});
+            
+            // Modal mode (backward compatible)
             if ($row.attr('data-clickable-row')) {
                 const modalId = $row.data('modal');
                 
                 if (modalId && typeof SAWModal !== 'undefined') {
+                    console.log('🔲 Opening modal:', modalId);
                     SAWModal.open(modalId, {
                         id: itemId,
                         nonce: (window.sawGlobal && window.sawGlobal.nonce) || window.sawAjaxNonce
@@ -241,21 +257,26 @@
                 return;
             }
             
+            // Sidebar mode (AJAX)
             const detailUrl = $row.data('detail-url');
             
             if (detailUrl) {
-                e.preventDefault();
+                console.log('📊 Detail URL found:', detailUrl);
                 
                 const parsed = parseUrl(detailUrl);
+                console.log('📊 Parsed URL:', parsed);
                 
                 if (parsed.entity && parsed.id) {
+                    console.log('📊 Calling openSidebarAjax');
                     openSidebarAjax(parsed.id, parsed.mode, parsed.entity);
                 } else {
+                    console.warn('⚠️ Could not parse URL, falling back to full reload');
                     fallbackToFullReload(detailUrl);
                 }
             }
         });
         
+        // Close sidebar button
         $(document).on('click', '.saw-sidebar-close', function(e) {
             e.preventDefault();
             e.stopPropagation();
@@ -263,30 +284,8 @@
             const listUrl = $(this).attr('href');
             closeSidebar(listUrl);
         });
-    }
-    
-    /**
-     * Handle browser back/forward buttons
-     *
-     * @return {void}
-     */
-    function initHistoryNavigation() {
-        if (!window.history || !window.history.pushState) {
-            return;
-        }
         
-        $(window).on('popstate', function(e) {
-            const state = e.originalEvent.state;
-            
-            if (state && state.id && state.mode && state.entity) {
-                openSidebarAjax(state.id, state.mode, state.entity);
-            } else {
-                const $wrapper = $('.saw-sidebar-wrapper');
-                if ($wrapper.length && $wrapper.hasClass('active')) {
-                    closeSidebar(window.location.pathname);
-                }
-            }
-        });
+        console.log('✅ Admin Table initialized');
     }
     
     /**
@@ -294,7 +293,6 @@
      */
     $(document).ready(function() {
         initAdminTable();
-        initHistoryNavigation();
     });
     
 })(jQuery);

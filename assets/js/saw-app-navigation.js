@@ -24,6 +24,13 @@
         $(document).on('click', '.saw-app-sidebar a, .saw-page-wrapper a[href^="/admin"], .saw-page-wrapper a[href^="/manager"]', function(e) {
             const $link = $(this);
             const href = $link.attr('href');
+            
+            // CRITICAL: Skip if inside table row with data-detail-url (AJAX sidebar)
+            const $parentRow = $link.closest('tr[data-detail-url]');
+            if ($parentRow.length > 0) {
+                console.log('⏭️ SPA: Skipping - inside table row with sidebar');
+                return; // Let admin-table.js handle it
+            }
 
             if (!href || href.startsWith('http') || href.startsWith('//')) return;
             if (href.startsWith('#')) return;

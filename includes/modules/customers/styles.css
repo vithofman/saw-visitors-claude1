@@ -16,9 +16,33 @@
  * - .saw-button-* (from buttons.css)
  * 
  * @package SAW_Visitors
- * @version 7.0.0
+ * @version 7.1.0 - SIDEBAR FIX
  * @since   4.6.1
  */
+
+/* ============================================
+   SIDEBAR FIX - CRITICAL
+   Sidebar nesmí dědit žádné module-specific CSS
+   ============================================ */
+.saw-module-customers .saw-sidebar-wrapper,
+.saw-module-customers .saw-sidebar-wrapper *,
+.saw-module-customers .saw-sidebar,
+.saw-module-customers .saw-sidebar * {
+    background: initial !important;
+    color: initial !important;
+}
+
+.saw-module-customers .saw-sidebar-wrapper {
+    background: #ffffff !important;
+}
+
+.saw-module-customers .saw-sidebar {
+    background: #ffffff !important;
+}
+
+.saw-module-customers .saw-sidebar-content {
+    background: #ffffff !important;
+}
 
 /* ============================================
    BRANDING GRID (FORM ONLY)

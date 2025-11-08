@@ -411,33 +411,46 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
      * @return void (outputs JSON)
      */
     public function ajax_load_sidebar() {
+        error_log('=== AJAX LOAD SIDEBAR START ===');
+        
         check_ajax_referer('saw_ajax_nonce', 'nonce');
         
         $id = intval($_POST['id'] ?? 0);
         $mode = sanitize_text_field($_POST['mode'] ?? 'detail');
         
+        error_log('ID: ' . $id);
+        error_log('Mode: ' . $mode);
+        error_log('Entity: ' . $this->entity);
+        
         if (!in_array($mode, array('detail', 'edit'), true)) {
+            error_log('ERROR: Invalid mode');
             wp_send_json_error(array('message' => 'Invalid mode'));
         }
         
         if ($mode === 'detail' && !$this->can('view')) {
+            error_log('ERROR: No view permission');
             wp_send_json_error(array('message' => 'Nemáte oprávnění zobrazit detail'));
         }
         
         if ($mode === 'edit' && !$this->can('edit')) {
+            error_log('ERROR: No edit permission');
             wp_send_json_error(array('message' => 'Nemáte oprávnění upravovat záznamy'));
         }
         
         $item = $this->model->get_by_id($id);
         
         if (!$item) {
+            error_log('ERROR: Item not found');
             wp_send_json_error(array('message' => 'Zákazník nenalezen'));
         }
+        
+        error_log('Item loaded: ' . print_r($item, true));
         
         $account_types = array();
         
         if ($mode === 'edit') {
             $account_types = $this->load_account_types();
+            error_log('Account types loaded: ' . count($account_types));
         }
         
         $item = $this->format_detail_data($item);
@@ -447,15 +460,35 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         if ($mode === 'detail') {
             $tab = 'overview';
             $config = $this->config;
-            require SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/detail-sidebar.php';
+            $entity = $this->entity;
+            
+            $template_path = SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/detail-sidebar.php';
+            error_log('Template path: ' . $template_path);
+            error_log('Template exists: ' . (file_exists($template_path) ? 'YES' : 'NO'));
+            
+            require $template_path;
         } else {
             $is_edit = true;
             $GLOBALS['saw_sidebar_form'] = true;
-            require $this->config['path'] . 'form-template.php';
+            
+            $form_path = $this->config['path'] . 'form-template.php';
+            error_log('Form path: ' . $form_path);
+            error_log('Form exists: ' . (file_exists($form_path) ? 'YES' : 'NO'));
+            
+            require $form_path;
             unset($GLOBALS['saw_sidebar_form']);
         }
         
-        $html = ob_get_clean();
+        $sidebar_content = ob_get_clean();
+        
+        error_log('Sidebar content length: ' . strlen($sidebar_content));
+        error_log('First 200 chars: ' . substr($sidebar_content, 0, 200));
+        
+        // Wrap in sidebar wrapper for proper CSS styling
+        $html = '<div class="saw-sidebar-wrapper active">' . $sidebar_content . '</div>';
+        
+        error_log('Final HTML length: ' . strlen($html));
+        error_log('=== AJAX LOAD SIDEBAR END ===');
         
         wp_send_json_success(array(
             'html' => $html,
