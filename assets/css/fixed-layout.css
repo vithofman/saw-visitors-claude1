@@ -1,26 +1,20 @@
 /**
- * Fixed Layout Patch
+ * Fixed Layout - Modern Design System
  * 
- * Global layout system for SAW Visitors application.
- * ZERO ANIMATIONS - Everything happens instantly.
+ * Ultra-minimal full-width layout with maximum space utilization.
+ * Inspired by: Vercel, Linear, Tailwind UI
  * 
  * @package     SAW_Visitors
- * @subpackage  Assets/CSS
- * @version     2.7.0 - FIXED: Removed double overflow for sticky header
- * @since       1.0.0
+ * @version     3.0.0 - Complete redesign
  */
 
 /* ============================================
-   WORDPRESS ADMIN BAR REMOVAL
+   RESET & BASE
    ============================================ */
 
 #wpadminbar {
     display: none !important;
 }
-
-/* ============================================
-   BASE LAYOUT - FULL HEIGHT APP
-   ============================================ */
 
 html {
     margin: 0 !important;
@@ -37,11 +31,13 @@ html, body {
 body.saw-app-body {
     display: flex !important;
     flex-direction: column !important;
-    padding-top: 0px !important;
+    padding-top: 0 !important;
+    background: #fafafa !important; /* Ultra-light gray background */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
 }
 
 /* ============================================
-   APP STRUCTURE
+   APP STRUCTURE - FULL HEIGHT
    ============================================ */
 
 .saw-app-header {
@@ -52,6 +48,8 @@ body.saw-app-body {
     height: 60px !important;
     z-index: 1000 !important;
     flex-shrink: 0 !important;
+    background: #ffffff !important;
+    border-bottom: 1px solid #eaeaea !important;
 }
 
 .saw-app-container {
@@ -65,6 +63,8 @@ body.saw-app-body {
 .saw-app-sidebar {
     flex-shrink: 0 !important;
     overflow-y: auto !important;
+    background: #ffffff !important;
+    border-right: 1px solid #eaeaea !important;
 }
 
 .saw-app-main {
@@ -79,7 +79,7 @@ body.saw-app-body {
 .saw-app-content {
     flex: 1 !important;
     overflow-y: auto !important;
-    padding: 0 !important;
+    padding: 20px !important; /* Minimální 20px padding */
     width: 100%;
 }
 
@@ -89,23 +89,27 @@ body.saw-app-body {
 }
 
 /* ============================================
-   MODULE CONTAINERS
+   MODULE CONTAINERS - ZERO PADDING
    ============================================ */
 
 .saw-module-customers,
 .saw-module-branches,
 .saw-module-organizations,
 .saw-module-contacts,
-.saw-module-account-types {
+.saw-module-account-types,
+.saw-module-departments,
+.saw-module-users,
+.saw-module-invitations,
+.saw-module-visitors {
     height: 100% !important;
     display: flex !important;
     flex-direction: column !important;
-    padding: 24px !important;
+    padding: 0 !important; /* ZERO - maximální prostor */
+    gap: 0 !important; /* ZERO gap - header a table jsou spojené */
 }
 
 /* ============================================
    SPLIT LAYOUT - TABLE + SIDEBAR
-   ZERO TRANSITIONS - Instant resize
    ============================================ */
 
 .saw-admin-table-split {
@@ -114,7 +118,10 @@ body.saw-app-body {
     min-height: 0 !important;
     padding-right: 0 !important;
     overflow: hidden !important;
-    /* NO TRANSITION */
+    background: #ffffff !important;
+    border-radius: 8px !important;
+    border: 1px solid #eaeaea !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
 }
 
 .saw-admin-table-split.has-sidebar {
@@ -122,24 +129,40 @@ body.saw-app-body {
 }
 
 /* ============================================
-   TABLE PANEL - ZERO TRANSITIONS
-   THIS IS THE SCROLL CONTAINER!
+   TABLE PANEL - SCROLL CONTAINER
    ============================================ */
 
 .saw-table-panel {
     flex: 1 !important;
     overflow-y: auto !important;
     border-right: none !important;
-    background: #fff !important;
-    /* NO TRANSITION */
+    background: #ffffff !important;
 }
 
 .saw-admin-table-split.has-sidebar .saw-table-panel {
-    border-right: 1px solid #e5e7eb !important;
+    border-right: 1px solid #eaeaea !important;
+}
+
+/* Scrollbar styling */
+.saw-table-panel::-webkit-scrollbar {
+    width: 8px;
+}
+
+.saw-table-panel::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.saw-table-panel::-webkit-scrollbar-thumb {
+    background: #d4d4d4;
+    border-radius: 4px;
+}
+
+.saw-table-panel::-webkit-scrollbar-thumb:hover {
+    background: #a3a3a3;
 }
 
 /* ============================================
-   SIDEBAR WRAPPER (AJAX) - INSTANT
+   SIDEBAR WRAPPER (AJAX)
    ============================================ */
 
 .saw-sidebar-wrapper {
@@ -149,43 +172,36 @@ body.saw-app-body {
     bottom: 0 !important;
     width: 700px !important;
     z-index: 9999 !important;
-    display: none !important; /* INSTANT hide */
+    display: none !important;
     flex-direction: column !important;
-    background: #fff !important;
-    box-shadow: -8px 0 24px rgba(0,0,0,0.08) !important;
-    border-left: none !important;
+    background: #ffffff !important;
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.08), -1px 0 0 #eaeaea !important;
 }
 
 .saw-sidebar-wrapper.active {
-    display: flex !important; /* INSTANT show */
+    display: flex !important;
 }
-
-/* OVERLAY REMOVED - Table stays fully interactive when sidebar is open */
 
 .saw-sidebar-content {
     flex: 1 !important;
     overflow-y: auto !important;
-    padding: 20px !important;
+    padding: 24px !important;
 }
 
 /* ============================================
-   PAGE COMPONENTS
+   PAGE HEADER - KOMPAKTNÍ
    ============================================ */
 
 .saw-page-header {
     flex-shrink: 0 !important;
-    margin-bottom: 20px !important;
-}
-
-/* CRITICAL FIX: Remove overflow-y to allow sticky header to work */
-.saw-table-responsive-wrapper {
-    flex: 1 !important;
-    min-height: 0 !important;
-    /* overflow-y: auto !important; <-- REMOVED - causes sticky header to fail */
+    margin-bottom: 0 !important;
+    padding: 20px 24px !important;
+    background: #ffffff !important;
+    border-bottom: 1px solid #eaeaea !important;
 }
 
 /* ============================================
-   RESPONSIVE LAYOUT
+   RESPONSIVE
    ============================================ */
 
 @media (max-width: 1200px) {
@@ -199,6 +215,14 @@ body.saw-app-body {
 }
 
 @media (max-width: 768px) {
+    .saw-app-content {
+        padding: 16px !important;
+    }
+    
+    .saw-admin-table-split {
+        border-radius: 6px !important;
+    }
+    
     .saw-admin-table-split.has-sidebar {
         padding-right: 0 !important;
     }
@@ -209,5 +233,9 @@ body.saw-app-body {
     
     .saw-sidebar-wrapper {
         width: 100% !important;
+    }
+    
+    .saw-page-header {
+        padding: 16px 20px !important;
     }
 }
