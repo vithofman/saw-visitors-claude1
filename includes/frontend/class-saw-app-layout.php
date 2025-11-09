@@ -1,19 +1,21 @@
 <?php
 /**
- * SAW App Layout - AJAX FIXED v2.1.0
+ * SAW App Layout - AJAX FIXED v2.2.0
  *
  * Main layout manager for the application.
  * Handles complete page rendering with header, sidebar, footer, and content.
  * Supports AJAX requests for SPA-like navigation.
  *
- * CRITICAL FIX:
+ * CRITICAL FIX v2.2.0:
+ * - ✅ Removed hardcoded saw-app-navigation.js script tag
+ * - ✅ Now properly enqueued via SAW_Asset_Manager
  * - ✅ WordPress AJAX requests are NOT intercepted
  * - ✅ Only custom XHR requests go through layout
  * - ✅ Prevents layout from breaking wp_ajax_* handlers
  * - ✅ Fixed layout - eliminuje celostránkový scroll
  *
  * @package SAW_Visitors
- * @version 2.1.0 - FIXED LAYOUT
+ * @version 2.2.0 - REMOVED HARDCODED SCRIPT
  * @since   4.6.1
  */
 
@@ -259,6 +261,9 @@ class SAW_App_Layout {
      * Outputs full HTML page with header, sidebar, footer, and content.
      * Used for normal page requests (not AJAX).
      *
+     * ✅ FIXED v2.2.0: Removed hardcoded saw-app-navigation.js script tag
+     * Script is now properly enqueued via SAW_Asset_Manager with correct dependencies
+     *
      * @since 4.6.1
      * @param string $content Page content HTML
      * @return void
@@ -301,12 +306,13 @@ class SAW_App_Layout {
             <?php $this->render_footer(); ?>
             
             <?php
+            // ✅ FIXED v2.2.0: saw-app-navigation.js is now properly enqueued
+            // via SAW_Asset_Manager::enqueue_global_scripts() with dependencies
+            // No need for hardcoded script tag here!
             if (function_exists('wp_print_footer_scripts')) {
                 wp_print_footer_scripts();
             }
             ?>
-            
-            <script src="<?php echo esc_url(SAW_VISITORS_PLUGIN_URL . 'assets/js/saw-app-navigation.js?v=' . SAW_VISITORS_VERSION); ?>"></script>
         </body>
         </html>
         <?php

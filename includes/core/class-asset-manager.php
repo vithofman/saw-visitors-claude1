@@ -5,6 +5,7 @@
  * @package    SAW_Visitors
  * @subpackage Core
  * @since      1.0.0
+ * @version    1.1.0 - FIXED: Added all component CSS/JS to prevent FOUC
  */
 
 if (!defined('ABSPATH')) {
@@ -37,6 +38,7 @@ class SAW_Asset_Manager {
      * @var array
      */
     const COMPONENT_STYLES = [
+        // Core UI components
         'saw-buttons'             => 'components/buttons.css',
         'saw-forms'               => 'components/forms.css',
         'saw-tables'              => 'components/tables.css',
@@ -46,7 +48,16 @@ class SAW_Asset_Manager {
         'saw-cards'               => 'components/cards.css',
         'saw-search'              => 'components/search.css',
         'saw-pagination'          => 'components/pagination.css',
-        'saw-table-column-types'  => 'components/table-column-types.css'
+        'saw-table-column-types'  => 'components/table-column-types.css',
+        
+        // Interactive components (CRITICAL: Must load globally to prevent FOUC)
+        'saw-customer-switcher'   => '../includes/components/customer-switcher/customer-switcher.css',
+        'saw-branch-switcher'     => '../includes/components/branch-switcher/branch-switcher.css',
+        'saw-language-switcher'   => '../includes/components/language-switcher/language-switcher.css',
+        'saw-selectbox'           => '../includes/components/selectbox/saw-selectbox.css',
+        
+        // Admin Table component
+        'saw-admin-table-sidebar' => '../includes/components/admin-table/sidebar.css',
     ];
     
     /**
@@ -106,7 +117,12 @@ class SAW_Asset_Manager {
      */
     private static function enqueue_component_styles() {
         foreach (self::COMPONENT_STYLES as $handle => $path) {
-            self::enqueue_style($handle, 'css/' . $path, ['saw-variables']);
+            // Handle paths that start with ../ (component-specific paths)
+            if (strpos($path, '../') === 0) {
+                self::enqueue_style($handle, $path, ['saw-variables']);
+            } else {
+                self::enqueue_style($handle, 'css/' . $path, ['saw-variables']);
+            }
         }
     }
     
@@ -144,6 +160,7 @@ class SAW_Asset_Manager {
     private static function enqueue_global_scripts() {
         wp_enqueue_script('jquery');
         
+        // Main app script
         wp_enqueue_script(
             'saw-app',
             SAW_VISITORS_PLUGIN_URL . 'assets/js/saw-app.js',
@@ -161,6 +178,87 @@ class SAW_Asset_Manager {
             'customerModalNonce'  => wp_create_nonce('saw_customer_modal_nonce'),
             'deleteNonce'         => wp_create_nonce('saw_admin_table_nonce')
         ]);
+        
+        // Enqueue component-specific JavaScript
+        self::enqueue_component_scripts();
+    }
+    
+    /**
+     * Enqueue component-specific JavaScript files
+     *
+     * CRITICAL: These must load globally to ensure interactive components
+     * work on first page load without FOUC.
+     *
+     * @since 1.0.1
+     * @return void
+     */
+    private static function enqueue_component_scripts() {
+        $component_scripts = [
+            'saw-customer-switcher' => [
+                'path' => 'includes/components/customer-switcher/customer-switcher.js',
+                'deps' => ['jquery', 'saw-app'],
+                'localize' => 'sawCustomerSwitcher',
+                'localize_data' => [
+                    'ajaxurl' => admin_url('admin-ajax.php'),
+                    'nonce' => wp_create_nonce('saw_customer_switcher'),
+                ]
+            ],
+            'saw-branch-switcher' => [
+                'path' => 'includes/components/branch-switcher/branch-switcher.js',
+                'deps' => ['jquery', 'saw-app'],
+                'localize' => 'sawBranchSwitcher',
+                'localize_data' => [
+                    'ajaxurl' => admin_url('admin-ajax.php'),
+                    'nonce' => wp_create_nonce('saw_branch_switcher'),
+                ]
+            ],
+            'saw-language-switcher' => [
+                'path' => 'includes/components/language-switcher/language-switcher.js',
+                'deps' => ['jquery', 'saw-app'],
+                'localize' => 'sawLanguageSwitcher',
+                'localize_data' => [
+                    'ajaxurl' => admin_url('admin-ajax.php'),
+                    'nonce' => wp_create_nonce('saw_language_switcher'),
+                ]
+            ],
+            'saw-selectbox' => [
+                'path' => 'includes/components/selectbox/saw-selectbox.js',
+                'deps' => ['jquery', 'saw-app'],
+            ],
+            'saw-admin-table-sidebar' => [
+                'path' => 'includes/components/admin-table/sidebar.js',
+                'deps' => ['jquery', 'saw-app'],
+            ],
+            'saw-admin-table-component' => [
+                'path' => 'includes/components/admin-table/admin-table.js',
+                'deps' => ['jquery', 'saw-app'],
+            ],
+        ];
+        
+        foreach ($component_scripts as $handle => $config) {
+            $script_path = SAW_VISITORS_PLUGIN_DIR . $config['path'];
+            
+            if (!file_exists($script_path)) {
+                continue;
+            }
+            
+            wp_enqueue_script(
+                $handle,
+                SAW_VISITORS_PLUGIN_URL . $config['path'],
+                $config['deps'],
+                SAW_VISITORS_VERSION,
+                true
+            );
+            
+            // Localize script if needed
+            if (isset($config['localize']) && isset($config['localize_data'])) {
+                wp_localize_script(
+                    $handle,
+                    $config['localize'],
+                    $config['localize_data']
+                );
+            }
+        }
     }
     
     /**

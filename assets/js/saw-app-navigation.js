@@ -2,7 +2,7 @@
  * SAW App Navigation - SPA (Single Page Application) Support
  * 
  * @package SAW_Visitors
- * @version 5.3.0 - SPA ENABLED
+ * @version 5.4.0 - FIXED: Added admin table exclusions
  */
 
 (function($) {
@@ -25,11 +25,22 @@
             const $link = $(this);
             const href = $link.attr('href');
             
-            // CRITICAL: Skip if inside table row with data-detail-url (AJAX sidebar)
             const $parentRow = $link.closest('tr[data-detail-url]');
             if ($parentRow.length > 0) {
                 console.log('⏭️ SPA: Skipping - inside table row with sidebar');
-                return; // Let admin-table.js handle it
+                return;
+            }
+            
+            const $parentTable = $link.closest('.saw-admin-table');
+            if ($parentTable.length > 0) {
+                console.log('⏭️ SPA: Skipping - inside admin table');
+                return;
+            }
+            
+            const $actionButtons = $link.closest('.saw-action-buttons');
+            if ($actionButtons.length > 0) {
+                console.log('⏭️ SPA: Skipping - inside action buttons');
+                return;
             }
 
             if (!href || href.startsWith('http') || href.startsWith('//')) return;

@@ -100,9 +100,10 @@ class SAW_Visitors {
         $this->init_router();
         $this->init_session();
         $this->init_context();
-        $this->init_customer_switcher();
-        $this->init_branch_switcher();
-        $this->init_language_switcher();
+        
+        // Initialize Component Manager (handles all components + AJAX registration)
+        SAW_Component_Manager::instance();
+        
         $this->register_module_ajax_handlers();
         $this->block_wp_admin_for_saw_roles();
     }
@@ -135,6 +136,9 @@ class SAW_Visitors {
     private function load_dependencies() {
         // Core loader (required)
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-loader.php';
+        
+        // Component Manager (required) - MUST load before components
+        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-component-manager.php';
         
         // Base classes (required)
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/trait-ajax-handlers.php';
@@ -221,59 +225,6 @@ class SAW_Visitors {
     private function init_context() {
         if (class_exists('SAW_Context')) {
             SAW_Context::instance();
-        }
-    }
-    
-    /**
-     * Initialize customer switcher component
-     *
-     * Loads and registers customer switcher UI component.
-     *
-     * @since 1.0.0
-     */
-    private function init_customer_switcher() {
-        $path = SAW_VISITORS_PLUGIN_DIR . 'includes/components/customer-switcher/class-saw-component-customer-switcher.php';
-        
-        if (file_exists($path)) {
-            require_once $path;
-            
-            if (class_exists('SAW_Component_Customer_Switcher')) {
-                new SAW_Component_Customer_Switcher();
-            }
-        }
-    }
-    
-    /**
-     * Initialize branch switcher component
-     *
-     * Loads and registers branch switcher UI component.
-     *
-     * @since 1.0.0
-     */
-    private function init_branch_switcher() {
-        $path = SAW_VISITORS_PLUGIN_DIR . 'includes/components/branch-switcher/class-saw-component-branch-switcher.php';
-        
-        if (file_exists($path)) {
-            require_once $path;
-            
-            if (class_exists('SAW_Component_Branch_Switcher')) {
-                new SAW_Component_Branch_Switcher();
-            }
-        }
-    }
-    
-    /**
-     * Initialize language switcher
-     *
-     * Loads AJAX handler for language switching.
-     *
-     * @since 1.0.0
-     */
-    private function init_language_switcher() {
-        $path = SAW_VISITORS_PLUGIN_DIR . 'includes/components/language-switcher/ajax-handler.php';
-        
-        if (file_exists($path)) {
-            require_once $path;
         }
     }
     

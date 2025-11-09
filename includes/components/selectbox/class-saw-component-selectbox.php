@@ -7,7 +7,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Components/Selectbox
- * @version     4.6.1
+ * @version     4.6.2 - FIXED: Enqueue assets in constructor
  * @since       4.6.1
  * @author      SAW Visitors Team
  */
@@ -46,6 +46,7 @@ class SAW_Component_Selectbox {
      * Constructor
      * 
      * Initializes the selectbox component with ID and configuration.
+     * CRITICAL FIX: Enqueues assets immediately to prevent FOUC.
      * 
      * @since 4.6.1
      * @param string $id     Unique selectbox identifier
@@ -54,6 +55,7 @@ class SAW_Component_Selectbox {
     public function __construct($id, $config = array()) {
         $this->id = sanitize_key($id);
         $this->config = $this->parse_config($config);
+        $this->enqueue_assets();
     }
     
     /**
@@ -88,14 +90,13 @@ class SAW_Component_Selectbox {
     /**
      * Render the selectbox component
      * 
-     * Enqueues assets and includes the selectbox input template.
+     * Includes the selectbox input template.
+     * Assets are already enqueued in constructor.
      * 
      * @since 4.6.1
      * @return void
      */
     public function render() {
-        $this->enqueue_assets();
-        
         $id = $this->id;
         $config = $this->config;
         
@@ -107,6 +108,7 @@ class SAW_Component_Selectbox {
      * 
      * Loads CSS and JavaScript files for the selectbox component.
      * Also ensures saw-app script is loaded with global AJAX configuration.
+     * Called from constructor to ensure assets load before wp_head().
      * 
      * @since 4.6.1
      * @return void

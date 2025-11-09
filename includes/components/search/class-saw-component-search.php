@@ -7,7 +7,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Components/Search
- * @version     1.1.0
+ * @version     1.2.0 - FIXED: Enqueue assets in constructor
  * @since       1.0.0
  * @author      SAW Visitors Team
  */
@@ -45,6 +45,7 @@ class SAW_Component_Search {
      * Constructor
      * 
      * Initializes the search component with entity and configuration.
+     * CRITICAL FIX: Enqueues assets immediately to prevent FOUC.
      * 
      * @since 1.0.0
      * @param string $entity Entity identifier (e.g., 'customers', 'visitors')
@@ -53,6 +54,7 @@ class SAW_Component_Search {
     public function __construct($entity, $config = array()) {
         $this->entity = sanitize_key($entity);
         $this->config = $this->parse_config($config);
+        $this->enqueue_assets();
     }
     
     /**
@@ -83,14 +85,13 @@ class SAW_Component_Search {
     /**
      * Render the search component
      * 
-     * Enqueues assets and includes the search input template.
+     * Includes the search input template.
+     * Assets are already enqueued in constructor.
      * 
      * @since 1.0.0
      * @return void
      */
     public function render() {
-        $this->enqueue_assets();
-        
         $entity = $this->entity;
         $config = $this->config;
         
@@ -101,6 +102,7 @@ class SAW_Component_Search {
      * Enqueue search assets
      * 
      * Loads CSS and JavaScript files for the search component.
+     * Called from constructor to ensure assets load before wp_head().
      * 
      * @since 1.0.0
      * @return void

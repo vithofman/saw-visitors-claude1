@@ -88,13 +88,27 @@ class SAW_App_Header {
         
         // Get customer data from context
         if (!$customer) {
-            $customer = SAW_Context::get_customer_data();
+            $customer_id = null;
+            
+            if (class_exists('SAW_Context')) {
+                $customer_id = SAW_Context::get_customer_id();
+            }
+            
+            if ($customer_id) {
+                global $wpdb;
+                $customer = $wpdb->get_row($wpdb->prepare(
+                    "SELECT id, name, ico, logo_url, primary_color FROM %i WHERE id = %d",
+                    $wpdb->prefix . 'saw_customers',
+                    $customer_id
+                ), ARRAY_A);
+            }
         }
         
         $this->customer = $customer ?: array(
             'id' => 1,
             'name' => 'Demo Firma s.r.o.',
             'ico' => '12345678',
+            'logo_url' => '',
         );
     }
     

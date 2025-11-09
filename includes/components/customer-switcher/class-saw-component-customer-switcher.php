@@ -58,6 +58,20 @@ class SAW_Component_Customer_Switcher {
     private static $assets_enqueued = false;
     
     /**
+     * Register AJAX handlers globally
+     *
+     * CRITICAL: This must be called early (via Component Manager), NOT in constructor.
+     * Ensures AJAX handlers work even if component doesn't render.
+     *
+     * @since 8.0.0
+     * @return void
+     */
+    public static function register_ajax_handlers() {
+        add_action('wp_ajax_saw_get_customers_for_switcher', array(__CLASS__, 'ajax_get_customers_static'));
+        add_action('wp_ajax_saw_switch_customer', array(__CLASS__, 'ajax_switch_customer_static'));
+    }
+    
+    /**
      * Constructor
      *
      * Initializes customer switcher with customer and user data.
@@ -92,63 +106,36 @@ class SAW_Component_Customer_Switcher {
             'role' => current_user_can('manage_options') ? 'super_admin' : 'admin',
         );
         
-        // CRITICAL FIX: Enqueue CSS immediately in constructor to prevent FOUC
-        $this->enqueue_assets_early();
-        
-        // Register AJAX handlers once
-        if (!self::$ajax_registered) {
-            add_action('wp_ajax_saw_get_customers_for_switcher', array($this, 'ajax_get_customers'));
-            add_action('wp_ajax_saw_switch_customer', array($this, 'ajax_switch_customer'));
-            self::$ajax_registered = true;
-        }
+        // Assets and AJAX handlers are registered globally via SAW_Component_Manager
     }
     
     /**
      * Enqueue assets early (in constructor)
      *
-     * CRITICAL: This method is called from constructor to ensure CSS
-     * is loaded BEFORE any HTML is rendered, preventing FOUC (Flash of Unstyled Content).
-     * Only enqueues once per page load.
+     * DEPRECATED: Assets are now loaded globally via SAW_Asset_Manager.
+     * This method is kept for backwards compatibility but does nothing.
      *
      * @since 4.7.0
+     * @deprecated 8.0.0 Use SAW_Asset_Manager instead
      * @return void
      */
     private function enqueue_assets_early() {
-        if (self::$assets_enqueued) {
-            return;
-        }
-        
-        // Enqueue CSS immediately
-        wp_enqueue_style(
-            'saw-customer-switcher',
-            SAW_VISITORS_PLUGIN_URL . 'includes/components/customer-switcher/customer-switcher.css',
-            array(),
-            SAW_VISITORS_VERSION
-        );
-        
-        // Enqueue JS for super admins
-        if ($this->is_super_admin()) {
-            wp_enqueue_script(
-                'saw-customer-switcher',
-                SAW_VISITORS_PLUGIN_URL . 'includes/components/customer-switcher/customer-switcher.js',
-                array('jquery'),
-                SAW_VISITORS_VERSION,
-                true
-            );
-            
-            wp_localize_script(
-                'saw-customer-switcher',
-                'sawCustomerSwitcher',
-                array(
-                    'ajaxurl' => admin_url('admin-ajax.php'),
-                    'nonce' => wp_create_nonce('saw_customer_switcher'),
-                    'currentCustomerId' => $this->current_customer['id'],
-                    'currentCustomerName' => $this->current_customer['name'],
-                )
-            );
-        }
-        
-        self::$assets_enqueued = true;
+        // Assets are now enqueued globally via SAW_Asset_Manager
+        // to prevent FOUC on first page load. Do not re-enqueue here.
+        return;
+    }
+    
+    /**
+     * AJAX: Get customers list (static wrapper)
+     *
+     * Static method called by WordPress AJAX system.
+     *
+     * @since 8.0.0
+     * @return void
+     */
+    public static function ajax_get_customers_static() {
+        $instance = new self();
+        $instance->ajax_get_customers();
     }
     
     /**
@@ -207,6 +194,19 @@ class SAW_Component_Customer_Switcher {
             'customers' => $formatted,
             'current_customer_id' => $current_customer_id,
         ));
+    }
+    
+    /**
+     * AJAX: Switch customer (static wrapper)
+     *
+     * Static method called by WordPress AJAX system.
+     *
+     * @since 8.0.0
+     * @return void
+     */
+    public static function ajax_switch_customer_static() {
+        $instance = new self();
+        $instance->ajax_switch_customer();
     }
     
     /**
