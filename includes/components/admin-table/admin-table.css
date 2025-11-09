@@ -6,7 +6,7 @@
  *
  * @package    SAW_Visitors
  * @subpackage Components
- * @version    1.4.0
+ * @version    1.6.0 - FIXED: Sticky header + active row (using !important for specificity)
  * @since      1.0.0
  */
 
@@ -108,6 +108,23 @@
     min-width: 1000px;
 }
 
+/* ============================================
+   STICKY HEADER - CRITICAL FIX
+   Must use !important to override global tables.css
+   @since 1.6.0
+   ============================================ */
+.saw-admin-table thead th {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 20 !important;
+    background: linear-gradient(180deg, var(--saw-gray-50) 0%, var(--saw-gray-100) 100%) !important;
+}
+
+/* ============================================
+   STICKY CORNER
+   Last column header (actions) - sticky both horizontally and vertically
+   @since 1.6.0
+   ============================================ */
 .saw-admin-table thead th:last-child,
 .saw-admin-table tbody td:last-child {
     position: sticky;
@@ -118,7 +135,8 @@
 }
 
 .saw-admin-table thead th:last-child {
-    background: linear-gradient(180deg, var(--saw-gray-50) 0%, var(--saw-gray-100) 100%);
+    z-index: 21 !important;
+    background: linear-gradient(180deg, var(--saw-gray-50) 0%, var(--saw-gray-100) 100%) !important;
 }
 
 .saw-admin-table tbody td:last-child {
@@ -141,6 +159,36 @@
 
 .saw-admin-table tbody tr[data-clickable-row]:hover {
     background: var(--saw-gray-50);
+}
+
+/* ============================================
+   ACTIVE ROW HIGHLIGHT - CRITICAL FIX
+   Must use !important to override sidebar.css
+   @since 1.6.0
+   ============================================ */
+.saw-admin-table tbody tr.saw-row-active {
+    background: #eff6ff !important;
+    border-left: 3px solid #3b82f6 !important;
+}
+
+.saw-admin-table tbody tr.saw-row-active td {
+    background: #eff6ff !important;
+}
+
+.saw-admin-table tbody tr.saw-row-active td:last-child {
+    background: #eff6ff !important;
+}
+
+.saw-admin-table tbody tr.saw-row-active:hover {
+    background: #dbeafe !important;
+}
+
+.saw-admin-table tbody tr.saw-row-active:hover td {
+    background: #dbeafe !important;
+}
+
+.saw-admin-table tbody tr.saw-row-active:hover td:last-child {
+    background: #dbeafe !important;
 }
 
 /* ============================================

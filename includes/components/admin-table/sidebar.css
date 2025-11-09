@@ -29,10 +29,6 @@
     background: #fff;
 }
 
-.saw-table-panel tr.saw-row-active {
-    background: #eff6ff !important;
-    border-left: 3px solid #3b82f6;
-}
 
 /* ============================================
    SIDEBAR WRAPPER - HIDDEN BY DEFAULT

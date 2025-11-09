@@ -6,7 +6,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Assets/CSS
- * @version     2.6.0 - REMOVED OVERLAY - Table stays interactive
+ * @version     2.7.0 - FIXED: Removed double overflow for sticky header
  * @since       1.0.0
  */
 
@@ -123,6 +123,7 @@ body.saw-app-body {
 
 /* ============================================
    TABLE PANEL - ZERO TRANSITIONS
+   THIS IS THE SCROLL CONTAINER!
    ============================================ */
 
 .saw-table-panel {
@@ -176,10 +177,11 @@ body.saw-app-body {
     margin-bottom: 20px !important;
 }
 
+/* CRITICAL FIX: Remove overflow-y to allow sticky header to work */
 .saw-table-responsive-wrapper {
     flex: 1 !important;
     min-height: 0 !important;
-    overflow-y: auto !important;
+    /* overflow-y: auto !important; <-- REMOVED - causes sticky header to fail */
 }
 
 /* ============================================

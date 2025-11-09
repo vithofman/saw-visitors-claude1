@@ -6,7 +6,7 @@
  *
  * @package    SAW_Visitors
  * @subpackage Components
- * @version    3.4.0 - FIXED URL HISTORY
+ * @version    3.9.0 - FIXED: SPA navigation conflict + active row + scroll
  * @since      1.0.0
  */
 
@@ -29,10 +29,15 @@
         
         console.log('📊 Opening sidebar via AJAX:', {id, mode, entity});
         
+        // CRITICAL FIX: Save scroll position from .saw-table-panel (the actual scroll container)
+        const $scrollContainer = $('.saw-table-panel');
+        const scrollPosition = $scrollContainer.length ? $scrollContainer.scrollTop() : 0;
+        console.log('💾 Saved scroll position:', scrollPosition);
+        
         showLoadingOverlay();
         
         $.ajax({
-            url: window.ajaxurl || '/wp-admin/admin-ajax.php',
+            url: (window.sawGlobal && window.sawGlobal.ajaxurl) || '/wp-admin/admin-ajax.php',
             method: 'POST',
             timeout: 10000,
             data: {
@@ -77,21 +82,38 @@
                 // CRITICAL FIX: Add has-sidebar class to table for proper spacing
                 $('.saw-admin-table-split').addClass('has-sidebar');
                 
+                // CRITICAL FIX: Set active row IMMEDIATELY (before any animations)
+                updateActiveRow(id);
+                console.log('✨ Active row set for ID:', id);
+                
+                // CRITICAL FIX: Restore scroll position IMMEDIATELY (before any animations)
+                if ($scrollContainer.length) {
+                    $scrollContainer.scrollTop(scrollPosition);
+                    console.log('📜 Restored scroll position:', scrollPosition);
+                }
+                
+                // Add active class to wrapper for slide-in animation
                 setTimeout(function() {
-                    console.log('✨ Adding active class');
+                    console.log('✨ Adding active class to wrapper');
                     $wrapper.addClass('active');
                 }, 10);
                 
                 // CRITICAL FIX: Update URL via History API
+                // Include 'url' key to prevent SPA navigation from reloading
                 const newUrl = buildUrl(entity, id, mode);
                 console.log('🔗 Updating URL to:', newUrl);
                 window.history.pushState(
-                    { id: id, mode: mode, entity: entity },
+                    { 
+                        id: id, 
+                        mode: mode, 
+                        entity: entity,
+                        url: newUrl,           // ← SPA navigation needs this
+                        sawAdminTable: true    // ← Marker that this is from admin table
+                    },
                     '',
                     newUrl
                 );
                 
-                updateActiveRow(id);
                 console.log('✅ Sidebar opened successfully');
             },
             error: function(xhr, status, error) {
@@ -128,12 +150,20 @@
             console.log('✅ Sidebar closed');
         }, 300);
         
+        // CRITICAL FIX: Remove active row highlight when closing
         $('.saw-admin-table tbody tr').removeClass('saw-row-active');
         
         // CRITICAL FIX: Update URL back to list view
         if (listUrl) {
             console.log('🔗 Updating URL to:', listUrl);
-            window.history.pushState({}, '', listUrl);
+            window.history.pushState(
+                {
+                    url: listUrl,
+                    sawAdminTable: true
+                },
+                '', 
+                listUrl
+            );
         }
     };
     
@@ -173,6 +203,7 @@
     function updateActiveRow(id) {
         $('.saw-admin-table tbody tr').removeClass('saw-row-active');
         $('.saw-admin-table tbody tr[data-id="' + id + '"]').addClass('saw-row-active');
+        console.log('✨ Active row updated:', id);
     }
     
     /**

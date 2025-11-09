@@ -3,7 +3,7 @@
  * Data tables, admin tables, responsive wrappers
  * 
  * @package SAW_Visitors
- * @version 1.0.0
+ * @version 1.1.0 - FIXED: Removed overflow:hidden to allow sticky header
  */
 
 .saw-list-container {
@@ -58,7 +58,7 @@
     background: #ffffff;
     border: var(--saw-border-width) solid var(--saw-border-color);
     border-radius: var(--saw-border-radius-lg);
-    overflow: hidden;
+    /* overflow: hidden; REMOVED - prevents sticky header from working */
 }
 
 .saw-admin-table table {

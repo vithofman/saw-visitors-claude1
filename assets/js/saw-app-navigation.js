@@ -2,7 +2,7 @@
  * SAW App Navigation - SPA (Single Page Application) Support
  * 
  * @package SAW_Visitors
- * @version 5.4.0 - FIXED: Added admin table exclusions
+ * @version 5.5.0 - FIXED: Ignore admin table pushState events
  */
 
 (function($) {
@@ -366,6 +366,12 @@
 
     function initBrowserBackButton() {
         window.addEventListener('popstate', function(event) {
+            // CRITICAL FIX: Ignore admin table pushState events
+            if (event.state && event.state.sawAdminTable) {
+                console.log('⏭️ SPA: Ignoring admin table popstate event');
+                return;
+            }
+            
             if (event.state && event.state.url) {
                 navigateToPage(event.state.url);
             } else {

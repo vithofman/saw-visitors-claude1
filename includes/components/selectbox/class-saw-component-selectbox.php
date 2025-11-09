@@ -7,7 +7,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Components/Selectbox
- * @version     4.6.2 - FIXED: Enqueue assets in constructor
+ * @version     4.6.3 - FIXED: Removed duplicit wp_localize_script call
  * @since       4.6.1
  * @author      SAW Visitors Team
  */
@@ -107,7 +107,7 @@ class SAW_Component_Selectbox {
      * Enqueue selectbox assets
      * 
      * Loads CSS and JavaScript files for the selectbox component.
-     * Also ensures saw-app script is loaded with global AJAX configuration.
+     * Relies on SAW_Asset_Manager for sawGlobal initialization.
      * Called from constructor to ensure assets load before wp_head().
      * 
      * @since 4.6.1
@@ -129,16 +129,11 @@ class SAW_Component_Selectbox {
             true
         );
         
+        // CRITICAL FIX v4.6.3: Only ensure saw-app is enqueued
+        // Do NOT call wp_localize_script - sawGlobal is already initialized by SAW_Asset_Manager
+        // Duplicate wp_localize_script calls overwrite previous data and cause nonce issues
         if (!wp_script_is('saw-app', 'enqueued')) {
             wp_enqueue_script('saw-app');
-        }
-        
-        $existing_data = wp_scripts()->get_data('saw-app', 'data');
-        if (empty($existing_data) || strpos($existing_data, 'sawGlobal') === false) {
-            wp_localize_script('saw-app', 'sawGlobal', array(
-                'ajaxurl' => admin_url('admin-ajax.php'),
-                'nonce' => wp_create_nonce('saw_ajax_nonce'),
-            ));
         }
     }
 }
