@@ -6,7 +6,7 @@
  *
  * @package    SAW_Visitors
  * @subpackage Components
- * @version    1.4.0
+ * @version    1.6.0 - FIXED: Sticky header + active row in correct file
  * @since      1.0.0
  */
 
@@ -100,14 +100,33 @@
 }
 
 /* ============================================
-   TABLE STICKY ACTIONS
-   Last column (actions) stays visible on scroll
-   @since 1.0.0
+   TABLE STRUCTURE - STICKY HEADER - FIXED!
+   Header stays visible when scrolling table
+   @since 1.6.0
    ============================================ */
 .saw-admin-table table {
     min-width: 1000px;
 }
 
+/* CRITICAL FIX: Added position relative to parent */
+.saw-table-panel {
+    position: relative !important;
+}
+
+/* STICKY HEADER - Now works! */
+.saw-admin-table thead th {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+    background: linear-gradient(180deg, var(--saw-gray-50) 0%, var(--saw-gray-100) 100%) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* ============================================
+   TABLE STICKY ACTIONS
+   Last column (actions) stays visible on scroll
+   @since 1.0.0
+   ============================================ */
 .saw-admin-table thead th:last-child,
 .saw-admin-table tbody td:last-child {
     position: sticky;
@@ -119,6 +138,7 @@
 
 .saw-admin-table thead th:last-child {
     background: linear-gradient(180deg, var(--saw-gray-50) 0%, var(--saw-gray-100) 100%);
+    z-index: 11; /* Higher than normal sticky header */
 }
 
 .saw-admin-table tbody td:last-child {
@@ -127,6 +147,31 @@
 
 .saw-admin-table tbody tr:hover td:last-child {
     background: var(--saw-gray-50);
+}
+
+/* ============================================
+   ACTIVE ROW HIGHLIGHT - MOVED HERE FROM SIDEBAR.CSS
+   Clearly visible indicator for selected row
+   @since 1.6.0
+   ============================================ */
+.saw-admin-table tbody tr.saw-row-active {
+    background: linear-gradient(90deg, #dbeafe 0%, #eff6ff 100%) !important;
+    border-left: 4px solid #3b82f6 !important;
+    box-shadow: inset 0 1px 3px rgba(59, 130, 246, 0.1) !important;
+    position: relative !important;
+}
+
+.saw-admin-table tbody tr.saw-row-active td {
+    font-weight: 500 !important;
+    color: #1e40af !important;
+}
+
+.saw-admin-table tbody tr.saw-row-active:hover {
+    background: linear-gradient(90deg, #bfdbfe 0%, #dbeafe 100%) !important;
+}
+
+.saw-admin-table tbody tr.saw-row-active td:last-child {
+    background: linear-gradient(90deg, rgba(219, 234, 254, 0.8) 0%, rgba(239, 246, 255, 0.8) 100%) !important;
 }
 
 /* ============================================

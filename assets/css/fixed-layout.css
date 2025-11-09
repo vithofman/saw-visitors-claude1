@@ -6,7 +6,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Assets/CSS
- * @version     2.5.0 - ZERO ANIMATIONS
+ * @version     2.6.0 - REMOVED OVERLAY - Table stays interactive
  * @since       1.0.0
  */
 
@@ -159,21 +159,7 @@ body.saw-app-body {
     display: flex !important; /* INSTANT show */
 }
 
-.saw-sidebar-wrapper::before {
-    content: '' !important;
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 700px !important;
-    bottom: 0 !important;
-    background: rgba(0, 0, 0, 0.2) !important;
-    z-index: -1 !important;
-    pointer-events: none !important;
-}
-
-.saw-sidebar-wrapper.active::before {
-    pointer-events: auto !important;
-}
+/* OVERLAY REMOVED - Table stays fully interactive when sidebar is open */
 
 .saw-sidebar-content {
     flex: 1 !important;
@@ -208,10 +194,6 @@ body.saw-app-body {
     .saw-sidebar-wrapper {
         width: 500px !important;
     }
-    
-    .saw-sidebar-wrapper::before {
-        right: 500px !important;
-    }
 }
 
 @media (max-width: 768px) {
@@ -225,9 +207,5 @@ body.saw-app-body {
     
     .saw-sidebar-wrapper {
         width: 100% !important;
-    }
-    
-    .saw-sidebar-wrapper::before {
-        right: 0 !important;
     }
 }

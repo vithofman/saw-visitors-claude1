@@ -1,4 +1,13 @@
 <?php
+
+
+// FORCE OPCACHE CLEAR
+if (function_exists('opcache_reset')) {
+    opcache_reset();
+}
+
+
+
 /**
  * Admin Table Component
  *
