@@ -49,6 +49,7 @@ body.saw-app-body {
     top: 0 !important;
     left: 0 !important;
     right: 0 !important;
+    height: 60px !important;
     z-index: 1000 !important;
     flex-shrink: 0 !important;
 }

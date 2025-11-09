@@ -139,7 +139,7 @@ class SAW_App_Layout {
      * Loads customer data from database using SAW_Context.
      * Returns default data if customer not found.
      *
-     * ✅ FIX v2.3.0: Now includes logo_url and primary_color
+     * ✅ FIX v2.4.0: Removed address and primary_color columns
      *
      * @since 4.6.1
      * @return array Customer data array
@@ -150,7 +150,7 @@ class SAW_App_Layout {
         if ($customer_id) {
             global $wpdb;
             $customer = $wpdb->get_row($wpdb->prepare(
-                "SELECT id, name, ico, address, logo_url, primary_color FROM %i WHERE id = %d",
+                "SELECT id, name, ico, logo_url FROM %i WHERE id = %d",
                 $wpdb->prefix . 'saw_customers',
                 $customer_id
             ), ARRAY_A);
@@ -160,9 +160,7 @@ class SAW_App_Layout {
                     'id' => $customer['id'],
                     'name' => $customer['name'],
                     'ico' => $customer['ico'] ?? '',
-                    'address' => $customer['address'] ?? '',
                     'logo_url' => $customer['logo_url'] ?? '',
-                    'primary_color' => $customer['primary_color'] ?? '',
                 );
             }
         }
@@ -171,9 +169,7 @@ class SAW_App_Layout {
             'id' => 0,
             'name' => 'Žádný zákazník',
             'ico' => '',
-            'address' => '',
             'logo_url' => '',
-            'primary_color' => '',
         );
     }
     

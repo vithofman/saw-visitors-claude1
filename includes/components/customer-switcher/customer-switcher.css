@@ -323,13 +323,29 @@
     
     .saw-customer-switcher-dropdown {
         width: 320px;
+        /* Zarovnání doprava aby dropdown nekončil mimo obrazovku */
+        right: 0;
+        left: auto;
+    }
+}
+
+@media (max-width: 768px) {
+    .saw-customer-switcher-dropdown {
+        /* Na tabletech dropdown zarovnaný k levému okraji tlačítka */
+        width: calc(100vw - 80px);
+        max-width: 360px;
+        left: 0;
+        right: auto;
+        transform: none;
     }
 }
 
 @media (max-width: 480px) {
     .saw-customer-switcher-dropdown {
+        /* Na mobilech dropdown přes téměř celou šířku */
         width: calc(100vw - 32px);
-        left: 50%;
-        transform: translateX(-50%);
+        left: 0;
+        right: auto;
+        transform: none;
     }
 }

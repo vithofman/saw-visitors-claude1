@@ -1,16 +1,16 @@
 <?php
 /**
- * SAW App Header Component - FIXED v2.0
+ * SAW App Header Component - FIXED v2.1
  *
  * Renders application header with branding, user menu, customer switcher,
  * and language switcher.
  *
- * FIX v2.0:
+ * FIX v2.1:
+ * - ✅ Added fallback to load logo_url even if customer data is passed without it
  * - ✅ Removed primary_color from customer data
- * - ✅ Ensured logo_url is properly loaded from database
  *
  * @package SAW_Visitors
- * @version 2.0 - REMOVED PRIMARY_COLOR
+ * @version 2.1 - LOGO FALLBACK FIX
  * @since   4.8.0
  */
 
@@ -49,6 +49,8 @@ class SAW_App_Header {
      *
      * Initializes user and customer data.
      * If not provided, loads from current WordPress user and SAW context.
+     *
+     * ✅ FIX v2.1: Even if customer is passed, ensure logo_url is loaded
      *
      * @since 4.8.0
      * @param array|null $user     Optional user data override
@@ -91,7 +93,22 @@ class SAW_App_Header {
             );
         }
         
-        // Get customer data from context
+        // ✅ CRITICAL FIX: If customer is passed BUT missing logo_url, load it from DB
+        if ($customer && isset($customer['id']) && empty($customer['logo_url'])) {
+            global $wpdb;
+            $full_customer = $wpdb->get_row($wpdb->prepare(
+                "SELECT logo_url FROM %i WHERE id = %d",
+                $wpdb->prefix . 'saw_customers',
+                $customer['id']
+            ), ARRAY_A);
+            
+            if ($full_customer && !empty($full_customer['logo_url'])) {
+                $customer['logo_url'] = $full_customer['logo_url'];
+                $customer['logo_url_full'] = wp_get_upload_dir()['baseurl'] . '/' . ltrim($full_customer['logo_url'], '/');
+            }
+        }
+        
+        // Get customer data from context if not provided
         if (!$customer) {
             $customer_id = null;
             
@@ -106,6 +123,10 @@ class SAW_App_Header {
                     $wpdb->prefix . 'saw_customers',
                     $customer_id
                 ), ARRAY_A);
+                
+                if ($customer && !empty($customer['logo_url'])) {
+                    $customer['logo_url_full'] = wp_get_upload_dir()['baseurl'] . '/' . ltrim($customer['logo_url'], '/');
+                }
             }
         }
         

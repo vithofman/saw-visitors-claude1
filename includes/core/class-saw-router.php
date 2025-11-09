@@ -625,7 +625,7 @@ class SAW_Router {
     /**
      * Get current customer data
      *
-     * ✅ FIX v7.2.0: Always load logo_url from database even if SAW_Context doesn't provide it
+     * ✅ FIX v7.3.0: Fixed duplicate base URL in logo_url_full
      *
      * @since 1.0.0
      * @return array Customer data array
@@ -651,12 +651,24 @@ class SAW_Router {
             ), ARRAY_A);
             
             if ($customer) {
+                $logo_url_full = '';
+                
+                if (!empty($customer['logo_url'])) {
+                    // Check if already full URL (starts with http)
+                    if (strpos($customer['logo_url'], 'http') === 0) {
+                        $logo_url_full = $customer['logo_url'];
+                    } else {
+                        // Relative path - build full URL
+                        $logo_url_full = wp_get_upload_dir()['baseurl'] . '/' . ltrim($customer['logo_url'], '/');
+                    }
+                }
+                
                 return array(
                     'id' => $customer['id'],
                     'name' => $customer['name'],
                     'ico' => $customer['ico'] ?? '',
                     'logo_url' => $customer['logo_url'] ?? '',
-                    'logo_url_full' => !empty($customer['logo_url']) ? wp_get_upload_dir()['baseurl'] . '/' . ltrim($customer['logo_url'], '/') : '',
+                    'logo_url_full' => $logo_url_full,
                 );
             }
         }
@@ -669,12 +681,24 @@ class SAW_Router {
         ), ARRAY_A);
         
         if ($customer) {
+            $logo_url_full = '';
+            
+            if (!empty($customer['logo_url'])) {
+                // Check if already full URL (starts with http)
+                if (strpos($customer['logo_url'], 'http') === 0) {
+                    $logo_url_full = $customer['logo_url'];
+                } else {
+                    // Relative path - build full URL
+                    $logo_url_full = wp_get_upload_dir()['baseurl'] . '/' . ltrim($customer['logo_url'], '/');
+                }
+            }
+            
             return array(
                 'id' => $customer['id'],
                 'name' => $customer['name'],
                 'ico' => $customer['ico'] ?? '',
                 'logo_url' => $customer['logo_url'] ?? '',
-                'logo_url_full' => !empty($customer['logo_url']) ? wp_get_upload_dir()['baseurl'] . '/' . ltrim($customer['logo_url'], '/') : '',
+                'logo_url_full' => $logo_url_full,
             );
         }
         

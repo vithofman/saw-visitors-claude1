@@ -418,19 +418,23 @@ class SAW_Component_Customer_Switcher {
      * @return string Logo URL or empty string
      */
     private function get_logo_url() {
-        if (!empty($this->current_customer['logo_url_full'])) {
-            return $this->current_customer['logo_url_full'];
-        }
-        
-        if (!empty($this->current_customer['logo_url'])) {
-            if (strpos($this->current_customer['logo_url'], 'http') === 0) {
-                return $this->current_customer['logo_url'];
-            }
-            return wp_upload_dir()['baseurl'] . '/' . ltrim($this->current_customer['logo_url'], '/');
-        }
-        
-        return '';
+    // Zkus nejdřív logo_url_full
+    if (isset($this->current_customer['logo_url_full']) && $this->current_customer['logo_url_full'] !== '') {
+        return $this->current_customer['logo_url_full'];
     }
+    
+    // Pak zkus logo_url
+    if (isset($this->current_customer['logo_url']) && $this->current_customer['logo_url'] !== '') {
+        // Už je full URL?
+        if (strpos($this->current_customer['logo_url'], 'http') === 0) {
+            return $this->current_customer['logo_url'];
+        }
+        // Sestav full URL
+        return wp_get_upload_dir()['baseurl'] . '/' . ltrim($this->current_customer['logo_url'], '/');
+    }
+    
+    return '';
+}
     
     /**
      * Check if current user is super admin
