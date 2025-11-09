@@ -2,10 +2,10 @@
  * Fixed Layout - Modern Design System
  * 
  * Ultra-minimal full-width layout with maximum space utilization.
- * Inspired by: Vercel, Linear, Tailwind UI
+ * FINAL FIX: Correct padding-top + massive bottom padding
  * 
  * @package     SAW_Visitors
- * @version     3.0.0 - Complete redesign
+ * @version     11.0.0 - FINAL FINAL: padding-top 60px
  */
 
 /* ============================================
@@ -32,12 +32,12 @@ body.saw-app-body {
     display: flex !important;
     flex-direction: column !important;
     padding-top: 0 !important;
-    background: #fafafa !important; /* Ultra-light gray background */
+    background: #fafafa !important;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
 }
 
 /* ============================================
-   APP STRUCTURE - FULL HEIGHT
+   APP STRUCTURE - FULL HEIGHT WITH PROPER OFFSETS
    ============================================ */
 
 .saw-app-header {
@@ -57,14 +57,52 @@ body.saw-app-body {
     display: flex !important;
     min-height: 0 !important;
     overflow: hidden !important;
-    padding-top: 0 !important;
+    padding-top: 35px !important; /* OPRAVENO: MUSÍ BÝT 60px JAKO HEADER */
 }
 
 .saw-app-sidebar {
+    position: fixed !important;
+    top: 60px !important;
+    left: 0 !important;
+    bottom: 45px !important;
+    width: 260px !important;
     flex-shrink: 0 !important;
     overflow-y: auto !important;
+    overflow-x: hidden !important;
     background: #ffffff !important;
     border-right: 1px solid #eaeaea !important;
+    z-index: 999 !important;
+}
+
+/* Sidebar scrollbar styling */
+.saw-app-sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.saw-app-sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.saw-app-sidebar::-webkit-scrollbar-thumb {
+    background: #d4d4d4;
+    border-radius: 3px;
+}
+
+.saw-app-sidebar::-webkit-scrollbar-thumb:hover {
+    background: #a3a3a3;
+}
+
+/* Mobile: hide sidebar by default */
+@media (max-width: 1024px) {
+    .saw-app-sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        bottom: 40px;
+    }
+    
+    .saw-app-sidebar.active {
+        transform: translateX(0);
+    }
 }
 
 .saw-app-main {
@@ -73,19 +111,84 @@ body.saw-app-body {
     flex-direction: column !important;
     min-width: 0 !important;
     overflow: hidden !important;
-    margin-left: 260px !important;
+    margin-left: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+/* Desktop: offset for sidebar */
+@media (min-width: 1025px) {
+    .saw-app-main {
+        margin-left: 260px !important;
+    }
 }
 
 .saw-app-content {
     flex: 1 !important;
     overflow-y: auto !important;
-    padding: 20px !important; /* Minimální 20px padding */
-    width: 100%;
+    overflow-x: hidden !important;
+    padding: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
 }
 
+/* Content scrollbar styling */
+.saw-app-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.saw-app-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.saw-app-content::-webkit-scrollbar-thumb {
+    background: #d4d4d4;
+    border-radius: 4px;
+}
+
+.saw-app-content::-webkit-scrollbar-thumb:hover {
+    background: #a3a3a3;
+}
+
+/* ============================================
+   APP FOOTER - FIXED AT BOTTOM
+   ============================================ */
+
 .saw-app-footer {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 45px !important;
+    z-index: 900 !important;
     flex-shrink: 0 !important;
-    margin-left: 260px !important;
+    background: #f8f9fa !important;
+    border-top: 1px solid #e5e7eb !important;
+    padding: 10px 24px !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+/* Desktop: offset for sidebar */
+@media (min-width: 1025px) {
+    .saw-app-footer {
+        left: 260px !important;
+    }
+}
+
+/* Mobile: no offset */
+@media (max-width: 1024px) {
+    .saw-app-footer {
+        left: 0 !important;
+    }
+}
+
+/* Mobile: smaller footer */
+@media (max-width: 768px) {
+    .saw-app-footer {
+        padding: 8px 16px !important;
+        height: 40px !important;
+    }
 }
 
 /* ============================================
@@ -104,8 +207,26 @@ body.saw-app-body {
     height: 100% !important;
     display: flex !important;
     flex-direction: column !important;
-    padding: 0 !important; /* ZERO - maximální prostor */
-    gap: 0 !important; /* ZERO gap - header a table jsou spojené */
+    padding: 0 !important;
+    gap: 0 !important;
+}
+
+/* ============================================
+   PAGE HEADER - MINIMAL PADDING
+   ============================================ */
+
+.saw-page-header {
+    flex-shrink: 0 !important;
+    margin-bottom: 0 !important;
+    padding: 20px !important;
+    background: #ffffff !important;
+    border-bottom: 1px solid #eaeaea !important;
+}
+
+@media (max-width: 768px) {
+    .saw-page-header {
+        padding: 16px !important;
+    }
 }
 
 /* ============================================
@@ -119,31 +240,57 @@ body.saw-app-body {
     padding-right: 0 !important;
     overflow: hidden !important;
     background: #ffffff !important;
-    border-radius: 8px !important;
-    border: 1px solid #eaeaea !important;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+    border-radius: 0 !important;
+    border: none !important;
+    border-top: 1px solid #eaeaea !important;
 }
 
 .saw-admin-table-split.has-sidebar {
     padding-right: 700px !important;
 }
 
+/* Responsive sidebar width */
+@media (max-width: 1200px) {
+    .saw-admin-table-split.has-sidebar {
+        padding-right: 500px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .saw-admin-table-split.has-sidebar {
+        padding-right: 0 !important;
+    }
+}
+
 /* ============================================
-   TABLE PANEL - SCROLL CONTAINER
+   TABLE PANEL - EXTREME PADDING FOR LAST ROW
    ============================================ */
 
 .saw-table-panel {
     flex: 1 !important;
     overflow-y: auto !important;
+    overflow-x: hidden !important;
     border-right: none !important;
     background: #ffffff !important;
+    padding-bottom: 250px !important;
 }
 
 .saw-admin-table-split.has-sidebar .saw-table-panel {
     border-right: 1px solid #eaeaea !important;
 }
 
-/* Scrollbar styling */
+/* Hide table on mobile when sidebar is open */
+@media (max-width: 768px) {
+    .saw-table-panel {
+        padding-bottom: 200px !important;
+    }
+    
+    .saw-admin-table-split.has-sidebar .saw-table-panel {
+        display: none !important;
+    }
+}
+
+/* Table panel scrollbar styling */
 .saw-table-panel::-webkit-scrollbar {
     width: 8px;
 }
@@ -162,14 +309,35 @@ body.saw-app-body {
 }
 
 /* ============================================
+   TABLE - EXTREME SPACING LAYERS
+   ============================================ */
+
+.saw-admin-table-wrapper {
+    padding-bottom: 150px !important;
+}
+
+.saw-admin-table {
+    margin-bottom: 100px !important;
+}
+
+/* Extreme protection for last row */
+.saw-admin-table tbody {
+    padding-bottom: 80px !important;
+}
+
+.saw-admin-table tbody tr:last-child td {
+    padding-bottom: 80px !important;
+}
+
+/* ============================================
    SIDEBAR WRAPPER (AJAX)
    ============================================ */
 
 .saw-sidebar-wrapper {
     position: fixed !important;
-    top: 0 !important;
+    top: 60px !important;
     right: 0 !important;
-    bottom: 0 !important;
+    bottom: 45px !important;
     width: 700px !important;
     z-index: 9999 !important;
     display: none !important;
@@ -185,57 +353,102 @@ body.saw-app-body {
 .saw-sidebar-content {
     flex: 1 !important;
     overflow-y: auto !important;
+    overflow-x: hidden !important;
     padding: 24px !important;
 }
 
-/* ============================================
-   PAGE HEADER - KOMPAKTNÍ
-   ============================================ */
-
-.saw-page-header {
-    flex-shrink: 0 !important;
-    margin-bottom: 0 !important;
-    padding: 20px 24px !important;
-    background: #ffffff !important;
-    border-bottom: 1px solid #eaeaea !important;
+/* Sidebar content scrollbar */
+.saw-sidebar-content::-webkit-scrollbar {
+    width: 6px;
 }
 
-/* ============================================
-   RESPONSIVE
-   ============================================ */
+.saw-sidebar-content::-webkit-scrollbar-track {
+    background: transparent;
+}
 
+.saw-sidebar-content::-webkit-scrollbar-thumb {
+    background: #d4d4d4;
+    border-radius: 3px;
+}
+
+.saw-sidebar-content::-webkit-scrollbar-thumb:hover {
+    background: #a3a3a3;
+}
+
+/* Responsive sidebar width */
 @media (max-width: 1200px) {
-    .saw-admin-table-split.has-sidebar {
-        padding-right: 500px !important;
-    }
-    
     .saw-sidebar-wrapper {
         width: 500px !important;
     }
 }
 
 @media (max-width: 768px) {
-    .saw-app-content {
-        padding: 16px !important;
+    .saw-sidebar-wrapper {
+        width: 100% !important;
+        top: 60px !important;
+        bottom: 40px !important;
     }
-    
-    .saw-admin-table-split {
-        border-radius: 6px !important;
-    }
-    
-    .saw-admin-table-split.has-sidebar {
-        padding-right: 0 !important;
-    }
-    
-    .saw-table-panel {
+}
+
+/* ============================================
+   PRINT STYLES
+   ============================================ */
+
+@media print {
+    .saw-app-header,
+    .saw-app-sidebar,
+    .saw-app-footer {
         display: none !important;
     }
     
-    .saw-sidebar-wrapper {
-        width: 100% !important;
+    .saw-app-main {
+        margin-left: 0 !important;
+        padding-top: 0 !important;
     }
     
-    .saw-page-header {
-        padding: 16px 20px !important;
+    .saw-app-content {
+        padding-bottom: 0 !important;
+        overflow: visible !important;
     }
+    
+    .saw-app-container {
+        padding-top: 0 !important;
+    }
+    
+    .saw-table-panel {
+        padding-bottom: 0 !important;
+    }
+    
+    .saw-admin-table-wrapper {
+        padding-bottom: 0 !important;
+    }
+    
+    .saw-admin-table {
+        margin-bottom: 0 !important;
+    }
+    
+    .saw-admin-table tbody {
+        padding-bottom: 0 !important;
+    }
+    
+    .saw-admin-table tbody tr:last-child td {
+        padding-bottom: 0 !important;
+    }
+}
+
+/* ============================================
+   UTILITY - PREVENT HORIZONTAL OVERFLOW
+   ============================================ */
+
+* {
+    box-sizing: border-box;
+}
+
+body, html {
+    overflow-x: hidden !important;
+}
+
+/* Ensure no element causes horizontal scroll */
+.saw-app-body * {
+    max-width: 100%;
 }

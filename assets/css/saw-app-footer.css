@@ -2,41 +2,59 @@
  * SAW App Footer - Global Component Styles
  * 
  * Footer component for frontend application layout
- * Displays branding, version, copyright, and links
+ * Light neutral design with excellent readability
+ * Full responsive support with proper spacing
  * 
  * @package SAW_Visitors
  * @since   4.6.1
+ * @version 2.3.0 - Simplified (positioning handled by fixed-layout.css)
  */
 
 .saw-app-footer {
-    background: white;
-    border-top: 1px solid #e5e7eb;
-    padding: 16px 24px;
-    margin-left: 260px;
+    color: #6b7280;
+    background: #f8f9fa;
 }
 
 .saw-footer-content {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    max-width: 1400px;
+    max-width: 100%;
+    gap: 20px;
+}
+
+/* Mobile layout - stack vertically */
+@media (max-width: 768px) {
+    .saw-footer-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
 }
 
 .saw-footer-left {
     display: flex;
     align-items: center;
     gap: 12px;
-    font-size: 12px;
+    font-size: 13px;
     color: #6b7280;
+    flex-wrap: wrap;
 }
 
 .saw-footer-brand {
     font-weight: 600;
     color: #111827;
+    letter-spacing: -0.01em;
 }
 
 .saw-footer-version {
     color: #9ca3af;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    background: #e5e7eb;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
 }
 
 .saw-footer-copy {
@@ -47,16 +65,69 @@
     display: flex;
     align-items: center;
     gap: 16px;
+    flex-wrap: wrap;
+}
+
+/* Mobile layout - full width links */
+@media (max-width: 768px) {
+    .saw-footer-right {
+        width: 100%;
+        gap: 12px;
+    }
 }
 
 .saw-footer-link {
-    font-size: 12px;
+    font-size: 13px;
     color: #2563eb;
     text-decoration: none;
-    transition: color 0.2s;
+    transition: all 0.2s ease;
+    position: relative;
+    padding: 4px 0;
+    white-space: nowrap;
 }
 
 .saw-footer-link:hover {
     color: #1d4ed8;
-    text-decoration: underline;
+}
+
+/* Subtle underline animation on hover */
+.saw-footer-link::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: currentColor;
+    transform: scaleX(0);
+    transition: transform 0.2s ease;
+}
+
+.saw-footer-link:hover::after {
+    transform: scaleX(1);
+}
+
+/* External link icon */
+.saw-footer-link[target="_blank"]::before {
+    content: '';
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-right: 4px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'%3E%3C/path%3E%3Cpolyline points='15 3 21 3 21 9'%3E%3C/polyline%3E%3Cline x1='10' y1='14' x2='21' y2='3'%3E%3C/line%3E%3C/svg%3E");
+    background-size: contain;
+    background-repeat: no-repeat;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+.saw-footer-link[target="_blank"]:hover::before {
+    opacity: 1;
+}
+
+/* Print styles */
+@media print {
+    .saw-app-footer {
+        display: none;
+    }
 }
