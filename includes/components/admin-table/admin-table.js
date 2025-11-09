@@ -6,7 +6,7 @@
  *
  * @package    SAW_Visitors
  * @subpackage Components
- * @version    3.11.0 - FINAL FIX: Fresh scroll container after HTML insert
+ * @version    4.0.0 - CRITICAL FIX: Active row from URL + scroll into view
  * @since      1.0.0
  */
 
@@ -82,18 +82,9 @@
                 // CRITICAL FIX: Add has-sidebar class to table for proper spacing
                 $('.saw-admin-table-split').addClass('has-sidebar');
                 
-                // CRITICAL FIX: Set active row IMMEDIATELY (before any animations)
-                updateActiveRow(id);
+                // CRITICAL FIX: Set active row IMMEDIATELY with scroll
+                updateActiveRow(id, true);
                 console.log('✨ Active row set for ID:', id);
-                
-                // CRITICAL FIX: Get FRESH scroll container reference AFTER HTML insert
-                const $newScrollContainer = $('.saw-table-panel');
-                if ($newScrollContainer.length) {
-                    $newScrollContainer.scrollTop(scrollPosition);
-                    console.log('📜 Restored scroll position:', scrollPosition);
-                } else {
-                    console.warn('⚠️ Scroll container not found after HTML insert');
-                }
                 
                 // Add active class to wrapper for slide-in animation
                 setTimeout(function() {
@@ -201,12 +192,55 @@
      * Update active row in table
      *
      * @param {number} id Item ID
+     * @param {boolean} scrollToRow Whether to scroll active row into view
      * @return {void}
      */
-    function updateActiveRow(id) {
+    function updateActiveRow(id, scrollToRow) {
+        if (typeof scrollToRow === 'undefined') {
+            scrollToRow = false;
+        }
+        
         $('.saw-admin-table tbody tr').removeClass('saw-row-active');
-        $('.saw-admin-table tbody tr[data-id="' + id + '"]').addClass('saw-row-active');
+        const $activeRow = $('.saw-admin-table tbody tr[data-id="' + id + '"]');
+        
+        if (!$activeRow.length) {
+            console.warn('⚠️ Active row not found for ID:', id);
+            return;
+        }
+        
+        $activeRow.addClass('saw-row-active');
         console.log('✨ Active row updated:', id);
+        
+        // CRITICAL FIX: Scroll active row into view
+        if (scrollToRow) {
+            setTimeout(function() {
+                const $scrollContainer = $('.saw-table-panel');
+                
+                if (!$scrollContainer.length) {
+                    console.warn('⚠️ Scroll container (.saw-table-panel) not found');
+                    return;
+                }
+                
+                const containerTop = $scrollContainer.offset().top;
+                const containerScrollTop = $scrollContainer.scrollTop();
+                const rowTop = $activeRow.offset().top;
+                const rowHeight = $activeRow.outerHeight();
+                const containerHeight = $scrollContainer.outerHeight();
+                
+                // Calculate if row is visible
+                const rowRelativeTop = rowTop - containerTop;
+                const isRowVisible = (rowRelativeTop >= 0) && (rowRelativeTop + rowHeight <= containerHeight);
+                
+                if (!isRowVisible) {
+                    // Scroll so row is centered in viewport
+                    const targetScrollTop = containerScrollTop + rowRelativeTop - (containerHeight / 2) + (rowHeight / 2);
+                    $scrollContainer.animate({ scrollTop: targetScrollTop }, 300);
+                    console.log('📜 Scrolled active row into view');
+                } else {
+                    console.log('✅ Active row already visible');
+                }
+            }, 100); // Wait for DOM and animations to settle
+        }
     }
     
     /**
@@ -271,11 +305,38 @@
     }
     
     /**
+     * CRITICAL FIX: Set active row on page load from URL
+     * 
+     * This ensures that when user opens a detail URL directly 
+     * (e.g., /admin/settings/customers/24/), the corresponding 
+     * table row is highlighted and scrolled into view.
+     *
+     * @return {void}
+     */
+    function setActiveRowFromUrl() {
+        const currentUrl = window.location.pathname;
+        const parsed = parseUrl(currentUrl);
+        
+        if (parsed.id && parsed.entity) {
+            console.log('🎯 Setting active row from URL:', parsed);
+            
+            // Wait for table to be fully rendered
+            setTimeout(function() {
+                updateActiveRow(parsed.id, true);
+            }, 200);
+        }
+    }
+    
+    /**
      * Initialize admin table component
      *
      * @return {void}
      */
     function initAdminTable() {
+        // CRITICAL FIX: Set active row on page load
+        setActiveRowFromUrl();
+        
+        // Clickable table rows
         $(document).on('click', '.saw-admin-table tbody tr', function(e) {
             // Ignore clicks on action buttons
             if ($(e.target).closest('.saw-action-buttons, button, a, input, select').length) {
@@ -303,7 +364,7 @@
                 const modalId = $row.data('modal');
                 
                 if (modalId && typeof SAWModal !== 'undefined') {
-                    console.log('🔲 Opening modal:', modalId);
+                    console.log('📲 Opening modal:', modalId);
                     SAWModal.open(modalId, {
                         id: itemId,
                         nonce: (window.sawGlobal && window.sawGlobal.nonce) || window.sawAjaxNonce
@@ -325,7 +386,7 @@
                     console.log('📊 Calling openSidebarAjax');
                     
                     // CRITICAL FIX: Set active row IMMEDIATELY on click
-                    updateActiveRow(itemId);
+                    updateActiveRow(itemId, false);
                     
                     openSidebarAjax(parsed.id, parsed.mode, parsed.entity);
                 } else {
