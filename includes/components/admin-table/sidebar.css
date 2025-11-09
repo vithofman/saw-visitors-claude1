@@ -1,17 +1,25 @@
 /**
  * Sidebar Styles - Detail & Form
  *
+ * Smooth slide-in animation with transform for performance.
+ * Hidden by default, shown with .active class.
+ *
  * @package     SAW_Visitors
- * @version     2.7.0 - FIXED: Removed active row (moved to admin-table.css)
+ * @subpackage  Components/AdminTable
+ * @version     2.2.0 - OPTIMIZED: Faster animation (200ms)
  * @since       4.0.0
  */
 
-/* SPLIT LAYOUT */
+/* ============================================
+   SPLIT LAYOUT
+   ============================================ */
+
 .saw-admin-table-split {
     display: flex;
     gap: 0;
     min-height: 600px;
     height: calc(100vh - 200px);
+    padding-right: 700px;
 }
 
 .saw-table-panel {
@@ -21,7 +29,15 @@
     background: #fff;
 }
 
-/* SIDEBAR WRAPPER */
+.saw-table-panel tr.saw-row-active {
+    background: #eff6ff !important;
+    border-left: 3px solid #3b82f6;
+}
+
+/* ============================================
+   SIDEBAR WRAPPER - HIDDEN BY DEFAULT
+   ============================================ */
+
 .saw-sidebar-wrapper {
     position: fixed !important;
     top: 0 !important;
@@ -29,24 +45,54 @@
     bottom: 0 !important;
     width: 700px !important;
     z-index: 99999 !important;
-    display: none !important;
+    display: flex !important;
     flex-direction: column !important;
     box-shadow: -8px 0 24px rgba(0, 0, 0, 0.08), -2px 0 8px rgba(0, 0, 0, 0.04) !important;
+    
+    transform: translateX(100%);
+    /* transition: ODSTRANĚNO */
+    pointer-events: none;
 }
-
 .saw-sidebar-wrapper.active {
-    display: flex !important;
+    transform: translateX(0) !important;
+    pointer-events: auto !important;
 }
 
-/* SIDEBAR STRUCTURE */
+.saw-sidebar-wrapper::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 700px;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    /* transition: ODSTRANĚNO */
+    z-index: -1;
+    pointer-events: none;
+}
+.saw-sidebar-wrapper.active::before {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* ============================================
+   SIDEBAR STRUCTURE
+   ============================================ */
+
 .saw-sidebar {
     display: flex !important;
     flex-direction: column !important;
     height: 100% !important;
     background: #ffffff !important;
+    position: relative !important;
+    z-index: 1 !important;
 }
 
-/* HEADER */
+/* ============================================
+   HEADER
+   ============================================ */
+
 .saw-sidebar-header {
     padding: 12px 20px !important;
     border-bottom: 1px solid #e5e7eb !important;
@@ -66,6 +112,11 @@
     flex: 1 !important;
 }
 
+.saw-sidebar-icon {
+    font-size: 20px !important;
+    line-height: 1 !important;
+}
+
 .saw-sidebar-heading,
 .saw-sidebar-title h2 {
     margin: 0 !important;
@@ -74,9 +125,9 @@
     color: #111827 !important;
 }
 
-/* NAV CONTROLS */
 .saw-sidebar-nav-controls {
     display: flex !important;
+    align-items: center !important;
     gap: 4px !important;
 }
 
@@ -92,17 +143,26 @@
     border-radius: 6px !important;
     cursor: pointer !important;
     font-size: 20px !important;
+    line-height: 1 !important;
     color: #6b7280 !important;
-    transition: all 0.15s ease !important;
+    font-weight: 300 !important;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* CRITICAL FIX: Vertical alignment for arrow characters */
+.saw-sidebar-nav-btn span {
+    display: inline-block !important;
+    vertical-align: middle !important;
+    line-height: 1 !important;
 }
 
 .saw-sidebar-nav-btn:hover {
     background: #f3f4f6 !important;
     border-color: #d1d5db !important;
     color: #111827 !important;
+    transform: translateY(-1px);
 }
 
-/* CLOSE BUTTON */
 .saw-sidebar-close {
     display: flex !important;
     align-items: center !important;
@@ -114,25 +174,111 @@
     border: none !important;
     border-radius: 6px !important;
     cursor: pointer !important;
+    flex-shrink: 0 !important;
     font-size: 20px !important;
+    line-height: 1 !important;
     color: #fff !important;
+    font-weight: 400 !important;
     text-decoration: none !important;
-    transition: all 0.15s ease !important;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* CRITICAL FIX: Vertical alignment for cross character */
+.saw-sidebar-close span {
+    display: inline-block !important;
+    vertical-align: middle !important;
+    line-height: 1 !important;
 }
 
 .saw-sidebar-close:hover {
     background: #b91c1c !important;
+    color: #fff !important;
+    transform: translateY(-1px);
 }
 
-/* CONTENT */
+/* ============================================
+   CONTENT
+   ============================================ */
+
 .saw-sidebar-content {
     flex: 1 !important;
     overflow-y: auto !important;
     padding: 20px !important;
     background: #ffffff !important;
+    position: relative !important;
+    z-index: 1 !important;
 }
 
-/* FLOATING ACTIONS */
+/* ============================================
+   FOOTER
+   ============================================ */
+
+.saw-sidebar-footer {
+    padding: 16px 20px !important;
+    border-top: 1px solid #e5e7eb !important;
+    display: flex !important;
+    gap: 8px !important;
+    background: #fafbfc !important;
+    flex-shrink: 0 !important;
+}
+
+.saw-sidebar-footer .saw-button {
+    flex: 1;
+}
+
+/* ============================================
+   FORM SPECIFIC
+   ============================================ */
+
+.saw-sidebar[data-mode="form"] .saw-form-container {
+    max-width: none !important;
+    padding: 0 !important;
+}
+
+.saw-sidebar[data-mode="form"] .saw-page-header {
+    display: none !important;
+}
+
+/* ============================================
+   BUTTON STYLES
+   ============================================ */
+
+.saw-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.saw-button-primary {
+    background: #3b82f6;
+    color: #fff;
+}
+
+.saw-button-primary:hover {
+    background: #2563eb;
+}
+
+.saw-button-secondary {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.saw-button-secondary:hover {
+    background: #e5e7eb;
+}
+
+/* ============================================
+   FLOATING ACTION BUTTONS
+   ============================================ */
+
 .saw-sidebar-floating-actions {
     position: fixed;
     right: 24px;
@@ -152,9 +298,15 @@
     justify-content: center;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none;
     border: none;
     font-size: 20px;
+}
+
+.saw-floating-action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
 .saw-floating-action-btn.edit {
@@ -175,19 +327,45 @@
     background: #dc2626;
 }
 
-/* RESPONSIVE */
+.saw-floating-action-btn .dashicons {
+    width: 24px;
+    height: 24px;
+    font-size: 24px;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
 @media (max-width: 1200px) {
     .saw-sidebar-wrapper {
         width: 500px !important;
     }
+    
+    .saw-admin-table-split {
+        padding-right: 500px;
+    }
+    
+    .saw-sidebar-wrapper::before {
+        right: 500px;
+    }
 }
 
 @media (max-width: 768px) {
+    .saw-admin-table-split {
+        flex-direction: column;
+        padding-right: 0;
+    }
+    
     .saw-table-panel {
         display: none;
     }
     
     .saw-sidebar-wrapper {
         width: 100% !important;
+    }
+    
+    .saw-sidebar-wrapper::before {
+        right: 0;
     }
 }

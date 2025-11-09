@@ -1,13 +1,4 @@
 <?php
-
-
-// FORCE OPCACHE CLEAR
-if (function_exists('opcache_reset')) {
-    opcache_reset();
-}
-
-
-
 /**
  * Admin Table Component
  *
@@ -15,7 +6,7 @@ if (function_exists('opcache_reset')) {
  *
  * @package     SAW_Visitors
  * @subpackage  Components
- * @version     5.2.0 - FIXED: Removed duplicate asset enqueueing, relies on SAW_Asset_Manager
+ * @version     5.1.0 - REFACTORED: Header with inline controls, no duplicates
  * @since       1.0.0
  */
 
@@ -183,10 +174,7 @@ class SAW_Component_Admin_Table {
      * @return void Outputs HTML directly
      */
     public function render() {
-        // CRITICAL: Assets are enqueued globally via SAW_Asset_Manager
-        // Tables.css and table-column-types.css are already loaded
-        // Only component-specific JS/CSS are enqueued here if needed
-        $this->enqueue_component_specific_assets();
+        $this->enqueue_assets();
         
         $has_sidebar = !empty($this->config['sidebar_mode']);
         
@@ -259,27 +247,36 @@ class SAW_Component_Admin_Table {
 }
     
     /**
-     * Enqueue component-specific assets
-     *
-     * CRITICAL: Only enqueues AdminTable component JS/CSS.
-     * Global styles (tables.css, table-column-types.css) are already loaded via SAW_Asset_Manager.
+     * Enqueue component CSS and JS assets
      *
      * @since 1.0.0
      * @return void
      */
-    private function enqueue_component_specific_assets() {
-        // AdminTable component CSS (if exists)
+    private function enqueue_assets() {
+        wp_enqueue_style(
+            'saw-tables',
+            SAW_VISITORS_PLUGIN_URL . 'assets/css/components/tables.css',
+            array('saw-variables'),
+            SAW_VISITORS_VERSION
+        );
+        
+        wp_enqueue_style(
+            'saw-table-column-types',
+            SAW_VISITORS_PLUGIN_URL . 'assets/css/components/table-column-types.css',
+            array('saw-variables'),
+            SAW_VISITORS_VERSION
+        );
+        
         $component_css = __DIR__ . '/admin-table.css';
         if (file_exists($component_css)) {
             wp_enqueue_style(
                 'saw-admin-table-component',
                 str_replace(SAW_VISITORS_PLUGIN_DIR, SAW_VISITORS_PLUGIN_URL, $component_css),
-                array('saw-tables'), // Depends on global tables.css
+                array('saw-tables'),
                 filemtime($component_css)
             );
         }
         
-        // AdminTable component JS (if exists)
         $component_js = __DIR__ . '/admin-table.js';
         if (file_exists($component_js)) {
             wp_enqueue_script(
@@ -291,7 +288,7 @@ class SAW_Component_Admin_Table {
             );
         }
         
-        // Sidebar CSS (if exists)
+        // Sidebar assets
         $sidebar_css = __DIR__ . '/sidebar.css';
         if (file_exists($sidebar_css)) {
             wp_enqueue_style(
@@ -302,7 +299,6 @@ class SAW_Component_Admin_Table {
             );
         }
         
-        // Sidebar JS (if exists)
         $sidebar_js = __DIR__ . '/sidebar.js';
         if (file_exists($sidebar_js)) {
             wp_enqueue_script(

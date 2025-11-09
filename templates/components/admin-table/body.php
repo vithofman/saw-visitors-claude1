@@ -5,7 +5,7 @@
  * 
  * @package SAW_Visitors
  * @since 4.6.1
- * @version ENHANCED - Clickable rows + Modal detail
+ * @version 4.7.0 - FIXED: Added data-clickable-row attribute
  */
 
 if (!defined('ABSPATH')) {
@@ -19,11 +19,11 @@ $edit_url = $config['edit_url'] ?? '';
 $orderby = $config['orderby'] ?? '';
 $order = $config['order'] ?? 'ASC';
 
-// ✨ NOVÉ: Callback funkce pro custom class a style na řádcích
+// Callback funkce pro custom class a style na řádcích
 $row_class_callback = $config['row_class_callback'] ?? null;
 $row_style_callback = $config['row_style_callback'] ?? null;
 
-// ✨ NOVÉ: Detail modal enable flag
+// Detail modal enable flag
 $enable_detail_modal = $config['enable_detail_modal'] ?? false;
 ?>
 
@@ -83,11 +83,11 @@ $enable_detail_modal = $config['enable_detail_modal'] ?? false;
             <?php else: ?>
                 <?php foreach ($rows as $row): ?>
                     <?php
-                    // ✨ NOVÉ: Aplikace custom class a style na řádek
+                    // Aplikace custom class a style na řádek
                     $row_class = 'saw-table-row';
                     $row_style = '';
                     
-                    // ✨ NOVÉ: Pokud je zapnutý modal detail, přidej clickable class
+                    // KRITICKÁ OPRAVA: Přidat data-clickable-row pokud je zapnutý modal detail
                     if ($enable_detail_modal) {
                         $row_class .= ' saw-row-clickable';
                     }
@@ -108,7 +108,7 @@ $enable_detail_modal = $config['enable_detail_modal'] ?? false;
                         data-id="<?php echo esc_attr($row['id'] ?? ''); ?>"
                         data-entity="<?php echo esc_attr($entity); ?>"
                         <?php if ($enable_detail_modal): ?>
-                            data-row-data="<?php echo esc_attr(json_encode($row)); ?>"
+                            data-clickable-row="1"
                         <?php endif; ?>>
                         
                         <?php foreach ($columns as $column_key => $column_config): ?>

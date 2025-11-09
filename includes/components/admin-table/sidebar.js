@@ -6,7 +6,7 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Components/AdminTable
- * @version     3.1.0 - FIXED: Edit mode detection with console logs
+ * @version     3.0.0 - REFACTORED: Universal close logic + cancel button
  * @since       4.0.0
  */
 
@@ -163,7 +163,6 @@
     function initCloseButton() {
         $(document).on('click', '.saw-sidebar-close', function(e) {
             e.preventDefault();
-            console.log('🔴 CLOSE BUTTON CLICKED - calling handleSidebarClose()');
             handleSidebarClose();
         });
     }
@@ -176,7 +175,6 @@
     function initCancelButton() {
         $(document).on('click', '.saw-form-cancel-btn', function(e) {
             e.preventDefault();
-            console.log('🟡 CANCEL BUTTON CLICKED - calling handleSidebarClose()');
             handleSidebarClose();
         });
     }
@@ -191,12 +189,9 @@
      * @return {void}
      */
     function handleSidebarClose() {
-        console.log('🚪 handleSidebarClose() STARTED');
-        
         const $sidebar = $('.saw-sidebar');
         
         if (!$sidebar.length) {
-            console.log('⚠️ No sidebar found');
             return;
         }
         
@@ -204,71 +199,34 @@
         const entity = $sidebar.attr('data-entity');
         const currentId = $sidebar.data('current-id');
         
-        console.log('📊 Sidebar data:', {
-            mode: mode,
-            entity: entity,
-            currentId: currentId
-        });
-        
         const currentUrl = window.location.pathname;
         const pathParts = currentUrl.split('/').filter(function(p) { return p; });
         
-        console.log('🔗 Current URL:', currentUrl);
-        console.log('📂 Path parts:', pathParts);
-        console.log('🔍 Last part:', pathParts[pathParts.length - 1]);
-        
         // EDIT MODE -> Go to DETAIL
-        if (mode === 'edit' && currentId) {
-            console.log('✅ EDIT MODE DETECTED - Going to DETAIL');
-            
-            // Remove 'edit' from path
-            if (pathParts[pathParts.length - 1] === 'edit') {
-                pathParts.pop();
-            }
-            
-            const detailUrl = '/' + pathParts.join('/') + '/';
-            console.log('🎯 Redirecting to:', detailUrl);
-            window.location.href = detailUrl;
+        if (pathParts[pathParts.length - 1] === 'edit' && currentId) {
+            pathParts.pop(); // Remove 'edit'
+            window.location.href = '/' + pathParts.join('/') + '/';
             return;
         }
         
         // CREATE MODE -> Go to LIST
-        if (mode === 'create') {
-            console.log('✅ CREATE MODE DETECTED - Going to LIST');
-            
-            if (pathParts[pathParts.length - 1] === 'create') {
-                pathParts.pop();
-            }
-            
-            const listUrl = '/' + pathParts.join('/') + '/';
-            console.log('🎯 Redirecting to:', listUrl);
-            window.location.href = listUrl;
+        if (pathParts[pathParts.length - 1] === 'create') {
+            pathParts.pop(); // Remove 'create'
+            window.location.href = '/' + pathParts.join('/') + '/';
             return;
         }
         
         // DETAIL MODE -> Go to LIST
-        if (mode === 'detail' && currentId) {
-            console.log('✅ DETAIL MODE DETECTED - Going to LIST');
-            
-            // Remove ID from path
-            if (!isNaN(pathParts[pathParts.length - 1])) {
-                pathParts.pop();
-            }
-            
-            const listUrl = '/' + pathParts.join('/') + '/';
-            console.log('🎯 Redirecting to:', listUrl);
-            window.location.href = listUrl;
+        if (currentId && !isNaN(pathParts[pathParts.length - 1])) {
+            pathParts.pop(); // Remove ID
+            window.location.href = '/' + pathParts.join('/') + '/';
             return;
         }
         
         // FALLBACK: Use close button href
-        console.log('⚠️ FALLBACK - using close button href');
         const closeUrl = $('.saw-sidebar-close').attr('href');
         if (closeUrl && closeUrl !== '#') {
-            console.log('🎯 Redirecting to href:', closeUrl);
             window.location.href = closeUrl;
-        } else {
-            console.log('❌ No valid close URL found');
         }
     }
     
@@ -297,8 +255,6 @@
                 }
             }
         }
-        
-        console.log('✅ Sidebar initialized with ID:', currentId);
     }
     
     /**
