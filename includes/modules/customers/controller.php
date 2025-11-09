@@ -423,6 +423,9 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
      * @return void (outputs JSON)
      */
     public function ajax_load_sidebar() {
+
+    error_log('========== AJAX SIDEBAR CALLED ==========');
+    error_log('POST data: ' . print_r($_POST, true));
         check_ajax_referer('saw_ajax_nonce', 'nonce');
         
         $id = intval($_POST['id'] ?? 0);

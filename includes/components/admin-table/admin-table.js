@@ -6,7 +6,7 @@
  *
  * @package    SAW_Visitors
  * @subpackage Components
- * @version    3.9.0 - FIXED: SPA navigation conflict + active row + scroll
+ * @version    3.11.0 - FINAL FIX: Fresh scroll container after HTML insert
  * @since      1.0.0
  */
 
@@ -86,10 +86,13 @@
                 updateActiveRow(id);
                 console.log('✨ Active row set for ID:', id);
                 
-                // CRITICAL FIX: Restore scroll position IMMEDIATELY (before any animations)
-                if ($scrollContainer.length) {
-                    $scrollContainer.scrollTop(scrollPosition);
+                // CRITICAL FIX: Get FRESH scroll container reference AFTER HTML insert
+                const $newScrollContainer = $('.saw-table-panel');
+                if ($newScrollContainer.length) {
+                    $newScrollContainer.scrollTop(scrollPosition);
                     console.log('📜 Restored scroll position:', scrollPosition);
+                } else {
+                    console.warn('⚠️ Scroll container not found after HTML insert');
                 }
                 
                 // Add active class to wrapper for slide-in animation
@@ -320,6 +323,10 @@
                 
                 if (parsed.entity && parsed.id) {
                     console.log('📊 Calling openSidebarAjax');
+                    
+                    // CRITICAL FIX: Set active row IMMEDIATELY on click
+                    updateActiveRow(itemId);
+                    
                     openSidebarAjax(parsed.id, parsed.mode, parsed.entity);
                 } else {
                     console.warn('⚠️ Could not parse URL, falling back to full reload');
