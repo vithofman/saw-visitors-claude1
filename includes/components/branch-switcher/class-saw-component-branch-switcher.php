@@ -335,6 +335,3 @@ class SAW_Component_Branch_Switcher {
         ));
     }
 }
-
-// Register AJAX handlers globally when class is loaded
-SAW_Component_Branch_Switcher::register_ajax_handlers();

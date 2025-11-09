@@ -70,6 +70,90 @@ class SAW_Component_Language_Switcher {
     }
     
     /**
+     * Register AJAX handlers globally
+     *
+     * CRITICAL: This must be called early (via Component Manager), NOT in constructor.
+     * Ensures AJAX handlers work even if component doesn't render.
+     *
+     * @since 8.0.0
+     * @return void
+     */
+    public static function register_ajax_handlers() {
+        add_action('wp_ajax_saw_switch_language', array(__CLASS__, 'ajax_switch_language'));
+    }
+    
+    /**
+     * AJAX: Switch language
+     *
+     * Static method called by WordPress AJAX system.
+     * Updates user's language preference in saw_users table with
+     * session and user meta fallbacks for reliability.
+     *
+     * @since 8.0.0
+     * @return void Outputs JSON response
+     */
+    public static function ajax_switch_language() {
+        // Verify nonce
+        check_ajax_referer('saw_language_switcher', 'nonce');
+        
+        // Get and validate language
+        $language = isset($_POST['language']) ? sanitize_text_field($_POST['language']) : '';
+        
+        $valid_languages = array('cs', 'en');
+        if (!in_array($language, $valid_languages, true)) {
+            wp_send_json_error(array('message' => 'Neplatný jazyk'));
+            return;
+        }
+        
+        global $wpdb;
+        $user_id = get_current_user_id();
+        
+        // Update language in saw_users table
+        $updated = $wpdb->update(
+            $wpdb->prefix . 'saw_users',
+            array('language' => $language),
+            array('wp_user_id' => $user_id),
+            array('%s'),
+            array('%d')
+        );
+        
+        if ($updated === false) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log(sprintf(
+                    '[Language Switcher] DB update failed for user %d: %s',
+                    $user_id,
+                    $wpdb->last_error
+                ));
+            }
+            wp_send_json_error(array('message' => 'Chyba při ukládání jazyka'));
+            return;
+        }
+        
+        // Backup to session for reliability
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $_SESSION['saw_current_language'] = $language;
+        
+        // Backup to WordPress user meta
+        update_user_meta($user_id, 'saw_current_language', $language);
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log(sprintf(
+                '[Language Switcher] Success - Language: %s, User: %d, DB rows: %d',
+                $language,
+                $user_id,
+                $updated
+            ));
+        }
+        
+        wp_send_json_success(array(
+            'language' => $language,
+            'message' => 'Jazyk byl úspěšně změněn'
+        ));
+    }
+    
+    /**
      * Get current user language from database
      * 
      * Retrieves the user's language preference from the saw_users table.
@@ -145,34 +229,16 @@ class SAW_Component_Language_Switcher {
     /**
      * Enqueue component assets
      * 
-     * Loads CSS, JavaScript, and localizes script data for AJAX.
+     * DEPRECATED: Assets are now loaded globally via SAW_Asset_Manager.
+     * This method is kept for backwards compatibility but does nothing.
      * 
      * @since 4.7.0
+     * @deprecated 8.0.0 Use SAW_Asset_Manager instead
      * @return void
      */
     private function enqueue_assets() {
-        wp_enqueue_style(
-            'saw-language-switcher',
-            SAW_VISITORS_PLUGIN_URL . 'includes/components/language-switcher/language-switcher.css',
-            array(),
-            SAW_VISITORS_VERSION
-        );
-        
-        wp_enqueue_script(
-            'saw-language-switcher',
-            SAW_VISITORS_PLUGIN_URL . 'includes/components/language-switcher/language-switcher.js',
-            array('jquery'),
-            SAW_VISITORS_VERSION,
-            true
-        );
-        
-        wp_localize_script(
-            'saw-language-switcher',
-            'sawLanguageSwitcher',
-            array(
-                'ajaxurl' => admin_url('admin-ajax.php'),
-                'nonce' => wp_create_nonce('saw_language_switcher'),
-            )
-        );
+        // Assets are now enqueued globally via SAW_Asset_Manager
+        // to prevent FOUC on first page load. Do not re-enqueue here.
+        return;
     }
 }
