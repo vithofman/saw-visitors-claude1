@@ -6,7 +6,7 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Components/AdminTable
- * @version     3.3.0 - FIXED: Edit URL generation with home_url() like delete button
+ * @version     4.0.0 - RELATED DATA SUPPORT ADDED
  * @since       4.0.0
  */
 
@@ -50,6 +50,48 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
             echo '<p>Detail template not found: ' . esc_html($detail_template) . '</p>';
         }
         ?>
+        
+        <?php
+        // Related Data Sections
+        if (!empty($related_data) && is_array($related_data)):
+        ?>
+        <div class="saw-related-sections">
+            <h3 class="saw-related-sections-title">
+                <?php echo esc_html__('Související záznamy', 'saw-visitors'); ?>
+            </h3>
+            
+            <?php foreach ($related_data as $key => $relation): ?>
+            <details class="saw-related-section" open>
+                <summary class="saw-related-section-summary">
+                    <span class="saw-related-section-icon"><?php echo esc_html($relation['icon']); ?></span>
+                    <span class="saw-related-section-label"><?php echo esc_html($relation['label']); ?></span>
+                    <span class="saw-badge saw-badge-info"><?php echo intval($relation['count']); ?></span>
+                </summary>
+                
+                <div class="saw-related-items">
+                    <?php if (!empty($relation['items'])): ?>
+                        <?php foreach ($relation['items'] as $related_item): ?>
+                        <a href="#" 
+                           class="saw-related-item-link"
+                           data-entity="<?php echo esc_attr($relation['entity']); ?>"
+                           data-id="<?php echo intval($related_item['id']); ?>"
+                           title="<?php echo esc_attr__('Zobrazit detail', 'saw-visitors'); ?>">
+                            <span class="saw-related-item-text">
+                                <?php echo esc_html($related_item['display']); ?>
+                            </span>
+                            <span class="saw-related-item-arrow">→</span>
+                        </a>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <p class="saw-related-empty">
+                            <?php echo esc_html__('Žádné záznamy', 'saw-visitors'); ?>
+                        </p>
+                    <?php endif; ?>
+                </div>
+            </details>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
     </div>
     
     <?php if ($can_edit || $can_delete): ?>

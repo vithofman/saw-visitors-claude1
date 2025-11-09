@@ -15,9 +15,10 @@
  * - Dependency validation (branches, users, visits, invitations)
  * - Comprehensive cache invalidation
  * - File upload handling (logo)
+ * - Related data support (branches)
  *
  * @package SAW_Visitors
- * @version 10.0.0 - REMOVED color field, FIXED account_types with display_name
+ * @version 11.0.0 - RELATED DATA SUPPORT ADDED
  * @since   4.6.1
  */
 
@@ -86,138 +87,350 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
      * @return void
      */
     public function index() {
-        $this->verify_module_access();
-        $this->enqueue_assets();
-        
-        // CRITICAL FIX: Start output buffering at the very beginning
-        // to catch any SQL output from load_account_types()
-        ob_start();
-        
-        $sidebar_context = $this->get_sidebar_context();
-        $sidebar_mode = $sidebar_context['mode'] ?? null;
-        
-        $detail_item = null;
-        $form_item = null;
-        $detail_tab = $sidebar_context['tab'] ?? 'overview';
-        $account_types = array();
-        
-        if ($sidebar_mode === 'detail') {
-            if (!$this->can('view')) {
-                ob_end_clean();
-                $this->set_flash('Nemáte oprávnění zobrazit detail', 'error');
-                wp_redirect(home_url('/admin/settings/customers/'));
-                exit;
-            }
-            
-            $detail_item = $this->model->get_by_id($sidebar_context['id']);
-            
-            if (!$detail_item) {
-                ob_end_clean();
-                $this->set_flash('Zákazník nenalezen', 'error');
-                wp_redirect(home_url('/admin/settings/customers/'));
-                exit;
-            }
-            
-            $detail_item = $this->format_detail_data($detail_item);
+    $this->verify_module_access();
+    $this->enqueue_assets();
+    
+    // CRITICAL FIX: Start output buffering at the very beginning
+    ob_start();
+    
+    $sidebar_context = $this->get_sidebar_context();
+    $sidebar_mode = $sidebar_context['mode'] ?? null;
+    
+    $detail_item = null;
+    $form_item = null;
+    $detail_tab = $sidebar_context['tab'] ?? 'overview';
+    $account_types = array();
+    $related_data = null;
+    
+    if ($sidebar_mode === 'detail') {
+        if (!$this->can('view')) {
+            ob_end_clean();
+            $this->set_flash('Nemáte oprávnění zobrazit detail', 'error');
+            wp_redirect(home_url('/admin/settings/customers/'));
+            exit;
         }
         
-        elseif ($sidebar_mode === 'create') {
-            if (!$this->can('create')) {
-                ob_end_clean();
-                $this->set_flash('Nemáte oprávnění vytvářet zákazníky', 'error');
-                wp_redirect(home_url('/admin/settings/customers/'));
-                exit;
-            }
-            
-            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-                ob_end_clean();
-                $this->handle_create_post();
-                return;
-            }
-            
-            $form_item = array();
+        $detail_item = $this->model->get_by_id($sidebar_context['id']);
+        
+        if (!$detail_item) {
+            ob_end_clean();
+            $this->set_flash('Zákazník nenalezen', 'error');
+            wp_redirect(home_url('/admin/settings/customers/'));
+            exit;
         }
         
-        elseif ($sidebar_mode === 'edit') {
-            if (!$this->can('edit')) {
-                ob_end_clean();
-                $this->set_flash('Nemáte oprávnění upravovat zákazníky', 'error');
-                wp_redirect(home_url('/admin/settings/customers/'));
-                exit;
-            }
-            
-            $form_item = $this->model->get_by_id($sidebar_context['id']);
-            
-            if (!$form_item) {
-                ob_end_clean();
-                $this->set_flash('Zákazník nenalezen', 'error');
-                wp_redirect(home_url('/admin/settings/customers/'));
-                exit;
-            }
-            
-            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-                ob_end_clean();
-                $this->handle_edit_post($sidebar_context['id']);
-                return;
-            }
+        $detail_item = $this->format_detail_data($detail_item);
+        
+        // ✅ Načti related data
+        $related_data = $this->load_related_data($sidebar_context['id']);
+    }
+    
+    elseif ($sidebar_mode === 'create') {
+        if (!$this->can('create')) {
+            ob_end_clean();
+            $this->set_flash('Nemáte oprávnění vytvářet zákazníky', 'error');
+            wp_redirect(home_url('/admin/settings/customers/'));
+            exit;
         }
         
-        // Load account types AFTER ob_start() - any SQL output will be caught
-        if ($sidebar_mode === 'create' || $sidebar_mode === 'edit') {
-            $account_types = $this->load_account_types();
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            ob_end_clean();
+            $this->handle_create_post();
+            return;
         }
         
-        $search = isset($_GET['s']) ? sanitize_text_field(wp_unslash($_GET['s'])) : '';
-        $status = isset($_GET['status']) ? sanitize_text_field(wp_unslash($_GET['status'])) : '';
-        $orderby = isset($_GET['orderby']) ? sanitize_text_field(wp_unslash($_GET['orderby'])) : 'id';
-        $order = isset($_GET['order']) ? strtoupper(sanitize_text_field(wp_unslash($_GET['order']))) : 'DESC';
-        $page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
+        $form_item = array();
+    }
+    
+    elseif ($sidebar_mode === 'edit') {
+        if (!$this->can('edit')) {
+            ob_end_clean();
+            $this->set_flash('Nemáte oprávnění upravovat zákazníky', 'error');
+            wp_redirect(home_url('/admin/settings/customers/'));
+            exit;
+        }
         
-        $filters = array(
-            'search' => $search,
-            'orderby' => $orderby,
-            'order' => $order,
-            'page' => $page,
-            'per_page' => 20,
+        $form_item = $this->model->get_by_id($sidebar_context['id']);
+        
+        if (!$form_item) {
+            ob_end_clean();
+            $this->set_flash('Zákazník nenalezen', 'error');
+            wp_redirect(home_url('/admin/settings/customers/'));
+            exit;
+        }
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            ob_end_clean();
+            $this->handle_edit_post($sidebar_context['id']);
+            return;
+        }
+    }
+    
+    // Load account types AFTER ob_start()
+    if ($sidebar_mode === 'create' || $sidebar_mode === 'edit') {
+        $account_types = $this->load_account_types();
+    }
+    
+    $search = isset($_GET['s']) ? sanitize_text_field(wp_unslash($_GET['s'])) : '';
+    $status = isset($_GET['status']) ? sanitize_text_field(wp_unslash($_GET['status'])) : '';
+    $orderby = isset($_GET['orderby']) ? sanitize_text_field(wp_unslash($_GET['orderby'])) : 'id';
+    $order = isset($_GET['order']) ? strtoupper(sanitize_text_field(wp_unslash($_GET['order']))) : 'DESC';
+    $page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
+    
+    $filters = array(
+        'search' => $search,
+        'orderby' => $orderby,
+        'order' => $order,
+        'page' => $page,
+        'per_page' => 20,
+    );
+    
+    if ($status !== '') {
+        $filters['status'] = $status;
+    }
+    
+    $data = $this->model->get_all($filters);
+    $items = $data['items'];
+    $total = $data['total'];
+    $total_pages = ceil($total / 20);
+    
+    // Clear any captured SQL output
+    $captured_junk = ob_get_clean();
+    
+    // Start fresh output buffer
+    ob_start();
+    
+    if (class_exists('SAW_Module_Style_Manager')) {
+        $style_manager = SAW_Module_Style_Manager::get_instance();
+        echo $style_manager->inject_module_css($this->entity);
+    }
+    
+    echo '<div class="saw-module-' . esc_attr($this->entity) . '">';
+    $this->render_flash_messages();
+    
+    // ✅ CRITICAL: Extract ALL variables needed by template
+    extract(array(
+        'items' => $items,
+        'total' => $total,
+        'page' => $page,
+        'total_pages' => $total_pages,
+        'search' => $search,
+        'status' => $status,
+        'orderby' => $orderby,
+        'order' => $order,
+        'detail_item' => $detail_item,
+        'form_item' => $form_item,
+        'sidebar_mode' => $sidebar_mode,
+        'detail_tab' => $detail_tab,
+        'account_types' => $account_types,
+        'related_data' => $related_data,
+    ));
+    
+    require $this->config['path'] . 'list-template.php';
+    
+    echo '</div>';
+    
+    $content = ob_get_clean();
+    $this->render_with_layout($content, $this->config['plural']);
+}
+    
+    /**
+     * AJAX: Load sidebar content
+     *
+     * Universal AJAX handler for loading sidebar in detail/edit/create modes.
+     * Returns HTML for sidebar wrapper.
+     *
+     * @since 9.1.0
+     * @return void (outputs JSON)
+     */
+    public function ajax_load_sidebar() {
+    error_log('========== AJAX SIDEBAR CALLED ==========');
+    error_log('POST data: ' . print_r($_POST, true));
+    
+    check_ajax_referer('saw_ajax_nonce', 'nonce');
+    
+    $id = intval($_POST['id'] ?? 0);
+    $mode = sanitize_text_field($_POST['mode'] ?? 'detail');
+    
+    if (!in_array($mode, array('detail', 'edit'), true)) {
+        wp_send_json_error(array('message' => 'Invalid mode'));
+    }
+    
+    if ($mode === 'detail' && !$this->can('view')) {
+        wp_send_json_error(array('message' => 'Nemáte oprávnění zobrazit detail'));
+    }
+    
+    if ($mode === 'edit' && !$this->can('edit')) {
+        wp_send_json_error(array('message' => 'Nemáte oprávnění upravovat záznamy'));
+    }
+    
+    $item = $this->model->get_by_id($id);
+    
+    if (!$item) {
+        wp_send_json_error(array('message' => 'Zákazník nenalezen'));
+    }
+    
+    // Start output buffering BEFORE load_account_types()
+    ob_start();
+    
+    $account_types = array();
+    $related_data = null;
+    
+    if ($mode === 'edit') {
+        $account_types = $this->load_account_types();
+    }
+    
+    if ($mode === 'detail') {
+        // ✅ Načti related data pro detail mode
+        $related_data = $this->load_related_data($id);
+    }
+    
+    // Clear any captured SQL output
+    $captured_junk = ob_get_clean();
+    
+    // Start fresh buffer for actual content
+    ob_start();
+    
+    $item = $this->format_detail_data($item);
+    
+    if ($mode === 'detail') {
+        $tab = 'overview';
+        $config = $this->config;
+        $entity = $this->entity;
+        
+        $template_path = SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/detail-sidebar.php';
+        
+        require $template_path;
+    } else {
+        $is_edit = true;
+        $GLOBALS['saw_sidebar_form'] = true;
+        
+        $config = $this->config;
+        $config['account_types'] = $account_types;
+        $entity = $this->entity;
+        
+        $form_path = $this->config['path'] . 'form-template.php';
+        
+        require $form_path;
+        unset($GLOBALS['saw_sidebar_form']);
+    }
+    
+    $sidebar_content = ob_get_clean();
+    
+    wp_send_json_success(array(
+        'html' => $sidebar_content,
+        'mode' => $mode,
+        'id' => $id
+    ));
+}
+    
+    /**
+     * Format data for detail view
+     *
+     * Adds computed fields and formatting for detail display.
+     *
+     * @since 8.0.0
+     * @param array $item Raw item data
+     * @return array Formatted item data
+     */
+    private function format_detail_data($item) {
+        $account_types = $this->load_account_types();
+        
+        // Format account type with display name
+        if (!empty($item['account_type_id']) && isset($account_types[$item['account_type_id']])) {
+            $item['account_type_display'] = $account_types[$item['account_type_id']]['display_name'];
+        } else {
+            $item['account_type_display'] = 'Nezadáno';
+        }
+        
+        // Add logo URL
+        if (!empty($item['logo_path'])) {
+            $upload_dir = wp_upload_dir();
+            $item['logo_url'] = $upload_dir['baseurl'] . '/' . $item['logo_path'];
+        }
+        
+        // Format dates
+        if (!empty($item['created_at'])) {
+            $item['created_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['created_at']));
+        }
+        
+        if (!empty($item['updated_at'])) {
+            $item['updated_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['updated_at']));
+        }
+        
+        // Format status
+        $item['status_label'] = $this->get_status_label($item['status'] ?? '');
+        
+        return $item;
+    }
+    
+    /**
+     * Format row data for list table
+     *
+     * @since 8.0.0
+     * @param array $item Raw item data
+     * @param array $account_types Account types lookup
+     * @return array Formatted row data
+     */
+    private function format_row_data($item, $account_types) {
+        // Format account type
+        if (!empty($item['account_type_id']) && isset($account_types[$item['account_type_id']])) {
+            $item['account_type_display'] = $account_types[$item['account_type_id']]['display_name'];
+        } else {
+            $item['account_type_display'] = '-';
+        }
+        
+        // Add logo URL
+        if (!empty($item['logo_path'])) {
+            $upload_dir = wp_upload_dir();
+            $item['logo_url'] = $upload_dir['baseurl'] . '/' . $item['logo_path'];
+        }
+        
+        return $item;
+    }
+    
+    /**
+     * Get status label
+     *
+     * @since 8.0.0
+     * @param string $status Status value
+     * @return string Status label
+     */
+    private function get_status_label($status) {
+        $labels = array(
+            'potential' => 'Potenciální',
+            'active' => 'Aktivní',
+            'inactive' => 'Neaktivní',
         );
         
-        if ($status !== '') {
-            $filters['status'] = $status;
+        return $labels[$status] ?? 'Neznámý';
+    }
+    
+    /**
+     * Load account types
+     *
+     * FIXED v10.0.0: Returns array with both 'name' and 'display_name' for compatibility.
+     *
+     * @since 8.0.0
+     * @return array Account types indexed by ID
+     */
+    private function load_account_types() {
+        global $wpdb;
+        
+        $types = $wpdb->get_results(
+            "SELECT id, name, display_name FROM {$wpdb->prefix}saw_account_types WHERE is_active = 1 ORDER BY display_order ASC",
+            ARRAY_A
+        );
+        
+        $account_types = array();
+        foreach ($types as $type) {
+            $account_types[$type['id']] = array(
+                'name' => $type['name'],
+                'display_name' => $type['display_name'],
+            );
         }
         
-        $data = $this->model->get_all($filters);
-        $items = $data['items'];
-        $total = $data['total'];
-        $total_pages = ceil($total / 20);
-        
-        // Clear any captured SQL output before starting real output
-        $captured_junk = ob_get_clean();
-        
-        // Start fresh output buffer for actual content
-        ob_start();
-        
-        if (class_exists('SAW_Module_Style_Manager')) {
-            $style_manager = SAW_Module_Style_Manager::get_instance();
-            echo $style_manager->inject_module_css($this->entity);
-        }
-        
-        echo '<div class="saw-module-' . esc_attr($this->entity) . '">';
-        $this->render_flash_messages();
-        
-        extract(array(
-            'detail_item' => $detail_item,
-            'form_item' => $form_item,
-            'sidebar_mode' => $sidebar_mode,
-            'detail_tab' => $detail_tab,
-            'account_types' => $account_types,
-        ));
-        
-        require $this->config['path'] . 'list-template.php';
-        
-        echo '</div>';
-        
-        $content = ob_get_clean();
-        $this->render_with_layout($content, $this->config['plural']);
+        return $account_types;
     }
     
     /**
@@ -226,18 +439,46 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
      * @since 8.0.0
      * @return void (redirects)
      */
-    protected function handle_create_post() {
+    private function handle_create() {
         if (!wp_verify_nonce($_POST['saw_nonce'] ?? '', 'saw_customers_form')) {
             wp_die('Neplatný bezpečnostní token');
         }
         
-        $data = $this->prepare_form_data($_POST);
-        
-        $data = $this->before_save($data);
-        if (is_wp_error($data)) {
-            $this->set_flash($data->get_error_message(), 'error');
+        if (!$this->can('create')) {
+            $this->set_flash('Nemáte oprávnění vytvářet záznamy', 'error');
             wp_redirect(home_url('/admin/settings/customers/create'));
             exit;
+        }
+        
+        $data = array(
+            'name' => sanitize_text_field($_POST['name'] ?? ''),
+            'email' => sanitize_email($_POST['email'] ?? ''),
+            'phone' => sanitize_text_field($_POST['phone'] ?? ''),
+            'address' => sanitize_textarea_field($_POST['address'] ?? ''),
+            'billing_address' => sanitize_textarea_field($_POST['billing_address'] ?? ''),
+            'ic' => sanitize_text_field($_POST['ic'] ?? ''),
+            'dic' => sanitize_text_field($_POST['dic'] ?? ''),
+            'status' => sanitize_text_field($_POST['status'] ?? 'active'),
+            'account_type_id' => !empty($_POST['account_type_id']) ? intval($_POST['account_type_id']) : null,
+            'notes' => sanitize_textarea_field($_POST['notes'] ?? ''),
+        );
+        
+        // Handle logo upload
+        if (!empty($_FILES['logo']['name'])) {
+            $upload_result = $this->file_uploader->upload(
+                $_FILES['logo'],
+                array('jpg', 'jpeg', 'png', 'gif', 'svg'),
+                2 * 1024 * 1024,
+                'customers'
+            );
+            
+            if (is_wp_error($upload_result)) {
+                $this->set_flash($upload_result->get_error_message(), 'error');
+                wp_redirect(home_url('/admin/settings/customers/create'));
+                exit;
+            }
+            
+            $data['logo_path'] = $upload_result['file'];
         }
         
         $validation = $this->model->validate($data);
@@ -256,7 +497,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             exit;
         }
         
-        $this->after_save($result);
+        $this->invalidate_caches();
         
         $this->set_flash('Zákazník byl úspěšně vytvořen', 'success');
         wp_redirect(home_url('/admin/settings/customers/' . $result . '/'));
@@ -270,18 +511,52 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
      * @param int $id Customer ID
      * @return void (redirects)
      */
-    protected function handle_edit_post($id) {
+    private function handle_edit($id) {
         if (!wp_verify_nonce($_POST['saw_nonce'] ?? '', 'saw_customers_form')) {
             wp_die('Neplatný bezpečnostní token');
         }
         
-        $data = $this->prepare_form_data($_POST);
-        
-        $data = $this->before_save($data);
-        if (is_wp_error($data)) {
-            $this->set_flash($data->get_error_message(), 'error');
+        if (!$this->can('edit')) {
+            $this->set_flash('Nemáte oprávnění upravovat záznamy', 'error');
             wp_redirect(home_url('/admin/settings/customers/' . $id . '/edit'));
             exit;
+        }
+        
+        $data = array(
+            'name' => sanitize_text_field($_POST['name'] ?? ''),
+            'email' => sanitize_email($_POST['email'] ?? ''),
+            'phone' => sanitize_text_field($_POST['phone'] ?? ''),
+            'address' => sanitize_textarea_field($_POST['address'] ?? ''),
+            'billing_address' => sanitize_textarea_field($_POST['billing_address'] ?? ''),
+            'ic' => sanitize_text_field($_POST['ic'] ?? ''),
+            'dic' => sanitize_text_field($_POST['dic'] ?? ''),
+            'status' => sanitize_text_field($_POST['status'] ?? 'active'),
+            'account_type_id' => !empty($_POST['account_type_id']) ? intval($_POST['account_type_id']) : null,
+            'notes' => sanitize_textarea_field($_POST['notes'] ?? ''),
+        );
+        
+        // Handle logo upload
+        if (!empty($_FILES['logo']['name'])) {
+            $upload_result = $this->file_uploader->upload(
+                $_FILES['logo'],
+                array('jpg', 'jpeg', 'png', 'gif', 'svg'),
+                2 * 1024 * 1024,
+                'customers'
+            );
+            
+            if (is_wp_error($upload_result)) {
+                $this->set_flash($upload_result->get_error_message(), 'error');
+                wp_redirect(home_url('/admin/settings/customers/' . $id . '/edit'));
+                exit;
+            }
+            
+            // Delete old logo
+            $old_customer = $this->model->get_by_id($id);
+            if (!empty($old_customer['logo_path'])) {
+                $this->file_uploader->delete($old_customer['logo_path']);
+            }
+            
+            $data['logo_path'] = $upload_result['file'];
         }
         
         $validation = $this->model->validate($data, $id);
@@ -300,105 +575,23 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             exit;
         }
         
-        $this->after_save($id);
+        $this->invalidate_caches();
         
-        $this->set_flash('Zákazník byl úspěšně upraven', 'success');
+        $this->set_flash('Zákazník byl úspěšně aktualizován', 'success');
         wp_redirect(home_url('/admin/settings/customers/' . $id . '/'));
         exit;
     }
     
     /**
-     * Prepare form data from POST
-     *
-     * REMOVED: primary_color field (no longer in DB schema)
+     * Invalidate all caches after data changes
      *
      * @since 8.0.0
-     * @param array $post POST data
-     * @return array Prepared data
+     * @return void
      */
-    protected function prepare_form_data($post) {
-        $data = array(
-            'name' => sanitize_text_field($post['name'] ?? ''),
-            'ico' => sanitize_text_field($post['ico'] ?? ''),
-            'status' => sanitize_text_field($post['status'] ?? 'potential'),
-            'account_type_id' => !empty($post['account_type_id']) ? intval($post['account_type_id']) : null,
-        );
-        
-        if (isset($_FILES['logo']) && $_FILES['logo']['error'] !== UPLOAD_ERR_NO_FILE) {
-            $upload_result = $this->file_uploader->upload($_FILES['logo'], 'customers');
-            
-            if (!is_wp_error($upload_result)) {
-                $data['logo_url'] = $upload_result['url'];
-            }
+    private function invalidate_caches() {
+        if (function_exists('saw_clear_cache')) {
+            saw_clear_cache('customers');
         }
-        
-        return $data;
-    }
-    
-    /**
-     * Load account types from database
-     *
-     * FIXED v10.0.0: Added display_name and price to SELECT
-     *
-     * @since 8.0.0
-     * @return array Account types with id, name, display_name, price
-     */
-    protected function load_account_types() {
-    global $wpdb;
-    
-    $table_name = $wpdb->prefix . 'saw_account_types';
-    
-    // FIXED: Use prepare() instead of string interpolation
-    $query = $wpdb->prepare(
-        "SELECT id, name, display_name, price 
-         FROM %i 
-         WHERE is_active = 1 
-         ORDER BY sort_order ASC, name ASC",
-        $table_name
-    );
-    
-    $results = $wpdb->get_results($query, ARRAY_A);
-    
-    return is_array($results) ? $results : array();
-}
-    
-    /**
-     * Get sidebar context from router
-     *
-     * @since 8.0.0
-     * @return array Sidebar context
-     */
-    protected function get_sidebar_context() {
-        $context = get_query_var('saw_sidebar_context');
-        
-        if (empty($context) || !is_array($context)) {
-            return array(
-                'mode' => null,
-                'id' => 0,
-                'tab' => 'overview',
-            );
-        }
-        
-        return $context;
-    }
-    
-    /**
-     * Format detail data
-     *
-     * @since 8.0.0
-     * @param array $item Raw item data
-     * @return array Formatted item
-     */
-    protected function format_detail_data($item) {
-        if (!empty($item['created_at'])) {
-            $item['created_at_formatted'] = mysql2date(get_option('date_format'), $item['created_at']);
-        }
-        
-        if (!empty($item['updated_at'])) {
-            $item['updated_at_formatted'] = mysql2date(get_option('date_format'), $item['updated_at']);
-        }
-        
-        return $item;
     }
     
     /**
@@ -407,213 +600,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
      * @since 8.0.0
      * @return void
      */
-    public function enqueue_assets() {
-        $this->file_uploader->enqueue_assets();
-    }
-    
-    /**
-     * AJAX: Load sidebar content
-     *
-     * Loads customer data and renders sidebar template (detail or edit).
-     * Validates nonce, permissions, and item existence.
-     *
-     * CRITICAL FIX v9.1.4: Output buffering starts BEFORE load_account_types()
-     *
-     * @since 9.0.0
-     * @return void (outputs JSON)
-     */
-    public function ajax_load_sidebar() {
-
-    error_log('========== AJAX SIDEBAR CALLED ==========');
-    error_log('POST data: ' . print_r($_POST, true));
-        check_ajax_referer('saw_ajax_nonce', 'nonce');
-        
-        $id = intval($_POST['id'] ?? 0);
-        $mode = sanitize_text_field($_POST['mode'] ?? 'detail');
-        
-        if (!in_array($mode, array('detail', 'edit'), true)) {
-            wp_send_json_error(array('message' => 'Invalid mode'));
-        }
-        
-        if ($mode === 'detail' && !$this->can('view')) {
-            wp_send_json_error(array('message' => 'Nemáte oprávnění zobrazit detail'));
-        }
-        
-        if ($mode === 'edit' && !$this->can('edit')) {
-            wp_send_json_error(array('message' => 'Nemáte oprávnění upravovat záznamy'));
-        }
-        
-        $item = $this->model->get_by_id($id);
-        
-        if (!$item) {
-            wp_send_json_error(array('message' => 'Zákazník nenalezen'));
-        }
-        
-        // CRITICAL FIX: Start output buffering BEFORE load_account_types()
-        ob_start();
-        
-        $account_types = array();
-        
-        if ($mode === 'edit') {
-            $account_types = $this->load_account_types();
-        }
-        
-        // Clear any captured SQL output
-        $captured_junk = ob_get_clean();
-        
-        // Start fresh buffer for actual content
-        ob_start();
-        
-        $item = $this->format_detail_data($item);
-        
-        if ($mode === 'detail') {
-            $tab = 'overview';
-            $config = $this->config;
-            $entity = $this->entity;
-            
-            $template_path = SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/detail-sidebar.php';
-            
-            require $template_path;
-        } else {
-    $is_edit = true;
-    $GLOBALS['saw_sidebar_form'] = true;
-    
-    // CRITICAL FIX: Pass variables to template scope
-    $config = $this->config;
-    $config['account_types'] = $account_types; // Make account_types available
-    $entity = $this->entity;
-    
-    $form_path = $this->config['path'] . 'form-template.php';
-    
-    require $form_path;
-    unset($GLOBALS['saw_sidebar_form']);
-}
-        
-        $sidebar_content = ob_get_clean();
-        
-        wp_send_json_success(array(
-            'html' => $sidebar_content,
-            'mode' => $mode,
-            'id' => $id
-        ));
-    }
-    
-    /**
-     * AJAX: Get detail for modal (BACKWARD COMPATIBLE)
-     *
-     * Loads customer data and renders detail modal template.
-     * Validates nonce, permissions, and item existence.
-     *
-     * @since 2.0.0
-     * @return void (outputs JSON)
-     */
-    public function ajax_get_detail() {
-        check_ajax_referer('saw_ajax_nonce', 'nonce');
-        
-        $id = intval($_POST['id'] ?? 0);
-        
-        if (!$this->can('view')) {
-            wp_send_json_error(array('message' => 'Nedostatečná oprávnění'));
-        }
-        
-        $item = $this->model->get_by_id($id);
-        
-        if (!$item) {
-            wp_send_json_error(array('message' => 'Záznam nenalezen'));
-        }
-        
-        $item = $this->format_detail_data($item);
-        
-        ob_start();
-        require $this->config['path'] . 'detail-modal-template.php';
-        $html = ob_get_clean();
-        
-        wp_send_json_success(array('html' => $html));
-    }
-    
-    /**
-     * AJAX: Search customers
-     *
-     * @since 2.0.0
-     * @return void (outputs JSON)
-     */
-    public function ajax_search() {
-        check_ajax_referer('saw_ajax_nonce', 'nonce');
-        
-        if (!$this->can('list')) {
-            wp_send_json_error(array('message' => 'Nedostatečná oprávnění'));
-        }
-        
-        $search = sanitize_text_field($_POST['search'] ?? '');
-        
-        $filters = array(
-            'search' => $search,
-            'per_page' => 10,
-        );
-        
-        $data = $this->model->get_all($filters);
-        
-        wp_send_json_success($data);
-    }
-    
-    /**
-     * AJAX: Delete customer
-     *
-     * @since 2.0.0
-     * @return void (outputs JSON)
-     */
-    public function ajax_delete() {
-        check_ajax_referer('saw_ajax_nonce', 'nonce');
-        
-        $id = intval($_POST['id'] ?? 0);
-        
-        if (!$this->can('delete')) {
-            wp_send_json_error(array('message' => 'Nedostatečná oprávnění'));
-        }
-        
-        $result = $this->model->delete($id);
-        
-        if (is_wp_error($result)) {
-            wp_send_json_error(array('message' => $result->get_error_message()));
-        }
-        
-        $this->invalidate_caches();
-        
-        wp_send_json_success(array('message' => 'Zákazník byl úspěšně smazán'));
-    }
-    
-    /**
-     * Before save hook
-     *
-     * CRITICAL: Signatura musí zůstat (array $data) bez druhého parametru
-     * pro kompatibilitu s existing code.
-     *
-     * @since 8.0.0
-     * @param array $data Data to save
-     * @return array|WP_Error
-     */
-    protected function before_save($data) {
-        return $data;
-    }
-    
-    /**
-     * After save hook
-     *
-     * @since 8.0.0
-     * @param int $id Saved ID
-     * @return void
-     */
-    protected function after_save($id) {
-        $this->invalidate_caches();
-    }
-    
-    /**
-     * Invalidate caches
-     *
-     * @since 8.0.0
-     * @return void
-     */
-    protected function invalidate_caches() {
-        delete_transient('customers_list');
+    protected function enqueue_assets() {
+        // Assets are loaded globally by Asset Manager
     }
 }

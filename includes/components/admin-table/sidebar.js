@@ -6,7 +6,7 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Components/AdminTable
- * @version     3.0.0 - REFACTORED: Universal close logic + cancel button
+ * @version     4.0.0 - RELATED ITEMS NAVIGATION ADDED
  * @since       4.0.0
  */
 
@@ -104,6 +104,39 @@
         
         const newUrl = '/' + path.join('/') + '/';
         window.location.href = newUrl;
+    }
+    
+    /**
+     * Initialize related items navigation
+     *
+     * @return {void}
+     */
+    function initRelatedItemsNavigation() {
+        $(document).on('click', '.saw-related-item-link', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const $link = $(this);
+            const entity = $link.data('entity');
+            const id = $link.data('id');
+            
+            if (!entity || !id) {
+                console.error('❌ Related item missing entity or id');
+                return;
+            }
+            
+            console.log('🔗 Related item clicked:', {entity, id});
+            
+            // Use global sidebar AJAX function
+            if (typeof window.openSidebarAjax === 'function') {
+                window.openSidebarAjax(id, 'detail', entity);
+            } else {
+                console.error('❌ openSidebarAjax not available');
+                // Fallback to full page load
+                const baseUrl = window.location.origin;
+                window.location.href = baseUrl + '/admin/settings/' + entity + '/' + id + '/';
+            }
+        });
     }
     
     /**
@@ -261,11 +294,13 @@
      * Initialize on DOM ready
      */
     $(document).ready(function() {
+        console.log('🔗 Related items navigation initialized');
         initSidebar();
         initKeyboardNavigation();
         initNavigationButtons();
         initCloseButton();
         initCancelButton();
+        initRelatedItemsNavigation();
     });
     
 })(jQuery);

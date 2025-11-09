@@ -2,7 +2,7 @@
  * SAW App Navigation - SPA (Single Page Application) Support
  * 
  * @package SAW_Visitors
- * @version 5.5.0 - FIXED: Ignore admin table pushState events
+ * @version 5.6.0 - RELATED ITEMS SUPPORT ADDED
  */
 
 (function($) {
@@ -24,6 +24,12 @@
         $(document).on('click', '.saw-app-sidebar a, .saw-page-wrapper a[href^="/admin"], .saw-page-wrapper a[href^="/manager"]', function(e) {
             const $link = $(this);
             const href = $link.attr('href');
+            
+            // Skip related item links (handled by sidebar.js)
+            if ($link.hasClass('saw-related-item-link')) {
+                console.log('⏭️ SPA: Skipping - related item link');
+                return;
+            }
             
             const $parentRow = $link.closest('tr[data-detail-url]');
             if ($parentRow.length > 0) {

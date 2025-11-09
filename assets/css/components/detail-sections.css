@@ -1,0 +1,137 @@
+/**
+ * Related Sections Styles
+ *
+ * @package     SAW_Visitors
+ * @subpackage  Components/DetailSections
+ * @since       8.0.0
+ */
+
+/* ============================================
+   RELATED SECTIONS WRAPPER
+   ============================================ */
+
+.saw-related-sections {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--color-border, #e2e8f0);
+}
+
+.saw-related-sections-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-text-primary, #1e293b);
+    margin: 0 0 16px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ============================================
+   RELATED SECTION (COLLAPSIBLE)
+   ============================================ */
+
+.saw-related-section {
+    margin-bottom: 12px;
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 8px;
+    background: var(--color-background, #f8fafc);
+    overflow: hidden;
+}
+
+.saw-related-section[open] {
+    background: #ffffff;
+}
+
+.saw-related-section-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+    transition: background-color 150ms ease;
+}
+
+.saw-related-section-summary:hover {
+    background-color: var(--color-background-hover, #f1f5f9);
+}
+
+.saw-related-section-summary::-webkit-details-marker {
+    display: none;
+}
+
+.saw-related-section-icon {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.saw-related-section-label {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text-primary, #1e293b);
+}
+
+/* ============================================
+   RELATED ITEMS LIST
+   ============================================ */
+
+.saw-related-items {
+    padding: 0;
+    border-top: 1px solid var(--color-border, #e2e8f0);
+}
+
+.saw-related-item-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    text-decoration: none;
+    color: var(--color-text-primary, #1e293b);
+    border-bottom: 1px solid var(--color-border, #e2e8f0);
+    transition: background-color 150ms ease;
+}
+
+.saw-related-item-link:last-child {
+    border-bottom: none;
+}
+
+.saw-related-item-link:hover {
+    background-color: var(--color-background-hover, #f1f5f9);
+}
+
+.saw-related-item-link:hover .saw-related-item-arrow {
+    transform: translateX(4px);
+    color: var(--color-primary, #3b82f6);
+}
+
+.saw-related-item-text {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.saw-related-item-arrow {
+    font-size: 16px;
+    color: var(--color-text-muted, #64748b);
+    transition: transform 150ms ease, color 150ms ease;
+}
+
+.saw-related-empty {
+    padding: 12px 16px;
+    color: var(--color-text-muted, #64748b);
+    font-size: 14px;
+    font-style: italic;
+    margin: 0;
+}
+
+/* ============================================
+   RELATED SECTIONS IN SIDEBAR
+   ============================================ */
+
+.saw-sidebar-content .saw-related-sections {
+    margin-top: 24px;
+}
+
+.saw-sidebar-content .saw-related-section {
+    margin-bottom: 8px;
+}

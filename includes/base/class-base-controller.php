@@ -8,7 +8,7 @@
  *
  * @package    SAW_Visitors
  * @subpackage Base
- * @version    7.1.0 - SIDEBAR SUPPORT ADDED
+ * @version    8.0.0 - RELATED DATA SUPPORT ADDED
  * @since      1.0.0
  */
 
@@ -101,6 +101,124 @@ abstract class SAW_Base_Controller
      */
     protected function has_sidebar() {
         return !empty($this->get_sidebar_mode());
+    }
+    
+    /**
+     * Load relations configuration for module
+     * 
+     * @since 8.0.0
+     * @return array|null Relations config or null if file doesn't exist
+     */
+    protected function load_relations_config() {
+        $relations_file = $this->config['path'] . 'relations.php';
+        
+        if (!file_exists($relations_file)) {
+            return null;
+        }
+        
+        $relations = include $relations_file;
+        
+        if (empty($relations) || !is_array($relations)) {
+            return null;
+        }
+        
+        return $relations;
+    }
+    
+    /**
+     * Load related data for detail sidebar
+     * 
+     * Fetches related records based on relations.php configuration.
+     * 
+     * @since 8.0.0
+     * @param int $item_id Current item ID
+     * @return array|null Related data grouped by relation key, or null
+     */
+    protected function load_related_data($item_id) {
+        $relations = $this->load_relations_config();
+        
+        if (empty($relations)) {
+            return null;
+        }
+        
+        global $wpdb;
+        $related_data = array();
+        
+        foreach ($relations as $key => $relation) {
+            // Validate required fields
+            if (empty($relation['entity']) || empty($relation['foreign_key'])) {
+                continue;
+            }
+            
+            $table = $wpdb->prefix . 'saw_' . $relation['entity'];
+            $foreign_key = $relation['foreign_key'];
+            $order_by = $relation['order_by'] ?? 'id DESC';
+            
+            // Build query
+            $query = $wpdb->prepare(
+                "SELECT * FROM {$table} WHERE {$foreign_key} = %d ORDER BY {$order_by}",
+                $item_id
+            );
+            
+            $items = $wpdb->get_results($query, ARRAY_A);
+            
+            if (empty($items)) {
+                continue;
+            }
+            
+            // Format items for display
+            $formatted_items = array();
+            foreach ($items as $item) {
+                $display_text = $this->format_related_item_display($item, $relation);
+                
+                $formatted_items[] = array(
+                    'id' => $item['id'],
+                    'display' => $display_text,
+                    'raw' => $item,
+                );
+            }
+            
+            $related_data[$key] = array(
+                'label' => $relation['label'],
+                'icon' => $relation['icon'] ?? '📋',
+                'entity' => $relation['entity'],
+                'items' => $formatted_items,
+                'route' => $relation['route'],
+                'count' => count($formatted_items),
+            );
+        }
+        
+        return empty($related_data) ? null : $related_data;
+    }
+    
+    /**
+     * Format related item display text
+     * 
+     * @since 8.0.0
+     * @param array $item Item data
+     * @param array $relation Relation config
+     * @return string Formatted display text
+     */
+    protected function format_related_item_display($item, $relation) {
+        // Single field display
+        if (!empty($relation['display_field'])) {
+            $field = $relation['display_field'];
+            return $item[$field] ?? '#' . $item['id'];
+        }
+        
+        // Multiple fields display
+        if (!empty($relation['display_fields']) && is_array($relation['display_fields'])) {
+            $parts = array();
+            foreach ($relation['display_fields'] as $field) {
+                if (!empty($item[$field])) {
+                    $parts[] = $item[$field];
+                }
+            }
+            return implode(' - ', $parts);
+        }
+        
+        // Fallback
+        return $item['name'] ?? $item['title'] ?? '#' . $item['id'];
     }
     
     /**
@@ -299,327 +417,260 @@ abstract class SAW_Base_Controller
      * @return array Prepared data
      */
     protected function prepare_form_data($post) {
-        $data = array();
-        
-        if (!empty($this->config['form_config']['fields'])) {
-            foreach ($this->config['form_config']['fields'] as $key => $field) {
-                if (isset($post[$key])) {
-                    $data[$key] = $this->sanitize_field($post[$key], $field);
-                }
-            }
-        }
-        
-        return $data;
+        return $post;
     }
     
     /**
-     * Sanitize field value based on type
-     * 
-     * @since 7.1.0
-     * @param mixed $value Field value
-     * @param array $field Field configuration
-     * @return mixed Sanitized value
-     */
-    protected function sanitize_field($value, $field) {
-        $type = $field['type'] ?? 'text';
-        
-        switch ($type) {
-            case 'email':
-                return sanitize_email($value);
-            case 'url':
-                return esc_url_raw($value);
-            case 'number':
-                return intval($value);
-            case 'textarea':
-                return sanitize_textarea_field($value);
-            case 'checkbox':
-                return !empty($value) ? 1 : 0;
-            default:
-                return sanitize_text_field($value);
-        }
-    }
-    
-    /**
-     * Load related data for detail view
-     * 
-     * Override in child controller to load tabs, relationships, etc.
-     * 
-     * @since 7.1.0
-     * @param array  $item Detail item
-     * @param string $tab  Active tab
-     * @return array Modified item
-     */
-    protected function load_detail_related_data($item, $tab) {
-        return $item;
-    }
-    
-    /**
-     * Verify user has access to module
+     * Verify module access permissions
      *
-     * Checks 'list' permission for current module.
-     * Redirects with error if access denied.
+     * Checks if current user has permission to access this module.
+     * Wp_die() on failure.
      *
      * @since 1.0.0
-     * @return bool True if access granted
+     * @return void
      */
     protected function verify_module_access() {
-        $role = $this->get_current_user_role();
+        $list_cap = $this->config['capabilities']['list'] ?? 'read';
         
-        // Super admin always has access
-        if ($role === 'super_admin') {
+        if (!current_user_can($list_cap)) {
+            wp_die(
+                __('Nemáte oprávnění k přístupu do této sekce.', 'saw-visitors'),
+                __('Přístup odepřen', 'saw-visitors'),
+                array('response' => 403)
+            );
+        }
+    }
+    
+    /**
+     * Check action permission
+     *
+     * @since 1.0.0
+     * @param string $action Action name (list, view, create, edit, delete)
+     * @return bool True if user can perform action
+     */
+    protected function can($action) {
+        $capability = $this->config['capabilities'][$action] ?? 'manage_options';
+        return current_user_can($capability);
+    }
+    
+    /**
+     * Validate scope access for data
+     *
+     * Ensures user can only access data within their scope (customer/branch/department).
+     *
+     * @since 1.0.0
+     * @param array  $data   Data to validate
+     * @param string $action Action being performed
+     * @return true|WP_Error True on success, WP_Error on failure
+     */
+    protected function validate_scope_access($data, $action = 'view') {
+        // Super admin can access everything
+        if (current_user_can('manage_options')) {
             return true;
         }
         
-        // Load permissions class if needed
-        if (!class_exists('SAW_Permissions')) {
-            $permissions_file = SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-permissions.php';
-            if (file_exists($permissions_file)) {
-                require_once $permissions_file;
+        // Check customer isolation
+        if (!empty($this->config['has_customer_isolation'])) {
+            $current_customer_id = $this->get_current_customer_id();
+            
+            if (!$current_customer_id) {
+                return new WP_Error('no_customer', __('Není nastaven zákazník', 'saw-visitors'));
+            }
+            
+            if (!empty($data['customer_id']) && (int)$data['customer_id'] !== (int)$current_customer_id) {
+                return new WP_Error('customer_mismatch', __('Nemáte oprávnění k tomuto zákazníkovi', 'saw-visitors'));
             }
         }
         
-        if (!class_exists('SAW_Permissions')) {
-            $this->set_flash(__('Permissions system not available', 'saw-visitors'), 'error');
-            $this->redirect(home_url('/admin/'));
-        }
-        
-        if (empty($role)) {
-            $this->set_flash(__('User role not found', 'saw-visitors'), 'error');
-            $this->redirect(home_url('/admin/'));
-        }
-        
-        $has_access = SAW_Permissions::check($role, $this->entity, 'list');
-        
-        if (!$has_access) {
-            $this->set_flash(__('Nemáte oprávnění k tomuto modulu', 'saw-visitors'), 'error');
-            $this->redirect(home_url('/admin/'));
+        // Check branch isolation
+        if (!empty($this->config['has_branch_isolation'])) {
+            $current_branch_id = $this->get_current_branch_id();
+            
+            if (!$current_branch_id) {
+                return new WP_Error('no_branch', __('Není nastavena pobočka', 'saw-visitors'));
+            }
+            
+            if (!empty($data['branch_id']) && (int)$data['branch_id'] !== (int)$current_branch_id) {
+                return new WP_Error('branch_mismatch', __('Nemáte oprávnění k této pobočce', 'saw-visitors'));
+            }
         }
         
         return true;
     }
     
     /**
-     * Check if user can perform action
+     * Get accessible branch IDs for current user
      *
-     * Validates permission for specific action on current module.
-     *
-     * @since 1.0.0
-     * @param string $action Action name (list, view, create, edit, delete)
-     * @return bool True if action allowed
-     */
-    protected function can($action) {
-        $role = $this->get_current_user_role();
-        
-        // Super admin can do everything
-        if ($role === 'super_admin') {
-            return true;
-        }
-        
-        // Load permissions class if needed
-        if (!class_exists('SAW_Permissions')) {
-            $permissions_file = SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-permissions.php';
-            if (file_exists($permissions_file)) {
-                require_once $permissions_file;
-            }
-        }
-        
-        if (!class_exists('SAW_Permissions')) {
-            return false;
-        }
-        
-        if (empty($role)) {
-            return false;
-        }
-        
-        return SAW_Permissions::check($role, $this->entity, $action);
-    }
-    
-    /**
-     * Validate scope access for data
-     *
-     * Checks if user's scope allows access to data based on role permissions.
-     * Validates customer_id, branch_id, department_id based on scope.
+     * Returns array of branch IDs the user can access.
      *
      * @since 1.0.0
-     * @param array  $data   Data to validate
-     * @param string $action Action being performed (create, edit)
-     * @return true|WP_Error True if allowed, WP_Error otherwise
+     * @return array|null Array of branch IDs, or null for super admin (all access)
      */
-    protected function validate_scope_access($data, $action = 'create') {
+    protected function get_accessible_branch_ids() {
+        if (current_user_can('manage_options')) {
+            return null; // Super admin - all branches
+        }
+        
         $role = $this->get_current_user_role();
-        
-        // Super admin bypasses scope checks
-        if ($role === 'super_admin') {
-            return true;
-        }
-        
-        if (!$role || !class_exists('SAW_Permissions')) {
-            return new WP_Error(
-                'no_permission',
-                __('Nelze ověřit oprávnění', 'saw-visitors')
-            );
-        }
-        
-        $permission = SAW_Permissions::get_permission($role, $this->entity, $action);
-        
-        if (!$permission || !isset($permission['scope'])) {
-            return new WP_Error(
-                'no_permission',
-                __('Nemáte oprávnění k této akci', 'saw-visitors')
-            );
-        }
-        
-        $scope = $permission['scope'];
-        
-        switch ($scope) {
-            case 'all':
-                return true;
-                
-            case 'customer':
-                if (isset($data['customer_id'])) {
-                    $current_customer_id = $this->get_current_customer_id();
-                    if ($data['customer_id'] != $current_customer_id) {
-                        return new WP_Error(
-                            'scope_violation',
-                            __('Nemůžete vytvořit/upravit záznam pro jiného zákazníka', 'saw-visitors')
-                        );
-                    }
-                }
-                return true;
-                
-            case 'branch':
-                if (isset($data['branch_id'])) {
-                    $accessible_branch_ids = $this->get_accessible_branch_ids();
-                    if (!in_array($data['branch_id'], $accessible_branch_ids)) {
-                        return new WP_Error(
-                            'scope_violation',
-                            __('Nemůžete vytvořit/upravit záznam pro tuto pobočku', 'saw-visitors')
-                        );
-                    }
-                }
-                return true;
-                
-            case 'department':
-                if (isset($data['department_id'])) {
-                    $accessible_dept_ids = $this->get_current_department_ids();
-                    if (!in_array($data['department_id'], $accessible_dept_ids)) {
-                        return new WP_Error(
-                            'scope_violation',
-                            __('Nemůžete vytvořit/upravit záznam pro toto oddělení', 'saw-visitors')
-                        );
-                    }
-                }
-                return true;
-                
-            case 'own':
-                // Users with 'own' scope can only manage their own records
-                return true;
-                
-            default:
-                return new WP_Error(
-                    'unknown_scope',
-                    __('Neznámý scope', 'saw-visitors')
-                );
-        }
-    }
-    
-    /**
-     * Get accessible branches for current user
-     *
-     * Returns branches based on user role:
-     * - super_admin/admin: all branches for customer
-     * - super_manager: assigned branches
-     *
-     * @since 1.0.0
-     * @return array Branch records
-     */
-    protected function get_accessible_branches() {
-        $role = $this->get_current_user_role();
-        
-        if ($role === 'super_admin' || $role === 'admin') {
-            global $wpdb;
-            $customer_id = $this->get_current_customer_id();
-            
-            if (!$customer_id) {
-                return [];
-            }
-            
-            return $wpdb->get_results($wpdb->prepare(
-                "SELECT * FROM %i 
-                 WHERE customer_id = %d AND is_active = 1 
-                 ORDER BY is_headquarters DESC, name ASC",
-                $wpdb->prefix . 'saw_branches',
-                $customer_id
-            ), ARRAY_A);
-        }
         
         if ($role === 'super_manager') {
-            if (!class_exists('SAW_User_Branches') || !class_exists('SAW_Context')) {
-                return [];
+            // Super manager - multiple branches via user_branches table
+            if (!class_exists('SAW_User_Branches')) {
+                require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-user-branches.php';
             }
             
             $saw_user_id = SAW_Context::get_saw_user_id();
-            if (!$saw_user_id) {
-                return [];
-            }
-            
-            return SAW_User_Branches::get_branches_for_user($saw_user_id);
+            return SAW_User_Branches::get_branch_ids_for_user($saw_user_id);
         }
         
-        return [];
+        // Other roles - single active branch from context
+        $branch_id = $this->get_current_branch_id();
+        return $branch_id ? [$branch_id] : [];
     }
     
     /**
-     * Get accessible branch IDs
+     * Get current customer
      *
-     * @since 1.0.0
-     * @return array Branch IDs
-     */
-    protected function get_accessible_branch_ids() {
-        $branches = $this->get_accessible_branches();
-        return array_map(function($branch) {
-            return intval($branch['id']);
-        }, $branches);
-    }
-    
-    /**
-     * Check if user can access specific branch
-     *
-     * @since 1.0.0
-     * @param int $branch_id Branch ID to check
-     * @return bool True if accessible
-     */
-    protected function can_access_branch($branch_id) {
-        $accessible_ids = $this->get_accessible_branch_ids();
-        return in_array(intval($branch_id), $accessible_ids);
-    }
-    
-    /**
-     * Get current customer data
+     * Returns customer data for current context.
      *
      * @since 1.0.0
      * @return array|null Customer data or null
      */
     protected function get_current_customer() {
-        if (class_exists('SAW_Context')) {
-            return SAW_Context::get_customer_data();
+        $customer_id = $this->get_current_customer_id();
+        
+        if (!$customer_id) {
+            return null;
         }
         
-        return null;
+        global $wpdb;
+        
+        $customer = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM %i WHERE id = %d",
+            $wpdb->prefix . 'saw_customers',
+            $customer_id
+        ), ARRAY_A);
+        
+        return $customer;
     }
     
     /**
-     * Get current branch data
+     * Get current branch
+     *
+     * Returns branch data for current context.
      *
      * @since 1.0.0
      * @return array|null Branch data or null
      */
     protected function get_current_branch() {
-        if (class_exists('SAW_Context')) {
-            return SAW_Context::get_branch_data();
+        $branch_id = $this->get_current_branch_id();
+        
+        if (!$branch_id) {
+            return null;
         }
         
-        return null;
+        global $wpdb;
+        
+        $branch = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM %i WHERE id = %d",
+            $wpdb->prefix . 'saw_branches',
+            $branch_id
+        ), ARRAY_A);
+        
+        return $branch;
+    }
+    
+    /**
+     * Add customer isolation to WHERE clause
+     *
+     * Modifies WHERE array to include customer_id filter if isolation is enabled.
+     *
+     * @since 1.0.0
+     * @param array $where WHERE conditions
+     * @return array Modified WHERE conditions
+     */
+    protected function apply_customer_isolation($where = array()) {
+        if (empty($this->config['has_customer_isolation'])) {
+            return $where;
+        }
+        
+        if (current_user_can('manage_options')) {
+            return $where; // Super admin bypasses isolation
+        }
+        
+        $customer_id = $this->get_current_customer_id();
+        
+        if ($customer_id) {
+            $where['customer_id'] = $customer_id;
+        }
+        
+        return $where;
+    }
+    
+    /**
+     * Add branch isolation to WHERE clause
+     *
+     * Modifies WHERE array to include branch_id filter(s) if isolation is enabled.
+     *
+     * @since 1.0.0
+     * @param array $where WHERE conditions
+     * @return array Modified WHERE conditions
+     */
+    protected function apply_branch_isolation($where = array()) {
+        if (empty($this->config['has_branch_isolation'])) {
+            return $where;
+        }
+        
+        if (current_user_can('manage_options')) {
+            return $where; // Super admin bypasses isolation
+        }
+        
+        $branch_ids = $this->get_accessible_branch_ids();
+        
+        if (!empty($branch_ids)) {
+            if (count($branch_ids) === 1) {
+                $where['branch_id'] = $branch_ids[0];
+            } else {
+                $where['branch_id__in'] = $branch_ids;
+            }
+        }
+        
+        return $where;
+    }
+    
+    /**
+     * Check if item belongs to accessible scope
+     *
+     * Validates if a single item is within user's access scope.
+     *
+     * @since 1.0.0
+     * @param array $item Item data
+     * @return bool True if accessible
+     */
+    protected function is_item_accessible($item) {
+        if (current_user_can('manage_options')) {
+            return true; // Super admin
+        }
+        
+        // Check customer isolation
+        if (!empty($this->config['has_customer_isolation'])) {
+            $current_customer_id = $this->get_current_customer_id();
+            
+            if (!$current_customer_id || (int)$item['customer_id'] !== (int)$current_customer_id) {
+                return false;
+            }
+        }
+        
+        // Check branch isolation
+        if (!empty($this->config['has_branch_isolation'])) {
+            $branch_ids = $this->get_accessible_branch_ids();
+            
+            if (empty($branch_ids) || !in_array((int)$item['branch_id'], $branch_ids)) {
+                return false;
+            }
+        }
+        
+        return true;
     }
     
     /**

@@ -5,7 +5,7 @@
  * @package    SAW_Visitors
  * @subpackage Core
  * @since      1.0.0
- * @version    1.1.0 - FIXED: Added all component CSS/JS to prevent FOUC
+ * @version    1.2.0 - DETAIL SECTIONS CSS ADDED
  */
 
 if (!defined('ABSPATH')) {
@@ -49,6 +49,7 @@ class SAW_Asset_Manager {
         'saw-search'              => 'components/search.css',
         'saw-pagination'          => 'components/pagination.css',
         'saw-table-column-types'  => 'components/table-column-types.css',
+        'saw-detail-sections'     => 'components/detail-sections.css',
         
         // Interactive components (CRITICAL: Must load globally to prevent FOUC)
         'saw-customer-switcher'   => '../includes/components/customer-switcher/customer-switcher.css',
