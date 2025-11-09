@@ -8,7 +8,7 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Core
- * @version     7.1.0 - ROUTING FIXED
+ * @version     7.2.0 - LOGO FIX
  * @since       1.0.0
  */
 
@@ -625,28 +625,46 @@ class SAW_Router {
     /**
      * Get current customer data
      *
+     * ✅ FIX v7.2.0: Always load logo_url from database even if SAW_Context doesn't provide it
+     *
      * @since 1.0.0
      * @return array Customer data array
      */
     private function get_current_customer_data() {
+        $customer_id = null;
+        
+        // Try SAW_Context first to get customer ID
         if (class_exists('SAW_Context')) {
-            $customer = SAW_Context::get_customer_data();
+            $customer_basic = SAW_Context::get_customer_data();
+            if ($customer_basic && isset($customer_basic['id'])) {
+                $customer_id = $customer_basic['id'];
+            }
+        }
+        
+        // If we have customer_id, load FULL data from database
+        if ($customer_id) {
+            global $wpdb;
+            $customer = $wpdb->get_row($wpdb->prepare(
+                "SELECT id, name, ico, logo_url FROM %i WHERE id = %d",
+                $wpdb->prefix . 'saw_customers',
+                $customer_id
+            ), ARRAY_A);
+            
             if ($customer) {
                 return array(
                     'id' => $customer['id'],
                     'name' => $customer['name'],
                     'ico' => $customer['ico'] ?? '',
-                    'address' => $customer['address'] ?? '',
                     'logo_url' => $customer['logo_url'] ?? '',
                     'logo_url_full' => !empty($customer['logo_url']) ? wp_get_upload_dir()['baseurl'] . '/' . ltrim($customer['logo_url'], '/') : '',
                 );
             }
         }
         
+        // Fallback: Load first active customer
         global $wpdb;
-        
         $customer = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM %i WHERE status = 'active' ORDER BY id ASC LIMIT 1",
+            "SELECT id, name, ico, logo_url FROM %i WHERE status = 'active' ORDER BY id ASC LIMIT 1",
             $wpdb->prefix . 'saw_customers'
         ), ARRAY_A);
         
@@ -655,7 +673,6 @@ class SAW_Router {
                 'id' => $customer['id'],
                 'name' => $customer['name'],
                 'ico' => $customer['ico'] ?? '',
-                'address' => $customer['address'] ?? '',
                 'logo_url' => $customer['logo_url'] ?? '',
                 'logo_url_full' => !empty($customer['logo_url']) ? wp_get_upload_dir()['baseurl'] . '/' . ltrim($customer['logo_url'], '/') : '',
             );
@@ -665,7 +682,6 @@ class SAW_Router {
             'id' => 0,
             'name' => 'Žádný zákazník',
             'ico' => '',
-            'address' => '',
             'logo_url' => '',
             'logo_url_full' => '',
         );

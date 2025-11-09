@@ -1,10 +1,15 @@
 <?php
 /**
- * SAW App Layout - AJAX FIXED v2.2.0
+ * SAW App Layout - AJAX FIXED v2.3.0
  *
  * Main layout manager for the application.
  * Handles complete page rendering with header, sidebar, footer, and content.
  * Supports AJAX requests for SPA-like navigation.
+ *
+ * CRITICAL FIX v2.3.0:
+ * - ✅ Fixed missing logo_url in customer data on dashboard
+ * - ✅ Added primary_color to customer data
+ * - ✅ Customer data now consistent across all pages
  *
  * CRITICAL FIX v2.2.0:
  * - ✅ Removed hardcoded saw-app-navigation.js script tag
@@ -15,7 +20,7 @@
  * - ✅ Fixed layout - eliminuje celostránkový scroll
  *
  * @package SAW_Visitors
- * @version 2.2.0 - REMOVED HARDCODED SCRIPT
+ * @version 2.3.0 - FIXED CUSTOMER DATA
  * @since   4.6.1
  */
 
@@ -134,6 +139,8 @@ class SAW_App_Layout {
      * Loads customer data from database using SAW_Context.
      * Returns default data if customer not found.
      *
+     * ✅ FIX v2.3.0: Now includes logo_url and primary_color
+     *
      * @since 4.6.1
      * @return array Customer data array
      */
@@ -143,7 +150,7 @@ class SAW_App_Layout {
         if ($customer_id) {
             global $wpdb;
             $customer = $wpdb->get_row($wpdb->prepare(
-                "SELECT * FROM %i WHERE id = %d",
+                "SELECT id, name, ico, address, logo_url, primary_color FROM %i WHERE id = %d",
                 $wpdb->prefix . 'saw_customers',
                 $customer_id
             ), ARRAY_A);
@@ -155,6 +162,7 @@ class SAW_App_Layout {
                     'ico' => $customer['ico'] ?? '',
                     'address' => $customer['address'] ?? '',
                     'logo_url' => $customer['logo_url'] ?? '',
+                    'primary_color' => $customer['primary_color'] ?? '',
                 );
             }
         }
@@ -165,6 +173,7 @@ class SAW_App_Layout {
             'ico' => '',
             'address' => '',
             'logo_url' => '',
+            'primary_color' => '',
         );
     }
     

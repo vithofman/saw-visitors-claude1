@@ -1,11 +1,16 @@
 <?php
 /**
- * SAW App Header Component
+ * SAW App Header Component - FIXED v2.0
  *
  * Renders application header with branding, user menu, customer switcher,
  * and language switcher.
  *
+ * FIX v2.0:
+ * - ✅ Removed primary_color from customer data
+ * - ✅ Ensured logo_url is properly loaded from database
+ *
  * @package SAW_Visitors
+ * @version 2.0 - REMOVED PRIMARY_COLOR
  * @since   4.8.0
  */
 
@@ -97,7 +102,7 @@ class SAW_App_Header {
             if ($customer_id) {
                 global $wpdb;
                 $customer = $wpdb->get_row($wpdb->prepare(
-                    "SELECT id, name, ico, logo_url, primary_color FROM %i WHERE id = %d",
+                    "SELECT id, name, ico, logo_url FROM %i WHERE id = %d",
                     $wpdb->prefix . 'saw_customers',
                     $customer_id
                 ), ARRAY_A);
