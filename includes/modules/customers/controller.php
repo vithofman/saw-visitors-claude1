@@ -344,20 +344,23 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
      * @return array Account types with id, name, display_name, price
      */
     protected function load_account_types() {
-        global $wpdb;
-        
-        $table_name = $wpdb->prefix . 'saw_account_types';
-        
-        $results = @$wpdb->get_results(
-    "SELECT id, name, display_name, price 
-     FROM {$table_name}
-     WHERE is_active = 1 
-     ORDER BY sort_order ASC, name ASC",
-    ARRAY_A
-);
-        
-        return is_array($results) ? $results : array();
-    }
+    global $wpdb;
+    
+    $table_name = $wpdb->prefix . 'saw_account_types';
+    
+    // FIXED: Use prepare() instead of string interpolation
+    $query = $wpdb->prepare(
+        "SELECT id, name, display_name, price 
+         FROM %i 
+         WHERE is_active = 1 
+         ORDER BY sort_order ASC, name ASC",
+        $table_name
+    );
+    
+    $results = $wpdb->get_results($query, ARRAY_A);
+    
+    return is_array($results) ? $results : array();
+}
     
     /**
      * Get sidebar context from router
@@ -469,14 +472,19 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             
             require $template_path;
         } else {
-            $is_edit = true;
-            $GLOBALS['saw_sidebar_form'] = true;
-            
-            $form_path = $this->config['path'] . 'form-template.php';
-            
-            require $form_path;
-            unset($GLOBALS['saw_sidebar_form']);
-        }
+    $is_edit = true;
+    $GLOBALS['saw_sidebar_form'] = true;
+    
+    // CRITICAL FIX: Pass variables to template scope
+    $config = $this->config;
+    $config['account_types'] = $account_types; // Make account_types available
+    $entity = $this->entity;
+    
+    $form_path = $this->config['path'] . 'form-template.php';
+    
+    require $form_path;
+    unset($GLOBALS['saw_sidebar_form']);
+}
         
         $sidebar_content = ob_get_clean();
         

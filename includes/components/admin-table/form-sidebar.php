@@ -3,10 +3,11 @@
  * Form Sidebar Template
  *
  * Renders create/edit form in sidebar.
+ * FIXED: Correct data-mode (edit/create) and data-current-id for proper navigation
  *
  * @package     SAW_Visitors
  * @subpackage  Components/AdminTable
- * @version     3.1.0 - FIXED: Vertical alignment of close button with span wrapper
+ * @version     3.2.0 - FIXED: data-mode shows edit/create, added data-current-id
  * @since       4.0.0
  */
 
@@ -19,9 +20,16 @@ $form_template = SAW_VISITORS_PLUGIN_DIR . "includes/modules/{$module_slug}/form
 
 // Close URL is now handled by JavaScript
 $close_url = '#';
+
+// CRITICAL FIX: Use actual mode (edit/create), not generic "form"
+$actual_mode = $is_edit ? 'edit' : 'create';
+$current_id = $is_edit && !empty($item['id']) ? intval($item['id']) : 0;
 ?>
 
-<div class="saw-sidebar" data-mode="form" data-entity="<?php echo esc_attr($entity); ?>">
+<div class="saw-sidebar" 
+     data-mode="<?php echo esc_attr($actual_mode); ?>" 
+     data-entity="<?php echo esc_attr($entity); ?>"
+     data-current-id="<?php echo esc_attr($current_id); ?>">
     <div class="saw-sidebar-header">
         <div class="saw-sidebar-title">
             <span><?php echo esc_html($config['icon'] ?? '📝'); ?></span>

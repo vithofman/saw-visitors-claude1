@@ -1,17 +1,16 @@
 /**
  * Sidebar Styles - Detail & Form
  *
- * Smooth slide-in animation with transform for performance.
- * Hidden by default, shown with .active class.
+ * ZERO ANIMATIONS - Everything instant, no fades, no slides, nothing.
  *
  * @package     SAW_Visitors
  * @subpackage  Components/AdminTable
- * @version     2.2.0 - OPTIMIZED: Faster animation (200ms)
+ * @version     2.4.0 - ZERO ANIMATIONS
  * @since       4.0.0
  */
 
 /* ============================================
-   SPLIT LAYOUT
+   SPLIT LAYOUT - NO PADDING
    ============================================ */
 
 .saw-admin-table-split {
@@ -19,7 +18,7 @@
     gap: 0;
     min-height: 600px;
     height: calc(100vh - 200px);
-    padding-right: 700px;
+    /* NO padding - controlled by .has-sidebar in fixed-layout.css */
 }
 
 .saw-table-panel {
@@ -35,7 +34,7 @@
 }
 
 /* ============================================
-   SIDEBAR WRAPPER - HIDDEN BY DEFAULT
+   SIDEBAR WRAPPER - INSTANT SHOW/HIDE
    ============================================ */
 
 .saw-sidebar-wrapper {
@@ -45,17 +44,13 @@
     bottom: 0 !important;
     width: 700px !important;
     z-index: 99999 !important;
-    display: flex !important;
+    display: none !important; /* HIDDEN by default */
     flex-direction: column !important;
     box-shadow: -8px 0 24px rgba(0, 0, 0, 0.08), -2px 0 8px rgba(0, 0, 0, 0.04) !important;
-    
-    transform: translateX(100%);
-    /* transition: ODSTRANĚNO */
-    pointer-events: none;
 }
+
 .saw-sidebar-wrapper.active {
-    transform: translateX(0) !important;
-    pointer-events: auto !important;
+    display: flex !important; /* INSTANT show */
 }
 
 .saw-sidebar-wrapper::before {
@@ -66,13 +61,11 @@
     right: 700px;
     bottom: 0;
     background: rgba(0, 0, 0, 0.2);
-    opacity: 0;
-    /* transition: ODSTRANĚNO */
     z-index: -1;
     pointer-events: none;
 }
+
 .saw-sidebar-wrapper.active::before {
-    opacity: 1;
     pointer-events: auto;
 }
 
@@ -149,7 +142,6 @@
     transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-/* CRITICAL FIX: Vertical alignment for arrow characters */
 .saw-sidebar-nav-btn span {
     display: inline-block !important;
     vertical-align: middle !important;
@@ -183,7 +175,6 @@
     transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-/* CRITICAL FIX: Vertical alignment for cross character */
 .saw-sidebar-close span {
     display: inline-block !important;
     vertical-align: middle !important;
@@ -342,21 +333,12 @@
         width: 500px !important;
     }
     
-    .saw-admin-table-split {
-        padding-right: 500px;
-    }
-    
     .saw-sidebar-wrapper::before {
         right: 500px;
     }
 }
 
 @media (max-width: 768px) {
-    .saw-admin-table-split {
-        flex-direction: column;
-        padding-right: 0;
-    }
-    
     .saw-table-panel {
         display: none;
     }

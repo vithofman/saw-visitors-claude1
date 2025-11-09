@@ -7,7 +7,7 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Components
- * @version     2.1.1
+ * @version     2.1.2
  * @since       4.7.0
  */
 
@@ -50,10 +50,19 @@ class SAW_Component_Customer_Switcher {
     private static $ajax_registered = false;
     
     /**
+     * Assets enqueued flag
+     *
+     * @since 4.7.0
+     * @var bool
+     */
+    private static $assets_enqueued = false;
+    
+    /**
      * Constructor
      *
      * Initializes customer switcher with customer and user data.
      * Auto-loads customer from context if not provided.
+     * CRITICAL: Enqueues CSS immediately to prevent FOUC.
      *
      * @since 4.7.0
      * @param array|null $customer Customer data (null = auto-load)
@@ -83,12 +92,63 @@ class SAW_Component_Customer_Switcher {
             'role' => current_user_can('manage_options') ? 'super_admin' : 'admin',
         );
         
+        // CRITICAL FIX: Enqueue CSS immediately in constructor to prevent FOUC
+        $this->enqueue_assets_early();
+        
         // Register AJAX handlers once
         if (!self::$ajax_registered) {
             add_action('wp_ajax_saw_get_customers_for_switcher', array($this, 'ajax_get_customers'));
             add_action('wp_ajax_saw_switch_customer', array($this, 'ajax_switch_customer'));
             self::$ajax_registered = true;
         }
+    }
+    
+    /**
+     * Enqueue assets early (in constructor)
+     *
+     * CRITICAL: This method is called from constructor to ensure CSS
+     * is loaded BEFORE any HTML is rendered, preventing FOUC (Flash of Unstyled Content).
+     * Only enqueues once per page load.
+     *
+     * @since 4.7.0
+     * @return void
+     */
+    private function enqueue_assets_early() {
+        if (self::$assets_enqueued) {
+            return;
+        }
+        
+        // Enqueue CSS immediately
+        wp_enqueue_style(
+            'saw-customer-switcher',
+            SAW_VISITORS_PLUGIN_URL . 'includes/components/customer-switcher/customer-switcher.css',
+            array(),
+            SAW_VISITORS_VERSION
+        );
+        
+        // Enqueue JS for super admins
+        if ($this->is_super_admin()) {
+            wp_enqueue_script(
+                'saw-customer-switcher',
+                SAW_VISITORS_PLUGIN_URL . 'includes/components/customer-switcher/customer-switcher.js',
+                array('jquery'),
+                SAW_VISITORS_VERSION,
+                true
+            );
+            
+            wp_localize_script(
+                'saw-customer-switcher',
+                'sawCustomerSwitcher',
+                array(
+                    'ajaxurl' => admin_url('admin-ajax.php'),
+                    'nonce' => wp_create_nonce('saw_customer_switcher'),
+                    'currentCustomerId' => $this->current_customer['id'],
+                    'currentCustomerName' => $this->current_customer['name'],
+                )
+            );
+        }
+        
+        self::$assets_enqueued = true;
     }
     
     /**
@@ -254,13 +314,12 @@ class SAW_Component_Customer_Switcher {
      * Render customer switcher UI
      *
      * Outputs either interactive switcher (super admin) or static info (others).
+     * Assets are already enqueued in constructor.
      *
      * @since 4.7.0
      * @return void Outputs HTML directly
      */
     public function render() {
-        $this->enqueue_assets();
-        
         if (!$this->is_super_admin()) {
             $this->render_static_info();
             return;
@@ -275,6 +334,8 @@ class SAW_Component_Customer_Switcher {
                     <?php if ($logo_url): ?>
                         <img src="<?php echo esc_url($logo_url); ?>" 
                              alt="<?php echo esc_attr($this->current_customer['name']); ?>" 
+                             width="40"
+                             height="40"
                              class="saw-switcher-logo-image">
                     <?php else: ?>
                         <svg width="32" height="32" viewBox="0 0 40 40" fill="none" class="saw-switcher-logo-fallback">
@@ -327,7 +388,9 @@ class SAW_Component_Customer_Switcher {
             <div class="saw-logo">
                 <?php if ($logo_url): ?>
                     <img src="<?php echo esc_url($logo_url); ?>" 
-                         alt="<?php echo esc_attr($this->current_customer['name']); ?>" 
+                         alt="<?php echo esc_attr($this->current_customer['name']); ?>"
+                         width="40"
+                         height="40"
                          class="saw-logo-image">
                 <?php else: ?>
                     <svg width="40" height="40" viewBox="0 0 40 40" fill="none" class="saw-logo-fallback">
@@ -344,44 +407,6 @@ class SAW_Component_Customer_Switcher {
             </div>
         </div>
         <?php
-    }
-    
-    /**
-     * Enqueue component assets
-     *
-     * Loads CSS and conditionally loads JS for super admins.
-     *
-     * @since 4.7.0
-     * @return void
-     */
-    private function enqueue_assets() {
-        wp_enqueue_style(
-            'saw-customer-switcher',
-            SAW_VISITORS_PLUGIN_URL . 'includes/components/customer-switcher/customer-switcher.css',
-            array(),
-            SAW_VISITORS_VERSION
-        );
-        
-        if ($this->is_super_admin()) {
-            wp_enqueue_script(
-                'saw-customer-switcher',
-                SAW_VISITORS_PLUGIN_URL . 'includes/components/customer-switcher/customer-switcher.js',
-                array('jquery'),
-                SAW_VISITORS_VERSION,
-                true
-            );
-            
-            wp_localize_script(
-                'saw-customer-switcher',
-                'sawCustomerSwitcher',
-                array(
-                    'ajaxurl' => admin_url('admin-ajax.php'),
-                    'nonce' => wp_create_nonce('saw_customer_switcher'),
-                    'currentCustomerId' => $this->current_customer['id'],
-                    'currentCustomerName' => $this->current_customer['name'],
-                )
-            );
-        }
     }
     
     /**

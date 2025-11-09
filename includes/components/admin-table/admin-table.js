@@ -2,11 +2,12 @@
  * Admin Table Component JavaScript
  *
  * Handles clickable table rows with AJAX sidebar loading.
- * Supports both modal and sidebar modes with smooth navigation.
+ * ZERO ANIMATIONS - Everything instant.
+ * FIXED: Removed close button handler - now handled by sidebar.js
  *
  * @package    SAW_Visitors
  * @subpackage Components
- * @version    3.4.0 - FIXED URL HISTORY
+ * @version    4.1.0 - REMOVED close button handler conflict
  * @since      1.0.0
  */
 
@@ -74,15 +75,11 @@
                 console.log('📝 Inserting HTML into wrapper');
                 $wrapper.html(response.data.html);
                 
-                // CRITICAL FIX: Add has-sidebar class to table for proper spacing
+                // INSTANT: Add both classes at same time
                 $('.saw-admin-table-split').addClass('has-sidebar');
+                $wrapper.addClass('active');
                 
-                setTimeout(function() {
-                    console.log('✨ Adding active class');
-                    $wrapper.addClass('active');
-                }, 10);
-                
-                // CRITICAL FIX: Update URL via History API
+                // Update URL
                 const newUrl = buildUrl(entity, id, mode);
                 console.log('🔗 Updating URL to:', newUrl);
                 window.history.pushState(
@@ -105,11 +102,14 @@
     /**
      * Close sidebar
      *
+     * INSTANT: No timeout, immediate cleanup
+     * NOTE: This is called from sidebar.js after handling navigation logic
+     *
      * @param {string} listUrl URL to navigate back to list
      * @return {void}
      */
     window.closeSidebar = function(listUrl) {
-        console.log('🚪 Closing sidebar');
+        console.log('🚪 closeSidebar() called from external');
         
         const $wrapper = $('.saw-sidebar-wrapper');
         
@@ -118,23 +118,14 @@
             return;
         }
         
+        // INSTANT: Remove classes and HTML at same time
         $wrapper.removeClass('active');
-        
-        // CRITICAL FIX: Remove padding from table when sidebar closes
         $('.saw-admin-table-split').removeClass('has-sidebar');
-        
-        setTimeout(function() {
-            $wrapper.html('');
-            console.log('✅ Sidebar closed');
-        }, 300);
+        $wrapper.html(''); // NO setTimeout - instant cleanup
         
         $('.saw-admin-table tbody tr').removeClass('saw-row-active');
         
-        // CRITICAL FIX: Update URL back to list view
-        if (listUrl) {
-            console.log('🔗 Updating URL to:', listUrl);
-            window.history.pushState({}, '', listUrl);
-        }
+        console.log('✅ Sidebar closed instantly');
     };
     
     /**
@@ -255,10 +246,6 @@
                 return;
             }
             
-            // ========================================
-            // CRITICAL FIX: Stop event propagation
-            // Prevents SPA navigation from intercepting this click
-            // ========================================
             e.stopPropagation();
             e.preventDefault();
             
@@ -269,7 +256,7 @@
                 const modalId = $row.data('modal');
                 
                 if (modalId && typeof SAWModal !== 'undefined') {
-                    console.log('🔲 Opening modal:', modalId);
+                    console.log('📲 Opening modal:', modalId);
                     SAWModal.open(modalId, {
                         id: itemId,
                         nonce: (window.sawGlobal && window.sawGlobal.nonce) || window.sawAjaxNonce
@@ -297,33 +284,23 @@
             }
         });
         
-        // Close sidebar button
-        $(document).on('click', '.saw-sidebar-close', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const listUrl = $(this).attr('href');
-            closeSidebar(listUrl);
-        });
+        // REMOVED: Close sidebar button handler - now in sidebar.js
+        // This prevents double event handlers and conflicts
         
-        // CRITICAL FIX: Browser back/forward button support
+        // Browser back/forward button support
         window.addEventListener('popstate', function(e) {
             console.log('🔙 Browser back/forward detected', e.state);
             
             if (e.state && e.state.id && e.state.entity) {
-                // Reopen sidebar via AJAX
                 console.log('📊 Reopening sidebar from history');
                 openSidebarAjax(e.state.id, e.state.mode, e.state.entity);
             } else {
-                // Close sidebar (we're back at list view)
                 console.log('🚪 Closing sidebar from history');
                 const $wrapper = $('.saw-sidebar-wrapper');
                 if ($wrapper.length && $wrapper.hasClass('active')) {
                     $wrapper.removeClass('active');
                     $('.saw-admin-table-split').removeClass('has-sidebar');
-                    setTimeout(function() {
-                        $wrapper.html('');
-                    }, 300);
+                    $wrapper.html(''); // INSTANT cleanup
                     $('.saw-admin-table tbody tr').removeClass('saw-row-active');
                 }
             }

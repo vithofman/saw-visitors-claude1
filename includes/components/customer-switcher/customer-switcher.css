@@ -47,10 +47,8 @@
 }
 
 .saw-switcher-logo-image {
-    max-width: 40px;
-    max-height: 40px;
-    width: auto;
-    height: auto;
+    width: 40px;
+    height: 40px;
     object-fit: contain;
     border-radius: var(--saw-border-radius-sm);
 }
@@ -187,10 +185,8 @@
 }
 
 .saw-switcher-item-logo img {
-    max-width: 36px;
-    max-height: 36px;
-    width: auto;
-    height: auto;
+    width: 36px;
+    height: 36px;
     object-fit: contain;
     border-radius: var(--saw-space-xs);
 }
@@ -282,10 +278,8 @@
 }
 
 .saw-customer-info-static .saw-logo-image {
-    max-width: 40px;
-    max-height: 40px;
-    width: auto;
-    height: auto;
+    width: 40px;
+    height: 40px;
     object-fit: contain;
 }
 
