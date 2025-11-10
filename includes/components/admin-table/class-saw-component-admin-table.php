@@ -237,6 +237,7 @@ class SAW_Component_Admin_Table {
     if ($mode === 'detail') {
         $item = $this->config['detail_item'];
         $tab = $this->config['detail_tab'];
+        $related_data = $this->config['related_data'] ?? null; // ✅ PŘIDÁNO
         require __DIR__ . '/detail-sidebar.php';
     } 
     elseif ($mode === 'create' || $mode === 'edit') {

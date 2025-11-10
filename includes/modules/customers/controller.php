@@ -118,6 +118,9 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             
             $detail_item = $this->format_detail_data($detail_item);
             $related_data = $this->load_related_data($sidebar_context['id']);
+error_log('=== INDEX() RELATED DATA ===');
+error_log('Customer ID: ' . $sidebar_context['id']);
+error_log('Related data: ' . print_r($related_data, true));
         }
         
         elseif ($sidebar_mode === 'create') {
@@ -261,22 +264,35 @@ $this->config['account_types'] = $account_types;
         wp_send_json_error(array('message' => 'Zákazník nenalezen'));
     }
     
+    // ✅ Suppress unwanted output
     ob_start();
     
     $account_types = array();
     $related_data = null;
     
+    // ✅ FIXED: Use lazy_load_lookup_data for consistency
     if ($mode === 'edit') {
-        // ✅ Load account types directly (not via lazy_load)
-        $account_types = $this->load_account_types_from_db();
+        $account_types = $this->lazy_load_lookup_data('account_types', function() {
+            return $this->load_account_types_from_db();
+        });
+        $this->config['account_types'] = $account_types;
     }
     
+    // ✅ CRITICAL: Load related data for detail mode
     if ($mode === 'detail') {
         $related_data = $this->load_related_data($id);
+
+error_log('=== AJAX SIDEBAR RELATED DATA ===');
+    error_log('Customer ID: ' . $id);
+    error_log('Related data type: ' . gettype($related_data));
+    error_log('Related data: ' . print_r($related_data, true));
+
+
     }
     
     $captured_junk = ob_get_clean();
     
+    // ✅ Start fresh output buffer for template
     ob_start();
     
     $item = $this->format_detail_data($item);
@@ -298,7 +314,6 @@ $this->config['account_types'] = $account_types;
         $config = $this->config;
         $entity = $this->entity;
         
-        // ✅ CRITICAL: Extract account_types as standalone variable
         extract(compact('item', 'is_edit', 'account_types', 'config', 'entity'));
         
         $form_path = $this->config['path'] . 'form-template.php';

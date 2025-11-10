@@ -87,7 +87,9 @@ $filters_html = ob_get_clean();
         'form_item' => $form_item ?? null,
         'detail_tab' => $detail_tab ?? 'overview',
         'account_types' => $account_types ?? array(),
-        
+	'related_data' => $related_data ?? null,        
+
+
         // Override auto-generated columns with custom display
         'columns' => array(
             'logo_url' => array(
