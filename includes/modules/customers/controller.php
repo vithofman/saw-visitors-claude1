@@ -165,6 +165,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             $account_types = $this->lazy_load_lookup_data('account_types', function() {
                 return $this->load_account_types_from_db();
             });
+$this->config['account_types'] = $account_types;
         }
         
         $search = isset($_GET['s']) ? sanitize_text_field(wp_unslash($_GET['s'])) : '';
@@ -237,82 +238,86 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
      * @return void (outputs JSON)
      */
     public function ajax_load_sidebar() {
-        check_ajax_referer('saw_ajax_nonce', 'nonce');
-        
-        $id = intval($_POST['id'] ?? 0);
-        $mode = sanitize_text_field($_POST['mode'] ?? 'detail');
-        
-        if (!in_array($mode, array('detail', 'edit'), true)) {
-            wp_send_json_error(array('message' => 'Invalid mode'));
-        }
-        
-        if ($mode === 'detail' && !$this->can('view')) {
-            wp_send_json_error(array('message' => 'Nemáte oprávnění zobrazit detail'));
-        }
-        
-        if ($mode === 'edit' && !$this->can('edit')) {
-            wp_send_json_error(array('message' => 'Nemáte oprávnění upravovat záznamy'));
-        }
-        
-        $item = $this->model->get_by_id($id);
-        
-        if (!$item) {
-            wp_send_json_error(array('message' => 'Zákazník nenalezen'));
-        }
-        
-        ob_start();
-        
-        $account_types = array();
-        $related_data = null;
-        
-        if ($mode === 'edit') {
-            $account_types = $this->lazy_load_lookup_data('account_types', function() {
-                return $this->load_account_types_from_db();
-            });
-        }
-        
-        if ($mode === 'detail') {
-            $related_data = $this->load_related_data($id);
-        }
-        
-        $captured_junk = ob_get_clean();
-        
-        ob_start();
-        
-        $item = $this->format_detail_data($item);
-        
-        if ($mode === 'detail') {
-            $tab = 'overview';
-            $config = $this->config;
-            $entity = $this->entity;
-            
-            extract(compact('item', 'tab', 'config', 'entity', 'related_data'));
-            
-            $template_path = SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/detail-sidebar.php';
-            
-            require $template_path;
-        } else {
-            $is_edit = true;
-            $GLOBALS['saw_sidebar_form'] = true;
-            
-            $config = $this->config;
-            $config['account_types'] = $account_types;
-            $entity = $this->entity;
-            
-            $form_path = $this->config['path'] . 'form-template.php';
-            
-            require $form_path;
-            unset($GLOBALS['saw_sidebar_form']);
-        }
-        
-        $sidebar_content = ob_get_clean();
-        
-        wp_send_json_success(array(
-            'html' => $sidebar_content,
-            'mode' => $mode,
-            'id' => $id
-        ));
+    check_ajax_referer('saw_ajax_nonce', 'nonce');
+    
+    $id = intval($_POST['id'] ?? 0);
+    $mode = sanitize_text_field($_POST['mode'] ?? 'detail');
+    
+    if (!in_array($mode, array('detail', 'edit'), true)) {
+        wp_send_json_error(array('message' => 'Invalid mode'));
     }
+    
+    if ($mode === 'detail' && !$this->can('view')) {
+        wp_send_json_error(array('message' => 'Nemáte oprávnění zobrazit detail'));
+    }
+    
+    if ($mode === 'edit' && !$this->can('edit')) {
+        wp_send_json_error(array('message' => 'Nemáte oprávnění upravovat záznamy'));
+    }
+    
+    $item = $this->model->get_by_id($id);
+    
+    if (!$item) {
+        wp_send_json_error(array('message' => 'Zákazník nenalezen'));
+    }
+    
+    ob_start();
+    
+    $account_types = array();
+    $related_data = null;
+    
+    if ($mode === 'edit') {
+        // ✅ Load account types directly (not via lazy_load)
+        $account_types = $this->load_account_types_from_db();
+    }
+    
+    if ($mode === 'detail') {
+        $related_data = $this->load_related_data($id);
+    }
+    
+    $captured_junk = ob_get_clean();
+    
+    ob_start();
+    
+    $item = $this->format_detail_data($item);
+    
+    if ($mode === 'detail') {
+        $tab = 'overview';
+        $config = $this->config;
+        $entity = $this->entity;
+        
+        extract(compact('item', 'tab', 'config', 'entity', 'related_data'));
+        
+        $template_path = SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/detail-sidebar.php';
+        
+        require $template_path;
+    } else {
+        $is_edit = true;
+        $GLOBALS['saw_sidebar_form'] = true;
+        
+        $config = $this->config;
+        $entity = $this->entity;
+        
+        // ✅ CRITICAL: Extract account_types as standalone variable
+        extract(compact('item', 'is_edit', 'account_types', 'config', 'entity'));
+        
+        $form_path = $this->config['path'] . 'form-template.php';
+        
+        require $form_path;
+        
+        unset($GLOBALS['saw_sidebar_form']);
+    }
+    
+    $sidebar_content = ob_get_clean();
+    
+    wp_send_json_success(array(
+        'html' => $sidebar_content,
+        'mode' => $mode,
+        'id' => $id
+    ));
+}
+
+
     
     /**
      * AJAX delete handler - OVERRIDE
@@ -457,23 +462,24 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
      * @return array Account types indexed by ID
      */
     private function load_account_types_from_db() {
-        global $wpdb;
-        
-        $types = $wpdb->get_results(
-            "SELECT id, name, display_name FROM {$wpdb->prefix}saw_account_types WHERE is_active = 1 ORDER BY name ASC",
-            ARRAY_A
+    global $wpdb;
+    
+    $types = $wpdb->get_results(
+        "SELECT id, name, display_name FROM {$wpdb->prefix}saw_account_types WHERE is_active = 1 ORDER BY name ASC",
+        ARRAY_A
+    );
+    
+    $account_types = array();
+    foreach ($types as $type) {
+        $account_types[$type['id']] = array(
+            'id' => intval($type['id']),  // ✅ MUST HAVE - template uses $type['id']
+            'name' => $type['name'],
+            'display_name' => $type['display_name'],
         );
-        
-        $account_types = array();
-        foreach ($types as $type) {
-            $account_types[$type['id']] = array(
-                'name' => $type['name'],
-                'display_name' => $type['display_name'],
-            );
-        }
-        
-        return $account_types;
     }
+    
+    return $account_types;
+}
     
     /**
      * Load account types (backward compatible wrapper)
