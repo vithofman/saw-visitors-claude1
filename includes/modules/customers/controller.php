@@ -1,6 +1,6 @@
 <?php
 /**
- * Customers Module Controller - PERFORMANCE OPTIMIZED
+ * Customers Module Controller - FILE UPLOAD FIXED
  *
  * Main controller for the Customers module with sidebar support.
  * Handles CRUD operations, file uploads, AJAX requests, and sidebar context.
@@ -18,7 +18,7 @@
  * - Related data support (branches)
  *
  * @package SAW_Visitors
- * @version 11.2.2 - HOTFIX: before_delete returns true in AJAX context
+ * @version 11.3.0 - HOTFIX: Fixed file upload (correct parameters & return keys)
  * @since   4.6.1
  */
 
@@ -492,7 +492,9 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
      * 
      * Override base controller method to handle file uploads and custom fields.
      * 
-     * @since 11.2.0
+     * ✅ HOTFIX v11.3.0: Fixed file upload parameters and return key usage
+     * 
+     * @since 11.3.0
      * @param array $post POST data
      * @return array|WP_Error Prepared data or error
      */
@@ -524,18 +526,17 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             'notes' => sanitize_textarea_field($post['notes'] ?? ''),
         );
         
+        // ✅ HOTFIX: File upload with CORRECT parameters and return key
         if (!empty($_FILES['logo']['name'])) {
-            $upload_result = $this->file_uploader->upload(
-                $_FILES['logo'],
-                array('jpg', 'jpeg', 'png', 'gif', 'svg'),
-                2 * 1024 * 1024,
-                'customers'
-            );
+            // upload() method signature: upload($file, $dir_key = 'customers')
+            // Returns: array('url' => ..., 'path' => ..., 'filename' => ...)
+            $upload_result = $this->file_uploader->upload($_FILES['logo'], 'customers');
             
             if (is_wp_error($upload_result)) {
                 return $upload_result;
             }
             
+            // Delete old logo if editing
             if (isset($post['id'])) {
                 $old_customer = $this->model->get_by_id($post['id']);
                 if (!empty($old_customer['logo_url'])) {
@@ -543,7 +544,8 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
                 }
             }
             
-            $data['logo_url'] = $upload_result['file'];
+            // ✅ HOTFIX: Use correct return key 'url' (not 'file')
+            $data['logo_url'] = $upload_result['url'];
         }
         
         return $data;
@@ -619,9 +621,13 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
     /**
      * Enqueue module assets
      *
-     * @since 8.0.0
+     * ✅ HOTFIX v11.3.0: Load file upload component assets
+     *
+     * @since 11.3.0
      * @return void
      */
     protected function enqueue_assets() {
+        // ✅ CRITICAL: Enqueue file upload component CSS & JS
+        $this->file_uploader->enqueue_assets();
     }
 }

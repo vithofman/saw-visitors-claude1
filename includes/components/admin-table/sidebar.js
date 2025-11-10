@@ -1,14 +1,18 @@
 /**
- * Sidebar Navigation - ENTERPRISE EDITION
+ * Sidebar Navigation - HOTFIX EDITION
  *
  * Handles keyboard navigation and prev/next controls for sidebar.
  * Supports AJAX loading for seamless navigation.
  * 
- * SECURITY: Uses centralized nonce management from sawGlobal
+ * HOTFIX v5.0.2:
+ * - Opraveno: Duplicitní delete handlers (sidebar.js vs saw-app.js)
+ * - Opraveno: "Zákazník nenalezen" po smazání
+ * - Opraveno: Dvakrát confirm dialog
+ * - Sidebar se zavře PŘED reload, aby se nezobrazila chyba
  *
  * @package     SAW_Visitors
  * @subpackage  Components/AdminTable
- * @version     5.0.0 - ENTERPRISE: Centralized nonce + error handling
+ * @version     5.0.2 - HOTFIX: Delete handler improvements
  * @since       4.0.0
  */
 
@@ -42,7 +46,7 @@
         }
         
         if (window.sawGlobal && window.sawGlobal.deleteNonce) {
-            console.warn(⚠️ Using legacy deleteNonce');
+            console.warn('⚠️ Using legacy deleteNonce');
             return window.sawGlobal.deleteNonce;
         }
         
@@ -251,12 +255,17 @@
     /**
      * Initialize delete button in sidebar
      * 
-     * ✅ ENTERPRISE: Centralized nonce + comprehensive error handling
+     * ✅ HOTFIX v5.0.2:
+     * - Closes sidebar BEFORE reload to prevent "not found" error
+     * - Only ONE delete handler (removed from saw-app.js)
+     * - No duplicate confirm dialogs
      *
      * @return {void}
      */
     function initDeleteButton() {
-        $(document).on('click', '.saw-delete-btn', function(e) {
+        // CRITICAL: Only handle .saw-delete-btn that are INSIDE .saw-sidebar
+        // This prevents conflicts with other delete buttons
+        $(document).on('click', '.saw-sidebar .saw-delete-btn', function(e) {
             e.preventDefault();
             e.stopPropagation();
             
@@ -301,21 +310,36 @@
                     console.log('✅ Delete response:', response);
                     
                     if (response.success) {
+                        // ✅ HOTFIX: Close sidebar immediately
+                        const $wrapper = $('.saw-sidebar-wrapper');
+                        $wrapper.removeClass('active');
+                        $('.saw-admin-table-split').removeClass('has-sidebar');
+                        
                         // Show success message
                         if (typeof sawShowToast === 'function') {
                             sawShowToast(response.data.message || 'Úspěšně smazáno', 'success');
-                        } else {
-                            alert(response.data.message || 'Úspěšně smazáno');
                         }
                         
-                        // Close sidebar
-                        const $sidebar = $('.saw-sidebar-wrapper');
-                        $sidebar.removeClass('active');
-                        $('.saw-admin-table-split').removeClass('has-sidebar');
-                        
-                        // Reload page after short delay
+                        // ✅ CRITICAL FIX: Redirect to LIST URL, not reload
+                        // This prevents "Zákazník nenalezen" error because:
+                        // - reload() keeps current URL with deleted ID
+                        // - controller tries to load deleted customer
+                        // - shows "not found" error
                         setTimeout(function() {
-                            window.location.reload();
+                            // Build list URL from current path
+                            const pathParts = window.location.pathname.split('/').filter(function(p) { return p; });
+                            
+                            // Remove ID from path (last numeric segment)
+                            for (let i = pathParts.length - 1; i >= 0; i--) {
+                                if (!isNaN(pathParts[i]) && parseInt(pathParts[i]) > 0) {
+                                    pathParts.splice(i, 1);
+                                    break;
+                                }
+                            }
+                            
+                            const listUrl = '/' + pathParts.join('/') + '/';
+                            console.log('🔄 Redirecting to list:', listUrl);
+                            window.location.href = listUrl;
                         }, 500);
                     } else {
                         console.error('❌ Delete failed:', response.data);
@@ -551,14 +575,14 @@
      * Initialize on DOM ready
      */
     $(document).ready(function() {
-        console.log('🎨 Sidebar JS initialized v5.0.0 ENTERPRISE');
-        debugNonceAvailability(); // ✅ Debug nonce availability
+        console.log('🎨 Sidebar JS initialized v5.0.2 HOTFIX');
+        debugNonceAvailability();
         initSidebar();
         initKeyboardNavigation();
         initNavigationButtons();
         initCloseButton();
         initCancelButton();
-        initDeleteButton(); // ✅ Delete functionality with centralized nonce
+        initDeleteButton(); // ✅ HOTFIX: Improved delete with sidebar close before reload
         initRelatedItemsNavigation();
     });
     

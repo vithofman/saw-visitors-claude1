@@ -1,8 +1,13 @@
 /**
- * SAW App JavaScript - VYČIŠTĚNÁ VERZE
+ * SAW App JavaScript - HOTFIX EDITION
+ * 
+ * HOTFIX v5.4.2:
+ * - ODSTRANĚN: Delete button handler (přesunut výhradně do sidebar.js)
+ * - Opraveno: Duplicitní delete handlers
+ * - Opraveno: Dvakrát confirm dialog
  * 
  * @package SAW_Visitors
- * @version 5.4.1 - HOTFIX: Delete handler nonce fix
+ * @version 5.4.2 - HOTFIX: Removed duplicate delete handler
  */
 
 (function($) {
@@ -40,69 +45,12 @@
     
     // ========================================
     // DELETE CONFIRMATION
-    // HOTFIX: Fixed nonce handling
+    // ✅ HOTFIX: REMOVED - Delete handler je nyní pouze v sidebar.js
+    // Důvod: Duplicitní handlers způsobovaly 2x confirm dialog a 2x AJAX request
     // ========================================
     
-    $(document).on('click', '.saw-delete-btn', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const id = $(this).data('id');
-        const name = $(this).data('name');
-        const entity = $(this).data('entity') || 'customers';
-        
-        if (!confirm('Opravdu chcete smazat "' + name + '"?')) {
-            return;
-        }
-        
-        const $btn = $(this);
-        const originalText = $btn.text();
-        $btn.prop('disabled', true).text('Mažu...');
-        
-        // HOTFIX: Use sawGlobal.nonce (primary) with fallback
-        const nonce = (window.sawGlobal && window.sawGlobal.nonce) || 
-                      (window.sawGlobal && window.sawGlobal.deleteNonce) || 
-                      '';
-        
-        if (!nonce) {
-            console.error('❌ No nonce available!');
-            alert('Chyba: Bezpečnostní token není dostupný. Obnovte stránku.');
-            $btn.prop('disabled', false).text(originalText);
-            return;
-        }
-        
-        $.ajax({
-            url: sawGlobal.ajaxurl,
-            method: 'POST',
-            data: {
-                action: 'saw_delete_' + entity,
-                nonce: nonce,  // HOTFIX: Use correct nonce
-                id: id
-            },
-            success: function(response) {
-                if (response.success) {
-                    if (typeof sawShowToast === 'function') {
-                        sawShowToast('Úspěšně smazáno', 'success');
-                    }
-                    setTimeout(function() {
-                        location.reload();
-                    }, 500);
-                } else {
-                    alert('Chyba: ' + (response.data?.message || 'Neznámá chyba'));
-                    $btn.prop('disabled', false).text(originalText);
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('Delete error:', {
-                    status: status,
-                    error: error,
-                    response: xhr.responseText
-                });
-                alert('Chyba při mazání');
-                $btn.prop('disabled', false).text(originalText);
-            }
-        });
-    });
+    // DELETE HANDLER JE NYNÍ POUZE V: includes/components/admin-table/sidebar.js
+    // Řádek ~280-380 v sidebar.js: initDeleteButton()
     
     // ========================================
     // TOAST NOTIFICATIONS
@@ -238,10 +186,11 @@
         document.body.classList.add('loaded');
         
         if (sawGlobal.debug) {
-            console.log('🚀 SAW App initialized', {
+            console.log('🚀 SAW App initialized v5.4.2 HOTFIX', {
                 sawGlobal: typeof sawGlobal !== 'undefined',
                 jQuery: !!$,
-                modalSystem: typeof SAWModal !== 'undefined'
+                modalSystem: typeof SAWModal !== 'undefined',
+                deleteHandler: '✅ Moved to sidebar.js'
             });
         }
     });
