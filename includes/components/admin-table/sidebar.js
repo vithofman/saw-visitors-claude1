@@ -1,17 +1,59 @@
 /**
- * Sidebar Navigation
+ * Sidebar Navigation - ENTERPRISE EDITION
  *
  * Handles keyboard navigation and prev/next controls for sidebar.
  * Supports AJAX loading for seamless navigation.
+ * 
+ * SECURITY: Uses centralized nonce management from sawGlobal
  *
  * @package     SAW_Visitors
  * @subpackage  Components/AdminTable
- * @version     4.0.0 - RELATED ITEMS NAVIGATION ADDED
+ * @version     5.0.0 - ENTERPRISE: Centralized nonce + error handling
  * @since       4.0.0
  */
 
 (function($) {
     'use strict';
+    
+    /**
+     * Get AJAX URL with fallback
+     * 
+     * @return {string}
+     */
+    function getAjaxUrl() {
+        return (window.sawGlobal && window.sawGlobal.ajaxurl) || 
+               window.ajaxurl || 
+               '/wp-admin/admin-ajax.php';
+    }
+    
+    /**
+     * Get nonce with fallback chain
+     * 
+     * Priority:
+     * 1. sawGlobal.nonce (from Asset Manager)
+     * 2. sawGlobal.deleteNonce (legacy)
+     * 3. sawAjaxNonce (fallback)
+     * 
+     * @return {string}
+     */
+    function getNonce() {
+        if (window.sawGlobal && window.sawGlobal.nonce) {
+            return window.sawGlobal.nonce;
+        }
+        
+        if (window.sawGlobal && window.sawGlobal.deleteNonce) {
+            console.warn(⚠️ Using legacy deleteNonce');
+            return window.sawGlobal.deleteNonce;
+        }
+        
+        if (window.sawAjaxNonce) {
+            console.warn('⚠️ Using fallback sawAjaxNonce');
+            return window.sawAjaxNonce;
+        }
+        
+        console.error('❌ NO NONCE AVAILABLE!');
+        return '';
+    }
     
     /**
      * Navigate to previous or next item in sidebar
@@ -23,18 +65,21 @@
         const $sidebar = $('.saw-sidebar');
         
         if (!$sidebar.length) {
+            console.error('❌ Sidebar not found');
             return;
         }
         
         const currentId = parseInt($sidebar.data('current-id') || 0);
         
         if (!currentId) {
+            console.error('❌ No current ID');
             return;
         }
         
         const $rows = $('.saw-table-panel tbody tr[data-id]').toArray();
         
         if (!$rows.length) {
+            console.error('❌ No table rows found');
             return;
         }
         
@@ -45,6 +90,7 @@
         const currentIndex = rowIds.indexOf(currentId);
         
         if (currentIndex === -1) {
+            console.error('❌ Current ID not found in rows');
             return;
         }
         
@@ -58,13 +104,18 @@
         
         if (targetId) {
             const mode = $sidebar.attr('data-mode') || 'detail';
-            const entity = extractEntityFromUrl();
+            const entity = $sidebar.attr('data-entity') || extractEntityFromUrl();
+            
+            console.log('🔄 Navigating:', {direction, currentId, targetId, mode, entity});
             
             if (entity && typeof window.openSidebarAjax === 'function') {
                 window.openSidebarAjax(targetId, mode, entity);
             } else {
+                console.error('❌ Cannot navigate - missing entity or openSidebarAjax');
                 navigateWithUrl(targetId);
             }
+        } else {
+            console.log('⚠️ No target ID - already at boundary');
         }
     };
     
@@ -80,6 +131,11 @@
             if (path[i] === 'settings' && path[i + 1]) {
                 return path[i + 1];
             }
+        }
+        
+        // Fallback: try to get entity from path
+        if (path.length >= 3 && path[0] === 'admin') {
+            return path[1];
         }
         
         return null;
@@ -179,12 +235,120 @@
     function initNavigationButtons() {
         $(document).on('click', '.saw-sidebar-prev', function(e) {
             e.preventDefault();
+            e.stopPropagation();
+            console.log('⬅️ Prev button clicked');
             saw_navigate_sidebar('prev');
         });
         
         $(document).on('click', '.saw-sidebar-next', function(e) {
             e.preventDefault();
+            e.stopPropagation();
+            console.log('➡️ Next button clicked');
             saw_navigate_sidebar('next');
+        });
+    }
+    
+    /**
+     * Initialize delete button in sidebar
+     * 
+     * ✅ ENTERPRISE: Centralized nonce + comprehensive error handling
+     *
+     * @return {void}
+     */
+    function initDeleteButton() {
+        $(document).on('click', '.saw-delete-btn', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const $btn = $(this);
+            const id = $btn.data('id');
+            const entity = $btn.data('entity');
+            const name = $btn.data('name') || '#' + id;
+            
+            if (!id || !entity) {
+                console.error('❌ Delete button missing id or entity', {id, entity});
+                alert('Chyba: Neplatná konfigurace tlačítka');
+                return;
+            }
+            
+            // CRITICAL: Get nonce using centralized function
+            const nonce = getNonce();
+            if (!nonce) {
+                console.error('❌ Cannot delete - no nonce available');
+                alert('Chyba bezpečnosti: Nonce není k dispozici. Obnovte stránku.');
+                return;
+            }
+            
+            const confirmMsg = 'Opravdu chcete smazat "' + name + '"?';
+            if (!confirm(confirmMsg)) {
+                return;
+            }
+            
+            console.log('🗑️ Deleting:', {id, entity, name, nonce: nonce.substring(0, 10) + '...'});
+            
+            const originalHtml = $btn.html();
+            $btn.prop('disabled', true).html('<span class="dashicons dashicons-update-alt saw-spin"></span>');
+            
+            $.ajax({
+                url: getAjaxUrl(),
+                method: 'POST',
+                data: {
+                    action: 'saw_delete_' + entity,
+                    nonce: nonce,
+                    id: id
+                },
+                success: function(response) {
+                    console.log('✅ Delete response:', response);
+                    
+                    if (response.success) {
+                        // Show success message
+                        if (typeof sawShowToast === 'function') {
+                            sawShowToast(response.data.message || 'Úspěšně smazáno', 'success');
+                        } else {
+                            alert(response.data.message || 'Úspěšně smazáno');
+                        }
+                        
+                        // Close sidebar
+                        const $sidebar = $('.saw-sidebar-wrapper');
+                        $sidebar.removeClass('active');
+                        $('.saw-admin-table-split').removeClass('has-sidebar');
+                        
+                        // Reload page after short delay
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 500);
+                    } else {
+                        console.error('❌ Delete failed:', response.data);
+                        const errorMsg = response.data && response.data.message 
+                            ? response.data.message 
+                            : 'Neznámá chyba';
+                        alert('Chyba při mazání: ' + errorMsg);
+                        $btn.prop('disabled', false).html(originalHtml);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('❌ AJAX error:', {
+                        status: status,
+                        error: error,
+                        xhr: xhr,
+                        responseText: xhr.responseText,
+                        statusCode: xhr.status
+                    });
+                    
+                    let errorMsg = 'Chyba spojení se serverem';
+                    
+                    if (xhr.status === 403) {
+                        errorMsg = 'Chyba oprávnění (403). Obnovte stránku a zkuste znovu.';
+                    } else if (xhr.status === 500) {
+                        errorMsg = 'Chyba serveru (500). Kontaktujte administrátora.';
+                    } else if (xhr.responseText === '-1') {
+                        errorMsg = 'Bezpečnostní token vypršel. Obnovte stránku.';
+                    }
+                    
+                    alert(errorMsg);
+                    $btn.prop('disabled', false).html(originalHtml);
+                }
+            });
         });
     }
     
@@ -362,18 +526,39 @@
                 }
             }
         }
+        
+        console.log('🎯 Sidebar initialized with ID:', currentId);
+    }
+    
+    /**
+     * Debug: Log available nonces on init
+     *
+     * @return {void}
+     */
+    function debugNonceAvailability() {
+        console.log('🔐 Nonce Debug:', {
+            sawGlobal: window.sawGlobal ? {
+                nonce: window.sawGlobal.nonce ? '✅ Available' : '❌ Missing',
+                deleteNonce: window.sawGlobal.deleteNonce ? '✅ Available' : '❌ Missing',
+                ajaxurl: window.sawGlobal.ajaxurl || '❌ Missing'
+            } : '❌ sawGlobal not found',
+            sawAjaxNonce: window.sawAjaxNonce ? '✅ Available' : '❌ Missing',
+            selectedNonce: getNonce() ? '✅ Using: ' + getNonce().substring(0, 10) + '...' : '❌ NONE'
+        });
     }
     
     /**
      * Initialize on DOM ready
      */
     $(document).ready(function() {
-        console.log('🔗 Related items navigation initialized');
+        console.log('🎨 Sidebar JS initialized v5.0.0 ENTERPRISE');
+        debugNonceAvailability(); // ✅ Debug nonce availability
         initSidebar();
         initKeyboardNavigation();
         initNavigationButtons();
         initCloseButton();
         initCancelButton();
+        initDeleteButton(); // ✅ Delete functionality with centralized nonce
         initRelatedItemsNavigation();
     });
     

@@ -7,7 +7,7 @@
  *
  * @package    SAW_Visitors
  * @subpackage Base
- * @version    2.2.0
+ * @version    2.2.1 - HOTFIX: Nonce verification fallback
  * @since      1.0.0
  */
 
@@ -76,7 +76,29 @@ trait SAW_AJAX_Handlers
      * @return void
      */
     public function ajax_delete() {
-        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        // HOTFIX: Try multiple nonce verification strategies
+        $nonce = isset($_POST['nonce']) ? sanitize_text_field(wp_unslash($_POST['nonce'])) : '';
+        
+        if (empty($nonce)) {
+            wp_send_json_error(['message' => __('Bezpečnostní token chybí', 'saw-visitors')]);
+            return;
+        }
+        
+        // Try standard nonce first
+        $verified = wp_verify_nonce($nonce, 'saw_ajax_nonce');
+        
+        // Fallback: try admin_table nonce
+        if (!$verified) {
+            $verified = wp_verify_nonce($nonce, 'saw_admin_table_nonce');
+        }
+        
+        if (!$verified) {
+            if (defined('SAW_DEBUG') && SAW_DEBUG) {
+                error_log('[SAW DELETE] Nonce verification failed. Nonce: ' . substr($nonce, 0, 10) . '... User: ' . get_current_user_id());
+            }
+            wp_send_json_error(['message' => __('Bezpečnostní token je neplatný', 'saw-visitors')]);
+            return;
+        }
         
         if (!$this->can_perform_action('delete')) {
             wp_send_json_error(['message' => __('Nedostatečná oprávnění', 'saw-visitors')]);

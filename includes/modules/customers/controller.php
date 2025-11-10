@@ -18,7 +18,7 @@
  * - Related data support (branches)
  *
  * @package SAW_Visitors
- * @version 11.1.0 - PERFORMANCE OPTIMIZED
+ * @version 11.2.2 - HOTFIX: before_delete returns true in AJAX context
  * @since   4.6.1
  */
 
@@ -130,7 +130,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             
             if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ob_end_clean();
-                $this->handle_create();
+                $this->handle_create_post();
                 return;
             }
             
@@ -156,7 +156,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             
             if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ob_end_clean();
-                $this->handle_edit($sidebar_context['id']);
+                $this->handle_edit_post($sidebar_context['id']);
                 return;
             }
         }
@@ -315,6 +315,61 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
     }
     
     /**
+     * AJAX delete handler - OVERRIDE
+     *
+     * Override trait method to use config-based permissions instead of SAW_Permissions.
+     * Uses can('delete') which checks capabilities from config.
+     *
+     * @since 11.2.1
+     * @return void
+     */
+    public function ajax_delete() {
+        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        
+        if (!$this->can('delete')) {
+            wp_send_json_error(array('message' => 'Nemáte oprávnění mazat záznamy'));
+            return;
+        }
+        
+        $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+        
+        if (!$id) {
+            wp_send_json_error(array('message' => 'Neplatné ID'));
+            return;
+        }
+        
+        $item = $this->model->get_by_id($id);
+        
+        if (!$item) {
+            wp_send_json_error(array('message' => 'Zákazník nenalezen'));
+            return;
+        }
+        
+        $before_delete_result = $this->before_delete($id);
+        
+        if (is_wp_error($before_delete_result)) {
+            wp_send_json_error(array('message' => $before_delete_result->get_error_message()));
+            return;
+        }
+        
+        if ($before_delete_result === false) {
+            wp_send_json_error(array('message' => 'Nelze smazat zákazníka'));
+            return;
+        }
+        
+        $result = $this->model->delete($id);
+        
+        if (is_wp_error($result)) {
+            wp_send_json_error(array('message' => $result->get_error_message()));
+            return;
+        }
+        
+        $this->after_delete($id);
+        
+        wp_send_json_success(array('message' => 'Zákazník byl úspěšně smazán'));
+    }
+    
+    /**
      * Format data for detail view
      *
      * Adds computed fields and formatting for detail display.
@@ -433,47 +488,40 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
     }
     
     /**
-     * Handle create POST request
-     *
-     * @since 8.0.0
-     * @return void (redirects)
+     * Prepare form data from POST
+     * 
+     * Override base controller method to handle file uploads and custom fields.
+     * 
+     * @since 11.2.0
+     * @param array $post POST data
+     * @return array|WP_Error Prepared data or error
      */
-    private function handle_create() {
-        if (!wp_verify_nonce($_POST['saw_nonce'] ?? '', 'saw_customers_form')) {
-            wp_die('Neplatný bezpečnostní token');
-        }
-        
-        if (!$this->can('create')) {
-            $this->set_flash('Nemáte oprávnění vytvářet záznamy', 'error');
-            wp_redirect(home_url('/admin/customers/create'));
-            exit;
-        }
-        
+    protected function prepare_form_data($post) {
         $data = array(
-            'name' => sanitize_text_field($_POST['name'] ?? ''),
-            'ico' => sanitize_text_field($_POST['ico'] ?? ''),
-            'dic' => sanitize_text_field($_POST['dic'] ?? ''),
+            'name' => sanitize_text_field($post['name'] ?? ''),
+            'ico' => sanitize_text_field($post['ico'] ?? ''),
+            'dic' => sanitize_text_field($post['dic'] ?? ''),
             
-            'address_street' => sanitize_text_field($_POST['address_street'] ?? ''),
-            'address_number' => sanitize_text_field($_POST['address_number'] ?? ''),
-            'address_city' => sanitize_text_field($_POST['address_city'] ?? ''),
-            'address_zip' => sanitize_text_field($_POST['address_zip'] ?? ''),
-            'address_country' => sanitize_text_field($_POST['address_country'] ?? 'Česká republika'),
+            'address_street' => sanitize_text_field($post['address_street'] ?? ''),
+            'address_number' => sanitize_text_field($post['address_number'] ?? ''),
+            'address_city' => sanitize_text_field($post['address_city'] ?? ''),
+            'address_zip' => sanitize_text_field($post['address_zip'] ?? ''),
+            'address_country' => sanitize_text_field($post['address_country'] ?? 'Česká republika'),
             
-            'billing_address_street' => sanitize_text_field($_POST['billing_address_street'] ?? ''),
-            'billing_address_number' => sanitize_text_field($_POST['billing_address_number'] ?? ''),
-            'billing_address_city' => sanitize_text_field($_POST['billing_address_city'] ?? ''),
-            'billing_address_zip' => sanitize_text_field($_POST['billing_address_zip'] ?? ''),
-            'billing_address_country' => sanitize_text_field($_POST['billing_address_country'] ?? ''),
+            'billing_address_street' => sanitize_text_field($post['billing_address_street'] ?? ''),
+            'billing_address_number' => sanitize_text_field($post['billing_address_number'] ?? ''),
+            'billing_address_city' => sanitize_text_field($post['billing_address_city'] ?? ''),
+            'billing_address_zip' => sanitize_text_field($post['billing_address_zip'] ?? ''),
+            'billing_address_country' => sanitize_text_field($post['billing_address_country'] ?? ''),
             
-            'contact_person' => sanitize_text_field($_POST['contact_person'] ?? ''),
-            'contact_email' => sanitize_email($_POST['contact_email'] ?? ''),
-            'contact_phone' => sanitize_text_field($_POST['contact_phone'] ?? ''),
+            'contact_person' => sanitize_text_field($post['contact_person'] ?? ''),
+            'contact_email' => sanitize_email($post['contact_email'] ?? ''),
+            'contact_phone' => sanitize_text_field($post['contact_phone'] ?? ''),
             
-            'website' => esc_url_raw($_POST['website'] ?? ''),
-            'status' => sanitize_text_field($_POST['status'] ?? 'potential'),
-            'account_type_id' => !empty($_POST['account_type_id']) ? intval($_POST['account_type_id']) : null,
-            'notes' => sanitize_textarea_field($_POST['notes'] ?? ''),
+            'website' => esc_url_raw($post['website'] ?? ''),
+            'status' => sanitize_text_field($post['status'] ?? 'potential'),
+            'account_type_id' => !empty($post['account_type_id']) ? intval($post['account_type_id']) : null,
+            'notes' => sanitize_textarea_field($post['notes'] ?? ''),
         );
         
         if (!empty($_FILES['logo']['name'])) {
@@ -485,125 +533,75 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             );
             
             if (is_wp_error($upload_result)) {
-                $this->set_flash($upload_result->get_error_message(), 'error');
-                wp_redirect(home_url('/admin/customers/create'));
-                exit;
+                return $upload_result;
+            }
+            
+            if (isset($post['id'])) {
+                $old_customer = $this->model->get_by_id($post['id']);
+                if (!empty($old_customer['logo_url'])) {
+                    $this->file_uploader->delete($old_customer['logo_url']);
+                }
             }
             
             $data['logo_url'] = $upload_result['file'];
         }
         
-        $validation = $this->model->validate($data);
-        if (is_wp_error($validation)) {
-            $errors = $validation->get_error_data();
-            $this->set_flash(implode('<br>', $errors), 'error');
-            wp_redirect(home_url('/admin/customers/create'));
-            exit;
-        }
-        
-        $result = $this->model->create($data);
-        
-        if (is_wp_error($result)) {
-            $this->set_flash($result->get_error_message(), 'error');
-            wp_redirect(home_url('/admin/customers/create'));
-            exit;
-        }
-        
-        $this->invalidate_caches();
-        
-        $this->set_flash('Zákazník byl úspěšně vytvořen', 'success');
-        wp_redirect(home_url('/admin/customers/' . $result . '/'));
-        exit;
+        return $data;
     }
     
     /**
-     * Handle edit POST request
-     *
-     * @since 8.0.0
-     * @param int $id Customer ID
-     * @return void (redirects)
+     * After save hook - cache invalidation
+     * 
+     * @since 11.2.0
+     * @param int $id Item ID
      */
-    private function handle_edit($id) {
-        if (!wp_verify_nonce($_POST['saw_nonce'] ?? '', 'saw_customers_form')) {
-            wp_die('Neplatný bezpečnostní token');
-        }
-        
-        if (!$this->can('edit')) {
-            $this->set_flash('Nemáte oprávnění upravovat záznamy', 'error');
-            wp_redirect(home_url('/admin/customers/' . $id . '/edit'));
-            exit;
-        }
-        
-        $data = array(
-            'name' => sanitize_text_field($_POST['name'] ?? ''),
-            'ico' => sanitize_text_field($_POST['ico'] ?? ''),
-            'dic' => sanitize_text_field($_POST['dic'] ?? ''),
-            
-            'address_street' => sanitize_text_field($_POST['address_street'] ?? ''),
-            'address_number' => sanitize_text_field($_POST['address_number'] ?? ''),
-            'address_city' => sanitize_text_field($_POST['address_city'] ?? ''),
-            'address_zip' => sanitize_text_field($_POST['address_zip'] ?? ''),
-            'address_country' => sanitize_text_field($_POST['address_country'] ?? 'Česká republika'),
-            
-            'billing_address_street' => sanitize_text_field($_POST['billing_address_street'] ?? ''),
-            'billing_address_number' => sanitize_text_field($_POST['billing_address_number'] ?? ''),
-            'billing_address_city' => sanitize_text_field($_POST['billing_address_city'] ?? ''),
-            'billing_address_zip' => sanitize_text_field($_POST['billing_address_zip'] ?? ''),
-            'billing_address_country' => sanitize_text_field($_POST['billing_address_country'] ?? ''),
-            
-            'contact_person' => sanitize_text_field($_POST['contact_person'] ?? ''),
-            'contact_email' => sanitize_email($_POST['contact_email'] ?? ''),
-            'contact_phone' => sanitize_text_field($_POST['contact_phone'] ?? ''),
-            
-            'website' => esc_url_raw($_POST['website'] ?? ''),
-            'status' => sanitize_text_field($_POST['status'] ?? 'potential'),
-            'account_type_id' => !empty($_POST['account_type_id']) ? intval($_POST['account_type_id']) : null,
-            'notes' => sanitize_textarea_field($_POST['notes'] ?? ''),
-        );
-        
-        if (!empty($_FILES['logo']['name'])) {
-            $upload_result = $this->file_uploader->upload(
-                $_FILES['logo'],
-                array('jpg', 'jpeg', 'png', 'gif', 'svg'),
-                2 * 1024 * 1024,
-                'customers'
-            );
-            
-            if (is_wp_error($upload_result)) {
-                $this->set_flash($upload_result->get_error_message(), 'error');
-                wp_redirect(home_url('/admin/customers/' . $id . '/edit'));
-                exit;
-            }
-            
-            $old_customer = $this->model->get_by_id($id);
-            if (!empty($old_customer['logo_url'])) {
-                $this->file_uploader->delete($old_customer['logo_url']);
-            }
-            
-            $data['logo_url'] = $upload_result['file'];
-        }
-        
-        $validation = $this->model->validate($data, $id);
-        if (is_wp_error($validation)) {
-            $errors = $validation->get_error_data();
-            $this->set_flash(implode('<br>', $errors), 'error');
-            wp_redirect(home_url('/admin/customers/' . $id . '/edit'));
-            exit;
-        }
-        
-        $result = $this->model->update($id, $data);
-        
-        if (is_wp_error($result)) {
-            $this->set_flash($result->get_error_message(), 'error');
-            wp_redirect(home_url('/admin/customers/' . $id . '/edit'));
-            exit;
-        }
-        
+    protected function after_save($id) {
         $this->invalidate_caches();
+    }
+    
+    /**
+     * Before delete hook - dependency validation
+     * 
+     * HOTFIX: Database has CASCADE delete, so we just log dependencies and allow deletion.
+     * In AJAX context, we can't show confirmation dialog, so we proceed directly.
+     * 
+     * @since 11.2.2
+     * @param int $id Customer ID
+     * @return bool Always true (CASCADE delete handles dependencies)
+     */
+    protected function before_delete($id) {
+        global $wpdb;
         
-        $this->set_flash('Zákazník byl úspěšně aktualizován', 'success');
-        wp_redirect(home_url('/admin/customers/' . $id . '/'));
-        exit;
+        // Log dependencies in debug mode
+        if (defined('SAW_DEBUG') && SAW_DEBUG) {
+            $branches = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$wpdb->prefix}saw_branches WHERE customer_id = %d", $id
+            ));
+            $users = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$wpdb->prefix}saw_users WHERE customer_id = %d", $id
+            ));
+            $departments = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$wpdb->prefix}saw_departments WHERE customer_id = %d", $id
+            ));
+            
+            error_log(sprintf(
+                '[SAW] Deleting customer #%d with dependencies: %d branches, %d users, %d departments (CASCADE)',
+                $id, $branches, $users, $departments
+            ));
+        }
+        
+        // HOTFIX: Always return true - database CASCADE will handle deletion
+        return true;
+    }
+    
+    /**
+     * After delete hook - cache invalidation
+     * 
+     * @since 11.2.1
+     * @param int $id Customer ID
+     */
+    protected function after_delete($id) {
+        $this->invalidate_caches();
     }
     
     /**

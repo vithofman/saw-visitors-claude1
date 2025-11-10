@@ -8,6 +8,7 @@
  * @package    SAW_Visitors
  * @subpackage Core
  * @since      1.0.0
+ * @version    1.0.1 - HOTFIX: Enqueue detection for SAW pages
  */
 
 if (!defined('ABSPATH')) {
@@ -505,15 +506,11 @@ class SAW_Visitors {
      * Enqueues global styles and module-specific styles.
      *
      * @since 1.0.0
+     * @version 1.0.1 - HOTFIX: Always enqueue assets (SAW uses custom routing)
      */
     public function enqueue_public_styles() {
-        $route = get_query_var('saw_route');
-        $is_saw_page = !empty($route) || $this->is_saw_url();
-        
-        if (!$is_saw_page) {
-            return;
-        }
-        
+        // HOTFIX: Always enqueue - SAW uses custom routing, not standard WP pages
+        // The is_saw_url() check happens in router, assets must be available
         SAW_Asset_Manager::enqueue_global();
         
         $active_module = $this->router->get_active_module();
@@ -529,14 +526,11 @@ class SAW_Visitors {
      * Includes AJAX configuration.
      *
      * @since 1.0.0
+     * @version 1.0.1 - HOTFIX: Always enqueue assets (SAW uses custom routing)
      */
     public function enqueue_public_scripts() {
-        $route = get_query_var('saw_route');
-        $is_saw_page = !empty($route) || $this->is_saw_url();
-        
-        if (!$is_saw_page) {
-            return;
-        }
+        // HOTFIX: Always enqueue - SAW uses custom routing, not standard WP pages
+        // The is_saw_url() check happens in router, assets must be available
         
         $public_js = SAW_VISITORS_PLUGIN_DIR . 'assets/js/public.js';
         

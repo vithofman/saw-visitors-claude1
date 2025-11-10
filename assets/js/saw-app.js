@@ -2,7 +2,7 @@
  * SAW App JavaScript - VYČIŠTĚNÁ VERZE
  * 
  * @package SAW_Visitors
- * @version 5.4.0
+ * @version 5.4.1 - HOTFIX: Delete handler nonce fix
  */
 
 (function($) {
@@ -40,6 +40,7 @@
     
     // ========================================
     // DELETE CONFIRMATION
+    // HOTFIX: Fixed nonce handling
     // ========================================
     
     $(document).on('click', '.saw-delete-btn', function(e) {
@@ -58,13 +59,24 @@
         const originalText = $btn.text();
         $btn.prop('disabled', true).text('Mažu...');
         
+        // HOTFIX: Use sawGlobal.nonce (primary) with fallback
+        const nonce = (window.sawGlobal && window.sawGlobal.nonce) || 
+                      (window.sawGlobal && window.sawGlobal.deleteNonce) || 
+                      '';
+        
+        if (!nonce) {
+            console.error('❌ No nonce available!');
+            alert('Chyba: Bezpečnostní token není dostupný. Obnovte stránku.');
+            $btn.prop('disabled', false).text(originalText);
+            return;
+        }
+        
         $.ajax({
             url: sawGlobal.ajaxurl,
             method: 'POST',
             data: {
                 action: 'saw_delete_' + entity,
-                nonce: sawGlobal.deleteNonce || sawGlobal.nonce,
-                entity: entity,
+                nonce: nonce,  // HOTFIX: Use correct nonce
                 id: id
             },
             success: function(response) {

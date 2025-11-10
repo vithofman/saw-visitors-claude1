@@ -20,7 +20,7 @@
  * - file: File upload (logo)
  *
  * @package SAW_Visitors
- * @version 11.0.0 - REFACTORED: Removed redundant list_config (auto-generated)
+ * @version 11.2.1 - FIXED: Route changed to 'customers' (base controller adds /admin/ prefix)
  * @since   4.6.1
  */
 
@@ -36,9 +36,9 @@ return array(
     'table' => 'saw_customers',
     'singular' => 'Zákazník',
     'plural' => 'Zákazníci',
-    'route' => 'admin/customers',
+    'route' => 'customers',
     'icon' => '🏢',
-'edit_url' => 'admin/customers/{id}/edit',
+    'edit_url' => 'customers/{id}/edit',
     
     // ============================================
     // CAPABILITIES
