@@ -42,7 +42,7 @@ $search_component = new SAW_Component_Search('customers', array(
     'show_button' => true,
     'show_info_banner' => true,
     'info_banner_label' => __('Vyhledávání:', 'saw-visitors'),
-    'clear_url' => home_url('/admin/settings/customers/'),
+    'clear_url' => home_url('/admin/customers/'),
 ));
 $search_component->render();
 $search_html = ob_get_clean();
@@ -74,9 +74,9 @@ $filters_html = ob_get_clean();
     // Initialize admin table component with sidebar support
     $table = new SAW_Component_Admin_Table('customers', array(
         'title' => __('Zákazníci', 'saw-visitors'),
-        'create_url' => home_url('/admin/settings/customers/create'),
-        'edit_url' => home_url('/admin/settings/customers/{id}/edit'),
-        'detail_url' => home_url('/admin/settings/customers/{id}/'),
+        'create_url' => home_url('/admin/customers/create'),
+        'edit_url' => home_url('/admin/customers/{id}/edit'),
+        'detail_url' => home_url('/admin/customers/{id}/'),
         
         // CRITICAL: Pass module config for auto-generation
         'module_config' => $this->config,
