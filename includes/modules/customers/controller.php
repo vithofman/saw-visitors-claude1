@@ -1,6 +1,6 @@
 <?php
 /**
- * Customers Module Controller - FILE UPLOAD FIXED
+ * Customers Module Controller
  *
  * Main controller for the Customers module with sidebar support.
  * Handles CRUD operations, file uploads, AJAX requests, and sidebar context.
@@ -18,7 +18,7 @@
  * - Related data support (branches)
  *
  * @package SAW_Visitors
- * @version 11.3.0 - HOTFIX: Fixed file upload (correct parameters & return keys)
+ * @version 12.0.1 - HOTFIX: Nonce validation fixed
  * @since   4.6.1
  */
 
@@ -81,7 +81,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
      * Shows paginated, searchable, filterable list of customers.
      * Supports sidebar for detail view, create form, and edit form.
      *
-     * @since 8.0.0
+     * @since 12.0.0 - Config-driven lookups
      * @return void
      */
     public function index() {
@@ -96,7 +96,6 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         $detail_item = null;
         $form_item = null;
         $detail_tab = $sidebar_context['tab'] ?? 'overview';
-        $account_types = array();
         $related_data = null;
         
         if ($sidebar_mode === 'detail') {
@@ -118,9 +117,6 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
             
             $detail_item = $this->format_detail_data($detail_item);
             $related_data = $this->load_related_data($sidebar_context['id']);
-error_log('=== INDEX() RELATED DATA ===');
-error_log('Customer ID: ' . $sidebar_context['id']);
-error_log('Related data: ' . print_r($related_data, true));
         }
         
         elseif ($sidebar_mode === 'create') {
@@ -164,11 +160,17 @@ error_log('Related data: ' . print_r($related_data, true));
             }
         }
         
+        // ✅ FÁZE 1 - Krok 1.3: Config-driven lookup loading
         if ($sidebar_mode === 'create' || $sidebar_mode === 'edit') {
-            $account_types = $this->lazy_load_lookup_data('account_types', function() {
-                return $this->load_account_types_from_db();
-            });
-$this->config['account_types'] = $account_types;
+            $lookups = $this->load_sidebar_lookups();
+            
+            foreach ($lookups as $key => $data) {
+                $this->config[$key] = $data;
+            }
+            
+            $account_types = $lookups['account_types'] ?? array();
+        } else {
+            $account_types = array();
         }
         
         $search = isset($_GET['s']) ? sanitize_text_field(wp_unslash($_GET['s'])) : '';
@@ -237,102 +239,94 @@ $this->config['account_types'] = $account_types;
      * Universal AJAX handler for loading sidebar in detail/edit/create modes.
      * Returns HTML for sidebar wrapper.
      *
-     * @since 9.1.0
+     * @since 12.0.0 - Config-driven lookups
      * @return void (outputs JSON)
      */
     public function ajax_load_sidebar() {
-    check_ajax_referer('saw_ajax_nonce', 'nonce');
-    
-    $id = intval($_POST['id'] ?? 0);
-    $mode = sanitize_text_field($_POST['mode'] ?? 'detail');
-    
-    if (!in_array($mode, array('detail', 'edit'), true)) {
-        wp_send_json_error(array('message' => 'Invalid mode'));
+        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        
+        $id = intval($_POST['id'] ?? 0);
+        $mode = sanitize_text_field($_POST['mode'] ?? 'detail');
+        
+        if (!in_array($mode, array('detail', 'edit'), true)) {
+            wp_send_json_error(array('message' => 'Invalid mode'));
+        }
+        
+        if ($mode === 'detail' && !$this->can('view')) {
+            wp_send_json_error(array('message' => 'Nemáte oprávnění zobrazit detail'));
+        }
+        
+        if ($mode === 'edit' && !$this->can('edit')) {
+            wp_send_json_error(array('message' => 'Nemáte oprávnění upravovat záznamy'));
+        }
+        
+        $item = $this->model->get_by_id($id);
+        
+        if (!$item) {
+            wp_send_json_error(array('message' => 'Zákazník nenalezen'));
+        }
+        
+        ob_start();
+        
+        $related_data = null;
+        
+        // ✅ FÁZE 1 - Krok 1.4: Config-driven lookup loading
+        if ($mode === 'edit') {
+            $lookups = $this->load_sidebar_lookups();
+            
+            foreach ($lookups as $key => $data) {
+                $this->config[$key] = $data;
+            }
+            
+            $account_types = $lookups['account_types'] ?? array();
+        } else {
+            $account_types = array();
+        }
+        
+        if ($mode === 'detail') {
+            $related_data = $this->load_related_data($id);
+        }
+        
+        $captured_junk = ob_get_clean();
+        
+        ob_start();
+        
+        $item = $this->format_detail_data($item);
+        
+        if ($mode === 'detail') {
+            $tab = 'overview';
+            $config = $this->config;
+            $entity = $this->entity;
+            
+            extract(compact('item', 'tab', 'config', 'entity', 'related_data'));
+            
+            $template_path = SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/detail-sidebar.php';
+            
+            require $template_path;
+        } else {
+            $is_edit = true;
+            $GLOBALS['saw_sidebar_form'] = true;
+            
+            $config = $this->config;
+            $entity = $this->entity;
+            
+            extract(compact('item', 'is_edit', 'account_types', 'config', 'entity'));
+            
+            $form_path = $this->config['path'] . 'form-template.php';
+            
+            require $form_path;
+            
+            unset($GLOBALS['saw_sidebar_form']);
+        }
+        
+        $sidebar_content = ob_get_clean();
+        
+        wp_send_json_success(array(
+            'html' => $sidebar_content,
+            'mode' => $mode,
+            'id' => $id
+        ));
     }
-    
-    if ($mode === 'detail' && !$this->can('view')) {
-        wp_send_json_error(array('message' => 'Nemáte oprávnění zobrazit detail'));
-    }
-    
-    if ($mode === 'edit' && !$this->can('edit')) {
-        wp_send_json_error(array('message' => 'Nemáte oprávnění upravovat záznamy'));
-    }
-    
-    $item = $this->model->get_by_id($id);
-    
-    if (!$item) {
-        wp_send_json_error(array('message' => 'Zákazník nenalezen'));
-    }
-    
-    // ✅ Suppress unwanted output
-    ob_start();
-    
-    $account_types = array();
-    $related_data = null;
-    
-    // ✅ FIXED: Use lazy_load_lookup_data for consistency
-    if ($mode === 'edit') {
-        $account_types = $this->lazy_load_lookup_data('account_types', function() {
-            return $this->load_account_types_from_db();
-        });
-        $this->config['account_types'] = $account_types;
-    }
-    
-    // ✅ CRITICAL: Load related data for detail mode
-    if ($mode === 'detail') {
-        $related_data = $this->load_related_data($id);
-
-error_log('=== AJAX SIDEBAR RELATED DATA ===');
-    error_log('Customer ID: ' . $id);
-    error_log('Related data type: ' . gettype($related_data));
-    error_log('Related data: ' . print_r($related_data, true));
-
-
-    }
-    
-    $captured_junk = ob_get_clean();
-    
-    // ✅ Start fresh output buffer for template
-    ob_start();
-    
-    $item = $this->format_detail_data($item);
-    
-    if ($mode === 'detail') {
-        $tab = 'overview';
-        $config = $this->config;
-        $entity = $this->entity;
-        
-        extract(compact('item', 'tab', 'config', 'entity', 'related_data'));
-        
-        $template_path = SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/detail-sidebar.php';
-        
-        require $template_path;
-    } else {
-        $is_edit = true;
-        $GLOBALS['saw_sidebar_form'] = true;
-        
-        $config = $this->config;
-        $entity = $this->entity;
-        
-        extract(compact('item', 'is_edit', 'account_types', 'config', 'entity'));
-        
-        $form_path = $this->config['path'] . 'form-template.php';
-        
-        require $form_path;
-        
-        unset($GLOBALS['saw_sidebar_form']);
-    }
-    
-    $sidebar_content = ob_get_clean();
-    
-    wp_send_json_success(array(
-        'html' => $sidebar_content,
-        'mode' => $mode,
-        'id' => $id
-    ));
-}
-
-
     
     /**
      * AJAX delete handler - OVERRIDE
@@ -394,14 +388,13 @@ error_log('=== AJAX SIDEBAR RELATED DATA ===');
      *
      * Adds computed fields and formatting for detail display.
      *
-     * @since 8.0.0
+     * @since 12.0.0 - Config-driven lookups
      * @param array $item Raw item data
      * @return array Formatted item data
      */
     private function format_detail_data($item) {
-        $account_types = $this->lazy_load_lookup_data('account_types', function() {
-            return $this->load_account_types_from_db();
-        });
+        // ✅ FÁZE 1 - Krok 1.5: Config-driven lookup loading
+        $account_types = $this->load_lookup_from_config('account_types');
         
         if (!empty($item['account_type_id']) && isset($account_types[$item['account_type_id']])) {
             $item['account_type_display'] = $account_types[$item['account_type_id']]['display_name'];
@@ -471,49 +464,9 @@ error_log('=== AJAX SIDEBAR RELATED DATA ===');
     }
     
     /**
-     * Load account types from database
-     *
-     * @since 8.0.0
-     * @return array Account types indexed by ID
-     */
-    private function load_account_types_from_db() {
-    global $wpdb;
-    
-    $types = $wpdb->get_results(
-        "SELECT id, name, display_name FROM {$wpdb->prefix}saw_account_types WHERE is_active = 1 ORDER BY name ASC",
-        ARRAY_A
-    );
-    
-    $account_types = array();
-    foreach ($types as $type) {
-        $account_types[$type['id']] = array(
-            'id' => intval($type['id']),  // ✅ MUST HAVE - template uses $type['id']
-            'name' => $type['name'],
-            'display_name' => $type['display_name'],
-        );
-    }
-    
-    return $account_types;
-}
-    
-    /**
-     * Load account types (backward compatible wrapper)
-     *
-     * @since 8.0.0
-     * @return array Account types indexed by ID
-     */
-    private function load_account_types() {
-        return $this->lazy_load_lookup_data('account_types', function() {
-            return $this->load_account_types_from_db();
-        });
-    }
-    
-    /**
      * Prepare form data from POST
      * 
      * Override base controller method to handle file uploads and custom fields.
-     * 
-     * ✅ HOTFIX v11.3.0: Fixed file upload parameters and return key usage
      * 
      * @since 11.3.0
      * @param array $post POST data
@@ -547,17 +500,13 @@ error_log('=== AJAX SIDEBAR RELATED DATA ===');
             'notes' => sanitize_textarea_field($post['notes'] ?? ''),
         );
         
-        // ✅ HOTFIX: File upload with CORRECT parameters and return key
         if (!empty($_FILES['logo']['name'])) {
-            // upload() method signature: upload($file, $dir_key = 'customers')
-            // Returns: array('url' => ..., 'path' => ..., 'filename' => ...)
             $upload_result = $this->file_uploader->upload($_FILES['logo'], 'customers');
             
             if (is_wp_error($upload_result)) {
                 return $upload_result;
             }
             
-            // Delete old logo if editing
             if (isset($post['id'])) {
                 $old_customer = $this->model->get_by_id($post['id']);
                 if (!empty($old_customer['logo_url'])) {
@@ -565,7 +514,6 @@ error_log('=== AJAX SIDEBAR RELATED DATA ===');
                 }
             }
             
-            // ✅ HOTFIX: Use correct return key 'url' (not 'file')
             $data['logo_url'] = $upload_result['url'];
         }
         
@@ -585,8 +533,7 @@ error_log('=== AJAX SIDEBAR RELATED DATA ===');
     /**
      * Before delete hook - dependency validation
      * 
-     * HOTFIX: Database has CASCADE delete, so we just log dependencies and allow deletion.
-     * In AJAX context, we can't show confirmation dialog, so we proceed directly.
+     * Database has CASCADE delete, so we just log dependencies and allow deletion.
      * 
      * @since 11.2.2
      * @param int $id Customer ID
@@ -595,7 +542,6 @@ error_log('=== AJAX SIDEBAR RELATED DATA ===');
     protected function before_delete($id) {
         global $wpdb;
         
-        // Log dependencies in debug mode
         if (defined('SAW_DEBUG') && SAW_DEBUG) {
             $branches = $wpdb->get_var($wpdb->prepare(
                 "SELECT COUNT(*) FROM {$wpdb->prefix}saw_branches WHERE customer_id = %d", $id
@@ -606,14 +552,8 @@ error_log('=== AJAX SIDEBAR RELATED DATA ===');
             $departments = $wpdb->get_var($wpdb->prepare(
                 "SELECT COUNT(*) FROM {$wpdb->prefix}saw_departments WHERE customer_id = %d", $id
             ));
-            
-            error_log(sprintf(
-                '[SAW] Deleting customer #%d with dependencies: %d branches, %d users, %d departments (CASCADE)',
-                $id, $branches, $users, $departments
-            ));
         }
         
-        // HOTFIX: Always return true - database CASCADE will handle deletion
         return true;
     }
     
@@ -642,13 +582,10 @@ error_log('=== AJAX SIDEBAR RELATED DATA ===');
     /**
      * Enqueue module assets
      *
-     * ✅ HOTFIX v11.3.0: Load file upload component assets
-     *
      * @since 11.3.0
      * @return void
      */
     protected function enqueue_assets() {
-        // ✅ CRITICAL: Enqueue file upload component CSS & JS
         $this->file_uploader->enqueue_assets();
     }
 }

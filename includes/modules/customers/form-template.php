@@ -8,7 +8,7 @@
  * @package     SAW_Visitors
  * @subpackage  Modules/Customers/Templates
  * @since       1.0.0
- * @version     11.0.0 - REFACTORED: Cancel button with .saw-form-cancel-btn
+ * @version     12.0.1 - HOTFIX: Nonce field corrected for Base Controller
  */
 
 if (!defined('ABSPATH')) {
@@ -46,7 +46,12 @@ if (!isset($account_types)) {
 
 <div class="saw-form-container">
     <form method="post" action="" enctype="multipart/form-data" class="saw-customer-form">
-        <?php wp_nonce_field('saw_customers_form', 'saw_nonce'); ?>
+        <?php 
+        // ✅ HOTFIX: Correct nonce field matching Base Controller expectations
+        // wp_nonce_field($action, $name, $referer, $echo)
+        $nonce_action = $is_edit ? 'saw_edit_customers' : 'saw_create_customers';
+        wp_nonce_field($nonce_action, '_wpnonce', false);
+        ?>
         
         <?php if ($is_edit): ?>
             <input type="hidden" name="id" value="<?php echo esc_attr($item['id']); ?>">

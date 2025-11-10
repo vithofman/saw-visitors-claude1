@@ -8,7 +8,7 @@
  *
  * @package    SAW_Visitors
  * @subpackage Base
- * @version    8.1.0 - PERFORMANCE OPTIMIZED (LAZY LOADING ADDED)
+ * @version    12.0.0 - Config-driven Lookups Added (FÁZE 1)
  * @since      1.0.0
  */
 
@@ -351,9 +351,7 @@ abstract class SAW_Base_Controller
      * @return void (redirects)
      */
     protected function handle_create_post() {
-        if (!wp_verify_nonce($_POST['saw_nonce'] ?? '', 'saw_' . $this->entity . '_form')) {
-            wp_die('Neplatný bezpečnostní token');
-        }
+        check_admin_referer('saw_create_' . $this->entity);
         
         $data = $this->prepare_form_data($_POST);
         
@@ -402,9 +400,7 @@ abstract class SAW_Base_Controller
      * @return void (redirects)
      */
     protected function handle_edit_post($id) {
-        if (!wp_verify_nonce($_POST['saw_nonce'] ?? '', 'saw_' . $this->entity . '_form')) {
-            wp_die('Neplatný bezpečnostní token');
-        }
+        check_admin_referer('saw_edit_' . $this->entity);
         
         $data = $this->prepare_form_data($_POST);
         $data['id'] = $id;
@@ -970,6 +966,67 @@ abstract class SAW_Base_Controller
      * @return void
      */
     protected function enqueue_assets() {
+    }
+    
+    /**
+     * Load lookup data from config definition
+     * 
+     * Universal method that loads lookup tables defined in module config.
+     * Automatically caches results and formats as associative array indexed by ID.
+     * 
+     * @since 12.0.0
+     * @param string $key Lookup key from config (e.g. 'account_types')
+     * @return array Loaded data indexed by ID
+     */
+    protected function load_lookup_from_config($key) {
+        if (empty($this->config['lookup_tables'][$key])) {
+            return array();
+        }
+        
+        $lookup_config = $this->config['lookup_tables'][$key];
+        
+        return $this->lazy_load_lookup_data($key, function() use ($lookup_config) {
+            global $wpdb;
+            
+            $table = $wpdb->prefix . $lookup_config['table'];
+            $fields = implode(', ', $lookup_config['fields']);
+            $where = !empty($lookup_config['where']) ? 'WHERE ' . $lookup_config['where'] : '';
+            $order = !empty($lookup_config['order']) ? 'ORDER BY ' . $lookup_config['order'] : '';
+            
+            $query = "SELECT {$fields} FROM {$table} {$where} {$order}";
+            $results = $wpdb->get_results($query, ARRAY_A);
+            
+            $data = array();
+            foreach ($results as $row) {
+                $id = $row['id'];
+                $data[$id] = $row;
+            }
+            
+            return $data;
+        }, $lookup_config['cache_ttl'] ?? 3600);
+    }
+    
+    /**
+     * Load all lookup tables for sidebar forms
+     * 
+     * Automatically loads all lookup tables defined in config.
+     * Called when sidebar is in create/edit mode.
+     * 
+     * @since 12.0.0
+     * @return array All loaded lookup data
+     */
+    protected function load_sidebar_lookups() {
+        $lookups = array();
+        
+        if (empty($this->config['lookup_tables'])) {
+            return $lookups;
+        }
+        
+        foreach ($this->config['lookup_tables'] as $key => $config) {
+            $lookups[$key] = $this->load_lookup_from_config($key);
+        }
+        
+        return $lookups;
     }
     
     /**

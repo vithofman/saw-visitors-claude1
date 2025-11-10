@@ -10,6 +10,7 @@
  * - Capabilities: WordPress capability checks for each action
  * - Fields: Complete field definitions with types, labels, validation
  * - List Config: Filters and pagination (columns auto-generated from fields)
+ * - Lookup Tables: Auto-loaded reference data with caching
  * - Cache: Caching strategy and TTL settings
  *
  * Field Types Supported:
@@ -20,7 +21,7 @@
  * - file: File upload (logo)
  *
  * @package SAW_Visitors
- * @version 11.2.1 - FIXED: Route changed to 'customers' (base controller adds /admin/ prefix)
+ * @version 12.0.0 - Config-driven Lookups Added (FÁZE 1)
  * @since   4.6.1
  */
 
@@ -220,6 +221,21 @@ return array(
         ),
         'per_page' => 20,
         'enable_detail_modal' => true,
+    ),
+    
+    // ============================================
+    // LOOKUP TABLES
+    // Auto-loaded for forms, cached automatically
+    // ============================================
+    'lookup_tables' => array(
+        'account_types' => array(
+            'table' => 'saw_account_types',
+            'fields' => array('id', 'name', 'display_name', 'color', 'price'),
+            'where' => 'is_active = 1',
+            'order' => 'name ASC',
+            'display_field' => 'display_name',
+            'cache_ttl' => 3600,
+        ),
     ),
     
     // ============================================
