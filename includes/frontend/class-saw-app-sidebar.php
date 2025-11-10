@@ -377,7 +377,7 @@ class SAW_App_Sidebar {
                 'heading' => 'Systém',
                 'items' => array(
                     array('id' => 'permissions', 'label' => 'Oprávnění', 'url' => '/admin/permissions', 'icon' => '🔒'),
-                    array('id' => 'customers', 'label' => 'Zákazníci', 'url' => '/admin/settings/customers', 'icon' => '🏬'),
+                    array('id' => 'customers', 'label' => 'Zákazníci', 'url' => '/admin/customers', 'icon' => '🏬'),
                     array('id' => 'account-types', 'label' => 'Typy účtů', 'url' => '/admin/settings/account-types', 'icon' => '💳'),
                     array('id' => 'company', 'label' => 'Firma', 'url' => '/admin/settings/company', 'icon' => '⚙️'),
                     array('id' => 'about', 'label' => 'O aplikaci', 'url' => '/admin/settings/about', 'icon' => 'ℹ️'),

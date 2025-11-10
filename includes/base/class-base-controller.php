@@ -8,7 +8,7 @@
  *
  * @package    SAW_Visitors
  * @subpackage Base
- * @version    8.0.0 - RELATED DATA SUPPORT ADDED
+ * @version    8.1.0 - PERFORMANCE OPTIMIZED (LAZY LOADING ADDED)
  * @since      1.0.0
  */
 
@@ -68,7 +68,6 @@ abstract class SAW_Base_Controller
     protected function get_sidebar_context() {
         $context = get_query_var('saw_sidebar_context');
         
-        // Default context if not set
         if (empty($context) || !is_array($context)) {
             return array(
                 'mode' => null,
@@ -101,6 +100,55 @@ abstract class SAW_Base_Controller
      */
     protected function has_sidebar() {
         return !empty($this->get_sidebar_mode());
+    }
+    
+    /**
+     * Lazy load lookup data with caching
+     * 
+     * PERFORMANCE OPTIMIZATION: Universal method for loading reference data
+     * (account types, categories, etc.) with automatic caching to avoid repeated DB queries.
+     * 
+     * @since 8.1.0
+     * @param string   $key       Lookup data key
+     * @param callable $callback  Function to load data from DB
+     * @param int      $cache_ttl Cache time-to-live in seconds
+     * @return mixed Loaded data
+     */
+    protected function lazy_load_lookup_data($key, $callback, $cache_ttl = 3600) {
+        static $memory_cache = array();
+        
+        if (isset($memory_cache[$key])) {
+            return $memory_cache[$key];
+        }
+        
+        $cache_key = 'saw_lookup_' . $this->entity . '_' . $key;
+        $cached = get_transient($cache_key);
+        
+        if ($cached !== false) {
+            $memory_cache[$key] = $cached;
+            return $cached;
+        }
+        
+        $data = $callback();
+        
+        set_transient($cache_key, $data, $cache_ttl);
+        $memory_cache[$key] = $data;
+        
+        return $data;
+    }
+    
+    /**
+     * Invalidate lookup cache
+     * 
+     * PERFORMANCE OPTIMIZATION: Clears cached lookup data
+     * 
+     * @since 8.1.0
+     * @param string $key Lookup data key
+     * @return void
+     */
+    protected function invalidate_lookup_cache($key) {
+        $cache_key = 'saw_lookup_' . $this->entity . '_' . $key;
+        delete_transient($cache_key);
     }
     
     /**
@@ -145,7 +193,6 @@ abstract class SAW_Base_Controller
         $related_data = array();
         
         foreach ($relations as $key => $relation) {
-            // Validate required fields
             if (empty($relation['entity']) || empty($relation['foreign_key'])) {
                 continue;
             }
@@ -154,7 +201,6 @@ abstract class SAW_Base_Controller
             $foreign_key = $relation['foreign_key'];
             $order_by = $relation['order_by'] ?? 'id DESC';
             
-            // Build query
             $query = $wpdb->prepare(
                 "SELECT * FROM {$table} WHERE {$foreign_key} = %d ORDER BY {$order_by}",
                 $item_id
@@ -166,7 +212,6 @@ abstract class SAW_Base_Controller
                 continue;
             }
             
-            // Format items for display
             $formatted_items = array();
             foreach ($items as $item) {
                 $display_text = $this->format_related_item_display($item, $relation);
@@ -200,13 +245,11 @@ abstract class SAW_Base_Controller
      * @return string Formatted display text
      */
     protected function format_related_item_display($item, $relation) {
-        // Single field display
         if (!empty($relation['display_field'])) {
             $field = $relation['display_field'];
             return $item[$field] ?? '#' . $item['id'];
         }
         
-        // Multiple fields display
         if (!empty($relation['display_fields']) && is_array($relation['display_fields'])) {
             $parts = array();
             foreach ($relation['display_fields'] as $field) {
@@ -217,7 +260,6 @@ abstract class SAW_Base_Controller
             return implode(' - ', $parts);
         }
         
-        // Fallback
         return $item['name'] ?? $item['title'] ?? '#' . $item['id'];
     }
     
@@ -238,7 +280,6 @@ abstract class SAW_Base_Controller
         $sidebar_mode = $ctx['mode'];
         $detail_tab = $ctx['tab'];
         
-        // DETAIL MODE
         if ($ctx['mode'] === 'detail' && $ctx['id']) {
             if (!$this->can('view')) {
                 $this->set_flash('Nemáte oprávnění zobrazit detail', 'error');
@@ -259,7 +300,6 @@ abstract class SAW_Base_Controller
             }
         }
         
-        // CREATE MODE
         elseif ($ctx['mode'] === 'create') {
             if (!$this->can('create')) {
                 $this->set_flash('Nemáte oprávnění vytvářet záznamy', 'error');
@@ -275,7 +315,6 @@ abstract class SAW_Base_Controller
             $form_item = array();
         }
         
-        // EDIT MODE
         elseif ($ctx['mode'] === 'edit' && $ctx['id']) {
             if (!$this->can('edit')) {
                 $this->set_flash('Nemáte oprávnění upravovat záznamy', 'error');
@@ -464,12 +503,10 @@ abstract class SAW_Base_Controller
      * @return true|WP_Error True on success, WP_Error on failure
      */
     protected function validate_scope_access($data, $action = 'view') {
-        // Super admin can access everything
         if (current_user_can('manage_options')) {
             return true;
         }
         
-        // Check customer isolation
         if (!empty($this->config['has_customer_isolation'])) {
             $current_customer_id = $this->get_current_customer_id();
             
@@ -482,7 +519,6 @@ abstract class SAW_Base_Controller
             }
         }
         
-        // Check branch isolation
         if (!empty($this->config['has_branch_isolation'])) {
             $current_branch_id = $this->get_current_branch_id();
             
@@ -508,13 +544,12 @@ abstract class SAW_Base_Controller
      */
     protected function get_accessible_branch_ids() {
         if (current_user_can('manage_options')) {
-            return null; // Super admin - all branches
+            return null;
         }
         
         $role = $this->get_current_user_role();
         
         if ($role === 'super_manager') {
-            // Super manager - multiple branches via user_branches table
             if (!class_exists('SAW_User_Branches')) {
                 require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-user-branches.php';
             }
@@ -523,7 +558,6 @@ abstract class SAW_Base_Controller
             return SAW_User_Branches::get_branch_ids_for_user($saw_user_id);
         }
         
-        // Other roles - single active branch from context
         $branch_id = $this->get_current_branch_id();
         return $branch_id ? [$branch_id] : [];
     }
@@ -595,7 +629,7 @@ abstract class SAW_Base_Controller
         }
         
         if (current_user_can('manage_options')) {
-            return $where; // Super admin bypasses isolation
+            return $where;
         }
         
         $customer_id = $this->get_current_customer_id();
@@ -622,7 +656,7 @@ abstract class SAW_Base_Controller
         }
         
         if (current_user_can('manage_options')) {
-            return $where; // Super admin bypasses isolation
+            return $where;
         }
         
         $branch_ids = $this->get_accessible_branch_ids();
@@ -649,10 +683,9 @@ abstract class SAW_Base_Controller
      */
     protected function is_item_accessible($item) {
         if (current_user_can('manage_options')) {
-            return true; // Super admin
+            return true;
         }
         
-        // Check customer isolation
         if (!empty($this->config['has_customer_isolation'])) {
             $current_customer_id = $this->get_current_customer_id();
             
@@ -661,7 +694,6 @@ abstract class SAW_Base_Controller
             }
         }
         
-        // Check branch isolation
         if (!empty($this->config['has_branch_isolation'])) {
             $branch_ids = $this->get_accessible_branch_ids();
             

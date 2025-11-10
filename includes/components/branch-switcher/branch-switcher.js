@@ -6,7 +6,7 @@
  *
  * @package SAW_Visitors
  * @since   4.7.0
- * @version 3.0.1
+ * @version 3.0.2
  */
 
 (function($) {
@@ -138,6 +138,7 @@
          * Load branches via AJAX
          *
          * Fetches branches for current customer from server.
+         * Auto-reloads page if branch was auto-selected by server.
          *
          * @since 4.7.0
          * @return {void}
@@ -199,6 +200,12 @@
                     
                     if (response.data.current_branch_id) {
                         this.currentBranchId = parseInt(response.data.current_branch_id);
+                    }
+                    
+                    // AUTO-SELECT: Reload page if branch was auto-selected
+                    if (response.data.auto_selected === true) {
+                        window.location.reload();
+                        return;
                     }
                     
                     this.renderBranches();

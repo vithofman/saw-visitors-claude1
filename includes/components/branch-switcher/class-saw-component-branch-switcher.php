@@ -7,7 +7,7 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Components
- * @version     7.0.1
+ * @version     7.0.2
  * @since       4.7.0
  */
 
@@ -85,6 +85,7 @@ class SAW_Component_Branch_Switcher {
      *
      * Static method - can be called without instance.
      * Returns list of active branches for current customer with proper isolation.
+     * Auto-selects first branch if none is currently selected.
      *
      * @since 4.7.0
      * @return void Outputs JSON response
@@ -168,10 +169,25 @@ class SAW_Component_Branch_Switcher {
             $current_branch_id = SAW_Context::get_branch_id();
         }
         
+        // AUTO-SELECT: If no branch selected but branches exist, select first one
+        $auto_selected = false;
+        if (!$current_branch_id && !empty($formatted)) {
+            $first_branch_id = $formatted[0]['id'];
+            
+            if (class_exists('SAW_Context')) {
+                $result = SAW_Context::set_branch_id($first_branch_id);
+                if ($result) {
+                    $current_branch_id = $first_branch_id;
+                    $auto_selected = true;
+                }
+            }
+        }
+        
         wp_send_json_success(array(
             'branches' => $formatted,
             'current_branch_id' => $current_branch_id,
             'customer_id' => $customer_id,
+            'auto_selected' => $auto_selected,
         ));
     }
     

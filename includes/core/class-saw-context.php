@@ -124,6 +124,11 @@ class SAW_Context {
         
         $this->customer_id = $this->resolve_customer_id($saw_user);
         $this->branch_id = $this->resolve_branch_id($saw_user);
+        
+        // AUTO-SELECT: Pokud není vybraná pobočka a uživatel může vybírat pobočky
+        if (!$this->branch_id && $this->customer_id && in_array($this->role, ['super_admin', 'admin', 'super_manager'])) {
+            $this->auto_select_branch();
+        }
     }
     
     /**
@@ -156,6 +161,39 @@ class SAW_Context {
         }
         
         return null;
+    }
+    
+    /**
+     * Auto-select first available branch if none selected
+     *
+     * @since 8.0.0
+     * @return void
+     */
+    private function auto_select_branch() {
+        global $wpdb;
+        
+        // Get first active branch for customer
+        $first_branch = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM %i WHERE customer_id = %d AND is_active = 1 ORDER BY is_headquarters DESC, name ASC LIMIT 1",
+            $wpdb->prefix . 'saw_branches',
+            $this->customer_id
+        ));
+        
+        if ($first_branch) {
+            $branch_id = absint($first_branch);
+            
+            // Update database
+            $wpdb->update(
+                $wpdb->prefix . 'saw_users',
+                ['context_branch_id' => $branch_id],
+                ['id' => $this->saw_user_id],
+                ['%d'],
+                ['%d']
+            );
+            
+            // Update instance
+            $this->branch_id = $branch_id;
+        }
     }
     
     /**
@@ -372,12 +410,15 @@ class SAW_Context {
         global $wpdb;
         
         $branches = $wpdb->get_results($wpdb->prepare(
-            "SELECT id FROM %i WHERE customer_id = %d AND is_active = 1 LIMIT 2",
+            "SELECT id FROM %i WHERE customer_id = %d AND is_active = 1 ORDER BY is_headquarters DESC, name ASC LIMIT 2",
             $wpdb->prefix . 'saw_branches',
             $customer_id
         ), ARRAY_A);
         
         if (count($branches) === 1) {
+            self::set_branch_id(absint($branches[0]['id']));
+        } elseif (count($branches) > 1) {
+            // Auto-select first branch (headquarters first)
             self::set_branch_id(absint($branches[0]['id']));
         } else {
             self::set_branch_id(null);
