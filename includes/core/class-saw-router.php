@@ -389,7 +389,7 @@ class SAW_Router {
     }
     
     // CRITICAL FIX: If path is numeric ID, it's likely a detail/edit for last visited module
-    // This handles shortcuts like /admin/19/edit -> /admin/settings/customers/19/edit
+    // This handles shortcuts like /admin/19/edit -> /admin/customers/19/edit
     $segments = explode('/', $clean_path);
     if (is_numeric($segments[0])) {
         // Default to customers module for numeric IDs (can be made smarter with session)

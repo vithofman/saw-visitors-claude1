@@ -106,7 +106,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         if (!$this->can('view')) {
             ob_end_clean();
             $this->set_flash('Nemáte oprávnění zobrazit detail', 'error');
-            wp_redirect(home_url('/admin/settings/customers/'));
+            wp_redirect(home_url('/admin/customers/'));
             exit;
         }
         
@@ -115,7 +115,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         if (!$detail_item) {
             ob_end_clean();
             $this->set_flash('Zákazník nenalezen', 'error');
-            wp_redirect(home_url('/admin/settings/customers/'));
+            wp_redirect(home_url('/admin/customers/'));
             exit;
         }
         
@@ -129,13 +129,13 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         if (!$this->can('create')) {
             ob_end_clean();
             $this->set_flash('Nemáte oprávnění vytvářet zákazníky', 'error');
-            wp_redirect(home_url('/admin/settings/customers/'));
+            wp_redirect(home_url('/admin/customers/'));
             exit;
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ob_end_clean();
-            $this->handle_create_post();
+            $this->handle_create();
             return;
         }
         
@@ -146,7 +146,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         if (!$this->can('edit')) {
             ob_end_clean();
             $this->set_flash('Nemáte oprávnění upravovat zákazníky', 'error');
-            wp_redirect(home_url('/admin/settings/customers/'));
+            wp_redirect(home_url('/admin/customers/'));
             exit;
         }
         
@@ -155,13 +155,13 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         if (!$form_item) {
             ob_end_clean();
             $this->set_flash('Zákazník nenalezen', 'error');
-            wp_redirect(home_url('/admin/settings/customers/'));
+            wp_redirect(home_url('/admin/customers/'));
             exit;
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ob_end_clean();
-            $this->handle_edit_post($sidebar_context['id']);
+            $this->handle_edit($sidebar_context['id']);
             return;
         }
     }
@@ -298,6 +298,9 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         $config = $this->config;
         $entity = $this->entity;
         
+        // CRITICAL: Explicitly extract variables for template scope
+        extract(compact('item', 'tab', 'config', 'entity', 'related_data'));
+        
         $template_path = SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/detail-sidebar.php';
         
         require $template_path;
@@ -334,35 +337,41 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
      * @return array Formatted item data
      */
     private function format_detail_data($item) {
-        $account_types = $this->load_account_types();
-        
-        // Format account type with display name
-        if (!empty($item['account_type_id']) && isset($account_types[$item['account_type_id']])) {
-            $item['account_type_display'] = $account_types[$item['account_type_id']]['display_name'];
-        } else {
-            $item['account_type_display'] = 'Nezadáno';
-        }
-        
-        // Add logo URL
-        if (!empty($item['logo_path'])) {
-            $upload_dir = wp_upload_dir();
-            $item['logo_url'] = $upload_dir['baseurl'] . '/' . $item['logo_path'];
-        }
-        
-        // Format dates
-        if (!empty($item['created_at'])) {
-            $item['created_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['created_at']));
-        }
-        
-        if (!empty($item['updated_at'])) {
-            $item['updated_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['updated_at']));
-        }
-        
-        // Format status
-        $item['status_label'] = $this->get_status_label($item['status'] ?? '');
-        
-        return $item;
+    $account_types = $this->load_account_types();
+    
+    // Format account type with display name
+    if (!empty($item['account_type_id']) && isset($account_types[$item['account_type_id']])) {
+        $item['account_type_display'] = $account_types[$item['account_type_id']]['display_name'];
+    } else {
+        $item['account_type_display'] = 'Nezadáno';
     }
+    
+    // ✅ OPRAVENO: logo_url je už v DB, jen zkontroluj jestli je relativní cesta
+    if (!empty($item['logo_url'])) {
+        // Pokud logo_url začíná na http, je to už full URL
+        if (strpos($item['logo_url'], 'http') === 0) {
+            // Už je to full URL, nech to být
+        } else {
+            // Je to relativní cesta, přidej base URL
+            $upload_dir = wp_upload_dir();
+            $item['logo_url'] = $upload_dir['baseurl'] . '/' . ltrim($item['logo_url'], '/');
+        }
+    }
+    
+    // Format dates
+    if (!empty($item['created_at'])) {
+        $item['created_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['created_at']));
+    }
+    
+    if (!empty($item['updated_at'])) {
+        $item['updated_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['updated_at']));
+    }
+    
+    // Format status
+    $item['status_label'] = $this->get_status_label($item['status'] ?? '');
+    
+    return $item;
+}
     
     /**
      * Format row data for list table
@@ -418,7 +427,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
         global $wpdb;
         
         $types = $wpdb->get_results(
-            "SELECT id, name, display_name FROM {$wpdb->prefix}saw_account_types WHERE is_active = 1 ORDER BY display_order ASC",
+            "SELECT id, name, display_name FROM {$wpdb->prefix}saw_account_types WHERE is_active = 1 ORDER BY name ASC",
             ARRAY_A
         );
         
@@ -440,69 +449,87 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
      * @return void (redirects)
      */
     private function handle_create() {
-        if (!wp_verify_nonce($_POST['saw_nonce'] ?? '', 'saw_customers_form')) {
-            wp_die('Neplatný bezpečnostní token');
-        }
-        
-        if (!$this->can('create')) {
-            $this->set_flash('Nemáte oprávnění vytvářet záznamy', 'error');
-            wp_redirect(home_url('/admin/settings/customers/create'));
-            exit;
-        }
-        
-        $data = array(
-            'name' => sanitize_text_field($_POST['name'] ?? ''),
-            'email' => sanitize_email($_POST['email'] ?? ''),
-            'phone' => sanitize_text_field($_POST['phone'] ?? ''),
-            'address' => sanitize_textarea_field($_POST['address'] ?? ''),
-            'billing_address' => sanitize_textarea_field($_POST['billing_address'] ?? ''),
-            'ic' => sanitize_text_field($_POST['ic'] ?? ''),
-            'dic' => sanitize_text_field($_POST['dic'] ?? ''),
-            'status' => sanitize_text_field($_POST['status'] ?? 'active'),
-            'account_type_id' => !empty($_POST['account_type_id']) ? intval($_POST['account_type_id']) : null,
-            'notes' => sanitize_textarea_field($_POST['notes'] ?? ''),
-        );
-        
-        // Handle logo upload
-        if (!empty($_FILES['logo']['name'])) {
-            $upload_result = $this->file_uploader->upload(
-                $_FILES['logo'],
-                array('jpg', 'jpeg', 'png', 'gif', 'svg'),
-                2 * 1024 * 1024,
-                'customers'
-            );
-            
-            if (is_wp_error($upload_result)) {
-                $this->set_flash($upload_result->get_error_message(), 'error');
-                wp_redirect(home_url('/admin/settings/customers/create'));
-                exit;
-            }
-            
-            $data['logo_path'] = $upload_result['file'];
-        }
-        
-        $validation = $this->model->validate($data);
-        if (is_wp_error($validation)) {
-            $errors = $validation->get_error_data();
-            $this->set_flash(implode('<br>', $errors), 'error');
-            wp_redirect(home_url('/admin/settings/customers/create'));
-            exit;
-        }
-        
-        $result = $this->model->create($data);
-        
-        if (is_wp_error($result)) {
-            $this->set_flash($result->get_error_message(), 'error');
-            wp_redirect(home_url('/admin/settings/customers/create'));
-            exit;
-        }
-        
-        $this->invalidate_caches();
-        
-        $this->set_flash('Zákazník byl úspěšně vytvořen', 'success');
-        wp_redirect(home_url('/admin/settings/customers/' . $result . '/'));
+    if (!wp_verify_nonce($_POST['saw_nonce'] ?? '', 'saw_customers_form')) {
+        wp_die('Neplatný bezpečnostní token');
+    }
+    
+    if (!$this->can('create')) {
+        $this->set_flash('Nemáte oprávnění vytvářet záznamy', 'error');
+        wp_redirect(home_url('/admin/customers/create'));
         exit;
     }
+    
+    // ✅ OPRAVENÉ FIELDY podle DB struktury
+    $data = array(
+        'name' => sanitize_text_field($_POST['name'] ?? ''),
+        'ico' => sanitize_text_field($_POST['ico'] ?? ''),  // ✅ ico (ne ic)
+        'dic' => sanitize_text_field($_POST['dic'] ?? ''),
+        
+        // ✅ Address fields (rozdělit)
+        'address_street' => sanitize_text_field($_POST['address_street'] ?? ''),
+        'address_number' => sanitize_text_field($_POST['address_number'] ?? ''),
+        'address_city' => sanitize_text_field($_POST['address_city'] ?? ''),
+        'address_zip' => sanitize_text_field($_POST['address_zip'] ?? ''),
+        'address_country' => sanitize_text_field($_POST['address_country'] ?? 'Česká republika'),
+        
+        // ✅ Billing address fields (rozdělit)
+        'billing_address_street' => sanitize_text_field($_POST['billing_address_street'] ?? ''),
+        'billing_address_number' => sanitize_text_field($_POST['billing_address_number'] ?? ''),
+        'billing_address_city' => sanitize_text_field($_POST['billing_address_city'] ?? ''),
+        'billing_address_zip' => sanitize_text_field($_POST['billing_address_zip'] ?? ''),
+        'billing_address_country' => sanitize_text_field($_POST['billing_address_country'] ?? ''),
+        
+        // ✅ Contact fields
+        'contact_person' => sanitize_text_field($_POST['contact_person'] ?? ''),
+        'contact_email' => sanitize_email($_POST['contact_email'] ?? ''),  // ✅ contact_email (ne email)
+        'contact_phone' => sanitize_text_field($_POST['contact_phone'] ?? ''),  // ✅ contact_phone (ne phone)
+        
+        'website' => esc_url_raw($_POST['website'] ?? ''),  // ✅ website (ne web)
+        'status' => sanitize_text_field($_POST['status'] ?? 'potential'),
+        'account_type_id' => !empty($_POST['account_type_id']) ? intval($_POST['account_type_id']) : null,
+        'notes' => sanitize_textarea_field($_POST['notes'] ?? ''),
+    );
+    
+    // Handle logo upload
+    if (!empty($_FILES['logo']['name'])) {
+        $upload_result = $this->file_uploader->upload(
+            $_FILES['logo'],
+            array('jpg', 'jpeg', 'png', 'gif', 'svg'),
+            2 * 1024 * 1024,
+            'customers'
+        );
+        
+        if (is_wp_error($upload_result)) {
+            $this->set_flash($upload_result->get_error_message(), 'error');
+            wp_redirect(home_url('/admin/customers/create'));
+            exit;
+        }
+        
+        $data['logo_url'] = $upload_result['file'];  // ✅ logo_url (ne logo_path)
+    }
+    
+    $validation = $this->model->validate($data);
+    if (is_wp_error($validation)) {
+        $errors = $validation->get_error_data();
+        $this->set_flash(implode('<br>', $errors), 'error');
+        wp_redirect(home_url('/admin/customers/create'));
+        exit;
+    }
+    
+    $result = $this->model->create($data);
+    
+    if (is_wp_error($result)) {
+        $this->set_flash($result->get_error_message(), 'error');
+        wp_redirect(home_url('/admin/customers/create'));
+        exit;
+    }
+    
+    $this->invalidate_caches();
+    
+    $this->set_flash('Zákazník byl úspěšně vytvořen', 'success');
+    wp_redirect(home_url('/admin/customers/' . $result . '/'));
+    exit;
+}
     
     /**
      * Handle edit POST request
@@ -512,75 +539,93 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
      * @return void (redirects)
      */
     private function handle_edit($id) {
-        if (!wp_verify_nonce($_POST['saw_nonce'] ?? '', 'saw_customers_form')) {
-            wp_die('Neplatný bezpečnostní token');
-        }
-        
-        if (!$this->can('edit')) {
-            $this->set_flash('Nemáte oprávnění upravovat záznamy', 'error');
-            wp_redirect(home_url('/admin/settings/customers/' . $id . '/edit'));
-            exit;
-        }
-        
-        $data = array(
-            'name' => sanitize_text_field($_POST['name'] ?? ''),
-            'email' => sanitize_email($_POST['email'] ?? ''),
-            'phone' => sanitize_text_field($_POST['phone'] ?? ''),
-            'address' => sanitize_textarea_field($_POST['address'] ?? ''),
-            'billing_address' => sanitize_textarea_field($_POST['billing_address'] ?? ''),
-            'ic' => sanitize_text_field($_POST['ic'] ?? ''),
-            'dic' => sanitize_text_field($_POST['dic'] ?? ''),
-            'status' => sanitize_text_field($_POST['status'] ?? 'active'),
-            'account_type_id' => !empty($_POST['account_type_id']) ? intval($_POST['account_type_id']) : null,
-            'notes' => sanitize_textarea_field($_POST['notes'] ?? ''),
-        );
-        
-        // Handle logo upload
-        if (!empty($_FILES['logo']['name'])) {
-            $upload_result = $this->file_uploader->upload(
-                $_FILES['logo'],
-                array('jpg', 'jpeg', 'png', 'gif', 'svg'),
-                2 * 1024 * 1024,
-                'customers'
-            );
-            
-            if (is_wp_error($upload_result)) {
-                $this->set_flash($upload_result->get_error_message(), 'error');
-                wp_redirect(home_url('/admin/settings/customers/' . $id . '/edit'));
-                exit;
-            }
-            
-            // Delete old logo
-            $old_customer = $this->model->get_by_id($id);
-            if (!empty($old_customer['logo_path'])) {
-                $this->file_uploader->delete($old_customer['logo_path']);
-            }
-            
-            $data['logo_path'] = $upload_result['file'];
-        }
-        
-        $validation = $this->model->validate($data, $id);
-        if (is_wp_error($validation)) {
-            $errors = $validation->get_error_data();
-            $this->set_flash(implode('<br>', $errors), 'error');
-            wp_redirect(home_url('/admin/settings/customers/' . $id . '/edit'));
-            exit;
-        }
-        
-        $result = $this->model->update($id, $data);
-        
-        if (is_wp_error($result)) {
-            $this->set_flash($result->get_error_message(), 'error');
-            wp_redirect(home_url('/admin/settings/customers/' . $id . '/edit'));
-            exit;
-        }
-        
-        $this->invalidate_caches();
-        
-        $this->set_flash('Zákazník byl úspěšně aktualizován', 'success');
-        wp_redirect(home_url('/admin/settings/customers/' . $id . '/'));
+    if (!wp_verify_nonce($_POST['saw_nonce'] ?? '', 'saw_customers_form')) {
+        wp_die('Neplatný bezpečnostní token');
+    }
+    
+    if (!$this->can('edit')) {
+        $this->set_flash('Nemáte oprávnění upravovat záznamy', 'error');
+        wp_redirect(home_url('/admin/customers/' . $id . '/edit'));
         exit;
     }
+    
+    // ✅ OPRAVENÉ FIELDY podle DB struktury
+    $data = array(
+        'name' => sanitize_text_field($_POST['name'] ?? ''),
+        'ico' => sanitize_text_field($_POST['ico'] ?? ''),  // ✅ ico (ne ic)
+        'dic' => sanitize_text_field($_POST['dic'] ?? ''),
+        
+        // ✅ Address fields (rozdělit)
+        'address_street' => sanitize_text_field($_POST['address_street'] ?? ''),
+        'address_number' => sanitize_text_field($_POST['address_number'] ?? ''),
+        'address_city' => sanitize_text_field($_POST['address_city'] ?? ''),
+        'address_zip' => sanitize_text_field($_POST['address_zip'] ?? ''),
+        'address_country' => sanitize_text_field($_POST['address_country'] ?? 'Česká republika'),
+        
+        // ✅ Billing address fields (rozdělit)
+        'billing_address_street' => sanitize_text_field($_POST['billing_address_street'] ?? ''),
+        'billing_address_number' => sanitize_text_field($_POST['billing_address_number'] ?? ''),
+        'billing_address_city' => sanitize_text_field($_POST['billing_address_city'] ?? ''),
+        'billing_address_zip' => sanitize_text_field($_POST['billing_address_zip'] ?? ''),
+        'billing_address_country' => sanitize_text_field($_POST['billing_address_country'] ?? ''),
+        
+        // ✅ Contact fields
+        'contact_person' => sanitize_text_field($_POST['contact_person'] ?? ''),
+        'contact_email' => sanitize_email($_POST['contact_email'] ?? ''),  // ✅ contact_email (ne email)
+        'contact_phone' => sanitize_text_field($_POST['contact_phone'] ?? ''),  // ✅ contact_phone (ne phone)
+        
+        'website' => esc_url_raw($_POST['website'] ?? ''),  // ✅ website (ne web)
+        'status' => sanitize_text_field($_POST['status'] ?? 'potential'),
+        'account_type_id' => !empty($_POST['account_type_id']) ? intval($_POST['account_type_id']) : null,
+        'notes' => sanitize_textarea_field($_POST['notes'] ?? ''),
+    );
+    
+    // Handle logo upload
+    if (!empty($_FILES['logo']['name'])) {
+        $upload_result = $this->file_uploader->upload(
+            $_FILES['logo'],
+            array('jpg', 'jpeg', 'png', 'gif', 'svg'),
+            2 * 1024 * 1024,
+            'customers'
+        );
+        
+        if (is_wp_error($upload_result)) {
+            $this->set_flash($upload_result->get_error_message(), 'error');
+            wp_redirect(home_url('/admin/customers/' . $id . '/edit'));
+            exit;
+        }
+        
+        // Delete old logo
+        $old_customer = $this->model->get_by_id($id);
+        if (!empty($old_customer['logo_url'])) {  // ✅ logo_url (ne logo_path)
+            $this->file_uploader->delete($old_customer['logo_url']);
+        }
+        
+        $data['logo_url'] = $upload_result['file'];  // ✅ logo_url (ne logo_path)
+    }
+    
+    $validation = $this->model->validate($data, $id);
+    if (is_wp_error($validation)) {
+        $errors = $validation->get_error_data();
+        $this->set_flash(implode('<br>', $errors), 'error');
+        wp_redirect(home_url('/admin/customers/' . $id . '/edit'));
+        exit;
+    }
+    
+    $result = $this->model->update($id, $data);
+    
+    if (is_wp_error($result)) {
+        $this->set_flash($result->get_error_message(), 'error');
+        wp_redirect(home_url('/admin/customers/' . $id . '/edit'));
+        exit;
+    }
+    
+    $this->invalidate_caches();
+    
+    $this->set_flash('Zákazník byl úspěšně aktualizován', 'success');
+    wp_redirect(home_url('/admin/customers/' . $id . '/'));
+    exit;
+}
     
     /**
      * Invalidate all caches after data changes

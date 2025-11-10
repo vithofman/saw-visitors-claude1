@@ -1,12 +1,11 @@
 <?php
 /**
- * Detail Sidebar Template
+ * Detail Sidebar Template - ULTRA MODERN + COLLAPSIBLE
  *
- * Renders detail view in sidebar with navigation controls and floating action buttons.
+ * Card-based layout with smooth collapse/expand
  *
  * @package     SAW_Visitors
- * @subpackage  Components/AdminTable
- * @version     4.0.0 - RELATED DATA SUPPORT ADDED
+ * @version     5.1.0 - Added Collapsible
  * @since       4.0.0
  */
 
@@ -17,14 +16,10 @@ if (!defined('ABSPATH')) {
 $module_slug = str_replace('_', '-', $entity);
 $detail_template = SAW_VISITORS_PLUGIN_DIR . "includes/modules/{$module_slug}/detail-modal-template.php";
 
-// Close URL is now handled by JavaScript
 $close_url = '#';
-
-// FIXED: Generate absolute URLs using home_url() like delete button
 $edit_url = home_url('/admin/' . str_replace('admin/', '', $config['route'] ?? '') . '/' . intval($item['id']) . '/edit');
 $delete_url = home_url('/admin/' . str_replace('admin/', '', $config['route'] ?? '') . '/delete/' . intval($item['id']));
 
-// Check permissions
 $can_edit = function_exists('saw_can') ? saw_can('edit', $entity) : true;
 $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
 ?>
@@ -51,34 +46,60 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
         }
         ?>
         
-        <?php
-        // Related Data Sections
-        if (!empty($related_data) && is_array($related_data)):
-        ?>
+        <?php if (!empty($related_data) && is_array($related_data)): ?>
         <div class="saw-related-sections">
             <h3 class="saw-related-sections-title">
                 <?php echo esc_html__('Související záznamy', 'saw-visitors'); ?>
             </h3>
             
             <?php foreach ($related_data as $key => $relation): ?>
-            <details class="saw-related-section" open>
-                <summary class="saw-related-section-summary">
-                    <span class="saw-related-section-icon"><?php echo esc_html($relation['icon']); ?></span>
-                    <span class="saw-related-section-label"><?php echo esc_html($relation['label']); ?></span>
-                    <span class="saw-badge saw-badge-info"><?php echo intval($relation['count']); ?></span>
-                </summary>
+            <div class="saw-related-section" data-section="<?php echo esc_attr($key); ?>">
+                <!-- Collapsible Header -->
+                <div class="saw-related-section-header" data-toggle-section>
+                    <div class="saw-related-section-toggle"></div>
+                    
+                    <div class="saw-related-section-icon-wrapper">
+                        <span class="saw-related-section-icon"><?php echo esc_html($relation['icon']); ?></span>
+                    </div>
+                    
+                    <div class="saw-related-section-info">
+                        <h4 class="saw-related-section-label">
+                            <?php echo esc_html($relation['label']); ?>
+                        </h4>
+                        <div class="saw-related-section-count">
+                            <?php 
+                            printf(
+                                _n('%d záznam', '%d záznamy', $relation['count'], 'saw-visitors'),
+                                $relation['count']
+                            );
+                            ?>
+                        </div>
+                    </div>
+                    
+                    <div class="saw-related-section-badge">
+                        <?php echo intval($relation['count']); ?>
+                    </div>
+                </div>
                 
+                <!-- Collapsible Content -->
                 <div class="saw-related-items">
                     <?php if (!empty($relation['items'])): ?>
                         <?php foreach ($relation['items'] as $related_item): ?>
+                        <?php 
+                        $item_route = str_replace('{id}', $related_item['id'], $relation['route']);
+                        ?>
                         <a href="#" 
                            class="saw-related-item-link"
                            data-entity="<?php echo esc_attr($relation['entity']); ?>"
                            data-id="<?php echo intval($related_item['id']); ?>"
+                           data-route="<?php echo esc_attr($item_route); ?>"
                            title="<?php echo esc_attr__('Zobrazit detail', 'saw-visitors'); ?>">
-                            <span class="saw-related-item-text">
-                                <?php echo esc_html($related_item['display']); ?>
-                            </span>
+                            <div class="saw-related-item-content">
+                                <span class="saw-related-item-dot"></span>
+                                <span class="saw-related-item-text">
+                                    <?php echo esc_html($related_item['display']); ?>
+                                </span>
+                            </div>
                             <span class="saw-related-item-arrow">→</span>
                         </a>
                         <?php endforeach; ?>
@@ -88,7 +109,7 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
                         </p>
                     <?php endif; ?>
                 </div>
-            </details>
+            </div>
             <?php endforeach; ?>
         </div>
         <?php endif; ?>
@@ -117,3 +138,34 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
     </div>
     <?php endif; ?>
 </div>
+
+<script>
+(function($) {
+    'use strict';
+    
+    /**
+     * Initialize collapsible related sections
+     */
+    function initCollapsibleSections() {
+        $(document).on('click', '[data-toggle-section]', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const $header = $(this);
+            const $section = $header.closest('.saw-related-section');
+            
+            // Toggle collapsed state
+            $section.toggleClass('is-collapsed');
+            
+            console.log('🔽 Section toggled:', $section.data('section'));
+        });
+    }
+    
+    // Initialize on document ready
+    $(document).ready(function() {
+        console.log('🎨 Collapsible sections initialized');
+        initCollapsibleSections();
+    });
+    
+})(jQuery);
+</script>

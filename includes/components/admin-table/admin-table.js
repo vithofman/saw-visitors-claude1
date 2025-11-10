@@ -252,7 +252,7 @@
      * @return {string}
      */
     function buildUrl(entity, id, mode) {
-        const base = '/admin/settings/' + entity + '/';
+        const base = '/admin/' + entity + '/';
         
         if (mode === 'edit') {
             return base + id + '/edit';

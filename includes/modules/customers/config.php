@@ -36,9 +36,9 @@ return array(
     'table' => 'saw_customers',
     'singular' => 'Zákazník',
     'plural' => 'Zákazníci',
-    'route' => 'admin/settings/customers',
+    'route' => 'admin/customers',
     'icon' => '🏢',
-'edit_url' => 'admin/settings/customers/{id}/edit',
+'edit_url' => 'admin/customers/{id}/edit',
     
     // ============================================
     // CAPABILITIES

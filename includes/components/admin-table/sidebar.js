@@ -190,24 +190,98 @@
     
     /**
      * Handle sidebar close button click
+     * 
+     * ✅ v5.1.0: In form mode, trigger Cancel button instead
      *
      * @return {void}
      */
     function initCloseButton() {
         $(document).on('click', '.saw-sidebar-close', function(e) {
             e.preventDefault();
+            
+            // ✅ Check if we're in a FORM (create/edit mode)
+            const $sidebar = $('.saw-sidebar');
+            const mode = $sidebar.attr('data-mode');
+            
+            // If in form mode, find Cancel button and click it
+            if (mode === 'create' || mode === 'edit') {
+                const $cancelBtn = $('.saw-form-cancel-btn');
+                if ($cancelBtn.length) {
+                    console.log('✅ X button -> triggering Cancel button');
+                    $cancelBtn.trigger('click');
+                    return;
+                }
+            }
+            
+            // Otherwise use normal close logic
             handleSidebarClose();
         });
     }
     
     /**
      * Handle cancel button in forms
+     * 
+     * ✅ v5.2.0: Prevent default to avoid page reload flash
      *
      * @return {void}
      */
     function initCancelButton() {
         $(document).on('click', '.saw-form-cancel-btn', function(e) {
             e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('❌ Cancel button clicked');
+            
+            const $sidebar = $('.saw-sidebar');
+            const mode = $sidebar.attr('data-mode');
+            const entity = $sidebar.attr('data-entity');
+            const currentId = $sidebar.data('current-id');
+            
+            // ✅ EDIT MODE -> Load DETAIL via AJAX (smooth, no reload)
+            if (mode === 'edit' && currentId && entity) {
+                console.log('📝 Edit -> Detail: Loading via AJAX');
+                
+                if (typeof window.openSidebarAjax === 'function') {
+                    window.openSidebarAjax(currentId, 'detail', entity);
+                } else {
+                    console.error('❌ openSidebarAjax not available');
+                    // Fallback: smooth close
+                    $sidebar.fadeOut(300, function() {
+                        $(this).remove();
+                    });
+                    
+                    // Update URL
+                    const currentUrl = window.location.pathname;
+                    const pathParts = currentUrl.split('/').filter(function(p) { return p; });
+                    if (pathParts[pathParts.length - 1] === 'edit') {
+                        pathParts.pop();
+                        window.history.pushState({}, '', '/' + pathParts.join('/') + '/');
+                    }
+                }
+                return;
+            }
+            
+            // ✅ CREATE MODE -> Close sidebar smoothly (no reload)
+            if (mode === 'create') {
+                console.log('➕ Create -> List: Closing smoothly');
+                
+                $sidebar.fadeOut(300, function() {
+                    $(this).remove();
+                });
+                
+                // Update URL
+                const currentUrl = window.location.pathname;
+                const pathParts = currentUrl.split('/').filter(function(p) { return p; });
+                if (pathParts[pathParts.length - 1] === 'create') {
+                    pathParts.pop();
+                    window.history.pushState({}, '', '/' + pathParts.join('/') + '/');
+                }
+                
+                $(document).trigger('sidebar:closed');
+                return;
+            }
+            
+            // FALLBACK: Generic close
             handleSidebarClose();
         });
     }

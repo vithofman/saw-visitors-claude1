@@ -49,9 +49,9 @@ function saw_universal_ajax_load_sidebar() {
     
     try {
         // Load base classes
-        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/class-saw-base-controller.php';
+        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/class-base-controller.php';
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/trait-ajax-handlers.php';
-        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/class-saw-base-model.php';
+        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/class-base-model.php';
         
         // Build controller class name (e.g., SAW_Module_Customers_Controller)
         $controller_file = SAW_VISITORS_PLUGIN_DIR . "includes/modules/{$module}/controller.php";
