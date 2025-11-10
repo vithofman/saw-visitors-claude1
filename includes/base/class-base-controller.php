@@ -8,7 +8,7 @@
  *
  * @package    SAW_Visitors
  * @subpackage Base
- * @version    12.0.0 - Config-driven Lookups Added (FÁZE 1)
+ * @version    12.2.0 - Universal List View Added (FÁZE 3)
  * @since      1.0.0
  */
 
@@ -1027,6 +1027,332 @@ abstract class SAW_Base_Controller
         }
         
         return $lookups;
+    }
+    
+    /**
+     * Universal AJAX sidebar loader
+     * 
+     * Handles AJAX sidebar loading for detail/edit modes.
+     * Child controllers can override format_detail_data() for custom formatting.
+     * 
+     * @since 12.1.0 - FÁZE 2
+     * @return void Outputs JSON
+     */
+    public function ajax_load_sidebar() {
+        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        
+        $id = intval($_POST['id'] ?? 0);
+        $mode = sanitize_text_field($_POST['mode'] ?? 'detail');
+        
+        if (!in_array($mode, array('detail', 'edit'), true)) {
+            wp_send_json_error(array('message' => 'Invalid mode'));
+        }
+        
+        $required_permission = ($mode === 'detail') ? 'view' : 'edit';
+        if (!$this->can($required_permission)) {
+            wp_send_json_error(array(
+                'message' => sprintf(
+                    'Nemáte oprávnění %s záznamy', 
+                    $mode === 'detail' ? 'zobrazit' : 'upravovat'
+                )
+            ));
+        }
+        
+        $item = $this->model->get_by_id($id);
+        
+        if (!$item) {
+            wp_send_json_error(array(
+                'message' => sprintf('%s nenalezen', $this->config['singular'] ?? 'Záznam')
+            ));
+        }
+        
+        ob_start();
+        
+        $related_data = null;
+        
+        if ($mode === 'edit') {
+            $lookups = $this->load_sidebar_lookups();
+            
+            foreach ($lookups as $key => $data) {
+                $this->config[$key] = $data;
+            }
+        }
+        
+        if ($mode === 'detail') {
+            $related_data = $this->load_related_data($id);
+        }
+        
+        $captured_junk = ob_get_clean();
+        
+        if (method_exists($this, 'format_detail_data')) {
+            $item = $this->format_detail_data($item);
+        }
+        
+        ob_start();
+        
+        if ($mode === 'detail') {
+            $tab = 'overview';
+            $config = $this->config;
+            $entity = $this->entity;
+            
+            extract(compact('item', 'tab', 'config', 'entity', 'related_data'));
+            
+            $template_path = SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/detail-sidebar.php';
+            require $template_path;
+        } else {
+            $is_edit = true;
+            $GLOBALS['saw_sidebar_form'] = true;
+            
+            $config = $this->config;
+            $entity = $this->entity;
+            
+            $lookups = array();
+            if (!empty($this->config['lookup_tables'])) {
+                foreach ($this->config['lookup_tables'] as $key => $lookup_config) {
+                    if (isset($this->config[$key])) {
+                        $lookups[$key] = $this->config[$key];
+                    }
+                }
+            }
+            
+            extract(array_merge(
+                compact('item', 'is_edit', 'config', 'entity'),
+                $lookups
+            ));
+            
+            $form_path = $this->config['path'] . 'form-template.php';
+            require $form_path;
+            
+            unset($GLOBALS['saw_sidebar_form']);
+        }
+        
+        $sidebar_content = ob_get_clean();
+        
+        wp_send_json_success(array(
+            'html' => $sidebar_content,
+            'mode' => $mode,
+            'id' => $id
+        ));
+    }
+    
+    /**
+     * Universal list view renderer
+     * 
+     * Handles complete list page logic including sidebar modes.
+     * Child controllers only need to call: $this->render_list_view();
+     * 
+     * @since 12.2.0 - FÁZE 3
+     * @param array $options Optional overrides
+     * @return void Outputs HTML
+     */
+    protected function render_list_view($options = array()) {
+        $this->verify_module_access();
+        $this->enqueue_assets();
+        
+        ob_start();
+        
+        $sidebar_context = $this->get_sidebar_context();
+        $sidebar_mode = $sidebar_context['mode'] ?? null;
+        
+        $detail_item = null;
+        $form_item = null;
+        $detail_tab = $sidebar_context['tab'] ?? 'overview';
+        $related_data = null;
+        
+        if ($sidebar_mode === 'detail') {
+            $detail_item = $this->handle_detail_mode($sidebar_context);
+            if ($detail_item) {
+                $related_data = $this->load_related_data($sidebar_context['id']);
+            }
+        }
+        elseif ($sidebar_mode === 'create') {
+            $form_item = $this->handle_create_mode();
+            if ($form_item === null) return;
+        }
+        elseif ($sidebar_mode === 'edit') {
+            $form_item = $this->handle_edit_mode($sidebar_context);
+            if ($form_item === null) return;
+        }
+        
+        if (in_array($sidebar_mode, array('create', 'edit'))) {
+            $lookups = $this->load_sidebar_lookups();
+            foreach ($lookups as $key => $data) {
+                $this->config[$key] = $data;
+            }
+        }
+        
+        $list_data = $this->get_list_data();
+        
+        $captured_junk = ob_get_clean();
+        
+        ob_start();
+        
+        if (class_exists('SAW_Module_Style_Manager')) {
+            $style_manager = SAW_Module_Style_Manager::get_instance();
+            echo $style_manager->inject_module_css($this->entity);
+        }
+        
+        echo '<div class="saw-module-' . esc_attr($this->entity) . '">';
+        $this->render_flash_messages();
+        
+        $template_vars = array_merge(
+            $list_data,
+            array(
+                'detail_item' => $detail_item,
+                'form_item' => $form_item,
+                'sidebar_mode' => $sidebar_mode,
+                'detail_tab' => $detail_tab,
+                'related_data' => $related_data,
+            ),
+            $options
+        );
+        
+        if (!empty($this->config['lookup_tables'])) {
+            foreach ($this->config['lookup_tables'] as $key => $lookup_config) {
+                if (isset($this->config[$key])) {
+                    $template_vars[$key] = $this->config[$key];
+                }
+            }
+        }
+        
+        extract($template_vars);
+        
+        require $this->config['path'] . 'list-template.php';
+        
+        echo '</div>';
+        
+        $content = ob_get_clean();
+        $this->render_with_layout($content, $this->config['plural']);
+    }
+    
+    /**
+     * Handle detail sidebar mode
+     * 
+     * @since 12.2.0
+     * @param array $context Sidebar context
+     * @return array|null Item data or null on error
+     */
+    protected function handle_detail_mode($context) {
+        if (!$this->can('view')) {
+            $this->set_flash('Nemáte oprávnění zobrazit detail', 'error');
+            wp_redirect(home_url('/admin/' . $this->config['route'] . '/'));
+            exit;
+        }
+        
+        $item = $this->model->get_by_id($context['id']);
+        
+        if (!$item) {
+            $this->set_flash('Záznam nenalezen', 'error');
+            wp_redirect(home_url('/admin/' . $this->config['route'] . '/'));
+            exit;
+        }
+        
+        if (method_exists($this, 'format_detail_data')) {
+            $item = $this->format_detail_data($item);
+        }
+        
+        return $item;
+    }
+    
+    /**
+     * Handle create sidebar mode
+     * 
+     * @since 12.2.0
+     * @return array|null Empty array for new form, null if POST processed
+     */
+    protected function handle_create_mode() {
+        if (!$this->can('create')) {
+            $this->set_flash('Nemáte oprávnění vytvářet záznamy', 'error');
+            wp_redirect(home_url('/admin/' . $this->config['route'] . '/'));
+            exit;
+        }
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $this->handle_create_post();
+            return null;
+        }
+        
+        return array();
+    }
+    
+    /**
+     * Handle edit sidebar mode
+     * 
+     * @since 12.2.0
+     * @param array $context Sidebar context
+     * @return array|null Item data or null if POST processed
+     */
+    protected function handle_edit_mode($context) {
+        if (!$this->can('edit')) {
+            $this->set_flash('Nemáte oprávnění upravovat záznamy', 'error');
+            wp_redirect(home_url('/admin/' . $this->config['route'] . '/'));
+            exit;
+        }
+        
+        $item = $this->model->get_by_id($context['id']);
+        
+        if (!$item) {
+            $this->set_flash('Záznam nenalezen', 'error');
+            wp_redirect(home_url('/admin/' . $this->config['route'] . '/'));
+            exit;
+        }
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $this->handle_edit_post($context['id']);
+            return null;
+        }
+        
+        return $item;
+    }
+    
+    /**
+     * Get list data (items, pagination)
+     * 
+     * @since 12.2.0
+     * @return array List data
+     */
+    protected function get_list_data() {
+        $search = isset($_GET['s']) ? sanitize_text_field(wp_unslash($_GET['s'])) : '';
+        $orderby = isset($_GET['orderby']) ? sanitize_text_field(wp_unslash($_GET['orderby'])) : 'id';
+        $order = isset($_GET['order']) ? strtoupper(sanitize_text_field(wp_unslash($_GET['order']))) : 'DESC';
+        $page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
+        $per_page = $this->config['list_config']['per_page'] ?? 20;
+        
+        $filters = array(
+            'search' => $search,
+            'orderby' => $orderby,
+            'order' => $order,
+            'page' => $page,
+            'per_page' => $per_page,
+        );
+        
+        if (!empty($this->config['list_config']['filters'])) {
+            foreach ($this->config['list_config']['filters'] as $filter_key => $enabled) {
+                if ($enabled && isset($_GET[$filter_key])) {
+                    $filters[$filter_key] = sanitize_text_field(wp_unslash($_GET[$filter_key]));
+                }
+            }
+        }
+        
+        $data = $this->model->get_all($filters);
+        
+        $result = array(
+            'items' => $data['items'],
+            'total' => $data['total'],
+            'page' => $page,
+            'total_pages' => ceil($data['total'] / $per_page),
+            'search' => $search,
+            'orderby' => $orderby,
+            'order' => $order,
+        );
+        
+        foreach ($_GET as $key => $value) {
+            if (!in_array($key, array('s', 'orderby', 'order', 'paged'))) {
+                $result[$key] = sanitize_text_field(wp_unslash($value));
+            }
+        }
+        
+        return $result;
     }
     
     /**

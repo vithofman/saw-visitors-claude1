@@ -6,10 +6,10 @@
  * Handles CRUD operations, file uploads, AJAX requests, and sidebar context.
  *
  * Features:
- * - List view with search, filtering, sorting, pagination
- * - Create/Edit forms in sidebar
- * - Detail view in sidebar
- * - AJAX sidebar loading
+ * - List view with search, filtering, sorting, pagination (inherited)
+ * - Create/Edit forms in sidebar (inherited)
+ * - Detail view in sidebar (inherited)
+ * - AJAX sidebar loading (inherited from Base Controller)
  * - AJAX detail modal (backward compatible)
  * - AJAX search and delete
  * - Dependency validation (branches, users, visits, invitations)
@@ -18,7 +18,7 @@
  * - Related data support (branches)
  *
  * @package SAW_Visitors
- * @version 12.0.1 - HOTFIX: Nonce validation fixed
+ * @version 12.2.0 - FÁZE 3: index() uses render_list_view()
  * @since   4.6.1
  */
 
@@ -78,254 +78,13 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
     /**
      * Display list page with optional sidebar
      *
-     * Shows paginated, searchable, filterable list of customers.
-     * Supports sidebar for detail view, create form, and edit form.
+     * Now uses universal render_list_view() from Base Controller.
      *
-     * @since 12.0.0 - Config-driven lookups
+     * @since 12.2.0 - FÁZE 3
      * @return void
      */
     public function index() {
-        $this->verify_module_access();
-        $this->enqueue_assets();
-        
-        ob_start();
-        
-        $sidebar_context = $this->get_sidebar_context();
-        $sidebar_mode = $sidebar_context['mode'] ?? null;
-        
-        $detail_item = null;
-        $form_item = null;
-        $detail_tab = $sidebar_context['tab'] ?? 'overview';
-        $related_data = null;
-        
-        if ($sidebar_mode === 'detail') {
-            if (!$this->can('view')) {
-                ob_end_clean();
-                $this->set_flash('Nemáte oprávnění zobrazit detail', 'error');
-                wp_redirect(home_url('/admin/customers/'));
-                exit;
-            }
-            
-            $detail_item = $this->model->get_by_id($sidebar_context['id']);
-            
-            if (!$detail_item) {
-                ob_end_clean();
-                $this->set_flash('Zákazník nenalezen', 'error');
-                wp_redirect(home_url('/admin/customers/'));
-                exit;
-            }
-            
-            $detail_item = $this->format_detail_data($detail_item);
-            $related_data = $this->load_related_data($sidebar_context['id']);
-        }
-        
-        elseif ($sidebar_mode === 'create') {
-            if (!$this->can('create')) {
-                ob_end_clean();
-                $this->set_flash('Nemáte oprávnění vytvářet zákazníky', 'error');
-                wp_redirect(home_url('/admin/customers/'));
-                exit;
-            }
-            
-            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-                ob_end_clean();
-                $this->handle_create_post();
-                return;
-            }
-            
-            $form_item = array();
-        }
-        
-        elseif ($sidebar_mode === 'edit') {
-            if (!$this->can('edit')) {
-                ob_end_clean();
-                $this->set_flash('Nemáte oprávnění upravovat zákazníky', 'error');
-                wp_redirect(home_url('/admin/customers/'));
-                exit;
-            }
-            
-            $form_item = $this->model->get_by_id($sidebar_context['id']);
-            
-            if (!$form_item) {
-                ob_end_clean();
-                $this->set_flash('Zákazník nenalezen', 'error');
-                wp_redirect(home_url('/admin/customers/'));
-                exit;
-            }
-            
-            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-                ob_end_clean();
-                $this->handle_edit_post($sidebar_context['id']);
-                return;
-            }
-        }
-        
-        // ✅ FÁZE 1 - Krok 1.3: Config-driven lookup loading
-        if ($sidebar_mode === 'create' || $sidebar_mode === 'edit') {
-            $lookups = $this->load_sidebar_lookups();
-            
-            foreach ($lookups as $key => $data) {
-                $this->config[$key] = $data;
-            }
-            
-            $account_types = $lookups['account_types'] ?? array();
-        } else {
-            $account_types = array();
-        }
-        
-        $search = isset($_GET['s']) ? sanitize_text_field(wp_unslash($_GET['s'])) : '';
-        $status = isset($_GET['status']) ? sanitize_text_field(wp_unslash($_GET['status'])) : '';
-        $orderby = isset($_GET['orderby']) ? sanitize_text_field(wp_unslash($_GET['orderby'])) : 'id';
-        $order = isset($_GET['order']) ? strtoupper(sanitize_text_field(wp_unslash($_GET['order']))) : 'DESC';
-        $page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
-        
-        $filters = array(
-            'search' => $search,
-            'orderby' => $orderby,
-            'order' => $order,
-            'page' => $page,
-            'per_page' => 20,
-        );
-        
-        if ($status !== '') {
-            $filters['status'] = $status;
-        }
-        
-        $data = $this->model->get_all($filters);
-        $items = $data['items'];
-        $total = $data['total'];
-        $total_pages = ceil($total / 20);
-        
-        $captured_junk = ob_get_clean();
-        
-        ob_start();
-        
-        if (class_exists('SAW_Module_Style_Manager')) {
-            $style_manager = SAW_Module_Style_Manager::get_instance();
-            echo $style_manager->inject_module_css($this->entity);
-        }
-        
-        echo '<div class="saw-module-' . esc_attr($this->entity) . '">';
-        $this->render_flash_messages();
-        
-        extract(array(
-            'items' => $items,
-            'total' => $total,
-            'page' => $page,
-            'total_pages' => $total_pages,
-            'search' => $search,
-            'status' => $status,
-            'orderby' => $orderby,
-            'order' => $order,
-            'detail_item' => $detail_item,
-            'form_item' => $form_item,
-            'sidebar_mode' => $sidebar_mode,
-            'detail_tab' => $detail_tab,
-            'account_types' => $account_types,
-            'related_data' => $related_data,
-        ));
-        
-        require $this->config['path'] . 'list-template.php';
-        
-        echo '</div>';
-        
-        $content = ob_get_clean();
-        $this->render_with_layout($content, $this->config['plural']);
-    }
-    
-    /**
-     * AJAX: Load sidebar content
-     *
-     * Universal AJAX handler for loading sidebar in detail/edit/create modes.
-     * Returns HTML for sidebar wrapper.
-     *
-     * @since 12.0.0 - Config-driven lookups
-     * @return void (outputs JSON)
-     */
-    public function ajax_load_sidebar() {
-        check_ajax_referer('saw_ajax_nonce', 'nonce');
-        
-        $id = intval($_POST['id'] ?? 0);
-        $mode = sanitize_text_field($_POST['mode'] ?? 'detail');
-        
-        if (!in_array($mode, array('detail', 'edit'), true)) {
-            wp_send_json_error(array('message' => 'Invalid mode'));
-        }
-        
-        if ($mode === 'detail' && !$this->can('view')) {
-            wp_send_json_error(array('message' => 'Nemáte oprávnění zobrazit detail'));
-        }
-        
-        if ($mode === 'edit' && !$this->can('edit')) {
-            wp_send_json_error(array('message' => 'Nemáte oprávnění upravovat záznamy'));
-        }
-        
-        $item = $this->model->get_by_id($id);
-        
-        if (!$item) {
-            wp_send_json_error(array('message' => 'Zákazník nenalezen'));
-        }
-        
-        ob_start();
-        
-        $related_data = null;
-        
-        // ✅ FÁZE 1 - Krok 1.4: Config-driven lookup loading
-        if ($mode === 'edit') {
-            $lookups = $this->load_sidebar_lookups();
-            
-            foreach ($lookups as $key => $data) {
-                $this->config[$key] = $data;
-            }
-            
-            $account_types = $lookups['account_types'] ?? array();
-        } else {
-            $account_types = array();
-        }
-        
-        if ($mode === 'detail') {
-            $related_data = $this->load_related_data($id);
-        }
-        
-        $captured_junk = ob_get_clean();
-        
-        ob_start();
-        
-        $item = $this->format_detail_data($item);
-        
-        if ($mode === 'detail') {
-            $tab = 'overview';
-            $config = $this->config;
-            $entity = $this->entity;
-            
-            extract(compact('item', 'tab', 'config', 'entity', 'related_data'));
-            
-            $template_path = SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/detail-sidebar.php';
-            
-            require $template_path;
-        } else {
-            $is_edit = true;
-            $GLOBALS['saw_sidebar_form'] = true;
-            
-            $config = $this->config;
-            $entity = $this->entity;
-            
-            extract(compact('item', 'is_edit', 'account_types', 'config', 'entity'));
-            
-            $form_path = $this->config['path'] . 'form-template.php';
-            
-            require $form_path;
-            
-            unset($GLOBALS['saw_sidebar_form']);
-        }
-        
-        $sidebar_content = ob_get_clean();
-        
-        wp_send_json_success(array(
-            'html' => $sidebar_content,
-            'mode' => $mode,
-            'id' => $id
-        ));
+        $this->render_list_view();
     }
     
     /**
@@ -392,8 +151,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
      * @param array $item Raw item data
      * @return array Formatted item data
      */
-    private function format_detail_data($item) {
-        // ✅ FÁZE 1 - Krok 1.5: Config-driven lookup loading
+    protected function format_detail_data($item) {
         $account_types = $this->load_lookup_from_config('account_types');
         
         if (!empty($item['account_type_id']) && isset($account_types[$item['account_type_id']])) {
