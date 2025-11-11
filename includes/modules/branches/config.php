@@ -1,15 +1,16 @@
 <?php
+
+error_log('BRANCHES CONFIG LOADING...');
+
 /**
  * Branches Module Configuration
  *
- * REFACTORED v13.1.0 - PRODUCTION READY
- * ✅ Čisté UTF-8 encoding
- * ✅ Lookup tables pro customers
- * ✅ Všechna pole ze schema
+ * FINAL v13.5.0 - CLEAN UTF-8
+ * Bez GPS, bez opening_hours
  *
  * @package     SAW_Visitors
  * @subpackage  Modules/Branches
- * @version     13.1.0
+ * @version     13.5.0
  */
 
 if (!defined('ABSPATH')) {
@@ -88,6 +89,12 @@ return array(
             'label' => 'Obrázek (Logo)',
             'required' => false,
         ),
+        'image_thumbnail' => array(
+            'type' => 'text',
+            'label' => 'Náhled',
+            'required' => false,
+            'hidden' => true,
+        ),
 
         // Contact
         'phone' => array(
@@ -129,28 +136,7 @@ return array(
             'sanitize' => 'sanitize_text_field',
         ),
 
-        // GPS
-        'latitude' => array(
-            'type' => 'text',
-            'label' => 'GPS Lat',
-            'required' => false,
-            'sanitize' => 'sanitize_text_field',
-        ),
-        'longitude' => array(
-            'type' => 'text',
-            'label' => 'GPS Lng',
-            'required' => false,
-            'sanitize' => 'sanitize_text_field',
-        ),
-
         // Data
-        'opening_hours' => array(
-            'type' => 'textarea',
-            'label' => 'Otevírací doba (JSON)',
-            'required' => false,
-            'hidden' => true,
-            'sanitize' => 'sanitize_text_field',
-        ),
         'notes' => array(
             'type' => 'textarea',
             'label' => 'Poznámky',
@@ -185,19 +171,9 @@ return array(
     ),
 
     // ============================================
-    // LOOKUP TABLES (pro dropdown selecty)
+    // LOOKUP TABLES
     // ============================================
-    'lookup_tables' => array(
-        'customers' => array(
-            'table' => 'saw_customers',
-            'fields' => array('id', 'name', 'ico'),
-            'where' => 'status = "active"',
-            'order' => 'name ASC',
-            'display_field' => 'name',
-            'cache_ttl' => 3600,
-        ),
-    ),
-
+	'lookup_tables' => array(),
     // ============================================
     // LIST CONFIGURATION
     // ============================================

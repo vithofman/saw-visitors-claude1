@@ -2,14 +2,14 @@
 /**
  * Branches Detail Template
  *
- * REFACTORED v13.1.0 - PRODUCTION READY
+ * FINAL v13.4.0 - BEZ OPENING HOURS
  * ✅ Validace dat
- * ✅ Opening hours display
- * ✅ GPS map link
+ * ✅ Bez GPS
+ * ✅ Bez opening hours
  *
  * @package     SAW_Visitors
  * @subpackage  Modules/Branches
- * @version     13.1.0
+ * @version     13.4.0
  */
 
 if (!defined('ABSPATH')) {
@@ -24,19 +24,6 @@ if (empty($item)) {
     echo '</div>';
     return;
 }
-
-// Data prepared in controller->format_detail_data()
-$opening_hours = $item['opening_hours_array'] ?? array();
-$days = array(
-    'monday' => 'Pondělí',
-    'tuesday' => 'Úterý',
-    'wednesday' => 'Středa',
-    'thursday' => 'Čtvrtek',
-    'friday' => 'Pátek',
-    'saturday' => 'Sobota',
-    'sunday' => 'Neděle',
-);
-
 ?>
 
 <div class="saw-detail-header saw-module-branches">
@@ -129,38 +116,6 @@ $days = array(
             </div>
         <?php endif; ?>
     </div>
-    
-    <!-- Otevírací doba -->
-    <?php if (!empty($opening_hours)): ?>
-    <div class="saw-detail-section">
-        <h3 class="saw-detail-section-title">
-            <span class="saw-detail-section-icon">🕒</span>
-            Otevírací doba
-        </h3>
-        <ul class="saw-opening-hours-list" style="list-style: none; padding: 0; margin: 0;">
-            <?php foreach ($days as $day_key => $day_label): ?>
-                <?php
-                $status = $opening_hours[$day_key]['is_open'] ?? 'closed';
-                $from = $opening_hours[$day_key]['open_from'] ?? '';
-                $to = $opening_hours[$day_key]['open_to'] ?? '';
-                $display_time = '';
-                
-                if ($status === 'nonstop') {
-                    $display_time = '<strong style="color: #0073aa;">Nonstop</strong>';
-                } elseif ($status === 'open') {
-                    $display_time = '<strong>' . esc_html($from) . ' - ' . esc_html($to) . '</strong>';
-                } else {
-                    $display_time = '<span class="saw-text-muted" style="color: #999;">Zavřeno</span>';
-                }
-                ?>
-                <li style="padding: 0.5rem 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;">
-                    <span style="font-weight: 500;"><?php echo esc_html($day_label); ?>:</span>
-                    <?php echo $display_time; // WPCS: XSS ok. ?>
-                </li>
-            <?php endforeach; ?>
-        </ul>
-    </div>
-    <?php endif; ?>
 
     <!-- Popis -->
     <?php if (!empty($item['description'])): ?>

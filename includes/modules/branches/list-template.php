@@ -2,14 +2,13 @@
 /**
  * Branches List Template
  *
- * REFACTORED v13.1.0 - PRODUCTION READY
- * ✅ Správné načtení context proměnných
+ * REFACTORED v13.3.0 - FIXED
+ * ✅ Správné UTF-8 encoding
  * ✅ Sidebar support
- * ✅ Modal fallback
  *
  * @package     SAW_Visitors
  * @subpackage  Modules/Branches
- * @version     13.1.0
+ * @version     13.3.0
  */
 
 if (!defined('ABSPATH')) {
@@ -47,10 +46,8 @@ $filters_html = '';
         'edit_url' => home_url('/admin/branches/{id}/edit'),
         'detail_url' => home_url('/admin/branches/{id}/'),
         
-        // ✅ CRITICAL: Pass config
         'module_config' => $config ?? array(),
         
-        // ✅ CRITICAL: Sidebar variables
         'sidebar_mode' => $sidebar_mode ?? null,
         'detail_item' => $detail_item ?? null,
         'form_item' => $form_item ?? null,

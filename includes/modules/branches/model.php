@@ -2,13 +2,11 @@
 /**
  * Branches Module Model
  *
- * REFACTORED v13.1.0 - PRODUCTION READY
- * ✅ Opraveno: SAW_Context::get_customer_id() (NE get_active_customer_id)
- * ✅ Consistent helper method usage
+ * FINAL v13.6.0 - FIXED & CLEAN
  *
  * @package     SAW_Visitors
  * @subpackage  Modules/Branches
- * @version     13.1.0
+ * @version     13.6.0
  */
 
 if (!defined('ABSPATH')) {
@@ -29,11 +27,7 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         $this->table = $wpdb->prefix . $config['table'];
         $this->config = $config;
         $this->cache_ttl = $config['cache']['ttl'] ?? 300;
-
-        $this->allowed_orderby = [
-            'id', 'name', 'code', 'city', 'phone', 
-            'sort_order', 'is_headquarters', 'created_at'
-        ];
+     
     }
     
     /**
@@ -76,37 +70,21 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
     
     /**
      * Get all branches with filters and caching
-     * 
-     * ✅ CRITICAL: Auto-filtruje podle customer_id z contextu
      */
     public function get_all($filters = array()) {
-        // Auto-inject customer_id filter
-        $customer_id = $this->get_current_customer_id();
-        
-        if (empty($customer_id)) {
-            return array(
-                'items' => array(),
-                'total_items' => 0,
-                'total_pages' => 0,
-                'total' => 0
-            );
-        }
-        
-        $filters['customer_id'] = $customer_id;
-        
-        $cache_key = 'branches_list_' . md5(serialize($filters));
-        
-        $cached = get_transient($cache_key);
-        if ($cached !== false) {
-            return $cached;
-        }
-        
-        $result = parent::get_all($filters);
-        
-        set_transient($cache_key, $result, $this->cache_ttl);
-        
-        return $result;
+    $cache_key = 'branches_list_' . md5(serialize($filters));
+    
+    $cached = get_transient($cache_key);
+    if ($cached !== false) {
+        return $cached;
     }
+    
+    $result = parent::get_all($filters);
+    
+    set_transient($cache_key, $result, $this->cache_ttl);
+    
+    return $result;
+}
 
     /**
      * Create new branch with cache invalidation
@@ -199,45 +177,9 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         
         return empty($errors) ? true : new WP_Error('validation_error', __('Validation failed', 'saw-visitors'), $errors);
     }
-    
-    /**
-     * ✅ HELPER: Get current customer ID
-     * Priorita: SAW_Context → saw_users table
-     */
-    private function get_current_customer_id() {
-        // 1. Zkus SAW_Context
-        if (class_exists('SAW_Context')) {
-            $context_id = SAW_Context::get_customer_id();
-            if ($context_id) {
-                return $context_id;
-            }
-        }
-
-        // 2. Fallback pro non-super-admin (z saw_users)
-        if (is_user_logged_in() && !current_user_can('manage_options')) {
-            global $wpdb;
-            $saw_user = $wpdb->get_row(
-                $wpdb->prepare(
-                    "SELECT customer_id FROM {$wpdb->prefix}saw_users WHERE wp_user_id = %d AND is_active = 1",
-                    get_current_user_id()
-                ),
-                ARRAY_A
-            );
-            if ($saw_user && $saw_user['customer_id']) {
-                return intval($saw_user['customer_id']);
-            }
-        }
-        
-        // 3. Poslední pokus přes SAW_Context znovu (pro super admina)
-        if (class_exists('SAW_Context')) {
-            return SAW_Context::get_customer_id();
-        }
-
-        return null;
-    }
 
     /**
-     * Check if branch code already exists for this customer
+     * Check if branch code exists for customer
      */
     private function code_exists($code, $customer_id, $exclude_id = 0) {
         global $wpdb;
@@ -253,17 +195,12 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         return (bool) $wpdb->get_var($query);
     }
 
-    // ============================================
-    // MODULE-SPECIFIC DB METHODS
-    // ============================================
-
     /**
      * Set new headquarters (removes old HQ flag)
      */
     public function set_new_headquarters($branch_id, $customer_id) {
         global $wpdb;
         
-        // Zruš u všech
         $wpdb->update(
             $this->table,
             array('is_headquarters' => 0),
@@ -272,7 +209,6 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
             array('%d')
         );
         
-        // Nastav novému
         $wpdb->update(
             $this->table,
             array('is_headquarters' => 1),
@@ -295,38 +231,5 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
             $customer_id,
             $exclude_id
         ));
-    }
-
-    /**
-     * Get GPS coordinates from address via Google API
-     */
-    public function get_gps_coordinates($address) {
-        $api_key = get_option('saw_google_maps_api_key', '');
-        if (empty($api_key)) {
-            return new WP_Error('no_api_key', __('Chybí Google Maps API klíč v nastavení.', 'saw-visitors'));
-        }
-        
-        $url = add_query_arg(array(
-            'address' => urlencode($address),
-            'key' => $api_key,
-        ), 'https://maps.googleapis.com/maps/api/geocode/json');
-        
-        $response = wp_remote_get($url);
-        
-        if (is_wp_error($response)) {
-            return $response;
-        }
-        
-        $body = wp_remote_retrieve_body($response);
-        $data = json_decode($body, true);
-        
-        if ($data['status'] === 'OK') {
-            return array(
-                'lat' => $data['results'][0]['geometry']['location']['lat'],
-                'lng' => $data['results'][0]['geometry']['location']['lng'],
-            );
-        } else {
-            return new WP_Error('api_error', $data['error_message'] ?? __('Nepodařilo se načíst GPS souřadnice.', 'saw-visitors'));
-        }
     }
 }

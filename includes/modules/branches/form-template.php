@@ -2,15 +2,14 @@
 /**
  * Branches Form Template
  *
- * REFACTORED v13.1.0 - PRODUCTION READY
+ * FINAL v13.4.0 - BEZ GPS, BEZ OPENING HOURS
  * ✅ Sidebar + page support
- * ✅ Opening hours inline management
- * ✅ GPS button
  * ✅ File upload
+ * ✅ Zjednodušeno
  *
  * @package     SAW_Visitors
  * @subpackage  Modules/Branches
- * @version     13.1.0
+ * @version     13.4.0
  */
 
 if (!defined('ABSPATH')) {
@@ -20,26 +19,6 @@ if (!defined('ABSPATH')) {
 $is_edit = !empty($item);
 $item = $item ?? array();
 $in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'];
-
-// Decode opening hours
-$opening_hours = array();
-if (!empty($item['opening_hours'])) {
-    $opening_hours = json_decode($item['opening_hours'], true);
-}
-if (!is_array($opening_hours)) {
-    $opening_hours = array();
-}
-
-$days = array(
-    'monday' => 'Pondělí',
-    'tuesday' => 'Úterý',
-    'wednesday' => 'Středa',
-    'thursday' => 'Čtvrtek',
-    'friday' => 'Pátek',
-    'saturday' => 'Sobota',
-    'sunday' => 'Neděle',
-);
-
 ?>
 
 <?php if (!$in_sidebar): ?>
@@ -183,29 +162,6 @@ $days = array(
                         <input type="text" id="country" name="country" class="saw-input"
                                value="<?php echo esc_attr($item['country'] ?? 'CZ'); ?>"
                                maxlength="2">
-                    </div>
-                </div>
-                
-                <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-5">
-                        <label for="latitude" class="saw-label">GPS Latitude</label>
-                        <input type="text" id="latitude" name="latitude" class="saw-input"
-                               value="<?php echo esc_attr($item['latitude'] ?? ''); ?>"
-                               placeholder="50.0755">
-                    </div>
-                    
-                    <div class="saw-form-group saw-col-5">
-                        <label for="longitude" class="saw-label">GPS Longitude</label>
-                        <input type="text" id="longitude" name="longitude" class="saw-input"
-                               value="<?php echo esc_attr($item['longitude'] ?? ''); ?>"
-                               placeholder="14.4378">
-                    </div>
-                    
-                    <div class="saw-form-group saw-col-2">
-                        <label class="saw-label">&nbsp;</label>
-                        <button type="button" id="load-gps-btn" class="saw-button saw-button-secondary">
-                            📍 GPS
-                        </button>
                     </div>
                 </div>
                 

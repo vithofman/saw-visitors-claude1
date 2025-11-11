@@ -104,17 +104,12 @@ function saw_universal_ajax_handler() {
 // Registrace AJAX handlerů
 // ========================================
 
-// --- Customers ---
-add_action('wp_ajax_saw_load_sidebar_customers', 'saw_universal_ajax_handler');
-add_action('wp_ajax_saw_get_detail_customers', 'saw_universal_ajax_handler');
-add_action('wp_ajax_saw_delete_customers', 'saw_universal_ajax_handler');
-add_action('wp_ajax_saw_search_customers', 'saw_universal_ajax_handler');
-
 // --- Branches (OPRAVENO A DOPLNĚNO) ---
 add_action('wp_ajax_saw_load_sidebar_branches', 'saw_universal_ajax_handler');
 add_action('wp_ajax_saw_get_detail_branches', 'saw_universal_ajax_handler');
 add_action('wp_ajax_saw_delete_branches', 'saw_universal_ajax_handler');
 add_action('wp_ajax_saw_search_branches', 'saw_universal_ajax_handler');
+
 // Specifické akce pro 'branches'
 add_action('wp_ajax_saw_get_gps_coordinates_branches', 'saw_universal_ajax_handler');
 add_action('wp_ajax_saw_check_headquarters_branches', 'saw_universal_ajax_handler');
@@ -310,30 +305,55 @@ if ( ! function_exists( 'saw_log_error' ) ) {
 }
 
 add_action( 'plugins_loaded', function () {
+	// ✅ DEBUG
+	$log = WP_CONTENT_DIR . '/saw-bootstrap-debug.log';
+	file_put_contents($log, "\n" . date('H:i:s') . " ==================\n", FILE_APPEND);
+	file_put_contents($log, "REQUEST_URI: " . ($_SERVER['REQUEST_URI'] ?? 'N/A') . "\n", FILE_APPEND);
+	file_put_contents($log, "Bootstrap started\n", FILE_APPEND);
+	
 	try {
+		file_put_contents($log, "Loading Module Style Manager\n", FILE_APPEND);
 		require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-module-style-manager.php';
 		SAW_Module_Style_Manager::get_instance();
 		
 		if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/modules/training-languages/class-auto-setup.php')) {
+			file_put_contents($log, "Loading training languages\n", FILE_APPEND);
 			require_once SAW_VISITORS_PLUGIN_DIR . 'includes/modules/training-languages/class-auto-setup.php';
 		}
 		
 		$main = SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-visitors.php';
+		file_put_contents($log, "Checking main class: $main\n", FILE_APPEND);
+		
 		if ( ! file_exists( $main ) ) {
+			file_put_contents($log, "ERROR: Main class file not found\n", FILE_APPEND);
 			saw_log_error( 'Missing main class file', [ 'path' => $main ] );
 			return;
 		}
+		
+		file_put_contents($log, "Requiring main class\n", FILE_APPEND);
 		require_once $main;
+		
 		if ( ! class_exists( 'SAW_Visitors' ) ) {
+			file_put_contents($log, "ERROR: SAW_Visitors class not found\n", FILE_APPEND);
 			saw_log_error( 'Class SAW_Visitors not found after require' );
 			return;
 		}
 		
+		file_put_contents($log, "Getting SAW_Visitors instance\n", FILE_APPEND);
 		$instance = SAW_Visitors::get_instance();
+		
 		if ( method_exists( $instance, 'run' ) ) {
+			file_put_contents($log, "Calling run()\n", FILE_APPEND);
 			$instance->run();
+			file_put_contents($log, "Bootstrap completed successfully\n", FILE_APPEND);
+		} else {
+			file_put_contents($log, "ERROR: run() method not found\n", FILE_APPEND);
 		}
 	} catch ( Throwable $t ) {
+		file_put_contents($log, "EXCEPTION: " . $t->getMessage() . "\n", FILE_APPEND);
+		file_put_contents($log, "File: " . $t->getFile() . "\n", FILE_APPEND);
+		file_put_contents($log, "Line: " . $t->getLine() . "\n", FILE_APPEND);
+		
 		saw_log_error( 'Bootstrap exception', [
 			'message' => $t->getMessage(),
 			'file'    => $t->getFile(),
