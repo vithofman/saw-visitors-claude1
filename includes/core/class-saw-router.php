@@ -150,52 +150,76 @@ class SAW_Router {
      * @return void
      */
     public function dispatch($route = '', $path = '') {
-        if (wp_doing_ajax()) {
-            return;
-        }
-        
-        if (empty($route)) {
-            $route = get_query_var('saw_route');
-        }
-        
-        if (empty($path)) {
-            $path = get_query_var('saw_path');
-        }
-        
-        if (empty($route)) {
-            return;
-        }
-        
-        $this->load_frontend_components();
-        
-        switch ($route) {
-            case 'auth':
-                $this->handle_auth_route();
-                break;
-            
-            case 'admin':
-                $this->handle_admin_route($path);
-                break;
-                
-            case 'manager':
-                $this->handle_manager_route($path);
-                break;
-                
-            case 'terminal':
-                $this->handle_terminal_route($path);
-                break;
-                
-            case 'visitor':
-                $this->handle_visitor_route($path);
-                break;
-                
-            default:
-                $this->handle_404();
-                break;
-        }
-        
-        exit;
+    // ✅ DEBUG
+    $log = WP_CONTENT_DIR . '/saw-dispatch-debug.log';
+    file_put_contents($log, "\n" . date('H:i:s') . " ==================\n", FILE_APPEND);
+    file_put_contents($log, "REQUEST_URI: " . ($_SERVER['REQUEST_URI'] ?? 'N/A') . "\n", FILE_APPEND);
+    file_put_contents($log, "is_ajax: " . (wp_doing_ajax() ? 'YES' : 'NO') . "\n", FILE_APPEND);
+    
+    if (wp_doing_ajax()) {
+        file_put_contents($log, "AJAX - skipping dispatch\n", FILE_APPEND);
+        return;
     }
+    
+    if (empty($route)) {
+        $route = get_query_var('saw_route');
+        file_put_contents($log, "Route from query_var: '$route'\n", FILE_APPEND);
+    } else {
+        file_put_contents($log, "Route from param: '$route'\n", FILE_APPEND);
+    }
+    
+    if (empty($path)) {
+        $path = get_query_var('saw_path');
+        file_put_contents($log, "Path from query_var: '$path'\n", FILE_APPEND);
+    } else {
+        file_put_contents($log, "Path from param: '$path'\n", FILE_APPEND);
+    }
+    
+    if (empty($route)) {
+        file_put_contents($log, "Empty route - exiting dispatch\n", FILE_APPEND);
+        return;
+    }
+    
+    file_put_contents($log, "Loading frontend components\n", FILE_APPEND);
+    $this->load_frontend_components();
+    
+    file_put_contents($log, "Switching on route: '$route'\n", FILE_APPEND);
+    
+    switch ($route) {
+        case 'auth':
+            file_put_contents($log, "-> handle_auth_route()\n", FILE_APPEND);
+            $this->handle_auth_route();
+            break;
+        
+        case 'admin':
+            file_put_contents($log, "-> handle_admin_route('$path')\n", FILE_APPEND);
+            $this->handle_admin_route($path);
+            break;
+            
+        case 'manager':
+            file_put_contents($log, "-> handle_manager_route()\n", FILE_APPEND);
+            $this->handle_manager_route($path);
+            break;
+            
+        case 'terminal':
+            file_put_contents($log, "-> handle_terminal_route()\n", FILE_APPEND);
+            $this->handle_terminal_route($path);
+            break;
+            
+        case 'visitor':
+            file_put_contents($log, "-> handle_visitor_route()\n", FILE_APPEND);
+            $this->handle_visitor_route($path);
+            break;
+            
+        default:
+            file_put_contents($log, "-> handle_404() - unknown route\n", FILE_APPEND);
+            $this->handle_404();
+            break;
+    }
+    
+    file_put_contents($log, "Exiting dispatch\n", FILE_APPEND);
+    exit;
+}
     
     /**
      * Handle authentication routes
@@ -295,56 +319,93 @@ class SAW_Router {
      * @return void
      */
     private function dispatch_module($slug, $segments) {
-        $config = SAW_Module_Loader::load($slug);
-        
-        if (!$config) {
-            $this->handle_404();
-            return;
-        }
-        
-        $parts = explode('-', $slug);
-        $parts = array_map('ucfirst', $parts);
-        $class_name = implode('_', $parts);
-        $controller_class = 'SAW_Module_' . $class_name . '_Controller';
-        
-        if (!class_exists($controller_class)) {
-            wp_die('Controller class not found: ' . $controller_class . '<br>Slug: ' . $slug . '<br>Check if controller.php exists and class name matches.');
-            return;
-        }
-        
-        try {
-            $controller = new $controller_class();
-        } catch (Exception $e) {
-            wp_die('Error creating controller: ' . $e->getMessage());
-            return;
-        }
-        
-        $sidebar_context = $this->parse_sidebar_context($segments);
-        set_query_var('saw_sidebar_context', $sidebar_context);
-        
-        if (!method_exists($controller, 'index')) {
-            wp_die('Controller does not have index() method: ' . $controller_class);
-            return;
-        }
-        
-        if ($sidebar_context['mode'] === null && !empty($segments[0])) {
-            if ($segments[0] === 'create' || $segments[0] === 'new') {
-                if (method_exists($controller, 'create')) {
-                    $controller->create();
-                    return;
-                }
-            }
-            
-            if (($segments[0] === 'edit' || $segments[0] === 'upravit') && !empty($segments[1])) {
-                if (method_exists($controller, 'edit')) {
-                    $controller->edit(intval($segments[1]));
-                    return;
-                }
-            }
-        }
-        
-        $controller->index();
+    // DEBUG
+    $log = WP_CONTENT_DIR . '/dispatch-module.log';
+    file_put_contents($log, "\n" . date('H:i:s') . " ==================\n", FILE_APPEND);
+    file_put_contents($log, "Dispatching module: $slug\n", FILE_APPEND);
+    file_put_contents($log, "Segments: " . print_r($segments, true) . "\n", FILE_APPEND);
+    
+    $config = SAW_Module_Loader::load($slug);
+    
+    file_put_contents($log, "Config loaded: " . ($config ? 'YES' : 'NO') . "\n", FILE_APPEND);
+    
+    if (!$config) {
+        file_put_contents($log, "ERROR: Config not found\n", FILE_APPEND);
+        $this->handle_404();
+        return;
     }
+    
+    file_put_contents($log, "Building class name from slug: $slug\n", FILE_APPEND);
+    
+    $parts = explode('-', $slug);
+    $parts = array_map('ucfirst', $parts);
+    $class_name = implode('_', $parts);
+    $controller_class = 'SAW_Module_' . $class_name . '_Controller';
+    
+    file_put_contents($log, "Controller class: $controller_class\n", FILE_APPEND);
+    
+    if (!class_exists($controller_class)) {
+        file_put_contents($log, "ERROR: Controller class not found\n", FILE_APPEND);
+        wp_die('Controller class not found: ' . $controller_class . '<br>Slug: ' . $slug . '<br>Check if controller.php exists and class name matches.');
+        return;
+    }
+    
+    file_put_contents($log, "Creating controller instance...\n", FILE_APPEND);
+    
+    try {
+        $controller = new $controller_class();
+        file_put_contents($log, "Controller created successfully\n", FILE_APPEND);
+    } catch (Exception $e) {
+        file_put_contents($log, "ERROR creating controller: " . $e->getMessage() . "\n", FILE_APPEND);
+        file_put_contents($log, "Stack trace: " . $e->getTraceAsString() . "\n", FILE_APPEND);
+        wp_die('Error creating controller: ' . $e->getMessage());
+        return;
+    }
+    
+    file_put_contents($log, "Parsing sidebar context...\n", FILE_APPEND);
+    
+    $sidebar_context = $this->parse_sidebar_context($segments);
+    set_query_var('saw_sidebar_context', $sidebar_context);
+    
+    file_put_contents($log, "Sidebar context: " . print_r($sidebar_context, true) . "\n", FILE_APPEND);
+    
+    if (!method_exists($controller, 'index')) {
+        file_put_contents($log, "ERROR: index() method not found\n", FILE_APPEND);
+        wp_die('Controller does not have index() method: ' . $controller_class);
+        return;
+    }
+    
+    if ($sidebar_context['mode'] === null && !empty($segments[0])) {
+        if ($segments[0] === 'create' || $segments[0] === 'new') {
+            if (method_exists($controller, 'create')) {
+                file_put_contents($log, "Calling create() method\n", FILE_APPEND);
+                $controller->create();
+                return;
+            }
+        }
+        
+        if (($segments[0] === 'edit' || $segments[0] === 'upravit') && !empty($segments[1])) {
+            if (method_exists($controller, 'edit')) {
+                file_put_contents($log, "Calling edit() method\n", FILE_APPEND);
+                $controller->edit(intval($segments[1]));
+                return;
+            }
+        }
+    }
+    
+    file_put_contents($log, "Calling index() method\n", FILE_APPEND);
+    
+    try {
+        $controller->index();
+        file_put_contents($log, "index() completed successfully\n", FILE_APPEND);
+    } catch (Throwable $e) {
+        file_put_contents($log, "ERROR in index(): " . $e->getMessage() . "\n", FILE_APPEND);
+        file_put_contents($log, "File: " . $e->getFile() . "\n", FILE_APPEND);
+        file_put_contents($log, "Line: " . $e->getLine() . "\n", FILE_APPEND);
+        file_put_contents($log, "Stack trace: " . $e->getTraceAsString() . "\n", FILE_APPEND);
+        throw $e;
+    }
+}
     
     /**
      * Handle admin routes
@@ -356,37 +417,58 @@ class SAW_Router {
      * @return void
      */
     private function handle_admin_route($path) {
+    // ✅ PŘIDEJ DEBUG
+    $log = WP_CONTENT_DIR . '/saw-router-debug.log';
+    file_put_contents($log, "\n" . date('H:i:s') . " ==================\n", FILE_APPEND);
+    file_put_contents($log, "Path: $path\n", FILE_APPEND);
+    
     if (!$this->is_logged_in()) {
+        file_put_contents($log, "Not logged in - redirecting\n", FILE_APPEND);
         $this->redirect_to_login('admin');
         return;
     }
     
+    file_put_contents($log, "User logged in\n", FILE_APPEND);
+    
     $clean_path = trim($path, '/');
+    file_put_contents($log, "Clean path: $clean_path\n", FILE_APPEND);
     
     if (empty($clean_path)) {
+        file_put_contents($log, "Empty path - rendering dashboard\n", FILE_APPEND);
         $this->render_page('Admin Dashboard', $path, 'admin', 'dashboard');
         return;
     }
     
     $modules = SAW_Module_Loader::get_all();
+    file_put_contents($log, "Loaded " . count($modules) . " modules\n", FILE_APPEND);
     
     // CRITICAL FIX: Check modules FIRST before treating as admin dashboard
     foreach ($modules as $slug => $config) {
+        file_put_contents($log, "Checking module: $slug\n", FILE_APPEND);
+        
         $module_route = ltrim($config['route'] ?? '', '/');
         $module_route_without_admin = str_replace('admin/', '', $module_route);
+        
+        file_put_contents($log, "  Module route: $module_route_without_admin\n", FILE_APPEND);
         
         // Match if path starts with module route
         if ($module_route_without_admin === $clean_path || 
             strpos($clean_path . '/', $module_route_without_admin . '/') === 0) {
             
+            file_put_contents($log, "  MATCH! Dispatching to module\n", FILE_APPEND);
+            
             $route_parts = explode('/', $module_route_without_admin);
             $path_parts = explode('/', $clean_path);
             $remaining_segments = array_slice($path_parts, count($route_parts));
+            
+            file_put_contents($log, "  Segments: " . print_r($remaining_segments, true) . "\n", FILE_APPEND);
             
             $this->dispatch_module($slug, $remaining_segments);
             return;
         }
     }
+    
+    file_put_contents($log, "No module matched - continuing...\n", FILE_APPEND);
     
     // CRITICAL FIX: If path is numeric ID, it's likely a detail/edit for last visited module
     // This handles shortcuts like /admin/19/edit -> /admin/customers/19/edit

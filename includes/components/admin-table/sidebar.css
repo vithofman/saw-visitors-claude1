@@ -227,9 +227,16 @@
    FORM SPECIFIC
    ============================================ */
 
+
 .saw-sidebar[data-mode="form"] .saw-form-container {
     max-width: none !important;
     padding: 0 !important;
+}
+
+.saw-sidebar[data-mode="form"] .saw-form-actions,
+.saw-sidebar[data-mode="edit"] .saw-form-actions,
+.saw-sidebar[data-mode="create"] .saw-form-actions {
+    margin-bottom: 80px !important; /* Extra space at bottom */
 }
 
 .saw-sidebar[data-mode="form"] .saw-page-header {

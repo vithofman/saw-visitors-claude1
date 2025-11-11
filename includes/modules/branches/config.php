@@ -1,7 +1,5 @@
 <?php
 
-error_log('BRANCHES CONFIG LOADING...');
-
 /**
  * Branches Module Configuration
  *
@@ -27,6 +25,7 @@ return array(
     'plural' => 'Pobočky',
     'route' => 'branches',
     'icon' => '🏢',
+    'has_customer_isolation' => true,
     'edit_url' => 'branches/{id}/edit',
 
     // ============================================

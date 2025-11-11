@@ -2,14 +2,11 @@
 /**
  * Branches Form Template
  *
- * FINAL v13.4.0 - BEZ GPS, BEZ OPENING HOURS
- * ✅ Sidebar + page support
- * ✅ File upload
- * ✅ Zjednodušeno
+ * FINAL v14.0.0 - WITH FILE UPLOAD COMPONENT (COMPLETE VERSION)
  *
  * @package     SAW_Visitors
  * @subpackage  Modules/Branches
- * @version     13.4.0
+ * @version     14.0.0
  */
 
 if (!defined('ABSPATH')) {
@@ -70,22 +67,24 @@ $in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'
                 </div>
                 
                 <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-6">
-                        <label class="saw-checkbox-label">
-                            <input type="checkbox" name="is_headquarters" value="1"
-                                   <?php checked(!empty($item['is_headquarters'])); ?>>
-                            <span>Sídlo firmy</span>
-                        </label>
-                    </div>
-                    
-                    <div class="saw-form-group saw-col-6">
-                        <label class="saw-checkbox-label">
-                            <input type="checkbox" name="is_active" value="1"
-                                   <?php checked(empty($item) || !empty($item['is_active'])); ?>>
-                            <span>Aktivní</span>
-                        </label>
-                    </div>
-                </div>
+    <div class="saw-form-group saw-col-12">
+        <label class="saw-checkbox-label">
+            <input type="checkbox" name="is_headquarters" value="1"
+                   <?php checked(!empty($item['is_headquarters'])); ?>>
+            <span>Sídlo firmy</span>
+        </label>
+    </div>
+</div>
+
+<div class="saw-form-row">
+    <div class="saw-form-group saw-col-12">
+        <label class="saw-checkbox-label">
+            <input type="checkbox" name="is_active" value="1"
+                   <?php checked(empty($item) || !empty($item['is_active'])); ?>>
+            <span>Aktivní</span>
+        </label>
+    </div>
+</div>
                 
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
@@ -176,16 +175,23 @@ $in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'
             </summary>
             <div class="saw-form-section-content">
                 
-                <?php if (!empty($item['image_url'])): ?>
-                    <div class="saw-current-image">
-                        <img src="<?php echo esc_url($item['image_url']); ?>" alt="Current" style="max-width: 200px;">
+                <div class="saw-form-row">
+                    <div class="saw-form-group saw-col-12">
+                        <?php
+                        // ✅ FILE UPLOAD COMPONENT - STEJNĚ JAKO CUSTOMERS
+                        $id = 'image_url';
+                        $name = 'image_url';
+                        $current_file_url = $item['image_url'] ?? '';
+                        $label = 'Nahrát obrázek';
+                        $current_label = 'Současný obrázek';
+                        $help_text = 'Nahrajte obrázek ve formátu JPG, PNG nebo WebP (max 2MB)';
+                        $accept = 'image/jpeg,image/png,image/webp';
+                        $show_preview = true;
+                        $config = array();
+                        
+                        require SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/file-upload-input.php';
+                        ?>
                     </div>
-                <?php endif; ?>
-                
-                <div class="saw-form-group">
-                    <label for="image_url" class="saw-label">Nahrát nový obrázek</label>
-                    <input type="file" id="image_url" name="image_url" accept="image/*" class="saw-input">
-                    <small class="saw-help-text">Formáty: JPG, PNG, GIF. Max 2MB.</small>
                 </div>
                 
             </div>

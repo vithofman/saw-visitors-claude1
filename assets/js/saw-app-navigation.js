@@ -26,10 +26,10 @@
             const href = $link.attr('href');
             
             // Skip related item links (handled by sidebar.js)
-            if ($link.hasClass('saw-related-item-link')) {
-                console.log('⏭️ SPA: Skipping - related item link');
-                return;
-            }
+if ($link.hasClass('saw-related-item-link') && !$link.hasClass('saw-spa-link')) {
+    console.log('⏭️ SPA: Skipping - related item link');
+    return;
+}
             
             const $parentRow = $link.closest('tr[data-detail-url]');
             if ($parentRow.length > 0) {

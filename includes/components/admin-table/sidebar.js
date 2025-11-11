@@ -107,20 +107,23 @@
         }
         
         if (targetId) {
-            const mode = $sidebar.attr('data-mode') || 'detail';
-            const entity = $sidebar.attr('data-entity') || extractEntityFromUrl();
-            
-            console.log('🔄 Navigating:', {direction, currentId, targetId, mode, entity});
-            
-            if (entity && typeof window.openSidebarAjax === 'function') {
-                window.openSidebarAjax(targetId, mode, entity);
-            } else {
-                console.error('❌ Cannot navigate - missing entity or openSidebarAjax');
-                navigateWithUrl(targetId);
+    const mode = $sidebar.attr('data-mode') || 'detail';
+    const entity = $sidebar.attr('data-entity') || extractEntityFromUrl();
+    
+    console.log('🔄 Navigating:', {direction, currentId, targetId, mode, entity});
+    
+    if (entity && typeof window.openSidebarAjax === 'function') {
+        window.openSidebarAjax(targetId, mode, entity);
+        
+        // ✅ PŘIDEJ TOTO - zvýrazni aktivní řádek BEZ scrollu
+        setTimeout(function() {
+            if (typeof window.updateActiveRow === 'function') {
+                window.updateActiveRow(targetId, false);
+                console.log('✨ Active row updated for:', targetId);
             }
-        } else {
-            console.log('⚠️ No target ID - already at boundary');
-        }
+        }, 300);
+    }
+}
     };
     
     /**

@@ -390,36 +390,72 @@ class SAW_Visitors {
      * @param string $slug Module slug
      * @param string $method Controller method to call
      */
-    private function handle_module_ajax($slug, $method) {
-        // Validate module exists
-        $config = SAW_Module_Loader::load($slug);
-        if (!$config) {
-            wp_send_json_error(['message' => __('Module not found', 'saw-visitors')]);
-            return;
-        }
-        
-        // Get controller instance
-        $controller = $this->get_module_controller($slug);
-        if (!$controller) {
-            wp_send_json_error(['message' => __('Controller not found', 'saw-visitors')]);
-            return;
-        }
-        
-        // Validate method exists
-        if (!method_exists($controller, $method)) {
-            wp_send_json_error([
-                'message' => sprintf(
-                    /* translators: %s: method name */
-                    __('Method %s not found', 'saw-visitors'),
-                    $method
-                )
-            ]);
-            return;
-        }
-        
-        // Call method
-        $controller->$method();
+   private function handle_module_ajax($slug, $method) {
+    // ✅ DEBUG LOG
+    $log = WP_CONTENT_DIR . '/saw-ajax-handler.log';
+    file_put_contents($log, "\n" . date('H:i:s') . " ==================\n", FILE_APPEND);
+    file_put_contents($log, "Slug: $slug\n", FILE_APPEND);
+    file_put_contents($log, "Method: $method\n", FILE_APPEND);
+    
+    // Validate module exists
+    $config = SAW_Module_Loader::load($slug);
+    
+    file_put_contents($log, "Config loaded: " . ($config ? 'YES' : 'NO') . "\n", FILE_APPEND);
+    if ($config) {
+        file_put_contents($log, "Entity: " . ($config['entity'] ?? 'N/A') . "\n", FILE_APPEND);
     }
+    
+    if (!$config) {
+        file_put_contents($log, "ERROR: Module not found\n", FILE_APPEND);
+        wp_send_json_error(['message' => __('Module not found', 'saw-visitors')]);
+        return;
+    }
+    
+    // Get controller instance
+    file_put_contents($log, "Getting controller...\n", FILE_APPEND);
+    
+    try {
+        $controller = $this->get_module_controller($slug);
+        file_put_contents($log, "Controller: " . ($controller ? get_class($controller) : 'NULL') . "\n", FILE_APPEND);
+    } catch (Throwable $e) {
+        file_put_contents($log, "ERROR creating controller: " . $e->getMessage() . "\n", FILE_APPEND);
+        wp_send_json_error(['message' => 'Controller error: ' . $e->getMessage()]);
+        return;
+    }
+    
+    if (!$controller) {
+        file_put_contents($log, "ERROR: Controller is NULL\n", FILE_APPEND);
+        wp_send_json_error(['message' => __('Controller not found', 'saw-visitors')]);
+        return;
+    }
+    
+    // Validate method exists
+    file_put_contents($log, "Checking method exists...\n", FILE_APPEND);
+    
+    if (!method_exists($controller, $method)) {
+        file_put_contents($log, "ERROR: Method $method not found\n", FILE_APPEND);
+        wp_send_json_error([
+            'message' => sprintf(
+                /* translators: %s: method name */
+                __('Method %s not found', 'saw-visitors'),
+                $method
+            )
+        ]);
+        return;
+    }
+    
+    // Call method
+    file_put_contents($log, "Calling method $method...\n", FILE_APPEND);
+    
+    try {
+        $controller->$method();
+        file_put_contents($log, "Method executed successfully\n", FILE_APPEND);
+    } catch (Throwable $e) {
+        file_put_contents($log, "ERROR executing method: " . $e->getMessage() . "\n", FILE_APPEND);
+        file_put_contents($log, "Trace: " . $e->getTraceAsString() . "\n", FILE_APPEND);
+        wp_send_json_error(['message' => 'Method error: ' . $e->getMessage()]);
+    }
+}
     
     /**
      * Define WordPress hooks

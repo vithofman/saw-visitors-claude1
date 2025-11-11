@@ -5,7 +5,7 @@
  * Card-based layout with smooth collapse/expand
  *
  * @package     SAW_Visitors
- * @version     5.1.0 - Added Collapsible
+ * @version     5.2.0 - Fixed related links to navigate properly
  * @since       4.0.0
  */
 
@@ -87,9 +87,11 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
                         <?php foreach ($relation['items'] as $related_item): ?>
                         <?php 
                         $item_route = str_replace('{id}', $related_item['id'], $relation['route']);
+                        $full_url = home_url('/' . ltrim($item_route, '/'));
                         ?>
-                        <a href="#" 
-                           class="saw-related-item-link"
+                        <a href="<?php echo esc_url($full_url); ?>" 
+                           class="saw-related-item-link saw-spa-link"
+                           data-spa-navigate="true"
                            data-entity="<?php echo esc_attr($relation['entity']); ?>"
                            data-id="<?php echo intval($related_item['id']); ?>"
                            data-route="<?php echo esc_attr($item_route); ?>"
@@ -154,17 +156,51 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
             const $header = $(this);
             const $section = $header.closest('.saw-related-section');
             
-            // Toggle collapsed state
             $section.toggleClass('is-collapsed');
             
             console.log('🔽 Section toggled:', $section.data('section'));
         });
     }
     
-    // Initialize on document ready
+    /**
+     * Handle related item links - FORCE FULL PAGE RELOAD
+     */
+    function initRelatedItemLinks() {
+        $(document).off('click', '.saw-related-item-link');
+        
+        $(document).on('click', '.saw-related-item-link', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            
+            const $link = $(this);
+            const href = $link.attr('href');
+            
+            console.log('🔗 Related link clicked:', href);
+            
+            if (href && href !== '#') {
+                console.log('✅ Forcing FULL PAGE RELOAD');
+                
+                setTimeout(function() {
+                    window.location.href = href;
+                }, 10);
+            }
+            
+            return false;
+        });
+        
+        console.log('✅ Related item links handler initialized');
+    }
+    
     $(document).ready(function() {
-        console.log('🎨 Collapsible sections initialized');
+        console.log('🎨 Detail sidebar scripts initialized');
         initCollapsibleSections();
+        initRelatedItemLinks();
+    });
+    
+    $(document).on('saw-sidebar-loaded', function() {
+        console.log('🔄 Re-initializing after AJAX load');
+        initRelatedItemLinks();
     });
     
 })(jQuery);

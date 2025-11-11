@@ -6,7 +6,7 @@
  *
  * @package    SAW_Visitors
  * @subpackage Components
- * @version    4.0.0 - CRITICAL FIX: Active row from URL + scroll into view
+ * @version    4.1.0 - FIXED: Export updateActiveRow as global + scroll preservation
  * @since      1.0.0
  */
 
@@ -47,69 +47,64 @@
                 mode: mode
             },
             success: function(response) {
-                console.log('✅ AJAX Success:', response);
-                hideLoadingOverlay();
-                
-                if (!response.success) {
-                    console.error('❌ AJAX returned success: false');
-                    fallbackToFullReload(buildUrl(entity, id, mode));
-                    return;
-                }
-                
-                if (!response.data || !response.data.html || response.data.html.length < 100) {
-                    console.error('❌ Invalid HTML response', {
-                        hasData: !!response.data,
-                        hasHtml: !!(response.data && response.data.html),
-                        htmlLength: response.data && response.data.html ? response.data.html.length : 0
-                    });
-                    fallbackToFullReload(buildUrl(entity, id, mode));
-                    return;
-                }
-                
-                console.log('📦 Received HTML length:', response.data.html.length);
-                
-                let $wrapper = $('.saw-sidebar-wrapper');
-                
-                if (!$wrapper.length) {
-                    console.log('🆕 Creating new sidebar wrapper');
-                    $wrapper = $('<div class="saw-sidebar-wrapper"></div>');
-                    $('body').append($wrapper);
-                }
-                
-                console.log('📝 Inserting HTML into wrapper');
-                $wrapper.html(response.data.html);
-                
-                // CRITICAL FIX: Add has-sidebar class to table for proper spacing
-                $('.saw-admin-table-split').addClass('has-sidebar');
-                
-                // CRITICAL FIX: Set active row IMMEDIATELY with scroll
-                updateActiveRow(id, true);
-                console.log('✨ Active row set for ID:', id);
-                
-                // Add active class to wrapper for slide-in animation
-                setTimeout(function() {
-                    console.log('✨ Adding active class to wrapper');
-                    $wrapper.addClass('active');
-                }, 10);
-                
-                // CRITICAL FIX: Update URL via History API
-                // Include 'url' key to prevent SPA navigation from reloading
-                const newUrl = buildUrl(entity, id, mode);
-                console.log('🔗 Updating URL to:', newUrl);
-                window.history.pushState(
-                    { 
-                        id: id, 
-                        mode: mode, 
-                        entity: entity,
-                        url: newUrl,           // ← SPA navigation needs this
-                        sawAdminTable: true    // ← Marker that this is from admin table
-                    },
-                    '',
-                    newUrl
-                );
-                
-                console.log('✅ Sidebar opened successfully');
-            },
+    console.log('✅ AJAX Success:', response);
+    hideLoadingOverlay();
+    
+    if (!response.success) {
+        console.error('❌ AJAX returned success: false');
+        fallbackToFullReload(buildUrl(entity, id, mode));
+        return;
+    }
+    
+    if (!response.data || !response.data.html || response.data.html.length < 100) {
+        console.error('❌ Invalid HTML response');
+        fallbackToFullReload(buildUrl(entity, id, mode));
+        return;
+    }
+    
+    console.log('📦 Received HTML length:', response.data.html.length);
+    
+    let $wrapper = $('.saw-sidebar-wrapper');
+    
+    if (!$wrapper.length) {
+        console.log('🆕 Creating new sidebar wrapper');
+        $wrapper = $('<div class="saw-sidebar-wrapper"></div>');
+        $('body').append($wrapper);
+    }
+    
+    console.log('📝 Inserting HTML into wrapper');
+    $wrapper.html(response.data.html);
+    
+    // Add has-sidebar class to table for proper spacing
+    $('.saw-admin-table-split').addClass('has-sidebar');
+    
+    // ✅ Set active row AND scroll to it (always)
+    updateActiveRow(id, true);
+    console.log('✨ Active row set and scrolled for ID:', id);
+    
+    // Add active class to wrapper for slide-in animation
+    setTimeout(function() {
+        console.log('✨ Adding active class to wrapper');
+        $wrapper.addClass('active');
+    }, 10);
+    
+    // Update URL via History API
+    const newUrl = buildUrl(entity, id, mode);
+    console.log('🔗 Updating URL to:', newUrl);
+    window.history.pushState(
+        { 
+            id: id, 
+            mode: mode, 
+            entity: entity,
+            url: newUrl,
+            sawAdminTable: true
+        },
+        '',
+        newUrl
+    );
+    
+    console.log('✅ Sidebar opened successfully');
+},
             error: function(xhr, status, error) {
                 console.error('❌ AJAX Error:', {xhr, status, error});
                 hideLoadingOverlay();
@@ -243,6 +238,9 @@
         }
     }
     
+    // ✅ EXPORT updateActiveRow as global function
+    window.updateActiveRow = updateActiveRow;
+    
     /**
      * Build URL from entity, id and mode
      *
@@ -275,34 +273,47 @@
     }
     
     /**
-     * Parse URL to extract entity, id and mode
-     *
-     * @param {string} url URL to parse
-     * @return {object} Parsed data
-     */
-    function parseUrl(url) {
-        const path = url.split('/').filter(function(p) { return p; });
-        
-        let entity = null;
-        let id = 0;
-        let mode = 'detail';
-        
-        for (let i = 0; i < path.length; i++) {
-            if (path[i] === 'settings' && path[i + 1]) {
-                entity = path[i + 1];
-            }
-            
-            if (!isNaN(path[i]) && parseInt(path[i]) > 0) {
-                id = parseInt(path[i]);
-                
-                if (path[i + 1] === 'edit') {
-                    mode = 'edit';
-                }
-            }
+ * Parse URL to extract entity, id and mode
+ *
+ * @param {string} url URL to parse
+ * @return {object} Parsed data
+ */
+function parseUrl(url) {
+    const path = url.split('/').filter(function(p) { return p; });
+    
+    let entity = null;
+    let id = 0;
+    let mode = 'detail';
+    
+    // ✅ OPRAVENO: Najdi entity - může být /admin/entity/ NEBO /admin/settings/entity/
+    for (let i = 0; i < path.length; i++) {
+        // Check for /admin/settings/customers/ pattern
+        if (path[i] === 'settings' && path[i + 1]) {
+            entity = path[i + 1];
+            break;
         }
-        
-        return { entity: entity, id: id, mode: mode };
+        // Check for /admin/branches/ pattern (without settings)
+        if (path[i] === 'admin' && path[i + 1] && path[i + 1] !== 'settings') {
+            entity = path[i + 1];
+            break;
+        }
     }
+    
+    // Find ID (first numeric value after entity)
+    for (let i = 0; i < path.length; i++) {
+        if (!isNaN(path[i]) && parseInt(path[i]) > 0) {
+            id = parseInt(path[i]);
+            
+            // Check if next segment is 'edit'
+            if (path[i + 1] === 'edit') {
+                mode = 'edit';
+            }
+            break;
+        }
+    }
+    
+    return { entity: entity, id: id, mode: mode };
+}
     
     /**
      * CRITICAL FIX: Set active row on page load from URL
@@ -428,7 +439,7 @@
             }
         });
         
-        console.log('✅ Admin Table initialized');
+        console.log('✅ Admin Table initialized v4.1.0');
     }
     
     /**

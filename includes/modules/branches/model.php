@@ -2,7 +2,7 @@
 /**
  * Branches Module Model
  *
- * FINAL v13.6.0 - FIXED & CLEAN
+ * FINAL v13.6.0 - COMPLETE
  *
  * @package     SAW_Visitors
  * @subpackage  Modules/Branches
@@ -27,7 +27,6 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         $this->table = $wpdb->prefix . $config['table'];
         $this->config = $config;
         $this->cache_ttl = $config['cache']['ttl'] ?? 300;
-     
     }
     
     /**
@@ -71,7 +70,22 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
     /**
      * Get all branches with filters and caching
      */
-    public function get_all($filters = array()) {
+    /**
+ * Get all branches with filters and caching
+ * ALWAYS filtered by customer_id from context
+ */
+public function get_all($filters = array()) {
+    global $wpdb;
+    
+    // ✅ VŽDY přidej customer_id filtr
+    $customer_id = SAW_Context::get_customer_id();
+    
+    if (!$customer_id) {
+        return array('items' => array(), 'total' => 0);
+    }
+    
+    // Cache key
+    $filters['customer_id'] = $customer_id; // Force into filters for cache key
     $cache_key = 'branches_list_' . md5(serialize($filters));
     
     $cached = get_transient($cache_key);
@@ -79,82 +93,66 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         return $cached;
     }
     
-    $result = parent::get_all($filters);
+    // Build base query
+    $sql = "SELECT * FROM {$this->table} WHERE customer_id = %d";
+    $params = array($customer_id);
     
+    // Search
+    if (!empty($filters['search'])) {
+        $search_fields = array('name', 'code', 'city', 'email');
+        $search_conditions = array();
+        
+        foreach ($search_fields as $field) {
+            $search_conditions[] = "`{$field}` LIKE %s";
+            $params[] = '%' . $wpdb->esc_like($filters['search']) . '%';
+        }
+        
+        $sql .= " AND (" . implode(' OR ', $search_conditions) . ")";
+    }
+    
+    // Filters
+    if (isset($filters['is_active']) && $filters['is_active'] !== '') {
+        $sql .= " AND is_active = %d";
+        $params[] = intval($filters['is_active']);
+    }
+    
+    // Count total
+    $count_sql = str_replace('SELECT *', 'SELECT COUNT(*)', $sql);
+    $total = (int) $wpdb->get_var($wpdb->prepare($count_sql, $params));
+    
+    // Order
+    $orderby = !empty($filters['orderby']) ? sanitize_key($filters['orderby']) : 'is_headquarters';
+    $order = !empty($filters['order']) ? strtoupper($filters['order']) : 'DESC';
+    
+    if (!in_array($order, array('ASC', 'DESC'))) {
+        $order = 'DESC';
+    }
+    
+    $sql .= " ORDER BY `{$orderby}` {$order}, name ASC";
+    
+    // Pagination
+    $page = isset($filters['page']) ? max(1, intval($filters['page'])) : 1;
+    $per_page = isset($filters['per_page']) ? max(1, intval($filters['per_page'])) : 20;
+    $offset = ($page - 1) * $per_page;
+    
+    $sql .= " LIMIT %d OFFSET %d";
+    $params[] = $per_page;
+    $params[] = $offset;
+    
+    // Execute
+    $items = $wpdb->get_results($wpdb->prepare($sql, $params), ARRAY_A);
+    
+    $result = array(
+        'items' => $items ?: array(),
+        'total' => $total,
+    );
+    
+    // Cache
     set_transient($cache_key, $result, $this->cache_ttl);
     
     return $result;
 }
-
-    /**
-     * Create new branch with cache invalidation
-     */
-    public function create($data) {
-        $id = parent::create($data); 
-        
-        if ($id && !is_wp_error($id)) {
-            $this->invalidate_list_cache();
-            do_action('saw_branch_created', $id, $data['customer_id']);
-        }
-        return $id;
-    }
-
-    /**
-     * Update branch with cache invalidation
-     */
-    public function update($id, $data) {
-        $result = parent::update($id, $data); 
-        
-        if ($result && !is_wp_error($result)) {
-            $this->invalidate_item_cache($id);
-            $this->invalidate_list_cache();
-            do_action('saw_branch_updated', $id);
-        }
-        return $result;
-    }
-
-    /**
-     * Delete branch with cache invalidation
-     */
-    public function delete($id) {
-        $item = $this->get_by_id($id, true);
-        
-        $result = parent::delete($id); 
-        
-        if ($result && !is_wp_error($result)) {
-            $this->invalidate_item_cache($id);
-            $this->invalidate_list_cache();
-            if ($item) {
-                do_action('saw_branch_deleted', $id, $item['customer_id']);
-            }
-        }
-        return $result;
-    }
-
-    /**
-     * Invalidate item cache
-     */
-    private function invalidate_item_cache($id) {
-        $cache_key = sprintf('branches_item_%d', $id);
-        delete_transient($cache_key);
-    }
     
-    /**
-     * Invalidate all list caches
-     */
-    private function invalidate_list_cache() {
-        global $wpdb;
-        
-        $wpdb->query($wpdb->prepare(
-            "DELETE FROM %i 
-             WHERE option_name LIKE %s 
-             OR option_name LIKE %s",
-            $wpdb->options,
-            $wpdb->esc_like('_transient_branches_list_') . '%',
-            $wpdb->esc_like('_transient_timeout_branches_list_') . '%'
-        ));
-    }
-
     /**
      * Validate data
      */
@@ -177,7 +175,7 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         
         return empty($errors) ? true : new WP_Error('validation_error', __('Validation failed', 'saw-visitors'), $errors);
     }
-
+    
     /**
      * Check if branch code exists for customer
      */
@@ -194,13 +192,14 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         
         return (bool) $wpdb->get_var($query);
     }
-
+    
     /**
      * Set new headquarters (removes old HQ flag)
      */
     public function set_new_headquarters($branch_id, $customer_id) {
         global $wpdb;
         
+        // Remove HQ from all branches of this customer
         $wpdb->update(
             $this->table,
             array('is_headquarters' => 0),
@@ -209,6 +208,7 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
             array('%d')
         );
         
+        // Set new HQ
         $wpdb->update(
             $this->table,
             array('is_headquarters' => 1),
@@ -216,15 +216,16 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
             array('%d'),
             array('%d', '%d')
         );
-
+        
         $this->invalidate_list_cache();
     }
-
+    
     /**
      * Get count of headquarters for customer
      */
     public function get_headquarters_count($customer_id, $exclude_id = 0) {
         global $wpdb;
+        
         return (int) $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM %i WHERE customer_id = %d AND is_headquarters = 1 AND id != %d",
             $this->table,

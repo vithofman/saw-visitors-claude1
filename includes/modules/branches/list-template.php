@@ -2,13 +2,9 @@
 /**
  * Branches List Template
  *
- * REFACTORED v13.3.0 - FIXED
- * ✅ Správné UTF-8 encoding
- * ✅ Sidebar support
- *
  * @package     SAW_Visitors
  * @subpackage  Modules/Branches
- * @version     13.3.0
+ * @version     13.4.0
  */
 
 if (!defined('ABSPATH')) {
@@ -16,10 +12,21 @@ if (!defined('ABSPATH')) {
 }
 
 // Load required components
-require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/search/class-saw-component-search.php';
-require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/selectbox/class-saw-component-selectbox.php';
-require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/class-saw-component-admin-table.php';
-require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/modal/class-saw-component-modal.php';
+if (!class_exists('SAW_Component_Search')) {
+    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/search/class-saw-component-search.php';
+}
+
+if (!class_exists('SAW_Component_Selectbox')) {
+    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/selectbox/class-saw-component-selectbox.php';
+}
+
+if (!class_exists('SAW_Component_Admin_Table')) {
+    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/class-saw-component-admin-table.php';
+}
+
+if (!class_exists('SAW_Component_Modal')) {
+    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/modal/class-saw-component-modal.php';
+}
 
 // Prepare search component HTML
 ob_start();
@@ -46,7 +53,7 @@ $filters_html = '';
         'edit_url' => home_url('/admin/branches/{id}/edit'),
         'detail_url' => home_url('/admin/branches/{id}/'),
         
-        'module_config' => $config ?? array(),
+        'module_config' => $config ?? array(),  // ✅ POUŽÍVÁ $config proměnnou
         
         'sidebar_mode' => $sidebar_mode ?? null,
         'detail_item' => $detail_item ?? null,

@@ -1199,6 +1199,8 @@ protected function render_flash_messages() {
         $template_vars = array_merge(
             $list_data,
             array(
+		 'config' => $this->config,          // ✅ PŘIDEJ
+		 'entity' => $this->entity,          // ✅ PŘIDEJ
                 'detail_item' => $detail_item,
                 'form_item' => $form_item,
                 'sidebar_mode' => $sidebar_mode,
