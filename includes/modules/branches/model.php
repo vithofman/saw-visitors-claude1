@@ -2,17 +2,13 @@
 /**
  * Branches Module Model
  *
- * REFACTORED to new architecture. Extends SAW_Base_Model.
- * UPDATED (v13.0.0) - CRITICAL FIX:
- * Mirrored customers/model.php structure exactly.
- * Replaced direct call to SAW_Context::get_active_customer_id() inside get_all()
- * with a local get_current_customer_id() helper method to prevent
- * fatal error (Class not found) during initialization.
+ * REFACTORED v13.1.0 - PRODUCTION READY
+ * ✅ Opraveno: SAW_Context::get_customer_id() (NE get_active_customer_id)
+ * ✅ Consistent helper method usage
  *
  * @package     SAW_Visitors
  * @subpackage  Modules/Branches
- * @since       9.0.0 (Refactored)
- * @version     13.0.0 (Context-Fix)
+ * @version     13.1.0
  */
 
 if (!defined('ABSPATH')) {
@@ -80,14 +76,14 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
     
     /**
      * Get all branches with filters and caching
-     * (CRITICAL FIX v13.0.0)
+     * 
+     * ✅ CRITICAL: Auto-filtruje podle customer_id z contextu
      */
     public function get_all($filters = array()) {
+        // Auto-inject customer_id filter
+        $customer_id = $this->get_current_customer_id();
         
-        // --- BRANCH SPECIFIC LOGIC (Copied from customers/model.php) ---
-        // Použije lokální helper, NE SAW_Context::
-        $filters['customer_id'] = $this->get_current_customer_id(); 
-        if (empty($filters['customer_id'])) {
+        if (empty($customer_id)) {
             return array(
                 'items' => array(),
                 'total_items' => 0,
@@ -95,8 +91,9 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
                 'total' => 0
             );
         }
-        // --- END SPECIFIC LOGIC ---
-
+        
+        $filters['customer_id'] = $customer_id;
+        
         $cache_key = 'branches_list_' . md5(serialize($filters));
         
         $cached = get_transient($cache_key);
@@ -104,7 +101,6 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
             return $cached;
         }
         
-        // Volání parent::get_all() je teď bezpečné
         $result = parent::get_all($filters);
         
         set_transient($cache_key, $result, $this->cache_ttl);
@@ -182,7 +178,7 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
     }
 
     /**
-     * Validate data (Required by abstract SAW_Base_Model)
+     * Validate data
      */
     public function validate($data, $id = 0) {
         $errors = array();
@@ -205,10 +201,11 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
     }
     
     /**
-     * *** HELPER (Copied from customers/model.php) ***
-     * Get current customer ID from context or user data
+     * ✅ HELPER: Get current customer ID
+     * Priorita: SAW_Context → saw_users table
      */
     private function get_current_customer_id() {
+        // 1. Zkus SAW_Context
         if (class_exists('SAW_Context')) {
             $context_id = SAW_Context::get_customer_id();
             if ($context_id) {
@@ -216,7 +213,7 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
             }
         }
 
-        // Fallback for non-super-admin
+        // 2. Fallback pro non-super-admin (z saw_users)
         if (is_user_logged_in() && !current_user_can('manage_options')) {
             global $wpdb;
             $saw_user = $wpdb->get_row(
@@ -231,9 +228,9 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
             }
         }
         
-        // Fallback pro Super Admina, který ještě nevybral (stane se zřídka)
+        // 3. Poslední pokus přes SAW_Context znovu (pro super admina)
         if (class_exists('SAW_Context')) {
-             return SAW_Context::get_active_customer_id(); // Bezpečnější volání
+            return SAW_Context::get_customer_id();
         }
 
         return null;
@@ -260,24 +257,36 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
     // MODULE-SPECIFIC DB METHODS
     // ============================================
 
+    /**
+     * Set new headquarters (removes old HQ flag)
+     */
     public function set_new_headquarters($branch_id, $customer_id) {
         global $wpdb;
         
+        // Zruš u všech
         $wpdb->update(
             $this->table,
             array('is_headquarters' => 0),
-            array('customer_id' => $customer_id)
+            array('customer_id' => $customer_id),
+            array('%d'),
+            array('%d')
         );
         
+        // Nastav novému
         $wpdb->update(
             $this->table,
             array('is_headquarters' => 1),
-            array('id' => $branch_id, 'customer_id' => $customer_id)
+            array('id' => $branch_id, 'customer_id' => $customer_id),
+            array('%d'),
+            array('%d', '%d')
         );
 
         $this->invalidate_list_cache();
     }
 
+    /**
+     * Get count of headquarters for customer
+     */
     public function get_headquarters_count($customer_id, $exclude_id = 0) {
         global $wpdb;
         return (int) $wpdb->get_var($wpdb->prepare(
@@ -288,6 +297,9 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         ));
     }
 
+    /**
+     * Get GPS coordinates from address via Google API
+     */
     public function get_gps_coordinates($address) {
         $api_key = get_option('saw_google_maps_api_key', '');
         if (empty($api_key)) {

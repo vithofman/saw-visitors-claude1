@@ -2,15 +2,14 @@
 /**
  * Branches Module Controller
  *
- * REFACTORED to new architecture. Extends SAW_Base_Controller.
- * UPDATED (v12.0.7) - CRITICAL FIX: Renamed ajax_get_gps() to
- * ajax_get_gps_coordinates() to match the universal AJAX handler.
- * Removed all ajax add_action() calls.
+ * REFACTORED v13.2.0 - CRITICAL FIX
+ * ✅ SAW_Context existence check PŘED použitím
+ * ✅ Kompletní prepare_form_data()
+ * ✅ File upload + Opening hours
  *
  * @package     SAW_Visitors
  * @subpackage  Modules/Branches
- * @since       9.0.0 (Refactored)
- * @version     12.0.7 (AJAX-Rename-Fix)
+ * @version     13.2.0
  */
 
 if (!defined('ABSPATH')) {
@@ -46,9 +45,6 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/class-saw-file-uploader.php';
         $this->file_uploader = new SAW_File_Uploader();
         
-        // Všechny AJAX add_action() jsou odstraněny (řeší saw-visitors.php)
-        
-        // Registrace pro CSS/JS zůstává
         add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'));
     }
 
@@ -61,7 +57,6 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
 
     /**
      * AJAX delete handler - OVERRIDE
-     * (Tato metoda je nyní volána přes saw_universal_ajax_handler)
      */
     public function ajax_delete() {
         check_ajax_referer('saw_ajax_nonce', 'nonce');
@@ -101,64 +96,152 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
 
     /**
      * Prepare form data from POST
+     * 
+     * ✅ KRITICKÁ METODA - Zpracovává všechna pole z formuláře
+     * ✅ Kontrola SAW_Context existence
+     * 
+     * @param array $post POST data
+     * @return array|WP_Error Prepared data or error
      */
     protected function prepare_form_data($post) {
-        $data = parent::prepare_form_data($post);
+        $data = array();
         
-        $data['customer_id'] = SAW_Context::get_active_customer_id();
-        if (empty($data['customer_id'])) {
-            return new WP_Error('no_customer_context', __('Není vybrán žádný aktivní zákazník.', 'saw-visitors'));
+        // ============================================
+        // 1. CUSTOMER ID (z customer switcheru)
+        // ============================================
+        $customer_id = $this->get_current_customer_id();
+        if (empty($customer_id)) {
+            return new WP_Error('no_customer_context', 'Není vybrán žádný aktivní zákazník.');
         }
-
+        $data['customer_id'] = $customer_id;
+        
+        // ============================================
+        // 2. TEXT FIELDS
+        // ============================================
+        $text_fields = array('name', 'code', 'street', 'city', 'postal_code', 'country', 'phone', 'email');
+        foreach ($text_fields as $field) {
+            if (isset($post[$field])) {
+                $value = sanitize_text_field($post[$field]);
+                $data[$field] = !empty($value) ? $value : null;
+            }
+        }
+        
+        // ============================================
+        // 3. TEXTAREA FIELDS
+        // ============================================
+        $textarea_fields = array('notes', 'description');
+        foreach ($textarea_fields as $field) {
+            if (isset($post[$field])) {
+                $value = sanitize_textarea_field($post[$field]);
+                $data[$field] = !empty($value) ? $value : null;
+            }
+        }
+        
+        // ============================================
+        // 4. GPS COORDINATES
+        // ============================================
+        if (isset($post['latitude'])) {
+            $lat = sanitize_text_field($post['latitude']);
+            $data['latitude'] = !empty($lat) ? $lat : null;
+        }
+        if (isset($post['longitude'])) {
+            $lng = sanitize_text_field($post['longitude']);
+            $data['longitude'] = !empty($lng) ? $lng : null;
+        }
+        
+        // ============================================
+        // 5. BOOLEAN FIELDS
+        // ============================================
+        $data['is_headquarters'] = !empty($post['is_headquarters']) ? 1 : 0;
+        $data['is_active'] = !empty($post['is_active']) ? 1 : 0;
+        
+        // ============================================
+        // 6. NUMERIC FIELDS
+        // ============================================
+        $data['sort_order'] = isset($post['sort_order']) ? intval($post['sort_order']) : 10;
+        
+        // ============================================
+        // 7. FILE UPLOAD (image_url)
+        // ============================================
         if (!empty($_FILES['image_url']['name'])) {
             $upload_result = $this->file_uploader->upload($_FILES['image_url'], 'branches');
+            
             if (is_wp_error($upload_result)) {
                 return $upload_result;
             }
+            
+            // Delete old image if editing
             if (isset($post['id'])) {
                 $old_item = $this->model->get_by_id($post['id'], true);
                 if (!empty($old_item['image_url'])) {
                     $this->file_uploader->delete($old_item['image_url']);
                 }
             }
+            
             $data['image_url'] = $upload_result['url'];
         }
-
-        $opening_hours = $post['opening_hours'] ?? array();
-        $data['opening_hours'] = wp_json_encode($opening_hours);
         
-        $data['is_headquarters'] = !empty($post['is_headquarters']) ? 1 : 0;
-        $data['is_active'] = !empty($post['is_active']) ? 1 : 0;
-        $data['sort_order'] = !empty($post['sort_order']) ? intval($post['sort_order']) : 10;
-        $data['country'] = $post['country'] ?? 'CZ';
-        $data['description'] = $post['description'] ?? null;
-        $data['metadata'] = $post['metadata'] ?? null;
+        // ============================================
+        // 8. OPENING HOURS (JSON encoding)
+        // ============================================
+        if (isset($post['opening_hours']) && is_array($post['opening_hours'])) {
+            $data['opening_hours'] = wp_json_encode($post['opening_hours']);
+        } else {
+            $data['opening_hours'] = wp_json_encode(array());
+        }
+        
+        // ============================================
+        // 9. METADATA (volitelné)
+        // ============================================
+        if (isset($post['metadata'])) {
+            $data['metadata'] = sanitize_text_field($post['metadata']);
+        }
         
         return $data;
     }
 
     /**
      * Before Save Hook
+     * 
+     * Zajistí, že je vždy jen jedno sídlo firmy.
      */
-    protected function before_save($id, $data) {
+    protected function before_save($data) {
         if (!empty($data['is_headquarters'])) {
-            $customer_id = $data['customer_id'] ?? SAW_Context::get_active_customer_id();
-            $this->model->set_new_headquarters($id, $customer_id);
+            $customer_id = $data['customer_id'];
+            
+            // Zrušit is_headquarters u všech ostatních poboček tohoto zákazníka
+            global $wpdb;
+            $wpdb->update(
+                $wpdb->prefix . 'saw_branches',
+                array('is_headquarters' => 0),
+                array('customer_id' => $customer_id),
+                array('%d'),
+                array('%d')
+            );
         }
+        
         return $data;
     }
 
     /**
      * Before Delete Hook
+     * 
+     * Zabrání smazání poslední pobočky se sídlem.
      */
     protected function before_delete($id) {
         $item = $this->model->get_by_id($id);
+        
         if ($item && $item['is_headquarters']) {
             $count = $this->model->get_headquarters_count($item['customer_id']);
+            
             if ($count <= 1) {
-                return new WP_Error('delete_last_hq', __('Nelze smazat poslední sídlo firmy. Nejprve označte jako sídlo jinou pobočku.', 'saw-visitors'));
+                return new WP_Error(
+                    'delete_last_hq', 
+                    'Nelze smazat poslední sídlo firmy. Nejprve označte jako sídlo jinou pobočku.'
+                );
             }
         }
+        
         return true;
     }
     
@@ -166,34 +249,48 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
      * Format data for detail view
      */
     protected function format_detail_data($item) {
+        // Datumy
         if (!empty($item['created_at'])) {
             $item['created_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['created_at']));
         }
         if (!empty($item['updated_at'])) {
             $item['updated_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['updated_at']));
         }
+        
+        // Opening hours
         $item['opening_hours_array'] = json_decode($item['opening_hours'] ?? '[]', true);
         if (!is_array($item['opening_hours_array'])) {
             $item['opening_hours_array'] = array();
         }
+        
+        // Full address
         $address_parts = array();
         if (!empty($item['street'])) $address_parts[] = $item['street'];
         if (!empty($item['city']))   $address_parts[] = $item['city'];
-        if (!empty($item['postal_code']))    $address_parts[] = $item['postal_code'];
+        if (!empty($item['postal_code'])) $address_parts[] = $item['postal_code'];
         $item['full_address'] = implode(', ', $address_parts);
+        
+        // Map link
         if (!empty($item['latitude']) && !empty($item['longitude'])) {
-            $item['map_link'] = sprintf('http://googleusercontent.com/maps/google.com/0', $item['latitude'], $item['longitude']);
+            $item['map_link'] = sprintf(
+                'https://www.google.com/maps?q=%s,%s', 
+                $item['latitude'], 
+                $item['longitude']
+            );
         } elseif (!empty($item['full_address'])) {
-            $item['map_link'] = 'http://googleusercontent.com/maps/google.com/1' . urlencode($item['full_address']);
+            $item['map_link'] = 'https://www.google.com/maps/search/' . urlencode($item['full_address']);
         } else {
             $item['map_link'] = null;
         }
+        
+        // Image URL normalizace
         if (!empty($item['image_url'])) {
             if (strpos($item['image_url'], 'http') !== 0) {
                 $upload_dir = wp_upload_dir();
                 $item['image_url'] = $upload_dir['baseurl'] . '/' . ltrim($item['image_url'], '/');
             }
         }
+        
         return $item;
     }
 
@@ -224,9 +321,9 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
                 'ajax_url' => admin_url('admin-ajax.php'),
                 'nonce' => wp_create_nonce('saw_ajax_nonce'),
                 'text' => array(
-                    'loadingGps' => __('Načítám GPS...', 'saw-visitors'),
-                    'loadGps' => __('Načíst souřadnice', 'saw-visitors'),
-                    'hqWarning' => __('Tato akce přesune označení "Sídlo" z jiné pobočky. Pokračovat?', 'saw-visitors'),
+                    'loadingGps' => 'Načítám GPS...',
+                    'loadGps' => 'Načíst souřadnice',
+                    'hqWarning' => 'Tato akce přesune označení "Sídlo" z jiné pobočky. Pokračovat?',
                 ),
             ));
         }
@@ -235,10 +332,53 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
     }
     
     // ============================================
+    // HELPER METHODS
+    // ============================================
+    
+    /**
+     * ✅ HELPER: Get current customer ID
+     * Priorita: SAW_Context → saw_users table
+     */
+    private function get_current_customer_id() {
+        // 1. Zkus SAW_Context
+        if (class_exists('SAW_Context')) {
+            $context_id = SAW_Context::get_customer_id();
+            if ($context_id) {
+                return $context_id;
+            }
+        }
+
+        // 2. Fallback pro non-super-admin (z saw_users)
+        if (is_user_logged_in() && !current_user_can('manage_options')) {
+            global $wpdb;
+            $saw_user = $wpdb->get_row(
+                $wpdb->prepare(
+                    "SELECT customer_id FROM {$wpdb->prefix}saw_users WHERE wp_user_id = %d AND is_active = 1",
+                    get_current_user_id()
+                ),
+                ARRAY_A
+            );
+            if ($saw_user && $saw_user['customer_id']) {
+                return intval($saw_user['customer_id']);
+            }
+        }
+        
+        // 3. Poslední pokus přes SAW_Context znovu
+        if (class_exists('SAW_Context')) {
+            return SAW_Context::get_customer_id();
+        }
+
+        return null;
+    }
+    
+    // ============================================
     // MODULE-SPECIFIC AJAX
     // ============================================
 
-    public function ajax_get_gps_coordinates() { // Přejmenováno pro univerzální handler
+    /**
+     * AJAX: Get GPS coordinates from address
+     */
+    public function ajax_get_gps_coordinates() {
         check_ajax_referer('saw_ajax_nonce', 'nonce');
         
         if (!$this->can('edit') && !$this->can('create')) {
@@ -259,47 +399,17 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         }
     }
 
+    /**
+     * AJAX: Check if headquarters already exists
+     */
     public function ajax_check_headquarters() {
         check_ajax_referer('saw_ajax_nonce', 'nonce');
         
-        $customer_id = $this->get_current_customer_id(); // Použití helperu
+        $customer_id = $this->get_current_customer_id();
         $exclude_id = isset($_POST['id']) ? intval($_POST['id']) : 0;
         
         $hq_exists = $this->model->get_headquarters_count($customer_id, $exclude_id);
         
         wp_send_json_success(array('hq_exists' => $hq_exists));
-    }
-
-    /**
-     * *** HELPER (Copied from customers/model.php) ***
-     * Get current customer ID from context or user data
-     */
-    private function get_current_customer_id() {
-        if (class_exists('SAW_Context')) {
-            $context_id = SAW_Context::get_customer_id();
-            if ($context_id) {
-                return $context_id;
-            }
-        }
-
-        if (is_user_logged_in() && !current_user_can('manage_options')) {
-            global $wpdb;
-            $saw_user = $wpdb->get_row(
-                $wpdb->prepare(
-                    "SELECT customer_id FROM {$wpdb->prefix}saw_users WHERE wp_user_id = %d AND is_active = 1",
-                    get_current_user_id()
-                ),
-                ARRAY_A
-            );
-            if ($saw_user && $saw_user['customer_id']) {
-                return intval($saw_user['customer_id']);
-            }
-        }
-        
-        if (class_exists('SAW_Context')) {
-             return SAW_Context::get_active_customer_id();
-        }
-
-        return null;
     }
 }

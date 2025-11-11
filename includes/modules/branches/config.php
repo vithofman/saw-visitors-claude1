@@ -2,13 +2,14 @@
 /**
  * Branches Module Configuration
  *
- * REFACTORED to new config-driven architecture.
- * UPDATED to match 'schema-branches.php' column names.
+ * REFACTORED v13.1.0 - PRODUCTION READY
+ * ✅ Čisté UTF-8 encoding
+ * ✅ Lookup tables pro customers
+ * ✅ Všechna pole ze schema
  *
  * @package     SAW_Visitors
  * @subpackage  Modules/Branches
- * @since       9.0.0 (Refactored)
- * @version     12.0.1 (Schema-Fix)
+ * @version     13.1.0
  */
 
 if (!defined('ABSPATH')) {
@@ -39,7 +40,7 @@ return array(
     ),
 
     // ============================================
-    // FIELD DEFINITIONS (Matches schema-branches.php)
+    // FIELD DEFINITIONS
     // ============================================
     'fields' => array(
         // Core Fields
@@ -53,7 +54,7 @@ return array(
             'type' => 'number',
             'label' => 'Zákazník ID',
             'required' => true,
-            'hidden' => true, // Managed by controller
+            'hidden' => true,
             'sanitize' => 'absint',
         ),
         'is_headquarters' => array(
@@ -68,7 +69,7 @@ return array(
             'default' => 1,
             'sanitize' => 'absint',
         ),
-        'code' => array( // formerly 'branch_code'
+        'code' => array(
             'type' => 'text',
             'label' => 'Kód pobočky',
             'required' => false,
@@ -82,7 +83,7 @@ return array(
         ),
 
         // Branding
-        'image_url' => array( // formerly 'thumbnail_url'
+        'image_url' => array(
             'type' => 'file',
             'label' => 'Obrázek (Logo)',
             'required' => false,
@@ -103,19 +104,19 @@ return array(
         ),
 
         // Address
-        'street' => array( // formerly 'address_street'
+        'street' => array(
             'type' => 'text',
             'label' => 'Ulice a č.p.',
             'required' => false,
             'sanitize' => 'sanitize_text_field',
         ),
-        'city' => array( // formerly 'address_city'
+        'city' => array(
             'type' => 'text',
             'label' => 'Město',
             'required' => false,
             'sanitize' => 'sanitize_text_field',
         ),
-        'postal_code' => array( // formerly 'address_zip'
+        'postal_code' => array(
             'type' => 'text',
             'label' => 'PSČ',
             'required' => false,
@@ -129,13 +130,13 @@ return array(
         ),
 
         // GPS
-        'latitude' => array( // formerly 'gps_lat'
+        'latitude' => array(
             'type' => 'text',
             'label' => 'GPS Lat',
             'required' => false,
             'sanitize' => 'sanitize_text_field',
         ),
-        'longitude' => array( // formerly 'gps_lng'
+        'longitude' => array(
             'type' => 'text',
             'label' => 'GPS Lng',
             'required' => false,
@@ -148,7 +149,7 @@ return array(
             'label' => 'Otevírací doba (JSON)',
             'required' => false,
             'hidden' => true,
-            'sanitize' => 'sanitize_text_field', // Special sanitize in controller
+            'sanitize' => 'sanitize_text_field',
         ),
         'notes' => array(
             'type' => 'textarea',
@@ -184,6 +185,20 @@ return array(
     ),
 
     // ============================================
+    // LOOKUP TABLES (pro dropdown selecty)
+    // ============================================
+    'lookup_tables' => array(
+        'customers' => array(
+            'table' => 'saw_customers',
+            'fields' => array('id', 'name', 'ico'),
+            'where' => 'status = "active"',
+            'order' => 'name ASC',
+            'display_field' => 'name',
+            'cache_ttl' => 3600,
+        ),
+    ),
+
+    // ============================================
     // LIST CONFIGURATION
     // ============================================
     'list_config' => array(
@@ -203,7 +218,7 @@ return array(
     // ============================================
     'cache' => array(
         'enabled' => true,
-        'ttl' => 300, // 5 minutes
+        'ttl' => 300,
         'invalidate_on' => array('save', 'delete'),
     ),
 );
