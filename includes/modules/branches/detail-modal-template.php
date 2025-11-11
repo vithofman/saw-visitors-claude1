@@ -1,186 +1,199 @@
 <?php
 /**
- * Branches Detail Modal Template
- * 
- * Displays branch details in a modal window including address, contact info,
- * opening hours, GPS coordinates, and metadata.
- * 
- * REFACTORED v2.0.0:
- * ✅ No inline styles
- * ✅ Global CSS classes
- * ✅ All values escaped
- * ✅ Fallback for missing data
- * 
- * @package SAW_Visitors
- * @since 2.0.0
- * @version 2.0.0
+ * Branches Detail Template - REFACTORED
+ * * UPDATED to match 'schema-branches.php' column names.
+ *
+ * @package     SAW_Visitors
+ * @subpackage  Modules/Branches/Templates
+ * @since       9.0.0 (Refactored)
+ * @version     12.0.1 (Schema-Fix)
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+// Validate data
 if (empty($item)) {
-    echo '<div class="saw-alert saw-alert-danger">Pobočka nebyla nalezena</div>';
+    echo '<div class="saw-alert saw-alert-danger">';
+    echo '<strong>' . esc_html__('Chyba:', 'saw-visitors') . '</strong> ';
+    echo esc_html__('Pobočka nebyla nalezena nebo data nejsou dostupná.', 'saw-visitors');
+    echo '</div>';
     return;
 }
+
+// Data prepared in controller->format_detail_data()
+$opening_hours = $item['opening_hours_array'] ?? array();
+$days = array(
+    'monday' => __('Pondělí', 'saw-visitors'),
+    'tuesday' => __('Úterý', 'saw-visitors'),
+    'wednesday' => __('Středa', 'saw-visitors'),
+    'thursday' => __('Čtvrtek', 'saw-visitors'),
+    'friday' => __('Pátek', 'saw-visitors'),
+    'saturday' => __('Sobota', 'saw-visitors'),
+    'sunday' => __('Neděle', 'saw-visitors'),
+);
+
 ?>
 
-<div class="saw-detail-header">
-    <?php if (!empty($item['image_url'])): ?>
+<div class="saw-detail-header saw-module-branches">
+    <?php if (!empty($item['image_url'])): // Use 'image_url' ?>
         <img src="<?php echo esc_url($item['image_url']); ?>" 
              alt="<?php echo esc_attr($item['name']); ?>" 
-             class="saw-detail-logo">
+             class="saw-detail-logo saw-branch-thumbnail">
     <?php else: ?>
         <div class="saw-detail-logo-placeholder">
-            <span class="dashicons dashicons-building"></span>
+            <span class="dashicons dashicons-store"></span>
         </div>
     <?php endif; ?>
     
-    <div class="saw-detail-header-info">
-        <h2>
+    <div class="saw-detail-header-content">
+        <h2 class="saw-detail-header-title">
             <?php echo esc_html($item['name']); ?>
         </h2>
         
-        <div class="saw-detail-badges">
-            <?php if (!empty($item['code'])): ?>
-                <span class="saw-code-badge"><?php echo esc_html($item['code']); ?></span>
-            <?php endif; ?>
-            
+        <div class="saw-detail-header-badges">
             <?php if (!empty($item['is_headquarters'])): ?>
-                <span class="saw-badge saw-badge-info">Hlavní sídlo</span>
+                <span class="saw-badge saw-badge-primary">
+                    <?php echo esc_html__('Sídlo firmy', 'saw-visitors'); ?>
+                </span>
             <?php endif; ?>
             
-            <span class="<?php echo esc_attr($item['is_active_badge_class']); ?>">
-                <?php echo esc_html($item['is_active_label']); ?>
+            <?php if (!empty($item['code'])): // Use 'code' ?>
+                <span class="saw-badge saw-badge-light">
+                    Kód: <?php echo esc_html($item['code']); ?>
+                </span>
+            <?php endif; ?>
+
+            <span class="saw-badge saw-badge-light">
+                ID: <?php echo esc_html($item['id']); ?>
             </span>
         </div>
     </div>
 </div>
 
-<div class="saw-detail-sections">
+<div class="saw-detail-sections saw-module-branches">
     
-    <?php if (!empty($item['full_address'])): ?>
     <div class="saw-detail-section">
-        <h3>📍 Adresa</h3>
+        <h3 class="saw-detail-section-title">
+            <span class="saw-detail-section-icon">📞</span>
+            <?php echo esc_html__('Kontakt a Adresa', 'saw-visitors'); ?>
+        </h3>
         <dl class="saw-detail-list">
-            <?php if (!empty($item['street'])): ?>
-                <dt>Ulice</dt>
-                <dd><?php echo esc_html($item['street']); ?></dd>
+            <?php if (!empty($item['phone'])): ?>
+                <div>
+                    <dt><?php echo esc_html__('Telefon:', 'saw-visitors'); ?></dt>
+                    <dd>
+                        <a href="tel:<?php echo esc_attr($item['phone']); ?>" class="saw-phone-link">
+                            <?php echo esc_html($item['phone']); ?>
+                        </a>
+                    </dd>
+                </div>
             <?php endif; ?>
             
-            <?php if (!empty($item['city'])): ?>
-                <dt>Město</dt>
-                <dd><?php echo esc_html($item['city']); ?></dd>
-            <?php endif; ?>
-            
-            <?php if (!empty($item['postal_code'])): ?>
-                <dt>PSČ</dt>
-                <dd><?php echo esc_html($item['postal_code']); ?></dd>
-            <?php endif; ?>
-            
-            <?php if (!empty($item['country_name'])): ?>
-                <dt>Země</dt>
-                <dd><?php echo esc_html($item['country_name']); ?></dd>
+            <?php if (!empty($item['email'])): ?>
+                <div>
+                    <dt><?php echo esc_html__('Email:', 'saw-visitors'); ?></dt>
+                    <dd>
+                        <a href="mailto:<?php echo esc_attr($item['email']); ?>">
+                            <?php echo esc_html($item['email']); ?>
+                        </a>
+                    </dd>
+                </div>
             <?php endif; ?>
         </dl>
+
+        <?php if (!empty($item['full_address'])): ?>
+            <div class="saw-detail-address">
+                <?php if (!empty($item['street'])): // Use 'street' ?>
+                    <div><?php echo esc_html($item['street']); ?></div>
+                <?php endif; ?>
+                <div><?php echo esc_html(trim(($item['postal_code'] ?? '') . ' ' . ($item['city'] ?? ''))); // Use 'postal_code' and 'city' ?></div>
+                <?php if (!empty($item['country'])): ?>
+                    <div><?php echo esc_html($item['country']); ?></div>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
         
-        <?php if (!empty($item['has_gps'])): ?>
+        <?php if (!empty($item['map_link'])): ?>
             <div class="saw-detail-action">
-                <a href="<?php echo esc_url($item['google_maps_url']); ?>" 
-                   target="_blank" 
-                   class="saw-map-link">
+                <a href="<?php echo esc_url($item['map_link']); ?>" target="_blank" rel="noopener" class="saw-map-link">
                     <span class="dashicons dashicons-location"></span>
-                    Zobrazit na mapě
+                    <?php echo esc_html__('Zobrazit na mapě', 'saw-visitors'); ?>
                 </a>
             </div>
         <?php endif; ?>
     </div>
-    <?php endif; ?>
     
-    <?php if (!empty($item['phone']) || !empty($item['email'])): ?>
+    <?php if (!empty($opening_hours)): ?>
     <div class="saw-detail-section">
-        <h3>📞 Kontakt</h3>
-        <dl class="saw-detail-list">
-            <?php if (!empty($item['phone'])): ?>
-                <dt>Telefon</dt>
-                <dd><a href="tel:<?php echo esc_attr($item['phone']); ?>"><?php echo esc_html($item['phone']); ?></a></dd>
-            <?php endif; ?>
-            
-            <?php if (!empty($item['email'])): ?>
-                <dt>Email</dt>
-                <dd><a href="mailto:<?php echo esc_attr($item['email']); ?>"><?php echo esc_html($item['email']); ?></a></dd>
-            <?php endif; ?>
-        </dl>
-    </div>
-    <?php endif; ?>
-    
-    <?php if (!empty($item['opening_hours_array'])): ?>
-    <div class="saw-detail-section">
-        <h3>🕐 Provozní doba</h3>
+        <h3 class="saw-detail-section-title">
+            <span class="saw-detail-section-icon">🕒</span>
+            <?php echo esc_html__('Otevírací doba', 'saw-visitors'); ?>
+        </h3>
         <ul class="saw-opening-hours-list">
-            <?php foreach ($item['opening_hours_array'] as $hours): ?>
-                <li><?php echo esc_html($hours); ?></li>
+            <?php foreach ($days as $day_key => $day_label): ?>
+                <?php
+                $status = $opening_hours[$day_key]['is_open'] ?? 'closed';
+                $from = $opening_hours[$day_key]['open_from'] ?? '';
+                $to = $opening_hours[$day_key]['open_to'] ?? '';
+                $display_time = '';
+                
+                if ($status === 'nonstop') {
+                    $display_time = '<strong>' . __('Nonstop', 'saw-visitors') . '</strong>';
+                } elseif ($status === 'open') {
+                    $display_time = '<strong>' . esc_html($from) . ' - ' . esc_html($to) . '</strong>';
+                } else {
+                    $display_time = '<span class="saw-text-muted">' . __('Zavřeno', 'saw-visitors') . '</span>';
+                }
+                ?>
+                <li>
+                    <span><?php echo esc_html($day_label); ?>:</span>
+                    <?php echo $display_time; // WPCS: XSS ok. ?>
+                </li>
             <?php endforeach; ?>
         </ul>
     </div>
     <?php endif; ?>
-    
+
     <?php if (!empty($item['description'])): ?>
     <div class="saw-detail-section">
-        <h3>📄 Popis</h3>
-        <p><?php echo nl2br(esc_html($item['description'])); ?></p>
+        <h3 class="saw-detail-section-title">
+            <span class="dashicons dashicons-clipboard"></span>
+            <?php echo esc_html__('Popis', 'saw-visitors'); ?>
+        </h3>
+        <div class="saw-detail-section-content saw-detail-section-content-preformatted">
+            <?php echo nl2br(esc_html($item['description'])); ?>
+        </div>
     </div>
     <?php endif; ?>
     
     <?php if (!empty($item['notes'])): ?>
     <div class="saw-detail-section">
-        <h3>🔒 Interní poznámky</h3>
-        <p><?php echo nl2br(esc_html($item['notes'])); ?></p>
+        <h3 class="saw-detail-section-title">
+            <span class="dashicons dashicons-edit-page"></span>
+            <?php echo esc_html__('Poznámky', 'saw-visitors'); ?>
+        </h3>
+        <div class="saw-detail-section-content saw-detail-section-content-preformatted">
+            <?php echo nl2br(esc_html($item['notes'])); ?>
+        </div>
     </div>
     <?php endif; ?>
     
-    <?php if (!empty($item['has_gps'])): ?>
-    <div class="saw-detail-section">
-        <h3>🌍 GPS Souřadnice</h3>
+    <div class="saw-detail-section saw-detail-section-metadata">
         <dl class="saw-detail-list">
-            <dt>Zeměpisná šířka</dt>
-            <dd><?php echo esc_html($item['latitude']); ?></dd>
-            
-            <dt>Zeměpisná délka</dt>
-            <dd><?php echo esc_html($item['longitude']); ?></dd>
-        </dl>
-    </div>
-    <?php endif; ?>
-    
-    <div class="saw-detail-section">
-        <h3>ℹ️ Informace</h3>
-        <dl class="saw-detail-list">
-            <dt>Status</dt>
-            <dd>
-                <span class="<?php echo esc_attr($item['is_active_badge_class']); ?>">
-                    <?php echo esc_html($item['is_active_label']); ?>
-                </span>
-            </dd>
-            
-            <dt>Hlavní sídlo</dt>
-            <dd>
-                <span class="<?php echo esc_attr($item['is_headquarters_badge_class']); ?>">
-                    <?php echo esc_html($item['is_headquarters_label']); ?>
-                </span>
-            </dd>
-            
-            <dt>Pořadí řazení</dt>
-            <dd><?php echo esc_html($item['sort_order'] ?? 0); ?></dd>
-            
             <?php if (!empty($item['created_at_formatted'])): ?>
-                <dt>Vytvořeno</dt>
-                <dd><?php echo esc_html($item['created_at_formatted']); ?></dd>
+                <div>
+                    <dt><?php echo esc_html__('Vytvořeno:', 'saw-visitors'); ?></dt>
+                    <dd><?php echo esc_html($item['created_at_formatted']); ?></dd>
+                </div>
             <?php endif; ?>
             
             <?php if (!empty($item['updated_at_formatted'])): ?>
-                <dt>Naposledy upraveno</dt>
-                <dd><?php echo esc_html($item['updated_at_formatted']); ?></dd>
+                <div>
+                    <dt><?php echo esc_html__('Aktualizováno:', 'saw-visitors'); ?></dt>
+                    <dd><?php echo esc_html($item['updated_at_formatted']); ?></dd>
+                </div>
             <?php endif; ?>
         </dl>
     </div>

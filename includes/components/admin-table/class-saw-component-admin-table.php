@@ -523,7 +523,7 @@ class SAW_Component_Admin_Table {
                 
             case 'custom':
                 if (is_array($column) && isset($column['callback']) && is_callable($column['callback'])) {
-                    echo $column['callback']($value);
+                    echo $column['callback']($value, $row);
                 } else {
                     echo esc_html($value);
                 }

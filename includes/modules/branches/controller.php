@@ -1,44 +1,37 @@
 <?php
 /**
  * Branches Module Controller
- * 
- * Handles all CRUD operations for branches including:
- * - List view with filtering and pagination
- * - Create/Edit forms with validation
- * - File upload handling for branch images
- * - Permission and scope validation
- * - Cache invalidation
- * 
- * @package SAW_Visitors
- * @since 2.0.0
- * @version 3.1.0 - Permissions & Scope Fix
+ *
+ * REFACTORED to new architecture. Extends SAW_Base_Controller.
+ * UPDATED (v12.0.7) - CRITICAL FIX: Renamed ajax_get_gps() to
+ * ajax_get_gps_coordinates() to match the universal AJAX handler.
+ * Removed all ajax add_action() calls.
+ *
+ * @package     SAW_Visitors
+ * @subpackage  Modules/Branches
+ * @since       9.0.0 (Refactored)
+ * @version     12.0.7 (AJAX-Rename-Fix)
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-/**
- * Branches Module Controller
- * 
- * @since 2.0.0
- */
+if (!class_exists('SAW_Base_Controller')) {
+    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/class-base-controller.php';
+}
+if (!trait_exists('SAW_AJAX_Handlers')) {
+    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/trait-ajax-handlers.php';
+}
+
 class SAW_Module_Branches_Controller extends SAW_Base_Controller 
 {
     use SAW_AJAX_Handlers;
-    
-    /**
-     * File uploader instance
-     * 
-     * @since 2.0.0
-     * @var SAW_File_Uploader
-     */
+
     private $file_uploader;
-    
+
     /**
-     * Constructor - Initialize controller
-     * 
-     * @since 2.0.0
+     * Constructor
      */
     public function __construct() {
         $module_path = SAW_VISITORS_PLUGIN_DIR . 'includes/modules/branches/';
@@ -50,337 +43,263 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         require_once $module_path . 'model.php';
         $this->model = new SAW_Module_Branches_Model($this->config);
         
-        if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/class-saw-file-uploader.php')) {
-            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/class-saw-file-uploader.php';
-            $this->file_uploader = new SAW_File_Uploader();
-        }
+        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/class-saw-file-uploader.php';
+        $this->file_uploader = new SAW_File_Uploader();
+        
+        // Všechny AJAX add_action() jsou odstraněny (řeší saw-visitors.php)
+        
+        // Registrace pro CSS/JS zůstává
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'));
     }
-    
+
     /**
-     * Display branches list view
-     * 
-     * @since 2.0.0
-     * @return void
+     * Display list page with optional sidebar
      */
     public function index() {
-        $this->verify_module_access();
-        
-        $search = isset($_GET['s']) ? sanitize_text_field($_GET['s']) : '';
-        $is_active = isset($_GET['is_active']) ? sanitize_text_field($_GET['is_active']) : '';
-        $is_headquarters = isset($_GET['is_headquarters']) ? sanitize_text_field($_GET['is_headquarters']) : '';
-        $orderby = isset($_GET['orderby']) ? sanitize_text_field($_GET['orderby']) : 'sort_order';
-        $order = isset($_GET['order']) ? strtoupper(sanitize_text_field($_GET['order'])) : 'ASC';
-        $page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
-        
-        $filters = array(
-            'search' => $search,
-            'orderby' => $orderby,
-            'order' => $order,
-            'page' => $page,
-            'per_page' => 20,
-        );
-        
-        if ($is_active !== '') {
-            $filters['is_active'] = intval($is_active);
-        }
-        
-        if ($is_headquarters !== '') {
-            $filters['is_headquarters'] = intval($is_headquarters);
-        }
-        
-        $data = $this->model->get_all($filters);
-        $items = $data['items'];
-        $total = $data['total'];
-        $total_pages = ceil($total / 20);
-        
-        ob_start();
-        
-        if (class_exists('SAW_Module_Style_Manager')) {
-            $style_manager = SAW_Module_Style_Manager::get_instance();
-            echo $style_manager->inject_module_css($this->entity);
-        }
-        
-        echo '<div class="saw-module-' . esc_attr($this->entity) . '">';
-        
-        $this->render_flash_messages();
-        
-        require $this->config['path'] . 'list-template.php';
-        
-        echo '</div>';
-        
-        $content = ob_get_clean();
-        
-        $this->render_with_layout($content, $this->config['plural']);
+        $this->render_list_view();
     }
-    
+
     /**
-     * Display create branch form and handle submission
-     * 
-     * @since 2.0.0
-     * @return void
+     * AJAX delete handler - OVERRIDE
+     * (Tato metoda je nyní volána přes saw_universal_ajax_handler)
      */
-    public function create() {
-        $this->verify_module_access();
+    public function ajax_delete() {
+        check_ajax_referer('saw_ajax_nonce', 'nonce');
         
-        if (!$this->can('create')) {
-            $this->set_flash('Nemáte oprávnění vytvářet pobočky', 'error');
-            $this->redirect(home_url('/admin/branches/'));
+        if (!$this->can('delete')) { 
+            wp_send_json_error(array('message' => 'Nemáte oprávnění mazat záznamy'));
+            return;
         }
         
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            if (!wp_verify_nonce($_POST['saw_nonce'] ?? '', 'saw_branches_form')) {
-                wp_die('Neplatný bezpečnostní token');
-            }
-            
-            $data = $this->prepare_form_data($_POST);
-            
-            $scope_validation = $this->validate_scope_access($data, 'create');
-            if (is_wp_error($scope_validation)) {
-                $this->set_flash($scope_validation->get_error_message(), 'error');
-                $this->redirect(home_url('/admin/branches/'));
-            }
-            
-            $data = $this->before_save($data);
-            if (is_wp_error($data)) {
-                $this->set_flash($data->get_error_message(), 'error');
-                $this->redirect($_SERVER['REQUEST_URI']);
-            }
-            
-            $validation = $this->model->validate($data);
-            if (is_wp_error($validation)) {
-                $errors = $validation->get_error_data();
-                $this->set_flash(implode('<br>', $errors), 'error');
-                $this->redirect($_SERVER['REQUEST_URI']);
-            }
-            
-            $result = $this->model->create($data);
-            
-            if (is_wp_error($result)) {
-                $this->set_flash($result->get_error_message(), 'error');
-                $this->redirect($_SERVER['REQUEST_URI']);
-            }
-            
-            $this->after_save($result);
-            
-            $this->set_flash('Pobočka byla úspěšně vytvořena', 'success');
-            $this->redirect(home_url('/admin/branches/'));
+        $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+        if (!$id) {
+            wp_send_json_error(array('message' => 'Neplatné ID'));
+            return;
         }
         
-        $item = array();
-        
-        ob_start();
-        
-        if (class_exists('SAW_Module_Style_Manager')) {
-            $style_manager = SAW_Module_Style_Manager::get_instance();
-            echo $style_manager->inject_module_css($this->entity);
-        }
-        
-        echo '<div class="saw-module-' . esc_attr($this->entity) . '">';
-        
-        $this->render_flash_messages();
-        
-        require $this->config['path'] . 'form-template.php';
-        
-        echo '</div>';
-        
-        $content = ob_get_clean();
-        
-        $this->render_with_layout($content, 'Nová pobočka');
-    }
-    
-    /**
-     * Display edit branch form and handle submission
-     * 
-     * @since 2.0.0
-     * @param int $id Branch ID
-     * @return void
-     */
-    public function edit($id) {
-        $this->verify_module_access();
-        
-        if (!$this->can('edit')) {
-            $this->set_flash('Nemáte oprávnění upravovat pobočky', 'error');
-            $this->redirect(home_url('/admin/branches/'));
-        }
-        
-        $id = intval($id);
         $item = $this->model->get_by_id($id);
-        
         if (!$item) {
-            $this->set_flash('Pobočka nebyla nalezena', 'error');
-            $this->redirect(home_url('/admin/branches/'));
+            wp_send_json_error(array('message' => 'Pobočka nenalezena'));
+            return;
         }
         
-        if (!$this->can_access_item($item)) {
-            $this->set_flash('Nemáte oprávnění k tomuto záznamu', 'error');
-            $this->redirect(home_url('/admin/branches/'));
+        $before_delete_result = $this->before_delete($id);
+        if (is_wp_error($before_delete_result)) {
+            wp_send_json_error(array('message' => $before_delete_result->get_error_message()));
+            return;
         }
         
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            if (!wp_verify_nonce($_POST['saw_nonce'] ?? '', 'saw_branches_form')) {
-                wp_die('Neplatný bezpečnostní token');
-            }
-            
-            $data = $this->prepare_form_data($_POST);
-            $data['id'] = $id;
-            
-            $scope_validation = $this->validate_scope_access($data, 'edit');
-            if (is_wp_error($scope_validation)) {
-                $this->set_flash($scope_validation->get_error_message(), 'error');
-                $this->redirect(home_url('/admin/branches/edit/' . $id));
-            }
-            
-            $data = $this->before_save($data);
-            if (is_wp_error($data)) {
-                $this->set_flash($data->get_error_message(), 'error');
-                $this->redirect($_SERVER['REQUEST_URI']);
-            }
-            
-            $validation = $this->model->validate($data, $id);
-            if (is_wp_error($validation)) {
-                $errors = $validation->get_error_data();
-                $this->set_flash(implode('<br>', $errors), 'error');
-                $this->redirect($_SERVER['REQUEST_URI']);
-            }
-            
-            $result = $this->model->update($id, $data);
-            
-            if (is_wp_error($result)) {
-                $this->set_flash($result->get_error_message(), 'error');
-                $this->redirect($_SERVER['REQUEST_URI']);
-            }
-            
-            $this->after_save($id);
-            
-            $this->set_flash('Pobočka byla úspěšně aktualizována', 'success');
-            $this->redirect(home_url('/admin/branches/'));
+        $result = $this->model->delete($id);
+        if (is_wp_error($result)) {
+            wp_send_json_error(array('message' => $result->get_error_message()));
+            return;
         }
         
-        ob_start();
-        
-        if (class_exists('SAW_Module_Style_Manager')) {
-            $style_manager = SAW_Module_Style_Manager::get_instance();
-            echo $style_manager->inject_module_css($this->entity);
-        }
-        
-        echo '<div class="saw-module-' . esc_attr($this->entity) . '">';
-        
-        $this->render_flash_messages();
-        
-        require $this->config['path'] . 'form-template.php';
-        
-        echo '</div>';
-        
-        $content = ob_get_clean();
-        
-        $this->render_with_layout($content, 'Upravit pobočku');
+        $this->after_delete($id);
+        wp_send_json_success(array('message' => 'Pobočka byla úspěšně smazána'));
     }
-    
+
     /**
-     * Prepare form data from POST request
-     * 
-     * Sanitizes and validates form data according to field configuration.
-     * 
-     * @since 2.0.0
-     * @param array $post POST data
-     * @return array Sanitized form data
+     * Prepare form data from POST
      */
-    private function prepare_form_data($post) {
-        $data = array();
+    protected function prepare_form_data($post) {
+        $data = parent::prepare_form_data($post);
         
-        foreach ($this->config['fields'] as $field_name => $field_config) {
-            if (isset($post[$field_name])) {
-                $value = $post[$field_name];
-                
-                if (isset($field_config['sanitize']) && is_callable($field_config['sanitize'])) {
-                    $value = call_user_func($field_config['sanitize'], $value);
-                }
-                
-                $data[$field_name] = $value;
-            } elseif ($field_config['type'] === 'checkbox') {
-                $data[$field_name] = 0;
-            }
-        }
-        
-        if (isset($post['id'])) {
-            $data['id'] = intval($post['id']);
-        }
-        
-        return $data;
-    }
-    
-    /**
-     * Process data before save
-     * 
-     * Handles:
-     * - Auto-set customer_id from context
-     * - File upload/removal for branch images
-     * - Old file cleanup
-     * 
-     * @since 2.0.0
-     * @param array $data Form data
-     * @return array|WP_Error Processed data or error
-     */
-    protected function before_save($data) {
+        $data['customer_id'] = SAW_Context::get_active_customer_id();
         if (empty($data['customer_id'])) {
-            $data['customer_id'] = SAW_Context::get_customer_id();
+            return new WP_Error('no_customer_context', __('Není vybrán žádný aktivní zákazník.', 'saw-visitors'));
         }
-        
-        if ($this->file_uploader && $this->file_uploader->should_remove_file('image_url')) {
-            if (!empty($data['id'])) {
-                $existing = $this->model->get_by_id($data['id']);
-                if (!empty($existing['image_url'])) {
-                    $this->file_uploader->delete($existing['image_url']);
+
+        if (!empty($_FILES['image_url']['name'])) {
+            $upload_result = $this->file_uploader->upload($_FILES['image_url'], 'branches');
+            if (is_wp_error($upload_result)) {
+                return $upload_result;
+            }
+            if (isset($post['id'])) {
+                $old_item = $this->model->get_by_id($post['id'], true);
+                if (!empty($old_item['image_url'])) {
+                    $this->file_uploader->delete($old_item['image_url']);
                 }
             }
-            $data['image_url'] = '';
-            $data['image_thumbnail'] = '';
+            $data['image_url'] = $upload_result['url'];
         }
+
+        $opening_hours = $post['opening_hours'] ?? array();
+        $data['opening_hours'] = wp_json_encode($opening_hours);
         
-        if ($this->file_uploader && !empty($_FILES['image_url']['name'])) {
-            $upload = $this->file_uploader->upload($_FILES['image_url'], 'branches');
-            
-            if (is_wp_error($upload)) {
-                return $upload;
-            }
-            
-            $data['image_url'] = $upload['url'];
-            $data['image_thumbnail'] = $upload['url'];
-            
-            if (!empty($data['id'])) {
-                $existing = $this->model->get_by_id($data['id']);
-                if (!empty($existing['image_url']) && $existing['image_url'] !== $data['image_url']) {
-                    $this->file_uploader->delete($existing['image_url']);
-                }
-            }
-        }
+        $data['is_headquarters'] = !empty($post['is_headquarters']) ? 1 : 0;
+        $data['is_active'] = !empty($post['is_active']) ? 1 : 0;
+        $data['sort_order'] = !empty($post['sort_order']) ? intval($post['sort_order']) : 10;
+        $data['country'] = $post['country'] ?? 'CZ';
+        $data['description'] = $post['description'] ?? null;
+        $data['metadata'] = $post['metadata'] ?? null;
         
         return $data;
     }
-    
+
     /**
-     * Process actions after successful save
-     * 
-     * Handles cache invalidation for branch switcher component.
-     * 
-     * @since 2.0.0
-     * @param int $id Branch ID
-     * @return void
+     * Before Save Hook
      */
-    protected function after_save($id) {
-        $branch = $this->model->get_by_id($id);
-        
-        if (!empty($branch['customer_id'])) {
-            delete_transient('branches_for_switcher_' . $branch['customer_id']);
-            
-            // Log cache invalidation in debug mode
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log(sprintf(
-                    '[Branches] Cache invalidated for customer %d after saving branch %d',
-                    $branch['customer_id'],
-                    $id
-                ));
+    protected function before_save($id, $data) {
+        if (!empty($data['is_headquarters'])) {
+            $customer_id = $data['customer_id'] ?? SAW_Context::get_active_customer_id();
+            $this->model->set_new_headquarters($id, $customer_id);
+        }
+        return $data;
+    }
+
+    /**
+     * Before Delete Hook
+     */
+    protected function before_delete($id) {
+        $item = $this->model->get_by_id($id);
+        if ($item && $item['is_headquarters']) {
+            $count = $this->model->get_headquarters_count($item['customer_id']);
+            if ($count <= 1) {
+                return new WP_Error('delete_last_hq', __('Nelze smazat poslední sídlo firmy. Nejprve označte jako sídlo jinou pobočku.', 'saw-visitors'));
             }
         }
+        return true;
+    }
+    
+    /**
+     * Format data for detail view
+     */
+    protected function format_detail_data($item) {
+        if (!empty($item['created_at'])) {
+            $item['created_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['created_at']));
+        }
+        if (!empty($item['updated_at'])) {
+            $item['updated_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['updated_at']));
+        }
+        $item['opening_hours_array'] = json_decode($item['opening_hours'] ?? '[]', true);
+        if (!is_array($item['opening_hours_array'])) {
+            $item['opening_hours_array'] = array();
+        }
+        $address_parts = array();
+        if (!empty($item['street'])) $address_parts[] = $item['street'];
+        if (!empty($item['city']))   $address_parts[] = $item['city'];
+        if (!empty($item['postal_code']))    $address_parts[] = $item['postal_code'];
+        $item['full_address'] = implode(', ', $address_parts);
+        if (!empty($item['latitude']) && !empty($item['longitude'])) {
+            $item['map_link'] = sprintf('http://googleusercontent.com/maps/google.com/0', $item['latitude'], $item['longitude']);
+        } elseif (!empty($item['full_address'])) {
+            $item['map_link'] = 'http://googleusercontent.com/maps/google.com/1' . urlencode($item['full_address']);
+        } else {
+            $item['map_link'] = null;
+        }
+        if (!empty($item['image_url'])) {
+            if (strpos($item['image_url'], 'http') !== 0) {
+                $upload_dir = wp_upload_dir();
+                $item['image_url'] = $upload_dir['baseurl'] . '/' . ltrim($item['image_url'], '/');
+            }
+        }
+        return $item;
+    }
+
+    /**
+     * Enqueue module assets
+     */
+    protected function enqueue_assets() {
+        if (SAW_Router::get_instance()->get_current_module() === $this->entity) {
+            $version = defined('SAW_VISITORS_VERSION') ? SAW_VISITORS_VERSION : time();
+            $module_url = SAW_VISITORS_PLUGIN_URL . 'includes/modules/branches/';
+            
+            wp_enqueue_style(
+                'saw-module-branches',
+                $module_url . 'assets/styles.css',
+                array(),
+                $version
+            );
+            
+            wp_enqueue_script(
+                'saw-module-branches',
+                $module_url . 'assets/scripts.js',
+                array('jquery'),
+                $version,
+                true
+            );
+            
+            wp_localize_script('saw-module-branches', 'sawBranches', array(
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('saw_ajax_nonce'),
+                'text' => array(
+                    'loadingGps' => __('Načítám GPS...', 'saw-visitors'),
+                    'loadGps' => __('Načíst souřadnice', 'saw-visitors'),
+                    'hqWarning' => __('Tato akce přesune označení "Sídlo" z jiné pobočky. Pokračovat?', 'saw-visitors'),
+                ),
+            ));
+        }
+        
+        $this->file_uploader->enqueue_assets();
+    }
+    
+    // ============================================
+    // MODULE-SPECIFIC AJAX
+    // ============================================
+
+    public function ajax_get_gps_coordinates() { // Přejmenováno pro univerzální handler
+        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        
+        if (!$this->can('edit') && !$this->can('create')) {
+            wp_send_json_error(array('message' => 'Nemáte oprávnění.'));
+        }
+        
+        $address = sanitize_text_field($_POST['address'] ?? '');
+        if (empty($address)) {
+            wp_send_json_error(array('message' => 'Adresa je prázdná.'));
+        }
+        
+        $coords = $this->model->get_gps_coordinates($address);
+        
+        if (is_wp_error($coords)) {
+            wp_send_json_error(array('message' => $coords->get_error_message()));
+        } else {
+            wp_send_json_success($coords);
+        }
+    }
+
+    public function ajax_check_headquarters() {
+        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        
+        $customer_id = $this->get_current_customer_id(); // Použití helperu
+        $exclude_id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+        
+        $hq_exists = $this->model->get_headquarters_count($customer_id, $exclude_id);
+        
+        wp_send_json_success(array('hq_exists' => $hq_exists));
+    }
+
+    /**
+     * *** HELPER (Copied from customers/model.php) ***
+     * Get current customer ID from context or user data
+     */
+    private function get_current_customer_id() {
+        if (class_exists('SAW_Context')) {
+            $context_id = SAW_Context::get_customer_id();
+            if ($context_id) {
+                return $context_id;
+            }
+        }
+
+        if (is_user_logged_in() && !current_user_can('manage_options')) {
+            global $wpdb;
+            $saw_user = $wpdb->get_row(
+                $wpdb->prepare(
+                    "SELECT customer_id FROM {$wpdb->prefix}saw_users WHERE wp_user_id = %d AND is_active = 1",
+                    get_current_user_id()
+                ),
+                ARRAY_A
+            );
+            if ($saw_user && $saw_user['customer_id']) {
+                return intval($saw_user['customer_id']);
+            }
+        }
+        
+        if (class_exists('SAW_Context')) {
+             return SAW_Context::get_active_customer_id();
+        }
+
+        return null;
     }
 }

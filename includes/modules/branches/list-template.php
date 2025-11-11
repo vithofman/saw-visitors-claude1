@@ -1,255 +1,168 @@
 <?php
 /**
- * Branches List Template
- * 
- * Displays list of branches with search, filters, pagination, and modal details.
- * Uses SAW component system for consistent UI and functionality.
- * 
- * @package SAW_Visitors
- * @since 2.0.0
- * @version 3.1.0 - Permissions Fix
+ * Branches List Template - REFACTORED
+ * * Uses SAW_Component_Admin_Table for consistency.
+ * * UPDATED (v12.0.2) to match 'schema-branches.php' and be compatible
+ * * with the 1-argument callback limit in class-saw-component-admin-table.php.
+ *
+ * @package     SAW_Visitors
+ * @subpackage  Modules/Branches/Templates
+ * @since       9.0.0 (Refactored)
+ * @version     12.0.2 (Compatibility-Fix)
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-if (!class_exists('SAW_Component_Search')) {
-    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/search/class-saw-component-search.php';
-}
+// Load required components
+require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/search/class-saw-component-search.php';
+require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/selectbox/class-saw-component-selectbox.php';
+require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/class-saw-component-admin-table.php';
+require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/modal/class-saw-component-modal.php';
 
-if (!class_exists('SAW_Component_Selectbox')) {
-    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/selectbox/class-saw-component-selectbox.php';
-}
-
-if (!class_exists('SAW_Component_Admin_Table')) {
-    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/class-saw-component-admin-table.php';
-}
-
-if (!class_exists('SAW_Component_Modal')) {
-    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/modal/class-saw-component-modal.php';
-}
-
-// Prepare search component
+// Prepare search component HTML
 ob_start();
 $search_component = new SAW_Component_Search('branches', array(
-    'placeholder' => 'Hledat pobočku...',
+    'placeholder' => __('Hledat pobočku...', 'saw-visitors'),
     'search_value' => $search,
     'ajax_enabled' => false,
-    'ajax_action' => 'saw_search_branches',
     'show_button' => true,
     'show_info_banner' => true,
-    'info_banner_label' => 'Vyhledávání:',
+    'info_banner_label' => __('Vyhledávání:', 'saw-visitors'),
     'clear_url' => home_url('/admin/branches/'),
 ));
 $search_component->render();
 $search_html = ob_get_clean();
 
-// Prepare filters
-ob_start();
-echo '<div class="saw-filters-row">';
+$filters_html = '';
+?>
 
-if (!empty($this->config['list_config']['filters']['is_active'])) {
-    $status_filter = new SAW_Component_Selectbox('is_active-filter', array(
-        'options' => array(
-            '' => 'Všechny statusy',
-            '1' => 'Aktivní',
-            '0' => 'Neaktivní',
-        ),
-        'selected' => $_GET['is_active'] ?? '',
-        'on_change' => 'redirect',
-        'allow_empty' => true,
-        'custom_class' => 'saw-filter-select',
-        'name' => 'is_active',
-    ));
-    $status_filter->render();
-}
+<div class="saw-module-branches">
+    <?php
+    $table = new SAW_Component_Admin_Table('branches', array(
+        'title' => __('Pobočky', 'saw-visitors'),
+        'create_url' => home_url('/admin/branches/create'),
+        'edit_url' => home_url('/admin/branches/{id}/edit'),
+        'detail_url' => home_url('/admin/branches/{id}/'),
+        
+        'module_config' => $this->config,
+        
+        'sidebar_mode' => $sidebar_mode ?? null,
+        'detail_item' => $detail_item ?? null,
+        'form_item' => $form_item ?? null,
+        'detail_tab' => $detail_tab ?? 'overview',
+	    'related_data' => $related_data ?? null,        
 
-if (!empty($this->config['list_config']['filters']['is_headquarters'])) {
-    $headquarters_filter = new SAW_Component_Selectbox('is_headquarters-filter', array(
-        'options' => array(
-            '' => 'Všechny pobočky',
-            '1' => 'Jen hlavní sídla',
-            '0' => 'Bez hlavních sídel',
-        ),
-        'selected' => $_GET['is_headquarters'] ?? '',
-        'on_change' => 'redirect',
-        'allow_empty' => true,
-        'custom_class' => 'saw-filter-select',
-        'name' => 'is_headquarters',
-    ));
-    $headquarters_filter->render();
-}
-
-echo '</div>';
-$filters_html = ob_get_clean();
-
-// Check permissions for actions
-$can_create = $this->can('create');
-$can_edit = $this->can('edit');
-$can_delete = $this->can('delete');
-$can_view = $this->can('view');
-
-// Build actions array
-$actions = array();
-if ($can_edit) {
-    $actions[] = 'edit';
-}
-if ($can_delete) {
-    $actions[] = 'delete';
-}
-
-// Initialize admin table
-$table = new SAW_Component_Admin_Table('branches', array(
-    'title' => 'Pobočky',
-    'create_url' => $can_create ? home_url('/admin/branches/new/') : null,
-    'edit_url' => $can_edit ? home_url('/admin/branches/edit/{id}/') : null,
-    
-    'columns' => array(
-        'name' => array(
-            'label' => 'Název pobočky',
-            'type' => 'custom',
-            'sortable' => true,
-            'bold' => true,
-            'callback' => function($value, $item) {
-                $html = '';
-                
-                if (!empty($item['image_thumbnail'])) {
-                    $html .= '<img src="' . esc_url($item['image_thumbnail']) . '" alt="' . esc_attr($value) . '" class="saw-branch-thumbnail">';
-                } else {
-                    $html .= '<span class="saw-branch-icon">🏢</span>';
+        // *** CRITICAL FIX ***
+        // Sloupce jsou definovány manuálně, aby odpovídaly struktuře customers-template.php
+        // a používaly pouze callbacky s 1 argumentem, které podporuje admin-table.php.
+        'columns' => array(
+            'image_url' => array(
+                'label' => __('Obrázek', 'saw-visitors'),
+                'type' => 'custom', // Použije custom pro zobrazení placeholderu
+                'width' => '60px',
+                'align' => 'center',
+                'callback' => function($value) { // Pouze 1 argument ($value)
+                    if (!empty($value)) {
+                        $upload_dir = wp_upload_dir();
+                        $thumb_url = strpos($value, 'http') === 0 
+                            ? $value 
+                            : $upload_dir['baseurl'] . '/' . ltrim($value, '/');
+                        
+                        return sprintf(
+                            '<img src="%s" alt="" class="saw-branch-thumbnail" style="margin-right: 0;">',
+                            esc_url($thumb_url)
+                        );
+                    } else {
+                        return '<span class="saw-branch-icon" style="margin-right: 0;">🏢</span>';
+                    }
                 }
-                
-                $html .= '<strong>' . esc_html($value) . '</strong>';
-                
-                if (!empty($item['is_headquarters'])) {
-                    $html .= ' <span class="saw-badge saw-badge-info saw-badge-sm">HQ</span>';
-                }
-                
-                return $html;
-            }
-        ),
-        'code' => array(
-            'label' => 'Kód',
-            'type' => 'custom',
-            'width' => '100px',
-            'sortable' => true,
-            'callback' => function($value) {
-                if (!empty($value)) {
-                    return '<span class="saw-code-badge">' . esc_html($value) . '</span>';
-                }
-                return '<span class="saw-text-muted">—</span>';
-            }
-        ),
-        'city' => array(
-            'label' => 'Město',
-            'type' => 'text',
-            'width' => '150px',
-            'sortable' => true
-        ),
-        'phone' => array(
-            'label' => 'Telefon',
-            'type' => 'custom',
-            'width' => '120px',
-            'callback' => function($value) {
-                if (!empty($value)) {
-                    return '<a href="tel:' . esc_attr($value) . '" class="saw-phone-link" onclick="event.stopPropagation();">' . esc_html($value) . '</a>';
-                }
-                return '<span class="saw-text-muted">—</span>';
-            }
-        ),
-        'is_headquarters' => array(
-            'label' => 'Hlavní',
-            'type' => 'badge',
-            'width' => '100px',
-            'align' => 'center',
-            'map' => array(
-                '1' => 'info',
-                '0' => 'secondary'
             ),
-            'labels' => array(
-                '1' => 'Ano',
-                '0' => 'Ne'
-            )
-        ),
-        'is_active' => array(
-            'label' => 'Status',
-            'type' => 'badge',
-            'width' => '100px',
-            'align' => 'center',
-            'map' => array(
-                '1' => 'success',
-                '0' => 'secondary'
+            'name' => array(
+                'label' => __('Název pobočky', 'saw-visitors'),
+                'type' => 'text', // Žádný callback
+                'sortable' => true,
+                'class' => 'saw-table-cell-bold',
             ),
-            'labels' => array(
-                '1' => 'Aktivní',
-                '0' => 'Neaktivní'
-            )
+             'is_headquarters' => array(
+                'label' => __('Sídlo', 'saw-visitors'),
+                'type' => 'custom',
+                'width' => '80px',
+                'align' => 'center',
+                'callback' => function($value) { // Pouze 1 argument ($value)
+                    if (empty($value)) {
+                        return '<span class="saw-text-muted">—</span>';
+                    }
+                    return sprintf(
+                        '<span class="saw-badge saw-badge-sm saw-badge-primary">%s</span>',
+                        __('Sídlo', 'saw-visitors')
+                    );
+                }
+            ),
+            'code' => array(
+                'label' => __('Kód', 'saw-visitors'),
+                'type' => 'custom',
+                'width' => '100px',
+                'align' => 'center',
+                'callback' => function($value) { // Pouze 1 argument ($value)
+                    if (empty($value)) return '<span class="saw-text-muted">—</span>';
+                    return sprintf('<span class="saw-code-badge">%s</span>', esc_html($value));
+                }
+            ),
+            'city' => array(
+                'label' => __('Město', 'saw-visitors'),
+                'type' => 'text', // Žádný callback
+                'sortable' => true,
+            ),
+            'phone' => array(
+                'label' => __('Telefon', 'saw-visitors'),
+                'type' => 'custom',
+                'callback' => function($value) { // Pouze 1 argument ($value)
+                    if (empty($value)) return '<span class="saw-text-muted">—</span>';
+                    return sprintf(
+                        '<a href="tel:%s" class="saw-phone-link">%s</a>',
+                        esc_attr(preg_replace('/[^\d+]/', '', $value)),
+                        esc_html($value)
+                    );
+                }
+            ),
+            'sort_order' => array(
+                'label' => __('Pořadí', 'saw-visitors'),
+                'type' => 'custom',
+                'sortable' => true,
+                'width' => '80px',
+                'align' => 'center',
+                'callback' => function($value) { // Pouze 1 argument ($value)
+                    return sprintf('<span class="saw-sort-order-badge">%d</span>', (int) $value);
+                }
+            ),
         ),
-        'sort_order' => array(
-            'label' => 'Pořadí',
-            'type' => 'custom',
-            'width' => '80px',
-            'align' => 'center',
-            'sortable' => true,
-            'callback' => function($value) {
-                return '<span class="saw-sort-order-badge">' . esc_html($value ?? 0) . '</span>';
-            }
-        )
-    ),
-    
-    'rows' => $items,
-    'total_items' => $total,
-    'current_page' => $page,
-    'total_pages' => $total_pages,
-    'orderby' => $orderby,
-    'order' => $order,
-    'search' => $search_html,
-    'filters' => $filters_html,
-    'actions' => $actions,
-    'empty_message' => 'Žádné pobočky nenalezeny',
-    'add_new' => $can_create ? 'Nová pobočka' : null,
-    
-    'enable_modal' => $can_view,
-    'modal_id' => 'branch-detail',
-    'modal_ajax_action' => 'saw_get_branches_detail',
-));
+        
+        'rows' => $items,
+        'total_items' => $total,
+        'current_page' => $page,
+        'total_pages' => $total_pages,
+        'orderby' => $orderby,
+        'order' => $order,
+        
+        'search' => $search_html,
+        'filters' => $filters_html,
+        
+        'enable_modal' => empty($sidebar_mode),
+        'modal_id' => 'branch-detail',
+        'modal_ajax_action' => 'saw_get_branches_detail',
+    ));
 
-$table->render();
+    $table->render();
+    ?>
+</div>
 
-// Modal component (only if user can view details)
-if ($can_view) {
-    $modal_actions = array();
-    
-    if ($can_edit) {
-        $modal_actions[] = array(
-            'type' => 'edit',
-            'label' => '',
-            'icon' => 'dashicons-edit',
-            'url' => home_url('/admin/branches/edit/{id}/'),
-        );
-    }
-    
-    if ($can_delete) {
-        $modal_actions[] = array(
-            'type' => 'delete',
-            'label' => '',
-            'icon' => 'dashicons-trash',
-            'confirm' => true,
-            'confirm_message' => 'Opravdu chcete smazat tuto pobočku?',
-            'ajax_action' => 'saw_delete_branches',
-        );
-    }
-    
-    $branch_modal = new SAW_Component_Modal('branch-detail', array(
-        'title' => 'Detail pobočky',
-        'ajax_enabled' => true,
-        'ajax_action' => 'saw_get_branches_detail',
+<?php
+if (empty($sidebar_mode)) {
+    $modal = new SAW_Component_Modal('branch-detail', array(
+        'title' => __('Detail pobočky', 'saw-visitors'),
         'size' => 'large',
-        'show_close' => true,
-        'close_on_backdrop' => true,
-        'close_on_escape' => true,
-        'header_actions' => $modal_actions,
     ));
-    $branch_modal->render();
+    $modal->render();
 }

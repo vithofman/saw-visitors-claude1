@@ -849,31 +849,32 @@ abstract class SAW_Base_Controller
     }
     
     /**
-     * Render flash messages
-     *
-     * Displays and clears flash messages from session.
-     *
-     * @since 1.0.0
-     * @return void
-     */
-    protected function render_flash_messages() {
-        if (!class_exists('SAW_Session_Manager')) {
-            return;
-        }
-        
-        $session = SAW_Session_Manager::instance();
-        
-        if ($session->has('flash_success')) {
-            echo '<div class="saw-alert saw-alert-success">' . esc_html($session->get('flash_success')) . '</div>';
-            $session->unset('flash_success');
-        }
-        
-        if ($session->has('flash_error')) {
-            echo '<div class="saw-alert saw-alert-error">' . esc_html($session->get('flash_error')) . '</div>';
-            $session->unset('flash_error');
-        }
+ * Render flash messages as toast notifications
+ *
+ * Displays and clears flash messages from session using toast notifications.
+ *
+ * @since 12.3.0
+ * @return void
+ */
+protected function render_flash_messages() {
+    if (!class_exists('SAW_Session_Manager')) {
+        return;
     }
     
+    $session = SAW_Session_Manager::instance();
+    
+    if ($session->has('flash_success')) {
+        $message = $session->get('flash_success');
+        echo '<script>jQuery(document).ready(function() { sawShowToast(' . wp_json_encode($message) . ', "success"); });</script>';
+        $session->unset('flash_success');
+    }
+    
+    if ($session->has('flash_error')) {
+        $message = $session->get('flash_error');
+        echo '<script>jQuery(document).ready(function() { sawShowToast(' . wp_json_encode($message) . ', "danger"); });</script>';
+        $session->unset('flash_error');
+    }
+}    
     /**
      * Set flash message
      *

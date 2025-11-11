@@ -25,35 +25,45 @@ define( 'SAW_DB_PREFIX', 'saw_' );
 // ========================================
 
 /**
- * Universal AJAX handler for sidebar loading
- * Handles: saw_load_sidebar_{module}
- * Example: saw_load_sidebar_customers, saw_load_sidebar_branches, etc.
+ * NOVÝ Univerzální AJAX handler
+ * Zpracuje VŠECHNY akce ve formátu:
+ * wp_ajax_saw_{metoda}_{modul}
+ *
+ * Příklady:
+ * - saw_load_sidebar_customers -> $controller->ajax_load_sidebar()
+ * - saw_delete_branches -> $controller->ajax_delete()
+ * - saw_get_gps_coordinates_branches -> $controller->ajax_get_gps_coordinates()
  */
-function saw_universal_ajax_load_sidebar() {
+function saw_universal_ajax_handler() {
     $action = $_POST['action'] ?? '';
-    
-    // Extract module name from action (e.g., 'saw_load_sidebar_customers' -> 'customers')
-    if (!preg_match('/^saw_load_sidebar_(.+)$/', $action, $matches)) {
+
+    // Extrahování metody a modulu
+    // Vzor: saw_ (metoda) _ (modul)
+    if (!preg_match('/^saw_([a-z_]+)_(.+)$/', $action, $matches)) {
         if (SAW_DEBUG) {
             error_log('[SAW] Invalid AJAX action format: ' . $action);
         }
         wp_send_json_error(['message' => 'Invalid action format']);
         return;
     }
-    
-    $module = sanitize_key($matches[1]); // customers, branches, departments, etc.
-    
+
+    $raw_method = sanitize_key($matches[1]); // např. 'load_sidebar', 'delete', 'get_gps_coordinates'
+    $module = sanitize_key($matches[2]);     // např. 'customers', 'branches'
+
+    // Převedení na název metody v controlleru (ajax_load_sidebar, ajax_delete, atd.)
+    $method_name = 'ajax_' . $raw_method;
+
     if (SAW_DEBUG) {
-        error_log("[SAW] AJAX sidebar request for module: {$module}");
+        error_log("[SAW] AJAX Handler: Module '{$module}', Method '{$method_name}'");
     }
-    
+
     try {
         // Load base classes
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/class-base-controller.php';
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/trait-ajax-handlers.php';
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/class-base-model.php';
         
-        // Build controller class name (e.g., SAW_Module_Customers_Controller)
+        // Sestavení cesty k controlleru modulu
         $controller_file = SAW_VISITORS_PLUGIN_DIR . "includes/modules/{$module}/controller.php";
         
         if (!file_exists($controller_file)) {
@@ -62,20 +72,25 @@ function saw_universal_ajax_load_sidebar() {
         
         require_once $controller_file;
         
-        // Convert module name to class name (customers -> Customers)
+        // Převedení názvu modulu na název třídy (customers -> Customers)
         $class_name = 'SAW_Module_' . str_replace(' ', '_', ucwords(str_replace('-', ' ', $module))) . '_Controller';
         
         if (!class_exists($class_name)) {
             throw new Exception("Controller class not found: {$class_name}");
         }
         
+        // Vytvoření instance controlleru (tím se spustí jeho __construct)
         $controller = new $class_name();
         
-        if (!method_exists($controller, 'ajax_load_sidebar')) {
-            throw new Exception("Method ajax_load_sidebar not found in {$class_name}");
+        if (!method_exists($controller, $method_name)) {
+            // Zkusíme fallback na trait, pokud metoda neexistuje (např. ajax_get_detail)
+            if (!method_exists($controller, $method_name)) {
+                 throw new Exception("Method {$method_name} not found in {$class_name}");
+            }
         }
         
-        $controller->ajax_load_sidebar();
+        // Zavolání požadované metody (např. $controller->ajax_delete())
+        $controller->{$method_name}();
         
     } catch (Throwable $e) {
         if (SAW_DEBUG) {
@@ -85,19 +100,36 @@ function saw_universal_ajax_load_sidebar() {
     }
 }
 
-// Register universal AJAX handlers for all modules
-// This dynamically handles any module without hardcoding
-add_action('wp_ajax_saw_load_sidebar_customers', 'saw_universal_ajax_load_sidebar');
-add_action('wp_ajax_saw_load_sidebar_branches', 'saw_universal_ajax_load_sidebar');
-add_action('wp_ajax_saw_load_sidebar_departments', 'saw_universal_ajax_load_sidebar');
-add_action('wp_ajax_saw_load_sidebar_users', 'saw_universal_ajax_load_sidebar');
-add_action('wp_ajax_saw_load_sidebar_contacts', 'saw_universal_ajax_load_sidebar');
-add_action('wp_ajax_saw_load_sidebar_invitations', 'saw_universal_ajax_load_sidebar');
-add_action('wp_ajax_saw_load_sidebar_visitors', 'saw_universal_ajax_load_sidebar');
+// ========================================
+// Registrace AJAX handlerů
+// ========================================
+
+// --- Customers ---
+add_action('wp_ajax_saw_load_sidebar_customers', 'saw_universal_ajax_handler');
+add_action('wp_ajax_saw_get_detail_customers', 'saw_universal_ajax_handler');
+add_action('wp_ajax_saw_delete_customers', 'saw_universal_ajax_handler');
+add_action('wp_ajax_saw_search_customers', 'saw_universal_ajax_handler');
+
+// --- Branches (OPRAVENO A DOPLNĚNO) ---
+add_action('wp_ajax_saw_load_sidebar_branches', 'saw_universal_ajax_handler');
+add_action('wp_ajax_saw_get_detail_branches', 'saw_universal_ajax_handler');
+add_action('wp_ajax_saw_delete_branches', 'saw_universal_ajax_handler');
+add_action('wp_ajax_saw_search_branches', 'saw_universal_ajax_handler');
+// Specifické akce pro 'branches'
+add_action('wp_ajax_saw_get_gps_coordinates_branches', 'saw_universal_ajax_handler');
+add_action('wp_ajax_saw_check_headquarters_branches', 'saw_universal_ajax_handler');
+
+
+// --- Ostatní moduly (příklad registrace) ---
+// add_action('wp_ajax_saw_load_sidebar_departments', 'saw_universal_ajax_handler');
+// add_action('wp_ajax_saw_delete_departments', 'saw_universal_ajax_handler');
+// ... atd. ...
+
 
 // ========================================
 // BRANCH SWITCHER AJAX
 // ========================================
+
 
 add_action('wp_ajax_saw_get_branches_for_switcher', function() {
     $nonce = isset($_POST['nonce']) ? $_POST['nonce'] : '';
