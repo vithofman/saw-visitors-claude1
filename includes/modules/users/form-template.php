@@ -57,7 +57,10 @@ if (current_user_can('manage_options')) {
 
 <div class="saw-form-container">
     <form method="post" action="" class="saw-user-form">
-        <?php wp_nonce_field('saw_users_form', 'saw_nonce'); ?>
+        <?php 
+$nonce_action = $is_edit ? 'saw_edit_users' : 'saw_create_users';
+wp_nonce_field($nonce_action, '_wpnonce', false);
+?>
         
         <?php if ($is_edit): ?>
             <input type="hidden" name="id" value="<?php echo esc_attr($item['id']); ?>">

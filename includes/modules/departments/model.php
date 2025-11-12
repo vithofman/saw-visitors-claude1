@@ -9,7 +9,7 @@
  * @subpackage  Modules/Departments
  * @since       1.0.0
  * @author      SAW Visitors Dev Team
- * @version     1.0.2
+ * @version     2.0.0 - FIXED: Added branch_id filtering from SAW_Context
  */
 
 if (!defined('ABSPATH')) {
@@ -191,27 +191,43 @@ class SAW_Module_Departments_Model extends SAW_Base_Model
     }
     
     /**
-     * Get all departments with customer isolation and caching
+     * Get all departments with customer and branch isolation
      * 
-     * Retrieves a list of departments filtered by current customer context.
+     * CRITICAL FIX: Now filters by BOTH customer_id AND branch_id from SAW_Context
+     * - customer_id = Always filtered by current customer (from customer switcher)
+     * - branch_id = Filtered by current branch (from branch switcher) if set
+     * 
      * Results are cached for 5 minutes using transients.
      * 
      * @since 1.0.0
+     * @version 2.0.0 - Added branch_id filtering
      * @param array $filters Query filters (search, orderby, page, etc.)
      * @return array Array with 'items' and 'total' keys
      */
     public function get_all($filters = array()) {
         $customer_id = SAW_Context::get_customer_id();
         
+        // CRITICAL: Always require customer_id
+        if (!$customer_id) {
+            return array('items' => array(), 'total' => 0);
+        }
+        
         // Auto-set customer_id filter from context
         if (!isset($filters['customer_id'])) {
             $filters['customer_id'] = $customer_id;
         }
         
-        // Create cache key based on customer and filters
+        // CRITICAL FIX: Add branch_id filter from SAW_Context (branch switcher)
+        $branch_id = SAW_Context::get_branch_id();
+        if ($branch_id && !isset($filters['branch_id'])) {
+            $filters['branch_id'] = $branch_id;
+        }
+        
+        // Create cache key based on customer, branch, and filters
         $cache_key = sprintf(
-            'saw_departments_list_%d_%s',
+            'saw_departments_list_%d_%s_%s',
             $customer_id,
+            $branch_id ? $branch_id : 'all',
             md5(serialize($filters))
         );
         
@@ -241,7 +257,6 @@ class SAW_Module_Departments_Model extends SAW_Base_Model
     public function create($data) {
         $result = parent::create($data);
         
-        // Invalidate list caches on success
         if (!is_wp_error($result)) {
             $this->invalidate_list_cache();
         }
@@ -257,14 +272,13 @@ class SAW_Module_Departments_Model extends SAW_Base_Model
      * @since 1.0.0
      * @param int $id Department ID
      * @param array $data Department data
-     * @return bool|WP_Error True on success or error
+     * @return bool|WP_Error True on success, error on failure
      */
     public function update($id, $data) {
         $result = parent::update($id, $data);
         
-        // Invalidate caches on success
         if (!is_wp_error($result)) {
-            delete_transient(sprintf('saw_departments_item_%d', $id));
+            $this->invalidate_item_cache($id);
             $this->invalidate_list_cache();
         }
         
@@ -278,14 +292,13 @@ class SAW_Module_Departments_Model extends SAW_Base_Model
      * 
      * @since 1.0.0
      * @param int $id Department ID
-     * @return bool|WP_Error True on success or error
+     * @return bool|WP_Error True on success, error on failure
      */
     public function delete($id) {
         $result = parent::delete($id);
         
-        // Invalidate caches on success
         if (!is_wp_error($result)) {
-            delete_transient(sprintf('saw_departments_item_%d', $id));
+            $this->invalidate_item_cache($id);
             $this->invalidate_list_cache();
         }
         
@@ -293,28 +306,36 @@ class SAW_Module_Departments_Model extends SAW_Base_Model
     }
     
     /**
-     * Invalidate all list caches
+     * Invalidate item cache
      * 
-     * Removes all cached department lists from transients.
+     * Removes cached data for a specific department.
      * 
-     * @since 1.0.2
+     * @since 1.0.0
+     * @param int $id Department ID
+     * @return void
+     */
+    private function invalidate_item_cache($id) {
+        $cache_key = sprintf('saw_departments_item_%d', $id);
+        delete_transient($cache_key);
+    }
+    
+    /**
+     * Invalidate list cache
+     * 
+     * Removes all cached department lists.
+     * Uses wildcard pattern to clear all list variations.
+     * 
+     * @since 1.0.0
      * @return void
      */
     private function invalidate_list_cache() {
         global $wpdb;
         
-        // Delete all department list transients
-        $wpdb->query($wpdb->prepare(
-            "DELETE FROM %i WHERE option_name LIKE %s",
-            $wpdb->options,
-            $wpdb->esc_like('_transient_saw_departments_list_') . '%'
-        ));
-        
-        // Also delete timeout records
-        $wpdb->query($wpdb->prepare(
-            "DELETE FROM %i WHERE option_name LIKE %s",
-            $wpdb->options,
-            $wpdb->esc_like('_transient_timeout_saw_departments_list_') . '%'
-        ));
+        // Delete all department list caches (wildcard)
+        $wpdb->query(
+            "DELETE FROM {$wpdb->options} 
+             WHERE option_name LIKE '_transient_saw_departments_list_%' 
+             OR option_name LIKE '_transient_timeout_saw_departments_list_%'"
+        );
     }
 }

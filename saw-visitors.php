@@ -104,15 +104,6 @@ function saw_universal_ajax_handler() {
 // Registrace AJAX handlerů
 // ========================================
 
-// --- Branches (OPRAVENO A DOPLNĚNO) ---
-add_action('wp_ajax_saw_load_sidebar_branches', 'saw_universal_ajax_handler');
-add_action('wp_ajax_saw_get_detail_branches', 'saw_universal_ajax_handler');
-add_action('wp_ajax_saw_delete_branches', 'saw_universal_ajax_handler');
-add_action('wp_ajax_saw_search_branches', 'saw_universal_ajax_handler');
-
-// Specifické akce pro 'branches'
-add_action('wp_ajax_saw_get_gps_coordinates_branches', 'saw_universal_ajax_handler');
-add_action('wp_ajax_saw_check_headquarters_branches', 'saw_universal_ajax_handler');
 
 
 // --- Ostatní moduly (příklad registrace) ---

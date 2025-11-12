@@ -10,7 +10,7 @@
  * @subpackage  Modules/Departments
  * @since       1.0.0
  * @author      SAW Visitors Dev Team
- * @version     1.0.0
+ * @version     2.0.0 - FIXED: Changed capabilities to manage_options
  */
 
 if (!defined('ABSPATH')) {
@@ -18,45 +18,40 @@ if (!defined('ABSPATH')) {
 }
 
 return array(
-    // ================================================
-    // BASIC MODULE INFO
-    // ================================================
-    
+    // ============================================
+    // ENTITY DEFINITION
+    // ============================================
     'entity' => 'departments',
     'table' => 'saw_departments',
     'singular' => 'Oddělení',
     'plural' => 'Oddělení',
-    'route' => 'admin/departments',
-    'icon' => '🏢',
-    
-    // ================================================
-    // SECURITY & ISOLATION
-    // ================================================
-    
+    'route' => 'departments',
+    'icon' => '🏭',
     'has_customer_isolation' => true,
+    'edit_url' => 'departments/{id}/edit',
     
-    // ================================================
-    // CAPABILITIES (WordPress permissions)
-    // ================================================
-    
+    // ============================================
+    // CAPABILITIES
+    // ============================================
     'capabilities' => array(
-        'list' => 'saw_view_departments',
-        'view' => 'saw_view_departments',
-        'create' => 'saw_manage_departments',
-        'edit' => 'saw_manage_departments',
-        'delete' => 'saw_manage_departments',
+        'list' => 'manage_options',
+        'view' => 'manage_options',
+        'create' => 'manage_options',
+        'edit' => 'manage_options',
+        'delete' => 'manage_options',
     ),
     
-    // ================================================
+    // ============================================
     // FIELD DEFINITIONS
-    // ================================================
-    
+    // ============================================
     'fields' => array(
-        
         // Customer ID (hidden, auto-set from context)
         'customer_id' => array(
-            'type' => 'hidden',
+            'type' => 'number',
+            'label' => 'Zákazník ID',
             'required' => true,
+            'hidden' => true,
+            'sanitize' => 'absint',
         ),
         
         // Branch selection
@@ -64,6 +59,7 @@ return array(
             'type' => 'select',
             'label' => 'Pobočka',
             'required' => true,
+            'sanitize' => 'absint',
             'help' => 'Pobočka ke které oddělení patří',
         ),
         
@@ -108,18 +104,18 @@ return array(
         
         // Active status
         'is_active' => array(
-            'type' => 'checkbox',
-            'label' => 'Aktivní oddělení',
+            'type' => 'boolean',
+            'label' => 'Aktivní',
             'required' => false,
             'default' => 1,
+            'sanitize' => 'absint',
             'help' => 'Pouze aktivní oddělení jsou dostupná pro výběr',
         ),
     ),
     
-    // ================================================
+    // ============================================
     // LIST VIEW CONFIGURATION
-    // ================================================
-    
+    // ============================================
     'list_config' => array(
         'columns' => array('department_number', 'name', 'branch_id', 'training_version', 'is_active'),
         'searchable' => array('name', 'department_number', 'description'),
@@ -132,10 +128,9 @@ return array(
         'enable_detail_modal' => true,
     ),
     
-    // ================================================
+    // ============================================
     // CACHING CONFIGURATION
-    // ================================================
-    
+    // ============================================
     'cache' => array(
         'enabled' => true,
         'ttl' => 300, // 5 minutes

@@ -183,58 +183,106 @@ abstract class SAW_Base_Controller
      * @return array|null Related data grouped by relation key, or null
      */
     protected function load_related_data($item_id) {
-        $relations = $this->load_relations_config();
+    error_log('[DEBUG] load_related_data called with ID: ' . $item_id);
+    
+    $relations = $this->load_relations_config();
+    
+    error_log('[DEBUG] Relations config: ' . print_r($relations, true));
+    
+    if (empty($relations)) {
+        error_log('[DEBUG] No relations config found!');
+        return null;
+    }
+    
+    global $wpdb;
+    $related_data = array();
+    
+    foreach ($relations as $key => $relation) {
+        error_log('[DEBUG] Processing relation: ' . $key);
         
-        if (empty($relations)) {
-            return null;
+        if (empty($relation['entity'])) {
+            error_log('[DEBUG] Missing entity for relation: ' . $key);
+            continue;
         }
         
-        global $wpdb;
-        $related_data = array();
+        $entity_table = $wpdb->prefix . 'saw_' . $relation['entity'];
+        $order_by = $relation['order_by'] ?? 'id DESC';
         
-        foreach ($relations as $key => $relation) {
-            if (empty($relation['entity']) || empty($relation['foreign_key'])) {
+        // Handle junction table (many-to-many)
+        if (!empty($relation['junction_table'])) {
+            error_log('[DEBUG] Using junction table for: ' . $key);
+            
+            if (empty($relation['foreign_key']) || empty($relation['local_key'])) {
+                error_log('[DEBUG] Missing keys for junction table!');
                 continue;
             }
             
-            $table = $wpdb->prefix . 'saw_' . $relation['entity'];
+            $junction_table = $wpdb->prefix . $relation['junction_table'];
             $foreign_key = $relation['foreign_key'];
-            $order_by = $relation['order_by'] ?? 'id DESC';
+            $local_key = $relation['local_key'];
             
             $query = $wpdb->prepare(
-                "SELECT * FROM {$table} WHERE {$foreign_key} = %d ORDER BY {$order_by}",
+                "SELECT e.* 
+                 FROM {$entity_table} e
+                 INNER JOIN {$junction_table} j ON e.id = j.{$local_key}
+                 WHERE j.{$foreign_key} = %d
+                 ORDER BY e.{$order_by}",
                 $item_id
             );
             
-            $items = $wpdb->get_results($query, ARRAY_A);
+            error_log('[DEBUG] Junction query: ' . $query);
+        } 
+        // Handle direct foreign key
+        else {
+            error_log('[DEBUG] Using direct foreign key for: ' . $key);
             
-            if (empty($items)) {
+            if (empty($relation['foreign_key'])) {
                 continue;
             }
             
-            $formatted_items = array();
-            foreach ($items as $item) {
-                $display_text = $this->format_related_item_display($item, $relation);
-                
-                $formatted_items[] = array(
-                    'id' => $item['id'],
-                    'display' => $display_text,
-                    'raw' => $item,
-                );
-            }
+            $foreign_key = $relation['foreign_key'];
             
-            $related_data[$key] = array(
-                'label' => $relation['label'],
-                'icon' => $relation['icon'] ?? '📋',
-                'entity' => $relation['entity'],
-                'items' => $formatted_items,
-                'route' => $relation['route'],
-                'count' => count($formatted_items),
+            $query = $wpdb->prepare(
+                "SELECT * FROM {$entity_table} WHERE {$foreign_key} = %d ORDER BY {$order_by}",
+                $item_id
+            );
+            
+            error_log('[DEBUG] Direct query: ' . $query);
+        }
+        
+        $items = $wpdb->get_results($query, ARRAY_A);
+        
+        error_log('[DEBUG] Found items: ' . count($items));
+        
+        if (empty($items)) {
+            continue;
+        }
+        
+        $formatted_items = array();
+        foreach ($items as $item) {
+            $display_text = $this->format_related_item_display($item, $relation);
+            
+            $formatted_items[] = array(
+                'id' => $item['id'],
+                'display' => $display_text,
+                'raw' => $item,
             );
         }
         
-        return empty($related_data) ? null : $related_data;
+        $related_data[$key] = array(
+            'label' => $relation['label'],
+            'icon' => $relation['icon'] ?? '📋',
+            'entity' => $relation['entity'],
+            'items' => $formatted_items,
+            'route' => $relation['route'],
+            'count' => count($formatted_items),
+        );
     }
+    
+    error_log('[DEBUG] Total related data sections: ' . count($related_data));
+    
+    return empty($related_data) ? null : $related_data;
+}
     
     /**
      * Format related item display text

@@ -2,12 +2,21 @@
 /**
  * Users Module Controller
  * 
- * @package SAW_Visitors
- * @version 4.1.0 - Permissions & Scope Fix
+ * @package     SAW_Visitors
+ * @subpackage  Modules/Users
+ * @version     5.0.0 - COMPLETE with all original methods
  */
 
 if (!defined('ABSPATH')) {
     exit;
+}
+
+if (!class_exists('SAW_Base_Controller')) {
+    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/class-base-controller.php';
+}
+
+if (!trait_exists('SAW_AJAX_Handlers')) {
+    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/trait-ajax-handlers.php';
 }
 
 class SAW_Module_Users_Controller extends SAW_Base_Controller 
@@ -27,221 +36,21 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
         require_once $module_path . 'model.php';
         $this->model = new SAW_Module_Users_Model($this->config);
         
-        add_action('wp_ajax_saw_get_departments_by_branch', [$this, 'ajax_get_departments_by_branch']);
+        add_action('wp_ajax_saw_get_departments_by_branch', array($this, 'ajax_get_departments_by_branch'));
     }
     
+    /**
+     * Display list page with optional sidebar
+     */
     public function index() {
-        $this->verify_module_access();
-        
-        $search = isset($_GET['s']) ? sanitize_text_field($_GET['s']) : '';
-        $is_active = isset($_GET['is_active']) ? sanitize_text_field($_GET['is_active']) : '';
-        $role = isset($_GET['role']) ? sanitize_text_field($_GET['role']) : '';
-        $orderby = isset($_GET['orderby']) ? sanitize_text_field($_GET['orderby']) : 'first_name';
-        $order = isset($_GET['order']) ? strtoupper(sanitize_text_field($_GET['order'])) : 'ASC';
-        $page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
-        
-        $filters = [
-            'search' => $search,
-            'orderby' => $orderby,
-            'order' => $order,
-            'page' => $page,
-            'per_page' => 20,
-        ];
-        
-        if ($is_active !== '') {
-            $filters['is_active'] = intval($is_active);
-        }
-        
-        if ($role !== '') {
-            $filters['role'] = $role;
-        }
-        
-        $data = $this->model->get_all($filters);
-        $items = $data['items'];
-        $total = $data['total'];
-        $total_pages = ceil($total / 20);
-        
-        ob_start();
-        
-        if (class_exists('SAW_Module_Style_Manager')) {
-            $style_manager = SAW_Module_Style_Manager::get_instance();
-            echo $style_manager->inject_module_css($this->entity);
-        }
-        
-        echo '<div class="saw-module-' . esc_attr($this->entity) . '">';
-        
-        $this->render_flash_messages();
-        
-        require $this->config['path'] . 'list-template.php';
-        
-        echo '</div>';
-        
-        $content = ob_get_clean();
-        
-        $this->render_with_layout($content, $this->config['plural']);
+        $this->render_list_view();
     }
     
-    public function create() {
-        $this->verify_module_access();
-        
-        if (!$this->can('create')) {
-            $this->set_flash('Nemáte oprávnění vytvářet uživatele', 'error');
-            $this->redirect(home_url('/admin/users/'));
-        }
-        
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            if (!wp_verify_nonce($_POST['saw_nonce'] ?? '', 'saw_users_form')) {
-                wp_die('Neplatný bezpečnostní token');
-            }
-            
-            $data = $this->prepare_form_data($_POST);
-            
-            $scope_validation = $this->validate_scope_access($data, 'create');
-            if (is_wp_error($scope_validation)) {
-                $this->set_flash($scope_validation->get_error_message(), 'error');
-                $this->redirect(home_url('/admin/users/'));
-            }
-            
-            $data = $this->before_save($data);
-            
-            if (is_wp_error($data)) {
-                $this->set_flash($data->get_error_message(), 'error');
-            } else {
-                $id = $this->model->create($data);
-                
-                if (is_wp_error($id)) {
-                    $this->set_flash($id->get_error_message(), 'error');
-                } else {
-                    $this->after_save($id);
-                    $this->set_flash('Uživatel byl úspěšně vytvořen', 'success');
-                    $this->redirect(home_url('/admin/users/'));
-                }
-            }
-        }
-        
-        $item = [];
-        
-        ob_start();
-        
-        if (class_exists('SAW_Module_Style_Manager')) {
-            $style_manager = SAW_Module_Style_Manager::get_instance();
-            echo $style_manager->inject_module_css($this->entity);
-        }
-        
-        echo '<div class="saw-module-' . esc_attr($this->entity) . '">';
-        
-        $this->render_flash_messages();
-        
-        require $this->config['path'] . 'form-template.php';
-        
-        echo '</div>';
-        
-        $content = ob_get_clean();
-        
-        $this->render_with_layout($content, 'Nový uživatel');
-    }
-    
-    public function edit($id) {
-        $this->verify_module_access();
-        
-        if (!$this->can('edit')) {
-            $this->set_flash('Nemáte oprávnění upravovat uživatele', 'error');
-            $this->redirect(home_url('/admin/users/'));
-        }
-        
-        $item = $this->model->get_by_id($id);
-        
-        if (!$item) {
-            $this->set_flash('Uživatel nebyl nalezen', 'error');
-            $this->redirect(home_url('/admin/users/'));
-        }
-        
-        if (!$this->can_access_item($item)) {
-            $this->set_flash('Nemáte oprávnění k tomuto záznamu', 'error');
-            $this->redirect(home_url('/admin/users/'));
-        }
-        
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            if (!wp_verify_nonce($_POST['saw_nonce'] ?? '', 'saw_users_form')) {
-                wp_die('Neplatný bezpečnostní token');
-            }
-            
-            $data = $this->prepare_form_data($_POST);
-            $data['id'] = $id;
-            
-            $scope_validation = $this->validate_scope_access($data, 'edit');
-            if (is_wp_error($scope_validation)) {
-                $this->set_flash($scope_validation->get_error_message(), 'error');
-                $this->redirect(home_url('/admin/users/edit/' . $id));
-            }
-            
-            $data = $this->before_save($data);
-            
-            if (is_wp_error($data)) {
-                $this->set_flash($data->get_error_message(), 'error');
-            } else {
-                $result = $this->model->update($id, $data);
-                
-                if (is_wp_error($result)) {
-                    $this->set_flash($result->get_error_message(), 'error');
-                } else {
-                    $this->after_save($id);
-                    $this->set_flash('Uživatel byl úspěšně aktualizován', 'success');
-                    $this->redirect(home_url('/admin/users/'));
-                }
-            }
-            
-            $item = $this->model->get_by_id($id);
-        }
-        
-        if (!empty($item['wp_user_id'])) {
-            $wp_user = get_userdata($item['wp_user_id']);
-            $item['email'] = $wp_user ? $wp_user->user_email : '';
-        }
-        
-        ob_start();
-        
-        if (class_exists('SAW_Module_Style_Manager')) {
-            $style_manager = SAW_Module_Style_Manager::get_instance();
-            echo $style_manager->inject_module_css($this->entity);
-        }
-        
-        echo '<div class="saw-module-' . esc_attr($this->entity) . '">';
-        
-        $this->render_flash_messages();
-        
-        require $this->config['path'] . 'form-template.php';
-        
-        echo '</div>';
-        
-        $content = ob_get_clean();
-        
-        $this->render_with_layout($content, 'Upravit uživatele');
-    }
-    
-    public function ajax_get_departments_by_branch() {
-        check_ajax_referer('saw_departments', 'nonce');
-        
-        $branch_id = isset($_POST['branch_id']) ? intval($_POST['branch_id']) : 0;
-        
-        if (!$branch_id) {
-            wp_send_json_error(['message' => 'Chybí branch_id']);
-        }
-        
-        global $wpdb;
-        $departments = $wpdb->get_results($wpdb->prepare(
-            "SELECT id, name FROM %i 
-             WHERE branch_id = %d AND is_active = 1 
-             ORDER BY name ASC",
-            $wpdb->prefix . 'saw_departments',
-            $branch_id
-        ), ARRAY_A);
-        
-        wp_send_json_success(['departments' => $departments]);
-    }
-    
-    private function prepare_form_data($post) {
-        $data = [];
+    /**
+     * Prepare form data
+     */
+    protected function prepare_form_data($post) {
+        $data = array();
         
         foreach ($this->config['fields'] as $field_name => $field_config) {
             if (isset($post[$field_name])) {
@@ -263,6 +72,7 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
             $data['id'] = intval($post['id']);
         }
         
+        // Handle department_ids array
         if (isset($post['department_ids']) && is_array($post['department_ids'])) {
             $data['department_ids'] = array_map('intval', $post['department_ids']);
         }
@@ -270,7 +80,30 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
         return $data;
     }
     
+    /**
+     * Format data for detail view
+     */
+    protected function format_detail_data($item) {
+        if (!empty($item['created_at'])) {
+            $item['created_at_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['created_at']));
+        }
+        
+        if (!empty($item['updated_at'])) {
+            $item['updated_at_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['updated_at']));
+        }
+        
+        if (!empty($item['last_login'])) {
+            $item['last_login_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['last_login']));
+        }
+        
+        return $item;
+    }
+    
+    /**
+     * Before save hook - handles WP user creation/update, role mapping, PIN hashing
+     */
     protected function before_save($data) {
+        // Auto-set customer_id for non-edit operations
         if (empty($data['id'])) {
             if (isset($data['role']) && $data['role'] === 'super_admin') {
                 $data['customer_id'] = null;
@@ -281,12 +114,14 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
                 }
             }
         } else {
+            // For edits, preserve existing customer_id
             $existing = $this->model->get_by_id($data['id']);
             if ($existing) {
                 $data['customer_id'] = $existing['customer_id'];
             }
         }
         
+        // CREATE: Create WordPress user
         if (empty($data['id'])) {
             $existing_wp_user = get_user_by('email', $data['email']);
             if ($existing_wp_user) {
@@ -295,7 +130,7 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
             
             @set_time_limit(30);
             
-            $wp_user_id = wp_insert_user([
+            $wp_user_id = wp_insert_user(array(
                 'user_login' => $data['email'],
                 'user_email' => $data['email'],
                 'user_pass' => wp_generate_password(32, true),
@@ -303,7 +138,7 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
                 'last_name' => $data['last_name'],
                 'display_name' => $data['first_name'] . ' ' . $data['last_name'],
                 'role' => $this->map_saw_to_wp_role($data['role']),
-            ]);
+            ));
             
             if (is_wp_error($wp_user_id)) {
                 return new WP_Error('wp_user_error', 'Chyba při vytváření WordPress uživatele: ' . $wp_user_id->get_error_message());
@@ -315,36 +150,41 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
             
             $data['wp_user_id'] = $wp_user_id;
             
-            $this->pending_setup_email = [
+            // Queue welcome email
+            $this->pending_setup_email = array(
                 'email' => $data['email'],
                 'role' => $data['role'],
                 'first_name' => $data['first_name'],
                 'saw_user_id' => null,
-            ];
+            );
         } else {
+            // EDIT: Update existing user
             $existing_user = $this->model->get_by_id($data['id']);
             
             if (!$existing_user) {
                 return new WP_Error('user_not_found', 'Uživatel nenalezen');
             }
             
+            // Clear departments if role changes from manager
             if ($existing_user['role'] === 'manager' && $data['role'] !== 'manager') {
                 $data['branch_id'] = null;
                 
                 global $wpdb;
                 $wpdb->delete(
                     $wpdb->prefix . 'saw_user_departments',
-                    ['user_id' => $data['id']],
-                    ['%d']
+                    array('user_id' => $data['id']),
+                    array('%d')
                 );
                 
-                $this->pending_departments = [];
+                $this->pending_departments = array();
             }
             
-            if (in_array($existing_user['role'], ['super_manager', 'terminal']) && $data['role'] === 'admin') {
+            // Clear branch if role changes to admin
+            if (in_array($existing_user['role'], array('super_manager', 'terminal')) && $data['role'] === 'admin') {
                 $data['branch_id'] = null;
             }
             
+            // Update WordPress role if changed
             if (!empty($existing_user['wp_user_id']) && $existing_user['role'] !== $data['role']) {
                 $wp_user = new WP_User($existing_user['wp_user_id']);
                 $new_wp_role = $this->map_saw_to_wp_role($data['role']);
@@ -359,6 +199,7 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
             $data['wp_user_id'] = $existing_user['wp_user_id'];
         }
         
+        // Hash PIN for terminal users
         if ($data['role'] === 'terminal' && !empty($data['pin'])) {
             if (!preg_match('/^\d{4}$/', $data['pin'])) {
                 return new WP_Error('invalid_pin', 'PIN musí být 4 číslice');
@@ -368,11 +209,12 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
             $data['pin'] = null;
         }
         
+        // Store departments for later processing
         if (isset($data['department_ids'])) {
             if (is_array($data['department_ids'])) {
                 $this->pending_departments = array_filter($data['department_ids']);
             } else {
-                $this->pending_departments = [];
+                $this->pending_departments = array();
             }
             
             if ($data['role'] === 'manager' && empty($this->pending_departments)) {
@@ -380,33 +222,42 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
             }
         }
         
+        // Remove fields that shouldn't be saved directly
         unset($data['department_ids']);
         unset($data['password']);
         
         return $data;
     }
     
+    /**
+     * After save hook - handles department assignments and welcome email
+     */
     protected function after_save($user_id) {
+        // Handle department assignments
         if ($this->pending_departments !== null) {
             global $wpdb;
             
+            // Delete old assignments
             $wpdb->delete(
                 $wpdb->prefix . 'saw_user_departments',
-                ['user_id' => $user_id]
+                array('user_id' => $user_id),
+                array('%d')
             );
             
+            // Insert new assignments
             foreach ($this->pending_departments as $dept_id) {
                 $wpdb->insert(
                     $wpdb->prefix . 'saw_user_departments',
-                    [
+                    array(
                         'user_id' => $user_id,
                         'department_id' => (int)$dept_id
-                    ],
-                    ['%d', '%d']
+                    ),
+                    array('%d', '%d')
                 );
             }
         }
         
+        // Send welcome email with setup link
         if ($this->pending_setup_email) {
             $this->pending_setup_email['saw_user_id'] = $user_id;
             
@@ -437,22 +288,26 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
             }
         }
         
+        // Audit log
         if (class_exists('SAW_Audit')) {
             $user = $this->model->get_by_id($user_id);
             
-            SAW_Audit::log([
+            SAW_Audit::log(array(
                 'action' => empty($this->pending_setup_email) ? 'user_updated' : 'user_created',
                 'entity_type' => 'user',
                 'entity_id' => $user_id,
                 'customer_id' => $user['customer_id'] ?? null,
-                'details' => json_encode([
+                'details' => json_encode(array(
                     'role' => $this->pending_setup_email['role'] ?? 'updated',
                     'email' => $this->pending_setup_email['email'] ?? '',
-                ])
-            ]);
+                ))
+            ));
         }
     }
     
+    /**
+     * Before delete hook - deletes WP user and department assignments
+     */
     protected function before_delete($id) {
         $user = $this->model->get_by_id($id);
         
@@ -460,6 +315,7 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
             return true;
         }
         
+        // Prevent self-deletion
         if (!empty($user['wp_user_id'])) {
             $wp_user_id = intval($user['wp_user_id']);
             
@@ -467,6 +323,7 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
                 return new WP_Error('delete_self', 'Nemůžete smazat sami sebe');
             }
             
+            // Delete WordPress user
             require_once(ABSPATH . 'wp-admin/includes/user.php');
             $deleted = wp_delete_user($wp_user_id);
             
@@ -475,25 +332,52 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
             }
         }
         
+        // Delete department assignments
         global $wpdb;
         $wpdb->delete(
             $wpdb->prefix . 'saw_user_departments',
-            ['user_id' => $id],
-            ['%d']
+            array('user_id' => $id),
+            array('%d')
         );
         
         return true;
     }
     
+    /**
+     * Map SAW role to WordPress role
+     */
     private function map_saw_to_wp_role($saw_role) {
-        $mapping = [
+        $mapping = array(
             'super_admin' => 'administrator',
             'admin' => 'saw_admin',
             'super_manager' => 'saw_super_manager',
             'manager' => 'saw_manager',
             'terminal' => 'saw_terminal'
-        ];
+        );
         
         return $mapping[$saw_role] ?? 'saw_admin';
+    }
+    
+    /**
+     * AJAX: Get departments by branch
+     */
+    public function ajax_get_departments_by_branch() {
+        check_ajax_referer('saw_departments', 'nonce');
+        
+        $branch_id = isset($_POST['branch_id']) ? intval($_POST['branch_id']) : 0;
+        
+        if (!$branch_id) {
+            wp_send_json_error(array('message' => 'Invalid branch ID'));
+            return;
+        }
+        
+        global $wpdb;
+        $departments = $wpdb->get_results($wpdb->prepare(
+            "SELECT id, name FROM %i WHERE branch_id = %d AND is_active = 1 ORDER BY name ASC",
+            $wpdb->prefix . 'saw_departments',
+            $branch_id
+        ), ARRAY_A);
+        
+        wp_send_json_success(array('departments' => $departments));
     }
 }

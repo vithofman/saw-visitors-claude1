@@ -1,4 +1,12 @@
 <?php
+/**
+ * Users Module Configuration
+ * 
+ * @package     SAW_Visitors
+ * @subpackage  Modules/Users
+ * @version     5.0.0 - REFACTORED with related data support
+ */
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -8,13 +16,12 @@ return [
     'table' => 'saw_users',
     'singular' => 'Uživatel',
     'plural' => 'Uživatelé',
-    'route' => 'admin/users',
+    'route' => 'users',
     'icon' => '👤',
+    'has_customer_isolation' => true,
+    'edit_url' => 'admin/users/{id}/edit',
     
     'allowed_roles' => ['super_admin', 'admin'],
-    
-    'filter_by_customer' => true,
-    'filter_by_branch' => false,
     
     'capabilities' => [
         'list' => 'read',

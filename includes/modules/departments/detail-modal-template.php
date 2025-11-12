@@ -23,7 +23,7 @@
  * @subpackage  Modules/Departments
  * @since       1.0.0
  * @author      SAW Visitors Dev Team
- * @version     1.0.0
+ * @version     2.0.0 - Added related data support
  */
 
 if (!defined('ABSPATH')) {
@@ -135,5 +135,7 @@ if (empty($item)) {
             
         </dl>
     </div>
+    
+    
     
 </div>

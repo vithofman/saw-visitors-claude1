@@ -1,26 +1,22 @@
 <?php
 /**
- * Departments Form Template
+ * Departments Form Template - SIDEBAR VERSION
  * 
- * Form for creating new departments or editing existing ones.
- * Used by both create() and edit() controller methods.
- * 
- * Available Variables:
- * @var array $item Department data (empty array for create, populated for edit)
- * @var bool $is_edit True if editing existing department, false if creating new
- * @var int $customer_id Current customer ID from context
- * @var array $branches List of available branches for the current customer
+ * Form for creating/editing departments.
+ * Optimized for use in sidebar with compact layout.
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Departments
  * @since       1.0.0
- * @author      SAW Visitors Dev Team
- * @version     1.0.0
+ * @version     2.0.0 - REFACTORED for sidebar usage
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
+
+// Check if we're in sidebar mode
+$in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'];
 
 // Determine if this is edit mode
 $is_edit = !empty($item);
@@ -29,226 +25,208 @@ $item = $item ?? array();
 // Get current customer context
 $customer_id = SAW_Context::get_customer_id();
 
-// Fetch branches for dropdown (only active branches)
-global $wpdb;
-$branches = array();
-if ($customer_id) {
-    $branches = $wpdb->get_results($wpdb->prepare(
+// Get branches from parent scope (passed from list-template or controller)
+$branches = $branches ?? array();
+
+// If branches not provided, fetch them
+if (empty($branches) && $customer_id) {
+    global $wpdb;
+    $branches_data = $wpdb->get_results($wpdb->prepare(
         "SELECT id, name FROM %i WHERE customer_id = %d AND is_active = 1 ORDER BY name ASC",
         $wpdb->prefix . 'saw_branches',
         $customer_id
     ), ARRAY_A);
+    
+    $branches = array();
+    foreach ($branches_data as $branch) {
+        $branches[$branch['id']] = $branch['name'];
+    }
 }
+
+// Form action URL
+$form_action = $is_edit 
+    ? home_url('/admin/departments/' . $item['id'] . '/edit')
+    : home_url('/admin/departments/create');
 ?>
 
-<!-- Page Header -->
+<?php if (!$in_sidebar): ?>
+<!-- Page Header (only when NOT in sidebar) -->
 <div class="saw-page-header">
     <div class="saw-page-header-content">
         <h1 class="saw-page-title">
-            <?php echo $is_edit ? 'Upravit oddělení' : 'Nové oddělení'; ?>
+            <?php echo $is_edit ? __('Upravit oddělení', 'saw-visitors') : __('Nové oddělení', 'saw-visitors'); ?>
         </h1>
-        <a href="<?php echo esc_url(home_url('/admin/departments/')); ?>" class="saw-back-button">
-            <span class="dashicons dashicons-arrow-left-alt2"></span>
-            Zpět na seznam
+    </div>
+    <div class="saw-page-header-actions">
+        <a href="<?php echo esc_url(home_url('/admin/departments/')); ?>" class="saw-button saw-button-secondary">
+            <?php _e('Zpět na seznam', 'saw-visitors'); ?>
         </a>
     </div>
 </div>
+<?php endif; ?>
 
-<!-- Form Container -->
-<div class="saw-form-container">
-    <form method="post" class="saw-department-form">
-        
-        <!-- CSRF Protection -->
-        <?php wp_nonce_field('saw_departments_form', 'saw_nonce'); ?>
-        
-        <!-- Hidden Fields -->
-        <?php if ($is_edit): ?>
-            <input type="hidden" name="id" value="<?php echo esc_attr($item['id']); ?>">
+<!-- Form -->
+<form method="POST" action="<?php echo esc_url($form_action); ?>" class="saw-form" id="department-form">
+    <?php wp_nonce_field('saw_departments_form', 'saw_nonce'); ?>
+    
+    <!-- Hidden Fields -->
+    <input type="hidden" name="customer_id" value="<?php echo esc_attr($customer_id); ?>">
+    
+    <!-- Form Card -->
+    <div class="saw-form-card">
+        <?php if (!$in_sidebar): ?>
+        <div class="saw-form-card-header">
+            <h2 class="saw-form-card-title"><?php _e('Základní informace', 'saw-visitors'); ?></h2>
+        </div>
         <?php endif; ?>
         
-        <input type="hidden" name="customer_id" value="<?php echo esc_attr($customer_id); ?>">
-        
-        <!-- ================================================ -->
-        <!-- SECTION: Basic Information -->
-        <!-- ================================================ -->
-        <details class="saw-form-section" open>
-            <summary>
-                <span class="dashicons dashicons-admin-generic"></span>
-                <strong>Základní informace</strong>
-            </summary>
-            <div class="saw-form-section-content">
-                
-                <!-- Branch + Department Number Row -->
-                <div class="saw-form-row">
-                    
-                    <!-- Branch Selection -->
-                    <div class="saw-form-group saw-col-6">
-                        <label for="branch_id" class="saw-label saw-required">
-                            Pobočka
-                        </label>
-                        <select 
-                            id="branch_id" 
-                            name="branch_id" 
-                            class="saw-select"
-                            required
+        <div class="saw-form-card-body">
+            <!-- Branch Selection -->
+            <div class="saw-form-group">
+                <label for="branch_id" class="saw-label saw-label-required">
+                    <?php _e('Pobočka', 'saw-visitors'); ?>
+                </label>
+                <select 
+                    name="branch_id" 
+                    id="branch_id" 
+                    class="saw-select" 
+                    required
+                    <?php echo $is_edit ? 'disabled' : ''; ?>
+                >
+                    <option value=""><?php _e('-- Vyberte pobočku --', 'saw-visitors'); ?></option>
+                    <?php foreach ($branches as $branch_id => $branch_name): ?>
+                        <option 
+                            value="<?php echo esc_attr($branch_id); ?>"
+                            <?php selected(isset($item['branch_id']) ? $item['branch_id'] : '', $branch_id); ?>
                         >
-                            <option value="">Vyberte pobočku</option>
-                            <?php foreach ($branches as $branch): ?>
-                                <option 
-                                    value="<?php echo esc_attr($branch['id']); ?>"
-                                    <?php selected(!empty($item['branch_id']) ? $item['branch_id'] : '', $branch['id']); ?>
-                                >
-                                    <?php echo esc_html($branch['name']); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <span class="saw-help-text">
-                            Pobočka ke které oddělení patří
-                        </span>
-                    </div>
-                    
-                    <!-- Department Number (Optional) -->
-                    <div class="saw-form-group saw-col-6">
-                        <label for="department_number" class="saw-label">
-                            Číslo oddělení
-                        </label>
-                        <input 
-                            type="text" 
-                            id="department_number" 
-                            name="department_number" 
-                            class="saw-input"
-                            value="<?php echo esc_attr($item['department_number'] ?? ''); ?>"
-                            placeholder="ODD-001"
-                        >
-                        <span class="saw-help-text">
-                            Interní číslo oddělení (volitelné)
-                        </span>
-                    </div>
-                </div>
-                
-                <!-- Department Name Row -->
-                <div class="saw-form-row">
-                    <div class="saw-form-group">
-                        <label for="name" class="saw-label saw-required">
-                            Název oddělení
-                        </label>
-                        <input 
-                            type="text" 
-                            id="name" 
-                            name="name" 
-                            class="saw-input"
-                            value="<?php echo esc_attr($item['name'] ?? ''); ?>" 
-                            required
-                            placeholder="Výroba"
-                        >
-                        <span class="saw-help-text">
-                            Název oddělení
-                        </span>
-                    </div>
-                </div>
-                
-                <!-- Description Row -->
-                <div class="saw-form-row">
-                    <div class="saw-form-group">
-                        <label for="description" class="saw-label">
-                            Popis
-                        </label>
-                        <textarea 
-                            id="description" 
-                            name="description" 
-                            class="saw-textarea"
-                            rows="4"
-                            placeholder="Volitelný popis oddělení..."
-                        ><?php echo esc_textarea($item['description'] ?? ''); ?></textarea>
-                        <span class="saw-help-text">
-                            Volitelný popis oddělení
-                        </span>
-                    </div>
-                </div>
-                
+                            <?php echo esc_html($branch_name); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <?php if ($is_edit): ?>
+                    <!-- Hidden field to submit branch_id when disabled -->
+                    <input type="hidden" name="branch_id" value="<?php echo esc_attr($item['branch_id'] ?? ''); ?>">
+                <?php endif; ?>
+                <p class="saw-help-text"><?php _e('Pobočka ke které oddělení patří', 'saw-visitors'); ?></p>
             </div>
-        </details>
-        
-        <!-- ================================================ -->
-        <!-- SECTION: Training -->
-        <!-- ================================================ -->
-        <details class="saw-form-section" open>
-            <summary>
-                <span class="dashicons dashicons-welcome-learn-more"></span>
-                <strong>Školení</strong>
-            </summary>
-            <div class="saw-form-section-content">
-                
-                <!-- Training Version Row -->
-                <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-6">
-                        <label for="training_version" class="saw-label">
-                            Verze školení
-                        </label>
-                        <input 
-                            type="number" 
-                            id="training_version" 
-                            name="training_version" 
-                            class="saw-input"
-                            value="<?php echo esc_attr($item['training_version'] ?? '1'); ?>"
-                            min="1"
-                            max="999"
-                            placeholder="1"
-                        >
-                        <span class="saw-help-text">
-                            Aktuální verze školení pro oddělení
-                        </span>
-                    </div>
-                </div>
-                
+            
+            <!-- Department Number -->
+            <div class="saw-form-group">
+                <label for="department_number" class="saw-label">
+                    <?php _e('Číslo oddělení', 'saw-visitors'); ?>
+                </label>
+                <input 
+                    type="text" 
+                    name="department_number" 
+                    id="department_number" 
+                    class="saw-input"
+                    value="<?php echo esc_attr($item['department_number'] ?? ''); ?>"
+                    placeholder="<?php _e('např. 001', 'saw-visitors'); ?>"
+                >
+                <p class="saw-help-text"><?php _e('Interní číslo oddělení (volitelné)', 'saw-visitors'); ?></p>
             </div>
-        </details>
-        
-        <!-- ================================================ -->
-        <!-- SECTION: Availability Settings -->
-        <!-- ================================================ -->
-        <details class="saw-form-section" open>
-            <summary>
-                <span class="dashicons dashicons-admin-settings"></span>
-                <strong>Nastavení dostupnosti</strong>
-            </summary>
-            <div class="saw-form-section-content">
-                
-                <!-- Active Status Checkbox -->
-                <div class="saw-form-row">
-                    <div class="saw-form-group">
-                        <label class="saw-checkbox-label">
-                            <input 
-                                type="checkbox" 
-                                id="is_active" 
-                                name="is_active" 
-                                value="1"
-                                <?php checked(!empty($item['is_active']) ? $item['is_active'] : 1, 1); ?>
-                            >
-                            <span class="saw-checkbox-text">
-                                <strong>Aktivní oddělení</strong>
-                                <small>Pouze aktivní oddělení jsou dostupná pro výběr</small>
-                            </span>
-                        </label>
-                    </div>
-                </div>
-                
+            
+            <!-- Department Name -->
+            <div class="saw-form-group">
+                <label for="name" class="saw-label saw-label-required">
+                    <?php _e('Název oddělení', 'saw-visitors'); ?>
+                </label>
+                <input 
+                    type="text" 
+                    name="name" 
+                    id="name" 
+                    class="saw-input"
+                    value="<?php echo esc_attr($item['name'] ?? ''); ?>"
+                    placeholder="<?php _e('např. Výroba, Sklad, IT', 'saw-visitors'); ?>"
+                    required
+                >
+                <p class="saw-help-text"><?php _e('Název oddělení', 'saw-visitors'); ?></p>
             </div>
-        </details>
-        
-        <!-- ================================================ -->
-        <!-- FORM ACTIONS -->
-        <!-- ================================================ -->
-        <div class="saw-form-actions">
-            <button type="submit" class="saw-button saw-button-primary">
-                <span class="dashicons dashicons-yes"></span>
-                <?php echo $is_edit ? 'Uložit změny' : 'Vytvořit oddělení'; ?>
-            </button>
-            <a href="<?php echo esc_url(home_url('/admin/departments/')); ?>" class="saw-button saw-button-secondary">
-                <span class="dashicons dashicons-no-alt"></span>
-                Zrušit
-            </a>
+            
+            <!-- Description -->
+            <div class="saw-form-group">
+                <label for="description" class="saw-label">
+                    <?php _e('Popis', 'saw-visitors'); ?>
+                </label>
+                <textarea 
+                    name="description" 
+                    id="description" 
+                    class="saw-textarea"
+                    rows="3"
+                    placeholder="<?php _e('Volitelný popis oddělení...', 'saw-visitors'); ?>"
+                ><?php echo esc_textarea($item['description'] ?? ''); ?></textarea>
+                <p class="saw-help-text"><?php _e('Volitelný popis oddělení', 'saw-visitors'); ?></p>
+            </div>
+            
+            <!-- Training Version -->
+            <div class="saw-form-group">
+                <label for="training_version" class="saw-label">
+                    <?php _e('Verze školení', 'saw-visitors'); ?>
+                </label>
+                <input 
+                    type="number" 
+                    name="training_version" 
+                    id="training_version" 
+                    class="saw-input"
+                    value="<?php echo esc_attr($item['training_version'] ?? 1); ?>"
+                    min="1"
+                    max="999"
+                    step="1"
+                >
+                <p class="saw-help-text"><?php _e('Aktuální verze školení pro oddělení', 'saw-visitors'); ?></p>
+            </div>
+            
+            <!-- Active Status -->
+            <div class="saw-form-group">
+                <label class="saw-checkbox-label">
+                    <input 
+                        type="checkbox" 
+                        name="is_active" 
+                        id="is_active" 
+                        value="1"
+                        <?php checked(isset($item['is_active']) ? $item['is_active'] : 1, 1); ?>
+                    >
+                    <span class="saw-checkbox-text"><?php _e('Aktivní oddělení', 'saw-visitors'); ?></span>
+                </label>
+                <p class="saw-help-text"><?php _e('Pouze aktivní oddělení jsou dostupná pro výběr', 'saw-visitors'); ?></p>
+            </div>
         </div>
         
-    </form>
-</div>
+        <!-- Form Actions -->
+        <div class="saw-form-card-footer">
+            <button type="submit" class="saw-button saw-button-primary">
+                <?php echo $is_edit ? __('Uložit změny', 'saw-visitors') : __('Vytvořit oddělení', 'saw-visitors'); ?>
+            </button>
+            
+            <?php if (!$in_sidebar): ?>
+            <a href="<?php echo esc_url(home_url('/admin/departments/')); ?>" class="saw-button saw-button-secondary">
+                <?php _e('Zrušit', 'saw-visitors'); ?>
+            </a>
+            <?php endif; ?>
+        </div>
+    </div>
+</form>
+
+<script>
+jQuery(document).ready(function($) {
+    console.log('[Departments] Form loaded, edit mode:', <?php echo $is_edit ? 'true' : 'false'; ?>);
+    
+    // Form validation
+    $('#department-form').on('submit', function(e) {
+        const branchId = $('#branch_id').val();
+        const name = $('#name').val().trim();
+        
+        if (!branchId) {
+            alert('<?php _e('Vyberte prosím pobočku', 'saw-visitors'); ?>');
+            e.preventDefault();
+            return false;
+        }
+        
+        if (!name) {
+            alert('<?php _e('Vyplňte prosím název oddělení', 'saw-visitors'); ?>');
+            e.preventDefault();
+            return false;
+        }
+    });
+});
+</script>

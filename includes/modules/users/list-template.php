@@ -1,14 +1,14 @@
 <?php
 /**
- * Users List Template - REFACTORED v4.0.0
+ * Users List Template - REFACTORED v5.0.0
  * 
  * ✅ Uses SAW_Component_Admin_Table
  * ✅ Inline filters (side by side)
  * ✅ Float button for create
- * ✅ Modal detail
+ * ✅ Sidebar with related data support
  * 
  * @package SAW_Visitors
- * @version 4.0.0
+ * @version 5.0.0
  */
 
 if (!defined('ABSPATH')) {
@@ -27,17 +27,12 @@ if (!class_exists('SAW_Component_Admin_Table')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/class-saw-component-admin-table.php';
 }
 
-if (!class_exists('SAW_Component_Modal')) {
-    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/modal/class-saw-component-modal.php';
-}
-
 // Prepare search component
 ob_start();
 $search_component = new SAW_Component_Search('users', array(
     'placeholder' => 'Hledat uživatele...',
     'search_value' => $search,
     'ajax_enabled' => false,
-    'ajax_action' => 'saw_search_users',
     'show_button' => true,
     'show_info_banner' => true,
     'info_banner_label' => 'Vyhledávání:',
@@ -91,11 +86,24 @@ $filters_html = ob_get_clean();
 
 global $wpdb;
 
+// CRITICAL: Module wrapper for proper layout
+echo '<div class="saw-module-users">';
+
 // Initialize admin table
 $table = new SAW_Component_Admin_Table('users', [
     'title' => 'Uživatelé',
     'create_url' => home_url('/admin/users/new/'),
     'edit_url' => home_url('/admin/users/edit/{id}/'),
+    'detail_url' => home_url('/admin/users/{id}/'),
+    
+    // ✅ CRITICAL: Module config + related data support
+    'module_config' => $this->config,
+    'sidebar_mode' => $sidebar_mode ?? null,
+    'detail_item' => $detail_item ?? null,
+    'form_item' => $form_item ?? null,
+    'detail_tab' => $detail_tab ?? 'overview',
+    'related_data' => $related_data ?? null,
+    'is_edit' => $is_edit ?? false,
     
     'columns' => [
         'name' => [
@@ -191,41 +199,14 @@ $table = new SAW_Component_Admin_Table('users', [
     'order' => $order,
     'search' => $search_html,
     'filters' => $filters_html,
-    'actions' => ['edit', 'delete'],
+    'actions' => ['view', 'edit', 'delete'],
     'empty_message' => 'Žádní uživatelé nenalezeni',
     'add_new' => 'Nový uživatel',
     
-    'enable_modal' => true,
-    'modal_id' => 'user-detail',
-    'modal_ajax_action' => 'saw_get_users_detail',
+    'ajax_enabled' => true,
+    'ajax_nonce' => wp_create_nonce('saw_ajax_nonce'),
 ]);
 
 $table->render();
 
-// Modal component
-$user_modal = new SAW_Component_Modal('user-detail', array(
-    'title' => 'Detail uživatele',
-    'ajax_enabled' => true,
-    'ajax_action' => 'saw_get_users_detail',
-    'size' => 'large',
-    'show_close' => true,
-    'close_on_backdrop' => true,
-    'close_on_escape' => true,
-    'header_actions' => array(
-        array(
-            'type' => 'edit',
-            'label' => '',
-            'icon' => 'dashicons-edit',
-            'url' => home_url('/admin/users/edit/{id}/'),
-        ),
-        array(
-            'type' => 'delete',
-            'label' => '',
-            'icon' => 'dashicons-trash',
-            'confirm' => true,
-            'confirm_message' => 'Opravdu chcete smazat tohoto uživatele?',
-            'ajax_action' => 'saw_delete_users',
-        ),
-    ),
-));
-$user_modal->render();
+echo '</div>'; // .saw-module-users
