@@ -9,7 +9,7 @@
  * @subpackage  Modules/Departments
  * @since       1.0.0
  * @author      SAW Visitors Dev Team
- * @version     2.0.0 - FIXED: Added branch_id filtering from SAW_Context
+ * @version     3.0.0 - SIMPLIFIED: Removed branch_name loading and training_version
  */
 
 if (!defined('ABSPATH')) {
@@ -119,10 +119,11 @@ class SAW_Module_Departments_Model extends SAW_Base_Model
      * Get department by ID with formatting and isolation check
      * 
      * Retrieves a single department record by ID, validates customer isolation,
-     * and formats the data for display (branch name, status labels, dates).
+     * and formats the data for display (status labels, dates).
      * Uses transient cache with 5 minute TTL.
      * 
      * @since 1.0.0
+     * @version 3.0.0 - Removed branch_name loading (not needed in list view)
      * @param int $id Department ID
      * @return array|null Department data or null if not found/no access
      */
@@ -160,18 +161,6 @@ class SAW_Module_Departments_Model extends SAW_Base_Model
                 }
                 return null;
             }
-        }
-        
-        // Get branch name
-        if (!empty($item['branch_id'])) {
-            global $wpdb;
-            $branch = $wpdb->get_row($wpdb->prepare(
-                "SELECT name FROM %i WHERE id = %d",
-                $wpdb->prefix . 'saw_branches',
-                $item['branch_id']
-            ), ARRAY_A);
-            
-            $item['branch_name'] = $branch['name'] ?? 'N/A';
         }
         
         // Format active status
