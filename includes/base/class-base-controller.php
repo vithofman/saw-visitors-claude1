@@ -8,7 +8,7 @@
  *
  * @package    SAW_Visitors
  * @subpackage Base
- * @version    12.2.0 - Universal List View Added (FÁZE 3)
+ * @version    12.2.1 - RBAC can() + brace fix
  * @since      1.0.0
  */
 
@@ -183,106 +183,105 @@ abstract class SAW_Base_Controller
      * @return array|null Related data grouped by relation key, or null
      */
     protected function load_related_data($item_id) {
-    error_log('[DEBUG] load_related_data called with ID: ' . $item_id);
-    
-    $relations = $this->load_relations_config();
-    
-    error_log('[DEBUG] Relations config: ' . print_r($relations, true));
-    
-    if (empty($relations)) {
-        error_log('[DEBUG] No relations config found!');
-        return null;
-    }
-    
-    global $wpdb;
-    $related_data = array();
-    
-    foreach ($relations as $key => $relation) {
-        error_log('[DEBUG] Processing relation: ' . $key);
+        error_log('[DEBUG] load_related_data called with ID: ' . $item_id);
         
-        if (empty($relation['entity'])) {
-            error_log('[DEBUG] Missing entity for relation: ' . $key);
-            continue;
+        $relations = $this->load_relations_config();
+        error_log('[DEBUG] Relations config: ' . print_r($relations, true));
+        
+        if (empty($relations)) {
+            error_log('[DEBUG] No relations config found!');
+            return null;
         }
         
-        $entity_table = $wpdb->prefix . 'saw_' . $relation['entity'];
-        $order_by = $relation['order_by'] ?? 'id DESC';
+        global $wpdb;
+        $related_data = array();
         
-        // Handle junction table (many-to-many)
-        if (!empty($relation['junction_table'])) {
-            error_log('[DEBUG] Using junction table for: ' . $key);
+        foreach ($relations as $key => $relation) {
+            error_log('[DEBUG] Processing relation: ' . $key);
             
-            if (empty($relation['foreign_key']) || empty($relation['local_key'])) {
-                error_log('[DEBUG] Missing keys for junction table!');
+            if (empty($relation['entity'])) {
+                error_log('[DEBUG] Missing entity for relation: ' . $key);
                 continue;
             }
             
-            $junction_table = $wpdb->prefix . $relation['junction_table'];
-            $foreign_key = $relation['foreign_key'];
-            $local_key = $relation['local_key'];
+            $entity_table = $wpdb->prefix . 'saw_' . $relation['entity'];
+            $order_by = $relation['order_by'] ?? 'id DESC';
             
-            $query = $wpdb->prepare(
-                "SELECT e.* 
-                 FROM {$entity_table} e
-                 INNER JOIN {$junction_table} j ON e.id = j.{$local_key}
-                 WHERE j.{$foreign_key} = %d
-                 ORDER BY e.{$order_by}",
-                $item_id
-            );
+            // Handle junction table (many-to-many)
+            if (!empty($relation['junction_table'])) {
+                error_log('[DEBUG] Using junction table for: ' . $key);
+                
+                if (empty($relation['foreign_key']) || empty($relation['local_key'])) {
+                    error_log('[DEBUG] Missing keys for junction table!');
+                    continue;
+                }
+                
+                $junction_table = $wpdb->prefix . $relation['junction_table'];
+                $foreign_key = $relation['foreign_key'];
+                $local_key = $relation['local_key'];
+                
+                $query = $wpdb->prepare(
+                    "SELECT e.* 
+                     FROM {$entity_table} e
+                     INNER JOIN {$junction_table} j ON e.id = j.{$local_key}
+                     WHERE j.{$foreign_key} = %d
+                     ORDER BY e.{$order_by}",
+                    $item_id
+                );
+                
+                error_log('[DEBUG] Junction query: ' . $query);
+            } 
+            // Handle direct foreign key
+            else {
+                error_log('[DEBUG] Using direct foreign key for: ' . $key);
+                
+                if (empty($relation['foreign_key'])) {
+                    continue;
+                }
+                
+                $foreign_key = $relation['foreign_key'];
+                
+                $query = $wpdb->prepare(
+                    "SELECT * FROM {$entity_table} WHERE {$foreign_key} = %d ORDER BY {$order_by}",
+                    $item_id
+                );
+                
+                error_log('[DEBUG] Direct query: ' . $query);
+            }
             
-            error_log('[DEBUG] Junction query: ' . $query);
-        } 
-        // Handle direct foreign key
-        else {
-            error_log('[DEBUG] Using direct foreign key for: ' . $key);
+            $items = $wpdb->get_results($query, ARRAY_A);
             
-            if (empty($relation['foreign_key'])) {
+            error_log('[DEBUG] Found items: ' . count($items));
+            
+            if (empty($items)) {
                 continue;
             }
             
-            $foreign_key = $relation['foreign_key'];
+            $formatted_items = array();
+            foreach ($items as $item) {
+                $display_text = $this->format_related_item_display($item, $relation);
+                
+                $formatted_items[] = array(
+                    'id' => $item['id'],
+                    'display' => $display_text,
+                    'raw' => $item,
+                );
+            }
             
-            $query = $wpdb->prepare(
-                "SELECT * FROM {$entity_table} WHERE {$foreign_key} = %d ORDER BY {$order_by}",
-                $item_id
-            );
-            
-            error_log('[DEBUG] Direct query: ' . $query);
-        }
-        
-        $items = $wpdb->get_results($query, ARRAY_A);
-        
-        error_log('[DEBUG] Found items: ' . count($items));
-        
-        if (empty($items)) {
-            continue;
-        }
-        
-        $formatted_items = array();
-        foreach ($items as $item) {
-            $display_text = $this->format_related_item_display($item, $relation);
-            
-            $formatted_items[] = array(
-                'id' => $item['id'],
-                'display' => $display_text,
-                'raw' => $item,
+            $related_data[$key] = array(
+                'label' => $relation['label'],
+                'icon' => $relation['icon'] ?? '📋',
+                'entity' => $relation['entity'],
+                'items' => $formatted_items,
+                'route' => $relation['route'],
+                'count' => count($formatted_items),
             );
         }
         
-        $related_data[$key] = array(
-            'label' => $relation['label'],
-            'icon' => $relation['icon'] ?? '📋',
-            'entity' => $relation['entity'],
-            'items' => $formatted_items,
-            'route' => $relation['route'],
-            'count' => count($formatted_items),
-        );
+        error_log('[DEBUG] Total related data sections: ' . count($related_data));
+        
+        return empty($related_data) ? null : $related_data;
     }
-    
-    error_log('[DEBUG] Total related data sections: ' . count($related_data));
-    
-    return empty($related_data) ? null : $related_data;
-}
     
     /**
      * Format related item display text
@@ -347,7 +346,6 @@ abstract class SAW_Base_Controller
                 $detail_item = $this->load_detail_related_data($detail_item, $detail_tab);
             }
         }
-        
         elseif ($ctx['mode'] === 'create') {
             if (!$this->can('create')) {
                 $this->set_flash('Nemáte oprávnění vytvářet záznamy', 'error');
@@ -362,7 +360,6 @@ abstract class SAW_Base_Controller
             
             $form_item = array();
         }
-        
         elseif ($ctx['mode'] === 'edit' && $ctx['id']) {
             if (!$this->can('edit')) {
                 $this->set_flash('Nemáte oprávnění upravovat záznamy', 'error');
@@ -504,36 +501,117 @@ abstract class SAW_Base_Controller
     }
     
     /**
-     * Verify module access permissions
-     *
-     * Checks if current user has permission to access this module.
-     * Wp_die() on failure.
-     *
-     * @since 1.0.0
-     * @return void
-     */
+ * Verify module access permissions
+ *
+ * Kontroluje, zda má aktuální uživatel přístup k modulu (akce "list").
+ * Primárně podle SAW rolí / SAW_Permissions, sekundárně podle WP capabilities.
+ *
+ * @since 1.0.0
+ * @return void
+ */
     protected function verify_module_access() {
-        $list_cap = $this->config['capabilities']['list'] ?? 'read';
-        
-        if (!current_user_can($list_cap)) {
-            wp_die(
-                __('Nemáte oprávnění k přístupu do této sekce.', 'saw-visitors'),
-                __('Přístup odepřen', 'saw-visitors'),
-                array('response' => 403)
-            );
+    // Nejprve si zjistíme modul a roli
+    $module = $this->entity 
+        ?? ($this->config['entity'] ?? ($this->config['route'] ?? ''));
+
+    // Fallback WP capability z configu
+    $list_cap = $this->config['capabilities']['list'] ?? 'read';
+
+    // 1) WordPress super admin / capability override
+    //    Pokud má uživatel manage_options, necháme ho vždy projít.
+    if (current_user_can('manage_options')) {
+        return;
+    }
+
+    // 2) SAW permissions – primární logika
+    $has_permission = false;
+
+    if ($module && class_exists('SAW_Context')) {
+        $role = SAW_Context::get_role();
+        if (empty($role)) {
+            $role = 'guest';
+        }
+
+        if (!class_exists('SAW_Permissions')) {
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-permissions.php';
+        }
+
+        if (class_exists('SAW_Permissions')) {
+            // pro vstup na seznam používáme logickou akci "list"
+            $has_permission = SAW_Permissions::check($role, $module, 'list');
         }
     }
+
+    // 3) Fallback – WordPress capability z configu
+    if (!$has_permission && !empty($list_cap) && current_user_can($list_cap)) {
+        $has_permission = true;
+    }
+
+    if (!$has_permission) {
+        wp_die(
+            __('Nemáte oprávnění k přístupu do této sekce.', 'saw-visitors'),
+            __('Přístup odepřen', 'saw-visitors'),
+            array('response' => 403)
+        );
+    }
+}
     
     /**
-     * Check action permission
+ * Check action permission
+ *
+ * Kontroluje oprávnění k akci (list, view, create, edit, delete).
+ * Primárně SAW_Permissions, fallback na WP capabilities.
+ *
+ * @since 1.0.0
+ * @param string $action Action name (list, view, create, edit, delete)
+ * @return bool True if user can perform action
+ */
+protected function can($action) {
+    // 1) WordPress super admin override
+    if (current_user_can('manage_options')) {
+        return true;
+    }
+
+    // 2) SAW role + SAW_Permissions (primární kontrola)
+    $module = $this->entity 
+        ?? ($this->config['entity'] ?? ($this->config['route'] ?? ''));
+
+    if ($module && class_exists('SAW_Context')) {
+        $role = SAW_Context::get_role();
+        if (empty($role)) {
+            $role = 'guest';
+        }
+
+        if (!class_exists('SAW_Permissions')) {
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-permissions.php';
+        }
+
+        if (class_exists('SAW_Permissions')) {
+            if (SAW_Permissions::check($role, $module, $action)) {
+                return true;
+            }
+        }
+    }
+
+    // 3) Fallback – WordPress capability podle configu
+    $capability = $this->config['capabilities'][$action] ?? null;
+
+    if (!empty($capability) && current_user_can($capability)) {
+        return true;
+    }
+
+    return false;
+}
+
+
+    /**
+     * Determine if RBAC (SAW_Permissions) is available
      *
-     * @since 1.0.0
-     * @param string $action Action name (list, view, create, edit, delete)
-     * @return bool True if user can perform action
+     * @since 12.4.0
+     * @return bool
      */
-    protected function can($action) {
-        $capability = $this->config['capabilities'][$action] ?? 'manage_options';
-        return current_user_can($capability);
+    protected function use_rbac() {
+        return function_exists('saw_can') || class_exists('SAW_Permissions');
     }
     
     /**
@@ -598,8 +676,8 @@ abstract class SAW_Base_Controller
                 require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-user-branches.php';
             }
             
-            $saw_user_id = SAW_Context::get_saw_user_id();
-            return SAW_User_Branches::get_branch_ids_for_user($saw_user_id);
+            $saw_user_id = class_exists('SAW_Context') ? SAW_Context::get_saw_user_id() : 0;
+            return $saw_user_id ? SAW_User_Branches::get_branch_ids_for_user($saw_user_id) : [];
         }
         
         $branch_id = $this->get_current_branch_id();
@@ -897,32 +975,33 @@ abstract class SAW_Base_Controller
     }
     
     /**
- * Render flash messages as toast notifications
- *
- * Displays and clears flash messages from session using toast notifications.
- *
- * @since 12.3.0
- * @return void
- */
-protected function render_flash_messages() {
-    if (!class_exists('SAW_Session_Manager')) {
-        return;
-    }
+     * Render flash messages as toast notifications
+     *
+     * Displays and clears flash messages from session using toast notifications.
+     *
+     * @since 12.3.0
+     * @return void
+     */
+    protected function render_flash_messages() {
+        if (!class_exists('SAW_Session_Manager')) {
+            return;
+        }
+        
+        $session = SAW_Session_Manager::instance();
+        
+        if ($session->has('flash_success')) {
+            $message = $session->get('flash_success');
+            echo '<script>jQuery(document).ready(function() { sawShowToast(' . wp_json_encode($message) . ', "success"); });</script>';
+            $session->unset('flash_success');
+        }
+        
+        if ($session->has('flash_error')) {
+            $message = $session->get('flash_error');
+            echo '<script>jQuery(document).ready(function() { sawShowToast(' . wp_json_encode($message) . ', "danger"); });</script>';
+            $session->unset('flash_error');
+        }
+    }    
     
-    $session = SAW_Session_Manager::instance();
-    
-    if ($session->has('flash_success')) {
-        $message = $session->get('flash_success');
-        echo '<script>jQuery(document).ready(function() { sawShowToast(' . wp_json_encode($message) . ', "success"); });</script>';
-        $session->unset('flash_success');
-    }
-    
-    if ($session->has('flash_error')) {
-        $message = $session->get('flash_error');
-        echo '<script>jQuery(document).ready(function() { sawShowToast(' . wp_json_encode($message) . ', "danger"); });</script>';
-        $session->unset('flash_error');
-    }
-}    
     /**
      * Set flash message
      *
@@ -1247,8 +1326,8 @@ protected function render_flash_messages() {
         $template_vars = array_merge(
             $list_data,
             array(
-		 'config' => $this->config,          // ✅ PŘIDEJ
-		 'entity' => $this->entity,          // ✅ PŘIDEJ
+                'config' => $this->config,
+                'entity' => $this->entity,
                 'detail_item' => $detail_item,
                 'form_item' => $form_item,
                 'sidebar_mode' => $sidebar_mode,

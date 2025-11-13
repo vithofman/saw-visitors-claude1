@@ -66,19 +66,38 @@ class SAW_Component_Branch_Switcher {
      * @param array|null $current_branch Current branch data (null = auto-load from context)
      */
     public function __construct($customer_id = null, $current_branch = null) {
-        // Auto-load from SAW_Context if not provided
-        if ($customer_id === null && class_exists('SAW_Context')) {
-            $customer_id = SAW_Context::get_customer_id();
+    // Auto-load from SAW_Context if not provided
+    if ($customer_id === null && class_exists('SAW_Context')) {
+        $customer_id = SAW_Context::get_customer_id();
+
+        // ✅ Fallback přes saw_users, pokud v kontextu nic není
+        if (!$customer_id) {
+            global $wpdb;
+            $saw_user = $wpdb->get_row(
+                $wpdb->prepare(
+                    "SELECT customer_id 
+                     FROM {$wpdb->prefix}saw_users 
+                     WHERE wp_user_id = %d AND is_active = 1",
+                    get_current_user_id()
+                ),
+                ARRAY_A
+            );
+
+            if ($saw_user && !empty($saw_user['customer_id'])) {
+                $customer_id = (int) $saw_user['customer_id'];
+            }
         }
-        
-        $this->customer_id = $customer_id;
-        
-        if ($current_branch === null && class_exists('SAW_Context')) {
-            $current_branch = SAW_Context::get_branch_data();
-        }
-        
-        $this->current_branch = $current_branch;
     }
+    
+    $this->customer_id = $customer_id;
+    
+    if ($current_branch === null && class_exists('SAW_Context')) {
+        $current_branch = SAW_Context::get_branch_data();
+    }
+    
+    $this->current_branch = $current_branch;
+}
+
     
     /**
      * AJAX: Get branches for current customer
