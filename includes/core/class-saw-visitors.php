@@ -95,7 +95,7 @@ class SAW_Visitors {
      */
     private function __construct() {
         $this->plugin_name = 'saw-visitors';
-        $this->version = SAW_VISITORS_VERSION;
+        $this->version     = SAW_VISITORS_VERSION;
         
         $this->load_dependencies();
         $this->init_router();
@@ -103,7 +103,12 @@ class SAW_Visitors {
         $this->init_context();
         
         // Initialize Component Manager (handles all components + AJAX registration)
-        SAW_Component_Manager::instance();
+        if (class_exists('SAW_Component_Manager')) {
+            SAW_Component_Manager::instance();
+        }
+
+        // 🔄 Globální AJAX handlery pro komponenty (branch switcher)
+        $this->init_global_ajax_handlers();
         
         $this->register_module_ajax_handlers();
         $this->block_wp_admin_for_saw_roles();
@@ -190,6 +195,28 @@ class SAW_Visitors {
         
         // Initialize loader
         $this->loader = new SAW_Loader();
+
+        // Branch switcher component (global component)
+        $branch_switcher_path = SAW_VISITORS_PLUGIN_DIR . 'includes/components/branch-switcher/class-saw-component-branch-switcher.php';
+        if (file_exists($branch_switcher_path)) {
+            require_once $branch_switcher_path;
+        }
+    }
+
+    /**
+     * Initialize global AJAX handlers for components
+     *
+     * Zajistí registraci AJAX handlerů pro komponenty,
+     * které musí fungovat globálně (např. branch switcher).
+     *
+     * @since 1.1.0
+     * @return void
+     */
+    private function init_global_ajax_handlers() {
+        // Branch Switcher AJAX handlers
+        if (class_exists('SAW_Component_Branch_Switcher')) {
+            SAW_Component_Branch_Switcher::register_ajax_handlers();
+        }
     }
     
     /**
@@ -238,16 +265,29 @@ class SAW_Visitors {
      * @since 1.0.0
      */
     private function block_wp_admin_for_saw_roles() {
-        add_action('admin_init', function() {
-            $user = wp_get_current_user();
-            $saw_roles = ['saw_admin', 'saw_super_manager', 'saw_manager', 'saw_terminal'];
-            
-            if (array_intersect($saw_roles, $user->roles)) {
-                wp_safe_redirect(home_url('/login/'));
-                exit;
-            }
-        });
-    }
+    add_action('admin_init', function() {
+        // ✅ Nepřesměrovávat AJAX ani REST API
+        if ( function_exists('wp_doing_ajax') && wp_doing_ajax() ) {
+            return;
+        }
+        if ( defined('REST_REQUEST') && REST_REQUEST ) {
+            return;
+        }
+
+        $user = wp_get_current_user();
+        $saw_roles = ['saw_admin', 'saw_super_manager', 'saw_manager', 'saw_terminal'];
+
+        // Uživatel nemá žádnou SAW roli → neřešíme
+        if ( empty($user) || empty($user->ID) || ! array_intersect($saw_roles, (array) $user->roles) ) {
+            return;
+        }
+
+        // Vše ostatní přesměrovat z wp-admin pryč
+        wp_safe_redirect( home_url('/login/') );
+        exit;
+    });
+}
+
     
     /**
      * Register module AJAX handlers
@@ -259,7 +299,7 @@ class SAW_Visitors {
      * @since 1.0.0
      */
     private function register_module_ajax_handlers() {
-        $modules = SAW_Module_Loader::get_all();
+        $modules  = SAW_Module_Loader::get_all();
         $instance = $this;
         
         // Register standard CRUD handlers for all modules
@@ -281,9 +321,9 @@ class SAW_Visitors {
         
         // Register custom AJAX actions for permissions module
         // Permissions module has custom business logic (not standard CRUD)
-        add_action('wp_ajax_saw_update_permission', [$this, 'handle_permissions_update']);
+        add_action('wp_ajax_saw_update_permission',        [$this, 'handle_permissions_update']);
         add_action('wp_ajax_saw_get_permissions_for_role', [$this, 'handle_permissions_get_for_role']);
-        add_action('wp_ajax_saw_reset_permissions', [$this, 'handle_permissions_reset']);
+        add_action('wp_ajax_saw_reset_permissions',        [$this, 'handle_permissions_reset']);
     }
     
     /**
@@ -370,7 +410,7 @@ class SAW_Visitors {
         
         $parts = explode('-', $slug);
         $parts = array_map('ucfirst', $parts);
-        $class_name = implode('_', $parts);
+        $class_name       = implode('_', $parts);
         $controller_class = 'SAW_Module_' . $class_name . '_Controller';
         
         if (!class_exists($controller_class)) {
@@ -387,75 +427,75 @@ class SAW_Visitors {
      * Validates module, loads controller, and calls requested method.
      *
      * @since 1.0.0
-     * @param string $slug Module slug
+     * @param string $slug   Module slug
      * @param string $method Controller method to call
      */
-   private function handle_module_ajax($slug, $method) {
-    // ✅ DEBUG LOG
-    $log = WP_CONTENT_DIR . '/saw-ajax-handler.log';
-    file_put_contents($log, "\n" . date('H:i:s') . " ==================\n", FILE_APPEND);
-    file_put_contents($log, "Slug: $slug\n", FILE_APPEND);
-    file_put_contents($log, "Method: $method\n", FILE_APPEND);
-    
-    // Validate module exists
-    $config = SAW_Module_Loader::load($slug);
-    
-    file_put_contents($log, "Config loaded: " . ($config ? 'YES' : 'NO') . "\n", FILE_APPEND);
-    if ($config) {
-        file_put_contents($log, "Entity: " . ($config['entity'] ?? 'N/A') . "\n", FILE_APPEND);
+    private function handle_module_ajax($slug, $method) {
+        // ✅ DEBUG LOG
+        $log = WP_CONTENT_DIR . '/saw-ajax-handler.log';
+        file_put_contents($log, "\n" . date('H:i:s') . " ==================\n", FILE_APPEND);
+        file_put_contents($log, "Slug: $slug\n", FILE_APPEND);
+        file_put_contents($log, "Method: $method\n", FILE_APPEND);
+        
+        // Validate module exists
+        $config = SAW_Module_Loader::load($slug);
+        
+        file_put_contents($log, "Config loaded: " . ($config ? 'YES' : 'NO') . "\n", FILE_APPEND);
+        if ($config) {
+            file_put_contents($log, "Entity: " . ($config['entity'] ?? 'N/A') . "\n", FILE_APPEND);
+        }
+        
+        if (!$config) {
+            file_put_contents($log, "ERROR: Module not found\n", FILE_APPEND);
+            wp_send_json_error(['message' => __('Module not found', 'saw-visitors')]);
+            return;
+        }
+        
+        // Get controller instance
+        file_put_contents($log, "Getting controller...\n", FILE_APPEND);
+        
+        try {
+            $controller = $this->get_module_controller($slug);
+            file_put_contents($log, "Controller: " . ($controller ? get_class($controller) : 'NULL') . "\n", FILE_APPEND);
+        } catch (Throwable $e) {
+            file_put_contents($log, "ERROR creating controller: " . $e->getMessage() . "\n", FILE_APPEND);
+            wp_send_json_error(['message' => 'Controller error: ' . $e->getMessage()]);
+            return;
+        }
+        
+        if (!$controller) {
+            file_put_contents($log, "ERROR: Controller is NULL\n", FILE_APPEND);
+            wp_send_json_error(['message' => __('Controller not found', 'saw-visitors')]);
+            return;
+        }
+        
+        // Validate method exists
+        file_put_contents($log, "Checking method exists...\n", FILE_APPEND);
+        
+        if (!method_exists($controller, $method)) {
+            file_put_contents($log, "ERROR: Method $method not found\n", FILE_APPEND);
+            wp_send_json_error([
+                'message' => sprintf(
+                    /* translators: %s: method name */
+                    __('Method %s not found', 'saw-visitors'),
+                    $method
+                )
+            ]);
+            return;
+        }
+        
+        // Call method
+        file_put_contents($log, "Calling method $method...\n", FILE_APPEND);
+        
+        try {
+            $controller->$method();
+            file_put_contents($log, "Method executed successfully\n", FILE_APPEND);
+        } catch (Throwable $e) {
+            file_put_contents($log, "ERROR executing method: " . $e->getMessage() . "\n", FILE_APPEND);
+            file_put_contents($log, "Trace: " . $e->getTraceAsString() . "\n", FILE_APPEND);
+            wp_send_json_error(['message' => 'Method error: ' . $e->getMessage()]);
+        }
     }
-    
-    if (!$config) {
-        file_put_contents($log, "ERROR: Module not found\n", FILE_APPEND);
-        wp_send_json_error(['message' => __('Module not found', 'saw-visitors')]);
-        return;
-    }
-    
-    // Get controller instance
-    file_put_contents($log, "Getting controller...\n", FILE_APPEND);
-    
-    try {
-        $controller = $this->get_module_controller($slug);
-        file_put_contents($log, "Controller: " . ($controller ? get_class($controller) : 'NULL') . "\n", FILE_APPEND);
-    } catch (Throwable $e) {
-        file_put_contents($log, "ERROR creating controller: " . $e->getMessage() . "\n", FILE_APPEND);
-        wp_send_json_error(['message' => 'Controller error: ' . $e->getMessage()]);
-        return;
-    }
-    
-    if (!$controller) {
-        file_put_contents($log, "ERROR: Controller is NULL\n", FILE_APPEND);
-        wp_send_json_error(['message' => __('Controller not found', 'saw-visitors')]);
-        return;
-    }
-    
-    // Validate method exists
-    file_put_contents($log, "Checking method exists...\n", FILE_APPEND);
-    
-    if (!method_exists($controller, $method)) {
-        file_put_contents($log, "ERROR: Method $method not found\n", FILE_APPEND);
-        wp_send_json_error([
-            'message' => sprintf(
-                /* translators: %s: method name */
-                __('Method %s not found', 'saw-visitors'),
-                $method
-            )
-        ]);
-        return;
-    }
-    
-    // Call method
-    file_put_contents($log, "Calling method $method...\n", FILE_APPEND);
-    
-    try {
-        $controller->$method();
-        file_put_contents($log, "Method executed successfully\n", FILE_APPEND);
-    } catch (Throwable $e) {
-        file_put_contents($log, "ERROR executing method: " . $e->getMessage() . "\n", FILE_APPEND);
-        file_put_contents($log, "Trace: " . $e->getTraceAsString() . "\n", FILE_APPEND);
-        wp_send_json_error(['message' => 'Method error: ' . $e->getMessage()]);
-    }
-}
     
     /**
      * Define WordPress hooks
@@ -465,8 +505,8 @@ class SAW_Visitors {
      * @since 1.0.0
      */
     private function define_hooks() {
-        $this->loader->add_action('init', $this->router, 'register_routes');
-        $this->loader->add_filter('query_vars', $this->router, 'register_query_vars');
+        $this->loader->add_action('init',            $this->router, 'register_routes');
+        $this->loader->add_filter('query_vars',      $this->router, 'register_query_vars');
         $this->loader->add_action('template_redirect', $this->router, 'dispatch', 1);
         
         $this->loader->add_action('wp_enqueue_scripts', $this, 'enqueue_public_styles');
