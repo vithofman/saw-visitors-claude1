@@ -4,7 +4,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Users
- * @version     5.0.0 - COMPLETE with all original methods
+ * @version     5.2.0 - FIXED: AJAX handler registration (uses universal handler)
  */
 
 if (!defined('ABSPATH')) {
@@ -36,7 +36,9 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
         require_once $module_path . 'model.php';
         $this->model = new SAW_Module_Users_Model($this->config);
         
-        add_action('wp_ajax_saw_get_departments_by_branch', array($this, 'ajax_get_departments_by_branch'));
+        // ✅ REMOVED: AJAX handler registration from constructor
+        // Universal handler in saw-visitors.php will handle it:
+        // saw_get_departments_by_branch -> ajax_get_departments_by_branch()
     }
     
     /**
@@ -72,9 +74,11 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
             $data['id'] = intval($post['id']);
         }
         
-        // Handle department_ids array
+        // Handle department_ids array (multiselect)
         if (isset($post['department_ids']) && is_array($post['department_ids'])) {
             $data['department_ids'] = array_map('intval', $post['department_ids']);
+        } else {
+            $data['department_ids'] = array();
         }
         
         return $data;
@@ -217,6 +221,7 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
                 $this->pending_departments = array();
             }
             
+            // Validace: Manager MUSÍ mít alespoň jedno oddělení
             if ($data['role'] === 'manager' && empty($this->pending_departments)) {
                 return new WP_Error('departments_required', 'Manager musí mít přiřazeno alespoň jedno oddělení');
             }
@@ -233,7 +238,7 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
      * After save hook - handles department assignments and welcome email
      */
     protected function after_save($user_id) {
-        // Handle department assignments
+        // Handle department assignments (multiselect)
         if ($this->pending_departments !== null) {
             global $wpdb;
             
@@ -244,16 +249,18 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
                 array('%d')
             );
             
-            // Insert new assignments
-            foreach ($this->pending_departments as $dept_id) {
-                $wpdb->insert(
-                    $wpdb->prefix . 'saw_user_departments',
-                    array(
-                        'user_id' => $user_id,
-                        'department_id' => (int)$dept_id
-                    ),
-                    array('%d', '%d')
-                );
+            // Insert new assignments (pokud jsou nějaká vybraná oddělení)
+            if (!empty($this->pending_departments)) {
+                foreach ($this->pending_departments as $dept_id) {
+                    $wpdb->insert(
+                        $wpdb->prefix . 'saw_user_departments',
+                        array(
+                            'user_id' => $user_id,
+                            'department_id' => (int)$dept_id
+                        ),
+                        array('%d', '%d')
+                    );
+                }
             }
         }
         
@@ -360,20 +367,45 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
     
     /**
      * AJAX: Get departments by branch
+     * 
+     * Called by universal AJAX handler: saw_get_departments_by_branch
+     * Pattern: saw_{method}_{module} -> ajax_{method}()
      */
     public function ajax_get_departments_by_branch() {
-        check_ajax_referer('saw_departments', 'nonce');
+        // Verify nonce
+        check_ajax_referer('saw_ajax_nonce', 'nonce');
         
         $branch_id = isset($_POST['branch_id']) ? intval($_POST['branch_id']) : 0;
         
         if (!$branch_id) {
-            wp_send_json_error(array('message' => 'Invalid branch ID'));
+            wp_send_json_error(array('message' => 'Chybí ID pobočky'));
             return;
         }
         
+        // Security: Ověření, že branch patří k customer_id z kontextu
+        $customer_id = SAW_Context::get_customer_id();
+        
         global $wpdb;
+        
+        // Nejdřív ověříme, že branch patří k customer_id
+        $branch_check = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM %i WHERE id = %d AND customer_id = %d AND is_active = 1",
+            $wpdb->prefix . 'saw_branches',
+            $branch_id,
+            $customer_id
+        ));
+        
+        if (!$branch_check) {
+            wp_send_json_error(array('message' => 'Nemáte přístup k této pobočce'));
+            return;
+        }
+        
+        // Načteme departments pro danou pobočku
         $departments = $wpdb->get_results($wpdb->prepare(
-            "SELECT id, name FROM %i WHERE branch_id = %d AND is_active = 1 ORDER BY name ASC",
+            "SELECT id, name, department_number 
+             FROM %i 
+             WHERE branch_id = %d AND is_active = 1 
+             ORDER BY name ASC",
             $wpdb->prefix . 'saw_departments',
             $branch_id
         ), ARRAY_A);

@@ -4,7 +4,7 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Modules/Branches
- * @version     14.4.0 - stabilní HQ logika v after_save
+ * @version     14.5.0 - opravena logika is_headquarters v after_save
  */
 
 if (!defined('ABSPATH')) {
@@ -174,6 +174,53 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
     }
 
     /**
+     * Before save – vynutíme „maximálně jedno sídlo na zákazníka"
+     * 
+     * Tato metoda se volá PŘED zápisem do databáze, takže můžeme upravit ostatní záznamy
+     * předtím, než se uloží aktuální pobočka.
+     * 
+     * @param array $data Data která se budou ukládat
+     * @param int|null $id ID záznamu při editaci (null při vytváření nového)
+     * @return array Upravená data (pokud potřeba)
+     */
+    protected function before_save($data, $id = null) {
+        global $wpdb;
+
+        // Pokud se nastavuje is_headquarters na 1
+        if (!empty($data['is_headquarters'])) {
+            $customer_id = !empty($data['customer_id']) ? (int) $data['customer_id'] : 0;
+
+            // Pokud nemáme customer_id v datech, zkusíme ho získat z existujícího záznamu při editaci
+            if (!$customer_id && $id) {
+                $existing = $this->model->get_by_id($id);
+                $customer_id = !empty($existing['customer_id']) ? (int) $existing['customer_id'] : 0;
+            }
+
+            // Pokud nemáme customer_id ani teď, zkusíme kontext
+            if (!$customer_id && class_exists('SAW_Context')) {
+                $customer_id = SAW_Context::get_customer_id();
+            }
+
+            if ($customer_id) {
+                $table = $wpdb->prefix . 'saw_branches';
+
+                // Přepneme VŠECHNY pobočky tohoto zákazníka na is_headquarters = 0
+                // (aktuální pobočka se nastaví na 1 při save)
+                $wpdb->query(
+                    $wpdb->prepare(
+                        "UPDATE {$table} 
+                         SET is_headquarters = 0 
+                         WHERE customer_id = %d",
+                        $customer_id
+                    )
+                );
+            }
+        }
+
+        return $data;
+    }
+
+    /**
      * Before delete – kontrola, jestli má pobočka oddělení
      */
     protected function before_delete($id) {
@@ -196,48 +243,10 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
     }
 
     /**
-     * After save – zde vynutíme „maximálně jedno sídlo na zákazníka“
-     *
-     * Volá se jak po create, tak po update (Base controller).
+     * After save – invalidace cache
      */
     protected function after_save($id) {
-        global $wpdb;
-
-        // Invalidace cache, ať taháme čerstvá data
         $this->invalidate_caches();
-
-        $branch = $this->model->get_by_id($id);
-        if (!$branch) {
-            return;
-        }
-
-        $customer_id = !empty($branch['customer_id']) ? (int) $branch['customer_id'] : 0;
-        if (!$customer_id) {
-            return;
-        }
-
-        // Pokud tato pobočka NENÍ sídlo, nic dál nevynucujeme
-        if (empty($branch['is_headquarters'])) {
-            return;
-        }
-
-        $table = $wpdb->prefix . 'saw_branches';
-
-        // ✅ Všechny OSTATNÍ pobočky stejného zákazníka přepnout na 0
-        $wpdb->query(
-            $wpdb->prepare(
-                "UPDATE {$table} 
-                 SET is_headquarters = 0 
-                 WHERE customer_id = %d AND id != %d AND is_headquarters = 1",
-                $customer_id,
-                (int) $id
-            )
-        );
-
-        // Aktuální záznam už má po uložení správnou hodnotu (1),
-        // není potřeba ho znovu přepisovat.
-
-        // Cache po HQ změně už jsme invalidovali na začátku.
     }
 
     /**

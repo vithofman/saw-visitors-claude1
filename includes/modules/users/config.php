@@ -4,7 +4,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Users
- * @version     5.0.0 - REFACTORED with related data support
+ * @version     5.1.0 - FIXED: Added custom_ajax_actions for departments by branch
  */
 
 if (!defined('ABSPATH')) {
@@ -95,6 +95,15 @@ return [
         ],
         'per_page' => 20,
         'enable_detail_modal' => true,
+    ],
+    
+    //  ============================================
+    // ✅ CUSTOM AJAX ACTIONS
+    // Registers additional AJAX endpoints beyond standard CRUD
+    // Pattern: 'wp_ajax_{action}' => 'controller_method'
+    // ============================================
+    'custom_ajax_actions' => [
+        'saw_get_departments_by_branch' => 'ajax_get_departments_by_branch',
     ],
     
     'cache' => [

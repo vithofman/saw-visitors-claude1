@@ -1,14 +1,9 @@
 <?php
 /**
- * Users List Template - REFACTORED v5.0.0
- * 
- * ✅ Uses SAW_Component_Admin_Table
- * ✅ Inline filters (side by side)
- * ✅ Float button for create
- * ✅ Sidebar with related data support
+ * Users List Template - FINAL WORKING VERSION
  * 
  * @package SAW_Visitors
- * @version 5.0.0
+ * @version 5.3.0
  */
 
 if (!defined('ABSPATH')) {
@@ -27,26 +22,11 @@ if (!class_exists('SAW_Component_Admin_Table')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/class-saw-component-admin-table.php';
 }
 
-// Prepare search component
+// ONE FILTER ROW: [Role] [Status] [Search]
 ob_start();
-$search_component = new SAW_Component_Search('users', array(
-    'placeholder' => 'Hledat uživatele...',
-    'search_value' => $search,
-    'ajax_enabled' => false,
-    'show_button' => true,
-    'show_info_banner' => true,
-    'info_banner_label' => 'Vyhledávání:',
-    'clear_url' => home_url('/admin/users/'),
-));
-$search_component->render();
-$search_html = ob_get_clean();
+echo '<div style="display: flex; gap: 12px; align-items: flex-start;">';
 
-// Prepare filters - INLINE STYLE FOR SIDE BY SIDE
-ob_start();
-echo '<div style="display: flex; gap: 12px; flex-wrap: wrap;">';
-
-// Role filter
-echo '<div style="flex: 0 0 auto;">';
+echo '<div>';
 $role_filter = new SAW_Component_Selectbox('role-filter', array(
     'options' => array(
         '' => 'Všechny role',
@@ -57,15 +37,12 @@ $role_filter = new SAW_Component_Selectbox('role-filter', array(
     ),
     'selected' => $_GET['role'] ?? '',
     'on_change' => 'redirect',
-    'allow_empty' => true,
-    'custom_class' => 'saw-filter-select',
     'name' => 'role',
 ));
 $role_filter->render();
 echo '</div>';
 
-// Status filter
-echo '<div style="flex: 0 0 auto;">';
+echo '<div>';
 $status_filter = new SAW_Component_Selectbox('is_active-filter', array(
     'options' => array(
         '' => 'Všechny statusy',
@@ -74,11 +51,21 @@ $status_filter = new SAW_Component_Selectbox('is_active-filter', array(
     ),
     'selected' => $_GET['is_active'] ?? '',
     'on_change' => 'redirect',
-    'allow_empty' => true,
-    'custom_class' => 'saw-filter-select',
     'name' => 'is_active',
 ));
 $status_filter->render();
+echo '</div>';
+
+echo '<div style="flex: 1;">';
+$search_component = new SAW_Component_Search('users', array(
+    'placeholder' => 'Hledat uživatele...',
+    'search_value' => $search,
+    'ajax_enabled' => false,
+    'show_button' => true,
+    'show_info_banner' => false,
+    'clear_url' => home_url('/admin/users/'),
+));
+$search_component->render();
 echo '</div>';
 
 echo '</div>';
@@ -86,17 +73,14 @@ $filters_html = ob_get_clean();
 
 global $wpdb;
 
-// CRITICAL: Module wrapper for proper layout
 echo '<div class="saw-module-users">';
 
-// Initialize admin table
 $table = new SAW_Component_Admin_Table('users', [
     'title' => 'Uživatelé',
     'create_url' => home_url('/admin/users/new/'),
     'edit_url' => home_url('/admin/users/edit/{id}/'),
     'detail_url' => home_url('/admin/users/{id}/'),
     
-    // ✅ CRITICAL: Module config + related data support
     'module_config' => $this->config,
     'sidebar_mode' => $sidebar_mode ?? null,
     'detail_item' => $detail_item ?? null,
@@ -141,7 +125,6 @@ $table = new SAW_Component_Admin_Table('users', [
                     'terminal' => 'Terminál'
                 ];
                 $role_label = $role_labels[$value] ?? $value;
-                
                 return '<span class="saw-role-badge saw-role-' . esc_attr($value) . '">' . esc_html($role_label) . '</span>';
             }
         ],
@@ -197,7 +180,6 @@ $table = new SAW_Component_Admin_Table('users', [
     'total_pages' => $total_pages,
     'orderby' => $orderby,
     'order' => $order,
-    'search' => $search_html,
     'filters' => $filters_html,
     'actions' => ['view', 'edit', 'delete'],
     'empty_message' => 'Žádní uživatelé nenalezeni',
@@ -209,4 +191,4 @@ $table = new SAW_Component_Admin_Table('users', [
 
 $table->render();
 
-echo '</div>'; // .saw-module-users
+echo '</div>';

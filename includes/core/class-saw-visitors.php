@@ -8,7 +8,7 @@
  * @package    SAW_Visitors
  * @subpackage Core
  * @since      1.0.0
- * @version    1.0.1 - HOTFIX: Enqueue detection for SAW pages
+ * @version    1.1.0 - Added support for custom_ajax_actions from module config
  */
 
 if (!defined('ABSPATH')) {
@@ -265,38 +265,40 @@ class SAW_Visitors {
      * @since 1.0.0
      */
     private function block_wp_admin_for_saw_roles() {
-    add_action('admin_init', function() {
-        // ✅ Nepřesměrovávat AJAX ani REST API
-        if ( function_exists('wp_doing_ajax') && wp_doing_ajax() ) {
-            return;
-        }
-        if ( defined('REST_REQUEST') && REST_REQUEST ) {
-            return;
-        }
+        add_action('admin_init', function() {
+            // ✅ Nepřesměrovávat AJAX ani REST API
+            if ( function_exists('wp_doing_ajax') && wp_doing_ajax() ) {
+                return;
+            }
+            if ( defined('REST_REQUEST') && REST_REQUEST ) {
+                return;
+            }
 
-        $user = wp_get_current_user();
-        $saw_roles = ['saw_admin', 'saw_super_manager', 'saw_manager', 'saw_terminal'];
+            $user = wp_get_current_user();
+            $saw_roles = ['saw_admin', 'saw_super_manager', 'saw_manager', 'saw_terminal'];
 
-        // Uživatel nemá žádnou SAW roli → neřešíme
-        if ( empty($user) || empty($user->ID) || ! array_intersect($saw_roles, (array) $user->roles) ) {
-            return;
-        }
+            // Uživatel nemá žádnou SAW roli → neřešíme
+            if ( empty($user) || empty($user->ID) || ! array_intersect($saw_roles, (array) $user->roles) ) {
+                return;
+            }
 
-        // Vše ostatní přesměrovat z wp-admin pryč
-        wp_safe_redirect( home_url('/login/') );
-        exit;
-    });
-}
+            // Vše ostatní přesměrovat z wp-admin pryč
+            wp_safe_redirect( home_url('/login/') );
+            exit;
+        });
+    }
 
     
     /**
      * Register module AJAX handlers
      *
      * Dynamically registers AJAX actions for all modules.
-     * Creates handlers for: detail, search, delete operations.
-     * Also registers custom permission module handlers.
+     * Creates handlers for:
+     * 1. Standard CRUD operations (detail, search, delete)
+     * 2. Custom AJAX actions defined in module config['custom_ajax_actions']
      *
      * @since 1.0.0
+     * @version 1.1.0 - Added support for custom_ajax_actions from module config
      */
     private function register_module_ajax_handlers() {
         $modules  = SAW_Module_Loader::get_all();
@@ -306,6 +308,7 @@ class SAW_Visitors {
         foreach ($modules as $slug => $config) {
             $entity = $config['entity'];
             
+            // Standard CRUD actions
             add_action('wp_ajax_saw_get_' . $entity . '_detail', function() use ($slug, $instance) {
                 $instance->handle_module_ajax($slug, 'ajax_get_detail');
             });
@@ -317,10 +320,21 @@ class SAW_Visitors {
             add_action('wp_ajax_saw_delete_' . $entity, function() use ($slug, $instance) {
                 $instance->handle_module_ajax($slug, 'ajax_delete');
             });
+            
+            // ✅ NEW: Register custom AJAX actions from module config
+            // Allows modules to define their own AJAX endpoints without modifying core code
+            // Example in config: 'custom_ajax_actions' => ['saw_get_departments_by_branch' => 'ajax_get_departments_by_branch']
+            if (!empty($config['custom_ajax_actions']) && is_array($config['custom_ajax_actions'])) {
+                foreach ($config['custom_ajax_actions'] as $ajax_action => $controller_method) {
+                    add_action('wp_ajax_' . $ajax_action, function() use ($slug, $controller_method, $instance) {
+                        $instance->handle_module_ajax($slug, $controller_method);
+                    });
+                }
+            }
         }
         
-        // Register custom AJAX actions for permissions module
-        // Permissions module has custom business logic (not standard CRUD)
+        // Register custom AJAX actions for permissions module (backward compatibility)
+        // Note: Permissions module can now also use custom_ajax_actions in config
         add_action('wp_ajax_saw_update_permission',        [$this, 'handle_permissions_update']);
         add_action('wp_ajax_saw_get_permissions_for_role', [$this, 'handle_permissions_get_for_role']);
         add_action('wp_ajax_saw_reset_permissions',        [$this, 'handle_permissions_reset']);
@@ -431,49 +445,29 @@ class SAW_Visitors {
      * @param string $method Controller method to call
      */
     private function handle_module_ajax($slug, $method) {
-        // ✅ DEBUG LOG
-        $log = WP_CONTENT_DIR . '/saw-ajax-handler.log';
-        file_put_contents($log, "\n" . date('H:i:s') . " ==================\n", FILE_APPEND);
-        file_put_contents($log, "Slug: $slug\n", FILE_APPEND);
-        file_put_contents($log, "Method: $method\n", FILE_APPEND);
-        
         // Validate module exists
         $config = SAW_Module_Loader::load($slug);
         
-        file_put_contents($log, "Config loaded: " . ($config ? 'YES' : 'NO') . "\n", FILE_APPEND);
-        if ($config) {
-            file_put_contents($log, "Entity: " . ($config['entity'] ?? 'N/A') . "\n", FILE_APPEND);
-        }
-        
         if (!$config) {
-            file_put_contents($log, "ERROR: Module not found\n", FILE_APPEND);
             wp_send_json_error(['message' => __('Module not found', 'saw-visitors')]);
             return;
         }
         
         // Get controller instance
-        file_put_contents($log, "Getting controller...\n", FILE_APPEND);
-        
         try {
             $controller = $this->get_module_controller($slug);
-            file_put_contents($log, "Controller: " . ($controller ? get_class($controller) : 'NULL') . "\n", FILE_APPEND);
         } catch (Throwable $e) {
-            file_put_contents($log, "ERROR creating controller: " . $e->getMessage() . "\n", FILE_APPEND);
             wp_send_json_error(['message' => 'Controller error: ' . $e->getMessage()]);
             return;
         }
         
         if (!$controller) {
-            file_put_contents($log, "ERROR: Controller is NULL\n", FILE_APPEND);
             wp_send_json_error(['message' => __('Controller not found', 'saw-visitors')]);
             return;
         }
         
         // Validate method exists
-        file_put_contents($log, "Checking method exists...\n", FILE_APPEND);
-        
         if (!method_exists($controller, $method)) {
-            file_put_contents($log, "ERROR: Method $method not found\n", FILE_APPEND);
             wp_send_json_error([
                 'message' => sprintf(
                     /* translators: %s: method name */
@@ -485,14 +479,9 @@ class SAW_Visitors {
         }
         
         // Call method
-        file_put_contents($log, "Calling method $method...\n", FILE_APPEND);
-        
         try {
             $controller->$method();
-            file_put_contents($log, "Method executed successfully\n", FILE_APPEND);
         } catch (Throwable $e) {
-            file_put_contents($log, "ERROR executing method: " . $e->getMessage() . "\n", FILE_APPEND);
-            file_put_contents($log, "Trace: " . $e->getTraceAsString() . "\n", FILE_APPEND);
             wp_send_json_error(['message' => 'Method error: ' . $e->getMessage()]);
         }
     }
