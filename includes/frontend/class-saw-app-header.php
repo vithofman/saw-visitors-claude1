@@ -1,62 +1,23 @@
 <?php
 /**
- * SAW App Header Component - FIXED v2.1
+ * SAW App Header Component - v2.3 SETTINGS LINK
  *
- * Renders application header with branding, user menu, customer switcher,
- * and language switcher.
- *
- * FIX v2.1:
- * - ✅ Added fallback to load logo_url even if customer data is passed without it
- * - ✅ Removed primary_color from customer data
- *
- * @package SAW_Visitors
- * @version 2.1 - LOGO FALLBACK FIX
- * @since   4.8.0
+ * @version 2.3 - Changed to link to Settings page instead of inline edit
+ * @since   4.9.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-/**
- * SAW App Header Class
- *
- * Main header component for the application.
- * Displays navigation, user info, customer switcher, and language selection.
- *
- * @since 4.8.0
- */
 class SAW_App_Header {
     
-    /**
-     * Current user data
-     *
-     * @since 4.8.0
-     * @var array
-     */
     private $user;
-    
-    /**
-     * Current customer data
-     *
-     * @since 4.8.0
-     * @var array
-     */
     private $customer;
     
-    /**
-     * Constructor
-     *
-     * Initializes user and customer data.
-     * If not provided, loads from current WordPress user and SAW context.
-     *
-     * ✅ FIX v2.1: Even if customer is passed, ensure logo_url is loaded
-     *
-     * @since 4.8.0
-     * @param array|null $user     Optional user data override
-     * @param array|null $customer Optional customer data override
-     */
     public function __construct($user = null, $customer = null) {
+        // ... stejná logika jako předtím pro načtení user a customer ...
+        
         if (!$user && is_user_logged_in()) {
             $wp_user = wp_get_current_user();
             
@@ -75,6 +36,7 @@ class SAW_App_Header {
                     'role' => $saw_user['role'],
                     'first_name' => $saw_user['first_name'],
                     'last_name' => $saw_user['last_name'],
+                    'customer_id' => $saw_user['customer_id'],
                 );
             } else {
                 $this->user = array(
@@ -93,7 +55,7 @@ class SAW_App_Header {
             );
         }
         
-        // ✅ CRITICAL FIX: If customer is passed BUT missing logo_url, load it from DB
+        // Load customer logic...
         if ($customer && isset($customer['id']) && empty($customer['logo_url'])) {
             global $wpdb;
             $full_customer = $wpdb->get_row($wpdb->prepare(
@@ -108,7 +70,6 @@ class SAW_App_Header {
             }
         }
         
-        // Get customer data from context if not provided
         if (!$customer) {
             $customer_id = null;
             
@@ -138,15 +99,6 @@ class SAW_App_Header {
         );
     }
     
-    /**
-     * Render header
-     *
-     * Outputs complete header HTML including mobile menu toggle,
-     * customer switcher, language switcher, and user menu.
-     *
-     * @since 4.8.0
-     * @return void
-     */
     public function render() {
         ?>
         <header class="saw-app-header" id="sawAppHeader">
@@ -199,6 +151,7 @@ class SAW_App_Header {
                             <span>Můj profil</span>
                         </a>
                         
+                        <!-- ✅ NOVÉ: Odkaz na Settings stránku -->
                         <a href="/admin/settings" class="saw-dropdown-item">
                             <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
@@ -221,14 +174,6 @@ class SAW_App_Header {
         <?php
     }
     
-    /**
-     * Render customer switcher component
-     *
-     * Loads and renders the customer switcher component.
-     *
-     * @since 4.8.0
-     * @return void
-     */
     private function render_customer_switcher() {
         if (!class_exists('SAW_Component_Customer_Switcher')) {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/customer-switcher/class-saw-component-customer-switcher.php';
@@ -238,14 +183,6 @@ class SAW_App_Header {
         $switcher->render();
     }
     
-    /**
-     * Render language switcher component
-     *
-     * Loads and renders the language switcher component.
-     *
-     * @since 4.8.0
-     * @return void
-     */
     private function render_language_switcher() {
         if (!class_exists('SAW_Component_Language_Switcher')) {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/language-switcher/class-saw-component-language-switcher.php';
@@ -256,15 +193,6 @@ class SAW_App_Header {
         $switcher->render();
     }
     
-    /**
-     * Get current language
-     *
-     * Returns current language from user meta.
-     * Defaults to 'cs' if not set.
-     *
-     * @since 4.8.0
-     * @return string Language code (e.g. 'cs', 'en')
-     */
     private function get_current_language() {
         if (is_user_logged_in()) {
             $lang = get_user_meta(get_current_user_id(), 'saw_current_language', true);
@@ -276,14 +204,6 @@ class SAW_App_Header {
         return 'cs';
     }
     
-    /**
-     * Get role label
-     *
-     * Translates role code to human-readable label.
-     *
-     * @since 4.8.0
-     * @return string Translated role label
-     */
     private function get_role_label() {
         $role = $this->user['role'] ?? 'admin';
         

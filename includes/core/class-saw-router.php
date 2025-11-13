@@ -482,11 +482,7 @@ class SAW_Router {
         }
     }
     
-    // Handle settings routes
-    if ($segments[0] === 'settings' && isset($segments[1])) {
-        $this->render_page('Settings: ' . ucfirst($segments[1]), $path, 'admin', 'settings');
-        return;
-    }
+
     
     // Default admin interface
     $active_section = isset($segments[0]) ? $segments[0] : '';
