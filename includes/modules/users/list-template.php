@@ -113,6 +113,12 @@ $table = new SAW_Component_Admin_Table('users', [
                 return '<span class="saw-text-muted">—</span>';
             }
         ],
+        'position' => [
+            'label' => 'Funkce',
+            'type' => 'text',
+            'width' => '180px',
+            'empty_value' => '—'
+        ],
         'role' => [
             'label' => 'Role',
             'type' => 'custom',

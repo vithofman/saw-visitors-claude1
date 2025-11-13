@@ -59,6 +59,11 @@ if ($item['role'] === 'manager') {
     
     <div class="saw-detail-header-info">
         <h2><?php echo esc_html($item['first_name'] . ' ' . $item['last_name']); ?></h2>
+        <?php if (!empty($item['position'])): ?>
+            <p style="margin: 2px 0 2px 0; color: #4b5563; font-size: 13px; font-weight: 500;">
+                <?php echo esc_html($item['position']); ?>
+            </p>
+        <?php endif; ?>
         <p style="margin: 4px 0 8px 0; color: #6b7280; font-size: 14px;">
             <?php echo esc_html($email); ?>
         </p>

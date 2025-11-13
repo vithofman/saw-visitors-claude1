@@ -3,7 +3,7 @@
  * Users Module Model - FINAL WORKING VERSION
  * 
  * @package SAW_Visitors
- * @version 5.3.0 - ADMIN SEES HIMSELF
+ * @version 5.4.0 - FIXED: Admin vidí sám sebe v tabulce
  */
 
 if (!defined('ABSPATH')) {
@@ -57,11 +57,18 @@ class SAW_Module_Users_Model extends SAW_Base_Model
     }
     
     /**
-     * Get all users - FIXED: Admin sees himself
+     * Get all users - FIXED: Admin vidí sám sebe
+     * 
+     * Logika:
+     * - Super admin (WordPress administrator) vidí všechny uživatele
+     * - SAW admin vidí všechny uživatele svého customera (včetně sebe)
+     * - Super manager/Manager vidí uživatele své pobočky + adminy svého customera
+     * - Vždy zahrnuje aktuálně přihlášeného uživatele
      */
     public function get_all($filters = array()) {
         global $wpdb;
         
+        // Super admin vidí všechny uživatele
         $current_wp_user = wp_get_current_user();
         $is_wp_super_admin = in_array('administrator', $current_wp_user->roles, true);
         
@@ -69,25 +76,42 @@ class SAW_Module_Users_Model extends SAW_Base_Model
             return parent::get_all($filters);
         }
         
+        // Získáme customer_id z kontextu
         $context_customer_id = SAW_Context::get_customer_id();
         if (!$context_customer_id) {
             return array('items' => array(), 'total' => 0);
         }
         
+        // Získáme ID aktuálně přihlášeného SAW uživatele
+        $current_saw_user_id = SAW_Context::get_saw_user_id();
+        
+        // Základní query - všichni uživatelé daného customera
         $sql = "SELECT * FROM {$this->table} WHERE customer_id = %d";
         $count_sql = "SELECT COUNT(*) FROM {$this->table} WHERE customer_id = %d";
         
         $params = array($context_customer_id);
         $count_params = array($context_customer_id);
         
+        // Branch filtr - pokud je nastaven context_branch_id (pro super_manager/manager)
         $context_branch_id = SAW_Context::get_branch_id();
         if ($context_branch_id) {
-            $sql .= " AND (branch_id = %d OR branch_id IS NULL)";
-            $count_sql .= " AND (branch_id = %d OR branch_id IS NULL)";
-            $params[] = $context_branch_id;
-            $count_params[] = $context_branch_id;
+            // Zobrazit uživatele z dané pobočky + uživatele bez pobočky (admins) + sebe
+            if ($current_saw_user_id) {
+                $sql .= " AND (branch_id = %d OR branch_id IS NULL OR id = %d)";
+                $count_sql .= " AND (branch_id = %d OR branch_id IS NULL OR id = %d)";
+                $params[] = $context_branch_id;
+                $params[] = $current_saw_user_id;
+                $count_params[] = $context_branch_id;
+                $count_params[] = $current_saw_user_id;
+            } else {
+                $sql .= " AND (branch_id = %d OR branch_id IS NULL)";
+                $count_sql .= " AND (branch_id = %d OR branch_id IS NULL)";
+                $params[] = $context_branch_id;
+                $count_params[] = $context_branch_id;
+            }
         }
         
+        // Vyhledávání
         if (!empty($filters['search'])) {
             $search_fields = $this->config['list_config']['searchable'] ?? array('first_name', 'last_name');
             $search_conditions = array();
@@ -102,6 +126,7 @@ class SAW_Module_Users_Model extends SAW_Base_Model
             $count_sql .= $search_where;
         }
         
+        // Filtry (role, is_active, atd.)
         foreach ($this->config['list_config']['filters'] ?? array() as $filter_key => $enabled) {
             if ($enabled && isset($filters[$filter_key]) && $filters[$filter_key] !== '') {
                 $sql .= $wpdb->prepare(" AND {$filter_key} = %s", $filters[$filter_key]);
@@ -109,11 +134,14 @@ class SAW_Module_Users_Model extends SAW_Base_Model
             }
         }
         
+        // Připravíme SQL s parametry
         $sql = $wpdb->prepare($sql, ...$params);
         $count_sql = $wpdb->prepare($count_sql, ...$count_params);
         
+        // Celkový počet
         $total = (int) $wpdb->get_var($count_sql);
         
+        // Řazení
         $orderby = $filters['orderby'] ?? 'first_name';
         $order = strtoupper($filters['order'] ?? 'ASC');
         
@@ -123,12 +151,14 @@ class SAW_Module_Users_Model extends SAW_Base_Model
         
         $sql .= " ORDER BY {$orderby} {$order}";
         
+        // Stránkování
         $page = isset($filters['page']) ? max(1, intval($filters['page'])) : 1;
         $per_page = isset($filters['per_page']) ? max(1, intval($filters['per_page'])) : 20;
         $offset = ($page - 1) * $per_page;
         
         $sql .= $wpdb->prepare(" LIMIT %d OFFSET %d", $per_page, $offset);
         
+        // Načtení dat
         $items = $wpdb->get_results($sql, ARRAY_A);
         
         return array(

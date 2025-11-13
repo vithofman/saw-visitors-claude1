@@ -4,7 +4,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Users
- * @version     5.1.0 - FIXED: Added custom_ajax_actions for departments by branch
+ * @version     5.2.0 - ADDED: position field (funkce)
  */
 
 if (!defined('ABSPATH')) {
@@ -61,6 +61,13 @@ return [
             'required' => true,
             'sanitize' => 'sanitize_text_field',
         ],
+        'position' => [
+            'type' => 'text',
+            'label' => 'Funkce',
+            'required' => false,
+            'sanitize' => 'sanitize_text_field',
+            'placeholder' => 'např. Vedoucí výroby, BOZP technik',
+        ],
         'branch_id' => [
             'type' => 'select',
             'label' => 'Pobočka',
@@ -86,9 +93,9 @@ return [
     ],
     
     'list_config' => [
-        'columns' => ['name', 'email', 'role', 'branch', 'is_active'],
-        'searchable' => ['first_name', 'last_name', 'email'],
-        'sortable' => ['role', 'created_at'],
+        'columns' => ['name', 'email', 'position', 'role', 'branch', 'is_active'],
+        'searchable' => ['first_name', 'last_name', 'email', 'position'],
+        'sortable' => ['role', 'position', 'created_at'],
         'filters' => [
             'is_active' => true,
             'role' => true,
@@ -97,11 +104,6 @@ return [
         'enable_detail_modal' => true,
     ],
     
-    //  ============================================
-    // ✅ CUSTOM AJAX ACTIONS
-    // Registers additional AJAX endpoints beyond standard CRUD
-    // Pattern: 'wp_ajax_{action}' => 'controller_method'
-    // ============================================
     'custom_ajax_actions' => [
         'saw_get_departments_by_branch' => 'ajax_get_departments_by_branch',
     ],

@@ -140,7 +140,7 @@ wp_nonce_field($nonce_action, '_wpnonce', false);
                 </div>
                 
                 <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-12">
+                    <div class="saw-form-group saw-col-6">
                         <label for="email" class="saw-label">
                             Email <span class="saw-required">*</span>
                         </label>
@@ -154,6 +154,21 @@ wp_nonce_field($nonce_action, '_wpnonce', false);
                             <?php echo $is_edit ? 'readonly' : ''; ?>
                         >
                         <span class="saw-help-text">Email slouží jako přihlašovací jméno</span>
+                    </div>
+                    
+                    <div class="saw-form-group saw-col-6">
+                        <label for="position" class="saw-label">
+                            Funkce
+                        </label>
+                        <input 
+                            type="text" 
+                            id="position" 
+                            name="position" 
+                            class="saw-input"
+                            value="<?php echo esc_attr($item['position'] ?? ''); ?>"
+                            placeholder="např. Vedoucí výroby, BOZP technik"
+                        >
+                        <span class="saw-help-text">Pracovní pozice uživatele</span>
                     </div>
                 </div>
                 
