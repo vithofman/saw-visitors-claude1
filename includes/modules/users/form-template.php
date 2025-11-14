@@ -1,9 +1,9 @@
 <?php
 /**
- * Users Form Template - PRODUCTION v5.0.1
+ * Users Form Template - PRODUCTION v5.0.2
  * 
  * @package SAW_Visitors
- * @version 5.0.1 - FIXED: Professional department selection UX
+ * @version 5.0.2 - FIXED: Department checkboxes now properly load selected values on edit
  */
 
 if (!defined('ABSPATH')) {
@@ -48,14 +48,24 @@ if (!$is_edit) {
     }
 }
 
-// Načteme existující department_ids pro edit mode
+// ✅ FIXED: Načteme existující department_ids pro edit mode
+// Priorita: 1) Z $item['department_ids'] (načteno v modelu), 2) Fallback na přímý dotaz
 $existing_department_ids = [];
 if ($is_edit && !empty($item['id'])) {
-    $existing_department_ids = $wpdb->get_col($wpdb->prepare(
-        "SELECT department_id FROM %i WHERE user_id = %d",
-        $wpdb->prefix . 'saw_user_departments',
-        $item['id']
-    ));
+    // Model už může mít department_ids načtené v get_by_id()
+    if (isset($item['department_ids']) && is_array($item['department_ids'])) {
+        $existing_department_ids = $item['department_ids'];
+    } else {
+        // Fallback - načteme ručně, pokud model neposkytl
+        $existing_department_ids = $wpdb->get_col($wpdb->prepare(
+            "SELECT department_id FROM %i WHERE user_id = %d",
+            $wpdb->prefix . 'saw_user_departments',
+            $item['id']
+        ));
+    }
+    
+    // Zajistíme, že jsou to integery (pro porovnání v JS)
+    $existing_department_ids = array_map('intval', $existing_department_ids);
 }
 ?>
 
@@ -79,33 +89,61 @@ wp_nonce_field($nonce_action, '_wpnonce', false);
 ?>
         
         <?php if ($is_edit): ?>
+            <input type="hidden" name="action" value="edit">
             <input type="hidden" name="id" value="<?php echo esc_attr($item['id']); ?>">
+        <?php else: ?>
+            <input type="hidden" name="action" value="create">
         <?php endif; ?>
         
-        <!-- Základní informace -->
+        <!-- Role -->
         <details class="saw-form-section" open>
             <summary>
                 <span class="dashicons dashicons-admin-users"></span>
-                <strong>Základní informace</strong>
+                <strong>Základní údaje</strong>
             </summary>
             <div class="saw-form-section-content">
-                
                 <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-12">
+                    <div class="saw-form-group saw-col-6">
                         <label for="role" class="saw-label">
                             Role <span class="saw-required">*</span>
                         </label>
-                        <select id="role" name="role" class="saw-select" required>
-                            <option value="">Vyberte roli</option>
+                        <select name="role" id="role" class="saw-select" required>
+                            <option value="">-- Vyberte --</option>
                             <?php if (current_user_can('manage_options')): ?>
-                                <option value="super_admin" <?php selected($item['role'] ?? '', 'super_admin'); ?>>Super Admin (vše)</option>
+                            <option value="super_admin" <?php selected($item['role'] ?? '', 'super_admin'); ?>>
+                                Super Admin (celý systém)
+                            </option>
                             <?php endif; ?>
-                            <option value="admin" <?php selected($item['role'] ?? '', 'admin'); ?>>Admin (všechny pobočky zákazníka)</option>
-                            <option value="super_manager" <?php selected($item['role'] ?? '', 'super_manager'); ?>>Super Manager (jedna pobočka)</option>
-                            <option value="manager" <?php selected($item['role'] ?? '', 'manager'); ?>>Manager (vybraná oddělení)</option>
-                            <option value="terminal" <?php selected($item['role'] ?? '', 'terminal'); ?>>Terminál (check-in/out)</option>
+                            <option value="admin" <?php selected($item['role'] ?? '', 'admin'); ?>>
+                                Admin (všechny pobočky)
+                            </option>
+                            <option value="super_manager" <?php selected($item['role'] ?? '', 'super_manager'); ?>>
+                                Super Manager (jedna pobočka)
+                            </option>
+                            <option value="manager" <?php selected($item['role'] ?? '', 'manager'); ?>>
+                                Manager (oddělení)
+                            </option>
+                            <option value="terminal" <?php selected($item['role'] ?? '', 'terminal'); ?>>
+                                Terminál
+                            </option>
                         </select>
-                        <span class="saw-help-text">Role určuje úroveň přístupu v systému</span>
+                        <span class="saw-help-text">Určuje úroveň přístupu</span>
+                    </div>
+                    
+                    <div class="saw-form-group saw-col-6">
+                        <label for="email" class="saw-label">
+                            Email <span class="saw-required">*</span>
+                        </label>
+                        <input 
+                            type="email" 
+                            name="email" 
+                            id="email" 
+                            class="saw-input" 
+                            value="<?php echo esc_attr($item['email'] ?? ''); ?>"
+                            required
+                            <?php echo $is_edit ? 'readonly' : ''; ?>
+                        >
+                        <span class="saw-help-text">Slouží jako přihlašovací jméno</span>
                     </div>
                 </div>
                 
@@ -116,9 +154,9 @@ wp_nonce_field($nonce_action, '_wpnonce', false);
                         </label>
                         <input 
                             type="text" 
-                            id="first_name" 
                             name="first_name" 
-                            class="saw-input"
+                            id="first_name" 
+                            class="saw-input" 
                             value="<?php echo esc_attr($item['first_name'] ?? ''); ?>"
                             required
                         >
@@ -130,9 +168,9 @@ wp_nonce_field($nonce_action, '_wpnonce', false);
                         </label>
                         <input 
                             type="text" 
-                            id="last_name" 
                             name="last_name" 
-                            class="saw-input"
+                            id="last_name" 
+                            class="saw-input" 
                             value="<?php echo esc_attr($item['last_name'] ?? ''); ?>"
                             required
                         >
@@ -140,31 +178,15 @@ wp_nonce_field($nonce_action, '_wpnonce', false);
                 </div>
                 
                 <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-6">
-                        <label for="email" class="saw-label">
-                            Email <span class="saw-required">*</span>
-                        </label>
-                        <input 
-                            type="email" 
-                            id="email" 
-                            name="email" 
-                            class="saw-input"
-                            value="<?php echo esc_attr($item['email'] ?? ''); ?>"
-                            required
-                            <?php echo $is_edit ? 'readonly' : ''; ?>
-                        >
-                        <span class="saw-help-text">Email slouží jako přihlašovací jméno</span>
-                    </div>
-                    
-                    <div class="saw-form-group saw-col-6">
+                    <div class="saw-form-group saw-col-12">
                         <label for="position" class="saw-label">
                             Funkce
                         </label>
                         <input 
                             type="text" 
-                            id="position" 
                             name="position" 
-                            class="saw-input"
+                            id="position" 
+                            class="saw-input" 
                             value="<?php echo esc_attr($item['position'] ?? ''); ?>"
                             placeholder="např. Vedoucí výroby, BOZP technik"
                         >
@@ -172,10 +194,24 @@ wp_nonce_field($nonce_action, '_wpnonce', false);
                     </div>
                 </div>
                 
+                <div class="saw-form-row">
+                    <div class="saw-form-group saw-col-12">
+                        <label class="saw-checkbox-label">
+                            <input 
+                                type="checkbox" 
+                                name="is_active" 
+                                value="1"
+                                <?php checked($item['is_active'] ?? 1, 1); ?>
+                            >
+                            <span>Aktivní uživatel</span>
+                        </label>
+                        <span class="saw-help-text">Neaktivní uživatel se nemůže přihlásit</span>
+                    </div>
+                </div>
             </div>
         </details>
         
-        <!-- Zákazník (pouze pro super admina) -->
+        <!-- Zákazník (pouze pro super admins) -->
         <?php if (current_user_can('manage_options')): ?>
         <details class="saw-form-section field-customer" style="display:none;">
             <summary>
@@ -211,27 +247,27 @@ wp_nonce_field($nonce_action, '_wpnonce', false);
                 <strong>Pobočka a oddělení</strong>
             </summary>
             <div class="saw-form-section-content">
-                
-                <!-- Pobočka -->
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
                         <label for="branch_id" class="saw-label">
-                            Pobočka <span class="saw-required field-branch-required">*</span>
+                            Pobočka <span class="saw-required field-branch-required" style="display:none;">*</span>
                         </label>
-                        <select id="branch_id" name="branch_id" class="saw-select">
-                            <option value="">-- Vyberte pobočku --</option>
-                            <?php foreach ($branches as $branch): 
-                                $label = $branch['name'];
-                                if (!empty($branch['code'])) {
-                                    $label .= ' (' . $branch['code'] . ')';
-                                }
-                                if (!empty($branch['city'])) {
-                                    $label .= ' - ' . $branch['city'];
-                                }
+                        <select name="branch_id" id="branch_id" class="saw-select">
+                            <option value="">-- Vyberte --</option>
+                            <?php 
+                            $selected_branch_id = $item['branch_id'] ?? $default_branch_id ?? '';
+                            
+                            foreach ($branches as $branch): 
+                                $code = !empty($branch['code']) ? $branch['code'] : '';
+                                $city = !empty($branch['city']) ? $branch['city'] : '';
                                 
-                                $selected_branch_id = $is_edit ? ($item['branch_id'] ?? '') : $default_branch_id;
+                                $label = $branch['name'];
+                                if ($code || $city) {
+                                    $parts = array_filter([$code, $city]);
+                                    $label .= ' (' . implode(', ', $parts) . ')';
+                                }
                             ?>
-                                <option value="<?php echo esc_attr($branch['id']); ?>" 
+                                <option value="<?php echo esc_attr($branch['id']); ?>"
                                         data-customer="<?php echo esc_attr($customer_id); ?>"
                                         <?php selected($selected_branch_id, $branch['id']); ?>>
                                     <?php echo esc_html($label); ?>
@@ -279,101 +315,76 @@ wp_nonce_field($nonce_action, '_wpnonce', false);
                         <span class="saw-help-text">Vyberte jedno nebo více oddělení, která manager uvidí</span>
                     </div>
                 </div>
-                
             </div>
         </details>
         
-        <!-- PIN pro terminál -->
+        <!-- PIN pro terminály -->
         <details class="saw-form-section field-pin" style="display:none;">
             <summary>
                 <span class="dashicons dashicons-lock"></span>
-                <strong>PIN</strong>
+                <strong>PIN pro přihlášení</strong>
             </summary>
             <div class="saw-form-section-content">
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-6">
                         <label for="pin" class="saw-label">
-                            PIN (4 čísla)
+                            PIN (4 číslice)
                         </label>
                         <input 
                             type="text" 
-                            id="pin" 
                             name="pin" 
-                            class="saw-input"
-                            maxlength="4" 
-                            pattern="[0-9]{4}" 
-                            placeholder="0000"
+                            id="pin" 
+                            class="saw-input" 
+                            maxlength="4"
+                            pattern="\d{4}"
+                            placeholder="např. 1234"
                         >
-                        <span class="saw-help-text">4místný PIN pro přihlášení na terminál</span>
+                        <span class="saw-help-text">Slouží pro přihlášení na terminálu</span>
                     </div>
                 </div>
             </div>
         </details>
         
-        <!-- Status -->
-        <details class="saw-form-section" open>
-            <summary>
-                <span class="dashicons dashicons-admin-settings"></span>
-                <strong>Status</strong>
-            </summary>
-            <div class="saw-form-section-content">
-                <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-12">
-                        <label class="saw-checkbox-label">
-                            <input 
-                                type="checkbox" 
-                                id="is_active" 
-                                name="is_active" 
-                                value="1"
-                                <?php checked(!empty($item['is_active']), true); ?>
-                            >
-                            <span class="saw-checkbox-text">Aktivní uživatel</span>
-                        </label>
-                        <span class="saw-help-text">
-                            Pouze aktivní uživatelé se mohou přihlásit
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </details>
-        
+        <!-- Tlačítka -->
         <div class="saw-form-actions">
-            <button type="submit" class="saw-button saw-button-primary">
-                <span class="dashicons dashicons-yes"></span>
+            <button type="submit" class="saw-btn saw-btn-primary">
+                <span class="dashicons dashicons-saved"></span>
                 <?php echo $is_edit ? 'Uložit změny' : 'Vytvořit uživatele'; ?>
             </button>
-            <a href="<?php echo esc_url(home_url('/admin/users/')); ?>" class="saw-button saw-button-secondary">
-                <span class="dashicons dashicons-no-alt"></span>
+            <a href="<?php echo esc_url(home_url('/admin/users/')); ?>" class="saw-btn saw-btn-secondary">
                 Zrušit
             </a>
         </div>
-        
     </form>
 </div>
 
 <style>
+/* Profesionální styly pro department checkboxy */
 .saw-dept-item {
     padding: 12px 16px;
     border-bottom: 1px solid #f0f0f1;
-    cursor: pointer;
-    transition: background 0.15s;
     display: flex;
     align-items: center;
     gap: 12px;
+    transition: all 0.15s ease;
+    cursor: pointer;
+    background: #fff;
 }
 .saw-dept-item:hover {
-    background: #f9f9f9;
+    background: #f6f7f7;
 }
 .saw-dept-item.selected {
-    background: #e8f4f8;
+    background: #e7f5ff;
+    border-left: 3px solid #0073aa;
 }
 .saw-dept-item:last-child {
     border-bottom: none;
 }
 .saw-dept-item input[type="checkbox"] {
+    margin: 0;
+    cursor: pointer;
     width: 18px;
     height: 18px;
-    cursor: pointer;
     flex-shrink: 0;
 }
 .saw-dept-item label {
@@ -425,7 +436,9 @@ jQuery(document).ready(function($) {
     const counterDiv = $('#dept-counter');
     
     let allDepts = [];
-    let existingIds = <?php echo json_encode(array_map('intval', $existing_department_ids)); ?>;
+    
+    // ✅ FIXED: Properly parse existing department IDs as integers for comparison
+    let existingIds = <?php echo json_encode($existing_department_ids); ?>;
     
     const ajaxUrl = (window.sawGlobal && window.sawGlobal.ajaxurl) || '/wp-admin/admin-ajax.php';
     const ajaxNonce = (window.sawGlobal && window.sawGlobal.nonce) || '<?php echo wp_create_nonce("saw_ajax_nonce"); ?>';
@@ -502,15 +515,18 @@ jQuery(document).ready(function($) {
         
         let html = '';
         depts.forEach(d => {
-            const checked = existingIds.includes(d.id);
+            // ✅ FIXED: Convert d.id to integer for proper comparison
+            const deptId = parseInt(d.id, 10);
+            const checked = existingIds.includes(deptId);
+            
             // Formát: "111 | Název oddělení" nebo jen "Název oddělení" pokud číslo chybí
             const label = d.department_number 
                 ? `<span class="saw-dept-number">${d.department_number}</span><span class="saw-dept-separator">|</span><span class="saw-dept-name">${d.name}</span>` 
                 : `<span class="saw-dept-name">${d.name}</span>`;
             
-            html += `<div class="saw-dept-item ${checked ? 'selected' : ''}" data-id="${d.id}" data-name="${d.name.toLowerCase()}" data-number="${(d.department_number || '').toLowerCase()}">
-                <input type="checkbox" name="department_ids[]" value="${d.id}" ${checked ? 'checked' : ''} id="dept-${d.id}">
-                <label for="dept-${d.id}">${label}</label>
+            html += `<div class="saw-dept-item ${checked ? 'selected' : ''}" data-id="${deptId}" data-name="${d.name.toLowerCase()}" data-number="${(d.department_number || '').toLowerCase()}">
+                <input type="checkbox" name="department_ids[]" value="${deptId}" ${checked ? 'checked' : ''} id="dept-${deptId}">
+                <label for="dept-${deptId}">${label}</label>
             </div>`;
         });
         
@@ -538,14 +554,13 @@ jQuery(document).ready(function($) {
         $('.saw-dept-item').each(function() {
             const $item = $(this);
             const name = $item.data('name');
-            const number = String($item.data('number')).toLowerCase();
+            const number = $item.data('number');
             
-            if (term === '' || name.includes(term) || number.includes(term)) {
-                $item.show();
-            } else {
-                $item.hide();
-            }
+            const matches = name.includes(term) || number.includes(term);
+            $item.toggle(matches);
         });
+        
+        updateCounter();
     }
     
     function toggleAll() {
@@ -553,22 +568,31 @@ jQuery(document).ready(function($) {
         $('.saw-dept-item:visible input[type="checkbox"]').prop('checked', checked).trigger('change');
     }
     
-    function updateSelectAllState() {
-        const visible = $('.saw-dept-item:visible input[type="checkbox"]');
-        const visibleChecked = visible.filter(':checked').length;
-        selectAllCb.prop('checked', visibleChecked === visible.length && visibleChecked > 0);
-    }
-    
     function updateCounter() {
-        const selected = deptList.find('input:checked').length;
+        const visible = $('.saw-dept-item:visible').length;
+        const selected = $('.saw-dept-item:visible input[type="checkbox"]:checked').length;
+        
         selectedSpan.text(selected);
-        totalSpan.text(allDepts.length);
-        // Počítadlo je vždy viditelné
+        totalSpan.text(visible);
+        
+        // Změna barvy podle počtu vybraných
+        if (selected === 0) {
+            counterDiv.css('background', '#d63638'); // červená
+        } else if (selected === visible) {
+            counterDiv.css('background', '#00a32a'); // zelená
+        } else {
+            counterDiv.css('background', '#0073aa'); // modrá
+        }
     }
     
-    updateFields();
-    if (roleSelect.val() === 'manager' && branchSelect.val()) {
-        loadDepts();
+    function updateSelectAllState() {
+        const visible = $('.saw-dept-item:visible').length;
+        const selected = $('.saw-dept-item:visible input[type="checkbox"]:checked').length;
+        
+        selectAllCb.prop('checked', visible > 0 && selected === visible);
     }
+    
+    // Inicializace při načtení stránky
+    updateFields();
 });
 </script>

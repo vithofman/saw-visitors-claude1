@@ -273,6 +273,17 @@
     letter-spacing: -0.01em;
 }
 
+.saw-dept-number {
+    display: inline-block;
+    margin-right: 0.5rem;
+    padding: 0.125rem 0.5rem;
+    background: #e0f2fe;
+    color: #0369a1;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    font-weight: 700;
+}
+
 .saw-department-content {
     display: none;
     padding: 2rem 1.75rem;

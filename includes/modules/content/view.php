@@ -219,11 +219,11 @@ if (!defined('ABSPATH')) {
                         
                         if ($saw_user) {
                             $departments = $wpdb->get_results($wpdb->prepare(
-                                "SELECT d.id, d.name 
+                                "SELECT d.id, d.name, d.department_number 
                                  FROM %i ud
                                  INNER JOIN %i d ON ud.department_id = d.id
                                  WHERE ud.user_id = %d AND d.is_active = 1
-                                 ORDER BY d.name ASC",
+                                 ORDER BY d.department_number ASC, d.name ASC",
                                 $wpdb->prefix . 'saw_user_departments',
                                 $wpdb->prefix . 'saw_departments',
                                 $saw_user->id
@@ -234,7 +234,7 @@ if (!defined('ABSPATH')) {
                     } else {
                         // Admin/Super admin vidí všechna oddělení pobočky
                         $departments = $wpdb->get_results($wpdb->prepare(
-                            "SELECT id, name FROM %i WHERE branch_id = %d AND is_active = 1 ORDER BY name ASC",
+                            "SELECT id, name, department_number FROM %i WHERE branch_id = %d AND is_active = 1 ORDER BY department_number ASC, name ASC",
                             $wpdb->prefix . 'saw_departments',
                             $branch_id
                         ), ARRAY_A);
@@ -258,7 +258,12 @@ if (!defined('ABSPATH')) {
                             <div class="saw-department-subsection">
                                 <button type="button" class="saw-department-header">
                                     <span class="saw-dept-icon">▶</span>
-                                    <span class="saw-dept-name"><?php echo esc_html($dept['name']); ?></span>
+                                    <span class="saw-dept-name">
+                                        <?php if (!empty($dept['department_number'])): ?>
+                                            <span class="saw-dept-number"><?php echo esc_html($dept['department_number']); ?></span>
+                                        <?php endif; ?>
+                                        <?php echo esc_html($dept['name']); ?>
+                                    </span>
                                 </button>
                                 <div class="saw-department-content">
                                     

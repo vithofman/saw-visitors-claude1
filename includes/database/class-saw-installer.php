@@ -117,55 +117,40 @@ class SAW_Installer {
      * Get tables order based on dependencies
      *
      * Tables are ordered to respect foreign key dependencies.
-     * Total: 33 tables
+     * Total: 16 tables
      *
      * @since 4.6.1
      * @return array Table names (without 'saw_' prefix)
      */
     private static function get_tables_order() {
         return array(
-            // Core (5)
+            // Core (4)
             'customers',
-            'customer_api_keys',
-            'users',
-            'training_config',
+            'companies',
+            'branches',
             'account_types',
             
-            // POI System (9)
-            'beacons',
-            'pois',
-            'routes',
-            'route_pois',
-            'poi_content',
-            'poi_media',
-            'poi_pdfs',
-            'poi_risks',
-            'poi_additional_info',
-            
-            // Multi-tenant Core (5)
-            'departments',
-            'user_departments',
-            'department_materials',
-            'department_documents',
-            'contact_persons',
-            
-            // Visitor Management (8)
-            'companies',
-            'invitations',
-            'invitation_departments',
-            'uploaded_docs',
-            'visitors',
-            'visits',
-            'materials',
-            'documents',
-            
-            // System (6)
-            'audit_log',
-            'error_log',
+            // Users & Auth (4)
+            'users',
             'sessions',
             'password_resets',
-            'rate_limits',
-            'email_queue',
+            'contact_persons',
+            
+            // Departments & Relations (3)
+            'departments',
+            'user_branches',
+            'user_departments',
+            
+            // Permissions (1)
+            'permissions',
+            
+            // Training (2)
+            'training_languages',
+            'training_language_branches',
+            
+            // System Logs (2)
+            'audit_log',
+            'error_log',
         );
     }
     
@@ -185,110 +170,54 @@ class SAW_Installer {
         $added_count = 0;
         
         $foreign_keys = array(
-            // customer_api_keys
-            array('table' => 'customer_api_keys', 'constraint' => 'fk_apikey_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            // companies
+            array('table' => 'companies', 'constraint' => 'fk_company_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            
+            // branches
+            array('table' => 'branches', 'constraint' => 'fk_branch_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            
+            // account_types
+            array('table' => 'account_types', 'constraint' => 'fk_acctype_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
             // users
             array('table' => 'users', 'constraint' => 'fk_user_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'users', 'constraint' => 'fk_user_acctype', 'column' => 'account_type_id', 'ref_table' => 'account_types', 'ref_column' => 'id', 'on_delete' => 'RESTRICT'),
             
-            // beacons
-            array('table' => 'beacons', 'constraint' => 'fk_beacon_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            // sessions
+            array('table' => 'sessions', 'constraint' => 'fk_session_user', 'column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
-            // pois
-            array('table' => 'pois', 'constraint' => 'fk_poi_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            array('table' => 'pois', 'constraint' => 'fk_poi_beacon', 'column' => 'beacon_id', 'ref_table' => 'beacons', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
+            // password_resets
+            array('table' => 'password_resets', 'constraint' => 'fk_pwreset_user', 'column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
-            // routes
-            array('table' => 'routes', 'constraint' => 'fk_route_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            
-            // route_pois
-            array('table' => 'route_pois', 'constraint' => 'fk_routepoi_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            array('table' => 'route_pois', 'constraint' => 'fk_routepoi_route', 'column' => 'route_id', 'ref_table' => 'routes', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            array('table' => 'route_pois', 'constraint' => 'fk_routepoi_poi', 'column' => 'poi_id', 'ref_table' => 'pois', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            
-            // poi_content
-            array('table' => 'poi_content', 'constraint' => 'fk_poicontent_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            array('table' => 'poi_content', 'constraint' => 'fk_poicontent_poi', 'column' => 'poi_id', 'ref_table' => 'pois', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            
-            // poi_media
-            array('table' => 'poi_media', 'constraint' => 'fk_poimedia_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            array('table' => 'poi_media', 'constraint' => 'fk_poimedia_poi', 'column' => 'poi_id', 'ref_table' => 'pois', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            
-            // poi_pdfs
-            array('table' => 'poi_pdfs', 'constraint' => 'fk_poipdf_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            array('table' => 'poi_pdfs', 'constraint' => 'fk_poipdf_poi', 'column' => 'poi_id', 'ref_table' => 'pois', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            
-            // poi_risks
-            array('table' => 'poi_risks', 'constraint' => 'fk_poirisk_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            array('table' => 'poi_risks', 'constraint' => 'fk_poirisk_poi', 'column' => 'poi_id', 'ref_table' => 'pois', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            
-            // poi_additional_info
-            array('table' => 'poi_additional_info', 'constraint' => 'fk_poiinfo_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            array('table' => 'poi_additional_info', 'constraint' => 'fk_poiinfo_poi', 'column' => 'poi_id', 'ref_table' => 'pois', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            // contact_persons
+            array('table' => 'contact_persons', 'constraint' => 'fk_contact_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'contact_persons', 'constraint' => 'fk_contact_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
             
             // departments
             array('table' => 'departments', 'constraint' => 'fk_dept_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'departments', 'constraint' => 'fk_dept_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            
+            // user_branches
+            array('table' => 'user_branches', 'constraint' => 'fk_userbranch_user', 'column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'user_branches', 'constraint' => 'fk_userbranch_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
             // user_departments
             array('table' => 'user_departments', 'constraint' => 'fk_userdept_user', 'column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'user_departments', 'constraint' => 'fk_userdept_dept', 'column' => 'department_id', 'ref_table' => 'departments', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
-            // department_materials
-            array('table' => 'department_materials', 'constraint' => 'fk_deptmat_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            array('table' => 'department_materials', 'constraint' => 'fk_deptmat_dept', 'column' => 'department_id', 'ref_table' => 'departments', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            // permissions
+            array('table' => 'permissions', 'constraint' => 'fk_perm_acctype', 'column' => 'account_type_id', 'ref_table' => 'account_types', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
-            // department_documents
-            array('table' => 'department_documents', 'constraint' => 'fk_deptdoc_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            array('table' => 'department_documents', 'constraint' => 'fk_deptdoc_dept', 'column' => 'department_id', 'ref_table' => 'departments', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            // training_languages
+            array('table' => 'training_languages', 'constraint' => 'fk_trainlang_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
-            // contact_persons
-            array('table' => 'contact_persons', 'constraint' => 'fk_contact_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            
-            // companies
-            array('table' => 'companies', 'constraint' => 'fk_company_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            
-            // invitations
-            array('table' => 'invitations', 'constraint' => 'fk_inv_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            array('table' => 'invitations', 'constraint' => 'fk_inv_company', 'column' => 'company_id', 'ref_table' => 'companies', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
-            array('table' => 'invitations', 'constraint' => 'fk_inv_manager', 'column' => 'responsible_manager_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
-            
-            // invitation_departments
-            array('table' => 'invitation_departments', 'constraint' => 'fk_invdept_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            array('table' => 'invitation_departments', 'constraint' => 'fk_invdept_inv', 'column' => 'invitation_id', 'ref_table' => 'invitations', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            array('table' => 'invitation_departments', 'constraint' => 'fk_invdept_dept', 'column' => 'department_id', 'ref_table' => 'departments', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            
-            // materials
-            array('table' => 'materials', 'constraint' => 'fk_material_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            
-            // documents
-            array('table' => 'documents', 'constraint' => 'fk_document_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            
-            // uploaded_docs
-            array('table' => 'uploaded_docs', 'constraint' => 'fk_upload_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            
-            // visitors
-            array('table' => 'visitors', 'constraint' => 'fk_visitor_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            array('table' => 'visitors', 'constraint' => 'fk_visitor_company', 'column' => 'company_id', 'ref_table' => 'companies', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
-            array('table' => 'visitors', 'constraint' => 'fk_visitor_riskdoc', 'column' => 'risk_document_id', 'ref_table' => 'uploaded_docs', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
-            
-            // visits
-            array('table' => 'visits', 'constraint' => 'fk_visit_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            array('table' => 'visits', 'constraint' => 'fk_visit_visitor', 'column' => 'visitor_id', 'ref_table' => 'visitors', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            array('table' => 'visits', 'constraint' => 'fk_visit_invitation', 'column' => 'invitation_id', 'ref_table' => 'invitations', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
-            array('table' => 'visits', 'constraint' => 'fk_visit_checkinby', 'column' => 'check_in_by', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
-            array('table' => 'visits', 'constraint' => 'fk_visit_checkoutby', 'column' => 'check_out_by', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
+            // training_language_branches
+            array('table' => 'training_language_branches', 'constraint' => 'fk_trainlangbranch_lang', 'column' => 'training_language_id', 'ref_table' => 'training_languages', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'training_language_branches', 'constraint' => 'fk_trainlangbranch_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
             // audit_log
-            array('table' => 'audit_log', 'constraint' => 'fk_audit_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'audit_log', 'constraint' => 'fk_audit_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
             array('table' => 'audit_log', 'constraint' => 'fk_audit_user', 'column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
-            
-            // sessions
-            array('table' => 'sessions', 'constraint' => 'fk_session_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            array('table' => 'sessions', 'constraint' => 'fk_session_user', 'column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            
-            // password_resets
-            array('table' => 'password_resets', 'constraint' => 'fk_pwreset_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            array('table' => 'password_resets', 'constraint' => 'fk_pwreset_user', 'column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
         );
         
         foreach ($foreign_keys as $fk) {
@@ -342,7 +271,7 @@ class SAW_Installer {
     /**
      * Insert default data (optional)
      *
-     * Creates demo customer and training config if database is empty.
+     * Creates demo customer and account type if database is empty.
      * Only runs if no customers exist.
      *
      * @since 4.6.1
@@ -375,16 +304,16 @@ class SAW_Installer {
         
         $customer_id = $wpdb->insert_id;
         
-        // Insert training config if table exists
-        if ($customer_id && self::table_exists('training_config')) {
+        // Insert default account type
+        if ($customer_id && self::table_exists('account_types')) {
             $wpdb->insert(
-                $prefix . 'training_config',
+                $prefix . 'account_types',
                 array(
-                    'customer_id'         => $customer_id,
-                    'training_version'    => 1,
-                    'skip_threshold_days' => 365,
+                    'customer_id' => $customer_id,
+                    'name'        => 'Administrátor',
+                    'description' => 'Výchozí administrátorský účet s plným přístupem',
                 ),
-                array('%d', '%d', '%d')
+                array('%d', '%s', '%s')
             );
         }
     }

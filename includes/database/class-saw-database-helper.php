@@ -30,62 +30,40 @@ class SAW_Database_Helper {
     /**
      * Get list of all tables in dependency order
      *
-     * Total: 34 tables
+     * Total: 16 tables
      *
      * @since 4.6.1
      * @return array Table names (without 'saw_' prefix)
      */
     public static function get_tables_order() {
         return array(
-            // Core (5)
+            // Core (4)
             'customers',
-            'customer_api_keys',
-            'users',
-            'permissions',
-            'training_config',
+            'companies',
+            'branches',
             'account_types',
             
-            // POI System (9)
-            'beacons',
-            'pois',
-            'routes',
-            'route_pois',
-            'poi_content',
-            'poi_media',
-            'poi_pdfs',
-            'poi_risks',
-            'poi_additional_info',
-            
-            // Multi-tenant Core (5)
-            'departments',
-            'user_departments',
-            'user_branches',
-            'department_materials',
-            'department_documents',
+            // Users & Auth (4)
+            'users',
+            'sessions',
+            'password_resets',
             'contact_persons',
-            'branches',
-
-            // Training language
+            
+            // Departments & Relations (3)
+            'departments',
+            'user_branches',
+            'user_departments',
+            
+            // Permissions (1)
+            'permissions',
+            
+            // Training (2)
             'training_languages',
             'training_language_branches',
             
-            // Visitor Management (8)
-            'companies',
-            'invitations',
-            'invitation_departments',
-            'uploaded_docs',
-            'visitors',
-            'visits',
-            'materials',
-            'documents',
-            
-            // System (6)
+            // System Logs (2)
             'audit_log',
             'error_log',
-            'sessions',
-            'password_resets',
-            'rate_limits',
-            'email_queue',
         );
     }
     
@@ -93,8 +71,8 @@ class SAW_Database_Helper {
      * Get full table name with prefix
      *
      * @since 4.6.1
-     * @param string $table_name Table name without prefix (e.g. 'pois')
-     * @return string Full table name with prefix (e.g. 'wp_saw_pois')
+     * @param string $table_name Table name without prefix (e.g. 'customers')
+     * @return string Full table name with prefix (e.g. 'wp_saw_customers')
      */
     public static function get_table_name($table_name) {
         global $wpdb;
@@ -123,7 +101,7 @@ class SAW_Database_Helper {
     /**
      * Get all languages used in system for customer
      *
-     * Checks POI content, materials, and department materials.
+     * Checks training_languages table for active languages.
      *
      * @since 4.6.1
      * @param int $customer_id Customer ID
@@ -134,102 +112,72 @@ class SAW_Database_Helper {
         
         $languages = array();
         
-        // POI content languages
-        if (self::table_exists('poi_content')) {
-            $poi_langs = $wpdb->get_col($wpdb->prepare(
-                "SELECT DISTINCT language FROM %i WHERE customer_id = %d",
-                self::get_table_name('poi_content'),
+        // Training languages
+        if (self::table_exists('training_languages')) {
+            $langs = $wpdb->get_col($wpdb->prepare(
+                "SELECT DISTINCT language_code FROM %i 
+                WHERE customer_id = %d AND is_active = 1",
+                self::get_table_name('training_languages'),
                 $customer_id
             ));
-            $languages = array_merge($languages, $poi_langs);
-        }
-        
-        // Materials languages
-        if (self::table_exists('materials')) {
-            $mat_langs = $wpdb->get_col($wpdb->prepare(
-                "SELECT DISTINCT language FROM %i WHERE customer_id = %d",
-                self::get_table_name('materials'),
-                $customer_id
-            ));
-            $languages = array_merge($languages, $mat_langs);
-        }
-        
-        // Department materials languages
-        if (self::table_exists('department_materials')) {
-            $dept_mat_langs = $wpdb->get_col($wpdb->prepare(
-                "SELECT DISTINCT language FROM %i WHERE customer_id = %d",
-                self::get_table_name('department_materials'),
-                $customer_id
-            ));
-            $languages = array_merge($languages, $dept_mat_langs);
+            $languages = array_merge($languages, $langs);
         }
         
         return array_unique(array_filter($languages));
     }
     
     /**
-     * Safe insert of POI content
+     * Safe insert of training language
      *
-     * Example usage of dynamic multi-language content.
-     * Creates new record or updates existing if language version exists.
+     * Creates new training language record or returns existing ID.
      *
      * @since 4.6.1
-     * @param array $data Data to insert (customer_id, poi_id, language, title required)
+     * @param array $data Data to insert (customer_id, language_code, language_name required)
      * @return int|false Inserted ID or false on error
      */
-    public static function insert_poi_content($data) {
+    public static function insert_training_language($data) {
         global $wpdb;
         
         // Validate required fields
-        $required = array('customer_id', 'poi_id', 'language', 'title');
+        $required = array('customer_id', 'language_code', 'language_name');
         foreach ($required as $field) {
             if (empty($data[$field])) {
                 return false;
             }
         }
         
-        // Check if language version already exists
+        // Check if language already exists for this customer
         $exists = $wpdb->get_var($wpdb->prepare(
             "SELECT id FROM %i 
-            WHERE customer_id = %d AND poi_id = %d AND language = %s",
-            self::get_table_name('poi_content'),
+            WHERE customer_id = %d AND language_code = %s",
+            self::get_table_name('training_languages'),
             $data['customer_id'],
-            $data['poi_id'],
-            $data['language']
+            $data['language_code']
         ));
         
         if ($exists) {
-            return self::update_poi_content($exists, $data);
+            return $exists;
         }
         
-        // Insert new content
+        // Insert new language
         $result = $wpdb->insert(
-            self::get_table_name('poi_content'),
+            self::get_table_name('training_languages'),
             array(
-                'customer_id'          => $data['customer_id'],
-                'poi_id'               => $data['poi_id'],
-                'language'             => $data['language'],
-                'title'                => $data['title'],
-                'subtitle'             => $data['subtitle'] ?? null,
-                'description'          => $data['description'] ?? null,
-                'safety_instructions'  => $data['safety_instructions'] ?? null,
-                'interesting_facts'    => $data['interesting_facts'] ?? null,
-                'technical_specs'      => $data['technical_specs'] ?? null,
-                'meta_description'     => $data['meta_description'] ?? null,
-                'is_published'         => $data['is_published'] ?? 1,
+                'customer_id'   => $data['customer_id'],
+                'language_code' => $data['language_code'],
+                'language_name' => $data['language_name'],
+                'is_active'     => $data['is_active'] ?? 1,
             ),
-            array(
-                '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d'
-            )
+            array('%d', '%s', '%s', '%d')
         );
         
         return $result ? $wpdb->insert_id : false;
     }
     
     /**
-     * Update POI content
+     * Update training language
      *
-     * Updates existing POI content with new data.
+     * Updates existing training language with new data.
      * Only updates fields that are present in $data array.
      *
      * @since 4.6.1
@@ -237,7 +185,7 @@ class SAW_Database_Helper {
      * @param array $data Data to update
      * @return int|false Number of rows updated or false on error
      */
-    public static function update_poi_content($id, $data) {
+    public static function update_training_language($id, $data) {
         global $wpdb;
         
         $update_data = array();
@@ -245,14 +193,9 @@ class SAW_Database_Helper {
         
         // Whitelist of allowed fields
         $allowed_fields = array(
-            'title'               => '%s',
-            'subtitle'            => '%s',
-            'description'         => '%s',
-            'safety_instructions' => '%s',
-            'interesting_facts'   => '%s',
-            'technical_specs'     => '%s',
-            'meta_description'    => '%s',
-            'is_published'        => '%d',
+            'language_code' => '%s',
+            'language_name' => '%s',
+            'is_active'     => '%d',
         );
         
         // Build update data from allowed fields only
@@ -268,7 +211,7 @@ class SAW_Database_Helper {
         }
         
         return $wpdb->update(
-            self::get_table_name('poi_content'),
+            self::get_table_name('training_languages'),
             $update_data,
             array('id' => $id),
             $formats,
@@ -277,57 +220,83 @@ class SAW_Database_Helper {
     }
     
     /**
-     * Get POI content by language
+     * Assign training language to branch
      *
-     * Retrieves published POI content for specific language.
+     * Creates relationship between training language and branch.
      *
      * @since 4.6.1
-     * @param int    $poi_id      POI ID
-     * @param string $language    ISO language code (e.g. 'cs')
-     * @param int    $customer_id Customer ID
-     * @return object|null Content object or null if not found
+     * @param int $training_language_id Training language ID
+     * @param int $branch_id Branch ID
+     * @return int|false Inserted ID or false on error/already exists
      */
-    public static function get_poi_content($poi_id, $language, $customer_id) {
+    public static function assign_language_to_branch($training_language_id, $branch_id) {
         global $wpdb;
         
-        return $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM %i 
-            WHERE customer_id = %d AND poi_id = %d AND language = %s AND is_published = 1",
-            self::get_table_name('poi_content'),
-            $customer_id,
-            $poi_id,
-            $language
+        // Check if already assigned
+        $exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM %i 
+            WHERE training_language_id = %d AND branch_id = %d",
+            self::get_table_name('training_language_branches'),
+            $training_language_id,
+            $branch_id
         ));
+        
+        if ($exists) {
+            return $exists;
+        }
+        
+        $result = $wpdb->insert(
+            self::get_table_name('training_language_branches'),
+            array(
+                'training_language_id' => $training_language_id,
+                'branch_id'            => $branch_id,
+            ),
+            array('%d', '%d')
+        );
+        
+        return $result ? $wpdb->insert_id : false;
     }
     
     /**
-     * Get all translations for POI
+     * Remove training language from branch
      *
-     * Returns all published language versions of POI content.
+     * Deletes relationship between training language and branch.
      *
      * @since 4.6.1
-     * @param int $poi_id      POI ID
-     * @param int $customer_id Customer ID
-     * @return array Associative array: ['cs' => object, 'en' => object, ...]
+     * @param int $training_language_id Training language ID
+     * @param int $branch_id Branch ID
+     * @return bool True on success, false on error
      */
-    public static function get_poi_translations($poi_id, $customer_id) {
+    public static function remove_language_from_branch($training_language_id, $branch_id) {
         global $wpdb;
         
-        $results = $wpdb->get_results($wpdb->prepare(
-            "SELECT * FROM %i 
-            WHERE customer_id = %d AND poi_id = %d AND is_published = 1 
-            ORDER BY language",
-            self::get_table_name('poi_content'),
-            $customer_id,
-            $poi_id
+        return $wpdb->delete(
+            self::get_table_name('training_language_branches'),
+            array(
+                'training_language_id' => $training_language_id,
+                'branch_id'            => $branch_id,
+            ),
+            array('%d', '%d')
+        ) !== false;
+    }
+    
+    /**
+     * Get branches for training language
+     *
+     * Returns all branches assigned to specific training language.
+     *
+     * @since 4.6.1
+     * @param int $training_language_id Training language ID
+     * @return array Array of branch IDs
+     */
+    public static function get_language_branches($training_language_id) {
+        global $wpdb;
+        
+        return $wpdb->get_col($wpdb->prepare(
+            "SELECT branch_id FROM %i WHERE training_language_id = %d",
+            self::get_table_name('training_language_branches'),
+            $training_language_id
         ));
-        
-        $translations = array();
-        foreach ($results as $row) {
-            $translations[$row->language] = $row;
-        }
-        
-        return $translations;
     }
     
     /**
@@ -513,7 +482,10 @@ class SAW_Database_Helper {
         $allowed_columns = array(
             'id', 'name', 'title', 'created_at', 'updated_at',
             'is_active', 'status', 'sort_order', 'language',
-            'email', 'first_name', 'last_name', 'phone'
+            'email', 'first_name', 'last_name', 'phone',
+            'language_code', 'language_name', 'address', 'city',
+            'postal_code', 'country', 'contact_email', 'contact_phone',
+            'description', 'position', 'is_primary'
         );
         
         // Allowed directions

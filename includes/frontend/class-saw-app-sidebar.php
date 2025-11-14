@@ -6,7 +6,8 @@
  * permission checks, and branch switcher.
  *
  * @package SAW_Visitors
- * @since   4.6.1
+ * @since   4.6.2
+ * @version 4.6.2 - ADDED: Content Management and Settings routes
  */
 
 if (!defined('ABSPATH')) {
@@ -345,10 +346,14 @@ class SAW_App_Sidebar {
      * Items are filtered by permissions during rendering.
      *
      * @since 4.6.1
+     * @version 4.6.2 - UPDATED: Changed "Obsah" to "Správa obsahu", added "Nastavení"
      * @return array Menu structure
      */
     private function get_menu_items() {
         return array(
+            // ===============================================
+            // HLAVNÍ NAVIGACE
+            // ===============================================
             array(
                 'items' => array(
                     array('id' => 'dashboard', 'label' => 'Dashboard', 'url' => '/admin/', 'icon' => '📊'),
@@ -357,6 +362,10 @@ class SAW_App_Sidebar {
                     array('id' => 'statistics', 'label' => 'Statistiky', 'url' => '/admin/statistics', 'icon' => '📈'),
                 ),
             ),
+            
+            // ===============================================
+            // ORGANIZACE
+            // ===============================================
             array(
                 'heading' => 'Organizace',
                 'items' => array(
@@ -365,21 +374,29 @@ class SAW_App_Sidebar {
                     array('id' => 'users', 'label' => 'Uživatelé', 'url' => '/admin/users', 'icon' => '👤'),
                 ),
             ),
+            
+            // ===============================================
+            // ŠKOLENÍ
+            // ===============================================
             array(
                 'heading' => 'Školení',
                 'items' => array(
                     array('id' => 'training-languages', 'label' => 'Jazyky', 'url' => '/admin/training-languages', 'icon' => '🌍'),
-                    array('id' => 'content', 'label' => 'Obsah', 'url' => '/admin/settings/content', 'icon' => '📚'),
-                    array('id' => 'training', 'label' => 'Verze', 'url' => '/admin/settings/training', 'icon' => '🎓'),
+                    array('id' => 'content', 'label' => 'Správa obsahu', 'url' => '/admin/content', 'icon' => '📚'),
+                    array('id' => 'training', 'label' => 'Verze školení', 'url' => '/admin/settings/training', 'icon' => '🎓'),
                 ),
             ),
+            
+            // ===============================================
+            // SYSTÉM
+            // ===============================================
             array(
                 'heading' => 'Systém',
                 'items' => array(
                     array('id' => 'permissions', 'label' => 'Oprávnění', 'url' => '/admin/permissions', 'icon' => '🔒'),
                     array('id' => 'customers', 'label' => 'Zákazníci', 'url' => '/admin/customers', 'icon' => '🏬'),
                     array('id' => 'account-types', 'label' => 'Typy účtů', 'url' => '/admin/settings/account-types', 'icon' => '💳'),
-                    array('id' => 'company', 'label' => 'Firma', 'url' => '/admin/settings/company', 'icon' => '⚙️'),
+                    array('id' => 'settings', 'label' => 'Nastavení', 'url' => '/admin/settings', 'icon' => '⚙️'),
                     array('id' => 'about', 'label' => 'O aplikaci', 'url' => '/admin/settings/about', 'icon' => 'ℹ️'),
                 ),
             ),
