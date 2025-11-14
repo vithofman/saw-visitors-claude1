@@ -1,0 +1,269 @@
+/**
+ * Settings Module Styles
+ * 
+ * @package SAW_Visitors
+ * @version 1.0.0
+ */
+
+.saw-settings-page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0;
+}
+
+.saw-page-header {
+    background: #fff;
+    padding: 1.5rem 2rem;
+    margin-bottom: 0;
+}
+
+.saw-page-title {
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin: 0;
+    color: #1a1a1a;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.saw-page-icon {
+    font-size: 1.75rem;
+}
+
+.saw-flash-message {
+    margin: 1.5rem 2rem;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+.saw-flash-success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.saw-flash-error {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.saw-settings-tabs {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0 2rem;
+    background: #fff;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.saw-tab-btn {
+    padding: 1rem 1.5rem;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: -2px;
+}
+
+.saw-tab-btn:hover:not(:disabled) {
+    color: #1a73e8;
+    background: #f9fafb;
+}
+
+.saw-tab-btn.active {
+    color: #1a73e8;
+    border-bottom-color: #1a73e8;
+}
+
+.saw-tab-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.saw-settings-content {
+    background: #fff;
+    padding: 2rem;
+}
+
+.saw-settings-form {
+    max-width: 100%;
+}
+
+.saw-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 0;
+}
+
+.saw-form-column {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.saw-form-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+}
+
+.saw-section-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    color: #1a1a1a;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid #f3f4f6;
+}
+
+.saw-form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.saw-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.saw-label {
+    font-weight: 500;
+    color: #374151;
+    font-size: 0.95rem;
+}
+
+.saw-label.required::after {
+    content: ' *';
+    color: #dc3545;
+}
+
+.saw-input {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    transition: border-color 0.2s;
+}
+
+.saw-input:focus {
+    outline: none;
+    border-color: #1a73e8;
+    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+}
+
+.saw-hint {
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+
+.saw-metadata {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.saw-meta-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.625rem 0;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.saw-meta-item:last-child {
+    border-bottom: none;
+}
+
+.saw-meta-label {
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+.saw-meta-value {
+    color: #1a1a1a;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.saw-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding: 2rem 0;
+    margin-top: 2rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+.saw-btn-primary {
+    padding: 0.75rem 2rem;
+    background: #1a73e8;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.saw-btn-primary:hover {
+    background: #1557b0;
+    box-shadow: 0 2px 8px rgba(26, 115, 232, 0.3);
+}
+
+.saw-tab-content {
+    display: block;
+}
+
+.saw-empty-tab {
+    text-align: center;
+    padding: 4rem 2rem;
+}
+
+.saw-empty-icon {
+    font-size: 4rem;
+    display: block;
+    margin-bottom: 1rem;
+}
+
+.saw-empty-tab h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0 0 0.5rem 0;
+}
+
+.saw-empty-tab p {
+    font-size: 1rem;
+    color: #6b7280;
+    margin: 0;
+}
+
+@media (max-width: 1024px) {
+    .saw-form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .saw-page-header,
+    .saw-settings-tabs,
+    .saw-settings-content {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    
+    .saw-form-row {
+        grid-template-columns: 1fr;
+    }
+}

@@ -3,33 +3,213 @@
  * Settings Module Controller
  *
  * @package SAW_Visitors
- * @subpackage Modules\Settings
- * @since 4.9.0
+ * @version 1.0.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-// Load dependencies
-if (!class_exists('SAW_Base_Controller')) {
-    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/class-base-controller.php';
-}
-
-class SAW_Module_Settings_Controller extends SAW_Base_Controller {
+class SAW_Module_Settings_Controller 
+{
+    protected $config;
+    protected $model;
+    private $file_uploader;
     
     public function __construct() {
-        $this->config = require __DIR__ . '/config.php';
-        $this->entity = $this->config['entity'];
-        $this->config['path'] = __DIR__ . '/';
+        $module_path = SAW_VISITORS_PLUGIN_DIR . 'includes/modules/settings/';
+        
+        $this->config = require $module_path . 'config.php';
+        $this->config['path'] = $module_path;
+        
+        require_once $module_path . 'model.php';
+        $this->model = new SAW_Module_Settings_Model();
+        
+        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/class-saw-file-uploader.php';
+        $this->file_uploader = new SAW_File_Uploader();
+        
+        add_action('wp_ajax_saw_delete_settings_logo', array($this, 'ajax_delete_logo'));
+        add_action('wp_enqueue_scripts', array($this, 'enqueue_assets'));
+    }
+    
+    public function enqueue_assets() {
+        $this->file_uploader->enqueue_assets();
+        
+        wp_enqueue_style(
+            'saw-settings-module',
+            SAW_VISITORS_PLUGIN_URL . 'includes/modules/settings/settings.css',
+            array(),
+            SAW_VISITORS_VERSION
+        );
     }
     
     public function index() {
-        echo '<!DOCTYPE html><html><head><title>Settings</title></head><body>';
-        echo '<h1>✅ Settings modul funguje!</h1>';
-        echo '<p>Path: ' . __DIR__ . '</p>';
-        echo '<p>Entity: ' . $this->entity . '</p>';
-        echo '</body></html>';
+        $role = $this->get_current_role();
+        
+        // Základní záložka je dostupná všem
+        // Admin záložka jen pro roli 'admin'
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // POST může dělat jen admin
+            if ($role !== 'admin') {
+                wp_die(
+                    'Nemáte oprávnění upravovat nastavení firmy.',
+                    'Přístup odepřen',
+                    array('response' => 403)
+                );
+            }
+            
+            $customer_id = SAW_Context::get_customer_id();
+            if (!$customer_id) {
+                wp_die(
+                    'Nebylo možné určit vašeho zákazníka.',
+                    'Chyba konfigurace',
+                    array('response' => 500)
+                );
+            }
+            
+            $this->handle_save($customer_id);
+            return;
+        }
+        
+        $view_data = array(
+            'role' => $role,
+            'icon' => $this->config['icon'],
+            'flash' => $this->get_flash(),
+            'customer' => null,
+        );
+        
+        // Načtení dat zákazníka jen pro admina
+        if ($role === 'admin') {
+            $customer_id = SAW_Context::get_customer_id();
+            
+            if ($customer_id) {
+                $customer = $this->model->get_customer($customer_id);
+                $view_data['customer'] = $customer;
+            }
+        }
+        
+        $this->render_view($view_data);
+    }
+    
+    private function handle_save($customer_id) {
+        check_admin_referer('saw_settings_save');
+        
+        $data = array(
+            'name' => $_POST['name'] ?? '',
+            'ico' => $_POST['ico'] ?? '',
+            'dic' => $_POST['dic'] ?? '',
+        );
+        
+        if (empty($data['name'])) {
+            $this->set_flash('Název firmy je povinný', 'error');
+            wp_redirect(home_url('/admin/settings'));
+            exit;
+        }
+        
+        if ($this->file_uploader->should_remove_file('logo')) {
+            $this->model->delete_logo($customer_id);
+            $data['logo_url'] = null;
+        }
+        elseif (!empty($_FILES['logo']['name'])) {
+            $upload_result = $this->file_uploader->upload($_FILES['logo'], 'customers');
+            
+            if (is_wp_error($upload_result)) {
+                $this->set_flash($upload_result->get_error_message(), 'error');
+                wp_redirect(home_url('/admin/settings'));
+                exit;
+            }
+            
+            $data['logo_url'] = $upload_result['url'];
+        }
+        
+        $result = $this->model->update_customer($customer_id, $data);
+        
+        if (is_wp_error($result)) {
+            $this->set_flash($result->get_error_message(), 'error');
+        } else {
+            $this->set_flash('Údaje o zákazníkovi byly úspěšně uloženy', 'success');
+        }
+        
+        wp_redirect(home_url('/admin/settings'));
         exit;
+    }
+    
+    public function ajax_delete_logo() {
+        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        
+        $role = $this->get_current_role();
+        
+        if ($role !== 'admin') {
+            wp_send_json_error(array('message' => 'Nemáte oprávnění'));
+            return;
+        }
+        
+        $customer_id = SAW_Context::get_customer_id();
+        
+        if (!$customer_id) {
+            wp_send_json_error(array('message' => 'Nebylo možné určit zákazníka'));
+            return;
+        }
+        
+        $this->model->delete_logo($customer_id);
+        
+        wp_send_json_success(array('message' => 'Logo bylo smazáno'));
+    }
+    
+    private function render_view($view_data) {
+        if (!class_exists('SAW_App_Layout')) {
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/class-saw-app-layout.php';
+        }
+        
+        ob_start();
+        
+        extract($view_data);
+        
+        $template_path = $this->config['path'] . 'view.php';
+        if (file_exists($template_path)) {
+            require $template_path;
+        }
+        
+        $content = ob_get_clean();
+        
+        $layout = new SAW_App_Layout();
+        $layout->render($content, 'Nastavení', 'settings');
+    }
+    
+    private function get_current_role() {
+        if (class_exists('SAW_Context')) {
+            return SAW_Context::get_role();
+        }
+        
+        if (current_user_can('manage_options')) {
+            return 'super_admin';
+        }
+        
+        return null;
+    }
+    
+    private function set_flash($message, $type = 'success') {
+        if (!session_id()) {
+            session_start();
+        }
+        $_SESSION['saw_flash'] = array(
+            'message' => $message,
+            'type' => $type
+        );
+    }
+    
+    private function get_flash() {
+        if (!session_id()) {
+            session_start();
+        }
+        
+        if (isset($_SESSION['saw_flash'])) {
+            $flash = $_SESSION['saw_flash'];
+            unset($_SESSION['saw_flash']);
+            return $flash;
+        }
+        
+        return null;
     }
 }

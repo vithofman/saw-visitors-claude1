@@ -1,6 +1,6 @@
 <?php
 /**
- * Settings Module Configuration
+ * Content Module Configuration
  *
  * @package SAW_Visitors
  * @version 1.0.0
@@ -11,11 +11,11 @@ if (!defined('ABSPATH')) {
 }
 
 return array(
-    'entity' => 'settings',
-    'singular' => 'Nastavení',
-    'plural' => 'Nastavení',
-    'route' => 'settings',
-    'icon' => '⚙️',
+    'entity' => 'content',
+    'singular' => 'Obsah',
+    'plural' => 'Obsah',
+    'route' => 'admin/content',
+    'icon' => '📝',
     
     'capabilities' => array(
         'view' => 'saw_admin',
