@@ -30,6 +30,7 @@ class SAW_Installer {
      * Creates all tables in two phases:
      * - Phase 1: Tables without foreign key constraints
      * - Phase 2: Add foreign key constraints via ALTER TABLE
+     * - Phase 3: Insert default data
      *
      * @since 4.6.1
      * @return bool True if installation successful, false on error
@@ -102,7 +103,7 @@ class SAW_Installer {
         // Phase 2: Add foreign keys
         self::add_foreign_keys();
         
-        // Insert default data
+        // Phase 3: Insert default data
         self::insert_default_data();
         
         update_option('saw_db_version', '4.6.1');
@@ -117,7 +118,7 @@ class SAW_Installer {
      * Get tables order based on dependencies
      *
      * Tables are ordered to respect foreign key dependencies.
-     * Total: 16 tables
+     * Total: 20 tables
      *
      * @since 4.6.1
      * @return array Table names (without 'saw_' prefix)
@@ -144,9 +145,13 @@ class SAW_Installer {
             // Permissions (1)
             'permissions',
             
-            // Training (2)
+            // Training System (6)
             'training_languages',
             'training_language_branches',
+            'training_document_types',
+            'training_content',
+            'training_department_content',
+            'training_documents',
             
             // System Logs (2)
             'audit_log',
@@ -215,6 +220,18 @@ class SAW_Installer {
             array('table' => 'training_language_branches', 'constraint' => 'fk_trainlangbranch_lang', 'column' => 'training_language_id', 'ref_table' => 'training_languages', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'training_language_branches', 'constraint' => 'fk_trainlangbranch_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
+            // training_content
+            array('table' => 'training_content', 'constraint' => 'fk_training_content_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'training_content', 'constraint' => 'fk_training_content_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'training_content', 'constraint' => 'fk_training_content_language', 'column' => 'language_id', 'ref_table' => 'training_languages', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            
+            // training_department_content
+            array('table' => 'training_department_content', 'constraint' => 'fk_dept_content_training', 'column' => 'training_content_id', 'ref_table' => 'training_content', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'training_department_content', 'constraint' => 'fk_dept_content_department', 'column' => 'department_id', 'ref_table' => 'departments', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            
+            // training_documents
+            array('table' => 'training_documents', 'constraint' => 'fk_training_doc_type', 'column' => 'document_type_id', 'ref_table' => 'training_document_types', 'ref_column' => 'id', 'on_delete' => 'RESTRICT'),
+            
             // audit_log
             array('table' => 'audit_log', 'constraint' => 'fk_audit_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
             array('table' => 'audit_log', 'constraint' => 'fk_audit_user', 'column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
@@ -269,10 +286,9 @@ class SAW_Installer {
     }
     
     /**
-     * Insert default data (optional)
+     * Insert default data
      *
-     * Creates demo customer and account type if database is empty.
-     * Only runs if no customers exist.
+     * Creates demo customer, default account type, and training document types.
      *
      * @since 4.6.1
      * @return void
@@ -281,40 +297,73 @@ class SAW_Installer {
         global $wpdb;
         $prefix = $wpdb->prefix . 'saw_';
         
+        // Insert demo customer if needed
         $customer_exists = $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM %i",
             $prefix . 'customers'
         ));
         
-        if ($customer_exists > 0) {
-            return;
+        if ($customer_exists == 0) {
+            // Insert demo customer
+            $wpdb->insert(
+                $prefix . 'customers',
+                array(
+                    'name'          => 'Demo Zákazník',
+                    'ico'           => '12345678',
+                    'address'       => 'Demo ulice 123, 100 00 Praha',
+                    'primary_color' => '#1e40af',
+                ),
+                array('%s', '%s', '%s', '%s')
+            );
+            
+            $customer_id = $wpdb->insert_id;
+            
+            // Insert default account type
+            if ($customer_id && self::table_exists('account_types')) {
+                $wpdb->insert(
+                    $prefix . 'account_types',
+                    array(
+                        'customer_id' => $customer_id,
+                        'name'        => 'Administrátor',
+                        'description' => 'Výchozí administrátorský účet s plným přístupem',
+                    ),
+                    array('%d', '%s', '%s')
+                );
+            }
         }
         
-        // Insert demo customer
-        $wpdb->insert(
-            $prefix . 'customers',
-            array(
-                'name'          => 'Demo Zákazník',
-                'ico'           => '12345678',
-                'address'       => 'Demo ulice 123, 100 00 Praha',
-                'primary_color' => '#1e40af',
-            ),
-            array('%s', '%s', '%s', '%s')
-        );
-        
-        $customer_id = $wpdb->insert_id;
-        
-        // Insert default account type
-        if ($customer_id && self::table_exists('account_types')) {
-            $wpdb->insert(
-                $prefix . 'account_types',
-                array(
-                    'customer_id' => $customer_id,
-                    'name'        => 'Administrátor',
-                    'description' => 'Výchozí administrátorský účet s plným přístupem',
-                ),
-                array('%d', '%s', '%s')
-            );
+        // Insert training document types if table is empty
+        if (self::table_exists('training_document_types')) {
+            $types_exist = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM %i",
+                $prefix . 'training_document_types'
+            ));
+            
+            if ($types_exist == 0) {
+                $document_types = array(
+                    array('name' => 'Dokumentace BOZP', 'description' => 'Dokumenty týkající se bezpečnosti a ochrany zdraví při práci', 'sort_order' => 1),
+                    array('name' => 'Dokumentace PO', 'description' => 'Dokumenty požární ochrany a prevence', 'sort_order' => 2),
+                    array('name' => 'Dokumentace rizik', 'description' => 'Identifikace a hodnocení rizik na pracovišti', 'sort_order' => 3),
+                    array('name' => 'Pokyny BOZP a PO', 'description' => 'Pracovní a bezpečnostní pokyny pro zaměstnance', 'sort_order' => 4),
+                    array('name' => 'Místní provozní bezpečnostní předpis', 'description' => 'Interní bezpečnostní předpisy specifické pro pracoviště', 'sort_order' => 5),
+                    array('name' => 'Požární řád', 'description' => 'Základní dokument upravující požární ochranu v objektu', 'sort_order' => 6),
+                    array('name' => 'Požární poplachové směrnice', 'description' => 'Postupy při vzniku požáru a evakuaci', 'sort_order' => 7),
+                    array('name' => 'Požární evakuační plán', 'description' => 'Grafické znázornění únikových cest a shromažďovacích míst', 'sort_order' => 8),
+                    array('name' => 'Dokumentace prevence havárií', 'description' => 'Dokumenty pro předcházení závažným haváriím', 'sort_order' => 9),
+                    array('name' => 'Dokumentace k ochraně životního prostředí', 'description' => 'Dokumenty týkající se ochrany životního prostředí a nakládání s odpady', 'sort_order' => 10),
+                    array('name' => 'Ostatní dokumenty', 'description' => 'Další relevantní dokumenty nespadající do předchozích kategorií', 'sort_order' => 11),
+                );
+                
+                foreach ($document_types as $type) {
+                    $wpdb->insert(
+                        $prefix . 'training_document_types',
+                        $type,
+                        array('%s', '%s', '%d')
+                    );
+                }
+                
+                error_log("[SAW Installer] Phase 3: Inserted 11 training document types");
+            }
         }
     }
     

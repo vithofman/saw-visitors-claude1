@@ -11,6 +11,74 @@
     padding: 0;
 }
 
+/* Success Toast Notification */
+.saw-success-notification {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #fff;
+    padding: 1.25rem 2rem;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 1rem;
+    box-shadow: 0 10px 40px rgba(16, 185, 129, 0.4);
+    animation: slideInRight 0.4s ease-out;
+    z-index: 10000;
+    min-width: 300px;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.saw-success-notification.hiding {
+    animation: slideOutRight 0.4s ease-out forwards;
+}
+
+.saw-success-notification::before {
+    content: '✓';
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 50%;
+    font-size: 1.125rem;
+    flex-shrink: 0;
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+}
+
+@media (max-width: 768px) {
+    .saw-success-notification {
+        bottom: 1rem;
+        right: 1rem;
+        left: 1rem;
+        min-width: auto;
+    }
+}
+
 /* Header - Clean White */
 .saw-page-header {
     background: #fff;
@@ -361,6 +429,159 @@
     box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
 }
 
+/* Zvětšení výšky TinyMCE editorů */
+.wp-editor-container .mce-edit-area,
+.wp-editor-container .mce-edit-area iframe {
+    min-height: 420px !important;
+}
+
+.wp-editor-container textarea.wp-editor-area {
+    min-height: 420px !important;
+}
+
+/* Menší editory pro oddělení */
+.saw-department-content .wp-editor-container .mce-edit-area,
+.saw-department-content .wp-editor-container .mce-edit-area iframe,
+.saw-department-content .wp-editor-container textarea.wp-editor-area {
+    min-height: 350px !important;
+}
+
+/* File Type Icons */
+.saw-file-icon {
+    display: inline-block;
+    width: 32px;
+    height: 32px;
+    margin-right: 0.5rem;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    flex-shrink: 0;
+}
+
+.saw-icon-pdf {
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23dc2626"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M15.5,14.5C15.5,15.61 14.61,16.5 13.5,16.5H11V19H9.5V13H13.5C14.61,13 15.5,13.89 15.5,14.5V14.5M14,14.5H11V15H14V14.5M8,13V19H6.5V13H8Z"/></svg>');
+}
+
+.saw-icon-word {
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%232563eb"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M15.2,20H13.8L12,13.2L10.2,20H8.8L6.6,11H8.1L9.5,17.8L11.3,11H12.6L14.4,17.8L15.8,11H17.3L15.2,20M13,9V3.5L18.5,9H13Z"/></svg>');
+}
+
+.saw-icon-excel {
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2316a34a"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M15.2,20L12,16.5L8.8,20H7.2L11.1,15.5L7.2,11H8.8L12,14.5L15.2,11H16.8L12.9,15.5L16.8,20H15.2M13,9V3.5L18.5,9H13Z"/></svg>');
+}
+
+.saw-icon-powerpoint {
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ea580c"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M15.5,15C15.5,16.11 14.61,17 13.5,17H11V19H9.5V11H13.5C14.61,11 15.5,11.89 15.5,13V15M14,13H11V15.5H14V13M13,9V3.5L18.5,9H13Z"/></svg>');
+}
+
+.saw-icon-text {
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%236b7280"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M15.5,17H14.5L12,10L9.5,17H8.5L6,10H7.2L9,15.6L11.2,10H12.8L15,15.6L16.8,10H18L15.5,17M13,9V3.5L18.5,9H13Z"/></svg>');
+}
+
+.saw-icon-document {
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%239ca3af"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/></svg>');
+}
+
+/* Existing Documents Display */
+.saw-existing-documents {
+    margin-bottom: 1.5rem;
+    padding: 1.25rem;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border: 1px solid #bae6fd;
+    border-radius: 10px;
+}
+
+.saw-docs-title {
+    margin: 0 0 1rem 0;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: #0369a1;
+}
+
+.saw-existing-doc {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: #fff;
+    border: 1px solid #e0f2fe;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+}
+
+.saw-existing-doc:last-child {
+    margin-bottom: 0;
+}
+
+.saw-doc-badge {
+    flex-shrink: 0;
+    padding: 0.375rem 0.875rem;
+    background: #0ea5e9;
+    color: #fff;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1;
+    align-self: center;
+}
+
+.saw-doc-name {
+    flex: 1;
+    font-size: 0.9375rem;
+    color: #334155;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    line-height: 1.4;
+}
+
+.saw-doc-size {
+    flex-shrink: 0;
+    font-size: 0.8125rem;
+    color: #64748b;
+    font-weight: 600;
+    line-height: 1;
+    align-self: center;
+}
+
+.saw-doc-view {
+    flex-shrink: 0;
+    padding: 0.375rem 0.875rem;
+    background: #0ea5e9;
+    color: #fff;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    line-height: 1;
+    align-self: center;
+}
+
+.saw-doc-view:hover {
+    background: #0284c7;
+    transform: translateY(-1px);
+}
+
+.saw-doc-delete {
+    flex-shrink: 0;
+    padding: 0.375rem 0.75rem;
+    background: #fee2e2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+    border-radius: 6px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    line-height: 1;
+    align-self: center;
+}
+
+.saw-doc-delete:hover {
+    background: #fecaca;
+    transform: scale(1.1);
+}
+
 /* Documents */
 .saw-documents-list {
     display: flex;
@@ -369,8 +590,27 @@
     margin-bottom: 1.25rem;
 }
 
+.saw-validation-error {
+    padding: 0.75rem 1rem;
+    background: #fee2e2;
+    border: 1px solid #fecaca;
+    border-radius: 6px;
+    color: #dc2626;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    margin-bottom: 0.5rem;
+    animation: shake 0.5s;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
+}
+
 .saw-document-item {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr 2fr auto;
     align-items: center;
     gap: 0.75rem;
     padding: 1rem;
@@ -385,8 +625,32 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
+.saw-doc-type-select {
+    width: 100%;
+}
+
+.saw-select {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    background: #fff;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.saw-select:hover {
+    border-color: #9ca3af;
+}
+
+.saw-select:focus {
+    outline: none;
+    border-color: #1a73e8;
+    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+}
+
 .saw-document-item .saw-file-input {
-    flex: 1;
     background: #fff;
 }
 
@@ -455,6 +719,7 @@
     justify-content: flex-end;
     padding: 2rem 0 0.5rem;
     margin-top: 2.5rem;
+    margin-bottom: 4rem;
     border-top: 1px solid #e2e8f0;
 }
 
@@ -502,12 +767,8 @@
     }
     
     .saw-document-item {
+        grid-template-columns: 1fr;
         padding: 0.75rem;
-        flex-wrap: wrap;
-    }
-    
-    .saw-document-item .saw-file-input {
-        width: 100%;
     }
     
     .saw-remove-document {

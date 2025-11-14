@@ -44,7 +44,11 @@ class SAW_Database {
             'audit_log',
             'error_log',
             'training_languages',
-            'training_language_branches'
+            'training_language_branches',
+            'training_document_types',
+            'training_content',
+            'training_department_content',
+            'training_documents'
         ];
     }
     
@@ -327,6 +331,73 @@ class SAW_Database {
             UNIQUE KEY language_branch (training_language_id, branch_id),
             KEY training_language_id (training_language_id),
             KEY branch_id (branch_id)
+        ) {$this->charset_collate};";
+        dbDelta($sql);
+        
+        // Training document types table
+        $sql = "CREATE TABLE {$this->wpdb->prefix}saw_training_document_types (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            name varchar(100) NOT NULL,
+            description text DEFAULT NULL,
+            sort_order int unsigned NOT NULL DEFAULT 0,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY sort_order (sort_order)
+        ) {$this->charset_collate};";
+        dbDelta($sql);
+        
+        // Training content table
+        $sql = "CREATE TABLE {$this->wpdb->prefix}saw_training_content (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            customer_id bigint(20) unsigned NOT NULL,
+            branch_id bigint(20) unsigned NOT NULL,
+            language_id bigint(20) unsigned NOT NULL,
+            video_url varchar(500) DEFAULT NULL,
+            pdf_map_path varchar(500) DEFAULT NULL,
+            risks_text longtext DEFAULT NULL,
+            additional_text longtext DEFAULT NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY unique_content (customer_id, branch_id, language_id),
+            KEY customer_id (customer_id),
+            KEY branch_id (branch_id),
+            KEY language_id (language_id)
+        ) {$this->charset_collate};";
+        dbDelta($sql);
+        
+        // Training department content table
+        $sql = "CREATE TABLE {$this->wpdb->prefix}saw_training_department_content (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            training_content_id bigint(20) unsigned NOT NULL,
+            department_id bigint(20) unsigned NOT NULL,
+            text_content longtext DEFAULT NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY unique_dept_content (training_content_id, department_id),
+            KEY training_content_id (training_content_id),
+            KEY department_id (department_id)
+        ) {$this->charset_collate};";
+        dbDelta($sql);
+        
+        // Training documents table
+        $sql = "CREATE TABLE {$this->wpdb->prefix}saw_training_documents (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            document_type_id bigint(20) unsigned NOT NULL,
+            content_type enum('risks','additional','department') NOT NULL,
+            reference_id bigint(20) unsigned NOT NULL,
+            file_path varchar(500) NOT NULL,
+            file_name varchar(255) NOT NULL,
+            file_size bigint(20) unsigned DEFAULT NULL,
+            mime_type varchar(100) DEFAULT NULL,
+            uploaded_at datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY document_type_id (document_type_id),
+            KEY content_type (content_type),
+            KEY reference_id (reference_id),
+            KEY type_reference (content_type, reference_id)
         ) {$this->charset_collate};";
         dbDelta($sql);
     }

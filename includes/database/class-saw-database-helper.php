@@ -30,7 +30,7 @@ class SAW_Database_Helper {
     /**
      * Get list of all tables in dependency order
      *
-     * Total: 16 tables
+     * Total: 20 tables
      *
      * @since 4.6.1
      * @return array Table names (without 'saw_' prefix)
@@ -57,9 +57,13 @@ class SAW_Database_Helper {
             // Permissions (1)
             'permissions',
             
-            // Training (2)
+            // Training System (6)
             'training_languages',
             'training_language_branches',
+            'training_document_types',
+            'training_content',
+            'training_department_content',
+            'training_documents',
             
             // System Logs (2)
             'audit_log',
@@ -124,6 +128,23 @@ class SAW_Database_Helper {
         }
         
         return array_unique(array_filter($languages));
+    }
+    
+    /**
+     * Get all training document types
+     *
+     * Returns all document types ordered by sort_order.
+     *
+     * @since 4.6.1
+     * @return array Array of document type objects
+     */
+    public static function get_document_types() {
+        global $wpdb;
+        
+        return $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM %i ORDER BY sort_order ASC",
+            self::get_table_name('training_document_types')
+        ));
     }
     
     /**
@@ -485,7 +506,8 @@ class SAW_Database_Helper {
             'email', 'first_name', 'last_name', 'phone',
             'language_code', 'language_name', 'address', 'city',
             'postal_code', 'country', 'contact_email', 'contact_phone',
-            'description', 'position', 'is_primary'
+            'description', 'position', 'is_primary', 'uploaded_at',
+            'file_name', 'file_size', 'mime_type'
         );
         
         // Allowed directions
