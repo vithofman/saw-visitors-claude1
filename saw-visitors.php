@@ -269,11 +269,65 @@ function saw_universal_ajax_handler() {
 // Registrace AJAX handlerů
 // ========================================
 
-// Tady registruješ konkrétní akce, např.:
-// add_action('wp_ajax_saw_load_sidebar_customers', 'saw_universal_ajax_handler');
-// add_action('wp_ajax_saw_delete_branches', 'saw_universal_ajax_handler');
+// ✅ KRITICKÉ: Univerzální nested sidebar handler pro Select-Create komponentu
+add_action('wp_ajax_saw_load_nested_sidebar', function() {
+    check_ajax_referer('saw_ajax_nonce', 'nonce');
+    
+    if (!current_user_can('edit_posts')) {
+        wp_send_json_error(array('message' => 'Nemáte oprávnění'));
+        return;
+    }
+    
+    $target_module = sanitize_key($_POST['target_module'] ?? '');
+    
+    if (empty($target_module)) {
+        wp_send_json_error(array('message' => 'Chybí cílový modul'));
+        return;
+    }
+    
+    // Načti Base Controller
+    if (!class_exists('SAW_Base_Controller')) {
+        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/class-base-controller.php';
+    }
+    
+    // Načti controller cílového modulu
+    $controller_class = 'SAW_Module_' . ucfirst($target_module) . '_Controller';
+    $controller_file = SAW_VISITORS_PLUGIN_DIR . "includes/modules/{$target_module}/controller.php";
+    
+    if (!file_exists($controller_file)) {
+        wp_send_json_error(array('message' => 'Modul nenalezen: ' . $target_module));
+        return;
+    }
+    
+    require_once $controller_file;
+    
+    if (!class_exists($controller_class)) {
+        wp_send_json_error(array('message' => 'Controller nenalezen: ' . $controller_class));
+        return;
+    }
+    
+    $controller = new $controller_class();
+    
+    if (!method_exists($controller, 'ajax_load_nested_sidebar')) {
+        wp_send_json_error(array('message' => 'Metoda ajax_load_nested_sidebar nenalezena'));
+        return;
+    }
+    
+    $controller->ajax_load_nested_sidebar();
+});
 
+// ✅ Register AJAX handler for inline create - companies
+add_action('wp_ajax_saw_inline_create_companies', function() {
+    if (!class_exists('SAW_Module_Companies_Controller')) {
+        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/modules/companies/controller.php';
+    }
+    
+    $controller = new SAW_Module_Companies_Controller();
+    $controller->ajax_inline_create();
+});
 
+// Modulové AJAX akce se registrují automaticky přes SAW_Visitors::register_module_ajax_handlers()
+// např.: saw_load_sidebar_customers, saw_delete_branches, atd.
 
 
 // ========================================

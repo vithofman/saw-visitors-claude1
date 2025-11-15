@@ -7,7 +7,7 @@
  * @package     SAW_Visitors
  * @subpackage  Modules/Companies
  * @since       1.0.0
- * @version     1.0.0
+ * @version     1.1.0 - Added AJAX inline create support
  */
 
 if (!defined('ABSPATH')) {
@@ -16,6 +16,9 @@ if (!defined('ABSPATH')) {
 
 // Check if we're in sidebar mode
 $in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'];
+
+// ✅ NEW: Check if we're in nested inline create mode
+$is_nested = isset($GLOBALS['saw_nested_inline_create']) && $GLOBALS['saw_nested_inline_create'];
 
 // Determine if this is edit mode
 $is_edit = !empty($item);
@@ -89,6 +92,11 @@ $form_action = $is_edit
         
         <!-- Hidden Fields -->
         <input type="hidden" name="customer_id" value="<?php echo esc_attr($customer_id); ?>">
+        
+        <?php if ($is_nested): ?>
+            <!-- ✅ NEW: Hidden field to trigger AJAX mode in Base Controller -->
+            <input type="hidden" name="_ajax_inline_create" value="1">
+        <?php endif; ?>
         
         <!-- ================================================ -->
         <!-- ZÁKLADNÍ INFORMACE -->
@@ -362,48 +370,9 @@ $form_action = $is_edit
 jQuery(document).ready(function($) {
     console.log('[Companies Form] Loaded');
     console.log('[Companies Form] Edit mode:', <?php echo $is_edit ? 'true' : 'false'; ?>);
+    console.log('[Companies Form] Nested mode:', <?php echo $is_nested ? 'true' : 'false'; ?>);
     console.log('[Companies Form] Branch from switcher:', <?php echo $context_branch_id ? $context_branch_id : 'null'; ?>);
     console.log('[Companies Form] Selected branch:', <?php echo $selected_branch_id ? $selected_branch_id : 'null'; ?>);
-    
-    // Form validation
-    $('.saw-company-form').on('submit', function(e) {
-        const branchId = $('#branch_id').val();
-        const name = $('#name').val().trim();
-        const email = $('#email').val().trim();
-        const website = $('#website').val().trim();
-        
-        // Branch validation
-        if (!branchId) {
-            alert('Vyberte prosím pobočku');
-            $('#branch_id').focus();
-            e.preventDefault();
-            return false;
-        }
-        
-        // Name validation
-        if (!name) {
-            alert('Vyplňte prosím název firmy');
-            $('#name').focus();
-            e.preventDefault();
-            return false;
-        }
-        
-        // Email validation (if provided)
-        if (email && !isValidEmail(email)) {
-            alert('Zadejte prosím platný email');
-            $('#email').focus();
-            e.preventDefault();
-            return false;
-        }
-        
-        // Website validation (if provided)
-        if (website && !isValidURL(website)) {
-            alert('Zadejte prosím platnou webovou adresu (včetně https://)');
-            $('#website').focus();
-            e.preventDefault();
-            return false;
-        }
-    });
     
     // Helper functions
     function isValidEmail(email) {
@@ -419,5 +388,127 @@ jQuery(document).ready(function($) {
             return false;
         }
     }
+    
+    // ✅ NESTED INLINE CREATE MODE
+    <?php if ($is_nested): ?>
+        
+        console.log('[Companies Form] NESTED MODE - Setting up AJAX submit');
+        
+        // Override submit for AJAX
+        $('.saw-company-form').on('submit', function(e) {
+            e.preventDefault();
+            console.log('[Companies Form] AJAX submit triggered');
+            
+            const $form = $(this);
+            const branchId = $('#branch_id').val();
+            const name = $('#name').val().trim();
+            const email = $('#email').val().trim();
+            const website = $('#website').val().trim();
+            
+            // Quick validation
+            if (!branchId) {
+                alert('Vyberte prosím pobočku');
+                $('#branch_id').focus();
+                return false;
+            }
+            
+            if (!name) {
+                alert('Vyplňte prosím název firmy');
+                $('#name').focus();
+                return false;
+            }
+            
+            if (email && !isValidEmail(email)) {
+                alert('Zadejte prosím platný email');
+                $('#email').focus();
+                return false;
+            }
+            
+            if (website && !isValidURL(website)) {
+                alert('Zadejte prosím platnou webovou adresu (včetně https://)');
+                $('#website').focus();
+                return false;
+            }
+            
+            // AJAX submit
+            $.ajax({
+                url: '<?php echo admin_url('admin-ajax.php'); ?>',
+	        type: 'POST',
+ 	        data: $form.serialize() + '&action=saw_inline_create_companies&nonce=' + sawGlobal.nonce,  
+	        success: function(response) {
+                    console.log('[Companies Form] AJAX response:', response);
+                    
+                    if (response.success) {
+                        // Get target field from nested wrapper
+                        const $wrapper = $('.saw-sidebar-wrapper[data-is-nested="1"]').last();
+                        const targetField = $wrapper.attr('data-target-field');
+                        
+                        console.log('[Companies Form] Success! Target field:', targetField);
+                        console.log('[Companies Form] New company:', response.data);
+                        
+                        // Call global handler
+                        if (window.SAWSelectCreate) {
+                            window.SAWSelectCreate.handleInlineSuccess(response.data, targetField);
+                        } else {
+                            console.error('[Companies Form] SAWSelectCreate not available!');
+                            alert('Firma byla vytvořena, ale nepodařilo se aktualizovat formulář');
+                        }
+                    } else {
+                        alert(response.data?.message || 'Chyba při ukládání firmy');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('[Companies Form] AJAX error:', error);
+                    console.error('[Companies Form] Response:', xhr.responseText);
+                    alert('Chyba při komunikaci se serverem');
+                }
+            });
+            
+            return false;
+        });
+        
+    <?php else: ?>
+        
+        // ✅ NORMAL MODE - Standard validation
+        $('.saw-company-form').on('submit', function(e) {
+            const branchId = $('#branch_id').val();
+            const name = $('#name').val().trim();
+            const email = $('#email').val().trim();
+            const website = $('#website').val().trim();
+            
+            // Branch validation
+            if (!branchId) {
+                alert('Vyberte prosím pobočku');
+                $('#branch_id').focus();
+                e.preventDefault();
+                return false;
+            }
+            
+            // Name validation
+            if (!name) {
+                alert('Vyplňte prosím název firmy');
+                $('#name').focus();
+                e.preventDefault();
+                return false;
+            }
+            
+            // Email validation (if provided)
+            if (email && !isValidEmail(email)) {
+                alert('Zadejte prosím platný email');
+                $('#email').focus();
+                e.preventDefault();
+                return false;
+            }
+            
+            // Website validation (if provided)
+            if (website && !isValidURL(website)) {
+                alert('Zadejte prosím platnou webovou adresu (včetně https://)');
+                $('#website').focus();
+                e.preventDefault();
+                return false;
+            }
+        });
+        
+    <?php endif; ?>
 });
 </script>
