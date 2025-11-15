@@ -1,6 +1,11 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
+// Load Select-Create component
+if (!class_exists('SAW_Component_Select_Create')) {
+    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/select-create/class-saw-component-select-create.php';
+}
+
 $in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'];
 $is_edit = !empty($item);
 $item = $item ?? array();
@@ -31,6 +36,7 @@ if (empty($companies) && $customer_id) {
     }
     $sql .= " ORDER BY name ASC";
     $companies_data = $wpdb->get_results($sql, ARRAY_A);
+    $companies = array();
     foreach ($companies_data as $company) {
         $companies[$company['id']] = $company['name'];
     }
@@ -108,15 +114,26 @@ $form_action = $is_edit
                 
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
-                        <label for="company_id" class="saw-label saw-required">Firma</label>
-                        <select name="company_id" id="company_id" class="saw-input" required>
-                            <option value="">-- Vyberte firmu --</option>
-                            <?php foreach ($companies as $company_id => $company_name): ?>
-                                <option value="<?php echo esc_attr($company_id); ?>" <?php selected($item['company_id'] ?? '', $company_id); ?>>
-                                    <?php echo esc_html($company_name); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+                        <?php
+                        // ✅ NOVÝ: Select-Create komponenta pro firmy
+                        $company_select = new SAW_Component_Select_Create('company_id', array(
+                            'label' => 'Firma',
+                            'options' => $companies,
+                            'selected' => $item['company_id'] ?? '',
+                            'required' => true,
+                            'placeholder' => '-- Vyberte firmu --',
+                            'inline_create' => array(
+                                'enabled' => true,
+                                'target_module' => 'companies',
+                                'button_text' => '+ Nová firma',
+                                'prefill' => array(
+                                    'branch_id' => $selected_branch_id,
+                                    'customer_id' => $customer_id,
+                                ),
+                            ),
+                        ));
+                        $company_select->render();
+                        ?>
                     </div>
                 </div>
                 

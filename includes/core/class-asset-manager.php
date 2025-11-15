@@ -5,7 +5,7 @@
  * @package    SAW_Visitors
  * @subpackage Core
  * @since      1.0.0
- * @version    1.2.0 - DETAIL SECTIONS CSS ADDED
+ * @version    1.3.0 - Added select-create component
  */
 
 if (!defined('ABSPATH')) {
@@ -56,6 +56,7 @@ class SAW_Asset_Manager {
         'saw-branch-switcher'     => '../includes/components/branch-switcher/branch-switcher.css',
         'saw-language-switcher'   => '../includes/components/language-switcher/language-switcher.css',
         'saw-selectbox'           => '../includes/components/selectbox/saw-selectbox.css',
+	'saw-select-create'       => '../includes/components/select-create/select-create.css',
         
         // Admin Table component
         'saw-admin-table-sidebar' => '../includes/components/admin-table/sidebar.css',
@@ -226,6 +227,10 @@ class SAW_Asset_Manager {
                 'path' => 'includes/components/selectbox/saw-selectbox.js',
                 'deps' => ['jquery', 'saw-app'],
             ],
+	    'saw-select-create' => [
+		'path' => 'includes/components/select-create/select-create.js',
+		'deps' => ['jquery', 'saw-app'],
+	    ],
             'saw-admin-table-sidebar' => [
                 'path' => 'includes/components/admin-table/sidebar.js',
                 'deps' => ['jquery', 'saw-app'],

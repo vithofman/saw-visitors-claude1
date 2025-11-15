@@ -5,7 +5,7 @@
  * @package    SAW_Visitors
  * @subpackage Core
  * @since      1.0.0
- * @version    1.0.0 - Initial release
+ * @version    1.1.0 - Added select-create component
  */
 
 if (!defined('ABSPATH')) {
@@ -60,7 +60,7 @@ class SAW_Component_Manager {
      */
     private function __construct() {
         // Register all components on init hook (priority 5 - before default 10)
-        add_action('init', array($this, 'register_all_components'), 5);
+        $this->register_all_components();
     }
     
     /**
@@ -94,6 +94,7 @@ class SAW_Component_Manager {
             'branch-switcher'   => 'includes/components/branch-switcher/class-saw-component-branch-switcher.php',
             'language-switcher' => 'includes/components/language-switcher/class-saw-component-language-switcher.php',
             'selectbox'         => 'includes/components/selectbox/class-saw-component-selectbox.php',
+            'select-create'     => 'includes/components/select-create/class-saw-component-select-create.php',
             'search'            => 'includes/components/search/class-saw-component-search.php',
             'modal'             => 'includes/components/modal/class-saw-component-modal.php',
             'admin-table'       => 'includes/components/admin-table/class-saw-component-admin-table.php',
@@ -120,11 +121,12 @@ class SAW_Component_Manager {
      * @return void
      */
     private function register_ajax_handlers() {
-        $ajax_components = array(
-            'SAW_Component_Customer_Switcher',
-            'SAW_Component_Branch_Switcher',
-            'SAW_Component_Language_Switcher',
-        );
+    $ajax_components = array(
+        'SAW_Component_Customer_Switcher',
+        'SAW_Component_Branch_Switcher',
+        'SAW_Component_Language_Switcher',
+        'SAW_Component_Select_Create',
+    );
         
         foreach ($ajax_components as $class_name) {
             if (class_exists($class_name) && method_exists($class_name, 'register_ajax_handlers')) {

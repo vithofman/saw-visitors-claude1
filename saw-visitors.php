@@ -25,6 +25,14 @@ define( 'SAW_VISITORS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 define( 'SAW_DB_PREFIX', 'saw_' );
 
 // ========================================
+// EARLY COMPONENT INITIALIZATION FOR AJAX
+// ========================================
+if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-component-manager.php')) {
+    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-component-manager.php';
+    SAW_Component_Manager::instance();
+}
+
+// ========================================
 // 🚀 UNIVERSAL AJAX HANDLERS
 // Funguje pro VŠECHNY moduly (customers, branches, departments, users, atd.)
 // ========================================
@@ -82,7 +90,7 @@ function saw_universal_ajax_handler() {
     $nonce_value = isset($_POST['nonce']) ? sanitize_text_field(wp_unslash($_POST['nonce'])) : '';
 
     /**
-     * Umožňuje rozšířit seznam povolených nonce „akcí“ pro univerzální AJAX.
+     * Umožňuje rozšířit seznam povolených nonce „akcí" pro univerzální AJAX.
      *
      * @param array  $nonces       Výchozí seznam nonce akcí.
      * @param string $module       Modul (např. 'branches').

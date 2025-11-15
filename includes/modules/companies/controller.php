@@ -160,10 +160,6 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
      */
     protected function after_save($id) {
         // Currently no post-save logic needed
-        // Can be extended for:
-        // - Cache invalidation
-        // - Activity logging
-        // - Related record updates
     }
     
     /**
@@ -196,13 +192,33 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
     }
     
     /**
-     * Load related data for detail sidebar - OVERRIDE
-     * 
-     * Can be customized to load related records (e.g., visitors from this company)
+     * AJAX: Load inline create sidebar
      * 
      * @since 1.0.0
-     * @param int $item_id Company ID
-     * @return array|null Related data grouped by relation key, or null
+     * @return void (JSON response)
      */
-    
+    public function ajax_load_sidebar() {
+        // Prefill z POST
+        $item = array(
+            'branch_id' => !empty($_POST['prefill']['branch_id']) ? intval($_POST['prefill']['branch_id']) : SAW_Context::get_branch_id(),
+            'customer_id' => !empty($_POST['prefill']['customer_id']) ? intval($_POST['prefill']['customer_id']) : SAW_Context::get_customer_id(),
+        );
+        
+        $is_edit = false;
+        $entity = 'companies';
+        $config = $this->config;
+        
+        // Load branches pro select
+        $branches = $this->model->get_branches_for_select($item['customer_id']);
+        
+        $GLOBALS['saw_nested_inline_create'] = true;
+        
+        ob_start();
+        require SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/form-sidebar.php';
+        $html = ob_get_clean();
+        
+        unset($GLOBALS['saw_nested_inline_create']);
+        
+        wp_send_json_success(array('html' => $html));
+    }
 }

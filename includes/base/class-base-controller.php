@@ -431,6 +431,15 @@ abstract class SAW_Base_Controller
         }
         
         $this->after_save($result);
+        
+        // ✅ NEW: AJAX inline create mode
+        if (!empty($_POST['_ajax_inline_create'])) {
+            $item = $this->model->get_by_id($result);
+            wp_send_json_success(array(
+                'id' => $result,
+                'name' => $this->get_display_name($item),
+            ));
+        }
 
 	// Clear cache to ensure fresh data loads correctly after redirect
 	clearstatcache();
@@ -1497,5 +1506,107 @@ protected function can($action) {
      * @since 1.0.0
      * @return void
      */
+
+/**
+     * AJAX: Load nested sidebar for inline create
+     * 
+     * Loads form sidebar for target module with prefill data.
+     * Returns HTML for nested sidebar display.
+     * 
+     * @since 13.0.0
+     * @return void (JSON response)
+     */
+    public function ajax_load_nested_sidebar() {
+        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        
+        if (!$this->can('create')) {
+            wp_send_json_error(array('message' => 'Nemáte oprávnění'));
+        }
+        
+        $target_module = sanitize_key($_POST['target_module'] ?? '');
+        $prefill = $_POST['prefill'] ?? array();
+        
+        if (empty($target_module)) {
+            wp_send_json_error(array('message' => 'Chybí cílový modul'));
+        }
+        
+        // Load target controller
+        $controller_class = 'SAW_Module_' . ucfirst($target_module) . '_Controller';
+        $controller_file = SAW_VISITORS_PLUGIN_DIR . "includes/modules/{$target_module}/controller.php";
+        
+        if (!file_exists($controller_file)) {
+            wp_send_json_error(array('message' => 'Modul nenalezen'));
+        }
+        
+        require_once $controller_file;
+        
+        if (!class_exists($controller_class)) {
+            wp_send_json_error(array('message' => 'Controller nenalezen'));
+        }
+        
+        $controller = new $controller_class();
+        
+        // Prepare prefill item
+        $form_item = array();
+        foreach ($prefill as $key => $value) {
+            $form_item[$key] = sanitize_text_field($value);
+        }
+        
+        // Set nested flag
+        $GLOBALS['saw_nested_inline_create'] = true;
+        
+        // Render sidebar
+        ob_start();
+        
+        $entity = $target_module;
+        $config = $controller->config;
+        $item = $form_item;
+        $is_edit = false;
+        
+        // Load lookups for form
+        if (method_exists($controller, 'load_sidebar_lookups')) {
+            $lookups = $controller->load_sidebar_lookups();
+            foreach ($lookups as $key => $data) {
+                $$key = $data;
+            }
+        }
+        
+        require SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/form-sidebar.php';
+        
+        $html = ob_get_clean();
+        
+        unset($GLOBALS['saw_nested_inline_create']);
+        
+        wp_send_json_success(array('html' => $html));
+    }
+    
+    /**
+     * Get display name for created item
+     * 
+     * Override in child controllers for custom display names.
+     * Used by inline create to populate dropdown option text.
+     * 
+     * @since 13.0.0
+     * @param array $item Created item data
+     * @return string Display name
+     */
+    protected function get_display_name($item) {
+        // Try common name fields
+        if (!empty($item['name'])) {
+            return $item['name'];
+        }
+        
+        if (!empty($item['first_name']) && !empty($item['last_name'])) {
+            return trim($item['first_name'] . ' ' . $item['last_name']);
+        }
+        
+        if (!empty($item['title'])) {
+            return $item['title'];
+        }
+        
+        // Fallback to ID
+        return '#' . $item['id'];
+    }
+
     abstract public function index();
 }
