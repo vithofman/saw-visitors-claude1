@@ -1,0 +1,42 @@
+/**
+ * Companies Module Styles
+ * 
+ * @package     SAW_Visitors
+ * @subpackage  Modules/Companies
+ * @since       1.0.0
+ * @version     1.0.0
+ * 
+ * Description:
+ * This module uses global CSS components exclusively and requires no custom styles.
+ * All UI elements utilize the standardized design system from assets/css/
+ * 
+ * Global Components Used:
+ * - .saw-button, .saw-button-primary, .saw-button-secondary
+ * - .saw-admin-table
+ * - .saw-form-card, .saw-form-card-header, .saw-form-card-body
+ * - .saw-form-section (collapsible sections with <details>)
+ * - .saw-input, .saw-select, .saw-textarea, .saw-label
+ * - .saw-badge, .saw-badge-success, .saw-badge-secondary
+ * - .saw-action-btn, .saw-action-edit, .saw-action-delete, .saw-action-view
+ * - .saw-detail-header, .saw-detail-sections, .saw-detail-section
+ * - .saw-link (for clickable email, phone, website links)
+ * 
+ * CSS Variables Used:
+ * - --saw-primary, --saw-primary-hover
+ * - --saw-success, --saw-danger, --saw-warning
+ * - --saw-gray-* (50, 100, 200, 500, 700, 900)
+ * - --saw-space-* (xs, sm, md, lg, xl, 2xl, 3xl)
+ * - --saw-border-radius-* (sm, md, lg)
+ * - --saw-shadow-* (sm, md, lg)
+ * 
+ * Responsive Design:
+ * Handled by global table component (.saw-admin-table) which includes
+ * mobile-first responsive utilities and breakpoints.
+ * 
+ * Form Layout:
+ * Uses .saw-form-row and .saw-col-* for responsive grid layout:
+ * - .saw-col-4, .saw-col-8, .saw-col-12 for various column widths
+ * - Automatically stacks on mobile devices
+ */
+
+/* No custom styles required - using global design system */

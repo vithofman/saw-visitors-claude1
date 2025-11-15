@@ -491,17 +491,17 @@ class SAW_Component_Admin_Table {
                 break;
                 
             case 'badge':
-                if (!empty($value)) {
-                    $badge_class = 'saw-badge';
-                    if (is_array($column) && isset($column['map'][$value])) {
-                        $badge_class .= ' saw-badge-' . $column['map'][$value];
-                    }
-                    $label = is_array($column) && isset($column['labels'][$value]) 
-                        ? $column['labels'][$value] 
-                        : $value;
-                    echo '<span class="' . esc_attr($badge_class) . '">' . esc_html($label) . '</span>';
-                }
-                break;
+    if ($value !== '' && $value !== null) {  // OPRAVA: Povolit 0!
+        $badge_class = 'saw-badge';
+        if (is_array($column) && isset($column['map'][$value])) {
+            $badge_class .= ' saw-badge-' . $column['map'][$value];
+        }
+        $label = isset($column['labels'][$value]) 
+            ? $column['labels'][$value] 
+            : $value;
+        echo '<span class="' . esc_attr($badge_class) . '">' . esc_html($label) . '</span>';
+    }
+    break;
                 
             case 'date':
                 if (!empty($value) && $value !== '0000-00-00' && $value !== '0000-00-00 00:00:00') {

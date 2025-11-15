@@ -7,7 +7,7 @@
  *
  * @package SAW_Visitors
  * @since   4.6.2
- * @version 4.6.2 - ADDED: Content Management and Settings routes
+ * @version 4.6.3 - ADDED: Companies menu item in ORGANIZACE section
  */
 
 if (!defined('ABSPATH')) {
@@ -346,7 +346,7 @@ class SAW_App_Sidebar {
      * Items are filtered by permissions during rendering.
      *
      * @since 4.6.1
-     * @version 4.6.2 - UPDATED: Changed "Obsah" to "Správa obsahu", added "Nastavení"
+     * @version 4.6.3 - ADDED: Companies menu item in ORGANIZACE section
      * @return array Menu structure
      */
     private function get_menu_items() {
@@ -364,12 +364,22 @@ class SAW_App_Sidebar {
             ),
             
             // ===============================================
+            // NÁVŠTĚVY
+            // ===============================================
+            array(
+                'heading' => 'Návštěvy',
+                'items' => array(
+		    array('id' => 'companies', 'label' => 'Firmy', 'url' => '/admin/companies', 'icon' => '🏭'),
+                ),
+            ),
+
+            // ===============================================
             // ORGANIZACE
             // ===============================================
             array(
                 'heading' => 'Organizace',
                 'items' => array(
-                    array('id' => 'branches', 'label' => 'Pobočky', 'url' => '/admin/branches', 'icon' => '🏢'),
+                    array('id' => 'branches', 'label' => 'Pobočky', 'url' => '/admin/branches', 'icon' => '🏢'),                    
                     array('id' => 'departments', 'label' => 'Oddělení', 'url' => '/admin/departments', 'icon' => '📂'),
                     array('id' => 'users', 'label' => 'Uživatelé', 'url' => '/admin/users', 'icon' => '👤'),
                 ),

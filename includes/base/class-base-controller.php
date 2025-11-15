@@ -431,6 +431,10 @@ abstract class SAW_Base_Controller
         }
         
         $this->after_save($result);
+
+	// Clear cache to ensure fresh data loads correctly after redirect
+	clearstatcache();
+	sleep(1); // Give DB time to propagate the new record
         
         $this->set_flash($this->config['singular'] . ' byl úspěšně vytvořen', 'success');
         wp_redirect(home_url('/admin/' . $this->config['route'] . '/' . $result . '/'));
