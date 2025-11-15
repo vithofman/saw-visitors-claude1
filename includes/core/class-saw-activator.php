@@ -32,7 +32,6 @@ class SAW_Activator {
         self::check_requirements();
         self::create_custom_roles();
         self::create_database_tables();
-        self::insert_default_data();
         self::insert_default_permissions();
         self::create_upload_directories();
         self::set_default_options();
@@ -111,63 +110,22 @@ class SAW_Activator {
     /**
      * Create database tables
      *
-     * Uses SAW_Database class to create all required tables.
+     * Uses SAW_Installer class to create all required tables.
      *
      * @since 1.0.0
      */
     private static function create_database_tables() {
-        $db_file = SAW_VISITORS_PLUGIN_DIR . 'includes/database/class-saw-database.php';
+        $installer_file = SAW_VISITORS_PLUGIN_DIR . 'includes/database/class-saw-installer.php';
         
-        if (!file_exists($db_file)) {
+        if (!file_exists($installer_file)) {
             return;
         }
         
-        require_once $db_file;
+        require_once $installer_file;
         
-        if (class_exists('SAW_Database')) {
-            SAW_Database::create_tables();
+        if (class_exists('SAW_Installer')) {
+            SAW_Installer::install();
         }
-    }
-
-    /**
-     * Insert default data
-     *
-     * Creates demo customer if database is empty.
-     *
-     * @since 1.0.0
-     */
-    private static function insert_default_data() {
-        global $wpdb;
-        $table = $wpdb->prefix . 'saw_customers';
-        
-        $table_exists = $wpdb->get_var($wpdb->prepare(
-            "SHOW TABLES LIKE %s",
-            $wpdb->esc_like($table)
-        ));
-        
-        if ($table_exists !== $table) {
-            return;
-        }
-        
-        $customers_count = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM %i",
-            $table
-        ));
-        
-        if ($customers_count > 0) {
-            return;
-        }
-        
-        $wpdb->insert(
-            $table,
-            [
-                'name'          => __('Demo Customer', 'saw-visitors'),
-                'ico'           => '12345678',
-                'address'       => __('Demo Street 123, Prague', 'saw-visitors'),
-                'primary_color' => '#0073aa'
-            ],
-            ['%s', '%s', '%s', '%s']
-        );
     }
 
     /**

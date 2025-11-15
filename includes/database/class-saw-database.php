@@ -48,7 +48,12 @@ class SAW_Database {
             'training_document_types',
             'training_content',
             'training_department_content',
-            'training_documents'
+            'training_documents',
+            'visits',
+            'visitors',
+            'visit_hosts',
+            'visit_daily_logs',
+            'visitor_certificates'
         ];
     }
     

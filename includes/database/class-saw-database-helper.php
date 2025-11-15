@@ -30,7 +30,7 @@ class SAW_Database_Helper {
     /**
      * Get list of all tables in dependency order
      *
-     * Total: 20 tables
+     * Total: 25 tables
      *
      * @since 4.6.1
      * @return array Table names (without 'saw_' prefix)
@@ -64,6 +64,13 @@ class SAW_Database_Helper {
             'training_content',
             'training_department_content',
             'training_documents',
+            
+            // Visitor Training System (5)
+            'visits',
+            'visitors',
+            'visit_hosts',
+            'visit_daily_logs',
+            'visitor_certificates',
             
             // System Logs (2)
             'audit_log',

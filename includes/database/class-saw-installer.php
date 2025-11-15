@@ -86,7 +86,7 @@ class SAW_Installer {
             }
             
             // Remove FK constraints for Phase 1
-            $sql = preg_replace('/,\s*CONSTRAINT\s+fk_\w+\s+FOREIGN\s+KEY[^,)]+/i', '', $sql);
+            $sql = preg_replace('/,\s*CONSTRAINT\s+\w+\s+FOREIGN\s+KEY\s*\([^)]+\)\s*REFERENCES\s+[^\s]+\s*\([^)]+\)(\s+ON\s+DELETE\s+\w+)?(\s+ON\s+UPDATE\s+\w+)?/i', '', $sql);
             
             dbDelta($sql);
             
@@ -118,7 +118,7 @@ class SAW_Installer {
      * Get tables order based on dependencies
      *
      * Tables are ordered to respect foreign key dependencies.
-     * Total: 20 tables
+     * Total: 25 tables
      *
      * @since 4.6.1
      * @return array Table names (without 'saw_' prefix)
@@ -152,6 +152,13 @@ class SAW_Installer {
             'training_content',
             'training_department_content',
             'training_documents',
+            
+            // Visitor Training System (5)
+            'visits',
+            'visitors',
+            'visit_hosts',
+            'visit_daily_logs',
+            'visitor_certificates',
             
             // System Logs (2)
             'audit_log',
@@ -231,6 +238,25 @@ class SAW_Installer {
             
             // training_documents
             array('table' => 'training_documents', 'constraint' => 'fk_training_doc_type', 'column' => 'document_type_id', 'ref_table' => 'training_document_types', 'ref_column' => 'id', 'on_delete' => 'RESTRICT'),
+            
+            // visits
+            array('table' => 'visits', 'constraint' => 'fk_visit_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'visits', 'constraint' => 'fk_visit_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'visits', 'constraint' => 'fk_visit_company', 'column' => 'company_id', 'ref_table' => 'companies', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
+            
+            // visitors
+            array('table' => 'visitors', 'constraint' => 'fk_visitor_visit', 'column' => 'visit_id', 'ref_table' => 'visits', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            
+            // visit_hosts
+            array('table' => 'visit_hosts', 'constraint' => 'fk_host_visit', 'column' => 'visit_id', 'ref_table' => 'visits', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'visit_hosts', 'constraint' => 'fk_host_user', 'column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            
+            // visit_daily_logs
+            array('table' => 'visit_daily_logs', 'constraint' => 'fk_daily_visit', 'column' => 'visit_id', 'ref_table' => 'visits', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'visit_daily_logs', 'constraint' => 'fk_daily_visitor', 'column' => 'visitor_id', 'ref_table' => 'visitors', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            
+            // visitor_certificates
+            array('table' => 'visitor_certificates', 'constraint' => 'fk_cert_visitor', 'column' => 'visitor_id', 'ref_table' => 'visitors', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
             // audit_log
             array('table' => 'audit_log', 'constraint' => 'fk_audit_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
