@@ -28,8 +28,6 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
         
         require_once $module_path . 'model.php';
         $this->model = new SAW_Module_Companies_Model($this->config);
-
-	add_action('wp_ajax_saw_inline_create_companies', array($this, 'ajax_inline_create'));        
     }
     
     public function index() {

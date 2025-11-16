@@ -4,7 +4,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Companies
- * @version     1.0.0
+ * @version     1.1.0 - Added custom_ajax_actions for inline create
  */
 
 if (!defined('ABSPATH')) {
@@ -27,6 +27,11 @@ return array(
         'create' => 'manage_options',
         'edit' => 'manage_options',
         'delete' => 'manage_options',
+    ),
+    
+    // ✅ NOVÉ: Custom AJAX actions - automaticky se zaregistrují v class-saw-visitors.php
+    'custom_ajax_actions' => array(
+        'saw_inline_create_companies' => 'ajax_inline_create',
     ),
     
     'fields' => array(
