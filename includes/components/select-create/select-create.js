@@ -6,7 +6,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Components/SelectCreate
- * @version     1.1.0 - FIXED: Nested sidebar wrapper positioning
+ * @version     1.2.0 - FIXED: Close handler with stopImmediatePropagation
  * @since       13.0.0
  * @author      SAW Visitors Team
  */
@@ -55,7 +55,6 @@
                         return;
                     }
                     
-                    // ✅ CRITICAL: Wrap v .saw-sidebar-wrapper pro správné stylování
                     const htmlContent = response.data.html;
                     
                     // Vytvoř wrapper s nested atributy
@@ -84,9 +83,9 @@
                 error: function(xhr, status, error) {
                     self.$button.removeClass('loading').prop('disabled', false);
                     
-                    console.error('AJAX error:', status, error);
-                    console.error('Response:', xhr.responseText);
-                    alert('Chyba při komunikaci se serverem\n\n' + xhr.responseText);
+                    console.error('[Select-Create] AJAX error:', status, error);
+                    console.error('[Select-Create] Response:', xhr.responseText);
+                    alert('Chyba při komunikaci se serverem');
                 }
             });
         }
@@ -103,12 +102,12 @@
     window.SAWSelectCreate = {
         
         handleInlineSuccess: function(data, targetField) {
-            console.log('SAWSelectCreate: Handling success', data, targetField);
+            console.log('[Select-Create] Handling success', data, targetField);
             
             const $select = $(`select[name="${targetField}"]`);
             
             if (!$select.length) {
-                console.error('SAWSelectCreate: Target select not found:', targetField);
+                console.error('[Select-Create] Target select not found:', targetField);
                 return;
             }
             
@@ -129,18 +128,32 @@
             const $nested = $('.saw-sidebar-wrapper[data-is-nested="1"]').last();
             this.closeNested($nested);
             
-            console.log('SAWSelectCreate: Option added successfully');
+            console.log('[Select-Create] Option added successfully');
         },
         
         closeNested: function($nested) {
-            if (!$nested || !$nested.length) {
-                return;
-            }
+            if (!$nested || !$nested.length) return;
             
-            $nested.removeClass('saw-sidebar-active');
+            console.log('[Select-Create] Closing nested, keeping parent');
+            
+            // Zavři nested wrapper
+            $nested.removeClass('active');
             
             setTimeout(() => {
                 $nested.remove();
+                
+                // Reaktivuj parent sidebar
+                const $parent = $('.saw-sidebar-wrapper').not('[data-is-nested="1"]').first();
+                if ($parent.length) {
+                    console.log('[Select-Create] Reactivating parent sidebar');
+                    $parent.addClass('active');
+                    
+                    // Zajisti že je viditelný
+                    const $parentInner = $parent.find('.saw-sidebar');
+                    if ($parentInner.length && !$parentInner.hasClass('saw-sidebar-active')) {
+                        $parentInner.addClass('saw-sidebar-active');
+                    }
+                }
             }, 300);
         }
     };
@@ -151,17 +164,34 @@
         });
     });
     
+    // ✅ CRITICAL: Close handler s stopImmediatePropagation
+    // Zastaví admin-table.js handler, který by zavřel všechny sidebary
     $(document).on('click', '.saw-sidebar-wrapper[data-is-nested="1"] .saw-sidebar-close', function(e) {
         e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation(); // ← ZASTAVÍ další handlery!
+        
+        console.log('[Select-Create] Close button clicked on nested sidebar');
         
         const $nested = $(this).closest('.saw-sidebar-wrapper[data-is-nested="1"]');
-        window.SAWSelectCreate.closeNested($nested);
+        
+        if ($nested.length) {
+            window.SAWSelectCreate.closeNested($nested);
+        } else {
+            console.warn('[Select-Create] Nested wrapper not found');
+        }
     });
     
+    // ESC key handler
     $(document).on('keydown', function(e) {
         if (e.key === 'Escape' || e.keyCode === 27) {
             const $nested = $('.saw-sidebar-wrapper[data-is-nested="1"]').last();
             if ($nested.length) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                
+                console.log('[Select-Create] ESC pressed on nested sidebar');
                 window.SAWSelectCreate.closeNested($nested);
             }
         }
