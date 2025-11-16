@@ -1,15 +1,12 @@
 /**
- * Admin Table Component - Ultra Modern Design
- *
- * Minimalist component with perfect typography and spacing.
- * Every pixel matters.
+ * Admin Table Component - Ultra Modern Design with Search & Filters
  *
  * @package    SAW_Visitors
- * @version    3.0.0 - Complete redesign
+ * @version    6.0.0 - Added search & filter controls
  */
 
 /* ============================================
-   HEADER - ULTRA MINIMAL
+   HEADER
    ============================================ */
 
 .saw-page-header {
@@ -38,10 +35,6 @@
     line-height: 1.4;
 }
 
-/* ============================================
-   HEADER CONTROLS (Right side buttons)
-   ============================================ */
-
 .saw-page-header-controls {
     display: flex;
     align-items: center;
@@ -50,7 +43,7 @@
 }
 
 /* ============================================
-   TABLE CONTROLS - INTEGRATED SEARCH
+   TABLE CONTROLS - SEARCH & FILTERS
    ============================================ */
 
 .saw-table-controls {
@@ -64,41 +57,141 @@
     border-bottom: 1px solid #eaeaea;
 }
 
+/* Search Form */
 .saw-search-form {
-    min-width: 300px;
+    position: relative;
+    min-width: 320px;
     margin: 0;
     flex: 0 0 auto;
 }
 
-.saw-search-form input {
+.saw-search-input {
     width: 100%;
-    height: 36px;
-    padding: 0 12px 0 36px; /* Space for search icon */
-    border: 1px solid #e5e5e5;
-    border-radius: 6px;
+    height: 38px;
+    padding: 0 40px 0 38px;
+    border: 1.5px solid #e5e5e5;
+    border-radius: 8px;
     font-size: 14px;
     color: #171717;
     background: #fafafa url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23737373" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>') no-repeat 12px center;
     background-size: 16px;
-    transition: all 0.15s ease;
+    transition: all 0.2s ease;
 }
 
-.saw-search-form input::placeholder {
+.saw-search-input::placeholder {
     color: #a3a3a3;
 }
 
-.saw-search-form input:focus {
+.saw-search-input:focus {
     outline: none;
     border-color: #0070f3;
     background-color: #ffffff;
-    box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.08);
+    box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.1);
 }
 
+/* Search Clear Button */
+.saw-search-clear {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ef4444;
+    color: #ffffff;
+    border-radius: 50%;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.saw-search-clear:hover {
+    background: #dc2626;
+    transform: translateY(-50%) scale(1.1);
+}
+
+/* Filters Container */
 .saw-filters {
     display: flex;
-    gap: 10px;
+    gap: 12px;
     flex-wrap: wrap;
     flex: 0 0 auto;
+}
+
+/* Filter Item */
+.saw-filter-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+}
+
+.saw-filter-form {
+    margin: 0;
+}
+
+.saw-filter-select {
+    height: 38px;
+    min-width: 180px;
+    padding: 0 32px 0 12px;
+    border: 1.5px solid #e5e5e5;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #171717;
+    background-color: #fafafa;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    appearance: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="%23737373" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>');
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 12px;
+}
+
+.saw-filter-select:hover {
+    border-color: #cbd5e1;
+    background-color: #ffffff;
+}
+
+.saw-filter-select:focus {
+    outline: none;
+    border-color: #0070f3;
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.1);
+}
+
+/* Filter Clear Button */
+.saw-filter-clear {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fef2f2;
+    border: 1.5px solid #fecaca;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.saw-filter-clear:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    transform: scale(1.05);
+}
+
+.saw-filter-clear .dashicons {
+    color: #ef4444;
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
 }
 
 /* ============================================
@@ -187,17 +280,17 @@
    CLICKABLE ROWS
    ============================================ */
 
-.saw-admin-table tbody tr[data-clickable-row] {
+.saw-admin-table tbody tr[data-detail-url] {
     cursor: pointer;
     transition: background-color 0.12s ease;
 }
 
-.saw-admin-table tbody tr[data-clickable-row]:hover {
+.saw-admin-table tbody tr[data-detail-url]:hover {
     background: #fafafa;
 }
 
 /* ============================================
-   ACTIVE ROW - SIMPLE BACKGROUND ONLY
+   ACTIVE ROW
    ============================================ */
 
 .saw-admin-table tbody tr.saw-row-active {
@@ -259,6 +352,80 @@
 }
 
 /* ============================================
+   EMPTY STATE
+   ============================================ */
+
+.saw-empty-state {
+    padding: 60px 20px;
+    text-align: center;
+    background: #fafafa;
+    border-radius: 8px;
+    margin: 24px;
+}
+
+.saw-empty-icon {
+    margin-bottom: 16px;
+}
+
+.saw-empty-icon .dashicons {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    color: #cbd5e1;
+}
+
+.saw-empty-state h3 {
+    margin: 0 0 20px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #475569;
+}
+
+/* ============================================
+   PAGINATION
+   ============================================ */
+
+.saw-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 20px 24px;
+    background: #ffffff;
+    border-top: 1px solid #eaeaea;
+}
+
+.saw-pagination-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 12px;
+    border: 1.5px solid #e5e5e5;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #475569;
+    text-decoration: none;
+    background: #ffffff;
+    transition: all 0.2s ease;
+}
+
+.saw-pagination-link:hover {
+    border-color: #0070f3;
+    color: #0070f3;
+    background: #f0f9ff;
+}
+
+.saw-pagination-link.current {
+    border-color: #0070f3;
+    background: #0070f3;
+    color: #ffffff;
+    cursor: default;
+}
+
+/* ============================================
    RESPONSIVE - TABLET
    ============================================ */
 
@@ -273,7 +440,12 @@
     
     .saw-search-form {
         flex: 1 1 100%;
+        min-width: 100%;
         max-width: 100%;
+    }
+    
+    .saw-filters {
+        flex: 1 1 100%;
     }
 }
 
@@ -304,6 +476,15 @@
     
     .saw-filters {
         width: 100%;
+        flex-direction: column;
+    }
+    
+    .saw-filter-item {
+        width: 100%;
+    }
+    
+    .saw-filter-select {
+        width: 100%;
     }
     
     .saw-admin-table th,
@@ -313,30 +494,14 @@
 }
 
 /* ============================================
-   RESPONSIVE - SMALL MOBILE
-   ============================================ */
-
-@media (max-width: 480px) {
-    .saw-page-header {
-        padding: 12px 16px;
-    }
-    
-    .saw-page-title {
-        font-size: 16px;
-    }
-    
-    .saw-admin-table th,
-    .saw-admin-table td {
-        padding: 10px 12px;
-        font-size: 13px;
-    }
-}
-
-/* ============================================
-   UTILITY - BOLD CELLS
+   UTILITY
    ============================================ */
 
 .saw-table-cell-bold {
     font-weight: 600;
     color: #171717;
+}
+
+.saw-text-muted {
+    color: #94a3b8;
 }

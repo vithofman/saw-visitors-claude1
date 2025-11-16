@@ -1,0 +1,189 @@
+/**
+ * Visitors Module Styles
+ * 
+ * @package     SAW_Visitors
+ * @subpackage  Modules/Visitors
+ * @version     1.0.0
+ */
+
+/* Certificates List in Detail */
+.saw-certificates-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.saw-certificate-item {
+    display: flex;
+    gap: 16px;
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #0073aa;
+    transition: all 0.2s ease;
+}
+
+.saw-certificate-item:hover {
+    background: #f0f0f1;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.saw-certificate-icon {
+    font-size: 32px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.saw-certificate-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.saw-certificate-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #2c3338;
+}
+
+.saw-certificate-number,
+.saw-certificate-validity {
+    font-size: 14px;
+    color: #666;
+}
+
+.saw-certificate-validity {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Logs List in Detail */
+.saw-logs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.saw-log-item {
+    display: flex;
+    gap: 16px;
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #46b450;
+}
+
+.saw-log-date {
+    font-size: 15px;
+    font-weight: 700;
+    color: #2c3338;
+    min-width: 100px;
+    flex-shrink: 0;
+}
+
+.saw-log-details {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.saw-log-time {
+    font-size: 14px;
+    color: #666;
+}
+
+.saw-log-time strong {
+    color: #2c3338;
+    font-weight: 600;
+}
+
+.saw-log-notes {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: #fff;
+    border-radius: 4px;
+    font-size: 13px;
+    color: #555;
+    border-left: 2px solid #0073aa;
+}
+
+/* Certificate Form Rows */
+.saw-certificate-row {
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    border-left: 3px solid #0073aa;
+    transition: all 0.2s ease;
+}
+
+.saw-certificate-row:hover {
+    background: #f0f0f1;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Checkbox Label Styling */
+.saw-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 10px 12px;
+    background: #f0f0f1;
+    border-radius: 4px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.saw-checkbox-label:hover {
+    background: #e0e0e1;
+}
+
+.saw-checkbox-label input[type="checkbox"] {
+    margin: 0;
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+}
+
+/* Parent Visit Info */
+.saw-parent-visit-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.saw-parent-visit-info div {
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.saw-parent-visit-info strong {
+    color: #2c3338;
+    font-weight: 600;
+    margin-right: 6px;
+}
+
+/* Empty State */
+.saw-text-muted {
+    color: #666;
+    font-style: italic;
+    text-align: center;
+    padding: 20px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .saw-certificate-item,
+    .saw-log-item {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .saw-log-date {
+        min-width: auto;
+    }
+}

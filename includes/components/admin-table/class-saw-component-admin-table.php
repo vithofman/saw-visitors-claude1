@@ -2,11 +2,11 @@
 /**
  * Admin Table Component
  *
- * Modern table component with OOP structure, modal support, sidebar support, and permissions
+ * Modern table component with integrated search, filters, sorting, and pagination
  *
  * @package     SAW_Visitors
  * @subpackage  Components
- * @version     5.1.0 - REFACTORED: Header with inline controls, no duplicates
+ * @version     6.0.0 - REFACTORED: Integrated search & filters
  * @since       1.0.0
  */
 
@@ -17,40 +17,16 @@ if (!defined('ABSPATH')) {
 /**
  * SAW Component Admin Table
  *
- * Handles rendering of admin data tables with sorting, filtering,
- * pagination, modal integration, sidebar integration, and permission checks
- *
  * @since 1.0.0
  */
 class SAW_Component_Admin_Table {
     
-    /**
-     * Entity name
-     *
-     * @since 1.0.0
-     * @var string
-     */
     private $entity;
-    
-    /**
-     * Table configuration
-     *
-     * @since 1.0.0
-     * @var array
-     */
     private $config;
     
-    /**
-     * Constructor
-     *
-     * @since 1.0.0
-     * @param string $entity Entity name (e.g. 'customer', 'branch')
-     * @param array  $config Table configuration
-     */
     public function __construct($entity, $config = array()) {
         $this->entity = sanitize_key($entity);
         
-        // CRITICAL: Auto-generate columns from fields if not explicitly defined
         if (empty($config['columns']) && !empty($config['module_config']['fields'])) {
             $config['columns'] = $this->generate_columns_from_fields($config['module_config']['fields']);
         }
@@ -58,39 +34,27 @@ class SAW_Component_Admin_Table {
         $this->config = $this->parse_config($config);
     }
     
-    /**
-     * Generate columns from config fields if not explicitly defined
-     * 
-     * @since 5.0.0
-     * @param array $fields Fields configuration from module config
-     * @return array Columns configuration
-     */
     private function generate_columns_from_fields($fields) {
         $columns = array();
         
         foreach ($fields as $key => $field) {
-            // Skip hidden fields
             if (isset($field['hidden']) && $field['hidden']) {
                 continue;
             }
             
-            // Skip deprecated fields
             if (isset($field['deprecated']) && $field['deprecated']) {
                 continue;
             }
             
-            // Basic column config
             $column = array(
                 'label' => $field['label'] ?? ucfirst($key),
                 'type' => $this->map_field_type_to_column_type($field['type']),
             );
             
-            // Auto-detect searchable fields
             if (in_array($field['type'], array('text', 'email', 'textarea'))) {
                 $column['searchable'] = true;
             }
             
-            // Auto-detect sortable fields
             if (in_array($field['type'], array('text', 'email', 'select', 'date', 'number'))) {
                 $column['sortable'] = true;
             }
@@ -101,13 +65,6 @@ class SAW_Component_Admin_Table {
         return $columns;
     }
     
-    /**
-     * Map field type to column display type
-     * 
-     * @since 5.0.0
-     * @param string $field_type Field type from config
-     * @return string Column type
-     */
     private function map_field_type_to_column_type($field_type) {
         $map = array(
             'text' => 'text',
@@ -123,13 +80,6 @@ class SAW_Component_Admin_Table {
         return $map[$field_type] ?? 'text';
     }
     
-    /**
-     * Parse and merge configuration with defaults
-     *
-     * @since 1.0.0
-     * @param array $config User-provided configuration
-     * @return array Merged configuration
-     */
     private function parse_config($config) {
         $defaults = array(
             'columns' => array(),
@@ -140,9 +90,16 @@ class SAW_Component_Admin_Table {
             'per_page' => 20,
             'orderby' => '',
             'order' => 'ASC',
-            'search' => false,
+            
+            // Search & Filters - NEW
+            'enable_search' => false,
+            'search_placeholder' => 'Hledat...',
             'search_value' => '',
+            
+            'enable_filters' => false,
             'filters' => array(),
+            'active_filters' => array(),
+            
             'actions' => array('edit', 'delete'),
             'create_url' => '',
             'edit_url' => '',
@@ -167,12 +124,6 @@ class SAW_Component_Admin_Table {
         return wp_parse_args($config, $defaults);
     }
     
-    /**
-     * Render complete table with all components
-     *
-     * @since 1.0.0
-     * @return void Outputs HTML directly
-     */
     public function render() {
         $this->enqueue_assets();
         
@@ -182,6 +133,7 @@ class SAW_Component_Admin_Table {
             $this->render_split_layout();
         } else {
             $this->render_header();
+            $this->render_controls();
             $this->render_table_or_empty();
             $this->render_pagination();
             $this->render_modal();
@@ -190,69 +142,51 @@ class SAW_Component_Admin_Table {
         }
     }
     
-    /**
-     * Render split layout with sidebar
-     *
-     * @since 4.0.0
-     * @return void Outputs HTML directly
-     */
     private function render_split_layout() {
-    $has_sidebar = !empty($this->config['sidebar_mode']);
-    $sidebar_class = $has_sidebar ? ' has-sidebar' : '';
-    ?>
-    <div class="saw-admin-table-split<?php echo $sidebar_class; ?>">
-        <div class="saw-table-panel">
-            <?php
-            $this->render_header();
-            $this->render_table_or_empty();
-            $this->render_pagination();
-            $this->render_floating_button();
-            ?>
+        $has_sidebar = !empty($this->config['sidebar_mode']);
+        $sidebar_class = $has_sidebar ? ' has-sidebar' : '';
+        ?>
+        <div class="saw-admin-table-split<?php echo $sidebar_class; ?>">
+            <div class="saw-table-panel">
+                <?php
+                $this->render_header();
+                $this->render_controls();
+                $this->render_table_or_empty();
+                $this->render_pagination();
+                $this->render_floating_button();
+                ?>
+            </div>
+            
+            <?php if ($has_sidebar): ?>
+            <div class="saw-sidebar-wrapper active">
+                <?php $this->render_sidebar(); ?>
+            </div>
+            <?php endif; ?>
         </div>
-        
-        <?php if ($has_sidebar): ?>
-        <div class="saw-sidebar-wrapper active">
-            <?php $this->render_sidebar(); ?>
-        </div>
-        <?php endif; ?>
-    </div>
-    <?php
-    $this->render_delete_script();
-}
-    
-    /**
-     * Render sidebar content
-     *
-     * @since 4.0.0
-     * @return void Outputs HTML directly
-     */
-    private function render_sidebar() {
-    $mode = $this->config['sidebar_mode'];
-    $entity = $this->entity;
-    
-    // CRITICAL: Pass module config, not Admin Table config!
-    $module_config = $this->config['module_config'] ?? $this->config;
-    $config = $module_config;
-    
-    if ($mode === 'detail') {
-        $item = $this->config['detail_item'];
-        $tab = $this->config['detail_tab'];
-        $related_data = $this->config['related_data'] ?? null; // ✅ PŘIDÁNO
-        require __DIR__ . '/detail-sidebar.php';
-    } 
-    elseif ($mode === 'create' || $mode === 'edit') {
-        $item = $this->config['form_item'];
-        $is_edit = ($mode === 'edit');
-        require __DIR__ . '/form-sidebar.php';
+        <?php
+        $this->render_delete_script();
     }
-}
     
-    /**
-     * Enqueue component CSS and JS assets
-     *
-     * @since 1.0.0
-     * @return void
-     */
+    private function render_sidebar() {
+        $mode = $this->config['sidebar_mode'];
+        $entity = $this->entity;
+        
+        $module_config = $this->config['module_config'] ?? $this->config;
+        $config = $module_config;
+        
+        if ($mode === 'detail') {
+            $item = $this->config['detail_item'];
+            $tab = $this->config['detail_tab'];
+            $related_data = $this->config['related_data'] ?? null;
+            require __DIR__ . '/detail-sidebar.php';
+        } 
+        elseif ($mode === 'create' || $mode === 'edit') {
+            $item = $this->config['form_item'];
+            $is_edit = ($mode === 'edit');
+            require __DIR__ . '/form-sidebar.php';
+        }
+    }
+    
     private function enqueue_assets() {
         wp_enqueue_style(
             'saw-tables',
@@ -289,7 +223,6 @@ class SAW_Component_Admin_Table {
             );
         }
         
-        // Sidebar assets
         $sidebar_css = __DIR__ . '/sidebar.css';
         if (file_exists($sidebar_css)) {
             wp_enqueue_style(
@@ -312,12 +245,6 @@ class SAW_Component_Admin_Table {
         }
     }
     
-    /**
-     * Render page header with title and inline controls
-     *
-     * @since 1.0.0
-     * @return void Outputs HTML directly
-     */
     private function render_header() {
         if (empty($this->config['title'])) {
             return;
@@ -338,30 +265,211 @@ class SAW_Component_Admin_Table {
                     <p class="saw-page-subtitle"><?php echo esc_html($this->config['subtitle']); ?></p>
                 <?php endif; ?>
             </div>
-            
-            <div class="saw-page-header-controls">
-                <?php if (!empty($this->config['filters'])): ?>
-                    <div class="saw-filters-wrapper">
-                        <?php echo $this->config['filters']; ?>
-                    </div>
-                <?php endif; ?>
-                
-                <?php if (!empty($this->config['search'])): ?>
-                    <div class="saw-search-wrapper">
-                        <?php echo $this->config['search']; ?>
-                    </div>
-                <?php endif; ?>
-            </div>
         </div>
         <?php
     }
     
     /**
-     * Render table or empty message
-     *
-     * @since 1.0.0
-     * @return void Outputs HTML directly
+     * Render search and filter controls
+     * 
+     * @since 6.0.0
      */
+    private function render_controls() {
+        if (!$this->config['enable_search'] && !$this->config['enable_filters']) {
+            return;
+        }
+        
+        $base_url = $this->get_base_url();
+        $current_params = $this->get_current_params();
+        
+        ?>
+        <div class="saw-table-controls">
+            <?php if ($this->config['enable_search']): ?>
+                <?php $this->render_search_form($base_url, $current_params); ?>
+            <?php endif; ?>
+            
+            <?php if ($this->config['enable_filters']): ?>
+                <?php $this->render_filters($base_url, $current_params); ?>
+            <?php endif; ?>
+        </div>
+        <?php
+    }
+    
+    /**
+     * Render search form
+     * 
+     * @since 6.0.0
+     */
+    private function render_search_form($base_url, $current_params) {
+        $search_value = $this->config['search_value'];
+        $placeholder = $this->config['search_placeholder'];
+        
+        ?>
+        <form method="GET" action="<?php echo esc_url($base_url); ?>" class="saw-search-form">
+            <?php
+            // Preserve filters
+            foreach ($current_params as $key => $value) {
+                if ($key !== 's' && $key !== 'paged') {
+                    echo '<input type="hidden" name="' . esc_attr($key) . '" value="' . esc_attr($value) . '">';
+                }
+            }
+            ?>
+            
+            <input type="search" 
+                   name="s" 
+                   value="<?php echo esc_attr($search_value); ?>" 
+                   placeholder="<?php echo esc_attr($placeholder); ?>"
+                   class="saw-search-input">
+            
+            <?php if (!empty($search_value)): ?>
+                <a href="<?php echo esc_url($this->build_url($base_url, array_diff_key($current_params, array('s' => '', 'paged' => '')))); ?>" 
+                   class="saw-search-clear" 
+                   title="Zrušit vyhledávání">×</a>
+            <?php endif; ?>
+        </form>
+        <?php
+    }
+    
+    /**
+     * Render filter controls
+     * 
+     * @since 6.0.0
+     */
+    private function render_filters($base_url, $current_params) {
+        if (empty($this->config['filters'])) {
+            return;
+        }
+        
+        ?>
+        <div class="saw-filters">
+            <?php foreach ($this->config['filters'] as $filter_key => $filter_config): ?>
+                <?php $this->render_single_filter($filter_key, $filter_config, $base_url, $current_params); ?>
+            <?php endforeach; ?>
+        </div>
+        <?php
+    }
+    
+    /**
+     * Render single filter control
+     * 
+     * @since 6.0.0
+     */
+    private function render_single_filter($filter_key, $filter_config, $base_url, $current_params) {
+        $filter_type = $filter_config['type'] ?? 'select';
+        $filter_value = $current_params[$filter_key] ?? '';
+        
+        if ($filter_type === 'select') {
+            $this->render_select_filter($filter_key, $filter_config, $filter_value, $base_url, $current_params);
+        }
+        // Můžeš přidat další typy filtrů: date_range, multiselect, atd.
+    }
+    
+    /**
+     * Render select filter
+     * 
+     * @since 6.0.0
+     */
+    private function render_select_filter($filter_key, $filter_config, $filter_value, $base_url, $current_params) {
+        $options = $filter_config['options'] ?? array();
+        $label = $filter_config['label'] ?? ucfirst($filter_key);
+        
+        ?>
+        <div class="saw-filter-item">
+            <form method="GET" action="<?php echo esc_url($base_url); ?>" class="saw-filter-form">
+                <?php
+                // Preserve other params
+                foreach ($current_params as $key => $value) {
+                    if ($key !== $filter_key && $key !== 'paged') {
+                        echo '<input type="hidden" name="' . esc_attr($key) . '" value="' . esc_attr($value) . '">';
+                    }
+                }
+                ?>
+                
+                <select name="<?php echo esc_attr($filter_key); ?>" 
+                        class="saw-select saw-filter-select" 
+                        onchange="this.form.submit()"
+                        aria-label="<?php echo esc_attr($label); ?>">
+                    <?php foreach ($options as $option_value => $option_label): ?>
+                        <option value="<?php echo esc_attr($option_value); ?>" 
+                                <?php selected($filter_value, $option_value); ?>>
+                            <?php echo esc_html($option_label); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </form>
+            
+            <?php if (!empty($filter_value)): ?>
+                <a href="<?php echo esc_url($this->build_url($base_url, array_diff_key($current_params, array($filter_key => '', 'paged' => '')))); ?>" 
+                   class="saw-filter-clear" 
+                   title="Zrušit filtr">
+                    <span class="dashicons dashicons-dismiss"></span>
+                </a>
+            <?php endif; ?>
+        </div>
+        <?php
+    }
+    
+    /**
+     * Get base URL without query params
+     * 
+     * @since 6.0.0
+     * @return string
+     */
+    private function get_base_url() {
+        $current_url = $_SERVER['REQUEST_URI'] ?? '';
+        if (strpos($current_url, '?') !== false) {
+            return substr($current_url, 0, strpos($current_url, '?'));
+        }
+        return $current_url;
+    }
+    
+    /**
+     * Get current URL parameters
+     * 
+     * @since 6.0.0
+     * @return array
+     */
+    private function get_current_params() {
+        $params = array();
+        
+        if (!empty($_GET['s'])) {
+            $params['s'] = sanitize_text_field($_GET['s']);
+        }
+        
+        // Get active filters
+        foreach ($this->config['filters'] as $filter_key => $filter_config) {
+            if (!empty($_GET[$filter_key])) {
+                $params[$filter_key] = sanitize_text_field($_GET[$filter_key]);
+            }
+        }
+        
+        if (!empty($_GET['orderby'])) {
+            $params['orderby'] = sanitize_text_field($_GET['orderby']);
+        }
+        
+        if (!empty($_GET['order'])) {
+            $params['order'] = sanitize_text_field($_GET['order']);
+        }
+        
+        return $params;
+    }
+    
+    /**
+     * Build URL with parameters
+     * 
+     * @since 6.0.0
+     * @param string $base_url Base URL
+     * @param array $params Query parameters
+     * @return string
+     */
+    private function build_url($base_url, $params) {
+        if (empty($params)) {
+            return $base_url;
+        }
+        
+        return $base_url . '?' . http_build_query($params);
+    }
+    
     private function render_table_or_empty() {
         if (empty($this->config['rows'])) {
             $this->render_empty_state();
@@ -370,12 +478,6 @@ class SAW_Component_Admin_Table {
         }
     }
     
-    /**
-     * Render empty state message
-     *
-     * @since 1.0.0
-     * @return void Outputs HTML directly
-     */
     private function render_empty_state() {
         ?>
         <div class="saw-empty-state">
@@ -398,156 +500,136 @@ class SAW_Component_Admin_Table {
         <?php
     }
     
-    /**
-     * Render data table
-     *
-     * @since 1.0.0
-     * @return void Outputs HTML directly
-     */
     private function render_table() {
         ?>
-        <table class="saw-admin-table">
-            <thead>
-                <tr>
-                    <?php foreach ($this->config['columns'] as $key => $column): ?>
-                        <?php
-                        $label = is_array($column) ? ($column['label'] ?? ucfirst($key)) : $column;
-                        $sortable = is_array($column) && isset($column['sortable']) ? $column['sortable'] : false;
-                        $width = is_array($column) && isset($column['width']) ? $column['width'] : '';
-                        $align = is_array($column) && isset($column['align']) ? $column['align'] : 'left';
-                        ?>
-                        <th style="<?php echo $width ? 'width: ' . esc_attr($width) . ';' : ''; ?> text-align: <?php echo esc_attr($align); ?>;">
-                            <?php if ($sortable): ?>
-                                <a href="<?php echo esc_url($this->get_sort_url($key, $this->config['orderby'], $this->config['order'])); ?>" class="saw-sortable">
-                                    <?php echo esc_html($label); ?>
-                                    <?php echo $this->get_sort_icon($key, $this->config['orderby'], $this->config['order']); ?>
-                                </a>
-                            <?php else: ?>
-                                <?php echo esc_html($label); ?>
-                            <?php endif; ?>
-                        </th>
-                    <?php endforeach; ?>
-                    
-                    <?php if (!empty($this->config['actions'])): ?>
-                        <th class="saw-actions-column">Akce</th>
-                    <?php endif; ?>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($this->config['rows'] as $row): ?>
-                    <?php
-                    $detail_url = !empty($this->config['detail_url']) 
-                        ? str_replace('{id}', intval($row['id'] ?? 0), $this->config['detail_url'])
-                        : '';
-                    
-                    $row_class = 'saw-table-row';
-                    if (!empty($detail_url)) {
-                        $row_class .= ' saw-clickable-row';
-                    }
-                    ?>
-                    <tr class="<?php echo esc_attr($row_class); ?>" 
-                        data-id="<?php echo esc_attr($row['id'] ?? ''); ?>"
-                        <?php if (!empty($detail_url)): ?>
-                            data-detail-url="<?php echo esc_url($detail_url); ?>"
-                        <?php endif; ?>>
-                        
+        <div class="saw-table-responsive-wrapper">
+            <table class="saw-admin-table">
+                <thead>
+                    <tr>
                         <?php foreach ($this->config['columns'] as $key => $column): ?>
-                            <?php $this->render_table_cell($row, $key, $column); ?>
+                            <?php
+                            $label = is_array($column) ? ($column['label'] ?? ucfirst($key)) : $column;
+                            $sortable = is_array($column) && isset($column['sortable']) ? $column['sortable'] : false;
+                            $width = is_array($column) && isset($column['width']) ? $column['width'] : '';
+                            $align = is_array($column) && isset($column['align']) ? $column['align'] : 'left';
+                            ?>
+                            <th style="<?php echo $width ? 'width: ' . esc_attr($width) . ';' : ''; ?> text-align: <?php echo esc_attr($align); ?>;">
+                                <?php if ($sortable): ?>
+                                    <a href="<?php echo esc_url($this->get_sort_url($key, $this->config['orderby'], $this->config['order'])); ?>" class="saw-sortable">
+                                        <?php echo esc_html($label); ?>
+                                        <?php echo $this->get_sort_icon($key, $this->config['orderby'], $this->config['order']); ?>
+                                    </a>
+                                <?php else: ?>
+                                    <?php echo esc_html($label); ?>
+                                <?php endif; ?>
+                            </th>
                         <?php endforeach; ?>
                         
                         <?php if (!empty($this->config['actions'])): ?>
-                            <?php $this->render_action_buttons($row); ?>
+                            <th class="saw-actions-column">Akce</th>
                         <?php endif; ?>
                     </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    <?php foreach ($this->config['rows'] as $row): ?>
+                        <?php
+                        $detail_url = !empty($this->config['detail_url']) 
+                            ? str_replace('{id}', intval($row['id'] ?? 0), $this->config['detail_url'])
+                            : '';
+                        
+                        $row_class = 'saw-table-row';
+                        if (!empty($detail_url)) {
+                            $row_class .= ' saw-clickable-row';
+                        }
+                        ?>
+                        <tr class="<?php echo esc_attr($row_class); ?>" 
+                            data-id="<?php echo esc_attr($row['id'] ?? ''); ?>"
+                            <?php if (!empty($detail_url)): ?>
+                                data-detail-url="<?php echo esc_url($detail_url); ?>"
+                            <?php endif; ?>>
+                            
+                            <?php foreach ($this->config['columns'] as $key => $column): ?>
+                                <?php $this->render_table_cell($row, $key, $column); ?>
+                            <?php endforeach; ?>
+                            
+                            <?php if (!empty($this->config['actions'])): ?>
+                                <?php $this->render_action_buttons($row); ?>
+                            <?php endif; ?>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
         <?php
     }
     
-    /**
-     * Render table cell based on column type
-     *
-     * @since 1.0.0
-     * @param array  $row    Row data
-     * @param string $key    Column key
-     * @param mixed  $column Column configuration
-     * @return void Outputs HTML directly
-     */
     private function render_table_cell($row, $key, $column) {
-    $value = $row[$key] ?? '';
-    $type = is_array($column) ? ($column['type'] ?? 'text') : 'text';
-    $align = is_array($column) && isset($column['align']) ? $column['align'] : 'left';
-    $class = is_array($column) && isset($column['class']) ? $column['class'] : '';
-    
-    $td_class = $class ? ' class="' . esc_attr($class) . '"' : '';
-    echo '<td' . $td_class . ' style="text-align: ' . esc_attr($align) . ';">';
-    
-    switch ($type) {
-        case 'image':
-            if (!empty($value)) {
-                echo '<img src="' . esc_url($value) . '" alt="" class="saw-table-image">';
-            }
-            break;
-            
-        case 'badge':
-            if ($value !== '' && $value !== null) {
-                $badge_class = 'saw-badge';
-                if (is_array($column) && isset($column['map'][$value])) {
-                    $badge_class .= ' saw-badge-' . $column['map'][$value];
-                }
-                $label = isset($column['labels'][$value]) 
-                    ? $column['labels'][$value] 
-                    : $value;
-                echo '<span class="' . esc_attr($badge_class) . '">' . esc_html($label) . '</span>';
-            }
-            break;
-            
-        case 'date':
-            if (!empty($value) && $value !== '0000-00-00' && $value !== '0000-00-00 00:00:00') {
-                $format = is_array($column) && isset($column['format']) ? $column['format'] : 'd.m.Y';
-                echo esc_html(date_i18n($format, strtotime($value)));
-            }
-            break;
-            
-        case 'boolean':
-            echo $value ? '<span class="dashicons dashicons-yes-alt" style="color: #10b981;"></span>' 
-                        : '<span class="dashicons dashicons-dismiss" style="color: #ef4444;"></span>';
-            break;
-            
-        case 'email':
-            if (!empty($value)) {
-                echo '<a href="mailto:' . esc_attr($value) . '">' . esc_html($value) . '</a>';
-            }
-            break;
-            
-        case 'custom':
-            if (is_array($column) && isset($column['callback']) && is_callable($column['callback'])) {
-                echo $column['callback']($value, $row);
-            } else {
-                echo esc_html($value);
-            }
-            break;
+        $value = $row[$key] ?? '';
+        $type = is_array($column) ? ($column['type'] ?? 'text') : 'text';
+        $align = is_array($column) && isset($column['align']) ? $column['align'] : 'left';
+        $class = is_array($column) && isset($column['class']) ? $column['class'] : '';
         
-        case 'html_raw':
-            echo $value;  // BEZ escapování - pro HTML obsah
-            break;
+        $td_class = $class ? ' class="' . esc_attr($class) . '"' : '';
+        echo '<td' . $td_class . ' style="text-align: ' . esc_attr($align) . ';">';
+        
+        switch ($type) {
+            case 'image':
+                if (!empty($value)) {
+                    echo '<img src="' . esc_url($value) . '" alt="" class="saw-table-image">';
+                }
+                break;
+                
+            case 'badge':
+                if ($value !== '' && $value !== null) {
+                    $badge_class = 'saw-badge';
+                    if (is_array($column) && isset($column['map'][$value])) {
+                        $badge_class .= ' saw-badge-' . $column['map'][$value];
+                    }
+                    $label = isset($column['labels'][$value]) 
+                        ? $column['labels'][$value] 
+                        : $value;
+                    echo '<span class="' . esc_attr($badge_class) . '">' . esc_html($label) . '</span>';
+                }
+                break;
+                
+            case 'date':
+                if (!empty($value) && $value !== '0000-00-00' && $value !== '0000-00-00 00:00:00') {
+                    $format = is_array($column) && isset($column['format']) ? $column['format'] : 'd.m.Y';
+                    echo esc_html(date_i18n($format, strtotime($value)));
+                }
+                break;
+                
+            case 'boolean':
+                echo $value ? '<span class="dashicons dashicons-yes-alt" style="color: #10b981;"></span>' 
+                            : '<span class="dashicons dashicons-dismiss" style="color: #ef4444;"></span>';
+                break;
+                
+            case 'email':
+                if (!empty($value)) {
+                    echo '<a href="mailto:' . esc_attr($value) . '">' . esc_html($value) . '</a>';
+                }
+                break;
+                
+            case 'custom':
+                if (is_array($column) && isset($column['callback']) && is_callable($column['callback'])) {
+                    echo $column['callback']($value, $row);
+                } else {
+                    echo esc_html($value);
+                }
+                break;
             
-        default:
-            echo esc_html($value);
-            break;
+            case 'html_raw':
+                echo $value;
+                break;
+                
+            default:
+                echo esc_html($value);
+                break;
+        }
+        
+        echo '</td>';
     }
     
-    echo '</td>';
-}
-    
-    /**
-     * Render action buttons for row
-     *
-     * @since 1.0.0
-     * @param array $row Row data
-     * @return void Outputs HTML directly
-     */
     private function render_action_buttons($row) {
         ?>
         <td class="saw-actions-cell">
@@ -558,6 +640,18 @@ class SAW_Component_Admin_Table {
                 
                 if (is_array($this->config['actions'])) {
                     foreach ($this->config['actions'] as $action) {
+                        if ($action === 'view' && !empty($this->config['detail_url'])) {
+                            $view_url = str_replace('{id}', intval($row['id'] ?? 0), $this->config['detail_url']);
+                            ?>
+                            <a href="<?php echo esc_url($view_url); ?>" 
+                               class="saw-action-btn saw-action-view" 
+                               title="Zobrazit"
+                               onclick="event.stopPropagation();">
+                                <span class="dashicons dashicons-visibility"></span>
+                            </a>
+                            <?php
+                        }
+                        
                         if ($action === 'edit' && $can_edit && !empty($this->config['edit_url'])) {
                             $edit_url = str_replace('{id}', intval($row['id'] ?? 0), $this->config['edit_url']);
                             ?>
@@ -590,12 +684,6 @@ class SAW_Component_Admin_Table {
         <?php
     }
     
-    /**
-     * Render pagination controls
-     *
-     * @since 1.0.0
-     * @return void Outputs HTML directly
-     */
     private function render_pagination() {
         if ($this->config['total_pages'] <= 1) {
             return;
@@ -603,11 +691,16 @@ class SAW_Component_Admin_Table {
         
         $page = $this->config['current_page'];
         $total_pages = $this->config['total_pages'];
-        $search = $this->config['search_value'];
+        $base_url = $this->get_base_url();
+        $current_params = $this->get_current_params();
+        
         ?>
         <div class="saw-pagination">
             <?php if ($page > 1): ?>
-                <a href="?paged=<?php echo ($page - 1); ?><?php echo $search ? '&s=' . urlencode($search) : ''; ?>" class="saw-pagination-link">
+                <?php
+                $prev_params = array_merge($current_params, array('paged' => $page - 1));
+                ?>
+                <a href="<?php echo esc_url($this->build_url($base_url, $prev_params)); ?>" class="saw-pagination-link">
                     « Předchozí
                 </a>
             <?php endif; ?>
@@ -616,14 +709,20 @@ class SAW_Component_Admin_Table {
                 <?php if ($i == $page): ?>
                     <span class="saw-pagination-link current"><?php echo $i; ?></span>
                 <?php else: ?>
-                    <a href="?paged=<?php echo $i; ?><?php echo $search ? '&s=' . urlencode($search) : ''; ?>" class="saw-pagination-link">
+                    <?php
+                    $page_params = array_merge($current_params, array('paged' => $i));
+                    ?>
+                    <a href="<?php echo esc_url($this->build_url($base_url, $page_params)); ?>" class="saw-pagination-link">
                         <?php echo $i; ?>
                     </a>
                 <?php endif; ?>
             <?php endfor; ?>
             
             <?php if ($page < $total_pages): ?>
-                <a href="?paged=<?php echo ($page + 1); ?><?php echo $search ? '&s=' . urlencode($search) : ''; ?>" class="saw-pagination-link">
+                <?php
+                $next_params = array_merge($current_params, array('paged' => $page + 1));
+                ?>
+                <a href="<?php echo esc_url($this->build_url($base_url, $next_params)); ?>" class="saw-pagination-link">
                     Další »
                 </a>
             <?php endif; ?>
@@ -631,12 +730,6 @@ class SAW_Component_Admin_Table {
         <?php
     }
     
-    /**
-     * Render floating action button
-     *
-     * @since 1.0.0
-     * @return void Outputs HTML directly
-     */
     private function render_floating_button() {
         if (empty($this->config['create_url'])) {
             return;
@@ -655,12 +748,6 @@ class SAW_Component_Admin_Table {
         <?php
     }
     
-    /**
-     * Render modal component if enabled
-     *
-     * @since 1.0.0
-     * @return void Outputs HTML directly
-     */
     private function render_modal() {
         if (!$this->config['enable_modal'] || empty($this->config['modal_id'])) {
             return;
@@ -704,14 +791,6 @@ class SAW_Component_Admin_Table {
         $modal->render();
     }
     
-    /**
-     * Render inline delete script
-     *
-     * Only renders once per page to avoid duplicates.
-     *
-     * @since 1.0.0
-     * @return void Outputs HTML directly
-     */
     private function render_delete_script() {
         static $script_added = false;
         
@@ -759,15 +838,6 @@ class SAW_Component_Admin_Table {
         <?php
     }
     
-    /**
-     * Get sort URL for column
-     *
-     * @since 1.0.0
-     * @param string $column          Column key
-     * @param string $current_orderby Current order by column
-     * @param string $current_order   Current order direction
-     * @return string Sort URL
-     */
     private function get_sort_url($column, $current_orderby, $current_order) {
         $new_order = 'ASC';
         
@@ -775,37 +845,20 @@ class SAW_Component_Admin_Table {
             $new_order = ($current_order === 'ASC') ? 'DESC' : 'ASC';
         }
         
-        $query_args = array(
+        $base_url = $this->get_base_url();
+        $current_params = $this->get_current_params();
+        
+        $sort_params = array_merge($current_params, array(
             'orderby' => $column,
             'order' => $new_order,
-        );
+        ));
         
-        if (isset($_GET['s']) && !empty($_GET['s'])) {
-            $query_args['s'] = sanitize_text_field($_GET['s']);
-        }
+        // Remove paged when sorting
+        unset($sort_params['paged']);
         
-        if (isset($_GET['paged'])) {
-            $query_args['paged'] = intval($_GET['paged']);
-        }
-        
-        foreach ($_GET as $key => $value) {
-            if (!in_array($key, array('orderby', 'order', 's', 'paged'))) {
-                $query_args[$key] = sanitize_text_field($value);
-            }
-        }
-        
-        return add_query_arg($query_args);
+        return $this->build_url($base_url, $sort_params);
     }
     
-    /**
-     * Get sort icon HTML for column
-     *
-     * @since 1.0.0
-     * @param string $column          Column key
-     * @param string $current_orderby Current order by column
-     * @param string $current_order   Current order direction
-     * @return string Icon HTML
-     */
     private function get_sort_icon($column, $current_orderby, $current_order) {
         if ($column !== $current_orderby) {
             return '<span class="dashicons dashicons-sort saw-sort-icon"></span>';

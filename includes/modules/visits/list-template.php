@@ -1,10 +1,10 @@
 <?php
 /**
- * Visits List Template - SIDEBAR VERSION
+ * Visits List Template
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visits
- * @version     2.1.0 - Added search and filters
+ * @version     3.0.0 - REFACTORED: Uses admin-table search & filters
  */
 
 if (!defined('ABSPATH')) {
@@ -30,102 +30,50 @@ if ($customer_id) {
     }
 }
 
-// Filtry
-$search = $search ?? '';
+// Připrav data pro search a filtry
+$search_value = $search ?? '';
 $status_filter = $status_filter ?? '';
 
-$status_options = array(
-    '' => 'Všechny stavy',
-    'draft' => 'Koncept',
-    'pending' => 'Čekající',
-    'confirmed' => 'Potvrzená',
-    'in_progress' => 'Probíhající',
-    'completed' => 'Dokončená',
-    'cancelled' => 'Zrušená',
-);
-
-// Base URL pro formuláře
-$current_url = $_SERVER['REQUEST_URI'] ?? '';
-if (strpos($current_url, '?') !== false) {
-    $base_url = substr($current_url, 0, strpos($current_url, '?'));
-} else {
-    $base_url = $current_url;
-}
-
-// STATUS FILTER
-$filter_html = '<div style="display: inline-flex; gap: 8px; align-items: center;">
-    <form method="GET" action="' . esc_url($base_url) . '" class="saw-filters-form" style="display: inline-flex; gap: 8px; align-items: center;">';
-        
-if (!empty($search)) {
-    $filter_html .= '<input type="hidden" name="s" value="' . esc_attr($search) . '">';
-}
-
-$filter_html .= '<select name="status" class="saw-select" onchange="this.form.submit()" style="min-width: 180px;">';
-
-foreach ($status_options as $value => $label) {
-    $selected = ($status_filter === $value) ? 'selected' : '';
-    $filter_html .= '<option value="' . esc_attr($value) . '" ' . $selected . '>' . esc_html($label) . '</option>';
-}
-
-$filter_html .= '</select>
-    </form>';
-
-// Reset button - zobraz jen když je aktivní filtr
-if (!empty($status_filter)) {
-    $reset_url = $base_url;
-    if (!empty($search)) {
-        $reset_url .= '?s=' . urlencode($search);
-    }
-    
-    $filter_html .= '<a href="' . esc_url($reset_url) . '" class="saw-button saw-button-secondary" style="padding: 6px 12px;">
-        <span class="dashicons dashicons-dismiss"></span>
-        Zrušit filtr
-    </a>';
-}
-
-$filter_html .= '</div>';
-
-// SEARCH
-$search_html = '<form method="GET" action="' . esc_url($base_url) . '" class="saw-search-form" style="display: inline-flex; gap: 8px; align-items: center;">';
-    
-if (!empty($status_filter)) {
-    $search_html .= '<input type="hidden" name="status" value="' . esc_attr($status_filter) . '">';
-}
-
-$search_html .= '<input type="search" 
-           name="s" 
-           value="' . esc_attr($search) . '" 
-           placeholder="Hledat návštěvu..." 
-           class="saw-search-input"
-           style="min-width: 250px;">
-    <button type="submit" class="saw-button saw-button-primary">
-        <span class="dashicons dashicons-search"></span>
-    </button>
-</form>';
-
-// Reset search button
-if (!empty($search)) {
-    $reset_search_url = $base_url;
-    if (!empty($status_filter)) {
-        $reset_search_url .= '?status=' . urlencode($status_filter);
-    }
-    
-    $search_html .= '<a href="' . esc_url($reset_search_url) . '" class="saw-button saw-button-secondary" title="Zrušit vyhledávání">
-        <span class="dashicons dashicons-no"></span>
-    </a>';
-}
 ?>
 
 <div class="saw-module-visits">
     <?php
     $table = new SAW_Component_Admin_Table('visits', array(
         'title' => 'Návštěvy',
+        'icon' => '📅',
         'create_url' => home_url('/admin/visits/create'),
         'edit_url' => home_url('/admin/visits/{id}/edit'),
         'detail_url' => home_url('/admin/visits/{id}/'),
         
         'module_config' => $this->config,
         
+        // ✅ ZAPNUTÍ SEARCH
+        'enable_search' => true,
+        'search_placeholder' => 'Hledat návštěvu...',
+        'search_value' => $search_value,
+        
+        // ✅ ZAPNUTÍ FILTRŮ
+        'enable_filters' => true,
+        'filters' => array(
+            'status' => array(
+                'label' => 'Stav',
+                'type' => 'select',
+                'options' => array(
+                    '' => 'Všechny stavy',
+                    'draft' => 'Koncept',
+                    'pending' => 'Čekající',
+                    'confirmed' => 'Potvrzená',
+                    'in_progress' => 'Probíhající',
+                    'completed' => 'Dokončená',
+                    'cancelled' => 'Zrušená',
+                ),
+            ),
+        ),
+        'active_filters' => array(
+            'status' => $status_filter,
+        ),
+        
+        // Sidebar
         'sidebar_mode' => $sidebar_mode ?? null,
         'detail_item' => $detail_item ?? null,
         'form_item' => $form_item ?? null,
@@ -133,10 +81,7 @@ if (!empty($search)) {
         'related_data' => $related_data ?? null,
         'branches' => $branches ?? array(),
         
-        'filters' => $filter_html,
-        'search' => $search_html,
-        'search_value' => $search,
-        
+        // Columns
         'columns' => array(            
             'company_name' => array(
                 'label' => 'Firma',
@@ -171,6 +116,7 @@ if (!empty($search)) {
             ),
         ),
         
+        // Data
         'rows' => $items,
         'total_items' => $total,
         'current_page' => $page,

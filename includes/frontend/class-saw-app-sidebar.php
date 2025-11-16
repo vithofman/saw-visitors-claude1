@@ -358,7 +358,6 @@ class SAW_App_Sidebar {
                 'items' => array(
                     array('id' => 'dashboard', 'label' => 'Dashboard', 'url' => '/admin/', 'icon' => '📊'),
                     array('id' => 'invitations', 'label' => 'Pozvánky', 'url' => '/admin/invitations', 'icon' => '📧'),
-                    array('id' => 'visits', 'label' => 'Přehled návštěv', 'url' => '/admin/visits', 'icon' => '👥'),
                     array('id' => 'statistics', 'label' => 'Statistiky', 'url' => '/admin/statistics', 'icon' => '📈'),
                 ),
             ),
@@ -370,6 +369,9 @@ class SAW_App_Sidebar {
                 'heading' => 'Návštěvy',
                 'items' => array(
 		    array('id' => 'companies', 'label' => 'Firmy', 'url' => '/admin/companies', 'icon' => '🏭'),
+                    array('id' => 'visits', 'label' => 'Přehled návštěv', 'url' => '/admin/visits', 'icon' => '👥'),
+                    array('id' => 'visitors', 'label' => 'Návštěvníci', 'url' => '/admin/visitors', 'icon' => '👥'),
+
                 ),
             ),
 
