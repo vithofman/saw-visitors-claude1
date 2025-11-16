@@ -53,7 +53,8 @@ class SAW_Database {
             'visitors',
             'visit_hosts',
             'visit_daily_logs',
-            'visitor_certificates'
+            'visitor_certificates',
+	    'visit_schedules'
         ];
     }
     

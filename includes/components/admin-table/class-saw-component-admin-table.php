@@ -475,67 +475,71 @@ class SAW_Component_Admin_Table {
      * @return void Outputs HTML directly
      */
     private function render_table_cell($row, $key, $column) {
-        $value = $row[$key] ?? '';
-        $type = is_array($column) ? ($column['type'] ?? 'text') : 'text';
-        $align = is_array($column) && isset($column['align']) ? $column['align'] : 'left';
-        $class = is_array($column) && isset($column['class']) ? $column['class'] : '';
-        
-        $td_class = $class ? ' class="' . esc_attr($class) . '"' : '';
-        echo '<td' . $td_class . ' style="text-align: ' . esc_attr($align) . ';">';
-        
-        switch ($type) {
-            case 'image':
-                if (!empty($value)) {
-                    echo '<img src="' . esc_url($value) . '" alt="" class="saw-table-image">';
+    $value = $row[$key] ?? '';
+    $type = is_array($column) ? ($column['type'] ?? 'text') : 'text';
+    $align = is_array($column) && isset($column['align']) ? $column['align'] : 'left';
+    $class = is_array($column) && isset($column['class']) ? $column['class'] : '';
+    
+    $td_class = $class ? ' class="' . esc_attr($class) . '"' : '';
+    echo '<td' . $td_class . ' style="text-align: ' . esc_attr($align) . ';">';
+    
+    switch ($type) {
+        case 'image':
+            if (!empty($value)) {
+                echo '<img src="' . esc_url($value) . '" alt="" class="saw-table-image">';
+            }
+            break;
+            
+        case 'badge':
+            if ($value !== '' && $value !== null) {
+                $badge_class = 'saw-badge';
+                if (is_array($column) && isset($column['map'][$value])) {
+                    $badge_class .= ' saw-badge-' . $column['map'][$value];
                 }
-                break;
-                
-            case 'badge':
-    if ($value !== '' && $value !== null) {  // OPRAVA: Povolit 0!
-        $badge_class = 'saw-badge';
-        if (is_array($column) && isset($column['map'][$value])) {
-            $badge_class .= ' saw-badge-' . $column['map'][$value];
-        }
-        $label = isset($column['labels'][$value]) 
-            ? $column['labels'][$value] 
-            : $value;
-        echo '<span class="' . esc_attr($badge_class) . '">' . esc_html($label) . '</span>';
-    }
-    break;
-                
-            case 'date':
-                if (!empty($value) && $value !== '0000-00-00' && $value !== '0000-00-00 00:00:00') {
-                    $format = is_array($column) && isset($column['format']) ? $column['format'] : 'd.m.Y';
-                    echo esc_html(date_i18n($format, strtotime($value)));
-                }
-                break;
-                
-            case 'boolean':
-                echo $value ? '<span class="dashicons dashicons-yes-alt" style="color: #10b981;"></span>' 
-                            : '<span class="dashicons dashicons-dismiss" style="color: #ef4444;"></span>';
-                break;
-                
-            case 'email':
-                if (!empty($value)) {
-                    echo '<a href="mailto:' . esc_attr($value) . '">' . esc_html($value) . '</a>';
-                }
-                break;
-                
-            case 'custom':
-                if (is_array($column) && isset($column['callback']) && is_callable($column['callback'])) {
-                    echo $column['callback']($value, $row);
-                } else {
-                    echo esc_html($value);
-                }
-                break;
-                
-            default:
+                $label = isset($column['labels'][$value]) 
+                    ? $column['labels'][$value] 
+                    : $value;
+                echo '<span class="' . esc_attr($badge_class) . '">' . esc_html($label) . '</span>';
+            }
+            break;
+            
+        case 'date':
+            if (!empty($value) && $value !== '0000-00-00' && $value !== '0000-00-00 00:00:00') {
+                $format = is_array($column) && isset($column['format']) ? $column['format'] : 'd.m.Y';
+                echo esc_html(date_i18n($format, strtotime($value)));
+            }
+            break;
+            
+        case 'boolean':
+            echo $value ? '<span class="dashicons dashicons-yes-alt" style="color: #10b981;"></span>' 
+                        : '<span class="dashicons dashicons-dismiss" style="color: #ef4444;"></span>';
+            break;
+            
+        case 'email':
+            if (!empty($value)) {
+                echo '<a href="mailto:' . esc_attr($value) . '">' . esc_html($value) . '</a>';
+            }
+            break;
+            
+        case 'custom':
+            if (is_array($column) && isset($column['callback']) && is_callable($column['callback'])) {
+                echo $column['callback']($value, $row);
+            } else {
                 echo esc_html($value);
-                break;
-        }
+            }
+            break;
         
-        echo '</td>';
+        case 'html_raw':
+            echo $value;  // BEZ escapování - pro HTML obsah
+            break;
+            
+        default:
+            echo esc_html($value);
+            break;
     }
+    
+    echo '</td>';
+}
     
     /**
      * Render action buttons for row

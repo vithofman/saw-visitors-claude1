@@ -4,7 +4,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visits
- * @version     1.0.0
+ * @version     2.0.0 - REFACTORED: Multiple day schedules support
  */
 
 if (!defined('ABSPATH')) {
@@ -64,18 +64,6 @@ return array(
             'sanitize' => 'sanitize_text_field',
             'default' => 'pending',
         ),
-        'planned_date_from' => array(
-            'type' => 'datetime-local',
-            'label' => 'Datum a čas od',
-            'required' => false,
-            'sanitize' => 'sanitize_text_field',
-        ),
-        'planned_date_to' => array(
-            'type' => 'datetime-local',
-            'label' => 'Datum a čas do',
-            'required' => false,
-            'sanitize' => 'sanitize_text_field',
-        ),
         'invitation_email' => array(
             'type' => 'email',
             'label' => 'Email pro pozvánku',
@@ -91,9 +79,9 @@ return array(
     ),
     
     'list_config' => array(
-        'columns' => array('id', 'company_id', 'planned_date_from', 'planned_date_to', 'status'),
+        'columns' => array('id', 'company_id', 'schedule_dates', 'status'),
         'searchable' => array(),
-        'sortable' => array('id', 'planned_date_from'),
+        'sortable' => array('id'),
         'filters' => array(),
         'per_page' => 20,
         'enable_detail_modal' => true,
@@ -105,9 +93,6 @@ return array(
         'invalidate_on' => array('save', 'delete'),
     ),
     
-    // ✅ CRITICAL: Custom AJAX actions for this module
-    // Pattern: 'ajax_action_name' => 'controller_method_name'
-    // This registers: wp_ajax_saw_get_hosts_by_branch -> SAW_Module_Visits_Controller::ajax_get_hosts_by_branch()
     'custom_ajax_actions' => array(
         'saw_get_hosts_by_branch' => 'ajax_get_hosts_by_branch',
     ),

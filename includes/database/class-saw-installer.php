@@ -155,6 +155,7 @@ class SAW_Installer {
             
             // Visitor Training System (5)
             'visits',
+	    'visit_schedules',
             'visitors',
             'visit_hosts',
             'visit_daily_logs',
@@ -244,6 +245,9 @@ class SAW_Installer {
             array('table' => 'visits', 'constraint' => 'fk_visit_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'visits', 'constraint' => 'fk_visit_company', 'column' => 'company_id', 'ref_table' => 'companies', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
             
+	    // visit_schedules
+	    array('table' => 'visit_schedules', 'constraint' => 'fk_schedule_visit', 'column' => 'visit_id', 'ref_table' => 'visits', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+
             // visitors
             array('table' => 'visitors', 'constraint' => 'fk_visitor_visit', 'column' => 'visit_id', 'ref_table' => 'visits', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             

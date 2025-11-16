@@ -1,7 +1,6 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-// Load Select-Create component
 if (!class_exists('SAW_Component_Select_Create')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/select-create/class-saw-component-select-create.php';
 }
@@ -49,7 +48,6 @@ if ($is_edit && !empty($item['branch_id'])) {
     $selected_branch_id = $context_branch_id;
 }
 
-// Načtení existujících hostů pro edit mode
 $existing_host_ids = array();
 if ($is_edit && !empty($item['id'])) {
     $existing_host_ids = $wpdb->get_col($wpdb->prepare(
@@ -115,7 +113,6 @@ $form_action = $is_edit
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
                         <?php
-                        // ✅ NOVÝ: Select-Create komponenta pro firmy
                         $company_select = new SAW_Component_Select_Create('company_id', array(
                             'label' => 'Firma',
                             'options' => $companies,
@@ -160,14 +157,82 @@ $form_action = $is_edit
                 </div>
                 
                 <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-6">
-                        <label for="planned_date_from" class="saw-label">Datum a čas od</label>
-                        <input type="datetime-local" name="planned_date_from" id="planned_date_from" class="saw-input" value="<?php echo esc_attr($item['planned_date_from'] ?? ''); ?>">
-                    </div>
-                    
-                    <div class="saw-form-group saw-col-6">
-                        <label for="planned_date_to" class="saw-label">Datum a čas do</label>
-                        <input type="datetime-local" name="planned_date_to" id="planned_date_to" class="saw-input" value="<?php echo esc_attr($item['planned_date_to'] ?? ''); ?>">
+                    <div class="saw-form-group saw-col-12">
+                        <label class="saw-label">Dny návštěvy</label>
+                        
+                        <div id="visit-schedule-container" class="saw-schedule-container">
+                            <?php
+                            $schedules = array();
+                            if ($is_edit && !empty($item['id'])) {
+                                $schedules = $wpdb->get_results($wpdb->prepare(
+                                    "SELECT * FROM %i WHERE visit_id = %d ORDER BY sort_order ASC",
+                                    $wpdb->prefix . 'saw_visit_schedules',
+                                    $item['id']
+                                ), ARRAY_A);
+                            }
+                            
+                            if (empty($schedules)) {
+                                $schedules = array(array('date' => '', 'time_from' => '', 'time_to' => '', 'notes' => ''));
+                            }
+                            
+                            foreach ($schedules as $index => $schedule): ?>
+                                <div class="saw-schedule-row" data-index="<?php echo $index; ?>">
+                                    <div class="saw-schedule-row-fields">
+                                        <div class="saw-schedule-field-group">
+                                            <div class="saw-schedule-field saw-schedule-date">
+                                                <label>Datum</label>
+                                                <input type="date" 
+                                                       name="schedule_dates[]" 
+                                                       value="<?php echo esc_attr($schedule['date'] ?? ''); ?>" 
+                                                       class="saw-input saw-schedule-date-input"
+                                                       required>
+                                            </div>
+                                            
+                                            <div class="saw-schedule-field saw-schedule-time">
+                                                <label>Čas od</label>
+                                                <input type="time" 
+                                                       name="schedule_times_from[]" 
+                                                       value="<?php echo esc_attr($schedule['time_from'] ?? ''); ?>" 
+                                                       class="saw-input saw-schedule-time-input">
+                                            </div>
+                                            
+                                            <div class="saw-schedule-field saw-schedule-time">
+                                                <label>Čas do</label>
+                                                <input type="time" 
+                                                       name="schedule_times_to[]" 
+                                                       value="<?php echo esc_attr($schedule['time_to'] ?? ''); ?>" 
+                                                       class="saw-input saw-schedule-time-input">
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="saw-schedule-field saw-schedule-notes-full">
+                                            <label>Poznámka (volitelné)</label>
+                                            <input type="text" 
+                                                   name="schedule_notes[]" 
+                                                   value="<?php echo esc_attr($schedule['notes'] ?? ''); ?>" 
+                                                   class="saw-input saw-schedule-notes-input"
+                                                   placeholder="Poznámka k danému dni">
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="saw-schedule-row-actions">
+                                        <button type="button" 
+                                                class="saw-remove-schedule-day" 
+                                                title="Odstranit den"
+                                                <?php echo count($schedules) === 1 ? 'disabled' : ''; ?>>
+                                            <span class="dashicons dashicons-trash"></span>
+                                        </button>
+                                        <button type="button" class="saw-add-schedule-day-inline" title="Přidat další den">
+                                            <span class="dashicons dashicons-plus-alt"></span>
+                                        </button>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                        
+                        <p class="saw-field-hint">
+                            Přidejte jeden nebo více dnů, kdy návštěva proběhne. Každý den může mít různý čas.
+                        </p>
                     </div>
                 </div>
                 
@@ -185,7 +250,6 @@ $form_action = $is_edit
                     </div>
                 </div>
                 
-                <!-- ✅ NOVÝ: Moderní checkbox výběr hostů -->
                 <div class="saw-form-row field-hosts-row">
                     <div class="saw-form-group saw-col-12">
                         <label class="saw-label saw-required">
@@ -230,216 +294,10 @@ $form_action = $is_edit
 </div>
 
 <style>
-/* Profesionální styly pro host checkboxy - identické s Users → Oddělení */
-.saw-host-item {
-    padding: 12px 16px;
-    border-bottom: 1px solid #f0f0f1;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    transition: all 0.15s ease;
-    cursor: pointer;
-    background: #fff;
-}
-.saw-host-item:hover {
-    background: #f6f7f7;
-}
-.saw-host-item.selected {
-    background: #e7f5ff;
-    border-left: 3px solid #0073aa;
-}
-.saw-host-item:last-child {
-    border-bottom: none;
-}
-.saw-host-item input[type="checkbox"] {
-    margin: 0;
-    cursor: pointer;
-    width: 18px;
-    height: 18px;
-    flex-shrink: 0;
-}
-.saw-host-item label {
-    flex: 1;
-    cursor: pointer;
-    margin: 0;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    pointer-events: none;
-}
-.saw-host-name {
-    font-weight: 600;
-    color: #2c3338;
-}
-.saw-host-role {
-    color: #666;
-    font-size: 13px;
-    font-weight: 400;
-}
-.saw-host-controls {
-    display: flex !important;
-}
-#hosts-list::-webkit-scrollbar {
-    width: 8px;
-}
-#hosts-list::-webkit-scrollbar-track {
-    background: #f1f1f1;
-}
-#hosts-list::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 4px;
-}
+<?php readfile(SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/visits.css'); ?>
 </style>
 
 <script>
-jQuery(document).ready(function($) {
-    const branchSelect = $('#branch_id');
-    const hostList = $('#hosts-list');
-    const hostControls = $('.saw-host-controls');
-    const searchInput = $('#host-search');
-    const selectAllCb = $('#select-all-host');
-    const selectedSpan = $('#host-selected');
-    const totalSpan = $('#host-total');
-    const counterDiv = $('#host-counter');
-    
-    let allHosts = [];
-    
-    // ✅ Existující hostitelé (při editaci)
-    let existingIds = <?php echo json_encode(array_map('intval', $existing_host_ids)); ?>;
-    
-    const ajaxUrl = (window.sawGlobal && window.sawGlobal.ajaxurl) || '/wp-admin/admin-ajax.php';
-    const ajaxNonce = (window.sawGlobal && window.sawGlobal.nonce) || '<?php echo wp_create_nonce("saw_ajax_nonce"); ?>';
-    
-    branchSelect.on('change', loadHosts);
-    searchInput.on('input', filterHosts);
-    selectAllCb.on('change', toggleAll);
-    
-    // Načtení při prvním zobrazení (pokud je branch_id již vybraná)
-    if (branchSelect.val()) {
-        loadHosts();
-    }
-    
-    function loadHosts() {
-        const branchId = branchSelect.val();
-        
-        if (!branchId) {
-            hostList.html('<p class="saw-text-muted" style="padding: 20px; margin: 0; text-align: center;">Nejprve vyberte pobočku výše</p>');
-            hostControls.hide();
-            return;
-        }
-        
-        hostList.html('<p class="saw-text-muted" style="padding: 20px; margin: 0; text-align: center;"><span class="dashicons dashicons-update-alt" style="animation: rotation 1s infinite linear;"></span> Načítám uživatele...</p>');
-        
-        $.ajax({
-            url: ajaxUrl,
-            method: 'POST',
-            data: {
-                action: 'saw_get_hosts_by_branch',
-                nonce: ajaxNonce,
-                branch_id: branchId
-            },
-            success: function(response) {
-                if (response.success && response.data.hosts) {
-                    allHosts = response.data.hosts;
-                    renderHosts();
-                    hostControls.show();
-                } else {
-                    hostList.html('<p class="saw-text-muted" style="padding: 20px; margin: 0; text-align: center;">Žádní uživatelé nenalezeni</p>');
-                    hostControls.hide();
-                }
-            },
-            error: function() {
-                hostList.html('<p class="saw-text-muted" style="padding: 20px; margin: 0; text-align: center; color: #d63638;">❌ Chyba při načítání uživatelů</p>');
-                hostControls.hide();
-            }
-        });
-    }
-    
-    function renderHosts() {
-        let html = '';
-        
-        $.each(allHosts, function(index, h) {
-            const hostId = parseInt(h.id);
-            const checked = existingIds.includes(hostId);
-            
-            const label = `<span class="saw-host-name">${h.first_name} ${h.last_name}</span><span class="saw-host-role">(${h.role})</span>`;
-            
-            html += `<div class="saw-host-item ${checked ? 'selected' : ''}" data-id="${hostId}" data-name="${(h.first_name + ' ' + h.last_name).toLowerCase()}" data-role="${h.role.toLowerCase()}">
-                <input type="checkbox" name="hosts[]" value="${hostId}" ${checked ? 'checked' : ''} id="host-${hostId}">
-                <label for="host-${hostId}">${label}</label>
-            </div>`;
-        });
-        
-        hostList.html(html);
-        
-        // Klik na celý řádek přepne checkbox
-        $('.saw-host-item').on('click', function(e) {
-            if (e.target.type !== 'checkbox') {
-                const cb = $(this).find('input[type="checkbox"]');
-                cb.prop('checked', !cb.prop('checked')).trigger('change');
-            }
-        });
-        
-        hostList.on('change', 'input[type="checkbox"]', function() {
-            $(this).closest('.saw-host-item').toggleClass('selected', this.checked);
-            updateCounter();
-            updateSelectAllState();
-        });
-        
-        updateCounter();
-        updateSelectAllState();
-    }
-    
-    function filterHosts() {
-        const term = searchInput.val().toLowerCase().trim();
-        
-        $('.saw-host-item').each(function() {
-            const $item = $(this);
-            const name = $item.data('name');
-            const role = $item.data('role');
-            
-            const matches = name.includes(term) || role.includes(term);
-            $item.toggle(matches);
-        });
-        
-        updateCounter();
-    }
-    
-    function toggleAll() {
-        const checked = selectAllCb.prop('checked');
-        $('.saw-host-item:visible input[type="checkbox"]').prop('checked', checked).trigger('change');
-    }
-    
-    function updateCounter() {
-        const visible = $('.saw-host-item:visible').length;
-        const selected = $('.saw-host-item:visible input[type="checkbox"]:checked').length;
-        
-        selectedSpan.text(selected);
-        totalSpan.text(visible);
-        
-        // Změna barvy podle počtu vybraných
-        if (selected === 0) {
-            counterDiv.css('background', '#d63638'); // červená
-        } else if (selected === visible) {
-            counterDiv.css('background', '#00a32a'); // zelená
-        } else {
-            counterDiv.css('background', '#0073aa'); // modrá
-        }
-    }
-    
-    function updateSelectAllState() {
-        const visible = $('.saw-host-item:visible').length;
-        const selected = $('.saw-host-item:visible input[type="checkbox"]:checked').length;
-        
-        selectAllCb.prop('checked', visible > 0 && selected === visible);
-    }
-});
+window.sawVisitExistingHosts = <?php echo json_encode(array_map('intval', $existing_host_ids)); ?>;
+<?php readfile(SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/visits.js'); ?>
 </script>
-
-<style>
-@keyframes rotation {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-</style>

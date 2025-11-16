@@ -10,8 +10,6 @@ function saw_get_schema_visits($table_name, $prefix, $charset_collate) {
 		visit_type ENUM('planned', 'walk_in') NOT NULL,
 		status ENUM('draft', 'pending', 'confirmed', 'in_progress', 'completed', 'cancelled') NOT NULL DEFAULT 'pending',
 		pin_code VARCHAR(6) NULL,
-		planned_date_from DATE NULL,
-		planned_date_to DATE NULL,
 		invitation_email VARCHAR(255) NULL,
 		invitation_token VARCHAR(64) NULL,
 		invitation_sent_at DATETIME NULL,
@@ -31,7 +29,6 @@ function saw_get_schema_visits($table_name, $prefix, $charset_collate) {
 		KEY idx_customer_branch (customer_id, branch_id),
 		KEY idx_company (company_id),
 		KEY idx_status (status),
-		KEY idx_pin (pin_code, customer_id),
-		KEY idx_dates (planned_date_from, planned_date_to)
+		KEY idx_pin (pin_code, customer_id)
 	) {$charset_collate};";
 }

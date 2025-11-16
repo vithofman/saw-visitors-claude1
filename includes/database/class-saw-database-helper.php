@@ -67,6 +67,7 @@ class SAW_Database_Helper {
             
             // Visitor Training System (5)
             'visits',
+	    'visit_schedules',
             'visitors',
             'visit_hosts',
             'visit_daily_logs',

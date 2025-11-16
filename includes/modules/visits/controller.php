@@ -4,6 +4,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visits
+ * @version     2.1.0 - Added search, filters, and schedule-based sorting
  */
 
 if (!defined('ABSPATH')) {
@@ -22,14 +23,6 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
 {
     use SAW_AJAX_Handlers;
     
-    /**
-     * Constructor - Initialize controller with config and model
-     * 
-     * Loads module configuration and initializes model.
-     * AJAX handlers are registered via universal system.
-     * 
-     * @since 1.0.0
-     */
     public function __construct() {
         $module_path = SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/';
         
@@ -39,46 +32,96 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         
         require_once $module_path . 'model.php';
         $this->model = new SAW_Module_Visits_Model($this->config);
+        
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'));
     }
     
-    /**
-     * Display list of all companies with optional sidebar
-     * 
-     * Uses universal render_list_view() from Base Controller.
-     * Automatically handles sidebar modes (detail, create, edit).
-     * 
-     * OVERRIDE: Explicitly adds branch_id filter from context
-     * 
-     * @since 1.0.0
-     * @return void
-     */
-    public function index() {
-        // Get branch ID from context BEFORE calling render_list_view
-        $branch_id = SAW_Context::get_branch_id();
-        
-        // Get list data with explicit branch filter
-        $filters = array();
-        if ($branch_id) {
-            $filters['branch_id'] = $branch_id;
+    public function enqueue_assets() {
+        if (!is_admin()) {
+            return;
         }
         
-        // Pass filters to render_list_view
-        $list_data = $this->get_list_data($filters);
+        $current_url = $_SERVER['REQUEST_URI'] ?? '';
         
-        $this->render_list_view($list_data);
+        if (strpos($current_url, '/admin/visits') === false) {
+            return;
+        }
+        
+        wp_enqueue_style(
+            'saw-visits-css',
+            SAW_VISITORS_PLUGIN_URL . 'includes/modules/visits/visits.css',
+            array(),
+            SAW_VISITORS_VERSION
+        );
+        
+        wp_enqueue_script(
+            'saw-visits-scripts',
+            SAW_VISITORS_PLUGIN_URL . 'includes/modules/visits/scripts.js',
+            array('jquery'),
+            SAW_VISITORS_VERSION,
+            true
+        );
+        
+        wp_enqueue_script(
+            'saw-visits-js',
+            SAW_VISITORS_PLUGIN_URL . 'includes/modules/visits/visits.js',
+            array('jquery'),
+            SAW_VISITORS_VERSION,
+            true
+        );
     }
     
-    /**
-     * AJAX: Get hosts by branch
-     * 
-     * Returns list of users (admin, super_manager, manager) for selected branch.
-     * Used for dynamic loading of host checkboxes in visit form.
-     * 
-     * @since 1.0.0
-     * @return void (JSON response)
-     */
+    public function index() {
+    $branch_id = SAW_Context::get_branch_id();
+    
+    $filters = array();
+    if ($branch_id) {
+        $filters['branch_id'] = $branch_id;
+    }
+    
+    // Search
+    if (!empty($_GET['s'])) {
+        $filters['search'] = sanitize_text_field($_GET['s']);
+    }
+    
+    // Status filter
+    if (!empty($_GET['status'])) {
+        $filters['status'] = sanitize_text_field($_GET['status']);
+    }
+    
+    // Sorting
+    if (!empty($_GET['orderby'])) {
+        $filters['orderby'] = sanitize_text_field($_GET['orderby']);
+    }
+    if (!empty($_GET['order'])) {
+        $filters['order'] = sanitize_text_field($_GET['order']);
+    }
+    
+    // Pagination
+    if (!empty($_GET['paged'])) {
+        $filters['page'] = intval($_GET['paged']);
+    }
+    
+    // Zavolej model PŘÍMO
+    $list_data = $this->model->get_all($filters);
+    
+    // PŘIDEJ SCHEDULES DO KAŽDÉHO ŘÁDKU
+    foreach ($list_data['items'] as &$item) {
+        $item['schedule_dates_formatted'] = $this->render_schedule_column($item);
+    }
+    unset($item);
+    
+    // Přidej filtry zpátky do list_data
+    $list_data['search'] = $filters['search'] ?? '';
+    $list_data['status_filter'] = $filters['status'] ?? '';
+    $list_data['orderby'] = $filters['orderby'] ?? 'first_schedule_date';
+    $list_data['order'] = $filters['order'] ?? 'DESC';
+    
+    // ✅ POUŽIJ render_list_view() - má správný layout!
+    $this->render_list_view($list_data);
+}
+    
     public function ajax_get_hosts_by_branch() {
-        // Verify nonce
         check_ajax_referer('saw_ajax_nonce', 'nonce');
         
         $branch_id = isset($_POST['branch_id']) ? intval($_POST['branch_id']) : 0;
@@ -112,15 +155,6 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         wp_send_json_success(array('hosts' => $hosts));
     }
     
-    /**
-     * Prepare and sanitize form data from POST request
-     * 
-     * Extracts and sanitizes all company fields from the POST array.
-     * 
-     * @since 1.0.0
-     * @param array $post Raw POST data
-     * @return array Sanitized form data
-     */
     protected function prepare_form_data($post) {
         $data = array();
         
@@ -136,7 +170,7 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
             $data['company_id'] = intval($post['company_id']);
         }
         
-        $text_fields = array('visit_type', 'status', 'planned_date_from', 'planned_date_to', 'purpose');
+        $text_fields = array('visit_type', 'status', 'purpose');
         foreach ($text_fields as $field) {
             if (isset($post[$field])) {
                 $data[$field] = sanitize_text_field($post[$field]);
@@ -150,18 +184,7 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         return $data;
     }
     
-    /**
-     * Hook: Before save operations
-     * 
-     * Auto-sets customer_id from context if not provided.
-     * Can be extended for additional pre-save logic.
-     * 
-     * @since 1.0.0
-     * @param array $data Form data
-     * @return array|WP_Error Modified data or error
-     */
     protected function before_save($data) {
-        // Auto-set customer_id from context if empty
         if (empty($data['customer_id'])) {
             $data['customer_id'] = SAW_Context::get_customer_id();
         }
@@ -169,41 +192,16 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         return $data;
     }
     
-    /**
-     * Hook: After save operations
-     * 
-     * Called after successful create or update.
-     * Handles host assignments for visits.
-     * 
-     * FIXED: Merged duplicate method - now handles both cache invalidation and host saving
-     * 
-     * @since 1.0.0
-     * @param int $id Visit ID (new ID for create, existing ID for update)
-     * @return void
-     */
     protected function after_save($id) {
-        // Save hosts if provided in POST data
         if (isset($_POST['hosts']) && is_array($_POST['hosts'])) {
             $this->model->save_hosts($id, array_map('intval', $_POST['hosts']));
         }
         
-        // Additional post-save logic can be added here:
-        // - Cache invalidation (handled by model)
-        // - Activity logging
-        // - Notification sending
-        // - Related record updates
+        if (isset($_POST['schedule_dates']) && is_array($_POST['schedule_dates'])) {
+            $this->model->save_schedules($id, $_POST);
+        }
     }
     
-    /**
-     * Format company data for detail modal
-     * 
-     * Transforms raw database data into a format suitable for display
-     * in the detail modal. Adds branch name lookup.
-     * 
-     * @since 1.0.0
-     * @param array $item Raw company data from database
-     * @return array Formatted company data
-     */
     protected function format_detail_data($item) {
         global $wpdb;
         
@@ -231,11 +229,54 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
             }
         }
         
-        // Load hosts for this visit
         if (!empty($item['id'])) {
             $item['hosts'] = $this->model->get_hosts($item['id']);
         }
         
         return $item;
+    }
+    
+    public function render_schedule_column($item) {
+        if (empty($item['id'])) {
+            return '<span class="saw-text-muted">—</span>';
+        }
+        
+        $schedules = $this->model->get_schedules($item['id']);
+        
+        if (empty($schedules)) {
+            return '<span class="saw-text-muted">—</span>';
+        }
+        
+        $lines = array();
+        foreach ($schedules as $schedule) {
+            $date = date('d.m.Y', strtotime($schedule['date']));
+            $day_name = $this->get_czech_day_name($schedule['date']);
+            
+            $time_range = '';
+            if (!empty($schedule['time_from']) || !empty($schedule['time_to'])) {
+                $time_from = $schedule['time_from'] ? substr($schedule['time_from'], 0, 5) : '—';
+                $time_to = $schedule['time_to'] ? substr($schedule['time_to'], 0, 5) : '—';
+                $time_range = " <span style=\"color: #6b7280;\">({$time_from} - {$time_to})</span>";
+            }
+            
+            $lines[] = '<div style="margin-bottom: 4px;"><strong>' . $day_name . '</strong> ' . $date . $time_range . '</div>';
+        }
+        
+        return '<div class="saw-schedule-list">' . implode('', $lines) . '</div>';
+    }
+    
+    private function get_czech_day_name($date) {
+        $day_names = array(
+            'Mon' => 'Po',
+            'Tue' => 'Út',
+            'Wed' => 'St',
+            'Thu' => 'Čt',
+            'Fri' => 'Pá',
+            'Sat' => 'So',
+            'Sun' => 'Ne',
+        );
+        
+        $en_day = date('D', strtotime($date));
+        return $day_names[$en_day] ?? '';
     }
 }

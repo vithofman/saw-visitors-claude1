@@ -1,0 +1,251 @@
+/**
+ * Visit Schedules Styling
+ * 
+ * @since 2.0.0
+ */
+
+/* Schedule Container */
+.saw-schedule-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+/* Schedule Row */
+.saw-schedule-row {
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 16px;
+    position: relative;
+    transition: all 0.2s ease;
+}
+.saw-schedule-row:hover {
+    border-color: #2271b1;
+    box-shadow: 0 2px 8px rgba(34, 113, 177, 0.1);
+}
+
+/* Row Fields Layout */
+.saw-schedule-row-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Field Group - datum + časy vedle sebe */
+.saw-schedule-field-group {
+    display: grid;
+    grid-template-columns: 180px 120px 120px;
+    gap: 12px;
+}
+
+/* Schedule Field */
+.saw-schedule-field {
+    display: flex;
+    flex-direction: column;
+}
+.saw-schedule-field label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 6px;
+}
+.saw-schedule-field input {
+    width: 100%;
+}
+
+/* Notes - full width */
+.saw-schedule-field-notes-full {
+    display: flex;
+    flex-direction: column;
+}
+.saw-schedule-field-notes-full label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 6px;
+}
+.saw-schedule-field-notes-full input {
+    width: 100%;
+}
+
+/* Actions - pravý horní roh */
+.saw-schedule-row-actions {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    gap: 8px;
+}
+
+/* Remove Button */
+.saw-remove-schedule-day {
+    background: #fee2e2;
+    border: 2px solid #fca5a5;
+    border-radius: 6px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.saw-remove-schedule-day .dashicons {
+    color: #dc2626;
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+.saw-remove-schedule-day:hover:not(:disabled) {
+    background: #fecaca;
+    border-color: #f87171;
+    transform: scale(1.05);
+}
+.saw-remove-schedule-day:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* Add Button Inline */
+.saw-add-schedule-day-inline {
+    background: #dcfce7;
+    border: 2px solid #86efac;
+    border-radius: 6px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.saw-add-schedule-day-inline .dashicons {
+    color: #16a34a;
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+.saw-add-schedule-day-inline:hover {
+    background: #bbf7d0;
+    border-color: #4ade80;
+    transform: scale(1.05);
+}
+
+/* Field Hint */
+.saw-field-hint {
+    font-size: 13px;
+    color: #64748b;
+    margin-top: 8px;
+    margin-bottom: 0;
+    font-style: italic;
+}
+
+/* Validation Error */
+.saw-validation-error {
+    background: #fef2f2;
+    border: 2px solid #fca5a5;
+    border-radius: 6px;
+    padding: 12px 16px;
+    color: #991b1b;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 12px;
+}
+.saw-input-error {
+    border-color: #ef4444 !important;
+    background: #fef2f2 !important;
+}
+
+/* Schedule List in Table */
+.saw-schedule-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.saw-schedule-item {
+    display: flex;
+    gap: 8px;
+    font-size: 13px;
+    line-height: 1.4;
+}
+.saw-schedule-date {
+    font-weight: 500;
+    color: #374151;
+}
+.saw-schedule-time {
+    color: #6b7280;
+}
+
+/* Host List */
+.saw-host-list {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+    background: white;
+}
+.saw-host-item {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0f1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.15s ease;
+    cursor: pointer;
+    background: #fff;
+}
+.saw-host-item:hover {
+    background: #f6f7f7;
+}
+.saw-host-item.selected {
+    background: #e7f5ff;
+    border-left: 3px solid #0073aa;
+}
+.saw-host-item:last-child {
+    border-bottom: none;
+}
+.saw-host-item input[type="checkbox"] {
+    margin: 0;
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+.saw-host-item label {
+    flex: 1;
+    cursor: pointer;
+    margin: 0;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+}
+.saw-host-name {
+    font-weight: 600;
+    color: #2c3338;
+}
+.saw-host-role {
+    color: #666;
+    font-size: 13px;
+    font-weight: 400;
+}
+.saw-host-controls {
+    display: flex !important;
+}
+#hosts-list::-webkit-scrollbar {
+    width: 8px;
+}
+#hosts-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+#hosts-list::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+/* Animation */
+@keyframes rotation {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
