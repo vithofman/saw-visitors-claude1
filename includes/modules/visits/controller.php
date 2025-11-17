@@ -459,6 +459,11 @@ protected function after_save($id) {
     if (!empty($item['id'])) {
         $item['hosts'] = $this->model->get_hosts($item['id']);
     }
+
+	// Load visitors (only confirmed)
+    if (!empty($item['id'])) {
+        $item['visitors'] = $this->model->get_visitors($item['id'], true);
+    }
     
     // Load schedules
     if (!empty($item['id'])) {

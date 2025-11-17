@@ -14,6 +14,8 @@ jQuery(document).ready(function($) {
         const $card = $btn.closest('.saw-visitor-card');
         const visitorId = $btn.data('visitor-id');
         
+        console.log('Checkout button clicked, visitor ID:', visitorId); // ✅ DEBUG
+        
         // Confirm action
         if (!confirm('Opravdu chcete odhlásit tohoto návštěvníka?')) {
             return;
@@ -25,18 +27,23 @@ jQuery(document).ready(function($) {
         // Disable button
         $btn.prop('disabled', true).html('<span class="dashicons dashicons-update spin"></span> Odhlašuji...');
         
+        console.log('Sending AJAX request...'); // ✅ DEBUG
+        
         // AJAX checkout
         $.ajax({
             url: sawDashboard.ajaxurl,
             type: 'POST',
             data: {
-                action: 'saw_checkout_visitor',
+                action: 'saw_checkout',
                 nonce: sawDashboard.nonce,
                 visitor_id: visitorId,
+                log_date: new Date().toISOString().split('T')[0], // ✅ OPRAVENO - JS formát
                 manual: 1,
                 reason: reason
             },
             success: function(response) {
+                console.log('AJAX response:', response); // ✅ DEBUG
+                
                 if (response.success) {
                     // Remove card with animation
                     $card.fadeOut(300, function() {
@@ -57,7 +64,8 @@ jQuery(document).ready(function($) {
                     showNotice('error', response.data?.message || 'Chyba při odhlašování');
                 }
             },
-            error: function() {
+            error: function(xhr, status, error) {
+                console.error('AJAX error:', xhr, status, error); // ✅ DEBUG
                 $btn.prop('disabled', false).html('<span class="dashicons dashicons-exit"></span> Check-out');
                 showNotice('error', 'Chyba připojení');
             }

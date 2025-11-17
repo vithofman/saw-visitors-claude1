@@ -4,7 +4,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visitors
- * @version     1.0.0
+ * @version     2.0.0 - UPDATED: Dynamic status, check-in/out times, training
  */
 
 if (!defined('ABSPATH')) {
@@ -28,11 +28,51 @@ $order = $list_data['order'] ?? 'DESC';
 
 $base_url = home_url('/admin/visitors/');
 
+// ✅ Compute current status for each visitor
+global $wpdb;
+$today = current_time('Y-m-d');
+
+foreach ($items as &$item) {
+    // Get today's log
+    $log = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM {$wpdb->prefix}saw_visit_daily_logs 
+         WHERE visitor_id = %d AND log_date = %s",
+        $item['id'], $today
+    ), ARRAY_A);
+    
+    // Compute dynamic status
+    if ($item['participation_status'] === 'confirmed') {
+        if ($log && $log['checked_in_at'] && !$log['checked_out_at']) {
+            $item['current_status'] = 'present'; // Přítomen
+        } elseif ($log && $log['checked_out_at']) {
+            $item['current_status'] = 'checked_out'; // Odhlášen
+        } else {
+            $item['current_status'] = 'confirmed'; // Potvrzený (ale dnes ještě nepřišel)
+        }
+    } elseif ($item['participation_status'] === 'no_show') {
+        $item['current_status'] = 'no_show';
+    } else {
+        $item['current_status'] = 'planned';
+    }
+    
+    // Compute training status
+    if ($item['training_skipped']) {
+        $item['training_status'] = 'skipped';
+    } elseif ($item['training_completed_at']) {
+        $item['training_status'] = 'completed';
+    } elseif ($item['training_started_at']) {
+        $item['training_status'] = 'in_progress';
+    } else {
+        $item['training_status'] = 'not_started';
+    }
+}
+unset($item); // Break reference
+
 // Build filter HTML
 $filter_html = '<div class="saw-filters-container" style="display: flex; gap: 12px; align-items: center;">';
 
 $filter_html .= '<select name="participation_status" class="saw-filter-select" onchange="window.location.href=\'' . esc_url($base_url) . '?participation_status=\' + this.value' . ($search ? ' + \'&s=' . esc_js($search) . '\'' : '') . '">
-    <option value=""' . ($status_filter === '' ? ' selected' : '') . '>Všechny stavy účasti</option>
+    <option value=""' . ($status_filter === '' ? ' selected' : '') . '>Všechny stavy</option>
     <option value="planned"' . ($status_filter === 'planned' ? ' selected' : '') . '>Plánovaný</option>
     <option value="confirmed"' . ($status_filter === 'confirmed' ? ' selected' : '') . '>Potvrzený</option>
     <option value="no_show"' . ($status_filter === 'no_show' ? ' selected' : '') . '>Nedostavil se</option>
@@ -125,19 +165,52 @@ if (!empty($search)) {
                 'label' => 'Pobočka',
                 'type' => 'text',
             ),
-            'participation_status' => array(
-                'label' => 'Stav účasti',
+            'current_status' => array(
+                'label' => 'Aktuální stav',
                 'type' => 'badge',
-                'sortable' => true,
                 'map' => array(
-                    'planned' => 'warning',
-                    'confirmed' => 'success',
+                    'present' => 'success',
+                    'checked_out' => 'secondary',
+                    'confirmed' => 'warning',
+                    'planned' => 'info',
                     'no_show' => 'danger',
                 ),
                 'labels' => array(
-                    'planned' => 'Plánovaný',
-                    'confirmed' => 'Potvrzený',
-                    'no_show' => 'Nedostavil se',
+                    'present' => '✅ Přítomen',
+                    'checked_out' => '🚪 Odhlášen',
+                    'confirmed' => '⏳ Potvrzený',
+                    'planned' => '📅 Plánovaný',
+                    'no_show' => '❌ Nedostavil se',
+                ),
+            ),
+            'first_checkin_at' => array(
+                'label' => 'První check-in',
+                'type' => 'callback',
+                'callback' => function($value) {
+                    return !empty($value) ? date('d.m.Y H:i', strtotime($value)) : '—';
+                },
+            ),
+            'last_checkout_at' => array(
+                'label' => 'Poslední check-out',
+                'type' => 'callback',
+                'callback' => function($value) {
+                    return !empty($value) ? date('d.m.Y H:i', strtotime($value)) : '—';
+                },
+            ),
+            'training_status' => array(
+                'label' => 'Školení',
+                'type' => 'badge',
+                'map' => array(
+                    'completed' => 'success',
+                    'in_progress' => 'info',
+                    'skipped' => 'warning',
+                    'not_started' => 'secondary',
+                ),
+                'labels' => array(
+                    'completed' => '✅ Dokončeno',
+                    'in_progress' => '🔄 Probíhá',
+                    'skipped' => '⏭️ Přeskočeno',
+                    'not_started' => '⚪ Nespuštěno',
                 ),
             ),
         ),

@@ -2,10 +2,10 @@
 /**
  * Terminal Step - Checkout via PIN
  * 
- * Enter PIN to load all visitors for that visit, then select who is leaving
+ * Enter PIN to load visitors
  * 
  * @package SAW_Visitors
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 if (!defined('ABSPATH')) {
@@ -17,54 +17,26 @@ $lang = $flow['language'] ?? 'cs';
 
 $translations = [
     'cs' => [
-        'title' => 'Zadejte PIN kód',
-        'subtitle' => 'PIN kód z vaší návštěvy',
-        'select_title' => 'Vyberte odcházející osoby',
-        'select_subtitle' => 'Zaškrtněte všechny, kdo odcházejí',
-        'select_all' => 'Vybrat všechny',
-        'submit' => 'Odhlásit vybrané',
+        'title' => 'Odhlášení - PIN kód',
+        'subtitle' => 'Zadejte PIN kód z vaší návštěvy',
+        'submit' => 'Načíst návštěvu',
     ],
     'en' => [
-        'title' => 'Enter PIN Code',
-        'subtitle' => 'PIN code from your visit',
-        'select_title' => 'Select departing persons',
-        'select_subtitle' => 'Check all who are leaving',
-        'select_all' => 'Select All',
-        'submit' => 'Check out selected',
+        'title' => 'Check-out - PIN Code',
+        'subtitle' => 'Enter PIN code from your visit',
+        'submit' => 'Load Visit',
     ],
     'uk' => [
-        'title' => 'Введіть PIN-код',
-        'subtitle' => 'PIN-код з вашого візиту',
-        'select_title' => 'Виберіть осіб, які від\'їжджають',
-        'select_subtitle' => 'Позначте всіх, хто від\'їжджає',
-        'select_all' => 'Вибрати всіх',
-        'submit' => 'Виписати вибраних',
+        'title' => 'Виписка - PIN-код',
+        'subtitle' => 'Введіть PIN-код з вашого візиту',
+        'submit' => 'Завантажити візит',
     ],
 ];
 
 $t = $translations[$lang] ?? $translations['cs'];
-
-// TODO: Load visitors based on PIN from database
-// For now, mock data
-$visitors = [];
-$pin_verified = false;
-
-if (isset($_POST['pin']) && !empty($_POST['pin'])) {
-    // Mock verification
-    $pin_verified = true;
-    $visitors = [
-        ['id' => 1, 'first_name' => 'Jan', 'last_name' => 'Novák', 'position' => 'Obchodní ředitel'],
-        ['id' => 2, 'first_name' => 'Marie', 'last_name' => 'Svobodová', 'position' => 'Manažerka projektu'],
-        ['id' => 3, 'first_name' => 'Petr', 'last_name' => 'Dvořák', 'position' => 'IT specialista'],
-    ];
-}
 ?>
 
 <div class="saw-terminal-card">
-    
-    <?php if (!$pin_verified): ?>
-    
-    <!-- PIN Entry -->
     <div class="saw-terminal-card-header">
         <h2 class="saw-terminal-card-title">
             🔐 <?php echo esc_html($t['title']); ?>
@@ -100,91 +72,71 @@ if (isset($_POST['pin']) && !empty($_POST['pin'])) {
         
         <form method="POST" id="pin-form" class="saw-terminal-form">
             <?php wp_nonce_field('saw_terminal_step', 'terminal_nonce'); ?>
+            <input type="hidden" name="terminal_action" value="checkout_pin_verify">
             <input type="hidden" name="pin" id="pin-input" value="">
             
             <button type="submit" class="saw-terminal-btn saw-terminal-btn-success">
-                Načíst návštěvu →
+                <?php echo esc_html($t['submit']); ?> →
             </button>
         </form>
         
     </div>
-    
-    <?php else: ?>
-    
-    <!-- Visitor Selection -->
-    <div class="saw-terminal-card-header">
-        <h2 class="saw-terminal-card-title">
-            <?php echo esc_html($t['select_title']); ?>
-        </h2>
-        <p class="saw-terminal-card-subtitle">
-            <?php echo esc_html($t['select_subtitle']); ?>
-        </p>
-    </div>
-    
-    <div class="saw-terminal-card-body">
-        
-        <form method="POST" class="saw-terminal-form">
-            <?php wp_nonce_field('saw_terminal_step', 'terminal_nonce'); ?>
-            <input type="hidden" name="terminal_action" value="checkout_pin">
-            
-            <!-- Select All Button -->
-            <button type="button" 
-                    class="saw-terminal-btn saw-terminal-btn-secondary" 
-                    id="select-all-btn"
-                    style="margin-bottom: 2rem;">
-                ✅ <?php echo esc_html($t['select_all']); ?>
-            </button>
-            
-            <!-- Visitor List -->
-            <div class="saw-terminal-visitor-list">
-                <?php foreach ($visitors as $visitor): ?>
-                <label class="saw-terminal-visitor-item" data-visitor-id="<?php echo $visitor['id']; ?>">
-                    <input type="checkbox" 
-                           name="visitor_ids[]" 
-                           value="<?php echo $visitor['id']; ?>" 
-                           class="saw-terminal-visitor-checkbox">
-                    
-                    <div class="saw-terminal-visitor-avatar">
-                        <?php echo strtoupper(substr($visitor['first_name'], 0, 1)); ?>
-                    </div>
-                    
-                    <div class="saw-terminal-visitor-info">
-                        <h3 class="saw-terminal-visitor-name">
-                            <?php echo esc_html($visitor['first_name'] . ' ' . $visitor['last_name']); ?>
-                        </h3>
-                        <?php if (!empty($visitor['position'])): ?>
-                        <p class="saw-terminal-visitor-position">
-                            <?php echo esc_html($visitor['position']); ?>
-                        </p>
-                        <?php endif; ?>
-                    </div>
-                </label>
-                <?php endforeach; ?>
-            </div>
-            
-            <!-- Submit Button -->
-            <button type="submit" class="saw-terminal-btn saw-terminal-btn-danger">
-                🚪 <?php echo esc_html($t['submit']); ?>
-            </button>
-            
-        </form>
-        
-    </div>
-    
-    <?php endif; ?>
-    
 </div>
 
 <script>
 jQuery(document).ready(function($) {
-    // Select all button
-    $('#select-all-btn').on('click', function() {
-        const allChecked = $('.saw-terminal-visitor-checkbox:checked').length === $('.saw-terminal-visitor-checkbox').length;
+    let pin = '';
+    
+    // Update PIN display
+    function updateDisplay() {
+        $('.saw-terminal-pin-dot').each(function(i) {
+            $(this).toggleClass('filled', i < pin.length);
+        });
         
-        $('.saw-terminal-visitor-checkbox').prop('checked', !allChecked);
-        $('.saw-terminal-visitor-item').toggleClass('selected', !allChecked);
+        $('#pin-input').val(pin);
         
-        $(this).text(allChecked ? '✅ Vybrat všechny' : '❌ Zrušit výběr');
+        // Auto-submit when 6 digits entered
+        if (pin.length === 6) {
+            setTimeout(function() {
+                $('#pin-form').submit();
+            }, 300);
+        }
+    }
+    
+    // Number button click
+    $('.saw-terminal-numpad-btn[data-value]').on('click', function() {
+        if (pin.length < 6) {
+            pin += $(this).data('value');
+            updateDisplay();
+        }
+    });
+    
+    // Clear button
+    $('.saw-terminal-numpad-btn.clear').on('click', function() {
+        pin = '';
+        updateDisplay();
+    });
+    
+    // Backspace button
+    $('.saw-terminal-numpad-btn.backspace').on('click', function() {
+        pin = pin.slice(0, -1);
+        updateDisplay();
+    });
+    
+    // Keyboard support
+    $(document).on('keydown', function(e) {
+        if (e.key >= '0' && e.key <= '9') {
+            if (pin.length < 6) {
+                pin += e.key;
+                updateDisplay();
+            }
+        } else if (e.key === 'Backspace') {
+            pin = pin.slice(0, -1);
+            updateDisplay();
+        } else if (e.key === 'Escape') {
+            pin = '';
+            updateDisplay();
+        }
     });
 });
 </script>

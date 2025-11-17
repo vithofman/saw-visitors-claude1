@@ -16,6 +16,10 @@ if (empty($item)) {
     padding: 20px !important;
 }
 
+/* Full-width cards */
+.saw-detail-card-full {
+    grid-column: 1 / -1 !important;
+}
 .saw-detail-card {
     background: #fff !important;
     border: 1px solid #e5e7eb !important;
@@ -118,10 +122,36 @@ if (empty($item)) {
     width: 20px !important;
     height: 20px !important;
 }
+
+.saw-training-progress {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+}
+
+.saw-training-step {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 8px !important;
+    background: #f8fafc !important;
+    border-radius: 6px !important;
+}
+
+.saw-training-step.completed {
+    background: #f0fdf4 !important;
+    border: 1px solid #bbf7d0 !important;
+}
+
+.saw-training-step.incomplete {
+    background: #fef2f2 !important;
+    border: 1px solid #fecaca !important;
+}
 </style>
 
 <div class="saw-detail-grid">
     
+    <!-- 1. ZÁKLADNÍ INFORMACE -->
     <div class="saw-detail-card">
         <div class="saw-detail-card-header">
             <span class="saw-detail-card-icon">👤</span>
@@ -158,6 +188,7 @@ if (empty($item)) {
         </div>
     </div>
     
+    <!-- 2. NÁVŠTĚVA -->
     <div class="saw-detail-card">
         <div class="saw-detail-card-header">
             <span class="saw-detail-card-icon">🏢</span>
@@ -206,6 +237,7 @@ if (empty($item)) {
         </div>
     </div>
     
+    <!-- 3. STAV ÚČASTI -->
     <div class="saw-detail-card">
         <div class="saw-detail-card-header">
             <span class="saw-detail-card-icon">✓</span>
@@ -226,37 +258,166 @@ if (empty($item)) {
                     ?>
                 </dd>
                 
-                <dt class="saw-detail-label">Školení</dt>
+                <dt class="saw-detail-label">První check-in</dt>
                 <dd class="saw-detail-value">
-                    <?php if (!empty($item['training_skipped'])): ?>
-                        <span class="saw-badge saw-badge-warning">Do 1 roku</span>
-                    <?php else: ?>
-                        —
-                    <?php endif; ?>
+                    <?php echo !empty($item['first_checkin_at']) ? date('d.m.Y H:i', strtotime($item['first_checkin_at'])) : '—'; ?>
+                </dd>
+                
+                <dt class="saw-detail-label">Poslední check-out</dt>
+                <dd class="saw-detail-value">
+                    <?php echo !empty($item['last_checkout_at']) ? date('d.m.Y H:i', strtotime($item['last_checkout_at'])) : '—'; ?>
                 </dd>
             </dl>
         </div>
     </div>
     
+    <!-- 4. ŠKOLENÍ -->
     <div class="saw-detail-card">
         <div class="saw-detail-card-header">
-            <span class="saw-detail-card-icon">🕒</span>
-            <h3 class="saw-detail-card-title">Check-in / Check-out</h3>
+            <span class="saw-detail-card-icon">🎓</span>
+            <h3 class="saw-detail-card-title">Školení BOZP</h3>
         </div>
         <div class="saw-detail-card-body">
             <dl class="saw-detail-list">
-                <dt class="saw-detail-label">Check-in</dt>
-                <dd class="saw-detail-value"><?php echo !empty($item['checked_in_at']) ? esc_html($item['checked_in_at']) : '—'; ?></dd>
+                <dt class="saw-detail-label">Status</dt>
+                <dd class="saw-detail-value">
+                    <?php if (!empty($item['training_skipped'])): ?>
+                        <span class="saw-badge saw-badge-warning">⏭️ Přeskočeno (do 1 roku)</span>
+                    <?php elseif (!empty($item['training_completed_at'])): ?>
+                        <span class="saw-badge saw-badge-success">✅ Dokončeno</span>
+                    <?php elseif (!empty($item['training_started_at'])): ?>
+                        <span class="saw-badge saw-badge-info">🔄 Probíhá</span>
+                    <?php else: ?>
+                        <span class="saw-badge saw-badge-secondary">⚪ Nespuštěno</span>
+                    <?php endif; ?>
+                </dd>
                 
-                <dt class="saw-detail-label">Check-out</dt>
-                <dd class="saw-detail-value"><?php echo !empty($item['checked_out_at']) ? esc_html($item['checked_out_at']) : '—'; ?></dd>
+                <?php if (!empty($item['training_started_at'])): ?>
+                <dt class="saw-detail-label">Zahájeno</dt>
+                <dd class="saw-detail-value"><?php echo date('d.m.Y H:i', strtotime($item['training_started_at'])); ?></dd>
+                <?php endif; ?>
+                
+                <?php if (!empty($item['training_completed_at'])): ?>
+                <dt class="saw-detail-label">Dokončeno</dt>
+                <dd class="saw-detail-value"><?php echo date('d.m.Y H:i', strtotime($item['training_completed_at'])); ?></dd>
+                <?php endif; ?>
+
+ <?php 
+                // ✅ VÝPOČET DOBY ŠKOLENÍ
+                if (!empty($item['training_started_at']) && !empty($item['training_completed_at'])): 
+                    $start = strtotime($item['training_started_at']);
+                    $end = strtotime($item['training_completed_at']);
+                    $duration_seconds = $end - $start;
+                    
+                    if ($duration_seconds < 60) {
+                        // Méně než minuta → sekundy
+                        $duration_text = $duration_seconds . ' sekund';
+                    } elseif ($duration_seconds < 3600) {
+                        // Méně než hodina → minuty a sekundy
+                        $minutes = floor($duration_seconds / 60);
+                        $seconds = $duration_seconds % 60;
+                        $duration_text = $minutes . ' min ' . $seconds . ' s';
+                    } else {
+                        // Více než hodina → hodiny, minuty, sekundy
+                        $hours = floor($duration_seconds / 3600);
+                        $minutes = floor(($duration_seconds % 3600) / 60);
+                        $seconds = $duration_seconds % 60;
+                        $duration_text = $hours . ' h ' . $minutes . ' min ' . $seconds . ' s';
+                    }
+                ?>
+                <dt class="saw-detail-label">⏱️ Doba školení</dt>
+                <dd class="saw-detail-value">
+                    <strong><?php echo $duration_text; ?></strong>
+                </dd>
+                <?php endif; ?>
+                
+                <?php if (!$item['training_skipped'] && !empty($item['training_started_at'])): ?>
+                <dt class="saw-detail-label">Progress</dt>
+                <dd class="saw-detail-value">
+                    <div class="saw-training-progress">
+                        <div class="saw-training-step <?php echo $item['training_step_video'] ? 'completed' : 'incomplete'; ?>">
+                            <?php echo $item['training_step_video'] ? '✅' : '⬜'; ?> Video školení
+                        </div>
+                        <div class="saw-training-step <?php echo $item['training_step_map'] ? 'completed' : 'incomplete'; ?>">
+                            <?php echo $item['training_step_map'] ? '✅' : '⬜'; ?> Mapa objektu
+                        </div>
+                        <div class="saw-training-step <?php echo $item['training_step_risks'] ? 'completed' : 'incomplete'; ?>">
+                            <?php echo $item['training_step_risks'] ? '✅' : '⬜'; ?> Informace o rizicích
+                        </div>
+                        <div class="saw-training-step <?php echo $item['training_step_additional'] ? 'completed' : 'incomplete'; ?>">
+                            <?php echo $item['training_step_additional'] ? '✅' : '⬜'; ?> Další informace
+                        </div>
+                        <div class="saw-training-step <?php echo $item['training_step_department'] ? 'completed' : 'incomplete'; ?>">
+                            <?php echo $item['training_step_department'] ? '✅' : '⬜'; ?> Specifika oddělení
+                        </div>
+                    </div>
+                </dd>
+                <?php endif; ?>
             </dl>
         </div>
     </div>
     
-    <div class="saw-detail-card">
+    <!-- 5. HISTORIE CHECK-IN/OUT -->
+    <div class="saw-detail-card saw-detail-card-full">
         <div class="saw-detail-card-header">
-            <span class="saw-detail-card-icon">🎓</span>
+            <span class="saw-detail-card-icon">📊</span>
+            <h3 class="saw-detail-card-title">Historie check-in/out</h3>
+        </div>
+        <div class="saw-detail-card-body">
+            <?php if (!empty($item['daily_logs'])): ?>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                            <th style="padding: 8px; text-align: left; font-size: 13px; color: #64748b;">Datum</th>
+                            <th style="padding: 8px; text-align: left; font-size: 13px; color: #64748b;">Check-in</th>
+                            <th style="padding: 8px; text-align: left; font-size: 13px; color: #64748b;">Check-out</th>
+                            <th style="padding: 8px; text-align: left; font-size: 13px; color: #64748b;">Doba</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($item['daily_logs'] as $log): ?>
+                        <tr style="border-bottom: 1px solid #e2e8f0;">
+                            <td style="padding: 8px; font-size: 14px;">
+                                <?php echo date('d.m.Y', strtotime($log['log_date'])); ?>
+                            </td>
+                            <td style="padding: 8px; font-size: 14px;">
+                                <?php echo $log['checked_in_at'] ? date('H:i', strtotime($log['checked_in_at'])) : '—'; ?>
+                            </td>
+                            <td style="padding: 8px; font-size: 14px;">
+                                <?php 
+                                if ($log['checked_out_at']) {
+                                    echo date('H:i', strtotime($log['checked_out_at']));
+                                } else {
+                                    echo '<span class="saw-badge saw-badge-success">Přítomen</span>';
+                                }
+                                ?>
+                            </td>
+                            <td style="padding: 8px; font-size: 14px; color: #64748b;">
+                                <?php 
+                                if ($log['checked_in_at'] && $log['checked_out_at']) {
+                                    $diff = strtotime($log['checked_out_at']) - strtotime($log['checked_in_at']);
+                                    $hours = floor($diff / 3600);
+                                    $minutes = floor(($diff % 3600) / 60);
+                                    echo sprintf('%dh %dm', $hours, $minutes);
+                                } else {
+                                    echo '—';
+                                }
+                                ?>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php else: ?>
+                <p style="color: #64748b; font-size: 14px;">Žádná historie check-in/out.</p>
+            <?php endif; ?>
+        </div>
+    </div>
+    
+    <!-- 6. PROFESNÍ PRŮKAZY -->
+    <div class="saw-detail-card saw-detail-card-full">
+        <div class="saw-detail-card-header">
+            <span class="saw-detail-card-icon">📜</span>
             <h3 class="saw-detail-card-title">Profesní průkazy</h3>
         </div>
         <div class="saw-detail-card-body">
@@ -278,7 +439,7 @@ if (empty($item)) {
                     <?php endforeach; ?>
                 </div>
             <?php else: ?>
-                <p>Žádné průkazy.</p>
+                <p style="color: #64748b; font-size: 14px;">Žádné průkazy.</p>
             <?php endif; ?>
         </div>
     </div>

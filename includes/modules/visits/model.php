@@ -382,6 +382,7 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
         
         $results = $wpdb->get_results($wpdb->prepare(
             "SELECT v.id as visit_id,
+		    vis.id as visitor_id,
                     c.name as company_name,
                     CONCAT(vis.first_name, ' ', vis.last_name) as visitor_name,
                     vis.phone,
@@ -584,6 +585,27 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
             $wpdb->prefix . 'saw_users',
             $visit_id
         ), ARRAY_A);
+    }
+
+/**
+     * Get visit visitors
+     * 
+     * @param int $visit_id Visit ID
+     * @param bool $only_confirmed Filter only confirmed visitors (default false)
+     * @return array List of visitors
+     */
+    public function get_visitors($visit_id, $only_confirmed = false) {
+        global $wpdb;
+        
+        $sql = "SELECT * FROM {$wpdb->prefix}saw_visitors WHERE visit_id = %d";
+        
+        if ($only_confirmed) {
+            $sql .= " AND participation_status = 'confirmed'";
+        }
+        
+        $sql .= " ORDER BY last_name ASC, first_name ASC";
+        
+        return $wpdb->get_results($wpdb->prepare($sql, $visit_id), ARRAY_A);
     }
     
     /**

@@ -7,18 +7,15 @@
  * @package SAW_Visitors
  * @version 1.0.0
  */
-
 if (!defined('ABSPATH')) {
     exit;
 }
-
 $flow = $this->session->get('terminal_flow');
 $lang = $flow['language'] ?? 'cs';
-
 $translations = [
     'cs' => [
         'title' => 'Jak se chcete odhlásit?',
-        'subtitle' => 'Vyberte způsob odhláška',
+        'subtitle' => 'Vyberte způsob odhlášení',
         'pin' => 'Mám PIN kód',
         'pin_desc' => 'Zadám PIN a vyberu všechny odcházející',
         'search' => 'Vyhledat mě',
@@ -41,10 +38,8 @@ $translations = [
         'search_desc' => 'Я буду шукати за своїм ім\'ям',
     ],
 ];
-
 $t = $translations[$lang] ?? $translations['cs'];
 ?>
-
 <div class="saw-terminal-card">
     <div class="saw-terminal-card-header">
         <h2 class="saw-terminal-card-title">
@@ -59,7 +54,7 @@ $t = $translations[$lang] ?? $translations['cs'];
         <div class="saw-terminal-grid-2">
             
             <!-- PIN Method -->
-            <a href="<?php echo home_url('/terminal/checkout/pin/'); ?>" 
+            <a href="<?php echo home_url('/terminal/checkout-pin/'); ?>" 
                class="saw-terminal-btn saw-terminal-btn-icon">
                 <span class="icon">🔐</span>
                 <div>
@@ -73,7 +68,7 @@ $t = $translations[$lang] ?? $translations['cs'];
             </a>
             
             <!-- Search Method -->
-            <a href="<?php echo home_url('/terminal/checkout/search/'); ?>" 
+            <a href="<?php echo home_url('/terminal/checkout-search/'); ?>" 
                class="saw-terminal-btn saw-terminal-btn-icon saw-terminal-btn-secondary">
                 <span class="icon">🔍</span>
                 <div>

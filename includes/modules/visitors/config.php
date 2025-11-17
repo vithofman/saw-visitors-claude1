@@ -82,8 +82,8 @@ return array(
         ),
     ),
     
-    'list_config' => array(
-        'columns' => array('id', 'first_name', 'last_name', 'visit_id', 'participation_status'),
+ 'list_config' => array(
+        'columns' => array('id', 'first_name', 'last_name', 'visit_id', 'current_status', 'first_checkin_at', 'last_checkout_at'),
         'searchable' => array('first_name', 'last_name', 'email'),
         'sortable' => array('id', 'first_name', 'last_name', 'created_at'),
         'filters' => array(

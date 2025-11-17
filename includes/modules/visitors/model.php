@@ -301,79 +301,91 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
      * @return bool|WP_Error True on success
      */
     public function daily_checkout($visitor_id, $log_date = null, $manual = false, $admin_id = null, $reason = null) {
-        global $wpdb;
-        
-        if (!$log_date) {
-            $log_date = current_time('Y-m-d');
-        }
-        
-        $visitor = $this->get_by_id($visitor_id);
-        
-        if (!$visitor) {
-            return new WP_Error('visitor_not_found', 'Visitor not found');
-        }
-        
-        $visit_id = $visitor['visit_id'];
-        
-        // Find today's log
-        $log = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM %i WHERE visit_id = %d AND visitor_id = %d AND log_date = %s",
-            $wpdb->prefix . 'saw_visit_daily_logs',
-            $visit_id,
-            $visitor_id,
-            $log_date
-        ), ARRAY_A);
-        
-        if (!$log) {
-            return new WP_Error('no_checkin', 'No check-in found for this date');
-        }
-        
-        if (!empty($log['checked_out_at'])) {
-            return new WP_Error('already_checked_out', 'Already checked out');
-        }
-        
-        // Update log with checkout
-        $update_data = array(
-            'checked_out_at' => current_time('mysql'),
-        );
-        
-        if ($manual) {
-            $update_data['manual_checkout'] = 1;
-            $update_data['manual_checkout_by'] = $admin_id;
-            $update_data['manual_checkout_reason'] = $reason;
-        }
-        
-        $result = $wpdb->update(
-            $wpdb->prefix . 'saw_visit_daily_logs',
-            $update_data,
-            array('id' => $log['id']),
-            array_fill(0, count($update_data), '%s'),
-            array('%d')
-        );
-        
-        if ($result === false) {
-            return new WP_Error('checkout_failed', 'Failed to record check-out');
-        }
-        
-        // Update visitor's last_checkout_at
-        $wpdb->update(
-            $this->table,
-            array('last_checkout_at' => current_time('mysql')),
-            array('id' => $visitor_id),
-            array('%s'),
-            array('%d')
-        );
-        
-        // Check if visit should be completed
-        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/model.php';
-        $visits_config = require SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/config.php';
-        $visits_model = new SAW_Module_Visits_Model($visits_config);
-        $visits_model->check_and_complete_visit($visit_id);
-        
-        $this->invalidate_item_cache($visitor_id);
-        
-        return true;
+    global $wpdb;
+    
+    if (!$log_date) {
+        $log_date = current_time('Y-m-d');
     }
+    
+    // ✅ OPRAVENO: Přímý SQL query místo get_by_id (kvůli customer isolation)
+    $visitor = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM {$wpdb->prefix}saw_visitors WHERE id = %d",
+        $visitor_id
+    ), ARRAY_A);
+    
+    if (!$visitor) {
+        error_log("[SAW Checkout] ERROR: Visitor ID {$visitor_id} not found in database");
+        return new WP_Error('visitor_not_found', 'Visitor not found');
+    }
+    
+    error_log("[SAW Checkout] Visitor found: {$visitor['first_name']} {$visitor['last_name']}");
+    
+    $visit_id = $visitor['visit_id'];
+    
+    // Find today's log
+    $log = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM {$wpdb->prefix}saw_visit_daily_logs 
+         WHERE visit_id = %d AND visitor_id = %d AND log_date = %s",
+        $visit_id,
+        $visitor_id,
+        $log_date
+    ), ARRAY_A);
+    
+    if (!$log) {
+        error_log("[SAW Checkout] ERROR: No check-in found for date {$log_date}");
+        return new WP_Error('no_checkin', 'No check-in found for this date');
+    }
+    
+    if (!empty($log['checked_out_at'])) {
+        error_log("[SAW Checkout] ERROR: Already checked out at {$log['checked_out_at']}");
+        return new WP_Error('already_checked_out', 'Already checked out');
+    }
+    
+    // Update log with checkout
+    $update_data = array(
+        'checked_out_at' => current_time('mysql'),
+    );
+    
+    if ($manual) {
+        $update_data['manual_checkout'] = 1;
+        $update_data['manual_checkout_by'] = $admin_id;
+        $update_data['manual_checkout_reason'] = $reason;
+    }
+    
+    $result = $wpdb->update(
+        $wpdb->prefix . 'saw_visit_daily_logs',
+        $update_data,
+        array('id' => $log['id']),
+        array_fill(0, count($update_data), '%s'),
+        array('%d')
+    );
+    
+    if ($result === false) {
+        error_log("[SAW Checkout] ERROR: Failed to update daily log");
+        return new WP_Error('checkout_failed', 'Failed to record check-out');
+    }
+    
+    // Update visitor's last_checkout_at
+    $wpdb->update(
+        $this->table,
+        array('last_checkout_at' => current_time('mysql')),
+        array('id' => $visitor_id),
+        array('%s'),
+        array('%d')
+    );
+    
+    error_log("[SAW Checkout] SUCCESS: Visitor {$visitor_id} checked out");
+    
+    // Check if visit should be completed
+    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/model.php';
+    $visits_config = require SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/config.php';
+    $visits_model = new SAW_Module_Visits_Model($visits_config);
+    $visits_model->check_and_complete_visit($visit_id);
+    
+    $this->invalidate_item_cache($visitor_id);
+    
+    return true;
+}
     
     /**
      * Add ad-hoc visitor

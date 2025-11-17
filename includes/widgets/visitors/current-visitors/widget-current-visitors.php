@@ -6,7 +6,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Admin/Widgets
- * @version     1.0.0
+ * @version     2.0.0 - UPDATED: Removed redundant counter, modern styling
  */
 
 if (!defined('ABSPATH')) {
@@ -79,64 +79,61 @@ class SAW_Widget_Current_Visitors {
         
         ?>
         <div class="saw-current-visitors-widget">
-            <div class="saw-widget-header">
-                <span class="saw-visitor-count"><?php echo count($present); ?></span>
-                <span class="saw-visitor-label">
-                    <?php 
-                    $count = count($present);
-                    echo $count === 1 ? 'osoba' : ($count < 5 ? 'osoby' : 'osob'); 
-                    ?> uvnitř
-                </span>
+    <div class="saw-visitors-list">
+        <?php foreach ($present as $person): ?>
+        <a href="<?php echo home_url('/admin/visitors/' . $person['visitor_id']); ?>" 
+           class="saw-visitor-card" 
+           data-visitor-id="<?php echo esc_attr($person['visitor_id']); ?>">
+            <div class="saw-visitor-avatar">
+                <span class="dashicons dashicons-admin-users"></span>
             </div>
             
-            <div class="saw-visitors-list">
-                <?php foreach ($present as $person): ?>
-                <div class="saw-visitor-card" data-visitor-id="<?php echo esc_attr($person['visit_id']); ?>">
-                    <div class="saw-visitor-info">
-                        <div class="saw-visitor-name">
-                            <strong><?php echo esc_html($person['visitor_name']); ?></strong>
-                            <?php if (!empty($person['company_name'])): ?>
-                                <span class="saw-visitor-company">
-                                    <?php echo esc_html($person['company_name']); ?>
-                                </span>
-                            <?php else: ?>
-                                <span class="saw-visitor-company" style="color: #6366f1;">
-                                    Fyzická osoba
-                                </span>
-                            <?php endif; ?>
-                        </div>
-                        
-                        <div class="saw-visitor-meta">
-                            <span class="saw-visitor-time">
-                                <span class="dashicons dashicons-clock"></span>
-                                Příchod: <?php echo date('H:i', strtotime($person['today_checkin'])); ?>
-                            </span>
-                            <span class="saw-visitor-duration">
-                                <?php echo $person['minutes_inside']; ?> min uvnitř
-                            </span>
-                        </div>
-                        
-                        <?php if (!empty($person['phone'])): ?>
-                        <div class="saw-visitor-contact">
-                            <span class="dashicons dashicons-phone"></span>
-                            <?php echo esc_html($person['phone']); ?>
-                        </div>
-                        <?php endif; ?>
-                    </div>
-                    
-                    <div class="saw-visitor-actions">
-                        <button type="button" 
-                                class="saw-manual-checkout-btn"
-                                data-visitor-id="<?php echo esc_attr($person['visit_id']); ?>"
-                                title="Ručně odhlásit">
-                            <span class="dashicons dashicons-exit"></span>
-                            Check-out
-                        </button>
-                    </div>
+            <div class="saw-visitor-info">
+                <div class="saw-visitor-name">
+                    <strong><?php echo esc_html($person['visitor_name']); ?></strong>
+                    <?php if (!empty($person['company_name'])): ?>
+                        <span class="saw-visitor-company">
+                            🏢 <?php echo esc_html($person['company_name']); ?>
+                        </span>
+                    <?php else: ?>
+                        <span class="saw-visitor-company saw-visitor-physical">
+                            👤 Fyzická osoba
+                        </span>
+                    <?php endif; ?>
                 </div>
-                <?php endforeach; ?>
+                
+                <div class="saw-visitor-meta">
+                    <span class="saw-visitor-time">
+                        <span class="dashicons dashicons-clock"></span>
+                        <?php echo date('H:i', strtotime($person['today_checkin'])); ?>
+                    </span>
+                    <span class="saw-visitor-duration">
+                        <span class="dashicons dashicons-backup"></span>
+                        <?php echo $person['minutes_inside']; ?> min
+                    </span>
+                    <?php if (!empty($person['phone'])): ?>
+                    <span class="saw-visitor-phone">
+                        <span class="dashicons dashicons-phone"></span>
+                        <?php echo esc_html($person['phone']); ?>
+                    </span>
+                    <?php endif; ?>
+                </div>
             </div>
-        </div>
+            
+            <div class="saw-visitor-actions">
+                <button type="button" 
+                        class="saw-manual-checkout-btn"
+                        data-visitor-id="<?php echo esc_attr($person['visitor_id']); ?>"
+                        title="Ručně odhlásit"
+                        onclick="event.preventDefault(); event.stopPropagation(); handleCheckout(this);">
+                    <span class="dashicons dashicons-exit"></span>
+                    Check-out
+                </button>
+            </div>
+        </a>
+        <?php endforeach; ?>
+    </div>
+</div>
         <?php
     }
     
