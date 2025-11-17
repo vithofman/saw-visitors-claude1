@@ -531,7 +531,15 @@ if ($saw_page === 'dashboard') {
             return;
         }
         
-        $this->render_page('Terminal Interface', $path, 'terminal', '');
+        $handler = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal-route-handler.php';
+    
+    if (file_exists($handler)) {
+        require_once $handler;
+        exit;
+    } else {
+        wp_die('Terminal handler not found: ' . $handler);
+    }
+}
     }
     
     /**
