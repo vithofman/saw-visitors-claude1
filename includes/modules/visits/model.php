@@ -473,6 +473,31 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
         $name = preg_replace('/\s+/', '', $name);
         return $name;
     }
+
+
+/**
+     * Generate unique PIN for visit
+     * 
+     * @return string 6-digit PIN
+     */
+    public function generate_pin() {
+        global $wpdb;
+        
+        $customer_id = SAW_Context::get_customer_id();
+        
+        do {
+            $pin = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+            
+            $exists = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$this->table} 
+                 WHERE pin_code = %s AND customer_id = %d",
+                $pin, $customer_id
+            ));
+        } while ($exists > 0);
+        
+        return $pin;
+    }
+
     
     /**
      * Create walk-in visit (immediate check-in)

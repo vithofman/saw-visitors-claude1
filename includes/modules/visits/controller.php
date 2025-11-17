@@ -350,67 +350,123 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
     }
     
     /**
-     * After save hook
-     * Save related data (hosts, schedules)
-     */
-    protected function after_save($id) {
-        if (isset($_POST['hosts']) && is_array($_POST['hosts'])) {
-            $this->model->save_hosts($id, array_map('intval', $_POST['hosts']));
-        }
+ * After save hook
+ * Save related data (hosts, schedules)
+ */
+protected function after_save($id) {
+    global $wpdb;
+    
+    // ✅ 1. GENERATE PIN for planned visits
+    $visit = $this->model->get_by_id($id);
+    
+    if ($visit && $visit['visit_type'] === 'planned' && empty($visit['pin_code'])) {
+        $pin = $this->model->generate_pin();
         
-        if (isset($_POST['schedule_dates']) && is_array($_POST['schedule_dates'])) {
-            $result = $this->model->save_schedules($id, $_POST);
+        $wpdb->update(
+            $wpdb->prefix . 'saw_visits',
+            ['pin_code' => $pin],
+            ['id' => $id],
+            ['%s'],
+            ['%d']
+        );
+        
+        error_log("[SAW Visits] Generated PIN {$pin} for visit #{$id}");
+    }
+    
+    // ✅ 2. SET created_by (if not already set)
+    if ($visit && empty($visit['created_by'])) {
+        $current_user = wp_get_current_user();
+        
+        if ($current_user && $current_user->ID) {
+            $saw_user_id = $wpdb->get_var($wpdb->prepare(
+                "SELECT id FROM {$wpdb->prefix}saw_users WHERE wp_user_id = %d",
+                $current_user->ID
+            ));
             
-            if (is_wp_error($result)) {
-                $_SESSION['saw_error'] = $result->get_error_message();
+            if ($saw_user_id) {
+                $wpdb->update(
+                    $wpdb->prefix . 'saw_visits',
+                    ['created_by' => $saw_user_id],
+                    ['id' => $id],
+                    ['%d'],
+                    ['%d']
+                );
             }
         }
     }
+    
+    // ✅ 3. SAVE HOSTS
+    if (isset($_POST['hosts']) && is_array($_POST['hosts'])) {
+        $this->model->save_hosts($id, array_map('intval', $_POST['hosts']));
+    }
+    
+    // ✅ 4. SAVE SCHEDULES
+    if (isset($_POST['schedule_dates']) && is_array($_POST['schedule_dates'])) {
+        $result = $this->model->save_schedules($id, $_POST);
+        
+        if (is_wp_error($result)) {
+            $_SESSION['saw_error'] = $result->get_error_message();
+        }
+    }
+}
     
     /**
      * Format data for detail view
      */
     protected function format_detail_data($item) {
-        global $wpdb;
+    global $wpdb;
+    
+    // ✅ NAČTI CELÝ ZÁZNAM ZNOVU (aby obsahoval PIN a všechna pole)
+    if (!empty($item['id'])) {
+        $full_item = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}saw_visits WHERE id = %d",
+            $item['id']
+        ), ARRAY_A);
         
-        // Load company name
-        if (!empty($item['company_id'])) {
-            $company = $wpdb->get_row($wpdb->prepare(
-                "SELECT name FROM %i WHERE id = %d",
-                $wpdb->prefix . 'saw_companies',
-                $item['company_id']
-            ), ARRAY_A);
-            
-            if ($company) {
-                $item['company_name'] = $company['name'];
-            }
+        // Merge s původními daty
+        if ($full_item) {
+            $item = array_merge($item, $full_item);
         }
-        
-        // Load branch name
-        if (!empty($item['branch_id'])) {
-            $branch = $wpdb->get_row($wpdb->prepare(
-                "SELECT name FROM %i WHERE id = %d",
-                $wpdb->prefix . 'saw_branches',
-                $item['branch_id']
-            ), ARRAY_A);
-            
-            if ($branch) {
-                $item['branch_name'] = $branch['name'];
-            }
-        }
-        
-        // Load hosts
-        if (!empty($item['id'])) {
-            $item['hosts'] = $this->model->get_hosts($item['id']);
-        }
-        
-        // Load schedules
-        if (!empty($item['id'])) {
-            $item['schedules'] = $this->model->get_schedules($item['id']);
-        }
-        
-        return $item;
     }
+    
+    // Load company name
+    if (!empty($item['company_id'])) {
+        $company = $wpdb->get_row($wpdb->prepare(
+            "SELECT name FROM %i WHERE id = %d",
+            $wpdb->prefix . 'saw_companies',
+            $item['company_id']
+        ), ARRAY_A);
+        
+        if ($company) {
+            $item['company_name'] = $company['name'];
+        }
+    }
+    
+    // Load branch name
+    if (!empty($item['branch_id'])) {
+        $branch = $wpdb->get_row($wpdb->prepare(
+            "SELECT name FROM %i WHERE id = %d",
+            $wpdb->prefix . 'saw_branches',
+            $item['branch_id']
+        ), ARRAY_A);
+        
+        if ($branch) {
+            $item['branch_name'] = $branch['name'];
+        }
+    }
+    
+    // Load hosts
+    if (!empty($item['id'])) {
+        $item['hosts'] = $this->model->get_hosts($item['id']);
+    }
+    
+    // Load schedules
+    if (!empty($item['id'])) {
+        $item['schedules'] = $this->model->get_schedules($item['id']);
+    }
+    
+    return $item;
+}
     
     // ============================================
     // RENDERING HELPERS

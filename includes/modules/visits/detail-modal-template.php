@@ -217,6 +217,18 @@ $is_physical_person = empty($item['company_id']);
         <dl class="saw-detail-list">
             <dt class="saw-detail-label">Pobočka</dt>
             <dd class="saw-detail-value"><?php echo esc_html($item['branch_name'] ?? '—'); ?></dd>
+
+<?php if (!empty($item['pin_code'])): ?>
+        <dt class="saw-detail-label">PIN kód</dt>
+        <dd class="saw-detail-value">
+            <div style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: #f0f9ff; border: 2px solid #0ea5e9; border-radius: 8px;">
+                <span class="dashicons dashicons-lock" style="color: #0ea5e9;"></span>
+                <span style="font-size: 24px; font-weight: 700; color: #0369a1; letter-spacing: 3px; font-family: monospace;">
+                    <?php echo esc_html($item['pin_code']); ?>
+                </span>
+            </div>
+        </dd>
+        <?php endif; ?>
             
             <dt class="saw-detail-label">Návštěvník</dt>
             <dd class="saw-detail-value">
