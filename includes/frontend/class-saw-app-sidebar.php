@@ -356,7 +356,7 @@ class SAW_App_Sidebar {
             // ===============================================
             array(
                 'items' => array(
-                    array('id' => 'dashboard', 'label' => 'Dashboard', 'url' => '/admin/', 'icon' => '📊'),
+                    array('id' => 'dashboard', 'label' => 'Dashboard', 'url' => '/admin/dashboard', 'icon' => '📊'),
                     array('id' => 'invitations', 'label' => 'Pozvánky', 'url' => '/admin/invitations', 'icon' => '📧'),
                     array('id' => 'statistics', 'label' => 'Statistiky', 'url' => '/admin/statistics', 'icon' => '📈'),
                 ),

@@ -1,4 +1,12 @@
 <?php
+/**
+ * Visits Form Template
+ * 
+ * @package     SAW_Visitors
+ * @subpackage  Modules/Visits
+ * @version     3.0.0 - REFACTORED: Physical/Legal person radio toggle
+ */
+
 if (!defined('ABSPATH')) exit;
 
 if (!class_exists('SAW_Component_Select_Create')) {
@@ -14,6 +22,7 @@ $context_branch_id = SAW_Context::get_branch_id();
 $branches = $branches ?? array();
 $companies = $companies ?? array();
 
+// Load branches
 if (empty($branches) && $customer_id) {
     global $wpdb;
     $branches_data = $wpdb->get_results($wpdb->prepare(
@@ -25,6 +34,7 @@ if (empty($branches) && $customer_id) {
     }
 }
 
+// Load companies
 if (empty($companies) && $customer_id) {
     $sql = $wpdb->prepare(
         "SELECT id, name FROM %i WHERE customer_id = %d",
@@ -46,6 +56,12 @@ if ($is_edit && !empty($item['branch_id'])) {
     $selected_branch_id = $item['branch_id'];
 } elseif (!$is_edit && $context_branch_id) {
     $selected_branch_id = $context_branch_id;
+}
+
+// Determine if visit has company (legal person) or is physical person
+$has_company = 1; // Default: legal person
+if ($is_edit && isset($item['company_id'])) {
+    $has_company = !empty($item['company_id']) ? 1 : 0;
 }
 
 $existing_host_ids = array();
@@ -96,6 +112,7 @@ $form_action = $is_edit
             </summary>
             <div class="saw-form-section-content">
                 
+                <!-- Branch -->
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
                         <label for="branch_id" class="saw-label saw-required">Pobočka</label>
@@ -110,14 +127,40 @@ $form_action = $is_edit
                     </div>
                 </div>
                 
+                <!-- ⭐ NEW: Physical vs Legal Person Radio -->
                 <div class="saw-form-row">
+                    <div class="saw-form-group saw-col-12">
+                        <label class="saw-label saw-required">Typ návštěvníka</label>
+                        <div class="saw-radio-group" style="display: flex; gap: 24px; margin-top: 8px;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="radio" 
+                                       name="has_company" 
+                                       value="1" 
+                                       <?php checked($has_company, 1); ?>
+                                       style="margin: 0;">
+                                <span style="font-weight: 500;">Právnická osoba (firma, instituce)</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="radio" 
+                                       name="has_company" 
+                                       value="0" 
+                                       <?php checked($has_company, 0); ?>
+                                       style="margin: 0;">
+                                <span style="font-weight: 500;">Fyzická osoba</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- ⭐ Conditional Company Field -->
+                <div class="saw-form-row field-company-row" style="<?php echo $has_company ? '' : 'display: none;'; ?>">
                     <div class="saw-form-group saw-col-12">
                         <?php
                         $company_select = new SAW_Component_Select_Create('company_id', array(
                             'label' => 'Firma',
                             'options' => $companies,
                             'selected' => $item['company_id'] ?? '',
-                            'required' => true,
+                            'required' => false, // JavaScript will handle this dynamically
                             'placeholder' => '-- Vyberte firmu --',
                             'inline_create' => array(
                                 'enabled' => true,
@@ -134,6 +177,7 @@ $form_action = $is_edit
                     </div>
                 </div>
                 
+                <!-- Visit Type & Status -->
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-6">
                         <label for="visit_type" class="saw-label saw-required">Typ návštěvy</label>
@@ -156,6 +200,7 @@ $form_action = $is_edit
                     </div>
                 </div>
                 
+                <!-- Schedule Days (Multi-day support) -->
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
                         <label class="saw-label">Dny návštěvy</label>
@@ -236,6 +281,7 @@ $form_action = $is_edit
                     </div>
                 </div>
                 
+                <!-- Invitation Email -->
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
                         <label for="invitation_email" class="saw-label">Email pro pozvánku</label>
@@ -243,6 +289,7 @@ $form_action = $is_edit
                     </div>
                 </div>
                 
+                <!-- Purpose -->
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
                         <label for="purpose" class="saw-label">Účel návštěvy</label>
@@ -250,6 +297,7 @@ $form_action = $is_edit
                     </div>
                 </div>
                 
+                <!-- Hosts (loaded via AJAX when branch changes) -->
                 <div class="saw-form-row field-hosts-row">
                     <div class="saw-form-group saw-col-12">
                         <label class="saw-label saw-required">
@@ -299,5 +347,31 @@ $form_action = $is_edit
 
 <script>
 window.sawVisitExistingHosts = <?php echo json_encode(array_map('intval', $existing_host_ids)); ?>;
+
+// ⭐ NEW: Toggle company field based on radio
+jQuery(document).ready(function($) {
+    const $companyRow = $('.field-company-row');
+    const $companySelect = $('#company_id');
+    
+    function toggleCompanyField() {
+        const hasCompany = $('input[name="has_company"]:checked').val();
+        
+        if (hasCompany === '1') {
+            $companyRow.slideDown();
+            $companySelect.prop('required', true);
+        } else {
+            $companyRow.slideUp();
+            $companySelect.prop('required', false);
+            $companySelect.val(''); // Clear value
+        }
+    }
+    
+    // Toggle on radio change
+    $('input[name="has_company"]').on('change', toggleCompanyField);
+    
+    // Initial state
+    toggleCompanyField();
+});
+
 <?php readfile(SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/visits.js'); ?>
 </script>

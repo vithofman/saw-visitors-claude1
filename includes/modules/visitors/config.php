@@ -4,7 +4,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visitors
- * @version     1.0.0
+ * @version     2.0.0 - UPDATED: Added check-in/out AJAX actions
  */
 
 if (!defined('ABSPATH')) {
@@ -109,6 +109,12 @@ return array(
     ),
     
     'custom_ajax_actions' => array(
+        // Existing
         'saw_get_visits_for_select' => 'ajax_get_visits_for_select',
+        
+        // ⭐ NEW: Check-in/out actions
+        'saw_checkin' => 'ajax_checkin',
+        'saw_checkout' => 'ajax_checkout',
+        'saw_add_adhoc_visitor' => 'ajax_add_adhoc_visitor',
     ),
 );

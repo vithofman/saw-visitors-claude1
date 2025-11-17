@@ -4,7 +4,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visits
- * @version     2.0.0 - REFACTORED: Multiple day schedules support
+ * @version     3.0.0 - REFACTORED: Added walk-in and invitation AJAX actions
  */
 
 if (!defined('ABSPATH')) {
@@ -47,7 +47,7 @@ return array(
         'company_id' => array(
             'type' => 'select',
             'label' => 'Firma',
-            'required' => true,
+            'required' => false, // Not required for physical persons
             'sanitize' => 'absint',
         ),
         'visit_type' => array(
@@ -64,6 +64,20 @@ return array(
             'sanitize' => 'sanitize_text_field',
             'default' => 'pending',
         ),
+        'started_at' => array(
+            'type' => 'datetime',
+            'label' => 'Zahájeno',
+            'required' => false,
+            'hidden' => true,
+            'sanitize' => 'sanitize_text_field',
+        ),
+        'completed_at' => array(
+            'type' => 'datetime',
+            'label' => 'Dokončeno',
+            'required' => false,
+            'hidden' => true,
+            'sanitize' => 'sanitize_text_field',
+        ),
         'invitation_email' => array(
             'type' => 'email',
             'label' => 'Email pro pozvánku',
@@ -76,12 +90,18 @@ return array(
             'required' => false,
             'sanitize' => 'sanitize_textarea_field',
         ),
+        'notes' => array(
+            'type' => 'textarea',
+            'label' => 'Poznámky',
+            'required' => false,
+            'sanitize' => 'sanitize_textarea_field',
+        ),
     ),
     
     'list_config' => array(
-        'columns' => array('id', 'company_id', 'schedule_dates', 'status'),
+        'columns' => array('id', 'company_id', 'schedule_dates', 'status', 'started_at'),
         'searchable' => array(),
-        'sortable' => array('id'),
+        'sortable' => array('id', 'first_schedule_date', 'started_at'),
         'filters' => array(),
         'per_page' => 20,
         'enable_detail_modal' => true,
@@ -95,5 +115,7 @@ return array(
     
     'custom_ajax_actions' => array(
         'saw_get_hosts_by_branch' => 'ajax_get_hosts_by_branch',
+        'saw_create_walkin' => 'ajax_create_walkin',
+        'saw_send_invitation' => 'ajax_send_invitation',
     ),
 );

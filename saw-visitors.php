@@ -114,6 +114,18 @@ add_action('wp_ajax_saw_inline_create_companies', function() {
 
 
 // ========================================
+// WIDGETS
+// ========================================
+
+// Widget
+require_once SAW_VISITORS_PLUGIN_DIR . 'includes/widgets/visitors/current-visitors/widget-current-visitors.php';
+SAW_Widget_Current_Visitors::init();
+
+// Dashboard  
+require_once SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/dashboard/dashboard.php';
+
+
+// ========================================
 // BOOTSTRAP & AKTIVACE
 // ========================================
 

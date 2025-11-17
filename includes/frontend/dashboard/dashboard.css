@@ -1,0 +1,324 @@
+/* SAW Frontend Dashboard */
+
+body.saw-dashboard-page {
+    margin: 0;
+    padding: 0;
+    background: #f1f5f9;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.saw-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+/* Header */
+.saw-dashboard-header {
+    background: white;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 20px 0;
+}
+
+.saw-header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.saw-dashboard-title {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 700;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.saw-dashboard-title .saw-icon {
+    font-size: 32px;
+}
+
+.saw-header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.saw-user-info {
+    font-size: 14px;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.saw-logout-btn {
+    padding: 8px 16px;
+    background: #ef4444;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.saw-logout-btn:hover {
+    background: #dc2626;
+    transform: translateY(-1px);
+}
+
+/* Main Content */
+.saw-dashboard-main {
+    padding: 32px 0;
+}
+
+/* Widgets Grid */
+.saw-widgets-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 24px;
+}
+
+/* Widget Card */
+.saw-widget {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.saw-widget-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.saw-widget-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.saw-widget-icon {
+    font-size: 24px;
+}
+
+.saw-widget-refresh {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    color: #64748b;
+    transition: all 0.2s;
+}
+
+.saw-widget-refresh:hover {
+    color: #2271b1;
+    transform: rotate(180deg);
+}
+
+.saw-widget-body {
+    padding: 24px;
+}
+
+/* Current Visitors Widget */
+.saw-widget-current-visitors {
+    grid-column: span 2;
+}
+
+.saw-visitor-count-badge {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 24px;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.saw-visitor-count-badge .saw-count {
+    font-size: 36px;
+    font-weight: 700;
+}
+
+.saw-visitor-count-badge .saw-label {
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.saw-visitors-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.saw-visitor-card {
+    display: flex;
+    gap: 16px;
+    padding: 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.saw-visitor-card:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.saw-visitor-info {
+    flex: 1;
+}
+
+.saw-visitor-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 4px;
+}
+
+.saw-visitor-company {
+    font-size: 14px;
+    color: #64748b;
+    margin-bottom: 8px;
+}
+
+.saw-visitor-meta {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.saw-meta-item {
+    font-size: 13px;
+    color: #64748b;
+}
+
+.saw-visitor-actions {
+    display: flex;
+    align-items: center;
+}
+
+.saw-checkout-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px;
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.saw-checkout-btn:hover {
+    background: #dc2626;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+/* Empty State */
+.saw-empty-state {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.saw-empty-icon {
+    font-size: 64px;
+    display: block;
+    margin-bottom: 12px;
+}
+
+.saw-empty-text {
+    color: #64748b;
+    margin: 0;
+    font-size: 16px;
+}
+
+/* Stats Widget */
+.saw-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.saw-stat-card {
+    text-align: center;
+    padding: 20px;
+    background: #f8fafc;
+    border-radius: 8px;
+}
+
+.saw-stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: #2271b1;
+    margin-bottom: 8px;
+}
+
+.saw-stat-label {
+    font-size: 13px;
+    color: #64748b;
+    font-weight: 500;
+}
+
+/* Actions Widget */
+.saw-action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.saw-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #1e293b;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.saw-action-btn:hover {
+    background: #2271b1;
+    color: white;
+    border-color: #2271b1;
+    transform: translateX(4px);
+}
+
+.saw-action-btn .dashicons {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .saw-widgets-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .saw-widget-current-visitors {
+        grid-column: span 1;
+    }
+    
+    .saw-stats-grid {
+        grid-template-columns: 1fr;
+    }
+}

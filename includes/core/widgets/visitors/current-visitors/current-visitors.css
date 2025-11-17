@@ -1,0 +1,157 @@
+/* Dashboard Widget - Current Visitors */
+
+.saw-current-visitors-widget {
+    padding: 0;
+}
+
+.saw-widget-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    border-radius: 6px 6px 0 0;
+    margin: -12px -12px 16px -12px;
+}
+
+.saw-visitor-count {
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.saw-visitor-label {
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 0.95;
+}
+
+.saw-visitors-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.saw-visitor-card {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.saw-visitor-card:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.saw-visitor-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.saw-visitor-name {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.saw-visitor-name strong {
+    font-size: 15px;
+    color: #1e293b;
+}
+
+.saw-visitor-company {
+    font-size: 13px;
+    color: #64748b;
+}
+
+.saw-visitor-meta {
+    display: flex;
+    gap: 16px;
+    font-size: 13px;
+    color: #64748b;
+}
+
+.saw-visitor-time,
+.saw-visitor-duration {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.saw-visitor-time .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+.saw-visitor-contact {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #475569;
+}
+
+.saw-visitor-contact .dashicons {
+    color: #64748b;
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+.saw-visitor-actions {
+    display: flex;
+    align-items: center;
+}
+
+.saw-manual-checkout-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.saw-manual-checkout-btn:hover {
+    background: #dc2626;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.saw-manual-checkout-btn .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+.saw-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    text-align: center;
+}
+
+/* Loading state */
+.saw-visitor-card.saw-loading {
+    opacity: 0.5;
+    pointer-events: none;
+}

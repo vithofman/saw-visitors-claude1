@@ -4,7 +4,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visits
- * @version     3.0.0 - REFACTORED: Uses admin-table search & filters
+ * @version     3.0.0 - REFACTORED: Shows physical person name when no company
  */
 
 if (!defined('ABSPATH')) {
@@ -82,12 +82,30 @@ $status_filter = $status_filter ?? '';
         'branches' => $branches ?? array(),
         
         // Columns
-        'columns' => array(            
-            'company_name' => array(
-                'label' => 'Firma',
-                'type' => 'text',
-                'class' => 'saw-table-cell-bold',
-                'sortable' => true,
+        'columns' => array(
+            'company_person' => array(
+                'label' => 'Návštěvník',
+                'type' => 'custom',
+                'sortable' => false,
+                'callback' => function($value, $item) {
+                    if (!empty($item['company_id'])) {
+                        // Legal person (company)
+                        echo '<div style="display: flex; align-items: center; gap: 8px;">';
+                        echo '<strong>' . esc_html($item['company_name']) . '</strong>';
+                        echo '<span class="saw-badge saw-badge-info" style="font-size: 11px;">Firma</span>';
+                        echo '</div>';
+                    } else {
+                        // Physical person
+                        echo '<div style="display: flex; align-items: center; gap: 8px;">';
+                        if (!empty($item['first_visitor_name'])) {
+                            echo '<strong style="color: #6366f1;">' . esc_html($item['first_visitor_name']) . '</strong>';
+                        } else {
+                            echo '<strong style="color: #6366f1;">Fyzická osoba</strong>';
+                        }
+                        echo '<span class="saw-badge" style="background: #6366f1; color: white; font-size: 11px;">👤 Fyzická</span>';
+                        echo '</div>';
+                    }
+                },
             ),
             'schedule_dates_formatted' => array(
                 'label' => 'Naplánované dny',

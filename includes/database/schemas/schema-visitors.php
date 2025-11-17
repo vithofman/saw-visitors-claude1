@@ -13,7 +13,9 @@ function saw_get_schema_visitors($table_name, $prefix, $charset_collate) {
 		email VARCHAR(255) NULL,
 		phone VARCHAR(50) NULL,
 		participation_status ENUM('planned', 'confirmed', 'no_show') NOT NULL DEFAULT 'planned',
-		training_skipped TINYINT(1) DEFAULT 0,
+		
+		training_required TINYINT(1) DEFAULT 1,
+		training_skipped TINYINT(1) DEFAULT 0 COMMENT 'Absolvoval do 1 roku',
 		training_started_at DATETIME NULL,
 		training_completed_at DATETIME NULL,
 		training_step_video TINYINT(1) DEFAULT 0,
@@ -21,8 +23,10 @@ function saw_get_schema_visitors($table_name, $prefix, $charset_collate) {
 		training_step_risks TINYINT(1) DEFAULT 0,
 		training_step_additional TINYINT(1) DEFAULT 0,
 		training_step_department TINYINT(1) DEFAULT 0,
-		checked_in_at DATETIME NULL,
-		checked_out_at DATETIME NULL,
+		
+		first_checkin_at DATETIME NULL COMMENT 'První check-in první den',
+		last_checkout_at DATETIME NULL COMMENT 'Poslední check-out poslední den',
+		
 		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
 		PRIMARY KEY (id),

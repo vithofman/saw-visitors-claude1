@@ -41,7 +41,10 @@ class SAW_Router {
         add_rewrite_rule('^reset-password/?$', 'index.php?saw_route=auth&saw_action=reset-password', 'top');
         add_rewrite_rule('^logout/?$', 'index.php?saw_route=auth&saw_action=logout', 'top');
         
-        add_rewrite_rule('^admin/?$', 'index.php?saw_route=admin', 'top');
+	// Dashboard route (MUST be before generic admin routes)
+	add_rewrite_rule('^admin/dashboard/?$', 'index.php?saw_route=admin&saw_page=dashboard', 'top');
+        
+	add_rewrite_rule('^admin/?$', 'index.php?saw_route=admin', 'top');
         add_rewrite_rule('^admin/([^/]+)/?$', 'index.php?saw_route=admin&saw_path=$matches[1]', 'top');
         add_rewrite_rule('^admin/([^/]+)/(.+)', 'index.php?saw_route=admin&saw_path=$matches[1]/$matches[2]', 'top');
         
@@ -69,12 +72,13 @@ class SAW_Router {
      * @return array Modified query vars
      */
     public function register_query_vars($vars) {
-        $vars[] = 'saw_route';
-        $vars[] = 'saw_path';
-        $vars[] = 'saw_action';
-        $vars[] = 'saw_sidebar_context';
-        return $vars;
-    }
+	    $vars[] = 'saw_route';
+	    $vars[] = 'saw_path';
+	    $vars[] = 'saw_action';
+	    $vars[] = 'saw_page';
+	    $vars[] = 'saw_sidebar_context';
+    return $vars;
+}
     
     /**
      * Parse sidebar context from URL segments
@@ -432,6 +436,15 @@ class SAW_Router {
     
     $clean_path = trim($path, '/');
     file_put_contents($log, "Clean path: $clean_path\n", FILE_APPEND);
+
+$saw_page = get_query_var('saw_page');
+if ($saw_page === 'dashboard') {
+    file_put_contents($log, "Dashboard page detected - loading dashboard\n", FILE_APPEND);
+    // Load dashboard class
+    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/dashboard/dashboard.php';
+    SAW_Frontend_Dashboard::render_dashboard();
+    exit;
+}
     
     if (empty($clean_path)) {
         file_put_contents($log, "Empty path - rendering dashboard\n", FILE_APPEND);

@@ -1,4 +1,12 @@
 <?php
+/**
+ * Visits Detail Modal Template
+ * 
+ * @package     SAW_Visitors
+ * @subpackage  Modules/Visits
+ * @version     3.0.0 - REFACTORED: Shows started_at, completed_at, physical/legal person
+ */
+
 if (!defined('ABSPATH')) exit;
 
 if (empty($item)) {
@@ -6,7 +14,7 @@ if (empty($item)) {
     return;
 }
 
-// Načti schedules
+// Load schedules
 global $wpdb;
 $schedules = array();
 if (!empty($item['id'])) {
@@ -16,16 +24,29 @@ if (!empty($item['id'])) {
         $item['id']
     ), ARRAY_A);
 }
+
+// Load visitors count
+$visitors_count = 0;
+if (!empty($item['id'])) {
+    $visitors_count = $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM %i WHERE visit_id = %d",
+        $wpdb->prefix . 'saw_visitors',
+        $item['id']
+    ));
+}
+
+// Determine if physical or legal person
+$is_physical_person = empty($item['company_id']);
 ?>
 
 <div class="saw-detail-header">
     <div class="saw-detail-header-info">
         <h2 class="saw-detail-title">
             #<?php echo esc_html($item['id']); ?> 
-            <?php if (!empty($item['company_name'])): ?>
-                <?php echo esc_html($item['company_name']); ?>
+            <?php if ($is_physical_person): ?>
+                <span style="color: #6366f1;">Fyzická osoba</span>
             <?php else: ?>
-                Návštěva
+                <?php echo esc_html($item['company_name']); ?>
             <?php endif; ?>
         </h2>
         <div class="saw-detail-badges">
@@ -56,6 +77,13 @@ if (!empty($item['id'])) {
                 <?php echo esc_html($type_labels[$item['visit_type']] ?? $item['visit_type']); ?>
             </span>
             <?php endif; ?>
+            
+            <?php if ($is_physical_person): ?>
+            <span class="saw-badge" style="background: #6366f1; color: white;">
+                👤 Fyzická osoba
+            </span>
+            <?php endif; ?>
+            
             <?php if (!empty($item['status'])): ?>
             <span class="saw-badge <?php echo esc_attr($status_classes[$item['status']] ?? 'saw-badge-secondary'); ?>">
                 <?php echo esc_html($status_labels[$item['status']] ?? $item['status']); ?>
@@ -67,6 +95,64 @@ if (!empty($item['id'])) {
 
 <div class="saw-detail-sections">
     
+    <!-- ⭐ NEW: Tracking Timeline -->
+    <?php if (!empty($item['started_at']) || !empty($item['completed_at'])): ?>
+    <div class="saw-detail-section">
+        <h3 class="saw-detail-section-title">
+            <span class="dashicons dashicons-clock"></span>
+            Průběh návštěvy
+        </h3>
+        
+        <div class="saw-tracking-timeline">
+            <?php if (!empty($item['started_at'])): ?>
+            <div class="saw-tracking-event">
+                <div class="saw-tracking-icon saw-tracking-icon-start">
+                    <span class="dashicons dashicons-arrow-down-alt"></span>
+                </div>
+                <div class="saw-tracking-content">
+                    <strong>Zahájeno</strong>
+                    <span class="saw-tracking-time">
+                        <?php echo date('d.m.Y H:i', strtotime($item['started_at'])); ?>
+                    </span>
+                </div>
+            </div>
+            <?php endif; ?>
+            
+            <?php if (!empty($item['completed_at'])): ?>
+            <div class="saw-tracking-event">
+                <div class="saw-tracking-icon saw-tracking-icon-end">
+                    <span class="dashicons dashicons-arrow-up-alt"></span>
+                </div>
+                <div class="saw-tracking-content">
+                    <strong>Dokončeno</strong>
+                    <span class="saw-tracking-time">
+                        <?php echo date('d.m.Y H:i', strtotime($item['completed_at'])); ?>
+                    </span>
+                </div>
+            </div>
+            <?php endif; ?>
+            
+            <?php if (!empty($item['started_at']) && !empty($item['completed_at'])): ?>
+            <div class="saw-tracking-duration">
+                <?php
+                $start = new DateTime($item['started_at']);
+                $end = new DateTime($item['completed_at']);
+                $diff = $start->diff($end);
+                
+                $duration_parts = array();
+                if ($diff->d > 0) $duration_parts[] = $diff->d . ' dní';
+                if ($diff->h > 0) $duration_parts[] = $diff->h . ' h';
+                if ($diff->i > 0) $duration_parts[] = $diff->i . ' min';
+                
+                echo '⏱️ Celková doba: ' . implode(', ', $duration_parts);
+                ?>
+            </div>
+            <?php endif; ?>
+        </div>
+    </div>
+    <?php endif; ?>
+    
+    <!-- Scheduled Days -->
     <?php if (!empty($schedules)): ?>
     <div class="saw-detail-section">
         <h3 class="saw-detail-section-title">
@@ -122,12 +208,33 @@ if (!empty($item['id'])) {
     </div>
     <?php endif; ?>
     
+    <!-- Visit Information -->
     <div class="saw-detail-section">
         <h3 class="saw-detail-section-title">
             <span class="dashicons dashicons-info"></span>
             Informace o návštěvě
         </h3>
         <dl class="saw-detail-list">
+            <dt class="saw-detail-label">Pobočka</dt>
+            <dd class="saw-detail-value"><?php echo esc_html($item['branch_name'] ?? '—'); ?></dd>
+            
+            <dt class="saw-detail-label">Návštěvník</dt>
+            <dd class="saw-detail-value">
+                <?php if ($is_physical_person): ?>
+                    <span style="color: #6366f1; font-weight: 600;">👤 Fyzická osoba</span>
+                <?php else: ?>
+                    <strong><?php echo esc_html($item['company_name']); ?></strong>
+                <?php endif; ?>
+            </dd>
+            
+            <dt class="saw-detail-label">Počet návštěvníků</dt>
+            <dd class="saw-detail-value">
+                <span class="saw-badge saw-badge-info">
+                    <?php echo $visitors_count; ?> 
+                    <?php echo $visitors_count === 1 ? 'osoba' : ($visitors_count < 5 ? 'osoby' : 'osob'); ?>
+                </span>
+            </dd>
+            
             <?php if (!empty($item['invitation_email'])): ?>
             <dt class="saw-detail-label">Email pro pozvánku</dt>
             <dd class="saw-detail-value">
@@ -148,13 +255,13 @@ if (!empty($item['id'])) {
                         <div class="saw-host-card">
                             <span class="dashicons dashicons-businessman"></span>
                             <div class="saw-host-info">
-    <strong><?php echo esc_html($host['first_name'] . ' ' . $host['last_name']); ?></strong>
-    <?php if (!empty($host['position'])): ?>
-        <span class="saw-host-email"><?php echo esc_html($host['position']); ?></span>
-    <?php elseif (!empty($host['email'])): ?>
-        <span class="saw-host-email"><?php echo esc_html($host['email']); ?></span>
-    <?php endif; ?>
-</div>
+                                <strong><?php echo esc_html($host['first_name'] . ' ' . $host['last_name']); ?></strong>
+                                <?php if (!empty($host['position'])): ?>
+                                    <span class="saw-host-email"><?php echo esc_html($host['position']); ?></span>
+                                <?php elseif (!empty($host['email'])): ?>
+                                    <span class="saw-host-email"><?php echo esc_html($host['email']); ?></span>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -165,6 +272,73 @@ if (!empty($item['id'])) {
 </div>
 
 <style>
+/* ⭐ NEW: Tracking Timeline */
+.saw-tracking-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 8px;
+}
+
+.saw-tracking-event {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.saw-tracking-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.saw-tracking-icon-start {
+    background: #10b981;
+}
+
+.saw-tracking-icon-end {
+    background: #3b82f6;
+}
+
+.saw-tracking-icon .dashicons {
+    color: white;
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+}
+
+.saw-tracking-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.saw-tracking-content strong {
+    font-size: 16px;
+    color: #1e293b;
+}
+
+.saw-tracking-time {
+    font-size: 14px;
+    color: #64748b;
+}
+
+.saw-tracking-duration {
+    padding: 12px;
+    background: white;
+    border: 2px dashed #cbd5e1;
+    border-radius: 6px;
+    text-align: center;
+    font-weight: 600;
+    color: #475569;
+}
+
 /* Schedule Day Cards */
 .saw-visit-schedule-detail {
     display: flex;
