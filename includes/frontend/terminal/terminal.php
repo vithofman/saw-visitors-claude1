@@ -5,20 +5,15 @@
  * Main routing and session management for visitor terminal.
  * Handles multi-step check-in/out flow with language support.
  *
- * Flow:
- * 1. Language selection (cs/en/uk)
- * 2. Action choice (check-in/check-out)
- * 3. Check-in paths:
- *    - Planned visit (PIN entry)
- *    - Walk-in visit (registration form)
- * 4. Check-out paths:
- *    - PIN based (list all visitors for that visit)
- *    - Search based (find by name)
+ * CHANGES v2.0:
+ * - ✅ Načítá jazyky z DB podle customer_id a branch_id
+ * - ✅ Podporuje terminal role (má pevné branch_id)
+ * - ✅ Podporuje super_admin s context_customer_id/context_branch_id
  *
  * @package    SAW_Visitors
  * @subpackage Frontend/Terminal
  * @since      1.0.0
- * @version    1.0.0
+ * @version    2.0.0
  */
 
 if (!defined('ABSPATH')) {
@@ -47,15 +42,25 @@ class SAW_Terminal_Controller {
     private $current_step;
     
     /**
-     * Available languages
+     * Available languages (loaded from DB)
      *
      * @var array
      */
-    private $languages = [
-        'cs' => 'Čeština',
-        'en' => 'English',
-        'uk' => 'Українська',
-    ];
+    private $languages = [];
+    
+    /**
+     * Current customer ID
+     *
+     * @var int
+     */
+    private $customer_id;
+    
+    /**
+     * Current branch ID
+     *
+     * @var int
+     */
+    private $branch_id;
     
     /**
      * Constructor
@@ -64,8 +69,138 @@ class SAW_Terminal_Controller {
      */
     public function __construct() {
         $this->session = SAW_Session_Manager::instance();
+        
+        // ✅ Získání customer_id a branch_id
+        $this->load_context();
+        
+        // ✅ Načtení jazyků z DB
+        $this->load_languages();
+        
         $this->init_terminal_session();
         $this->current_step = $this->get_current_step();
+    }
+    
+    /**
+     * Load customer and branch context
+     *
+     * Logika:
+     * 1. Terminal role → má pevné branch_id a customer_id
+     * 2. Super admin → použije context_customer_id a context_branch_id
+     * 3. Admin/Manager → použije své branch_id a customer_id
+     *
+     * @since 2.0.0
+     * @return void
+     */
+    private function load_context() {
+        global $wpdb;
+        
+        if (!is_user_logged_in()) {
+            wp_die('Musíte být přihlášeni pro přístup k terminálu.', 'Přístup odepřen', ['response' => 403]);
+        }
+        
+        $wp_user_id = get_current_user_id();
+        
+        $saw_user = $wpdb->get_row($wpdb->prepare(
+            "SELECT 
+                customer_id,
+                branch_id,
+                context_customer_id,
+                context_branch_id,
+                role
+             FROM {$wpdb->prefix}saw_users 
+             WHERE wp_user_id = %d",
+            $wp_user_id
+        ));
+        
+        if (!$saw_user) {
+            wp_die('SAW uživatel nenalezen.', 'Chyba', ['response' => 500]);
+        }
+        
+        // ✅ Logika podle role
+        switch ($saw_user->role) {
+            case 'super_admin':
+                // Super admin používá context (customer switcher)
+                $this->customer_id = $saw_user->context_customer_id ?? $saw_user->customer_id;
+                $this->branch_id = $saw_user->context_branch_id ?? $saw_user->branch_id;
+                break;
+                
+            case 'terminal':
+                // Terminal má pevné branch_id
+                $this->customer_id = $saw_user->customer_id;
+                $this->branch_id = $saw_user->branch_id;
+                break;
+                
+            default:
+                // Admin, super_manager, manager
+                $this->customer_id = $saw_user->customer_id;
+                $this->branch_id = $saw_user->context_branch_id ?? $saw_user->branch_id;
+                break;
+        }
+        
+        if (!$this->customer_id || !$this->branch_id) {
+            wp_die(
+                'Chybí kontext zákazníka nebo pobočky. Ujistěte se, že máte vybraný zákazník (super admin) nebo přiřazenou pobočku.',
+                'Chyba konfigurace',
+                ['response' => 500]
+            );
+        }
+    }
+    
+    /**
+     * Load available languages from database
+     *
+     * Načte pouze jazyky:
+     * 1. Pro aktuálního zákazníka (customer_id)
+     * 2. Aktivní pro aktuální pobočku (branch_id)
+     * 3. Seřazené podle display_order
+     *
+     * @since 2.0.0
+     * @return void
+     */
+    private function load_languages() {
+        global $wpdb;
+        
+        $results = $wpdb->get_results($wpdb->prepare(
+            "SELECT 
+                tl.language_code,
+                tl.language_name,
+                tl.flag_emoji,
+                tlb.is_default,
+                tlb.display_order
+             FROM {$wpdb->prefix}saw_training_languages tl
+             INNER JOIN {$wpdb->prefix}saw_training_language_branches tlb 
+                ON tl.id = tlb.language_id
+             WHERE tl.customer_id = %d
+               AND tlb.branch_id = %d
+               AND tlb.is_active = 1
+             ORDER BY tlb.display_order ASC, tl.language_name ASC",
+            $this->customer_id,
+            $this->branch_id
+        ));
+        
+        // Vytvoření pole pro template: ['cs' => 'Čeština', 'en' => 'English']
+        $this->languages = [];
+        foreach ($results as $row) {
+            $this->languages[$row->language_code] = [
+                'name' => $row->language_name,
+                'flag' => $row->flag_emoji,
+                'is_default' => (bool) $row->is_default,
+            ];
+        }
+        
+        // ✅ Fallback pokud nejsou žádné jazyky
+        if (empty($this->languages)) {
+            error_log("[SAW Terminal] WARNING: No languages found for customer #{$this->customer_id}, branch #{$this->branch_id}");
+            
+            // Hardcoded fallback - čeština
+            $this->languages = [
+                'cs' => [
+                    'name' => 'Čeština',
+                    'flag' => '🇨🇿',
+                    'is_default' => true,
+                ],
+            ];
+        }
     }
     
     /**
@@ -87,6 +222,8 @@ class SAW_Terminal_Controller {
                 'visit_id' => null,
                 'visitor_ids' => [],
                 'data' => [],
+                'customer_id' => $this->customer_id,
+                'branch_id' => $this->branch_id,
             ]);
         }
     }
@@ -99,6 +236,11 @@ class SAW_Terminal_Controller {
      */
     private function get_current_step() {
         $path = get_query_var('saw_path');
+        
+        // ✅ If URL is exactly /terminal/ (home button), always return 'language'
+        if (empty($path) || $path === '/' || $path === 'terminal') {
+            return 'language';
+        }
         
         // Parse step from URL: /terminal/checkin/register -> step = 'register'
         if (!empty($path)) {
@@ -124,6 +266,24 @@ class SAW_Terminal_Controller {
      * @return void
      */
     public function render() {
+        // ✅ DEBUG - zjistíme co se děje
+        $path = get_query_var('saw_path');
+        $request_uri = $_SERVER['REQUEST_URI'] ?? '';
+        error_log("=== TERMINAL DEBUG ===");
+        error_log("REQUEST_URI: {$request_uri}");
+        error_log("saw_path query var: '{$path}'");
+        error_log("current_step: {$this->current_step}");
+        
+        // ✅ Reset flow when returning to language step via home button
+        if ($this->current_step === 'language') {
+            $flow = $this->session->get('terminal_flow');
+            // If we have progress but we're back at language, reset
+            if (!empty($flow['language']) || !empty($flow['action'])) {
+                error_log("RESETTING FLOW - user returned to language step");
+                $this->reset_flow();
+            }
+        }
+        
         // Enqueue terminal assets
         $this->enqueue_assets();
         
@@ -196,6 +356,182 @@ class SAW_Terminal_Controller {
                 $this->render_language_selection();
                 break;
         }
+    }
+    
+    /**
+     * Render language selection step
+     *
+     * @since 1.0.0
+     * @return void
+     */
+    private function render_language_selection() {
+        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/1-language.php';
+        $this->render_template($template, [
+            'languages' => $this->languages, // ✅ Nyní z DB
+        ]);
+    }
+    
+    /**
+     * Render action choice step
+     *
+     * @since 1.0.0
+     * @return void
+     */
+    private function render_action_choice() {
+        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/2-action.php';
+        $this->render_template($template, []);
+    }
+    
+    /**
+     * Render check-in type selection
+     *
+     * @since 1.0.0
+     * @return void
+     */
+    private function render_checkin_type() {
+        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/3-type.php';
+        $this->render_template($template, []);
+    }
+    
+    /**
+     * Render checkout method selection
+     *
+     * @since 1.0.0
+     * @return void
+     */
+    private function render_checkout_method() {
+        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/checkout-method.php';
+        $this->render_template($template, []);
+    }
+    
+    /**
+     * Render PIN entry form
+     *
+     * @since 1.0.0
+     * @return void
+     */
+    private function render_pin_entry() {
+        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/pin-entry.php';
+        $this->render_template($template, []);
+    }
+    
+    /**
+     * Render registration form
+     *
+     * @since 1.0.0
+     * @return void
+     */
+    private function render_registration_form() {
+        // ✅ Load hosts from database
+        global $wpdb;
+        
+        $hosts = $wpdb->get_results($wpdb->prepare(
+            "SELECT id, first_name, last_name, position, role
+             FROM {$wpdb->prefix}saw_users
+             WHERE customer_id = %d 
+               AND branch_id = %d
+               AND role IN ('admin', 'super_manager', 'manager')
+               AND is_active = 1
+             ORDER BY last_name ASC, first_name ASC",
+            $this->customer_id,
+            $this->branch_id
+        ), ARRAY_A);
+        
+        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/4-register.php';
+        $this->render_template($template, [
+            'hosts' => $hosts, // ✅ Pass hosts to template
+        ]);
+    }
+    
+    /**
+     * Render checkout PIN form
+     *
+     * @since 1.0.0
+     * @return void
+     */
+    private function render_checkout_pin() {
+        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/checkout/pin.php';
+        $this->render_template($template, []);
+    }
+    
+    /**
+     * Render checkout search form
+     *
+     * @since 1.0.0
+     * @return void
+     */
+    private function render_checkout_search() {
+        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/checkout/search.php';
+        $this->render_template($template, []);
+    }
+    
+    /**
+     * Render success page
+     *
+     * @since 1.0.0
+     * @return void
+     */
+    private function render_success() {
+        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/success.php';
+        $flow = $this->session->get('terminal_flow');
+        $this->render_template($template, [
+            'action' => $flow['action'] ?? 'checkin',
+        ]);
+    }
+    
+    /**
+     * Render training video step
+     *
+     * @since 1.0.0
+     * @return void
+     */
+    private function render_training_video() {
+        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/training/video.php';
+        $this->render_template($template, []);
+    }
+    
+    /**
+     * Render training map step
+     *
+     * @since 1.0.0
+     * @return void
+     */
+    private function render_training_map() {
+        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/training/map.php';
+        $this->render_template($template, []);
+    }
+    
+    /**
+     * Render training risks step
+     *
+     * @since 1.0.0
+     * @return void
+     */
+    private function render_training_risks() {
+        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/training/risks.php';
+        $this->render_template($template, []);
+    }
+    
+    /**
+     * Render training department step
+     *
+     * @since 1.0.0
+     * @return void
+     */
+    private function render_training_department() {
+        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/training/department.php';
+        $this->render_template($template, []);
+    }
+    
+    /**
+     * Render training additional step
+     *
+     * @since 1.0.0
+     * @return void
+     */
+    private function render_training_additional() {
+        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/training/additional.php';
+        $this->render_template($template, []);
     }
     
     /**
@@ -311,15 +647,21 @@ class SAW_Terminal_Controller {
         
         $flow = $this->session->get('terminal_flow');
         $flow['action'] = $action;
-        $flow['step'] = $action;
-        $this->session->set('terminal_flow', $flow);
         
-        wp_redirect(home_url('/terminal/' . $action . '/'));
+        if ($action === 'checkin') {
+            $flow['step'] = 'checkin';
+            wp_redirect(home_url('/terminal/checkin/'));
+        } else {
+            $flow['step'] = 'checkout';
+            wp_redirect(home_url('/terminal/checkout/'));
+        }
+        
+        $this->session->set('terminal_flow', $flow);
         exit;
     }
     
     /**
-     * Handle check-in type selection (planned/walkin)
+     * Handle checkin type selection
      *
      * @since 1.0.0
      * @return void
@@ -335,22 +677,23 @@ class SAW_Terminal_Controller {
         
         $flow = $this->session->get('terminal_flow');
         $flow['type'] = $type;
-        $this->session->set('terminal_flow', $flow);
         
         if ($type === 'planned') {
             $flow['step'] = 'pin-entry';
-            $this->session->set('terminal_flow', $flow);
-            wp_redirect(home_url('/terminal/checkin/pin-entry/'));
+            wp_redirect(home_url('/terminal/pin-entry/'));
         } else {
             $flow['step'] = 'register';
-            $this->session->set('terminal_flow', $flow);
-            wp_redirect(home_url('/terminal/checkin/register/'));
+            wp_redirect(home_url('/terminal/register/'));
         }
+        
+        $this->session->set('terminal_flow', $flow);
         exit;
     }
     
     /**
      * Handle PIN verification
+     *
+     * TODO: Implement actual DB lookup
      *
      * @since 1.0.0
      * @return void
@@ -358,387 +701,107 @@ class SAW_Terminal_Controller {
     private function handle_pin_verification() {
         $pin = sanitize_text_field($_POST['pin'] ?? '');
         
-        if (empty($pin)) {
-            $this->set_error(__('Zadejte PIN kód', 'saw-visitors'));
-            $this->render_pin_entry();
-            return;
-        }
+        // TODO: Lookup PIN in database
+        // $visit = find_visit_by_pin($pin, $this->customer_id);
         
-        // TODO: Verify PIN against database
-        // For now, mock success
-        $flow = $this->session->get('terminal_flow');
-        $flow['pin'] = $pin;
-        $flow['visit_id'] = 123; // TODO: Get from DB
-        $flow['step'] = 'success';
-        $this->session->set('terminal_flow', $flow);
-        
-        wp_redirect(home_url('/terminal/success/'));
-        exit;
+        $this->set_error(__('PIN verifikace ještě není implementována', 'saw-visitors'));
+        $this->render_pin_entry();
     }
     
     /**
-     * Handle registration form submission
+     * Handle registration submission
+     *
+     * TODO: Implement actual DB save
      *
      * @since 1.0.0
      * @return void
      */
     private function handle_registration_submission() {
-        // TODO: Validate and save registration data
+        // TODO: Save visitor to database
         
-        $flow = $this->session->get('terminal_flow');
-        $flow['step'] = 'success';
-        $this->session->set('terminal_flow', $flow);
-        
-        wp_redirect(home_url('/terminal/success/'));
-        exit;
+        $this->set_error(__('Registrace ještě není implementována', 'saw-visitors'));
+        $this->render_registration_form();
     }
     
     /**
      * Handle checkout via PIN
      *
+     * TODO: Implement actual DB lookup
+     *
      * @since 1.0.0
      * @return void
      */
     private function handle_checkout_pin() {
-        // TODO: Process checkout
-        
-        $flow = $this->session->get('terminal_flow');
-        $flow['step'] = 'success';
-        $this->session->set('terminal_flow', $flow);
-        
-        wp_redirect(home_url('/terminal/success/'));
-        exit;
+        // TODO: Implement
+        $this->set_error(__('Check-out přes PIN ještě není implementován', 'saw-visitors'));
+        $this->render_checkout_pin();
     }
     
     /**
      * Handle checkout via search
      *
+     * TODO: Implement actual DB search
+     *
      * @since 1.0.0
      * @return void
      */
     private function handle_checkout_search() {
-        // TODO: Process search and checkout
-        
-        $flow = $this->session->get('terminal_flow');
-        $flow['step'] = 'success';
-        $this->session->set('terminal_flow', $flow);
-        
-        wp_redirect(home_url('/terminal/success/'));
-        exit;
+        // TODO: Implement
+        $this->set_error(__('Vyhledávání ještě není implementováno', 'saw-visitors'));
+        $this->render_checkout_search();
     }
     
     /**
-     * Handle training video completion
-     *
-     * @since 1.0.0
-     * @return void
+     * Training step completion handlers (stubs for now)
      */
     private function handle_training_video_complete() {
-        $visitor_id = $this->session->get('terminal_flow')['visitor_id'] ?? null;
-        
-        if ($visitor_id) {
-            global $wpdb;
-            $wpdb->update(
-                $wpdb->prefix . 'saw_visitors',
-                ['training_step_video' => 1],
-                ['id' => $visitor_id],
-                ['%d'],
-                ['%d']
-            );
-        }
-        
-        wp_redirect(home_url('/terminal/training-map/'));
+        // TODO: Mark video as completed
+        wp_redirect(home_url('/terminal/success/'));
         exit;
     }
     
-    /**
-     * Handle training map completion
-     *
-     * @since 1.0.0
-     * @return void
-     */
     private function handle_training_map_complete() {
-        $visitor_id = $this->session->get('terminal_flow')['visitor_id'] ?? null;
-        
-        if ($visitor_id) {
-            global $wpdb;
-            $wpdb->update(
-                $wpdb->prefix . 'saw_visitors',
-                ['training_step_map' => 1],
-                ['id' => $visitor_id],
-                ['%d'],
-                ['%d']
-            );
-        }
-        
-        wp_redirect(home_url('/terminal/training-risks/'));
+        // TODO: Mark map as completed
+        wp_redirect(home_url('/terminal/success/'));
         exit;
     }
     
-    /**
-     * Handle training risks completion
-     *
-     * @since 1.0.0
-     * @return void
-     */
     private function handle_training_risks_complete() {
-        $visitor_id = $this->session->get('terminal_flow')['visitor_id'] ?? null;
-        
-        if ($visitor_id) {
-            global $wpdb;
-            $wpdb->update(
-                $wpdb->prefix . 'saw_visitors',
-                ['training_step_risks' => 1],
-                ['id' => $visitor_id],
-                ['%d'],
-                ['%d']
-            );
-        }
-        
-        wp_redirect(home_url('/terminal/training-department/'));
+        // TODO: Mark risks as completed
+        wp_redirect(home_url('/terminal/success/'));
         exit;
     }
     
-    /**
-     * Handle training department completion
-     *
-     * @since 1.0.0
-     * @return void
-     */
     private function handle_training_department_complete() {
-        $visitor_id = $this->session->get('terminal_flow')['visitor_id'] ?? null;
-        
-        if ($visitor_id) {
-            global $wpdb;
-            $wpdb->update(
-                $wpdb->prefix . 'saw_visitors',
-                ['training_step_department' => 1],
-                ['id' => $visitor_id],
-                ['%d'],
-                ['%d']
-            );
-        }
-        
-        wp_redirect(home_url('/terminal/training-additional/'));
+        // TODO: Mark department as completed
+        wp_redirect(home_url('/terminal/success/'));
         exit;
     }
     
-    /**
-     * Handle training additional completion (final step)
-     *
-     * @since 1.0.0
-     * @return void
-     */
     private function handle_training_additional_complete() {
-        $visitor_id = $this->session->get('terminal_flow')['visitor_id'] ?? null;
-        
-        if ($visitor_id) {
-            global $wpdb;
-            
-            // Mark final step complete
-            $wpdb->update(
-                $wpdb->prefix . 'saw_visitors',
-                [
-                    'training_step_additional' => 1,
-                    'training_completed_at' => current_time('mysql'),
-                ],
-                ['id' => $visitor_id],
-                ['%d', '%s'],
-                ['%d']
-            );
-        }
-        
-        // Redirect to success
-        $flow = $this->session->get('terminal_flow');
-        $flow['step'] = 'success';
-        $this->session->set('terminal_flow', $flow);
-        
+        // TODO: Mark additional as completed
         wp_redirect(home_url('/terminal/success/'));
         exit;
     }
     
     /**
-     * Render language selection step
+     * Render template with layout
      *
      * @since 1.0.0
-     * @return void
-     */
-    private function render_language_selection() {
-        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/1-language.php';
-        $this->render_template($template, [
-            'languages' => $this->languages,
-        ]);
-    }
-    
-    /**
-     * Render action choice step
-     *
-     * @since 1.0.0
-     * @return void
-     */
-    private function render_action_choice() {
-        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/2-action.php';
-        $this->render_template($template, []);
-    }
-    
-    /**
-     * Render check-in type selection
-     *
-     * @since 1.0.0
-     * @return void
-     */
-    private function render_checkin_type() {
-        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/3-type.php';
-        $this->render_template($template, []);
-    }
-    
-    /**
-     * Render checkout method selection
-     *
-     * @since 1.0.0
-     * @return void
-     */
-    private function render_checkout_method() {
-        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/checkout-method.php';
-        $this->render_template($template, []);
-    }
-    
-    /**
-     * Render PIN entry form
-     *
-     * @since 1.0.0
-     * @return void
-     */
-    private function render_pin_entry() {
-        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/pin-entry.php';
-        $this->render_template($template, []);
-    }
-    
-    /**
-     * Render registration form
-     *
-     * @since 1.0.0
-     * @return void
-     */
-    private function render_registration_form() {
-        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/4-register.php';
-        $this->render_template($template, []);
-    }
-    
-    /**
-     * Render checkout PIN form
-     *
-     * @since 1.0.0
-     * @return void
-     */
-    private function render_checkout_pin() {
-        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/checkout/pin.php';
-        $this->render_template($template, []);
-    }
-    
-    /**
-     * Render checkout search form
-     *
-     * @since 1.0.0
-     * @return void
-     */
-    private function render_checkout_search() {
-        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/checkout/search.php';
-        $this->render_template($template, []);
-    }
-    
-    /**
-     * Render success page
-     *
-     * @since 1.0.0
-     * @return void
-     */
-    private function render_success() {
-        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/success.php';
-        $flow = $this->session->get('terminal_flow');
-        $this->render_template($template, [
-            'action' => $flow['action'] ?? 'checkin',
-        ]);
-    }
-    
-    /**
-     * Render training video step
-     *
-     * @since 1.0.0
-     * @return void
-     */
-    private function render_training_video() {
-        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/training/video.php';
-        $this->render_template($template, []);
-    }
-    
-    /**
-     * Render training map step
-     *
-     * @since 1.0.0
-     * @return void
-     */
-    private function render_training_map() {
-        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/training/map.php';
-        $this->render_template($template, []);
-    }
-    
-    /**
-     * Render training risks step
-     *
-     * @since 1.0.0
-     * @return void
-     */
-    private function render_training_risks() {
-        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/training/risks.php';
-        $this->render_template($template, []);
-    }
-    
-    /**
-     * Render training department step
-     *
-     * @since 1.0.0
-     * @return void
-     */
-    private function render_training_department() {
-        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/training/department.php';
-        $this->render_template($template, []);
-    }
-    
-    /**
-     * Render training additional step
-     *
-     * @since 1.0.0
-     * @return void
-     */
-    private function render_training_additional() {
-        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/training/additional.php';
-        $this->render_template($template, []);
-    }
-    
-    /**
-     * Render template with terminal layout
-     *
-     * @since 1.0.0
-     * @param string $template Template file path
-     * @param array  $data     Data to pass to template
+     * @param string $template Template path
+     * @param array $data Data to pass to template
      * @return void
      */
     private function render_template($template, $data = []) {
-        if (!file_exists($template)) {
-            wp_die('Terminal template not found: ' . $template);
-        }
-        
-        $flow = $this->session->get('terminal_flow');
-        $error = $this->session->get('terminal_error');
-        
-        // Clear error after displaying
-        if ($error) {
-            $this->session->unset('terminal_error');
-        }
-        
         // Extract data for template
         extract($data);
+        
+        // Get error message if any
+        $error = $this->session->get('terminal_error');
+        $this->session->unset('terminal_error');
+        
+        // ✅ Provide flow to layouts (header/footer need it)
+        $flow = $this->session->get('terminal_flow');
         
         // Start terminal layout
         include SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/layout-header.php';
@@ -768,6 +831,8 @@ class SAW_Terminal_Controller {
             'visit_id' => null,
             'visitor_ids' => [],
             'data' => [],
+            'customer_id' => $this->customer_id,
+            'branch_id' => $this->branch_id,
         ]);
     }
     

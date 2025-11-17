@@ -526,12 +526,12 @@ if ($saw_page === 'dashboard') {
      * @return void
      */
     private function handle_terminal_route($path) {
-        if (!$this->is_logged_in()) {
-            $this->redirect_to_login('terminal');
-            return;
-        }
-        
-        $handler = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal-route-handler.php';
+    if (!$this->is_logged_in()) {
+        $this->redirect_to_login('terminal');
+        return;
+    }
+    
+    $handler = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal-route-handler.php';
     
     if (file_exists($handler)) {
         require_once $handler;
@@ -540,7 +540,6 @@ if ($saw_page === 'dashboard') {
         wp_die('Terminal handler not found: ' . $handler);
     }
 }
-    }
     
     /**
      * Handle visitor routes

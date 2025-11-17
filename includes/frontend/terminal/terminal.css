@@ -859,3 +859,116 @@ hr {
         height: 1.25rem;
     }
 }
+
+/* ============================================
+   TWO-COLUMN FORM LAYOUT (4-register.php)
+   ============================================ */
+
+.saw-terminal-card-wide {
+    max-width: 1200px !important;
+}
+
+
+/* ============================================
+   TWO-COLUMN FORM LAYOUT - COMPACT (4-register.php)
+   ============================================ */
+
+.saw-terminal-card-wide {
+    max-width: 1200px !important;
+}
+
+.saw-terminal-form-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+}
+
+.saw-terminal-form-column {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.saw-terminal-form-section {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 12px;
+    border: 2px solid #e2e8f0;
+}
+
+.saw-terminal-form-section-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #2d3748;
+    margin: 0 0 0.75rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.saw-terminal-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.saw-terminal-form-columns .saw-terminal-form-group {
+    margin-bottom: 0.75rem;
+}
+
+.saw-terminal-form-columns .saw-terminal-form-label {
+    font-size: 0.9375rem;
+    margin-bottom: 0.5rem;
+}
+
+.saw-terminal-form-columns .saw-terminal-form-input {
+    padding: 0.875rem 1rem;
+    font-size: 1rem;
+}
+
+.saw-terminal-form-columns .saw-terminal-form-checkbox {
+    padding: 0.875rem;
+    margin-bottom: 0.5rem;
+}
+
+.saw-terminal-form-columns .saw-terminal-form-checkbox label {
+    font-size: 0.9375rem;
+}
+
+.saw-terminal-form-submit {
+    grid-column: 1 / -1;
+    margin-top: 0.75rem;
+}
+
+.required {
+    color: #e53e3e;
+    font-weight: 700;
+}
+
+.saw-terminal-form-help {
+    display: block;
+    margin-top: 0.375rem;
+    color: #718096;
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
+/* Mobile responsive for columns */
+@media (max-width: 968px) {
+    .saw-terminal-form-columns {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    
+    .saw-terminal-form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .saw-terminal-form-section {
+        padding: 0.875rem;
+    }
+    
+    .saw-terminal-card-wide {
+        max-width: 900px !important;
+    }
+}
