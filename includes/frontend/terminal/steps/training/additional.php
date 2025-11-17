@@ -2,54 +2,26 @@
 /**
  * Terminal Training Step - Additional Information
  * 
- * Company policies, contact info, and final instructions
- * 
  * @package SAW_Visitors
- * @version 1.0.0
+ * @version 2.0.0 - Fullscreen with documents
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-$flow = $this->session->get('terminal_flow');
-$lang = $flow['language'] ?? 'cs';
-$visitor_id = $flow['visitor_id'] ?? null;
-$branch_id = $flow['branch_id'] ?? SAW_Context::get_branch_id();
+error_log("[ADDITIONAL.PHP] Template started");
 
-// TODO: Load from database/settings
-$company_policies = [
-    'cs' => [
-        '📵 Mobilní telefony na tichý režim',
-        '🚭 Zákaz kouření v celém objektu (kromě vyhrazených míst)',
-        '🎧 Neposlouchejte hudbu při pohybu',
-        '📸 Fotografování pouze se souhlasem',
-        '🗑️ Udržujte čistotu - používejte odpadkové koše',
-        '👔 Dodržujte dress code (není-li uvedeno jinak)',
-    ],
-    'en' => [
-        '📵 Mobile phones on silent mode',
-        '🚭 No smoking in the entire facility (except designated areas)',
-        '🎧 Do not listen to music while moving',
-        '📸 Photography only with permission',
-        '🗑️ Keep clean - use trash bins',
-        '👔 Follow dress code (unless stated otherwise)',
-    ],
-    'uk' => [
-        '📵 Мобільні телефони на беззвучному режимі',
-        '🚭 Заборона куріння у всьому об\'єкті (крім спеціальних місць)',
-        '🎧 Не слухайте музику під час руху',
-        '📸 Фотографування лише з дозволу',
-        '🗑️ Підтримуйте чистоту - використовуйте смітники',
-        '👔 Дотримуйтеся дрес-коду (якщо не вказано інше)',
-    ],
-];
+// Get data from flow
+$lang = isset($flow['language']) ? $flow['language'] : 'cs';
+$visitor_id = isset($flow['visitor_id']) ? $flow['visitor_id'] : null;
 
-$emergency_contacts = [
-    'emergency' => '112',
-    'reception' => '+420 123 456 789',
-    'security' => '+420 123 456 788',
-];
+error_log("[ADDITIONAL.PHP] Language: {$lang}, Visitor ID: {$visitor_id}");
+error_log("[ADDITIONAL.PHP] Additional text: " . (isset($additional_text) ? substr($additional_text, 0, 100) : 'NOT SET'));
+error_log("[ADDITIONAL.PHP] Documents: " . (isset($documents) ? count($documents) : 0));
+
+// Check if additional text exists
+$has_content = !empty($additional_text);
 
 // Check if already completed
 $completed = false;
@@ -59,245 +31,200 @@ if ($visitor_id) {
         "SELECT training_step_additional FROM {$wpdb->prefix}saw_visitors WHERE id = %d",
         $visitor_id
     ));
-    $completed = !empty($visitor['training_step_additional']);
+    if ($visitor) {
+        $completed = !empty($visitor->training_step_additional);
+    }
 }
 
-$translations = [
-    'cs' => [
-        'title' => 'Dodatečné informace',
-        'subtitle' => 'Firemní politiky a kontakty',
-        'policies_title' => 'Pravidla chování:',
-        'contacts_title' => 'Důležité kontakty:',
-        'emergency' => 'Tísňová linka',
-        'reception' => 'Recepce',
-        'security' => 'Ostraha',
-        'wifi_title' => 'Wi-Fi pro hosty:',
-        'wifi_network' => 'Síť',
-        'wifi_password' => 'Heslo',
-        'final_note' => 'V případě jakýchkoliv dotazů se neváhejte obrátit na hostitele nebo recepci.',
-        'confirm' => 'Přečetl/a jsem všechny informace a zavazuji se dodržovat pravidla',
-        'continue' => 'Dokončit školení',
-    ],
-    'en' => [
+// Translations
+$translations = array(
+    'cs' => array(
+        'title' => 'Další informace',
+        'subtitle' => 'Doplňující informace pro návštěvníky',
+        'confirm' => 'Potvrzuji, že jsem si přečetl/a další informace',
+        'continue' => 'Pokračovat',
+        'no_content' => 'Další informace nejsou k dispozici',
+    ),
+    'en' => array(
         'title' => 'Additional Information',
-        'subtitle' => 'Company policies and contacts',
-        'policies_title' => 'Behavioral rules:',
-        'contacts_title' => 'Important contacts:',
-        'emergency' => 'Emergency line',
-        'reception' => 'Reception',
-        'security' => 'Security',
-        'wifi_title' => 'Guest Wi-Fi:',
-        'wifi_network' => 'Network',
-        'wifi_password' => 'Password',
-        'final_note' => 'If you have any questions, please do not hesitate to contact your host or reception.',
-        'confirm' => 'I have read all information and commit to following the rules',
-        'continue' => 'Complete training',
-    ],
-    'uk' => [
+        'subtitle' => 'Supplementary information for visitors',
+        'confirm' => 'I confirm that I have read the additional information',
+        'continue' => 'Continue',
+        'no_content' => 'Additional information not available',
+    ),
+    'sk' => array(
+        'title' => 'Ďalšie informácie',
+        'subtitle' => 'Doplňujúce informácie pre návštevníkov',
+        'confirm' => 'Potvrdzujem, že som si prečítal/a ďalšie informácie',
+        'continue' => 'Pokračovať',
+        'no_content' => 'Ďalšie informácie nie sú k dispozícii',
+    ),
+    'uk' => array(
         'title' => 'Додаткова інформація',
-        'subtitle' => 'Політика компанії та контакти',
-        'policies_title' => 'Правила поведінки:',
-        'contacts_title' => 'Важливі контакти:',
-        'emergency' => 'Екстрена лінія',
-        'reception' => 'Рецепція',
-        'security' => 'Охорона',
-        'wifi_title' => 'Wi-Fi для гостей:',
-        'wifi_network' => 'Мережа',
-        'wifi_password' => 'Пароль',
-        'final_note' => 'Якщо у вас виникнуть запитання, зв\'яжіться з вашим господарем або рецепцією.',
-        'confirm' => 'Я прочитав всю інформацію і зобов\'язуюсь дотримуватися правил',
-        'continue' => 'Завершити навчання',
-    ],
-];
+        'subtitle' => 'Додаткова інформація для відвідувачів',
+        'confirm' => 'Підтверджую, що прочитав додаткову інформацію',
+        'continue' => 'Продовжити',
+        'no_content' => 'Додаткова інформація недоступна',
+    ),
+);
 
-$t = $translations[$lang] ?? $translations['cs'];
-$policies = $company_policies[$lang] ?? $company_policies['cs'];
+$t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
 ?>
 
-<div class="saw-terminal-card">
-    <div class="saw-terminal-card-header">
-        <h2 class="saw-terminal-card-title">
+<div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #f7fafc; z-index: 9999; overflow: hidden;">
+    
+    <!-- Header -->
+    <div style="background: white; border-bottom: 2px solid #e2e8f0; padding: 1.5rem 2rem;">
+        <h2 style="margin: 0; font-size: 1.75rem; color: #2d3748; font-weight: 700;">
             ℹ️ <?php echo esc_html($t['title']); ?>
         </h2>
-        <p class="saw-terminal-card-subtitle">
+        <p style="margin: 0.5rem 0 0 0; color: #718096;">
             <?php echo esc_html($t['subtitle']); ?>
         </p>
     </div>
     
-    <div class="saw-terminal-card-body">
-        
-        <!-- Progress indicator -->
-        <div class="saw-terminal-progress" style="margin-bottom: 2rem;">
-            <div class="saw-terminal-progress-step completed">1</div>
-            <div class="saw-terminal-progress-step completed">2</div>
-            <div class="saw-terminal-progress-step completed">3</div>
-            <div class="saw-terminal-progress-step completed">4</div>
-            <div class="saw-terminal-progress-step completed">5</div>
-        </div>
-        
-        <!-- Company policies -->
-        <div style="background: #f0f9ff; border: 2px solid #bae6fd; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
-            <h3 style="margin: 0 0 1.5rem 0; font-size: 1.25rem; font-weight: 700; color: #0369a1;">
-                <?php echo esc_html($t['policies_title']); ?>
-            </h3>
-            
-            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                <?php foreach ($policies as $policy): ?>
-                <div style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: white; border-radius: 8px;">
-                    <span style="font-size: 1.125rem; color: #0c4a6e; line-height: 1.6;">
-                        <?php echo esc_html($policy); ?>
-                    </span>
-                </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
-        
-        <!-- Emergency contacts -->
-        <div style="background: #fff5f5; border: 2px solid #fc8181; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
-            <h3 style="margin: 0 0 1.5rem 0; font-size: 1.25rem; font-weight: 700; color: #c53030;">
-                📞 <?php echo esc_html($t['contacts_title']); ?>
-            </h3>
-            
-            <div style="display: grid; gap: 1rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: white; border-radius: 8px; border-left: 4px solid #fc8181;">
-                    <span style="font-weight: 600; color: #2d3748;">
-                        🚨 <?php echo esc_html($t['emergency']); ?>
-                    </span>
-                    <a href="tel:<?php echo esc_attr($emergency_contacts['emergency']); ?>" 
-                       style="font-size: 1.5rem; font-weight: 700; color: #c53030; text-decoration: none;">
-                        <?php echo esc_html($emergency_contacts['emergency']); ?>
-                    </a>
-                </div>
-                
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: white; border-radius: 8px;">
-                    <span style="font-weight: 600; color: #2d3748;">
-                        📱 <?php echo esc_html($t['reception']); ?>
-                    </span>
-                    <a href="tel:<?php echo esc_attr($emergency_contacts['reception']); ?>" 
-                       style="font-size: 1.125rem; font-weight: 600; color: #0369a1; text-decoration: none;">
-                        <?php echo esc_html($emergency_contacts['reception']); ?>
-                    </a>
-                </div>
-                
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: white; border-radius: 8px;">
-                    <span style="font-weight: 600; color: #2d3748;">
-                        🛡️ <?php echo esc_html($t['security']); ?>
-                    </span>
-                    <a href="tel:<?php echo esc_attr($emergency_contacts['security']); ?>" 
-                       style="font-size: 1.125rem; font-weight: 600; color: #0369a1; text-decoration: none;">
-                        <?php echo esc_html($emergency_contacts['security']); ?>
-                    </a>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Guest WiFi -->
-        <div style="background: #f0fdf4; border: 2px solid #86efac; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
-            <h3 style="margin: 0 0 1rem 0; font-size: 1.125rem; font-weight: 700; color: #16a34a;">
-                📶 <?php echo esc_html($t['wifi_title']); ?>
-            </h3>
-            
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-                <div style="padding: 1rem; background: white; border-radius: 8px;">
-                    <p style="margin: 0 0 0.5rem 0; font-size: 0.875rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">
-                        <?php echo esc_html($t['wifi_network']); ?>
-                    </p>
-                    <p style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #16a34a;">
-                        Guest_WiFi
-                    </p>
-                </div>
-                
-                <div style="padding: 1rem; background: white; border-radius: 8px;">
-                    <p style="margin: 0 0 0.5rem 0; font-size: 0.875rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">
-                        <?php echo esc_html($t['wifi_password']); ?>
-                    </p>
-                    <p style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #16a34a; font-family: monospace;">
-                        Welcome2024
-                    </p>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Final note -->
-        <div style="background: #fffaf0; border: 2px solid #f6ad55; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; text-align: center;">
-            <p style="margin: 0; font-size: 1.125rem; color: #c05621; line-height: 1.6;">
-                💡 <strong><?php echo esc_html($t['final_note']); ?></strong>
+    <?php if (!$has_content): ?>
+    <!-- Error: No content -->
+    <div style="padding: 2rem; text-align: center;">
+        <div style="background: #fffaf0; border: 2px solid #f6ad55; border-radius: 12px; padding: 2rem; max-width: 600px; margin: 0 auto;">
+            <p style="margin: 0; font-size: 1.25rem; color: #c05621; font-weight: 600;">
+                ℹ️ <?php echo esc_html($t['no_content']); ?>
             </p>
         </div>
         
-        <!-- Confirmation form -->
-        <form method="POST" id="training-additional-form">
+        <form method="POST" style="margin-top: 2rem;">
+            <?php wp_nonce_field('saw_terminal_step', 'terminal_nonce'); ?>
+            <input type="hidden" name="terminal_action" value="complete_training_additional">
+            <button type="submit" class="saw-terminal-btn saw-terminal-btn-success">
+                <?php echo esc_html($t['continue']); ?> →
+            </button>
+        </form>
+    </div>
+    
+    <?php else: ?>
+    
+    <!-- Two column layout -->
+    <div style="display: flex; height: calc(100vh - 120px); overflow: hidden;">
+        
+        <!-- LEFT: Content -->
+        <div style="flex: 1; padding: 2rem; overflow-y: auto; background: white;">
+            <div style="max-width: 900px; margin: 0 auto;">
+                <div style="color: #2d3748; line-height: 1.8; font-size: 1.05rem;">
+                    <?php echo wp_kses_post($additional_text); ?>
+                </div>
+            </div>
+        </div>
+        
+        <!-- RIGHT: Documents -->
+        <div style="width: 350px; background: #f7fafc; border-left: 2px solid #e2e8f0; padding: 2rem; overflow-y: auto;">
+            <h3 style="margin: 0 0 1.5rem 0; font-size: 1.125rem; color: #2d3748; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-size: 1.5rem;">📄</span>
+                Dokumenty
+            </h3>
+            
+            <?php if (empty($documents)): ?>
+                <p style="color: #718096; font-style: italic;">
+                    Žádné dokumenty nejsou k dispozici
+                </p>
+            <?php else: ?>
+                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    <?php foreach ($documents as $doc): ?>
+                    <a href="<?php echo esc_url(content_url() . '/uploads' . $doc['file_path']); ?>" 
+                       target="_blank"
+                       style="display: block; padding: 1rem; background: white; border: 2px solid #e2e8f0; border-radius: 8px; text-decoration: none; transition: all 0.2s; color: inherit;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <span style="font-size: 2rem; flex-shrink: 0;">
+                                <?php 
+                                $ext = pathinfo($doc['file_name'], PATHINFO_EXTENSION);
+                                $icons = [
+                                    'pdf' => '📕',
+                                    'doc' => '📘', 'docx' => '📘',
+                                    'xls' => '📗', 'xlsx' => '📗',
+                                    'ppt' => '📙', 'pptx' => '📙',
+                                    'txt' => '📄'
+                                ];
+                                echo isset($icons[$ext]) ? $icons[$ext] : '📄';
+                                ?>
+                            </span>
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="font-weight: 600; color: #2d3748; font-size: 0.95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    <?php echo esc_html($doc['file_name']); ?>
+                                </div>
+                                <div style="font-size: 0.75rem; color: #718096; margin-top: 0.25rem;">
+                                    <?php echo size_format($doc['file_size']); ?>
+                                </div>
+                            </div>
+                            <span style="font-size: 1.25rem; color: #667eea;">→</span>
+                        </div>
+                    </a>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </div>
+        
+    </div>
+    
+    <!-- Bottom bar with checkbox and button -->
+    <div style="position: absolute; bottom: 0; left: 0; right: 0; background: white; border-top: 2px solid #e2e8f0; padding: 1.5rem 2rem;">
+        <form method="POST" id="training-additional-form" style="max-width: 900px; margin: 0 auto; display: flex; align-items: center; gap: 2rem;">
             <?php wp_nonce_field('saw_terminal_step', 'terminal_nonce'); ?>
             <input type="hidden" name="terminal_action" value="complete_training_additional">
             
             <?php if (!$completed): ?>
-            <div class="saw-terminal-form-checkbox" style="margin-bottom: 1.5rem;">
+            <label style="flex: 1; display: flex; align-items: center; gap: 1rem; cursor: pointer; padding: 1rem; background: #f0f9ff; border: 2px solid #bae6fd; border-radius: 8px;">
                 <input type="checkbox" 
                        name="additional_confirmed" 
                        id="additional-confirmed" 
                        value="1"
+                       style="width: 24px; height: 24px; cursor: pointer;"
                        required>
-                <label for="additional-confirmed">
-                    ✅ <?php echo esc_html($t['confirm']); ?>
-                </label>
-            </div>
+                <span style="color: #0369a1; font-weight: 600; font-size: 1.05rem;">
+                    <?php echo esc_html($t['confirm']); ?>
+                </span>
+            </label>
             <?php endif; ?>
             
             <button type="submit" 
-                    class="saw-terminal-btn saw-terminal-btn-success"
+                    class="saw-terminal-btn saw-terminal-btn-success <?php echo !$completed ? 'saw-terminal-btn-disabled' : ''; ?>"
                     id="continue-btn"
+                    style="<?php echo !$completed ? 'opacity: 0.5; cursor: not-allowed;' : ''; ?> width: auto; padding: 1rem 3rem; font-size: 1.125rem;"
                     <?php echo !$completed ? 'disabled' : ''; ?>>
-                🎓 <?php echo esc_html($t['continue']); ?>
+                <?php echo esc_html($t['continue']); ?> →
             </button>
         </form>
-        
-        <p style="margin-top: 2rem; text-align: center; color: #a0aec0; font-size: 0.875rem;">
-            <?php if ($lang === 'cs'): ?>
-                Po dokončení budete automaticky přihlášeni
-            <?php elseif ($lang === 'en'): ?>
-                After completion you will be automatically checked in
-            <?php else: ?>
-                Після завершення ви автоматично будете зареєстровані
-            <?php endif; ?>
-        </p>
-        
     </div>
+    
+    <?php endif; ?>
+    
 </div>
 
+<?php if ($has_content): ?>
 <script>
+// Enable continue button when checkbox is checked
 jQuery(document).ready(function($) {
-    // Enable continue button when confirmation is checked
     $('#additional-confirmed').on('change', function() {
-        $('#continue-btn').prop('disabled', !$(this).is(':checked'));
-    });
-    
-    // Success celebration on form submit
-    $('#training-additional-form').on('submit', function(e) {
-        $('#continue-btn').html('🎉 Dokončuji školení...');
-        
-        // Confetti effect (simple version)
-        for (let i = 0; i < 50; i++) {
-            const confetti = $('<div>').css({
-                'position': 'fixed',
-                'width': '10px',
-                'height': '10px',
-                'background': ['#667eea', '#764ba2', '#48bb78', '#f6ad55', '#fc8181'][Math.floor(Math.random() * 5)],
-                'left': Math.random() * 100 + '%',
-                'top': '-10px',
-                'border-radius': '50%',
-                'z-index': '9999',
-                'animation': 'fall ' + (2 + Math.random() * 2) + 's linear'
-            });
-            
-            $('body').append(confetti);
-            
-            setTimeout(function() {
-                confetti.remove();
-            }, 4000);
+        if ($(this).is(':checked')) {
+            $('#continue-btn')
+                .prop('disabled', false)
+                .removeClass('saw-terminal-btn-disabled')
+                .css({
+                    'opacity': '1',
+                    'cursor': 'pointer'
+                });
+        } else {
+            $('#continue-btn')
+                .prop('disabled', true)
+                .addClass('saw-terminal-btn-disabled')
+                .css({
+                    'opacity': '0.5',
+                    'cursor': 'not-allowed'
+                });
         }
     });
 });
-
-// Add confetti animation
-$('<style>@keyframes fall { to { transform: translateY(100vh) rotate(360deg); opacity: 0; } }</style>').appendTo('head');
 </script>
+<?php endif; ?>
+
+<?php
+error_log("[ADDITIONAL.PHP] Template finished");
+?>

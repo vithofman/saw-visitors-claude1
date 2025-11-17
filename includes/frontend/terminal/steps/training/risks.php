@@ -2,19 +2,25 @@
 /**
  * Terminal Training Step - General Risks
  * 
- * Display general workplace hazards and safety rules
- * 
  * @package SAW_Visitors
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-$flow = $this->session->get('terminal_flow');
-$lang = $flow['language'] ?? 'cs';
-$visitor_id = $flow['visitor_id'] ?? null;
+error_log("[RISKS.PHP] Template started");
+
+// Get data from flow
+$lang = isset($flow['language']) ? $flow['language'] : 'cs';
+$visitor_id = isset($flow['visitor_id']) ? $flow['visitor_id'] : null;
+
+error_log("[RISKS.PHP] Language: {$lang}, Visitor ID: {$visitor_id}");
+error_log("[RISKS.PHP] Risks text: " . (isset($risks_text) ? substr($risks_text, 0, 100) : 'NOT SET'));
+
+// Check if risks text exists
+$has_risks = !empty($risks_text);
 
 // Check if already completed
 $completed = false;
@@ -24,246 +30,200 @@ if ($visitor_id) {
         "SELECT training_step_risks FROM {$wpdb->prefix}saw_visitors WHERE id = %d",
         $visitor_id
     ));
-    $completed = !empty($visitor['training_step_risks']);
+    if ($visitor) {
+        $completed = !empty($visitor->training_step_risks);
+    }
 }
 
-$translations = [
-    'cs' => [
-        'title' => 'Obecná rizika',
-        'subtitle' => 'Bezpečnostní pravidla pro návštěvníky',
-        'rules_title' => 'Důležitá bezpečnostní pravidla:',
-        'confirm' => 'Potvrzuji, že jsem si přečetl/a všechna rizika',
+// Translations
+$translations = array(
+    'cs' => array(
+        'title' => 'Informace o rizicích',
+        'subtitle' => 'Bezpečnostní informace',
+        'confirm' => 'Potvrzuji, že jsem si přečetl/a informace o rizicích',
         'continue' => 'Pokračovat',
-        'rules' => [
-            '👷 Pohybujte se pouze v povolených prostorách',
-            '🚫 Nevstupujte do prostor označených jako nebezpečné',
-            '⚠️ Noste vždy ochranné pomůcky (přilba, vesta), pokud jsou vyžadovány',
-            '🚶 Nepohybujte se v místech s pohybem vozíků a strojů',
-            '📱 V případě nouze volejte: 112',
-            '🧯 Seznamte se s umístěním hasicích přístrojů',
-            '🚪 Zapamatujte si nejbližší nouzový východ',
-            '⛔ Zákaz kouření mimo vyhrazené prostory',
-            '📸 Fotografování pouze se souhlasem',
-            '🔊 V případě poplachu postupujte podle pokynů',
-        ],
-    ],
-    'en' => [
-        'title' => 'General Risks',
-        'subtitle' => 'Safety rules for visitors',
-        'rules_title' => 'Important safety rules:',
-        'confirm' => 'I confirm that I have read all risks',
+        'no_risks' => 'Informace o rizicích nejsou k dispozici',
+    ),
+    'en' => array(
+        'title' => 'Risk Information',
+        'subtitle' => 'Safety information',
+        'confirm' => 'I confirm that I have read the risk information',
         'continue' => 'Continue',
-        'rules' => [
-            '👷 Move only in authorized areas',
-            '🚫 Do not enter areas marked as dangerous',
-            '⚠️ Always wear protective equipment (helmet, vest) if required',
-            '🚶 Do not move in areas with vehicle and machinery traffic',
-            '📱 In case of emergency call: 112',
-            '🧯 Familiarize yourself with fire extinguisher locations',
-            '🚪 Remember the nearest emergency exit',
-            '⛔ No smoking outside designated areas',
-            '📸 Photography only with permission',
-            '🔊 In case of alarm follow instructions',
-        ],
-    ],
-    'uk' => [
-        'title' => 'Загальні ризики',
-        'subtitle' => 'Правила безпеки для відвідувачів',
-        'rules_title' => 'Важливі правила безпеки:',
-        'confirm' => 'Підтверджую, що прочитав усі ризики',
+        'no_risks' => 'Risk information not available',
+    ),
+    'sk' => array(
+        'title' => 'Informácie o rizikách',
+        'subtitle' => 'Bezpečnostné informácie',
+        'confirm' => 'Potvrdzujem, že som si prečítal/a informácie o rizikách',
+        'continue' => 'Pokračovať',
+        'no_risks' => 'Informácie o rizikách nie sú k dispozícii',
+    ),
+    'uk' => array(
+        'title' => 'Інформація про ризики',
+        'subtitle' => 'Інформація про безпеку',
+        'confirm' => 'Підтверджую, що прочитав інформацію про ризики',
         'continue' => 'Продовжити',
-        'rules' => [
-            '👷 Рухайтеся лише в дозволених зонах',
-            '🚫 Не входьте в зони, позначені як небезпечні',
-            '⚠️ Завжди використовуйте засоби захисту (шолом, жилет), якщо потрібно',
-            '🚶 Не рухайтеся в місцях руху транспорту та обладнання',
-            '📱 У разі надзвичайної ситуації дзвоніть: 112',
-            '🧯 Ознайомтеся з розташуванням вогнегасників',
-            '🚪 Запам\'ятайте найближчий аварійний вихід',
-            '⛔ Куріння заборонено поза спеціальними зонами',
-            '📸 Фотографування лише з дозволу',
-            '🔊 У разі тривоги дотримуйтесь інструкцій',
-        ],
-    ],
-];
+        'no_risks' => 'Інформація про ризики недоступна',
+    ),
+);
 
-$t = $translations[$lang] ?? $translations['cs'];
+$t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
 ?>
 
-<div class="saw-terminal-card">
-    <div class="saw-terminal-card-header">
-        <h2 class="saw-terminal-card-title">
+<div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #f7fafc; z-index: 9999; overflow: hidden;">
+    
+    <!-- Header -->
+    <div style="background: white; border-bottom: 2px solid #e2e8f0; padding: 1.5rem 2rem;">
+        <h2 style="margin: 0; font-size: 1.75rem; color: #2d3748; font-weight: 700;">
             ⚠️ <?php echo esc_html($t['title']); ?>
         </h2>
-        <p class="saw-terminal-card-subtitle">
+        <p style="margin: 0.5rem 0 0 0; color: #718096;">
             <?php echo esc_html($t['subtitle']); ?>
         </p>
     </div>
     
-    <div class="saw-terminal-card-body">
-        
-        <!-- Progress indicator -->
-        <div class="saw-terminal-progress" style="margin-bottom: 2rem;">
-            <div class="saw-terminal-progress-step completed">1</div>
-            <div class="saw-terminal-progress-step completed">2</div>
-            <div class="saw-terminal-progress-step completed">3</div>
-            <div class="saw-terminal-progress-step active">4</div>
-            <div class="saw-terminal-progress-step">5</div>
-        </div>
-        
-        <!-- Safety rules -->
-        <div style="background: #fff5f5; border: 2px solid #fc8181; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
-            <h3 style="margin: 0 0 1.5rem 0; font-size: 1.25rem; font-weight: 700; color: #c53030;">
-                <?php echo esc_html($t['rules_title']); ?>
-            </h3>
-            
-            <div class="saw-training-rules-list">
-                <?php foreach ($t['rules'] as $index => $rule): ?>
-                <div class="saw-training-rule-item" 
-                     style="display: flex; align-items: start; gap: 1rem; padding: 1rem; background: white; border-radius: 8px; margin-bottom: 0.75rem; cursor: pointer; transition: all 0.2s ease;"
-                     data-rule-index="<?php echo $index; ?>">
-                    <input type="checkbox" 
-                           class="rule-checkbox"
-                           style="width: 1.5rem; height: 1.5rem; margin-top: 0.25rem; flex-shrink: 0;">
-                    <span style="flex: 1; font-size: 1.125rem; color: #2d3748; line-height: 1.6;">
-                        <?php echo esc_html($rule); ?>
-                    </span>
-                </div>
-                <?php endforeach; ?>
-            </div>
-            
-            <!-- Progress counter -->
-            <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid #fed7d7; text-align: center;">
-                <p style="margin: 0; font-size: 1rem; color: #c53030; font-weight: 600;">
-                    <span id="rules-checked-count">0</span> / <?php echo count($t['rules']); ?> pravidel přečteno
-                </p>
-                <div style="height: 8px; background: #fed7d7; border-radius: 4px; margin-top: 0.75rem; overflow: hidden;">
-                    <div id="rules-progress-bar" 
-                         style="height: 100%; width: 0%; background: linear-gradient(90deg, #f56565, #e53e3e); transition: width 0.3s ease;">
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Additional warnings -->
-        <div style="background: #fffaf0; border: 2px solid #f6ad55; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
-            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
-                <span style="font-size: 2rem;">⚡</span>
-                <h3 style="margin: 0; font-size: 1.125rem; font-weight: 700; color: #c05621;">
-                    Zvláštní upozornění:
-                </h3>
-            </div>
-            <p style="margin: 0; color: #c05621; line-height: 1.6;">
-                <?php if ($lang === 'cs'): ?>
-                    V případě úrazu nebo nehody okamžitě informujte odpovědnou osobu nebo zavolejte linku 155 (zdravotnická záchranná služba).
-                <?php elseif ($lang === 'en'): ?>
-                    In case of injury or accident, immediately inform the responsible person or call 155 (emergency medical service).
-                <?php else: ?>
-                    У разі травми або нещасного випадку негайно повідомте відповідальну особу або зателефонуйте на 155 (швидка медична допомога).
-                <?php endif; ?>
+    <?php if (!$has_risks): ?>
+    <!-- Error: No risks -->
+    <div style="padding: 2rem; text-align: center;">
+        <div style="background: #fff5f5; border: 2px solid #fc8181; border-radius: 12px; padding: 2rem; max-width: 600px; margin: 0 auto;">
+            <p style="margin: 0; font-size: 1.25rem; color: #c53030; font-weight: 600;">
+                ⚠️ <?php echo esc_html($t['no_risks']); ?>
             </p>
         </div>
         
-        <!-- Confirmation form -->
-        <form method="POST" id="training-risks-form">
+        <form method="POST" style="margin-top: 2rem;">
+            <?php wp_nonce_field('saw_terminal_step', 'terminal_nonce'); ?>
+            <input type="hidden" name="terminal_action" value="complete_training_risks">
+            <button type="submit" class="saw-terminal-btn saw-terminal-btn-success">
+                <?php echo esc_html($t['continue']); ?> →
+            </button>
+        </form>
+    </div>
+    
+    <?php else: ?>
+    
+    <!-- Two column layout -->
+    <div style="display: flex; height: calc(100vh - 120px); overflow: hidden;">
+        
+        <!-- LEFT: Content -->
+        <div style="flex: 1; padding: 2rem; overflow-y: auto; background: white;">
+            <div style="max-width: 900px; margin: 0 auto;">
+                <div style="color: #2d3748; line-height: 1.8; font-size: 1.05rem;">
+                    <?php echo wp_kses_post($risks_text); ?>
+                </div>
+            </div>
+        </div>
+        
+        <!-- RIGHT: Documents -->
+        <div style="width: 350px; background: #f7fafc; border-left: 2px solid #e2e8f0; padding: 2rem; overflow-y: auto;">
+            <h3 style="margin: 0 0 1.5rem 0; font-size: 1.125rem; color: #2d3748; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-size: 1.5rem;">📄</span>
+                Dokumenty
+            </h3>
+            
+            <?php if (empty($documents)): ?>
+                <p style="color: #718096; font-style: italic;">
+                    Žádné dokumenty nejsou k dispozici
+                </p>
+            <?php else: ?>
+                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    <?php foreach ($documents as $doc): ?>
+                    <a href="<?php echo esc_url(content_url() . '/uploads' . $doc['file_path']); ?>" 
+                       target="_blank"
+                       style="display: block; padding: 1rem; background: white; border: 2px solid #e2e8f0; border-radius: 8px; text-decoration: none; transition: all 0.2s; color: inherit;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <span style="font-size: 2rem; flex-shrink: 0;">
+                                <?php 
+                                $ext = pathinfo($doc['file_name'], PATHINFO_EXTENSION);
+                                $icons = [
+                                    'pdf' => '📕',
+                                    'doc' => '📘', 'docx' => '📘',
+                                    'xls' => '📗', 'xlsx' => '📗',
+                                    'ppt' => '📙', 'pptx' => '📙',
+                                    'txt' => '📄'
+                                ];
+                                echo isset($icons[$ext]) ? $icons[$ext] : '📄';
+                                ?>
+                            </span>
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="font-weight: 600; color: #2d3748; font-size: 0.95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    <?php echo esc_html($doc['file_name']); ?>
+                                </div>
+                                <div style="font-size: 0.75rem; color: #718096; margin-top: 0.25rem;">
+                                    <?php echo size_format($doc['file_size']); ?>
+                                </div>
+                            </div>
+                            <span style="font-size: 1.25rem; color: #667eea;">→</span>
+                        </div>
+                    </a>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </div>
+        
+    </div>
+    
+    <!-- Bottom bar with checkbox and button -->
+    <div style="position: absolute; bottom: 0; left: 0; right: 0; background: white; border-top: 2px solid #e2e8f0; padding: 1.5rem 2rem;">
+        <form method="POST" id="training-risks-form" style="max-width: 900px; margin: 0 auto; display: flex; align-items: center; gap: 2rem;">
             <?php wp_nonce_field('saw_terminal_step', 'terminal_nonce'); ?>
             <input type="hidden" name="terminal_action" value="complete_training_risks">
             
             <?php if (!$completed): ?>
-            <div class="saw-terminal-form-checkbox" style="margin-bottom: 1.5rem;">
+            <label style="flex: 1; display: flex; align-items: center; gap: 1rem; cursor: pointer; padding: 1rem; background: #fffaf0; border: 2px solid #f6ad55; border-radius: 8px;">
                 <input type="checkbox" 
                        name="risks_confirmed" 
                        id="risks-confirmed" 
                        value="1"
-                       required
-                       disabled>
-                <label for="risks-confirmed">
-                    ✅ <?php echo esc_html($t['confirm']); ?>
-                </label>
-            </div>
+                       style="width: 24px; height: 24px; cursor: pointer;"
+                       required>
+                <span style="color: #744210; font-weight: 600; font-size: 1.05rem;">
+                    <?php echo esc_html($t['confirm']); ?>
+                </span>
+            </label>
             <?php endif; ?>
             
             <button type="submit" 
-                    class="saw-terminal-btn saw-terminal-btn-success"
+                    class="saw-terminal-btn saw-terminal-btn-success <?php echo !$completed ? 'saw-terminal-btn-disabled' : ''; ?>"
                     id="continue-btn"
+                    style="<?php echo !$completed ? 'opacity: 0.5; cursor: not-allowed;' : ''; ?> width: auto; padding: 1rem 3rem; font-size: 1.125rem;"
                     <?php echo !$completed ? 'disabled' : ''; ?>>
                 <?php echo esc_html($t['continue']); ?> →
             </button>
         </form>
-        
     </div>
+    
+    <?php endif; ?>
+    
 </div>
 
+<?php if ($has_risks): ?>
 <script>
+// Enable continue button when checkbox is checked
 jQuery(document).ready(function($) {
-    const totalRules = <?php echo count($t['rules']); ?>;
-    let checkedCount = 0;
-    
-    // Make rule items clickable
-    $('.saw-training-rule-item').on('click', function() {
-        const checkbox = $(this).find('.rule-checkbox');
-        const isChecked = checkbox.prop('checked');
-        
-        checkbox.prop('checked', !isChecked);
-        updateProgress();
-        
-        // Visual feedback
-        if (!isChecked) {
-            $(this).css({
-                'background': '#f0fdf4',
-                'border': '2px solid #86efac'
-            });
-        } else {
-            $(this).css({
-                'background': 'white',
-                'border': 'none'
-            });
-        }
-    });
-    
-    // Prevent checkbox click from double-toggling
-    $('.rule-checkbox').on('click', function(e) {
-        e.stopPropagation();
-        updateProgress();
-    });
-    
-    function updateProgress() {
-        checkedCount = $('.rule-checkbox:checked').length;
-        const percentage = Math.floor((checkedCount / totalRules) * 100);
-        
-        $('#rules-checked-count').text(checkedCount);
-        $('#rules-progress-bar').css('width', percentage + '%');
-        
-        // Enable confirmation checkbox when all rules are checked
-        if (checkedCount === totalRules) {
-            $('#risks-confirmed').prop('disabled', false);
-            
-            // Show success message
-            if (!$('.all-rules-checked-msg').length) {
-                $('<div class="all-rules-checked-msg" style="background: #f0fdf4; border: 2px solid #86efac; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; text-align: center; animation: slideDown 0.3s ease;">' +
-                  '<p style="margin: 0; font-size: 1.125rem; color: #16a34a; font-weight: 600;">🎉 Všechna pravidla přečtena!</p>' +
-                  '</div>').insertBefore('#risks-confirmed').closest('.saw-terminal-form-checkbox');
-            }
-        } else {
-            $('#risks-confirmed').prop('disabled', true).prop('checked', false);
-            $('#continue-btn').prop('disabled', true);
-            $('.all-rules-checked-msg').remove();
-        }
-    }
-    
-    // Enable continue button when confirmation is checked
     $('#risks-confirmed').on('change', function() {
-        $('#continue-btn').prop('disabled', !$(this).is(':checked'));
+        if ($(this).is(':checked')) {
+            $('#continue-btn')
+                .prop('disabled', false)
+                .removeClass('saw-terminal-btn-disabled')
+                .css({
+                    'opacity': '1',
+                    'cursor': 'pointer'
+                });
+        } else {
+            $('#continue-btn')
+                .prop('disabled', true)
+                .addClass('saw-terminal-btn-disabled')
+                .css({
+                    'opacity': '0.5',
+                    'cursor': 'not-allowed'
+                });
+        }
     });
-    
-    <?php if ($completed): ?>
-    // Pre-check all if already completed
-    $('.rule-checkbox').prop('checked', true);
-    $('.saw-training-rule-item').css({
-        'background': '#f0fdf4',
-        'border': '2px solid #86efac'
-    });
-    updateProgress();
-    <?php endif; ?>
 });
 </script>
+<?php endif; ?>
+
+<?php
+error_log("[RISKS.PHP] Template finished");
+?>

@@ -2,22 +2,25 @@
 /**
  * Terminal Training Step - BOZP Video
  * 
- * Safety training video with progress tracking
- * 
  * @package SAW_Visitors
- * @version 1.0.0
+ * @version 2.2.0 - Rebuilt from working minimal version
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-$flow = $this->session->get('terminal_flow');
-$lang = $flow['language'] ?? 'cs';
-$visitor_id = $flow['visitor_id'] ?? null;
+error_log("[VIDEO.PHP] Template started");
 
-// TODO: Load video URL from settings/database
-$video_url = 'https://www.youtube.com/embed/SAMPLE_VIDEO_ID';
+// Get language from flow
+$lang = isset($flow['language']) ? $flow['language'] : 'cs';
+$visitor_id = isset($flow['visitor_id']) ? $flow['visitor_id'] : null;
+
+error_log("[VIDEO.PHP] Language: {$lang}, Visitor ID: {$visitor_id}");
+error_log("[VIDEO.PHP] Video URL: " . (isset($video_url) ? $video_url : 'NOT SET'));
+
+// Check if video URL exists
+$has_video = !empty($video_url);
 
 // Check if already completed
 $completed = false;
@@ -27,40 +30,51 @@ if ($visitor_id) {
         "SELECT training_step_video FROM {$wpdb->prefix}saw_visitors WHERE id = %d",
         $visitor_id
     ));
-    $completed = !empty($visitor['training_step_video']);
+    if ($visitor) {
+        $completed = !empty($visitor->training_step_video);
+    }
 }
 
-$translations = [
-    'cs' => [
+// Translations
+$translations = array(
+    'cs' => array(
         'title' => 'Školení BOZP',
         'subtitle' => 'Sledujte prosím celé video',
-        'video_label' => 'Bezpečnost práce',
         'watched' => 'Video bylo shlédnuto',
         'mark_watched' => 'Potvrdit zhlédnutí',
         'continue' => 'Pokračovat',
         'required' => 'Sledování je povinné',
-    ],
-    'en' => [
+    ),
+    'en' => array(
         'title' => 'Safety Training',
         'subtitle' => 'Please watch the entire video',
-        'video_label' => 'Occupational Safety',
         'watched' => 'Video has been watched',
         'mark_watched' => 'Confirm watched',
         'continue' => 'Continue',
         'required' => 'Watching is required',
-    ],
-    'uk' => [
+    ),
+    'sk' => array(
+        'title' => 'Školenie BOZP',
+        'subtitle' => 'Prosím sledujte celé video',
+        'watched' => 'Video bolo zhliadnuté',
+        'mark_watched' => 'Potvrdiť zhliadnutie',
+        'continue' => 'Pokračovať',
+        'required' => 'Sledovanie je povinné',
+    ),
+    'uk' => array(
         'title' => 'Навчання з охорони праці',
         'subtitle' => 'Будь ласка, перегляньте все відео',
-        'video_label' => 'Безпека праці',
         'watched' => 'Відео переглянуто',
         'mark_watched' => 'Підтвердити перегляд',
         'continue' => 'Продовжити',
         'required' => 'Перегляд обов\'язковий',
-    ],
-];
+    ),
+);
 
-$t = $translations[$lang] ?? $translations['cs'];
+$t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
+
+error_log("[VIDEO.PHP] Has video: " . ($has_video ? 'YES' : 'NO'));
+error_log("[VIDEO.PHP] Completed: " . ($completed ? 'YES' : 'NO'));
 ?>
 
 <div class="saw-terminal-card">
@@ -75,24 +89,28 @@ $t = $translations[$lang] ?? $translations['cs'];
     
     <div class="saw-terminal-card-body">
         
-        <!-- Progress indicator -->
-        <div class="saw-terminal-progress" style="margin-bottom: 2rem;">
-            <div class="saw-terminal-progress-step completed">1</div>
-            <div class="saw-terminal-progress-step active">2</div>
-            <div class="saw-terminal-progress-step">3</div>
-            <div class="saw-terminal-progress-step">4</div>
-            <div class="saw-terminal-progress-step">5</div>
+        <?php if (!$has_video): ?>
+        <!-- Error: No video URL -->
+        <div style="background: #fff5f5; border: 2px solid #fc8181; border-radius: 12px; padding: 2rem; margin-bottom: 2rem; text-align: center;">
+            <p style="margin: 0 0 1rem 0; font-size: 1.25rem; color: #c53030; font-weight: 600;">
+                ⚠️ Video není k dispozici
+            </p>
         </div>
+        
+        <form method="POST">
+            <?php wp_nonce_field('saw_terminal_step', 'terminal_nonce'); ?>
+            <input type="hidden" name="terminal_action" value="complete_training_video">
+            <button type="submit" class="saw-terminal-btn saw-terminal-btn-success">
+                Pokračovat bez videa →
+            </button>
+        </form>
+        
+        <?php else: ?>
         
         <!-- Video container -->
         <div class="saw-training-video-container" style="margin-bottom: 2rem;">
             <div class="saw-training-video-wrapper" style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 12px; background: #000;">
-                <iframe id="training-video"
-                        src="<?php echo esc_url($video_url); ?>?enablejsapi=1"
-                        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowfullscreen>
-                </iframe>
+                <div id="training-video"></div>
             </div>
             
             <!-- Video progress bar -->
@@ -134,9 +152,10 @@ $t = $translations[$lang] ?? $translations['cs'];
             <?php endif; ?>
             
             <button type="submit" 
-                    class="saw-terminal-btn saw-terminal-btn-success"
+                    class="saw-terminal-btn saw-terminal-btn-success saw-terminal-btn-disabled"
                     id="continue-btn"
-                    <?php echo !$completed ? 'disabled' : ''; ?>>
+                    style="opacity: 0.5; cursor: not-allowed;"
+                    disabled>
                 <?php echo esc_html($t['continue']); ?> →
             </button>
         </form>
@@ -145,70 +164,138 @@ $t = $translations[$lang] ?? $translations['cs'];
             <strong>⚠️ <?php echo esc_html($t['required']); ?></strong>
         </p>
         
+        <?php endif; ?>
+        
     </div>
 </div>
 
+<?php if ($has_video): ?>
+<?php
+// Extrahuj YouTube video ID z URL
+$video_id = '';
+if (preg_match('/youtube\.com\/embed\/([^?\/]+)/', $video_url, $matches)) {
+    $video_id = $matches[1];
+} elseif (preg_match('/youtu\.be\/([^?\/]+)/', $video_url, $matches)) {
+    $video_id = $matches[1];
+}
+?>
+<script src="https://www.youtube.com/iframe_api"></script>
 <script>
-jQuery(document).ready(function($) {
-    let videoWatched = <?php echo $completed ? 'true' : 'false'; ?>;
-    let watchedPercentage = 0;
-    
-    // YouTube API
-    let player;
-    function onYouTubeIframeAPIReady() {
-        player = new YT.Player('training-video', {
-            events: {
-                'onStateChange': onPlayerStateChange
-            }
-        });
-    }
-    
-    function onPlayerStateChange(event) {
-        if (event.data == YT.PlayerState.PLAYING) {
-            startProgressTracking();
+var player;
+var videoWatched = <?php echo $completed ? 'true' : 'false'; ?>;
+var maxWatchedPercentage = 0;
+
+function onYouTubeIframeAPIReady() {
+    console.log('YouTube API ready');
+    player = new YT.Player('training-video', {
+        height: '100%',
+        width: '100%',
+        videoId: '<?php echo esc_js($video_id); ?>',
+        playerVars: {
+            'playsinline': 1,
+            'rel': 0,
+            'modestbranding': 1
+        },
+        events: {
+            'onReady': onPlayerReady,
+            'onStateChange': onPlayerStateChange
         }
+    });
+}
+
+function onPlayerReady(event) {
+    console.log('Player ready');
+    // Přidej CSS styling pro player
+    jQuery('#training-video').css({
+        'position': 'absolute',
+        'top': '0',
+        'left': '0',
+        'width': '100%',
+        'height': '100%'
+    });
+}
+
+function onPlayerStateChange(event) {
+    if (event.data == YT.PlayerState.PLAYING) {
+        console.log('Video playing - starting progress tracking');
+        startProgressTracking();
+    }
+}
+
+var progressInterval;
+
+function startProgressTracking() {
+    if (progressInterval) {
+        clearInterval(progressInterval);
     }
     
-    // Track video progress
-    function startProgressTracking() {
-        setInterval(function() {
-            if (player && player.getCurrentTime) {
-                const current = player.getCurrentTime();
-                const duration = player.getDuration();
+    progressInterval = setInterval(function() {
+        if (player && player.getCurrentTime && player.getDuration) {
+            var current = player.getCurrentTime();
+            var duration = player.getDuration();
+            
+            if (duration > 0) {
+                var percentage = Math.floor((current / duration) * 100);
                 
-                if (duration > 0) {
-                    watchedPercentage = Math.floor((current / duration) * 100);
-                    $('#video-progress-bar').css('width', watchedPercentage + '%');
-                    $('#video-progress-text').text(watchedPercentage + '%');
-                    
-                    // Enable mark as watched button at 90%
-                    if (watchedPercentage >= 90 && !videoWatched) {
-                        $('#mark-watched-btn').prop('disabled', false);
-                    }
+                // Sleduj maximální dosažený progress
+                if (percentage > maxWatchedPercentage) {
+                    maxWatchedPercentage = percentage;
+                }
+                
+                jQuery('#video-progress-bar').css('width', percentage + '%');
+                jQuery('#video-progress-text').text(percentage + '%');
+                
+                console.log('Video progress:', percentage + '%', 'Max:', maxWatchedPercentage + '%');
+                
+                // Povolit potvrzení když dosáhne 90%
+                if (maxWatchedPercentage >= 90 && !videoWatched) {
+                    jQuery('#mark-watched-btn').prop('disabled', false);
+                    console.log('90% reached - enabling confirm button');
                 }
             }
-        }, 1000);
-    }
+        }
+    }, 1000);
+}
+
+jQuery(document).ready(function($) {
+    console.log('Video template JS started');
     
-    // Load YouTube API
-    if (!window.YT) {
-        const tag = document.createElement('script');
-        tag.src = "https://www.youtube.com/iframe_api";
-        const firstScriptTag = document.getElementsByTagName('script')[0];
-        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-    }
-    
-    // Mark as watched
+    // Mark as watched handler
     $('#mark-watched-btn').on('click', function() {
         videoWatched = true;
         $('#video-watched-input').val('1');
-        $('#continue-btn').prop('disabled', false);
+        
+        // Vizuálně aktivuj tlačítko Pokračovat
+        $('#continue-btn')
+            .prop('disabled', false)
+            .removeClass('saw-terminal-btn-disabled')
+            .css({
+                'opacity': '1',
+                'cursor': 'pointer'
+            });
+        
+        if (progressInterval) {
+            clearInterval(progressInterval);
+        }
         
         $(this).fadeOut(300, function() {
             $('<div style="background: #f0fdf4; border: 2px solid #86efac; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; text-align: center;">' +
-              '<p style="margin: 0; font-size: 1.125rem; color: #16a34a; font-weight: 600;">✅ <?php echo esc_js($t['watched']); ?></p>' +
+              '<p style="margin: 0; font-size: 1.125rem; color: #16a34a; font-weight: 600;">✅ Video bylo shlédnuto</p>' +
               '</div>').insertBefore('#continue-btn').hide().fadeIn(300);
         });
     });
+    
+    // EMERGENCY FALLBACK: Po 2 minutách povolit pokračovat i bez sledování
+    setTimeout(function() {
+        if (!videoWatched) {
+            console.log('Emergency fallback - enabling buttons after 2 minutes');
+            $('#mark-watched-btn').prop('disabled', false);
+        }
+    }, 120000);
 });
 </script>
+<?php endif; ?>
+
+<?php
+error_log("[VIDEO.PHP] Template finished");
+?>
