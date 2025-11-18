@@ -8,7 +8,7 @@
  *
  * @package    SAW_Visitors
  * @subpackage Base
- * @version    5.5.0 - PERFORMANCE OPTIMIZED
+ * @version    7.1.0 - FINAL: Fixed Branch Scope for Branches Module
  * @since      1.0.0
  */
 
@@ -189,7 +189,6 @@ abstract class SAW_Base_Model
         global $wpdb;
         
         $validation = $this->validate($data);
-        
         if (is_wp_error($validation)) {
             return $validation;
         }
@@ -200,14 +199,10 @@ abstract class SAW_Base_Model
         $result = $wpdb->insert($this->table, $data);
         
         if ($result === false) {
-            return new WP_Error(
-                'db_error',
-                __('Database insert failed', 'saw-visitors') . ': ' . $wpdb->last_error
-            );
+            return new WP_Error('db_error', __('Database insert failed', 'saw-visitors') . ': ' . $wpdb->last_error);
         }
         
         $this->invalidate_cache();
-        
         return $wpdb->insert_id;
     }
     
@@ -223,7 +218,6 @@ abstract class SAW_Base_Model
         global $wpdb;
         
         $validation = $this->validate($data, $id);
-        
         if (is_wp_error($validation)) {
             return $validation;
         }
@@ -237,14 +231,10 @@ abstract class SAW_Base_Model
         );
         
         if ($result === false) {
-            return new WP_Error(
-                'db_error',
-                __('Database update failed', 'saw-visitors') . ': ' . $wpdb->last_error
-            );
+            return new WP_Error('db_error', __('Database update failed', 'saw-visitors') . ': ' . $wpdb->last_error);
         }
         
         $this->invalidate_cache();
-        
         return true;
     }
     
@@ -265,10 +255,7 @@ abstract class SAW_Base_Model
         ));
         
         if (!$exists) {
-            return new WP_Error(
-                'not_found',
-                __('Záznam nenalezen', 'saw-visitors')
-            );
+            return new WP_Error('not_found', __('Záznam nenalezen', 'saw-visitors'));
         }
         
         $result = $wpdb->delete(
@@ -278,21 +265,14 @@ abstract class SAW_Base_Model
         );
         
         if ($result === false) {
-            return new WP_Error(
-                'db_error',
-                __('Chyba databáze', 'saw-visitors') . ': ' . $wpdb->last_error
-            );
+            return new WP_Error('db_error', __('Chyba databáze', 'saw-visitors') . ': ' . $wpdb->last_error);
         }
         
         if ($result === 0) {
-            return new WP_Error(
-                'delete_failed',
-                __('Záznam se nepodařilo smazat', 'saw-visitors')
-            );
+            return new WP_Error('delete_failed', __('Záznam se nepodařilo smazat', 'saw-visitors'));
         }
         
         $this->invalidate_cache();
-        
         return true;
     }
     
@@ -362,44 +342,12 @@ abstract class SAW_Base_Model
      * @return array Search results
      */
     public function search($query, $limit = 10) {
-        global $wpdb;
-        
-        if (empty($query)) {
-            return [];
-        }
-        
-        $search_fields = $this->config['list_config']['searchable'] ?? ['name'];
-        $search_conditions = [];
-        $params = [];
-        
-        foreach ($search_fields as $field) {
-            if ($this->is_valid_column($field)) {
-                $search_conditions[] = "`{$field}` LIKE %s";
-                $params[] = '%' . $wpdb->esc_like($query) . '%';
-            }
-        }
-        
-        if (empty($search_conditions)) {
-            return [];
-        }
-        
-        $sql = $wpdb->prepare("SELECT * FROM %i WHERE ", $this->table);
-        $sql .= "(" . implode(' OR ', $search_conditions) . ")";
-        
-        list($scope_where, $scope_params) = $this->apply_data_scope();
-        if (!empty($scope_where)) {
-            $sql .= $scope_where;
-            $params = array_merge($params, $scope_params);
-        }
-        
-        $sql .= " LIMIT %d";
-        $params[] = intval($limit);
-        
-        $sql = $wpdb->prepare($sql, ...$params);
-        
-        return $wpdb->get_results($sql, ARRAY_A);
+        return $this->get_all(['search' => $query, 'per_page' => $limit])['items'];
     }
-    
+
+    // =========================================================================
+    // 🔥 APPLY DATA SCOPE - FINAL LOGIC WITH BRANCHES FIX
+    // =========================================================================
     /**
      * Apply data scope filtering
      *
@@ -409,436 +357,225 @@ abstract class SAW_Base_Model
      * @return array [sql_where, params]
      */
     protected function apply_data_scope() {
+        if (!is_user_logged_in()) return ['', []];
+        
+        global $wpdb;
         $role = $this->get_current_user_role();
+        $user_id = get_current_user_id();
+
+        // Auto-detect features
+        $is_users_table = (strpos($this->table, 'saw_users') !== false);
+        // ✅ FIX: Robustní detekce tabulky poboček (entity name OR table name)
+        $is_branches_table = ($this->config['entity'] === 'branches' || strpos($this->table, 'saw_branches') !== false);
         
-        if ($role === 'super_admin') {
-            return ['', []];
+        $allow_global = !empty($this->config['allow_global_in_branch_view']) || $is_users_table;
+
+        // 1. ZÍSKÁNÍ KONTEXTU PŘÍMO Z DB
+        $user_ctx = $wpdb->get_row($wpdb->prepare(
+            "SELECT customer_id, branch_id, context_customer_id, context_branch_id FROM {$wpdb->prefix}saw_users WHERE wp_user_id = %d",
+            $user_id
+        ), ARRAY_A);
+
+        $sql_where = "";
+        $params = [];
+
+        // 2. LOGIKA PRO ADMINA A SUPER ADMINA (SWITCHER)
+        if ($role === 'super_admin' || $role === 'admin') {
+            $active_customer_id = 0;
+            $active_branch_id = 0;
+
+            if ($user_ctx) {
+                if ($role === 'super_admin') {
+                    $active_customer_id = (int)($user_ctx['context_customer_id'] ?? $user_ctx['customer_id'] ?? 0);
+                } else {
+                    $active_customer_id = (int)($user_ctx['customer_id'] ?? 0);
+                }
+                
+                $active_branch_id = (int)($user_ctx['context_branch_id'] ?? 0);
+            } 
+            elseif ($role === 'super_admin') {
+                // Fallback meta
+                $active_customer_id = (int) get_user_meta($user_id, 'saw_context_customer_id', true);
+                $active_branch_id = (int) get_user_meta($user_id, 'saw_context_branch_id', true);
+            }
+
+            // A) Filtr Zákazníka
+            if ($this->table_has_column('customer_id') && $active_customer_id > 0) {
+                if ($role === 'super_admin' && $is_users_table) {
+                    $sql_where .= " AND (customer_id = %d OR customer_id IS NULL)";
+                } else {
+                    $sql_where .= " AND customer_id = %d";
+                }
+                $params[] = $active_customer_id;
+            }
+
+            // B) Filtr Pobočky
+            if ($active_branch_id > 0) {
+                if ($is_branches_table) {
+                    // ✅ Pokud jsme v modulu poboček, filtrujeme podle ID
+                    $sql_where .= " AND id = %d";
+                    $params[] = $active_branch_id;
+                } elseif ($this->table_has_column('branch_id')) {
+                    if ($allow_global) {
+                        $sql_where .= " AND (branch_id = %d OR branch_id IS NULL)";
+                    } else {
+                        $sql_where .= " AND branch_id = %d";
+                    }
+                    $params[] = $active_branch_id;
+                }
+            }
+
+            return [$sql_where, $params];
         }
-        
-        if (!$role || !class_exists('SAW_Permissions')) {
-            return ['', []];
-        }
+
+        // 3. LOGIKA PRO OSTATNÍ ROLE (Manager, SuperManager)
+        if (!class_exists('SAW_Permissions')) return ['', []];
         
         $permission = SAW_Permissions::get_permission($role, $this->config['entity'], 'list');
-        
-        if (!$permission || !isset($permission['scope'])) {
-            return [' AND 1=0', []];
-        }
-        
-        $scope = $permission['scope'];
-        $sql_where = '';
-        $params = [];
-        
-        switch ($scope) {
-            case 'all':
-                break;
-                
-            case 'customer':
-                if ($this->table_has_column('customer_id')) {
-                    $customer_id = $this->get_current_customer_id();
-                    if ($customer_id) {
-                        $sql_where = " AND customer_id = %d";
-                        $params[] = $customer_id;
-                    }
-                }
-                break;
-                
+        if (!$permission) return [' AND 1=0', []];
+
+        switch ($permission['scope']) {
             case 'branch':
-                if ($this->table_has_column('branch_id')) {
-                    $branch_ids = $this->get_accessible_branch_ids();
-                    if (!empty($branch_ids)) {
-                        $placeholders = implode(',', array_fill(0, count($branch_ids), '%d'));
-                        $sql_where = " AND branch_id IN ($placeholders)";
-                        $params = array_merge($params, $branch_ids);
+                // Super Manager -> Pevná pobočka
+                $fixed_branch = (int)($user_ctx['branch_id'] ?? 0);
+                
+                if ($fixed_branch) {
+                    if ($is_branches_table) {
+                        // ✅ FIX: Super Manager vidí v seznamu poboček jen tu svou
+                        $sql_where .= " AND id = %d";
+                        $params[] = $fixed_branch;
+                    } elseif ($this->table_has_column('branch_id')) {
+                        if ($allow_global) {
+                            $sql_where .= " AND (branch_id = %d OR branch_id IS NULL)";
+                        } else {
+                            $sql_where .= " AND branch_id = %d";
+                        }
+                        $params[] = $fixed_branch;
+                    }
+                } else {
+                    // Nemá pobočku -> nic, nebo jen globální
+                    if ($allow_global && $this->table_has_column('branch_id')) {
+                        $sql_where .= " AND branch_id IS NULL";
+                    } else {
+                        $sql_where = " AND 1=0";
                     }
                 }
                 break;
                 
             case 'department':
+                // Manager
                 if ($this->table_has_column('department_id')) {
-                    $department_ids = $this->get_current_department_ids();
-                    if (!empty($department_ids)) {
-                        $placeholders = implode(',', array_fill(0, count($department_ids), '%d'));
-                        $sql_where = " AND department_id IN ($placeholders)";
-                        $params = array_merge($params, $department_ids);
+                    $dids = $this->get_current_department_ids();
+                    if (!empty($dids)) {
+                        $placeholders = implode(',', array_fill(0, count($dids), '%d'));
+                        $sql_where .= " AND department_id IN ($placeholders)";
+                        $params = array_merge($params, $dids);
+                    } else {
+                        $sql_where = " AND 1=0";
                     }
                 }
                 break;
                 
             case 'own':
-                if ($this->table_has_column('created_by')) {
-                    $user_id = get_current_user_id();
-                    if ($user_id) {
-                        $sql_where = " AND created_by = %d";
-                        $params[] = $user_id;
-                    }
-                } elseif ($this->table_has_column('user_id')) {
-                    $user_id = get_current_user_id();
-                    if ($user_id) {
-                        $sql_where = " AND user_id = %d";
-                        $params[] = $user_id;
-                    }
-                } elseif ($this->table_has_column('wp_user_id')) {
-                    $user_id = get_current_user_id();
-                    if ($user_id) {
-                        $sql_where = " AND wp_user_id = %d";
-                        $params[] = $user_id;
-                    }
-                }
+                // Terminal
+                if ($this->table_has_column('created_by')) { $sql_where .= " AND created_by = %d"; $params[] = $user_id; }
+                elseif ($this->table_has_column('user_id')) { $sql_where .= " AND user_id = %d"; $params[] = $user_id; }
+                elseif ($this->table_has_column('wp_user_id')) { $sql_where .= " AND wp_user_id = %d"; $params[] = $user_id; }
                 break;
         }
-        
+
         return [$sql_where, $params];
     }
     
-    /**
-     * Check if table has column
-     *
-     * Uses static cache to avoid repeated queries.
-     *
-     * @since 1.0.0
-     * @param string $column_name Column name to check
-     * @return bool True if column exists
-     */
-    protected function table_has_column($column_name) {
-        static $column_cache = [];
+    // =========================================================================
+    // CACHE KEYS
+    // =========================================================================
+    protected function get_cache_key_with_scope($type, $identifier = '') {
+        $key = 'saw_' . $this->config['entity'] . '_' . $type;
+        $role = $this->get_current_user_role();
+        $key .= '_role_' . ($role ?: 'guest');
         
-        $cache_key = $this->table . '_' . $column_name;
-        
-        if (isset($column_cache[$cache_key])) {
-            return $column_cache[$cache_key];
+        if (is_user_logged_in()) {
+            global $wpdb;
+            $ctx = $wpdb->get_row($wpdb->prepare("SELECT context_customer_id, context_branch_id FROM {$wpdb->prefix}saw_users WHERE wp_user_id = %d", get_current_user_id()));
+            if ($ctx) {
+                $key .= '_cc' . ($ctx->context_customer_id ?? 0) . '_cb' . ($ctx->context_branch_id ?? 0);
+            } elseif ($role === 'super_admin') {
+                $mc = get_user_meta(get_current_user_id(), 'saw_context_customer_id', true);
+                $mb = get_user_meta(get_current_user_id(), 'saw_context_branch_id', true);
+                $key .= '_mcc' . ($mc ?: 0) . '_mcb' . ($mb ?: 0);
+            }
         }
         
-        global $wpdb;
+        if (is_array($identifier)) $key .= '_' . md5(serialize($identifier));
+        elseif ($identifier) $key .= '_' . $identifier;
         
-        $columns = $wpdb->get_col($wpdb->prepare(
-            "SHOW COLUMNS FROM %i LIKE %s",
-            $this->table,
-            $column_name
-        ));
-        
-        $column_cache[$cache_key] = !empty($columns);
-        
-        return $column_cache[$cache_key];
+        $v = get_option('saw_' . $this->config['entity'] . '_cache_version', 1);
+        return $key . '_v' . $v;
     }
-    
-    /**
-     * Check if column is valid for queries
-     *
-     * @since 5.4.0
-     * @param string $column_name Column name
-     * @return bool True if valid
-     */
+
+    // --- HELPERS (UNCHANGED) ---
+    protected function table_has_column($column_name) {
+        static $column_cache = [];
+        $key = $this->table . '_' . $column_name;
+        if (isset($column_cache[$key])) return $column_cache[$key];
+        global $wpdb;
+        $columns = $wpdb->get_col($wpdb->prepare("SHOW COLUMNS FROM %i LIKE %s", $this->table, $column_name));
+        return $column_cache[$key] = !empty($columns);
+    }
+
     protected function is_valid_column($column_name) {
         return preg_match('/^[a-zA-Z0-9_]+$/', $column_name);
     }
     
-    /**
-     * Check if orderby column is valid
-     *
-     * @since 5.4.0
-     * @param string $orderby Column name
-     * @return bool True if valid
-     */
     protected function is_valid_orderby($orderby) {
         return in_array($orderby, $this->allowed_orderby, true) || $this->is_valid_column($orderby);
     }
     
-    /**
-     * Get accessible branch IDs for current user
-     *
-     * @since 1.0.0
-     * @return array Branch IDs
-     */
-    protected function get_accessible_branch_ids() {
-        $role = $this->get_current_user_role();
-        $current_branch_id = $this->get_current_branch_id();
-        
-        if ($role === 'admin') {
-            global $wpdb;
-            $customer_id = $this->get_current_customer_id();
-            
-            if (!$customer_id) {
-                return [];
-            }
-            
-            $branch_ids = $wpdb->get_col($wpdb->prepare(
-                "SELECT id FROM %i WHERE customer_id = %d AND is_active = 1",
-                $wpdb->prefix . 'saw_branches',
-                $customer_id
-            ));
-            
-            return array_map('intval', $branch_ids);
-        }
-        
-        if ($role === 'super_manager') {
-            if (!class_exists('SAW_User_Branches') || !class_exists('SAW_Context')) {
-                return $current_branch_id ? [$current_branch_id] : [];
-            }
-            
-            $saw_user_id = SAW_Context::get_saw_user_id();
-            if (!$saw_user_id) {
-                return $current_branch_id ? [$current_branch_id] : [];
-            }
-            
-            $branch_ids = SAW_User_Branches::get_branch_ids_for_user($saw_user_id);
-            
-            if (empty($branch_ids)) {
-                return $current_branch_id ? [$current_branch_id] : [];
-            }
-            
-            if ($current_branch_id && in_array($current_branch_id, $branch_ids)) {
-                return [$current_branch_id];
-            }
-            
-            return $branch_ids;
-        }
-        
-        return $current_branch_id ? [$current_branch_id] : [];
-    }
-    
-    /**
-     * Get current user role
-     *
-     * @since 1.0.0
-     * @return string|null Role name or null
-     */
     protected function get_current_user_role() {
-        if (current_user_can('manage_options')) {
-            return 'super_admin';
-        }
-        
-        if (class_exists('SAW_Context')) {
-            return SAW_Context::get_role();
-        }
-        
+        if (current_user_can('manage_options')) return 'super_admin';
+        if (class_exists('SAW_Context')) return SAW_Context::get_role();
         return null;
     }
-    
-    /**
-     * Get current customer ID
-     *
-     * @since 1.0.0
-     * @return int|null Customer ID or null
-     */
-    protected function get_current_customer_id() {
-        if (class_exists('SAW_Context')) {
-            return SAW_Context::get_customer_id();
-        }
-        
-        return null;
-    }
-    
-    /**
-     * Get current branch ID
-     *
-     * @since 1.0.0
-     * @return int|null Branch ID or null
-     */
-    protected function get_current_branch_id() {
-        if (class_exists('SAW_Context')) {
-            return SAW_Context::get_branch_id();
-        }
-        
-        return null;
-    }
-    
-    /**
-     * Get current user's department IDs
-     *
-     * @since 1.0.0
-     * @return array Department IDs
-     */
+
     protected function get_current_department_ids() {
         global $wpdb;
-        
-        if (!class_exists('SAW_Context')) {
-            return [];
-        }
-        
+        if (!class_exists('SAW_Context')) return [];
         $saw_user_id = SAW_Context::get_saw_user_id();
-        if (!$saw_user_id) {
-            return [];
-        }
-        
-        $department_ids = $wpdb->get_col($wpdb->prepare(
-            "SELECT department_id FROM %i WHERE user_id = %d",
-            $wpdb->prefix . 'saw_user_departments',
-            $saw_user_id
-        ));
-        
+        if (!$saw_user_id) return [];
+        $department_ids = $wpdb->get_col($wpdb->prepare("SELECT department_id FROM %i WHERE user_id = %d", $wpdb->prefix . 'saw_user_departments', $saw_user_id));
         return array_map('intval', $department_ids);
     }
-    
-    /**
-     * Get cache key with scope context
-     *
-     * Generates unique cache key including user's scope context.
-     *
-     * @since 1.0.0
-     * @param string $type       Cache type
-     * @param mixed  $identifier Additional identifier
-     * @return string Cache key
-     */
-    protected function get_cache_key_with_scope($type, $identifier = '') {
-        $key = 'saw_' . $this->config['entity'] . '_' . $type;
-        
-        $role = $this->get_current_user_role();
-        if ($role && $role !== 'super_admin') {
-            $key .= '_role_' . $role;
-            
-            if (class_exists('SAW_Permissions')) {
-                $permission = SAW_Permissions::get_permission($role, $this->config['entity'], 'list');
-                if ($permission && isset($permission['scope'])) {
-                    $key .= '_scope_' . $permission['scope'];
-                    
-                    switch ($permission['scope']) {
-                        case 'customer':
-                            $customer_id = $this->get_current_customer_id();
-                            if ($customer_id) {
-                                $key .= '_c' . $customer_id;
-                            }
-                            break;
-                            
-                        case 'branch':
-                            $branch_ids = $this->get_accessible_branch_ids();
-                            if (!empty($branch_ids)) {
-                                sort($branch_ids);
-                                $key .= '_b' . implode('_', $branch_ids);
-                            }
-                            break;
-                            
-                        case 'department':
-                            $dept_ids = $this->get_current_department_ids();
-                            if (!empty($dept_ids)) {
-                                sort($dept_ids);
-                                $key .= '_d' . implode('_', $dept_ids);
-                            }
-                            break;
-                            
-                        case 'own':
-                            $user_id = get_current_user_id();
-                            if ($user_id) {
-                                $key .= '_u' . $user_id;
-                            }
-                            break;
-                    }
-                }
-            }
-        }
-        
-        if (is_array($identifier)) {
-            $key .= '_' . md5(serialize($identifier));
-        } elseif ($identifier) {
-            $key .= '_' . $identifier;
-        }
-        
-        $version_key = 'saw_' . $this->config['entity'] . '_cache_version';
-        $version = get_option($version_key, 1);
-        $key .= '_v' . ($version ? $version : 1);
-        
-        return $key;
-    }
-    
-    /**
-     * Validate data
-     *
-     * Must be implemented by child classes.
-     *
-     * @since 1.0.0
-     * @param array $data Data to validate
-     * @param int   $id   Record ID (0 for create)
-     * @return true|WP_Error True if valid, error otherwise
-     */
+
+    // Abstract & Protected methods for compatibility
     abstract public function validate($data, $id = 0);
-    
-    /**
-     * Get cache key
-     *
-     * @since 1.0.0
-     * @param string $type       Cache type
-     * @param mixed  $identifier Identifier
-     * @return string Cache key
-     */
-    protected function get_cache_key($type, $identifier = '') {
-        $key = 'saw_' . $this->config['entity'] . '_' . $type;
-        
-        if (is_array($identifier)) {
-            $key .= '_' . md5(serialize($identifier));
-        } elseif ($identifier) {
-            $key .= '_' . $identifier;
-        }
-        
-        $version_key = 'saw_' . $this->config['entity'] . '_cache_version';
-        $version = get_option($version_key, 1);
-        $key .= '_v' . ($version ? $version : 1);
-        
-        return $key;
-    }
-    
-    /**
-     * Get cached data
-     *
-     * @since 1.0.0
-     * @param string $key Cache key
-     * @return mixed Cached data or false
-     */
+    protected function get_cache_key($type, $identifier = '') { return $this->get_cache_key_with_scope($type, $identifier); }
+    protected function get_accessible_branch_ids() { return []; } 
+    protected function get_current_customer_id() { return SAW_Context::get_customer_id(); }
+    protected function get_current_branch_id() { return SAW_Context::get_branch_id(); }
+
     protected function get_cache($key) {
-        if (!($this->config['cache']['enabled'] ?? true)) {
-            return false;
-        }
-        
+        if (!($this->config['cache']['enabled'] ?? true)) return false;
         $group = 'saw_' . $this->config['entity'];
         $cached = wp_cache_get($key, $group);
-        
-        if ($cached !== false) {
-            return $cached;
-        }
-        
+        if ($cached !== false) return $cached;
         $cached = get_transient($key);
-        
-        if ($cached !== false) {
-            wp_cache_set($key, $cached, $group, 300);
-            return $cached;
-        }
-        
+        if ($cached !== false) { wp_cache_set($key, $cached, $group, 300); return $cached; }
         return false;
     }
     
-    /**
-     * Set cache data
-     *
-     * @since 1.0.0
-     * @param string $key  Cache key
-     * @param mixed  $data Data to cache
-     * @return bool Success
-     */
     protected function set_cache($key, $data) {
-        if (!($this->config['cache']['enabled'] ?? true)) {
-            return false;
-        }
-        
+        if (!($this->config['cache']['enabled'] ?? true)) return false;
         $ttl = $this->config['cache']['ttl'] ?? $this->cache_ttl;
         $group = 'saw_' . $this->config['entity'];
-        
         wp_cache_set($key, $data, $group, min($ttl, 300));
-        
         return set_transient($key, $data, $ttl);
     }
     
-    /**
-     * Invalidate all cache for entity
-     *
-     * Removes all transients matching entity pattern.
-     *
-     * @since 1.0.0
-     * @return void
-     */
     protected function invalidate_cache() {
         $version_key = 'saw_' . $this->config['entity'] . '_cache_version';
         $version = get_option($version_key, 1);
         update_option($version_key, $version + 1);
-        
         wp_cache_flush_group('saw_' . $this->config['entity']);
     }
 }

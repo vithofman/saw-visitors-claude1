@@ -2,11 +2,11 @@
 /**
  * Branches Module Model
  *
- * FINAL v13.6.0 - COMPLETE
+ * FINAL v14.0.0 - Fixed Scope Application
  *
  * @package     SAW_Visitors
  * @subpackage  Modules/Branches
- * @version     13.6.0
+ * @version     14.0.0
  */
 
 if (!defined('ABSPATH')) {
@@ -69,89 +69,101 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
     
     /**
      * Get all branches with filters and caching
+     * NOW SUPPORTS SCOPE & PERMISSIONS!
      */
-    /**
- * Get all branches with filters and caching
- * ALWAYS filtered by customer_id from context
- */
-public function get_all($filters = array()) {
-    global $wpdb;
-    
-    // ✅ VŽDY přidej customer_id filtr
-    $customer_id = SAW_Context::get_customer_id();
-    
-    if (!$customer_id) {
-        return array('items' => array(), 'total' => 0);
-    }
-    
-    // Cache key
-    $filters['customer_id'] = $customer_id; // Force into filters for cache key
-    $cache_key = 'branches_list_' . md5(serialize($filters));
-    
-    $cached = get_transient($cache_key);
-    if ($cached !== false) {
-        return $cached;
-    }
-    
-    // Build base query
-    $sql = "SELECT * FROM {$this->table} WHERE customer_id = %d";
-    $params = array($customer_id);
-    
-    // Search
-    if (!empty($filters['search'])) {
-        $search_fields = array('name', 'code', 'city', 'email');
-        $search_conditions = array();
+    public function get_all($filters = array()) {
+        global $wpdb;
         
-        foreach ($search_fields as $field) {
-            $search_conditions[] = "`{$field}` LIKE %s";
-            $params[] = '%' . $wpdb->esc_like($filters['search']) . '%';
+        // 1. Customer Context (Base Isolation)
+        $customer_id = SAW_Context::get_customer_id();
+        
+        if (!$customer_id && !saw_is_super_admin()) {
+            return array('items' => array(), 'total' => 0);
+        }
+
+        // Cache key construction
+        $filters['customer_id'] = $customer_id; 
+        // Přidáme do klíče i roli a user ID pro unikátnost scoupu
+        $cache_key = 'branches_list_' . md5(serialize($filters) . get_current_user_id());
+        
+        $cached = get_transient($cache_key);
+        if ($cached !== false) {
+            return $cached;
         }
         
-        $sql .= " AND (" . implode(' OR ', $search_conditions) . ")";
+        // 2. Build Base Query
+        // Start with Customer Isolation
+        $sql = "SELECT * FROM {$this->table} WHERE 1=1";
+        $params = array();
+
+        if ($customer_id) {
+            $sql .= " AND customer_id = %d";
+            $params[] = $customer_id;
+        }
+        
+        // 3. 🔥 APPLY SCOPE (Role Restrictions & Switcher)
+        // Toto chybělo! Nyní se zavolá logika z Base Modelu
+        list($scope_where, $scope_params) = $this->apply_data_scope();
+        if (!empty($scope_where)) {
+            $sql .= $scope_where;
+            $params = array_merge($params, $scope_params);
+        }
+        
+        // 4. Search Logic
+        if (!empty($filters['search'])) {
+            $search_fields = array('name', 'code', 'city', 'email');
+            $search_conditions = array();
+            
+            foreach ($search_fields as $field) {
+                $search_conditions[] = "`{$field}` LIKE %s";
+                $params[] = '%' . $wpdb->esc_like($filters['search']) . '%';
+            }
+            
+            $sql .= " AND (" . implode(' OR ', $search_conditions) . ")";
+        }
+        
+        // 5. Simple Filters
+        if (isset($filters['is_active']) && $filters['is_active'] !== '') {
+            $sql .= " AND is_active = %d";
+            $params[] = intval($filters['is_active']);
+        }
+        
+        // 6. Count total
+        $count_sql = str_replace('SELECT *', 'SELECT COUNT(*)', $sql);
+        $total = (int) $wpdb->get_var($wpdb->prepare($count_sql, $params));
+        
+        // 7. Order
+        $orderby = !empty($filters['orderby']) ? sanitize_key($filters['orderby']) : 'is_headquarters';
+        $order = !empty($filters['order']) ? strtoupper($filters['order']) : 'DESC';
+        
+        if (!in_array($order, array('ASC', 'DESC'))) {
+            $order = 'DESC';
+        }
+        
+        $sql .= " ORDER BY `{$orderby}` {$order}, name ASC";
+        
+        // 8. Pagination
+        $page = isset($filters['page']) ? max(1, intval($filters['page'])) : 1;
+        $per_page = isset($filters['per_page']) ? max(1, intval($filters['per_page'])) : 20;
+        $offset = ($page - 1) * $per_page;
+        
+        $sql .= " LIMIT %d OFFSET %d";
+        $params[] = $per_page;
+        $params[] = $offset;
+        
+        // 9. Execute
+        $items = $wpdb->get_results($wpdb->prepare($sql, $params), ARRAY_A);
+        
+        $result = array(
+            'items' => $items ?: array(),
+            'total' => $total,
+        );
+        
+        // Cache
+        set_transient($cache_key, $result, $this->cache_ttl);
+        
+        return $result;
     }
-    
-    // Filters
-    if (isset($filters['is_active']) && $filters['is_active'] !== '') {
-        $sql .= " AND is_active = %d";
-        $params[] = intval($filters['is_active']);
-    }
-    
-    // Count total
-    $count_sql = str_replace('SELECT *', 'SELECT COUNT(*)', $sql);
-    $total = (int) $wpdb->get_var($wpdb->prepare($count_sql, $params));
-    
-    // Order
-    $orderby = !empty($filters['orderby']) ? sanitize_key($filters['orderby']) : 'is_headquarters';
-    $order = !empty($filters['order']) ? strtoupper($filters['order']) : 'DESC';
-    
-    if (!in_array($order, array('ASC', 'DESC'))) {
-        $order = 'DESC';
-    }
-    
-    $sql .= " ORDER BY `{$orderby}` {$order}, name ASC";
-    
-    // Pagination
-    $page = isset($filters['page']) ? max(1, intval($filters['page'])) : 1;
-    $per_page = isset($filters['per_page']) ? max(1, intval($filters['per_page'])) : 20;
-    $offset = ($page - 1) * $per_page;
-    
-    $sql .= " LIMIT %d OFFSET %d";
-    $params[] = $per_page;
-    $params[] = $offset;
-    
-    // Execute
-    $items = $wpdb->get_results($wpdb->prepare($sql, $params), ARRAY_A);
-    
-    $result = array(
-        'items' => $items ?: array(),
-        'total' => $total,
-    );
-    
-    // Cache
-    set_transient($cache_key, $result, $this->cache_ttl);
-    
-    return $result;
-}
     
     /**
      * Validate data
@@ -232,5 +244,13 @@ public function get_all($filters = array()) {
             $customer_id,
             $exclude_id
         ));
+    }
+
+    /**
+     * Helper to invalidate list cache
+     */
+    private function invalidate_list_cache() {
+        global $wpdb;
+        $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_branches_list_%'");
     }
 }

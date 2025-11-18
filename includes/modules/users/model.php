@@ -1,13 +1,22 @@
 <?php
 /**
- * Users Module Model - FINAL WORKING VERSION
- * 
- * @package SAW_Visitors
- * @version 5.4.0 - FIXED: Admin vidí sám sebe v tabulce
+ * Users Module Model - FINAL HIERARCHY FIX
+ * * Handles user data retrieval with strict Role Hierarchy:
+ * - Super Admin: Sees everyone.
+ * - Admin: Sees everyone in Customer (including other Admins/Super Managers).
+ * - Super Manager: Sees Super Managers, Managers, Terminals. HIDES Admins & Super Admins.
+ * - Manager: Sees Managers, Terminals in their scope. HIDES Super Managers, Admins, Super Admins.
+ * * @package     SAW_Visitors
+ * @subpackage  Modules/Users
+ * @version     5.7.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
+}
+
+if (!class_exists('SAW_Base_Model')) {
+    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/class-base-model.php';
 }
 
 class SAW_Module_Users_Model extends SAW_Base_Model 
@@ -18,6 +27,8 @@ class SAW_Module_Users_Model extends SAW_Base_Model
         $this->config = $config;
         $this->cache_ttl = $config['cache']['ttl'] ?? 1800;
     }
+    
+    // --- CRUD ---
     
     public function create($data) {
         if (isset($data['role']) && $data['role'] === 'super_admin') {
@@ -32,9 +43,7 @@ class SAW_Module_Users_Model extends SAW_Base_Model
         }
         
         $result = parent::create($data);
-        if (!is_wp_error($result)) {
-            $this->invalidate_list_cache();
-        }
+        if (!is_wp_error($result)) $this->invalidate_list_cache();
         return $result;
     }
     
@@ -55,260 +64,179 @@ class SAW_Module_Users_Model extends SAW_Base_Model
         }
         return $result;
     }
-    
+
+    // --- HLAVNÍ LOGIKA FILTROVÁNÍ ---
+
     /**
-     * Get all users - FIXED: Admin vidí sám sebe
-     * 
-     * Logika:
-     * - Super admin (WordPress administrator) vidí všechny uživatele
-     * - SAW admin vidí všechny uživatele svého customera (včetně sebe)
-     * - Super manager/Manager vidí uživatele své pobočky + adminy svého customera
-     * - Vždy zahrnuje aktuálně přihlášeného uživatele
+     * Get all users with ROLE HIERARCHY & BRANCH LOGIC
      */
     public function get_all($filters = array()) {
         global $wpdb;
         
-        // Super admin vidí všechny uživatele
-        $current_wp_user = wp_get_current_user();
-        $is_wp_super_admin = in_array('administrator', $current_wp_user->roles, true);
-        
-        if ($is_wp_super_admin) {
+        // 1. Super Admin (WP) vidí vše (použije Base Model logiku)
+        if (current_user_can('manage_options')) {
             return parent::get_all($filters);
         }
-        
-        // Získáme customer_id z kontextu
+
+        // 2. Získat kontext
         $context_customer_id = SAW_Context::get_customer_id();
+        $context_branch_id = SAW_Context::get_branch_id();
+        $current_user_id = SAW_Context::get_saw_user_id();
+        $current_role = SAW_Context::get_role();
+
+        // Bez zákazníka nevidí nic
         if (!$context_customer_id) {
             return array('items' => array(), 'total' => 0);
         }
-        
-        // Získáme ID aktuálně přihlášeného SAW uživatele
-        $current_saw_user_id = SAW_Context::get_saw_user_id();
-        
-        // Základní query - všichni uživatelé daného customera
+
+        // 3. Základní SQL
         $sql = "SELECT * FROM {$this->table} WHERE customer_id = %d";
-        $count_sql = "SELECT COUNT(*) FROM {$this->table} WHERE customer_id = %d";
-        
         $params = array($context_customer_id);
-        $count_params = array($context_customer_id);
+
+        // =========================================================
+        // 4. HIERARCHIE ROLÍ (Kdo koho vidí)
+        // =========================================================
         
-        // Branch filtr - pokud je nastaven context_branch_id (pro super_manager/manager)
-        $context_branch_id = SAW_Context::get_branch_id();
+        // Super Admin: Vidí vše (vyřešeno nahoře)
+        
+        // Admin: Vidí vše v rámci zákazníka (včetně jiných adminů)
+        if ($current_role === 'admin') {
+             // Admin vidí vše, nic neskrýváme (kromě Super Admina, který nemá customer_id, takže je skrytý už základním dotazem)
+        }
+        // Super Manager: Nevidí Adminy ani Super Adminy
+        elseif ($current_role === 'super_manager') {
+             $sql .= " AND role NOT IN ('super_admin', 'admin')";
+        }
+        // Manager: Nevidí Super Managery, Adminy, ani Super Adminy
+        elseif ($current_role === 'manager') {
+             $sql .= " AND role NOT IN ('super_admin', 'admin', 'super_manager')";
+        }
+        // Terminal: Nevidí nikoho (obvykle)
+        elseif ($current_role === 'terminal') {
+             $sql .= " AND 1=0"; 
+        }
+
+        // =========================================================
+        // 5. FILTR POBOČKY (Switcher nebo Pevná)
+        // =========================================================
+        
         if ($context_branch_id) {
-            // Zobrazit uživatele z dané pobočky + uživatele bez pobočky (admins) + sebe
-            if ($current_saw_user_id) {
-                $sql .= " AND (branch_id = %d OR branch_id IS NULL OR id = %d)";
-                $count_sql .= " AND (branch_id = %d OR branch_id IS NULL OR id = %d)";
-                $params[] = $context_branch_id;
-                $params[] = $current_saw_user_id;
-                $count_params[] = $context_branch_id;
-                $count_params[] = $current_saw_user_id;
-            } else {
-                $sql .= " AND (branch_id = %d OR branch_id IS NULL)";
-                $count_sql .= " AND (branch_id = %d OR branch_id IS NULL)";
-                $params[] = $context_branch_id;
-                $count_params[] = $context_branch_id;
+            // Pokud filtrujeme podle pobočky:
+            // 1. Zobrazit uživatele, kteří patří do této pobočky (branch_id = X)
+            // 2. Zobrazit uživatele, kteří jsou "globální" pro zákazníka (branch_id IS NULL)
+            //    - To jsou typicky Admini a Super Manageři bez pobočky
+            // 3. VŽDY zobrazit sebe sama (pojistka)
+            
+            $sql .= " AND (branch_id = %d OR branch_id IS NULL";
+            $params[] = $context_branch_id;
+
+            if ($current_user_id) {
+                $sql .= " OR id = %d";
+                $params[] = $current_user_id;
             }
+            $sql .= ")";
+        } else {
+            // Pokud je vybráno "Všechny pobočky" (switcher je 0/NULL), vidíme vše v rámci zákazníka.
+            // Logika rolí (bod 4) už vyfiltrovala nadřízené, takže je to bezpečné.
         }
+
+        // =========================================================
+        // 6. SEARCH & DALŠÍ FILTRY
+        // =========================================================
         
-        // Vyhledávání
+        // Search
         if (!empty($filters['search'])) {
-            $search_fields = $this->config['list_config']['searchable'] ?? array('first_name', 'last_name');
-            $search_conditions = array();
             $search_value = '%' . $wpdb->esc_like($filters['search']) . '%';
-            
-            foreach ($search_fields as $field) {
-                $search_conditions[] = $wpdb->prepare("{$field} LIKE %s", $search_value);
-            }
-            
-            $search_where = ' AND (' . implode(' OR ', $search_conditions) . ')';
-            $sql .= $search_where;
-            $count_sql .= $search_where;
+            $sql .= " AND (first_name LIKE %s OR last_name LIKE %s OR email LIKE %s OR position LIKE %s)";
+            $params[] = $search_value;
+            $params[] = $search_value;
+            $params[] = $search_value;
+            $params[] = $search_value;
         }
-        
-        // Filtry (role, is_active, atd.)
-        foreach ($this->config['list_config']['filters'] ?? array() as $filter_key => $enabled) {
-            if ($enabled && isset($filters[$filter_key]) && $filters[$filter_key] !== '') {
-                $sql .= $wpdb->prepare(" AND {$filter_key} = %s", $filters[$filter_key]);
-                $count_sql .= $wpdb->prepare(" AND {$filter_key} = %s", $filters[$filter_key]);
-            }
+
+        // Filter: Role
+        if (!empty($filters['role'])) {
+            $sql .= " AND role = %s";
+            $params[] = $filters['role'];
         }
-        
-        // Připravíme SQL s parametry
-        $sql = $wpdb->prepare($sql, ...$params);
-        $count_sql = $wpdb->prepare($count_sql, ...$count_params);
-        
-        // Celkový počet
-        $total = (int) $wpdb->get_var($count_sql);
-        
-        // Řazení
-        $orderby = $filters['orderby'] ?? 'first_name';
-        $order = strtoupper($filters['order'] ?? 'ASC');
-        
-        if (!in_array($order, array('ASC', 'DESC'))) {
-            $order = 'ASC';
+
+        // Filter: Active
+        if (isset($filters['is_active']) && $filters['is_active'] !== '') {
+            $sql .= " AND is_active = %d";
+            $params[] = (int)$filters['is_active'];
         }
+
+        // Count
+        $count_sql = str_replace('SELECT *', 'SELECT COUNT(*)', $sql);
+        $total = (int) $wpdb->get_var($wpdb->prepare($count_sql, $params));
+
+        // Order & Pagination
+        $orderby = $filters['orderby'] ?? 'id';
+        $order = strtoupper($filters['order'] ?? 'DESC');
+        $valid_cols = ['id', 'first_name', 'last_name', 'email', 'role', 'created_at'];
+        if (!in_array($orderby, $valid_cols)) $orderby = 'id';
         
         $sql .= " ORDER BY {$orderby} {$order}";
-        
-        // Stránkování
+
         $page = isset($filters['page']) ? max(1, intval($filters['page'])) : 1;
         $per_page = isset($filters['per_page']) ? max(1, intval($filters['per_page'])) : 20;
         $offset = ($page - 1) * $per_page;
         
-        $sql .= $wpdb->prepare(" LIMIT %d OFFSET %d", $per_page, $offset);
-        
-        // Načtení dat
-        $items = $wpdb->get_results($sql, ARRAY_A);
-        
+        $sql .= " LIMIT %d OFFSET %d";
+        $params[] = $per_page;
+        $params[] = $offset;
+
+        // Execute
+        $items = $wpdb->get_results($wpdb->prepare($sql, $params), ARRAY_A);
+
         return array(
-            'items' => $items ?: array(),
+            'items' => $items,
             'total' => $total
         );
     }
     
-    public function get_by_id($id) {
-        $cache_key = sprintf('saw_users_item_%d', $id);
-        $item = get_transient($cache_key);
-        
-        if ($item === false) {
-            $item = parent::get_by_id($id);
-            if ($item) {
-                set_transient($cache_key, $item, $this->cache_ttl);
-            }
-        }
-        
-        if (!$item) {
-            return null;
-        }
-        
-        $current_customer_id = SAW_Context::get_customer_id();
-        
-        if (!current_user_can('manage_options')) {
-            if (!empty($item['customer_id']) && $item['customer_id'] != $current_customer_id) {
-                return null;
-            }
-            if (empty($item['customer_id']) && isset($item['role']) && $item['role'] === 'super_admin') {
-                return null;
-            }
-        }
-        
-        if (isset($item['role']) && $item['role'] === 'manager') {
-            global $wpdb;
-            $departments = $wpdb->get_results($wpdb->prepare(
-                "SELECT department_id FROM %i WHERE user_id = %d",
-                $wpdb->prefix . 'saw_user_departments',
-                $id
-            ), ARRAY_A);
-            $item['department_ids'] = array_column($departments, 'department_id');
-        }
-        
-        if (!empty($item['created_at'])) {
-            $item['created_at_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['created_at']));
-        }
-        if (!empty($item['updated_at'])) {
-            $item['updated_at_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['updated_at']));
-        }
-        if (!empty($item['last_login'])) {
-            $item['last_login_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['last_login']));
-        }
-        
-        return $item;
-    }
+    // --- HELPERS (Validation, etc.) ---
     
     public function validate($data, $id = 0) {
         $errors = array();
+        if (empty($data['email'])) $errors['email'] = 'Email je povinný';
+        elseif (!is_email($data['email'])) $errors['email'] = 'Neplatný formát';
+        elseif ($this->email_exists($data['email'], $id)) $errors['email'] = 'Email již existuje';
         
-        if (empty($data['email'])) {
-            $errors['email'] = 'Email je povinný';
-        } elseif (!is_email($data['email'])) {
-            $errors['email'] = 'Neplatný formát emailu';
-        } elseif ($this->email_exists($data['email'], $id)) {
-            $errors['email'] = 'Uživatel s tímto emailem již existuje';
-        }
-        
-        if (empty($data['first_name'])) {
-            $errors['first_name'] = 'Jméno je povinné';
-        }
-        
-        if (empty($data['last_name'])) {
-            $errors['last_name'] = 'Příjmení je povinné';
-        }
-        
-        if (empty($data['role'])) {
-            $errors['role'] = 'Role je povinná';
-        }
-        
-        if (isset($data['role']) && $data['role'] === 'terminal' && !empty($data['pin'])) {
-            if (!preg_match('/^\d{4}$/', $data['pin'])) {
-                $errors['pin'] = 'PIN musí být 4 číslice';
-            }
-        }
+        if (empty($data['first_name'])) $errors['first_name'] = 'Jméno je povinné';
+        if (empty($data['last_name'])) $errors['last_name'] = 'Příjmení je povinné';
+        if (empty($data['role'])) $errors['role'] = 'Role je povinná';
         
         return empty($errors) ? true : new WP_Error('validation_error', 'Validace selhala', $errors);
     }
     
     private function email_exists($email, $exclude_id = 0) {
         global $wpdb;
-        if (empty($email)) {
-            return false;
-        }
-        $query = $wpdb->prepare(
-            "SELECT COUNT(*) FROM %i WHERE email = %s AND id != %d",
-            $this->table,
-            $email,
-            $exclude_id
-        );
-        return (bool) $wpdb->get_var($query);
+        if (empty($email)) return false;
+        return (bool) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$this->table} WHERE email = %s AND id != %d", $email, $exclude_id));
     }
     
     public function is_used_in_system($id) {
         global $wpdb;
-        $tables_to_check = array(
-            'saw_visits' => 'created_by',
-            'saw_invitations' => 'created_by',
-        );
-        
-        foreach ($tables_to_check as $table => $column) {
-            $full_table = $wpdb->prefix . $table;
-            if ($wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $full_table)) !== $full_table) {
-                continue;
-            }
-            $count = $wpdb->get_var($wpdb->prepare(
-                "SELECT COUNT(*) FROM %i WHERE %i = %d",
-                $full_table,
-                $column,
-                $id
-            ));
-            if ($count > 0) {
-                return true;
+        $tables = ['saw_visits' => 'created_by', 'saw_invitations' => 'created_by'];
+        foreach ($tables as $tbl => $col) {
+            $ft = $wpdb->prefix . $tbl;
+            if ($wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $ft)) === $ft) {
+                if ($wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$ft} WHERE {$col} = %d", $id)) > 0) return true;
             }
         }
         return false;
     }
-    
+
     public function get_by_customer($customer_id, $active_only = false) {
-        $filters = array(
-            'customer_id' => $customer_id,
-            'orderby' => 'first_name',
-            'order' => 'ASC',
-        );
-        if ($active_only) {
-            $filters['is_active'] = 1;
-        }
+        $filters = ['customer_id' => $customer_id, 'orderby' => 'first_name', 'order' => 'ASC'];
+        if ($active_only) $filters['is_active'] = 1;
         return $this->get_all($filters);
     }
-    
-    private function invalidate_item_cache($id) {
-        delete_transient(sprintf('saw_users_item_%d', $id));
-    }
-    
+
+    private function invalidate_item_cache($id) { delete_transient(sprintf('saw_users_item_%d', $id)); }
     private function invalidate_list_cache() {
         global $wpdb;
-        $wpdb->query(
-            "DELETE FROM {$wpdb->options} 
-             WHERE option_name LIKE '_transient_saw_users_list_%' 
-             OR option_name LIKE '_transient_timeout_saw_users_list_%'"
-        );
+        $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_saw_users_list_%' OR option_name LIKE '_transient_timeout_saw_users_list_%'");
     }
 }

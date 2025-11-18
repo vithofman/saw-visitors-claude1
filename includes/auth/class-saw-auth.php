@@ -7,7 +7,7 @@
  *
  * @package    SAW_Visitors
  * @subpackage Auth
- * @version    5.1.0
+ * @version    5.2.0 - FIXED: Admin Branch Context
  * @since      1.0.0
  */
 
@@ -90,17 +90,15 @@ class SAW_Auth {
      * Get current branch ID
      *
      * Returns active branch ID from context.
-     * Super admins and admins don't have branch context.
+     * FIXED: Removed restriction for super admins/admins to allow switcher usage.
      *
      * @since 1.0.0
      * @return int|null Branch ID or null
      */
     public function get_current_branch_id() {
-        $role = $this->get_current_user_role();
-        
-        if ($role === 'super_admin' || $role === 'admin') {
-            return null;
-        }
+        // Původní kód zde natvrdo vracel null pro adminy.
+        // To jsme odstranili, aby fungoval Branch Switcher.
+        // SAW_Context se postará o to, aby vrátil správné ID (pokud je ve switcheru vybráno).
         
         return SAW_Context::get_branch_id();
     }

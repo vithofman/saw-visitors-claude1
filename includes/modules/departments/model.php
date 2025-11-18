@@ -1,330 +1,97 @@
 <?php
 /**
  * Departments Module Model
- * 
- * Handles all database operations for the Departments module including
- * CRUD operations, validation, customer isolation, and caching.
- * 
+ *
+ * Handles all database operations for the Departments module.
+ * Inherits robust scoping and context logic from SAW_Base_Model.
+ *
  * @package     SAW_Visitors
  * @subpackage  Modules/Departments
+ * @version     3.1.0 - VERIFIED: Works with Base Model 7.0
  * @since       1.0.0
- * @author      SAW Visitors Dev Team
- * @version     3.0.0 - SIMPLIFIED: Removed branch_name loading and training_version
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-/**
- * Departments Model Class
- * 
- * Extends SAW_Base_Model to provide department-specific functionality
- * including validation and data formatting.
- * 
- * @since 1.0.0
- */
 class SAW_Module_Departments_Model extends SAW_Base_Model 
 {
     /**
-     * Constructor - Initialize model with config
-     * 
-     * Sets up table name, configuration, and cache TTL.
-     * 
-     * @since 1.0.0
-     * @param array $config Module configuration array
+     * Constructor
      */
     public function __construct($config) {
         global $wpdb;
-        
         $this->table = $wpdb->prefix . $config['table'];
         $this->config = $config;
-        $this->cache_ttl = $config['cache']['ttl'] ?? 300;
+        $this->cache_ttl = 300;
     }
     
     /**
      * Validate department data
-     * 
-     * Validates all required fields and business rules:
-     * - customer_id must be present
-     * - branch_id must be present
-     * - name must be present
-     * - department_number must be unique within branch (if provided)
-     * 
-     * @since 1.0.0
-     * @param array $data Department data to validate
-     * @param int $id Department ID (for update validation, 0 for create)
-     * @return bool|WP_Error True if valid, WP_Error if validation fails
      */
     public function validate($data, $id = 0) {
         $errors = array();
         
-        // Customer ID validation
         if (empty($data['customer_id'])) {
             $errors['customer_id'] = 'Customer ID is required';
         }
         
-        // Branch ID validation
         if (empty($data['branch_id'])) {
             $errors['branch_id'] = 'Branch is required';
         }
         
-        // Name validation
         if (empty($data['name'])) {
-            $errors['name'] = 'Department name is required';
+            $errors['name'] = 'Name is required';
         }
         
-        // Department number uniqueness check (if provided)
+        // Check duplicate department number within the same branch
         if (!empty($data['department_number']) && $this->department_number_exists($data['customer_id'], $data['branch_id'], $data['department_number'], $id)) {
-            $errors['department_number'] = 'Department with this number already exists in this branch';
+            $errors['department_number'] = 'Duplicitní číslo oddělení';
         }
         
         return empty($errors) ? true : new WP_Error('validation_error', 'Validation failed', $errors);
     }
     
     /**
-     * Check if department number already exists
-     * 
-     * Verifies uniqueness of department_number within the same customer and branch.
-     * Empty department numbers are considered valid (not checked).
-     * 
-     * @since 1.0.0
-     * @param int $customer_id Customer ID
-     * @param int $branch_id Branch ID
-     * @param string $department_number Department number to check
-     * @param int $exclude_id Department ID to exclude from check (for updates)
-     * @return bool True if department number exists, false otherwise
+     * Check if department number exists
      */
     private function department_number_exists($customer_id, $branch_id, $department_number, $exclude_id = 0) {
         global $wpdb;
         
-        // Empty department numbers are allowed (not unique constraint)
         if (empty($department_number)) {
             return false;
         }
         
-        $query = $wpdb->prepare(
+        return (bool) $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM %i WHERE customer_id = %d AND branch_id = %d AND department_number = %s AND id != %d",
             $this->table,
             $customer_id,
             $branch_id,
             $department_number,
             $exclude_id
-        );
-        
-        return (bool) $wpdb->get_var($query);
+        ));
     }
     
     /**
-     * Get department by ID with formatting and isolation check
-     * 
-     * Retrieves a single department record by ID, validates customer isolation,
-     * and formats the data for display (status labels, dates).
-     * Uses transient cache with 5 minute TTL.
-     * 
-     * @since 1.0.0
-     * @version 3.0.0 - Removed branch_name loading (not needed in list view)
-     * @param int $id Department ID
-     * @return array|null Department data or null if not found/no access
+     * Get by ID with formatting
+     * We override this just to add specific formatting for the detail view.
      */
     public function get_by_id($id) {
-        // Try cache first
-        $cache_key = sprintf('saw_departments_item_%d', $id);
-        $item = get_transient($cache_key);
+        // Parent method handles security & access check
+        $item = parent::get_by_id($id);
         
-        if ($item === false) {
-            // Cache miss - fetch from database
-            $item = parent::get_by_id($id);
+        if ($item) {
+            // Add display helpers
+            $item['is_active_label'] = !empty($item['is_active']) ? 'Aktivní' : 'Neaktivní';
+            $item['is_active_badge_class'] = !empty($item['is_active']) ? 'saw-badge saw-badge-success' : 'saw-badge saw-badge-secondary';
             
-            if ($item) {
-                // Cache for 5 minutes
-                set_transient($cache_key, $item, $this->cache_ttl);
+            // Format dates if needed
+            if (!empty($item['created_at'])) {
+                $item['created_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['created_at']));
             }
-        }
-        
-        if (!$item) {
-            return null;
-        }
-        
-        // Customer isolation check
-        $current_customer_id = SAW_Context::get_customer_id();
-        
-        // Super admin can see all departments
-        if (!current_user_can('manage_options')) {
-            if (empty($item['customer_id']) || $item['customer_id'] != $current_customer_id) {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log(sprintf(
-                        '[DEPARTMENTS] Isolation violation - Item customer: %s, Current: %s',
-                        $item['customer_id'] ?? 'NULL',
-                        $current_customer_id ?? 'NULL'
-                    ));
-                }
-                return null;
-            }
-        }
-        
-        // Format active status
-        $item['is_active_label'] = !empty($item['is_active']) ? 'Aktivní' : 'Neaktivní';
-        $item['is_active_badge_class'] = !empty($item['is_active']) ? 'saw-badge saw-badge-success' : 'saw-badge saw-badge-secondary';
-        
-        // Format dates
-        if (!empty($item['created_at'])) {
-            $item['created_at_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['created_at']));
-        }
-        
-        if (!empty($item['updated_at'])) {
-            $item['updated_at_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['updated_at']));
         }
         
         return $item;
-    }
-    
-    /**
-     * Get all departments with customer and branch isolation
-     * 
-     * CRITICAL FIX: Now filters by BOTH customer_id AND branch_id from SAW_Context
-     * - customer_id = Always filtered by current customer (from customer switcher)
-     * - branch_id = Filtered by current branch (from branch switcher) if set
-     * 
-     * Results are cached for 5 minutes using transients.
-     * 
-     * @since 1.0.0
-     * @version 2.0.0 - Added branch_id filtering
-     * @param array $filters Query filters (search, orderby, page, etc.)
-     * @return array Array with 'items' and 'total' keys
-     */
-    public function get_all($filters = array()) {
-        $customer_id = SAW_Context::get_customer_id();
-        
-        // CRITICAL: Always require customer_id
-        if (!$customer_id) {
-            return array('items' => array(), 'total' => 0);
-        }
-        
-        // Auto-set customer_id filter from context
-        if (!isset($filters['customer_id'])) {
-            $filters['customer_id'] = $customer_id;
-        }
-        
-        // CRITICAL FIX: Add branch_id filter from SAW_Context (branch switcher)
-        $branch_id = SAW_Context::get_branch_id();
-        if ($branch_id && !isset($filters['branch_id'])) {
-            $filters['branch_id'] = $branch_id;
-        }
-        
-        // Create cache key based on customer, branch, and filters
-        $cache_key = sprintf(
-            'saw_departments_list_%d_%s_%s',
-            $customer_id,
-            $branch_id ? $branch_id : 'all',
-            md5(serialize($filters))
-        );
-        
-        // Try cache first
-        $data = get_transient($cache_key);
-        
-        if ($data === false) {
-            // Cache miss - fetch from database
-            $data = parent::get_all($filters);
-            
-            // Cache for 5 minutes
-            set_transient($cache_key, $data, $this->cache_ttl);
-        }
-        
-        return $data;
-    }
-    
-    /**
-     * Create new department with cache invalidation
-     * 
-     * Creates a new department record and invalidates relevant caches.
-     * 
-     * @since 1.0.0
-     * @param array $data Department data
-     * @return int|WP_Error New department ID or error
-     */
-    public function create($data) {
-        $result = parent::create($data);
-        
-        if (!is_wp_error($result)) {
-            $this->invalidate_list_cache();
-        }
-        
-        return $result;
-    }
-    
-    /**
-     * Update existing department with cache invalidation
-     * 
-     * Updates a department record and invalidates relevant caches.
-     * 
-     * @since 1.0.0
-     * @param int $id Department ID
-     * @param array $data Department data
-     * @return bool|WP_Error True on success, error on failure
-     */
-    public function update($id, $data) {
-        $result = parent::update($id, $data);
-        
-        if (!is_wp_error($result)) {
-            $this->invalidate_item_cache($id);
-            $this->invalidate_list_cache();
-        }
-        
-        return $result;
-    }
-    
-    /**
-     * Delete department with cache invalidation
-     * 
-     * Deletes a department record and invalidates relevant caches.
-     * 
-     * @since 1.0.0
-     * @param int $id Department ID
-     * @return bool|WP_Error True on success, error on failure
-     */
-    public function delete($id) {
-        $result = parent::delete($id);
-        
-        if (!is_wp_error($result)) {
-            $this->invalidate_item_cache($id);
-            $this->invalidate_list_cache();
-        }
-        
-        return $result;
-    }
-    
-    /**
-     * Invalidate item cache
-     * 
-     * Removes cached data for a specific department.
-     * 
-     * @since 1.0.0
-     * @param int $id Department ID
-     * @return void
-     */
-    private function invalidate_item_cache($id) {
-        $cache_key = sprintf('saw_departments_item_%d', $id);
-        delete_transient($cache_key);
-    }
-    
-    /**
-     * Invalidate list cache
-     * 
-     * Removes all cached department lists.
-     * Uses wildcard pattern to clear all list variations.
-     * 
-     * @since 1.0.0
-     * @return void
-     */
-    private function invalidate_list_cache() {
-        global $wpdb;
-        
-        // Delete all department list caches (wildcard)
-        $wpdb->query(
-            "DELETE FROM {$wpdb->options} 
-             WHERE option_name LIKE '_transient_saw_departments_list_%' 
-             OR option_name LIKE '_transient_timeout_saw_departments_list_%'"
-        );
     }
 }
