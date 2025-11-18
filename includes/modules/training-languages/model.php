@@ -4,7 +4,7 @@
  *
  * @package    SAW_Visitors
  * @subpackage Modules/TrainingLanguages
- * @version    4.0.0 - COMPLETE REWRITE: Override parent::create() entirely
+ * @version    5.0.0 - FIXED: Added COMMIT + proper method signatures
  */
 
 if (!defined('ABSPATH')) {
@@ -18,7 +18,6 @@ class SAW_Module_Training_Languages_Model extends SAW_Base_Model
     public function __construct($config) {
         global $wpdb;
         
-        // Table names with full prefix
         $this->table = $wpdb->prefix . 'saw_training_languages';
         $this->branches_table = $wpdb->prefix . 'saw_training_language_branches';
         $this->config = $config;
@@ -93,7 +92,10 @@ class SAW_Module_Training_Languages_Model extends SAW_Base_Model
         return ['items' => $items ?: [], 'total' => $total];
     }
     
-    public function get_by_id($id) {
+    /**
+     * ✅ FIXED: Added $bypass_cache parameter for compatibility
+     */
+    public function get_by_id($id, $bypass_cache = false) {
         global $wpdb;
         
         $item = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$this->table} WHERE id = %d", $id), ARRAY_A);
@@ -115,7 +117,7 @@ class SAW_Module_Training_Languages_Model extends SAW_Base_Model
     }
     
     /**
-     * 🔥 COMPLETE OVERRIDE - bypass parent::create() entirely
+     * ✅ FIXED: Added COMMIT after insert
      */
     public function create($data) {
         global $wpdb;
@@ -135,17 +137,17 @@ class SAW_Module_Training_Languages_Model extends SAW_Base_Model
         $data['created_at'] = current_time('mysql');
         $data['updated_at'] = current_time('mysql');
         
-        // 🔥 DIRECT INSERT with correct table name (no format array - wpdb derives it)
-        $result = $wpdb->insert(
-            $this->table,
-            $data
-        );
+        // Insert language
+        $result = $wpdb->insert($this->table, $data);
         
         if ($result === false) {
             return new WP_Error('db_error', 'Database insert failed: ' . $wpdb->last_error);
         }
         
         $id = $wpdb->insert_id;
+        
+        // 🔥 CRITICAL FIX: Force commit transaction
+        $wpdb->query('COMMIT');
         
         // Sync branches
         if (!empty($branches_data)) {
@@ -157,6 +159,9 @@ class SAW_Module_Training_Languages_Model extends SAW_Base_Model
         return $id;
     }
     
+    /**
+     * ✅ FIXED: Added COMMIT after update
+     */
     public function update($id, $data) {
         global $wpdb;
         
@@ -175,7 +180,7 @@ class SAW_Module_Training_Languages_Model extends SAW_Base_Model
         
         $data['updated_at'] = current_time('mysql');
         
-        // Direct update
+        // Update language
         $result = $wpdb->update(
             $this->table,
             $data,
@@ -188,6 +193,10 @@ class SAW_Module_Training_Languages_Model extends SAW_Base_Model
             return new WP_Error('db_error', 'Database update failed: ' . $wpdb->last_error);
         }
         
+        // 🔥 CRITICAL FIX: Force commit transaction
+        $wpdb->query('COMMIT');
+        
+        // Sync branches
         if ($branches_data !== null) {
             $this->sync_branches($id, $branches_data);
         }
@@ -197,6 +206,9 @@ class SAW_Module_Training_Languages_Model extends SAW_Base_Model
         return true;
     }
     
+    /**
+     * ✅ FIXED: Added COMMIT after delete
+     */
     public function delete($id) {
         $item = $this->get_by_id($id);
         if ($item && $item['language_code'] === 'cs') {
@@ -205,7 +217,7 @@ class SAW_Module_Training_Languages_Model extends SAW_Base_Model
         
         global $wpdb;
         
-        // Delete branches first (though CASCADE should handle it)
+        // Delete branches first
         $wpdb->delete($this->branches_table, ['language_id' => $id], ['%d']);
         
         // Delete main record
@@ -214,6 +226,9 @@ class SAW_Module_Training_Languages_Model extends SAW_Base_Model
         if ($result === false) {
             return new WP_Error('db_error', 'Database delete failed');
         }
+        
+        // 🔥 CRITICAL FIX: Force commit transaction
+        $wpdb->query('COMMIT');
         
         $this->invalidate_cache();
         

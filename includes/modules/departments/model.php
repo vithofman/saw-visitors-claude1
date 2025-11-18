@@ -7,7 +7,7 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Modules/Departments
- * @version     3.1.0 - VERIFIED: Works with Base Model 7.0
+ * @version     4.0.0 - FIXED: Added $bypass_cache parameter to get_by_id
  * @since       1.0.0
  */
 
@@ -74,12 +74,14 @@ class SAW_Module_Departments_Model extends SAW_Base_Model
     }
     
     /**
+     * ✅ FIXED: Added $bypass_cache parameter for compatibility with Base Model
+     * 
      * Get by ID with formatting
      * We override this just to add specific formatting for the detail view.
      */
-    public function get_by_id($id) {
+    public function get_by_id($id, $bypass_cache = false) {
         // Parent method handles security & access check
-        $item = parent::get_by_id($id);
+        $item = parent::get_by_id($id, $bypass_cache);
         
         if ($item) {
             // Add display helpers
