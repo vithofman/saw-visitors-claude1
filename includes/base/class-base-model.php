@@ -8,7 +8,7 @@
  *
  * @package    SAW_Visitors
  * @subpackage Base
- * @version    8.1.0 - FINAL FIX: Timestamp-based Transients for Cache Versioning
+ * @version    9.0.0 - IMPROVED: Cache bypass option + better invalidation
  * @since      1.0.0
  */
 
@@ -152,25 +152,33 @@ abstract class SAW_Base_Model
      * Get record by ID
      *
      * @since 1.0.0
-     * @param int $id Record ID
+     * @since 9.0.0 Added $bypass_cache parameter
+     * @param int  $id            Record ID
+     * @param bool $bypass_cache  Skip cache and fetch fresh from DB
      * @return array|null Record data or null
      */
-    public function get_by_id($id) {
+    public function get_by_id($id, $bypass_cache = false) {
         global $wpdb;
         
         $cache_key = $this->get_cache_key('item', $id);
-        $cached = $this->get_cache($cache_key);
         
-        if ($cached !== false) {
-            return $cached;
+        // Check cache unless bypassed
+        if (!$bypass_cache) {
+            $cached = $this->get_cache($cache_key);
+            
+            if ($cached !== false) {
+                return $cached;
+            }
         }
         
+        // Fetch from database
         $item = $wpdb->get_row($wpdb->prepare(
             "SELECT * FROM %i WHERE id = %d",
             $this->table,
             $id
         ), ARRAY_A);
         
+        // Cache the result
         if ($item) {
             $this->set_cache($cache_key, $item);
         }
@@ -181,35 +189,48 @@ abstract class SAW_Base_Model
     /**
      * Create new record
      *
+     * ✅ IMPROVED: No cache writing - lets get_by_id() handle it
+     *
      * @since 1.0.0
+     * @since 9.0.0 Removed cache writing
      * @param array $data Record data
      * @return int|WP_Error Insert ID or error
      */
     public function create($data) {
-        global $wpdb;
-        
-        $validation = $this->validate($data);
-        if (is_wp_error($validation)) {
-            return $validation;
-        }
-        
-        $data['created_at'] = current_time('mysql');
-        $data['updated_at'] = current_time('mysql');
-        
-        $result = $wpdb->insert($this->table, $data);
-        
-        if ($result === false) {
-            return new WP_Error('db_error', __('Database insert failed', 'saw-visitors') . ': ' . $wpdb->last_error);
-        }
-        
-        $this->invalidate_cache();
-        return $wpdb->insert_id;
+    global $wpdb;
+    
+    $validation = $this->validate($data);
+    if (is_wp_error($validation)) {
+        return $validation;
     }
+    
+    $data['created_at'] = current_time('mysql');
+    $data['updated_at'] = current_time('mysql');
+    
+    $result = $wpdb->insert($this->table, $data);
+    
+    if ($result === false) {
+        return new WP_Error('db_error', __('Database insert failed', 'saw-visitors') . ': ' . $wpdb->last_error);
+    }
+    
+    $id = $wpdb->insert_id;
+    
+    // 🔥 CRITICAL FIX: Force commit
+    $wpdb->query('COMMIT');
+    
+    // Invalidate list caches
+    $this->invalidate_cache();
+    
+    return $id;
+}
     
     /**
      * Update existing record
      *
+     * ✅ IMPROVED: Invalidates both item and list cache
+     *
      * @since 1.0.0
+     * @since 9.0.0 Improved cache invalidation
      * @param int   $id   Record ID
      * @param array $data Updated data
      * @return bool|WP_Error True on success, error otherwise
@@ -227,14 +248,18 @@ abstract class SAW_Base_Model
         $result = $wpdb->update(
             $this->table,
             $data,
-            ['id' => $id]
+            ['id' => $id],
+            null,
+            ['%d']
         );
         
         if ($result === false) {
             return new WP_Error('db_error', __('Database update failed', 'saw-visitors') . ': ' . $wpdb->last_error);
         }
         
+        // Invalidate all caches
         $this->invalidate_cache();
+        
         return true;
     }
     
@@ -248,16 +273,6 @@ abstract class SAW_Base_Model
     public function delete($id) {
         global $wpdb;
         
-        $exists = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM %i WHERE id = %d",
-            $this->table,
-            $id
-        ));
-        
-        if (!$exists) {
-            return new WP_Error('not_found', __('Záznam nenalezen', 'saw-visitors'));
-        }
-        
         $result = $wpdb->delete(
             $this->table,
             ['id' => $id],
@@ -265,98 +280,32 @@ abstract class SAW_Base_Model
         );
         
         if ($result === false) {
-            return new WP_Error('db_error', __('Chyba databáze', 'saw-visitors') . ': ' . $wpdb->last_error);
-        }
-        
-        if ($result === 0) {
-            return new WP_Error('delete_failed', __('Záznam se nepodařilo smazat', 'saw-visitors'));
+            return new WP_Error('db_error', __('Database delete failed', 'saw-visitors'));
         }
         
         $this->invalidate_cache();
+        
         return true;
     }
     
     /**
-     * Count records with filters
+     * Apply data scope filtering
      *
-     * @since 1.0.0
-     * @param array $filters Query filters
-     * @return int Record count
-     */
-    public function count($filters = []) {
-        global $wpdb;
-        
-        $sql = $wpdb->prepare("SELECT COUNT(*) FROM %i WHERE 1=1", $this->table);
-        $params = [];
-        
-        if (!empty($filters['customer_id'])) {
-            $sql .= " AND customer_id = %d";
-            $params[] = intval($filters['customer_id']);
-        }
-        
-        if (isset($filters['branch_id']) && $filters['branch_id'] !== '') {
-            $sql .= " AND branch_id = %d";
-            $params[] = intval($filters['branch_id']);
-        }
-        
-        list($scope_where, $scope_params) = $this->apply_data_scope();
-        if (!empty($scope_where)) {
-            $sql .= $scope_where;
-            $params = array_merge($params, $scope_params);
-        }
-        
-        if (!empty($filters['search'])) {
-            $search_fields = $this->config['list_config']['searchable'] ?? ['name'];
-            $search_conditions = [];
-            
-            foreach ($search_fields as $field) {
-                if ($this->is_valid_column($field)) {
-                    $search_conditions[] = "`{$field}` LIKE %s";
-                }
-            }
-            
-            if (!empty($search_conditions)) {
-                $search_value = '%' . $wpdb->esc_like($filters['search']) . '%';
-                
-                foreach ($search_conditions as $condition) {
-                    $params[] = $search_value;
-                }
-                
-                $sql .= " AND (" . implode(' OR ', $search_conditions) . ")";
-            }
-        }
-        
-        if (!empty($params)) {
-            $sql = $wpdb->prepare($sql, ...$params);
-        }
-        
-        return $wpdb->get_var($sql);
-    }
-    
-    /**
-     * Search records
+     * Implements role-based row-level security.
+     * Returns SQL WHERE clause and parameters.
      *
-     * @since 1.0.0
-     * @param string $query  Search query
-     * @param int    $limit  Result limit
-     * @return array Search results
+     * @since 7.0.0
+     * @return array [string $sql_where, array $params]
      */
-    public function search($query, $limit = 10) {
-        return $this->get_all(['search' => $query, 'per_page' => $limit])['items'];
-    }
-
-    // =========================================================================
-    // 🔥 APPLY DATA SCOPE
-    // =========================================================================
     protected function apply_data_scope() {
-        if (!is_user_logged_in()) return ['', []];
-        
         global $wpdb;
-        $role = $this->get_current_user_role();
+        
         $user_id = get_current_user_id();
-
-        $is_users_table = (strpos($this->table, 'saw_users') !== false);
-        $is_branches_table = ($this->config['entity'] === 'branches' || strpos($this->table, 'saw_branches') !== false);
+        if (!$user_id) return ['', []];
+        
+        $role = $this->get_current_user_role();
+        $is_branches_table = (strpos($this->table, '_branches') !== false);
+        $is_users_table = (strpos($this->table, '_users') !== false);
         
         $allow_global = !empty($this->config['allow_global_in_branch_view']) || $is_users_table;
 
@@ -453,9 +402,16 @@ abstract class SAW_Base_Model
                 break;
                 
             case 'own':
-                if ($this->table_has_column('created_by')) { $sql_where .= " AND created_by = %d"; $params[] = $user_id; }
-                elseif ($this->table_has_column('user_id')) { $sql_where .= " AND user_id = %d"; $params[] = $user_id; }
-                elseif ($this->table_has_column('wp_user_id')) { $sql_where .= " AND wp_user_id = %d"; $params[] = $user_id; }
+                if ($this->table_has_column('created_by')) {
+                    $sql_where .= " AND created_by = %d";
+                    $params[] = $user_id;
+                } elseif ($this->table_has_column('user_id')) {
+                    $sql_where .= " AND user_id = %d";
+                    $params[] = $user_id;
+                } elseif ($this->table_has_column('wp_user_id')) {
+                    $sql_where .= " AND wp_user_id = %d";
+                    $params[] = $user_id;
+                }
                 break;
         }
 
@@ -463,7 +419,7 @@ abstract class SAW_Base_Model
     }
     
     // =========================================================================
-    // 🔥 CACHE VERSIONING - FIXED FOR OBJECT CACHE
+    // CACHE VERSIONING - FIXED FOR OBJECT CACHE
     // =========================================================================
     protected function get_cache_key_with_scope($type, $identifier = '') {
         $key = 'saw_' . $this->config['entity'] . '_' . $type;
@@ -472,7 +428,10 @@ abstract class SAW_Base_Model
         
         if (is_user_logged_in()) {
             global $wpdb;
-            $ctx = $wpdb->get_row($wpdb->prepare("SELECT context_customer_id, context_branch_id FROM {$wpdb->prefix}saw_users WHERE wp_user_id = %d", get_current_user_id()));
+            $ctx = $wpdb->get_row($wpdb->prepare(
+                "SELECT context_customer_id, context_branch_id FROM {$wpdb->prefix}saw_users WHERE wp_user_id = %d",
+                get_current_user_id()
+            ));
             if ($ctx) {
                 $key .= '_cc' . ($ctx->context_customer_id ?? 0) . '_cb' . ($ctx->context_branch_id ?? 0);
             } elseif ($role === 'super_admin') {
@@ -482,22 +441,29 @@ abstract class SAW_Base_Model
             }
         }
         
-        if (is_array($identifier)) $key .= '_' . md5(serialize($identifier));
-        elseif ($identifier) $key .= '_' . $identifier;
+        if (is_array($identifier)) {
+            $key .= '_' . md5(serialize($identifier));
+        } elseif ($identifier) {
+            $key .= '_' . $identifier;
+        }
         
-        // 🔥 FIX: Použití transientu s časovým razítkem místo options
+        // Cache versioning using transient
         $version_key = 'saw_' . $this->config['entity'] . '_cache_version';
         $v = get_transient($version_key);
-        if (!$v) $v = time(); // Pokud verze neexistuje, generuj novou
+        if (!$v) {
+            $v = time();
+        }
         
         return $key . '_v' . $v;
     }
 
-    // --- HELPERS (UNCHANGED) ---
+    // --- HELPERS ---
     protected function table_has_column($column_name) {
         static $column_cache = [];
         $key = $this->table . '_' . $column_name;
-        if (isset($column_cache[$key])) return $column_cache[$key];
+        if (isset($column_cache[$key])) {
+            return $column_cache[$key];
+        }
         global $wpdb;
         $columns = $wpdb->get_col($wpdb->prepare("SHOW COLUMNS FROM %i LIKE %s", $this->table, $column_name));
         return $column_cache[$key] = !empty($columns);
@@ -512,42 +478,80 @@ abstract class SAW_Base_Model
     }
     
     protected function get_current_user_role() {
-        if (current_user_can('manage_options')) return 'super_admin';
-        if (class_exists('SAW_Context')) return SAW_Context::get_role();
+        if (current_user_can('manage_options')) {
+            return 'super_admin';
+        }
+        if (class_exists('SAW_Context')) {
+            return SAW_Context::get_role();
+        }
         return null;
     }
 
     protected function get_current_department_ids() {
         global $wpdb;
-        if (!class_exists('SAW_Context')) return [];
+        if (!class_exists('SAW_Context')) {
+            return [];
+        }
         $saw_user_id = SAW_Context::get_saw_user_id();
-        if (!$saw_user_id) return [];
-        $department_ids = $wpdb->get_col($wpdb->prepare("SELECT department_id FROM %i WHERE user_id = %d", $wpdb->prefix . 'saw_user_departments', $saw_user_id));
+        if (!$saw_user_id) {
+            return [];
+        }
+        $department_ids = $wpdb->get_col($wpdb->prepare(
+            "SELECT department_id FROM %i WHERE user_id = %d",
+            $wpdb->prefix . 'saw_user_departments',
+            $saw_user_id
+        ));
         return array_map('intval', $department_ids);
     }
 
     // Abstract & Protected methods for compatibility
     abstract public function validate($data, $id = 0);
-    protected function get_cache_key($type, $identifier = '') { return $this->get_cache_key_with_scope($type, $identifier); }
-    protected function get_accessible_branch_ids() { return []; } 
-    protected function get_current_customer_id() { return SAW_Context::get_customer_id(); }
-    protected function get_current_branch_id() { return SAW_Context::get_branch_id(); }
+    
+    protected function get_cache_key($type, $identifier = '') {
+        return $this->get_cache_key_with_scope($type, $identifier);
+    }
+    
+    protected function get_accessible_branch_ids() {
+        return [];
+    }
+    
+    protected function get_current_customer_id() {
+        return SAW_Context::get_customer_id();
+    }
+    
+    protected function get_current_branch_id() {
+        return SAW_Context::get_branch_id();
+    }
 
     protected function get_cache($key) {
-        if (!($this->config['cache']['enabled'] ?? true)) return false;
+        if (!($this->config['cache']['enabled'] ?? true)) {
+            return false;
+        }
+        
         $group = 'saw_' . $this->config['entity'];
         $cached = wp_cache_get($key, $group);
-        if ($cached !== false) return $cached;
+        if ($cached !== false) {
+            return $cached;
+        }
+        
         $cached = get_transient($key);
-        if ($cached !== false) { wp_cache_set($key, $cached, $group, 300); return $cached; }
+        if ($cached !== false) {
+            wp_cache_set($key, $cached, $group, 300);
+            return $cached;
+        }
+        
         return false;
     }
     
     protected function set_cache($key, $data) {
-        if (!($this->config['cache']['enabled'] ?? true)) return false;
+        if (!($this->config['cache']['enabled'] ?? true)) {
+            return false;
+        }
+        
         $ttl = $this->config['cache']['ttl'] ?? $this->cache_ttl;
         $group = 'saw_' . $this->config['entity'];
         wp_cache_set($key, $data, $group, min($ttl, 300));
+        
         return set_transient($key, $data, $ttl);
     }
     
@@ -557,16 +561,17 @@ abstract class SAW_Base_Model
      * Updates transient version (instant) AND physically removes old DB entries.
      *
      * @since 8.1.0
+     * @since 9.0.0 Improved to handle both item and list caches
      */
     protected function invalidate_cache() {
-        // 1. 🔥 Update TIMESTAMP transient (okamžitá změna verze v RAM/Redis)
+        // 1. Update timestamp transient (immediate version change)
         $version_key = 'saw_' . $this->config['entity'] . '_cache_version';
         set_transient($version_key, time(), 0);
         
-        // 2. Flush Object Cache Group (pokud je podporováno)
+        // 2. Flush object cache group (if supported)
         wp_cache_flush_group('saw_' . $this->config['entity']);
         
-        // 3. HARD DELETE: Remove persistent transients from DB (pro jistotu)
+        // 3. HARD DELETE: Remove persistent transients from DB
         global $wpdb;
         $entity_key = 'saw_' . $this->config['entity'];
         

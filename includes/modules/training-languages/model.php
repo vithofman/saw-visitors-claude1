@@ -4,7 +4,7 @@
  *
  * @package    SAW_Visitors
  * @subpackage Modules/TrainingLanguages
- * @version    3.7.0 - FINAL ROBUST FIX
+ * @version    4.0.0 - COMPLETE REWRITE: Override parent::create() entirely
  */
 
 if (!defined('ABSPATH')) {
@@ -18,7 +18,8 @@ class SAW_Module_Training_Languages_Model extends SAW_Base_Model
     public function __construct($config) {
         global $wpdb;
         
-        $this->table = $wpdb->prefix . $config['table'];
+        // Table names with full prefix
+        $this->table = $wpdb->prefix . 'saw_training_languages';
         $this->branches_table = $wpdb->prefix . 'saw_training_language_branches';
         $this->config = $config;
         $this->cache_ttl = $config['cache']['ttl'] ?? 3600;
@@ -45,10 +46,9 @@ class SAW_Module_Training_Languages_Model extends SAW_Base_Model
         ));
     }
     
-    // Helper: Check physical existence to prevent FK errors
     public function exists($id) {
         global $wpdb;
-        return (bool) $wpdb->get_var($wpdb->prepare("SELECT id FROM {$this->table} WHERE id = %d", $id));
+        return (bool) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$this->table} WHERE id = %d", $id));
     }
     
     public function get_all($filters = []) {
@@ -56,7 +56,6 @@ class SAW_Module_Training_Languages_Model extends SAW_Base_Model
         $customer_id = SAW_Context::get_customer_id();
         if (!$customer_id) return ['items' => [], 'total' => 0];
         
-        // Direct DB query for consistency (No Cache for List)
         $sql = "SELECT l.*, 
                 COUNT(CASE WHEN lb.is_active = 1 THEN 1 END) as branches_count
                 FROM {$this->table} l
@@ -83,7 +82,6 @@ class SAW_Module_Training_Languages_Model extends SAW_Base_Model
         $per_page = isset($filters['per_page']) ? intval($filters['per_page']) : 20;
         $offset = ($page - 1) * $per_page;
         
-        // Total count query
         $total = count($wpdb->get_results($wpdb->prepare($sql, ...$params)));
         
         $sql .= " LIMIT %d OFFSET %d";
@@ -96,22 +94,14 @@ class SAW_Module_Training_Languages_Model extends SAW_Base_Model
     }
     
     public function get_by_id($id) {
-        $cache_key = $this->get_cache_key('item', $id);
-        $item = $this->get_cache($cache_key);
+        global $wpdb;
         
-        if ($item === false) {
-            global $wpdb;
-            $item = $wpdb->get_row($wpdb->prepare("SELECT * FROM %i WHERE id = %d", $this->table, $id), ARRAY_A);
-            if ($item) $this->set_cache($cache_key, $item);
-        }
+        $item = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$this->table} WHERE id = %d", $id), ARRAY_A);
         
         if (!$item) return null;
         
-        // Always load branches live to ensure consistency
         $item['branches'] = $this->get_branches_for_form($id);
         
-        // Load active branches for detail view
-        global $wpdb;
         $item['active_branches'] = $wpdb->get_results($wpdb->prepare(
             "SELECT b.id, b.name, b.code, b.city, lb.is_default, lb.display_order
              FROM {$wpdb->prefix}saw_branches b
@@ -120,82 +110,142 @@ class SAW_Module_Training_Languages_Model extends SAW_Base_Model
              ORDER BY lb.display_order ASC, b.name ASC",
             $id
         ), ARRAY_A);
-
+        
         return $item;
     }
     
+    /**
+     * 🔥 COMPLETE OVERRIDE - bypass parent::create() entirely
+     */
     public function create($data) {
+        global $wpdb;
+        
         $customer_id = SAW_Context::get_customer_id();
         $data['customer_id'] = $customer_id;
         $branches_data = $data['branches'] ?? [];
         unset($data['branches']);
         
-        // 1. Insert Main Record
-        $id = parent::create($data);
-        
-        // 2. Check if insert was successful AND record exists
-        if ($id && !is_wp_error($id)) {
-            // Force check existence to prevent FK error
-            if ($this->exists($id) && !empty($branches_data)) {
-                $this->sync_branches($id, $branches_data);
-            }
-            
-            // 🔥 Explicitly clear cache for this new ID to prevent "Not Found" error
-            $cache_key = $this->get_cache_key('item', $id);
-            delete_transient($cache_key);
+        // Validate
+        $validation = $this->validate($data);
+        if (is_wp_error($validation)) {
+            return $validation;
         }
+        
+        // Add timestamps
+        $data['created_at'] = current_time('mysql');
+        $data['updated_at'] = current_time('mysql');
+        
+        // 🔥 DIRECT INSERT with correct table name (no format array - wpdb derives it)
+        $result = $wpdb->insert(
+            $this->table,
+            $data
+        );
+        
+        if ($result === false) {
+            return new WP_Error('db_error', 'Database insert failed: ' . $wpdb->last_error);
+        }
+        
+        $id = $wpdb->insert_id;
+        
+        // Sync branches
+        if (!empty($branches_data)) {
+            $this->sync_branches($id, $branches_data);
+        }
+        
+        $this->invalidate_cache();
         
         return $id;
     }
     
     public function update($id, $data) {
+        global $wpdb;
+        
         $branches_data = $data['branches'] ?? null;
         unset($data['branches']);
         
         if (!$this->exists($id)) {
             return new WP_Error('not_found', 'Záznam neexistuje.');
         }
-
-        $result = parent::update($id, $data);
         
-        if ($branches_data !== null && !is_wp_error($result)) {
-            $this->sync_branches($id, $branches_data);
-            
-            // Flush caches
-            $this->invalidate_cache();
-            $cache_key = $this->get_cache_key('item', $id);
-            delete_transient($cache_key);
+        // Validate
+        $validation = $this->validate($data, $id);
+        if (is_wp_error($validation)) {
+            return $validation;
         }
         
-        return $result;
+        $data['updated_at'] = current_time('mysql');
+        
+        // Direct update
+        $result = $wpdb->update(
+            $this->table,
+            $data,
+            ['id' => $id],
+            null,
+            ['%d']
+        );
+        
+        if ($result === false) {
+            return new WP_Error('db_error', 'Database update failed: ' . $wpdb->last_error);
+        }
+        
+        if ($branches_data !== null) {
+            $this->sync_branches($id, $branches_data);
+        }
+        
+        $this->invalidate_cache();
+        
+        return true;
     }
     
     public function delete($id) {
         $item = $this->get_by_id($id);
-        if ($item && $item['language_code'] === 'cs') return new WP_Error('protected', 'Čeština nemůže být smazána');
-        return parent::delete($id);
+        if ($item && $item['language_code'] === 'cs') {
+            return new WP_Error('protected', 'Čeština nemůže být smazána');
+        }
+        
+        global $wpdb;
+        
+        // Delete branches first (though CASCADE should handle it)
+        $wpdb->delete($this->branches_table, ['language_id' => $id], ['%d']);
+        
+        // Delete main record
+        $result = $wpdb->delete($this->table, ['id' => $id], ['%d']);
+        
+        if ($result === false) {
+            return new WP_Error('db_error', 'Database delete failed');
+        }
+        
+        $this->invalidate_cache();
+        
+        return true;
     }
     
     private function sync_branches($language_id, $branches_data) {
         global $wpdb;
         
-        // No Transaction - Direct DELETE/INSERT to avoid isolation issues
+        // Delete old assignments
         $wpdb->delete($this->branches_table, ['language_id' => $language_id], ['%d']);
         
-        if (empty($branches_data)) return;
+        if (empty($branches_data)) return true;
         
         foreach ($branches_data as $branch_id => $data) {
-            if (empty($data['active'])) continue;
+            if (intval($data['active']) !== 1) continue;
             
-            $wpdb->insert($this->branches_table, [
-                'language_id' => $language_id,
-                'branch_id' => $branch_id,
-                'is_default' => !empty($data['is_default']) ? 1 : 0,
-                'is_active' => 1,
-                'display_order' => intval($data['display_order'] ?? 0),
-                'created_at' => current_time('mysql'),
-            ], ['%d', '%d', '%d', '%d', '%d', '%s']);
+            $wpdb->insert(
+                $this->branches_table, 
+                [
+                    'language_id' => intval($language_id),
+                    'branch_id' => intval($branch_id),
+                    'is_default' => intval($data['is_default'] ?? 0),
+                    'is_active' => 1,
+                    'display_order' => intval($data['display_order'] ?? 0),
+                    'created_at' => current_time('mysql'),
+                ],
+                ['%d', '%d', '%d', '%d', '%d', '%s']
+            );
         }
+        
+        return true;
     }
     
     public function get_branches_for_form($language_id) {

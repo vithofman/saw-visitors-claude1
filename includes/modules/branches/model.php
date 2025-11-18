@@ -2,11 +2,9 @@
 /**
  * Branches Module Model
  *
- * FINAL v14.0.0 - Fixed Scope Application
- *
  * @package     SAW_Visitors
  * @subpackage  Modules/Branches
- * @version     14.0.0
+ * @version     20.0.0 - FINAL FIX: Override get_by_id to skip scope filtering
  */
 
 if (!defined('ABSPATH')) {
@@ -19,9 +17,6 @@ if (!class_exists('SAW_Base_Model')) {
 
 class SAW_Module_Branches_Model extends SAW_Base_Model 
 {
-    /**
-     * Constructor
-     */
     public function __construct($config) {
         global $wpdb;
         $this->table = $wpdb->prefix . $config['table'];
@@ -30,7 +25,10 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
     }
     
     /**
-     * Get branch by ID with optional cache bypass
+     * ✅ Override get_by_id to SKIP scope filtering
+     * 
+     * CRITICAL: Branches are the source of branch switcher, not its target.
+     * Must be accessible regardless of branch filter.
      */
     public function get_by_id($id, $bypass_cache = false) {
         global $wpdb;
@@ -40,59 +38,31 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
             return null;
         }
         
-        $cache_key = sprintf('branches_item_%d', $id);
-        
-        if (!$bypass_cache) {
-            $cached = get_transient($cache_key);
-            if ($cached !== false) {
-                return $cached;
-            }
-        }
-        
-        $item = $wpdb->get_row(
-            $wpdb->prepare(
-                "SELECT * FROM %i WHERE id = %d",
-                $this->table,
-                $id
-            ),
-            ARRAY_A
-        );
-        
-        if (!$item) {
-            return null;
-        }
-        
-        set_transient($cache_key, $item, $this->cache_ttl);
+        // ⚠️ CRITICAL: NO SCOPE - direct DB query
+        $item = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM %i WHERE id = %d",
+            $this->table,
+            $id
+        ), ARRAY_A);
         
         return $item;
     }
     
     /**
-     * Get all branches with filters and caching
-     * NOW SUPPORTS SCOPE & PERMISSIONS!
+     * ✅ Override get_all to SKIP scope filtering
+     * 
+     * CRITICAL: Branches are the source of branch switcher, not its target.
+     * Must show ALL branches for customer, regardless of branch filter.
      */
     public function get_all($filters = array()) {
         global $wpdb;
         
-        // 1. Customer Context (Base Isolation)
         $customer_id = SAW_Context::get_customer_id();
         
         if (!$customer_id && !saw_is_super_admin()) {
             return array('items' => array(), 'total' => 0);
         }
 
-        // Cache key construction
-        $filters['customer_id'] = $customer_id; 
-        // Přidáme do klíče i roli a user ID pro unikátnost scoupu
-        $cache_key = 'branches_list_' . md5(serialize($filters) . get_current_user_id());
-        
-        $cached = get_transient($cache_key);
-        if ($cached !== false) {
-            return $cached;
-        }
-        
-        // 2. Build Base Query
-        // Start with Customer Isolation
         $sql = "SELECT * FROM {$this->table} WHERE 1=1";
         $params = array();
 
@@ -101,15 +71,9 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
             $params[] = $customer_id;
         }
         
-        // 3. 🔥 APPLY SCOPE (Role Restrictions & Switcher)
-        // Toto chybělo! Nyní se zavolá logika z Base Modelu
-        list($scope_where, $scope_params) = $this->apply_data_scope();
-        if (!empty($scope_where)) {
-            $sql .= $scope_where;
-            $params = array_merge($params, $scope_params);
-        }
+        // ⚠️ CRITICAL: NO SCOPE FILTERING - branches are the switcher source
         
-        // 4. Search Logic
+        // Search
         if (!empty($filters['search'])) {
             $search_fields = array('name', 'code', 'city', 'email');
             $search_conditions = array();
@@ -122,17 +86,17 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
             $sql .= " AND (" . implode(' OR ', $search_conditions) . ")";
         }
         
-        // 5. Simple Filters
+        // Filters
         if (isset($filters['is_active']) && $filters['is_active'] !== '') {
             $sql .= " AND is_active = %d";
             $params[] = intval($filters['is_active']);
         }
         
-        // 6. Count total
+        // Count
         $count_sql = str_replace('SELECT *', 'SELECT COUNT(*)', $sql);
         $total = (int) $wpdb->get_var($wpdb->prepare($count_sql, $params));
         
-        // 7. Order
+        // Order
         $orderby = !empty($filters['orderby']) ? sanitize_key($filters['orderby']) : 'is_headquarters';
         $order = !empty($filters['order']) ? strtoupper($filters['order']) : 'DESC';
         
@@ -142,7 +106,7 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         
         $sql .= " ORDER BY `{$orderby}` {$order}, name ASC";
         
-        // 8. Pagination
+        // Pagination
         $page = isset($filters['page']) ? max(1, intval($filters['page'])) : 1;
         $per_page = isset($filters['per_page']) ? max(1, intval($filters['per_page'])) : 20;
         $offset = ($page - 1) * $per_page;
@@ -151,18 +115,34 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         $params[] = $per_page;
         $params[] = $offset;
         
-        // 9. Execute
+        // Execute
         $items = $wpdb->get_results($wpdb->prepare($sql, $params), ARRAY_A);
         
-        $result = array(
+        return array(
             'items' => $items ?: array(),
             'total' => $total,
         );
-        
-        // Cache
-        set_transient($cache_key, $result, $this->cache_ttl);
-        
-        return $result;
+    }
+    
+    /**
+     * ✅ Uses parent create() - works with improved Base Model
+     */
+    public function create($data) {
+        return parent::create($data);
+    }
+    
+    /**
+     * ✅ Uses parent update()
+     */
+    public function update($id, $data) {
+        return parent::update($id, $data);
+    }
+    
+    /**
+     * ✅ Uses parent delete()
+     */
+    public function delete($id) {
+        return parent::delete($id);
     }
     
     /**
@@ -188,9 +168,6 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         return empty($errors) ? true : new WP_Error('validation_error', __('Validation failed', 'saw-visitors'), $errors);
     }
     
-    /**
-     * Check if branch code exists for customer
-     */
     private function code_exists($code, $customer_id, $exclude_id = 0) {
         global $wpdb;
         
@@ -205,13 +182,9 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
         return (bool) $wpdb->get_var($query);
     }
     
-    /**
-     * Set new headquarters (removes old HQ flag)
-     */
     public function set_new_headquarters($branch_id, $customer_id) {
         global $wpdb;
         
-        // Remove HQ from all branches of this customer
         $wpdb->update(
             $this->table,
             array('is_headquarters' => 0),
@@ -220,7 +193,6 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
             array('%d')
         );
         
-        // Set new HQ
         $wpdb->update(
             $this->table,
             array('is_headquarters' => 1),
@@ -229,12 +201,9 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
             array('%d', '%d')
         );
         
-        $this->invalidate_list_cache();
+        $this->invalidate_cache();
     }
     
-    /**
-     * Get count of headquarters for customer
-     */
     public function get_headquarters_count($customer_id, $exclude_id = 0) {
         global $wpdb;
         
@@ -244,13 +213,5 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
             $customer_id,
             $exclude_id
         ));
-    }
-
-    /**
-     * Helper to invalidate list cache
-     */
-    private function invalidate_list_cache() {
-        global $wpdb;
-        $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_branches_list_%'");
     }
 }

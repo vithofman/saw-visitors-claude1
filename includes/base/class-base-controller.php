@@ -423,14 +423,27 @@ abstract class SAW_Base_Controller
         }
         
         $result = $this->model->create($data);
-        
-        if (is_wp_error($result)) {
-            $this->set_flash($result->get_error_message(), 'error');
-            wp_redirect(home_url('/admin/' . $this->config['route'] . '/create'));
-            exit;
-        }
-        
-        $this->after_save($result);
+
+if (is_wp_error($result)) {
+    $this->set_flash($result->get_error_message(), 'error');
+    wp_redirect(home_url('/admin/' . $this->config['route'] . '/create'));
+    exit;
+}
+
+// 🔥 DEBUG: Zkontroluj jestli se vytvořilo
+global $wpdb;
+$verify = $wpdb->get_row($wpdb->prepare(
+    "SELECT * FROM {$wpdb->prefix}saw_branches WHERE id = %d",
+    $result
+), ARRAY_A);
+error_log("🔥 AFTER CREATE - ID: $result");
+error_log("🔥 DB prefix: " . $wpdb->prefix);
+error_log("🔥 Verify query result: " . ($verify ? 'FOUND' : 'NOT FOUND'));
+if ($verify) {
+    error_log("🔥 Created data: " . print_r($verify, true));
+}
+
+$this->after_save($result);
         
         // ✅ NEW: AJAX inline create mode
         if (!empty($_POST['_ajax_inline_create'])) {
@@ -441,9 +454,13 @@ abstract class SAW_Base_Controller
             ));
         }
 
-	// Clear cache to ensure fresh data loads correctly after redirect
-	clearstatcache();
-	sleep(1); // Give DB time to propagate the new record
+
+        // 🔥 CRITICAL FIX: Warm cache BEFORE redirect (call twice to ensure)
+	$this->model->get_by_id($result, true);
+	$this->model->get_by_id($result, false); // druhé volání použije cache
+
+	// Wait for cache to settle
+	usleep(100000); // 0.1 sekundy
         
         $this->set_flash($this->config['singular'] . ' byl úspěšně vytvořen', 'success');
         wp_redirect(home_url('/admin/' . $this->config['route'] . '/' . $result . '/'));
@@ -1376,26 +1393,53 @@ protected function can($action) {
      * @return array|null Item data or null on error
      */
     protected function handle_detail_mode($context) {
-        if (!$this->can('view')) {
-            $this->set_flash('Nemáte oprávnění zobrazit detail', 'error');
-            wp_redirect(home_url('/admin/' . $this->config['route'] . '/'));
-            exit;
-        }
-        
-        $item = $this->model->get_by_id($context['id']);
-        
-        if (!$item) {
-            $this->set_flash('Záznam nenalezen', 'error');
-            wp_redirect(home_url('/admin/' . $this->config['route'] . '/'));
-            exit;
-        }
-        
-        if (method_exists($this, 'format_detail_data')) {
-            $item = $this->format_detail_data($item);
-        }
-        
-        return $item;
+    // 🔥 MEGA DEBUG
+    error_log("=== HANDLE_DETAIL_MODE START ===");
+    error_log("Context received: " . print_r($context, true));
+    error_log("Context ID: " . ($context['id'] ?? 'MISSING'));
+    error_log("Context ID type: " . gettype($context['id'] ?? null));
+    
+    if (!$this->can('view')) {
+        $this->set_flash('Nemáte oprávnění zobrazit detail', 'error');
+        wp_redirect(home_url('/admin/' . $this->config['route'] . '/'));
+        exit;
     }
+    
+    error_log("Calling get_by_id with ID: " . $context['id']);
+    error_log("Model class: " . get_class($this->model));
+
+    
+    // Add direct DB check
+    global $wpdb;
+    $direct_check = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM {$wpdb->prefix}saw_branches WHERE id = %d",
+        $context['id']
+    ), ARRAY_A);
+    error_log("Direct DB check result: " . ($direct_check ? 'FOUND' : 'NOT FOUND'));
+    if ($direct_check) {
+        error_log("Direct DB data: " . print_r($direct_check, true));
+    }
+    
+    $item = $this->model->get_by_id($context['id']);
+    
+    error_log("Model get_by_id result: " . ($item ? 'FOUND' : 'NOT FOUND'));
+    if ($item) {
+        error_log("Model data: " . print_r($item, true));
+    }
+    error_log("=== HANDLE_DETAIL_MODE END ===");
+    
+    if (!$item) {
+        $this->set_flash('Záznam nenalezen', 'error');
+        wp_redirect(home_url('/admin/' . $this->config['route'] . '/'));
+        exit;
+    }
+    
+    if (method_exists($this, 'format_detail_data')) {
+        $item = $this->format_detail_data($item);
+    }
+    
+    return $item;
+}
     
     /**
      * Handle create sidebar mode

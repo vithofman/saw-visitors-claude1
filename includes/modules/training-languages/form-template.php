@@ -1,9 +1,9 @@
 <?php
 /**
- * Training Languages Form Template - FINAL GLOSSY EDITION
+ * Training Languages Form Template - FIXED
  *
  * @package SAW_Visitors
- * @version 3.7.0
+ * @version 3.8.0 - FIXED: Added hidden input for branches[active]
  */
 
 if (!defined('ABSPATH')) {
@@ -53,53 +53,42 @@ $nonce_action = $is_edit ? 'saw_edit_training_languages' : 'saw_create_training_
                         <input type="hidden" id="language_name" name="language_name" value="<?php echo esc_attr($item['language_name'] ?? ''); ?>">
                         <input type="hidden" id="flag_emoji" name="flag_emoji" value="<?php echo esc_attr($item['flag_emoji'] ?? ''); ?>">
                     </div>
-
+                    
                     <div class="saw-language-preview-area">
-                        <div id="flag-preview-card" class="saw-id-card <?php echo !empty($item['flag_emoji']) ? 'is-visible' : ''; ?>">
-                            
-                            <div class="saw-id-placeholder" style="<?php echo !empty($item['flag_emoji']) ? 'display:none;' : ''; ?>">
-                                <span class="dashicons dashicons-format-image"></span>
-                                <span>Náhled karty jazyka</span>
-                            </div>
-
-                            <div class="saw-id-content-wrapper" style="<?php echo empty($item['flag_emoji']) ? 'display:none;' : ''; ?>">
-                                <div class="saw-id-flag"><?php echo esc_html($item['flag_emoji'] ?? ''); ?></div>
-                                <div class="saw-id-info">
-                                    <span class="saw-id-label">Jazyk školení</span>
-                                    <h2 class="saw-id-title"><?php echo esc_html($item['language_name'] ?? ''); ?></h2>
-                                </div>
-                                <div class="saw-id-badge"><?php echo esc_html(strtoupper($item['language_code'] ?? '')); ?></div>
-                            </div>
-
+                        <div class="saw-lang-id-card" id="flag-preview">
+                            <?php if (!empty($item['flag_emoji'])): ?>
+                                <span class="saw-flag-emoji"><?php echo esc_html($item['flag_emoji']); ?></span>
+                                <span class="saw-flag-name"><?php echo esc_html($item['language_name']); ?></span>
+                                <span class="saw-flag-code"><?php echo esc_html(strtoupper($item['language_code'])); ?></span>
+                            <?php endif; ?>
                         </div>
                     </div>
-
+                    
                 </div>
             </div>
         </div>
     </div>
-
+    
     <div class="saw-section">
-        <div class="saw-section-head saw-flex-between">
+        <div class="saw-section-head">
             <h3><span class="dashicons dashicons-building"></span> Aktivace pro pobočky</h3>
-            <label class="saw-toggle-all">
+            <label class="saw-select-all-compact">
                 <input type="checkbox" id="select-all-branches">
                 <span>Vybrat vše</span>
             </label>
         </div>
-
-        <?php if (empty($branches_to_loop)): ?>
-            <div class="saw-empty-box">
-                <span class="dashicons dashicons-store"></span>
-                <p>Žádné pobočky k dispozici.</p>
-            </div>
-        <?php else: ?>
-            <div class="saw-branches-list">
+        
+        <div class="saw-branches-glossy-grid">
+            <?php if (empty($branches_to_loop)): ?>
+                <div class="saw-notice saw-notice-warning">
+                    <p>Pro tohoto zákazníka nejsou k dispozici žádné aktivní pobočky.</p>
+                </div>
+            <?php else: ?>
                 <?php foreach ($branches_to_loop as $branch): ?>
                     <?php 
-                    $is_active = !empty($branch['is_active']);
-                    $is_default = !empty($branch['is_default']);
-                    $order = $branch['display_order'] ?? 0;
+                    $is_active = !empty($branch['is_active']) ? 1 : 0;
+                    $is_default = !empty($branch['is_default']) ? 1 : 0;
+                    $display_order = isset($branch['display_order']) ? intval($branch['display_order']) : 0;
                     ?>
                     <div class="saw-branch-glossy-row <?php echo $is_active ? 'is-active' : ''; ?>">
                         
@@ -111,6 +100,13 @@ $nonce_action = $is_edit ? 'saw_edit_training_languages' : 'saw_create_training_
                         </div>
 
                         <div class="saw-glossy-controls">
+                            
+                            <!-- 🔥 CRITICAL FIX: Hidden input to always send value -->
+                            <input type="hidden" 
+                                   name="branches[<?php echo esc_attr($branch['id']); ?>][active]" 
+                                   value="0"
+                                   class="saw-branch-active-hidden"
+                                   data-branch-id="<?php echo esc_attr($branch['id']); ?>">
                             
                             <div class="saw-control-item">
                                 <label class="saw-switch-compact" title="Aktivovat jazyk">
@@ -140,93 +136,124 @@ $nonce_action = $is_edit ? 'saw_edit_training_languages' : 'saw_create_training_
                                 </label>
                                 <input type="hidden" 
                                        name="branches[<?php echo esc_attr($branch['id']); ?>][is_default]" 
-                                       value="<?php echo $is_default ? '1' : '0'; ?>"
+                                       value="<?php echo $is_default ? '1' : '0'; ?>" 
                                        class="saw-branch-default-hidden"
                                        data-branch-id="<?php echo esc_attr($branch['id']); ?>">
                             </div>
 
-                            <div class="saw-control-item">
-                                <span class="saw-order-label">Pořadí:</span>
-                                <input type="number" 
-                                       name="branches[<?php echo esc_attr($branch['id']); ?>][display_order]" 
-                                       value="<?php echo esc_attr($order); ?>" 
-                                       class="saw-input-micro saw-order-input" 
-                                       min="0"
-                                       <?php disabled(!$is_active, true); ?>>
-                            </div>
+                            <div class="saw-separator"></div>
 
+                            <div class="saw-control-item">
+                                <label class="saw-order-label" title="Pořadí zobrazení">
+                                    <span class="dashicons dashicons-sort"></span>
+                                    <input type="number" 
+                                           name="branches[<?php echo esc_attr($branch['id']); ?>][display_order]" 
+                                           value="<?php echo esc_attr($display_order); ?>" 
+                                           class="saw-order-input-compact"
+                                           min="0"
+                                           step="1"
+                                           <?php disabled(!$is_active, true); ?>>
+                                </label>
+                            </div>
+                            
                         </div>
                     </div>
                 <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
+            <?php endif; ?>
+        </div>
     </div>
-
-    <div class="saw-form-footer">
-        <button type="submit" class="saw-button saw-button-primary saw-button-wide">
+    
+    <div class="saw-form-actions">
+        <button type="submit" class="saw-btn saw-btn-primary">
+            <span class="dashicons dashicons-saved"></span>
             <?php echo $is_edit ? 'Uložit změny' : 'Vytvořit jazyk'; ?>
         </button>
-        <button type="button" class="saw-button saw-button-text saw-form-cancel-btn">Zrušit</button>
     </div>
+    
 </form>
 
 <script>
 (function($) {
-    // Live Preview
-    $('#language_code').on('change', function() {
-        const $opt = $(this).find('option:selected');
-        const code = $opt.val();
+    'use strict';
+    
+    $(document).ready(function() {
         
-        const $card = $('#flag-preview-card');
-        const $ph = $card.find('.saw-id-placeholder');
-        const $content = $card.find('.saw-id-content-wrapper');
-
-        if (code) {
-            $('#language_name').val($opt.data('name'));
-            $('#flag_emoji').val($opt.data('flag'));
+        $('#language_code').on('change', function() {
+            const $selected = $(this).find('option:selected');
+            const code = $selected.val();
+            const name = $selected.data('name');
+            const flag = $selected.data('flag');
             
-            $content.find('.saw-id-flag').text($opt.data('flag'));
-            $content.find('.saw-id-title').text($opt.data('name'));
-            $content.find('.saw-id-badge').text(code.toUpperCase());
-
-            $ph.hide();
-            $content.css('display', 'flex');
-            $card.addClass('is-visible');
-        } else {
-            $ph.show();
-            $content.hide();
-            $card.removeClass('is-visible');
-        }
-    });
-
-    // Branch UI Logic
-    $('.saw-branch-active-checkbox').on('change', function() {
-        const $row = $(this).closest('.saw-branch-glossy-row');
-        if ($(this).is(':checked')) {
-            $row.addClass('is-active');
-            $row.find('input:not(.saw-branch-active-checkbox)').prop('disabled', false);
-        } else {
-            $row.removeClass('is-active');
-            $row.find('input[type="radio"]').prop('checked', false).prop('disabled', true);
-            $row.find('.saw-branch-default-hidden').val('0');
-            $row.find('.saw-order-input').prop('disabled', true);
-            $row.find('.saw-radio-pill-compact').removeClass('is-selected');
-        }
-    });
-
-    $('.saw-branch-default-radio').on('change', function() {
-        $('.saw-radio-pill-compact').removeClass('is-selected');
-        $('.saw-branch-default-hidden').val('0');
+            if (code && name && flag) {
+                $('#language_name').val(name);
+                $('#flag_emoji').val(flag);
+                
+                const html = `
+                    <span class="saw-flag-emoji">${flag}</span>
+                    <span class="saw-flag-name">${name}</span>
+                    <span class="saw-flag-code">${code.toUpperCase()}</span>
+                `;
+                $('#flag-preview').html(html);
+            } else {
+                $('#flag-preview').empty();
+            }
+        });
         
-        const branchId = $(this).data('branch-id');
-        $(this).closest('.saw-radio-pill-compact').addClass('is-selected');
-        $(`.saw-branch-default-hidden[data-branch-id="${branchId}"]`).val('1');
-    });
+        if ($('#language_code').val()) {
+            const $selected = $('#language_code').find('option:selected');
+            const code = $selected.val();
+            const name = $('#language_name').val() || $selected.data('name');
+            const flag = $('#flag_emoji').val() || $selected.data('flag');
+            
+            if (code && name && flag) {
+                const html = `
+                    <span class="saw-flag-emoji">${flag}</span>
+                    <span class="saw-flag-name">${name}</span>
+                    <span class="saw-flag-code">${code.toUpperCase()}</span>
+                `;
+                $('#flag-preview').html(html);
+            }
+        }
+        
+        $('.saw-branch-active-checkbox').on('change', function() {
+            const branchId = $(this).data('branch-id');
+            const isActive = $(this).is(':checked');
+            
+            // Update hidden input
+            $(`.saw-branch-active-hidden[data-branch-id="${branchId}"]`).val(isActive ? '1' : '0');
+            
+            const $row = $(this).closest('.saw-branch-glossy-row');
+            const $defaultRadio = $(`.saw-branch-default-radio[data-branch-id="${branchId}"]`);
+            const $orderInput = $(`input[name="branches[${branchId}][display_order]"]`);
+            
+            if (isActive) {
+                $row.addClass('is-active');
+                $defaultRadio.prop('disabled', false);
+                $orderInput.prop('disabled', false);
+            } else {
+                $row.removeClass('is-active');
+                $defaultRadio.prop('checked', false).prop('disabled', true);
+                $(`.saw-branch-default-hidden[data-branch-id="${branchId}"]`).val('0');
+                $(`.saw-radio-pill-compact[data-branch-id="${branchId}"]`).removeClass('is-selected');
+                $orderInput.val(0).prop('disabled', true);
+            }
+        });
+        
+        $('.saw-branch-default-radio').on('change', function() {
+            $('.saw-radio-pill-compact').removeClass('is-selected');
+            $('.saw-branch-default-hidden').val('0');
+            
+            const branchId = $(this).data('branch-id');
+            $(this).closest('.saw-radio-pill-compact').addClass('is-selected');
+            $(`.saw-branch-default-hidden[data-branch-id="${branchId}"]`).val('1');
+        });
 
-    $('#select-all-branches').on('change', function() {
-        $('.saw-branch-active-checkbox').prop('checked', $(this).is(':checked')).trigger('change');
-    });
+        $('#select-all-branches').on('change', function() {
+            $('.saw-branch-active-checkbox').prop('checked', $(this).is(':checked')).trigger('change');
+        });
 
+    });
+    
 })(jQuery);
 </script>
 <style>
@@ -249,117 +276,62 @@ $nonce_action = $is_edit ? 'saw_edit_training_languages' : 'saw_create_training_
 .saw-select-icon { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); color: #64748b; pointer-events: none; }
 
 /* === ID CARD PREVIEW === */
-.saw-language-preview-area { display: flex; justify-content: flex-end; }
+.saw-lang-id-card { width: 100%; height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: 3px solid #667eea; border-radius: 16px; padding: 24px; transition: all 0.3s ease; box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3); }
+.saw-lang-id-card:empty { background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-color: #e2e8f0; box-shadow: none; }
+.saw-lang-id-card:empty::before { content: '🏳️'; font-size: 64px; opacity: 0.3; }
+.saw-flag-emoji { font-size: 72px; line-height: 1; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); }
+.saw-flag-name { font-size: 20px; font-weight: 700; color: white; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); text-align: center; }
+.saw-flag-code { font-size: 14px; font-weight: 600; color: rgba(255, 255, 255, 0.85); text-transform: uppercase; letter-spacing: 2px; padding: 4px 12px; background: rgba(0, 0, 0, 0.15); border-radius: 6px; backdrop-filter: blur(10px); }
 
-.saw-id-card {
-    display: flex; align-items: center;
-    width: 100%; height: 100px;
-    background: #f1f5f9; border: 2px dashed #cbd5e1; border-radius: 12px;
-    padding: 0 20px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
-}
+/* === SELECT ALL === */
+.saw-select-all-compact { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 2px solid #bfdbfe; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; color: #1e40af; transition: all 0.2s; }
+.saw-select-all-compact:hover { background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); }
+.saw-select-all-compact input { width: 16px; height: 16px; cursor: pointer; accent-color: #2563eb; }
 
-.saw-id-card.is-visible {
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); /* Dark Blue Theme */
-    border: none;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    color: #fff;
-}
+/* === BRANCHES GRID === */
+.saw-branches-glossy-grid { display: flex; flex-direction: column; gap: 12px; }
+.saw-branch-glossy-row { display: flex; justify-content: space-between; align-items: center; padding: 18px 20px; background: #ffffff; border: 2px solid #e2e8f0; border-radius: 12px; transition: all 0.2s; }
+.saw-branch-glossy-row:hover { border-color: #cbd5e1; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06); }
+.saw-branch-glossy-row.is-active { border-color: #93c5fd; background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%); }
 
-.saw-id-content-wrapper { display: flex; align-items: center; gap: 16px; width: 100%; }
+.saw-glossy-info { display: flex; flex-direction: column; gap: 4px; }
+.saw-glossy-name { font-size: 15px; font-weight: 600; color: #0f172a; }
+.saw-glossy-city { font-size: 13px; color: #64748b; display: flex; align-items: center; gap: 4px; }
 
-.saw-id-flag { font-size: 48px; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); flex-shrink: 0; }
-.saw-id-info { flex: 1; display: flex; flex-direction: column; }
-.saw-id-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; font-weight: 700; margin-bottom: 2px; }
-.saw-id-title { font-size: 20px; font-weight: 700; color: #fff; margin: 0; letter-spacing: -0.5px; line-height: 1.2; }
-.saw-id-badge { 
-    background: rgba(255,255,255,0.1); color: #fff; 
-    padding: 4px 8px; border-radius: 6px; 
-    font-size: 13px; font-weight: 700; letter-spacing: 1px; 
-    border: 1px solid rgba(255,255,255,0.2);
-}
-
-.saw-id-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; color: #94a3b8; gap: 8px; font-size: 13px; font-weight: 500; }
-
-/* === GLOSSY LIST STYLES === */
-.saw-branches-list { display: flex; flex-direction: column; gap: 10px; }
-
-.saw-branch-glossy-row {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 12px 20px; background: #ffffff;
-    border: 1px solid #e2e8f0; border-radius: 10px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.saw-branch-glossy-row:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.08);
-    border-color: #cbd5e1;
-    background: linear-gradient(to bottom, #ffffff, #f8fafc);
-}
-
-.saw-branch-glossy-row.is-active { border-left: 4px solid #3b82f6; background: #fcfdff; }
-
-.saw-glossy-info { display: flex; flex-direction: column; gap: 2px; }
-.saw-glossy-name { font-size: 15px; font-weight: 600; color: #1e293b; }
-.saw-branch-glossy-row.is-active .saw-glossy-name { color: #2563eb; }
-.saw-glossy-city { font-size: 12px; color: #94a3b8; display: flex; align-items: center; gap: 4px; }
-.saw-glossy-city .dashicons { font-size: 14px; width: 14px; height: 14px; }
-
-.saw-glossy-controls { display: flex; align-items: center; gap: 16px; }
+.saw-glossy-controls { display: flex; gap: 20px; align-items: center; }
+.saw-control-item { display: flex; align-items: center; }
 .saw-separator { width: 1px; height: 24px; background: #e2e8f0; }
 
-/* Compact Switch */
-.saw-switch-compact { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+/* === SWITCH === */
+.saw-switch-compact { position: relative; display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
 .saw-switch-compact input { opacity: 0; width: 0; height: 0; position: absolute; }
-.saw-slider-compact { position: relative; width: 36px; height: 20px; background-color: #e2e8f0; border-radius: 20px; transition: .3s; }
-.saw-slider-compact:before { position: absolute; content: ""; height: 16px; width: 16px; left: 2px; bottom: 2px; background-color: white; border-radius: 50%; transition: .3s; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-.saw-switch-compact input:checked + .saw-slider-compact { background-color: #3b82f6; }
-.saw-switch-compact input:checked + .saw-slider-compact:before { transform: translateX(16px); }
-.saw-switch-label { font-size: 12px; font-weight: 600; color: #64748b; user-select: none; }
-.saw-branch-glossy-row.is-active .saw-switch-label { color: #3b82f6; }
+.saw-slider-compact { position: relative; width: 44px; height: 24px; background: #cbd5e1; border-radius: 24px; transition: 0.3s; }
+.saw-slider-compact:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
+.saw-switch-compact input:checked + .saw-slider-compact { background: #2563eb; }
+.saw-switch-compact input:checked + .saw-slider-compact:before { transform: translateX(20px); }
+.saw-switch-label { font-size: 13px; font-weight: 600; color: #475569; }
 
-/* Compact Radio Pill */
-.saw-radio-pill-compact {
-    display: flex; align-items: center; gap: 6px; padding: 4px 10px;
-    border-radius: 20px; border: 1px solid transparent;
-    cursor: pointer; transition: all 0.2s; color: #94a3b8; background: transparent;
-}
-.saw-radio-pill-compact:hover:not(.is-selected) { background: #f1f5f9; color: #64748b; }
-.saw-radio-pill-compact.is-selected { background: #fff7ed; color: #ea580c; border-color: #fdba74; }
+/* === RADIO PILL === */
+.saw-radio-pill-compact { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-size: 13px; font-weight: 600; color: #64748b; }
+.saw-radio-pill-compact:hover { background: #f1f5f9; border-color: #cbd5e1; }
+.saw-radio-pill-compact.is-selected { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-color: #fbbf24; color: #92400e; }
 .saw-radio-pill-compact input { display: none; }
 .saw-radio-pill-compact .dashicons { font-size: 16px; width: 16px; height: 16px; }
-.saw-radio-pill-compact span:last-child { font-size: 12px; font-weight: 600; }
 
-/* Order Input */
-.saw-order-label { font-size: 12px; color: #94a3b8; margin-right: 4px; }
-.saw-input-micro {
-    width: 48px; text-align: center; padding: 4px; border: 1px solid #e2e8f0;
-    border-radius: 6px; font-size: 13px; font-weight: 600; color: #334155; background: #f8fafc; transition: all 0.2s;
-}
-.saw-input-micro:focus { background: #fff; border-color: #3b82f6; outline: none; }
-.saw-branch-glossy-row.is-active .saw-input-micro { background: #fff; border-color: #cbd5e1; }
+/* === ORDER INPUT === */
+.saw-order-label { display: flex; align-items: center; gap: 6px; }
+.saw-order-input-compact { width: 60px; height: 32px; text-align: center; font-weight: 600; font-size: 13px; border: 2px solid #e2e8f0; border-radius: 6px; background: white; color: #0f172a; transition: all 0.2s; }
+.saw-order-input-compact:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); outline: none; }
+.saw-order-input-compact:disabled { background: #f8fafc; color: #94a3b8; cursor: not-allowed; }
 
-/* Select All */
-.saw-toggle-all { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #3b82f6; cursor: pointer; }
-.saw-toggle-all input { accent-color: #3b82f6; }
+/* === FORM ACTIONS === */
+.saw-form-actions { display: flex; gap: 12px; justify-content: flex-end; padding-top: 24px; border-top: 1px solid #e2e8f0; }
+.saw-btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; border: none; }
+.saw-btn-primary { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: white; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3); }
+.saw-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(37, 99, 235, 0.4); }
 
-/* Footer */
-.saw-form-footer { display: flex; gap: 12px; margin-top: 40px; padding-top: 20px; border-top: 1px solid #f1f5f9; }
-.saw-button-wide { flex: 1; justify-content: center; height: 48px; font-size: 16px; font-weight: 600; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2); }
-.saw-button-text { background: transparent; border: none; color: #64748b; font-weight: 600; }
-.saw-button-text:hover { color: #1e293b; background: #f1f5f9; }
-
-/* Mobile */
-@media (max-width: 768px) {
-    .saw-language-grid { grid-template-columns: 1fr; gap: 20px; }
-    .saw-language-preview-area { justify-content: center; }
-    .saw-id-card { max-width: 100%; }
-    .saw-branch-glossy-row { flex-direction: column; align-items: flex-start; gap: 12px; }
-    .saw-glossy-controls { width: 100%; justify-content: space-between; border-top: 1px solid #f1f5f9; padding-top: 12px; }
-    .saw-separator { display: none; }
+@media (max-width: 1024px) {
+    .saw-language-grid { grid-template-columns: 1fr; }
+    .saw-language-preview-area { order: -1; }
 }
 </style>

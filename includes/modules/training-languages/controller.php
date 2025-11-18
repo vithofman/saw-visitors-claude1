@@ -1,10 +1,10 @@
 <?php
 /**
- * Training Languages Controller - CLEANED
+ * Training Languages Controller
  *
  * @package    SAW_Visitors
  * @subpackage Modules/TrainingLanguages
- * @version    3.4.0 - CLEANED: Removed redundant create/edit methods to fix Nonce
+ * @version    3.9.0 - FIXED: Type casting + debugging for branches
  */
 
 if (!defined('ABSPATH')) {
@@ -34,14 +34,11 @@ class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller
      * Main Entry Point
      */
     public function index() {
-        // Base controller handles logic via process_sidebar_context()
-        // This handles POST requests for Create and Edit automatically!
         $sidebar_data = $this->process_sidebar_context();
-        if ($sidebar_data === null) return; // Redirected after save
+        if ($sidebar_data === null) return;
         
         $this->config = array_merge($this->config, $sidebar_data);
         
-        // Load extra data for sidebars
         if ($this->get_sidebar_mode() === 'create') {
             $this->config['available_branches'] = $this->model->get_available_branches();
             $this->config['languages_data'] = require $this->config['path'] . 'languages-data.php';
@@ -54,7 +51,7 @@ class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller
     }
     
     /**
-     * Prepare form data from POST
+     * Prepare form data from POST - FIXED TYPE CASTING
      */
     protected function prepare_form_data($post) {
         $data = [];
@@ -66,21 +63,34 @@ class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller
             }
         }
         
+        // 🔥 DEBUG: Log what arrives from POST
+        error_log('=== TRAINING LANGUAGES DEBUG ===');
+        error_log('POST branches raw: ' . print_r($post['branches'] ?? [], true));
+        
         if (!empty($post['branches'])) {
             $branches = [];
             foreach ($post['branches'] as $branch_id => $branch_data) {
-                if (!empty($branch_data['active'])) {
-                    $branches[$branch_id] = [
+                // 🔥 CRITICAL FIX: Type casting - HTML sends string "1", not integer
+                $is_active = intval($branch_data['active'] ?? 0);
+                
+                error_log("Branch #{$branch_id}: active={$is_active}, is_default=" . intval($branch_data['is_default'] ?? 0));
+                
+                if ($is_active === 1) {
+                    $branches[intval($branch_id)] = [
                         'active' => 1,
-                        'is_default' => !empty($branch_data['is_default']) ? 1 : 0,
+                        'is_default' => intval($branch_data['is_default'] ?? 0),
                         'display_order' => intval($branch_data['display_order'] ?? 0),
                     ];
                 }
             }
             $data['branches'] = $branches;
+            error_log('Processed branches count: ' . count($branches));
         } else {
             $data['branches'] = [];
+            error_log('NO branches in POST data!');
         }
+        
+        error_log('=== END DEBUG ===');
         
         return $data;
     }
@@ -103,14 +113,14 @@ class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller
             'saw-module-training-languages',
             SAW_VISITORS_PLUGIN_URL . 'includes/modules/training-languages/styles.css',
             ['saw-admin-table-component'],
-            '3.4.0'
+            '3.9.0'
         );
         
         wp_enqueue_script(
             'saw-module-training-languages',
             SAW_VISITORS_PLUGIN_URL . 'includes/modules/training-languages/scripts.js',
             ['jquery'],
-            '3.4.0',
+            '3.9.0',
             true
         );
     }
