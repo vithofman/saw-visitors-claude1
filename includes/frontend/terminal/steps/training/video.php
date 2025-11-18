@@ -1,28 +1,26 @@
 <?php
 /**
- * Terminal Training Step - BOZP Video
+ * Terminal Training Step - Video (Fixed)
  * 
  * @package SAW_Visitors
- * @version 2.2.0 - Rebuilt from working minimal version
+ * @version 3.0.1
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-error_log("[VIDEO.PHP] Template started");
-
-// Get language from flow
+// Get data from flow
 $lang = isset($flow['language']) ? $flow['language'] : 'cs';
-$visitor_id = isset($flow['visitor_id']) ? $flow['visitor_id'] : null;
+$visitor_id = isset($flow['visitor_ids'][0]) ? $flow['visitor_ids'][0] : null;
 
 error_log("[VIDEO.PHP] Language: {$lang}, Visitor ID: {$visitor_id}");
 error_log("[VIDEO.PHP] Video URL: " . (isset($video_url) ? $video_url : 'NOT SET'));
 
-// Check if video URL exists
+// Check if video exists
 $has_video = !empty($video_url);
 
-// Check if already completed
+// Check if completed
 $completed = false;
 if ($visitor_id) {
     global $wpdb;
@@ -38,261 +36,465 @@ if ($visitor_id) {
 // Translations
 $translations = array(
     'cs' => array(
-        'title' => 'Školení BOZP',
-        'subtitle' => 'Sledujte prosím celé video',
-        'watched' => 'Video bylo shlédnuto',
-        'mark_watched' => 'Potvrdit zhlédnutí',
+        'confirm' => 'Potvrzuji zhlédnutí videa',
         'continue' => 'Pokračovat',
-        'required' => 'Sledování je povinné',
+        'loading' => 'Načítání...',
+        'hint' => 'Shlédněte celé video (min. 90%)',
+        'no_video' => 'Video není k dispozici',
     ),
     'en' => array(
-        'title' => 'Safety Training',
-        'subtitle' => 'Please watch the entire video',
-        'watched' => 'Video has been watched',
-        'mark_watched' => 'Confirm watched',
+        'confirm' => 'I confirm video viewing',
         'continue' => 'Continue',
-        'required' => 'Watching is required',
+        'loading' => 'Loading...',
+        'hint' => 'Watch the entire video (min. 90%)',
+        'no_video' => 'Video not available',
     ),
     'sk' => array(
-        'title' => 'Školenie BOZP',
-        'subtitle' => 'Prosím sledujte celé video',
-        'watched' => 'Video bolo zhliadnuté',
-        'mark_watched' => 'Potvrdiť zhliadnutie',
+        'confirm' => 'Potvrdzujem zhliadnutie videa',
         'continue' => 'Pokračovať',
-        'required' => 'Sledovanie je povinné',
+        'loading' => 'Načítavanie...',
+        'hint' => 'Pozrite si celé video (min. 90%)',
+        'no_video' => 'Video nie je k dispozícii',
     ),
     'uk' => array(
-        'title' => 'Навчання з охорони праці',
-        'subtitle' => 'Будь ласка, перегляньте все відео',
-        'watched' => 'Відео переглянуто',
-        'mark_watched' => 'Підтвердити перегляд',
+        'confirm' => 'Підтверджую перегляд відео',
         'continue' => 'Продовжити',
-        'required' => 'Перегляд обов\'язковий',
+        'loading' => 'Завантаження...',
+        'hint' => 'Перегляньте все відео (мін. 90%)',
+        'no_video' => 'Відео недоступне',
     ),
 );
 
 $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
-
-error_log("[VIDEO.PHP] Has video: " . ($has_video ? 'YES' : 'NO'));
-error_log("[VIDEO.PHP] Completed: " . ($completed ? 'YES' : 'NO'));
 ?>
 
-<div class="saw-terminal-card">
-    <div class="saw-terminal-card-header">
-        <h2 class="saw-terminal-card-title">
-            📹 <?php echo esc_html($t['title']); ?>
-        </h2>
-        <p class="saw-terminal-card-subtitle">
-            <?php echo esc_html($t['subtitle']); ?>
-        </p>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+.saw-terminal-footer {
+    display: none !important;
+}
+
+.saw-video-fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #1a202c;
+    overflow: hidden;
+}
+
+.saw-video-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 95%;
+    max-width: 1600px;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+#video-player {
+    width: 100%;
+    height: 100%;
+}
+
+#video-player iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+.saw-video-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: white;
+}
+
+.saw-video-spinner {
+    width: 3rem;
+    height: 3rem;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-top-color: #667eea;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Progress Indicator - Top Right */
+.saw-video-progress-indicator {
+    position: fixed;
+    top: 2rem;
+    right: 2rem;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(20px);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 1.125rem;
+    z-index: 100;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    min-width: 80px;
+    text-align: center;
+}
+
+/* Hint Message - HIGHEST Z-INDEX, ABOVE EVERYTHING */
+.saw-video-hint-wrapper {
+    position: fixed;
+    bottom: 10.5rem;
+    right: 2rem;
+    width: 280px;
+    background: rgba(102, 126, 234, 0.25);
+    backdrop-filter: blur(20px);
+    border-radius: 12px;
+    padding: 0.875rem 1.25rem;
+    border: 1px solid rgba(102, 126, 234, 0.5);
+    z-index: 300;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    opacity: 1;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.saw-video-hint-wrapper.saw-video-hidden {
+    opacity: 0;
+    transform: translateY(10px);
+    pointer-events: none;
+}
+
+.saw-video-hint-icon {
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.saw-video-hint-text {
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.4;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Progress Bar */
+.saw-video-progress-bar {
+    position: fixed;
+    bottom: 7.5rem;
+    right: 2rem;
+    width: 280px;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(20px);
+    border-radius: 12px;
+    height: 12px;
+    overflow: hidden;
+    z-index: 199;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.saw-video-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #48bb78, #38a169);
+    border-radius: 12px;
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 16px rgba(72, 187, 120, 0.8);
+}
+
+/* Floating Actions - LOWEST */
+.saw-video-confirm-panel {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+    z-index: 200;
+    min-width: 280px;
+}
+
+.saw-video-confirm-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    padding: 1rem 1.5rem;
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(20px) saturate(180%);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+}
+
+.saw-video-confirm-checkbox:hover {
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(102, 126, 234, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 30px rgba(0, 0, 0, 0.3);
+}
+
+.saw-video-confirm-checkbox.saw-video-checked {
+    background: rgba(72, 187, 120, 0.2);
+    border-color: rgba(72, 187, 120, 0.5);
+}
+
+.saw-video-confirm-checkbox input {
+    width: 22px;
+    height: 22px;
+    cursor: pointer;
+    accent-color: #48bb78;
+    flex-shrink: 0;
+}
+
+.saw-video-confirm-checkbox span {
+    font-weight: 600;
+    color: white;
+    font-size: 0.925rem;
+    line-height: 1.4;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.saw-video-continue-btn {
+    padding: 1rem 1.5rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 16px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    box-shadow: 0 4px 24px rgba(102, 126, 234, 0.4);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.saw-video-continue-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.6);
+}
+
+.saw-video-continue-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .saw-video-container {
+        width: 95%;
+        top: 40%;
+    }
+    
+    .saw-video-progress-indicator {
+        top: 1rem;
+        right: 1rem;
+        font-size: 0.95rem;
+        padding: 0.625rem 1.25rem;
+    }
+    
+    .saw-video-hint-wrapper {
+        bottom: auto;
+        top: 4.5rem;
+        right: 1rem;
+        left: 1rem;
+        width: auto;
+    }
+    
+    .saw-video-progress-bar {
+        bottom: auto;
+        top: 8rem;
+        right: 1rem;
+        left: 1rem;
+        width: auto;
+        height: 10px;
+    }
+    
+    .saw-video-confirm-panel {
+        bottom: 1rem;
+        right: 1rem;
+        left: 1rem;
+        min-width: 0;
+    }
+    
+    .saw-video-confirm-checkbox {
+        padding: 0.875rem 1.25rem;
+    }
+    
+    .saw-video-confirm-checkbox span {
+        font-size: 0.875rem;
+    }
+    
+    .saw-video-continue-btn {
+        padding: 0.875rem 1.25rem;
+    }
+}
+</style>
+
+<div class="saw-video-fullscreen">
+    
+    <?php if (!$has_video): ?>
+    
+    <div class="saw-video-loading">
+        <p style="font-size: 1.5rem; margin-bottom: 2rem;">⚠️</p>
+        <p style="font-size: 1.125rem; font-weight: 600;"><?php echo esc_html($t['no_video']); ?></p>
     </div>
     
-    <div class="saw-terminal-card-body">
-        
-        <?php if (!$has_video): ?>
-        <!-- Error: No video URL -->
-        <div style="background: #fff5f5; border: 2px solid #fc8181; border-radius: 12px; padding: 2rem; margin-bottom: 2rem; text-align: center;">
-            <p style="margin: 0 0 1rem 0; font-size: 1.25rem; color: #c53030; font-weight: 600;">
-                ⚠️ Video není k dispozici
-            </p>
-        </div>
-        
-        <form method="POST">
-            <?php wp_nonce_field('saw_terminal_step', 'terminal_nonce'); ?>
-            <input type="hidden" name="terminal_action" value="complete_training_video">
-            <button type="submit" class="saw-terminal-btn saw-terminal-btn-success">
-                Pokračovat bez videa →
-            </button>
-        </form>
-        
-        <?php else: ?>
-        
-        <!-- Video container -->
-        <div class="saw-training-video-container" style="margin-bottom: 2rem;">
-            <div class="saw-training-video-wrapper" style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 12px; background: #000;">
-                <div id="training-video"></div>
-            </div>
-            
-            <!-- Video progress bar -->
-            <div class="saw-training-video-progress" style="margin-top: 1rem;">
-                <div style="display: flex; align-items: center; gap: 1rem;">
-                    <div style="flex: 1; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden;">
-                        <div id="video-progress-bar" 
-                             style="height: 100%; width: 0%; background: linear-gradient(90deg, #48bb78, #38a169); transition: width 0.3s ease;">
-                        </div>
-                    </div>
-                    <span id="video-progress-text" style="font-size: 0.875rem; color: #718096; min-width: 50px; text-align: right;">0%</span>
-                </div>
-            </div>
-        </div>
-        
-        <?php if ($completed): ?>
-        <!-- Already watched -->
-        <div style="background: #f0fdf4; border: 2px solid #86efac; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; text-align: center;">
-            <p style="margin: 0; font-size: 1.125rem; color: #16a34a; font-weight: 600;">
-                ✅ <?php echo esc_html($t['watched']); ?>
-            </p>
-        </div>
-        <?php endif; ?>
-        
-        <!-- Form -->
-        <form method="POST" id="training-video-form">
-            <?php wp_nonce_field('saw_terminal_step', 'terminal_nonce'); ?>
-            <input type="hidden" name="terminal_action" value="complete_training_video">
-            <input type="hidden" name="video_watched" id="video-watched-input" value="<?php echo $completed ? '1' : '0'; ?>">
-            
-            <?php if (!$completed): ?>
-            <button type="button" 
-                    id="mark-watched-btn"
-                    class="saw-terminal-btn saw-terminal-btn-secondary" 
-                    style="margin-bottom: 1rem;"
-                    disabled>
-                <?php echo esc_html($t['mark_watched']); ?>
-            </button>
-            <?php endif; ?>
-            
-            <button type="submit" 
-                    class="saw-terminal-btn saw-terminal-btn-success saw-terminal-btn-disabled"
-                    id="continue-btn"
-                    style="opacity: 0.5; cursor: not-allowed;"
-                    disabled>
-                <?php echo esc_html($t['continue']); ?> →
-            </button>
-        </form>
-        
-        <p style="margin-top: 1.5rem; text-align: center; color: #a0aec0; font-size: 0.875rem;">
-            <strong>⚠️ <?php echo esc_html($t['required']); ?></strong>
-        </p>
-        
-        <?php endif; ?>
-        
+    <?php else: ?>
+    
+    <div class="saw-video-container">
+        <div id="video-player"></div>
     </div>
+    
+    <!-- Progress Indicator - Top Right -->
+    <div id="progress-indicator" class="saw-video-progress-indicator" style="display: none;">
+        0%
+    </div>
+    
+    <!-- Hint Message - ABOVE everything -->
+    <div id="video-hint-message" class="saw-video-hint-wrapper" style="display: none;">
+        <span class="saw-video-hint-icon">▶️</span>
+        <span class="saw-video-hint-text"><?php echo esc_html($t['hint']); ?></span>
+    </div>
+    
+    <!-- Progress Bar -->
+    <div id="video-progress-bar" class="saw-video-progress-bar" style="display: none;">
+        <div id="video-progress-fill" class="saw-video-progress-fill" style="width: 0%;"></div>
+    </div>
+    
+    <!-- Floating Actions -->
+    <form method="POST" id="video-form" class="saw-video-confirm-panel">
+        <?php wp_nonce_field('saw_terminal_step', 'terminal_nonce'); ?>
+        <input type="hidden" name="terminal_action" value="complete_training_video">
+        
+        <?php if (!$completed): ?>
+        <label class="saw-video-confirm-checkbox" id="checkbox-wrapper">
+            <input type="checkbox" 
+                   name="video_confirmed" 
+                   id="video-confirmed"
+                   value="1"
+                   required
+                   disabled>
+            <span><?php echo esc_html($t['confirm']); ?></span>
+        </label>
+        <?php endif; ?>
+        
+        <button type="submit" 
+                class="saw-video-continue-btn"
+                id="continue-btn"
+                <?php echo !$completed ? 'disabled' : ''; ?>>
+            <?php echo esc_html($t['continue']); ?> →
+        </button>
+    </form>
+    
+    <?php endif; ?>
+    
 </div>
 
 <?php if ($has_video): ?>
-<?php
-// Extrahuj YouTube video ID z URL
-$video_id = '';
-if (preg_match('/youtube\.com\/embed\/([^?\/]+)/', $video_url, $matches)) {
-    $video_id = $matches[1];
-} elseif (preg_match('/youtu\.be\/([^?\/]+)/', $video_url, $matches)) {
-    $video_id = $matches[1];
-}
-?>
-<script src="https://www.youtube.com/iframe_api"></script>
 <script>
-var player;
-var videoWatched = <?php echo $completed ? 'true' : 'false'; ?>;
-var maxWatchedPercentage = 0;
-
-function onYouTubeIframeAPIReady() {
-    console.log('YouTube API ready');
-    player = new YT.Player('training-video', {
-        height: '100%',
-        width: '100%',
-        videoId: '<?php echo esc_js($video_id); ?>',
-        playerVars: {
-            'playsinline': 1,
-            'rel': 0,
-            'modestbranding': 1
-        },
-        events: {
-            'onReady': onPlayerReady,
-            'onStateChange': onPlayerStateChange
-        }
-    });
-}
-
-function onPlayerReady(event) {
-    console.log('Player ready');
-    // Přidej CSS styling pro player
-    jQuery('#training-video').css({
-        'position': 'absolute',
-        'top': '0',
-        'left': '0',
-        'width': '100%',
-        'height': '100%'
-    });
-}
-
-function onPlayerStateChange(event) {
-    if (event.data == YT.PlayerState.PLAYING) {
-        console.log('Video playing - starting progress tracking');
-        startProgressTracking();
-    }
-}
-
-var progressInterval;
-
-function startProgressTracking() {
-    if (progressInterval) {
-        clearInterval(progressInterval);
-    }
+(function() {
+    'use strict';
     
-    progressInterval = setInterval(function() {
-        if (player && player.getCurrentTime && player.getDuration) {
-            var current = player.getCurrentTime();
-            var duration = player.getDuration();
+    console.log('[SAW Video] Initializing...');
+    
+    function initWhenReady() {
+        if (typeof SAWVideoPlayer === 'undefined') {
+            setTimeout(initWhenReady, 100);
+            return;
+        }
+        
+        console.log('[SAW Video] Starting player...');
+        
+        const indicator = document.getElementById('progress-indicator');
+        const hint = document.getElementById('video-hint-message');
+        const progressBar = document.getElementById('video-progress-bar');
+        
+        if (indicator) indicator.style.display = 'block';
+        if (hint) hint.style.display = 'flex';
+        if (progressBar) progressBar.style.display = 'block';
+        
+        const player = new SAWVideoPlayer({
+            videoUrl: '<?php echo esc_js($video_url); ?>',
+            containerId: 'video-player',
+            completionThreshold: 90,
+            debug: false,
             
-            if (duration > 0) {
-                var percentage = Math.floor((current / duration) * 100);
+            onProgress: function(percent) {
+                console.log('[SAW Video] Progress:', percent + '%');
                 
-                // Sleduj maximální dosažený progress
-                if (percentage > maxWatchedPercentage) {
-                    maxWatchedPercentage = percentage;
+                if (indicator) {
+                    indicator.textContent = percent + '%';
                 }
                 
-                jQuery('#video-progress-bar').css('width', percentage + '%');
-                jQuery('#video-progress-text').text(percentage + '%');
+                const progressFill = document.getElementById('video-progress-fill');
+                if (progressFill) {
+                    progressFill.style.width = percent + '%';
+                }
+            },
+            
+            onComplete: function(data) {
+                console.log('[SAW Video] Completed!', data);
                 
-                console.log('Video progress:', percentage + '%', 'Max:', maxWatchedPercentage + '%');
+                if (hint) hint.classList.add('saw-video-hidden');
+                if (progressBar) {
+                    setTimeout(function() {
+                        progressBar.style.display = 'none';
+                    }, 400);
+                }
                 
-                // Povolit potvrzení když dosáhne 90%
-                if (maxWatchedPercentage >= 90 && !videoWatched) {
-                    jQuery('#mark-watched-btn').prop('disabled', false);
-                    console.log('90% reached - enabling confirm button');
+                const checkbox = document.getElementById('video-confirmed');
+                const wrapper = document.getElementById('checkbox-wrapper');
+                if (checkbox) {
+                    checkbox.disabled = false;
+                    if (wrapper) wrapper.classList.add('saw-video-checked');
                 }
             }
-        }
-    }, 1000);
-}
-
-jQuery(document).ready(function($) {
-    console.log('Video template JS started');
-    
-    // Mark as watched handler
-    $('#mark-watched-btn').on('click', function() {
-        videoWatched = true;
-        $('#video-watched-input').val('1');
-        
-        // Vizuálně aktivuj tlačítko Pokračovat
-        $('#continue-btn')
-            .prop('disabled', false)
-            .removeClass('saw-terminal-btn-disabled')
-            .css({
-                'opacity': '1',
-                'cursor': 'pointer'
-            });
-        
-        if (progressInterval) {
-            clearInterval(progressInterval);
-        }
-        
-        $(this).fadeOut(300, function() {
-            $('<div style="background: #f0fdf4; border: 2px solid #86efac; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; text-align: center;">' +
-              '<p style="margin: 0; font-size: 1.125rem; color: #16a34a; font-weight: 600;">✅ Video bylo shlédnuto</p>' +
-              '</div>').insertBefore('#continue-btn').hide().fadeIn(300);
         });
-    });
-    
-    // EMERGENCY FALLBACK: Po 2 minutách povolit pokračovat i bez sledování
-    setTimeout(function() {
-        if (!videoWatched) {
-            console.log('Emergency fallback - enabling buttons after 2 minutes');
-            $('#mark-watched-btn').prop('disabled', false);
+        
+        const checkbox = document.getElementById('video-confirmed');
+        const continueBtn = document.getElementById('continue-btn');
+        const wrapper = document.getElementById('checkbox-wrapper');
+        
+        if (checkbox && continueBtn) {
+            checkbox.addEventListener('change', function() {
+                continueBtn.disabled = !this.checked;
+                if (wrapper) {
+                    if (this.checked) {
+                        wrapper.classList.add('saw-video-checked');
+                    } else {
+                        wrapper.classList.remove('saw-video-checked');
+                    }
+                }
+            });
         }
-    }, 120000);
-});
+    }
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initWhenReady);
+    } else {
+        initWhenReady();
+    }
+})();
 </script>
 <?php endif; ?>
 

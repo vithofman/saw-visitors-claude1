@@ -1,0 +1,789 @@
+/**
+ * SAW Terminal - Component Styles
+ * 
+ * Reusable UI components for training interface
+ * Buttons, checkboxes, cards, forms, etc.
+ * 
+ * @package SAW_Visitors
+ * @version 3.0.0
+ * @since   3.0.0
+ */
+
+/* ============================================
+   BUTTONS - Touch-Friendly Action Buttons
+   Min 64px height for optimal touch targets
+   ============================================ */
+
+.saw-training-btn {
+    width: 100%;
+    min-height: 64px;
+    border: none;
+    border-radius: var(--radius-xl);
+    padding: var(--space-md) var(--space-xl);
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-bold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    box-shadow: var(--shadow-md);
+    text-decoration: none;
+    font-family: var(--font-primary);
+    line-height: var(--line-height-tight);
+}
+
+.saw-training-btn:hover:not(.saw-training-btn-disabled) {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+}
+
+.saw-training-btn:active:not(.saw-training-btn-disabled) {
+    transform: translateY(-1px);
+}
+
+/* Button Variants */
+
+/* Primary button */
+.saw-training-btn-primary {
+    background: var(--color-primary-gradient);
+    color: white;
+    box-shadow: var(--shadow-primary);
+}
+
+.saw-training-btn-primary:hover:not(.saw-training-btn-disabled) {
+    box-shadow: var(--shadow-primary-hover);
+}
+
+/* Success button (default for continue) */
+.saw-training-btn-success {
+    background: var(--color-success-gradient);
+    color: white;
+    box-shadow: var(--shadow-success);
+}
+
+.saw-training-btn-success:hover:not(.saw-training-btn-disabled) {
+    box-shadow: var(--shadow-success-hover);
+}
+
+/* Danger button */
+.saw-training-btn-danger {
+    background: linear-gradient(135deg, var(--color-danger) 0%, var(--color-danger-dark) 100%);
+    color: white;
+    box-shadow: var(--shadow-danger);
+}
+
+.saw-training-btn-danger:hover:not(.saw-training-btn-disabled) {
+    box-shadow: var(--shadow-danger-hover);
+}
+
+/* Secondary button (light) */
+.saw-training-btn-secondary {
+    background: linear-gradient(135deg, var(--color-bg-secondary) 0%, var(--color-bg-tertiary) 100%);
+    color: var(--color-text-primary);
+    box-shadow: var(--shadow-sm);
+}
+
+.saw-training-btn-secondary:hover:not(.saw-training-btn-disabled) {
+    box-shadow: var(--shadow-md);
+}
+
+/* Disabled state */
+.saw-training-btn-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* Button icon */
+.saw-training-btn-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+/* Button text */
+.saw-training-btn-text {
+    flex: 1;
+}
+
+/* Mobile */
+@media (max-width: 767px) {
+    .saw-training-btn {
+        min-height: 56px;
+        padding: var(--space-sm) var(--space-lg);
+        font-size: var(--font-size-md);
+    }
+    
+    .saw-training-btn-icon {
+        font-size: 1.25rem;
+    }
+}
+
+/* ============================================
+   CHECKBOX - Unified Confirmation Checkbox
+   Touch-friendly with large click area
+   ============================================ */
+
+.saw-training-confirm-wrapper {
+    margin: var(--space-lg) 0;
+}
+
+.saw-training-confirm-box {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    background: var(--color-bg-primary);
+    border: 3px solid var(--color-border-light);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    min-height: 64px; /* Touch target */
+    cursor: pointer;
+    transition: all var(--transition-base);
+    position: relative;
+}
+
+.saw-training-confirm-box:hover {
+    border-color: var(--color-primary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.saw-training-confirm-box.checked {
+    background: #f0fdf4;
+    border-color: var(--color-success);
+}
+
+/* Hidden native checkbox */
+.saw-training-checkbox-input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Custom checkbox icon */
+.saw-training-checkbox-icon {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border: 2px solid var(--color-border-medium);
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    transition: all var(--transition-fast);
+}
+
+.saw-training-confirm-box.checked .saw-training-checkbox-icon {
+    background: var(--color-success);
+    border-color: var(--color-success);
+}
+
+/* Checkmark SVG */
+.saw-icon-check {
+    width: 20px;
+    height: 20px;
+    stroke-width: 3;
+    color: white;
+    opacity: 0;
+    transform: scale(0);
+    transition: all var(--transition-fast);
+}
+
+.saw-training-confirm-box.checked .saw-icon-check {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* Checkbox content */
+.saw-training-checkbox-content {
+    flex: 1;
+}
+
+.saw-training-checkbox-text {
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+    line-height: var(--line-height-normal);
+}
+
+/* Mobile */
+@media (max-width: 767px) {
+    .saw-training-confirm-wrapper {
+        margin: var(--space-md) 0;
+    }
+    
+    .saw-training-confirm-box {
+        padding: var(--space-md);
+        min-height: 56px;
+    }
+    
+    .saw-training-checkbox-icon {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .saw-icon-check {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .saw-training-checkbox-text {
+        font-size: var(--font-size-base);
+    }
+}
+
+/* ============================================
+   CONTENT SECTIONS - Collapsible Sections
+   For risks, additional info, department content
+   ============================================ */
+
+.saw-content-viewer {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.saw-content-section {
+    background: var(--color-bg-primary);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow var(--transition-fast);
+}
+
+.saw-content-section:hover {
+    box-shadow: var(--shadow-md);
+}
+
+/* Section header (clickable) */
+.saw-content-section-header {
+    width: 100%;
+    padding: var(--space-lg);
+    background: var(--color-bg-secondary);
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+    text-align: left;
+}
+
+.saw-content-section-header:hover {
+    background: var(--color-bg-tertiary);
+}
+
+/* Section icon (chevron) */
+.saw-content-section-icon {
+    font-size: 1.25rem;
+    transition: transform var(--transition-base);
+    flex-shrink: 0;
+}
+
+.saw-content-section.collapsed .saw-content-section-icon {
+    transform: rotate(-90deg);
+}
+
+/* Section title */
+.saw-content-section-title {
+    flex: 1;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-primary);
+    margin: 0;
+    line-height: var(--line-height-tight);
+}
+
+/* Section body (content) */
+.saw-content-section-body {
+    padding: var(--space-lg);
+    max-height: 1000px;
+    overflow: hidden;
+    transition: max-height 0.4s ease, padding 0.4s ease;
+}
+
+.saw-content-section.collapsed .saw-content-section-body {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+/* Content text */
+.saw-content-text {
+    line-height: var(--line-height-relaxed);
+    color: var(--color-text-primary);
+}
+
+.saw-content-text h4 {
+    margin: var(--space-lg) 0 var(--space-sm) 0;
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-bold);
+}
+
+.saw-content-text ul,
+.saw-content-text ol {
+    margin: var(--space-md) 0;
+    padding-left: var(--space-lg);
+}
+
+.saw-content-text li {
+    margin-bottom: var(--space-xs);
+}
+
+/* Mobile */
+@media (max-width: 767px) {
+    .saw-content-section-header {
+        padding: var(--space-md);
+    }
+    
+    .saw-content-section-title {
+        font-size: var(--font-size-md);
+    }
+    
+    .saw-content-section-body {
+        padding: var(--space-md);
+    }
+}
+
+/* ============================================
+   DOCUMENT LIST - Attachments/Downloads
+   ============================================ */
+
+.saw-content-documents {
+    margin-top: var(--space-lg);
+    padding-top: var(--space-lg);
+    border-top: 2px solid var(--color-border-light);
+}
+
+.saw-content-documents h4 {
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-primary);
+    margin: 0 0 var(--space-md) 0;
+}
+
+.saw-document-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.saw-document-link {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    color: var(--color-text-primary);
+    transition: all var(--transition-fast);
+}
+
+.saw-document-link:hover {
+    background: var(--color-bg-tertiary);
+    transform: translateX(4px);
+    box-shadow: var(--shadow-sm);
+}
+
+.saw-document-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.saw-document-name {
+    flex: 1;
+    font-weight: var(--font-weight-semibold);
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-tight);
+}
+
+.saw-document-arrow {
+    font-size: 1.25rem;
+    color: var(--color-primary);
+    flex-shrink: 0;
+}
+
+/* Mobile */
+@media (max-width: 767px) {
+    .saw-document-link {
+        padding: var(--space-sm);
+    }
+    
+    .saw-document-icon {
+        font-size: 1.25rem;
+    }
+    
+    .saw-document-name {
+        font-size: var(--font-size-sm);
+    }
+}
+
+/* ============================================
+   PROGRESS INDICATOR - Steps Progress
+   Optional component for showing training progress
+   ============================================ */
+
+.saw-progress-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    padding: var(--space-md) 0;
+    margin-bottom: var(--space-lg);
+}
+
+.saw-progress-step {
+    width: 12px;
+    height: 12px;
+    border-radius: var(--radius-full);
+    background: rgba(255, 255, 255, 0.3);
+    transition: all var(--transition-base);
+}
+
+.saw-progress-step.active {
+    background: white;
+    transform: scale(1.2);
+}
+
+.saw-progress-step.completed {
+    background: var(--color-success);
+}
+
+/* ============================================
+   BADGE - Status Indicators
+   ============================================ */
+
+.saw-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    line-height: 1;
+}
+
+.saw-badge-success {
+    background: #f0fdf4;
+    color: var(--color-success-dark);
+    border: 1px solid var(--color-success-light);
+}
+
+.saw-badge-warning {
+    background: #fffaf0;
+    color: var(--color-warning-dark);
+    border: 1px solid var(--color-warning-light);
+}
+
+.saw-badge-danger {
+    background: #fff5f5;
+    color: var(--color-danger-dark);
+    border: 1px solid var(--color-danger-light);
+}
+
+.saw-badge-info {
+    background: #ebf8ff;
+    color: var(--color-info-dark);
+    border: 1px solid var(--color-info-light);
+}
+
+/* ============================================
+   ALERT - Notification/Message Box
+   ============================================ */
+
+.saw-alert {
+    padding: var(--space-md) var(--space-lg);
+    border-radius: var(--radius-lg);
+    border: 2px solid;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-md);
+    margin-bottom: var(--space-md);
+}
+
+.saw-alert-icon {
+    font-size: var(--font-size-xl);
+    flex-shrink: 0;
+}
+
+.saw-alert-content {
+    flex: 1;
+}
+
+.saw-alert-title {
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-bold);
+    margin: 0 0 var(--space-xs) 0;
+}
+
+.saw-alert-message {
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-normal);
+    margin: 0;
+}
+
+/* Alert variants */
+.saw-alert-success {
+    background: #f0fdf4;
+    border-color: var(--color-success);
+    color: #22543d;
+}
+
+.saw-alert-warning {
+    background: #fffaf0;
+    border-color: var(--color-warning);
+    color: #744210;
+}
+
+.saw-alert-danger {
+    background: #fff5f5;
+    border-color: var(--color-danger);
+    color: #742a2a;
+}
+
+.saw-alert-info {
+    background: #ebf8ff;
+    border-color: var(--color-info);
+    color: #1e4e8c;
+}
+
+/* Mobile */
+@media (max-width: 767px) {
+    .saw-alert {
+        padding: var(--space-sm) var(--space-md);
+    }
+    
+    .saw-alert-icon {
+        font-size: var(--font-size-lg);
+    }
+    
+    .saw-alert-title {
+        font-size: var(--font-size-base);
+    }
+    
+    .saw-alert-message {
+        font-size: var(--font-size-sm);
+    }
+}
+
+/* ============================================
+   VIDEO PLAYER - Training Video Container
+   ============================================ */
+
+.saw-video-viewer {
+    position: relative;
+    background: var(--color-text-primary);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+    box-shadow: var(--shadow-lg);
+}
+
+.saw-video-player-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.saw-video-player-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* Video progress overlay */
+.saw-video-progress-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+    padding: var(--space-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    pointer-events: none;
+}
+
+.saw-video-progress-bar {
+    flex: 1;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.saw-video-progress-fill {
+    height: 100%;
+    background: var(--color-success-gradient);
+    transition: width 0.3s ease;
+    box-shadow: 0 0 10px var(--color-success);
+}
+
+.saw-video-progress-text {
+    color: white;
+    font-weight: var(--font-weight-semibold);
+    font-size: var(--font-size-md);
+    min-width: 50px;
+    text-align: right;
+}
+
+/* Mobile */
+@media (max-width: 767px) {
+    .saw-video-progress-overlay {
+        padding: var(--space-md);
+    }
+    
+    .saw-video-progress-text {
+        font-size: var(--font-size-sm);
+        min-width: 40px;
+    }
+}
+
+/* ============================================
+   PDF VIEWER - Map/Document Viewer
+   ============================================ */
+
+.saw-pdf-viewer-container {
+    position: relative;
+    background: var(--color-text-primary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-md);
+    min-height: 500px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+#pdf-canvas {
+    max-width: 100%;
+    max-height: 100%;
+    box-shadow: var(--shadow-lg);
+    border-radius: var(--radius-sm);
+    display: block;
+}
+
+/* PDF Navigation Controls */
+.saw-pdf-navigation {
+    position: absolute;
+    bottom: var(--space-lg);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: var(--space-sm) var(--space-lg);
+    border-radius: var(--radius-full);
+}
+
+.saw-pdf-nav-btn {
+    width: 48px;
+    height: 48px;
+    border: none;
+    background: transparent;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+    border-radius: var(--radius-full);
+}
+
+.saw-pdf-nav-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.1);
+}
+
+.saw-pdf-nav-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.saw-pdf-indicator {
+    color: white;
+    font-weight: var(--font-weight-semibold);
+    font-size: var(--font-size-md);
+    min-width: 80px;
+    text-align: center;
+}
+
+/* Mobile */
+@media (max-width: 767px) {
+    .saw-pdf-viewer-container {
+        min-height: 400px;
+        padding: var(--space-sm);
+    }
+    
+    .saw-pdf-navigation {
+        bottom: var(--space-md);
+        padding: var(--space-xs) var(--space-md);
+    }
+    
+    .saw-pdf-nav-btn {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .saw-pdf-indicator {
+        font-size: var(--font-size-sm);
+        min-width: 60px;
+    }
+}
+
+/* ============================================
+   TOOLTIP - Hover Information
+   ============================================ */
+
+.saw-tooltip {
+    position: relative;
+    display: inline-block;
+}
+
+.saw-tooltip-text {
+    visibility: hidden;
+    opacity: 0;
+    position: absolute;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--color-text-primary);
+    color: white;
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    white-space: nowrap;
+    z-index: var(--z-tooltip);
+    transition: opacity var(--transition-fast);
+}
+
+.saw-tooltip:hover .saw-tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Tooltip arrow */
+.saw-tooltip-text::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: var(--color-text-primary) transparent transparent transparent;
+}

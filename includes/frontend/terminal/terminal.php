@@ -2114,19 +2114,80 @@ private function handle_training_additional_complete() {
      * @return void
      */
     private function enqueue_assets() {
-        wp_enqueue_style(
-            'saw-terminal',
-            SAW_VISITORS_PLUGIN_URL . 'includes/frontend/terminal/terminal.css',
-            [],
-            SAW_VISITORS_VERSION
-        );
-        
-        wp_enqueue_script(
-            'saw-terminal',
-            SAW_VISITORS_PLUGIN_URL . 'includes/frontend/terminal/terminal.js',
-            ['jquery'],
-            SAW_VISITORS_VERSION,
-            true
-        );
-    }
+    $css_dir = SAW_VISITORS_PLUGIN_URL . 'includes/frontend/terminal/assets/css/';
+    $js_dir = SAW_VISITORS_PLUGIN_URL . 'includes/frontend/terminal/assets/js/';
+    
+    // CSS - Base (first, contains variables)
+    wp_enqueue_style(
+        'saw-terminal-base',
+        $css_dir . 'terminal-base.css',
+        array(),
+        '3.0.0'
+    );
+    
+    // CSS - Layout (depends on base)
+    wp_enqueue_style(
+        'saw-terminal-layout',
+        $css_dir . 'terminal-layout.css',
+        array('saw-terminal-base'),
+        '3.0.0'
+    );
+    
+    // CSS - Components (depends on base)
+    wp_enqueue_style(
+        'saw-terminal-components',
+        $css_dir . 'terminal-components.css',
+        array('saw-terminal-base'),
+        '3.0.0'
+    );
+    
+    // CSS - Training (depends on all)
+    wp_enqueue_style(
+        'saw-terminal-training',
+        $css_dir . 'terminal-training.css',
+        array('saw-terminal-base', 'saw-terminal-layout', 'saw-terminal-components'),
+        '3.0.0'
+    );
+    
+    // CSS - Old terminal.css (fallback compatibility)
+    wp_enqueue_style(
+        'saw-terminal',
+        SAW_VISITORS_PLUGIN_URL . 'includes/frontend/terminal/terminal.css',
+        array(),
+        SAW_VISITORS_VERSION
+    );
+    
+    // JavaScript
+    wp_enqueue_script('jquery');
+    
+    // Touch gestures (dependency for PDF viewer)
+    wp_enqueue_script(
+        'saw-touch-gestures',
+        $js_dir . 'touch-gestures.js',
+        array(),
+        '3.0.0',
+        true
+    );
+    
+    // PDF viewer (depends on touch-gestures)
+    wp_enqueue_script(
+        'saw-pdf-viewer',
+        $js_dir . 'pdf-viewer.js',
+        array('saw-touch-gestures'),
+        '3.0.0',
+        true
+    );
+
+    //YOUTUBE / VIMEO VIDEO
+	wp_enqueue_script('saw-video-player', $js_dir . 'video-player.js', array(), '3.0.0', true);
+    
+    // Old terminal.js
+    wp_enqueue_script(
+        'saw-terminal',
+        SAW_VISITORS_PLUGIN_URL . 'includes/frontend/terminal/terminal.js',
+        array('jquery'),
+        SAW_VISITORS_VERSION,
+        true
+    );
+}
 }
