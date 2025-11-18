@@ -8,7 +8,7 @@
  *
  * @package    SAW_Visitors
  * @subpackage Base
- * @version    7.1.0 - FINAL: Fixed Branch Scope for Branches Module
+ * @version    8.1.0 - FINAL FIX: Timestamp-based Transients for Cache Versioning
  * @since      1.0.0
  */
 
@@ -346,16 +346,8 @@ abstract class SAW_Base_Model
     }
 
     // =========================================================================
-    // 🔥 APPLY DATA SCOPE - FINAL LOGIC WITH BRANCHES FIX
+    // 🔥 APPLY DATA SCOPE
     // =========================================================================
-    /**
-     * Apply data scope filtering
-     *
-     * Filters query based on user's role and scope permissions.
-     *
-     * @since 1.0.0
-     * @return array [sql_where, params]
-     */
     protected function apply_data_scope() {
         if (!is_user_logged_in()) return ['', []];
         
@@ -363,14 +355,11 @@ abstract class SAW_Base_Model
         $role = $this->get_current_user_role();
         $user_id = get_current_user_id();
 
-        // Auto-detect features
         $is_users_table = (strpos($this->table, 'saw_users') !== false);
-        // ✅ FIX: Robustní detekce tabulky poboček (entity name OR table name)
         $is_branches_table = ($this->config['entity'] === 'branches' || strpos($this->table, 'saw_branches') !== false);
         
         $allow_global = !empty($this->config['allow_global_in_branch_view']) || $is_users_table;
 
-        // 1. ZÍSKÁNÍ KONTEXTU PŘÍMO Z DB
         $user_ctx = $wpdb->get_row($wpdb->prepare(
             "SELECT customer_id, branch_id, context_customer_id, context_branch_id FROM {$wpdb->prefix}saw_users WHERE wp_user_id = %d",
             $user_id
@@ -379,7 +368,6 @@ abstract class SAW_Base_Model
         $sql_where = "";
         $params = [];
 
-        // 2. LOGIKA PRO ADMINA A SUPER ADMINA (SWITCHER)
         if ($role === 'super_admin' || $role === 'admin') {
             $active_customer_id = 0;
             $active_branch_id = 0;
@@ -390,16 +378,12 @@ abstract class SAW_Base_Model
                 } else {
                     $active_customer_id = (int)($user_ctx['customer_id'] ?? 0);
                 }
-                
                 $active_branch_id = (int)($user_ctx['context_branch_id'] ?? 0);
-            } 
-            elseif ($role === 'super_admin') {
-                // Fallback meta
+            } elseif ($role === 'super_admin') {
                 $active_customer_id = (int) get_user_meta($user_id, 'saw_context_customer_id', true);
                 $active_branch_id = (int) get_user_meta($user_id, 'saw_context_branch_id', true);
             }
 
-            // A) Filtr Zákazníka
             if ($this->table_has_column('customer_id') && $active_customer_id > 0) {
                 if ($role === 'super_admin' && $is_users_table) {
                     $sql_where .= " AND (customer_id = %d OR customer_id IS NULL)";
@@ -409,10 +393,8 @@ abstract class SAW_Base_Model
                 $params[] = $active_customer_id;
             }
 
-            // B) Filtr Pobočky
             if ($active_branch_id > 0) {
                 if ($is_branches_table) {
-                    // ✅ Pokud jsme v modulu poboček, filtrujeme podle ID
                     $sql_where .= " AND id = %d";
                     $params[] = $active_branch_id;
                 } elseif ($this->table_has_column('branch_id')) {
@@ -428,7 +410,6 @@ abstract class SAW_Base_Model
             return [$sql_where, $params];
         }
 
-        // 3. LOGIKA PRO OSTATNÍ ROLE (Manager, SuperManager)
         if (!class_exists('SAW_Permissions')) return ['', []];
         
         $permission = SAW_Permissions::get_permission($role, $this->config['entity'], 'list');
@@ -436,12 +417,9 @@ abstract class SAW_Base_Model
 
         switch ($permission['scope']) {
             case 'branch':
-                // Super Manager -> Pevná pobočka
                 $fixed_branch = (int)($user_ctx['branch_id'] ?? 0);
-                
                 if ($fixed_branch) {
                     if ($is_branches_table) {
-                        // ✅ FIX: Super Manager vidí v seznamu poboček jen tu svou
                         $sql_where .= " AND id = %d";
                         $params[] = $fixed_branch;
                     } elseif ($this->table_has_column('branch_id')) {
@@ -453,7 +431,6 @@ abstract class SAW_Base_Model
                         $params[] = $fixed_branch;
                     }
                 } else {
-                    // Nemá pobočku -> nic, nebo jen globální
                     if ($allow_global && $this->table_has_column('branch_id')) {
                         $sql_where .= " AND branch_id IS NULL";
                     } else {
@@ -463,7 +440,6 @@ abstract class SAW_Base_Model
                 break;
                 
             case 'department':
-                // Manager
                 if ($this->table_has_column('department_id')) {
                     $dids = $this->get_current_department_ids();
                     if (!empty($dids)) {
@@ -477,7 +453,6 @@ abstract class SAW_Base_Model
                 break;
                 
             case 'own':
-                // Terminal
                 if ($this->table_has_column('created_by')) { $sql_where .= " AND created_by = %d"; $params[] = $user_id; }
                 elseif ($this->table_has_column('user_id')) { $sql_where .= " AND user_id = %d"; $params[] = $user_id; }
                 elseif ($this->table_has_column('wp_user_id')) { $sql_where .= " AND wp_user_id = %d"; $params[] = $user_id; }
@@ -488,7 +463,7 @@ abstract class SAW_Base_Model
     }
     
     // =========================================================================
-    // CACHE KEYS
+    // 🔥 CACHE VERSIONING - FIXED FOR OBJECT CACHE
     // =========================================================================
     protected function get_cache_key_with_scope($type, $identifier = '') {
         $key = 'saw_' . $this->config['entity'] . '_' . $type;
@@ -510,7 +485,11 @@ abstract class SAW_Base_Model
         if (is_array($identifier)) $key .= '_' . md5(serialize($identifier));
         elseif ($identifier) $key .= '_' . $identifier;
         
-        $v = get_option('saw_' . $this->config['entity'] . '_cache_version', 1);
+        // 🔥 FIX: Použití transientu s časovým razítkem místo options
+        $version_key = 'saw_' . $this->config['entity'] . '_cache_version';
+        $v = get_transient($version_key);
+        if (!$v) $v = time(); // Pokud verze neexistuje, generuj novou
+        
         return $key . '_v' . $v;
     }
 
@@ -572,10 +551,31 @@ abstract class SAW_Base_Model
         return set_transient($key, $data, $ttl);
     }
     
+    /**
+     * Invalidate cache with HARD FLUSH and TIMESTAMP VERSIONING
+     *
+     * Updates transient version (instant) AND physically removes old DB entries.
+     *
+     * @since 8.1.0
+     */
     protected function invalidate_cache() {
+        // 1. 🔥 Update TIMESTAMP transient (okamžitá změna verze v RAM/Redis)
         $version_key = 'saw_' . $this->config['entity'] . '_cache_version';
-        $version = get_option($version_key, 1);
-        update_option($version_key, $version + 1);
+        set_transient($version_key, time(), 0);
+        
+        // 2. Flush Object Cache Group (pokud je podporováno)
         wp_cache_flush_group('saw_' . $this->config['entity']);
+        
+        // 3. HARD DELETE: Remove persistent transients from DB (pro jistotu)
+        global $wpdb;
+        $entity_key = 'saw_' . $this->config['entity'];
+        
+        $wpdb->query($wpdb->prepare(
+            "DELETE FROM {$wpdb->options} 
+             WHERE option_name LIKE %s 
+             OR option_name LIKE %s",
+            '_transient_' . $wpdb->esc_like($entity_key) . '_%',
+            '_transient_timeout_' . $wpdb->esc_like($entity_key) . '_%'
+        ));
     }
 }

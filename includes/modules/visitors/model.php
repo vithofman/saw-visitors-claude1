@@ -1,10 +1,9 @@
 <?php
 /**
  * Visitors Module Model
- * 
- * @package     SAW_Visitors
+ * * @package     SAW_Visitors
  * @subpackage  Modules/Visitors
- * @version     2.0.0 - REFACTORED: Daily check-in/out, first/last tracking
+ * @version     2.4.0 - STANDARD: Uses Base Model Hard Flush
  */
 
 if (!defined('ABSPATH')) {
@@ -47,17 +46,22 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
     }
     
     /**
-     * Get visitor by ID with cache
+     * Get visitor by ID (Cached)
      */
     public function get_by_id($id) {
-        $cache_key = sprintf('saw_visitors_item_%d', $id);
-        $item = get_transient($cache_key);
+        $cache_key = $this->get_cache_key('item', $id);
+        $item = $this->get_cache($cache_key);
         
         if ($item === false) {
-            $item = parent::get_by_id($id);
+            global $wpdb;
+            $item = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM %i WHERE id = %d",
+                $this->table,
+                $id
+            ), ARRAY_A);
             
             if ($item) {
-                set_transient($cache_key, $item, $this->cache_ttl);
+                $this->set_cache($cache_key, $item);
             }
         }
         
@@ -65,7 +69,8 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
     }
     
     /**
-     * Get all visitors with filters (customer isolated via visits)
+     * Get all visitors (Cached)
+     * Relies on Base Model to hard-flush this cache on update
      */
     public function get_all($filters = array()) {
         global $wpdb;
@@ -76,13 +81,9 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
             return array('items' => array(), 'total' => 0);
         }
         
-        $cache_key = sprintf(
-            'saw_visitors_list_%d_%s',
-            $customer_id,
-            md5(serialize($filters))
-        );
+        $cache_key = $this->get_cache_key('list', array_merge(['cid' => $customer_id], $filters));
+        $cached = $this->get_cache($cache_key);
         
-        $cached = get_transient($cache_key);
         if ($cached !== false) {
             return $cached;
         }
@@ -158,279 +159,135 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
             'total_pages' => $per_page > 0 ? ceil($total / $per_page) : 0,
         );
         
-        set_transient($cache_key, $result, $this->cache_ttl);
+        $this->set_cache($cache_key, $result);
         
         return $result;
     }
     
     /**
-     * Create visitor and invalidate cache
+     * Create visitor
      */
     public function create($data) {
-        $result = parent::create($data);
-        
-        if (!is_wp_error($result)) {
-            $this->invalidate_list_cache();
-        }
-        
+        $result = parent::create($data); // Parent calls invalidate_cache()
         return $result;
     }
     
     /**
-     * Update visitor and invalidate cache
+     * Update visitor
      */
     public function update($id, $data) {
-        $result = parent::update($id, $data);
-        
-        if (!is_wp_error($result)) {
-            $this->invalidate_item_cache($id);
-            $this->invalidate_list_cache();
-        }
-        
+        $result = parent::update($id, $data); // Parent calls invalidate_cache()
         return $result;
     }
     
     /**
-     * Delete visitor and invalidate cache
+     * Delete visitor
      */
     public function delete($id) {
-        $result = parent::delete($id);
-        
-        if (!is_wp_error($result)) {
-            $this->invalidate_item_cache($id);
-            $this->invalidate_list_cache();
-        }
-        
+        $result = parent::delete($id); // Parent calls invalidate_cache()
         return $result;
     }
     
     // ============================================
-    // NEW METHODS - DAILY CHECK-IN/OUT
+    // CUSTOM ACTIONS - Must call invalidate_cache() manually
     // ============================================
     
-    /**
-     * Daily check-in
-     * Records visitor arrival for specific day
-     * 
-     * @param int $visitor_id Visitor ID
-     * @param string $log_date Date (Y-m-d), default today
-     * @return bool|WP_Error True on success
-     */
     public function daily_checkin($visitor_id, $log_date = null) {
         global $wpdb;
-        
-        if (!$log_date) {
-            $log_date = current_time('Y-m-d');
-        }
+        if (!$log_date) $log_date = current_time('Y-m-d');
         
         $visitor = $this->get_by_id($visitor_id);
-        
-        if (!$visitor) {
-            return new WP_Error('visitor_not_found', 'Visitor not found');
-        }
+        if (!$visitor) return new WP_Error('visitor_not_found', 'Visitor not found');
         
         $visit_id = $visitor['visit_id'];
         
-        // Check if log exists for today
         $existing_log = $wpdb->get_row($wpdb->prepare(
             "SELECT * FROM %i WHERE visit_id = %d AND visitor_id = %d AND log_date = %s",
-            $wpdb->prefix . 'saw_visit_daily_logs',
-            $visit_id,
-            $visitor_id,
-            $log_date
+            $wpdb->prefix . 'saw_visit_daily_logs', $visit_id, $visitor_id, $log_date
         ), ARRAY_A);
         
         if ($existing_log) {
-    // ✅ OPRAVENO: Pokud už existuje log pro dnes, NEPŘEPISUJ ho
-    // Kontroluj jestli už není checked-out
-    if (!empty($existing_log['checked_out_at'])) {
-        // Už byl checked-out → vytvoř NOVÝ záznam pro další vstup
-        $result = $wpdb->insert(
-            $wpdb->prefix . 'saw_visit_daily_logs',
-            array(
-                'visit_id' => $visit_id,
-                'visitor_id' => $visitor_id,
-                'log_date' => $log_date,
-                'checked_in_at' => current_time('mysql'),
-            ),
-            array('%d', '%d', '%s', '%s')
-        );
-        
-        error_log("[SAW] Created NEW log entry for visitor #{$visitor_id} - re-entry after checkout");
-    } else {
-        // Ještě není checked-out → UPDATE check-in času (znovu přišel)
-        $result = $wpdb->update(
-            $wpdb->prefix . 'saw_visit_daily_logs',
-            array('checked_in_at' => current_time('mysql')),
-            array('id' => $existing_log['id']),
-            array('%s'),
-            array('%d')
-        );
-        
-        error_log("[SAW] Updated existing log entry for visitor #{$visitor_id} - updated check-in time");
-    }
-} else {
-            // Create new log
-            $result = $wpdb->insert(
-                $wpdb->prefix . 'saw_visit_daily_logs',
-                array(
-                    'visit_id' => $visit_id,
-                    'visitor_id' => $visitor_id,
-                    'log_date' => $log_date,
-                    'checked_in_at' => current_time('mysql'),
-                ),
-                array('%d', '%d', '%s', '%s')
-            );
+            if (!empty($existing_log['checked_out_at'])) {
+                $result = $wpdb->insert($wpdb->prefix . 'saw_visit_daily_logs', array(
+                    'visit_id' => $visit_id, 'visitor_id' => $visitor_id, 'log_date' => $log_date, 'checked_in_at' => current_time('mysql'),
+                ), array('%d', '%d', '%s', '%s'));
+            } else {
+                $result = $wpdb->update($wpdb->prefix . 'saw_visit_daily_logs', 
+                    array('checked_in_at' => current_time('mysql')), 
+                    array('id' => $existing_log['id']), array('%s'), array('%d'));
+            }
+        } else {
+            $result = $wpdb->insert($wpdb->prefix . 'saw_visit_daily_logs', array(
+                'visit_id' => $visit_id, 'visitor_id' => $visitor_id, 'log_date' => $log_date, 'checked_in_at' => current_time('mysql'),
+            ), array('%d', '%d', '%s', '%s'));
         }
         
-        if ($result === false) {
-            return new WP_Error('checkin_failed', 'Failed to record check-in');
-        }
+        if ($result === false) return new WP_Error('checkin_failed', 'Failed to record check-in');
         
-        // Update visitor's first_checkin_at if this is the first check-in
         if (empty($visitor['first_checkin_at'])) {
-            $wpdb->update(
-                $this->table,
-                array('first_checkin_at' => current_time('mysql')),
-                array('id' => $visitor_id),
-                array('%s'),
-                array('%d')
-            );
+            $wpdb->update($this->table, array('first_checkin_at' => current_time('mysql')), array('id' => $visitor_id), array('%s'), array('%d'));
         }
         
-        // Trigger visit started if needed
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/model.php';
         $visits_config = require SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/config.php';
         $visits_model = new SAW_Module_Visits_Model($visits_config);
         $visits_model->mark_as_started($visit_id);
         
-        $this->invalidate_item_cache($visitor_id);
+        // 🔥 CRITICAL: Hard flush via Base Model
+        $this->invalidate_cache();
         
         return true;
     }
     
-    /**
-     * Daily check-out
-     * Records visitor departure for specific day
-     * 
-     * @param int $visitor_id Visitor ID
-     * @param string $log_date Date (Y-m-d), default today
-     * @param bool $manual Is this manual checkout by admin?
-     * @param int|null $admin_id Admin user ID (if manual)
-     * @param string|null $reason Reason for manual checkout
-     * @return bool|WP_Error True on success
-     */
     public function daily_checkout($visitor_id, $log_date = null, $manual = false, $admin_id = null, $reason = null) {
-    global $wpdb;
-    
-    if (!$log_date) {
-        $log_date = current_time('Y-m-d');
+        global $wpdb;
+        if (!$log_date) $log_date = current_time('Y-m-d');
+        
+        $visitor = $this->get_by_id($visitor_id);
+        if (!$visitor) return new WP_Error('visitor_not_found', 'Visitor not found');
+        
+        $visit_id = $visitor['visit_id'];
+        
+        $log = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}saw_visit_daily_logs 
+             WHERE visit_id = %d AND visitor_id = %d AND log_date = %s
+             AND checked_in_at IS NOT NULL AND checked_out_at IS NULL
+             ORDER BY checked_in_at DESC LIMIT 1",
+            $visit_id, $visitor_id, $log_date
+        ), ARRAY_A);
+        
+        if (!$log) return new WP_Error('no_active_checkin', 'Návštěvník není momentálně přítomen');
+        
+        $update_data = array('checked_out_at' => current_time('mysql'));
+        if ($manual) {
+            $update_data['manual_checkout'] = 1;
+            $update_data['manual_checkout_by'] = $admin_id;
+            $update_data['manual_checkout_reason'] = $reason;
+        }
+        
+        $result = $wpdb->update($wpdb->prefix . 'saw_visit_daily_logs', $update_data, array('id' => $log['id']), array_fill(0, count($update_data), '%s'), array('%d'));
+        
+        if ($result === false) return new WP_Error('checkout_failed', 'Failed to record check-out');
+        
+        $wpdb->update($this->table, array('last_checkout_at' => current_time('mysql')), array('id' => $visitor_id), array('%s'), array('%d'));
+        
+        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/model.php';
+        $visits_config = require SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/config.php';
+        $visits_model = new SAW_Module_Visits_Model($visits_config);
+        $visits_model->check_and_complete_visit($visit_id);
+        
+        // 🔥 CRITICAL: Hard flush via Base Model
+        $this->invalidate_cache();
+        
+        return true;
     }
     
-    // ✅ OPRAVENO: Přímý SQL query místo get_by_id (kvůli customer isolation)
-    $visitor = $wpdb->get_row($wpdb->prepare(
-        "SELECT * FROM {$wpdb->prefix}saw_visitors WHERE id = %d",
-        $visitor_id
-    ), ARRAY_A);
-    
-    if (!$visitor) {
-        error_log("[SAW Checkout] ERROR: Visitor ID {$visitor_id} not found in database");
-        return new WP_Error('visitor_not_found', 'Visitor not found');
-    }
-    
-    error_log("[SAW Checkout] Visitor found: {$visitor['first_name']} {$visitor['last_name']}");
-    
-    $visit_id = $visitor['visit_id'];
-    
-    // Find today's log
-    $log = $wpdb->get_row($wpdb->prepare(
-    "SELECT * FROM {$wpdb->prefix}saw_visit_daily_logs 
-     WHERE visit_id = %d 
-     AND visitor_id = %d 
-     AND log_date = %s
-     AND checked_in_at IS NOT NULL
-     AND checked_out_at IS NULL
-     ORDER BY checked_in_at DESC
-     LIMIT 1",
-    $visit_id,
-    $visitor_id,
-    $log_date
-), ARRAY_A);
-    
-    if (!$log) {
-    error_log("[SAW Checkout] ERROR: No active check-in found for date {$log_date}");
-    return new WP_Error('no_active_checkin', 'Návštěvník není momentálně přítomen');
-}
-    
-    // Update log with checkout
-    $update_data = array(
-        'checked_out_at' => current_time('mysql'),
-    );
-    
-    if ($manual) {
-        $update_data['manual_checkout'] = 1;
-        $update_data['manual_checkout_by'] = $admin_id;
-        $update_data['manual_checkout_reason'] = $reason;
-    }
-    
-    $result = $wpdb->update(
-        $wpdb->prefix . 'saw_visit_daily_logs',
-        $update_data,
-        array('id' => $log['id']),
-        array_fill(0, count($update_data), '%s'),
-        array('%d')
-    );
-    
-    if ($result === false) {
-        error_log("[SAW Checkout] ERROR: Failed to update daily log");
-        return new WP_Error('checkout_failed', 'Failed to record check-out');
-    }
-    
-    // Update visitor's last_checkout_at
-    $wpdb->update(
-        $this->table,
-        array('last_checkout_at' => current_time('mysql')),
-        array('id' => $visitor_id),
-        array('%s'),
-        array('%d')
-    );
-    
-    error_log("[SAW Checkout] SUCCESS: Visitor {$visitor_id} checked out");
-    
-    // Check if visit should be completed
-    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/model.php';
-    $visits_config = require SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/config.php';
-    $visits_model = new SAW_Module_Visits_Model($visits_config);
-    $visits_model->check_and_complete_visit($visit_id);
-    
-    $this->invalidate_item_cache($visitor_id);
-    
-    return true;
-}
-    
-    /**
-     * Add ad-hoc visitor
-     * Creates visitor on-the-fly (e.g., someone unplanned shows up)
-     * 
-     * @param int $visit_id Visit ID
-     * @param array $visitor_data Visitor data
-     * @return int|WP_Error Visitor ID or error
-     */
     public function add_adhoc_visitor($visit_id, $visitor_data) {
         global $wpdb;
         
-        // Verify visit exists
-        $visit = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM %i WHERE id = %d",
-            $wpdb->prefix . 'saw_visits',
-            $visit_id
-        ), ARRAY_A);
+        $visit = $wpdb->get_row($wpdb->prepare("SELECT * FROM %i WHERE id = %d", $wpdb->prefix . 'saw_visits', $visit_id), ARRAY_A);
+        if (!$visit) return new WP_Error('visit_not_found', 'Visit not found');
         
-        if (!$visit) {
-            return new WP_Error('visit_not_found', 'Visit not found');
-        }
-        
-        // Create visitor
         $data = array(
             'visit_id' => $visit_id,
             'first_name' => sanitize_text_field($visitor_data['first_name']),
@@ -438,158 +295,79 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
             'position' => !empty($visitor_data['position']) ? sanitize_text_field($visitor_data['position']) : null,
             'email' => !empty($visitor_data['email']) ? sanitize_email($visitor_data['email']) : null,
             'phone' => !empty($visitor_data['phone']) ? sanitize_text_field($visitor_data['phone']) : null,
-            'participation_status' => 'confirmed', // Ad-hoc is confirmed
+            'participation_status' => 'confirmed',
             'training_skipped' => !empty($visitor_data['training_skipped']) ? 1 : 0,
         );
         
-        $result = $wpdb->insert(
-            $this->table,
-            $data,
-            array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%d')
-        );
+        $result = $wpdb->insert($this->table, $data, array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%d'));
+        if (!$result) return new WP_Error('insert_failed', 'Failed to create ad-hoc visitor');
         
-        if (!$result) {
-            return new WP_Error('insert_failed', 'Failed to create ad-hoc visitor');
-        }
-        
-        $this->invalidate_list_cache();
+        // 🔥 CRITICAL: Hard flush via Base Model
+        $this->invalidate_cache();
         
         return $wpdb->insert_id;
     }
     
     // ============================================
-    // EXISTING METHODS - CERTIFICATES & DATA
+    // HELPERS
     // ============================================
     
-    /**
-     * Get certificates for visitor
-     */
     public function get_certificates($visitor_id) {
         global $wpdb;
-        
         return $wpdb->get_results($wpdb->prepare(
             "SELECT * FROM %i WHERE visitor_id = %d ORDER BY created_at DESC",
-            $wpdb->prefix . 'saw_visitor_certificates',
-            $visitor_id
+            $wpdb->prefix . 'saw_visitor_certificates', $visitor_id
         ), ARRAY_A);
     }
     
-    /**
-     * Save certificates for visitor
-     */
     public function save_certificates($visitor_id, $certificates_data) {
         global $wpdb;
+        $wpdb->delete($wpdb->prefix . 'saw_visitor_certificates', array('visitor_id' => $visitor_id));
+        if (empty($certificates_data) || !is_array($certificates_data)) return true;
         
-        // Delete existing certificates
-        $wpdb->delete(
-            $wpdb->prefix . 'saw_visitor_certificates',
-            array('visitor_id' => $visitor_id)
-        );
-        
-        if (empty($certificates_data) || !is_array($certificates_data)) {
-            return true;
-        }
-        
-        // Insert new certificates
         foreach ($certificates_data as $cert) {
-            if (empty($cert['certificate_name'])) {
-                continue;
-            }
-            
-            $wpdb->insert(
-                $wpdb->prefix . 'saw_visitor_certificates',
-                array(
-                    'visitor_id' => $visitor_id,
-                    'certificate_name' => sanitize_text_field($cert['certificate_name']),
-                    'certificate_number' => !empty($cert['certificate_number']) ? sanitize_text_field($cert['certificate_number']) : null,
-                    'valid_until' => !empty($cert['valid_until']) ? sanitize_text_field($cert['valid_until']) : null,
-                ),
-                array('%d', '%s', '%s', '%s')
-            );
+            if (empty($cert['certificate_name'])) continue;
+            $wpdb->insert($wpdb->prefix . 'saw_visitor_certificates', array(
+                'visitor_id' => $visitor_id,
+                'certificate_name' => sanitize_text_field($cert['certificate_name']),
+                'certificate_number' => !empty($cert['certificate_number']) ? sanitize_text_field($cert['certificate_number']) : null,
+                'valid_until' => !empty($cert['valid_until']) ? sanitize_text_field($cert['valid_until']) : null,
+            ), array('%d', '%s', '%s', '%s'));
         }
-        
         return true;
     }
     
-    /**
-     * Get daily logs for visitor
-     */
     public function get_daily_logs($visitor_id) {
         global $wpdb;
-        
         return $wpdb->get_results($wpdb->prepare(
             "SELECT * FROM %i WHERE visitor_id = %d ORDER BY log_date DESC",
-            $wpdb->prefix . 'saw_visit_daily_logs',
-            $visitor_id
+            $wpdb->prefix . 'saw_visit_daily_logs', $visitor_id
         ), ARRAY_A);
     }
     
-    /**
-     * Get visit data for visitor
-     */
     public function get_visit_data($visit_id) {
         global $wpdb;
-        
         return $wpdb->get_row($wpdb->prepare(
             "SELECT v.*, c.name as company_name, b.name as branch_name
              FROM %i v
              LEFT JOIN %i c ON v.company_id = c.id
              LEFT JOIN %i b ON v.branch_id = b.id
              WHERE v.id = %d",
-            $wpdb->prefix . 'saw_visits',
-            $wpdb->prefix . 'saw_companies',
-            $wpdb->prefix . 'saw_branches',
-            $visit_id
+            $wpdb->prefix . 'saw_visits', $wpdb->prefix . 'saw_companies', $wpdb->prefix . 'saw_branches', $visit_id
         ), ARRAY_A);
     }
     
-    /**
-     * Get all visits for select dropdown (customer isolated)
-     */
     public function get_visits_for_select() {
         global $wpdb;
-        
         $customer_id = SAW_Context::get_customer_id();
-        
-        if (!$customer_id) {
-            return array();
-        }
-        
+        if (!$customer_id) return array();
         return $wpdb->get_results($wpdb->prepare(
             "SELECT v.id, c.name as company_name, v.status
              FROM %i v
              LEFT JOIN %i c ON v.company_id = c.id
              WHERE v.customer_id = %d
-             ORDER BY v.created_at DESC
-             LIMIT 100",
-            $wpdb->prefix . 'saw_visits',
-            $wpdb->prefix . 'saw_companies',
-            $customer_id
+             ORDER BY v.created_at DESC LIMIT 100",
+            $wpdb->prefix . 'saw_visits', $wpdb->prefix . 'saw_companies', $customer_id
         ), ARRAY_A);
-    }
-    
-    // ============================================
-    // CACHE INVALIDATION
-    // ============================================
-    
-    /**
-     * Invalidate single item cache
-     */
-    private function invalidate_item_cache($id) {
-        $cache_key = sprintf('saw_visitors_item_%d', $id);
-        delete_transient($cache_key);
-    }
-    
-    /**
-     * Invalidate list cache
-     */
-    private function invalidate_list_cache() {
-        global $wpdb;
-        
-        $wpdb->query(
-            "DELETE FROM {$wpdb->options} 
-             WHERE option_name LIKE '_transient_saw_visitors_list_%' 
-             OR option_name LIKE '_transient_timeout_saw_visitors_list_%'"
-        );
     }
 }

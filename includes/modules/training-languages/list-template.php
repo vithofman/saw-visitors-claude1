@@ -1,164 +1,127 @@
 <?php
 /**
  * Training Languages List Template
- * 
+ *
  * @package SAW_Visitors
- * @version 2.1.0
+ * @version 3.1.0 - FIXED: Added Title + URLs for Sidebar/Edit/Create
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-if (!class_exists('SAW_Component_Search')) {
-    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/search/class-saw-component-search.php';
-}
+// 1. Příprava konfigurace pro tabulku
+$table_config = $config; // Načte základ z config.php
 
-if (!class_exists('SAW_Component_Admin_Table')) {
-    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/class-saw-component-admin-table.php';
-}
+// 2. 🔥 CRITICAL: Doplnění URL adres a Nadpisu pro komponentu
+$base_url = home_url('/admin/' . ($config['route'] ?? 'training-languages'));
 
-if (!class_exists('SAW_Component_Modal')) {
-    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/modal/class-saw-component-modal.php';
-}
+$table_config['title']      = $config['plural']; // Nadpis (Jazyky školení)
+$table_config['create_url'] = $base_url . '/create'; // Tlačítko "Přidat nový"
+$table_config['detail_url'] = $base_url . '/{id}/'; // Kliknutí na řádek (Sidebar)
+$table_config['edit_url']   = $base_url . '/{id}/edit'; // Tlačítko Edit (Tužka)
 
-// Prepare search component
-ob_start();
-$search_component = new SAW_Component_Search('training_languages', array(
-    'placeholder' => 'Hledat jazyk...',
-    'search_value' => $search,
-    'ajax_enabled' => false,
-    'ajax_action' => 'saw_search_training_languages',
-    'show_button' => true,
-    'show_info_banner' => true,
-    'info_banner_label' => 'Vyhledávání:',
-    'clear_url' => home_url('/admin/training-languages/'),
-));
-$search_component->render();
-$search_html = ob_get_clean();
-
-// No filters
-$filters_html = '';
-
-// Initialize admin table
-$table = new SAW_Component_Admin_Table('training_languages', [
-    'title' => 'Jazyky školení',
-    'icon' => '🌐',
-    'create_url' => home_url('/admin/training-languages/new/'),
-    'edit_url' => home_url('/admin/training-languages/edit/{id}/'),
-    
-    'columns' => [
-        'flag_emoji' => [
-            'label' => 'Vlajka',
-            'type' => 'custom',
-            'width' => '80px',
-            'align' => 'center',
-            'callback' => function($value) {
-                return '<span style="font-size: 32px;">' . esc_html($value) . '</span>';
-            }
-        ],
-        'language_name' => [
-            'label' => 'Název jazyka',
-            'type' => 'custom',
-            'sortable' => true,
-            'callback' => function($value, $item) {
-                $is_protected = ($item['language_code'] === 'cs');
-                $html = '<strong>' . esc_html($value) . '</strong>';
-                if ($is_protected) {
-                    $html .= ' <span class="saw-badge saw-badge-info saw-badge-sm">Povinný</span>';
-                }
-                return $html;
-            }
-        ],
-        'language_code' => [
-            'label' => 'Kód',
-            'type' => 'custom',
-            'width' => '100px',
-            'sortable' => true,
-            'callback' => function($value) {
-                return '<span class="saw-code-badge">' . esc_html($value) . '</span>';
-            }
-        ],
-        'branches_count' => [
-            'label' => 'Aktivní pobočky',
-            'type' => 'custom',
-            'align' => 'center',
-            'width' => '150px',
-            'callback' => function($value) {
-                $count = intval($value);
-                if ($count > 0) {
-                    $label = $count === 1 ? 'pobočka' : 'poboček';
-                    return '<span class="saw-badge saw-badge-success">' . $count . ' ' . $label . '</span>';
-                } else {
-                    return '<span class="saw-badge saw-badge-secondary">0 poboček</span>';
-                }
-            }
-        ],
-        'created_at' => [
-            'label' => 'Vytvořeno',
-            'type' => 'date',
-            'format' => 'd.m.Y'
-        ]
-    ],
-    
-    'rows' => $items,
-    'total_items' => $total,
-    'current_page' => $page,
-    'total_pages' => $total_pages,
-    'orderby' => $orderby,
-    'order' => $order,
-    'search' => $search_html,
-    'filters' => $filters_html,
-    'actions' => ['edit', 'delete'],
-    'empty_message' => 'Žádné jazyky nenalezeny',
-    'add_new' => 'Nový jazyk',
-    
-    'enable_modal' => true,
-    'modal_id' => 'training-language-detail',
-    'modal_ajax_action' => 'saw_get_training_languages_detail',
-    
-    'row_data_attributes' => function($item) {
-        $is_protected = ($item['language_code'] === 'cs');
-        return [
-            'data-protected' => $is_protected ? '1' : '0'
-        ];
-    },
-    
-    'row_actions_filter' => function($actions, $item) {
-        $is_protected = ($item['language_code'] === 'cs');
-        if ($is_protected) {
-            unset($actions['delete']);
+// 3. Konfigurace sloupců
+$table_config['columns'] = [
+    'flag_emoji' => [
+        'label' => 'Vlajka',
+        'type' => 'custom',
+        'width' => '60px',
+        'align' => 'center',
+        'callback' => function($value) {
+            return '<span style="font-size: 24px;">' . esc_html($value) . '</span>';
         }
-        return $actions;
-    }
-]);
+    ],
+    'language_name' => [
+        'label' => 'Název jazyka',
+        'type' => 'custom',
+        'sortable' => true,
+        'class' => 'saw-table-cell-bold',
+        'callback' => function($value, $item) {
+            $html = esc_html($value);
+            // Check for Czech (protected)
+            if (($item['language_code'] ?? '') === 'cs') {
+                $html .= ' <span class="saw-badge saw-badge-info">Povinný</span>';
+            }
+            return $html;
+        }
+    ],
+    'language_code' => [
+        'label' => 'Kód',
+        'type' => 'custom',
+        'width' => '80px',
+        'align' => 'center',
+        'sortable' => true,
+        'callback' => function($value) {
+            return '<code style="background:#f1f5f9; padding:2px 6px; border-radius:4px; font-weight:600; color:#475569;">' . esc_html(strtoupper($value)) . '</code>';
+        }
+    ],
+    'branches_count' => [
+        'label' => 'Aktivní pobočky',
+        'type' => 'custom',
+        'align' => 'center',
+        'width' => '150px',
+        'callback' => function($value) {
+            $count = intval($value);
+            if ($count > 0) {
+                return '<span class="saw-badge saw-badge-success">' . $count . '</span>';
+            } else {
+                return '<span class="saw-text-muted" style="color:#cbd5e1;">—</span>';
+            }
+        }
+    ],
+    'created_at' => [
+        'label' => 'Vytvořeno',
+        'type' => 'date',
+        'width' => '120px',
+        'sortable' => true,
+        'format' => 'd.m.Y'
+    ]
+];
 
+// 4. Data a stránkování
+$table_config['rows'] = $items;
+$table_config['total_items'] = $total;
+$table_config['current_page'] = $page;
+$table_config['total_pages'] = $total_pages;
+$table_config['search_value'] = $search;
+$table_config['orderby'] = $orderby;
+$table_config['order'] = $order;
+
+// 5. Zapnutí funkcí
+$table_config['enable_search'] = true;
+$table_config['search_placeholder'] = 'Hledat jazyk...';
+$table_config['enable_filters'] = false; // Zatím žádné filtry nejsou potřeba
+
+// 6. Sidebar kontext (předává se z controlleru)
+$table_config['sidebar_mode'] = $sidebar_mode;
+$table_config['detail_item'] = $detail_item ?? null;
+$table_config['form_item'] = $form_item ?? null;
+$table_config['detail_tab'] = $detail_tab;
+$table_config['module_config'] = $config; 
+
+// 7. Akce v tabulce
+$table_config['actions'] = ['view', 'edit', 'delete'];
+$table_config['add_new'] = 'Nový jazyk';
+
+// 8. Renderování
+$table = new SAW_Component_Admin_Table($entity, $table_config);
 $table->render();
+?>
 
-// Modal component
-$language_modal = new SAW_Component_Modal('training-language-detail', array(
-    'title' => 'Detail jazyka',
-    'ajax_enabled' => true,
-    'ajax_action' => 'saw_get_training_languages_detail',
-    'size' => 'large',
-    'show_close' => true,
-    'close_on_backdrop' => true,
-    'close_on_escape' => true,
-    'header_actions' => array(
-        array(
-            'type' => 'edit',
-            'label' => '',
-            'icon' => 'dashicons-edit',
-            'url' => home_url('/admin/training-languages/edit/{id}/'),
-        ),
-        array(
-            'type' => 'delete',
-            'label' => '',
-            'icon' => 'dashicons-trash',
-            'confirm' => true,
-            'confirm_message' => 'Opravdu chcete smazat tento jazyk?',
-            'ajax_action' => 'saw_delete_training_languages',
-        ),
-    ),
-));
-$language_modal->render();
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    jQuery(document).on('click', '.saw-action-delete', function(e) {
+        const row = jQuery(this).closest('tr');
+        // Hledáme buňku s kódem (3. sloupec)
+        const codeCell = row.find('td:nth-child(3)').text().trim().toLowerCase();
+        
+        if (codeCell === 'cs') {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            alert('Češtinu nelze smazat, je to výchozí jazyk systému.');
+            return false;
+        }
+    });
+});
+</script>

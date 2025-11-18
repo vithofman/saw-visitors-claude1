@@ -1,9 +1,10 @@
 <?php
 /**
- * Training Languages Model - REFACTORED
- * 
- * @package SAW_Visitors
- * @version 2.0.0
+ * Training Languages Model
+ *
+ * @package    SAW_Visitors
+ * @subpackage Modules/TrainingLanguages
+ * @version    3.7.0 - FINAL ROBUST FIX
  */
 
 if (!defined('ABSPATH')) {
@@ -20,287 +21,205 @@ class SAW_Module_Training_Languages_Model extends SAW_Base_Model
         $this->table = $wpdb->prefix . $config['table'];
         $this->branches_table = $wpdb->prefix . 'saw_training_language_branches';
         $this->config = $config;
-        $this->cache_ttl = $config['cache']['ttl'] ?? 1800;
+        $this->cache_ttl = $config['cache']['ttl'] ?? 3600;
     }
     
-    /**
-     * Validate data
-     */
     public function validate($data, $id = 0) {
         $errors = [];
-        
-        if (empty($data['language_code'])) {
-            $errors['language_code'] = 'Kód jazyka je povinný';
-        }
-        
-        if (empty($data['language_name'])) {
-            $errors['language_name'] = 'Název jazyka je povinný';
-        }
-        
-        if (empty($data['flag_emoji'])) {
-            $errors['flag_emoji'] = 'Vlajka je povinná';
-        }
+        if (empty($data['language_code'])) $errors['language_code'] = 'Kód jazyka je povinný';
+        if (empty($data['language_name'])) $errors['language_name'] = 'Název jazyka je povinný';
+        if (empty($data['flag_emoji'])) $errors['flag_emoji'] = 'Vlajka je povinná';
         
         $customer_id = !empty($data['customer_id']) ? $data['customer_id'] : SAW_Context::get_customer_id();
-        
         if (!empty($data['language_code']) && $this->code_exists($data['language_code'], $id, $customer_id)) {
             $errors['language_code'] = 'Jazyk s tímto kódem již existuje';
         }
-        
         return empty($errors) ? true : new WP_Error('validation_error', 'Validace selhala', $errors);
     }
     
-    /**
-     * Check if language code exists for customer
-     */
     private function code_exists($code, $exclude_id = 0, $customer_id = 0) {
         global $wpdb;
-        
-        if (empty($code)) {
-            return false;
-        }
-        
-        $query = $wpdb->prepare(
+        return (bool) $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$this->table} WHERE language_code = %s AND customer_id = %d AND id != %d",
-            $code,
-            $customer_id,
-            $exclude_id
-        );
-        
-        return (bool) $wpdb->get_var($query);
+            $code, $customer_id, $exclude_id
+        ));
     }
     
-    /**
-     * Get all - NO CACHE, with branches count
-     */
+    // Helper: Check physical existence to prevent FK errors
+    public function exists($id) {
+        global $wpdb;
+        return (bool) $wpdb->get_var($wpdb->prepare("SELECT id FROM {$this->table} WHERE id = %d", $id));
+    }
+    
     public function get_all($filters = []) {
         global $wpdb;
-        
         $customer_id = SAW_Context::get_customer_id();
+        if (!$customer_id) return ['items' => [], 'total' => 0];
         
-        if (!isset($filters['customer_id'])) {
-            $filters['customer_id'] = $customer_id;
-        }
+        // Direct DB query for consistency (No Cache for List)
+        $sql = "SELECT l.*, 
+                COUNT(CASE WHEN lb.is_active = 1 THEN 1 END) as branches_count
+                FROM {$this->table} l
+                LEFT JOIN {$this->branches_table} lb ON l.id = lb.language_id
+                WHERE l.customer_id = %d";
+        $params = [$customer_id];
         
-        // Base WHERE
-        $where = ['1=1'];
-        $params = [];
-        
-        // Customer filter
-        if (!empty($filters['customer_id'])) {
-            $where[] = 'l.customer_id = %d';
-            $params[] = intval($filters['customer_id']);
-        }
-        
-        // Search
         if (!empty($filters['search'])) {
-            $where[] = '(l.language_name LIKE %s OR l.language_code LIKE %s)';
+            $sql .= " AND (l.language_name LIKE %s OR l.language_code LIKE %s)";
             $search_term = '%' . $wpdb->esc_like($filters['search']) . '%';
             $params[] = $search_term;
             $params[] = $search_term;
         }
         
-        // ORDER BY
-        $orderby = !empty($filters['orderby']) ? sanitize_text_field($filters['orderby']) : 'language_name';
-        $order = !empty($filters['order']) && strtoupper($filters['order']) === 'DESC' ? 'DESC' : 'ASC';
+        $sql .= " GROUP BY l.id";
+        $orderby = $filters['orderby'] ?? 'language_name';
+        $order = strtoupper($filters['order'] ?? 'ASC') === 'DESC' ? 'DESC' : 'ASC';
+        $allowed = ['language_name', 'language_code', 'created_at', 'branches_count'];
+        if (!in_array($orderby, $allowed)) $orderby = 'language_name';
         
-        // LIMIT
-        $per_page = !empty($filters['per_page']) ? intval($filters['per_page']) : 20;
-        $page = !empty($filters['page']) ? intval($filters['page']) : 1;
+        $sql .= " ORDER BY {$orderby} {$order}";
+        
+        $page = isset($filters['page']) ? max(1, intval($filters['page'])) : 1;
+        $per_page = isset($filters['per_page']) ? intval($filters['per_page']) : 20;
         $offset = ($page - 1) * $per_page;
         
-        // SQL with LEFT JOIN for branches count
-        $sql = "SELECT l.*, 
-                COUNT(CASE WHEN lb.is_active = 1 THEN 1 END) as branches_count
-                FROM {$this->table} l
-                LEFT JOIN {$this->branches_table} lb ON l.id = lb.language_id
-                WHERE " . implode(' AND ', $where) . "
-                GROUP BY l.id
-                ORDER BY l.{$orderby} {$order}
-                LIMIT {$per_page} OFFSET {$offset}";
+        // Total count query
+        $total = count($wpdb->get_results($wpdb->prepare($sql, ...$params)));
         
-        if (!empty($params)) {
-            $sql = $wpdb->prepare($sql, $params);
-        }
+        $sql .= " LIMIT %d OFFSET %d";
+        $params[] = $per_page;
+        $params[] = $offset;
         
-        $items = $wpdb->get_results($sql, ARRAY_A);
+        $items = $wpdb->get_results($wpdb->prepare($sql, ...$params), ARRAY_A);
         
-        // Count total
-        $count_sql = "SELECT COUNT(DISTINCT l.id)
-                      FROM {$this->table} l
-                      WHERE " . implode(' AND ', $where);
-        
-        if (!empty($params)) {
-            $count_sql = $wpdb->prepare($count_sql, $params);
-        }
-        
-        $total = $wpdb->get_var($count_sql);
-        
-        return [
-            'items' => $items,
-            'total' => $total
-        ];
+        return ['items' => $items ?: [], 'total' => $total];
     }
     
-    /**
-     * Get by ID with formatting and active branches
-     */
     public function get_by_id($id) {
-        $item = parent::get_by_id($id);
+        $cache_key = $this->get_cache_key('item', $id);
+        $item = $this->get_cache($cache_key);
         
-        if (!$item) {
-            return null;
+        if ($item === false) {
+            global $wpdb;
+            $item = $wpdb->get_row($wpdb->prepare("SELECT * FROM %i WHERE id = %d", $this->table, $id), ARRAY_A);
+            if ($item) $this->set_cache($cache_key, $item);
         }
         
-        // Customer isolation check
-        $current_customer_id = SAW_Context::get_customer_id();
+        if (!$item) return null;
         
-        if (!current_user_can('manage_options')) {
-            if (empty($item['customer_id']) || $item['customer_id'] != $current_customer_id) {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log(sprintf(
-                        '[TRAINING-LANGUAGES] Isolation violation - Item customer: %s, Current: %s',
-                        $item['customer_id'] ?? 'NULL',
-                        $current_customer_id ?? 'NULL'
-                    ));
-                }
-                return null;
-            }
-        }
+        // Always load branches live to ensure consistency
+        $item['branches'] = $this->get_branches_for_form($id);
         
-        // Get active branches for this language
+        // Load active branches for detail view
         global $wpdb;
         $item['active_branches'] = $wpdb->get_results($wpdb->prepare(
-            "SELECT b.id, b.name, b.code, b.city,
-                    lb.is_default, lb.display_order
+            "SELECT b.id, b.name, b.code, b.city, lb.is_default, lb.display_order
              FROM {$wpdb->prefix}saw_branches b
              INNER JOIN {$this->branches_table} lb ON b.id = lb.branch_id
              WHERE lb.language_id = %d AND lb.is_active = 1
              ORDER BY lb.display_order ASC, b.name ASC",
             $id
         ), ARRAY_A);
-        
-        // Format dates
-        if (!empty($item['created_at'])) {
-            $item['created_at_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['created_at']));
-        }
-        
-        if (!empty($item['updated_at'])) {
-            $item['updated_at_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['updated_at']));
-        }
-        
+
         return $item;
     }
     
-    /**
-     * Create with branches
-     */
     public function create($data) {
         $customer_id = SAW_Context::get_customer_id();
         $data['customer_id'] = $customer_id;
-        
         $branches_data = $data['branches'] ?? [];
         unset($data['branches']);
         
-        $language_id = parent::create($data);
+        // 1. Insert Main Record
+        $id = parent::create($data);
         
-        if ($language_id && !is_wp_error($language_id) && !empty($branches_data)) {
-            $this->sync_branches($language_id, $branches_data);
+        // 2. Check if insert was successful AND record exists
+        if ($id && !is_wp_error($id)) {
+            // Force check existence to prevent FK error
+            if ($this->exists($id) && !empty($branches_data)) {
+                $this->sync_branches($id, $branches_data);
+            }
+            
+            // 🔥 Explicitly clear cache for this new ID to prevent "Not Found" error
+            $cache_key = $this->get_cache_key('item', $id);
+            delete_transient($cache_key);
         }
         
-        return $language_id;
+        return $id;
     }
     
-    /**
-     * Update with branches
-     */
     public function update($id, $data) {
-        if (empty($data['customer_id'])) {
-            $existing = $this->get_by_id($id);
-            $data['customer_id'] = $existing['customer_id'] ?? SAW_Context::get_customer_id();
-        }
-        
-        $branches_data = $data['branches'] ?? [];
+        $branches_data = $data['branches'] ?? null;
         unset($data['branches']);
         
+        if (!$this->exists($id)) {
+            return new WP_Error('not_found', 'Záznam neexistuje.');
+        }
+
         $result = parent::update($id, $data);
         
-        if ($result && !is_wp_error($result)) {
+        if ($branches_data !== null && !is_wp_error($result)) {
             $this->sync_branches($id, $branches_data);
+            
+            // Flush caches
+            $this->invalidate_cache();
+            $cache_key = $this->get_cache_key('item', $id);
+            delete_transient($cache_key);
         }
         
         return $result;
     }
     
-    /**
-     * Sync branches for language
-     */
-    private function sync_branches($language_id, $branches_data) {
-        global $wpdb;
-        
-        // Delete existing
-        $wpdb->delete($this->branches_table, ['language_id' => $language_id], ['%d']);
-        
-        if (empty($branches_data)) {
-            return;
-        }
-        
-        // Insert new
-        foreach ($branches_data as $branch_id => $branch_data) {
-            if (empty($branch_data['active'])) {
-                continue;
-            }
-            
-            $wpdb->insert(
-                $this->branches_table,
-                [
-                    'language_id' => $language_id,
-                    'branch_id' => $branch_id,
-                    'is_default' => !empty($branch_data['is_default']) ? 1 : 0,
-                    'is_active' => 1,
-                    'display_order' => intval($branch_data['display_order'] ?? 0),
-                    'created_at' => current_time('mysql'),
-                ],
-                ['%d', '%d', '%d', '%d', '%d', '%s']
-            );
-        }
-    }
-    
-    /**
-     * Delete - protect Czech
-     */
     public function delete($id) {
-        $language = $this->get_by_id($id);
-        
-        if (!$language) {
-            return new WP_Error('not_found', 'Jazyk nebyl nalezen');
-        }
-        
-        if ($language['language_code'] === 'cs') {
-            return new WP_Error('protected', 'Čeština nemůže být smazána');
-        }
-        
+        $item = $this->get_by_id($id);
+        if ($item && $item['language_code'] === 'cs') return new WP_Error('protected', 'Čeština nemůže být smazána');
         return parent::delete($id);
     }
     
-    /**
-     * Get branches for language (for form)
-     */
-    public function get_branches_for_language($language_id) {
+    private function sync_branches($language_id, $branches_data) {
         global $wpdb;
         
-        $branches_table = $wpdb->prefix . 'saw_branches';
+        // No Transaction - Direct DELETE/INSERT to avoid isolation issues
+        $wpdb->delete($this->branches_table, ['language_id' => $language_id], ['%d']);
+        
+        if (empty($branches_data)) return;
+        
+        foreach ($branches_data as $branch_id => $data) {
+            if (empty($data['active'])) continue;
+            
+            $wpdb->insert($this->branches_table, [
+                'language_id' => $language_id,
+                'branch_id' => $branch_id,
+                'is_default' => !empty($data['is_default']) ? 1 : 0,
+                'is_active' => 1,
+                'display_order' => intval($data['display_order'] ?? 0),
+                'created_at' => current_time('mysql'),
+            ], ['%d', '%d', '%d', '%d', '%d', '%s']);
+        }
+    }
+    
+    public function get_branches_for_form($language_id) {
+        global $wpdb;
+        $customer_id = $wpdb->get_var($wpdb->prepare("SELECT customer_id FROM {$this->table} WHERE id = %d", $language_id));
+        
+        if (!$customer_id) return [];
         
         return $wpdb->get_results($wpdb->prepare(
-            "SELECT b.id, b.name, b.code, b.city,
-                    lb.is_default, lb.is_active, lb.display_order
-             FROM {$branches_table} b
+            "SELECT b.id, b.name, b.code, b.city, lb.is_default, lb.is_active, lb.display_order
+             FROM {$wpdb->prefix}saw_branches b
              LEFT JOIN {$this->branches_table} lb ON b.id = lb.branch_id AND lb.language_id = %d
-             WHERE b.customer_id = (SELECT customer_id FROM {$this->table} WHERE id = %d)
-             AND b.is_active = 1
+             WHERE b.customer_id = %d AND b.is_active = 1
              ORDER BY b.name ASC",
-            $language_id,
-            $language_id
+            $language_id, $customer_id
+        ), ARRAY_A);
+    }
+    
+    public function get_available_branches() {
+        global $wpdb;
+        return $wpdb->get_results($wpdb->prepare(
+            "SELECT id, name, code, city FROM {$wpdb->prefix}saw_branches 
+             WHERE customer_id = %d AND is_active = 1 ORDER BY name ASC",
+            SAW_Context::get_customer_id()
         ), ARRAY_A);
     }
 }

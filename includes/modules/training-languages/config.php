@@ -1,11 +1,10 @@
 <?php
 /**
  * Training Languages Module Configuration
- * 
- * CRITICAL FIX: Entity must use UNDERSCORES for AJAX to work!
- * 
- * @package SAW_Visitors
- * @version 2.1.0 - FIXED: entity name with underscore
+ *
+ * @package    SAW_Visitors
+ * @subpackage Modules/TrainingLanguages
+ * @version    3.2.0 - FIXED: Route path
  */
 
 if (!defined('ABSPATH')) {
@@ -13,19 +12,19 @@ if (!defined('ABSPATH')) {
 }
 
 return [
-    // ✅ CRITICAL: Use UNDERSCORES, not dashes!
     'slug' => 'training-languages',
     'entity' => 'training_languages',
-    
     'table' => 'saw_training_languages',
-    'singular' => 'Jazyk',
-    'plural' => 'Jazyky školení',
-    'route' => 'admin/training-languages',
-    'icon' => '🌐',
-    'filter_by_customer' => true,
     
-    // ✅ Customer isolation enabled
+    'singular' => 'Jazyk školení',
+    'plural' => 'Jazyky školení',
+    'icon' => '🌐',
+    
+    // ✅ OPRAVENO: Odstraněno "settings/", aby odkazy vedly správně
+    'route' => 'training-languages', 
+    
     'has_customer_isolation' => true,
+    'has_branch_isolation' => false,
     
     'capabilities' => [
         'list' => 'read',
@@ -35,56 +34,14 @@ return [
         'delete' => 'read',
     ],
     
-    'fields' => [
-        'language_code' => [
-            'type' => 'select',
-            'label' => 'Kód jazyka',
-            'required' => true,
-            'sanitize' => 'sanitize_text_field',
-            'help' => 'ISO 639-1 kód (cs, en, sk, de, pl, uk, ru)',
-            'options' => [
-                'cs' => 'cs - Čeština',
-                'en' => 'en - English',
-                'sk' => 'sk - Slovenčina',
-                'de' => 'de - Deutsch',
-                'pl' => 'pl - Polski',
-                'uk' => 'uk - Українська',
-                'ru' => 'ru - Русский',
-            ],
-        ],
-        
-        'language_name' => [
-            'type' => 'text',
-            'label' => 'Název jazyka',
-            'required' => true,
-            'sanitize' => 'sanitize_text_field',
-            'help' => 'Plný název (např. "Čeština")',
-        ],
-        
-        'flag_emoji' => [
-            'type' => 'text',
-            'label' => 'Vlajka (emoji)',
-            'required' => true,
-            'sanitize' => 'sanitize_text_field',
-            'help' => 'Emoji vlajky (např. 🇨🇿)',
-            'maxlength' => 10,
-        ],
-    ],
-    
     'list_config' => [
-        'columns' => ['flag_emoji', 'language_name', 'language_code', 'branches_count', 'created_at'],
-        'searchable' => ['language_name', 'language_code'],
-        'sortable' => ['language_name', 'language_code', 'created_at'],
-        'filters' => [
-            'customer_id' => true,
-        ],
         'per_page' => 20,
-        'enable_detail_modal' => true,
+        'searchable' => ['language_name', 'language_code'],
     ],
     
+    // Ponecháme cache zapnutou, model ji umí mazat
     'cache' => [
-        'enabled' => false,  // Disabled for development
-        'ttl' => 1800,
-        'invalidate_on' => ['save', 'delete'],
+        'enabled' => true,
+        'ttl' => 3600,
     ],
 ];
