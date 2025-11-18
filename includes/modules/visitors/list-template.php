@@ -34,11 +34,14 @@ $today = current_time('Y-m-d');
 
 foreach ($items as &$item) {
     // Get today's log
-    $log = $wpdb->get_row($wpdb->prepare(
-        "SELECT * FROM {$wpdb->prefix}saw_visit_daily_logs 
-         WHERE visitor_id = %d AND log_date = %s",
-        $item['id'], $today
-    ), ARRAY_A);
+    // ✅ Get today's LATEST log (pro re-entry support)
+$log = $wpdb->get_row($wpdb->prepare(
+    "SELECT * FROM {$wpdb->prefix}saw_visit_daily_logs 
+     WHERE visitor_id = %d AND log_date = %s
+     ORDER BY checked_in_at DESC
+     LIMIT 1",
+    $item['id'], $today
+), ARRAY_A);
     
     // Compute dynamic status
     if ($item['participation_status'] === 'confirmed') {

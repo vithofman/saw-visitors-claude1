@@ -194,24 +194,96 @@ $t = $translations[$lang] ?? $translations['cs'];
     margin-bottom: 2rem;
 }
 
+/* ✅ ODKŘÍŽKNUTÉ - ŠEDÉ */
 .saw-visitor-checkbox-card {
-    background: var(--bg-glass);
+    background: rgba(255, 255, 255, 0.04);  /* ✅ Šedivější */
     backdrop-filter: blur(20px) saturate(180%);
     border-radius: 16px;
-    border: 1px solid var(--border-glass);
+    border: 1px solid rgba(148, 163, 184, 0.08);  /* ✅ Slabší border */
     padding: 1.5rem;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
     cursor: pointer;
+    opacity: 0.6;  /* ✅ Průhlednější */
 }
 
 .saw-visitor-checkbox-card:hover {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(239, 68, 68, 0.5);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(239, 68, 68, 0.3);
+    opacity: 0.8;
 }
 
+/* ✅ ZAŠKRTNUTÉ - ČERVENÉ (ZVÝRAZNĚNÉ) */
 .saw-visitor-checkbox-card.checked {
-    background: rgba(239, 68, 68, 0.15);
-    border-color: rgba(239, 68, 68, 0.5);
+    background: rgba(239, 68, 68, 0.15) !important;
+    border-color: rgba(239, 68, 68, 0.5) !important;
+    opacity: 1 !important;
+    transform: translateX(4px);
+}
+
+/* ✅ ŠEDÉ JMÉNO (odkřížknuté) */
+.saw-visitor-name {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.6);  /* ✅ Šedé */
+    margin-bottom: 0.25rem;
+    transition: color 0.3s;
+}
+
+/* ✅ BÍLÉ JMÉNO (zaškrtnuté) */
+.saw-visitor-checkbox-card.checked .saw-visitor-name {
+    color: var(--text-primary);
+}
+
+/* ✅ ŠEDÁ POZICE (odkřížknuté) */
+.saw-visitor-position {
+    font-size: 0.875rem;
+    color: rgba(203, 213, 225, 0.6);  /* ✅ Šedá */
+    margin-bottom: 0.375rem;
+    transition: color 0.3s;
+}
+
+/* ✅ SVĚTLEJŠÍ POZICE (zaškrtnuté) */
+.saw-visitor-checkbox-card.checked .saw-visitor-position {
+    color: rgba(203, 213, 225, 0.9);
+}
+
+/* ✅ ŠEDÝ ČAS (odkřížknuté) */
+.saw-visitor-time {
+    font-size: 0.875rem;
+    color: rgba(16, 185, 129, 0.5);  /* ✅ Tlumeně zelená */
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    transition: color 0.3s;
+}
+
+/* ✅ JASNĚ ZELENÝ ČAS (zaškrtnuté) */
+.saw-visitor-checkbox-card.checked .saw-visitor-time {
+    color: #10b981;
+}
+
+/* ✅ ŠEDÝ AVATAR (odkřížknuté) */
+.saw-visitor-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.4) 0%, rgba(220, 38, 38, 0.4) 100%);  /* ✅ Tlumeně červená */
+    color: rgba(255, 255, 255, 0.7);  /* ✅ Šedé písmeno */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+    transition: all 0.3s;
+}
+
+/* ✅ JASNĚ ČERVENÝ AVATAR (zaškrtnuté) */
+.saw-visitor-checkbox-card.checked .saw-visitor-avatar {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.5);
 }
 
 .saw-visitor-header {
@@ -391,8 +463,7 @@ $t = $translations[$lang] ?? $translations['cs'];
                             <div class="saw-visitor-header">
                                 <input type="checkbox" 
                                        name="visitor_ids[]" 
-                                       value="<?php echo $visitor['id']; ?>" 
-                                       checked>
+                                       value="<?php echo $visitor['id']; ?>">
                                 
                                 <div class="saw-visitor-avatar">
                                     <?php echo strtoupper(substr($visitor['first_name'], 0, 1)); ?>
@@ -482,15 +553,32 @@ $t = $translations[$lang] ?? $translations['cs'];
     }
     
     // Checkbox change
-    checkboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            updateCardAppearance(this);
-            updateCount();
-        });
-        
-        // Initial state
-        updateCardAppearance(checkbox);
+    // Checkbox change
+checkboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        updateCardAppearance(this);
+        updateCount();
+        updateToggleButton();  // ✅ PŘIDEJ
     });
+    
+    // ✅ INITIAL STATE - všechny ODKŘÍŽKNUTÉ
+    checkbox.checked = false;
+    updateCardAppearance(checkbox);
+});
+
+// ✅ FUNKCE PRO UPDATE TLAČÍTKA
+function updateToggleButton() {
+    if (!toggleBtn) return;
+    
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
+    
+    if (allChecked) {
+        toggleBtn.innerHTML = '❌ <?php echo esc_js($t['deselect_all']); ?>';
+    } else {
+        toggleBtn.innerHTML = '✅ <?php echo esc_js($t['select_all']); ?>';
+    }
+}
     
     // Click on card = toggle checkbox
     cards.forEach(card => {
@@ -505,8 +593,9 @@ $t = $translations[$lang] ?? $translations['cs'];
         });
     });
     
-    // Initial count
-    updateCount();
+// ✅ Initial state - všechno odkřížknuté
+updateCount();  // Ukáže 0
+updateToggleButton();
 })();
 </script>
 

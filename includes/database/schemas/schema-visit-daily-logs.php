@@ -22,7 +22,7 @@ function saw_get_schema_visit_daily_logs($table_name, $prefix, $charset_collate)
 		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
 		PRIMARY KEY (id),
-		UNIQUE KEY uk_visit_visitor_date (visit_id, visitor_id, log_date),
+		KEY idx_visit_visitor_date (visit_id, visitor_id, log_date),
 		KEY idx_visit (visit_id),
 		KEY idx_visitor (visitor_id),
 		KEY idx_date (log_date),

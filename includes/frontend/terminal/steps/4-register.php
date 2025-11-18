@@ -95,17 +95,17 @@ $translations = [
 
 $t = $translations[$lang] ?? $translations['cs'];
 
-// Split existing visitors
+// ✅ Split podle is_currently_inside (kdo je TEĎKA uvnitř)
 $already_checked_in = [];
 $waiting_for_checkin = [];
 
 if ($is_planned && !empty($existing_visitors)) {
     foreach ($existing_visitors as $visitor) {
-        if (!empty($visitor['today_checkout'])) {
-            $waiting_for_checkin[] = $visitor;
-        } elseif ($visitor['participation_status'] === 'confirmed') {
+        if ($visitor['is_currently_inside']) {
+            // Je TEĎKA AKTIVNĚ uvnitř → zelená
             $already_checked_in[] = $visitor;
         } else {
+            // Není uvnitř (odešel/nepřišel) → checkbox pro re-entry
             $waiting_for_checkin[] = $visitor;
         }
     }
@@ -304,18 +304,29 @@ if ($is_planned && !empty($existing_visitors)) {
 
 /* Waiting visitors - checkbox style */
 .saw-visitor-checkbox-card {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.04);
     backdrop-filter: blur(10px);
     border-radius: 12px;
     padding: 1.25rem;
     margin-bottom: 1rem;
-    border: 1px solid var(--border-glass);
-    transition: all 0.2s;
+    border: 1px solid rgba(148, 163, 184, 0.08);
+    transition: all 0.3s ease;
+    opacity: 0.6;
+    cursor: pointer;  /* ✅ PŘIDEJ */
+}
+
+/* ✅ KDYŽ JE ZAŠKRTNUTÝ - ZVÝRAZNI */
+.saw-visitor-checkbox-card.checked {
+    background: rgba(102, 126, 234, 0.15) !important;
+    border-color: rgba(102, 126, 234, 0.5) !important;
+    opacity: 1 !important;
+    transform: translateX(4px);
 }
 
 .saw-visitor-checkbox-card:hover {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(102, 126, 234, 0.5);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(102, 126, 234, 0.3);
+    opacity: 0.8;
 }
 
 .saw-visitor-checkbox-header {
@@ -323,6 +334,7 @@ if ($is_planned && !empty($existing_visitors)) {
     align-items: center;
     gap: 1rem;
     cursor: pointer;
+    pointer-events: none;  
 }
 
 .saw-visitor-checkbox-header input[type="checkbox"] {
@@ -331,32 +343,72 @@ if ($is_planned && !empty($existing_visitors)) {
     cursor: pointer;
     accent-color: var(--color-success);
     flex-shrink: 0;
+    pointer-events: auto;  
 }
-
 .saw-visitor-info {
     flex: 1;
     display: flex;
     align-items: center;
     gap: 0.75rem;
     flex-wrap: wrap;
+    pointer-events: none;  /* ✅ PŘIDEJ */
 }
 
 .saw-visitor-checkbox-card .saw-visitor-name {
     font-size: 1.125rem;
     font-weight: 700;
+    color: rgba(255, 255, 255, 0.6);
+    transition: color 0.3s;
+    pointer-events: none;  /* ✅ PŘIDEJ */
+}
+
+/* ✅ KDYŽ CHECKED - BÍLÉ JMÉNO */
+.saw-visitor-checkbox-card.checked .saw-visitor-name {
     color: var(--text-primary);
 }
 
 .saw-visitor-checkbox-card .saw-visitor-position {
     font-size: 0.8125rem;
-    color: rgba(203, 213, 225, 0.9);
-    background: rgba(102, 126, 234, 0.2);
-    border: 1px solid rgba(102, 126, 234, 0.3);
+    color: rgba(203, 213, 225, 0.6);
+    background: rgba(102, 126, 234, 0.1);
+    border: 1px solid rgba(102, 126, 234, 0.2);
     padding: 0.25rem 0.625rem;
     border-radius: 6px;
     font-weight: 600;
+    transition: all 0.3s;
+    pointer-events: none;  /* ✅ PŘIDEJ - důležité! */
+}
+/* ✅ KDYŽ CHECKED - BAREVNÁ POZICE */
+.saw-visitor-checkbox-card.checked .saw-visitor-position {
+    color: rgba(203, 213, 225, 0.9);
+    background: rgba(102, 126, 234, 0.3);
+    border-color: rgba(102, 126, 234, 0.5);
 }
 
+.saw-visitor-training-skip {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+/* ✅ TLAČÍTKO VYBRAT VŠE */
+.saw-btn-toggle-all {
+    padding: 0.75rem 1.5rem;
+    background: rgba(102, 126, 234, 0.2);
+    border: 1px solid rgba(102, 126, 234, 0.4);
+    border-radius: 10px;
+    color: #a5b4fc;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.saw-btn-toggle-all:hover {
+    background: rgba(102, 126, 234, 0.3);
+    border-color: rgba(102, 126, 234, 0.6);
+    transform: translateY(-1px);
+}
 .saw-visitor-training-skip {
     margin-top: 1rem;
     padding-top: 1rem;
@@ -892,14 +944,22 @@ if ($is_planned && !empty($existing_visitors)) {
                                     <span>👥</span>
                                     <span><?php echo esc_html($t['section_waiting']); ?> (<?php echo count($waiting_for_checkin); ?>)</span>
                                 </h3>
+
+<div style="margin-bottom: 1.5rem;">
+    <button type="button" 
+            id="toggle-all-visitors" 
+            class="saw-btn-toggle-all"
+            onclick="toggleAllVisitors()">
+        ✓ Vybrat vše
+    </button>
+</div>
                                 
                                 <?php foreach ($waiting_for_checkin as $visitor): ?>
                                 <div class="saw-visitor-checkbox-card">
                                     <div class="saw-visitor-checkbox-header">
                                         <input type="checkbox" 
                                                name="existing_visitor_ids[]" 
-                                               value="<?php echo $visitor['id']; ?>" 
-                                               checked>
+                                               value="<?php echo $visitor['id']; ?>">
                                         <div class="saw-visitor-info">
                                             <div class="saw-visitor-name">
                                                 <?php echo esc_html($visitor['first_name'] . ' ' . $visitor['last_name']); ?>
@@ -1353,7 +1413,34 @@ jQuery(document).ready(function($) {
         $('.saw-visitor-block[data-index="0"] .saw-remove-visitor-btn').show();
     });
     
-    // Add certificate
+// ✅ TOGGLE CHECKBOXU - přidej/odebere třídu "checked"
+$(document).on('change', 'input[name="existing_visitor_ids[]"]', function() {
+    const $card = $(this).closest('.saw-visitor-checkbox-card');
+    if ($(this).is(':checked')) {
+        $card.addClass('checked');
+    } else {
+        $card.removeClass('checked');
+    }
+});
+
+// ✅ KLIKNUTÍ NA CELOU KARTU - toggle (ne jen header)
+$(document).on('click', '.saw-visitor-checkbox-card', function(e) {
+    // Ignoruj kliknutí na checkbox samotný (už to handluje)
+    if ($(e.target).is('input[type="checkbox"]')) {
+        return;
+    }
+    
+    // Ignoruj kliknutí na training skip checkbox (ten je uvnitř karty)
+    if ($(e.target).closest('.saw-visitor-training-skip').length > 0) {
+        return;
+    }
+    
+    // Toggle hlavní checkbox
+    const $checkbox = $(this).find('input[name="existing_visitor_ids[]"]');
+    $checkbox.prop('checked', !$checkbox.prop('checked')).trigger('change');
+});    
+
+// Add certificate
     $(document).on('click', '.saw-add-cert-btn', function() {
         const visitorIdx = $(this).data('visitor');
         const $container = $(`.certificates-container[data-visitor="${visitorIdx}"]`);
@@ -1397,6 +1484,26 @@ function removeVisitor(index) {
     jQuery('.saw-visitor-block').each(function(i) {
         jQuery(this).find('.saw-visitor-block-header h4').text(`<?php echo esc_js($t['visitor_number']); ?> ${i + 1}`);
     });
+}
+
+// ✅ TOGGLE ALL VISITORS
+function toggleAllVisitors() {
+    const $checkboxes = jQuery('input[name="existing_visitor_ids[]"]');
+    const $btn = jQuery('#toggle-all-visitors');
+    
+    // Zjisti kolik je zaškrtnutých
+    const checkedCount = $checkboxes.filter(':checked').length;
+    const totalCount = $checkboxes.length;
+    
+    if (checkedCount === totalCount) {
+        // VŠECHNY ZAŠKRTNUTÉ → odškrtni vše
+        $checkboxes.prop('checked', false).trigger('change');
+        $btn.html('✓ Vybrat vše');
+    } else {
+        // NĚJAKÉ NEZAŠKRTNUTÉ → zaškrtni vše
+        $checkboxes.prop('checked', true).trigger('change');
+        $btn.html('✕ Zrušit vše');
+    }
 }
 
 function toggleVisitorBlock(index) {

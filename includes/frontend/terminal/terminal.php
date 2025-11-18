@@ -72,7 +72,7 @@ class SAW_Terminal_Controller {
         
         // ✅ Získání customer_id a branch_id
         $this->load_context();
-        
+
         // ✅ Načtení jazyků z DB
         $this->load_languages();
         
@@ -454,26 +454,55 @@ class SAW_Terminal_Controller {
      * @return void
      */
     private function render_registration_form() {
-        // ✅ Load hosts from database
-        global $wpdb;
-        
-        $hosts = $wpdb->get_results($wpdb->prepare(
-            "SELECT id, first_name, last_name, position, role
-             FROM {$wpdb->prefix}saw_users
-             WHERE customer_id = %d 
-               AND branch_id = %d
-               AND role IN ('admin', 'super_manager', 'manager')
-               AND is_active = 1
-             ORDER BY last_name ASC, first_name ASC",
-            $this->customer_id,
-            $this->branch_id
+    global $wpdb;
+    
+    // ✅ Load hosts from database
+    $hosts = $wpdb->get_results($wpdb->prepare(
+        "SELECT id, first_name, last_name, position, role
+         FROM {$wpdb->prefix}saw_users
+         WHERE customer_id = %d 
+           AND branch_id = %d
+           AND role IN ('admin', 'super_manager', 'manager')
+           AND is_active = 1
+         ORDER BY last_name ASC, first_name ASC",
+        $this->customer_id,
+        $this->branch_id
+    ), ARRAY_A);
+    
+    // ✅ OPRAVA: Reload visitors from DB if visit_id exists
+    $flow = $this->session->get('terminal_flow');
+    $visit_id = $flow['visit_id'] ?? null;
+    
+    if ($visit_id) {
+        // ✅ FRESH DATA z DB (ne ze session)
+        $visitors = $wpdb->get_results($wpdb->prepare(
+            "SELECT vis.*, 
+                    CASE 
+                        WHEN EXISTS (
+                            SELECT 1 FROM {$wpdb->prefix}saw_visit_daily_logs dl2
+                            WHERE dl2.visitor_id = vis.id 
+                            AND dl2.checked_in_at IS NOT NULL 
+                            AND dl2.checked_out_at IS NULL
+                        ) THEN 1
+                        ELSE 0
+                    END as is_currently_inside
+             FROM {$wpdb->prefix}saw_visitors vis
+             WHERE vis.visit_id = %d 
+             AND vis.participation_status IN ('planned', 'confirmed')
+             ORDER BY vis.last_name, vis.first_name",
+            $visit_id
         ), ARRAY_A);
         
-        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/4-register.php';
-        $this->render_template($template, [
-            'hosts' => $hosts, // ✅ Pass hosts to template
-        ]);
+        // ✅ UPDATE SESSION s fresh data
+        $flow['visitors'] = $visitors;
+        $this->session->set('terminal_flow', $flow);
     }
+    
+    $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/4-register.php';
+    $this->render_template($template, [
+        'hosts' => $hosts,
+    ]);
+}
     
     /**
      * Render checkout PIN form
@@ -490,14 +519,53 @@ class SAW_Terminal_Controller {
      * Render checkout visitor selection
      */
     private function render_checkout_select() {
-        $flow = $this->session->get('terminal_flow');
-        $visitors = $flow['checkout_visitors'] ?? [];
+    global $wpdb;
+    
+    $flow = $this->session->get('terminal_flow');
+    $visit_id = $flow['checkout_visit_id'] ?? null;
+    
+    // ✅ RELOAD FRESH DATA from DB (ne ze session)
+    if ($visit_id) {
+        $visitors = $wpdb->get_results($wpdb->prepare(
+            "SELECT DISTINCT 
+                vis.id,
+                vis.first_name,
+                vis.last_name,
+                vis.position,
+                vis.email,
+                vis.phone,
+                vis.participation_status,
+                dl.log_date,
+                dl.checked_in_at,
+                dl.id as log_id
+             FROM {$wpdb->prefix}saw_visitors vis
+             INNER JOIN {$wpdb->prefix}saw_visit_daily_logs dl 
+                ON vis.id = dl.visitor_id
+             WHERE vis.visit_id = %d
+               AND dl.checked_in_at IS NOT NULL
+               AND dl.checked_out_at IS NULL
+             ORDER BY dl.checked_in_at DESC, vis.last_name, vis.first_name",
+            $visit_id
+        ), ARRAY_A);
         
-        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/checkout/select.php';
-        $this->render_template($template, [
-            'visitors' => $visitors,
-        ]);
+        // ✅ UPDATE SESSION s fresh data
+        $flow['checkout_visitors'] = $visitors;
+        $this->session->set('terminal_flow', $flow);
+        
+        error_log(sprintf(
+            "[SAW Checkout Select RELOAD] Visit #%d - Reloaded %d visitors from DB",
+            $visit_id,
+            count($visitors)
+        ));
+    } else {
+        $visitors = $flow['checkout_visitors'] ?? [];
     }
+    
+    $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/checkout/select.php';
+    $this->render_template($template, [
+        'visitors' => $visitors,
+    ]);
+}
     
     /**
      * Render checkout search form
@@ -1015,29 +1083,28 @@ if (!$visit) {
         );
         
         error_log("[SAW Terminal] Visit #{$visit['id']} re-activated (was completed)");
-    }
+    }   
     
-    if (!$visit) {
-        $this->set_error(__('PIN kód nenalezen nebo návštěva již proběhla', 'saw-visitors'));
-        $this->render_pin_entry();
-        return;
-    }
     
-    // Načti návštěvníky
-    $visitors = $wpdb->get_results($wpdb->prepare(
-        "SELECT vis.*, 
-                dl.checked_out_at as today_checkout,
-                dl.id as log_id
-         FROM {$wpdb->prefix}saw_visitors vis
-         LEFT JOIN {$wpdb->prefix}saw_visit_daily_logs dl 
-            ON vis.id = dl.visitor_id 
-            AND dl.log_date = %s
-         WHERE vis.visit_id = %d 
-         AND vis.participation_status IN ('planned', 'confirmed')
-         ORDER BY vis.last_name, vis.first_name",
-        current_time('Y-m-d'),
-        $visit['id']
-    ), ARRAY_A);
+    // ✅ OPRAVENO: Načti VŠECHNY návštěvníky + zjisti kdo je uvnitř
+$visitors = $wpdb->get_results($wpdb->prepare(
+    "SELECT 
+        vis.*,
+        CASE 
+            WHEN EXISTS (
+                SELECT 1 FROM {$wpdb->prefix}saw_visit_daily_logs dl2
+                WHERE dl2.visitor_id = vis.id 
+                AND dl2.checked_in_at IS NOT NULL 
+                AND dl2.checked_out_at IS NULL
+            ) THEN 1
+            ELSE 0
+        END as is_currently_inside
+     FROM {$wpdb->prefix}saw_visitors vis
+     WHERE vis.visit_id = %d 
+     AND vis.participation_status IN ('planned', 'confirmed')
+     ORDER BY vis.last_name, vis.first_name",
+    $visit['id']
+), ARRAY_A);
     
     // Ulož do session
     $flow = $this->session->get('terminal_flow');
@@ -1389,126 +1456,168 @@ return $steps;
         $any_needs_training = false;
         
         // ===================================
-        // 3a. UPDATE EXISTING VISITORS
+// 3a. CHECKIN EXISTING VISITORS
+// ===================================
+
+// ✅ JEDNODUCHÁ LOGIKA: Projdi zaškrtnuté visitors a check-in je
+if (!empty($existing_visitor_ids) && is_array($existing_visitor_ids)) {
+    foreach ($existing_visitor_ids as $visitor_id) {
+        $visitor_id = intval($visitor_id);
+        
+        // ✅ OPRAVENO: Zkontroluj jestli už má DOKONČENÉ školení
+$has_completed_training = !empty($wpdb->get_var($wpdb->prepare(
+    "SELECT training_completed_at FROM {$wpdb->prefix}saw_visitors 
+     WHERE id = %d AND training_completed_at IS NOT NULL",
+    $visitor_id
+)));
+
+// Check training skip checkbox
+$training_skip = isset($_POST['existing_training_skip'][$visitor_id]) ? 1 : 0;
+
+// ✅ LOGIKA: Školení potřebuje JEN pokud:
+// 1. NENÍ zaškrtnutý checkbox "Absolvoval do 1 roku"
+// 2. A JEŠTĚ NEMÁ dokončené školení (training_completed_at IS NULL)
+if (!$training_skip && !$has_completed_training) {
+    $any_needs_training = true;
+    
+    // ✅ RESET training progress + nastav started_at (POUZE pokud ještě nemá completed!)
+    $wpdb->update(
+        $wpdb->prefix . 'saw_visitors',
+        [
+            'training_started_at' => current_time('mysql'),  // ✅ Nastav ČAS ŠKOLENÍ
+            'training_step_video' => 0,
+            'training_step_map' => 0,
+            'training_step_risks' => 0,
+            'training_step_additional' => 0,
+            'training_step_department' => 0,
+        ],
+        ['id' => $visitor_id],
+        ['%s', '%d', '%d', '%d', '%d', '%d'],
+        ['%d']
+    );
+    error_log("[SAW Terminal] Visitor #{$visitor_id} needs training - set training_started_at");
+} else {
+    if ($has_completed_training) {
+        error_log("[SAW Terminal] Visitor #{$visitor_id} already completed training - skipping");
+    }
+    if ($training_skip) {
+        error_log("[SAW Terminal] Visitor #{$visitor_id} training skipped (checkbox)");
+    }
+}
+
+// ✅ Update visitor - MARK AS CONFIRMED (BEZ training_started_at!)
+$wpdb->update(
+    $wpdb->prefix . 'saw_visitors',
+    [
+        'participation_status' => 'confirmed',
+        'training_skipped' => $training_skip,
+    ],
+    ['id' => $visitor_id],
+    ['%s', '%d'],
+    ['%d']
+);
+        
+        $visitor_ids[] = $visitor_id;
+        
+        error_log("[SAW Terminal] Existing visitor #{$visitor_id} checked in (confirmed)");
+        
+        // ===================================
+        // ✅ DAILY LOG - Re-entry support
         // ===================================
         
-        if ($is_planned && !empty($flow['visitors'])) {
-            // ✅ NOVÁ LOGIKA:
-            // 1. Confirmed zůstávají confirmed (nepřepisuj)
-            // 2. Zaškrtnuté (v $existing_visitor_ids) → confirmed
-            // 3. Nezaškrtnuté planned/no_show → ZŮSTÁVAJÍ planned (ne no_show!)
-            
-            foreach ($flow['visitors'] as $existing) {
-                $visitor_id = $existing['id'];
-                $is_selected = in_array($visitor_id, $existing_visitor_ids);
-                
-                // Už je confirmed? Skip (nepřepisuj)
-                if ($existing['participation_status'] === 'confirmed' && empty($existing['today_checkout'])) {
-                    error_log("[SAW Terminal] Visitor #{$visitor_id} already confirmed - skipping");
-                    continue;
-                }
-                
-                // Je zaškrtnutý? → Confirm (zpracuje se níže)
-                if ($is_selected) {
-                    continue;
-                }
-                
-                // Není zaškrtnutý A není confirmed → ZŮSTÁVÁ planned
-                if ($existing['participation_status'] !== 'confirmed') {
-                    error_log("[SAW Terminal] Visitor #{$visitor_id} not selected - remains planned");
-                    // Nedělej nic - zůstane planned
-                }
-            }
-        }
+        $log_date = current_time('Y-m-d');
+        $now = current_time('mysql');
         
-        // Pak check-in JEN zaškrtnuté
-        if (!empty($existing_visitor_ids) && is_array($existing_visitor_ids)) {
-            foreach ($existing_visitor_ids as $visitor_id) {
-                $visitor_id = intval($visitor_id);
+        // Zkontroluj jestli už má log DNES
+        $existing_log = $wpdb->get_row($wpdb->prepare(
+            "SELECT id, checked_out_at 
+             FROM {$wpdb->prefix}saw_visit_daily_logs
+             WHERE visit_id = %d 
+             AND visitor_id = %d 
+             AND log_date = %s
+             ORDER BY checked_in_at DESC
+             LIMIT 1",
+            $visit_id,
+            $visitor_id,
+            $log_date
+        ), ARRAY_A);
+        
+        if ($existing_log) {
+            // ✅ Už má log pro DNES
+            
+            if ($existing_log['checked_out_at']) {
+                // ===================================
+                // ✅ JE CHECKED OUT → vytvoř NOVÝ řádek (RE-ENTRY)
+                // ===================================
                 
-                // Check training skip
-                $training_skip = isset($_POST['existing_training_skip'][$visitor_id]) ? 1 : 0;
+                error_log("[SAW Checkin] Visitor #{$visitor_id} re-entering (was checked out at {$existing_log['checked_out_at']})");
                 
-                // ✅ Pokud má training_skip a JEŽ MÁ completed_at → nesmazat progress
-                // Jinak pokud nemá skip → může školení opakovat
-                if (!$training_skip) {
-                    $any_needs_training = true;
-                    
-                    // ✅ RESET training progress pro opakované školení
-                    $wpdb->update(
-                        $wpdb->prefix . 'saw_visitors',
-                        [
-                            'training_completed_at' => null,
-                            'training_step_video' => 0,
-                            'training_step_map' => 0,
-                            'training_step_risks' => 0,
-                            'training_step_additional' => 0,
-                            'training_step_department' => 0,
-                        ],
-                        ['id' => $visitor_id],
-                        ['%s', '%d', '%d', '%d', '%d', '%d'],
-                        ['%d']
-                    );
-                    error_log("[SAW Terminal] Reset training progress for visitor #{$visitor_id}");
-                }
+                // ✅ TRANSACTION pro race condition protection
+                $wpdb->query('START TRANSACTION');
                 
-                // Update visitor - MARK AS CONFIRMED
-                $wpdb->update(
-                    $wpdb->prefix . 'saw_visitors',
+                $result = $wpdb->insert(
+                    $wpdb->prefix . 'saw_visit_daily_logs',
                     [
-                        'participation_status' => 'confirmed',
-                        'training_skipped' => $training_skip,
-                        'training_started_at' => $training_skip ? null : current_time('mysql'),
+                        'visit_id' => $visit_id,
+                        'visitor_id' => $visitor_id,
+                        'log_date' => $log_date,
+                        'checked_in_at' => $now,
+                        'created_at' => $now,
                     ],
-                    ['id' => $visitor_id],
-                    ['%s', '%d', '%s'],
-                    ['%d']
+                    ['%d', '%d', '%s', '%s', '%s']
                 );
                 
-                $visitor_ids[] = $visitor_id;
-                
-                error_log("[SAW Terminal] Existing visitor #{$visitor_id} checked in (confirmed)");
-                
-                // ✅ Create or UPDATE daily log
-                $log_date = current_time('Y-m-d');
-                
-                // Zkontroluj jestli už existuje log pro dnes
-                $existing_log = $wpdb->get_var($wpdb->prepare(
-                    "SELECT id FROM {$wpdb->prefix}saw_visit_daily_logs 
-                     WHERE visit_id = %d AND visitor_id = %d AND log_date = %s",
-                    $visit_id, $visitor_id, $log_date
-                ));
-                
-                if ($existing_log) {
-                    // ✅ UPDATE - znovu check-in (vymaž checkout)
-                    $wpdb->update(
-                        $wpdb->prefix . 'saw_visit_daily_logs',
-                        [
-                            'checked_in_at' => current_time('mysql'),
-                            'checked_out_at' => null, // ✅ Vymaž předchozí checkout
-                        ],
-                        ['id' => $existing_log],
-                        ['%s', '%s'],
-                        ['%d']
-                    );
-                    error_log("[SAW Terminal] Updated daily log #{$existing_log} - re-entry");
+                if ($wpdb->insert_id) {
+                    $wpdb->query('COMMIT');
+                    error_log("[SAW Checkin] Created NEW daily log #{$wpdb->insert_id} for re-entry");
                 } else {
-                    // ✅ INSERT - nový log
-                    $wpdb->insert(
-                        $wpdb->prefix . 'saw_visit_daily_logs',
-                        [
-                            'visit_id' => $visit_id,
-                            'visitor_id' => $visitor_id,
-                            'log_date' => $log_date,
-                            'checked_in_at' => current_time('mysql'),
-                            'created_at' => current_time('mysql'),
-                        ],
-                        ['%d', '%d', '%s', '%s', '%s']
-                    );
-                    error_log("[SAW Terminal] Created new daily log for visitor #{$visitor_id}");
+                    $wpdb->query('ROLLBACK');
+                    error_log("[SAW Checkin] ERROR: Failed to create re-entry log (duplicate?): " . $wpdb->last_error);
                 }
+                
+            } else {
+                // ===================================
+                // ✅ JE STÁLE UVNITŘ → update check-in time (REFRESH)
+                // ===================================
+                
+                error_log("[SAW Checkin] Visitor #{$visitor_id} already inside, updating check-in time");
+                
+                $wpdb->update(
+                    $wpdb->prefix . 'saw_visit_daily_logs',
+                    ['checked_in_at' => $now],
+                    ['id' => $existing_log['id']],
+                    ['%s'],
+                    ['%d']
+                );
+            }
+            
+        } else {
+            // ===================================
+            // ✅ PRVNÍ CHECKIN DNES → vytvoř nový řádek
+            // ===================================
+            
+            error_log("[SAW Checkin] Visitor #{$visitor_id} first check-in today");
+            
+            $wpdb->insert(
+                $wpdb->prefix . 'saw_visit_daily_logs',
+                [
+                    'visit_id' => $visit_id,
+                    'visitor_id' => $visitor_id,
+                    'log_date' => $log_date,
+                    'checked_in_at' => $now,
+                    'created_at' => $now,
+                ],
+                ['%d', '%d', '%s', '%s', '%s']
+            );
+            
+            if ($wpdb->insert_id) {
+                error_log("[SAW Checkin] Created first daily log #{$wpdb->insert_id}");
+            } else {
+                error_log("[SAW Checkin] ERROR: Failed to create log: " . $wpdb->last_error);
             }
         }
+    }
+}
         
        // ===================================
         // 3b. VYTVOŘENÍ NEW VISITORS
@@ -1657,66 +1766,91 @@ return $steps;
      * Loads visitors who are currently checked in
      */
     private function handle_checkout_pin_verify() {
-        global $wpdb;
-        
-        $pin = sanitize_text_field($_POST['pin'] ?? '');
-        
-        if (empty($pin) || strlen($pin) !== 6) {
-            $this->set_error(__('Neplatný PIN kód', 'saw-visitors'));
-            $this->render_checkout_pin();
-            return;
-        }
-        
-        // Find visit by PIN
-        $visit = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_visits 
-             WHERE pin_code = %s 
-             AND customer_id = %d 
-             AND status IN ('in_progress', 'confirmed')",
-            $pin,
-            $this->customer_id
-        ), ARRAY_A);
-        
-        if (!$visit) {
-            $this->set_error(__('PIN kód nenalezen nebo návštěva již ukončena', 'saw-visitors'));
-            $this->render_checkout_pin();
-            return;
-        }
-        
-        // Load visitors who are CURRENTLY INSIDE (checked in today, not checked out)
-        $today = current_time('Y-m-d');
-        
-        $visitors = $wpdb->get_results($wpdb->prepare(
-            "SELECT vis.*, dl.checked_in_at, dl.id as log_id
-             FROM {$wpdb->prefix}saw_visitors vis
-             INNER JOIN {$wpdb->prefix}saw_visit_daily_logs dl 
-                ON vis.id = dl.visitor_id
-             WHERE vis.visit_id = %d
-               AND dl.log_date = %s
-               AND dl.checked_in_at IS NOT NULL
-               AND dl.checked_out_at IS NULL
-             ORDER BY vis.last_name, vis.first_name",
-            $visit['id'],
-            $today
-        ), ARRAY_A);
-        
-        if (empty($visitors)) {
-            $this->set_error(__('Nikdo z této návštěvy není momentálně přítomen', 'saw-visitors'));
-            $this->render_checkout_pin();
-            return;
-        }
-        
-        // Save to session
-        $flow = $this->session->get('terminal_flow');
-        $flow['checkout_visit_id'] = $visit['id'];
-        $flow['checkout_visitors'] = $visitors;
-        $flow['step'] = 'checkout-select';
-        $this->session->set('terminal_flow', $flow);
-        
-        // Redirect to selection
-        wp_redirect(home_url('/terminal/checkout-select/'));
-        exit;
+    global $wpdb;
+    
+    $pin = sanitize_text_field($_POST['pin'] ?? '');
+    
+    if (empty($pin) || strlen($pin) !== 6) {
+        $this->set_error(__('Neplatný PIN kód', 'saw-visitors'));
+        $this->render_checkout_pin();
+        return;
     }
+    
+    // Find visit by PIN
+    $visit = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM {$wpdb->prefix}saw_visits 
+         WHERE pin_code = %s 
+         AND customer_id = %d 
+         AND status IN ('in_progress', 'confirmed')",
+        $pin,
+        $this->customer_id
+    ), ARRAY_A);
+    
+    if (!$visit) {
+        $this->set_error(__('PIN kód nenalezen nebo návštěva již ukončena', 'saw-visitors'));
+        $this->render_checkout_pin();
+        return;
+    }
+    
+    // ✅ OPRAVENO: Načti JEN visitors s AKTIVNÍM neukončeným check-in
+    $visitors = $wpdb->get_results($wpdb->prepare(
+        "SELECT DISTINCT 
+            vis.id,
+            vis.first_name,
+            vis.last_name,
+            vis.position,
+            vis.email,
+            vis.phone,
+            vis.participation_status,
+            dl.log_date,
+            dl.checked_in_at,
+            dl.id as log_id
+         FROM {$wpdb->prefix}saw_visitors vis
+         INNER JOIN {$wpdb->prefix}saw_visit_daily_logs dl 
+            ON vis.id = dl.visitor_id
+         WHERE vis.visit_id = %d
+           AND dl.checked_in_at IS NOT NULL
+           AND dl.checked_out_at IS NULL
+         ORDER BY dl.checked_in_at DESC, vis.last_name, vis.first_name",
+        $visit['id']
+    ), ARRAY_A);
+    
+    // ✅ DEBUG
+    error_log(sprintf(
+        "[SAW Checkout PIN] Visit #%d - Found %d visitors with active check-in",
+        $visit['id'],
+        count($visitors)
+    ));
+    
+    if (!empty($visitors)) {
+        foreach ($visitors as $v) {
+            error_log(sprintf(
+                "  - %s %s (log_date: %s, checked_in: %s)",
+                $v['first_name'],
+                $v['last_name'],
+                $v['log_date'],
+                $v['checked_in_at']
+            ));
+        }
+    }
+    
+    if (empty($visitors)) {
+        $this->set_error(__('Nikdo z této návštěvy není momentálně přítomen', 'saw-visitors'));
+        $this->render_checkout_pin();
+        return;
+    }
+    
+    // Save to session
+    $flow = $this->session->get('terminal_flow');
+    $flow['checkout_visit_id'] = $visit['id'];
+    $flow['checkout_visitors'] = $visitors;
+    $flow['step'] = 'checkout-select';
+    $this->session->set('terminal_flow', $flow);
+    
+    // Redirect to selection
+    wp_redirect(home_url('/terminal/checkout-select/'));
+    exit;
+}
     
     /**
      * Handle checkout via search
@@ -1733,88 +1867,103 @@ return $steps;
     }
 
 /**
-     * Handle checkout completion
-     * Updates daily_logs and completes visit if needed
-     */
-    private function handle_checkout_complete() {
-        global $wpdb;
+ * Handle checkout completion
+ * Updates daily_logs and completes visit if needed
+ */
+private function handle_checkout_complete() {
+    global $wpdb;
+    
+    $flow = $this->session->get('terminal_flow');
+    
+    // ✅ OPRAVENO: Support both PIN and SEARCH checkout
+    $visitor_ids_input = $_POST['visitor_ids'] ?? [];
+    
+    // Handle comma-separated string (from search) OR array (from PIN)
+    if (is_string($visitor_ids_input)) {
+        $visitor_ids = array_map('intval', explode(',', $visitor_ids_input));
+    } else {
+        $visitor_ids = $visitor_ids_input;
+    }
+    
+    if (empty($visitor_ids)) {
+        $this->set_error(__('Musíte vybrat alespoň jednoho návštěvníka', 'saw-visitors'));
         
-        $flow = $this->session->get('terminal_flow');
-        $visit_id = $flow['checkout_visit_id'] ?? null;
+        // Redirect back based on method
+        if (!empty($flow['checkout_visit_id'])) {
+            $this->render_checkout_select();
+        } else {
+            $this->render_checkout_search();
+        }
+        return;
+    }
+    
+    $checkout_time = current_time('mysql');
+    
+    // ✅ OPRAVENO: Checkout BEZ visit_id (hledej podle visitor_id)
+    foreach ($visitor_ids as $visitor_id) {
+        $visitor_id = intval($visitor_id);
         
-        if (!$visit_id) {
-            $this->set_error(__('Chyba: Návštěva nenalezena', 'saw-visitors'));
-            $this->render_checkout_pin();
-            return;
+        // 1. NAJDI poslední aktivní log (BEZ visit_id filtru)
+        $log_id = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM {$wpdb->prefix}saw_visit_daily_logs
+             WHERE visitor_id = %d
+             AND checked_in_at IS NOT NULL
+             AND checked_out_at IS NULL
+             ORDER BY checked_in_at DESC
+             LIMIT 1",
+            $visitor_id
+        ));
+        
+        if (!$log_id) {
+            error_log("[SAW Terminal] WARNING: No active log found for visitor #{$visitor_id}");
+            continue;
         }
         
-        // Get selected visitor IDs
-        $visitor_ids = $_POST['visitor_ids'] ?? [];
+        // 2. UPDATE ten log
+        $result = $wpdb->update(
+            $wpdb->prefix . 'saw_visit_daily_logs',
+            ['checked_out_at' => $checkout_time],
+            ['id' => $log_id],
+            ['%s'],
+            ['%d']
+        );
         
-        if (empty($visitor_ids)) {
-            $this->set_error(__('Musíte vybrat alespoň jednoho návštěvníka', 'saw-visitors'));
-            $this->render_checkout_pin();
-            return;
+        if ($result === false) {
+            error_log("[SAW Terminal] Failed to checkout visitor #{$visitor_id}: " . $wpdb->last_error);
+        } else {
+            error_log("[SAW Terminal] Visitor #{$visitor_id} checked out (log #{$log_id})");
         }
         
-        $today = current_time('Y-m-d');
-        $checkout_time = current_time('mysql');
-        
-        // Check out selected visitors
-        foreach ($visitor_ids as $visitor_id) {
-            $visitor_id = intval($visitor_id);
-            
-            // Update daily log
-            $result = $wpdb->update(
-                $wpdb->prefix . 'saw_visit_daily_logs',
-                [
-                    'checked_out_at' => $checkout_time,
-                ],
-                [
-                    'visit_id' => $visit_id,
-                    'visitor_id' => $visitor_id,
-                    'log_date' => $today,
-                ],
-                ['%s'],
-                ['%d', '%d', '%s']
-            );
-            
-            if ($result === false) {
-                error_log("[SAW Terminal] Failed to checkout visitor #{$visitor_id}: " . $wpdb->last_error);
-            } else {
-                error_log("[SAW Terminal] Visitor #{$visitor_id} checked out");
-            }
-        }
-
-// ✅ Update last_checkout_at in visitors table
-        foreach ($visitor_ids as $visitor_id) {
-            $wpdb->update(
-                $wpdb->prefix . 'saw_visitors',
-                ['last_checkout_at' => $checkout_time],
-                ['id' => intval($visitor_id)],
-                ['%s'],
-                ['%d']
-            );
-        }
-        
-        // ✅ Check if visit should be completed
+        // 3. Update last_checkout_at in visitors table
+        $wpdb->update(
+            $wpdb->prefix . 'saw_visitors',
+            ['last_checkout_at' => $checkout_time],
+            ['id' => $visitor_id],
+            ['%s'],
+            ['%d']
+        );
+    }
+    
+    // ✅ Check if visits should be completed (pokud máme visit_id z PIN checkout)
+    if (!empty($flow['checkout_visit_id'])) {
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/model.php';
         $visits_config = require SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/config.php';
         $visits_model = new SAW_Module_Visits_Model($visits_config);
         
-        $completed = $visits_model->check_and_complete_visit($visit_id);
+        $completed = $visits_model->check_and_complete_visit($flow['checkout_visit_id']);
         
         if ($completed) {
-            error_log("[SAW Terminal] Visit #{$visit_id} automatically completed (all checked out on last day)");
+            error_log("[SAW Terminal] Visit #{$flow['checkout_visit_id']} automatically completed");
         }
-        
-        // Clear session
-        $this->reset_flow();
-        
-        // Redirect to success
-        wp_redirect(home_url('/terminal/success/?action=checkout'));
-        exit;
     }
+    
+    // Clear session
+    $this->reset_flow();
+    
+    // Redirect to success
+    wp_redirect(home_url('/terminal/success/?action=checkout'));
+    exit;
+}
     
     /**
      * Move to next training step
@@ -2190,4 +2339,6 @@ private function handle_training_additional_complete() {
         true
     );
 }
+    
+
 }

@@ -241,15 +241,35 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
         ), ARRAY_A);
         
         if ($existing_log) {
-            // Update existing log
-            $result = $wpdb->update(
-                $wpdb->prefix . 'saw_visit_daily_logs',
-                array('checked_in_at' => current_time('mysql')),
-                array('id' => $existing_log['id']),
-                array('%s'),
-                array('%d')
-            );
-        } else {
+    // ✅ OPRAVENO: Pokud už existuje log pro dnes, NEPŘEPISUJ ho
+    // Kontroluj jestli už není checked-out
+    if (!empty($existing_log['checked_out_at'])) {
+        // Už byl checked-out → vytvoř NOVÝ záznam pro další vstup
+        $result = $wpdb->insert(
+            $wpdb->prefix . 'saw_visit_daily_logs',
+            array(
+                'visit_id' => $visit_id,
+                'visitor_id' => $visitor_id,
+                'log_date' => $log_date,
+                'checked_in_at' => current_time('mysql'),
+            ),
+            array('%d', '%d', '%s', '%s')
+        );
+        
+        error_log("[SAW] Created NEW log entry for visitor #{$visitor_id} - re-entry after checkout");
+    } else {
+        // Ještě není checked-out → UPDATE check-in času (znovu přišel)
+        $result = $wpdb->update(
+            $wpdb->prefix . 'saw_visit_daily_logs',
+            array('checked_in_at' => current_time('mysql')),
+            array('id' => $existing_log['id']),
+            array('%s'),
+            array('%d')
+        );
+        
+        error_log("[SAW] Updated existing log entry for visitor #{$visitor_id} - updated check-in time");
+    }
+} else {
             // Create new log
             $result = $wpdb->insert(
                 $wpdb->prefix . 'saw_visit_daily_logs',
@@ -324,22 +344,23 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
     
     // Find today's log
     $log = $wpdb->get_row($wpdb->prepare(
-        "SELECT * FROM {$wpdb->prefix}saw_visit_daily_logs 
-         WHERE visit_id = %d AND visitor_id = %d AND log_date = %s",
-        $visit_id,
-        $visitor_id,
-        $log_date
-    ), ARRAY_A);
+    "SELECT * FROM {$wpdb->prefix}saw_visit_daily_logs 
+     WHERE visit_id = %d 
+     AND visitor_id = %d 
+     AND log_date = %s
+     AND checked_in_at IS NOT NULL
+     AND checked_out_at IS NULL
+     ORDER BY checked_in_at DESC
+     LIMIT 1",
+    $visit_id,
+    $visitor_id,
+    $log_date
+), ARRAY_A);
     
     if (!$log) {
-        error_log("[SAW Checkout] ERROR: No check-in found for date {$log_date}");
-        return new WP_Error('no_checkin', 'No check-in found for this date');
-    }
-    
-    if (!empty($log['checked_out_at'])) {
-        error_log("[SAW Checkout] ERROR: Already checked out at {$log['checked_out_at']}");
-        return new WP_Error('already_checked_out', 'Already checked out');
-    }
+    error_log("[SAW Checkout] ERROR: No active check-in found for date {$log_date}");
+    return new WP_Error('no_active_checkin', 'Návštěvník není momentálně přítomen');
+}
     
     // Update log with checkout
     $update_data = array(

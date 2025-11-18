@@ -16,6 +16,83 @@ if (empty($item)) {
     padding: 20px !important;
 }
 
+/* ✅ MOBILE RESPONSIVE - JEDEN SLOUPEC */
+@media (max-width: 782px) {
+    .saw-detail-grid {
+        grid-template-columns: 1fr !important;
+        padding: 12px !important;
+        gap: 16px !important;
+    }
+    
+    .saw-detail-card {
+        margin-bottom: 0 !important;
+    }
+    
+    .saw-detail-card-header {
+        padding: 12px !important;
+    }
+    
+    .saw-detail-card-body {
+        padding: 12px !important;
+    }
+    
+    .saw-detail-card-icon {
+        font-size: 20px !important;
+    }
+    
+    .saw-detail-card-title {
+        font-size: 15px !important;
+    }
+    
+    /* Menší tabulka na mobilu */
+    .saw-detail-card-full table {
+        font-size: 12px !important;
+    }
+    
+    .saw-detail-card-full table th,
+    .saw-detail-card-full table td {
+        padding: 6px 4px !important;
+    }
+}
+
+/* ✅ Extra malé mobily (iPhone SE, atd.) */
+@media (max-width: 480px) {
+    .saw-detail-grid {
+        padding: 8px !important;
+        gap: 12px !important;
+    }
+    
+    .saw-detail-card-header {
+        padding: 10px !important;
+        gap: 8px !important;
+    }
+    
+    .saw-detail-card-body {
+        padding: 10px !important;
+    }
+    
+    .saw-detail-card-icon {
+        font-size: 18px !important;
+    }
+    
+    .saw-detail-card-title {
+        font-size: 14px !important;
+    }
+    
+    .saw-detail-label {
+        font-size: 12px !important;
+    }
+    
+    .saw-detail-value {
+        font-size: 13px !important;
+    }
+    
+    /* Skrýt některé sloupce v tabulce */
+    .saw-detail-card-full table th:last-child,
+    .saw-detail-card-full table td:last-child {
+        display: none !important; /* Skrýt "Doba" */
+    }
+}
 /* Full-width cards */
 .saw-detail-card-full {
     grid-column: 1 / -1 !important;
@@ -238,38 +315,105 @@ if (empty($item)) {
     </div>
     
     <!-- 3. STAV ÚČASTI -->
-    <div class="saw-detail-card">
-        <div class="saw-detail-card-header">
-            <span class="saw-detail-card-icon">✓</span>
-            <h3 class="saw-detail-card-title">Stav účasti</h3>
-        </div>
-        <div class="saw-detail-card-body">
-            <dl class="saw-detail-list">
-                <dt class="saw-detail-label">Stav</dt>
-                <dd class="saw-detail-value">
-                    <?php
-                    $status = $item['participation_status'] ?? 'planned';
-                    $badges = array(
-                        'planned' => '<span class="saw-badge saw-badge-info">Plánovaný</span>',
-                        'confirmed' => '<span class="saw-badge saw-badge-success">Potvrzený</span>',
-                        'no_show' => '<span class="saw-badge saw-badge-danger">Nedorazil</span>',
-                    );
-                    echo $badges[$status] ?? $status;
-                    ?>
-                </dd>
-                
-                <dt class="saw-detail-label">První check-in</dt>
-                <dd class="saw-detail-value">
-                    <?php echo !empty($item['first_checkin_at']) ? date('d.m.Y H:i', strtotime($item['first_checkin_at'])) : '—'; ?>
-                </dd>
-                
-                <dt class="saw-detail-label">Poslední check-out</dt>
-                <dd class="saw-detail-value">
-                    <?php echo !empty($item['last_checkout_at']) ? date('d.m.Y H:i', strtotime($item['last_checkout_at'])) : '—'; ?>
-                </dd>
-            </dl>
-        </div>
+<div class="saw-detail-card">
+    <div class="saw-detail-card-header">
+        <span class="saw-detail-card-icon">✓</span>
+        <h3 class="saw-detail-card-title">Stav účasti</h3>
     </div>
+    <div class="saw-detail-card-body">
+        <?php
+        // ===================================
+        // ✅ DYNAMICKÝ STATUS (stejná logika jako v listu)
+        // ===================================
+        global $wpdb;
+        $today = current_time('Y-m-d');
+        
+        // Načti POSLEDNÍ log pro DNES
+        $log = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}saw_visit_daily_logs 
+             WHERE visitor_id = %d AND log_date = %s
+             ORDER BY checked_in_at DESC
+             LIMIT 1",
+            $item['id'], $today
+        ), ARRAY_A);
+        
+        // Vypočítej aktuální stav
+        if ($item['participation_status'] === 'confirmed') {
+            if ($log && $log['checked_in_at'] && !$log['checked_out_at']) {
+                $current_status = 'present'; // ✅ Přítomen
+                $status_badge = '<span class="saw-badge saw-badge-success">✅ Přítomen</span>';
+            } elseif ($log && $log['checked_out_at']) {
+                $current_status = 'checked_out'; // 🚪 Odhlášen
+                $status_badge = '<span class="saw-badge saw-badge-secondary">🚪 Odhlášen</span>';
+            } else {
+                $current_status = 'confirmed'; // ⏳ Potvrzený (ale dnes ještě nepřišel)
+                $status_badge = '<span class="saw-badge saw-badge-warning">⏳ Potvrzený</span>';
+            }
+        } elseif ($item['participation_status'] === 'no_show') {
+            $current_status = 'no_show';
+            $status_badge = '<span class="saw-badge saw-badge-danger">❌ Nedostavil se</span>';
+        } else {
+            $current_status = 'planned';
+            $status_badge = '<span class="saw-badge saw-badge-info">📅 Plánovaný</span>';
+        }
+        ?>
+        
+        <dl class="saw-detail-list">
+            <dt class="saw-detail-label">Aktuální stav</dt>
+            <dd class="saw-detail-value">
+                <?php echo $status_badge; ?>
+            </dd>
+            
+            <dt class="saw-detail-label">První check-in</dt>
+            <dd class="saw-detail-value">
+                <?php 
+                // ✅ Načti první check-in z daily_logs
+                $first_log = $wpdb->get_row($wpdb->prepare(
+                    "SELECT checked_in_at FROM {$wpdb->prefix}saw_visit_daily_logs 
+                     WHERE visitor_id = %d AND checked_in_at IS NOT NULL
+                     ORDER BY checked_in_at ASC
+                     LIMIT 1",
+                    $item['id']
+                ), ARRAY_A);
+                
+                echo !empty($first_log['checked_in_at']) ? date('d.m.Y H:i', strtotime($first_log['checked_in_at'])) : '—'; 
+                ?>
+            </dd>
+            
+            <dt class="saw-detail-label">Poslední check-in</dt>
+            <dd class="saw-detail-value">
+                <?php 
+                // ✅ NOVÉ: Načti poslední check-in z daily_logs
+                $last_checkin = $wpdb->get_row($wpdb->prepare(
+                    "SELECT checked_in_at FROM {$wpdb->prefix}saw_visit_daily_logs 
+                     WHERE visitor_id = %d AND checked_in_at IS NOT NULL
+                     ORDER BY checked_in_at DESC
+                     LIMIT 1",
+                    $item['id']
+                ), ARRAY_A);
+                
+                echo !empty($last_checkin['checked_in_at']) ? date('d.m.Y H:i', strtotime($last_checkin['checked_in_at'])) : '—'; 
+                ?>
+            </dd>
+            
+            <dt class="saw-detail-label">Poslední check-out</dt>
+            <dd class="saw-detail-value">
+                <?php 
+                // ✅ Načti poslední check-out z daily_logs
+                $last_checkout = $wpdb->get_row($wpdb->prepare(
+                    "SELECT checked_out_at FROM {$wpdb->prefix}saw_visit_daily_logs 
+                     WHERE visitor_id = %d AND checked_out_at IS NOT NULL
+                     ORDER BY checked_out_at DESC
+                     LIMIT 1",
+                    $item['id']
+                ), ARRAY_A);
+                
+                echo !empty($last_checkout['checked_out_at']) ? date('d.m.Y H:i', strtotime($last_checkout['checked_out_at'])) : '—'; 
+                ?>
+            </dd>
+        </dl>
+    </div>
+</div>
     
     <!-- 4. ŠKOLENÍ -->
     <div class="saw-detail-card">
@@ -303,33 +447,44 @@ if (empty($item)) {
                 <?php endif; ?>
 
  <?php 
-                // ✅ VÝPOČET DOBY ŠKOLENÍ
-                if (!empty($item['training_started_at']) && !empty($item['training_completed_at'])): 
-                    $start = strtotime($item['training_started_at']);
-                    $end = strtotime($item['training_completed_at']);
-                    $duration_seconds = $end - $start;
-                    
-                    if ($duration_seconds < 60) {
-                        // Méně než minuta → sekundy
-                        $duration_text = $duration_seconds . ' sekund';
-                    } elseif ($duration_seconds < 3600) {
-                        // Méně než hodina → minuty a sekundy
-                        $minutes = floor($duration_seconds / 60);
-                        $seconds = $duration_seconds % 60;
-                        $duration_text = $minutes . ' min ' . $seconds . ' s';
-                    } else {
-                        // Více než hodina → hodiny, minuty, sekundy
-                        $hours = floor($duration_seconds / 3600);
-                        $minutes = floor(($duration_seconds % 3600) / 60);
-                        $seconds = $duration_seconds % 60;
-                        $duration_text = $hours . ' h ' . $minutes . ' min ' . $seconds . ' s';
-                    }
-                ?>
-                <dt class="saw-detail-label">⏱️ Doba školení</dt>
-                <dd class="saw-detail-value">
-                    <strong><?php echo $duration_text; ?></strong>
-                </dd>
-                <?php endif; ?>
+// ✅ VÝPOČET DOBY ŠKOLENÍ
+if (!empty($item['training_started_at']) && !empty($item['training_completed_at'])): 
+    // ✅ OPRAVENO: Použij DateTime objekty (lepší timezone handling)
+    try {
+        $start = new DateTime($item['training_started_at']);
+        $end = new DateTime($item['training_completed_at']);
+        
+        $interval = $start->diff($end);
+        
+        // ✅ Kontrola jestli je čas záporný (completed před started)
+        if ($interval->invert) {
+            $duration_text = '<span style="color: #ef4444;">⚠️ Chyba v datech</span>';
+            error_log("[SAW Detail] ERROR: training_completed_at ({$item['training_completed_at']}) is BEFORE training_started_at ({$item['training_started_at']})");
+        } else {
+            // ✅ Vypočítej celkové sekundy
+            $duration_seconds = ($interval->days * 24 * 3600) + ($interval->h * 3600) + ($interval->i * 60) + $interval->s;
+            
+            if ($duration_seconds < 60) {
+                // Méně než minuta → sekundy
+                $duration_text = $duration_seconds . ' sekund';
+            } elseif ($duration_seconds < 3600) {
+                // Méně než hodina → minuty a sekundy
+                $duration_text = $interval->i . ' min ' . $interval->s . ' s';
+            } else {
+                // Více než hodina → hodiny, minuty, sekundy
+                $duration_text = $interval->h . ' h ' . $interval->i . ' min ' . $interval->s . ' s';
+            }
+        }
+    } catch (Exception $e) {
+        $duration_text = '<span style="color: #ef4444;">⚠️ Neplatný formát data</span>';
+        error_log("[SAW Detail] ERROR: Failed to parse dates - " . $e->getMessage());
+    }
+?>
+<dt class="saw-detail-label">⏱️ Doba školení</dt>
+<dd class="saw-detail-value">
+    <strong><?php echo $duration_text; ?></strong>
+</dd>
+<?php endif; ?>
                 
                 <?php if (!$item['training_skipped'] && !empty($item['training_started_at'])): ?>
                 <dt class="saw-detail-label">Progress</dt>

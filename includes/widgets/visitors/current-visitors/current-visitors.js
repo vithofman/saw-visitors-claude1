@@ -3,29 +3,45 @@
  * 
  * Handles manual checkout functionality
  */
-
 jQuery(document).ready(function($) {
+    
+    /**
+     * ✅ KRITICKÉ: Prevent card click when clicking actions area
+     */
+    $(document).on('click', '.saw-visitor-actions', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();  // ✅ Zastaví i další handlery
+        return false;  // ✅ Extra pojistka
+    });
     
     /**
      * Manual checkout button click
      */
     $(document).on('click', '.saw-manual-checkout-btn', function(e) {
         e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();  // ✅ Zastaví i další handlery
         
         const $btn = $(this);
         const $card = $btn.closest('.saw-visitor-card');
         const visitorId = $btn.data('visitor-id');
         
-        // Prompt for reason
+        // Confirm action
+        if (!confirm('Opravdu chcete odhlásit tohoto návštěvníka?')) {
+            return false;
+        }
+        
+        // Prompt for reason (optional)
         const reason = prompt('Důvod ručního odhlášení (volitelné):');
         
         if (reason === null) {
-            return; // User cancelled
+            return false; // User cancelled
         }
         
         // Add loading state
         $card.addClass('saw-loading');
-        $btn.prop('disabled', true);
+        $btn.prop('disabled', true).text('Odhlašuji...');
         
         // AJAX request
         $.ajax({
@@ -48,15 +64,6 @@ jQuery(document).ready(function($) {
                         if ($list.children().length === 0) {
                             // Reload widget to show empty state
                             location.reload();
-                        } else {
-                            // Update counter
-                            const newCount = $list.children().length;
-                            $('.saw-visitor-count').text(newCount);
-                            
-                            let label = 'osob';
-                            if (newCount === 1) label = 'osoba';
-                            else if (newCount < 5) label = 'osoby';
-                            $('.saw-visitor-label').text(label + ' uvnitř');
                         }
                     });
                     
@@ -64,16 +71,18 @@ jQuery(document).ready(function($) {
                     showNotice('success', 'Návštěvník odhlášen');
                 } else {
                     $card.removeClass('saw-loading');
-                    $btn.prop('disabled', false);
+                    $btn.prop('disabled', false).html('<span class="dashicons dashicons-exit"></span> Check-out');
                     showNotice('error', response.data.message || 'Chyba při odhlašování');
                 }
             },
             error: function() {
                 $card.removeClass('saw-loading');
-                $btn.prop('disabled', false);
+                $btn.prop('disabled', false).html('<span class="dashicons dashicons-exit"></span> Check-out');
                 showNotice('error', 'Chyba připojení k serveru');
             }
         });
+        
+        return false;  // ✅ Extra pojistka
     });
     
     /**

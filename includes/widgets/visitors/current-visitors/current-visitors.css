@@ -133,7 +133,10 @@
     display: flex;
     align-items: center;
     flex-shrink: 0;
+    position: relative;  
+    z-index: 100;
 }
+
 
 .saw-manual-checkout-btn {
     display: flex;
@@ -203,4 +206,19 @@
         width: 100%;
         justify-content: center;
     }
+}
+
+/* ✅ KRITICKÉ: Ensure button is always clickable */
+.saw-manual-checkout-btn {
+    position: relative;  /* ✅ Důležité! */
+    z-index: 101;  /* ✅ Nad .saw-visitor-actions */
+}
+
+/* ✅ Disable pointer events on card when hovering actions */
+.saw-visitor-card:has(.saw-visitor-actions:hover) {
+    pointer-events: none !important;
+}
+
+.saw-visitor-card .saw-visitor-actions {
+    pointer-events: auto !important;
 }

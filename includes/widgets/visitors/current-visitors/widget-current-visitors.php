@@ -121,15 +121,14 @@ class SAW_Widget_Current_Visitors {
             </div>
             
             <div class="saw-visitor-actions">
-                <button type="button" 
-                        class="saw-manual-checkout-btn"
-                        data-visitor-id="<?php echo esc_attr($person['visitor_id']); ?>"
-                        title="Ručně odhlásit"
-                        onclick="event.preventDefault(); event.stopPropagation(); handleCheckout(this);">
-                    <span class="dashicons dashicons-exit"></span>
-                    Check-out
-                </button>
-            </div>
+    <button type="button" 
+            class="saw-manual-checkout-btn"
+            data-visitor-id="<?php echo esc_attr($person['visitor_id']); ?>"
+            title="Ručně odhlásit">
+        <span class="dashicons dashicons-exit"></span>
+        Check-out
+    </button>
+</div>
         </a>
         <?php endforeach; ?>
     </div>

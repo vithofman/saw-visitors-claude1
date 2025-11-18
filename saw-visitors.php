@@ -112,6 +112,105 @@ add_action('wp_ajax_saw_inline_create_companies', function() {
 // Modulové AJAX akce se registrují automaticky přes SAW_Visitors::register_module_ajax_handlers()
 // např.: saw_load_sidebar_customers, saw_delete_branches, atd.
 
+// ========================================
+// 🔍 TERMINAL SEARCH AJAX (Checkout)
+// ========================================
+add_action('wp_ajax_saw_terminal_search_by_name', 'saw_terminal_search_ajax');
+add_action('wp_ajax_nopriv_saw_terminal_search_by_name', 'saw_terminal_search_ajax');
+
+function saw_terminal_search_ajax() {
+    error_log('[SAW AJAX Search] Handler called!');
+    error_log('[SAW AJAX Search] POST: ' . print_r($_POST, true));
+    
+    // Verify nonce
+    if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'saw_terminal_search')) {
+        error_log('[SAW AJAX Search] Nonce verification FAILED');
+        wp_send_json_error(['message' => 'Invalid nonce']);
+        return;
+    }
+    
+    error_log('[SAW AJAX Search] Nonce OK');
+    
+    $first_name = sanitize_text_field($_POST['first_name'] ?? '');
+    $last_name = sanitize_text_field($_POST['last_name'] ?? '');
+    $customer_id = intval($_POST['customer_id'] ?? 0);
+    $branch_id = intval($_POST['branch_id'] ?? 0);
+    
+    error_log(sprintf('[SAW AJAX Search] Params: first=%s, last=%s, customer=%d, branch=%d', 
+        $first_name, $last_name, $customer_id, $branch_id));
+    
+    if (empty($first_name) || empty($last_name) || !$customer_id || !$branch_id) {
+        error_log('[SAW AJAX Search] Invalid parameters');
+        wp_send_json_error(['message' => 'Invalid parameters']);
+        return;
+    }
+    
+    global $wpdb;
+    
+    error_log('[SAW AJAX Search] Running SQL query...');
+    
+    $visitors = $wpdb->get_results($wpdb->prepare(
+        "SELECT DISTINCT 
+            vis.id,
+            vis.first_name,
+            vis.last_name,
+            v.company_id,
+            c.name as company_name,
+            dl.checked_in_at,
+            dl.log_date,
+            TIMESTAMPDIFF(MINUTE, dl.checked_in_at, NOW()) as minutes_inside
+         FROM {$wpdb->prefix}saw_visitors vis
+         INNER JOIN {$wpdb->prefix}saw_visits v ON vis.visit_id = v.id
+         LEFT JOIN {$wpdb->prefix}saw_companies c ON v.company_id = c.id
+         INNER JOIN {$wpdb->prefix}saw_visit_daily_logs dl ON vis.id = dl.visitor_id
+         WHERE v.customer_id = %d
+           AND v.branch_id = %d
+           AND LOWER(vis.first_name) = LOWER(%s)
+           AND LOWER(vis.last_name) = LOWER(%s)
+           AND dl.checked_in_at IS NOT NULL
+           AND dl.checked_out_at IS NULL
+         ORDER BY dl.checked_in_at DESC",
+        $customer_id,
+        $branch_id,
+        $first_name,
+        $last_name
+    ), ARRAY_A);
+    
+    if ($wpdb->last_error) {
+        error_log('[SAW AJAX Search] SQL ERROR: ' . $wpdb->last_error);
+    }
+    
+    error_log('[SAW AJAX Search] Found ' . count($visitors) . ' visitors');
+    
+    if (!empty($visitors)) {
+        error_log('[SAW AJAX Search] Visitor details: ' . print_r($visitors, true));
+    }
+    
+    if (empty($visitors)) {
+        wp_send_json_error(['message' => 'No visitors found']);
+        return;
+    }
+    
+    // Format results
+    foreach ($visitors as &$visitor) {
+        $visitor['checkin_time'] = date('H:i', strtotime($visitor['checked_in_at']));
+        
+        $log_date = date('Y-m-d', strtotime($visitor['log_date']));
+        $today = current_time('Y-m-d');
+        
+        if ($log_date !== $today) {
+            $visitor['checkin_date'] = date('d.m.Y', strtotime($log_date));
+        }
+    }
+    
+    error_log('[SAW AJAX Search] Sending success response');
+    
+    wp_send_json_success([
+        'visitors' => $visitors,
+        'count' => count($visitors)
+    ]);
+}
+
 
 // ========================================
 // WIDGETS
