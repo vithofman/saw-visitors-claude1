@@ -4,7 +4,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visitors
- * @version     2.0.0 - UPDATED: Added check-in/out AJAX actions
+ * @version     3.0.0 - FIXED: Removed custom_ajax_actions (now handled in controller)
  */
 
 if (!defined('ABSPATH')) {
@@ -72,6 +72,11 @@ return array(
             'required' => true,
             'sanitize' => 'sanitize_text_field',
             'default' => 'planned',
+            'options' => array(
+                'planned' => 'Plánovaný',
+                'confirmed' => 'Potvrzený',
+                'no_show' => 'Nedostavil se',
+            ),
         ),
         'training_skipped' => array(
             'type' => 'checkbox',
@@ -82,8 +87,16 @@ return array(
         ),
     ),
     
- 'list_config' => array(
-        'columns' => array('id', 'first_name', 'last_name', 'visit_id', 'current_status', 'first_checkin_at', 'last_checkout_at'),
+    'list_config' => array(
+        'columns' => array(
+            'id',
+            'first_name',
+            'last_name',
+            'visit_id',
+            'current_status',
+            'first_checkin_at',
+            'last_checkout_at'
+        ),
         'searchable' => array('first_name', 'last_name', 'email'),
         'sortable' => array('id', 'first_name', 'last_name', 'created_at'),
         'filters' => array(
@@ -106,15 +119,5 @@ return array(
         'enabled' => true,
         'ttl' => 300,
         'invalidate_on' => array('save', 'delete'),
-    ),
-    
-    'custom_ajax_actions' => array(
-        // Existing
-        'saw_get_visits_for_select' => 'ajax_get_visits_for_select',
-        
-        // ⭐ NEW: Check-in/out actions
-        'saw_checkin' => 'ajax_checkin',
-        'saw_checkout' => 'ajax_checkout',
-        'saw_add_adhoc_visitor' => 'ajax_add_adhoc_visitor',
     ),
 );

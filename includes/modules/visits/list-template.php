@@ -1,15 +1,10 @@
 <?php
 /**
- * Visits List Template
- * 
- * @package     SAW_Visitors
- * @subpackage  Modules/Visits
- * @version     3.0.0 - REFACTORED: Shows physical person name when no company
+ * Visits List Template - IMPROVED
+ * @version 3.2.0 - More informative columns
  */
 
-if (!defined('ABSPATH')) {
-    exit;
-}
+if (!defined('ABSPATH')) exit;
 
 if (!class_exists('SAW_Component_Admin_Table')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/class-saw-component-admin-table.php';
@@ -30,7 +25,6 @@ if ($customer_id) {
     }
 }
 
-// Připrav data pro search a filtry
 $search_value = $search ?? '';
 $status_filter = $status_filter ?? '';
 
@@ -47,12 +41,10 @@ $status_filter = $status_filter ?? '';
         
         'module_config' => $this->config,
         
-        // ✅ ZAPNUTÍ SEARCH
         'enable_search' => true,
         'search_placeholder' => 'Hledat návštěvu...',
         'search_value' => $search_value,
         
-        // ✅ ZAPNUTÍ FILTRŮ
         'enable_filters' => true,
         'filters' => array(
             'status' => array(
@@ -73,7 +65,6 @@ $status_filter = $status_filter ?? '';
             'status' => $status_filter,
         ),
         
-        // Sidebar
         'sidebar_mode' => $sidebar_mode ?? null,
         'detail_item' => $detail_item ?? null,
         'form_item' => $form_item ?? null,
@@ -81,21 +72,23 @@ $status_filter = $status_filter ?? '';
         'related_data' => $related_data ?? null,
         'branches' => $branches ?? array(),
         
-        // Columns
         'columns' => array(
+            'id' => array(
+                'label' => 'ID',
+                'type' => 'text',
+                'sortable' => true,
+            ),
             'company_person' => array(
                 'label' => 'Návštěvník',
                 'type' => 'custom',
                 'sortable' => false,
                 'callback' => function($value, $item) {
                     if (!empty($item['company_id'])) {
-                        // Legal person (company)
                         echo '<div style="display: flex; align-items: center; gap: 8px;">';
-                        echo '<strong>' . esc_html($item['company_name']) . '</strong>';
-                        echo '<span class="saw-badge saw-badge-info" style="font-size: 11px;">Firma</span>';
+                        echo '<strong>' . esc_html($item['company_name'] ?? 'Firma #' . $item['company_id']) . '</strong>';
+                        echo '<span class="saw-badge saw-badge-info" style="font-size: 11px;">🏢 Firma</span>';
                         echo '</div>';
                     } else {
-                        // Physical person
                         echo '<div style="display: flex; align-items: center; gap: 8px;">';
                         if (!empty($item['first_visitor_name'])) {
                             echo '<strong style="color: #6366f1;">' . esc_html($item['first_visitor_name']) . '</strong>';
@@ -107,9 +100,33 @@ $status_filter = $status_filter ?? '';
                     }
                 },
             ),
-            'schedule_dates_formatted' => array(
-                'label' => 'Naplánované dny',
-                'type' => 'html_raw',
+            'branch_name' => array(
+                'label' => 'Pobočka',
+                'type' => 'text',
+            ),
+            'visit_type' => array(
+                'label' => 'Typ',
+                'type' => 'badge',
+                'map' => array(
+                    'planned' => 'info',
+                    'walk_in' => 'warning',
+                ),
+                'labels' => array(
+                    'planned' => 'Plánovaná',
+                    'walk_in' => 'Walk-in',
+                ),
+            ),
+            'visitor_count' => array(
+                'label' => 'Počet návštěvníků',
+                'type' => 'custom',
+                'callback' => function($value, $item) {
+                    $count = intval($item['visitor_count'] ?? 0);
+                    if ($count === 0) {
+                        echo '<span style="color: #999;">—</span>';
+                    } else {
+                        echo '<strong style="color: #0066cc;">👥 ' . $count . '</strong>';
+                    }
+                },
             ),
             'status' => array(
                 'label' => 'Stav',
@@ -132,9 +149,13 @@ $status_filter = $status_filter ?? '';
                     'cancelled' => 'Zrušená',
                 ),
             ),
+            'created_at' => array(
+                'label' => 'Vytvořeno',
+                'type' => 'text',
+                'sortable' => true,
+            ),
         ),
         
-        // Data
         'rows' => $items,
         'total_items' => $total,
         'current_page' => $page,

@@ -1,21 +1,16 @@
 <?php
 /**
  * Visitors Module Controller
- * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visitors
- * @version     2.0.0 - REFACTORED: Check-in/out AJAX handlers, ad-hoc visitors
+ * @since       1.0.0
+ * @version     3.0.0 - FINAL: Assets in module root, not assets/
  */
 
 if (!defined('ABSPATH')) exit;
 
-if (!class_exists('SAW_Base_Controller')) {
-    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/class-base-controller.php';
-}
-
-if (!trait_exists('SAW_AJAX_Handlers')) {
-    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/trait-ajax-handlers.php';
-}
+if (!class_exists('SAW_Base_Controller')) require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/class-base-controller.php';
+if (!trait_exists('SAW_AJAX_Handlers')) require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/trait-ajax-handlers.php';
 
 class SAW_Module_Visitors_Controller extends SAW_Base_Controller 
 {
@@ -23,30 +18,122 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
     
     public function __construct() {
         $module_path = SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visitors/';
-        
         $this->config = require $module_path . 'config.php';
         $this->entity = $this->config['entity'];
         $this->config['path'] = $module_path;
-        
         require_once $module_path . 'model.php';
         $this->model = new SAW_Module_Visitors_Model($this->config);
+        
+        // Register AJAX handlers
+        add_action('wp_ajax_saw_checkin', array($this, 'ajax_checkin'));
+        add_action('wp_ajax_saw_checkout', array($this, 'ajax_checkout'));
+        add_action('wp_ajax_saw_add_adhoc_visitor', array($this, 'ajax_add_adhoc_visitor'));
+        
+        // Enqueue assets
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'));
     }
     
-    /**
-     * Display list view
-     */
     public function index() {
+        if (function_exists('saw_can') && !saw_can('list', $this->entity)) {
+            wp_die('Nemáte oprávnění.', 403);
+        }
         $this->render_list_view();
     }
     
+    /**
+     * Enqueue module assets
+     * CSS and JS files are DIRECTLY in module folder (not in assets/)
+     */
+    public function enqueue_assets() {
+        if (!is_admin()) return;
+        
+        $current_url = $_SERVER['REQUEST_URI'] ?? '';
+        if (strpos($current_url, '/admin/visitors') === false) return;
+        
+        // CSS - visitors.css directly in module root
+        wp_enqueue_style(
+            'saw-visitors-css',
+            SAW_VISITORS_PLUGIN_URL . 'includes/modules/visitors/visitors.css',
+            array(),
+            SAW_VISITORS_VERSION
+        );
+        
+        // JS - visitors.js directly in module root
+        wp_enqueue_script(
+            'saw-visitors-js',
+            SAW_VISITORS_PLUGIN_URL . 'includes/modules/visitors/visitors.js',
+            array('jquery'),
+            SAW_VISITORS_VERSION,
+            true
+        );
+        
+        wp_localize_script('saw-visitors-js', 'sawVisitorsData', array(
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('saw_ajax_nonce'),
+        ));
+    }
+
+    protected function prepare_form_data($post) {
+        $data = array();
+        
+        foreach ($this->config['fields'] as $field_name => $field_config) {
+            if (isset($post[$field_name])) {
+                $sanitize = $field_config['sanitize'] ?? 'sanitize_text_field';
+                $data[$field_name] = $sanitize($post[$field_name]);
+            } elseif ($field_config['type'] === 'checkbox') {
+                $data[$field_name] = 0;
+            }
+        }
+        
+        return $data;
+    }
+    
+    protected function after_save($id) {
+        if (isset($_POST['certificates']) && is_array($_POST['certificates'])) {
+            $this->model->save_certificates($id, $_POST['certificates']);
+        }
+    }
+
+    protected function format_detail_data($item) {
+        if (empty($item)) return $item;
+        
+        // Load visit data
+        if (!empty($item['visit_id'])) {
+            $item['visit_data'] = $this->model->get_visit_data($item['visit_id']);
+            
+            // Load hosts
+            if (!empty($item['visit_data'])) {
+                global $wpdb;
+                $hosts = $wpdb->get_results($wpdb->prepare(
+                    "SELECT u.id, u.first_name, u.last_name, u.email
+                     FROM {$wpdb->prefix}saw_visit_hosts vh
+                     INNER JOIN {$wpdb->prefix}saw_users u ON vh.user_id = u.id
+                     WHERE vh.visit_id = %d
+                     ORDER BY u.last_name, u.first_name",
+                    $item['visit_id']
+                ), ARRAY_A);
+                
+                $item['visit_data']['hosts'] = $hosts;
+            }
+        }
+        
+        // Load certificates
+        if (!empty($item['id'])) {
+            $item['certificates'] = $this->model->get_certificates($item['id']);
+        }
+        
+        // Load daily logs
+        if (!empty($item['id'])) {
+            $item['daily_logs'] = $this->model->get_daily_logs($item['id']);
+        }
+        
+        return $item;
+    }
+    
     // ============================================
-    // NEW AJAX HANDLERS - CHECK-IN/OUT
+    // AJAX HANDLERS
     // ============================================
     
-    /**
-     * AJAX: Check-in visitor for specific day
-     * Called from terminal or dashboard
-     */
     public function ajax_checkin() {
         check_ajax_referer('saw_ajax_nonce', 'nonce');
         
@@ -76,79 +163,53 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
         ));
     }
     
-    /**
- * AJAX: Check-out visitor for specific day
- * Called from terminal or dashboard
- * Supports manual checkout by admin
- */
-public function ajax_checkout() {
-    check_ajax_referer('saw_ajax_nonce', 'nonce');
-    
-    if (!current_user_can('edit_posts')) {
-        wp_send_json_error(array('message' => 'Nemáte oprávnění'));
-        return;
+    public function ajax_checkout() {
+        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        
+        if (!current_user_can('edit_posts')) {
+            wp_send_json_error(array('message' => 'Nemáte oprávnění'));
+            return;
+        }
+        
+        $visitor_id = isset($_POST['visitor_id']) ? intval($_POST['visitor_id']) : 0;
+        $log_date = isset($_POST['log_date']) ? sanitize_text_field($_POST['log_date']) : current_time('Y-m-d');
+        $manual = isset($_POST['manual']) ? (bool) $_POST['manual'] : false;
+        $reason = isset($_POST['reason']) ? sanitize_textarea_field($_POST['reason']) : null;
+        
+        if (!$visitor_id) {
+            wp_send_json_error(array('message' => 'Neplatný návštěvník'));
+            return;
+        }
+        
+        global $wpdb;
+        $visitor_exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}saw_visitors WHERE id = %d",
+            $visitor_id
+        ));
+        
+        if (!$visitor_exists) {
+            wp_send_json_error(array('message' => 'Návštěvník nenalezen'));
+            return;
+        }
+        
+        $admin_id = null;
+        if ($manual) {
+            $admin_id = get_current_user_id();
+        }
+        
+        $result = $this->model->daily_checkout($visitor_id, $log_date, $manual, $admin_id, $reason);
+        
+        if (is_wp_error($result)) {
+            wp_send_json_error(array('message' => $result->get_error_message()));
+            return;
+        }
+        
+        wp_send_json_success(array(
+            'message' => 'Check-out úspěšný',
+            'checked_out_at' => current_time('Y-m-d H:i:s'),
+        ));
     }
     
-    // ✅ DEBUG
-    error_log('=== AJAX CHECKOUT DEBUG ===');
-    error_log('POST data: ' . print_r($_POST, true));
-    
-    $visitor_id = isset($_POST['visitor_id']) ? intval($_POST['visitor_id']) : 0;
-    $log_date = isset($_POST['log_date']) ? sanitize_text_field($_POST['log_date']) : current_time('Y-m-d');
-    $manual = isset($_POST['manual']) ? (bool) $_POST['manual'] : false;
-    $reason = isset($_POST['reason']) ? sanitize_textarea_field($_POST['reason']) : null;
-    
-    error_log('Parsed visitor_id: ' . $visitor_id);
-    error_log('Parsed log_date: ' . $log_date);
-    error_log('Parsed manual: ' . ($manual ? 'yes' : 'no'));
-    
-    if (!$visitor_id) {
-        error_log('ERROR: visitor_id is 0 or empty!');
-        wp_send_json_error(array('message' => 'Neplatný návštěvník (ID: 0)'));
-        return;
-    }
-    
-    // ✅ Verify visitor exists BEFORE calling model
-    global $wpdb;
-    $visitor_exists = $wpdb->get_var($wpdb->prepare(
-        "SELECT COUNT(*) FROM {$wpdb->prefix}saw_visitors WHERE id = %d",
-        $visitor_id
-    ));
-    
-    if (!$visitor_exists) {
-        error_log('ERROR: Visitor ID ' . $visitor_id . ' not found in database!');
-        wp_send_json_error(array('message' => 'Návštěvník nenalezen (ID: ' . $visitor_id . ')'));
-        return;
-    }
-    
-    error_log('Visitor exists, proceeding with checkout...');
-    
-    $admin_id = null;
-    if ($manual) {
-        $admin_id = get_current_user_id();
-        error_log('Manual checkout by admin ID: ' . $admin_id);
-    }
-    
-    $result = $this->model->daily_checkout($visitor_id, $log_date, $manual, $admin_id, $reason);
-    
-    if (is_wp_error($result)) {
-        error_log('ERROR from model: ' . $result->get_error_message());
-        wp_send_json_error(array('message' => $result->get_error_message()));
-        return;
-    }
-    
-    error_log('SUCCESS: Checkout completed for visitor ID ' . $visitor_id);
-    
-    wp_send_json_success(array(
-        'message' => 'Check-out úspěšný',
-        'checked_out_at' => current_time('Y-m-d H:i:s'),
-    ));
-}
-    
-    /**
-     * AJAX: Add ad-hoc visitor
-     * For unplanned visitors that show up
-     */
     public function ajax_add_adhoc_visitor() {
         check_ajax_referer('saw_ajax_nonce', 'nonce');
         
@@ -189,81 +250,5 @@ public function ajax_checkout() {
             'visitor_id' => $visitor_id,
             'message' => 'Návštěvník přidán',
         ));
-    }
-    
-    // ============================================
-    // FORM DATA HANDLING
-    // ============================================
-    
-    /**
-     * Prepare form data for save
-     */
-    protected function prepare_form_data($post) {
-        $data = array();
-        
-        foreach ($this->config['fields'] as $field_name => $field_config) {
-            if (isset($post[$field_name])) {
-                $sanitize = $field_config['sanitize'] ?? 'sanitize_text_field';
-                $data[$field_name] = $sanitize($post[$field_name]);
-            } elseif ($field_config['type'] === 'checkbox') {
-                $data[$field_name] = 0;
-            }
-        }
-        
-        return $data;
-    }
-    
-    /**
-     * After save hook
-     * Save certificates
-     */
-    protected function after_save($id) {
-        if (isset($_POST['certificates']) && is_array($_POST['certificates'])) {
-            $this->model->save_certificates($id, $_POST['certificates']);
-        }
-    }
-    
-    /**
-     * Format data for detail view
-     * Load related data (visit, hosts, certificates, daily logs)
-     */
-    protected function format_detail_data($item) {
-        if (empty($item)) {
-            return $item;
-        }
-        
-        // Load visit data
-        if (!empty($item['visit_id'])) {
-            $item['visit_data'] = $this->model->get_visit_data($item['visit_id']);
-            
-            // Load hosts for this visit
-            if (!empty($item['visit_data'])) {
-                global $wpdb;
-                $hosts = $wpdb->get_results($wpdb->prepare(
-                    "SELECT u.id, u.first_name, u.last_name, u.email
-                     FROM %i vh
-                     INNER JOIN %i u ON vh.user_id = u.id
-                     WHERE vh.visit_id = %d
-                     ORDER BY u.last_name, u.first_name",
-                    $wpdb->prefix . 'saw_visit_hosts',
-                    $wpdb->prefix . 'saw_users',
-                    $item['visit_id']
-                ), ARRAY_A);
-                
-                $item['visit_data']['hosts'] = $hosts;
-            }
-        }
-        
-        // Load certificates
-        if (!empty($item['id'])) {
-            $item['certificates'] = $this->model->get_certificates($item['id']);
-        }
-        
-        // Load daily logs (check-in/out history)
-        if (!empty($item['id'])) {
-            $item['daily_logs'] = $this->model->get_daily_logs($item['id']);
-        }
-        
-        return $item;
     }
 }

@@ -407,9 +407,9 @@ class SAW_App_Sidebar {
                 'items' => array(
                     array('id' => 'permissions', 'label' => 'Oprávnění', 'url' => '/admin/permissions', 'icon' => '🔒'),
                     array('id' => 'customers', 'label' => 'Zákazníci', 'url' => '/admin/customers', 'icon' => '🏬'),
-                    array('id' => 'account-types', 'label' => 'Typy účtů', 'url' => '/admin/settings/account-types', 'icon' => '💳'),
+                    array('id' => 'account-types', 'label' => 'Typy účtů', 'url' => '/admin/account-types', 'icon' => '💳'),
                     array('id' => 'settings', 'label' => 'Nastavení', 'url' => '/admin/settings', 'icon' => '⚙️'),
-                    array('id' => 'about', 'label' => 'O aplikaci', 'url' => '/admin/settings/about', 'icon' => 'ℹ️'),
+                    array('id' => 'about', 'label' => 'O aplikaci', 'url' => '/admin/about', 'icon' => 'ℹ️'),
                 ),
             ),
         );

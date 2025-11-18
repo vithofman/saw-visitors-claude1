@@ -1,8 +1,18 @@
 /**
  * Visit Schedules Styling
- * 
- * @since 2.0.0
+ * @version 2.1.0 - FIXED: Table pagination overflow
  */
+
+/* ✅ FIX: Ensure table wrapper doesn't overflow */
+.saw-module-visits {
+    max-width: 100%;
+    overflow: visible !important;
+}
+
+.saw-admin-table-wrapper {
+    max-width: 100%;
+    overflow: visible !important;
+}
 
 /* Schedule Container */
 .saw-schedule-container {

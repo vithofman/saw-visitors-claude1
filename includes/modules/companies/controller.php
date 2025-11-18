@@ -2,7 +2,7 @@
 /**
  * Companies Module Controller
  * 
- * @version 1.3.0 - AJAX handler ODEBRÁN z __construct (nefungoval), registrace v saw-visitors.php
+ * @version 2.0.0 - REFACTORED: Using render_list_view()
  */
 
 if (!defined('ABSPATH')) exit;
@@ -30,14 +30,11 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
         $this->model = new SAW_Module_Companies_Model($this->config);
     }
     
+    /**
+     * ✅ NEW: Using render_list_view() from Base Controller
+     */
     public function index() {
-        $branch_id = SAW_Context::get_branch_id();
-        $filters = array();
-        if ($branch_id) {
-            $filters['branch_id'] = $branch_id;
-        }
-        $list_data = $this->get_list_data($filters);
-        $this->render_list_view($list_data);
+        $this->render_list_view();
     }
     
     protected function prepare_form_data($post) {
@@ -78,10 +75,6 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
         return $data;
     }
     
-    protected function after_save($id) {
-        // Currently no post-save logic needed
-    }
-    
     protected function format_detail_data($item) {
         global $wpdb;
         
@@ -106,7 +99,6 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
     
     /**
      * ✅ AJAX: Inline create handler
-     * Voláno z saw-visitors.php přes wp_ajax_saw_inline_create_companies
      */
     public function ajax_inline_create() {
         check_ajax_referer('saw_ajax_nonce', 'nonce');
@@ -134,39 +126,11 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
             wp_send_json_error(array('message' => $result->get_error_message()));
         }
         
-        $this->after_save($result);
-        
         $item = $this->model->get_by_id($result);
         
         wp_send_json_success(array(
             'id' => $result,
             'name' => $this->get_display_name($item),
         ));
-    }
-    
-    /**
-     * ✅ AJAX: Load inline create sidebar
-     */
-    public function ajax_load_sidebar() {
-        $item = array(
-            'branch_id' => !empty($_POST['prefill']['branch_id']) ? intval($_POST['prefill']['branch_id']) : SAW_Context::get_branch_id(),
-            'customer_id' => !empty($_POST['prefill']['customer_id']) ? intval($_POST['prefill']['customer_id']) : SAW_Context::get_customer_id(),
-        );
-        
-        $is_edit = false;
-        $entity = 'companies';
-        $config = $this->config;
-        
-        $branches = $this->model->get_branches_for_select($item['customer_id']);
-        
-        $GLOBALS['saw_nested_inline_create'] = true;
-        
-        ob_start();
-        require SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/form-sidebar.php';
-        $html = ob_get_clean();
-        
-        unset($GLOBALS['saw_nested_inline_create']);
-        
-        wp_send_json_success(array('html' => $html));
     }
 }

@@ -2,16 +2,11 @@
 /**
  * Companies Relations Configuration
  * 
- * Defines related data that should be displayed in company detail view.
- * 
- * Future relations could include:
- * - Visitors from this company
- * - Contacts from this company
- * - Training records for this company
+ * Defines related data for companies (visits that belong to this company)
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Companies
- * @version     1.0.0
+ * @version     1.3.0 - Fixed: Direct foreign key relationship (no junction)
  */
 
 if (!defined('ABSPATH')) {
@@ -19,34 +14,27 @@ if (!defined('ABSPATH')) {
 }
 
 return array(
-    // No relations configured yet
-    // Add relations here as needed in the future
-    
-    // Example structure for future visitors relation:
-    /*
-    'visitors' => array(
-        'label' => 'Návštěvníci',
-        'icon' => '👥',
-        'entity' => 'visitors',
-        'table' => 'saw_visitors',
-        'foreign_key' => 'company_id',
-        'display_fields' => array('first_name', 'last_name', 'email'),
-        'route' => 'admin/visitors/{id}/',
-        'order_by' => 'last_name ASC, first_name ASC',
+    'visits' => array(
+        'label' => 'Návštěvy této firmy',
+        'icon' => '📋',
+        'entity' => 'visits',
+        'foreign_key' => 'company_id', // visits.company_id = companies.id
+        'display_fields' => array('visit_type', 'status', 'created_at'),
+        'route' => 'admin/visits/{id}/',
+        'order_by' => 'created_at DESC',
         'fields' => array(
-            'first_name' => array(
-                'label' => 'Jméno',
-                'type' => 'text',
+            'visit_type' => array(
+                'label' => 'Typ',
+                'type' => 'badge',
             ),
-            'last_name' => array(
-                'label' => 'Příjmení',
-                'type' => 'text',
+            'status' => array(
+                'label' => 'Stav',
+                'type' => 'badge',
             ),
-            'email' => array(
-                'label' => 'Email',
-                'type' => 'text',
+            'created_at' => array(
+                'label' => 'Vytvořeno',
+                'type' => 'datetime',
             ),
         ),
     ),
-    */
 );

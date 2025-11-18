@@ -871,6 +871,7 @@ class SAW_Terminal_Controller {
      * @return void
      */
     private function handle_post() {
+	error_log("[SAW Terminal] handle_post() CALLED - POST data: " . print_r($_POST, true));
         // Verify nonce
         if (!isset($_POST['terminal_nonce']) || !wp_verify_nonce($_POST['terminal_nonce'], 'saw_terminal_step')) {
             $this->set_error(__('Bezpečnostní kontrola selhala', 'saw-visitors'));
@@ -1174,6 +1175,8 @@ $visitors = $wpdb->get_results($wpdb->prepare(
     global $wpdb;
     
     $steps = [];
+
+	error_log("[DEBUG get_training_steps] customer_id={$this->customer_id}, branch_id={$this->branch_id}, language_code={$language_code}, visit_id={$visit_id}");
     
     // 1. Language ID
     $language_id = $wpdb->get_var($wpdb->prepare(
@@ -1294,10 +1297,20 @@ return $steps;
      */
     private function handle_unified_registration() {
         global $wpdb;
-        
-        $flow = $this->session->get('terminal_flow');
-        $is_planned = ($flow['type'] ?? '') === 'planned';
-        $visit_id = $flow['visit_id'] ?? null;
+
+	error_log("[SAW Terminal] handle_unified_registration() STARTED");
+
+	error_log("[SAW Terminal] Getting flow from session...");
+	$flow = $this->session->get('terminal_flow');
+	error_log("[SAW Terminal] Flow retrieved: " . print_r($flow, true));
+
+	$is_planned = ($flow['type'] ?? '') === 'planned';
+	error_log("[SAW Terminal] is_planned: " . ($is_planned ? 'YES' : 'NO'));
+
+	$visit_id = $flow['visit_id'] ?? null;
+	error_log("[SAW Terminal] visit_id: " . ($visit_id ?? 'NULL'));
+
+	error_log("[SAW Terminal] Starting validation...");
         
         // ===================================
         // 1. VALIDACE FORMULÁŘE
@@ -1306,8 +1319,19 @@ return $steps;
         $errors = [];
         
         // Zjisti zda jsou existing nebo new visitors
-        $existing_visitor_ids = $_POST['existing_visitor_ids'] ?? [];
-        $new_visitors = $_POST['new_visitors'] ?? [];
+	$existing_visitor_ids = $_POST['existing_visitor_ids'] ?? [];
+	$new_visitors = $_POST['new_visitors'] ?? [];
+
+	error_log("[SAW Terminal] existing_visitor_ids: " . print_r($existing_visitor_ids, true));
+	error_log("[SAW Terminal] new_visitors count: " . count($new_visitors));
+
+	// Musí být alespoň jeden visitor (existing NEBO new)
+	if (empty($existing_visitor_ids) && empty($new_visitors)) {
+	    error_log("[SAW Terminal] VALIDATION ERROR: No visitors");
+	    $errors[] = __('Musíte vybrat nebo zadat alespoň jednoho návštěvníka', 'saw-visitors');
+	}
+
+	error_log("[SAW Terminal] Validating new visitors...");
         
         // Musí být alespoň jeden visitor (existing NEBO new)
         if (empty($existing_visitor_ids) && empty($new_visitors)) {
@@ -1316,7 +1340,9 @@ return $steps;
         
         // Validace new visitors
         if (!empty($new_visitors) && is_array($new_visitors)) {
-            foreach ($new_visitors as $idx => $visitor) {
+	    error_log("[SAW Terminal] Entering new_visitors validation loop");
+	    foreach ($new_visitors as $idx => $visitor) {
+	        error_log("[SAW Terminal] Validating visitor #{$idx}: " . print_r($visitor, true));
                 // Přeskoč prázdné řádky
                 $is_empty = empty($visitor['first_name']) && empty($visitor['last_name']) && empty($visitor['position']) && empty($visitor['email']) && empty($visitor['phone']);
                 
@@ -1338,7 +1364,12 @@ return $steps;
         }
         
         // Pro walk-in: validace company a hosts
+
+	error_log("[SAW Terminal] New visitors validation complete");
+
         if (!$is_planned) {
+		error_log("[SAW Terminal] Validating walk-in specific data...");
+
             $is_individual = isset($_POST['is_individual']) && $_POST['is_individual'] == '1';
             
             if (!$is_individual && empty($_POST['company_name'])) {
@@ -1351,10 +1382,15 @@ return $steps;
         }
         
         if (!empty($errors)) {
+	
+		error_log("[SAW Terminal] VALIDATION FAILED: " . implode(', ', $errors));
+
             $this->set_error(implode('<br>', $errors));
             $this->render_registration_form();
             return;
         }
+
+	error_log("[SAW Terminal] Validation passed, creating visit...");
         
         // ===================================
         // 2. VYTVOŘENÍ/POUŽITÍ VISIT
@@ -1388,14 +1424,26 @@ return $steps;
             // Company
             $company_id = null;
             $is_individual = isset($_POST['is_individual']) && $_POST['is_individual'] == '1';
+
+		error_log("[SAW Terminal] is_individual: " . ($is_individual ? 'YES' : 'NO'));
             
             if (!$is_individual) {
-                require_once SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/model.php';
-                $visits_config = require SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/config.php';
-                $visits_model = new SAW_Module_Visits_Model($visits_config);
-                
-                $company_name = sanitize_text_field($_POST['company_name']);
-                $company_id = $visits_model->find_or_create_company($this->branch_id, $company_name);
+
+		error_log("[SAW Terminal] Creating/finding company...");
+		require_once SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/model.php';
+		error_log("[SAW Terminal] Visits model.php loaded");
+
+		$visits_config = require SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/config.php';
+		error_log("[SAW Terminal] Visits config loaded");
+
+		$visits_model = new SAW_Module_Visits_Model($visits_config);
+		error_log("[SAW Terminal] Visits model instantiated");
+
+		$company_name = sanitize_text_field($_POST['company_name']);
+		error_log("[SAW Terminal] Company name: {$company_name}, branch_id: {$this->branch_id}");
+
+		$company_id = $visits_model->find_or_create_company($this->branch_id, $company_name, $this->customer_id);
+		error_log("[SAW Terminal] Company ID returned: " . ($company_id ?: 'NULL'));
                 
                 if (is_wp_error($company_id)) {
                     $this->set_error(__('Chyba při vytváření firmy: ', 'saw-visitors') . $company_id->get_error_message());
@@ -1742,9 +1790,11 @@ $wpdb->update(
             error_log("[SAW Terminal] No training required - redirecting to success");
             wp_redirect(home_url('/terminal/success/'));
         } else {
-            $training_steps = $this->get_training_steps($visit_id, $flow['language']);
-            
-            error_log("[SAW Terminal] Training required - " . count($training_steps) . " steps found");
+            error_log("[SAW Terminal DEBUG] About to call get_training_steps with visit_id={$visit_id}, language={$flow['language']}");
+    $training_steps = $this->get_training_steps($visit_id, $flow['language']);
+    
+    error_log("[SAW Terminal] Training required - " . count($training_steps) . " steps found");
+    error_log("[SAW Terminal DEBUG] Training steps: " . print_r($training_steps, true));
             
             if (!empty($training_steps) && isset($training_steps[0])) {
                 $first_step_url = $training_steps[0]['url'];
