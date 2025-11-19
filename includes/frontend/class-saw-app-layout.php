@@ -308,19 +308,40 @@ class SAW_App_Layout {
         }
         
         // Component CSS files (from SAW_Asset_Loader::COMPONENT_STYLES)
-        // Only include critical ones needed by admin-table
+        // Include all consolidated component styles
         $component_styles = array(
             'saw-base-components' => 'components/base-components.css',
             'saw-forms' => 'components/forms.css', // Consolidated: forms, buttons, selectbox, select-create, color-picker, search-input
             'saw-tables' => 'components/tables.css', // Consolidated: tables, table-column-types, admin-table, admin-table-sidebar
             'saw-navigation' => 'components/navigation.css', // Consolidated: customer-switcher, branch-switcher, language-switcher
+            'saw-feedback' => 'components/feedback.css', // Consolidated: alerts, badges, cards, modals, pagination, detail-sections
         );
         
-        foreach ($component_styles as $handle => $path) {
+        // Layout CSS files
+        $layout_styles = array(
+            'saw-layout' => 'layout/layout.css', // Consolidated: grid, containers, spacing
+        );
+        
+        // App CSS files
+        $app_styles = array(
+            'saw-app' => 'app/app.css', // Consolidated: base, header, sidebar, footer, fixed-layout, legacy-base
+        );
+        
+        // Combine all CSS
+        $all_css = array_merge($component_styles, $layout_styles, $app_styles);
+        
+        foreach ($all_css as $handle => $path) {
             $css_url = SAW_VISITORS_PLUGIN_URL . 'assets/css/' . $path;
             $css_path = SAW_VISITORS_PLUGIN_DIR . 'assets/css/' . $path;
             if (file_exists($css_path)) {
-                $deps = ($handle === 'saw-base-components') ? array('saw-variables') : array('saw-variables', 'saw-base-components');
+                // Determine dependencies based on file type
+                if ($handle === 'saw-base-components') {
+                    $deps = array('saw-variables');
+                } elseif (in_array($handle, array('saw-layout', 'saw-app'))) {
+                    $deps = array('saw-variables', 'saw-base-components');
+                } else {
+                    $deps = array('saw-variables', 'saw-base-components');
+                }
                 $assets['css'][] = array(
                     'handle' => $handle,
                     'src' => $css_url . '?v=' . SAW_VISITORS_VERSION,
@@ -329,25 +350,48 @@ class SAW_App_Layout {
             }
         }
         
-        // Admin Table component JS (from assets/js/components/)
-        $admin_table_js = SAW_VISITORS_PLUGIN_URL . 'assets/js/components/admin-table.js';
-        $admin_table_js_path = SAW_VISITORS_PLUGIN_DIR . 'assets/js/components/admin-table.js';
-        if (file_exists($admin_table_js_path)) {
-            $assets['js'][] = array(
-                'handle' => 'saw-admin-table-component',
-                'src' => $admin_table_js . '?v=' . SAW_VISITORS_VERSION,
-                'deps' => array('jquery', 'saw-app')
-            );
+        // Core JS files (from assets/js/core/)
+        $core_js = array(
+            'saw-app' => 'core/app.js',
+            'saw-app-navigation' => 'core/navigation.js', // Consolidated: navigation + navigation-enhanced
+            'saw-validation' => 'core/validation.js',
+        );
+        
+        foreach ($core_js as $handle => $path) {
+            $js_url = SAW_VISITORS_PLUGIN_URL . 'assets/js/' . $path;
+            $js_path = SAW_VISITORS_PLUGIN_DIR . 'assets/js/' . $path;
+            if (file_exists($js_path)) {
+                $deps = ($handle === 'saw-app') ? array('jquery') : array('jquery', 'saw-app');
+                $assets['js'][] = array(
+                    'handle' => $handle,
+                    'src' => $js_url . '?v=' . SAW_VISITORS_VERSION,
+                    'deps' => $deps
+                );
+            }
         }
         
-        $admin_table_sidebar_js = SAW_VISITORS_PLUGIN_URL . 'assets/js/components/admin-table-sidebar.js';
-        $admin_table_sidebar_js_path = SAW_VISITORS_PLUGIN_DIR . 'assets/js/components/admin-table-sidebar.js';
-        if (file_exists($admin_table_sidebar_js_path)) {
-            $assets['js'][] = array(
-                'handle' => 'saw-admin-table-sidebar',
-                'src' => $admin_table_sidebar_js . '?v=' . SAW_VISITORS_VERSION,
-                'deps' => array('jquery', 'saw-admin-table-component')
-            );
+        // Component JS files (from assets/js/components/)
+        $component_js = array(
+            'saw-forms' => 'components/forms.js', // Consolidated: selectbox, select-create, color-picker, file-upload
+            'saw-navigation-components' => 'components/navigation-components.js', // Consolidated: customer-switcher, branch-switcher, language-switcher
+            'saw-ui' => 'components/ui.js', // Consolidated: modal, modal-triggers, search
+            'saw-admin-table-component' => 'components/admin-table.js',
+            'saw-admin-table-sidebar' => 'components/admin-table-sidebar.js',
+        );
+        
+        foreach ($component_js as $handle => $path) {
+            $js_url = SAW_VISITORS_PLUGIN_URL . 'assets/js/' . $path;
+            $js_path = SAW_VISITORS_PLUGIN_DIR . 'assets/js/' . $path;
+            if (file_exists($js_path)) {
+                $deps = ($handle === 'saw-admin-table-sidebar') 
+                    ? array('jquery', 'saw-app', 'saw-admin-table-component')
+                    : array('jquery', 'saw-app');
+                $assets['js'][] = array(
+                    'handle' => $handle,
+                    'src' => $js_url . '?v=' . SAW_VISITORS_VERSION,
+                    'deps' => $deps
+                );
+            }
         }
         
         // CRITICAL: WordPress dashicons (needed for icons in buttons)

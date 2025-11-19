@@ -273,14 +273,14 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
 
         wp_enqueue_style(
             'saw-file-upload',
-            SAW_VISITORS_PLUGIN_URL . 'includes/components/file-upload/file-upload.css',
+            SAW_VISITORS_PLUGIN_URL . 'assets/css/components/forms.css', // Consolidated: includes file-upload styles
             array(),
             SAW_VISITORS_VERSION
         );
 
         wp_enqueue_script(
             'saw-file-upload',
-            SAW_VISITORS_PLUGIN_URL . 'includes/components/file-upload/file-upload.js',
+            SAW_VISITORS_PLUGIN_URL . 'assets/js/components/forms.js', // Consolidated: includes file-upload
             array('jquery'),
             SAW_VISITORS_VERSION,
             true

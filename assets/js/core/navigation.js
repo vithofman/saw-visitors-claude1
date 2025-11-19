@@ -1,8 +1,16 @@
 /**
  * SAW App Navigation - SPA (Single Page Application) Support
  * 
+ * Consolidated navigation with enhanced features:
+ * - Base SPA navigation
+ * - Retry mechanism for failed requests
+ * - Dynamic module asset loading
+ * - Enhanced cleanup
+ * - Better error handling
+ * - TinyMCE initialization
+ * 
  * @package SAW_Visitors
- * @version 5.6.0 - RELATED ITEMS SUPPORT ADDED
+ * @version 6.0.0 - Consolidated with Enhanced Features
  */
 
 (function($) {
@@ -27,13 +35,13 @@
             
             // Skip AJAX-handled sidebar edit buttons
             if ($link.hasClass('saw-edit-ajax')) {
-                console.log(' SPA: Skipping - AJAX edit button');
+                console.log('⏭️ SPA: Skipping - AJAX edit button');
                 return;
             }
             
             // Skip sidebar close buttons (handled by admin-table.js)
             if ($link.hasClass('saw-sidebar-close')) {
-                console.log(' SPA: Skipping - Sidebar close button');
+                console.log('⏭️ SPA: Skipping - Sidebar close button');
                 return;
             }
             
@@ -73,7 +81,7 @@
                 closeMobileSidebar();
             }
             
-            navigateToPage(href);
+            navigateToPage(href, 0);
         });
     }
 
@@ -126,7 +134,12 @@
         $('body').css('overflow', '');
     }
 
-    function navigateToPage(url) {
+    /**
+     * Enhanced navigateToPage with retry and module loading
+     */
+    function navigateToPage(url, retryCount) {
+        retryCount = retryCount || 0;
+        
         if (isNavigating) {
             return;
         }
@@ -143,26 +156,71 @@
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
             success: function(response) {
                 if (response && response.success && response.data) {
-                    brutalCleanupBeforeNavigate();
-                    
+                    console.log('📦 Navigation: Success');
+
+                    // Enhanced cleanup
+                    enhancedCleanup();
                     cleanupPageScopedAssets();
+
+                    // Update content
                     updatePageContent(response.data);
                     updateBrowserURL(url, response.data.title);
                     updateActiveMenuItem(response.data.active_menu, url);
 
-                    setTimeout(function() {
-                        reinitializePageScripts();
-                    }, 200);
+                    // Load required assets from server response
+                    if (response.data.assets) {
+                        console.log('📦 Loading assets from server response:', response.data.assets);
+                        loadAssetsFromResponse(response.data.assets, function() {
+                            reinitializePageScripts();
+                            const moduleName = detectModuleFromURL(url);
+                            if (moduleName) {
+                                reinitializeModuleScripts(moduleName);
+                            }
+                        });
+                    } else {
+                        // Fallback: try to detect and load module assets
+                        setTimeout(function() {
+                            const moduleName = detectModuleFromURL(url);
+                            if (moduleName) {
+                                console.log('🔧 Loading module (fallback):', moduleName);
+                                loadModuleAssets(moduleName, function() {
+                                    reinitializePageScripts();
+                                    reinitializeModuleScripts(moduleName);
+                                });
+                            } else {
+                                reinitializePageScripts();
+                            }
+                        }, 200);
+                    }
                 } else {
+                    console.warn('⚠️ Invalid response, falling back');
                     fallbackToFullPageLoad(url);
                 }
             },
-            error: function() {
-                fallbackToFullPageLoad(url);
-            },
-            complete: function() {
+            error: function(xhr, status, error) {
+                console.error('❌ Navigation Error:', status);
+
+                // Retry mechanism
+                if (retryCount < 2) {
+                    console.log('🔄 Retrying... (' + (retryCount + 1) + '/2)');
+                    isNavigating = false;
+                    hideLoading();
+                    setTimeout(function() {
+                        navigateToPage(url, retryCount + 1);
+                    }, 1000);
+                    return;
+                }
+
+                // Show error UI
+                showNavigationError(url);
                 isNavigating = false;
                 hideLoading();
+            },
+            complete: function() {
+                if (retryCount >= 2) {
+                    isNavigating = false;
+                    hideLoading();
+                }
             }
         });
     }
@@ -187,6 +245,48 @@
         if ($oldStyles.length > 0) {
             $oldStyles.remove();
         }
+    }
+
+    /**
+     * Enhanced cleanup - more thorough than original
+     * 
+     * CRITICAL: Only removes module-specific assets, NOT global components
+     * like admin-table, which must remain in DOM for all modules.
+     */
+    function enhancedCleanup() {
+        const $content = $('#saw-app-content');
+        if (!$content.length) return;
+
+        console.log('🧹 Enhanced cleanup...');
+
+        // Remove modals
+        $content.find('[id*="saw-modal-"], .saw-modal').remove();
+        $('.saw-modal-overlay, .modal-backdrop').not('#sawSidebarOverlay').remove();
+
+        // Remove inline styles (module-specific only)
+        $('style[id*="saw-module-css-"]').remove();
+
+        // Destroy TinyMCE editors
+        if (typeof tinymce !== 'undefined') {
+            tinymce.editors.forEach(function(editor) {
+                try {
+                    tinymce.remove('#' + editor.id);
+                } catch (e) { }
+            });
+        }
+
+        // Clear WordPress media frames
+        if (typeof wp !== 'undefined' && wp.media && wp.media.frames) {
+            wp.media.frames = {};
+        }
+
+        // CRITICAL: Only remove module-specific assets (with data-saw-module attribute)
+        // DO NOT remove global components like admin-table, which are needed by all modules
+        $('link[data-saw-module], style[data-saw-module]').remove();
+        $('script[data-saw-module]').remove();
+
+        // Remove body overflow lock
+        $('body').css('overflow', '');
     }
 
     function updatePageContent(data) {
@@ -237,7 +337,7 @@
             const searchValue = $(this).find('input[name="s"]').val();
             const currentUrl = window.location.pathname;
             const newUrl = currentUrl + '?s=' + encodeURIComponent(searchValue);
-            navigateToPage(newUrl);
+            navigateToPage(newUrl, 0);
         });
 
         $('.saw-filter-select').off('change').on('change', function() {
@@ -245,7 +345,7 @@
             const filterName = $(this).attr('name');
             const currentUrl = window.location.pathname;
             const newUrl = currentUrl + '?' + filterName + '=' + encodeURIComponent(filterValue);
-            navigateToPage(newUrl);
+            navigateToPage(newUrl, 0);
         });
 
         $('.saw-delete-btn').off('click').on('click', function(e) {
@@ -390,7 +490,7 @@
             }
             
             if (event.state && event.state.url) {
-                navigateToPage(event.state.url);
+                navigateToPage(event.state.url, 0);
             } else {
                 window.location.reload();
             }
@@ -411,9 +511,320 @@
         });
     }
 
+    /**
+     * Detect module name from URL
+     */
+    function detectModuleFromURL(url) {
+        try {
+            const parts = url.split('/').filter(Boolean);
+            if (parts[0] === 'admin' && parts[1]) {
+                const moduleName = parts[1].split('?')[0];
+                if (moduleName === 'settings' || moduleName === 'dashboard') {
+                    return null;
+                }
+                return moduleName;
+            }
+            return null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    /**
+     * Load module-specific assets dynamically
+     * 
+     * Also ensures admin-table CSS/JS are loaded (needed by modules using admin-table)
+     */
+    function loadModuleAssets(moduleName, callback) {
+        if (!moduleName || typeof sawGlobal === 'undefined') {
+            // Even if no module, ensure admin-table assets are loaded
+            ensureAdminTableAssets(function() {
+                if (callback) callback();
+            });
+            return;
+        }
+
+        const cssUrl = sawGlobal.pluginUrl + 'assets/css/modules/' + moduleName + '/' + moduleName + '.css';
+        const jsUrl = sawGlobal.pluginUrl + 'assets/js/modules/' + moduleName + '/' + moduleName + '.js';
+
+        let cssLoaded = false;
+        let jsLoaded = false;
+        let adminTableLoaded = false;
+
+        // Load module CSS if not already loaded
+        if (!$('link[href*="' + moduleName + '.css"]').length) {
+            $('<link>')
+                .attr('rel', 'stylesheet')
+                .attr('href', cssUrl + '?v=' + sawGlobal.version)
+                .attr('data-saw-module', moduleName)
+                .appendTo('head');
+            console.log('  ✅ Loaded CSS:', moduleName);
+            cssLoaded = true;
+        } else {
+            cssLoaded = true;
+        }
+
+        // Load module JS if not already loaded
+        if (!$('script[src*="' + moduleName + '.js"]').length) {
+            $.getScript(jsUrl + '?v=' + sawGlobal.version)
+                .done(function() {
+                    console.log('  ✅ Loaded JS:', moduleName);
+                    jsLoaded = true;
+                    $(document).trigger('saw:module-loaded', [moduleName]);
+                    checkAndCallback();
+                })
+                .fail(function() {
+                    console.warn('  ⚠️ Failed to load JS for:', moduleName);
+                    jsLoaded = true;
+                    checkAndCallback();
+                });
+        } else {
+            jsLoaded = true;
+            checkAndCallback();
+        }
+
+        // Ensure admin-table assets are loaded (needed by modules using admin-table)
+        ensureAdminTableAssets(function() {
+            adminTableLoaded = true;
+            checkAndCallback();
+        });
+
+        function checkAndCallback() {
+            if (cssLoaded && jsLoaded && adminTableLoaded) {
+                if (callback) callback();
+            }
+        }
+    }
+
+    /**
+     * Helper function to sort assets by dependencies
+     * Ensures CSS/JS files are loaded in correct order
+     */
+    function sortAssetsByDependencies(assetsList) {
+        const sorted = [];
+        const processed = {};
+        const processing = {};
+        
+        function processAsset(asset) {
+            if (processed[asset.handle]) {
+                return;
+            }
+            if (processing[asset.handle]) {
+                // Circular dependency - skip and add anyway
+                if (!processed[asset.handle]) {
+                    sorted.push(asset);
+                    processed[asset.handle] = true;
+                }
+                return;
+            }
+            
+            processing[asset.handle] = true;
+            
+            // Process dependencies first
+            if (asset.deps && asset.deps.length > 0) {
+                asset.deps.forEach(function(dep) {
+                    const depAsset = assetsList.find(function(a) { return a.handle === dep; });
+                    if (depAsset && !processed[dep]) {
+                        processAsset(depAsset);
+                    }
+                });
+            }
+            
+            if (!processed[asset.handle]) {
+                sorted.push(asset);
+                processed[asset.handle] = true;
+            }
+            
+            delete processing[asset.handle];
+        }
+        
+        assetsList.forEach(processAsset);
+        return sorted;
+    }
+
+    /**
+     * Load assets from server response
+     * 
+     * Loads CSS and JS files specified in the AJAX response.
+     * This ensures all required assets are loaded for the current page.
+     * 
+     * CRITICAL: Checks for existing assets more carefully to avoid duplicates.
+     * Respects dependency order for correct loading sequence.
+     */
+    function loadAssetsFromResponse(assets, callback) {
+        if (!assets || (typeof sawGlobal === 'undefined')) {
+            console.warn('⚠️ No assets or sawGlobal undefined');
+            if (callback) callback();
+            return;
+        }
+
+        let cssLoaded = 0;
+        let jsLoaded = 0;
+        const totalCss = assets.css ? assets.css.length : 0;
+        const totalJs = assets.js ? assets.js.length : 0;
+        const total = totalCss + totalJs;
+
+        console.log('📦 Loading assets:', { css: totalCss, js: totalJs });
+
+        if (total === 0) {
+            console.warn('⚠️ No assets to load');
+            if (callback) callback();
+            return;
+        }
+
+        function checkComplete() {
+            if (cssLoaded === totalCss && jsLoaded === totalJs) {
+                console.log('  ✅ All assets loaded (' + totalCss + ' CSS, ' + totalJs + ' JS)');
+                if (callback) callback();
+            }
+        }
+
+        // Load CSS files - respect dependencies order
+        if (assets.css && assets.css.length > 0) {
+            // Sort CSS by dependencies to ensure correct load order
+            const sortedCss = sortAssetsByDependencies(assets.css);
+            
+            sortedCss.forEach(function(asset) {
+                // Better check for existing CSS - check by src URL or handle in href
+                const srcCheck = asset.src.replace(/\?.*$/, ''); // Remove query string for comparison
+                const exists = $('link[href*="' + srcCheck + '"], link[href="' + asset.src + '"], link[href*="' + asset.handle + '"], link[data-saw-asset="' + asset.handle + '"]').length > 0;
+                
+                if (exists) {
+                    console.log('  ⏭️ CSS already loaded:', asset.handle);
+                    cssLoaded++;
+                    checkComplete();
+                    return;
+                }
+
+                // Load CSS
+                $('<link>')
+                    .attr('rel', 'stylesheet')
+                    .attr('type', 'text/css')
+                    .attr('href', asset.src)
+                    .attr('data-saw-asset', asset.handle)
+                    .appendTo('head');
+                console.log('  ✅ Loaded CSS:', asset.handle, asset.src);
+                cssLoaded++;
+                checkComplete();
+            });
+        } else {
+            cssLoaded = totalCss;
+        }
+        
+        // CRITICAL: After loading assets, initialize TinyMCE for content module
+        // This is needed because wp_editor() is called in PHP but TinyMCE needs JS initialization
+        if (assets.css && assets.css.some(function(a) { return a.handle === 'saw-module-content'; })) {
+            // Wait a bit for all assets to load, then initialize TinyMCE
+            setTimeout(function() {
+                initTinyMCE();
+            }, 500);
+        }
+
+        // Load JS files
+        if (assets.js && assets.js.length > 0) {
+            assets.js.forEach(function(asset) {
+                // Better check for existing JS - check by src URL or handle in src
+                const srcCheck = asset.src.replace(/\?.*$/, ''); // Remove query string for comparison
+                const exists = $('script[src*="' + srcCheck + '"], script[src="' + asset.src + '"], script[src*="' + asset.handle + '"]').length > 0;
+                
+                if (exists) {
+                    console.log('  ⏭️ JS already loaded:', asset.handle);
+                    jsLoaded++;
+                    checkComplete();
+                    return;
+                }
+
+                // Load JS
+                $.getScript(asset.src)
+                    .done(function() {
+                        console.log('  ✅ Loaded JS:', asset.handle, asset.src);
+                        jsLoaded++;
+                        checkComplete();
+                    })
+                    .fail(function() {
+                        console.warn('  ⚠️ Failed to load JS:', asset.handle, asset.src);
+                        jsLoaded++;
+                        checkComplete();
+                    });
+            });
+        } else {
+            jsLoaded = totalJs;
+        }
+    }
+
+    /**
+     * Initialize TinyMCE editors
+     */
+    function initTinyMCE() {
+        if (typeof tinymce !== 'undefined' && typeof wp !== 'undefined' && wp.editor) {
+            console.log('  🔧 Initializing TinyMCE editors for content module...');
+            // Find all textareas that should be TinyMCE editors
+            $('textarea.wp-editor-area').each(function() {
+                var editorId = $(this).attr('id');
+                if (editorId && !tinymce.get(editorId)) {
+                    try {
+                        // Use WordPress editor initialization
+                        if (wp.editor.initialize) {
+                            wp.editor.initialize(editorId, {
+                                tinymce: {
+                                    toolbar1: 'formatselect,bold,italic,underline,strikethrough,forecolor,backcolor,bullist,numlist,alignleft,aligncenter,alignright,link,unlink',
+                                    toolbar2: 'undo,redo,removeformat,code,hr,blockquote,subscript,superscript,charmap,indent,outdent,pastetext,searchreplace,fullscreen',
+                                    block_formats: 'Odstavec=p;Nadpis 1=h1;Nadpis 2=h2;Nadpis 3=h3;Nadpis 4=h4;Citace=blockquote'
+                                }
+                            });
+                        }
+                    } catch (e) {
+                        console.warn('  ⚠️ Failed to initialize TinyMCE for:', editorId, e);
+                    }
+                }
+            });
+        }
+    }
+
+    /**
+     * Ensure admin-table CSS/JS are loaded (global component needed by many modules)
+     * NOTE: This is now handled by the server response, but kept for fallback
+     */
+    function ensureAdminTableAssets(callback) {
+        if (typeof sawGlobal === 'undefined') {
+            if (callback) callback();
+            return;
+        }
+
+        // Admin-table assets are now loaded via server response
+        // This function is kept for backward compatibility
+        if (callback) callback();
+    }
+
+    /**
+     * Re-initialize module-specific scripts
+     */
+    function reinitializeModuleScripts(moduleName) {
+        console.log('🔄 Re-initializing module:', moduleName);
+        $(document).trigger('saw:module-reinit', [moduleName]);
+    }
+
+    /**
+     * Show navigation error UI
+     */
+    function showNavigationError(url) {
+        const $content = $('#saw-app-content');
+        $content.html(
+            '<div class="saw-navigation-error" style="padding: 3rem; text-align: center; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">' +
+            '<div style="font-size: 4rem; margin-bottom: 1rem;">⚠️</div>' +
+            '<h2 style="color: #dc2626; margin-bottom: 1rem;">Chyba při načítání stránky</h2>' +
+            '<p style="margin-bottom: 2rem; color: #64748b;">Nepodařilo se načíst obsah. Zkuste to prosím znovu.</p>' +
+            '<div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">' +
+            '<button onclick="SAW_Navigation.navigateTo(\'' + url + '\')" style="padding: 0.75rem 1.5rem; background: #1a73e8; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem;">🔄 Zkusit znovu</button>' +
+            '<button onclick="window.location.reload()" style="padding: 0.75rem 1.5rem; background: #64748b; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem;">🔃 Obnovit stránku</button>' +
+            '</div>' +
+            '</div>'
+        );
+    }
+
     window.SAW_Navigation = {
-        navigateTo: function(url) { navigateToPage(url); },
-        reload: function() { navigateToPage(window.location.pathname); },
+        navigateTo: function(url) { navigateToPage(url, 0); },
+        reload: function() { navigateToPage(window.location.pathname, 0); },
         reinitializeScripts: function() { reinitializePageScripts(); },
         setActiveByMenuId: function(menuId) { updateActiveMenuItem(menuId); },
         openSidebar: function() { openMobileSidebar(); },

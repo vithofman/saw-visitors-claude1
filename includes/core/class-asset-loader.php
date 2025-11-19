@@ -167,7 +167,7 @@ class SAW_Asset_Loader {
             error_log("SAW Asset Loader: app.js not found: {$app_js}");
         }
         
-        // Base Navigation (SPA functionality)
+        // Navigation (SPA functionality with enhanced features)
         $nav_js = SAW_VISITORS_PLUGIN_DIR . 'assets/js/core/navigation.js';
         if (file_exists($nav_js)) {
             wp_enqueue_script(
@@ -179,20 +179,6 @@ class SAW_Asset_Loader {
             );
         } else {
             error_log("SAW Asset Loader: navigation.js not found: {$nav_js}");
-        }
-        
-        // Enhanced Navigation (extends base navigation with retry & module loading)
-        $nav_enhanced_js = SAW_VISITORS_PLUGIN_DIR . 'assets/js/core/navigation-enhanced.js';
-        if (file_exists($nav_enhanced_js)) {
-            wp_enqueue_script(
-                'saw-app-navigation-enhanced',
-                SAW_VISITORS_PLUGIN_URL . 'assets/js/core/navigation-enhanced.js',
-                ['jquery', 'saw-app', 'saw-app-navigation'],
-                filemtime($nav_enhanced_js),
-                true
-            );
-        } else {
-            error_log("SAW Asset Loader: navigation-enhanced.js not found: {$nav_enhanced_js}");
         }
         
 
@@ -225,60 +211,31 @@ class SAW_Asset_Loader {
      */
     private static function enqueue_component_scripts() {
         $component_scripts = [
-            'saw-customer-switcher' => [
-                'path' => 'assets/js/components/customer-switcher.js',
+            'saw-navigation-components' => [
+                'path' => 'assets/js/components/navigation-components.js', // Consolidated: customer-switcher, branch-switcher, language-switcher
                 'deps' => ['jquery', 'saw-app'],
-                'localize' => 'sawCustomerSwitcher',
-                'localize_data' => [
-                    'ajaxurl' => admin_url('admin-ajax.php'),
-                    'nonce' => wp_create_nonce('saw_customer_switcher'),
+                'localize_multiple' => [
+                    'sawCustomerSwitcher' => [
+                        'ajaxurl' => admin_url('admin-ajax.php'),
+                        'nonce' => wp_create_nonce('saw_customer_switcher'),
+                    ],
+                    'sawBranchSwitcher' => [
+                        'ajaxurl' => admin_url('admin-ajax.php'),
+                        'nonce' => wp_create_nonce('saw_branch_switcher'),
+                    ],
+                    'sawLanguageSwitcher' => [
+                        'ajaxurl' => admin_url('admin-ajax.php'),
+                        'nonce' => wp_create_nonce('saw_language_switcher'),
+                    ]
                 ]
             ],
-            'saw-branch-switcher' => [
-                'path' => 'assets/js/components/branch-switcher.js',
-                'deps' => ['jquery', 'saw-app'],
-                'localize' => 'sawBranchSwitcher',
-                'localize_data' => [
-                    'ajaxurl' => admin_url('admin-ajax.php'),
-                    'nonce' => wp_create_nonce('saw_branch_switcher'),
-                ]
-            ],
-            'saw-language-switcher' => [
-                'path' => 'assets/js/components/language-switcher.js',
-                'deps' => ['jquery', 'saw-app'],
-                'localize' => 'sawLanguageSwitcher',
-                'localize_data' => [
-                    'ajaxurl' => admin_url('admin-ajax.php'),
-                    'nonce' => wp_create_nonce('saw_language_switcher'),
-                ]
-            ],
-            'saw-selectbox' => [
-                'path' => 'assets/js/components/selectbox.js',
+            'saw-forms' => [
+                'path' => 'assets/js/components/forms.js', // Consolidated: selectbox, select-create, color-picker, file-upload
                 'deps' => ['jquery', 'saw-app'],
             ],
-            'saw-select-create' => [
-                'path' => 'assets/js/components/select-create.js',
+            'saw-ui' => [
+                'path' => 'assets/js/components/ui.js', // Consolidated: modal, modal-triggers, search
                 'deps' => ['jquery', 'saw-app'],
-            ],
-            'saw-color-picker' => [
-                'path' => 'assets/js/components/color-picker.js',
-                'deps' => ['jquery'],
-            ],
-            'saw-file-upload' => [
-                'path' => 'assets/js/components/file-upload.js',
-                'deps' => ['jquery', 'saw-app'],
-            ],
-            'saw-search' => [
-                'path' => 'assets/js/components/search.js',
-                'deps' => ['jquery'],
-            ],
-            'saw-modal' => [
-                'path' => 'assets/js/components/modal.js',
-                'deps' => ['jquery', 'saw-app'],
-            ],
-            'saw-modal-triggers' => [
-                'path' => 'assets/js/components/modal-triggers.js',
-                'deps' => ['jquery', 'saw-app', 'saw-modal'],
             ],
             'saw-admin-table-sidebar' => [
                 'path' => 'assets/js/components/admin-table-sidebar.js',
@@ -312,6 +269,17 @@ class SAW_Asset_Loader {
                     $config['localize'],
                     $config['localize_data']
                 );
+            }
+            
+            // Multiple localizations (for consolidated components)
+            if (isset($config['localize_multiple']) && is_array($config['localize_multiple'])) {
+                foreach ($config['localize_multiple'] as $localize_name => $localize_data) {
+                    wp_localize_script(
+                        $handle,
+                        $localize_name,
+                        $localize_data
+                    );
+                }
             }
         }
     }
