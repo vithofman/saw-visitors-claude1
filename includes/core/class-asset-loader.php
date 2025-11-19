@@ -104,7 +104,11 @@ class SAW_Asset_Loader {
      */
     private static function enqueue_component_styles() {
         foreach (self::COMPONENT_STYLES as $handle => $path) {
-            self::enqueue_style($handle, 'css/' . $path, ['saw-variables']);
+            // CRITICAL: Component styles depend on base-components (except base-components itself)
+            $deps = ($handle === 'saw-base-components') 
+                ? ['saw-variables'] 
+                : ['saw-variables', 'saw-base-components'];
+            self::enqueue_style($handle, 'css/' . $path, $deps);
         }
     }
     
@@ -129,7 +133,10 @@ class SAW_Asset_Loader {
             $file_path = SAW_VISITORS_PLUGIN_DIR . 'assets/css/' . $path;
             
             if (file_exists($file_path)) {
-                self::enqueue_style($handle, 'css/' . $path, ['saw-variables']);
+                // CRITICAL: App styles depend on layout and base components
+                self::enqueue_style($handle, 'css/' . $path, ['saw-variables', 'saw-base-components', 'saw-layout']);
+            } else {
+                error_log("SAW Asset Loader: App CSS file not found: {$file_path}");
             }
         }
     }

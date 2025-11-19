@@ -294,18 +294,31 @@ class SAW_Router {
         $clean_path = trim($path, '/');
         $modules = SAW_Module_Loader::get_all();
         
+        // CRITICAL FIX: Extract module name from path even if it contains ID
+        // e.g., "companies/37" -> "companies", "branches/5/edit" -> "branches"
+        $path_segments = explode('/', $clean_path);
+        $module_candidate = $path_segments[0] ?? '';
+        
+        // First, try to match exact module route
         foreach ($modules as $slug => $config) {
             $module_route = ltrim($config['route'] ?? '', '/');
             $module_route_without_admin = str_replace('admin/', '', $module_route);
             
-            if ($module_route_without_admin === $clean_path || strpos($clean_path . '/', $module_route_without_admin . '/') === 0) {
+            // Match if path starts with module route (e.g., "companies" or "companies/37")
+            if ($module_route_without_admin === $clean_path || 
+                strpos($clean_path . '/', $module_route_without_admin . '/') === 0) {
+                return $slug;
+            }
+            
+            // Also check if first segment matches module route
+            if ($module_route_without_admin === $module_candidate) {
                 return $slug;
             }
         }
         
-        $segments = explode('/', $clean_path);
-        if (isset($segments[0])) {
-            return $segments[0];
+        // Fallback: return first segment if it looks like a module name
+        if (!empty($module_candidate) && !is_numeric($module_candidate)) {
+            return $module_candidate;
         }
         
         return null;

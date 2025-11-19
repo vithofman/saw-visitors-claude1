@@ -78,7 +78,14 @@
             if ($link.attr('target') === '_blank') return;
             if ($link.data('no-ajax') === true) return;
 
-            console.log('🔗 SPA Navigation: Intercepted link:', href, 'Link element:', $link[0]);
+            console.log('🔗 SPA Navigation: Intercepted link:', href, 'Link element:', $link[0], 'isNavigating:', isNavigating);
+            
+            // CRITICAL: Check if navigation is already in progress
+            if (isNavigating) {
+                console.warn('⚠️ Navigation already in progress, ignoring click');
+                return;
+            }
+            
             e.preventDefault();
             e.stopPropagation(); // Prevent other handlers from interfering
             
@@ -163,6 +170,11 @@
                 if (response && response.success && response.data) {
                     console.log('📦 Navigation: Success');
 
+                    // CRITICAL FIX: Reset isNavigating IMMEDIATELY after successful response
+                    // This allows menu clicks to work right away, even while assets are loading
+                    isNavigating = false;
+                    console.log('✅ Navigation successful, resetting isNavigating flag');
+
                     // Enhanced cleanup
                     enhancedCleanup();
                     cleanupPageScopedAssets();
@@ -199,6 +211,7 @@
                     }
                 } else {
                     console.warn('⚠️ Invalid response, falling back');
+                    isNavigating = false; // Reset even on invalid response
                     fallbackToFullPageLoad(url);
                 }
             },
@@ -222,7 +235,10 @@
                 hideLoading();
             },
             complete: function() {
+                // CRITICAL FIX: Always reset isNavigating in complete callback as fallback
+                // This ensures flag is reset even if success/error callbacks fail
                 if (retryCount >= 2) {
+                    console.log('✅ Navigation complete (retry limit), resetting isNavigating flag');
                     isNavigating = false;
                     hideLoading();
                 }

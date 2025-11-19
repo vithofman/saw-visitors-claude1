@@ -377,26 +377,51 @@ class SAW_Bootstrap {
      */
     public static function enqueue_assets() {
         if (!class_exists('SAW_Asset_Loader')) {
+            error_log('SAW Bootstrap: SAW_Asset_Loader class not found');
             return;
         }
         
         try {
-            // Enqueue global assets
+            // CRITICAL: Always enqueue global assets first
             SAW_Asset_Loader::enqueue_global();
             
             // Enqueue module-specific assets
+            // CRITICAL: Try multiple methods to get active module
+            $active_module = null;
+            
+            // Method 1: From router service
             if (SAW_Service_Container::has('router')) {
-                $router = SAW_Service_Container::get('router');
-                if ($router && method_exists($router, 'get_active_module')) {
-                    $active_module = $router->get_active_module();
-                    
-                    if ($active_module) {
-                        SAW_Asset_Loader::enqueue_module($active_module);
+                try {
+                    $router = SAW_Service_Container::get('router');
+                    if ($router && method_exists($router, 'get_active_module')) {
+                        $active_module = $router->get_active_module();
+                        error_log('SAW Bootstrap: Active module from router: ' . ($active_module ?: 'null'));
+                    }
+                } catch (Exception $e) {
+                    error_log('SAW Bootstrap: Error getting router: ' . $e->getMessage());
+                }
+            }
+            
+            // Method 2: From query var directly (fallback)
+            if (empty($active_module)) {
+                $path = get_query_var('saw_path');
+                if (!empty($path)) {
+                    $clean_path = trim($path, '/');
+                    $segments = explode('/', $clean_path);
+                    if (!empty($segments[0]) && !is_numeric($segments[0])) {
+                        $active_module = $segments[0];
+                        error_log('SAW Bootstrap: Active module from query var: ' . $active_module);
                     }
                 }
             }
+            
+            if ($active_module && $active_module !== 'dashboard') {
+                SAW_Asset_Loader::enqueue_module($active_module);
+            }
         } catch (Exception $e) {
             // Log error if logger is available
+            error_log('SAW Bootstrap: Failed to enqueue assets: ' . $e->getMessage());
+            error_log('SAW Bootstrap: Asset enqueue error trace: ' . $e->getTraceAsString());
             if (function_exists('saw_log_error')) {
                 saw_log_error('Failed to enqueue assets: ' . $e->getMessage());
             }
