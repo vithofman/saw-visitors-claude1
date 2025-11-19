@@ -349,24 +349,8 @@ class SAW_Component_Branch_Switcher {
      * @return void
      */
     private function enqueue_assets() {
-        wp_enqueue_style(
-            'saw-branch-switcher',
-            SAW_VISITORS_PLUGIN_URL . 'includes/components/branch-switcher/branch-switcher.css',
-            array(),
-            SAW_VISITORS_VERSION
-        );
-        
-        wp_enqueue_script(
-            'saw-branch-switcher',
-            SAW_VISITORS_PLUGIN_URL . 'includes/components/branch-switcher/branch-switcher.js',
-            array('jquery'),
-            SAW_VISITORS_VERSION,
-            true
-        );
-        
-        wp_localize_script('saw-branch-switcher', 'sawBranchSwitcher', array(
-            'ajaxurl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('saw_branch_switcher')
-        ));
+        // Assets are now enqueued globally via SAW_Asset_Loader
+        // to prevent FOUC on first page load. Do not re-enqueue here.
+        return;
     }
 }

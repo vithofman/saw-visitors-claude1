@@ -103,4 +103,19 @@ class SAW_Component_Select_Create {
         
         include __DIR__ . '/select-create-input.php';
     }
+    
+    /**
+     * Register AJAX handlers
+     *
+     * Static method called by Component Manager to register AJAX endpoints.
+     * Select-Create uses nested sidebar AJAX which is handled by Base Controller,
+     * so no specific AJAX handlers are needed here.
+     *
+     * @since 13.0.0
+     * @return void
+     */
+    public static function register_ajax_handlers() {
+        // AJAX handlers are managed by Base Controller's nested sidebar system
+        // No specific handlers needed for this component
+    }
 }

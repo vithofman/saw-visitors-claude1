@@ -114,26 +114,8 @@ class SAW_Component_Selectbox {
      * @return void
      */
     private function enqueue_assets() {
-        wp_enqueue_style(
-            'saw-selectbox-component',
-            SAW_VISITORS_PLUGIN_URL . 'includes/components/selectbox/saw-selectbox.css',
-            array(),
-            SAW_VISITORS_VERSION
-        );
-        
-        wp_enqueue_script(
-            'saw-selectbox-component',
-            SAW_VISITORS_PLUGIN_URL . 'includes/components/selectbox/saw-selectbox.js',
-            array('jquery'),
-            SAW_VISITORS_VERSION,
-            true
-        );
-        
-        // CRITICAL FIX v4.6.3: Only ensure saw-app is enqueued
-        // Do NOT call wp_localize_script - sawGlobal is already initialized by SAW_Asset_Loader
-        // Duplicate wp_localize_script calls overwrite previous data and cause nonce issues
-        if (!wp_script_is('saw-app', 'enqueued')) {
-            wp_enqueue_script('saw-app');
-        }
+        // Assets are now enqueued globally via SAW_Asset_Loader
+        // to prevent FOUC on first page load. Do not re-enqueue here.
+        return;
     }
 }

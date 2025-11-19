@@ -129,30 +129,9 @@ class SAW_Component_Modal {
      * @return void
      */
     private function enqueue_assets() {
-        // Modal JS
-        wp_enqueue_script(
-            'saw-modal-component',
-            SAW_VISITORS_PLUGIN_URL . 'includes/components/modal/saw-modal.js',
-            array('jquery'),
-            SAW_VISITORS_VERSION,
-            true
-        );
-        
-        // Localize script
-        $localized_data = array(
-            'ajaxurl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('saw_ajax_nonce'),
-        );
-        
-        if (!empty($this->config['ajax_nonce'])) {
-            $localized_data['customNonce'] = $this->config['ajax_nonce'];
-        }
-        
-        wp_localize_script(
-            'saw-modal-component',
-            'sawModalGlobal',
-            $localized_data
-        );
+        // Assets are now enqueued globally via SAW_Asset_Loader
+        // to prevent FOUC on first page load. Do not re-enqueue here.
+        return;
     }
     
     /**

@@ -2320,7 +2320,7 @@ private function handle_training_additional_complete() {
     // CSS - Base (first, contains variables)
     wp_enqueue_style(
         'saw-terminal-base',
-        $css_dir . 'terminal-base.css',
+        $css_dir . 'terminal/base.css',
         array(),
         '3.0.0'
     );
@@ -2328,7 +2328,7 @@ private function handle_training_additional_complete() {
     // CSS - Layout (depends on base)
     wp_enqueue_style(
         'saw-terminal-layout',
-        $css_dir . 'terminal-layout.css',
+        $css_dir . 'terminal/layout.css',
         array('saw-terminal-base'),
         '3.0.0'
     );
@@ -2336,7 +2336,7 @@ private function handle_training_additional_complete() {
     // CSS - Components (depends on base)
     wp_enqueue_style(
         'saw-terminal-components',
-        $css_dir . 'terminal-components.css',
+        $css_dir . 'terminal/components.css',
         array('saw-terminal-base'),
         '3.0.0'
     );
@@ -2344,18 +2344,21 @@ private function handle_training_additional_complete() {
     // CSS - Training (depends on all)
     wp_enqueue_style(
         'saw-terminal-training',
-        $css_dir . 'terminal-training.css',
+        $css_dir . 'terminal/training.css',
         array('saw-terminal-base', 'saw-terminal-layout', 'saw-terminal-components'),
         '3.0.0'
     );
     
-    // CSS - Old terminal.css (fallback compatibility)
-    wp_enqueue_style(
-        'saw-terminal',
-        SAW_VISITORS_PLUGIN_URL . 'includes/frontend/terminal/terminal.css',
-        array(),
-        SAW_VISITORS_VERSION
-    );
+    // CSS - Old terminal.css (fallback compatibility - check if exists)
+    $terminal_css_legacy = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/terminal.css';
+    if (file_exists($terminal_css_legacy)) {
+        wp_enqueue_style(
+            'saw-terminal',
+            SAW_VISITORS_PLUGIN_URL . 'includes/frontend/terminal/terminal.css',
+            array(),
+            SAW_VISITORS_VERSION
+        );
+    }
     
     // JavaScript
     wp_enqueue_script('jquery');
@@ -2363,7 +2366,7 @@ private function handle_training_additional_complete() {
     // Touch gestures (dependency for PDF viewer)
     wp_enqueue_script(
         'saw-touch-gestures',
-        $js_dir . 'touch-gestures.js',
+        $js_dir . 'terminal/touch-gestures.js',
         array(),
         '3.0.0',
         true
@@ -2372,23 +2375,35 @@ private function handle_training_additional_complete() {
     // PDF viewer (depends on touch-gestures)
     wp_enqueue_script(
         'saw-pdf-viewer',
-        $js_dir . 'pdf-viewer.js',
+        $js_dir . 'terminal/pdf-viewer.js',
         array('saw-touch-gestures'),
         '3.0.0',
         true
     );
 
     //YOUTUBE / VIMEO VIDEO
-	wp_enqueue_script('saw-video-player', $js_dir . 'video-player.js', array(), '3.0.0', true);
+	wp_enqueue_script('saw-video-player', $js_dir . 'terminal/video-player.js', array(), '3.0.0', true);
     
-    // Old terminal.js
-    wp_enqueue_script(
-        'saw-terminal',
-        SAW_VISITORS_PLUGIN_URL . 'includes/frontend/terminal/terminal.js',
-        array('jquery'),
-        SAW_VISITORS_VERSION,
-        true
-    );
+    // Old terminal.js (legacy.js in new structure)
+    $terminal_js_legacy = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/assets/js/terminal/legacy.js';
+    if (file_exists($terminal_js_legacy)) {
+        wp_enqueue_script(
+            'saw-terminal',
+            SAW_VISITORS_PLUGIN_URL . 'includes/frontend/terminal/assets/js/terminal/legacy.js',
+            array('jquery'),
+            SAW_VISITORS_VERSION,
+            true
+        );
+    } elseif (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/terminal.js')) {
+        // Fallback to old location if legacy.js doesn't exist
+        wp_enqueue_script(
+            'saw-terminal',
+            SAW_VISITORS_PLUGIN_URL . 'includes/frontend/terminal/terminal.js',
+            array('jquery'),
+            SAW_VISITORS_VERSION,
+            true
+        );
+    }
 }
     
 

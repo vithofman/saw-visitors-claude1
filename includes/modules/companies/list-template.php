@@ -97,6 +97,11 @@ $table_config['module_config'] = $config;
 $table_config['actions'] = array('view', 'edit', 'delete');
 $table_config['add_new'] = 'Nová firma';
 
+// Ensure Admin Table class is loaded
+if (!class_exists('SAW_Component_Admin_Table')) {
+    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/class-saw-component-admin-table.php';
+}
+
 // Render
 $table = new SAW_Component_Admin_Table($entity, $table_config);
 $table->render();

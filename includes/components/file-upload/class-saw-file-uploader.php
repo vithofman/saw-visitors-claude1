@@ -185,19 +185,8 @@ class SAW_File_Uploader {
      * @return void
      */
     public function enqueue_assets() {
-        wp_enqueue_style(
-            'saw-file-upload-component',
-            SAW_VISITORS_PLUGIN_URL . 'includes/components/file-upload/file-upload.css',
-            array(),
-            SAW_VISITORS_VERSION
-        );
-        
-        wp_enqueue_script(
-            'saw-file-upload-component',
-            SAW_VISITORS_PLUGIN_URL . 'includes/components/file-upload/file-upload.js',
-            array('jquery'),
-            SAW_VISITORS_VERSION,
-            true
-        );
+        // Assets are now enqueued globally via SAW_Asset_Loader
+        // to prevent FOUC on first page load. Do not re-enqueue here.
+        return;
     }
 }

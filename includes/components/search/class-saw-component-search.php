@@ -108,19 +108,8 @@ class SAW_Component_Search {
      * @return void
      */
     private function enqueue_assets() {
-        wp_enqueue_style(
-            'saw-search-component',
-            SAW_VISITORS_PLUGIN_URL . 'includes/components/search/saw-search.css',
-            array(),
-            SAW_VISITORS_VERSION
-        );
-        
-        wp_enqueue_script(
-            'saw-search-component',
-            SAW_VISITORS_PLUGIN_URL . 'includes/components/search/saw-search.js',
-            array('jquery'),
-            SAW_VISITORS_VERSION,
-            true
-        );
+        // Assets are now enqueued globally via SAW_Asset_Loader
+        // to prevent FOUC on first page load. Do not re-enqueue here.
+        return;
     }
 }

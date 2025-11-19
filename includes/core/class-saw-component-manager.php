@@ -121,12 +121,12 @@ class SAW_Component_Manager {
      * @return void
      */
     private function register_ajax_handlers() {
-    $ajax_components = array(
-        'SAW_Component_Customer_Switcher',
-        'SAW_Component_Branch_Switcher',
-        'SAW_Component_Language_Switcher',
-        'SAW_Component_Select_Create',
-    );
+        $ajax_components = array(
+            'SAW_Component_Customer_Switcher',
+            'SAW_Component_Branch_Switcher',
+            'SAW_Component_Language_Switcher',
+            'SAW_Component_Select_Create',
+        );
         
         foreach ($ajax_components as $class_name) {
             if (class_exists($class_name) && method_exists($class_name, 'register_ajax_handlers')) {

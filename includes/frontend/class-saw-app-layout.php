@@ -289,9 +289,9 @@ class SAW_App_Layout {
         
         // Core CSS files (from SAW_Asset_Loader::CORE_STYLES)
         $core_styles = array(
-            'saw-variables' => 'core/variables.css',
-            'saw-reset' => 'core/reset.css',
-            'saw-typography' => 'core/typography.css'
+            'saw-variables' => 'foundation/variables.css',
+            'saw-reset' => 'foundation/reset.css',
+            'saw-typography' => 'foundation/typography.css'
         );
         
         foreach ($core_styles as $handle => $path) {
@@ -310,18 +310,20 @@ class SAW_App_Layout {
         // Component CSS files (from SAW_Asset_Loader::COMPONENT_STYLES)
         // Only include critical ones needed by admin-table
         $component_styles = array(
-            'saw-components' => 'core/saw-components.css',
+            'saw-base-components' => 'components/base-components.css',
             'saw-buttons' => 'components/buttons.css',
             'saw-forms' => 'components/forms.css',
             'saw-tables' => 'components/tables.css',
             'saw-table-column-types' => 'components/table-column-types.css',
+            'saw-admin-table' => 'components/admin-table.css',
+            'saw-admin-table-sidebar' => 'components/admin-table-sidebar.css',
         );
         
         foreach ($component_styles as $handle => $path) {
             $css_url = SAW_VISITORS_PLUGIN_URL . 'assets/css/' . $path;
             $css_path = SAW_VISITORS_PLUGIN_DIR . 'assets/css/' . $path;
             if (file_exists($css_path)) {
-                $deps = ($handle === 'saw-components') ? array('saw-variables') : array('saw-variables', 'saw-components');
+                $deps = ($handle === 'saw-base-components') ? array('saw-variables') : array('saw-variables', 'saw-base-components');
                 $assets['css'][] = array(
                     'handle' => $handle,
                     'src' => $css_url . '?v=' . SAW_VISITORS_VERSION,
@@ -330,29 +332,9 @@ class SAW_App_Layout {
             }
         }
         
-        // Admin Table component CSS/JS (from includes/components/admin-table/)
-        $admin_table_css = SAW_VISITORS_PLUGIN_URL . 'includes/components/admin-table/admin-table.css';
-        $admin_table_css_path = SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/admin-table.css';
-        if (file_exists($admin_table_css_path)) {
-            $assets['css'][] = array(
-                'handle' => 'saw-admin-table-component',
-                'src' => $admin_table_css . '?v=' . SAW_VISITORS_VERSION,
-                'deps' => array('saw-tables', 'saw-table-column-types')
-            );
-        }
-        
-        $admin_table_sidebar_css = SAW_VISITORS_PLUGIN_URL . 'includes/components/admin-table/sidebar.css';
-        $admin_table_sidebar_css_path = SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/sidebar.css';
-        if (file_exists($admin_table_sidebar_css_path)) {
-            $assets['css'][] = array(
-                'handle' => 'saw-admin-table-sidebar',
-                'src' => $admin_table_sidebar_css . '?v=' . SAW_VISITORS_VERSION,
-                'deps' => array('saw-admin-table-component')
-            );
-        }
-        
-        $admin_table_js = SAW_VISITORS_PLUGIN_URL . 'includes/components/admin-table/admin-table.js';
-        $admin_table_js_path = SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/admin-table.js';
+        // Admin Table component JS (from assets/js/components/)
+        $admin_table_js = SAW_VISITORS_PLUGIN_URL . 'assets/js/components/admin-table.js';
+        $admin_table_js_path = SAW_VISITORS_PLUGIN_DIR . 'assets/js/components/admin-table.js';
         if (file_exists($admin_table_js_path)) {
             $assets['js'][] = array(
                 'handle' => 'saw-admin-table-component',
@@ -361,8 +343,8 @@ class SAW_App_Layout {
             );
         }
         
-        $admin_table_sidebar_js = SAW_VISITORS_PLUGIN_URL . 'includes/components/admin-table/sidebar.js';
-        $admin_table_sidebar_js_path = SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/sidebar.js';
+        $admin_table_sidebar_js = SAW_VISITORS_PLUGIN_URL . 'assets/js/components/admin-table-sidebar.js';
+        $admin_table_sidebar_js_path = SAW_VISITORS_PLUGIN_DIR . 'assets/js/components/admin-table-sidebar.js';
         if (file_exists($admin_table_sidebar_js_path)) {
             $assets['js'][] = array(
                 'handle' => 'saw-admin-table-sidebar',
@@ -437,7 +419,7 @@ class SAW_App_Layout {
                 $assets['css'][] = array(
                     'handle' => 'saw-module-' . $active_module,
                     'src' => $module_css . '?v=' . SAW_VISITORS_VERSION,
-                    'deps' => array('saw-variables', 'saw-components')
+                    'deps' => array('saw-variables', 'saw-base-components')
                 );
             }
             
@@ -537,11 +519,7 @@ class SAW_App_Layout {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title><?php echo esc_html($this->page_title); ?> - SAW Visitors</title>
             
-            <link rel="stylesheet" href="<?php echo esc_url(SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-app.css?v=' . SAW_VISITORS_VERSION); ?>">
-            <link rel="stylesheet" href="<?php echo esc_url(SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-app-header.css?v=' . SAW_VISITORS_VERSION); ?>">
-            <link rel="stylesheet" href="<?php echo esc_url(SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-app-sidebar.css?v=' . SAW_VISITORS_VERSION); ?>">
-            <link rel="stylesheet" href="<?php echo esc_url(SAW_VISITORS_PLUGIN_URL . 'assets/css/saw-app-responsive.css?v=' . SAW_VISITORS_VERSION); ?>">
-            <link rel="stylesheet" href="<?php echo esc_url(SAW_VISITORS_PLUGIN_URL . 'assets/css/fixed-layout.css?v=' . SAW_VISITORS_VERSION); ?>">
+            <!-- CSS assets are loaded via SAW_Asset_Loader::enqueue_global() in wp_enqueue_scripts hook -->
             
             <?php
             if (function_exists('wp_head')) {

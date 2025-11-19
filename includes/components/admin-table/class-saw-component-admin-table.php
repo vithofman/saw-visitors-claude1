@@ -189,61 +189,9 @@ class SAW_Component_Admin_Table {
     }
     
     private function enqueue_assets() {
-        wp_enqueue_style(
-            'saw-tables',
-            SAW_VISITORS_PLUGIN_URL . 'assets/css/components/tables.css',
-            array('saw-variables'),
-            SAW_VISITORS_VERSION
-        );
-        
-        wp_enqueue_style(
-            'saw-table-column-types',
-            SAW_VISITORS_PLUGIN_URL . 'assets/css/components/table-column-types.css',
-            array('saw-variables'),
-            SAW_VISITORS_VERSION
-        );
-        
-        $component_css = __DIR__ . '/admin-table.css';
-        if (file_exists($component_css)) {
-            wp_enqueue_style(
-                'saw-admin-table-component',
-                str_replace(SAW_VISITORS_PLUGIN_DIR, SAW_VISITORS_PLUGIN_URL, $component_css),
-                array('saw-tables'),
-                filemtime($component_css)
-            );
-        }
-        
-        $component_js = __DIR__ . '/admin-table.js';
-        if (file_exists($component_js)) {
-            wp_enqueue_script(
-                'saw-admin-table-component',
-                str_replace(SAW_VISITORS_PLUGIN_DIR, SAW_VISITORS_PLUGIN_URL, $component_js),
-                array('jquery', 'saw-app'),
-                filemtime($component_js),
-                true
-            );
-        }
-        
-        $sidebar_css = __DIR__ . '/sidebar.css';
-        if (file_exists($sidebar_css)) {
-            wp_enqueue_style(
-                'saw-admin-table-sidebar',
-                str_replace(SAW_VISITORS_PLUGIN_DIR, SAW_VISITORS_PLUGIN_URL, $sidebar_css),
-                array('saw-admin-table-component'),
-                filemtime($sidebar_css)
-            );
-        }
-        
-        $sidebar_js = __DIR__ . '/sidebar.js';
-        if (file_exists($sidebar_js)) {
-            wp_enqueue_script(
-                'saw-admin-table-sidebar',
-                str_replace(SAW_VISITORS_PLUGIN_DIR, SAW_VISITORS_PLUGIN_URL, $sidebar_js),
-                array('jquery', 'saw-admin-table-component'),
-                filemtime($sidebar_js),
-                true
-            );
-        }
+        // Assets are now enqueued globally via SAW_Asset_Loader
+        // to prevent FOUC on first page load. Do not re-enqueue here.
+        return;
     }
     
     private function render_header() {

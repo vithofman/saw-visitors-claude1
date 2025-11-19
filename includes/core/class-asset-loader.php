@@ -27,9 +27,9 @@ class SAW_Asset_Loader {
      * @var array
      */
     const CORE_STYLES = [
-        'saw-variables'  => 'core/variables.css',
-        'saw-reset'      => 'core/reset.css',
-        'saw-typography' => 'core/typography.css'
+        'saw-variables'  => 'foundation/variables.css',
+        'saw-reset'      => 'foundation/reset.css',
+        'saw-typography' => 'foundation/typography.css'
     ];
     
     /**
@@ -40,7 +40,7 @@ class SAW_Asset_Loader {
      */
     const COMPONENT_STYLES = [
         // Core UI components
-        'saw-components'          => 'core/saw-components.css',
+        'saw-base-components'     => 'components/base-components.css',
         'saw-buttons'             => 'components/buttons.css',
         'saw-forms'               => 'components/forms.css',
         'saw-tables'              => 'components/tables.css',
@@ -48,20 +48,23 @@ class SAW_Asset_Loader {
         'saw-modals'              => 'components/modals.css',
         'saw-alerts'              => 'components/alerts.css',
         'saw-cards'               => 'components/cards.css',
-        'saw-search'              => 'components/search.css',
+        'saw-search'              => 'components/search-input.css',
         'saw-pagination'          => 'components/pagination.css',
         'saw-table-column-types'  => 'components/table-column-types.css',
         'saw-detail-sections'     => 'components/detail-sections.css',
         
         // Interactive components (CRITICAL: Must load globally to prevent FOUC)
-        'saw-customer-switcher'   => '../includes/components/customer-switcher/customer-switcher.css',
-        'saw-branch-switcher'     => '../includes/components/branch-switcher/branch-switcher.css',
-        'saw-language-switcher'   => '../includes/components/language-switcher/language-switcher.css',
-        'saw-selectbox'           => '../includes/components/selectbox/saw-selectbox.css',
-        'saw-select-create'       => '../includes/components/select-create/select-create.css',
+        'saw-customer-switcher'   => 'components/customer-switcher.css',
+        'saw-branch-switcher'     => 'components/branch-switcher.css',
+        'saw-language-switcher'   => 'components/language-switcher.css',
+        'saw-selectbox'           => 'components/selectbox.css',
+        'saw-select-create'       => 'components/select-create.css',
+        'saw-color-picker'        => 'components/color-picker.css',
+        'saw-file-upload'         => 'components/file-upload.css',
         
         // Admin Table component
-        'saw-admin-table-sidebar' => '../includes/components/admin-table/sidebar.css',
+        'saw-admin-table'         => 'components/admin-table.css',
+        'saw-admin-table-sidebar' => 'components/admin-table-sidebar.css',
     ];
     
     /**
@@ -83,10 +86,12 @@ class SAW_Asset_Loader {
      * @var array
      */
     const APP_STYLES = [
-        'saw-app-header'     => 'saw-app-header.css',
-        'saw-app-sidebar'    => 'saw-app-sidebar.css',
-        'saw-app-footer'     => 'saw-app-footer.css',
-        'saw-app-responsive' => 'saw-app-responsive.css'
+        'saw-app-base'        => 'app/base.css',
+        'saw-app-header'      => 'app/header.css',
+        'saw-app-sidebar'     => 'app/sidebar.css',
+        'saw-app-footer'      => 'app/footer.css',
+        'saw-app-fixed-layout' => 'app/fixed-layout.css',
+        'saw-app-legacy-base' => 'app/legacy-base.css',
     ];
     
     /**
@@ -95,11 +100,13 @@ class SAW_Asset_Loader {
      * @since 1.0.0
      */
     public static function enqueue_global() {
+        error_log('SAW Asset Loader: Starting global asset enqueueing');
         self::enqueue_core_styles();
         self::enqueue_component_styles();
         self::enqueue_layout_styles();
         self::enqueue_app_styles();
         self::enqueue_global_scripts();
+        error_log('SAW Asset Loader: Global asset enqueueing completed');
     }
     
     /**
@@ -121,12 +128,7 @@ class SAW_Asset_Loader {
      */
     private static function enqueue_component_styles() {
         foreach (self::COMPONENT_STYLES as $handle => $path) {
-            // Handle paths that start with ../ (component-specific paths)
-            if (strpos($path, '../') === 0) {
-                self::enqueue_style($handle, $path, ['saw-variables']);
-            } else {
-                self::enqueue_style($handle, 'css/' . $path, ['saw-variables']);
-            }
+            self::enqueue_style($handle, 'css/' . $path, ['saw-variables']);
         }
     }
     
@@ -147,11 +149,11 @@ class SAW_Asset_Loader {
      * @since 1.0.0
      */
     private static function enqueue_app_styles() {
-        foreach (self::APP_STYLES as $handle => $file) {
-            $file_path = SAW_VISITORS_PLUGIN_DIR . 'assets/css/' . $file;
+        foreach (self::APP_STYLES as $handle => $path) {
+            $file_path = SAW_VISITORS_PLUGIN_DIR . 'assets/css/' . $path;
             
             if (file_exists($file_path)) {
-                self::enqueue_style($handle, 'css/' . $file, ['saw-variables']);
+                self::enqueue_style($handle, 'css/' . $path, ['saw-variables']);
             }
         }
     }
@@ -165,52 +167,72 @@ class SAW_Asset_Loader {
         wp_enqueue_script('jquery');
         
         // Main app script
-        wp_enqueue_script(
-            'saw-app',
-            SAW_VISITORS_PLUGIN_URL . 'assets/js/saw-app.js',
-            ['jquery'],
-            SAW_VISITORS_VERSION,
-            true
-        );
-        
-        wp_localize_script('saw-app', 'sawGlobal', [
-            'ajaxurl'             => admin_url('admin-ajax.php'),
-            'homeUrl'             => home_url(),
-            'pluginUrl'           => SAW_VISITORS_PLUGIN_URL,
-            'version'             => SAW_VISITORS_VERSION,
-            'debug'               => defined('SAW_DEBUG') && SAW_DEBUG,
-            'nonce'               => wp_create_nonce('saw_ajax_nonce'),
-            'customerModalNonce'  => wp_create_nonce('saw_customer_modal_nonce'),
-            'deleteNonce'         => wp_create_nonce('saw_admin_table_nonce')
-        ]);
+        $app_js = SAW_VISITORS_PLUGIN_DIR . 'assets/js/core/app.js';
+        if (file_exists($app_js)) {
+            wp_enqueue_script(
+                'saw-app',
+                SAW_VISITORS_PLUGIN_URL . 'assets/js/core/app.js',
+                ['jquery'],
+                filemtime($app_js),
+                true
+            );
+            
+            wp_localize_script('saw-app', 'sawGlobal', [
+                'ajaxurl'             => admin_url('admin-ajax.php'),
+                'homeUrl'             => home_url(),
+                'pluginUrl'           => SAW_VISITORS_PLUGIN_URL,
+                'version'             => SAW_VISITORS_VERSION,
+                'debug'               => defined('SAW_DEBUG') && SAW_DEBUG,
+                'nonce'               => wp_create_nonce('saw_ajax_nonce'),
+                'customerModalNonce'  => wp_create_nonce('saw_customer_modal_nonce'),
+                'deleteNonce'         => wp_create_nonce('saw_admin_table_nonce')
+            ]);
+        } else {
+            error_log("SAW Asset Loader: app.js not found: {$app_js}");
+        }
         
         // Base Navigation (SPA functionality)
-        wp_enqueue_script(
-            'saw-app-navigation',
-            SAW_VISITORS_PLUGIN_URL . 'assets/js/saw-app-navigation.js',
-            ['jquery', 'saw-app'],
-            SAW_VISITORS_VERSION,
-            true
-        );
+        $nav_js = SAW_VISITORS_PLUGIN_DIR . 'assets/js/core/navigation.js';
+        if (file_exists($nav_js)) {
+            wp_enqueue_script(
+                'saw-app-navigation',
+                SAW_VISITORS_PLUGIN_URL . 'assets/js/core/navigation.js',
+                ['jquery', 'saw-app'],
+                filemtime($nav_js),
+                true
+            );
+        } else {
+            error_log("SAW Asset Loader: navigation.js not found: {$nav_js}");
+        }
         
         // Enhanced Navigation (extends base navigation with retry & module loading)
-        wp_enqueue_script(
-            'saw-app-navigation-enhanced',
-            SAW_VISITORS_PLUGIN_URL . 'assets/js/saw-app-navigation-enhanced.js',
-            ['jquery', 'saw-app', 'saw-app-navigation'],
-            SAW_VISITORS_VERSION,
-            true
-        );
+        $nav_enhanced_js = SAW_VISITORS_PLUGIN_DIR . 'assets/js/core/navigation-enhanced.js';
+        if (file_exists($nav_enhanced_js)) {
+            wp_enqueue_script(
+                'saw-app-navigation-enhanced',
+                SAW_VISITORS_PLUGIN_URL . 'assets/js/core/navigation-enhanced.js',
+                ['jquery', 'saw-app', 'saw-app-navigation'],
+                filemtime($nav_enhanced_js),
+                true
+            );
+        } else {
+            error_log("SAW Asset Loader: navigation-enhanced.js not found: {$nav_enhanced_js}");
+        }
         
 
         // Global Validation
-        wp_enqueue_script(
-            'saw-validation',
-            SAW_VISITORS_PLUGIN_URL . 'assets/js/core/saw-validation.js',
-            ['jquery'],
-            SAW_VISITORS_VERSION,
-            true
-        );
+        $validation_js = SAW_VISITORS_PLUGIN_DIR . 'assets/js/core/validation.js';
+        if (file_exists($validation_js)) {
+            wp_enqueue_script(
+                'saw-validation',
+                SAW_VISITORS_PLUGIN_URL . 'assets/js/core/validation.js',
+                ['jquery'],
+                filemtime($validation_js),
+                true
+            );
+        } else {
+            error_log("SAW Asset Loader: validation.js not found: {$validation_js}");
+        }
 
         // Enqueue component-specific JavaScript
         self::enqueue_component_scripts();
@@ -228,7 +250,7 @@ class SAW_Asset_Loader {
     private static function enqueue_component_scripts() {
         $component_scripts = [
             'saw-customer-switcher' => [
-                'path' => 'includes/components/customer-switcher/customer-switcher.js',
+                'path' => 'assets/js/components/customer-switcher.js',
                 'deps' => ['jquery', 'saw-app'],
                 'localize' => 'sawCustomerSwitcher',
                 'localize_data' => [
@@ -237,7 +259,7 @@ class SAW_Asset_Loader {
                 ]
             ],
             'saw-branch-switcher' => [
-                'path' => 'includes/components/branch-switcher/branch-switcher.js',
+                'path' => 'assets/js/components/branch-switcher.js',
                 'deps' => ['jquery', 'saw-app'],
                 'localize' => 'sawBranchSwitcher',
                 'localize_data' => [
@@ -246,7 +268,7 @@ class SAW_Asset_Loader {
                 ]
             ],
             'saw-language-switcher' => [
-                'path' => 'includes/components/language-switcher/language-switcher.js',
+                'path' => 'assets/js/components/language-switcher.js',
                 'deps' => ['jquery', 'saw-app'],
                 'localize' => 'sawLanguageSwitcher',
                 'localize_data' => [
@@ -255,19 +277,39 @@ class SAW_Asset_Loader {
                 ]
             ],
             'saw-selectbox' => [
-                'path' => 'includes/components/selectbox/saw-selectbox.js',
+                'path' => 'assets/js/components/selectbox.js',
                 'deps' => ['jquery', 'saw-app'],
             ],
             'saw-select-create' => [
-                'path' => 'includes/components/select-create/select-create.js',
+                'path' => 'assets/js/components/select-create.js',
                 'deps' => ['jquery', 'saw-app'],
             ],
+            'saw-color-picker' => [
+                'path' => 'assets/js/components/color-picker.js',
+                'deps' => ['jquery'],
+            ],
+            'saw-file-upload' => [
+                'path' => 'assets/js/components/file-upload.js',
+                'deps' => ['jquery', 'saw-app'],
+            ],
+            'saw-search' => [
+                'path' => 'assets/js/components/search.js',
+                'deps' => ['jquery'],
+            ],
+            'saw-modal' => [
+                'path' => 'assets/js/components/modal.js',
+                'deps' => ['jquery', 'saw-app'],
+            ],
+            'saw-modal-triggers' => [
+                'path' => 'assets/js/components/modal-triggers.js',
+                'deps' => ['jquery', 'saw-app', 'saw-modal'],
+            ],
             'saw-admin-table-sidebar' => [
-                'path' => 'includes/components/admin-table/sidebar.js',
+                'path' => 'assets/js/components/admin-table-sidebar.js',
                 'deps' => ['jquery', 'saw-app'],
             ],
             'saw-admin-table-component' => [
-                'path' => 'includes/components/admin-table/admin-table.js',
+                'path' => 'assets/js/components/admin-table.js',
                 'deps' => ['jquery', 'saw-app'],
             ],
         ];
@@ -319,23 +361,54 @@ class SAW_Asset_Loader {
             $module_path
         );
         
-        // 1. Enqueue Module CSS (New Structure)
-        $css_file_rel = 'assets/css/modules/saw-' . $slug . '.css';
-        if (file_exists(SAW_VISITORS_PLUGIN_DIR . $css_file_rel)) {
+        // 1. Enqueue Module CSS (New Structure - check both old and new paths)
+        // Try new structure first (modules/{slug}/{slug}.css)
+        $css_file_new = 'assets/css/modules/' . $slug . '/' . $slug . '.css';
+        $css_file_old = 'assets/css/modules/saw-' . $slug . '.css';
+        
+        if (file_exists(SAW_VISITORS_PLUGIN_DIR . $css_file_new)) {
             wp_enqueue_style(
                 'saw-module-' . $slug,
-                SAW_VISITORS_PLUGIN_URL . $css_file_rel,
-                ['saw-variables', 'saw-components'],
+                SAW_VISITORS_PLUGIN_URL . $css_file_new,
+                ['saw-variables', 'saw-base-components'],
+                SAW_VISITORS_VERSION
+            );
+        } elseif (file_exists(SAW_VISITORS_PLUGIN_DIR . $css_file_old)) {
+            wp_enqueue_style(
+                'saw-module-' . $slug,
+                SAW_VISITORS_PLUGIN_URL . $css_file_old,
+                ['saw-variables', 'saw-base-components'],
                 SAW_VISITORS_VERSION
             );
         }
 
-        // 2. Enqueue Module JS (New Structure)
-        $js_file_rel = 'assets/js/modules/saw-' . $slug . '.js';
-        if (file_exists(SAW_VISITORS_PLUGIN_DIR . $js_file_rel)) {
+        // 2. Enqueue Module JS (New Structure - check both old and new paths)
+        $js_file_new = 'assets/js/modules/' . $slug . '/' . $slug . '.js';
+        $js_file_old = 'assets/js/modules/saw-' . $slug . '.js';
+        
+        if (file_exists(SAW_VISITORS_PLUGIN_DIR . $js_file_new)) {
             wp_enqueue_script(
                 'saw-module-' . $slug,
-                SAW_VISITORS_PLUGIN_URL . $js_file_rel,
+                SAW_VISITORS_PLUGIN_URL . $js_file_new,
+                ['jquery', 'saw-app', 'saw-validation'],
+                SAW_VISITORS_VERSION,
+                true
+            );
+            
+            // Localize script
+            wp_localize_script('saw-module-' . $slug, 'saw' . ucfirst($slug), [
+                'ajaxurl'  => admin_url('admin-ajax.php'),
+                'nonce'    => wp_create_nonce('saw_' . $slug . '_ajax'),
+                'entity'   => esc_js($slug),
+                'isEdit'   => isset($_GET['id']) || (isset($_GET['saw_path']) && strpos($_GET['saw_path'], 'edit') !== false),
+                'isNested' => isset($_GET['nested']) ? $_GET['nested'] : '0'
+            ]);
+            
+            return; // Prefer new structure over legacy
+        } elseif (file_exists(SAW_VISITORS_PLUGIN_DIR . $js_file_old)) {
+            wp_enqueue_script(
+                'saw-module-' . $slug,
+                SAW_VISITORS_PLUGIN_URL . $js_file_old,
                 ['jquery', 'saw-app', 'saw-validation'],
                 SAW_VISITORS_VERSION,
                 true
@@ -386,11 +459,19 @@ class SAW_Asset_Loader {
      * @param array  $deps   Dependencies
      */
     private static function enqueue_style($handle, $path, $deps = []) {
+        $file_path = SAW_VISITORS_PLUGIN_DIR . 'assets/' . $path;
+        
+        // Check if file exists before enqueueing
+        if (!file_exists($file_path)) {
+            error_log("SAW Asset Loader: CSS file not found: {$file_path}");
+            return;
+        }
+        
         wp_enqueue_style(
             $handle,
             SAW_VISITORS_PLUGIN_URL . 'assets/' . $path,
             $deps,
-            SAW_VISITORS_VERSION
+            filemtime($file_path) // Use filemtime for cache busting
         );
     }
 }
