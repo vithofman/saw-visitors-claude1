@@ -127,41 +127,53 @@
      * @return {void}
      */
     window.closeSidebar = function (listUrl) {
-        console.log('🚪 Closing sidebar');
+    console.log('🚪 Closing sidebar, listUrl:', listUrl);
 
-        const $wrapper = $('.saw-sidebar-wrapper');
+    const $wrapper = $('.saw-sidebar-wrapper');
 
-        if (!$wrapper.length) {
-            console.log('⚠️ No wrapper found');
-            return;
+    if (!$wrapper.length) {
+        console.log('⚠️ No wrapper found');
+        return;
+    }
+
+    $wrapper.removeClass('active');
+    $('.saw-admin-table-split').removeClass('has-sidebar');
+
+    setTimeout(function () {
+        $wrapper.html('');
+        console.log('✅ Sidebar closed');
+    }, 300);
+
+    $('.saw-admin-table tbody tr').removeClass('saw-row-active');
+
+    // ✅ FIX: Ignore '#' and extract proper URL from current path
+    if (listUrl && listUrl !== '#') {
+        console.log('🔗 Updating URL to:', listUrl);
+        window.history.pushState(
+            { url: listUrl, sawAdminTable: true },
+            '',
+            listUrl
+        );
+    } else {
+        // ✅ Build list URL from current path
+        const currentUrl = window.location.pathname;
+        const pathParts = currentUrl.split('/').filter(p => p);
+        
+        // Remove ID from end (e.g., /admin/visits/44 -> /admin/visits)
+        if (pathParts.length > 0 && !isNaN(pathParts[pathParts.length - 1])) {
+            pathParts.pop();
         }
-
-        $wrapper.removeClass('active');
-
-        // CRITICAL FIX: Remove padding from table when sidebar closes
-        $('.saw-admin-table-split').removeClass('has-sidebar');
-
-        setTimeout(function () {
-            $wrapper.html('');
-            console.log('✅ Sidebar closed');
-        }, 300);
-
-        // CRITICAL FIX: Remove active row highlight when closing
-        $('.saw-admin-table tbody tr').removeClass('saw-row-active');
-
-        // CRITICAL FIX: Update URL back to list view
-        if (listUrl) {
-            console.log('🔗 Updating URL to:', listUrl);
-            window.history.pushState(
-                {
-                    url: listUrl,
-                    sawAdminTable: true
-                },
-                '',
-                listUrl
-            );
-        }
-    };
+        
+        const properListUrl = '/' + pathParts.join('/') + '/';
+        
+        console.log('🔗 Built list URL from path:', properListUrl);
+        window.history.pushState(
+            { url: properListUrl, sawAdminTable: true },
+            '',
+            properListUrl
+        );
+    }
+};
 
     /**
      * Show loading overlay

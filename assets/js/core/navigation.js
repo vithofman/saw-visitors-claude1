@@ -187,6 +187,13 @@
                     // Load required assets from server response
                     if (response.data.assets) {
                         console.log('📦 Loading assets from server response:', response.data.assets);
+                        console.log('📦 Asset counts - CSS: ' + (response.data.assets.css ? response.data.assets.css.length : 0) + ', JS: ' + (response.data.assets.js ? response.data.assets.js.length : 0));
+                        if (response.data.assets.css) {
+                            console.log('📦 CSS assets:', response.data.assets.css.map(function(a) { return a.handle + ' (' + a.src + ')'; }));
+                        }
+                        if (response.data.assets.js) {
+                            console.log('📦 JS assets:', response.data.assets.js.map(function(a) { return a.handle + ' (' + a.src + ')'; }));
+                        }
                         loadAssetsFromResponse(response.data.assets, function() {
                             reinitializePageScripts();
                             const moduleName = detectModuleFromURL(url);
@@ -195,6 +202,7 @@
                             }
                         });
                     } else {
+                        console.warn('⚠️ No assets in response!');
                         // Fallback: try to detect and load module assets
                         setTimeout(function() {
                             const moduleName = detectModuleFromURL(url);
@@ -337,8 +345,27 @@
         let scriptsExecuted = 0;
 
         $('#saw-app-content').find('script').each(function() {
-            const scriptContent = $(this).html();
+            const $script = $(this);
+            const scriptType = $script.attr('type') || '';
+            const scriptContent = $script.html();
+            
+            // CRITICAL: Skip Underscore/Backbone templates (type="text/template")
+            if (scriptType === 'text/template' || scriptType === 'text/html' || scriptType === 'text/x-handlebars-template') {
+                return; // These are templates, not JavaScript
+            }
+            
             if (!scriptContent || !scriptContent.trim()) return;
+            
+            // CRITICAL: Skip if script content looks like HTML (404 page or error)
+            // Check for common HTML tags that indicate this is not JavaScript
+            if (scriptContent.trim().startsWith('<') || 
+                scriptContent.includes('<!DOCTYPE') || 
+                scriptContent.includes('<html') ||
+                scriptContent.includes('404') ||
+                scriptContent.includes('Not Found')) {
+                console.warn('⚠️ Skipping script - appears to be HTML/404:', scriptContent.substring(0, 100));
+                return;
+            }
 
             try {
                 const script = document.createElement('script');
@@ -714,23 +741,28 @@
             const sortedCss = sortAssetsByDependencies(assets.css);
             
             sortedCss.forEach(function(asset) {
-                // Better check for existing CSS - check by src URL or handle in href
+                // CRITICAL: Check for existing CSS more carefully
+                // Check by exact href match, by handle in data attribute, or by filename in href
                 const srcCheck = asset.src.replace(/\?.*$/, ''); // Remove query string for comparison
-                const exists = $('link[href*="' + srcCheck + '"], link[href="' + asset.src + '"], link[href*="' + asset.handle + '"], link[data-saw-asset="' + asset.handle + '"]').length > 0;
+                const filename = srcCheck.split('/').pop(); // Get filename
+                const exists = $('link[href="' + asset.src + '"], link[href*="' + srcCheck + '"], link[data-saw-asset="' + asset.handle + '"], link[href*="' + filename + '"]').length > 0;
                 
                 if (exists) {
-                    console.log('  ⏭️ CSS already loaded:', asset.handle);
+                    console.log('  ⏭️ CSS already loaded:', asset.handle, asset.src);
                     cssLoaded++;
                     checkComplete();
                     return;
                 }
 
-                // Load CSS
+                // CRITICAL: Always load CSS, even if it might exist
+                // This ensures CSS is loaded for AJAX navigation
+                console.log('  📥 Loading CSS:', asset.handle, asset.src);
                 $('<link>')
                     .attr('rel', 'stylesheet')
                     .attr('type', 'text/css')
                     .attr('href', asset.src)
                     .attr('data-saw-asset', asset.handle)
+                    .attr('data-saw-module', 'ajax') // Mark as AJAX-loaded
                     .appendTo('head');
                 console.log('  ✅ Loaded CSS:', asset.handle, asset.src);
                 cssLoaded++;
@@ -749,33 +781,116 @@
             }, 500);
         }
 
-        // Load JS files
+        // Load JS files - CRITICAL: Load sequentially respecting dependencies
         if (assets.js && assets.js.length > 0) {
-            assets.js.forEach(function(asset) {
-                // Better check for existing JS - check by src URL or handle in src
-                const srcCheck = asset.src.replace(/\?.*$/, ''); // Remove query string for comparison
-                const exists = $('script[src*="' + srcCheck + '"], script[src="' + asset.src + '"], script[src*="' + asset.handle + '"]').length > 0;
-                
-                if (exists) {
-                    console.log('  ⏭️ JS already loaded:', asset.handle);
-                    jsLoaded++;
-                    checkComplete();
+            // Sort JS by dependencies to ensure correct load order
+            const sortedJs = sortAssetsByDependencies(assets.js);
+            
+            // Track which assets are already loaded (by handle)
+            const loadedAssets = {};
+            
+            // Helper function to check if all dependencies are loaded
+            function areDepsLoaded(asset) {
+                if (!asset.deps || asset.deps.length === 0) {
+                    return true;
+                }
+                return asset.deps.every(function(dep) {
+                    // Check if dependency is already loaded in DOM or in our tracking
+                    if (loadedAssets[dep]) {
+                        return true;
+                    }
+                    
+                    // Check if script is in DOM
+                    if ($('script[src*="' + dep + '"], script[data-saw-asset="' + dep + '"]').length > 0) {
+                        return true;
+                    }
+                    
+                    // Check for specific global objects
+                    // underscore -> _
+                    if (dep === 'underscore' && typeof window._ !== 'undefined') {
+                        return true;
+                    }
+                    // backbone -> Backbone
+                    if (dep === 'backbone' && typeof window.Backbone !== 'undefined') {
+                        return true;
+                    }
+                    // wp-util -> wp.util
+                    if (dep === 'wp-util' && typeof window.wp !== 'undefined' && typeof window.wp.util !== 'undefined') {
+                        return true;
+                    }
+                    // media-models -> wp.media.model
+                    if (dep === 'media-models' && typeof window.wp !== 'undefined' && typeof window.wp.media !== 'undefined' && typeof window.wp.media.model !== 'undefined') {
+                        return true;
+                    }
+                    
+                    // For other dependencies, check if they're in the assets list and already loaded
+                    const depAsset = sortedJs.find(function(a) { return a.handle === dep; });
+                    if (depAsset && loadedAssets[dep]) {
+                        return true;
+                    }
+                    
+                    return false;
+                });
+            }
+            
+            // Helper function to load a single JS asset
+            function loadJsAsset(index) {
+                if (index >= sortedJs.length) {
+                    // All assets processed
                     return;
                 }
-
-                // Load JS
+                
+                const asset = sortedJs[index];
+                
+                // Check if already loaded
+                const srcCheck = asset.src.replace(/\?.*$/, '');
+                const filename = srcCheck.split('/').pop();
+                const exists = $('script[src="' + asset.src + '"], script[src*="' + srcCheck + '"], script[src*="' + filename + '"]').length > 0;
+                
+                if (exists || loadedAssets[asset.handle]) {
+                    console.log('  ⏭️ JS already loaded:', asset.handle, asset.src);
+                    loadedAssets[asset.handle] = true;
+                    jsLoaded++;
+                    checkComplete();
+                    // Continue with next asset
+                    loadJsAsset(index + 1);
+                    return;
+                }
+                
+                // Check if dependencies are loaded
+                if (!areDepsLoaded(asset)) {
+                    // Wait a bit and retry
+                    setTimeout(function() {
+                        loadJsAsset(index);
+                    }, 50);
+                    return;
+                }
+                
+                // Load the asset
+                console.log('  📥 Loading JS:', asset.handle, asset.src);
                 $.getScript(asset.src)
                     .done(function() {
+                        // Mark script as AJAX-loaded
+                        $('script[src="' + asset.src + '"]').attr('data-saw-module', 'ajax');
+                        loadedAssets[asset.handle] = true;
                         console.log('  ✅ Loaded JS:', asset.handle, asset.src);
                         jsLoaded++;
                         checkComplete();
+                        // Continue with next asset
+                        loadJsAsset(index + 1);
                     })
                     .fail(function() {
                         console.warn('  ⚠️ Failed to load JS:', asset.handle, asset.src);
+                        loadedAssets[asset.handle] = true; // Mark as processed even if failed
                         jsLoaded++;
                         checkComplete();
+                        // Continue with next asset even on failure
+                        loadJsAsset(index + 1);
                     });
-            });
+            }
+            
+            // Start loading from first asset
+            loadJsAsset(0);
         } else {
             jsLoaded = totalJs;
         }

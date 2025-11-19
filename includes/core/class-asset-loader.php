@@ -119,7 +119,8 @@ class SAW_Asset_Loader {
      */
     private static function enqueue_layout_styles() {
         foreach (self::LAYOUT_STYLES as $handle => $path) {
-            self::enqueue_style($handle, 'css/' . $path, ['saw-variables']);
+            // CRITICAL: Layout styles depend on base-components
+            self::enqueue_style($handle, 'css/' . $path, ['saw-variables', 'saw-base-components']);
         }
     }
     

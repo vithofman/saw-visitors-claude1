@@ -258,6 +258,11 @@ class SAW_App_Layout {
         // Get required CSS/JS assets for current module
         $assets = $this->get_required_assets();
         
+        // DEBUG: Log response data
+        error_log('[SAW_App_Layout] render_content_only() - active_menu: ' . ($this->active_menu ?: 'empty'));
+        error_log('[SAW_App_Layout] render_content_only() - assets CSS count: ' . count($assets['css']));
+        error_log('[SAW_App_Layout] render_content_only() - assets JS count: ' . count($assets['js']));
+        
         wp_send_json_success(array(
             'content' => $content,
             'title' => $this->page_title,
@@ -283,6 +288,11 @@ class SAW_App_Layout {
             'css' => array(),
             'js' => array()
         );
+        
+        // DEBUG: Log asset detection
+        error_log('[SAW_App_Layout] get_required_assets() called');
+        error_log('[SAW_App_Layout] active_menu: ' . ($this->active_menu ?: 'empty'));
+        error_log('[SAW_App_Layout] REQUEST_URI: ' . ($_SERVER['REQUEST_URI'] ?? 'N/A'));
         
         // CRITICAL: Always include ALL global component CSS files needed by admin-table
         // These are normally loaded via SAW_Asset_Loader::enqueue_global() but not during AJAX
@@ -351,9 +361,9 @@ class SAW_App_Layout {
         }
         
         // Core JS files (from assets/js/core/)
+        // CRITICAL: Do NOT include saw-app and saw-app-navigation here - they are already loaded globally!
+        // Including them again would cause conflicts and duplicate loading
         $core_js = array(
-            'saw-app' => 'core/app.js',
-            'saw-app-navigation' => 'core/navigation.js', // Consolidated: navigation + navigation-enhanced
             'saw-validation' => 'core/validation.js',
         );
         
@@ -361,7 +371,9 @@ class SAW_App_Layout {
             $js_url = SAW_VISITORS_PLUGIN_URL . 'assets/js/' . $path;
             $js_path = SAW_VISITORS_PLUGIN_DIR . 'assets/js/' . $path;
             if (file_exists($js_path)) {
-                $deps = ($handle === 'saw-app') ? array('jquery') : array('jquery', 'saw-app');
+                // CRITICAL: saw-app and saw-app-navigation are already loaded globally, don't include them
+                // Only include validation.js which is module-specific
+                $deps = array('jquery', 'saw-app');
                 $assets['js'][] = array(
                     'handle' => $handle,
                     'src' => $js_url . '?v=' . SAW_VISITORS_VERSION,
@@ -404,14 +416,21 @@ class SAW_App_Layout {
         );
         
         // Get active module - try multiple methods
-        $active_module = $this->active_menu;
+        // CRITICAL: For AJAX requests, we need to detect module from URL since active_menu may not be set
+        $active_module = null;
         
-        // Method 1: From active_menu (passed to render())
-        if (empty($active_module)) {
-            // Method 2: From router
-            if (class_exists('SAW_Router')) {
-                $router = SAW_Router::get_instance();
-                $active_module = $router->get_active_module();
+        // Method 1: From active_menu (passed to render()) - only if not empty
+        if (!empty($this->active_menu)) {
+            $active_module = $this->active_menu;
+            error_log('[SAW_App_Layout] Method 1: active_module from active_menu: ' . $active_module);
+        }
+        
+        // Method 2: From REQUEST_URI (CRITICAL for AJAX - works even without query vars)
+        if (empty($active_module) && isset($_SERVER['REQUEST_URI'])) {
+            $uri = sanitize_text_field(wp_unslash($_SERVER['REQUEST_URI']));
+            if (preg_match('#/admin/([^/]+)#', $uri, $matches)) {
+                $active_module = $matches[1];
+                error_log('[SAW_App_Layout] Method 2: active_module from REQUEST_URI: ' . $active_module);
             }
         }
         
@@ -423,21 +442,29 @@ class SAW_App_Layout {
                 // Remove 'admin/' prefix if present
                 $clean_path = preg_replace('#^admin/#', '', $clean_path);
                 $segments = explode('/', $clean_path);
-                if (isset($segments[0]) && $segments[0] !== 'admin') {
+                if (isset($segments[0]) && $segments[0] !== 'admin' && !is_numeric($segments[0])) {
                     $active_module = $segments[0];
+                    error_log('[SAW_App_Layout] Method 3: active_module from query var: ' . $active_module);
                 }
             }
         }
         
-        // Method 4: From REQUEST_URI (fallback)
-        if (empty($active_module) && isset($_SERVER['REQUEST_URI'])) {
-            $uri = sanitize_text_field(wp_unslash($_SERVER['REQUEST_URI']));
-            if (preg_match('#/admin/([^/]+)#', $uri, $matches)) {
-                $active_module = $matches[1];
+        // Method 4: From router (fallback)
+        if (empty($active_module)) {
+            if (class_exists('SAW_Router')) {
+                try {
+                    $router = SAW_Router::get_instance();
+                    if ($router && method_exists($router, 'get_active_module')) {
+                        $active_module = $router->get_active_module();
+                        error_log('[SAW_App_Layout] Method 4: active_module from router: ' . ($active_module ?: 'null'));
+                    }
+                } catch (Exception $e) {
+                    error_log('[SAW_App_Layout] Method 4: Error getting router: ' . $e->getMessage());
+                }
             }
         }
         
-        // Method 5: Check if active_module matches a known module route
+        // Method 5: Check if active_module matches a known module route and convert to slug
         if (!empty($active_module)) {
             $modules = SAW_Module_Loader::get_all();
             foreach ($modules as $slug => $config) {
@@ -447,61 +474,78 @@ class SAW_App_Layout {
                 if ($module_route_without_admin === $active_module || 
                     strpos($module_route_without_admin, $active_module . '/') === 0) {
                     $active_module = $slug;
+                    error_log('[SAW_App_Layout] Method 5: active_module converted to slug: ' . $active_module);
                     break;
                 }
             }
         }
         
+        error_log('[SAW_App_Layout] Final active_module: ' . ($active_module ?: 'null'));
+        
         // Module-specific CSS
         if ($active_module && $active_module !== 'dashboard' && $active_module !== 'settings') {
-            $module_css = SAW_VISITORS_PLUGIN_URL . 'assets/css/modules/saw-' . $active_module . '.css';
+            // CRITICAL: Some modules have subdirectories (e.g., content/content.css)
             $module_css_path = SAW_VISITORS_PLUGIN_DIR . 'assets/css/modules/saw-' . $active_module . '.css';
+            $module_css = SAW_VISITORS_PLUGIN_URL . 'assets/css/modules/saw-' . $active_module . '.css';
+            
+            // Check for subdirectory structure (e.g., content/content.css)
+            if (!file_exists($module_css_path)) {
+                $module_css_path_alt = SAW_VISITORS_PLUGIN_DIR . 'assets/css/modules/' . $active_module . '/' . $active_module . '.css';
+                if (file_exists($module_css_path_alt)) {
+                    $module_css_path = $module_css_path_alt;
+                    $module_css = SAW_VISITORS_PLUGIN_URL . 'assets/css/modules/' . $active_module . '/' . $active_module . '.css';
+                }
+            }
+            
+            error_log('[SAW_App_Layout] Checking module CSS: ' . $module_css_path . ' - exists: ' . (file_exists($module_css_path) ? 'YES' : 'NO'));
             if (file_exists($module_css_path)) {
                 $assets['css'][] = array(
                     'handle' => 'saw-module-' . $active_module,
                     'src' => $module_css . '?v=' . SAW_VISITORS_VERSION,
                     'deps' => array('saw-variables', 'saw-base-components')
                 );
+                error_log('[SAW_App_Layout] Added module CSS: saw-module-' . $active_module);
+            } else {
+                error_log('[SAW_App_Layout] WARNING: Module CSS file not found: ' . $module_css_path);
             }
             
             // Module-specific JS
             $module_js = SAW_VISITORS_PLUGIN_URL . 'assets/js/modules/saw-' . $active_module . '.js';
             $module_js_path = SAW_VISITORS_PLUGIN_DIR . 'assets/js/modules/saw-' . $active_module . '.js';
+            error_log('[SAW_App_Layout] Checking module JS: ' . $module_js_path . ' - exists: ' . (file_exists($module_js_path) ? 'YES' : 'NO'));
             if (file_exists($module_js_path)) {
                 $assets['js'][] = array(
                     'handle' => 'saw-module-' . $active_module,
                     'src' => $module_js . '?v=' . SAW_VISITORS_VERSION,
                     'deps' => array('jquery', 'saw-app', 'saw-validation')
                 );
+                error_log('[SAW_App_Layout] Added module JS: saw-module-' . $active_module);
+            } else {
+                error_log('[SAW_App_Layout] WARNING: Module JS file not found: ' . $module_js_path);
             }
             
             // CRITICAL: Content module needs WordPress Media Library and TinyMCE
+            error_log('[SAW_App_Layout] Checking if content module - active_module: ' . ($active_module ?: 'null'));
             if ($active_module === 'content') {
-                // WordPress Media Library CSS
-                $media_css = includes_url('css/media.min.css');
-                $assets['css'][] = array(
-                    'handle' => 'media',
-                    'src' => $media_css,
-                    'deps' => array('dashicons')
-                );
+                error_log('[SAW_App_Layout] Content module detected - adding WordPress Media/TinyMCE assets');
                 
-                // WordPress Media Library JS
-                $media_js = includes_url('js/media-views.min.js');
+                // CRITICAL: Add dependencies FIRST (underscore, backbone) - WordPress core libraries
+                // These are normally loaded by WordPress but not during AJAX
+                $underscore_js = includes_url('js/underscore.min.js');
                 $assets['js'][] = array(
-                    'handle' => 'media-views',
-                    'src' => $media_js,
-                    'deps' => array('jquery', 'media-models', 'wp-util')
+                    'handle' => 'underscore',
+                    'src' => $underscore_js,
+                    'deps' => array()
                 );
                 
-                // Media Models (dependency for media-views)
-                $media_models_js = includes_url('js/media-models.min.js');
+                $backbone_js = includes_url('js/backbone.min.js');
                 $assets['js'][] = array(
-                    'handle' => 'media-models',
-                    'src' => $media_models_js,
-                    'deps' => array('jquery', 'wp-util', 'backbone')
+                    'handle' => 'backbone',
+                    'src' => $backbone_js,
+                    'deps' => array('underscore', 'jquery')
                 );
                 
-                // WP Util (dependency for media)
+                // WP Util (dependency for media) - must come after underscore
                 $wp_util_js = includes_url('js/wp-util.min.js');
                 $assets['js'][] = array(
                     'handle' => 'wp-util',
@@ -509,13 +553,65 @@ class SAW_App_Layout {
                     'deps' => array('jquery', 'underscore')
                 );
                 
-                // TinyMCE CSS (for wp_editor)
-                $tinymce_css = includes_url('css/tinymce.css');
-                $assets['css'][] = array(
-                    'handle' => 'tinymce',
-                    'src' => $tinymce_css,
-                    'deps' => array()
+                // Media Models (dependency for media-views) - must come after wp-util and backbone
+                $media_models_js = includes_url('js/media-models.min.js');
+                $assets['js'][] = array(
+                    'handle' => 'media-models',
+                    'src' => $media_models_js,
+                    'deps' => array('jquery', 'wp-util', 'backbone')
                 );
+                
+                // WordPress Media Library JS - must come after media-models
+                $media_js = includes_url('js/media-views.min.js');
+                $assets['js'][] = array(
+                    'handle' => 'media-views',
+                    'src' => $media_js,
+                    'deps' => array('jquery', 'media-models', 'wp-util')
+                );
+                
+                // WordPress Media Library CSS - try multiple paths
+                $media_css_paths = array(
+                    ABSPATH . WPINC . '/css/media.css',
+                    ABSPATH . WPINC . '/css/media.min.css'
+                );
+                $media_css = null;
+                foreach ($media_css_paths as $path) {
+                    if (file_exists($path)) {
+                        $media_css = includes_url(str_replace(ABSPATH . WPINC . '/', '', $path));
+                        break;
+                    }
+                }
+                if ($media_css) {
+                    $assets['css'][] = array(
+                        'handle' => 'media',
+                        'src' => $media_css,
+                        'deps' => array('dashicons')
+                    );
+                } else {
+                    error_log('[SAW_App_Layout] WARNING: WordPress media.css not found');
+                }
+                
+                // TinyMCE CSS (for wp_editor) - try multiple paths
+                $tinymce_css_paths = array(
+                    ABSPATH . WPINC . '/css/tinymce.css',
+                    ABSPATH . WPINC . '/css/editor.css'
+                );
+                $tinymce_css = null;
+                foreach ($tinymce_css_paths as $path) {
+                    if (file_exists($path)) {
+                        $tinymce_css = includes_url(str_replace(ABSPATH . WPINC . '/', '', $path));
+                        break;
+                    }
+                }
+                if ($tinymce_css) {
+                    $assets['css'][] = array(
+                        'handle' => 'tinymce',
+                        'src' => $tinymce_css,
+                        'deps' => array()
+                    );
+                } else {
+                    error_log('[SAW_App_Layout] WARNING: WordPress tinymce.css not found');
+                }
                 
                 // TinyMCE JS (core)
                 $tinymce_js = includes_url('js/tinymce/tinymce.min.js');
@@ -525,15 +621,32 @@ class SAW_App_Layout {
                     'deps' => array()
                 );
                 
-                // WordPress Editor JS (initializes TinyMCE)
-                $editor_js = includes_url('js/editor.min.js');
-                $assets['js'][] = array(
-                    'handle' => 'editor',
-                    'src' => $editor_js,
-                    'deps' => array('jquery', 'tinymce', 'wp-util')
+                // WordPress Editor JS (initializes TinyMCE) - try multiple paths
+                $editor_js_paths = array(
+                    ABSPATH . WPINC . '/js/editor.min.js',
+                    ABSPATH . WPINC . '/js/editor.js'
                 );
+                $editor_js = null;
+                foreach ($editor_js_paths as $path) {
+                    if (file_exists($path)) {
+                        $editor_js = includes_url(str_replace(ABSPATH . WPINC . '/', '', $path));
+                        break;
+                    }
+                }
+                if ($editor_js) {
+                    $assets['js'][] = array(
+                        'handle' => 'editor',
+                        'src' => $editor_js,
+                        'deps' => array('jquery', 'tinymce', 'wp-util')
+                    );
+                } else {
+                    error_log('[SAW_App_Layout] WARNING: WordPress editor.js not found');
+                }
             }
         }
+        
+        // DEBUG: Log final asset count
+        error_log('[SAW_App_Layout] Final assets count - CSS: ' . count($assets['css']) . ', JS: ' . count($assets['js']));
         
         return $assets;
     }
