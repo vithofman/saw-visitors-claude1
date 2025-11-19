@@ -176,12 +176,32 @@ class SAW_Asset_Manager {
             'ajaxurl'             => admin_url('admin-ajax.php'),
             'homeUrl'             => home_url(),
             'pluginUrl'           => SAW_VISITORS_PLUGIN_URL,
+            'version'             => SAW_VISITORS_VERSION,
             'debug'               => defined('SAW_DEBUG') && SAW_DEBUG,
             'nonce'               => wp_create_nonce('saw_ajax_nonce'),
             'customerModalNonce'  => wp_create_nonce('saw_customer_modal_nonce'),
             'deleteNonce'         => wp_create_nonce('saw_admin_table_nonce')
         ]);
         
+        // Base Navigation (SPA functionality)
+        wp_enqueue_script(
+            'saw-app-navigation',
+            SAW_VISITORS_PLUGIN_URL . 'assets/js/saw-app-navigation.js',
+            ['jquery', 'saw-app'],
+            SAW_VISITORS_VERSION,
+            true
+        );
+        
+        // Enhanced Navigation (extends base navigation with retry & module loading)
+        wp_enqueue_script(
+            'saw-app-navigation-enhanced',
+            SAW_VISITORS_PLUGIN_URL . 'assets/js/saw-app-navigation-enhanced.js',
+            ['jquery', 'saw-app', 'saw-app-navigation'],
+            SAW_VISITORS_VERSION,
+            true
+        );
+        
+
         // Global Validation
         wp_enqueue_script(
             'saw-validation',

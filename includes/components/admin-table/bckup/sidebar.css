@@ -17,27 +17,16 @@
     top: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
-    width: 720px !important;
-    /* VRÁCENÁ ŠÍŘKA */
+    width: 720px !important; /* VRÁCENÁ ŠÍŘKA */
     z-index: 99999 !important;
     display: none !important;
     flex-direction: column !important;
-    background: #1e293b !important;
-    /* TMAVÉ pozadí */
+    background: #1e293b !important; /* TMAVÉ pozadí */
     box-shadow: -16px 0 48px rgba(0, 0, 0, 0.3) !important;
-    transform: translateX(100%);
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .saw-sidebar-wrapper.active {
     display: flex !important;
-    transform: translateX(0);
-}
-
-/* Smooth content fade when switching */
-.saw-sidebar-wrapper.is-loading {
-    opacity: 0.6;
-    transition: opacity 0.2s ease-in-out;
 }
 
 /* NO BACKDROP */
@@ -62,14 +51,12 @@
    ============================================ */
 
 .saw-sidebar-header {
-    padding: 13px 24px !important;
-    /* SNÍŽENÝ padding pro menší výšku */
+    padding: 13px 24px !important; /* SNÍŽENÝ padding pro menší výšku */
     border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
     display: flex !important;
     justify-content: space-between !important;
     align-items: center !important;
-    background: #0f172a !important;
-    /* VELMI TMAVÁ */
+    background: #0f172a !important; /* VELMI TMAVÁ */
     flex-shrink: 0 !important;
     gap: 16px !important;
 }
@@ -86,18 +73,15 @@
     font-size: 20px !important;
     line-height: 1 !important;
     flex-shrink: 0 !important;
-    color: #60a5fa !important;
-    /* MODRÁ ikona */
+    color: #60a5fa !important; /* MODRÁ ikona */
 }
 
 .saw-sidebar-heading,
 .saw-sidebar-title h2 {
     margin: 0 !important;
-    font-size: 16px !important;
-    /* MENŠÍ pro kompaktnost */
+    font-size: 16px !important; /* MENŠÍ pro kompaktnost */
     font-weight: 600 !important;
-    color: #f1f5f9 !important;
-    /* SVĚTLÝ text na tmavém */
+    color: #f1f5f9 !important; /* SVĚTLÝ text na tmavém */
     letter-spacing: -0.01em !important;
     white-space: nowrap !important;
     overflow: hidden !important;
@@ -177,8 +161,7 @@
     flex: 1 !important;
     overflow-y: auto !important;
     padding: 24px !important;
-    background: #f8fafc !important;
-    /* SVĚTLÉ pozadí obsahu */
+    background: #f8fafc !important; /* SVĚTLÉ pozadí obsahu */
 }
 
 /* Minimal scrollbar */
@@ -253,8 +236,7 @@
 .saw-sidebar[data-mode="form"] .saw-form-actions,
 .saw-sidebar[data-mode="edit"] .saw-form-actions,
 .saw-sidebar[data-mode="create"] .saw-form-actions {
-    margin-bottom: 80px !important;
-    /* Extra space at bottom */
+    margin-bottom: 80px !important; /* Extra space at bottom */
 }
 
 .saw-sidebar[data-mode="form"] .saw-page-header {
@@ -270,8 +252,7 @@
     align-items: center;
     gap: 16px;
     padding: 20px;
-    margin-bottom: 16px;
-    /* SNÍŽENÁ mezera */
+    margin-bottom: 16px; /* SNÍŽENÁ mezera */
     background: #ffffff;
     border-radius: 8px;
     border: 1px solid #e2e8f0;
@@ -341,8 +322,7 @@
    ============================================ */
 
 .saw-detail-section {
-    margin-bottom: 12px;
-    /* SNÍŽENÁ mezera mezi sekcemi */
+    margin-bottom: 12px; /* SNÍŽENÁ mezera mezi sekcemi */
 }
 
 .saw-detail-section-title {
@@ -354,8 +334,7 @@
     color: #475569;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    margin-bottom: 8px;
-    /* SNÍŽENÁ mezera */
+    margin-bottom: 8px; /* SNÍŽENÁ mezera */
     padding-left: 2px;
 }
 
@@ -376,8 +355,7 @@
 
 .saw-detail-list {
     display: grid;
-    gap: 12px;
-    /* SNÍŽENÁ mezera */
+    gap: 12px; /* SNÍŽENÁ mezera */
     margin: 0;
 }
 
@@ -511,28 +489,28 @@
     .saw-sidebar-wrapper {
         width: 100% !important;
     }
-
+    
     .saw-sidebar-header {
         padding: 12px 20px !important;
     }
-
+    
     .saw-sidebar-heading,
     .saw-sidebar-title h2 {
         font-size: 14px !important;
     }
-
+    
     .saw-sidebar-content {
         padding: 20px !important;
     }
-
+    
     .saw-sidebar-footer {
         padding: 12px 20px !important;
     }
-
+    
     .saw-detail-header {
         padding: 16px;
     }
-
+    
     .saw-floating-action-btn {
         width: 48px;
         height: 48px;

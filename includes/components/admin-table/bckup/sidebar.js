@@ -500,11 +500,10 @@
         const currentUrl = window.location.pathname;
         const pathParts = currentUrl.split('/').filter(function (p) { return p; });
 
-        // EDIT MODE -> Go to DETAIL (keep sidebar open, just reload content)
+        // EDIT MODE -> Go to DETAIL (via AJAX, no reload!)
         if (pathParts[pathParts.length - 1] === 'edit' && currentId && entity) {
-            console.log('📝 Edit -> Detail: Keeping sidebar open, switching content');
+            console.log('📝 Edit -> Detail: Using AJAX');
             if (typeof window.openSidebarAjax === 'function') {
-                // Don't close - just load detail into existing sidebar
                 window.openSidebarAjax(currentId, 'detail', entity);
             } else {
                 // Fallback

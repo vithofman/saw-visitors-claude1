@@ -121,7 +121,9 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
     <div class="saw-sidebar-floating-actions">
         <?php if ($can_edit): ?>
         <a href="<?php echo esc_url($edit_url); ?>" 
-           class="saw-floating-action-btn edit" 
+           class="saw-floating-action-btn edit saw-edit-ajax" 
+           data-entity="<?php echo esc_attr($entity); ?>"
+           data-id="<?php echo intval($item['id']); ?>"
            title="Upravit">
             <span class="dashicons dashicons-edit"></span>
         </a>
@@ -163,7 +165,42 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
     }
     
     /**
-     * Handle related item links - FORCE FULL PAGE RELOAD
+     * Handle Edit button - USE AJAX NAVIGATION
+     */
+    function initEditButton() {
+        $(document).off('click', '.saw-edit-ajax');
+        
+        $(document).on('click', '.saw-edit-ajax', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const $btn = $(this);
+            const entity = $btn.data('entity');
+            const id = $btn.data('id');
+            
+            console.warn('🔴 EDIT BUTTON CLICKED!', {entity, id});
+            console.warn('🔴 Event prevented and stopped');
+            
+            if (entity && id && typeof window.openSidebarAjax === 'function') {
+                console.log('✅ Using AJAX navigation to edit mode');
+                window.openSidebarAjax(id, 'edit', entity);
+            } else {
+                // Fallback to full page reload
+                const href = $btn.attr('href');
+                if (href) {
+                    console.log('⚠️ Fallback to full page reload');
+                    window.location.href = href;
+                }
+            }
+            
+            return false;
+        });
+        
+        console.log('✅ Edit button handler initialized');
+    }
+    
+    /**
+     * Handle related item links - USE AJAX NAVIGATION
      */
     function initRelatedItemLinks() {
         $(document).off('click', '.saw-related-item-link');
@@ -174,16 +211,23 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
             e.stopImmediatePropagation();
             
             const $link = $(this);
-            const href = $link.attr('href');
+            const entity = $link.data('entity');
+            const id = $link.data('id');
             
-            console.log('🔗 Related link clicked:', href);
+            console.log('🔗 Related link clicked:', {entity, id});
             
-            if (href && href !== '#') {
-                console.log('✅ Forcing FULL PAGE RELOAD');
-                
-                setTimeout(function() {
-                    window.location.href = href;
-                }, 10);
+            if (entity && id && typeof window.openSidebarAjax === 'function') {
+                console.log('✅ Using AJAX navigation');
+                window.openSidebarAjax(id, 'detail', entity);
+            } else {
+                // Fallback to full page reload
+                const href = $link.attr('href');
+                if (href && href !== '#') {
+                    console.log('⚠️ Fallback to full page reload');
+                    setTimeout(function() {
+                        window.location.href = href;
+                    }, 10);
+                }
             }
             
             return false;
@@ -195,11 +239,13 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
     $(document).ready(function() {
         console.log('🎨 Detail sidebar scripts initialized');
         initCollapsibleSections();
+        initEditButton();
         initRelatedItemLinks();
     });
     
     $(document).on('saw-sidebar-loaded', function() {
         console.log('🔄 Re-initializing after AJAX load');
+        initEditButton();
         initRelatedItemLinks();
     });
     

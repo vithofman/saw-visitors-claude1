@@ -71,36 +71,30 @@
 
                 console.log('📦 Received HTML length:', response.data.html.length);
 
-                // Smooth content update with fade animation
+                // Smooth content update - fade out, update, fade in
                 if (isExisting) {
-                    // Updating existing sidebar - smooth fade transition
-                    console.log('🔄 Updating existing sidebar content');
-                    $wrapper.addClass('is-loading');
-
+                    // Updating existing sidebar - smooth transition
+                    $wrapper.css('opacity', '0');
                     setTimeout(function () {
                         $wrapper.html(response.data.html);
                         $('.saw-admin-table-split').addClass('has-sidebar');
-                        updateActiveRow(id, false); // Don't scroll when just updating
+                        updateActiveRow(id, !isExisting);
 
                         setTimeout(function () {
-                            $wrapper.removeClass('is-loading');
+                            $wrapper.css('opacity', '1');
                             if (!$wrapper.hasClass('active')) {
                                 $wrapper.addClass('active');
                             }
-                            // Trigger re-initialization event
-                            $(document).trigger('saw-sidebar-loaded');
                         }, 50);
-                    }, 200); // Smooth fade duration
+                    }, 150);
                 } else {
-                    // New sidebar - slide in from right
-                    console.log('🆕 Opening new sidebar');
+                    // New sidebar - instant appearance
                     $wrapper.html(response.data.html);
                     $('.saw-admin-table-split').addClass('has-sidebar');
                     updateActiveRow(id, true);
 
                     setTimeout(function () {
                         $wrapper.addClass('active');
-                        $(document).trigger('saw-sidebar-loaded');
                     }, 10);
                 }
 
