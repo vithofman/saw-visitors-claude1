@@ -115,6 +115,31 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
         return $item['name'] ?? 'Nová firma';
     }
     
+    /**
+     * Get header meta for detail sidebar
+     * 
+     * Returns HTML for badges/info displayed in universal detail header.
+     * 
+     * @since 7.3.0
+     * @param array $item Item data
+     * @return string HTML for header meta
+     */
+    protected function get_detail_header_meta($item) {
+        $meta_parts = array();
+        
+        if (!empty($item['ico'])) {
+            $meta_parts[] = '<span class="saw-badge-transparent">IČO: ' . esc_html($item['ico']) . '</span>';
+        }
+        
+        if (!empty($item['is_archived'])) {
+            $meta_parts[] = '<span class="saw-badge-transparent" style="background: rgba(0,0,0,0.4);">Archivováno</span>';
+        } else {
+            $meta_parts[] = '<span class="saw-badge-transparent">✓ Aktivní</span>';
+        }
+        
+        return implode('', $meta_parts);
+    }
+    
     public function ajax_inline_create() {
         check_ajax_referer('saw_ajax_nonce', 'nonce');
         

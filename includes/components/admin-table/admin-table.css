@@ -505,3 +505,58 @@
 .saw-text-muted {
     color: #94a3b8;
 }
+
+/* ============================================
+   FLOATING BUTTON (ADD NEW)
+   ============================================ */
+
+.saw-floating-button {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #10b981;
+    border: none;
+    border-radius: 50%;
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 1000;
+    text-decoration: none;
+}
+
+.saw-floating-button .dashicons {
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
+    color: #ffffff;
+}
+
+.saw-floating-button:hover {
+    background: #059669;
+    transform: scale(1.1);
+    box-shadow: 0 6px 24px rgba(16, 185, 129, 0.5);
+}
+
+.saw-floating-button:active {
+    transform: scale(0.95);
+}
+
+@media (max-width: 768px) {
+    .saw-floating-button {
+        bottom: 20px;
+        right: 20px;
+        width: 56px;
+        height: 56px;
+    }
+    
+    .saw-floating-button .dashicons {
+        font-size: 24px;
+        width: 24px;
+        height: 24px;
+    }
+}

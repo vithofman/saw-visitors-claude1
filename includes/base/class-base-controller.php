@@ -412,12 +412,24 @@ protected function format_related_item_display($item, $relation) {
      * @return void (redirects)
      */
     protected function handle_create_post() {
-        check_admin_referer('saw_create_' . $this->entity);
+        // For AJAX sidebar submit, use check_ajax_referer
+        if (!empty($_POST['_ajax_sidebar_submit'])) {
+            check_ajax_referer('saw_ajax_nonce', 'nonce');
+        } else {
+            check_admin_referer('saw_create_' . $this->entity);
+        }
         
         $data = $this->prepare_form_data($_POST);
         
         $scope_validation = $this->validate_scope_access($data, 'create');
         if (is_wp_error($scope_validation)) {
+            // Check for AJAX sidebar submit
+            if (!empty($_POST['_ajax_sidebar_submit'])) {
+                wp_send_json_error(array(
+                    'message' => $scope_validation->get_error_message(),
+                    'errors' => array($scope_validation->get_error_message())
+                ));
+            }
             $this->set_flash($scope_validation->get_error_message(), 'error');
             wp_redirect(home_url('/admin/' . $this->config['route'] . '/create'));
             exit;
@@ -425,6 +437,13 @@ protected function format_related_item_display($item, $relation) {
         
         $data = $this->before_save($data);
         if (is_wp_error($data)) {
+            // Check for AJAX sidebar submit
+            if (!empty($_POST['_ajax_sidebar_submit'])) {
+                wp_send_json_error(array(
+                    'message' => $data->get_error_message(),
+                    'errors' => array($data->get_error_message())
+                ));
+            }
             $this->set_flash($data->get_error_message(), 'error');
             wp_redirect(home_url('/admin/' . $this->config['route'] . '/create'));
             exit;
@@ -433,6 +452,13 @@ protected function format_related_item_display($item, $relation) {
         $validation = $this->model->validate($data);
         if (is_wp_error($validation)) {
             $errors = $validation->get_error_data();
+            // Check for AJAX sidebar submit
+            if (!empty($_POST['_ajax_sidebar_submit'])) {
+                wp_send_json_error(array(
+                    'message' => implode('<br>', $errors),
+                    'errors' => $errors
+                ));
+            }
             $this->set_flash(implode('<br>', $errors), 'error');
             wp_redirect(home_url('/admin/' . $this->config['route'] . '/create'));
             exit;
@@ -440,26 +466,41 @@ protected function format_related_item_display($item, $relation) {
         
         $result = $this->model->create($data);
 
-if (is_wp_error($result)) {
-    $this->set_flash($result->get_error_message(), 'error');
-    wp_redirect(home_url('/admin/' . $this->config['route'] . '/create'));
-    exit;
-}
+        if (is_wp_error($result)) {
+            // Check for AJAX sidebar submit
+            if (!empty($_POST['_ajax_sidebar_submit'])) {
+                wp_send_json_error(array(
+                    'message' => $result->get_error_message(),
+                    'errors' => array($result->get_error_message())
+                ));
+            }
+            $this->set_flash($result->get_error_message(), 'error');
+            wp_redirect(home_url('/admin/' . $this->config['route'] . '/create'));
+            exit;
+        }
 
-SAW_Logger::debug("AFTER CREATE - ID: $result");
-SAW_Logger::debug("DB prefix: " . $GLOBALS['wpdb']->prefix);
-$verify = $GLOBALS['wpdb']->get_row($GLOBALS['wpdb']->prepare(
-    "SELECT * FROM {$GLOBALS['wpdb']->prefix}saw_branches WHERE id = %d",
-    $result
-), ARRAY_A);
-SAW_Logger::debug("Verify query result: " . ($verify ? 'FOUND' : 'NOT FOUND'));
-if ($verify) {
-    SAW_Logger::debug("Created data: " . print_r($verify, true));
-}
+        SAW_Logger::debug("AFTER CREATE - ID: $result");
+        SAW_Logger::debug("DB prefix: " . $GLOBALS['wpdb']->prefix);
+        $verify = $GLOBALS['wpdb']->get_row($GLOBALS['wpdb']->prepare(
+            "SELECT * FROM {$GLOBALS['wpdb']->prefix}saw_branches WHERE id = %d",
+            $result
+        ), ARRAY_A);
+        SAW_Logger::debug("Verify query result: " . ($verify ? 'FOUND' : 'NOT FOUND'));
+        if ($verify) {
+            SAW_Logger::debug("Created data: " . print_r($verify, true));
+        }
 
-$this->after_save($result);
+        $this->after_save($result);
         
-        // ✅ NEW: AJAX inline create mode
+        // ✅ NEW: AJAX sidebar submit mode (for sidebar forms)
+        if (!empty($_POST['_ajax_sidebar_submit'])) {
+            wp_send_json_success(array(
+                'id' => $result,
+                'message' => $this->config['singular'] . ' byl úspěšně vytvořen'
+            ));
+        }
+        
+        // ✅ NEW: AJAX inline create mode (for nested inline create)
         if (!empty($_POST['_ajax_inline_create'])) {
             $item = $this->model->get_by_id($result);
             wp_send_json_success(array(
@@ -481,13 +522,25 @@ $this->after_save($result);
      * @return void (redirects)
      */
     protected function handle_edit_post($id) {
-        check_admin_referer('saw_edit_' . $this->entity);
+        // For AJAX sidebar submit, use check_ajax_referer
+        if (!empty($_POST['_ajax_sidebar_submit'])) {
+            check_ajax_referer('saw_ajax_nonce', 'nonce');
+        } else {
+            check_admin_referer('saw_edit_' . $this->entity);
+        }
         
         $data = $this->prepare_form_data($_POST);
         $data['id'] = $id;
         
         $scope_validation = $this->validate_scope_access($data, 'edit');
         if (is_wp_error($scope_validation)) {
+            // Check for AJAX sidebar submit
+            if (!empty($_POST['_ajax_sidebar_submit'])) {
+                wp_send_json_error(array(
+                    'message' => $scope_validation->get_error_message(),
+                    'errors' => array($scope_validation->get_error_message())
+                ));
+            }
             $this->set_flash($scope_validation->get_error_message(), 'error');
             wp_redirect(home_url('/admin/' . $this->config['route'] . '/' . $id . '/edit'));
             exit;
@@ -495,6 +548,13 @@ $this->after_save($result);
         
         $data = $this->before_save($data);
         if (is_wp_error($data)) {
+            // Check for AJAX sidebar submit
+            if (!empty($_POST['_ajax_sidebar_submit'])) {
+                wp_send_json_error(array(
+                    'message' => $data->get_error_message(),
+                    'errors' => array($data->get_error_message())
+                ));
+            }
             $this->set_flash($data->get_error_message(), 'error');
             wp_redirect(home_url('/admin/' . $this->config['route'] . '/' . $id . '/edit'));
             exit;
@@ -503,6 +563,13 @@ $this->after_save($result);
         $validation = $this->model->validate($data, $id);
         if (is_wp_error($validation)) {
             $errors = $validation->get_error_data();
+            // Check for AJAX sidebar submit
+            if (!empty($_POST['_ajax_sidebar_submit'])) {
+                wp_send_json_error(array(
+                    'message' => implode('<br>', $errors),
+                    'errors' => $errors
+                ));
+            }
             $this->set_flash(implode('<br>', $errors), 'error');
             wp_redirect(home_url('/admin/' . $this->config['route'] . '/' . $id . '/edit'));
             exit;
@@ -511,12 +578,27 @@ $this->after_save($result);
         $result = $this->model->update($id, $data);
         
         if (is_wp_error($result)) {
+            // Check for AJAX sidebar submit
+            if (!empty($_POST['_ajax_sidebar_submit'])) {
+                wp_send_json_error(array(
+                    'message' => $result->get_error_message(),
+                    'errors' => array($result->get_error_message())
+                ));
+            }
             $this->set_flash($result->get_error_message(), 'error');
             wp_redirect(home_url('/admin/' . $this->config['route'] . '/' . $id . '/edit'));
             exit;
         }
         
         $this->after_save($id);
+        
+        // ✅ NEW: AJAX sidebar submit mode (for sidebar forms)
+        if (!empty($_POST['_ajax_sidebar_submit'])) {
+            wp_send_json_success(array(
+                'id' => $id,
+                'message' => $this->config['singular'] . ' byl úspěšně aktualizován'
+            ));
+        }
         
         $this->set_flash($this->config['singular'] . ' byl úspěšně aktualizován', 'success');
         wp_redirect(home_url('/admin/' . $this->config['route'] . '/' . $id . '/'));
@@ -1208,33 +1290,43 @@ protected function can($action) {
         $id = intval($_POST['id'] ?? 0);
         $mode = sanitize_text_field($_POST['mode'] ?? 'detail');
         
-        if (!in_array($mode, array('detail', 'edit'), true)) {
+        if (!in_array($mode, array('detail', 'edit', 'create'), true)) {
             wp_send_json_error(array('message' => 'Invalid mode'));
         }
         
-        $required_permission = ($mode === 'detail') ? 'view' : 'edit';
+        // For create mode, id is not required
+        if ($mode === 'create') {
+            $id = 0;
+        }
+        
+        // Permission check
+        $required_permission = ($mode === 'detail') ? 'view' : (($mode === 'edit') ? 'edit' : 'create');
         if (!$this->can($required_permission)) {
             wp_send_json_error(array(
                 'message' => sprintf(
                     'Nemáte oprávnění %s záznamy', 
-                    $mode === 'detail' ? 'zobrazit' : 'upravovat'
+                    $mode === 'detail' ? 'zobrazit' : ($mode === 'edit' ? 'upravovat' : 'vytvářet')
                 )
             ));
         }
         
-        $item = $this->model->get_by_id($id);
-        
-        if (!$item) {
-            wp_send_json_error(array(
-                'message' => sprintf('%s nenalezen', $this->config['singular'] ?? 'Záznam')
-            ));
+        // For detail and edit modes, we need an item
+        $item = null;
+        if ($mode !== 'create') {
+            $item = $this->model->get_by_id($id);
+            
+            if (!$item) {
+                wp_send_json_error(array(
+                    'message' => sprintf('%s nenalezen', $this->config['singular'] ?? 'Záznam')
+                ));
+            }
         }
         
         ob_start();
         
         $related_data = null;
         
-        if ($mode === 'edit') {
+        if ($mode === 'edit' || $mode === 'create') {
             $lookups = $this->load_sidebar_lookups();
             
             foreach ($lookups as $key => $data) {
@@ -1248,7 +1340,7 @@ protected function can($action) {
         
         $captured_junk = ob_get_clean();
         
-        if (method_exists($this, 'format_detail_data')) {
+        if ($mode === 'detail' && method_exists($this, 'format_detail_data')) {
             $item = $this->format_detail_data($item);
         }
         
@@ -1259,17 +1351,35 @@ protected function can($action) {
             $config = $this->config;
             $entity = $this->entity;
             
+            // Set controller instance in global for detail-sidebar.php to use
+            global $saw_current_controller;
+            $saw_current_controller = $this;
+            
+            // Allow modules to set header_meta via format_detail_data or get_detail_header_meta method
+            // This way modules can customize header badges without rendering header themselves
+            if (!isset($item['header_meta']) && method_exists($this, 'get_detail_header_meta')) {
+                $item['header_meta'] = $this->get_detail_header_meta($item);
+            }
+            
             extract(compact('item', 'tab', 'config', 'entity', 'related_data'));
             
             $template_path = SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/detail-sidebar.php';
             require $template_path;
+            
+            // Clean up global
+            unset($GLOBALS['saw_current_controller']);
         } else {
-            // Edit mode - render form, then wrap in sidebar template
-            $is_edit = true;
+            // Edit or Create mode - render form in sidebar
+            $is_edit = ($mode === 'edit');
             $GLOBALS['saw_sidebar_form'] = true;
             
             $config = $this->config;
             $entity = $this->entity;
+            
+            // For create mode, use empty item
+            if (!$is_edit) {
+                $item = array();
+            }
             
             $lookups = array();
             if (!empty($this->config['lookup_tables'])) {
@@ -1293,9 +1403,9 @@ protected function can($action) {
             
             unset($GLOBALS['saw_sidebar_form']);
             
-            // Now wrap form HTML in edit sidebar template
+            // For both edit and create modes, use form-sidebar template (unified structure)
             ob_start();
-            require SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/edit-sidebar.php';
+            require SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/form-sidebar.php';
         }
         
         $sidebar_content = ob_get_clean();
@@ -1305,6 +1415,58 @@ protected function can($action) {
             'mode' => $mode,
             'id' => $id
         ));
+    }
+    
+    /**
+     * AJAX handler for create form submit
+     * 
+     * Called via AJAX from sidebar form.
+     * 
+     * @since 7.2.0
+     * @return void Outputs JSON
+     */
+    public function ajax_create() {
+        if (!$this->can('create')) {
+            wp_send_json_error(array(
+                'message' => 'Nemáte oprávnění vytvářet záznamy'
+            ));
+        }
+        
+        // Set flag for AJAX sidebar submit (before calling handle_create_post)
+        $_POST['_ajax_sidebar_submit'] = 1;
+        
+        // Call handle_create_post which will detect AJAX mode and return JSON
+        $this->handle_create_post();
+    }
+    
+    /**
+     * AJAX handler for edit form submit
+     * 
+     * Called via AJAX from sidebar form.
+     * 
+     * @since 7.2.0
+     * @return void Outputs JSON
+     */
+    public function ajax_edit() {
+        $id = intval($_POST['id'] ?? 0);
+        
+        if (!$id) {
+            wp_send_json_error(array(
+                'message' => 'Chybí ID záznamu'
+            ));
+        }
+        
+        if (!$this->can('edit')) {
+            wp_send_json_error(array(
+                'message' => 'Nemáte oprávnění upravovat záznamy'
+            ));
+        }
+        
+        // Set flag for AJAX sidebar submit (before calling handle_edit_post)
+        $_POST['_ajax_sidebar_submit'] = 1;
+        
+        // Call handle_edit_post which will detect AJAX mode and return JSON
+        $this->handle_edit_post($id);
     }
     
     /**

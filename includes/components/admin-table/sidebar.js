@@ -387,24 +387,69 @@
      * @return {void}
      */
     function initCloseButton() {
+        // Use capture phase to run BEFORE admin-table.js handler
         $(document).on('click', '.saw-sidebar-close', function (e) {
-            e.preventDefault();
-
-            // ✅ Check if we're in a FORM (create/edit mode)
+            // ✅ Check if we're in a FORM (create/edit mode) FIRST
             const $sidebar = $('.saw-sidebar');
             const mode = $sidebar.attr('data-mode');
+            
+            // Only handle form modes here - let admin-table.js handle detail mode
+            if (mode !== 'create' && mode !== 'edit') {
+                return; // Let other handlers process
+            }
+            
+            // For form modes, we handle it completely
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation(); // CRITICAL: Stop admin-table.js handler!
 
-            // If in form mode, find Cancel button and click it
-            if (mode === 'create' || mode === 'edit') {
-                const $cancelBtn = $('.saw-form-cancel-btn');
-                if ($cancelBtn.length) {
-                    console.log('✅ X button -> triggering Cancel button');
-                    $cancelBtn.trigger('click');
-                    return;
+            const entity = $sidebar.attr('data-entity');
+            const currentId = $sidebar.data('current-id');
+
+            // ✅ EDIT MODE -> Load DETAIL directly via AJAX (keep sidebar open, just change content)
+            if (mode === 'edit' && currentId && entity) {
+                console.log('📝 X button in edit -> Loading detail via AJAX (wrapper stays open)');
+                
+                if (typeof window.openSidebarAjax === 'function') {
+                    // Load detail directly without closing sidebar wrapper
+                    // Wrapper should already be open, we just change content
+                    window.openSidebarAjax(currentId, 'detail', entity);
+                } else {
+                    console.error('❌ openSidebarAjax not available');
+                    // Fallback: trigger cancel button
+                    const $cancelBtn = $('.saw-form-cancel-btn');
+                    if ($cancelBtn.length) {
+                        $cancelBtn.trigger('click');
+                    }
                 }
+                return false;
             }
 
-            // Otherwise use normal close logic
+            // ✅ CREATE MODE -> Close sidebar and go to list
+            if (mode === 'create') {
+                console.log('➕ X button in create -> Closing sidebar');
+                
+                if (typeof window.closeSidebar === 'function') {
+                    const currentUrl = window.location.pathname;
+                    const pathParts = currentUrl.split('/').filter(function (p) { return p; });
+                    if (pathParts[pathParts.length - 1] === 'create') {
+                        pathParts.pop();
+                        const listUrl = '/' + pathParts.join('/') + '/';
+                        window.closeSidebar(listUrl);
+                    } else {
+                        window.closeSidebar('#');
+                    }
+                } else {
+                    // Fallback: trigger cancel button
+                    const $cancelBtn = $('.saw-form-cancel-btn');
+                    if ($cancelBtn.length) {
+                        $cancelBtn.trigger('click');
+                    }
+                }
+                return;
+            }
+
+            // Otherwise use normal close logic (for detail mode)
             handleSidebarClose();
         });
     }
@@ -429,24 +474,24 @@
             const currentId = $sidebar.data('current-id');
 
             // ✅ EDIT MODE -> Load DETAIL via AJAX (smooth, no reload)
+            // Keep sidebar wrapper open, just change content
             if (mode === 'edit' && currentId && entity) {
-                console.log('📝 Edit -> Detail: Loading via AJAX');
+                console.log('📝 Cancel button -> Loading detail via AJAX (keeping sidebar open)');
 
                 if (typeof window.openSidebarAjax === 'function') {
+                    // Load detail directly - sidebar wrapper stays open
                     window.openSidebarAjax(currentId, 'detail', entity);
                 } else {
                     console.error('❌ openSidebarAjax not available');
-                    // Fallback: smooth close
-                    $sidebar.fadeOut(300, function () {
-                        $(this).remove();
-                    });
-
-                    // Update URL
-                    const currentUrl = window.location.pathname;
-                    const pathParts = currentUrl.split('/').filter(function (p) { return p; });
-                    if (pathParts[pathParts.length - 1] === 'edit') {
-                        pathParts.pop();
-                        window.history.pushState({}, '', '/' + pathParts.join('/') + '/');
+                    // Fallback: use closeSidebar function
+                    if (typeof window.closeSidebar === 'function') {
+                        const currentUrl = window.location.pathname;
+                        const pathParts = currentUrl.split('/').filter(function (p) { return p; });
+                        if (pathParts[pathParts.length - 1] === 'edit') {
+                            pathParts.pop();
+                            const detailUrl = '/' + pathParts.join('/') + '/';
+                            window.closeSidebar(detailUrl);
+                        }
                     }
                 }
                 return;
@@ -456,16 +501,23 @@
             if (mode === 'create') {
                 console.log('➕ Create -> List: Closing smoothly');
 
-                $sidebar.fadeOut(300, function () {
-                    $(this).remove();
-                });
-
-                // Update URL
-                const currentUrl = window.location.pathname;
-                const pathParts = currentUrl.split('/').filter(function (p) { return p; });
-                if (pathParts[pathParts.length - 1] === 'create') {
-                    pathParts.pop();
-                    window.history.pushState({}, '', '/' + pathParts.join('/') + '/');
+                // Use closeSidebar function to properly close wrapper
+                if (typeof window.closeSidebar === 'function') {
+                    const currentUrl = window.location.pathname;
+                    const pathParts = currentUrl.split('/').filter(function (p) { return p; });
+                    if (pathParts[pathParts.length - 1] === 'create') {
+                        pathParts.pop();
+                        const listUrl = '/' + pathParts.join('/') + '/';
+                        window.closeSidebar(listUrl);
+                    }
+                } else {
+                    // Fallback
+                    const $wrapper = $('.saw-sidebar-wrapper');
+                    $wrapper.removeClass('active');
+                    $('.saw-admin-table-split').removeClass('has-sidebar');
+                    setTimeout(function () {
+                        $wrapper.html('');
+                    }, 300);
                 }
 
                 $(document).trigger('sidebar:closed');
@@ -608,10 +660,170 @@
         initSidebar();
         initKeyboardNavigation();
         initNavigationButtons();
+        // CRITICAL: initCloseButton must run BEFORE admin-table.js handler
+        // Use capture phase to ensure it runs first
         initCloseButton();
         initCancelButton();
         initDeleteButton(); // ✅ HOTFIX: Improved delete with sidebar close before reload
         initRelatedItemsNavigation();
+        
+        // ✅ NEW: Universal detail sidebar handlers (moved from detail-sidebar.php)
+        initDetailSidebarHandlers();
     });
+    
+    /**
+     * Initialize universal detail sidebar handlers
+     * 
+     * Handles edit button, related item links, and collapsible sections.
+     * This replaces module-specific JS in detail-sidebar.php.
+     * 
+     * @since 7.0.0
+     * @return {void}
+     */
+    function initDetailSidebarHandlers() {
+        // Initialize collapsible related sections
+        $(document).on('click', '[data-toggle-section]', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const $header = $(this);
+            const $section = $header.closest('.saw-related-section');
+            
+            $section.toggleClass('is-collapsed');
+            
+            console.log('🔽 Section toggled:', $section.data('section'));
+        });
+        
+        // Handle Edit button - USE AJAX NAVIGATION
+        $(document).off('click', '.saw-edit-ajax');
+        
+        $(document).on('click', '.saw-edit-ajax', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const $btn = $(this);
+            const entity = $btn.data('entity');
+            const id = $btn.data('id');
+            
+            console.warn('🔴 EDIT BUTTON CLICKED!', {entity, id});
+            console.warn('🔴 Event prevented and stopped');
+            
+            if (entity && id && typeof window.openSidebarAjax === 'function') {
+                console.log('✅ Using AJAX navigation to edit mode');
+                window.openSidebarAjax(id, 'edit', entity);
+            } else {
+                // Fallback to full page reload
+                const href = $btn.attr('href');
+                if (href) {
+                    console.log('⚠️ Fallback to full page reload');
+                    window.location.href = href;
+                }
+            }
+            
+            return false;
+        });
+        
+        // Handle related item links - USE AJAX NAVIGATION
+        $(document).off('click', '.saw-related-item-link');
+        
+        $(document).on('click', '.saw-related-item-link', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            
+            const $link = $(this);
+            const entity = $link.data('entity');
+            const id = $link.data('id');
+            
+            console.log('🔗 Related link clicked:', {entity, id});
+            
+            if (entity && id && typeof window.openSidebarAjax === 'function') {
+                console.log('✅ Using AJAX navigation');
+                window.openSidebarAjax(id, 'detail', entity);
+            } else {
+                // Fallback to full page reload
+                const href = $link.attr('href');
+                if (href && href !== '#') {
+                    console.log('⚠️ Fallback to full page reload');
+                    setTimeout(function() {
+                        window.location.href = href;
+                    }, 10);
+                }
+            }
+            
+            return false;
+        });
+        
+        console.log('✅ Universal detail sidebar handlers initialized');
+    }
+    
+    // Re-initialize handlers after AJAX load
+    $(document).on('saw-sidebar-loaded', function() {
+        console.log('🔄 Re-initializing detail sidebar handlers after AJAX load');
+        initDetailSidebarHandlers();
+    });
+    
+    // CRITICAL: Register close button handler in CAPTURE PHASE to run BEFORE admin-table.js
+    // This ensures we can prevent closeSidebar() from being called when switching from edit to detail
+    document.addEventListener('click', function(e) {
+        // Check if clicked element is close button or inside it
+        const $target = $(e.target);
+        const $closeBtn = $target.closest('.saw-sidebar-close');
+        
+        if ($closeBtn.length) {
+            const $sidebar = $('.saw-sidebar');
+            const mode = $sidebar.attr('data-mode');
+            
+            // Only handle form modes (create/edit) in capture phase
+            // Let admin-table.js handle detail mode
+            if (mode === 'create' || mode === 'edit') {
+                const entity = $sidebar.attr('data-entity');
+                const currentId = $sidebar.data('current-id');
+                
+                // EDIT MODE -> Load detail without closing wrapper
+                if (mode === 'edit' && currentId && entity) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation(); // CRITICAL: Stop all other handlers!
+                    
+                    console.log('📝 X button (CAPTURE PHASE) -> Loading detail via AJAX (preventing closeSidebar)');
+                    
+                    // Use setTimeout to ensure this runs after current event loop
+                    setTimeout(function() {
+                        if (typeof window.openSidebarAjax === 'function') {
+                            window.openSidebarAjax(currentId, 'detail', entity);
+                        }
+                    }, 0);
+                    
+                    return false;
+                }
+                
+                // CREATE MODE -> Close sidebar properly
+                if (mode === 'create') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    
+                    console.log('➕ X button (CAPTURE PHASE) -> Closing sidebar');
+                    
+                    setTimeout(function() {
+                        if (typeof window.closeSidebar === 'function') {
+                            const currentUrl = window.location.pathname;
+                            const pathParts = currentUrl.split('/').filter(function (p) { return p; });
+                            if (pathParts[pathParts.length - 1] === 'create') {
+                                pathParts.pop();
+                                const listUrl = '/' + pathParts.join('/') + '/';
+                                window.closeSidebar(listUrl);
+                            } else {
+                                window.closeSidebar('#');
+                            }
+                        }
+                    }, 0);
+                    
+                    return false;
+                }
+            }
+        }
+    }, true); // TRUE = CAPTURE PHASE (runs before bubble phase handlers)
 
 })(jQuery);

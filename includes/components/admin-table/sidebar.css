@@ -27,11 +27,26 @@
     box-shadow: -16px 0 48px rgba(0, 0, 0, 0.3) !important;
     transform: translateX(100%);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    opacity: 0;
+    pointer-events: none;
 }
 
 .saw-sidebar-wrapper.active {
     display: flex !important;
     transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* When switching content, keep wrapper visible but fade content */
+.saw-sidebar-wrapper.switching {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.saw-sidebar-wrapper.switching .saw-sidebar-content {
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
 }
 
 /* Smooth content fade when switching */
@@ -176,9 +191,81 @@
 .saw-sidebar-content {
     flex: 1 !important;
     overflow-y: auto !important;
-    padding: 24px !important;
+    padding: 0 !important;
+    /* NO PADDING - detail header goes edge to edge */
     background: #f8fafc !important;
     /* SVĚTLÉ pozadí obsahu */
+}
+
+/* ============================================
+   UNIVERSAL DETAIL HEADER
+   ============================================ */
+
+.saw-detail-header-universal {
+    background: #005A8C;
+    color: #fff;
+    overflow: hidden;
+    margin: 0 !important;
+    margin-left: -24px !important;
+    margin-right: -24px !important;
+    /* Negative margins to go edge-to-edge (compensate for .saw-sidebar-content padding) */
+    width: calc(100% + 48px) !important;
+    /* NO MARGIN - goes from sidebar header to edges */
+    box-shadow: 0 4px 15px rgba(0, 90, 140, 0.2);
+    position: relative;
+}
+
+.saw-detail-header-inner {
+    padding: 20px 24px 16px 24px !important;
+}
+
+.saw-detail-header-title {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 28px;
+    text-transform: uppercase;
+    margin: 0 0 8px 0 !important;
+    color: #fff !important;
+    letter-spacing: 1px;
+    line-height: 1.1;
+}
+
+.saw-detail-header-meta {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    font-size: 13px;
+    opacity: 0.9;
+}
+
+.saw-detail-header-stripe {
+    height: 8px;
+    width: 100%;
+    background-image: repeating-linear-gradient(
+        -45deg,
+        #005A8C,
+        #005A8C 10px,
+        #fff 10px,
+        #fff 20px
+    );
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.saw-badge-transparent {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 4px 10px;
+    font-size: 12px;
+    border-radius: 2px;
+    font-weight: 500;
+    color: #fff;
+}
+
+/* Detail content wrapper - has padding for module content */
+.saw-detail-content-wrapper {
+    padding: 24px;
 }
 
 /* Minimal scrollbar */

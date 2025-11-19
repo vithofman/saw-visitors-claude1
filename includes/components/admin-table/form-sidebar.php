@@ -21,7 +21,7 @@ $form_template = SAW_VISITORS_PLUGIN_DIR . "includes/modules/{$module_slug}/form
 $close_url = '#';
 ?>
 
-<div class="saw-sidebar" data-mode="form" data-entity="<?php echo esc_attr($entity); ?>">
+<div class="saw-sidebar" data-mode="<?php echo $is_edit ? 'edit' : 'create'; ?>" data-entity="<?php echo esc_attr($entity); ?>" <?php if ($is_edit && !empty($item['id'])): ?>data-current-id="<?php echo intval($item['id']); ?>"<?php endif; ?>>
     <div class="saw-sidebar-header">
         <div class="saw-sidebar-title">
             <span><?php echo esc_html($config['icon'] ?? '📝'); ?></span>

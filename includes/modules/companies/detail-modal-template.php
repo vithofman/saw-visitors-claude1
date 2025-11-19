@@ -62,10 +62,7 @@ $all_companies = $wpdb->get_results($wpdb->prepare(
 :root {--p307-primary:#005A8C;--p307-accent:#0077B5;--p307-dark:#1a1a1a;--p307-gray:#f4f6f8;--p307-border:#dce1e5;--status-draft:#95a5a6;--status-pending:#f39c12;--status-confirmed:#3498db;--status-in-progress:#9b59b6;--status-completed:#27ae60;--status-cancelled:#e74c3c}
 .saw-detail-sidebar-content{font-family:'Roboto',sans-serif;color:var(--p307-dark);box-sizing:border-box}
 .saw-detail-sidebar-content *{box-sizing:border-box}
-.saw-industrial-stripe{height:8px;width:100%;background-image:repeating-linear-gradient(-45deg,var(--p307-primary),var(--p307-primary) 10px,#fff 10px,#fff 20px);border-bottom:1px solid rgba(0,0,0,.1)}
-.saw-industrial-header{background:var(--p307-primary);color:#fff;border-radius:4px 4px 0 0;overflow:hidden;margin-bottom:12px!important;box-shadow:0 4px 15px rgba(0,90,140,.2)}
-.saw-header-inner{padding:16px 24px 12px 24px!important}
-.saw-industrial-header h3{font-family:'Oswald',sans-serif;font-weight:700;font-size:28px;text-transform:uppercase;margin:0 0 6px 0!important;color:#fff!important;letter-spacing:1px;line-height:1.1}
+/* Header CSS removed - now handled by admin-table component */
 .saw-badge-transparent{display:inline-block;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);padding:4px 10px;font-size:12px;border-radius:2px;font-weight:500;color:#fff}
 .saw-industrial-section{background:#fff;border:1px solid var(--p307-border);margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
 .saw-section-head{background:#fff;padding:15px 20px;border-bottom:2px solid var(--p307-gray)}
@@ -164,22 +161,9 @@ $all_companies = $wpdb->get_results($wpdb->prepare(
 </style>
 
 <div class="saw-detail-sidebar-content">
-    <div class="saw-industrial-header">
-        <div class="saw-header-inner">
-            <h3><?php echo esc_html($item['name']); ?></h3>
-            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                <?php if (!empty($item['ico'])): ?>
-                    <span class="saw-badge-transparent">IČO: <?php echo esc_html($item['ico']); ?></span>
-                <?php endif; ?>
-                <?php if (!empty($item['is_archived'])): ?>
-                    <span class="saw-badge-transparent" style="background: rgba(0,0,0,0.4);">Archivováno</span>
-                <?php else: ?>
-                    <span class="saw-badge-transparent">✓ Aktivní</span>
-                <?php endif; ?>
-            </div>
-        </div>
-        <div class="saw-industrial-stripe"></div>
-    </div>
+    <!-- Header is now rendered by admin-table component (detail-sidebar.php) -->
+    <!-- Module only provides content -->
+    <!-- Header meta (badges) is set via controller->get_detail_header_meta() -->
     
     <div class="saw-industrial-section" style="background: #fff9e6; border-left: 4px solid #ffc107;">
         <div class="saw-section-body" style="padding: 16px 20px;">
@@ -356,8 +340,9 @@ $all_companies = $wpdb->get_results($wpdb->prepare(
 </div>
 
 <script>
-const companyId = <?php echo intval($item['id']); ?>;
-let currentTab = 'auto';
+// Use var instead of const/let to avoid redeclaration error when sidebar is reloaded via AJAX
+var companyId = <?php echo intval($item['id']); ?>;
+var currentTab = 'auto';
 
 function toggleVisit(visitId) {
     const content = document.getElementById('visit-' + visitId);

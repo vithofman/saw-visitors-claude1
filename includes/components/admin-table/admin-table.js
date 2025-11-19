@@ -22,7 +22,8 @@
      * @return {void}
      */
     window.openSidebarAjax = function (id, mode, entity) {
-        if (!id || !mode || !entity) {
+        // For create mode, id can be 0 or undefined
+        if ((mode !== 'create' && (!id || id === 0)) || !mode || !entity) {
             console.error('openSidebarAjax: Missing required parameters', { id, mode, entity });
             return;
         }
@@ -37,9 +38,19 @@
             $('body').append($wrapper);
         }
 
-        // Add subtle loading indicator to existing wrapper (no white flash)
-        const isExisting = $wrapper.hasClass('active');
-        if (!isExisting) {
+        // Check if sidebar is already open (switching content, not opening new)
+        const isAlreadyOpen = $wrapper.hasClass('active');
+        
+        // CRITICAL: When switching content (e.g., edit -> detail), keep wrapper open!
+        // Don't remove active class, just update content
+        if (isAlreadyOpen) {
+            console.log('🔄 Sidebar already open - switching content (keeping wrapper open)');
+            $wrapper.addClass('switching');
+            // Ensure wrapper stays visible
+            $wrapper.addClass('active');
+        } else {
+            // New sidebar - show loading
+            console.log('🆕 Opening new sidebar');
             $wrapper.addClass('loading');
         }
 
@@ -60,11 +71,20 @@
                 console.log('✅ AJAX Response received:', response);
 
                 if (response.success && response.data && response.data.html) {
+                    // Check if sidebar is already open (switching content, not opening new)
+                    const wasAlreadyOpen = $wrapper.hasClass('active');
+                    
+                    // Update content smoothly
                     $wrapper.html(response.data.html);
-                    $wrapper.removeClass('loading').addClass('active');
+                    $wrapper.removeClass('loading switching').addClass('active');
 
-                    // Add padding to table when sidebar opens
-                    $('.saw-admin-table-split').addClass('has-sidebar');
+                    // Add padding to table when sidebar opens (only if not already open)
+                    if (!wasAlreadyOpen) {
+                        $('.saw-admin-table-split').addClass('has-sidebar');
+                    }
+                    
+                    // Ensure wrapper stays visible when switching content
+                    // Sidebar wrapper should remain open and visible throughout the switch
 
                     // Update active row highlight
                     updateActiveRow(id, false);
@@ -85,7 +105,7 @@
                         newUrl
                     );
 
-                    console.log('✅ Sidebar opened successfully');
+                    console.log('✅ Sidebar opened successfully', wasAlreadyOpen ? '(content switched)' : '(newly opened)');
                 } else {
                     console.error('❌ Invalid AJAX response:', response);
                     $wrapper.removeClass('loading');
@@ -233,11 +253,15 @@
      *
      * @param {string} entity Entity name
      * @param {number} id Item ID
-     * @param {string} mode Mode: 'detail' or 'edit'
+     * @param {string} mode Mode: 'detail', 'edit', or 'create'
      * @return {string}
      */
     function buildUrl(entity, id, mode) {
         const base = '/admin/' + entity + '/';
+
+        if (mode === 'create') {
+            return base + 'create';
+        }
 
         if (mode === 'edit') {
             return base + id + '/edit';
@@ -402,11 +426,24 @@
         }, true); // TRUE = CAPTURE PHASE!
 
         // Close sidebar button
+        // NOTE: This handler has LOWER priority - sidebar.js handles form modes first with stopImmediatePropagation
+        // We use a delayed check to see if sidebar.js already handled it
         $(document).on('click', '.saw-sidebar-close', function (e) {
+            const $btn = $(this);
+            const $sidebar = $('.saw-sidebar');
+            const mode = $sidebar.attr('data-mode');
+            
+            // If in form mode (create/edit), let sidebar.js handle it
+            // sidebar.js will call stopImmediatePropagation, so this handler won't run
+            if (mode === 'create' || mode === 'edit') {
+                // Don't do anything - sidebar.js will handle it
+                return;
+            }
+
             e.preventDefault();
             e.stopPropagation();
 
-            const listUrl = $(this).attr('href');
+            const listUrl = $btn.attr('href');
             closeSidebar(listUrl);
         });
 
@@ -433,7 +470,123 @@
             }
         });
 
-        console.log('✅ Admin Table initialized v4.1.0');
+        // Floating button (Add New) - open create form via AJAX
+        $(document).on('click', '.saw-floating-button', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const $btn = $(this);
+            const createUrl = $btn.attr('href');
+
+            if (!createUrl || createUrl === '#') {
+                console.warn('⚠️ No create URL found');
+                return;
+            }
+
+            // Extract entity from URL (e.g., /admin/settings/customers/create -> customers)
+            const parsed = parseUrl(createUrl);
+            if (parsed.entity) {
+                console.log('➕ Opening create form via AJAX:', parsed.entity);
+                // For create mode, id is 0
+                openSidebarAjax(0, 'create', parsed.entity);
+            } else {
+                console.warn('⚠️ Could not parse create URL, falling back to full reload');
+                window.location.href = createUrl;
+            }
+        });
+
+        // AJAX form submit handler for sidebar forms
+        $(document).on('submit', '.saw-sidebar form', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const $form = $(this);
+            const $sidebar = $form.closest('.saw-sidebar');
+            const mode = $sidebar.attr('data-mode');
+            const entity = $sidebar.attr('data-entity');
+            const currentId = $sidebar.data('current-id') || 0;
+
+            // Only handle create/edit forms in sidebar
+            if (mode !== 'create' && mode !== 'edit') {
+                return true; // Let form submit normally
+            }
+
+            console.log('📝 Submitting sidebar form via AJAX:', { mode, entity, currentId });
+
+            // Check if form has validation errors
+            if (!$form[0].checkValidity()) {
+                $form[0].reportValidity();
+                return false;
+            }
+
+            // Disable submit button and show loading
+            const $submitBtn = $form.find('button[type="submit"], input[type="submit"]');
+            const originalHtml = $submitBtn.html();
+            $submitBtn.prop('disabled', true).html('<span class="dashicons dashicons-update-alt saw-spin"></span> Ukládání...');
+
+            // Prepare form data
+            // Get form data including hidden fields
+            const formData = $form.serialize();
+            
+            // Normalize entity name (replace hyphens with underscores for AJAX action)
+            const entityNormalized = entity.replace(/-/g, '_');
+            const action = mode === 'create' 
+                ? 'saw_create_' + entityNormalized 
+                : 'saw_edit_' + entityNormalized;
+
+            $.ajax({
+                url: (window.sawGlobal && window.sawGlobal.ajaxurl) || '/wp-admin/admin-ajax.php',
+                method: 'POST',
+                timeout: 30000,
+                data: formData + '&action=' + action + '&_ajax_sidebar_submit=1&nonce=' + ((window.sawGlobal && window.sawGlobal.nonce) || window.sawAjaxNonce),
+                success: function (response) {
+                    console.log('✅ Form submit response:', response);
+
+                    if (response.success) {
+                        // Get created/updated ID
+                        const newId = response.data.id || currentId;
+
+                        if (mode === 'create' && newId) {
+                            // After create -> show detail
+                            console.log('✅ Create successful, showing detail:', newId);
+                            openSidebarAjax(newId, 'detail', entity);
+                        } else if (mode === 'edit' && newId) {
+                            // After edit -> show detail
+                            console.log('✅ Edit successful, showing detail:', newId);
+                            openSidebarAjax(newId, 'detail', entity);
+                        } else {
+                            console.error('❌ No ID returned after save');
+                            alert('Chyba: Nepodařilo se získat ID záznamu');
+                            $submitBtn.prop('disabled', false).html(originalHtml);
+                        }
+                    } else {
+                        // Show errors
+                        console.error('❌ Form submit failed:', response.data);
+                        const errorMsg = response.data && response.data.message 
+                            ? response.data.message 
+                            : 'Chyba při ukládání';
+                        
+                        // Try to show errors in form
+                        if (response.data && response.data.errors) {
+                            alert(errorMsg + '\n\n' + response.data.errors.join('\n'));
+                        } else {
+                            alert(errorMsg);
+                        }
+                        
+                        $submitBtn.prop('disabled', false).html(originalHtml);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error('❌ AJAX error:', { xhr, status, error });
+                    alert('Chyba připojení. Zkuste to prosím znovu.');
+                    $submitBtn.prop('disabled', false).html(originalHtml);
+                }
+            });
+
+            return false;
+        });
+
+        console.log('✅ Admin Table initialized v5.0.0 - AJAX sidebar support');
     }
 
     /**

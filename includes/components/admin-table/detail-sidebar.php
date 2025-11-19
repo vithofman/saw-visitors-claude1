@@ -39,12 +39,67 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
     
     <div class="saw-sidebar-content">
         <?php 
-        if (file_exists($detail_template)) {
-            require $detail_template;
+        // Get display name - try to get controller instance from global context
+        // Controller is passed via ajax_load_sidebar() in Base Controller
+        global $saw_current_controller;
+        $controller_instance = $saw_current_controller ?? null;
+        
+        // If not in global, try to instantiate it
+        if (!$controller_instance) {
+            $controller_class = 'SAW_Module_' . str_replace(' ', '_', ucwords(str_replace('-', ' ', $entity))) . '_Controller';
+            $controller_file = SAW_VISITORS_PLUGIN_DIR . "includes/modules/{$module_slug}/controller.php";
+            
+            if (file_exists($controller_file) && class_exists($controller_class)) {
+                $controller_instance = new $controller_class();
+            }
+        }
+        
+        // Get display name using controller method or fallback
+        $display_name = '';
+        if ($controller_instance && method_exists($controller_instance, 'get_display_name')) {
+            $display_name = $controller_instance->get_display_name($item);
         } else {
-            echo '<p>Detail template not found: ' . esc_html($detail_template) . '</p>';
+            // Fallback to common fields
+            $display_name = $item['name'] ?? $item['title'] ?? '';
+            if (empty($display_name) && !empty($item['first_name'])) {
+                $display_name = trim($item['first_name'] . ' ' . ($item['last_name'] ?? ''));
+            }
+            if (empty($display_name)) {
+                $display_name = '#' . $item['id'];
+            }
+        }
+        
+        // Get header meta (badges, additional info) - modules can override via $item['header_meta']
+        $header_meta = $item['header_meta'] ?? '';
+        if (empty($header_meta) && !empty($item['id'])) {
+            $header_meta = '<span class="saw-badge-transparent">ID: ' . intval($item['id']) . '</span>';
         }
         ?>
+        
+        <!-- Universal Detail Header - Rendered by admin-table component -->
+        <!-- Goes from sidebar header to edges, no margin -->
+        <div class="saw-detail-header-universal">
+            <div class="saw-detail-header-inner">
+                <h3 class="saw-detail-header-title"><?php echo esc_html($display_name); ?></h3>
+                <?php if (!empty($header_meta)): ?>
+                <div class="saw-detail-header-meta">
+                    <?php echo $header_meta; ?>
+                </div>
+                <?php endif; ?>
+            </div>
+            <div class="saw-detail-header-stripe"></div>
+        </div>
+        
+        <!-- Module-specific content wrapper (has padding) -->
+        <div class="saw-detail-content-wrapper">
+            <?php 
+            if (file_exists($detail_template)) {
+                require $detail_template;
+            } else {
+                echo '<p>Detail template not found: ' . esc_html($detail_template) . '</p>';
+            }
+            ?>
+        </div>
         
         <?php if (!empty($related_data) && is_array($related_data)): ?>
         <div class="saw-related-sections">
@@ -143,111 +198,7 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
     <?php endif; ?>
 </div>
 
-<script>
-(function($) {
-    'use strict';
-    
-    /**
-     * Initialize collapsible related sections
-     */
-    function initCollapsibleSections() {
-        $(document).on('click', '[data-toggle-section]', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const $header = $(this);
-            const $section = $header.closest('.saw-related-section');
-            
-            $section.toggleClass('is-collapsed');
-            
-            console.log('🔽 Section toggled:', $section.data('section'));
-        });
-    }
-    
-    /**
-     * Handle Edit button - USE AJAX NAVIGATION
-     */
-    function initEditButton() {
-        $(document).off('click', '.saw-edit-ajax');
-        
-        $(document).on('click', '.saw-edit-ajax', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const $btn = $(this);
-            const entity = $btn.data('entity');
-            const id = $btn.data('id');
-            
-            console.warn('🔴 EDIT BUTTON CLICKED!', {entity, id});
-            console.warn('🔴 Event prevented and stopped');
-            
-            if (entity && id && typeof window.openSidebarAjax === 'function') {
-                console.log('✅ Using AJAX navigation to edit mode');
-                window.openSidebarAjax(id, 'edit', entity);
-            } else {
-                // Fallback to full page reload
-                const href = $btn.attr('href');
-                if (href) {
-                    console.log('⚠️ Fallback to full page reload');
-                    window.location.href = href;
-                }
-            }
-            
-            return false;
-        });
-        
-        console.log('✅ Edit button handler initialized');
-    }
-    
-    /**
-     * Handle related item links - USE AJAX NAVIGATION
-     */
-    function initRelatedItemLinks() {
-        $(document).off('click', '.saw-related-item-link');
-        
-        $(document).on('click', '.saw-related-item-link', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            
-            const $link = $(this);
-            const entity = $link.data('entity');
-            const id = $link.data('id');
-            
-            console.log('🔗 Related link clicked:', {entity, id});
-            
-            if (entity && id && typeof window.openSidebarAjax === 'function') {
-                console.log('✅ Using AJAX navigation');
-                window.openSidebarAjax(id, 'detail', entity);
-            } else {
-                // Fallback to full page reload
-                const href = $link.attr('href');
-                if (href && href !== '#') {
-                    console.log('⚠️ Fallback to full page reload');
-                    setTimeout(function() {
-                        window.location.href = href;
-                    }, 10);
-                }
-            }
-            
-            return false;
-        });
-        
-        console.log('✅ Related item links handler initialized');
-    }
-    
-    $(document).ready(function() {
-        console.log('🎨 Detail sidebar scripts initialized');
-        initCollapsibleSections();
-        initEditButton();
-        initRelatedItemLinks();
-    });
-    
-    $(document).on('saw-sidebar-loaded', function() {
-        console.log('🔄 Re-initializing after AJAX load');
-        initEditButton();
-        initRelatedItemLinks();
-    });
-    
-})(jQuery);
-</script>
+<!-- 
+    JS logika byla přesunuta do sidebar.js pro sjednocení.
+    Moduly mohou přidat vlastní JS do svých detail-modal-template.php souborů.
+-->
