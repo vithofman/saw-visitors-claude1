@@ -195,9 +195,10 @@
                             console.log('📦 JS assets:', response.data.assets.js.map(function(a) { return a.handle + ' (' + a.src + ')'; }));
                         }
                         loadAssetsFromResponse(response.data.assets, function() {
-                            console.log('🔧 Assets loaded callback - reinitializing scripts...');
+                            console.log('🔧 Assets loaded callback FIRED - reinitializing scripts...');
                             // CRITICAL: Wait a bit for all scripts to actually execute
                             setTimeout(function() {
+                                console.log('🔧 Executing reinitialization...');
                                 reinitializePageScripts();
                                 const moduleName = detectModuleFromURL(url);
                                 if (moduleName) {
@@ -205,8 +206,9 @@
                                     reinitializeModuleScripts(moduleName);
                                 }
                                 // Also trigger page-loaded event to ensure all modules reinitialize
+                                console.log('🔧 Triggering saw:page-loaded event with data:', response.data);
                                 $(document).trigger('saw:page-loaded', [response.data]);
-                            }, 100);
+                            }, 200); // Increased timeout to ensure scripts are executed
                         });
                     } else {
                         console.warn('⚠️ No assets in response!');
@@ -819,7 +821,31 @@
                         return true;
                     }
                     
-                    // Check if script is in DOM
+                    // CRITICAL: Global dependencies that are always loaded on first page load
+                    // These don't need to be in the current assets list
+                    const globalDeps = ['jquery', 'saw-app', 'saw-validation'];
+                    if (globalDeps.indexOf(dep) !== -1) {
+                        // Check if it's in DOM (should be, as it's loaded globally)
+                        if ($('script[src*="' + dep + '"]').length > 0) {
+                            return true;
+                        }
+                        // For saw-app and saw-validation, check if they exist as global objects/functions
+                        if (dep === 'saw-app' && (typeof window.SAW_App !== 'undefined' || typeof window.sawGlobal !== 'undefined')) {
+                            return true;
+                        }
+                        if (dep === 'saw-validation' && typeof window.SAW_Validation !== 'undefined') {
+                            return true;
+                        }
+                        // jQuery is always available
+                        if (dep === 'jquery' && typeof window.jQuery !== 'undefined') {
+                            return true;
+                        }
+                        // If we can't find it, assume it's loaded (it's a global dependency)
+                        console.log('  ⚠️ Global dependency not found in DOM, assuming loaded:', dep);
+                        return true;
+                    }
+                    
+                    // Check if script is in DOM (for non-global dependencies)
                     if ($('script[src*="' + dep + '"], script[data-saw-asset="' + dep + '"]').length > 0) {
                         return true;
                     }
@@ -848,7 +874,15 @@
                         return true;
                     }
                     
-                    return false;
+                    // If dependency is in sortedJs but not yet loaded, it's not ready
+                    if (depAsset && !loadedAssets[dep]) {
+                        return false;
+                    }
+                    
+                    // If we get here, dependency is not in sortedJs and not in DOM
+                    // This might be a problem, but for now assume it's a global that's already loaded
+                    console.log('  ⚠️ Dependency not found, assuming loaded:', dep);
+                    return true;
                 });
             }
             
@@ -856,9 +890,10 @@
             function loadJsAsset(index) {
                 if (index >= sortedJs.length) {
                     // All assets processed - check if we're done
-                    if (pendingJsCount === 0) {
-                        checkComplete();
-                    }
+                    console.log('  📊 All JS assets processed. jsLoaded:', jsLoaded, '/', totalJs, ', pendingJsCount:', pendingJsCount);
+                    // CRITICAL: Always call checkComplete when we've processed all assets
+                    // It will only trigger callback if everything is truly loaded
+                    checkComplete();
                     return;
                 }
                 
@@ -880,6 +915,7 @@
                 
                 // Check if dependencies are loaded
                 if (!areDepsLoaded(asset)) {
+                    console.log('  ⏳ Waiting for dependencies of:', asset.handle);
                     // Wait a bit and retry
                     setTimeout(function() {
                         loadJsAsset(index);
@@ -889,7 +925,7 @@
                 
                 // Load the asset - mark as pending
                 pendingJsCount++;
-                console.log('  📥 Loading JS:', asset.handle, asset.src);
+                console.log('  📥 Loading JS:', asset.handle, asset.src, '(pending:', pendingJsCount + ')');
                 $.getScript(asset.src)
                     .done(function() {
                         // Mark script as AJAX-loaded
@@ -898,6 +934,7 @@
                         console.log('  ✅ Loaded JS:', asset.handle, asset.src);
                         jsLoaded++;
                         pendingJsCount--;
+                        console.log('  📊 Progress: jsLoaded:', jsLoaded, '/', totalJs, ', pendingJsCount:', pendingJsCount);
                         // Continue with next asset
                         loadJsAsset(index + 1);
                     })
@@ -906,12 +943,14 @@
                         loadedAssets[asset.handle] = true; // Mark as processed even if failed
                         jsLoaded++;
                         pendingJsCount--;
+                        console.log('  📊 Progress: jsLoaded:', jsLoaded, '/', totalJs, ', pendingJsCount:', pendingJsCount);
                         // Continue with next asset even on failure
                         loadJsAsset(index + 1);
                     });
             }
             
             // Start loading from first asset
+            console.log('  🚀 Starting JS asset loading sequence...');
             loadJsAsset(0);
         } else {
             jsLoaded = totalJs;

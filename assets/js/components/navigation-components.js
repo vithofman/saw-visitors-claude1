@@ -944,19 +944,32 @@
      * @since 1.0.0
      */
     function initNavigationComponents() {
+        console.log('[Navigation Components] initNavigationComponents() called');
+        
         // Initialize customer switcher
         if ($('#sawCustomerSwitcherButton').length && !window.customerSwitcher) {
+            console.log('[Navigation Components] Initializing customer switcher');
             window.customerSwitcher = new CustomerSwitcher();
         }
         
         // Initialize branch switcher
         if ($('#sawBranchSwitcher').length && !window.branchSwitcher) {
+            console.log('[Navigation Components] Initializing branch switcher');
             window.branchSwitcher = new BranchSwitcher();
         }
         
         // Initialize language switcher
         if ($('#sawLanguageSwitcher').length && !window.languageSwitcher) {
+            console.log('[Navigation Components] Initializing language switcher');
             window.languageSwitcher = new LanguageSwitcher();
+        } else if ($('#sawLanguageSwitcher').length && window.languageSwitcher) {
+            console.log('[Navigation Components] Language switcher already exists, reinitializing...');
+            // Reinitialize if already exists
+            try {
+                window.languageSwitcher = new LanguageSwitcher();
+            } catch (e) {
+                console.error('[Navigation Components] Error reinitializing language switcher:', e);
+            }
         }
     }
 
@@ -966,7 +979,8 @@
     });
 
     // Re-initialize after AJAX page load
-    $(document).on('saw:page-loaded saw:scripts-reinitialized', function() {
+    $(document).on('saw:page-loaded saw:scripts-reinitialized', function(e, data) {
+        console.log('[Navigation Components] Event received:', e.type, 'Data:', data);
         // Reinitialize navigation components after AJAX navigation
         initNavigationComponents();
     });

@@ -13,6 +13,8 @@
      * Can be called on document ready or after AJAX page load
      */
     function initContentModule() {
+        console.log('[Content Module] initContentModule() called');
+        
         // Auto-hide success notification after 4 seconds
         var $notification = $('.saw-success-notification');
         if ($notification.length) {
@@ -43,7 +45,10 @@
         }
 
         // Přepínání jazykových záložek - use event delegation for AJAX-loaded content
+        const $tabButtons = $('.saw-tab-btn');
+        console.log('[Content Module] Found', $tabButtons.length, 'tab buttons');
         $(document).off('click', '.saw-tab-btn').on('click', '.saw-tab-btn', function () {
+            console.log('[Content Module] Tab button clicked:', $(this).data('tab'));
             $('.saw-tab-btn').removeClass('active');
             $(this).addClass('active');
 
@@ -71,13 +76,19 @@
         });
 
         // Rozbalovací sekce - use event delegation for AJAX-loaded content
+        const $sectionHeaders = $('.saw-section-header');
+        console.log('[Content Module] Found', $sectionHeaders.length, 'section headers');
         $(document).off('click', '.saw-section-header').on('click', '.saw-section-header', function (e) {
+            console.log('[Content Module] Section header clicked');
             e.preventDefault();
             $(this).closest('.saw-collapsible-section').toggleClass('open');
         });
 
         // Rozbalovací sekce oddělení - already using event delegation
+        const $deptHeaders = $('.saw-department-header');
+        console.log('[Content Module] Found', $deptHeaders.length, 'department headers');
         $(document).off('click', '.saw-department-header').on('click', '.saw-department-header', function (e) {
+            console.log('[Content Module] Department header clicked');
             e.preventDefault();
             $(this).closest('.saw-department-subsection').toggleClass('open');
         });
@@ -190,17 +201,21 @@
 
     // Re-initialize after AJAX page load
     $(document).on('saw:page-loaded saw:module-reinit', function (e, data) {
+        console.log('[Content Module] Event received:', e.type, 'Data:', data);
         // Check if we're on content page
         const isContentPage = $('#saw-app-content').find('.saw-content-form').length > 0;
+        console.log('[Content Module] Is content page:', isContentPage);
         
         // Only reinitialize if content module is active
         if (data && typeof data === 'object' && (data.active_menu === 'content' || isContentPage)) {
-            console.log('[Content Module] Re-initializing after AJAX load');
+            console.log('[Content Module] Re-initializing after AJAX load (active_menu:', data.active_menu, ')');
             initContentModule();
         } else if (isContentPage) {
             // If no data provided but we're on content page, initialize anyway
             console.log('[Content Module] Re-initializing after AJAX load (detected by DOM)');
             initContentModule();
+        } else {
+            console.log('[Content Module] Skipping - not content page');
         }
     });
 
