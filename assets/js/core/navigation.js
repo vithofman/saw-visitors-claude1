@@ -29,7 +29,11 @@
     function initSPANavigation() {
         console.log('✅ SPA Navigation ENABLED');
         
-        $(document).on('click', '.saw-app-sidebar a, .saw-page-wrapper a[href^="/admin"], .saw-page-wrapper a[href^="/manager"]', function(e) {
+        // CRITICAL: Remove existing handlers first to prevent duplicates
+        // Use namespace to avoid conflicts
+        $(document).off('click.saw-spa-nav', '.saw-app-sidebar a, .saw-page-wrapper a[href^="/admin"], .saw-page-wrapper a[href^="/manager"]');
+        
+        $(document).on('click.saw-spa-nav', '.saw-app-sidebar a, .saw-page-wrapper a[href^="/admin"], .saw-page-wrapper a[href^="/manager"]', function(e) {
             const $link = $(this);
             const href = $link.attr('href');
             
@@ -74,8 +78,9 @@
             if ($link.attr('target') === '_blank') return;
             if ($link.data('no-ajax') === true) return;
 
-            console.log('🔗 SPA Navigation: Intercepted link:', href);
+            console.log('🔗 SPA Navigation: Intercepted link:', href, 'Link element:', $link[0]);
             e.preventDefault();
+            e.stopPropagation(); // Prevent other handlers from interfering
             
             if (window.innerWidth <= 1024) {
                 closeMobileSidebar();
@@ -259,6 +264,9 @@
 
         console.log('🧹 Enhanced cleanup...');
 
+        // CRITICAL: Remove any lingering loading overlays that might block menu clicks
+        $('#saw-loading-overlay').remove();
+
         // Remove modals
         $content.find('[id*="saw-modal-"], .saw-modal').remove();
         $('.saw-modal-overlay, .modal-backdrop').not('#sawSidebarOverlay').remove();
@@ -327,6 +335,11 @@
         });
 
         $(document).trigger('saw:scripts-reinitialized');
+        
+        // CRITICAL: Re-initialize SPA navigation handlers after AJAX content load
+        // This ensures menu links continue to work after page navigation
+        console.log('🔄 Re-initializing SPA navigation handlers');
+        initSPANavigation();
         
         initTableInteractions();
     }

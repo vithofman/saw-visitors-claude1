@@ -1139,22 +1139,15 @@ body, html {
    SIDEBAR WRAPPER (AJAX)
    ============================================ */
 
-.saw-sidebar-wrapper {
-    position: fixed !important;
-    top: 60px !important;
-    right: 0 !important;
-    bottom: 45px !important;
-    width: 700px !important;
-    z-index: 9999 !important;
-    display: none !important;
-    flex-direction: column !important;
-    background: #ffffff !important;
-    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.08), -1px 0 0 #eaeaea !important;
-}
+/* ============================================
+   SIDEBAR WRAPPER
+   ============================================
+   NOTE: Main sidebar styles are in assets/css/components/tables.css
+   This section is kept for backward compatibility but should not override
+   the main styles. If you need to modify sidebar styles, do it in tables.css
+   ============================================ */
 
-.saw-sidebar-wrapper.active {
-    display: flex !important;
-}
+/* Removed duplicate .saw-sidebar-wrapper definition - use tables.css instead */
 
 .saw-sidebar-content {
     flex: 1 !important;

@@ -776,7 +776,7 @@
     right: 0 !important;
     bottom: 0 !important;
     width: 720px !important;
-    z-index: 99999 !important;
+    z-index: 100001 !important; /* Higher than header (1000) and footer (999) to overlay both */
     display: none !important;
     flex-direction: column !important;
     background: #1e293b !important;
