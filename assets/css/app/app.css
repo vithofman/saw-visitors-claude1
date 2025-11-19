@@ -1,0 +1,1447 @@
+/**
+ * SAW App - Consolidated
+ * 
+ * All app-level styles including:
+ * - Base styles (CSS variables, reset, layout)
+ * - Header (fixed header with user menu)
+ * - Sidebar (navigation sidebar)
+ * - Footer (fixed footer)
+ * - Fixed Layout (positioning and layout system)
+ * - Legacy Base (backward compatibility)
+ * 
+ * @package SAW_Visitors
+ * @version 1.0.0
+ */
+
+/* ============================================
+   CSS VARIABLES
+   ============================================ */
+
+:root {
+    --saw-primary: #2563eb;
+    --saw-success: #10b981;
+    --saw-warning: #f59e0b;
+    --saw-danger: #ef4444;
+    --saw-info: #3b82f6;
+    
+    --saw-gray-50: #f9fafb;
+    --saw-gray-100: #f3f4f6;
+    --saw-gray-200: #e5e7eb;
+    --saw-gray-300: #d1d5db;
+    --saw-gray-400: #9ca3af;
+    --saw-gray-500: #6b7280;
+    --saw-gray-600: #4b5563;
+    --saw-gray-700: #374151;
+    --saw-gray-800: #1f2937;
+    --saw-gray-900: #111827;
+    
+    --saw-spacing-xs: 4px;
+    --saw-spacing-sm: 8px;
+    --saw-spacing-md: 16px;
+    --saw-spacing-lg: 24px;
+    --saw-spacing-xl: 32px;
+    --saw-spacing-2xl: 48px;
+    
+    --saw-radius-sm: 4px;
+    --saw-radius-md: 6px;
+    --saw-radius-lg: 8px;
+    
+    --saw-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --saw-shadow-md: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --saw-shadow-lg: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* ============================================
+   RESET & BASE
+   ============================================ */
+
+* {
+    box-sizing: border-box;
+}
+
+#wpadminbar {
+    display: none !important;
+}
+
+html {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    height: 100% !important;
+    overflow: hidden !important;
+}
+
+body.saw-app-body {
+    display: flex !important;
+    flex-direction: column !important;
+    padding-top: 0 !important;
+    background: #fafafa !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--saw-gray-900);
+}
+
+body, html {
+    overflow-x: hidden !important;
+}
+
+.saw-app-body * {
+    max-width: 100%;
+}
+
+/* ============================================
+   APP STRUCTURE - FIXED LAYOUT
+   ============================================ */
+
+.saw-app-header {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 60px !important;
+    z-index: 1000 !important;
+    flex-shrink: 0 !important;
+    background: #ffffff !important;
+    border-bottom: 1px solid #eaeaea !important;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.saw-app-container {
+    flex: 1 !important;
+    display: flex !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    padding-top: 60px !important;
+    min-height: 100vh;
+}
+
+.saw-app-main {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    margin-left: 0 !important;
+    padding-bottom: 0 !important;
+    transition: margin-left 0.3s ease;
+    background: #fff;
+}
+
+@media (min-width: 1025px) {
+    .saw-app-main {
+        margin-left: 260px !important;
+    }
+}
+
+.saw-app-content {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 24px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    max-width: 100%;
+    margin: 0 auto;
+    background: #fff;
+}
+
+.saw-app-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.saw-app-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.saw-app-content::-webkit-scrollbar-thumb {
+    background: #d4d4d4;
+    border-radius: 4px;
+}
+
+.saw-app-content::-webkit-scrollbar-thumb:hover {
+    background: #a3a3a3;
+}
+
+.saw-page-wrapper {
+    width: 100%;
+    max-width: 100%;
+}
+
+/* ============================================
+   HEADER - LEFT SECTION
+   ============================================ */
+
+.saw-header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
+    min-width: 0;
+}
+
+.saw-mobile-menu-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: transparent;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.saw-mobile-menu-toggle:hover {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+/* ============================================
+   HEADER - RIGHT SECTION
+   ============================================ */
+
+.saw-header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+/* ============================================
+   USER MENU
+   ============================================ */
+
+.saw-user-menu {
+    position: relative;
+}
+
+.saw-user-menu-toggle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 12px 6px 6px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 0;
+}
+
+.saw-user-menu-toggle:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.saw-user-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: #ffffff;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.saw-user-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+}
+
+.saw-user-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #111827;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
+}
+
+.saw-user-role {
+    font-size: 12px;
+    color: #6b7280;
+    line-height: 1.2;
+}
+
+.saw-user-arrow {
+    flex-shrink: 0;
+    color: #9ca3af;
+    transition: transform 0.2s;
+}
+
+.saw-user-menu-toggle:hover .saw-user-arrow {
+    color: #6b7280;
+}
+
+.saw-user-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 280px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+    display: none;
+    z-index: 1001;
+    overflow: hidden;
+}
+
+.saw-user-dropdown.active {
+    display: block;
+    animation: sawDropdownFadeIn 0.2s ease;
+}
+
+@keyframes sawDropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.saw-user-dropdown-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+}
+
+.saw-user-dropdown-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: #ffffff;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.saw-user-dropdown-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.saw-user-dropdown-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #111827;
+    line-height: 1.3;
+    margin-bottom: 2px;
+}
+
+.saw-user-dropdown-email {
+    font-size: 13px;
+    color: #6b7280;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.saw-user-dropdown-divider {
+    height: 1px;
+    background: #e5e7eb;
+    margin: 8px 0;
+}
+
+.saw-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    color: #4b5563;
+    text-decoration: none;
+    transition: all 0.15s;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.saw-dropdown-item:hover {
+    background: #f9fafb;
+    color: #111827;
+}
+
+.saw-dropdown-item svg {
+    flex-shrink: 0;
+    opacity: 0.7;
+}
+
+.saw-dropdown-item:hover svg {
+    opacity: 1;
+}
+
+.saw-dropdown-item-danger {
+    color: #ef4444;
+}
+
+.saw-dropdown-item-danger:hover {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+/* ============================================
+   SIDEBAR
+   ============================================ */
+
+.saw-app-sidebar {
+    position: fixed !important;
+    top: 60px !important;
+    left: 0 !important;
+    bottom: 45px !important;
+    width: 260px !important;
+    height: calc(100vh - 60px);
+    flex-shrink: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    background: #ffffff !important;
+    border-right: 1px solid #eaeaea !important;
+    z-index: 999 !important;
+    transition: transform 0.3s ease;
+}
+
+.saw-app-sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.saw-app-sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.saw-app-sidebar::-webkit-scrollbar-thumb {
+    background: #d4d4d4;
+    border-radius: 3px;
+}
+
+.saw-app-sidebar::-webkit-scrollbar-thumb:hover {
+    background: #a3a3a3;
+}
+
+.saw-sidebar-header {
+    display: none;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e5e7eb;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.saw-sidebar-mobile-customer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+
+.saw-sidebar-mobile-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+}
+
+.saw-sidebar-logo-image {
+    max-width: 32px;
+    max-height: 32px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    display: block;
+}
+
+.saw-sidebar-logo-fallback {
+    display: block;
+    width: 32px;
+    height: 32px;
+}
+
+.saw-sidebar-mobile-customer-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #111827;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.saw-sidebar-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: transparent;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.saw-sidebar-close:hover {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+.saw-sidebar-nav {
+    padding: 8px 0;
+}
+
+.saw-nav-section {
+    margin-bottom: 2px;
+}
+
+.saw-nav-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 24px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #9ca3af;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.2s;
+}
+
+.saw-nav-heading:hover {
+    color: #6b7280;
+}
+
+.saw-nav-heading-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    transition: transform 0.2s ease;
+}
+
+.saw-nav-heading-toggle svg {
+    width: 12px;
+    height: 12px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+}
+
+.saw-nav-section.collapsed .saw-nav-heading-toggle {
+    transform: rotate(-90deg);
+}
+
+.saw-nav-items {
+    max-height: 1000px;
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    opacity: 1;
+}
+
+.saw-nav-section.collapsed .saw-nav-items {
+    max-height: 0;
+    opacity: 0;
+}
+
+.saw-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 24px;
+    color: #4b5563;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.saw-nav-item:hover {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+.saw-nav-item.active {
+    background: #eff6ff;
+    color: #2563eb;
+    border-left: 3px solid #2563eb;
+    padding-left: 21px;
+}
+
+.saw-nav-icon {
+    font-size: 18px;
+    width: 20px;
+    text-align: center;
+}
+
+.saw-nav-label {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.saw-sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 60px;
+    left: 0;
+    width: 100%;
+    height: calc(100vh - 60px);
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 998;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.saw-sidebar-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* ============================================
+   FOOTER
+   ============================================ */
+
+.saw-app-footer {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 45px !important;
+    z-index: 900 !important;
+    flex-shrink: 0 !important;
+    background: #f8f9fa !important;
+    border-top: 1px solid #e5e7eb !important;
+    padding: 10px 24px !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    align-items: center !important;
+    color: #6b7280;
+}
+
+@media (min-width: 1025px) {
+    .saw-app-footer {
+        left: 260px !important;
+    }
+}
+
+@media (max-width: 1024px) {
+    .saw-app-footer {
+        left: 0 !important;
+    }
+}
+
+.saw-footer-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 100%;
+    gap: 20px;
+    width: 100%;
+}
+
+.saw-footer-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    color: #6b7280;
+    flex-wrap: wrap;
+}
+
+.saw-footer-brand {
+    font-weight: 600;
+    color: #111827;
+    letter-spacing: -0.01em;
+}
+
+.saw-footer-version {
+    color: #9ca3af;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    background: #e5e7eb;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.saw-footer-copy {
+    color: #9ca3af;
+}
+
+.saw-footer-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.saw-footer-link {
+    font-size: 13px;
+    color: #2563eb;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    position: relative;
+    padding: 4px 0;
+    white-space: nowrap;
+}
+
+.saw-footer-link:hover {
+    color: #1d4ed8;
+}
+
+.saw-footer-link::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: currentColor;
+    transform: scaleX(0);
+    transition: transform 0.2s ease;
+}
+
+.saw-footer-link:hover::after {
+    transform: scaleX(1);
+}
+
+.saw-footer-link[target="_blank"]::before {
+    content: '';
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-right: 4px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'%3E%3C/path%3E%3Cpolyline points='15 3 21 3 21 9'%3E%3C/polyline%3E%3Cline x1='10' y1='14' x2='21' y2='3'%3E%3C/line%3E%3C/svg%3E");
+    background-size: contain;
+    background-repeat: no-repeat;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+.saw-footer-link[target="_blank"]:hover::before {
+    opacity: 1;
+}
+
+/* ============================================
+   PAGE HEADER
+   ============================================ */
+
+.saw-page-header {
+    flex-shrink: 0 !important;
+    margin-bottom: 0 !important;
+    padding: 20px !important;
+    background: #ffffff !important;
+    border-bottom: 1px solid #eaeaea !important;
+}
+
+.saw-page-header-content {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 0 32px;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 20px;
+    text-align: left !important;
+}
+
+.saw-page-title {
+    margin: 0 !important;
+    font-size: 24px;
+    font-weight: 600;
+    color: #111827;
+    line-height: 1.2;
+    text-align: left !important;
+}
+
+.saw-page-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-left: auto;
+}
+
+.saw-page-actions .saw-button-primary .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+/* ============================================
+   CARDS (Base styles - extended in feedback.css)
+   ============================================ */
+
+.saw-card {
+    background: white;
+    border: 1px solid var(--saw-gray-200);
+    border-radius: var(--saw-radius-lg);
+    margin-bottom: var(--saw-spacing-lg);
+    box-shadow: var(--saw-shadow-sm);
+}
+
+.saw-card-header {
+    padding: var(--saw-spacing-lg);
+    border-bottom: 1px solid var(--saw-gray-200);
+}
+
+.saw-card-header h2,
+.saw-card-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--saw-gray-900);
+}
+
+.saw-card-body {
+    padding: var(--saw-spacing-lg);
+}
+
+/* ============================================
+   INFO TABLES
+   ============================================ */
+
+.saw-info-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.saw-info-table tr {
+    border-bottom: 1px solid var(--saw-gray-200);
+}
+
+.saw-info-table tr:last-child {
+    border-bottom: none;
+}
+
+.saw-info-table th {
+    text-align: left;
+    padding: 12px;
+    background: var(--saw-gray-50);
+    font-weight: 600;
+    color: var(--saw-gray-700);
+    width: 150px;
+}
+
+.saw-info-table td {
+    padding: 12px;
+    color: var(--saw-gray-600);
+}
+
+.saw-info-table code {
+    background: var(--saw-gray-100);
+    padding: 2px 6px;
+    border-radius: var(--saw-radius-sm);
+    font-family: 'Monaco', 'Courier New', monospace;
+    font-size: 13px;
+    color: var(--saw-gray-700);
+}
+
+/* ============================================
+   BADGES (Base styles - extended in feedback.css)
+   ============================================ */
+
+.saw-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: var(--saw-radius-sm);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.saw-badge-success {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.saw-badge-warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.saw-badge-danger {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.saw-badge-info {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+/* ============================================
+   ALERTS (Base styles - extended in feedback.css)
+   ============================================ */
+
+.saw-alert {
+    padding: var(--saw-spacing-md);
+    border-radius: var(--saw-radius-md);
+    margin-bottom: var(--saw-spacing-md);
+}
+
+.saw-alert-success {
+    background: #d1fae5;
+    color: #065f46;
+    border-left: 4px solid #10b981;
+}
+
+.saw-alert-warning {
+    background: #fef3c7;
+    color: #92400e;
+    border-left: 4px solid #f59e0b;
+}
+
+.saw-alert-danger {
+    background: #fee2e2;
+    color: #991b1b;
+    border-left: 4px solid #ef4444;
+}
+
+.saw-alert-info {
+    background: #dbeafe;
+    color: #1e40af;
+    border-left: 4px solid #3b82f6;
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+
+.saw-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 24px;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    line-height: 1.5;
+}
+
+.saw-button-primary {
+    background: #0073aa;
+    color: #fff;
+}
+
+.saw-button-primary:hover {
+    background: #005177;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 115, 170, 0.25);
+}
+
+.saw-button-secondary {
+    background: #f0f0f1;
+    border-color: #c3c4c7;
+    color: #2c3338;
+}
+
+.saw-button-secondary:hover {
+    background: #fff;
+    border-color: #0073aa;
+    color: #0073aa;
+}
+
+.saw-button-success {
+    background: var(--saw-success);
+    color: white;
+}
+
+.saw-button-success:hover {
+    background: #059669;
+}
+
+.saw-button-purple {
+    background: #7c3aed;
+    color: white;
+}
+
+.saw-button-purple:hover {
+    background: #6d28d9;
+}
+
+.saw-back-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px;
+    background: #f0f0f1;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    text-decoration: none;
+    color: #2c3338;
+    font-weight: 500;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.saw-back-button:hover {
+    background: #fff;
+    border-color: #0073aa;
+    color: #0073aa;
+}
+
+.saw-button-group {
+    display: flex;
+    gap: var(--saw-spacing-md);
+    flex-wrap: wrap;
+}
+
+/* ============================================
+   STATS & CARDS
+   ============================================ */
+
+.saw-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+.saw-stat-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.saw-stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 4px;
+}
+
+.saw-stat-label {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+/* ============================================
+   DASHBOARD
+   ============================================ */
+
+.saw-dashboard-row {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.saw-dashboard-col {
+    flex: 1;
+}
+
+/* ============================================
+   MODULE CONTAINERS
+   ============================================ */
+
+.saw-module-customers,
+.saw-module-branches,
+.saw-module-organizations,
+.saw-module-contacts,
+.saw-module-account-types,
+.saw-module-departments,
+.saw-module-users,
+.saw-module-invitations,
+.saw-module-visitors {
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 0 !important;
+    gap: 0 !important;
+}
+
+/* ============================================
+   SPLIT LAYOUT - TABLE + SIDEBAR
+   ============================================ */
+
+.saw-admin-table-split {
+    flex: 1 !important;
+    display: flex !important;
+    min-height: 0 !important;
+    padding-right: 0 !important;
+    overflow: hidden !important;
+    background: #ffffff !important;
+    border-radius: 0 !important;
+    border: none !important;
+    border-top: 1px solid #eaeaea !important;
+}
+
+.saw-admin-table-split.has-sidebar {
+    padding-right: 700px !important;
+}
+
+.saw-table-panel {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    border-right: none !important;
+    background: #ffffff !important;
+    padding-bottom: 250px !important;
+}
+
+.saw-admin-table-split.has-sidebar .saw-table-panel {
+    border-right: 1px solid #eaeaea !important;
+}
+
+.saw-admin-table-wrapper {
+    padding-bottom: 150px !important;
+}
+
+.saw-admin-table {
+    margin-bottom: 100px !important;
+}
+
+.saw-admin-table tbody {
+    padding-bottom: 80px !important;
+}
+
+.saw-admin-table tbody tr:last-child td {
+    padding-bottom: 80px !important;
+}
+
+/* ============================================
+   SIDEBAR WRAPPER (AJAX)
+   ============================================ */
+
+.saw-sidebar-wrapper {
+    position: fixed !important;
+    top: 60px !important;
+    right: 0 !important;
+    bottom: 45px !important;
+    width: 700px !important;
+    z-index: 9999 !important;
+    display: none !important;
+    flex-direction: column !important;
+    background: #ffffff !important;
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.08), -1px 0 0 #eaeaea !important;
+}
+
+.saw-sidebar-wrapper.active {
+    display: flex !important;
+}
+
+.saw-sidebar-content {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 24px !important;
+}
+
+.saw-sidebar-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.saw-sidebar-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.saw-sidebar-content::-webkit-scrollbar-thumb {
+    background: #d4d4d4;
+    border-radius: 3px;
+}
+
+.saw-sidebar-content::-webkit-scrollbar-thumb:hover {
+    background: #a3a3a3;
+}
+
+/* ============================================
+   UTILITIES
+   ============================================ */
+
+.saw-hide-mobile {
+    display: block;
+}
+
+.saw-show-mobile {
+    display: none;
+}
+
+.saw-text-truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.saw-text-center {
+    text-align: center;
+}
+
+.saw-text-muted {
+    color: #646970;
+}
+
+/* ============================================
+   RESPONSIVE - TABLET
+   ============================================ */
+
+@media (max-width: 1024px) {
+    .saw-mobile-menu-toggle {
+        display: flex;
+    }
+    
+    .saw-app-header {
+        padding: 0 16px;
+    }
+    
+    .saw-user-name {
+        max-width: 120px;
+    }
+    
+    .saw-app-sidebar {
+        transform: translateX(-100%);
+        box-shadow: none;
+        bottom: 40px;
+    }
+    
+    .saw-app-sidebar.open,
+    .saw-app-sidebar.active {
+        transform: translateX(0);
+        box-shadow: 4px 0 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .saw-sidebar-header {
+        display: flex;
+    }
+    
+    .saw-sidebar-overlay {
+        display: block;
+    }
+    
+    .saw-app-main {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
+    
+    .saw-app-content {
+        margin-left: 0 !important;
+        padding: 24px 16px;
+    }
+    
+    .saw-admin-table-split.has-sidebar {
+        padding-right: 500px !important;
+    }
+    
+    .saw-sidebar-wrapper {
+        width: 500px !important;
+    }
+}
+
+/* ============================================
+   RESPONSIVE - MOBILE
+   ============================================ */
+
+@media (max-width: 768px) {
+    .saw-app-header {
+        padding: 0 12px;
+    }
+    
+    .saw-header-right {
+        gap: 8px;
+    }
+    
+    .saw-user-info {
+        display: none;
+    }
+    
+    .saw-user-menu-toggle {
+        padding: 6px;
+        min-width: 48px;
+        justify-content: center;
+    }
+    
+    .saw-user-arrow {
+        display: none;
+    }
+    
+    .saw-user-dropdown {
+        min-width: 260px;
+    }
+    
+    .saw-user-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 13px;
+    }
+    
+    .saw-app-sidebar {
+        width: 280px;
+    }
+    
+    .saw-app-content {
+        padding: 16px 12px;
+    }
+    
+    .saw-app-footer {
+        padding: 8px 16px !important;
+        height: 40px !important;
+    }
+    
+    .saw-page-header {
+        padding: 16px !important;
+    }
+    
+    .saw-page-header-content {
+        padding: 0 16px;
+    }
+    
+    .saw-page-title {
+        font-size: 20px;
+    }
+    
+    .saw-admin-table-split.has-sidebar {
+        padding-right: 0 !important;
+    }
+    
+    .saw-admin-table-split.has-sidebar .saw-table-panel {
+        display: none !important;
+    }
+    
+    .saw-table-panel {
+        padding-bottom: 200px !important;
+    }
+    
+    .saw-sidebar-wrapper {
+        width: 100% !important;
+        top: 60px !important;
+        bottom: 40px !important;
+    }
+    
+    .saw-footer-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .saw-footer-right {
+        width: 100%;
+        gap: 12px;
+    }
+}
+
+/* ============================================
+   RESPONSIVE - SMALL MOBILE
+   ============================================ */
+
+@media (max-width: 480px) {
+    .saw-app-header {
+        padding: 0 8px;
+    }
+    
+    .saw-user-dropdown {
+        right: -8px;
+        min-width: calc(100vw - 16px);
+        max-width: 280px;
+    }
+    
+    .saw-app-sidebar {
+        width: 100%;
+        max-width: 320px;
+    }
+    
+    .saw-page-header-content {
+        padding: 0 12px;
+        flex-wrap: wrap;
+    }
+    
+    .saw-page-title {
+        font-size: 18px;
+        flex: 1 1 100%;
+        margin-bottom: 12px;
+    }
+    
+    .saw-page-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+    
+    .saw-page-actions .saw-button-primary span:not(.dashicons) {
+        display: none;
+    }
+    
+    .saw-page-actions .saw-button-primary {
+        padding: 10px 16px;
+    }
+}
+
+/* ============================================
+   PRINT STYLES
+   ============================================ */
+
+@media print {
+    .saw-app-header,
+    .saw-app-sidebar,
+    .saw-app-footer {
+        display: none !important;
+    }
+    
+    .saw-app-main {
+        margin-left: 0 !important;
+        padding-top: 0 !important;
+    }
+    
+    .saw-app-content {
+        padding-bottom: 0 !important;
+        overflow: visible !important;
+    }
+    
+    .saw-app-container {
+        padding-top: 0 !important;
+    }
+    
+    .saw-table-panel {
+        padding-bottom: 0 !important;
+    }
+    
+    .saw-admin-table-wrapper {
+        padding-bottom: 0 !important;
+    }
+    
+    .saw-admin-table {
+        margin-bottom: 0 !important;
+    }
+    
+    .saw-admin-table tbody {
+        padding-bottom: 0 !important;
+    }
+    
+    .saw-admin-table tbody tr:last-child td {
+        padding-bottom: 0 !important;
+    }
+}
+

@@ -43,12 +43,7 @@ class SAW_Asset_Loader {
         'saw-base-components'     => 'components/base-components.css',
         'saw-forms'               => 'components/forms.css', // Consolidated: forms, buttons, selectbox, select-create, color-picker, search-input
         'saw-tables'              => 'components/tables.css', // Consolidated: tables, table-column-types, admin-table, admin-table-sidebar
-        'saw-badges'              => 'components/badges.css',
-        'saw-modals'              => 'components/modals.css',
-        'saw-alerts'              => 'components/alerts.css',
-        'saw-cards'               => 'components/cards.css',
-        'saw-pagination'          => 'components/pagination.css',
-        'saw-detail-sections'     => 'components/detail-sections.css',
+        'saw-feedback'            => 'components/feedback.css', // Consolidated: alerts, badges, cards, modals, pagination, detail-sections
         
         // Interactive components (CRITICAL: Must load globally to prevent FOUC)
         'saw-navigation'           => 'components/navigation.css', // Consolidated: customer-switcher, branch-switcher, language-switcher
@@ -72,12 +67,7 @@ class SAW_Asset_Loader {
      * @var array
      */
     const APP_STYLES = [
-        'saw-app-base'        => 'app/base.css',
-        'saw-app-header'      => 'app/header.css',
-        'saw-app-sidebar'     => 'app/sidebar.css',
-        'saw-app-footer'      => 'app/footer.css',
-        'saw-app-fixed-layout' => 'app/fixed-layout.css',
-        'saw-app-legacy-base' => 'app/legacy-base.css',
+        'saw-app' => 'app/app.css', // Consolidated: base, header, sidebar, footer, fixed-layout, legacy-base
     ];
     
     /**
