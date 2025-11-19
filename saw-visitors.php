@@ -109,6 +109,40 @@ add_action('wp_ajax_saw_inline_create_companies', function() {
     $controller->ajax_inline_create();
 });
 
+// ✅ Register AJAX handler for inline create - companies
+add_action('wp_ajax_saw_inline_create_companies', function() {
+    if (!class_exists('SAW_Module_Companies_Controller')) {
+        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/modules/companies/controller.php';
+    }
+    
+    $controller = new SAW_Module_Companies_Controller();
+    $controller->ajax_inline_create();
+});
+
+// ==========================================
+// ✅ COMPANIES MERGE - AJAX HANDLERS
+// ==========================================
+add_action('wp_ajax_saw_show_merge_modal', function() {
+    if (!class_exists('SAW_Module_Companies_Controller')) {
+        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/modules/companies/controller.php';
+    }
+    
+    $controller = new SAW_Module_Companies_Controller();
+    $controller->ajax_show_merge_modal();
+});
+
+add_action('wp_ajax_saw_merge_companies', function() {
+    if (!class_exists('SAW_Module_Companies_Controller')) {
+        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/modules/companies/controller.php';
+    }
+    
+    $controller = new SAW_Module_Companies_Controller();
+    $controller->ajax_merge_companies();
+});
+
+// Modulové AJAX akce se registrují automaticky přes SAW_Visitors::register_module_ajax_handlers()
+// např.: saw_load_sidebar_customers, saw_delete_branches, atd.
+
 // Modulové AJAX akce se registrují automaticky přes SAW_Visitors::register_module_ajax_handlers()
 // např.: saw_load_sidebar_customers, saw_delete_branches, atd.
 

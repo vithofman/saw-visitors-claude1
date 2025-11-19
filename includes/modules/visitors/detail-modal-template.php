@@ -7,596 +7,495 @@ if (empty($item)) {
 }
 ?>
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+
 <style>
-/* FORCE INLINE CSS */
-.saw-detail-grid {
-    display: grid !important;
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 20px !important;
-    padding: 20px !important;
-}
-
-/* ✅ MOBILE RESPONSIVE - JEDEN SLOUPEC */
-@media (max-width: 782px) {
-    .saw-detail-grid {
-        grid-template-columns: 1fr !important;
-        padding: 12px !important;
-        gap: 16px !important;
-    }
+/* 🎨 307P DESIGN SYSTEM */
+:root {
+    --p307-primary: #005A8C;
+    --p307-accent: #0077B5;
+    --p307-dark: #1a1a1a;
+    --p307-gray: #f4f6f8;
+    --p307-border: #dce1e5;
     
-    .saw-detail-card {
-        margin-bottom: 0 !important;
-    }
-    
-    .saw-detail-card-header {
-        padding: 12px !important;
-    }
-    
-    .saw-detail-card-body {
-        padding: 12px !important;
-    }
-    
-    .saw-detail-card-icon {
-        font-size: 20px !important;
-    }
-    
-    .saw-detail-card-title {
-        font-size: 15px !important;
-    }
-    
-    /* Menší tabulka na mobilu */
-    .saw-detail-card-full table {
-        font-size: 12px !important;
-    }
-    
-    .saw-detail-card-full table th,
-    .saw-detail-card-full table td {
-        padding: 6px 4px !important;
-    }
+    /* Status Colors */
+    --st-success-bg: #ecfdf5; --st-success-text: #047857; --st-success-border: #a7f3d0;
+    --st-warning-bg: #fffbeb; --st-warning-text: #b45309; --st-warning-border: #fde68a;
+    --st-danger-bg: #fef2f2;  --st-danger-text: #b91c1c;  --st-danger-border: #fecaca;
+    --st-info-bg: #eff6ff;    --st-info-text: #1d4ed8;    --st-info-border: #bfdbfe;
+    --st-neutral-bg: #f3f4f6; --st-neutral-text: #4b5563; --st-neutral-border: #e5e7eb;
 }
 
-/* ✅ Extra malé mobily (iPhone SE, atd.) */
-@media (max-width: 480px) {
-    .saw-detail-grid {
-        padding: 8px !important;
-        gap: 12px !important;
-    }
-    
-    .saw-detail-card-header {
-        padding: 10px !important;
-        gap: 8px !important;
-    }
-    
-    .saw-detail-card-body {
-        padding: 10px !important;
-    }
-    
-    .saw-detail-card-icon {
-        font-size: 18px !important;
-    }
-    
-    .saw-detail-card-title {
-        font-size: 14px !important;
-    }
-    
-    .saw-detail-label {
-        font-size: 12px !important;
-    }
-    
-    .saw-detail-value {
-        font-size: 13px !important;
-    }
-    
-    /* Skrýt některé sloupce v tabulce */
-    .saw-detail-card-full table th:last-child,
-    .saw-detail-card-full table td:last-child {
-        display: none !important; /* Skrýt "Doba" */
-    }
-}
-/* Full-width cards */
-.saw-detail-card-full {
-    grid-column: 1 / -1 !important;
-}
-.saw-detail-card {
-    background: #fff !important;
-    border: 1px solid #e5e7eb !important;
-    border-radius: 8px !important;
-    overflow: hidden !important;
+.saw-detail-wrapper {
+    font-family: 'Roboto', sans-serif;
+    color: var(--p307-dark);
+    box-sizing: border-box;
+    max-width: 100%;
 }
 
-.saw-detail-card-header {
-    display: flex !important;
-    align-items: center !important;
-    gap: 12px !important;
-    padding: 16px !important;
-    background: #f8fafc !important;
-    border-bottom: 1px solid #e5e7eb !important;
+.saw-detail-wrapper * { box-sizing: border-box; }
+
+/* LAYOUT - JEDEN SLOUPEC */
+.saw-detail-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 16px;
 }
 
-.saw-detail-card-icon {
-    font-size: 24px !important;
+/* HEADER */
+.saw-industrial-header {
+    background: var(--p307-primary);
+    color: #fff;
+    border-radius: 4px 4px 0 0;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,90,140,.2);
 }
 
-.saw-detail-card-title {
-    margin: 0 !important;
-    font-size: 16px !important;
-    font-weight: 600 !important;
-    color: #1e293b !important;
+.saw-header-inner { padding: 24px 24px 16px 24px; }
+
+.saw-industrial-header h3 {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 28px;
+    text-transform: uppercase;
+    margin: 0 0 8px 0;
+    color: #fff !important;
+    letter-spacing: 1px;
+    line-height: 1.1;
 }
 
-.saw-detail-card-body {
-    padding: 16px !important;
+.saw-header-meta { display: flex; gap: 10px; align-items: center; font-size: 13px; opacity: 0.9; }
+
+.saw-industrial-stripe {
+    height: 8px;
+    width: 100%;
+    background-image: repeating-linear-gradient(-45deg, var(--p307-primary), var(--p307-primary) 10px, #fff 10px, #fff 20px);
+    border-bottom: 1px solid rgba(0,0,0,.1);
 }
 
-.saw-detail-list {
-    display: grid !important;
-    gap: 12px !important;
-    margin: 0 !important;
+/* SECTION */
+.saw-industrial-section {
+    background: #fff;
+    border: 1px solid var(--p307-border);
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.05);
 }
 
-.saw-detail-label {
-    font-size: 13px !important;
-    font-weight: 600 !important;
-    color: #64748b !important;
-    margin: 0 !important;
+.saw-section-head {
+    background: #fff;
+    padding: 14px 20px;
+    border-bottom: 2px solid var(--p307-gray);
 }
 
-.saw-detail-value {
-    font-size: 14px !important;
-    color: #1e293b !important;
-    margin: 0 0 12px 0 !important;
+.saw-section-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--p307-primary);
+    margin: 0;
+    display: flex; align-items: center; gap: 8px;
 }
 
-.saw-certificates-list {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 12px !important;
+.saw-section-body { padding: 20px; }
+
+/* INFO ROWS - LEFT ALIGNED */
+.saw-info-row {
+    display: grid;
+    grid-template-columns: 140px 1fr; /* Pevná šířka pro label, zbytek pro hodnotu */
+    gap: 12px;
+    align-items: baseline; /* Zarovnání na řádek textu */
+    border-bottom: 1px dotted #e5e7eb;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+}
+.saw-info-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+.saw-info-label { 
+    font-size: 12px; 
+    color: #888; 
+    font-weight: 700; 
+    text-transform: uppercase; 
 }
 
-.saw-certificate-item {
-    display: flex !important;
-    gap: 12px !important;
-    padding: 12px !important;
-    background: #f8fafc !important;
-    border: 1px solid #e2e8f0 !important;
-    border-radius: 6px !important;
+.saw-info-val { 
+    font-size: 14px; 
+    color: var(--p307-dark); 
+    font-weight: 500; 
+    text-align: left; /* ✅ ZAROVNÁNÍ DOLEVA */
 }
 
-.saw-cert-icon {
-    font-size: 20px !important;
-}
+.saw-info-val a { color: var(--p307-accent); text-decoration: none; font-weight: 600; }
+.saw-info-val a:hover { text-decoration: underline; }
 
-.saw-cert-name {
-    font-weight: 600 !important;
-    color: #1e293b !important;
-    margin-bottom: 4px !important;
+/* STATUS BOX */
+.saw-status-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    margin-bottom: 12px;
 }
+.st-icon { font-size: 18px; }
+.st-content { flex: 1; }
+.st-title { font-size: 11px; text-transform: uppercase; font-weight: 700; opacity: 0.8; margin-bottom: 2px; display: block; }
+.st-value { font-size: 15px; font-weight: 700; display: block; }
 
-.saw-cert-meta {
-    font-size: 13px !important;
-    color: #64748b !important;
-}
+.status-success { background: var(--st-success-bg); color: var(--st-success-text); border-color: var(--st-success-border); }
+.status-warning { background: var(--st-warning-bg); color: var(--st-warning-text); border-color: var(--st-warning-border); }
+.status-danger  { background: var(--st-danger-bg);  color: var(--st-danger-text);  border-color: var(--st-danger-border); }
+.status-info    { background: var(--st-info-bg);    color: var(--st-info-text);    border-color: var(--st-info-border); }
+.status-neutral { background: var(--st-neutral-bg); color: var(--st-neutral-text); border-color: var(--st-neutral-border); }
 
-.saw-hosts-list {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 8px !important;
-}
+/* TABLES */
+.saw-simple-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.saw-simple-table th { text-align: left; color: #888; font-weight: 700; padding: 8px; border-bottom: 2px solid #eee; font-size: 11px; text-transform: uppercase; }
+.saw-simple-table td { padding: 8px; border-bottom: 1px solid #eee; color: #333; }
 
-.saw-host-item {
-    display: flex !important;
-    align-items: center !important;
-    gap: 10px !important;
-    padding: 8px 12px !important;
-    background: #f8fafc !important;
-    border: 1px solid #e2e8f0 !important;
-    border-radius: 6px !important;
-}
+/* OTHERS */
+.saw-host-mini { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.saw-progress-title { font-size: 11px; text-transform: uppercase; font-weight: 700; color: #888; margin-bottom: 8px; margin-top: 16px; }
+.saw-step-item { display: flex; align-items: center; gap: 10px; font-size: 13px; padding: 6px 0; border-bottom: 1px dashed #eee; }
+.saw-cert-row { display: flex; gap: 12px; padding: 10px; background: #fafafa; border: 1px solid #eee; border-radius: 4px; margin-bottom: 8px; }
+.saw-cert-title { font-weight: 700; font-size: 14px; color: var(--p307-primary); }
+.saw-cert-sub { font-size: 12px; color: #666; }
 
-.saw-host-item .dashicons {
-    color: #2271b1 !important;
-    font-size: 20px !important;
-    width: 20px !important;
-    height: 20px !important;
-}
-
-.saw-training-progress {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 8px !important;
-}
-
-.saw-training-step {
-    display: flex !important;
-    align-items: center !important;
-    gap: 8px !important;
-    padding: 8px !important;
-    background: #f8fafc !important;
-    border-radius: 6px !important;
-}
-
-.saw-training-step.completed {
-    background: #f0fdf4 !important;
-    border: 1px solid #bbf7d0 !important;
-}
-
-.saw-training-step.incomplete {
-    background: #fef2f2 !important;
-    border: 1px solid #fecaca !important;
-}
 </style>
 
-<div class="saw-detail-grid">
-    
-    <!-- 1. ZÁKLADNÍ INFORMACE -->
-    <div class="saw-detail-card">
-        <div class="saw-detail-card-header">
-            <span class="saw-detail-card-icon">👤</span>
-            <h3 class="saw-detail-card-title">Základní informace</h3>
-        </div>
-        <div class="saw-detail-card-body">
-            <dl class="saw-detail-list">
-                <dt class="saw-detail-label">Jméno a příjmení</dt>
-                <dd class="saw-detail-value"><strong><?php echo esc_html($item['first_name'] . ' ' . $item['last_name']); ?></strong></dd>
-                
+<div class="saw-detail-wrapper">
+
+    <div class="saw-industrial-header">
+        <div class="saw-header-inner">
+            <h3><?php echo esc_html($item['first_name'] . ' ' . $item['last_name']); ?></h3>
+            <div class="saw-header-meta">
                 <?php if (!empty($item['position'])): ?>
-                <dt class="saw-detail-label">Pozice/profese</dt>
-                <dd class="saw-detail-value"><?php echo esc_html($item['position']); ?></dd>
+                    <span>💼 <?php echo esc_html($item['position']); ?></span> • 
                 <?php endif; ?>
-                
-                <dt class="saw-detail-label">Email</dt>
-                <dd class="saw-detail-value">
-                    <?php if (!empty($item['email'])): ?>
-                        <a href="mailto:<?php echo esc_attr($item['email']); ?>"><?php echo esc_html($item['email']); ?></a>
-                    <?php else: ?>
-                        —
-                    <?php endif; ?>
-                </dd>
-                
-                <dt class="saw-detail-label">Telefon</dt>
-                <dd class="saw-detail-value">
-                    <?php if (!empty($item['phone'])): ?>
-                        <a href="tel:<?php echo esc_attr($item['phone']); ?>"><?php echo esc_html($item['phone']); ?></a>
-                    <?php else: ?>
-                        —
-                    <?php endif; ?>
-                </dd>
-            </dl>
+                <span>🆔 <?php echo esc_html($item['id']); ?></span>
+            </div>
         </div>
+        <div class="saw-industrial-stripe"></div>
     </div>
-    
-    <!-- 2. NÁVŠTĚVA -->
-    <div class="saw-detail-card">
-        <div class="saw-detail-card-header">
-            <span class="saw-detail-card-icon">🏢</span>
-            <h3 class="saw-detail-card-title">Návštěva</h3>
-        </div>
-        <div class="saw-detail-card-body">
-            <dl class="saw-detail-list">
-                <dt class="saw-detail-label">Firma</dt>
-                <dd class="saw-detail-value"><?php echo esc_html($item['visit_data']['company_name'] ?? '—'); ?></dd>
+
+    <div class="saw-detail-stack">
+        
+        <div class="saw-industrial-section">
+            <div class="saw-section-head">
+                <h4 class="saw-section-title">🏢 Informace o návštěvě</h4>
+            </div>
+            <div class="saw-section-body">
+                <div class="saw-info-row">
+                    <span class="saw-info-label">Firma</span>
+                    <span class="saw-info-val"><?php echo esc_html($item['visit_data']['company_name'] ?? '—'); ?></span>
+                </div>
                 
-                <dt class="saw-detail-label">Pobočka</dt>
-                <dd class="saw-detail-value"><?php echo esc_html($item['visit_data']['branch_name'] ?? '—'); ?></dd>
-                
-                <dt class="saw-detail-label">Koho navštěvuje</dt>
-                <dd class="saw-detail-value">
-                    <?php if (!empty($item['visit_data']['hosts'])): ?>
-                        <div class="saw-hosts-list">
+                <?php if(!empty($item['visit_data']['branch_name'])): ?>
+                <div class="saw-info-row">
+                    <span class="saw-info-label">Pobočka</span>
+                    <span class="saw-info-val"><?php echo esc_html($item['visit_data']['branch_name']); ?></span>
+                </div>
+                <?php endif; ?>
+
+                <div class="saw-info-row">
+                    <span class="saw-info-label">Hostitelé</span>
+                    <div class="saw-info-val">
+                        <?php if (!empty($item['visit_data']['hosts'])): ?>
                             <?php foreach ($item['visit_data']['hosts'] as $host): ?>
-                            <div class="saw-host-item">
-                                <span class="dashicons dashicons-businessman"></span>
-                                <div>
-                                    <strong><?php echo esc_html($host['first_name'] . ' ' . $host['last_name']); ?></strong>
-                                    <?php if (!empty($host['email'])): ?>
-                                    <div style="font-size:12px;color:#64748b;"><?php echo esc_html($host['email']); ?></div>
-                                    <?php endif; ?>
+                                <div class="saw-host-mini">
+                                    <span class="dashicons dashicons-businessman" style="color:#ccc"></span>
+                                    <span><?php echo esc_html($host['first_name'] . ' ' . $host['last_name']); ?></span>
                                 </div>
-                            </div>
                             <?php endforeach; ?>
-                        </div>
-                    <?php else: ?>
-                        —
-                    <?php endif; ?>
-                </dd>
-                
-                <dt class="saw-detail-label">Detail návštěvy</dt>
-                <dd class="saw-detail-value">
-                    <?php if (!empty($item['visit_id'])): ?>
+                        <?php else: ?>
+                            —
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <?php if (!empty($item['visit_id'])): ?>
+                <div class="saw-info-row" style="border-top: 1px dashed #eee; margin-top: 8px; padding-top: 8px;">
+                    <span class="saw-info-label">Akce</span>
+                    <span class="saw-info-val">
                         <a href="<?php echo esc_url(home_url('/admin/visits/' . $item['visit_id'] . '/')); ?>">
-                            Zobrazit návštěvu #<?php echo $item['visit_id']; ?>
+                            Zobrazit návštěvu #<?php echo $item['visit_id']; ?> →
                         </a>
-                    <?php else: ?>
-                        —
-                    <?php endif; ?>
-                </dd>
-            </dl>
+                    </span>
+                </div>
+                <?php endif; ?>
+            </div>
         </div>
-    </div>
-    
-    <!-- 3. STAV ÚČASTI -->
-<div class="saw-detail-card">
-    <div class="saw-detail-card-header">
-        <span class="saw-detail-card-icon">✓</span>
-        <h3 class="saw-detail-card-title">Stav účasti</h3>
-    </div>
-    <div class="saw-detail-card-body">
-        <?php
-        // ===================================
-        // ✅ DYNAMICKÝ STATUS (stejná logika jako v listu)
-        // ===================================
-        global $wpdb;
-        $today = current_time('Y-m-d');
-        
-        // Načti POSLEDNÍ log pro DNES
-        $log = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_visit_daily_logs 
-             WHERE visitor_id = %d AND log_date = %s
-             ORDER BY checked_in_at DESC
-             LIMIT 1",
-            $item['id'], $today
-        ), ARRAY_A);
-        
-        // Vypočítej aktuální stav
-        if ($item['participation_status'] === 'confirmed') {
-            if ($log && $log['checked_in_at'] && !$log['checked_out_at']) {
-                $current_status = 'present'; // ✅ Přítomen
-                $status_badge = '<span class="saw-badge saw-badge-success">✅ Přítomen</span>';
-            } elseif ($log && $log['checked_out_at']) {
-                $current_status = 'checked_out'; // 🚪 Odhlášen
-                $status_badge = '<span class="saw-badge saw-badge-secondary">🚪 Odhlášen</span>';
-            } else {
-                $current_status = 'confirmed'; // ⏳ Potvrzený (ale dnes ještě nepřišel)
-                $status_badge = '<span class="saw-badge saw-badge-warning">⏳ Potvrzený</span>';
-            }
-        } elseif ($item['participation_status'] === 'no_show') {
-            $current_status = 'no_show';
-            $status_badge = '<span class="saw-badge saw-badge-danger">❌ Nedostavil se</span>';
-        } else {
-            $current_status = 'planned';
-            $status_badge = '<span class="saw-badge saw-badge-info">📅 Plánovaný</span>';
-        }
-        ?>
-        
-        <dl class="saw-detail-list">
-            <dt class="saw-detail-label">Aktuální stav</dt>
-            <dd class="saw-detail-value">
-                <?php echo $status_badge; ?>
-            </dd>
-            
-            <dt class="saw-detail-label">První check-in</dt>
-            <dd class="saw-detail-value">
-                <?php 
-                // ✅ Načti první check-in z daily_logs
-                $first_log = $wpdb->get_row($wpdb->prepare(
-                    "SELECT checked_in_at FROM {$wpdb->prefix}saw_visit_daily_logs 
-                     WHERE visitor_id = %d AND checked_in_at IS NOT NULL
-                     ORDER BY checked_in_at ASC
-                     LIMIT 1",
-                    $item['id']
-                ), ARRAY_A);
+
+        <div class="saw-industrial-section">
+            <div class="saw-section-head">
+                <h4 class="saw-section-title">👤 Kontaktní údaje</h4>
+            </div>
+            <div class="saw-section-body">
+                <div class="saw-info-row">
+                    <span class="saw-info-label">Email</span>
+                    <span class="saw-info-val">
+                        <?php if (!empty($item['email'])): ?>
+                            <a href="mailto:<?php echo esc_attr($item['email']); ?>"><?php echo esc_html($item['email']); ?></a>
+                        <?php else: ?>
+                            <span style="color:#ccc">—</span>
+                        <?php endif; ?>
+                    </span>
+                </div>
                 
-                echo !empty($first_log['checked_in_at']) ? date('d.m.Y H:i', strtotime($first_log['checked_in_at'])) : '—'; 
-                ?>
-            </dd>
-            
-            <dt class="saw-detail-label">Poslední check-in</dt>
-            <dd class="saw-detail-value">
-                <?php 
-                // ✅ NOVÉ: Načti poslední check-in z daily_logs
-                $last_checkin = $wpdb->get_row($wpdb->prepare(
-                    "SELECT checked_in_at FROM {$wpdb->prefix}saw_visit_daily_logs 
-                     WHERE visitor_id = %d AND checked_in_at IS NOT NULL
-                     ORDER BY checked_in_at DESC
-                     LIMIT 1",
-                    $item['id']
-                ), ARRAY_A);
-                
-                echo !empty($last_checkin['checked_in_at']) ? date('d.m.Y H:i', strtotime($last_checkin['checked_in_at'])) : '—'; 
-                ?>
-            </dd>
-            
-            <dt class="saw-detail-label">Poslední check-out</dt>
-            <dd class="saw-detail-value">
-                <?php 
-                // ✅ Načti poslední check-out z daily_logs
-                $last_checkout = $wpdb->get_row($wpdb->prepare(
-                    "SELECT checked_out_at FROM {$wpdb->prefix}saw_visit_daily_logs 
-                     WHERE visitor_id = %d AND checked_out_at IS NOT NULL
-                     ORDER BY checked_out_at DESC
-                     LIMIT 1",
-                    $item['id']
-                ), ARRAY_A);
-                
-                echo !empty($last_checkout['checked_out_at']) ? date('d.m.Y H:i', strtotime($last_checkout['checked_out_at'])) : '—'; 
-                ?>
-            </dd>
-        </dl>
-    </div>
-</div>
-    
-    <!-- 4. ŠKOLENÍ -->
-    <div class="saw-detail-card">
-        <div class="saw-detail-card-header">
-            <span class="saw-detail-card-icon">🎓</span>
-            <h3 class="saw-detail-card-title">Školení BOZP</h3>
+                <div class="saw-info-row">
+                    <span class="saw-info-label">Telefon</span>
+                    <span class="saw-info-val">
+                        <?php if (!empty($item['phone'])): ?>
+                            <a href="tel:<?php echo esc_attr($item['phone']); ?>"><?php echo esc_html($item['phone']); ?></a>
+                        <?php else: ?>
+                            <span style="color:#ccc">—</span>
+                        <?php endif; ?>
+                    </span>
+                </div>
+            </div>
         </div>
-        <div class="saw-detail-card-body">
-            <dl class="saw-detail-list">
-                <dt class="saw-detail-label">Status</dt>
-                <dd class="saw-detail-value">
-                    <?php if (!empty($item['training_skipped'])): ?>
-                        <span class="saw-badge saw-badge-warning">⏭️ Přeskočeno (do 1 roku)</span>
-                    <?php elseif (!empty($item['training_completed_at'])): ?>
-                        <span class="saw-badge saw-badge-success">✅ Dokončeno</span>
-                    <?php elseif (!empty($item['training_started_at'])): ?>
-                        <span class="saw-badge saw-badge-info">🔄 Probíhá</span>
-                    <?php else: ?>
-                        <span class="saw-badge saw-badge-secondary">⚪ Nespuštěno</span>
-                    <?php endif; ?>
-                </dd>
+
+        <div class="saw-industrial-section">
+            <div class="saw-section-head">
+                <h4 class="saw-section-title">✓ Stav účasti</h4>
+            </div>
+            <div class="saw-section-body">
+                <?php
+                // ========================================
+                // ✅ PŮVODNÍ LOGIKA - BEZE ZMĚN
+                // ========================================
+                global $wpdb;
+                $today = current_time('Y-m-d');
                 
+                $log = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}saw_visit_daily_logs WHERE visitor_id = %d AND log_date = %s ORDER BY checked_in_at DESC LIMIT 1", $item['id'], $today), ARRAY_A);
+                
+                // Výchozí hodnoty (podle "else" v původním kódu = Plánovaný)
+                $st_class = 'status-info';
+                $st_icon = '📅';
+                $st_text = 'Plánovaný';
+
+                if ($item['participation_status'] === 'confirmed') {
+                    if ($log && $log['checked_in_at'] && !$log['checked_out_at']) {
+                        // Přítomen
+                        $st_class = 'status-success'; $st_icon = '✅'; $st_text = 'Přítomen';
+                    } elseif ($log && $log['checked_out_at']) {
+                        // Odhlášen
+                        $st_class = 'status-neutral'; $st_icon = '🚪'; $st_text = 'Odhlášen';
+                    } else {
+                        // Potvrzený
+                        $st_class = 'status-warning'; $st_icon = '⏳'; $st_text = 'Potvrzený';
+                    }
+                } elseif ($item['participation_status'] === 'no_show') {
+                    // Nedostavil se
+                    $st_class = 'status-danger'; $st_icon = '❌'; $st_text = 'Nedostavil se';
+                }
+                ?>
+
+                <div class="saw-status-box <?php echo $st_class; ?>">
+                    <div class="st-icon"><?php echo $st_icon; ?></div>
+                    <div class="st-content">
+                        <span class="st-title">Aktuální stav</span>
+                        <span class="st-value"><?php echo $st_text; ?></span>
+                    </div>
+                </div>
+
+                <?php 
+                // ✅ 1. První check-in
+                $first_log = $wpdb->get_row($wpdb->prepare("SELECT checked_in_at FROM {$wpdb->prefix}saw_visit_daily_logs WHERE visitor_id = %d AND checked_in_at IS NOT NULL ORDER BY checked_in_at ASC LIMIT 1", $item['id']), ARRAY_A);
+                
+                // ✅ 2. Poslední check-in (RESTORED)
+                $last_checkin = $wpdb->get_row($wpdb->prepare("SELECT checked_in_at FROM {$wpdb->prefix}saw_visit_daily_logs WHERE visitor_id = %d AND checked_in_at IS NOT NULL ORDER BY checked_in_at DESC LIMIT 1", $item['id']), ARRAY_A);
+
+                // ✅ 3. Poslední check-out
+                $last_checkout = $wpdb->get_row($wpdb->prepare("SELECT checked_out_at FROM {$wpdb->prefix}saw_visit_daily_logs WHERE visitor_id = %d AND checked_out_at IS NOT NULL ORDER BY checked_out_at DESC LIMIT 1", $item['id']), ARRAY_A);
+                ?>
+
+                <div class="saw-info-row">
+                    <span class="saw-info-label">První check-in</span>
+                    <span class="saw-info-val"><?php echo !empty($first_log['checked_in_at']) ? date('d.m.Y H:i', strtotime($first_log['checked_in_at'])) : '—'; ?></span>
+                </div>
+                
+                <div class="saw-info-row">
+                    <span class="saw-info-label">Poslední check-in</span>
+                    <span class="saw-info-val"><?php echo !empty($last_checkin['checked_in_at']) ? date('d.m.Y H:i', strtotime($last_checkin['checked_in_at'])) : '—'; ?></span>
+                </div>
+
+                <div class="saw-info-row">
+                    <span class="saw-info-label">Poslední check-out</span>
+                    <span class="saw-info-val"><?php echo !empty($last_checkout['checked_out_at']) ? date('d.m.Y H:i', strtotime($last_checkout['checked_out_at'])) : '—'; ?></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="saw-industrial-section">
+            <div class="saw-section-head">
+                <h4 class="saw-section-title">🎓 Školení BOZP</h4>
+            </div>
+            <div class="saw-section-body">
+                
+                <?php 
+                // Status logik
+                $tr_class = 'status-neutral'; $tr_icon = '⚪'; $tr_text = 'Nespuštěno';
+
+                if (!empty($item['training_skipped'])) {
+                    $tr_class = 'status-warning'; $tr_icon = '⏭️'; $tr_text = 'Přeskočeno (do 1 roku)';
+                } elseif (!empty($item['training_completed_at'])) {
+                    $tr_class = 'status-success'; $tr_icon = '✅'; $tr_text = 'Dokončeno';
+                } elseif (!empty($item['training_started_at'])) {
+                    $tr_class = 'status-info'; $tr_icon = '🔄'; $tr_text = 'Probíhá';
+                }
+                ?>
+
+                <div class="saw-status-box <?php echo $tr_class; ?>">
+                    <div class="st-icon"><?php echo $tr_icon; ?></div>
+                    <div class="st-content">
+                        <span class="st-title">Status školení</span>
+                        <span class="st-value"><?php echo $tr_text; ?></span>
+                    </div>
+                </div>
+
                 <?php if (!empty($item['training_started_at'])): ?>
-                <dt class="saw-detail-label">Zahájeno</dt>
-                <dd class="saw-detail-value"><?php echo date('d.m.Y H:i', strtotime($item['training_started_at'])); ?></dd>
+                <div class="saw-info-row">
+                    <span class="saw-info-label">Zahájeno</span>
+                    <span class="saw-info-val"><?php echo date('d.m.Y H:i', strtotime($item['training_started_at'])); ?></span>
+                </div>
                 <?php endif; ?>
                 
                 <?php if (!empty($item['training_completed_at'])): ?>
-                <dt class="saw-detail-label">Dokončeno</dt>
-                <dd class="saw-detail-value"><?php echo date('d.m.Y H:i', strtotime($item['training_completed_at'])); ?></dd>
+                <div class="saw-info-row">
+                    <span class="saw-info-label">Dokončeno</span>
+                    <span class="saw-info-val"><?php echo date('d.m.Y H:i', strtotime($item['training_completed_at'])); ?></span>
+                </div>
                 <?php endif; ?>
 
- <?php 
-// ✅ VÝPOČET DOBY ŠKOLENÍ
-if (!empty($item['training_started_at']) && !empty($item['training_completed_at'])): 
-    // ✅ OPRAVENO: Použij DateTime objekty (lepší timezone handling)
-    try {
-        $start = new DateTime($item['training_started_at']);
-        $end = new DateTime($item['training_completed_at']);
-        
-        $interval = $start->diff($end);
-        
-        // ✅ Kontrola jestli je čas záporný (completed před started)
-        if ($interval->invert) {
-            $duration_text = '<span style="color: #ef4444;">⚠️ Chyba v datech</span>';
-            error_log("[SAW Detail] ERROR: training_completed_at ({$item['training_completed_at']}) is BEFORE training_started_at ({$item['training_started_at']})");
-        } else {
-            // ✅ Vypočítej celkové sekundy
-            $duration_seconds = ($interval->days * 24 * 3600) + ($interval->h * 3600) + ($interval->i * 60) + $interval->s;
-            
-            if ($duration_seconds < 60) {
-                // Méně než minuta → sekundy
-                $duration_text = $duration_seconds . ' sekund';
-            } elseif ($duration_seconds < 3600) {
-                // Méně než hodina → minuty a sekundy
-                $duration_text = $interval->i . ' min ' . $interval->s . ' s';
-            } else {
-                // Více než hodina → hodiny, minuty, sekundy
-                $duration_text = $interval->h . ' h ' . $interval->i . ' min ' . $interval->s . ' s';
-            }
-        }
-    } catch (Exception $e) {
-        $duration_text = '<span style="color: #ef4444;">⚠️ Neplatný formát data</span>';
-        error_log("[SAW Detail] ERROR: Failed to parse dates - " . $e->getMessage());
-    }
-?>
-<dt class="saw-detail-label">⏱️ Doba školení</dt>
-<dd class="saw-detail-value">
-    <strong><?php echo $duration_text; ?></strong>
-</dd>
-<?php endif; ?>
-                
-                <?php if (!$item['training_skipped'] && !empty($item['training_started_at'])): ?>
-                <dt class="saw-detail-label">Progress</dt>
-                <dd class="saw-detail-value">
-                    <div class="saw-training-progress">
-                        <div class="saw-training-step <?php echo $item['training_step_video'] ? 'completed' : 'incomplete'; ?>">
-                            <?php echo $item['training_step_video'] ? '✅' : '⬜'; ?> Video školení
-                        </div>
-                        <div class="saw-training-step <?php echo $item['training_step_map'] ? 'completed' : 'incomplete'; ?>">
-                            <?php echo $item['training_step_map'] ? '✅' : '⬜'; ?> Mapa objektu
-                        </div>
-                        <div class="saw-training-step <?php echo $item['training_step_risks'] ? 'completed' : 'incomplete'; ?>">
-                            <?php echo $item['training_step_risks'] ? '✅' : '⬜'; ?> Informace o rizicích
-                        </div>
-                        <div class="saw-training-step <?php echo $item['training_step_additional'] ? 'completed' : 'incomplete'; ?>">
-                            <?php echo $item['training_step_additional'] ? '✅' : '⬜'; ?> Další informace
-                        </div>
-                        <div class="saw-training-step <?php echo $item['training_step_department'] ? 'completed' : 'incomplete'; ?>">
-                            <?php echo $item['training_step_department'] ? '✅' : '⬜'; ?> Specifika oddělení
-                        </div>
-                    </div>
-                </dd>
+                <?php 
+                // Calculation logic
+                if (!empty($item['training_started_at']) && !empty($item['training_completed_at'])):
+                    try {
+                        $start = new DateTime($item['training_started_at']);
+                        $end = new DateTime($item['training_completed_at']);
+                        $interval = $start->diff($end);
+                        if ($interval->invert) {
+                            $d_text = 'Chyba dat';
+                        } else {
+                            $secs = ($interval->days * 24 * 3600) + ($interval->h * 3600) + ($interval->i * 60) + $interval->s;
+                            if ($secs < 60) $d_text = $secs . ' sekund';
+                            elseif ($secs < 3600) $d_text = $interval->i . ' min ' . $interval->s . ' s';
+                            else $d_text = $interval->h . ' h ' . $interval->i . ' min ' . $interval->s . ' s';
+                        }
+                    } catch(Exception $e) { $d_text = 'Neplatný formát'; }
+                ?>
+                <div class="saw-info-row">
+                    <span class="saw-info-label">⏱️ Doba školení</span>
+                    <span class="saw-info-val"><strong><?php echo $d_text; ?></strong></span>
+                </div>
                 <?php endif; ?>
-            </dl>
+
+                <?php if (!$item['training_skipped'] && !empty($item['training_started_at'])): ?>
+                <div class="saw-progress-title">Progress</div>
+                <div class="saw-step-item">
+                    <span style="width:20px; text-align:center;"><?php echo $item['training_step_video'] ? '✅' : '⬜'; ?></span>
+                    <span>Video školení</span>
+                </div>
+                <div class="saw-step-item">
+                    <span style="width:20px; text-align:center;"><?php echo $item['training_step_map'] ? '✅' : '⬜'; ?></span>
+                    <span>Mapa objektu</span>
+                </div>
+                <div class="saw-step-item">
+                    <span style="width:20px; text-align:center;"><?php echo $item['training_step_risks'] ? '✅' : '⬜'; ?></span>
+                    <span>Informace o rizicích</span>
+                </div>
+                <div class="saw-step-item">
+                    <span style="width:20px; text-align:center;"><?php echo $item['training_step_additional'] ? '✅' : '⬜'; ?></span>
+                    <span>Další informace</span>
+                </div>
+                <div class="saw-step-item">
+                    <span style="width:20px; text-align:center;"><?php echo $item['training_step_department'] ? '✅' : '⬜'; ?></span>
+                    <span>Specifika oddělení</span>
+                </div>
+                <?php endif; ?>
+
+            </div>
         </div>
-    </div>
-    
-    <!-- 5. HISTORIE CHECK-IN/OUT -->
-    <div class="saw-detail-card saw-detail-card-full">
-        <div class="saw-detail-card-header">
-            <span class="saw-detail-card-icon">📊</span>
-            <h3 class="saw-detail-card-title">Historie check-in/out</h3>
+
+        <div class="saw-industrial-section">
+            <div class="saw-section-head">
+                <h4 class="saw-section-title">📊 Historie check-in/out</h4>
+            </div>
+            <div class="saw-section-body" style="padding: 0;">
+                <?php if (!empty($item['daily_logs'])): ?>
+                    <table class="saw-simple-table">
+                        <thead>
+                            <tr>
+                                <th>Datum</th>
+                                <th>IN</th>
+                                <th>OUT</th>
+                                <th>Doba</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($item['daily_logs'] as $log): ?>
+                            <tr>
+                                <td><?php echo date('d.m.Y', strtotime($log['log_date'])); ?></td>
+                                <td><?php echo $log['checked_in_at'] ? date('H:i', strtotime($log['checked_in_at'])) : '—'; ?></td>
+                                <td>
+                                    <?php 
+                                    if ($log['checked_out_at']) {
+                                        echo date('H:i', strtotime($log['checked_out_at']));
+                                    } else {
+                                        echo '<span class="saw-badge saw-badge-success" style="font-size:10px; background:#ecfdf5; color:#047857; padding:2px 6px; border-radius:4px;">Přítomen</span>';
+                                    }
+                                    ?>
+                                </td>
+                                <td>
+                                    <?php 
+                                    if ($log['checked_in_at'] && $log['checked_out_at']) {
+                                        $diff = strtotime($log['checked_out_at']) - strtotime($log['checked_in_at']);
+                                        $hours = floor($diff / 3600);
+                                        $minutes = floor(($diff % 3600) / 60);
+                                        echo sprintf('%dh %dm', $hours, $minutes);
+                                    } else {
+                                        echo '—';
+                                    }
+                                    ?>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php else: ?>
+                    <div style="padding: 20px; color: #888; font-style: italic; text-align: center;">Žádná historie check-in/out.</div>
+                <?php endif; ?>
+            </div>
         </div>
-        <div class="saw-detail-card-body">
-            <?php if (!empty($item['daily_logs'])): ?>
-                <table style="width: 100%; border-collapse: collapse;">
-                    <thead>
-                        <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
-                            <th style="padding: 8px; text-align: left; font-size: 13px; color: #64748b;">Datum</th>
-                            <th style="padding: 8px; text-align: left; font-size: 13px; color: #64748b;">Check-in</th>
-                            <th style="padding: 8px; text-align: left; font-size: 13px; color: #64748b;">Check-out</th>
-                            <th style="padding: 8px; text-align: left; font-size: 13px; color: #64748b;">Doba</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($item['daily_logs'] as $log): ?>
-                        <tr style="border-bottom: 1px solid #e2e8f0;">
-                            <td style="padding: 8px; font-size: 14px;">
-                                <?php echo date('d.m.Y', strtotime($log['log_date'])); ?>
-                            </td>
-                            <td style="padding: 8px; font-size: 14px;">
-                                <?php echo $log['checked_in_at'] ? date('H:i', strtotime($log['checked_in_at'])) : '—'; ?>
-                            </td>
-                            <td style="padding: 8px; font-size: 14px;">
-                                <?php 
-                                if ($log['checked_out_at']) {
-                                    echo date('H:i', strtotime($log['checked_out_at']));
-                                } else {
-                                    echo '<span class="saw-badge saw-badge-success">Přítomen</span>';
-                                }
-                                ?>
-                            </td>
-                            <td style="padding: 8px; font-size: 14px; color: #64748b;">
-                                <?php 
-                                if ($log['checked_in_at'] && $log['checked_out_at']) {
-                                    $diff = strtotime($log['checked_out_at']) - strtotime($log['checked_in_at']);
-                                    $hours = floor($diff / 3600);
-                                    $minutes = floor(($diff % 3600) / 60);
-                                    echo sprintf('%dh %dm', $hours, $minutes);
-                                } else {
-                                    echo '—';
-                                }
-                                ?>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            <?php else: ?>
-                <p style="color: #64748b; font-size: 14px;">Žádná historie check-in/out.</p>
-            <?php endif; ?>
-        </div>
-    </div>
-    
-    <!-- 6. PROFESNÍ PRŮKAZY -->
-    <div class="saw-detail-card saw-detail-card-full">
-        <div class="saw-detail-card-header">
-            <span class="saw-detail-card-icon">📜</span>
-            <h3 class="saw-detail-card-title">Profesní průkazy</h3>
-        </div>
-        <div class="saw-detail-card-body">
-            <?php if (!empty($item['certificates'])): ?>
-                <div class="saw-certificates-list">
+
+        <div class="saw-industrial-section">
+            <div class="saw-section-head">
+                <h4 class="saw-section-title">📜 Profesní průkazy</h4>
+            </div>
+            <div class="saw-section-body">
+                <?php if (!empty($item['certificates'])): ?>
                     <?php foreach ($item['certificates'] as $cert): ?>
-                    <div class="saw-certificate-item">
+                    <div class="saw-cert-row">
                         <div class="saw-cert-icon">📄</div>
-                        <div class="saw-cert-content">
-                            <div class="saw-cert-name"><?php echo esc_html($cert['certificate_name']); ?></div>
-                            <?php if (!empty($cert['certificate_number'])): ?>
-                            <div class="saw-cert-meta">Číslo: <?php echo esc_html($cert['certificate_number']); ?></div>
-                            <?php endif; ?>
-                            <?php if (!empty($cert['valid_until'])): ?>
-                            <div class="saw-cert-meta">Platný do: <?php echo esc_html($cert['valid_until']); ?></div>
-                            <?php endif; ?>
+                        <div>
+                            <div class="saw-cert-title"><?php echo esc_html($cert['certificate_name']); ?></div>
+                            <div class="saw-cert-sub">
+                                <?php if (!empty($cert['certificate_number'])) echo 'Číslo: ' . esc_html($cert['certificate_number']) . '<br>'; ?>
+                                <?php if (!empty($cert['valid_until'])) echo 'Platný do: ' . esc_html($cert['valid_until']); ?>
+                            </div>
                         </div>
                     </div>
                     <?php endforeach; ?>
-                </div>
-            <?php else: ?>
-                <p style="color: #64748b; font-size: 14px;">Žádné průkazy.</p>
-            <?php endif; ?>
+                <?php else: ?>
+                    <div style="color: #888; font-style: italic; text-align: center;">Žádné průkazy.</div>
+                <?php endif; ?>
+            </div>
         </div>
+
     </div>
-    
 </div>

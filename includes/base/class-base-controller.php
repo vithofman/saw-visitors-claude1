@@ -284,31 +284,47 @@ abstract class SAW_Base_Controller
     }
     
     /**
-     * Format related item display text
-     * 
-     * @since 8.0.0
-     * @param array $item Item data
-     * @param array $relation Relation config
-     * @return string Formatted display text
-     */
-    protected function format_related_item_display($item, $relation) {
-        if (!empty($relation['display_field'])) {
-            $field = $relation['display_field'];
-            return $item[$field] ?? '#' . $item['id'];
-        }
-        
-        if (!empty($relation['display_fields']) && is_array($relation['display_fields'])) {
-            $parts = array();
-            foreach ($relation['display_fields'] as $field) {
-                if (!empty($item[$field])) {
-                    $parts[] = $item[$field];
-                }
-            }
-            return implode(' - ', $parts);
-        }
-        
-        return $item['name'] ?? $item['title'] ?? '#' . $item['id'];
+ * Format related item display text
+ * 
+ * Supports three display strategies in order of priority:
+ * 1. custom_display function - for complex formatting (NEW!)
+ * 2. display_field - single field
+ * 3. display_fields - array of fields joined with ' - '
+ * 4. Fallback to common fields (name, title, id)
+ * 
+ * @since 8.0.0
+ * @version 8.1.0 - Added custom_display support
+ * @param array $item Item data
+ * @param array $relation Relation config
+ * @return string Formatted display text
+ */
+protected function format_related_item_display($item, $relation) {
+    // ✅ NEW: Priority 1 - Custom display function
+    if (!empty($relation['custom_display']) && is_callable($relation['custom_display'])) {
+        return call_user_func($relation['custom_display'], $item);
     }
+    
+    // Priority 2 - Single display field
+    if (!empty($relation['display_field'])) {
+        $field = $relation['display_field'];
+        return $item[$field] ?? '#' . $item['id'];
+    }
+    
+    // Priority 3 - Multiple display fields
+    if (!empty($relation['display_fields']) && is_array($relation['display_fields'])) {
+        $parts = array();
+        foreach ($relation['display_fields'] as $field) {
+            if (!empty($item[$field])) {
+                $parts[] = $item[$field];
+            }
+        }
+        // ✅ IMPROVED: Return ID if no parts found
+        return !empty($parts) ? implode(' - ', $parts) : '#' . $item['id'];
+    }
+    
+    // Priority 4 - Fallback to common fields
+    return $item['name'] ?? $item['title'] ?? '#' . $item['id'];
+}
     
     /**
      * Process sidebar context and return data for templates

@@ -2,7 +2,9 @@
 /**
  * Companies Module Controller
  * 
- * @version 2.0.0 - REFACTORED: Using render_list_view()
+ * @package     SAW_Visitors
+ * @subpackage  Modules/Companies
+ * @version     3.1.0 - FIXED: Inline merge content (no modal wrapper)
  */
 
 if (!defined('ABSPATH')) exit;
@@ -30,9 +32,6 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
         $this->model = new SAW_Module_Companies_Model($this->config);
     }
     
-    /**
-     * ✅ NEW: Using render_list_view() from Base Controller
-     */
     public function index() {
         $this->render_list_view();
     }
@@ -76,6 +75,8 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
     }
     
     protected function format_detail_data($item) {
+        error_log('[Companies Controller] format_detail_data called for ID: ' . ($item['id'] ?? 'unknown'));
+        
         global $wpdb;
         
         if (!empty($item['branch_id'])) {
@@ -87,8 +88,19 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
             
             if ($branch) {
                 $item['branch_name'] = $branch['name'];
+                error_log('[Companies Controller] Added branch_name: ' . $branch['name']);
             }
         }
+        
+        if (!empty($item['created_at'])) {
+            $item['created_at_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['created_at']));
+        }
+        
+        if (!empty($item['updated_at'])) {
+            $item['updated_at_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['updated_at']));
+        }
+        
+        error_log('[Companies Controller] format_detail_data completed. Item keys: ' . implode(', ', array_keys($item)));
         
         return $item;
     }
@@ -97,14 +109,12 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
         return $item['name'] ?? 'Nová firma';
     }
     
-    /**
-     * ✅ AJAX: Inline create handler
-     */
     public function ajax_inline_create() {
         check_ajax_referer('saw_ajax_nonce', 'nonce');
         
         if (!$this->can('create')) {
             wp_send_json_error(array('message' => 'Nemáte oprávnění vytvářet firmy'));
+            return;
         }
         
         $data = $this->prepare_form_data($_POST);
@@ -112,18 +122,21 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
         $data = $this->before_save($data);
         if (is_wp_error($data)) {
             wp_send_json_error(array('message' => $data->get_error_message()));
+            return;
         }
         
         $validation = $this->model->validate($data);
         if (is_wp_error($validation)) {
             $errors = $validation->get_error_data();
             wp_send_json_error(array('message' => implode('<br>', $errors)));
+            return;
         }
         
         $result = $this->model->create($data);
         
         if (is_wp_error($result)) {
             wp_send_json_error(array('message' => $result->get_error_message()));
+            return;
         }
         
         $item = $this->model->get_by_id($result);
@@ -131,6 +144,214 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
         wp_send_json_success(array(
             'id' => $result,
             'name' => $this->get_display_name($item),
+        ));
+    }
+    
+    // ==========================================
+    // ✅ MERGE FUNCTIONALITY - AJAX HANDLERS
+    // ==========================================
+    
+    /**
+     * ✅ FIXED: Returns clean HTML content (no modal wrapper)
+     * For inline UI in detail sidebar
+     * 
+     * @since 3.1.0
+     * @return void Outputs HTML
+     */
+    public function ajax_show_merge_modal() {
+        check_ajax_referer('saw_admin_nonce', 'nonce');
+        
+        if (!$this->can('edit')) {
+            echo '<div style="color:#dc3545;padding:20px">❌ Nemáte oprávnění</div>';
+            wp_die();
+        }
+        
+        $master_id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+        
+        if (!$master_id) {
+            echo '<div style="color:#dc3545;padding:20px">❌ Chybí ID firmy</div>';
+            wp_die();
+        }
+        
+        $master = $this->model->get_by_id($master_id);
+        
+        if (!$master) {
+            echo '<div style="color:#dc3545;padding:20px">❌ Firma nebyla nalezena</div>';
+            wp_die();
+        }
+        
+        $suggestions = $this->model->find_similar_companies(
+            $master['name'], 
+            $master['branch_id'],
+            $master_id
+        );
+        
+        error_log(sprintf(
+            'SAW Merge: Found %d similar companies for "%s" (ID: %d)',
+            count($suggestions),
+            $master['name'],
+            $master_id
+        ));
+        
+        // ✅ RENDER ONLY CONTENT (not full modal wrapper)
+        if (!empty($suggestions)): ?>
+            
+            <div class="saw-help-text">
+                💡 <strong>Našli jsme <?php echo count($suggestions); ?> podobných firem.</strong><br>
+                Vyberte firmy, které chcete sloučit pod hlavní záznam.
+            </div>
+            
+            <div class="saw-merge-warning">
+                <strong>⚠️ Tato akce je nevratná!</strong>
+                <p style="margin:4px 0 0 0;font-size:12px">Vybrané firmy budou smazány a jejich návštěvy přesunuty.</p>
+            </div>
+            
+            <div class="saw-duplicate-list">
+                <?php foreach ($suggestions as $company): ?>
+                <label class="saw-duplicate-item">
+                    <input type="checkbox" 
+                           name="duplicate_ids[]" 
+                           value="<?php echo intval($company['id']); ?>"
+                           onchange="updateMergeButton()">
+                    
+                    <div class="saw-dup-info">
+                        <strong><?php echo esc_html($company['name']); ?></strong>
+                        
+                        <div class="saw-dup-meta">
+                            <span class="saw-similarity-badge">
+                                ✓ <?php echo intval($company['similarity']); ?>% shoda
+                            </span>
+                            
+                            <span class="saw-visit-count">
+                                📋 <?php echo intval($company['visit_count']); ?> návštěv
+                            </span>
+                            
+                            <?php if (!empty($company['ico'])): ?>
+                            <span style="color:#999;font-size:11px">
+                                IČO: <?php echo esc_html($company['ico']); ?>
+                            </span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </label>
+                <?php endforeach; ?>
+            </div>
+            
+            <div class="saw-merge-actions">
+                <button class="saw-btn saw-btn-primary" 
+                        id="sawMergeButton"
+                        onclick="confirmMerge()" 
+                        type="button"
+                        disabled>
+                    Sloučit vybrané
+                </button>
+            </div>
+            
+        <?php else: ?>
+            
+            <div class="saw-no-duplicates">
+                ✓ Nebyly nalezeny žádné podobné firmy
+            </div>
+            
+        <?php endif;
+        
+        wp_die();
+    }
+    
+    public function ajax_merge_companies() {
+        check_ajax_referer('saw_admin_nonce', 'nonce');
+        
+        if (!$this->can('delete')) {
+            wp_send_json_error(array(
+                'message' => 'Nemáte oprávnění ke sloučení firem'
+            ));
+            return;
+        }
+        
+        $master_id = isset($_POST['master_id']) ? intval($_POST['master_id']) : 0;
+        $duplicate_ids_json = isset($_POST['duplicate_ids']) ? $_POST['duplicate_ids'] : '[]';
+        
+        $duplicate_ids = json_decode(stripslashes($duplicate_ids_json), true);
+        
+        if (!is_array($duplicate_ids)) {
+            $duplicate_ids = array();
+        }
+        
+        $duplicate_ids = array_map('intval', $duplicate_ids);
+        $duplicate_ids = array_filter($duplicate_ids);
+        
+        error_log(sprintf(
+            'SAW Merge Request: Master=%d, Duplicates=%s',
+            $master_id,
+            implode(',', $duplicate_ids)
+        ));
+        
+        if (!$master_id) {
+            wp_send_json_error(array(
+                'message' => 'Chybí ID hlavní firmy'
+            ));
+            return;
+        }
+        
+        if (empty($duplicate_ids)) {
+            wp_send_json_error(array(
+                'message' => 'Nevybrali jste žádné firmy ke sloučení'
+            ));
+            return;
+        }
+        
+        $master = $this->model->get_by_id($master_id);
+        if (!$master) {
+            wp_send_json_error(array(
+                'message' => 'Hlavní firma nebyla nalezena'
+            ));
+            return;
+        }
+        
+        $result = $this->model->merge_companies($master_id, $duplicate_ids);
+        
+        if (is_wp_error($result)) {
+            error_log('SAW Merge Error: ' . $result->get_error_message());
+            
+            wp_send_json_error(array(
+                'message' => 'Chyba při sloučení: ' . $result->get_error_message()
+            ));
+            return;
+        }
+        
+        $count = count($duplicate_ids);
+        $message = sprintf(
+            'Úspěšně sloučeno %d %s pod firmu "%s"',
+            $count,
+            $count === 1 ? 'firma' : ($count < 5 ? 'firmy' : 'firem'),
+            $master['name']
+        );
+        
+        error_log('SAW Merge Success: ' . $message);
+        
+        wp_send_json_success(array(
+            'message' => $message,
+            'merged_count' => $count,
+            'master_id' => $master_id
+        ));
+    }
+    
+    public function ajax_get_duplicate_stats() {
+        check_ajax_referer('saw_admin_nonce', 'nonce');
+        
+        if (!$this->can('view')) {
+            wp_send_json_error(array('message' => 'Nemáte oprávnění'));
+            return;
+        }
+        
+        $customer_id = SAW_Context::get_customer_id();
+        
+        $duplicates = $this->model->find_all_duplicates($customer_id);
+        
+        wp_send_json_success(array(
+            'total_groups' => count($duplicates),
+            'total_companies' => array_sum(array_column($duplicates, 'count')),
+            'groups' => array_slice($duplicates, 0, 5)
         ));
     }
 }
