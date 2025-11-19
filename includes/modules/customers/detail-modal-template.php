@@ -299,8 +299,8 @@ if (empty($item)) {
                 <div>
                     <dt><?php echo esc_html__('Primární barva:', 'saw-visitors'); ?></dt>
                     <dd>
-                        <span style="display: inline-flex; align-items: center; gap: 8px;">
-                            <span style="display: inline-block; width: 24px; height: 24px; border-radius: 6px; background: <?php echo esc_attr($item['primary_color']); ?>; border: 1px solid rgba(0,0,0,0.1);"></span>
+                        <span class="saw-color-preview">
+                            <span class="saw-color-swatch" style="background: <?php echo esc_attr($item['primary_color']); ?>;"></span>
                             <code><?php echo esc_html($item['primary_color']); ?></code>
                         </span>
                     </dd>

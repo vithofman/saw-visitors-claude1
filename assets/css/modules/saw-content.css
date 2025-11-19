@@ -53,6 +53,7 @@
         opacity: 0;
         transform: translateX(100px);
     }
+
     to {
         opacity: 1;
         transform: translateX(0);
@@ -64,6 +65,7 @@
         opacity: 1;
         transform: translateX(0);
     }
+
     to {
         opacity: 0;
         transform: translateX(100px);
@@ -603,9 +605,19 @@
 }
 
 @keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-10px); }
-    75% { transform: translateX(10px); }
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    25% {
+        transform: translateX(-10px);
+    }
+
+    75% {
+        transform: translateX(10px);
+    }
 }
 
 .saw-document-item {
@@ -728,64 +740,64 @@
     .saw-page-header {
         padding: 1.25rem 1rem;
     }
-    
+
     .saw-page-title {
         font-size: 1.5rem;
     }
-    
+
     .saw-content-tabs {
         padding: 0 1rem;
     }
-    
+
     .saw-tab-btn {
         padding: 0.875rem 1.25rem;
         font-size: 0.875rem;
     }
-    
+
     .saw-content-main {
         padding: 1.5rem 1rem;
     }
-    
+
     .saw-section-header {
         padding: 1.25rem 1rem;
     }
-    
+
     .saw-section-content {
         padding: 1.5rem 1rem;
     }
-    
+
     .saw-section-title {
         font-size: 1rem;
     }
-    
+
     .saw-department-header {
         padding: 1rem 1rem;
     }
-    
+
     .saw-department-content {
         padding: 1.5rem 1rem;
     }
-    
+
     .saw-document-item {
         grid-template-columns: 1fr;
         padding: 0.75rem;
     }
-    
+
     .saw-remove-document {
         width: 100%;
         margin-top: 0.5rem;
     }
-    
+
     .saw-form-actions {
         padding: 1.5rem 0 0;
     }
-    
+
     .saw-btn-primary,
     .saw-btn-secondary {
         width: 100%;
         justify-content: center;
     }
-    
+
     .saw-departments-intro {
         padding: 1rem;
     }

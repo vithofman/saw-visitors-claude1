@@ -137,11 +137,11 @@ $form_action = $is_edit
                         <?php endif; ?>
                         
                         <?php if (!$is_edit && !$context_branch_id): ?>
-                            <p class="saw-help-text" style="color: #d63638; margin-top: 4px;">
+                            <p class="saw-help-text saw-help-text-error">
                                 ⚠️ Není vybrána žádná pobočka v branch switcheru. Vyberte pobočku manuálně.
                             </p>
                         <?php elseif (!$is_edit && $context_branch_id): ?>
-                            <p class="saw-help-text" style="color: #00a32a; margin-top: 4px;">
+                            <p class="saw-help-text saw-help-text-success">
                                 ✅ Pobočka předvyplněna z branch switcheru
                             </p>
                         <?php else: ?>
@@ -365,150 +365,4 @@ $form_action = $is_edit
         
     </form>
 </div>
-
-<script>
-jQuery(document).ready(function($) {
-    console.log('[Companies Form] Loaded');
-    console.log('[Companies Form] Edit mode:', <?php echo $is_edit ? 'true' : 'false'; ?>);
-    console.log('[Companies Form] Nested mode:', <?php echo $is_nested ? 'true' : 'false'; ?>);
-    console.log('[Companies Form] Branch from switcher:', <?php echo $context_branch_id ? $context_branch_id : 'null'; ?>);
-    console.log('[Companies Form] Selected branch:', <?php echo $selected_branch_id ? $selected_branch_id : 'null'; ?>);
-    
-    // Helper functions
-    function isValidEmail(email) {
-        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return regex.test(email);
-    }
-    
-    function isValidURL(url) {
-        try {
-            new URL(url);
-            return true;
-        } catch {
-            return false;
-        }
-    }
-    
-    // ✅ NESTED INLINE CREATE MODE
-    <?php if ($is_nested): ?>
-        
-        console.log('[Companies Form] NESTED MODE - Setting up AJAX submit');
-        
-        // Override submit for AJAX
-        $('.saw-company-form').on('submit', function(e) {
-            e.preventDefault();
-            console.log('[Companies Form] AJAX submit triggered');
-            
-            const $form = $(this);
-            const branchId = $('#branch_id').val();
-            const name = $('#name').val().trim();
-            const email = $('#email').val().trim();
-            const website = $('#website').val().trim();
-            
-            // Quick validation
-            if (!branchId) {
-                alert('Vyberte prosím pobočku');
-                $('#branch_id').focus();
-                return false;
-            }
-            
-            if (!name) {
-                alert('Vyplňte prosím název firmy');
-                $('#name').focus();
-                return false;
-            }
-            
-            if (email && !isValidEmail(email)) {
-                alert('Zadejte prosím platný email');
-                $('#email').focus();
-                return false;
-            }
-            
-            if (website && !isValidURL(website)) {
-                alert('Zadejte prosím platnou webovou adresu (včetně https://)');
-                $('#website').focus();
-                return false;
-            }
-            
-            // AJAX submit
-            $.ajax({
-                url: '<?php echo admin_url('admin-ajax.php'); ?>',
-	        type: 'POST',
- 	        data: $form.serialize() + '&action=saw_inline_create_companies&nonce=' + sawGlobal.nonce,  
-	        success: function(response) {
-                    console.log('[Companies Form] AJAX response:', response);
-                    
-                    if (response.success) {
-                        // Get target field from nested wrapper
-                        const $wrapper = $('.saw-sidebar-wrapper[data-is-nested="1"]').last();
-                        const targetField = $wrapper.attr('data-target-field');
-                        
-                        console.log('[Companies Form] Success! Target field:', targetField);
-                        console.log('[Companies Form] New company:', response.data);
-                        
-                        // Call global handler
-                        if (window.SAWSelectCreate) {
-                            window.SAWSelectCreate.handleInlineSuccess(response.data, targetField);
-                        } else {
-                            console.error('[Companies Form] SAWSelectCreate not available!');
-                            alert('Firma byla vytvořena, ale nepodařilo se aktualizovat formulář');
-                        }
-                    } else {
-                        alert(response.data?.message || 'Chyba při ukládání firmy');
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('[Companies Form] AJAX error:', error);
-                    console.error('[Companies Form] Response:', xhr.responseText);
-                    alert('Chyba při komunikaci se serverem');
-                }
-            });
-            
-            return false;
-        });
-        
-    <?php else: ?>
-        
-        // ✅ NORMAL MODE - Standard validation
-        $('.saw-company-form').on('submit', function(e) {
-            const branchId = $('#branch_id').val();
-            const name = $('#name').val().trim();
-            const email = $('#email').val().trim();
-            const website = $('#website').val().trim();
-            
-            // Branch validation
-            if (!branchId) {
-                alert('Vyberte prosím pobočku');
-                $('#branch_id').focus();
-                e.preventDefault();
-                return false;
-            }
-            
-            // Name validation
-            if (!name) {
-                alert('Vyplňte prosím název firmy');
-                $('#name').focus();
-                e.preventDefault();
-                return false;
-            }
-            
-            // Email validation (if provided)
-            if (email && !isValidEmail(email)) {
-                alert('Zadejte prosím platný email');
-                $('#email').focus();
-                e.preventDefault();
-                return false;
-            }
-            
-            // Website validation (if provided)
-            if (website && !isValidURL(website)) {
-                alert('Zadejte prosím platnou webovou adresu (včetně https://)');
-                $('#website').focus();
-                e.preventDefault();
-                return false;
-            }
-        });
-        
-    <?php endif; ?>
-});
-</script>
+<!-- End Form Container -->

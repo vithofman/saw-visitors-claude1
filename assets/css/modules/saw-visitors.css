@@ -1,0 +1,482 @@
+/**
+ * Visitors Module Styles
+ * 
+ * @package     SAW_Visitors
+ * @subpackage  Modules/Visitors
+ * @version     1.0.0
+ */
+
+/* 🎨 307P DESIGN SYSTEM (Extracted from detail-modal-template.php) */
+:root {
+    --p307-primary: #005A8C;
+    --p307-accent: #0077B5;
+    --p307-dark: #1a1a1a;
+    --p307-gray: #f4f6f8;
+    --p307-border: #dce1e5;
+
+    /* Status Colors */
+    --st-success-bg: #ecfdf5;
+    --st-success-text: #047857;
+    --st-success-border: #a7f3d0;
+    --st-warning-bg: #fffbeb;
+    --st-warning-text: #b45309;
+    --st-warning-border: #fde68a;
+    --st-danger-bg: #fef2f2;
+    --st-danger-text: #b91c1c;
+    --st-danger-border: #fecaca;
+    --st-info-bg: #eff6ff;
+    --st-info-text: #1d4ed8;
+    --st-info-border: #bfdbfe;
+    --st-neutral-bg: #f3f4f6;
+    --st-neutral-text: #4b5563;
+    --st-neutral-border: #e5e7eb;
+}
+
+.saw-detail-wrapper {
+    font-family: 'Roboto', sans-serif;
+    color: var(--p307-dark);
+    box-sizing: border-box;
+    max-width: 100%;
+}
+
+.saw-detail-wrapper * {
+    box-sizing: border-box;
+}
+
+/* LAYOUT - JEDEN SLOUPEC */
+.saw-detail-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+/* HEADER */
+.saw-industrial-header {
+    background: var(--p307-primary);
+    color: #fff;
+    border-radius: 4px 4px 0 0;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 90, 140, .2);
+}
+
+.saw-header-inner {
+    padding: 24px 24px 16px 24px;
+}
+
+.saw-industrial-header h3 {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 28px;
+    text-transform: uppercase;
+    margin: 0 0 8px 0;
+    color: #fff !important;
+    letter-spacing: 1px;
+    line-height: 1.1;
+}
+
+.saw-header-meta {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-size: 13px;
+    opacity: 0.9;
+}
+
+.saw-industrial-stripe {
+    height: 8px;
+    width: 100%;
+    background-image: repeating-linear-gradient(-45deg, var(--p307-primary), var(--p307-primary) 10px, #fff 10px, #fff 20px);
+    border-bottom: 1px solid rgba(0, 0, 0, .1);
+}
+
+/* SECTION */
+.saw-industrial-section {
+    background: #fff;
+    border: 1px solid var(--p307-border);
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .05);
+}
+
+.saw-section-head {
+    background: #fff;
+    padding: 14px 20px;
+    border-bottom: 2px solid var(--p307-gray);
+}
+
+.saw-section-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--p307-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.saw-section-body {
+    padding: 20px;
+}
+
+/* INFO ROWS - LEFT ALIGNED */
+.saw-info-row {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    /* Pevná šířka pro label, zbytek pro hodnotu */
+    gap: 12px;
+    align-items: baseline;
+    /* Zarovnání na řádek textu */
+    border-bottom: 1px dotted #e5e7eb;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+}
+
+.saw-info-row:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.saw-info-label {
+    font-size: 12px;
+    color: #888;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.saw-info-val {
+    font-size: 14px;
+    color: var(--p307-dark);
+    font-weight: 500;
+    text-align: left;
+    /* ✅ ZAROVNÁNÍ DOLEVA */
+}
+
+.saw-info-val a {
+    color: var(--p307-accent);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.saw-info-val a:hover {
+    text-decoration: underline;
+}
+
+/* STATUS BOX */
+.saw-status-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    margin-bottom: 12px;
+}
+
+.st-icon {
+    font-size: 18px;
+}
+
+.st-content {
+    flex: 1;
+}
+
+.st-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 700;
+    opacity: 0.8;
+    margin-bottom: 2px;
+    display: block;
+}
+
+.st-value {
+    font-size: 15px;
+    font-weight: 700;
+    display: block;
+}
+
+.status-success {
+    background: var(--st-success-bg);
+    color: var(--st-success-text);
+    border-color: var(--st-success-border);
+}
+
+.status-warning {
+    background: var(--st-warning-bg);
+    color: var(--st-warning-text);
+    border-color: var(--st-warning-border);
+}
+
+.status-danger {
+    background: var(--st-danger-bg);
+    color: var(--st-danger-text);
+    border-color: var(--st-danger-border);
+}
+
+.status-info {
+    background: var(--st-info-bg);
+    color: var(--st-info-text);
+    border-color: var(--st-info-border);
+}
+
+.status-neutral {
+    background: var(--st-neutral-bg);
+    color: var(--st-neutral-text);
+    border-color: var(--st-neutral-border);
+}
+
+/* TABLES */
+.saw-simple-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.saw-simple-table th {
+    text-align: left;
+    color: #888;
+    font-weight: 700;
+    padding: 8px;
+    border-bottom: 2px solid #eee;
+    font-size: 11px;
+    text-transform: uppercase;
+}
+
+.saw-simple-table td {
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+    color: #333;
+}
+
+/* OTHERS */
+.saw-host-mini {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.saw-progress-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #888;
+    margin-bottom: 8px;
+    margin-top: 16px;
+}
+
+.saw-step-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    padding: 6px 0;
+    border-bottom: 1px dashed #eee;
+}
+
+.saw-cert-row {
+    display: flex;
+    gap: 12px;
+    padding: 10px;
+    background: #fafafa;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    margin-bottom: 8px;
+}
+
+.saw-cert-title {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--p307-primary);
+}
+
+.saw-cert-sub {
+    font-size: 12px;
+    color: #666;
+}
+
+/* Certificates List in Detail */
+.saw-certificates-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.saw-certificate-item {
+    display: flex;
+    gap: 16px;
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #0073aa;
+    transition: all 0.2s ease;
+}
+
+.saw-certificate-item:hover {
+    background: #f0f0f1;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.saw-certificate-icon {
+    font-size: 32px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.saw-certificate-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.saw-certificate-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #2c3338;
+}
+
+.saw-certificate-number,
+.saw-certificate-validity {
+    font-size: 14px;
+    color: #666;
+}
+
+.saw-certificate-validity {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Logs List in Detail */
+.saw-logs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.saw-log-item {
+    display: flex;
+    gap: 16px;
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #46b450;
+}
+
+.saw-log-date {
+    font-size: 15px;
+    font-weight: 700;
+    color: #2c3338;
+    min-width: 100px;
+    flex-shrink: 0;
+}
+
+.saw-log-details {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.saw-log-time {
+    font-size: 14px;
+    color: #666;
+}
+
+.saw-log-time strong {
+    color: #2c3338;
+    font-weight: 600;
+}
+
+.saw-log-notes {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: #fff;
+    border-radius: 4px;
+    font-size: 13px;
+    color: #555;
+    border-left: 2px solid #0073aa;
+}
+
+/* Certificate Form Rows */
+.saw-certificate-row {
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    border-left: 3px solid #0073aa;
+    transition: all 0.2s ease;
+}
+
+.saw-certificate-row:hover {
+    background: #f0f0f1;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Checkbox Label Styling */
+.saw-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 10px 12px;
+    background: #f0f0f1;
+    border-radius: 4px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.saw-checkbox-label:hover {
+    background: #e0e0e1;
+}
+
+.saw-checkbox-label input[type="checkbox"] {
+    margin: 0;
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+}
+
+/* Parent Visit Info */
+.saw-parent-visit-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.saw-parent-visit-info div {
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.saw-parent-visit-info strong {
+    color: #2c3338;
+    font-weight: 600;
+    margin-right: 6px;
+}
+
+/* Empty State */
+.saw-text-muted {
+    color: #666;
+    font-style: italic;
+    text-align: center;
+    padding: 20px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+
+    .saw-certificate-item,
+    .saw-log-item {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .saw-log-date {
+        min-width: auto;
+    }
+}

@@ -31,20 +31,7 @@ class SAW_Module_Content_Controller
         // WordPress media library
         wp_enqueue_media();
         
-        wp_enqueue_style(
-            'saw-content-module',
-            SAW_VISITORS_PLUGIN_URL . 'includes/modules/content/content.css',
-            array(),
-            SAW_VISITORS_VERSION
-        );
-        
-        wp_enqueue_script(
-            'saw-content-module',
-            SAW_VISITORS_PLUGIN_URL . 'includes/modules/content/content.js',
-            array('jquery'),
-            SAW_VISITORS_VERSION,
-            true
-        );
+        SAW_Asset_Manager::enqueue_module('content');
     }
     
     public function index() {
@@ -167,35 +154,37 @@ class SAW_Module_Content_Controller
     public function handle_save() {
         // Debug log
         $log = WP_CONTENT_DIR . '/saw-content-save-debug.log';
-        file_put_contents($log, "\n" . date('H:i:s') . " ==================\n", FILE_APPEND);
-        file_put_contents($log, "POST data: " . print_r($_POST, true) . "\n", FILE_APPEND);
-        file_put_contents($log, "FILES data: " . print_r($_FILES, true) . "\n", FILE_APPEND);
-        
+        SAW_Logger::debug("Handling content upload", [
+            'post' => $_POST,
+            'files' => $_FILES
+        ]);
+
         // Verify nonce
         if (!isset($_POST['saw_content_nonce'])) {
-            file_put_contents($log, "ERROR: Nonce not found in POST\n", FILE_APPEND);
-            wp_die('Nonce not found');
+            SAW_Logger::error("Nonce not found in POST");
+            wp_send_json_error('Bezpečnostní chyba: Chybí nonce');
         }
         
-        if (!wp_verify_nonce($_POST['saw_content_nonce'], 'saw_content_save_action')) {
-            file_put_contents($log, "ERROR: Nonce verification failed\n", FILE_APPEND);
-            wp_die('Security check failed');
+        if (!wp_verify_nonce($_POST['saw_content_nonce'], 'saw_content_action')) {
+            SAW_Logger::error("Nonce verification failed");
+            wp_send_json_error('Bezpečnostní chyba: Neplatný nonce');
         }
         
-        file_put_contents($log, "Nonce OK\n", FILE_APPEND);
+        SAW_Logger::debug("Nonce OK");
         
-        $role = $this->get_current_role();
-        file_put_contents($log, "Role: " . $role . "\n", FILE_APPEND);
+        // Check permissions
+        $role = $this->get_current_role(); // Changed from get_current_user_role() to get_current_role() to match existing method
+        SAW_Logger::debug("Role: " . $role);
         
-        if (!in_array($role, array('admin', 'super_admin', 'manager', 'super_manager'))) {
-            file_put_contents($log, "ERROR: Unauthorized role\n", FILE_APPEND);
-            wp_die('Unauthorized');
+        if (!in_array($role, ['admin', 'super_admin', 'manager', 'super_manager'])) { // Reverted roles to match original logic
+            SAW_Logger::error("Unauthorized role");
+            wp_send_json_error('Nemáte oprávnění pro tuto akci');
         }
         
         // Get customer and branch from context
         global $wpdb;
         $wp_user_id = get_current_user_id();
-        file_put_contents($log, "WP User ID: " . $wp_user_id . "\n", FILE_APPEND);
+        SAW_Logger::debug("WP User ID: " . $wp_user_id);
         
         $saw_user = $wpdb->get_row($wpdb->prepare(
             "SELECT context_customer_id, context_branch_id FROM %i WHERE wp_user_id = %d",
@@ -203,11 +192,11 @@ class SAW_Module_Content_Controller
             $wp_user_id
         ));
         
-        file_put_contents($log, "SAW User: " . print_r($saw_user, true) . "\n", FILE_APPEND);
+        SAW_Logger::debug("SAW User", ['user' => $saw_user]);
         
         if (!$saw_user || !$saw_user->context_customer_id || !$saw_user->context_branch_id) {
-            file_put_contents($log, "ERROR: Missing context\n", FILE_APPEND);
-            wp_die('Chybí kontext zákazníka nebo pobočky');
+            SAW_Logger::error("Missing context");
+            wp_send_json_error('Chyba kontextu: Uživatel nenalezen');
         }
         
         $customer_id = $saw_user->context_customer_id;
@@ -221,20 +210,20 @@ class SAW_Module_Content_Controller
             }
         }
         
-        file_put_contents($log, "Customer: $customer_id, Branch: $branch_id, Language: $language_id\n", FILE_APPEND);
+        SAW_Logger::debug("Customer: $customer_id, Branch: $branch_id, Language: $language_id");
         
         // Get or create content record
         $content_id = $this->model->get_or_create_content($customer_id, $branch_id, $language_id);
-        file_put_contents($log, "Content ID: $content_id\n", FILE_APPEND);
+        SAW_Logger::debug("Content ID: $content_id");
         
         if (!$content_id) {
-            file_put_contents($log, "ERROR: Failed to create content record\n", FILE_APPEND);
-            wp_die('Nepodařilo se vytvořit záznam obsahu');
+            SAW_Logger::error("Failed to create content record");
+            wp_send_json_error('Nepodařilo se vytvořit záznam obsahu');
         }
         
         // Save main content (all roles except manager)
         if ($role !== 'manager') {
-            file_put_contents($log, "Saving main content...\n", FILE_APPEND);
+            SAW_Logger::debug("Saving main content...");
             
             $result = $this->model->save_main_content($content_id, array(
                 'video_url' => sanitize_text_field($_POST['video_url'] ?? ''),
@@ -242,7 +231,7 @@ class SAW_Module_Content_Controller
                 'additional_text' => wp_kses_post($_POST['additional_text'] ?? ''),
             ));
             
-            file_put_contents($log, "Main content save result: " . ($result ? 'SUCCESS' : 'FAILED') . "\n", FILE_APPEND);
+            SAW_Logger::debug("Main content save result: " . ($result ? 'SUCCESS' : 'FAILED'));
             
             // Handle PDF map upload
             if (!empty($_FILES['pdf_map']['name'])) {
@@ -338,10 +327,9 @@ class SAW_Module_Content_Controller
         $redirect_url = remove_query_arg(array('saved', 'error'), wp_get_referer());
         $final_url = add_query_arg('saved', '1', $redirect_url);
         
-        file_put_contents($log, "Redirecting to: $final_url\n", FILE_APPEND);
-        file_put_contents($log, "=================\n\n", FILE_APPEND);
+        SAW_Logger::debug("Redirecting to: $final_url");
         
-        wp_redirect($final_url);
+        wp_send_json_success(['redirect' => $final_url]);
         exit;
     }
     

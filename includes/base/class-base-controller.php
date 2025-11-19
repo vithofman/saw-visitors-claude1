@@ -183,13 +183,13 @@ abstract class SAW_Base_Controller
      * @return array|null Related data grouped by relation key, or null
      */
     protected function load_related_data($item_id) {
-        error_log('[DEBUG] load_related_data called with ID: ' . $item_id);
+        SAW_Logger::debug('load_related_data called with ID: ' . $item_id);
         
         $relations = $this->load_relations_config();
-        error_log('[DEBUG] Relations config: ' . print_r($relations, true));
+        SAW_Logger::debug('Relations config: ' . print_r($relations, true));
         
         if (empty($relations)) {
-            error_log('[DEBUG] No relations config found!');
+            SAW_Logger::debug('No relations config found!');
             return null;
         }
         
@@ -197,10 +197,10 @@ abstract class SAW_Base_Controller
         $related_data = array();
         
         foreach ($relations as $key => $relation) {
-            error_log('[DEBUG] Processing relation: ' . $key);
+            SAW_Logger::debug('Processing relation: ' . $key);
             
             if (empty($relation['entity'])) {
-                error_log('[DEBUG] Missing entity for relation: ' . $key);
+                SAW_Logger::debug('Missing entity for relation: ' . $key);
                 continue;
             }
             
@@ -209,10 +209,10 @@ abstract class SAW_Base_Controller
             
             // Handle junction table (many-to-many)
             if (!empty($relation['junction_table'])) {
-                error_log('[DEBUG] Using junction table for: ' . $key);
+                SAW_Logger::debug('Using junction table for: ' . $key);
                 
                 if (empty($relation['foreign_key']) || empty($relation['local_key'])) {
-                    error_log('[DEBUG] Missing keys for junction table!');
+                    SAW_Logger::debug('Missing keys for junction table!');
                     continue;
                 }
                 
@@ -229,11 +229,11 @@ abstract class SAW_Base_Controller
                     $item_id
                 );
                 
-                error_log('[DEBUG] Junction query: ' . $query);
+                SAW_Logger::debug('Junction query: ' . $query);
             } 
             // Handle direct foreign key
             else {
-                error_log('[DEBUG] Using direct foreign key for: ' . $key);
+                SAW_Logger::debug('Using direct foreign key for: ' . $key);
                 
                 if (empty($relation['foreign_key'])) {
                     continue;
@@ -246,12 +246,12 @@ abstract class SAW_Base_Controller
                     $item_id
                 );
                 
-                error_log('[DEBUG] Direct query: ' . $query);
+                SAW_Logger::debug('Direct query: ' . $query);
             }
             
             $items = $wpdb->get_results($query, ARRAY_A);
             
-            error_log('[DEBUG] Found items: ' . count($items));
+            SAW_Logger::debug('Found items: ' . count($items));
             
             if (empty($items)) {
                 continue;
@@ -278,7 +278,7 @@ abstract class SAW_Base_Controller
             );
         }
         
-        error_log('[DEBUG] Total related data sections: ' . count($related_data));
+        SAW_Logger::debug('Total related data sections: ' . count($related_data));
         
         return empty($related_data) ? null : $related_data;
     }
@@ -446,17 +446,15 @@ if (is_wp_error($result)) {
     exit;
 }
 
-// 🔥 DEBUG: Zkontroluj jestli se vytvořilo
-global $wpdb;
-$verify = $wpdb->get_row($wpdb->prepare(
-    "SELECT * FROM {$wpdb->prefix}saw_branches WHERE id = %d",
+SAW_Logger::debug("AFTER CREATE - ID: $result");
+SAW_Logger::debug("DB prefix: " . $GLOBALS['wpdb']->prefix);
+$verify = $GLOBALS['wpdb']->get_row($GLOBALS['wpdb']->prepare(
+    "SELECT * FROM {$GLOBALS['wpdb']->prefix}saw_branches WHERE id = %d",
     $result
 ), ARRAY_A);
-error_log("🔥 AFTER CREATE - ID: $result");
-error_log("🔥 DB prefix: " . $wpdb->prefix);
-error_log("🔥 Verify query result: " . ($verify ? 'FOUND' : 'NOT FOUND'));
+SAW_Logger::debug("Verify query result: " . ($verify ? 'FOUND' : 'NOT FOUND'));
 if ($verify) {
-    error_log("🔥 Created data: " . print_r($verify, true));
+    SAW_Logger::debug("Created data: " . print_r($verify, true));
 }
 
 $this->after_save($result);
@@ -469,14 +467,6 @@ $this->after_save($result);
                 'name' => $this->get_display_name($item),
             ));
         }
-
-
-        // 🔥 CRITICAL FIX: Warm cache BEFORE redirect (call twice to ensure)
-	$this->model->get_by_id($result, true);
-	$this->model->get_by_id($result, false); // druhé volání použije cache
-
-	// Wait for cache to settle
-	usleep(100000); // 0.1 sekundy
         
         $this->set_flash($this->config['singular'] . ' byl úspěšně vytvořen', 'success');
         wp_redirect(home_url('/admin/' . $this->config['route'] . '/' . $result . '/'));

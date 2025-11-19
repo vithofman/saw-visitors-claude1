@@ -7,9 +7,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Permissions
- * @since       4.10.0
- * @author      SAW Visitors Dev Team
- * @version     1.0.0
+ * @version     4.10.0
  */
 
 /* ================================================
@@ -280,6 +278,7 @@
         transform: translateY(100%);
         opacity: 0;
     }
+
     to {
         transform: translateY(0);
         opacity: 1;
@@ -327,16 +326,16 @@
         flex-direction: column;
         align-items: stretch;
     }
-    
+
     .saw-quick-actions {
         justify-content: center;
         flex-wrap: wrap;
     }
-    
+
     .saw-permissions-matrix {
         overflow-x: auto;
     }
-    
+
     .saw-permissions-table {
         min-width: 900px;
     }
@@ -347,24 +346,24 @@
     .saw-permissions-controls {
         padding: var(--saw-space-lg);
     }
-    
+
     .saw-role-selector {
         flex-direction: column;
         align-items: stretch;
     }
-    
+
     .saw-role-selector .saw-select {
         min-width: 100%;
     }
-    
+
     .saw-quick-actions {
         flex-direction: column;
     }
-    
+
     .saw-quick-actions .saw-btn {
         width: 100%;
     }
-    
+
     .saw-save-indicator {
         bottom: var(--saw-space-lg);
         right: var(--saw-space-lg);

@@ -64,8 +64,8 @@ class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller
         }
         
         // 🔥 DEBUG: Log what arrives from POST
-        error_log('=== TRAINING LANGUAGES DEBUG ===');
-        error_log('POST branches raw: ' . print_r($post['branches'] ?? [], true));
+        SAW_Logger::debug('=== TRAINING LANGUAGES DEBUG ===');
+        SAW_Logger::debug('POST branches raw', ['branches' => $post['branches'] ?? []]);
         
         if (!empty($post['branches'])) {
             $branches = [];
@@ -73,7 +73,7 @@ class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller
                 // 🔥 CRITICAL FIX: Type casting - HTML sends string "1", not integer
                 $is_active = intval($branch_data['active'] ?? 0);
                 
-                error_log("Branch #{$branch_id}: active={$is_active}, is_default=" . intval($branch_data['is_default'] ?? 0));
+                SAW_Logger::debug("Branch #{$branch_id}: active={$is_active}, is_default=" . intval($branch_data['is_default'] ?? 0));
                 
                 if ($is_active === 1) {
                     $branches[intval($branch_id)] = [
@@ -84,13 +84,13 @@ class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller
                 }
             }
             $data['branches'] = $branches;
-            error_log('Processed branches count: ' . count($branches));
+            SAW_Logger::debug('Processed branches count: ' . count($branches));
         } else {
             $data['branches'] = [];
-            error_log('NO branches in POST data!');
+            SAW_Logger::debug('NO branches in POST data!');
         }
         
-        error_log('=== END DEBUG ===');
+        SAW_Logger::debug('=== END DEBUG ===');
         
         return $data;
     }
@@ -109,19 +109,6 @@ class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller
      * Enqueue assets
      */
     protected function enqueue_assets() {
-        wp_enqueue_style(
-            'saw-module-training-languages',
-            SAW_VISITORS_PLUGIN_URL . 'includes/modules/training-languages/styles.css',
-            ['saw-admin-table-component'],
-            '3.9.0'
-        );
-        
-        wp_enqueue_script(
-            'saw-module-training-languages',
-            SAW_VISITORS_PLUGIN_URL . 'includes/modules/training-languages/scripts.js',
-            ['jquery'],
-            '3.9.0',
-            true
-        );
+        SAW_Asset_Manager::enqueue_module('training-languages');
     }
 }

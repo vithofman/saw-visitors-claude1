@@ -14,14 +14,14 @@
  * @since   4.6.1
  */
 
-(function($) {
+(function ($) {
     'use strict';
-    
-    $(document).ready(function() {
+
+    $(document).ready(function () {
         initIcoValidation();
         initZipFormatting();
     });
-    
+
     /**
      * Initialize IČO (Company ID) validation
      * 
@@ -32,32 +32,32 @@
      * @return {void}
      */
     function initIcoValidation() {
-        $('#ico').on('blur', function() {
+        $('#ico').on('blur', function () {
             const $input = $(this);
             const ico = $input.val().trim();
-            
+
             // Skip validation if empty
             if (!ico) {
                 clearInputError($input);
                 return;
             }
-            
+
             // Validate format: exactly 8 digits
             if (!/^\d{8}$/.test(ico)) {
                 showInputError($input, 'IČO musí být 8 číslic!');
                 return;
             }
-            
+
             // Valid
             clearInputError($input);
         });
-        
+
         // Clear error on input
-        $('#ico').on('input', function() {
+        $('#ico').on('input', function () {
             clearInputError($(this));
         });
     }
-    
+
     /**
      * Initialize PSČ (Postal Code) auto-formatting
      * 
@@ -69,18 +69,18 @@
      */
     function initZipFormatting() {
         const $zipInputs = $('input[name="address_zip"], input[name="billing_address_zip"]');
-        
-        $zipInputs.on('blur', function() {
+
+        $zipInputs.on('blur', function () {
             const $input = $(this);
             let zip = $input.val().replace(/\s/g, ''); // Remove all spaces
-            
+
             // Format if exactly 5 digits
             if (zip.length === 5 && /^\d{5}$/.test(zip)) {
                 $input.val(zip.slice(0, 3) + ' ' + zip.slice(3));
             }
         });
     }
-    
+
     /**
      * Show input error message
      * 
@@ -95,18 +95,18 @@
     function showInputError($input, message) {
         // Add error class to input
         $input.addClass('saw-input-error');
-        
+
         // Remove existing error message
         $input.siblings('.saw-input-error-message').remove();
-        
+
         // Create and insert error message
         const $error = $('<div class="saw-input-error-message"></div>').text(message);
         $input.after($error);
-        
+
         // Focus input
         $input.focus();
     }
-    
+
     /**
      * Clear input error message
      * 
@@ -120,5 +120,5 @@
         $input.removeClass('saw-input-error');
         $input.siblings('.saw-input-error-message').remove();
     }
-    
+
 })(jQuery);

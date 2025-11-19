@@ -34,13 +34,7 @@ class SAW_Module_Settings_Controller
     
     public function enqueue_assets() {
         $this->file_uploader->enqueue_assets();
-        
-        wp_enqueue_style(
-            'saw-settings-module',
-            SAW_VISITORS_PLUGIN_URL . 'includes/modules/settings/settings.css',
-            array(),
-            SAW_VISITORS_VERSION
-        );
+        SAW_Asset_Manager::enqueue_module('settings');
     }
     
     public function index() {

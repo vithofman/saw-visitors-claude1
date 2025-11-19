@@ -47,6 +47,36 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
     public function index() {
         $this->render_list_view();
     }
+
+    protected function enqueue_assets() {
+        if (class_exists('SAW_Asset_Manager')) {
+            SAW_Asset_Manager::enqueue_module('users');
+            
+            // Pass existing department IDs for edit mode
+            if (isset($_GET['id']) && isset($_GET['mode']) && $_GET['mode'] === 'edit') {
+                $id = intval($_GET['id']);
+                $item = $this->model->get_by_id($id);
+                
+                $existing_ids = [];
+                if ($item && isset($item['department_ids'])) {
+                    $existing_ids = array_map('intval', $item['department_ids']);
+                } else {
+                    // Fallback direct query
+                    global $wpdb;
+                    $existing_ids = $wpdb->get_col($wpdb->prepare(
+                        "SELECT department_id FROM %i WHERE user_id = %d",
+                        $wpdb->prefix . 'saw_user_departments',
+                        $id
+                    ));
+                    $existing_ids = array_map('intval', $existing_ids);
+                }
+                
+                wp_localize_script('saw-users', 'sawUsers', array(
+                    'existingIds' => $existing_ids
+                ));
+            }
+        }
+    }
     
     /**
      * Prepare form data
@@ -289,7 +319,7 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
                     );
                 } else {
                     if (defined('WP_DEBUG') && WP_DEBUG) {
-                        error_log('[Users] Failed to create setup token for user: ' . $user_id);
+                        SAW_Logger::error('[Users] Failed to create setup token for user: ' . $user_id);
                     }
                 }
             }

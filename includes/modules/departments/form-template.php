@@ -242,32 +242,3 @@ $form_action = $is_edit
         
     </form>
 </div>
-
-<script>
-jQuery(document).ready(function($) {
-    console.log('[Departments Form] Loaded');
-    console.log('[Departments Form] Edit mode:', <?php echo $is_edit ? 'true' : 'false'; ?>);
-    console.log('[Departments Form] Branch from switcher:', <?php echo $context_branch_id ? $context_branch_id : 'null'; ?>);
-    console.log('[Departments Form] Selected branch:', <?php echo $selected_branch_id ? $selected_branch_id : 'null'; ?>);
-    
-    // Form validation
-    $('.saw-department-form').on('submit', function(e) {
-        const branchId = $('#branch_id').val();
-        const name = $('#name').val().trim();
-        
-        if (!branchId) {
-            alert('Vyberte prosím pobočku');
-            $('#branch_id').focus();
-            e.preventDefault();
-            return false;
-        }
-        
-        if (!name) {
-            alert('Vyplňte prosím název oddělení');
-            $('#name').focus();
-            e.preventDefault();
-            return false;
-        }
-    });
-});
-</script>

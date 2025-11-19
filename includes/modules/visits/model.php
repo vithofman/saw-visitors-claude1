@@ -194,7 +194,7 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
         ));
         
         if ($existing) {
-            error_log("[SAW Visits Model] Found existing company ID: {$existing}");
+            SAW_Logger::debug("[SAW Visits Model] Found existing company ID: {$existing}");
             return intval($existing);
         }
         
@@ -212,14 +212,13 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
         );
         
         if (!$result) {
-            error_log("[SAW Visits Model] Failed to create company: " . $wpdb->last_error);
+            SAW_Logger::error("[SAW Visits Model] Failed to create company: " . $wpdb->last_error);
             return new WP_Error('insert_failed', 'Failed to create company: ' . $wpdb->last_error);
-        }
-        
-        $new_id = $wpdb->insert_id;
-        error_log("[SAW Visits Model] Created new company ID: {$new_id}");
-        
-        return $new_id;
+        } else {
+            $new_id = $wpdb->insert_id;
+            SAW_Logger::debug("[SAW Visits Model] Created new company ID: {$new_id}");
+            return $new_id;
+        }  
     }
     
     /**

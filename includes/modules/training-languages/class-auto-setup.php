@@ -46,7 +46,7 @@ class SAW_Training_Languages_Auto_Setup {
         ));
         
         if ($exists) {
-            error_log("[SAW Auto-Setup] Czech already exists for customer #{$customer_id}");
+            SAW_Logger::debug("[SAW Auto-Setup] Czech already exists for customer #{$customer_id}");
             return;
         }
         
@@ -67,7 +67,7 @@ class SAW_Training_Languages_Auto_Setup {
             $language_id = $wpdb->insert_id;
             
             // Log úspěchu
-            error_log("[SAW Auto-Setup] ✓ Created Czech language (ID: {$language_id}) for customer #{$customer_id}");
+            SAW_Logger::debug("[SAW Auto-Setup] ✓ Created Czech language (ID: {$language_id}) for customer #{$customer_id}");
             
             // Aktivovat češtinu pro všechny existující pobočky zákazníka
             $this->activate_czech_for_all_branches($customer_id, $language_id);
@@ -82,7 +82,7 @@ class SAW_Training_Languages_Auto_Setup {
                 );
             }
         } else {
-            error_log("[SAW Auto-Setup] ✗ Failed to create Czech for customer #{$customer_id}: " . $wpdb->last_error);
+            SAW_Logger::error("[SAW Auto-Setup] ✗ Failed to create Czech for customer #{$customer_id}: " . $wpdb->last_error);
         }
     }
     

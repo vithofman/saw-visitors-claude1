@@ -340,38 +340,3 @@ $form_action = $is_edit
         
     </form>
 </div>
-
-<style>
-<?php readfile(SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/visits.css'); ?>
-</style>
-
-<script>
-window.sawVisitExistingHosts = <?php echo json_encode(array_map('intval', $existing_host_ids)); ?>;
-
-// ⭐ NEW: Toggle company field based on radio
-jQuery(document).ready(function($) {
-    const $companyRow = $('.field-company-row');
-    const $companySelect = $('#company_id');
-    
-    function toggleCompanyField() {
-        const hasCompany = $('input[name="has_company"]:checked').val();
-        
-        if (hasCompany === '1') {
-            $companyRow.slideDown();
-            $companySelect.prop('required', true);
-        } else {
-            $companyRow.slideUp();
-            $companySelect.prop('required', false);
-            $companySelect.val(''); // Clear value
-        }
-    }
-    
-    // Toggle on radio change
-    $('input[name="has_company"]').on('change', toggleCompanyField);
-    
-    // Initial state
-    toggleCompanyField();
-});
-
-<?php readfile(SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/visits.js'); ?>
-</script>

@@ -87,7 +87,7 @@ class SAW_Module_Customers_Model extends SAW_Base_Model
         
         if (!$item) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log(sprintf('[CUSTOMERS MODEL] ID not found in DB: %d', $id));
+                SAW_Logger::debug(sprintf('[CUSTOMERS MODEL] ID not found in DB: %d', $id));
             }
             return null;
         }
@@ -131,7 +131,7 @@ class SAW_Module_Customers_Model extends SAW_Base_Model
         set_transient($cache_key, $result, $this->cache_ttl);
         
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log(sprintf('[CUSTOMERS MODEL] List cache MISS - Loaded %d items', count($result['items'] ?? array())));
+            SAW_Logger::debug(sprintf('[CUSTOMERS MODEL] List cache MISS - Loaded %d items', count($result['items'] ?? array())));
         }
         
         return $result;

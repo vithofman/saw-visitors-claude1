@@ -37,18 +37,23 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
     }
     
     public function enqueue_assets() {
-        if (!is_admin()) return;
+        SAW_Asset_Manager::enqueue_module('visits');
         
-        $current_url = $_SERVER['REQUEST_URI'] ?? '';
-        if (strpos($current_url, '/admin/visits') === false) return;
+        // Pass existing hosts to JS if editing
+        $existing_hosts = array();
+        if (isset($_GET['id'])) {
+            global $wpdb;
+            $existing_hosts = $wpdb->get_col($wpdb->prepare(
+                "SELECT user_id FROM {$wpdb->prefix}saw_visit_hosts WHERE visit_id = %d",
+                intval($_GET['id'])
+            ));
+            $existing_hosts = array_map('intval', $existing_hosts);
+        }
         
-        wp_enqueue_style('saw-visits-css', SAW_VISITORS_PLUGIN_URL . 'includes/modules/visits/visits.css', array(), SAW_VISITORS_VERSION);
-        wp_enqueue_script('saw-visits-scripts', SAW_VISITORS_PLUGIN_URL . 'includes/modules/visits/scripts.js', array('jquery'), SAW_VISITORS_VERSION, true);
-        wp_enqueue_script('saw-visits-js', SAW_VISITORS_PLUGIN_URL . 'includes/modules/visits/visits.js', array('jquery'), SAW_VISITORS_VERSION, true);
-        
-        wp_localize_script('saw-visits-js', 'sawVisits', array(
+        wp_localize_script('saw-visits', 'sawVisits', array(
             'ajaxurl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('saw_ajax_nonce'),
+            'existing_hosts' => $existing_hosts
         ));
     }
 

@@ -35,6 +35,12 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
     public function index() {
         $this->render_list_view();
     }
+
+    protected function enqueue_assets() {
+        if (class_exists('SAW_Asset_Manager')) {
+            SAW_Asset_Manager::enqueue_module('companies');
+        }
+    }
     
     protected function prepare_form_data($post) {
         $data = array();
@@ -203,7 +209,10 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
             
             <div class="saw-merge-warning">
                 <strong>⚠️ Tato akce je nevratná!</strong>
-                <p style="margin:4px 0 0 0;font-size:12px">Vybrané firmy budou smazány a jejich návštěvy přesunuty.</p>
+                <p style="margin:4px 0 0 0;font-size:12px">
+                    Vybrané firmy budou <strong>trvale smazány</strong> a jejich veškerá historie (návštěvy, kontakty) 
+                    bude přesunuta pod hlavní firmu <strong><?php echo esc_html($master['name']); ?></strong>.
+                </p>
             </div>
             
             <div class="saw-duplicate-list">
@@ -259,6 +268,9 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
     }
     
     public function ajax_merge_companies() {
+        // ✅ FIX: Start buffering immediately to catch any unexpected output
+        ob_start();
+        
         check_ajax_referer('saw_admin_nonce', 'nonce');
         
         if (!$this->can('delete')) {
@@ -328,6 +340,9 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
         );
         
         error_log('SAW Merge Success: ' . $message);
+        
+        // ✅ FIX: Clean any unexpected output (warnings, notices) before sending JSON
+        ob_end_clean();
         
         wp_send_json_success(array(
             'message' => $message,

@@ -164,32 +164,35 @@ class SAW_Module_Companies_Model extends SAW_Base_Model
         // Remove diacritics
         $name = remove_accents($name);
         
-        // Lowercase FIRST
+        // Lowercase
         $name = mb_strtolower($name, 'UTF-8');
         
-        // Remove ALL special chars and punctuation
-        $name = preg_replace('/[^a-z0-9\s]/', '', $name);
+        // Remove ALL special chars (keep alphanumeric only)
+        // This removes spaces too, so we don't need to handle them in legal forms
+        $name = preg_replace('/[^a-z0-9]/', '', $name);
         
-        // Remove common legal forms (with all space variations)
+        // Legal forms - stripped of spaces
         $legal_forms = array(
             'spolecnostslimitovanymrucenim',
-            'spolecnostslimitovanymrucenim',
-            's r o', 'sro', 'spol s r o',
-            'a s', 'as', 'akciova spolecnost',
-            'v o s', 'vos',
-            'k s', 'ks',
-            'o p s', 'ops',
-            'z s', 'zs',
-            'o s', 'os',
+            'akciovaspolecnost',
+            'spolsro',
+            'sro', 
+            'as', 
+            'vos',
+            'ks',
+            'ops',
+            'zs',
+            'os',
         );
         
+        // Sort by length descending to match longest first
+        usort($legal_forms, function($a, $b) {
+            return strlen($b) - strlen($a);
+        });
+        
         foreach ($legal_forms as $form) {
-            // Remove with spaces
             $name = str_replace($form, '', $name);
         }
-        
-        // Remove ALL remaining spaces
-        $name = str_replace(' ', '', $name);
         
         return trim($name);
     }
@@ -266,10 +269,10 @@ class SAW_Module_Companies_Model extends SAW_Base_Model
             
             $wpdb->query('COMMIT');
             
-            $this->clear_cache();
+            $this->invalidate_cache();
             
-            error_log(sprintf(
-                'SAW: Successfully merged companies %s into %d. Updated %d records, deleted %d companies.',
+            SAW_Logger::debug(sprintf(
+                '[Companies Model] Successfully merged companies %s into %d. Updated %d records, deleted %d companies.',
                 implode(',', $duplicate_ids),
                 $master_id,
                 $total_updated,
@@ -280,7 +283,7 @@ class SAW_Module_Companies_Model extends SAW_Base_Model
             
         } catch (Exception $e) {
             $wpdb->query('ROLLBACK');
-            error_log('SAW Merge Error: ' . $e->getMessage());
+            SAW_Logger::error('SAW Merge Error: ' . $e->getMessage());
             return new WP_Error('merge_failed', 'Failed to merge companies: ' . $e->getMessage());
         }
     }

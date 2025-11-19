@@ -323,58 +323,59 @@ class SAW_Router {
      * @return void
      */
     private function dispatch_module($slug, $segments) {
-    // DEBUG
-    $log = WP_CONTENT_DIR . '/dispatch-module.log';
-    file_put_contents($log, "\n" . date('H:i:s') . " ==================\n", FILE_APPEND);
-    file_put_contents($log, "Dispatching module: $slug\n", FILE_APPEND);
-    file_put_contents($log, "Segments: " . print_r($segments, true) . "\n", FILE_APPEND);
+    SAW_Logger::debug("Dispatching module", [
+        'slug' => $slug,
+        'segments' => $segments
+    ]);
     
     $config = SAW_Module_Loader::load($slug);
     
-    file_put_contents($log, "Config loaded: " . ($config ? 'YES' : 'NO') . "\n", FILE_APPEND);
+    SAW_Logger::debug("Config loaded", ['config_exists' => ($config ? 'YES' : 'NO')]);
     
     if (!$config) {
-        file_put_contents($log, "ERROR: Config not found\n", FILE_APPEND);
+        SAW_Logger::error("Config not found for module", ['slug' => $slug]);
         $this->handle_404();
         return;
     }
     
-    file_put_contents($log, "Building class name from slug: $slug\n", FILE_APPEND);
+    SAW_Logger::debug("Building class name from slug", ['slug' => $slug]);
     
     $parts = explode('-', $slug);
     $parts = array_map('ucfirst', $parts);
     $class_name = implode('_', $parts);
     $controller_class = 'SAW_Module_' . $class_name . '_Controller';
     
-    file_put_contents($log, "Controller class: $controller_class\n", FILE_APPEND);
+    SAW_Logger::debug("Controller class", ['class' => $controller_class]);
     
     if (!class_exists($controller_class)) {
-        file_put_contents($log, "ERROR: Controller class not found\n", FILE_APPEND);
+        SAW_Logger::error("Controller class not found", ['class' => $controller_class, 'slug' => $slug]);
         wp_die('Controller class not found: ' . $controller_class . '<br>Slug: ' . $slug . '<br>Check if controller.php exists and class name matches.');
         return;
     }
     
-    file_put_contents($log, "Creating controller instance...\n", FILE_APPEND);
+    SAW_Logger::debug("Creating controller instance...");
     
     try {
         $controller = new $controller_class();
-        file_put_contents($log, "Controller created successfully\n", FILE_APPEND);
+        SAW_Logger::debug("Controller created successfully");
     } catch (Exception $e) {
-        file_put_contents($log, "ERROR creating controller: " . $e->getMessage() . "\n", FILE_APPEND);
-        file_put_contents($log, "Stack trace: " . $e->getTraceAsString() . "\n", FILE_APPEND);
+        SAW_Logger::error("Error creating controller", [
+            'message' => $e->getMessage(),
+            'stack_trace' => $e->getTraceAsString()
+        ]);
         wp_die('Error creating controller: ' . $e->getMessage());
         return;
     }
     
-    file_put_contents($log, "Parsing sidebar context...\n", FILE_APPEND);
+    SAW_Logger::debug("Parsing sidebar context...");
     
     $sidebar_context = $this->parse_sidebar_context($segments);
     set_query_var('saw_sidebar_context', $sidebar_context);
     
-    file_put_contents($log, "Sidebar context: " . print_r($sidebar_context, true) . "\n", FILE_APPEND);
+    SAW_Logger::debug("Sidebar context", ['context' => $sidebar_context]);
     
     if (!method_exists($controller, 'index')) {
-        file_put_contents($log, "ERROR: index() method not found\n", FILE_APPEND);
+        SAW_Logger::error("index() method not found in controller", ['class' => $controller_class]);
         wp_die('Controller does not have index() method: ' . $controller_class);
         return;
     }
@@ -382,7 +383,7 @@ class SAW_Router {
     if ($sidebar_context['mode'] === null && !empty($segments[0])) {
         if ($segments[0] === 'create' || $segments[0] === 'new') {
             if (method_exists($controller, 'create')) {
-                file_put_contents($log, "Calling create() method\n", FILE_APPEND);
+                SAW_Logger::debug("Calling create() method");
                 $controller->create();
                 return;
             }
@@ -390,23 +391,25 @@ class SAW_Router {
         
         if (($segments[0] === 'edit' || $segments[0] === 'upravit') && !empty($segments[1])) {
             if (method_exists($controller, 'edit')) {
-                file_put_contents($log, "Calling edit() method\n", FILE_APPEND);
+                SAW_Logger::debug("Calling edit() method");
                 $controller->edit(intval($segments[1]));
                 return;
             }
         }
     }
     
-    file_put_contents($log, "Calling index() method\n", FILE_APPEND);
+    SAW_Logger::debug("Calling index() method");
     
     try {
         $controller->index();
-        file_put_contents($log, "index() completed successfully\n", FILE_APPEND);
+        SAW_Logger::debug("index() completed successfully");
     } catch (Throwable $e) {
-        file_put_contents($log, "ERROR in index(): " . $e->getMessage() . "\n", FILE_APPEND);
-        file_put_contents($log, "File: " . $e->getFile() . "\n", FILE_APPEND);
-        file_put_contents($log, "Line: " . $e->getLine() . "\n", FILE_APPEND);
-        file_put_contents($log, "Stack trace: " . $e->getTraceAsString() . "\n", FILE_APPEND);
+        SAW_Logger::error("Error in index() method", [
+            'message' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'stack_trace' => $e->getTraceAsString()
+        ]);
         throw $e;
     }
 }
@@ -421,25 +424,22 @@ class SAW_Router {
      * @return void
      */
     private function handle_admin_route($path) {
-    // ✅ PŘIDEJ DEBUG
-    $log = WP_CONTENT_DIR . '/saw-router-debug.log';
-    file_put_contents($log, "\n" . date('H:i:s') . " ==================\n", FILE_APPEND);
-    file_put_contents($log, "Path: $path\n", FILE_APPEND);
+    SAW_Logger::debug("Handling admin route", ['path' => $path]);
     
     if (!$this->is_logged_in()) {
-        file_put_contents($log, "Not logged in - redirecting\n", FILE_APPEND);
+        SAW_Logger::debug("Not logged in - redirecting to login");
         $this->redirect_to_login('admin');
         return;
     }
     
-    file_put_contents($log, "User logged in\n", FILE_APPEND);
+    SAW_Logger::debug("User logged in");
     
     $clean_path = trim($path, '/');
-    file_put_contents($log, "Clean path: $clean_path\n", FILE_APPEND);
+    SAW_Logger::debug("Clean path", ['clean_path' => $clean_path]);
 
 $saw_page = get_query_var('saw_page');
 if ($saw_page === 'dashboard') {
-    file_put_contents($log, "Dashboard page detected - loading dashboard\n", FILE_APPEND);
+    SAW_Logger::debug("Dashboard page detected - loading dashboard");
     // Load dashboard class
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/dashboard/dashboard.php';
     SAW_Frontend_Dashboard::render_dashboard();
@@ -447,41 +447,41 @@ if ($saw_page === 'dashboard') {
 }
     
     if (empty($clean_path)) {
-        file_put_contents($log, "Empty path - rendering dashboard\n", FILE_APPEND);
+        SAW_Logger::debug("Empty path - rendering dashboard");
         $this->render_page('Admin Dashboard', $path, 'admin', 'dashboard');
         return;
     }
     
     $modules = SAW_Module_Loader::get_all();
-    file_put_contents($log, "Loaded " . count($modules) . " modules\n", FILE_APPEND);
+    SAW_Logger::debug("Loaded modules", ['count' => count($modules)]);
     
     // CRITICAL FIX: Check modules FIRST before treating as admin dashboard
     foreach ($modules as $slug => $config) {
-        file_put_contents($log, "Checking module: $slug\n", FILE_APPEND);
+        SAW_Logger::debug("Checking module", ['slug' => $slug]);
         
         $module_route = ltrim($config['route'] ?? '', '/');
         $module_route_without_admin = str_replace('admin/', '', $module_route);
         
-        file_put_contents($log, "  Module route: $module_route_without_admin\n", FILE_APPEND);
+        SAW_Logger::debug("Module route", ['module_route' => $module_route_without_admin]);
         
         // Match if path starts with module route
         if ($module_route_without_admin === $clean_path || 
             strpos($clean_path . '/', $module_route_without_admin . '/') === 0) {
             
-            file_put_contents($log, "  MATCH! Dispatching to module\n", FILE_APPEND);
+            SAW_Logger::debug("MATCH! Dispatching to module", ['slug' => $slug]);
             
             $route_parts = explode('/', $module_route_without_admin);
             $path_parts = explode('/', $clean_path);
             $remaining_segments = array_slice($path_parts, count($route_parts));
             
-            file_put_contents($log, "  Segments: " . print_r($remaining_segments, true) . "\n", FILE_APPEND);
+            SAW_Logger::debug("Segments", ['segments' => $remaining_segments]);
             
             $this->dispatch_module($slug, $remaining_segments);
             return;
         }
     }
     
-    file_put_contents($log, "No module matched - continuing...\n", FILE_APPEND);
+    SAW_Logger::debug("No module matched - continuing...");
     
     // CRITICAL FIX: If path is numeric ID, it's likely a detail/edit for last visited module
     // This handles shortcuts like /admin/19/edit -> /admin/customers/19/edit

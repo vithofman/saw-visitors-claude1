@@ -45,29 +45,9 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
      * CSS and JS files are DIRECTLY in module folder (not in assets/)
      */
     public function enqueue_assets() {
-        if (!is_admin()) return;
+        SAW_Asset_Manager::enqueue_module('visitors');
         
-        $current_url = $_SERVER['REQUEST_URI'] ?? '';
-        if (strpos($current_url, '/admin/visitors') === false) return;
-        
-        // CSS - visitors.css directly in module root
-        wp_enqueue_style(
-            'saw-visitors-css',
-            SAW_VISITORS_PLUGIN_URL . 'includes/modules/visitors/visitors.css',
-            array(),
-            SAW_VISITORS_VERSION
-        );
-        
-        // JS - visitors.js directly in module root
-        wp_enqueue_script(
-            'saw-visitors-js',
-            SAW_VISITORS_PLUGIN_URL . 'includes/modules/visitors/visitors.js',
-            array('jquery'),
-            SAW_VISITORS_VERSION,
-            true
-        );
-        
-        wp_localize_script('saw-visitors-js', 'sawVisitorsData', array(
+        wp_localize_script('saw-visitors', 'sawVisitorsData', array(
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('saw_ajax_nonce'),
         ));

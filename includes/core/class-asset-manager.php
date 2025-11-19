@@ -39,6 +39,7 @@ class SAW_Asset_Manager {
      */
     const COMPONENT_STYLES = [
         // Core UI components
+        'saw-components'          => 'core/saw-components.css',
         'saw-buttons'             => 'components/buttons.css',
         'saw-forms'               => 'components/forms.css',
         'saw-tables'              => 'components/tables.css',
@@ -181,6 +182,15 @@ class SAW_Asset_Manager {
             'deleteNonce'         => wp_create_nonce('saw_admin_table_nonce')
         ]);
         
+        // Global Validation
+        wp_enqueue_script(
+            'saw-validation',
+            SAW_VISITORS_PLUGIN_URL . 'assets/js/core/saw-validation.js',
+            ['jquery'],
+            SAW_VISITORS_VERSION,
+            true
+        );
+
         // Enqueue component-specific JavaScript
         self::enqueue_component_scripts();
     }
@@ -288,6 +298,41 @@ class SAW_Asset_Manager {
             $module_path
         );
         
+        // 1. Enqueue Module CSS (New Structure)
+        $css_file_rel = 'assets/css/modules/saw-' . $slug . '.css';
+        if (file_exists(SAW_VISITORS_PLUGIN_DIR . $css_file_rel)) {
+            wp_enqueue_style(
+                'saw-module-' . $slug,
+                SAW_VISITORS_PLUGIN_URL . $css_file_rel,
+                ['saw-variables', 'saw-components'],
+                SAW_VISITORS_VERSION
+            );
+        }
+
+        // 2. Enqueue Module JS (New Structure)
+        $js_file_rel = 'assets/js/modules/saw-' . $slug . '.js';
+        if (file_exists(SAW_VISITORS_PLUGIN_DIR . $js_file_rel)) {
+            wp_enqueue_script(
+                'saw-module-' . $slug,
+                SAW_VISITORS_PLUGIN_URL . $js_file_rel,
+                ['jquery', 'saw-app', 'saw-validation'],
+                SAW_VISITORS_VERSION,
+                true
+            );
+            
+            // Localize script
+            wp_localize_script('saw-module-' . $slug, 'saw' . ucfirst($slug), [
+                'ajaxurl'  => admin_url('admin-ajax.php'),
+                'nonce'    => wp_create_nonce('saw_' . $slug . '_ajax'),
+                'entity'   => esc_js($slug),
+                'isEdit'   => isset($_GET['id']) || (isset($_GET['saw_path']) && strpos($_GET['saw_path'], 'edit') !== false),
+                'isNested' => isset($_GET['nested']) ? $_GET['nested'] : '0'
+            ]);
+            
+            return; // Prefer new structure over legacy
+        }
+
+        // 3. Legacy Support (scripts.js in module dir)
         $js_file = $module_path . 'scripts.js';
         
         if (!file_exists($js_file)) {

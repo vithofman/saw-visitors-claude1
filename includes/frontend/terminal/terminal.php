@@ -190,7 +190,7 @@ class SAW_Terminal_Controller {
         
         // ✅ Fallback pokud nejsou žádné jazyky
         if (empty($this->languages)) {
-            error_log("[SAW Terminal] WARNING: No languages found for customer #{$this->customer_id}, branch #{$this->branch_id}");
+            SAW_Logger::warning("[SAW Terminal] WARNING: No languages found for customer #{$this->customer_id}, branch #{$this->branch_id}");
             
             // Hardcoded fallback - čeština
             $this->languages = [
@@ -270,19 +270,20 @@ class SAW_Terminal_Controller {
         $path = get_query_var('saw_path');
         $request_uri = $_SERVER['REQUEST_URI'] ?? '';
         
-        error_log("=== TERMINAL RENDER DEBUG ===");
-        error_log("REQUEST_URI: {$request_uri}");
-        error_log("saw_path query var: '{$path}'");
-        error_log("current_step: {$this->current_step}");
+        SAW_Logger::debug("=== TERMINAL RENDER DEBUG ===");
+        SAW_Logger::debug("REQUEST_URI: {$request_uri}");
+        SAW_Logger::debug("saw_path query var: '{$path}'");
+        SAW_Logger::debug("current_step: {$this->current_step}");
         
+        // Get current flow data
         $flow = $this->session->get('terminal_flow');
-        error_log("Flow data: " . print_r($flow, true));
+        SAW_Logger::debug("Flow data", ['flow' => $flow]);
         
         // ✅ Reset flow when returning to language step via home button
         if ($this->current_step === 'language') {
             // If we have progress but we're back at language, reset
             if (!empty($flow['language']) || !empty($flow['action'])) {
-                error_log("RESETTING FLOW - user returned to language step");
+                SAW_Logger::debug("RESETTING FLOW - user returned to language step");
                 $this->reset_flow();
             }
         }
@@ -297,26 +298,26 @@ class SAW_Terminal_Controller {
         }
         
         // Render appropriate step
-        error_log("=== ROUTING TO STEP: {$this->current_step} ===");
+        SAW_Logger::debug("=== ROUTING TO STEP: {$this->current_step} ===");
         
         switch ($this->current_step) {
             case 'language':
-                error_log("Rendering language selection");
+                SAW_Logger::debug("Rendering language selection");
                 $this->render_language_selection();
                 break;
                 
             case 'action':
-                error_log("Rendering action choice");
+                SAW_Logger::debug("Rendering action choice");
                 $this->render_action_choice();
                 break;
                 
             case 'checkin':
-                error_log("Rendering checkin type");
+                SAW_Logger::debug("Rendering checkin type");
                 $this->render_checkin_type();
                 break;
                 
             case 'checkout':
-                error_log("Rendering checkout method");
+                SAW_Logger::debug("Rendering checkout method");
                 $this->render_checkout_method();
                 break;
                 

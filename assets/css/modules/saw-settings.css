@@ -256,13 +256,14 @@
 }
 
 @media (max-width: 768px) {
+
     .saw-page-header,
     .saw-settings-tabs,
     .saw-settings-content {
         padding-left: 1rem;
         padding-right: 1rem;
     }
-    
+
     .saw-form-row {
         grid-template-columns: 1fr;
     }

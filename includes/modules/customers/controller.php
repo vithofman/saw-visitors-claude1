@@ -345,5 +345,6 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
      */
     protected function enqueue_assets() {
         $this->file_uploader->enqueue_assets();
+        SAW_Asset_Manager::enqueue_module('customers');
     }
 }

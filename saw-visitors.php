@@ -266,6 +266,9 @@ if ( ! defined( 'SAW_DEBUG' ) ) {
     define( 'SAW_DEBUG', false );
 }
 
+// Load Core Classes
+require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-logger.php';
+require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-router.php';
 require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-activator.php';
 require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-deactivator.php';
 
