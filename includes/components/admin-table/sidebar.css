@@ -206,17 +206,18 @@
     color: #fff;
     overflow: hidden;
     margin: 0 !important;
-    margin-left: -24px !important;
-    margin-right: -24px !important;
-    /* Negative margins to go edge-to-edge (compensate for .saw-sidebar-content padding) */
-    width: calc(100% + 48px) !important;
-    /* NO MARGIN - goes from sidebar header to edges */
+    padding: 0 !important;
+    /* NO MARGIN, NO PADDING - blue background goes edge-to-edge */
+    width: 100% !important;
+    box-sizing: border-box !important;
     box-shadow: 0 4px 15px rgba(0, 90, 140, 0.2);
     position: relative;
 }
 
 .saw-detail-header-inner {
     padding: 20px 24px 16px 24px !important;
+    /* Content has padding, but blue background extends edge-to-edge */
+    box-sizing: border-box !important;
 }
 
 .saw-detail-header-title {
