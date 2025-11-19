@@ -938,25 +938,37 @@
        ============================================ */
 
     /**
-     * Initialize all navigation components on document ready
+     * Initialize all navigation components
+     * Can be called on document ready or after AJAX page load
      * 
      * @since 1.0.0
      */
-    $(document).ready(function() {
+    function initNavigationComponents() {
         // Initialize customer switcher
-        if ($('#sawCustomerSwitcherButton').length) {
-            new CustomerSwitcher();
+        if ($('#sawCustomerSwitcherButton').length && !window.customerSwitcher) {
+            window.customerSwitcher = new CustomerSwitcher();
         }
         
         // Initialize branch switcher
-        if ($('#sawBranchSwitcher').length) {
+        if ($('#sawBranchSwitcher').length && !window.branchSwitcher) {
             window.branchSwitcher = new BranchSwitcher();
         }
         
         // Initialize language switcher
-        if ($('#sawLanguageSwitcher').length) {
+        if ($('#sawLanguageSwitcher').length && !window.languageSwitcher) {
             window.languageSwitcher = new LanguageSwitcher();
         }
+    }
+
+    // Initialize on document ready
+    $(document).ready(function() {
+        initNavigationComponents();
+    });
+
+    // Re-initialize after AJAX page load
+    $(document).on('saw:page-loaded saw:scripts-reinitialized', function() {
+        // Reinitialize navigation components after AJAX navigation
+        initNavigationComponents();
     });
 
 })(jQuery);

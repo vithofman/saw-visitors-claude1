@@ -8,8 +8,11 @@
 (function ($) {
     'use strict';
 
-    $(document).ready(function () {
-
+    /**
+     * Initialize content module functionality
+     * Can be called on document ready or after AJAX page load
+     */
+    function initContentModule() {
         // Auto-hide success notification after 4 seconds
         var $notification = $('.saw-success-notification');
         if ($notification.length) {
@@ -39,8 +42,8 @@
             });
         }
 
-        // Přepínání jazykových záložek
-        $('.saw-tab-btn').on('click', function () {
+        // Přepínání jazykových záložek - use event delegation for AJAX-loaded content
+        $(document).off('click', '.saw-tab-btn').on('click', '.saw-tab-btn', function () {
             $('.saw-tab-btn').removeClass('active');
             $(this).addClass('active');
 
@@ -67,14 +70,14 @@
             }, 100);
         });
 
-        // Rozbalovací sekce
-        $('.saw-section-header').on('click', function (e) {
+        // Rozbalovací sekce - use event delegation for AJAX-loaded content
+        $(document).off('click', '.saw-section-header').on('click', '.saw-section-header', function (e) {
             e.preventDefault();
             $(this).closest('.saw-collapsible-section').toggleClass('open');
         });
 
-        // Rozbalovací sekce oddělení
-        $(document).on('click', '.saw-department-header', function (e) {
+        // Rozbalovací sekce oddělení - already using event delegation
+        $(document).off('click', '.saw-department-header').on('click', '.saw-department-header', function (e) {
             e.preventDefault();
             $(this).closest('.saw-department-subsection').toggleClass('open');
         });
@@ -176,11 +179,29 @@
             $(this).siblings('.saw-validation-error').remove();
         });
 
-        // Odstranit dokument (pro dynamicky přidané)
-        $(document).on('click', '.saw-remove-document', function () {
-            $(this).closest('.saw-document-item').remove();
-        });
+        // Odstranit dokument (pro dynamicky přidané) - already using event delegation
+        // No change needed
+    }
 
+    // Initialize on document ready
+    $(document).ready(function () {
+        initContentModule();
+    });
+
+    // Re-initialize after AJAX page load
+    $(document).on('saw:page-loaded saw:module-reinit', function (e, data) {
+        // Check if we're on content page
+        const isContentPage = $('#saw-app-content').find('.saw-content-form').length > 0;
+        
+        // Only reinitialize if content module is active
+        if (data && typeof data === 'object' && (data.active_menu === 'content' || isContentPage)) {
+            console.log('[Content Module] Re-initializing after AJAX load');
+            initContentModule();
+        } else if (isContentPage) {
+            // If no data provided but we're on content page, initialize anyway
+            console.log('[Content Module] Re-initializing after AJAX load (detected by DOM)');
+            initContentModule();
+        }
     });
 
 })(jQuery);

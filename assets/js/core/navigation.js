@@ -195,11 +195,18 @@
                             console.log('📦 JS assets:', response.data.assets.js.map(function(a) { return a.handle + ' (' + a.src + ')'; }));
                         }
                         loadAssetsFromResponse(response.data.assets, function() {
-                            reinitializePageScripts();
-                            const moduleName = detectModuleFromURL(url);
-                            if (moduleName) {
-                                reinitializeModuleScripts(moduleName);
-                            }
+                            console.log('🔧 Assets loaded callback - reinitializing scripts...');
+                            // CRITICAL: Wait a bit for all scripts to actually execute
+                            setTimeout(function() {
+                                reinitializePageScripts();
+                                const moduleName = detectModuleFromURL(url);
+                                if (moduleName) {
+                                    console.log('🔧 Reinitializing module:', moduleName);
+                                    reinitializeModuleScripts(moduleName);
+                                }
+                                // Also trigger page-loaded event to ensure all modules reinitialize
+                                $(document).trigger('saw:page-loaded', [response.data]);
+                            }, 100);
                         });
                     } else {
                         console.warn('⚠️ No assets in response!');
@@ -342,6 +349,7 @@
     }
 
     function reinitializePageScripts() {
+        console.log('🔄 Reinitializing page scripts...');
         let scriptsExecuted = 0;
 
         $('#saw-app-content').find('script').each(function() {
@@ -377,6 +385,7 @@
             }
         });
 
+        console.log('✅ Executed ' + scriptsExecuted + ' inline scripts');
         $(document).trigger('saw:scripts-reinitialized');
         
         // CRITICAL: Re-initialize SPA navigation handlers after AJAX content load
@@ -716,6 +725,7 @@
 
         let cssLoaded = 0;
         let jsLoaded = 0;
+        let pendingJsCount = 0; // CRITICAL: Define at function scope, not inside JS block
         const totalCss = assets.css ? assets.css.length : 0;
         const totalJs = assets.js ? assets.js.length : 0;
         const total = totalCss + totalJs;
@@ -729,9 +739,17 @@
         }
 
         function checkComplete() {
-            if (cssLoaded === totalCss && jsLoaded === totalJs) {
-                console.log('  ✅ All assets loaded (' + totalCss + ' CSS, ' + totalJs + ' JS)');
-                if (callback) callback();
+            // CRITICAL: Only call callback when ALL assets are loaded AND no JS files are pending
+            if (cssLoaded === totalCss && jsLoaded === totalJs && pendingJsCount === 0) {
+                console.log('  ✅ All assets loaded (' + totalCss + ' CSS, ' + totalJs + ' JS, ' + pendingJsCount + ' pending)');
+                if (callback) {
+                    // Small delay to ensure all scripts have executed
+                    setTimeout(function() {
+                        callback();
+                    }, 50);
+                }
+            } else {
+                console.log('  ⏳ Assets loading... (CSS: ' + cssLoaded + '/' + totalCss + ', JS: ' + jsLoaded + '/' + totalJs + ', Pending: ' + pendingJsCount + ')');
             }
         }
 
@@ -788,6 +806,7 @@
             
             // Track which assets are already loaded (by handle)
             const loadedAssets = {};
+            // pendingJsCount is already defined at function scope above
             
             // Helper function to check if all dependencies are loaded
             function areDepsLoaded(asset) {
@@ -836,7 +855,10 @@
             // Helper function to load a single JS asset
             function loadJsAsset(index) {
                 if (index >= sortedJs.length) {
-                    // All assets processed
+                    // All assets processed - check if we're done
+                    if (pendingJsCount === 0) {
+                        checkComplete();
+                    }
                     return;
                 }
                 
@@ -851,8 +873,7 @@
                     console.log('  ⏭️ JS already loaded:', asset.handle, asset.src);
                     loadedAssets[asset.handle] = true;
                     jsLoaded++;
-                    checkComplete();
-                    // Continue with next asset
+                    // Continue with next asset immediately (no async loading needed)
                     loadJsAsset(index + 1);
                     return;
                 }
@@ -866,7 +887,8 @@
                     return;
                 }
                 
-                // Load the asset
+                // Load the asset - mark as pending
+                pendingJsCount++;
                 console.log('  📥 Loading JS:', asset.handle, asset.src);
                 $.getScript(asset.src)
                     .done(function() {
@@ -875,7 +897,7 @@
                         loadedAssets[asset.handle] = true;
                         console.log('  ✅ Loaded JS:', asset.handle, asset.src);
                         jsLoaded++;
-                        checkComplete();
+                        pendingJsCount--;
                         // Continue with next asset
                         loadJsAsset(index + 1);
                     })
@@ -883,7 +905,7 @@
                         console.warn('  ⚠️ Failed to load JS:', asset.handle, asset.src);
                         loadedAssets[asset.handle] = true; // Mark as processed even if failed
                         jsLoaded++;
-                        checkComplete();
+                        pendingJsCount--;
                         // Continue with next asset even on failure
                         loadJsAsset(index + 1);
                     });
