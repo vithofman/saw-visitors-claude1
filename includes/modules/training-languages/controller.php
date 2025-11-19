@@ -109,6 +109,6 @@ class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller
      * Enqueue assets
      */
     protected function enqueue_assets() {
-        SAW_Asset_Manager::enqueue_module('training-languages');
+        SAW_Asset_Loader::enqueue_module('training-languages');
     }
 }

@@ -112,15 +112,15 @@ class SAW_Component_Customer_Switcher {
     /**
      * Enqueue assets early (in constructor)
      *
-     * DEPRECATED: Assets are now loaded globally via SAW_Asset_Manager.
+     * DEPRECATED: Assets are now loaded globally via SAW_Asset_Loader.
      * This method is kept for backwards compatibility but does nothing.
      *
      * @since 4.7.0
-     * @deprecated 8.0.0 Use SAW_Asset_Manager instead
+     * @deprecated 8.0.0 Use SAW_Asset_Loader instead
      * @return void
      */
     private function enqueue_assets_early() {
-        // Assets are now enqueued globally via SAW_Asset_Manager
+        // Assets are now enqueued globally via SAW_Asset_Loader
         // to prevent FOUC on first page load. Do not re-enqueue here.
         return;
     }

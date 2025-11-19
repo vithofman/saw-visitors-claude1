@@ -49,8 +49,8 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
     }
 
     protected function enqueue_assets() {
-        if (class_exists('SAW_Asset_Manager')) {
-            SAW_Asset_Manager::enqueue_module('users');
+        if (class_exists('SAW_Asset_Loader')) {
+            SAW_Asset_Loader::enqueue_module('users');
             
             // Pass existing department IDs for edit mode
             if (isset($_GET['id']) && isset($_GET['mode']) && $_GET['mode'] === 'edit') {

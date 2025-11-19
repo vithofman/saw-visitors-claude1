@@ -37,8 +37,8 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
     }
 
     protected function enqueue_assets() {
-        if (class_exists('SAW_Asset_Manager')) {
-            SAW_Asset_Manager::enqueue_module('companies');
+        if (class_exists('SAW_Asset_Loader')) {
+            SAW_Asset_Loader::enqueue_module('companies');
         }
     }
     

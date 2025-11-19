@@ -45,7 +45,7 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
      * CSS and JS files are DIRECTLY in module folder (not in assets/)
      */
     public function enqueue_assets() {
-        SAW_Asset_Manager::enqueue_module('visitors');
+        SAW_Asset_Loader::enqueue_module('visitors');
         
         wp_localize_script('saw-visitors', 'sawVisitorsData', array(
             'ajaxUrl' => admin_url('admin-ajax.php'),

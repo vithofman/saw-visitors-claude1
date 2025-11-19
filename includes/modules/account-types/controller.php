@@ -67,8 +67,8 @@ class SAW_Module_Account_Types_Controller extends SAW_Base_Controller
         }
         
         // Module CSS handled by SAW_Module_Style_Manager
-        if (class_exists('SAW_Asset_Manager')) {
-            SAW_Asset_Manager::enqueue_module('account-types');
+        if (class_exists('SAW_Asset_Loader')) {
+            SAW_Asset_Loader::enqueue_module('account-types');
         }
     }
     

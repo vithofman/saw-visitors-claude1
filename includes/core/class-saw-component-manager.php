@@ -54,13 +54,13 @@ class SAW_Component_Manager {
     /**
      * Private constructor
      *
-     * Initializes component manager and registers WordPress hooks.
+     * Component registration is handled by Bootstrap.
      *
      * @since 1.0.0
+     * @since 5.0.0 Registration moved to Bootstrap
      */
     private function __construct() {
-        // Register all components on init hook (priority 5 - before default 10)
-        $this->register_all_components();
+        // Registration handled by Bootstrap
     }
     
     /**

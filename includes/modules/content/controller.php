@@ -31,7 +31,7 @@ class SAW_Module_Content_Controller
         // WordPress media library
         wp_enqueue_media();
         
-        SAW_Asset_Manager::enqueue_module('content');
+        SAW_Asset_Loader::enqueue_module('content');
     }
     
     public function index() {

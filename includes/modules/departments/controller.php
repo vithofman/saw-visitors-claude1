@@ -60,6 +60,6 @@ class SAW_Module_Departments_Controller extends SAW_Base_Controller
     }
     
     protected function enqueue_assets() {
-        SAW_Asset_Manager::enqueue_module('departments');
+        SAW_Asset_Loader::enqueue_module('departments');
     }
 }

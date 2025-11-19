@@ -37,7 +37,7 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
     }
     
     public function enqueue_assets() {
-        SAW_Asset_Manager::enqueue_module('visits');
+        SAW_Asset_Loader::enqueue_module('visits');
         
         // Pass existing hosts to JS if editing
         $existing_hosts = array();

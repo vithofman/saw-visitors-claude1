@@ -1,11 +1,11 @@
 <?php
 /**
- * Asset Manager - Centralized CSS/JS Asset Loading
+ * Asset Loader - Centralized CSS/JS Asset Loading
  *
  * @package    SAW_Visitors
  * @subpackage Core
  * @since      1.0.0
- * @version    1.3.0 - Added select-create component
+ * @version    5.0.0 - Renamed from SAW_Asset_Manager to SAW_Asset_Loader
  */
 
 if (!defined('ABSPATH')) {
@@ -16,8 +16,9 @@ if (!defined('ABSPATH')) {
  * Manages asset enqueueing for global and module-specific resources
  *
  * @since 1.0.0
+ * @since 5.0.0 Renamed from SAW_Asset_Manager to SAW_Asset_Loader
  */
-class SAW_Asset_Manager {
+class SAW_Asset_Loader {
     
     /**
      * Core CSS files to enqueue
@@ -57,7 +58,7 @@ class SAW_Asset_Manager {
         'saw-branch-switcher'     => '../includes/components/branch-switcher/branch-switcher.css',
         'saw-language-switcher'   => '../includes/components/language-switcher/language-switcher.css',
         'saw-selectbox'           => '../includes/components/selectbox/saw-selectbox.css',
-	'saw-select-create'       => '../includes/components/select-create/select-create.css',
+        'saw-select-create'       => '../includes/components/select-create/select-create.css',
         
         // Admin Table component
         'saw-admin-table-sidebar' => '../includes/components/admin-table/sidebar.css',
@@ -257,10 +258,10 @@ class SAW_Asset_Manager {
                 'path' => 'includes/components/selectbox/saw-selectbox.js',
                 'deps' => ['jquery', 'saw-app'],
             ],
-	    'saw-select-create' => [
-		'path' => 'includes/components/select-create/select-create.js',
-		'deps' => ['jquery', 'saw-app'],
-	    ],
+            'saw-select-create' => [
+                'path' => 'includes/components/select-create/select-create.js',
+                'deps' => ['jquery', 'saw-app'],
+            ],
             'saw-admin-table-sidebar' => [
                 'path' => 'includes/components/admin-table/sidebar.js',
                 'deps' => ['jquery', 'saw-app'],
@@ -393,3 +394,4 @@ class SAW_Asset_Manager {
         );
     }
 }
+

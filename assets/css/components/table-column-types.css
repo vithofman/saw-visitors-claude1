@@ -149,3 +149,13 @@
 .saw-admin-table td strong {
     font-weight: 600;
 }
+
+/* ============================================
+   BOLD CELL (for first column emphasis)
+   ============================================ */
+.saw-table-cell-bold,
+.saw-admin-table td.saw-table-cell-bold,
+.saw-admin-table .saw-table-cell-bold {
+    font-weight: 600 !important;
+    color: var(--saw-gray-900);
+}

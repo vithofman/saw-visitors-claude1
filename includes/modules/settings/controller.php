@@ -34,7 +34,7 @@ class SAW_Module_Settings_Controller
     
     public function enqueue_assets() {
         $this->file_uploader->enqueue_assets();
-        SAW_Asset_Manager::enqueue_module('settings');
+        SAW_Asset_Loader::enqueue_module('settings');
     }
     
     public function index() {

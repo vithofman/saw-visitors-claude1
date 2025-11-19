@@ -107,7 +107,7 @@ class SAW_Component_Selectbox {
      * Enqueue selectbox assets
      * 
      * Loads CSS and JavaScript files for the selectbox component.
-     * Relies on SAW_Asset_Manager for sawGlobal initialization.
+     * Relies on SAW_Asset_Loader for sawGlobal initialization.
      * Called from constructor to ensure assets load before wp_head().
      * 
      * @since 4.6.1
@@ -130,7 +130,7 @@ class SAW_Component_Selectbox {
         );
         
         // CRITICAL FIX v4.6.3: Only ensure saw-app is enqueued
-        // Do NOT call wp_localize_script - sawGlobal is already initialized by SAW_Asset_Manager
+        // Do NOT call wp_localize_script - sawGlobal is already initialized by SAW_Asset_Loader
         // Duplicate wp_localize_script calls overwrite previous data and cause nonce issues
         if (!wp_script_is('saw-app', 'enqueued')) {
             wp_enqueue_script('saw-app');

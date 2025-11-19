@@ -272,7 +272,7 @@ class SAW_Module_Permissions_Controller extends SAW_Base_Controller {
      * @return void
      */
     protected function enqueue_assets() {
-        SAW_Asset_Manager::enqueue_module('permissions');
+        SAW_Asset_Loader::enqueue_module('permissions');
         
         // Localize script data
         wp_localize_script(

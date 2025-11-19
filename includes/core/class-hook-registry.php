@@ -1,6 +1,6 @@
 <?php
 /**
- * SAW Hook Loader - WordPress Hook Registration Manager
+ * SAW Hook Registry - WordPress Hook Registration Manager
  *
  * Centralizes registration of all WordPress hooks and filters.
  * Provides a queue system for hooks that are registered at once.
@@ -8,6 +8,7 @@
  * @package    SAW_Visitors
  * @subpackage Core
  * @since      1.0.0
+ * @since      5.0.0 Renamed from SAW_Loader to SAW_Hook_Registry
  */
 
 if (!defined('ABSPATH')) {
@@ -15,11 +16,12 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Hook loader class
+ * Hook registry class
  *
  * @since 1.0.0
+ * @since 5.0.0 Renamed from SAW_Loader to SAW_Hook_Registry
  */
-class SAW_Loader {
+class SAW_Hook_Registry {
 
     /**
      * Registered actions queue
@@ -127,3 +129,4 @@ class SAW_Loader {
         }
     }
 }
+
