@@ -119,6 +119,7 @@ class SAW_Component_Admin_Table {
             'detail_tab' => 'overview',
             'form_item' => null,
             'sidebar_mode' => null,
+            'related_data' => null,
         );
         
         return wp_parse_args($config, $defaults);
@@ -736,14 +737,16 @@ class SAW_Component_Admin_Table {
         }
         
         $can_create = function_exists('saw_can') ? saw_can('create', $this->entity) : true;
+        
         if (!$can_create) {
             return;
         }
+        
         ?>
         <a href="<?php echo esc_url($this->config['create_url']); ?>" 
-           class="saw-floating-btn" 
+           class="saw-floating-button" 
            title="<?php echo esc_attr($this->config['add_new']); ?>">
-            <span class="dashicons dashicons-plus-alt"></span>
+            <span class="dashicons dashicons-plus"></span>
         </a>
         <?php
     }

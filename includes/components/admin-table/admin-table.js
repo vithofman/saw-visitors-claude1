@@ -53,78 +53,49 @@
                 id: id,
                 mode: mode
             },
+            beforeSend: function () {
+                console.log('⏳ Loading sidebar content...');
+            },
             success: function (response) {
-                console.log('✅ AJAX Success:', response);
-                $wrapper.removeClass('loading');
+                console.log('✅ AJAX Response received:', response);
 
-                if (!response.success) {
-                    console.error('❌ AJAX returned success: false');
-                    fallbackToFullReload(buildUrl(entity, id, mode));
-                    return;
-                }
-
-                if (!response.data || !response.data.html || response.data.html.length < 100) {
-                    console.error('❌ Invalid HTML response');
-                    fallbackToFullReload(buildUrl(entity, id, mode));
-                    return;
-                }
-
-                console.log('📦 Received HTML length:', response.data.html.length);
-
-                // Smooth content update with fade animation
-                if (isExisting) {
-                    // Updating existing sidebar - smooth fade transition
-                    console.log('🔄 Updating existing sidebar content');
-                    $wrapper.addClass('is-loading');
-
-                    setTimeout(function () {
-                        $wrapper.html(response.data.html);
-                        $('.saw-admin-table-split').addClass('has-sidebar');
-                        updateActiveRow(id, false); // Don't scroll when just updating
-
-                        setTimeout(function () {
-                            $wrapper.removeClass('is-loading');
-                            if (!$wrapper.hasClass('active')) {
-                                $wrapper.addClass('active');
-                            }
-                            // Trigger re-initialization event
-                            $(document).trigger('saw-sidebar-loaded');
-                        }, 50);
-                    }, 200); // Smooth fade duration
-                } else {
-                    // New sidebar - slide in from right
-                    console.log('🆕 Opening new sidebar');
+                if (response.success && response.data && response.data.html) {
                     $wrapper.html(response.data.html);
+                    $wrapper.removeClass('loading').addClass('active');
+
+                    // Add padding to table when sidebar opens
                     $('.saw-admin-table-split').addClass('has-sidebar');
-                    updateActiveRow(id, true);
 
-                    setTimeout(function () {
-                        $wrapper.addClass('active');
-                        $(document).trigger('saw-sidebar-loaded');
-                    }, 10);
+                    // Update active row highlight
+                    updateActiveRow(id, false);
+
+                    // Update browser URL
+                    const newUrl = buildUrl(entity, id, mode);
+                    console.log('🔗 Updating URL to:', newUrl);
+
+                    window.history.pushState(
+                        {
+                            id: id,
+                            mode: mode,
+                            entity: entity,
+                            url: newUrl,
+                            sawAdminTable: true
+                        },
+                        '',
+                        newUrl
+                    );
+
+                    console.log('✅ Sidebar opened successfully');
+                } else {
+                    console.error('❌ Invalid AJAX response:', response);
+                    $wrapper.removeClass('loading');
+                    alert('Chyba při načítání detailu. Zkuste to prosím znovu.');
                 }
-
-                // Update URL via History API
-                const newUrl = buildUrl(entity, id, mode);
-                console.log('🔗 Updating URL to:', newUrl);
-                window.history.pushState(
-                    {
-                        id: id,
-                        mode: mode,
-                        entity: entity,
-                        url: newUrl,
-                        sawAdminTable: true
-                    },
-                    '',
-                    newUrl
-                );
-
-                console.log('✅ Sidebar opened successfully');
             },
             error: function (xhr, status, error) {
                 console.error('❌ AJAX Error:', { xhr, status, error });
                 $wrapper.removeClass('loading');
-                fallbackToFullReload(buildUrl(entity, id, mode));
+                alert('Chyba připojení. Zkuste to prosím znovu.');
             }
         });
     };
@@ -289,11 +260,11 @@
     }
 
     /**
- * Parse URL to extract entity, id and mode
- *
- * @param {string} url URL to parse
- * @return {object} Parsed data
- */
+     * Parse URL to extract entity, id and mode
+     *
+     * @param {string} url URL to parse
+     * @return {object} Parsed data
+     */
     function parseUrl(url) {
         const path = url.split('/').filter(function (p) { return p; });
 

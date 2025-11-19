@@ -1264,6 +1264,7 @@ protected function can($action) {
             $template_path = SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/detail-sidebar.php';
             require $template_path;
         } else {
+            // Edit mode - render form, then wrap in sidebar template
             $is_edit = true;
             $GLOBALS['saw_sidebar_form'] = true;
             
@@ -1284,10 +1285,17 @@ protected function can($action) {
                 $lookups
             ));
             
+            // Render form first
             $form_path = $this->config['path'] . 'form-template.php';
             require $form_path;
             
+            $form_html = ob_get_clean();
+            
             unset($GLOBALS['saw_sidebar_form']);
+            
+            // Now wrap form HTML in edit sidebar template
+            ob_start();
+            require SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/edit-sidebar.php';
         }
         
         $sidebar_content = ob_get_clean();

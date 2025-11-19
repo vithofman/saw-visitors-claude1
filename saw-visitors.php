@@ -52,6 +52,10 @@ if (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-component-man
 // Registrace AJAX handlerů
 // ========================================
 
+// ✅ Universal AJAX dispatcher pro všechny moduly (visitors, visits, companies, atd.)
+require_once SAW_VISITORS_PLUGIN_DIR . 'universal-ajax-dispatcher.php';
+saw_register_universal_ajax_handlers();
+
 // ✅ KRITICKÉ: Univerzální nested sidebar handler pro Select-Create komponentu
 add_action('wp_ajax_saw_load_nested_sidebar', function() {
     check_ajax_referer('saw_ajax_nonce', 'nonce');

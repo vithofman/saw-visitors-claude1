@@ -25,21 +25,9 @@
             const $link = $(this);
             const href = $link.attr('href');
             
-            // Skip AJAX-handled sidebar edit buttons
-            if ($link.hasClass('saw-edit-ajax')) {
-                console.log(' SPA: Skipping - AJAX edit button');
-                return;
-            }
-            
-            // Skip sidebar close buttons (handled by admin-table.js)
-            if ($link.hasClass('saw-sidebar-close')) {
-                console.log(' SPA: Skipping - Sidebar close button');
-                return;
-            }
-            
             // Skip related item links (handled by sidebar.js)
-            if ($link.hasClass('saw-related-item-link') && !$link.hasClass('saw-spa-link')) {
-                console.log('⏭️ SPA: Skipping - related item link');
+if ($link.hasClass('saw-related-item-link') && !$link.hasClass('saw-spa-link')) {
+    console.log('⏭️ SPA: Skipping - related item link');
                 return;
             }
             
@@ -65,6 +53,7 @@
             if (href.startsWith('#')) return;
             if ($link.attr('target') === '_blank') return;
             if ($link.data('no-ajax') === true) return;
+            if ($link.hasClass('saw-sidebar-close')) return;
 
             console.log('🔗 SPA Navigation: Intercepted link:', href);
             e.preventDefault();
