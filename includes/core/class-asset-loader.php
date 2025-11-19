@@ -41,30 +41,18 @@ class SAW_Asset_Loader {
     const COMPONENT_STYLES = [
         // Core UI components
         'saw-base-components'     => 'components/base-components.css',
-        'saw-buttons'             => 'components/buttons.css',
-        'saw-forms'               => 'components/forms.css',
-        'saw-tables'              => 'components/tables.css',
+        'saw-forms'               => 'components/forms.css', // Consolidated: forms, buttons, selectbox, select-create, color-picker, search-input
+        'saw-tables'              => 'components/tables.css', // Consolidated: tables, table-column-types, admin-table, admin-table-sidebar
         'saw-badges'              => 'components/badges.css',
         'saw-modals'              => 'components/modals.css',
         'saw-alerts'              => 'components/alerts.css',
         'saw-cards'               => 'components/cards.css',
-        'saw-search'              => 'components/search-input.css',
         'saw-pagination'          => 'components/pagination.css',
-        'saw-table-column-types'  => 'components/table-column-types.css',
         'saw-detail-sections'     => 'components/detail-sections.css',
         
         // Interactive components (CRITICAL: Must load globally to prevent FOUC)
-        'saw-customer-switcher'   => 'components/customer-switcher.css',
-        'saw-branch-switcher'     => 'components/branch-switcher.css',
-        'saw-language-switcher'   => 'components/language-switcher.css',
-        'saw-selectbox'           => 'components/selectbox.css',
-        'saw-select-create'       => 'components/select-create.css',
-        'saw-color-picker'        => 'components/color-picker.css',
+        'saw-navigation'           => 'components/navigation.css', // Consolidated: customer-switcher, branch-switcher, language-switcher
         'saw-file-upload'         => 'components/file-upload.css',
-        
-        // Admin Table component
-        'saw-admin-table'         => 'components/admin-table.css',
-        'saw-admin-table-sidebar' => 'components/admin-table-sidebar.css',
     ];
     
     /**
@@ -74,9 +62,7 @@ class SAW_Asset_Loader {
      * @var array
      */
     const LAYOUT_STYLES = [
-        'saw-grid'       => 'layout/grid.css',
-        'saw-containers' => 'layout/containers.css',
-        'saw-spacing'    => 'layout/spacing.css'
+        'saw-layout' => 'layout/layout.css'
     ];
     
     /**

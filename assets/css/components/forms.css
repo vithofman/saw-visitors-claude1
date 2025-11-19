@@ -1,9 +1,15 @@
 /**
- * SAW Forms - v4.0 FINAL
+ * SAW Forms - Consolidated
+ * 
+ * Contains: Forms, Buttons, Selectbox, Select-Create, Color Picker, Search Input
  * 
  * @package SAW_Visitors
- * @version 4.0.0
+ * @version 5.0.0
  */
+
+/* ============================================
+   FORM BASICS
+   ============================================ */
 
 .saw-form-container {
     max-width: 100%;
@@ -368,6 +374,250 @@
     height: 18px;
 }
 
+/* ============================================
+   BUTTONS
+   ============================================ */
+
+.saw-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--saw-space-sm);
+    padding: var(--saw-button-padding);
+    border: var(--saw-border-width-thick) solid transparent;
+    border-radius: var(--saw-border-radius-lg);
+    font-size: var(--saw-font-size-base);
+    font-weight: var(--saw-font-weight-semibold);
+    line-height: var(--saw-line-height-tight);
+    cursor: pointer;
+    transition: all var(--saw-transition-base);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.saw-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.saw-btn-primary {
+    background: var(--saw-primary);
+    color: #ffffff;
+    border-color: var(--saw-primary);
+}
+
+.saw-btn-primary:hover:not(:disabled) {
+    background: var(--saw-primary-hover);
+    border-color: var(--saw-primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.saw-btn-secondary {
+    background: var(--saw-gray-100);
+    color: var(--saw-gray-700);
+    border-color: var(--saw-gray-300);
+}
+
+.saw-btn-secondary:hover:not(:disabled) {
+    background: #ffffff;
+    border-color: var(--saw-primary);
+    color: var(--saw-primary);
+}
+
+.saw-btn-success {
+    background: var(--saw-success);
+    color: #ffffff;
+    border-color: var(--saw-success);
+}
+
+.saw-btn-success:hover:not(:disabled) {
+    background: var(--saw-success-hover);
+    border-color: var(--saw-success-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.saw-btn-danger {
+    background: var(--saw-danger);
+    color: #ffffff;
+    border-color: var(--saw-danger);
+}
+
+.saw-btn-danger:hover:not(:disabled) {
+    background: var(--saw-danger-hover);
+    border-color: var(--saw-danger-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.saw-btn-warning {
+    background: var(--saw-warning);
+    color: #ffffff;
+    border-color: var(--saw-warning);
+}
+
+.saw-btn-warning:hover:not(:disabled) {
+    background: var(--saw-warning-hover);
+    border-color: var(--saw-warning-hover);
+}
+
+.saw-btn-ghost {
+    background: transparent;
+    color: var(--saw-gray-700);
+    border-color: var(--saw-gray-300);
+}
+
+.saw-btn-ghost:hover:not(:disabled) {
+    background: var(--saw-gray-50);
+    border-color: var(--saw-gray-400);
+}
+
+.saw-btn-sm {
+    padding: 6px 12px;
+    font-size: var(--saw-font-size-sm);
+    height: 32px;
+}
+
+.saw-btn-lg {
+    padding: 12px 32px;
+    font-size: var(--saw-font-size-lg);
+    height: 48px;
+}
+
+.saw-btn-icon-only {
+    padding: 0;
+    width: var(--saw-button-height);
+    height: var(--saw-button-height);
+}
+
+.saw-btn-icon-only.saw-btn-sm {
+    width: 32px;
+    height: 32px;
+}
+
+.saw-btn-icon-only.saw-btn-lg {
+    width: 48px;
+    height: 48px;
+}
+
+.saw-btn .dashicons {
+    font-size: var(--saw-icon-size-base);
+    width: var(--saw-icon-size-base);
+    height: var(--saw-icon-size-base);
+    line-height: 1;
+}
+
+.saw-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    margin: 0 var(--saw-space-xs);
+    border: none;
+    border-radius: var(--saw-border-radius-lg);
+    background: transparent;
+    cursor: pointer;
+    transition: all var(--saw-transition-base);
+    text-decoration: none;
+}
+
+.saw-action-btn .dashicons {
+    font-size: var(--saw-icon-size-base);
+    width: var(--saw-icon-size-base);
+    height: var(--saw-icon-size-base);
+    color: var(--saw-gray-500);
+}
+
+.saw-action-edit:hover {
+    background: var(--saw-primary-light);
+}
+
+.saw-action-edit:hover .dashicons {
+    color: var(--saw-primary);
+}
+
+.saw-action-delete:hover {
+    background: var(--saw-danger-light);
+}
+
+.saw-action-delete:hover .dashicons {
+    color: var(--saw-danger);
+}
+
+.saw-action-view:hover {
+    background: var(--saw-info-light);
+}
+
+.saw-action-view:hover .dashicons {
+    color: var(--saw-info);
+}
+
+.saw-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--saw-space-sm);
+    padding: 10px 20px;
+    background: var(--saw-gray-100);
+    border: var(--saw-border-width) solid var(--saw-border-color);
+    border-radius: var(--saw-border-radius-md);
+    font-size: var(--saw-font-size-base);
+    font-weight: var(--saw-font-weight-medium);
+    color: var(--saw-gray-700);
+    text-decoration: none;
+    transition: all var(--saw-transition-base);
+}
+
+.saw-back-btn:hover {
+    background: #ffffff;
+    border-color: var(--saw-primary);
+    color: var(--saw-primary);
+}
+
+.saw-btn-group {
+    display: flex;
+    gap: var(--saw-space-md);
+    flex-wrap: wrap;
+}
+
+.saw-floating-btn {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--saw-primary);
+    border: none;
+    border-radius: 50%;
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4);
+    cursor: pointer;
+    transition: all var(--saw-transition-base);
+    z-index: 1000;
+    text-decoration: none;
+}
+
+.saw-floating-btn .dashicons {
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
+    color: #ffffff;
+}
+
+.saw-floating-btn:hover {
+    background: var(--saw-primary-hover);
+    transform: scale(1.1);
+    box-shadow: 0 6px 24px rgba(37, 99, 235, 0.5);
+}
+
+.saw-floating-btn:active {
+    transform: scale(0.95);
+}
+
 .saw-button {
     display: inline-flex;
     align-items: center;
@@ -419,6 +669,590 @@
     height: 18px;
 }
 
+/* Enterprise Button - GREEN */
+.saw-button-primary {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #ffffff;
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+}
+
+.saw-button-primary:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    transform: translateY(-1px);
+}
+
+.saw-button-primary:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(16, 185, 129, 0.2);
+}
+
+.saw-button-secondary {
+    background: #ffffff;
+    color: #374151;
+    border: 1.5px solid #d1d5db;
+}
+
+.saw-button-secondary:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+    color: #1f2937;
+}
+
+.saw-button-secondary:active {
+    background: #f3f4f6;
+}
+
+/* ============================================
+   SELECTBOX
+   ============================================ */
+
+.saw-selectbox-component {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
+
+.saw-selectbox-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--saw-space-sm);
+    width: 100%;
+    padding: var(--saw-space-sm) var(--saw-space-md);
+    background: #ffffff;
+    border: var(--saw-border-width) solid var(--saw-border-color);
+    border-radius: var(--saw-border-radius-sm);
+    font-size: var(--saw-font-size-sm);
+    font-weight: 400;
+    color: var(--saw-gray-900);
+    cursor: pointer;
+    transition: all var(--saw-transition-fast);
+    text-align: left;
+}
+
+.saw-selectbox-trigger:hover {
+    border-color: var(--saw-primary);
+    background: var(--saw-gray-50);
+}
+
+.saw-selectbox-trigger:focus {
+    outline: none;
+    border-color: var(--saw-primary);
+    box-shadow: 0 0 0 1px var(--saw-primary);
+}
+
+.saw-selectbox-component.open .saw-selectbox-trigger {
+    border-color: var(--saw-primary);
+    box-shadow: 0 0 0 1px var(--saw-primary);
+}
+
+.saw-selectbox-trigger-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.saw-selectbox-trigger-icon {
+    flex-shrink: 0;
+    transition: transform var(--saw-transition-fast);
+}
+
+.saw-selectbox-component.open .saw-selectbox-trigger-icon {
+    transform: rotate(180deg);
+}
+
+.saw-selectbox-dropdown {
+    position: absolute;
+    top: calc(100% + var(--saw-space-xs));
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    border: var(--saw-border-width) solid var(--saw-border-color);
+    border-radius: var(--saw-border-radius-sm);
+    box-shadow: var(--saw-shadow-lg);
+    display: none;
+    flex-direction: column;
+    max-height: 320px;
+    z-index: 1000;
+}
+
+.saw-selectbox-component.open .saw-selectbox-dropdown {
+    display: flex;
+}
+
+.saw-selectbox-search {
+    padding: var(--saw-space-sm);
+    border-bottom: var(--saw-border-width) solid var(--saw-gray-100);
+    position: relative;
+}
+
+.saw-selectbox-search-input {
+    width: 100%;
+    padding: var(--saw-space-sm) var(--saw-space-md) var(--saw-space-sm) 36px;
+    border: var(--saw-border-width) solid var(--saw-border-color);
+    border-radius: var(--saw-border-radius-sm);
+    font-size: var(--saw-font-size-xs);
+    transition: border-color var(--saw-transition-fast);
+}
+
+.saw-selectbox-search-input:focus {
+    outline: none;
+    border-color: var(--saw-primary);
+    box-shadow: 0 0 0 1px var(--saw-primary);
+}
+
+.saw-selectbox-search-icon {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--saw-gray-600);
+    font-size: 16px;
+    pointer-events: none;
+}
+
+.saw-selectbox-options {
+    overflow-y: auto;
+    max-height: 280px;
+}
+
+.saw-selectbox-options::-webkit-scrollbar {
+    width: 8px;
+}
+
+.saw-selectbox-options::-webkit-scrollbar-track {
+    background: var(--saw-gray-50);
+}
+
+.saw-selectbox-options::-webkit-scrollbar-thumb {
+    background: var(--saw-gray-300);
+    border-radius: var(--saw-border-radius-sm);
+}
+
+.saw-selectbox-options::-webkit-scrollbar-thumb:hover {
+    background: var(--saw-gray-400);
+}
+
+.saw-selectbox-option {
+    padding: 10px var(--saw-space-md);
+    cursor: pointer;
+    transition: background var(--saw-transition-fast);
+    border-bottom: var(--saw-border-width) solid var(--saw-gray-50);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.saw-selectbox-option:last-child {
+    border-bottom: none;
+}
+
+.saw-selectbox-option:hover {
+    background: var(--saw-gray-50);
+}
+
+.saw-selectbox-option.active {
+    background: var(--saw-primary-light);
+    color: var(--saw-primary);
+}
+
+.saw-selectbox-option.hidden {
+    display: none;
+}
+
+.saw-selectbox-option-check {
+    color: var(--saw-primary);
+    font-weight: bold;
+    width: 16px;
+    flex-shrink: 0;
+}
+
+.saw-selectbox-option-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: var(--saw-border-radius-sm);
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.saw-selectbox-option-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.saw-selectbox-option-label {
+    font-size: var(--saw-font-size-sm);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.saw-selectbox-option-meta {
+    font-size: var(--saw-font-size-xs);
+    color: var(--saw-gray-600);
+    margin-top: 2px;
+}
+
+.saw-selectbox-loading {
+    padding: 32px var(--saw-space-2xl);
+    text-align: center;
+    color: var(--saw-gray-600);
+}
+
+.saw-selectbox-loading .spinner {
+    margin: 0 auto var(--saw-space-md);
+    float: none;
+}
+
+.saw-selectbox-empty {
+    padding: 32px var(--saw-space-2xl);
+    text-align: center;
+    color: var(--saw-gray-600);
+    font-size: var(--saw-font-size-sm);
+}
+
+/* ============================================
+   SELECT-CREATE
+   ============================================ */
+
+.saw-select-create-component {
+    margin-bottom: 20px;
+}
+
+.saw-select-create-wrapper {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+
+.saw-select-create-wrapper select {
+    flex: 1;
+    min-width: 0;
+}
+
+.saw-inline-create-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+    padding: 10px 16px;
+    background: #f5f5f5;
+    border: 1px solid #d4d4d4;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #171717;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    line-height: 1.5;
+    height: auto;
+}
+
+.saw-inline-create-btn:hover {
+    background: #e5e5e5;
+    border-color: #0066cc;
+    color: #0066cc;
+}
+
+.saw-inline-create-btn:active {
+    transform: translateY(1px);
+}
+
+.saw-inline-create-btn:focus {
+    outline: 2px solid #0066cc;
+    outline-offset: 2px;
+}
+
+.saw-sidebar[data-is-nested="1"] {
+    box-shadow: 0 0 60px rgba(0, 0, 0, 0.6) !important;
+}
+
+.saw-sidebar-wrapper[data-is-nested="1"] {
+    position: fixed !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 720px !important;
+    z-index: auto;
+}
+
+.saw-sidebar[data-is-nested="1"]::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.1);
+    z-index: -1;
+    pointer-events: none;
+}
+
+.saw-field-updated {
+    animation: fieldHighlight 2s ease;
+}
+
+@keyframes fieldHighlight {
+    0%, 100% { 
+        background: transparent; 
+        border-color: #d4d4d4;
+    }
+    15%, 85% { 
+        background: #d4edda; 
+        border-color: #28a745;
+    }
+}
+
+.saw-inline-create-btn.loading {
+    opacity: 0.6;
+    cursor: wait;
+    pointer-events: none;
+}
+
+.saw-inline-create-btn.loading::after {
+    content: '...';
+    margin-left: 4px;
+}
+
+.saw-form-group .saw-select-create-component {
+    margin-bottom: 0;
+}
+
+.saw-form-group .saw-select-create-component .saw-label {
+    margin-bottom: 8px;
+    display: block;
+}
+
+.saw-select-create-component .saw-label.saw-required::after {
+    content: ' *';
+    color: #dc3545;
+    font-weight: 700;
+}
+
+.saw-select-create-component.has-error select {
+    border-color: #dc3545;
+}
+
+.saw-select-create-component.has-error .saw-inline-create-btn {
+    border-color: #dc3545;
+}
+
+.saw-select-create-component .error-message {
+    margin-top: 6px;
+    font-size: 13px;
+    color: #dc3545;
+}
+
+/* ============================================
+   COLOR PICKER
+   ============================================ */
+
+.saw-color-picker-component {
+    width: 100%;
+}
+
+.saw-color-picker-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.saw-color-picker {
+    width: 56px;
+    height: 56px;
+    border: 2px solid #dcdcde;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 4px;
+    background: #fff;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.saw-color-picker::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.saw-color-picker::-webkit-color-swatch {
+    border: none;
+    border-radius: 8px;
+}
+
+.saw-color-picker::-moz-color-swatch {
+    border: none;
+    border-radius: 8px;
+}
+
+.saw-color-picker:hover {
+    border-color: #0073aa;
+    box-shadow: 0 4px 12px rgba(0, 115, 170, 0.15);
+    transform: translateY(-2px);
+}
+
+.saw-color-picker:focus {
+    outline: 2px solid #0073aa;
+    outline-offset: 2px;
+}
+
+.saw-color-value {
+    flex: 1;
+    max-width: 180px;
+    padding: 14px 16px;
+    border: 2px solid #dcdcde;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.2s ease;
+    text-align: center;
+    background: #f9fafb;
+    cursor: default;
+}
+
+.saw-color-picker-component .saw-help-text {
+    display: block;
+    margin-top: 8px;
+    font-size: 13px;
+    color: #6b7280;
+    line-height: 1.5;
+}
+
+/* ============================================
+   SEARCH INPUT
+   ============================================ */
+
+.saw-search-info {
+    background: var(--saw-warning-light);
+    padding: var(--saw-space-md) var(--saw-space-lg);
+    border-radius: var(--saw-border-radius-md);
+    margin-bottom: var(--saw-space-lg);
+    color: #92400e;
+    font-size: var(--saw-font-size-sm);
+    width: 100%;
+}
+
+.saw-search-info strong {
+    font-weight: 600;
+    color: #78350f;
+}
+
+.saw-search-info a {
+    color: var(--saw-primary);
+    text-decoration: none;
+    margin-left: var(--saw-space-md);
+    font-weight: 500;
+}
+
+.saw-search-info a:hover {
+    text-decoration: underline;
+}
+
+.saw-search-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-sm);
+    width: 100%;
+    max-width: 500px;
+    margin: 0;
+    padding: 0;
+}
+
+.saw-search-input {
+    flex: 1;
+    padding: 10px 44px 10px var(--saw-space-md);
+    border: var(--saw-border-width) solid var(--saw-border-color);
+    border-radius: var(--saw-border-radius-md);
+    font-size: var(--saw-font-size-sm);
+    line-height: 1.4;
+    transition: all var(--saw-transition-fast);
+    background: #ffffff;
+}
+
+.saw-search-input:focus {
+    outline: none;
+    border-color: var(--saw-primary);
+    box-shadow: 0 0 0 1px var(--saw-primary);
+}
+
+.saw-search-input::placeholder {
+    color: var(--saw-gray-400);
+}
+
+.saw-search-icon {
+    display: none;
+}
+
+.saw-search-clear {
+    position: absolute;
+    right: var(--saw-space-sm);
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    padding: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--saw-border-radius-sm);
+    transition: background var(--saw-transition-fast);
+    z-index: 2;
+}
+
+.saw-search-clear:hover {
+    background: var(--saw-gray-100);
+}
+
+.saw-search-clear .dashicons {
+    color: var(--saw-gray-600);
+    font-size: 18px;
+}
+
+.saw-search-clear:hover .dashicons {
+    color: var(--saw-danger);
+}
+
+.saw-search-submit {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px var(--saw-space-lg);
+    background: var(--saw-primary);
+    color: #ffffff;
+    border: var(--saw-border-width) solid var(--saw-primary);
+    border-radius: var(--saw-border-radius-md);
+    font-size: var(--saw-font-size-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--saw-transition-fast);
+    white-space: nowrap;
+    margin: 0;
+}
+
+.saw-search-submit:hover {
+    background: var(--saw-primary-hover);
+    border-color: var(--saw-primary-hover);
+}
+
+.saw-search-submit:active {
+    transform: scale(0.98);
+}
+
+.saw-search-submit .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
 @media (max-width: 768px) {
     .saw-form-row {
         grid-template-columns: 1fr;
@@ -460,4 +1294,139 @@
         min-width: auto;
         width: 100%;
     }
+    
+    .saw-floating-btn {
+        bottom: 20px;
+        right: 20px;
+        width: 56px;
+        height: 56px;
+    }
+    
+    .saw-floating-btn .dashicons {
+        font-size: 24px;
+        width: 24px;
+        height: 24px;
+    }
+    
+    .saw-selectbox-trigger {
+        font-size: 16px;
+        padding: 10px var(--saw-space-md);
+    }
+    
+    .saw-selectbox-dropdown {
+        max-height: 280px;
+    }
+    
+    .saw-selectbox-options {
+        max-height: 240px;
+    }
+    
+    .saw-select-create-wrapper {
+        flex-direction: column;
+    }
+    
+    .saw-inline-create-btn {
+        width: 100%;
+        text-align: center;
+    }
+    
+    .saw-color-picker-wrapper {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .saw-color-value {
+        max-width: 100%;
+    }
+    
+    .saw-color-picker {
+        width: 100%;
+        max-width: 200px;
+    }
+    
+    .saw-search-wrapper {
+        max-width: 100%;
+        width: 100%;
+    }
+    
+    .saw-search-input {
+        font-size: 16px;
+        padding: var(--saw-space-md) 44px var(--saw-space-md) var(--saw-space-md);
+    }
+    
+    .saw-search-submit {
+        padding: var(--saw-space-md) 14px;
+        min-width: 44px;
+        justify-content: center;
+    }
+    
+    .saw-search-submit-text {
+        display: none;
+    }
+    
+    .saw-search-submit .dashicons {
+        margin: 0;
+    }
 }
+
+@media (max-width: 480px) {
+    .saw-selectbox-dropdown {
+        position: fixed;
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        max-height: 70vh;
+        border-radius: var(--saw-border-radius-lg) var(--saw-border-radius-lg) 0 0;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    .saw-select-create-wrapper {
+        gap: 8px;
+    }
+    
+    .saw-inline-create-btn {
+        padding: 10px 12px;
+        font-size: 13px;
+    }
+}
+
+@media (prefers-contrast: high) {
+    .saw-inline-create-btn {
+        border-width: 2px;
+    }
+    
+    .saw-inline-create-btn:hover,
+    .saw-inline-create-btn:focus {
+        border-color: #000;
+        color: #000;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .saw-inline-create-btn,
+    .saw-field-updated {
+        transition: none;
+        animation: none;
+    }
+    
+    .saw-inline-create-btn:active {
+        transform: none;
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    .saw-inline-create-btn {
+        background: #2a2a2a;
+        border-color: #404040;
+        color: #e5e5e5;
+    }
+    
+    .saw-inline-create-btn:hover {
+        background: #333;
+        border-color: #4d94ff;
+        color: #4d94ff;
+    }
+}
+

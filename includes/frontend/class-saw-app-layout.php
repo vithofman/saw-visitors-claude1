@@ -311,12 +311,9 @@ class SAW_App_Layout {
         // Only include critical ones needed by admin-table
         $component_styles = array(
             'saw-base-components' => 'components/base-components.css',
-            'saw-buttons' => 'components/buttons.css',
-            'saw-forms' => 'components/forms.css',
-            'saw-tables' => 'components/tables.css',
-            'saw-table-column-types' => 'components/table-column-types.css',
-            'saw-admin-table' => 'components/admin-table.css',
-            'saw-admin-table-sidebar' => 'components/admin-table-sidebar.css',
+            'saw-forms' => 'components/forms.css', // Consolidated: forms, buttons, selectbox, select-create, color-picker, search-input
+            'saw-tables' => 'components/tables.css', // Consolidated: tables, table-column-types, admin-table, admin-table-sidebar
+            'saw-navigation' => 'components/navigation.css', // Consolidated: customer-switcher, branch-switcher, language-switcher
         );
         
         foreach ($component_styles as $handle => $path) {
