@@ -162,7 +162,7 @@
 /* Collapsible Sections */
 .saw-collapsible-section {
     margin-bottom: 1.5rem;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--saw-border-color);
     border-radius: 12px;
     overflow: hidden;
     background: var(--saw-form-section-bg);
@@ -199,7 +199,7 @@
 
 .saw-section-icon {
     font-size: 0.75rem;
-    color: #94a3b8;
+    color: var(--saw-text-secondary);
     transition: transform 0.2s ease;
     display: flex;
     align-items: center;
@@ -236,7 +236,7 @@
 .saw-section-content {
     display: none;
     padding: 2rem;
-    background: #fff;
+    background: var(--saw-form-section-bg);
 }
 
 .saw-collapsible-section.open .saw-section-content {
@@ -250,19 +250,19 @@
 }
 
 .saw-section-departments .saw-section-header {
-    background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
+    background: var(--saw-form-section-header-bg);
     padding: 1.75rem 2rem;
 }
 
 .saw-section-departments.open .saw-section-header {
-    background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
-    border-bottom: 2px solid #93c5fd;
+    background: var(--saw-form-section-header-bg);
+    border-bottom: 2px solid var(--saw-primary);
 }
 
 .saw-section-departments .saw-section-title {
     font-size: 1.25rem;
     font-weight: 700;
-    color: #1e40af;
+    color: var(--saw-primary);
 }
 
 .saw-departments-intro {
@@ -284,7 +284,7 @@
 /* Department Subsections - Better Visual Hierarchy */
 .saw-department-subsection {
     margin-bottom: 1.5rem;
-    border: 2px solid #e5e7eb;
+    border: 2px solid var(--saw-border-color);
     border-radius: 10px;
     overflow: hidden;
     background: var(--saw-form-section-bg);
@@ -319,7 +319,7 @@
 
 .saw-dept-icon {
     font-size: 0.625rem;
-    color: #94a3b8;
+    color: var(--saw-text-secondary);
     transition: transform 0.2s ease;
     flex-shrink: 0;
     display: flex;
@@ -327,7 +327,7 @@
     justify-content: center;
     width: 18px;
     height: 18px;
-    background: #f1f5f9;
+    background: var(--saw-bg-tertiary);
     border-radius: 4px;
 }
 
@@ -360,7 +360,7 @@
 .saw-department-content {
     display: none;
     padding: 2rem 1.75rem;
-    background: #fafbfc;
+    background: var(--saw-form-section-bg);
 }
 
 .saw-department-subsection.open .saw-department-content {
@@ -856,7 +856,7 @@
 
 /* CRITICAL: File input in document items must be visible */
 /* REMOVED DUPLICATE - using definition above */
-    background: #fff;
+    background: var(--saw-form-section-bg);
 }
 
 .saw-remove-document {

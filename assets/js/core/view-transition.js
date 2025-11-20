@@ -138,7 +138,7 @@
                 width: 100%;
                 height: 100%;
                 z-index: 999999;
-                background: white;
+                background: var(--saw-body-bg);
                 overflow: hidden;
             `;
 

@@ -52,6 +52,7 @@ class SAW_Asset_Loader {
         'saw-forms'               => 'components/forms.css', // Consolidated: forms, buttons, selectbox, select-create, color-picker, search-input
         'saw-tables'              => 'components/tables.css', // Consolidated: tables, table-column-types, admin-table, admin-table-sidebar
         'saw-feedback'            => 'components/feedback.css', // Consolidated: alerts, badges, cards, modals, pagination, detail-sections
+        'saw-admin-table-detail'  => 'components/admin-table-detail.css', // Global styles for admin-table detail sidebars (all modules)
         
         // Interactive components (CRITICAL: Must load globally to prevent FOUC)
         'saw-navigation'           => 'components/navigation.css', // Consolidated: customer-switcher, branch-switcher, language-switcher
@@ -135,9 +136,14 @@ class SAW_Asset_Loader {
     private static function enqueue_component_styles() {
         foreach (self::COMPONENT_STYLES as $handle => $path) {
             // CRITICAL: Component styles depend on base-components (except base-components itself)
-            $deps = ($handle === 'saw-base-components') 
-                ? ['saw-variables'] 
-                : ['saw-variables', 'saw-base-components'];
+            if ($handle === 'saw-base-components') {
+                $deps = ['saw-variables'];
+            } elseif ($handle === 'saw-admin-table-detail') {
+                // Admin table detail depends on tables component
+                $deps = ['saw-variables', 'saw-base-components', 'saw-tables'];
+            } else {
+                $deps = ['saw-variables', 'saw-base-components'];
+            }
             self::enqueue_style($handle, 'css/' . $path, $deps);
         }
     }
@@ -554,6 +560,31 @@ class SAW_Asset_Loader {
                 ['saw-variables', 'saw-base-components'],
                 SAW_VISITORS_VERSION
             );
+        }
+        
+        // Enqueue global admin-table detail CSS (used by all modules with admin-table)
+        $admin_table_detail_css = 'assets/css/components/admin-table-detail.css';
+        if (file_exists(SAW_VISITORS_PLUGIN_DIR . $admin_table_detail_css)) {
+            wp_enqueue_style(
+                'saw-admin-table-detail',
+                SAW_VISITORS_PLUGIN_URL . $admin_table_detail_css,
+                ['saw-tables'],
+                filemtime(SAW_VISITORS_PLUGIN_DIR . $admin_table_detail_css)
+            );
+        }
+        
+        // Enqueue module-specific merge CSS (e.g., companies-merge)
+        if ($slug === 'companies') {
+            $merge_css = 'assets/css/modules/companies/companies-merge.css';
+            
+            if (file_exists(SAW_VISITORS_PLUGIN_DIR . $merge_css)) {
+                wp_enqueue_style(
+                    'saw-companies-merge',
+                    SAW_VISITORS_PLUGIN_URL . $merge_css,
+                    ['saw-module-companies', 'saw-admin-table-detail', 'saw-feedback'],
+                    filemtime(SAW_VISITORS_PLUGIN_DIR . $merge_css)
+                );
+            }
         }
 
         // 2. Enqueue Module JS (New Structure - check both old and new paths)

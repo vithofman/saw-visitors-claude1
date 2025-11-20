@@ -363,7 +363,7 @@
     display: flex;
     gap: 14px;
     padding-top: 32px;
-    border-top: 2px solid #f3f4f6;
+    border-top: 2px solid var(--saw-border-color);
     margin-top: 40px;
 }
 
@@ -383,7 +383,7 @@
 .saw-page-title {
     font-size: 28px;
     font-weight: 700;
-    color: #111827;
+    color: var(--saw-text-primary);
     margin: 0;
 }
 
@@ -984,7 +984,7 @@
     border-radius: 6px;
     font-size: 14px;
     font-weight: 500;
-    color: #171717;
+    color: var(--saw-text-primary);
     cursor: pointer;
     transition: all 0.2s ease;
     line-height: 1.5;
@@ -1428,8 +1428,8 @@
     
     .saw-inline-create-btn:hover,
     .saw-inline-create-btn:focus {
-        border-color: #000;
-        color: #000;
+        border-color: var(--saw-text-primary);
+        color: var(--saw-text-primary);
     }
 }
 

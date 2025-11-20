@@ -270,10 +270,11 @@
     --saw-table-panel-bg: var(--saw-bg-secondary);
     --saw-table-controls-bg: var(--saw-bg-secondary);
     --saw-table-header-bg: var(--saw-bg-tertiary);
+    /* Jemnější barvy pro řádky tabulky - méně kontrastní */
     --saw-table-row-bg: var(--saw-bg-secondary);
-    --saw-table-row-hover-bg: var(--saw-bg-tertiary);
-    --saw-table-row-active-bg: var(--saw-primary-light);
-    --saw-table-row-active-hover-bg: rgba(59, 130, 246, 0.2);
+    --saw-table-row-hover-bg: rgba(30, 41, 59, 0.5);
+    --saw-table-row-active-bg: rgba(59, 130, 246, 0.15);
+    --saw-table-row-active-hover-bg: rgba(59, 130, 246, 0.25);
     --saw-switcher-button-bg: var(--saw-bg-tertiary);
     --saw-switcher-button-hover-bg: var(--saw-bg-quaternary);
     --saw-switcher-dropdown-bg: var(--saw-bg-tertiary);

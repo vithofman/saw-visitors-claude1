@@ -183,7 +183,7 @@
 .saw-section-title {
     font-size: var(--saw-font-size-2xl);
     font-weight: var(--saw-font-weight-semibold);
-    color: var(--saw-gray-900);
+    color: var(--saw-text-primary);
     margin-bottom: var(--saw-space-xs);
 }
 

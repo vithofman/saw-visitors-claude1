@@ -242,8 +242,8 @@ body, html {
 }
 
 .saw-user-menu-toggle:hover {
-    background: #f9fafb;
-    border-color: #d1d5db;
+    background: var(--saw-bg-tertiary);
+    border-color: var(--saw-border-color);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
@@ -371,7 +371,7 @@ body, html {
 
 .saw-user-dropdown-divider {
     height: 1px;
-    background: #e5e7eb;
+    background: var(--saw-border-color);
     margin: 8px 0;
 }
 
@@ -380,7 +380,7 @@ body, html {
     align-items: center;
     gap: 12px;
     padding: 12px 16px;
-    color: #4b5563;
+    color: var(--saw-text-primary);
     text-decoration: none;
     transition: all 0.15s;
     font-size: 14px;
@@ -388,7 +388,7 @@ body, html {
 }
 
 .saw-dropdown-item:hover {
-    background: #f9fafb;
+    background: var(--saw-bg-tertiary);
     color: var(--saw-text-primary);
 }
 
@@ -491,7 +491,7 @@ body, html {
 .saw-sidebar-mobile-customer-name {
     font-size: 14px;
     font-weight: 600;
-    color: #111827;
+    color: var(--saw-text-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -682,14 +682,14 @@ body, html {
 
 .saw-footer-brand {
     font-weight: 600;
-    color: #111827;
+    color: var(--saw-text-primary);
     letter-spacing: -0.01em;
 }
 
 .saw-footer-version {
-    color: #9ca3af;
+    color: var(--saw-text-muted);
     font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-    background: #e5e7eb;
+    background: var(--saw-bg-tertiary);
     padding: 3px 8px;
     border-radius: 4px;
     font-size: 11px;
@@ -781,7 +781,7 @@ body, html {
     margin: 0 !important;
     font-size: 24px;
     font-weight: 600;
-    color: #111827;
+    color: var(--saw-text-primary);
     line-height: 1.2;
     text-align: left !important;
 }
@@ -1043,7 +1043,7 @@ body, html {
 .saw-stat-value {
     font-size: 32px;
     font-weight: 700;
-    color: #111827;
+    color: var(--saw-text-primary);
     margin-bottom: 4px;
 }
 

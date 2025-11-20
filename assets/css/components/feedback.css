@@ -229,7 +229,7 @@
    ============================================ */
 
 .saw-card {
-    background: #ffffff;
+    background: var(--saw-card-bg);
     border: var(--saw-border-width) solid var(--saw-border-color);
     border-radius: var(--saw-border-radius-lg);
     margin-bottom: var(--saw-space-2xl);
@@ -304,7 +304,7 @@
 }
 
 .saw-stat-card {
-    background: #ffffff;
+    background: var(--saw-card-bg);
     border: var(--saw-border-width) solid var(--saw-border-color);
     border-radius: var(--saw-border-radius-lg);
     padding: var(--saw-space-2xl);
@@ -694,7 +694,7 @@ body.saw-modal-active {
     font-weight: var(--saw-font-weight-medium);
     color: var(--saw-gray-700);
     text-decoration: none;
-    background: #ffffff;
+    background: var(--saw-card-bg);
     transition: all var(--saw-transition-base);
 }
 
@@ -888,7 +888,7 @@ body.saw-modal-active {
 .saw-related-section-label {
     font-size: 16px;
     font-weight: 700;
-    color: #0f172a;
+    color: var(--saw-text-primary);
     letter-spacing: -0.01em;
     margin: 0 0 2px 0;
     line-height: 1.3;
@@ -946,10 +946,10 @@ body.saw-modal-active {
     justify-content: space-between;
     padding: 14px 16px;
     text-decoration: none;
-    color: #1e293b;
-    background: #ffffff;
+    color: var(--saw-text-primary);
+    background: var(--saw-card-bg);
     border-radius: 10px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--saw-border-color);
     transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;

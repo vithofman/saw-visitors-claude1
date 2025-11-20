@@ -132,7 +132,7 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
         }
         
         if (!empty($item['is_archived'])) {
-            $meta_parts[] = '<span class="saw-badge-transparent" style="background: rgba(0,0,0,0.4);">Archivováno</span>';
+            $meta_parts[] = '<span class="saw-badge-transparent saw-badge-archived">Archivováno</span>';
         } else {
             $meta_parts[] = '<span class="saw-badge-transparent">✓ Aktivní</span>';
         }
@@ -193,21 +193,21 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
         check_ajax_referer('saw_admin_nonce', 'nonce');
         
         if (!$this->can('edit')) {
-            echo '<div style="color:#dc3545;padding:20px">❌ Nemáte oprávnění</div>';
+            echo '<div class="saw-error-state">❌ Nemáte oprávnění</div>';
             wp_die();
         }
         
         $master_id = isset($_POST['id']) ? intval($_POST['id']) : 0;
         
         if (!$master_id) {
-            echo '<div style="color:#dc3545;padding:20px">❌ Chybí ID firmy</div>';
+            echo '<div class="saw-error-state">❌ Chybí ID firmy</div>';
             wp_die();
         }
         
         $master = $this->model->get_by_id($master_id);
         
         if (!$master) {
-            echo '<div style="color:#dc3545;padding:20px">❌ Firma nebyla nalezena</div>';
+            echo '<div class="saw-error-state">❌ Firma nebyla nalezena</div>';
             wp_die();
         }
         
@@ -234,7 +234,7 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
             
             <div class="saw-merge-warning">
                 <strong>⚠️ Tato akce je nevratná!</strong>
-                <p style="margin:4px 0 0 0;font-size:12px">
+                <p class="saw-merge-warning-text-p">
                     Vybrané firmy budou <strong>trvale smazány</strong> a jejich veškerá historie (návštěvy, kontakty) 
                     bude přesunuta pod hlavní firmu <strong><?php echo esc_html($master['name']); ?></strong>.
                 </p>
@@ -261,7 +261,7 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
                             </span>
                             
                             <?php if (!empty($company['ico'])): ?>
-                            <span style="color:#999;font-size:11px">
+                            <span class="saw-ico-badge">
                                 IČO: <?php echo esc_html($company['ico']); ?>
                             </span>
                             <?php endif; ?>

@@ -1,0 +1,833 @@
+/**
+ * Admin Table Detail Sidebar Styles
+ * 
+ * Global styles for admin-table detail sidebars used by all modules.
+ * Includes: sections, visit cards, merge UI, elegant alerts
+ * 
+ * @package     SAW_Visitors
+ * @subpackage  Components/AdminTable
+ * @version     1.0.0
+ */
+
+/* ============================================
+   BASE
+   ============================================ */
+
+.saw-detail-sidebar-content {
+    font-family: var(--saw-font-family);
+    color: var(--saw-text-primary);
+    box-sizing: border-box;
+}
+
+.saw-detail-sidebar-content * {
+    box-sizing: border-box;
+}
+
+/* ============================================
+   BADGES
+   ============================================ */
+
+.saw-badge-transparent {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 4px 10px;
+    font-size: 12px;
+    border-radius: 2px;
+    font-weight: 500;
+    color: #fff;
+}
+
+.saw-badge-transparent.saw-badge-archived {
+    background: rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .saw-badge-transparent {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+[data-theme="dark"] .saw-badge-transparent.saw-badge-archived {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* ============================================
+   INDUSTRIAL SECTIONS
+   ============================================ */
+
+.saw-industrial-section {
+    background: var(--saw-card-bg);
+    border: 1px solid var(--saw-border-color);
+    margin-bottom: 20px;
+    box-shadow: var(--saw-shadow-sm);
+}
+
+.saw-section-head {
+    background: var(--saw-form-section-header-bg);
+    padding: 15px 20px;
+    border-bottom: 2px solid var(--saw-border-color);
+}
+
+.saw-section-title {
+    font-size: 18px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--saw-text-primary);
+    margin: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Primary accent for section titles - only when needed */
+.saw-section-title.saw-section-title-accent {
+    color: var(--saw-primary);
+}
+
+.saw-section-body {
+    padding: 20px;
+}
+
+/* Warning Section */
+.saw-industrial-section.saw-warning-section {
+    background: var(--saw-warning-light);
+    border-left: 4px solid var(--saw-warning);
+}
+
+.saw-warning-section .saw-section-body.saw-warning-section-body {
+    padding: 16px 20px;
+}
+
+.saw-warning-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.saw-warning-text {
+    flex: 1;
+    min-width: 200px;
+}
+
+.saw-warning-title {
+    color: var(--saw-warning-dark);
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+}
+
+.saw-warning-description {
+    margin: 4px 0 0 0;
+    font-size: 13px;
+    color: var(--saw-text-secondary);
+}
+
+/* ============================================
+   INFO GRID
+   ============================================ */
+
+.saw-info-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+}
+
+@media (min-width: 400px) {
+    .saw-info-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.saw-info-item label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--saw-text-secondary);
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.saw-info-item span {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--saw-text-primary);
+}
+
+.saw-link {
+    color: var(--saw-primary);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.saw-link:hover {
+    text-decoration: underline;
+}
+
+/* ============================================
+   VISIT AGENDA CARDS
+   ============================================ */
+
+.saw-visit-agenda-card {
+    background: var(--saw-card-bg);
+    border: 1px solid var(--saw-border-color);
+    margin-bottom: 12px;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.2s ease;
+    border-left: 5px solid transparent;
+}
+
+.saw-visit-agenda-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--saw-shadow-md);
+}
+
+.saw-visit-agenda-card.status-draft {
+    border-left-color: var(--saw-gray-400);
+}
+
+.saw-visit-agenda-card.status-pending {
+    border-left-color: var(--saw-warning);
+}
+
+.saw-visit-agenda-card.status-confirmed {
+    border-left-color: var(--saw-info);
+}
+
+.saw-visit-agenda-card.status-in-progress {
+    border-left-color: var(--saw-primary);
+}
+
+.saw-visit-agenda-card.status-completed {
+    border-left-color: var(--saw-success);
+}
+
+.saw-visit-agenda-card.status-cancelled {
+    border-left-color: var(--saw-danger);
+}
+
+.saw-visit-trigger {
+    display: flex;
+    cursor: pointer;
+    min-height: 70px;
+}
+
+.saw-visit-date-box {
+    background: var(--saw-bg-tertiary);
+    width: 70px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-right: 1px solid var(--saw-border-color);
+    padding: 10px;
+    flex-shrink: 0;
+}
+
+.saw-date-day {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--saw-primary);
+    line-height: 1;
+}
+
+.saw-date-month {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--saw-text-secondary);
+    margin-top: 2px;
+}
+
+.saw-visit-info-box {
+    flex: 1;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.saw-visit-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.saw-visit-id {
+    font-size: 11px;
+    color: var(--saw-text-muted);
+}
+
+.saw-visit-badge {
+    font-size: 10px;
+    text-transform: uppercase;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 2px;
+    background: var(--saw-bg-tertiary);
+    color: var(--saw-text-secondary);
+}
+
+.saw-visit-main-title {
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--saw-text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.saw-visit-main-title .saw-visit-count {
+    font-weight: 400;
+    color: var(--saw-text-secondary);
+    font-size: 13px;
+    margin-left: auto;
+}
+
+.saw-toggle-arrow {
+    padding: 0 15px;
+    display: flex;
+    align-items: center;
+    color: var(--saw-primary);
+    font-size: 14px;
+    transition: transform 0.3s;
+}
+
+.saw-toggle-arrow.expanded {
+    transform: rotate(90deg);
+}
+
+.saw-visitors-wrap {
+    background: var(--saw-bg-secondary);
+    border-top: 1px solid var(--saw-border-color);
+    padding: 15px;
+    display: none;
+}
+
+.saw-visitors-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--saw-border-color);
+}
+
+.saw-visitors-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--saw-text-secondary);
+    text-transform: uppercase;
+}
+
+.saw-detail-visit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: var(--saw-primary);
+    color: #ffffff;
+    border: none;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.saw-detail-visit-btn:hover {
+    background: var(--saw-primary-hover);
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(59, 130, 246, 0.3);
+}
+
+.saw-visitor-row {
+    display: flex;
+    align-items: center;
+    background: var(--saw-card-bg);
+    border: 1px solid var(--saw-border-color);
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s;
+}
+
+.saw-visitor-row:hover {
+    background: var(--saw-bg-tertiary);
+    border-color: var(--saw-primary);
+}
+
+.saw-visitor-row.not-attended {
+    background: var(--saw-bg-tertiary);
+    opacity: 0.6;
+    border-color: var(--saw-border-color-light);
+}
+
+.saw-visitor-row.not-attended:hover {
+    background: var(--saw-bg-quaternary);
+    border-color: var(--saw-border-color);
+    opacity: 0.8;
+}
+
+.saw-visitor-row.not-attended .saw-v-info h5 {
+    color: var(--saw-text-secondary);
+}
+
+.saw-v-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.saw-visitor-row.not-attended .saw-v-avatar {
+    background: var(--saw-gray-400) !important;
+}
+
+.saw-v-info h5 {
+    margin: 0;
+    font-size: 14px;
+    color: var(--saw-text-primary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.saw-v-info p {
+    margin: 2px 0 0 0;
+    font-size: 12px;
+    color: var(--saw-text-secondary);
+}
+
+.saw-v-info-meta {
+    font-size: 11px;
+    color: var(--saw-text-muted);
+}
+
+.saw-not-attended-badge {
+    display: inline-block;
+    background: var(--saw-gray-400);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 3px;
+    letter-spacing: 0.5px;
+}
+
+.saw-visit-section-body {
+    background: var(--saw-bg-secondary);
+}
+
+.saw-visit-badge-count {
+    background: var(--saw-primary);
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+}
+
+.saw-empty-visitors {
+    text-align: center;
+    color: var(--saw-text-muted);
+    font-style: italic;
+    margin: 0;
+}
+
+@media (max-width: 480px) {
+    .saw-visit-trigger {
+        flex-wrap: wrap;
+    }
+    
+    .saw-visit-date-box {
+        width: 60px;
+    }
+}
+
+/* ============================================
+   MERGE UI (INLINE)
+   ============================================ */
+
+#sawMergeContainer {
+    display: none;
+    margin-top: 16px;
+    padding: 0;
+    background: var(--saw-card-bg);
+    border: 2px solid var(--saw-primary);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+#sawMergeContainer.active {
+    display: block;
+}
+
+.saw-merge-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, var(--saw-primary) 0%, var(--saw-primary-dark) 100%);
+    border-radius: 6px 6px 0 0;
+}
+
+.saw-merge-header h4 {
+    margin: 0;
+    font-size: 16px;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.saw-merge-close {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: #fff;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    transition: all 0.3s;
+}
+
+.saw-merge-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(90deg);
+}
+
+.saw-merge-body {
+    padding: 20px;
+}
+
+.saw-merge-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    border-bottom: 2px solid var(--saw-border-color);
+}
+
+.saw-merge-tab {
+    padding: 10px 20px;
+    background: none;
+    border: none;
+    color: var(--saw-text-secondary);
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.3s;
+}
+
+.saw-merge-tab:hover {
+    color: var(--saw-primary);
+}
+
+.saw-merge-tab.active {
+    color: var(--saw-primary);
+}
+
+.saw-merge-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--saw-primary);
+}
+
+.saw-merge-content {
+    display: none;
+}
+
+.saw-merge-content.active {
+    display: block;
+}
+
+.saw-help-text {
+    background: var(--saw-warning-light);
+    border-left: 3px solid var(--saw-warning);
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: var(--saw-text-primary);
+    border-radius: 4px;
+}
+
+.saw-merge-warning {
+    background: var(--saw-warning-light);
+    border: 2px solid var(--saw-warning);
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 16px;
+    display: flex;
+    gap: 10px;
+    font-size: 12px;
+}
+
+.saw-merge-warning strong {
+    display: block;
+    color: var(--saw-warning-dark);
+    margin-bottom: 4px;
+    font-size: 13px;
+}
+
+.saw-duplicate-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+    max-height: 350px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.saw-duplicate-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    border: 2px solid var(--saw-border-color);
+    border-radius: 6px;
+    background: var(--saw-card-bg);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.saw-duplicate-item:hover {
+    border-color: var(--saw-primary);
+    background: var(--saw-bg-tertiary);
+    transform: translateX(2px);
+}
+
+.saw-duplicate-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    flex-shrink: 0;
+    accent-color: var(--saw-primary);
+}
+
+.saw-dup-info {
+    flex: 1;
+}
+
+.saw-dup-info strong {
+    font-size: 14px;
+    color: var(--saw-text-primary);
+    display: block;
+    margin-bottom: 4px;
+}
+
+.saw-dup-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 11px;
+}
+
+.saw-dup-meta .saw-ico-text {
+    color: var(--saw-text-muted);
+    font-size: 11px;
+}
+
+.saw-similarity-badge {
+    background: var(--saw-success-light);
+    color: var(--saw-success-dark);
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: 700;
+}
+
+.saw-visit-count {
+    background: var(--saw-bg-tertiary);
+    color: var(--saw-text-secondary);
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.saw-merge-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    padding-top: 16px;
+    border-top: 2px solid var(--saw-border-color);
+}
+
+.saw-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.saw-btn-primary {
+    background: var(--saw-primary);
+    color: #fff;
+}
+
+.saw-btn-primary:hover {
+    background: var(--saw-primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.saw-btn-primary:disabled {
+    background: var(--saw-gray-400);
+    cursor: not-allowed;
+    transform: none;
+}
+
+.saw-no-duplicates {
+    text-align: center;
+    padding: 30px 20px;
+    color: var(--saw-success);
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.saw-manual-search {
+    margin-bottom: 12px;
+}
+
+.saw-manual-search input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid var(--saw-border-color);
+    border-radius: 6px;
+    font-size: 14px;
+    background: var(--saw-input-bg);
+    color: var(--saw-text-primary);
+}
+
+.saw-manual-search input:focus {
+    outline: none;
+    border-color: var(--saw-primary);
+    box-shadow: 0 0 0 3px var(--saw-primary-light);
+}
+
+/* ============================================
+   ELEGANT ALERTS
+   ============================================ */
+
+.saw-elegant-alert {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 999999;
+    background: var(--saw-card-bg);
+    padding: 20px 24px;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-width: 320px;
+    max-width: 400px;
+    animation: slideInRight 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    border: 1px solid var(--saw-border-color);
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.saw-alert-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.saw-alert-success .saw-alert-icon {
+    background: var(--saw-success-light);
+    color: var(--saw-success-dark);
+}
+
+.saw-alert-error .saw-alert-icon {
+    background: var(--saw-danger-light);
+    color: var(--saw-danger-dark);
+}
+
+.saw-alert-content {
+    flex: 1;
+}
+
+.saw-alert-content strong {
+    display: block;
+    font-size: 15px;
+    margin-bottom: 4px;
+    color: var(--saw-text-primary);
+}
+
+.saw-alert-content p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--saw-text-secondary);
+}
+
+.saw-alert-close {
+    background: none;
+    border: none;
+    color: var(--saw-text-muted);
+    cursor: pointer;
+    padding: 4px;
+    font-size: 20px;
+    line-height: 1;
+}
+
+.saw-alert-close:hover {
+    color: var(--saw-text-primary);
+}
+
+/* ============================================
+   LOADING STATES
+   ============================================ */
+
+.saw-loading-state {
+    text-align: center;
+    padding: 20px;
+    color: var(--saw-text-muted);
+}
+
+.saw-error-state {
+    color: var(--saw-danger);
+    padding: 20px;
+}
+

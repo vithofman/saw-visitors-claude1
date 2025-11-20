@@ -54,123 +54,18 @@ $all_companies = $wpdb->get_results($wpdb->prepare(
 ), ARRAY_A);
 ?>
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-
-<style>
-:root {--p307-primary:#005A8C;--p307-accent:#0077B5;--p307-dark:#1a1a1a;--p307-gray:#f4f6f8;--p307-border:#dce1e5;--status-draft:#95a5a6;--status-pending:#f39c12;--status-confirmed:#3498db;--status-in-progress:#9b59b6;--status-completed:#27ae60;--status-cancelled:#e74c3c}
-.saw-detail-sidebar-content{font-family:'Roboto',sans-serif;color:var(--p307-dark);box-sizing:border-box}
-.saw-detail-sidebar-content *{box-sizing:border-box}
-/* Header CSS removed - now handled by admin-table component */
-.saw-badge-transparent{display:inline-block;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);padding:4px 10px;font-size:12px;border-radius:2px;font-weight:500;color:#fff}
-.saw-industrial-section{background:#fff;border:1px solid var(--p307-border);margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
-.saw-section-head{background:#fff;padding:15px 20px;border-bottom:2px solid var(--p307-gray)}
-.saw-section-title{font-family:'Oswald',sans-serif;font-size:18px;font-weight:700;text-transform:uppercase;color:var(--p307-primary);margin:0;display:flex;justify-content:space-between;align-items:center}
-.saw-section-body{padding:20px}
-.saw-info-grid{display:grid;grid-template-columns:1fr;gap:16px}
-@media (min-width:400px){.saw-info-grid{grid-template-columns:1fr 1fr}}
-.saw-info-item label{display:block;font-size:11px;text-transform:uppercase;color:#888;font-weight:700;margin-bottom:4px}
-.saw-info-item span{font-size:14px;font-weight:500;color:var(--p307-dark)}
-.saw-link{color:var(--p307-accent);text-decoration:none;font-weight:600}
-.saw-link:hover{text-decoration:underline}
-.saw-visit-agenda-card{background:#fff;border:1px solid var(--p307-border);margin-bottom:12px;display:flex;flex-direction:column;transition:all .2s ease;border-left:5px solid transparent}
-.saw-visit-agenda-card:hover{transform:translateY(-2px);box-shadow:0 5px 15px rgba(0,0,0,.08)}
-.status-draft{border-left-color:var(--status-draft)!important}
-.status-pending{border-left-color:var(--status-pending)!important}
-.status-confirmed{border-left-color:var(--status-confirmed)!important}
-.status-in-progress{border-left-color:var(--status-in-progress)!important}
-.status-completed{border-left-color:var(--status-completed)!important}
-.status-cancelled{border-left-color:var(--status-cancelled)!important}
-.saw-visit-trigger{display:flex;cursor:pointer;min-height:70px}
-.saw-visit-date-box{background:var(--p307-gray);width:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-right:1px solid var(--p307-border);padding:10px;flex-shrink:0}
-.saw-date-day{font-family:'Oswald',sans-serif;font-size:22px;font-weight:700;color:var(--p307-primary);line-height:1}
-.saw-date-month{font-size:11px;text-transform:uppercase;color:#666;margin-top:2px}
-.saw-visit-info-box{flex:1;padding:12px 16px;display:flex;flex-direction:column;justify-content:center}
-.saw-visit-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
-.saw-visit-id{font-size:11px;color:#999}
-.saw-visit-badge{font-size:10px;text-transform:uppercase;font-weight:700;padding:2px 6px;border-radius:2px;background:#eee;color:#555}
-.saw-visit-main-title{font-family:'Roboto',sans-serif;font-weight:700;font-size:15px;color:var(--p307-dark);display:flex;align-items:center;gap:8px}
-.saw-toggle-arrow{padding:0 15px;display:flex;align-items:center;color:var(--p307-accent);font-size:14px;transition:transform .3s}
-.saw-toggle-arrow.expanded{transform:rotate(90deg)}
-.saw-visitors-wrap{background:#fcfcfc;border-top:1px solid var(--p307-border);padding:15px;display:none}
-.saw-visitors-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--p307-border)}
-.saw-visitors-title{font-size:12px;font-weight:700;color:#888;text-transform:uppercase}
-.saw-detail-visit-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:var(--p307-accent);color:#fff;border:none;border-radius:3px;font-size:12px;font-weight:600;text-decoration:none;text-transform:uppercase;transition:all .3s ease;cursor:pointer}
-.saw-detail-visit-btn:hover{background:var(--p307-primary);color:#fff;transform:translateY(-1px);box-shadow:0 3px 8px rgba(0,119,181,.3)}
-.saw-visitor-row{display:flex;align-items:center;background:#fff;border:1px solid var(--p307-border);padding:10px;border-radius:4px;margin-bottom:8px;text-decoration:none;color:inherit;transition:all .2s}
-.saw-visitor-row:hover{background:#f0f8ff;border-color:var(--p307-accent)}
-.saw-visitor-row.not-attended{background:#f5f5f5;opacity:.6;border-color:#d0d0d0}
-.saw-visitor-row.not-attended:hover{background:#ececec;border-color:#b0b0b0;opacity:.8}
-.saw-visitor-row.not-attended .saw-v-info h5{color:#888}
-.saw-v-avatar{width:40px;height:40px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;margin-right:12px;flex-shrink:0}
-.saw-visitor-row.not-attended .saw-v-avatar{background:#95a5a6!important}
-.saw-v-info h5{margin:0;font-size:14px;color:var(--p307-dark);display:flex;align-items:center;gap:6px}
-.saw-v-info p{margin:2px 0 0 0;font-size:12px;color:#777}
-.saw-not-attended-badge{display:inline-block;background:#95a5a6;color:#fff;font-size:9px;font-weight:700;text-transform:uppercase;padding:2px 6px;border-radius:3px;letter-spacing:.5px}
-@media (max-width:480px){.saw-visit-trigger{flex-wrap:wrap}.saw-visit-date-box{width:60px}}
-
-/* INLINE MERGE UI */
-#sawMergeContainer{display:none;margin-top:16px;padding:0;background:#fff;border:2px solid var(--p307-accent);border-radius:8px;box-shadow:0 4px 12px rgba(0,119,181,0.15)}
-#sawMergeContainer.active{display:block}
-.saw-merge-header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;background:linear-gradient(135deg,var(--p307-accent) 0%,var(--p307-primary) 100%);border-radius:6px 6px 0 0}
-.saw-merge-header h4{margin:0;font-family:'Oswald',sans-serif;font-size:16px;color:#fff;text-transform:uppercase;letter-spacing:0.5px}
-.saw-merge-close{background:rgba(255,255,255,0.2);border:none;color:#fff;width:28px;height:28px;border-radius:50%;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;font-size:18px;transition:all 0.3s}
-.saw-merge-close:hover{background:rgba(255,255,255,0.3);transform:rotate(90deg)}
-.saw-merge-body{padding:20px}
-.saw-merge-tabs{display:flex;gap:8px;margin-bottom:16px;border-bottom:2px solid var(--p307-gray)}
-.saw-merge-tab{padding:10px 20px;background:none;border:none;color:#666;font-weight:600;font-size:13px;cursor:pointer;position:relative;transition:all 0.3s}
-.saw-merge-tab:hover{color:var(--p307-accent)}
-.saw-merge-tab.active{color:var(--p307-accent)}
-.saw-merge-tab.active::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:2px;background:var(--p307-accent)}
-.saw-merge-content{display:none}
-.saw-merge-content.active{display:block}
-.saw-help-text{background:#fff9e6;border-left:3px solid #ffc107;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#666;border-radius:4px}
-.saw-merge-warning{background:#fff3e0;border:2px solid #ffb74d;border-radius:6px;padding:12px;margin-bottom:16px;display:flex;gap:10px;font-size:12px}
-.saw-merge-warning strong{display:block;color:#e65100;margin-bottom:4px;font-size:13px}
-.saw-duplicate-list{display:flex;flex-direction:column;gap:10px;margin-bottom:16px;max-height:350px;overflow-y:auto;padding-right:4px}
-.saw-duplicate-item{display:flex;align-items:center;gap:10px;padding:12px;border:2px solid var(--p307-border);border-radius:6px;background:#fff;cursor:pointer;transition:all 0.2s}
-.saw-duplicate-item:hover{border-color:var(--p307-accent);background:#f0f8ff;transform:translateX(2px)}
-.saw-duplicate-item input[type="checkbox"]{width:18px;height:18px;cursor:pointer;flex-shrink:0;accent-color:var(--p307-accent)}
-.saw-dup-info{flex:1}
-.saw-dup-info strong{font-size:14px;color:var(--p307-dark);display:block;margin-bottom:4px}
-.saw-dup-meta{display:flex;gap:8px;flex-wrap:wrap;font-size:11px}
-.saw-similarity-badge{background:#e8f5e9;color:#2e7d32;padding:3px 8px;border-radius:4px;font-weight:700}
-.saw-visit-count{background:var(--p307-gray);color:#666;padding:3px 8px;border-radius:4px;font-weight:600}
-.saw-merge-actions{display:flex;gap:10px;justify-content:flex-end;padding-top:16px;border-top:2px solid var(--p307-gray)}
-.saw-btn{padding:10px 20px;border:none;border-radius:6px;font-size:12px;font-weight:700;text-transform:uppercase;cursor:pointer;transition:all 0.3s}
-.saw-btn-primary{background:var(--p307-accent);color:#fff}
-.saw-btn-primary:hover{background:var(--p307-primary);transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,119,181,0.3)}
-.saw-btn-primary:disabled{background:#ccc;cursor:not-allowed;transform:none}
-.saw-no-duplicates{text-align:center;padding:30px 20px;color:#28a745;font-size:15px;font-weight:600}
-.saw-manual-search{margin-bottom:12px}
-.saw-manual-search input{width:100%;padding:10px 12px;border:2px solid var(--p307-border);border-radius:6px;font-size:14px}
-.saw-manual-search input:focus{outline:none;border-color:var(--p307-accent)}
-
-/* ELEGANT ALERTS */
-.saw-elegant-alert{position:fixed;top:80px;right:20px;z-index:999999;background:#fff;padding:20px 24px;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.15);display:flex;align-items:center;gap:16px;min-width:320px;max-width:400px;animation:slideInRight 0.4s cubic-bezier(0.68,-0.55,0.265,1.55)}
-@keyframes slideInRight{from{opacity:0;transform:translateX(100px)}to{opacity:1;transform:translateX(0)}}
-.saw-alert-icon{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
-.saw-alert-success .saw-alert-icon{background:#e8f5e9;color:#2e7d32}
-.saw-alert-error .saw-alert-icon{background:#ffebee;color:#c62828}
-.saw-alert-content{flex:1}
-.saw-alert-content strong{display:block;font-size:15px;margin-bottom:4px;color:#1a1a1a}
-.saw-alert-content p{margin:0;font-size:13px;color:#666}
-.saw-alert-close{background:none;border:none;color:#999;cursor:pointer;padding:4px;font-size:20px;line-height:1}
-.saw-alert-close:hover{color:#333}
-</style>
 
 <div class="saw-detail-sidebar-content">
     <!-- Header is now rendered by admin-table component (detail-sidebar.php) -->
     <!-- Module only provides content -->
     <!-- Header meta (badges) is set via controller->get_detail_header_meta() -->
     
-    <div class="saw-industrial-section" style="background: #fff9e6; border-left: 4px solid #ffc107;">
-        <div class="saw-section-body" style="padding: 16px 20px;">
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
-                <div style="flex: 1; min-width: 200px;">
-                    <strong style="color: #f57f17; font-size: 14px;">⚠️ Možné duplicity</strong>
-                    <p style="margin: 4px 0 0 0; font-size: 13px; color: #666;">Zkontrolujte, zda neexistují podobné firmy</p>
+    <div class="saw-industrial-section saw-warning-section">
+        <div class="saw-section-body saw-warning-section-body">
+            <div class="saw-warning-content">
+                <div class="saw-warning-text">
+                    <strong class="saw-warning-title">⚠️ Možné duplicity</strong>
+                    <p class="saw-warning-description">Zkontrolujte, zda neexistují podobné firmy</p>
                 </div>
                 <button id="sawMergeBtn" class="saw-detail-visit-btn" type="button">
                     🔗 Zkontrolovat
@@ -190,7 +85,7 @@ $all_companies = $wpdb->get_results($wpdb->prepare(
                     
                     <div id="sawMergeAuto" class="saw-merge-content active">
                         <div id="sawMergeAutoContent">
-                            <div style="text-align:center;padding:20px;color:#999">⏳ Načítání...</div>
+                            <div class="saw-loading-state">⏳ Načítání...</div>
                         </div>
                     </div>
                     
@@ -210,7 +105,7 @@ $all_companies = $wpdb->get_results($wpdb->prepare(
                                     <div class="saw-dup-meta">
                                         <span class="saw-visit-count">📋 <?php echo intval($company['visit_count']); ?> návštěv</span>
                                         <?php if (!empty($company['ico'])): ?>
-                                        <span style="color:#999;font-size:11px">IČO: <?php echo esc_html($company['ico']); ?></span>
+                                        <span class="saw-ico-text">IČO: <?php echo esc_html($company['ico']); ?></span>
                                         <?php endif; ?>
                                     </div>
                                 </div>
@@ -229,7 +124,7 @@ $all_companies = $wpdb->get_results($wpdb->prepare(
     </div>
     
     <div class="saw-industrial-section">
-        <div class="saw-section-head"><h4 class="saw-section-title">📍 Adresa sídla</h4></div>
+        <div class="saw-section-head"><h4 class="saw-section-title saw-section-title-accent">📍 Adresa sídla</h4></div>
         <div class="saw-section-body">
             <div class="saw-info-grid">
                 <?php if (!empty($item['street'])): ?>
@@ -247,7 +142,7 @@ $all_companies = $wpdb->get_results($wpdb->prepare(
     
     <?php if (!empty($item['email']) || !empty($item['phone']) || !empty($item['website'])): ?>
     <div class="saw-industrial-section">
-        <div class="saw-section-head"><h4 class="saw-section-title">📞 Kontakt</h4></div>
+        <div class="saw-section-head"><h4 class="saw-section-title saw-section-title-accent">📞 Kontakt</h4></div>
         <div class="saw-section-body">
             <div class="saw-info-grid">
                 <?php if (!empty($item['email'])): ?>
@@ -265,7 +160,7 @@ $all_companies = $wpdb->get_results($wpdb->prepare(
     <?php endif; ?>
     
     <div class="saw-industrial-section">
-        <div class="saw-section-head"><h4 class="saw-section-title">ℹ️ Info</h4></div>
+        <div class="saw-section-head"><h4 class="saw-section-title saw-section-title-accent">ℹ️ Info</h4></div>
         <div class="saw-section-body">
             <div class="saw-info-grid">
                 <?php if (!empty($item['branch_name'])): ?>
@@ -284,9 +179,9 @@ $all_companies = $wpdb->get_results($wpdb->prepare(
     <?php if (!empty($visits)): ?>
     <div class="saw-industrial-section">
         <div class="saw-section-head">
-            <h4 class="saw-section-title">📋 Návštěvy <span style="background:var(--p307-accent);color:#fff;padding:2px 8px;border-radius:10px;font-size:12px"><?php echo count($visits); ?></span></h4>
+            <h4 class="saw-section-title saw-section-title-accent">📋 Návštěvy <span class="saw-visit-badge-count"><?php echo count($visits); ?></span></h4>
         </div>
-        <div class="saw-section-body" style="background: #fafafa;">
+        <div class="saw-section-body saw-visit-section-body">
             <?php foreach ($visits as $idx => $visit): 
                 $status_labels = array('draft' => 'Koncept', 'pending' => 'Čeká', 'confirmed' => 'Potvrzeno', 'in_progress' => 'Probíhá', 'completed' => 'Dokončeno', 'cancelled' => 'Zrušeno');
                 $type_labels = array('planned' => 'Plánovaná', 'walk_in' => 'Walk-in');
@@ -305,7 +200,7 @@ $all_companies = $wpdb->get_results($wpdb->prepare(
                             <span class="saw-visit-id">ID: <?php echo intval($visit['id']); ?></span>
                             <span class="saw-visit-badge"><?php echo esc_html($type_labels[$visit['visit_type']] ?? $visit['visit_type']); ?></span>
                         </div>
-                        <div class="saw-visit-main-title"><?php echo esc_html($status_labels[$visit['status']] ?? $visit['status']); ?> <span style="font-weight:400;color:#888;font-size:13px;margin-left:auto">👥 <?php echo intval($visit['visitor_count']); ?></span></div>
+                        <div class="saw-visit-main-title"><?php echo esc_html($status_labels[$visit['status']] ?? $visit['status']); ?> <span class="saw-visit-count">👥 <?php echo intval($visit['visitor_count']); ?></span></div>
                     </div>
                     <div id="icon-<?php echo $visit['id']; ?>" class="saw-toggle-arrow">▶</div>
                 </div>
@@ -321,16 +216,16 @@ $all_companies = $wpdb->get_results($wpdb->prepare(
                         $did_not_attend = !(int)$visitor['has_attended'] && $visit['status'] === 'completed';
                     ?>
                     <a href="<?php echo esc_url($visitor_url); ?>" class="saw-visitor-row <?php echo $did_not_attend ? 'not-attended' : ''; ?>">
-                        <div class="saw-v-avatar" style="background:<?php echo $avatar_color; ?>"><?php echo esc_html($initials); ?></div>
+                        <div class="saw-v-avatar" style="background-color:<?php echo esc_attr($avatar_color); ?>"><?php echo esc_html($initials); ?></div>
                         <div class="saw-v-info">
                             <h5><?php echo esc_html($visitor['first_name'] . ' ' . $visitor['last_name']); ?><?php if ($did_not_attend): ?> <span class="saw-not-attended-badge">Nezúčastnil se</span><?php endif; ?></h5>
                             <?php if(!empty($visitor['position'])): ?><p><?php echo esc_html($visitor['position']); ?></p><?php endif; ?>
                             <?php if(!empty($visitor['email']) || !empty($visitor['phone'])): ?>
-                                <p style="font-size:11px;color:#999"><?php if(!empty($visitor['email'])): ?>📧 <?php echo esc_html($visitor['email']); ?><?php endif; ?><?php if(!empty($visitor['phone'])): ?><?php if(!empty($visitor['email'])) echo ' • '; ?>📱 <?php echo esc_html($visitor['phone']); ?><?php endif; ?></p>
+                                <p class="saw-v-info-meta"><?php if(!empty($visitor['email'])): ?>📧 <?php echo esc_html($visitor['email']); ?><?php endif; ?><?php if(!empty($visitor['phone'])): ?><?php if(!empty($visitor['email'])) echo ' • '; ?>📱 <?php echo esc_html($visitor['phone']); ?><?php endif; ?></p>
                             <?php endif; ?>
                         </div>
                     </a>
-                    <?php endforeach; else: ?><p style="text-align:center;color:#999;font-style:italic;margin:0">Žádní návštěvníci</p><?php endif; ?>
+                    <?php endforeach; else: ?><p class="saw-empty-visitors">Žádní návštěvníci</p><?php endif; ?>
                 </div>
             </div>
             <?php endforeach; ?>
@@ -384,7 +279,7 @@ document.getElementById('sawMergeBtn').addEventListener('click', function() {
     
     if (currentTab === 'auto') {
         const content = document.getElementById('sawMergeAutoContent');
-        content.innerHTML = '<div style="text-align:center;padding:20px;color:#999">⏳ Načítání...</div>';
+        content.innerHTML = '<div class="saw-loading-state">⏳ Načítání...</div>';
         
         fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
             method: 'POST',
@@ -403,7 +298,7 @@ document.getElementById('sawMergeBtn').addEventListener('click', function() {
             content.innerHTML = body ? body.innerHTML : html;
         })
         .catch(e => {
-            content.innerHTML = '<div style="color:#dc3545;padding:20px">❌ ' + e.message + '</div>';
+            content.innerHTML = '<div class="saw-error-state">❌ ' + e.message + '</div>';
         });
     }
 });
