@@ -47,7 +47,7 @@ class SAW_Asset_Loader {
         
         // Interactive components (CRITICAL: Must load globally to prevent FOUC)
         'saw-navigation'           => 'components/navigation.css', // Consolidated: customer-switcher, branch-switcher, language-switcher
-        'saw-file-upload'         => 'components/file-upload.css',
+        'saw-file-upload-modern'  => 'components/file-upload-modern.css',
     ];
     
     /**
@@ -238,8 +238,26 @@ class SAW_Asset_Loader {
                 ]
             ],
             'saw-forms' => [
-                'path' => 'assets/js/components/forms.js', // Consolidated: selectbox, select-create, color-picker, file-upload
+                'path' => 'assets/js/components/forms.js', // Consolidated: selectbox, select-create, color-picker
                 'deps' => ['jquery', 'saw-app'],
+            ],
+            'saw-file-upload-modern' => [
+                'path' => 'assets/js/components/file-upload-modern.js',
+                'deps' => ['jquery'],
+                'localize' => 'sawFileUpload',
+                'localize_data' => [
+                    'ajaxurl' => admin_url('admin-ajax.php'),
+                    'nonce' => wp_create_nonce('saw_upload_file'),
+                    'strings' => [
+                        'uploading' => 'Nahrávání...',
+                        'success' => 'Soubor byl úspěšně nahrán',
+                        'error' => 'Chyba při nahrávání',
+                        'file_too_large' => 'Soubor je příliš velký',
+                        'invalid_type' => 'Nepodporovaný formát souboru',
+                        'select_files' => 'Vybrat soubory',
+                        'drag_drop' => 'Přetáhněte soubory nebo',
+                    ]
+                ]
             ],
             'saw-ui' => [
                 'path' => 'assets/js/components/ui.js', // Consolidated: modal, modal-triggers, search

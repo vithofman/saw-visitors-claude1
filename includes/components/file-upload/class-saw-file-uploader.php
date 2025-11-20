@@ -165,6 +165,37 @@ class SAW_File_Uploader {
     }
     
     /**
+     * Upload file with progress support
+     * 
+     * Uploads a file and returns structured response with metadata.
+     * Used for AJAX uploads with progress tracking.
+     * 
+     * @since 2.0.0
+     * @param array  $file    File array from $_FILES
+     * @param string $dir_key Directory key from config
+     * @return array|WP_Error Array with file info on success, WP_Error on failure
+     */
+    public function upload_with_progress($file, $dir_key = 'documents') {
+        // Use existing upload method
+        $result = $this->upload($file, $dir_key);
+        
+        if (is_wp_error($result)) {
+            return $result;
+        }
+        
+        // Return enhanced metadata
+        return array(
+            'url' => $result['url'],
+            'path' => $result['path'],
+            'filename' => $result['filename'],
+            'name' => $file['name'],
+            'size' => $file['size'],
+            'type' => $file['type'],
+            'extension' => strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)),
+        );
+    }
+    
+    /**
      * Get configuration
      * 
      * Returns the current configuration array.

@@ -376,6 +376,8 @@ class SAW_Database {
         // Training department content table
         $sql = "CREATE TABLE {$this->wpdb->prefix}saw_training_department_content (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            customer_id bigint(20) unsigned NOT NULL,
+            branch_id bigint(20) unsigned NOT NULL,
             training_content_id bigint(20) unsigned NOT NULL,
             department_id bigint(20) unsigned NOT NULL,
             text_content longtext DEFAULT NULL,
@@ -383,6 +385,9 @@ class SAW_Database {
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             UNIQUE KEY unique_dept_content (training_content_id, department_id),
+            KEY customer_id (customer_id),
+            KEY branch_id (branch_id),
+            KEY idx_customer_branch (customer_id, branch_id),
             KEY training_content_id (training_content_id),
             KEY department_id (department_id)
         ) {$this->charset_collate};";
@@ -391,8 +396,10 @@ class SAW_Database {
         // Training documents table
         $sql = "CREATE TABLE {$this->wpdb->prefix}saw_training_documents (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-            document_type_id bigint(20) unsigned NOT NULL,
-            content_type enum('risks','additional','department') NOT NULL,
+            customer_id bigint(20) unsigned NOT NULL,
+            branch_id bigint(20) unsigned NOT NULL,
+            document_type enum('risks','additional','department') NOT NULL,
+            document_type_id bigint(20) unsigned DEFAULT NULL,
             reference_id bigint(20) unsigned NOT NULL,
             file_path varchar(500) NOT NULL,
             file_name varchar(255) NOT NULL,
@@ -400,10 +407,13 @@ class SAW_Database {
             mime_type varchar(100) DEFAULT NULL,
             uploaded_at datetime DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
+            KEY customer_id (customer_id),
+            KEY branch_id (branch_id),
+            KEY idx_customer_branch (customer_id, branch_id),
             KEY document_type_id (document_type_id),
-            KEY content_type (content_type),
+            KEY document_type (document_type),
             KEY reference_id (reference_id),
-            KEY type_reference (content_type, reference_id)
+            KEY type_reference (document_type, reference_id)
         ) {$this->charset_collate};";
         dbDelta($sql);
     }

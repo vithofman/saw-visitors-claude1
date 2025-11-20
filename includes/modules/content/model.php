@@ -114,15 +114,28 @@ class SAW_Module_Content_Model
      * @param int $reference_id
      * @return array
      */
-    public function get_documents($type, $reference_id) {
+    public function get_documents($type, $reference_id, $customer_id = null, $branch_id = null) {
         global $wpdb;
         
-        return $wpdb->get_results($wpdb->prepare(
-            "SELECT * FROM %i WHERE document_type = %s AND reference_id = %d ORDER BY uploaded_at ASC",
-            $wpdb->prefix . 'saw_training_documents',
-            $type,
-            $reference_id
-        ), ARRAY_A);
+        $where = "document_type = %s AND reference_id = %d";
+        $params = array($type, $reference_id);
+        $formats = array('%s', '%d');
+        
+        if ($customer_id !== null) {
+            $where .= " AND customer_id = %d";
+            $params[] = $customer_id;
+            $formats[] = '%d';
+        }
+        
+        if ($branch_id !== null) {
+            $where .= " AND branch_id = %d";
+            $params[] = $branch_id;
+            $formats[] = '%d';
+        }
+        
+        $query = "SELECT * FROM {$wpdb->prefix}saw_training_documents WHERE {$where} ORDER BY uploaded_at ASC";
+        
+        return $wpdb->get_results($wpdb->prepare($query, ...$params), ARRAY_A);
     }
     
     /**
@@ -218,7 +231,7 @@ class SAW_Module_Content_Model
      * @param string $text
      * @return int Department content ID
      */
-    public function save_department_content($content_id, $department_id, $text) {
+    public function save_department_content($content_id, $department_id, $text, $customer_id = null, $branch_id = null) {
         global $wpdb;
         $table = $wpdb->prefix . 'saw_training_department_content';
         
@@ -230,24 +243,50 @@ class SAW_Module_Content_Model
         ));
         
         if ($existing) {
+            $update_data = array('text_content' => $text);
+            $update_format = array('%s');
+            
+            // Update customer_id and branch_id if provided
+            if ($customer_id !== null) {
+                $update_data['customer_id'] = $customer_id;
+                $update_format[] = '%d';
+            }
+            if ($branch_id !== null) {
+                $update_data['branch_id'] = $branch_id;
+                $update_format[] = '%d';
+            }
+            
             $wpdb->update(
                 $table,
-                array('text_content' => $text),
+                $update_data,
                 array('id' => $existing->id),
-                array('%s'),
+                $update_format,
                 array('%d')
             );
             return $existing->id;
         }
         
+        $insert_data = array(
+            'training_content_id' => $content_id,
+            'department_id' => $department_id,
+            'text_content' => $text,
+        );
+        $insert_format = array('%d', '%d', '%s');
+        
+        // Add customer_id and branch_id if provided
+        if ($customer_id !== null) {
+            $insert_data['customer_id'] = $customer_id;
+            $insert_format[] = '%d';
+        }
+        if ($branch_id !== null) {
+            $insert_data['branch_id'] = $branch_id;
+            $insert_format[] = '%d';
+        }
+        
         $wpdb->insert(
             $table,
-            array(
-                'training_content_id' => $content_id,
-                'department_id' => $department_id,
-                'text_content' => $text,
-            ),
-            array('%d', '%d', '%s')
+            $insert_data,
+            $insert_format
         );
         
         return $wpdb->insert_id;
@@ -263,9 +302,11 @@ class SAW_Module_Content_Model
      * @param int $file_size
      * @param string $mime_type
      * @param int $document_type_id
+     * @param int $customer_id
+     * @param int $branch_id
      * @return int Document ID
      */
-    public function save_document($type, $reference_id, $file_path, $file_name, $file_size, $mime_type, $document_type_id = null) {
+    public function save_document($type, $reference_id, $file_path, $file_name, $file_size, $mime_type, $document_type_id = null, $customer_id = null, $branch_id = null) {
         global $wpdb;
         
         $wpdb->insert(
@@ -278,8 +319,10 @@ class SAW_Module_Content_Model
                 'file_size' => $file_size,
                 'mime_type' => $mime_type,
                 'document_type_id' => $document_type_id,
+                'customer_id' => $customer_id,
+                'branch_id' => $branch_id,
             ),
-            array('%s', '%d', '%s', '%s', '%d', '%s', '%d')
+            array('%s', '%d', '%s', '%s', '%d', '%s', '%d', '%d', '%d')
         );
         
         return $wpdb->insert_id;

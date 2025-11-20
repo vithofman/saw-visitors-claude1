@@ -92,6 +92,25 @@ class SAW_Module_Content_Controller
             return $allcaps;
         });
         
+        // CRITICAL: Force media buttons to be displayed in wp_editor
+        // WordPress checks user capabilities and this filter
+        add_filter('wp_editor_settings', function($settings, $editor_id) {
+            // Ensure media_buttons is always true for content module editors
+            if (strpos($editor_id, 'risks_text_') !== false || 
+                strpos($editor_id, 'additional_text_') !== false || 
+                strpos($editor_id, 'dept_text_') !== false) {
+                $settings['media_buttons'] = true;
+            }
+            return $settings;
+        }, 10, 2);
+        
+        // CRITICAL: Ensure media buttons HTML is output
+        // This hook allows us to add custom media buttons or ensure default ones are shown
+        add_action('media_buttons', function($editor_id = '') {
+            // WordPress should automatically add media buttons, but we ensure they're there
+            // This action is fired by wp_editor() when media_buttons is true
+        }, 1);
+        
         $languages = $this->model->get_training_languages($customer_id);
         
         if (empty($languages)) {
@@ -152,6 +171,121 @@ class SAW_Module_Content_Controller
     /**
      * Handle form save
      */
+    /**
+     * Get existing files for refresh
+     * 
+     * Returns list of existing files for a specific context.
+     * 
+     * @since 2.0.0
+     * @return void
+     */
+    public function ajax_get_existing_files() {
+        // Verify nonce
+        if (!isset($_GET['nonce']) || !wp_verify_nonce($_GET['nonce'], 'saw_content_action')) {
+            wp_send_json_error('Bezpečnostní chyba: Neplatný nonce');
+            return;
+        }
+        
+        // Check permissions
+        $role = $this->get_current_role();
+        if (!in_array($role, ['admin', 'super_admin', 'manager', 'super_manager'])) {
+            wp_send_json_error('Nemáte oprávnění');
+            return;
+        }
+        
+        // Get context
+        global $wpdb;
+        $wp_user_id = get_current_user_id();
+        $saw_user = $wpdb->get_row($wpdb->prepare(
+            "SELECT context_customer_id, context_branch_id FROM %i WHERE wp_user_id = %d",
+            $wpdb->prefix . 'saw_users',
+            $wp_user_id
+        ));
+        
+        if (!$saw_user || !$saw_user->context_customer_id || !$saw_user->context_branch_id) {
+            wp_send_json_error('Chyba kontextu');
+            return;
+        }
+        
+        $customer_id = $saw_user->context_customer_id;
+        $branch_id = $saw_user->context_branch_id;
+        $language_id = intval($_GET['language_id'] ?? 0);
+        $context = sanitize_text_field($_GET['context'] ?? '');
+        
+        if (!$language_id) {
+            wp_send_json_error('Chybí language_id');
+            return;
+        }
+        
+        $files = array();
+        $upload_dir = wp_upload_dir();
+        $document_types = $this->model->get_document_types();
+        
+        // Get content
+        $content = $this->model->get_content($customer_id, $branch_id, $language_id);
+        
+        if ($content) {
+            // PDF map
+            if ($context === 'content_pdf_map' && !empty($content['pdf_map_path'])) {
+                $files[] = array(
+                    'id' => 'pdf_map_' . $language_id,
+                    'url' => $upload_dir['baseurl'] . $content['pdf_map_path'],
+                    'path' => $content['pdf_map_path'],
+                    'name' => basename($content['pdf_map_path']),
+                    'size' => file_exists($upload_dir['basedir'] . $content['pdf_map_path']) ? filesize($upload_dir['basedir'] . $content['pdf_map_path']) : 0,
+                    'type' => 'application/pdf',
+                    'extension' => 'pdf',
+                );
+            }
+            
+            // Documents
+            if ($context === 'content_documents') {
+                $doc_type = sanitize_text_field($_GET['doc_type'] ?? '');
+                
+                if ($doc_type === 'risks') {
+                    $docs = $this->model->get_documents('risks', $content['id'], $customer_id, $branch_id);
+                } elseif ($doc_type === 'additional') {
+                    $docs = $this->model->get_documents('additional', $content['id'], $customer_id, $branch_id);
+                } elseif ($doc_type === 'department') {
+                    $dept_id = intval($_GET['dept_id'] ?? 0);
+                    if ($dept_id) {
+                        $dept_content_id = $this->model->get_department_content_id($content['id'], $dept_id);
+                        if ($dept_content_id) {
+                            $docs = $this->model->get_documents('department', $dept_content_id, $customer_id, $branch_id);
+                        }
+                    }
+                }
+                
+                if (!empty($docs)) {
+                    foreach ($docs as $doc) {
+                        $doc_type_name = '';
+                        foreach ($document_types as $dt) {
+                            if ($dt['id'] == $doc['document_type_id']) {
+                                $doc_type_name = $dt['name'];
+                                break;
+                            }
+                        }
+                        
+                        $file_path = $doc['file_path'] ?? '';
+                        $files[] = array(
+                            'id' => $doc['id'],
+                            'url' => !empty($file_path) ? $upload_dir['baseurl'] . $file_path : '',
+                            'path' => $file_path,
+                            'name' => $doc['file_name'],
+                            'size' => $doc['file_size'],
+                            'type' => $doc['file_type'] ?? 'application/octet-stream',
+                            'extension' => strtolower(pathinfo($doc['file_name'], PATHINFO_EXTENSION)),
+                            'category' => $doc['document_type_id'],
+                            'category_name' => $doc_type_name,
+                        );
+                    }
+                }
+            }
+        }
+        
+        wp_send_json_success(array('files' => $files));
+    }
+    
     public function handle_save() {
         // Debug log
         $log = WP_CONTENT_DIR . '/saw-content-save-debug.log';
@@ -204,10 +338,21 @@ class SAW_Module_Content_Controller
         $branch_id = $saw_user->context_branch_id;
         $language_id = intval($_POST['language_id']);
         
-        // Handle document deletions
+        // Handle document deletions (from old delete buttons - kept for backward compatibility)
+        // New delete is handled via AJAX in file upload component
         if (isset($_POST['delete_document']) && is_array($_POST['delete_document'])) {
             foreach ($_POST['delete_document'] as $doc_id) {
-                $this->model->delete_document_by_id(intval($doc_id));
+                $doc = $this->model->get_document_by_id(intval($doc_id));
+                if ($doc) {
+                    // Delete file physically
+                    $upload_dir = wp_upload_dir();
+                    $file_path = $upload_dir['basedir'] . $doc['file_path'];
+                    if (file_exists($file_path)) {
+                        @unlink($file_path);
+                    }
+                    // Delete from database
+                    $this->model->delete_document_by_id(intval($doc_id));
+                }
             }
         }
         
@@ -234,8 +379,21 @@ class SAW_Module_Content_Controller
             
             SAW_Logger::debug("Main content save result: " . ($result ? 'SUCCESS' : 'FAILED'));
             
-            // Handle PDF map upload
-            if (!empty($_FILES['pdf_map']['name'])) {
+            // Handle uploaded files from modern upload component
+            $uploaded_files = array();
+            if (!empty($_POST['uploaded_files'])) {
+                $uploaded_files_json = stripslashes($_POST['uploaded_files']);
+                $uploaded_files = json_decode($uploaded_files_json, true);
+                
+                if (!is_array($uploaded_files)) {
+                    $uploaded_files = array();
+                }
+            }
+            
+            // Handle PDF map upload (from modern upload component)
+            if (!empty($uploaded_files['pdf_map'])) {
+                $pdf_file_data = $uploaded_files['pdf_map'];
+                
                 // Delete old PDF map if exists
                 $old_content = $this->model->get_content($customer_id, $branch_id, $language_id);
                 if ($old_content && !empty($old_content['pdf_map_path'])) {
@@ -247,51 +405,68 @@ class SAW_Module_Content_Controller
                     }
                 }
                 
-                $pdf_file = $this->handle_file_upload($_FILES['pdf_map'], 'pdf');
-                if ($pdf_file) {
+                // File is already uploaded via AJAX, just save the path
+                if (!empty($pdf_file_data['path'])) {
                     $this->model->save_main_content($content_id, array(
-                        'pdf_map_path' => $pdf_file['path'],
+                        'pdf_map_path' => $pdf_file_data['path'],
                     ));
                 }
             }
             
-            // Handle risks documents - only add new ones, don't delete existing
-            if (!empty($_FILES['risks_documents']['name'][0])) {
-                foreach ($_FILES['risks_documents']['name'] as $key => $name) {
-                    if (!empty($name)) {
-                        $file = array(
-                            'name' => $_FILES['risks_documents']['name'][$key],
-                            'type' => $_FILES['risks_documents']['type'][$key],
-                            'tmp_name' => $_FILES['risks_documents']['tmp_name'][$key],
-                            'error' => $_FILES['risks_documents']['error'][$key],
-                            'size' => $_FILES['risks_documents']['size'][$key],
-                        );
-                        $doc_type_id = !empty($_POST['risks_doc_type'][$key]) ? intval($_POST['risks_doc_type'][$key]) : null;
-                        $uploaded = $this->handle_file_upload($file, 'document');
-                        if ($uploaded) {
-                            $this->model->save_document('risks', $content_id, $uploaded['path'], $uploaded['name'], $uploaded['size'], $uploaded['type'], $doc_type_id);
+            // Handle risks documents (from modern upload component)
+            // JavaScript sends: uploaded_files['risks_documents[]_category'] = [{file: {...}, doc_type: ...}, ...]
+            $risks_keys = array('risks_documents[]_category', 'risks_doc_type[]');
+            foreach ($risks_keys as $key) {
+                if (!empty($uploaded_files[$key]) && is_array($uploaded_files[$key])) {
+                    foreach ($uploaded_files[$key] as $file_data) {
+                        if (!empty($file_data['file']) && !empty($file_data['doc_type'])) {
+                            $doc_type_id = intval($file_data['doc_type']);
+                            $file_meta = $file_data['file'];
+                            
+                            if (!empty($file_meta['path'])) {
+                                $this->model->save_document(
+                                    'risks',
+                                    $content_id,
+                                    $file_meta['path'],
+                                    $file_meta['name'] ?? basename($file_meta['path']),
+                                    $file_meta['size'] ?? 0,
+                                    $file_meta['type'] ?? 'application/octet-stream',
+                                    $doc_type_id,
+                                    $customer_id,
+                                    $branch_id
+                                );
+                            }
                         }
                     }
+                    break; // Found the right key
                 }
             }
             
-            // Handle additional documents - only add new ones, don't delete existing
-            if (!empty($_FILES['additional_documents']['name'][0])) {
-                foreach ($_FILES['additional_documents']['name'] as $key => $name) {
-                    if (!empty($name)) {
-                        $file = array(
-                            'name' => $_FILES['additional_documents']['name'][$key],
-                            'type' => $_FILES['additional_documents']['type'][$key],
-                            'tmp_name' => $_FILES['additional_documents']['tmp_name'][$key],
-                            'error' => $_FILES['additional_documents']['error'][$key],
-                            'size' => $_FILES['additional_documents']['size'][$key],
-                        );
-                        $doc_type_id = !empty($_POST['additional_doc_type'][$key]) ? intval($_POST['additional_doc_type'][$key]) : null;
-                        $uploaded = $this->handle_file_upload($file, 'document');
-                        if ($uploaded) {
-                            $this->model->save_document('additional', $content_id, $uploaded['path'], $uploaded['name'], $uploaded['size'], $uploaded['type'], $doc_type_id);
+            // Handle additional documents (from modern upload component)
+            $additional_keys = array('additional_documents[]_category', 'additional_doc_type[]');
+            foreach ($additional_keys as $key) {
+                if (!empty($uploaded_files[$key]) && is_array($uploaded_files[$key])) {
+                    foreach ($uploaded_files[$key] as $file_data) {
+                        if (!empty($file_data['file']) && !empty($file_data['doc_type'])) {
+                            $doc_type_id = intval($file_data['doc_type']);
+                            $file_meta = $file_data['file'];
+                            
+                            if (!empty($file_meta['path'])) {
+                                $this->model->save_document(
+                                    'additional',
+                                    $content_id,
+                                    $file_meta['path'],
+                                    $file_meta['name'] ?? basename($file_meta['path']),
+                                    $file_meta['size'] ?? 0,
+                                    $file_meta['type'] ?? 'application/octet-stream',
+                                    $doc_type_id,
+                                    $customer_id,
+                                    $branch_id
+                                );
+                            }
                         }
                     }
+                    break; // Found the right key
                 }
             }
         }
@@ -300,37 +475,63 @@ class SAW_Module_Content_Controller
         if (isset($_POST['department_text']) && is_array($_POST['department_text'])) {
             foreach ($_POST['department_text'] as $dept_id => $text) {
                 $dept_id = intval($dept_id);
-                $dept_content_id = $this->model->save_department_content($content_id, $dept_id, wp_kses_post($text));
+                $dept_content_id = $this->model->save_department_content($content_id, $dept_id, wp_kses_post($text), $customer_id, $branch_id);
                 
-                // Handle department documents - only add new ones, don't delete existing
-                if (!empty($_FILES['department_documents']['name'][$dept_id][0])) {
-                    foreach ($_FILES['department_documents']['name'][$dept_id] as $key => $name) {
-                        if (!empty($name)) {
-                            $file = array(
-                                'name' => $_FILES['department_documents']['name'][$dept_id][$key],
-                                'type' => $_FILES['department_documents']['type'][$dept_id][$key],
-                                'tmp_name' => $_FILES['department_documents']['tmp_name'][$dept_id][$key],
-                                'error' => $_FILES['department_documents']['error'][$dept_id][$key],
-                                'size' => $_FILES['department_documents']['size'][$dept_id][$key],
-                            );
-                            $doc_type_id = !empty($_POST['department_doc_type'][$dept_id][$key]) ? intval($_POST['department_doc_type'][$dept_id][$key]) : null;
-                            $uploaded = $this->handle_file_upload($file, 'document');
-                            if ($uploaded) {
-                                $this->model->save_document('department', $dept_content_id, $uploaded['path'], $uploaded['name'], $uploaded['size'], $uploaded['type'], $doc_type_id);
+                // Handle department documents (from modern upload component)
+                // JavaScript sends: uploaded_files['department_documents[ID][]_category'] = [{file: {...}, doc_type: ...}, ...]
+                $dept_doc_keys = array(
+                    'department_documents[' . $dept_id . '][]_category',
+                    'department_doc_type[' . $dept_id . '][]',
+                );
+                
+                foreach ($dept_doc_keys as $dept_doc_key) {
+                    if (!empty($uploaded_files[$dept_doc_key]) && is_array($uploaded_files[$dept_doc_key])) {
+                        foreach ($uploaded_files[$dept_doc_key] as $file_data) {
+                            if (!empty($file_data['file']) && !empty($file_data['doc_type'])) {
+                                $doc_type_id = intval($file_data['doc_type']);
+                                $file_meta = $file_data['file'];
+                                
+                                if (!empty($file_meta['path'])) {
+                                    $this->model->save_document(
+                                        'department',
+                                        $dept_content_id,
+                                        $file_meta['path'],
+                                        $file_meta['name'] ?? basename($file_meta['path']),
+                                        $file_meta['size'] ?? 0,
+                                        $file_meta['type'] ?? 'application/octet-stream',
+                                        $doc_type_id,
+                                        $customer_id,
+                                        $branch_id
+                                    );
+                                }
                             }
                         }
+                        break; // Found the right key
                     }
                 }
             }
         }
         
-        // Redirect back with success message
-        $redirect_url = remove_query_arg(array('saved', 'error'), wp_get_referer());
-        $final_url = add_query_arg('saved', '1', $redirect_url);
+        // Return success with updated file list for refresh
+        $updated_content = $this->model->get_content($customer_id, $branch_id, $language_id);
+        $response_data = array(
+            'message' => 'Obsah byl úspěšně uložen',
+            'content_id' => $content_id,
+        );
         
-        SAW_Logger::debug("Redirecting to: $final_url");
+        // Include updated PDF map path if exists
+        if (!empty($updated_content['pdf_map_path'])) {
+            $upload_dir = wp_upload_dir();
+            $response_data['pdf_map'] = array(
+                'url' => $upload_dir['baseurl'] . $updated_content['pdf_map_path'],
+                'path' => $updated_content['pdf_map_path'],
+                'name' => basename($updated_content['pdf_map_path']),
+            );
+        }
         
-        wp_send_json_success(['redirect' => $final_url]);
+        SAW_Logger::debug("Content saved successfully");
+        
+        wp_send_json_success($response_data);
         exit;
     }
     

@@ -52,6 +52,7 @@ class SAW_AJAX_Registry {
             'SAW_Component_Branch_Switcher',
             'SAW_Component_Language_Switcher',
             'SAW_Component_Select_Create',
+            'SAW_Component_File_Upload',
         ];
         
         foreach ($components as $class_name) {

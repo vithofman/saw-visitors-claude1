@@ -2,11 +2,14 @@
 if (!defined('ABSPATH')) { 
     exit; 
 }
+
 function saw_get_schema_training_documents($table_name, $prefix, $charset_collate) {
     $document_types_table = $prefix . 'saw_training_document_types';
     
     return "CREATE TABLE {$table_name} (
         id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+        customer_id BIGINT(20) UNSIGNED NOT NULL,
+        branch_id BIGINT(20) UNSIGNED NOT NULL,
         document_type ENUM('risks','additional','department') NOT NULL,
         document_type_id BIGINT(20) UNSIGNED DEFAULT NULL,
         reference_id BIGINT(20) UNSIGNED NOT NULL COMMENT 'ID z training_content (risks/additional) nebo training_department_content (department)',
@@ -16,6 +19,9 @@ function saw_get_schema_training_documents($table_name, $prefix, $charset_collat
         mime_type VARCHAR(100) DEFAULT NULL,
         uploaded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
+        KEY idx_customer_branch (customer_id, branch_id),
+        KEY idx_customer (customer_id),
+        KEY idx_branch (branch_id),
         KEY idx_document_type (document_type),
         KEY idx_document_type_id (document_type_id),
         KEY idx_reference (reference_id),

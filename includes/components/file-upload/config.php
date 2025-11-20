@@ -49,5 +49,6 @@ return array(
         'materials' => '/saw-visitor-docs/materials/',
         'visitor-uploads' => '/saw-visitor-docs/visitor-uploads/',
         'risk-docs' => '/saw-visitor-docs/risk-docs/',
+        'documents' => '/saw-training/documents/',
     ),
 );

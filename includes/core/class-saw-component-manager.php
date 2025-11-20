@@ -98,6 +98,7 @@ class SAW_Component_Manager {
             'search'            => 'includes/components/search/class-saw-component-search.php',
             'modal'             => 'includes/components/modal/class-saw-component-modal.php',
             'admin-table'       => 'includes/components/admin-table/class-saw-component-admin-table.php',
+            'file-upload'       => 'includes/components/file-upload/class-saw-component-file-upload.php',
         );
         
         foreach ($components as $slug => $path) {

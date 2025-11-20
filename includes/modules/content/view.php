@@ -10,6 +10,9 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Load file upload component template
+require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/file-upload-input.php';
+
 /**
  * Get file icon CSS class based on extension
  */
@@ -85,7 +88,7 @@ function saw_get_file_icon($filename) {
             ?>
             
             <form method="post" action="" enctype="multipart/form-data" class="saw-content-form">
-                <?php wp_nonce_field('saw_content_save_action', 'saw_content_nonce'); ?>
+                <?php wp_nonce_field('saw_content_action', 'saw_content_nonce'); ?>
                 <input type="hidden" name="language_id" value="<?php echo esc_attr($language['id']); ?>">
                 
                 <?php if ($show_main_sections): ?>
@@ -118,28 +121,37 @@ function saw_get_file_icon($filename) {
                         <span class="saw-section-title">🗺️ PDF Mapa</span>
                     </button>
                     <div class="saw-section-content">
-                        
-                        <?php if (!empty($lang_content['pdf_map_path'])): ?>
-                        <div class="saw-existing-documents">
-                            <h4 class="saw-docs-title">📎 Nahraná mapa:</h4>
-                            <div class="saw-existing-doc">
-                                <span class="saw-doc-badge">PDF Mapa</span>
-                                <span class="saw-doc-name"><?php echo saw_get_file_icon($lang_content['pdf_map_path']); ?> <?php echo esc_html(basename($lang_content['pdf_map_path'])); ?></span>
-                                <a href="<?php echo esc_url(wp_upload_dir()['baseurl'] . $lang_content['pdf_map_path']); ?>" 
-                                   target="_blank" 
-                                   class="saw-doc-view">👁️ Zobrazit</a>
-                            </div>
-                        </div>
-                        <?php endif; ?>
-                        
                         <div class="saw-form-field">
                             <label class="saw-label">Nahrát PDF mapu</label>
-                            <input 
-                                type="file" 
-                                name="pdf_map" 
-                                accept="application/pdf"
-                                class="saw-file-input"
-                            >
+                            <?php
+                            // Prepare existing PDF map file
+                            $existing_pdf_map = array();
+                            if (!empty($lang_content['pdf_map_path'])) {
+                                $upload_dir = wp_upload_dir();
+                                $existing_pdf_map = array(
+                                    array(
+                                        'id' => 'pdf_map_' . $language['id'],
+                                        'url' => $upload_dir['baseurl'] . $lang_content['pdf_map_path'],
+                                        'path' => $lang_content['pdf_map_path'],
+                                        'name' => basename($lang_content['pdf_map_path']),
+                                        'size' => file_exists($upload_dir['basedir'] . $lang_content['pdf_map_path']) ? filesize($upload_dir['basedir'] . $lang_content['pdf_map_path']) : 0,
+                                        'type' => 'application/pdf',
+                                        'extension' => 'pdf',
+                                    )
+                                );
+                            }
+                            
+                            saw_file_upload_input(array(
+                                'name' => 'pdf_map',
+                                'id' => 'pdf-map-input-' . $language['id'],
+                                'multiple' => false,
+                                'accept' => 'application/pdf,.pdf',
+                                'max_size' => 10485760, // 10MB
+                                'max_files' => 1, // Only one PDF map allowed
+                                'context' => 'content_pdf_map',
+                                'existing_files' => $existing_pdf_map,
+                            ));
+                            ?>
                             <span class="saw-hint">Nahrajte PDF soubor s mapou objektu</span>
                         </div>
                     </div>
@@ -155,18 +167,47 @@ function saw_get_file_icon($filename) {
                         <div class="saw-form-field">
                             <label class="saw-label">Textový obsah</label>
                             <?php
-                            wp_editor($lang_content['risks_text'] ?? '', 'risks_text_' . $language['id'], array(
+                            // CRITICAL: Ensure media buttons are shown by checking user capabilities first
+                            $editor_id = 'risks_text_' . $language['id'];
+                            $editor_settings = array(
                                 'textarea_name' => 'risks_text',
                                 'textarea_rows' => 36,
-                                'media_buttons' => true,
+                                'media_buttons' => true, // CRITICAL: Must be true
                                 'teeny' => false,
                                 'tinymce' => array(
                                     'toolbar1' => 'formatselect,bold,italic,underline,strikethrough,forecolor,backcolor,bullist,numlist,alignleft,aligncenter,alignright,link,unlink',
                                     'toolbar2' => 'undo,redo,removeformat,code,hr,blockquote,subscript,superscript,charmap,indent,outdent,pastetext,searchreplace,fullscreen',
                                     'block_formats' => 'Odstavec=p;Nadpis 1=h1;Nadpis 2=h2;Nadpis 3=h3;Nadpis 4=h4;Citace=blockquote',
                                 ),
-                            ));
+                            );
+                            
+                            // Render editor
+                            wp_editor($lang_content['risks_text'] ?? '', $editor_id, $editor_settings);
+                            
+                            // CRITICAL: Manually ensure media buttons are rendered if WordPress didn't add them
+                            // WordPress checks current_user_can('upload_files') before showing media buttons
+                            // We already set this capability in controller, but double-check here
+                            $editor_wrap_id = 'wp-' . $editor_id . '-wrap';
                             ?>
+                            <script>
+                            (function() {
+                                // Ensure media buttons are visible after editor is rendered
+                                var editorWrap = document.getElementById('<?php echo esc_js($editor_wrap_id); ?>');
+                                if (editorWrap) {
+                                    var mediaButtons = editorWrap.querySelector('.wp-media-buttons');
+                                    if (!mediaButtons) {
+                                        // Media buttons missing - add them manually
+                                        var mediaButtonsDiv = document.createElement('div');
+                                        mediaButtonsDiv.className = 'wp-media-buttons';
+                                        mediaButtonsDiv.innerHTML = '<button type="button" class="button insert-media add_media" data-editor="<?php echo esc_js($editor_id); ?>"><span class="wp-media-buttons-icon"></span> Přidat média</button>';
+                                        var editorContainer = editorWrap.querySelector('.wp-editor-container');
+                                        if (editorContainer) {
+                                            editorWrap.insertBefore(mediaButtonsDiv, editorContainer);
+                                        }
+                                    }
+                                }
+                            })();
+                            </script>
                         </div>
                         
                         <div class="saw-form-field">
@@ -174,11 +215,11 @@ function saw_get_file_icon($filename) {
                             
                             <?php
                             // Load existing documents
+                            $existing_risks_docs = array();
                             if (isset($lang_content['id'])) {
                                 $risks_docs = $model->get_documents('risks', $lang_content['id']);
                                 if (!empty($risks_docs)) {
-                                    echo '<div class="saw-existing-documents">';
-                                    echo '<h4 class="saw-docs-title">📎 Nahrané dokumenty:</h4>';
+                                    $upload_dir = wp_upload_dir();
                                     foreach ($risks_docs as $doc) {
                                         $doc_type_name = '';
                                         foreach ($document_types as $dt) {
@@ -187,50 +228,48 @@ function saw_get_file_icon($filename) {
                                                 break;
                                             }
                                         }
-                                        echo '<div class="saw-existing-doc">';
-                                        echo '<span class="saw-doc-badge">' . esc_html($doc_type_name) . '</span>';
-                                        echo '<span class="saw-doc-name">' . saw_get_file_icon($doc['file_name']) . ' ' . esc_html($doc['file_name']) . '</span>';
-                                        echo '<span class="saw-doc-size">' . size_format($doc['file_size']) . '</span>';
-                                        echo '<button type="button" class="saw-doc-delete" data-doc-id="' . $doc['id'] . '" onclick="if(confirm(\'Opravdu smazat tento dokument?\')) { this.closest(\'.saw-existing-doc\').style.display=\'none\'; var input = document.createElement(\'input\'); input.type=\'hidden\'; input.name=\'delete_document[]\'; input.value=\'' . $doc['id'] . '\'; this.closest(\'form\').appendChild(input); }">🗑️</button>';
-                                        echo '</div>';
+                                        
+                                        $existing_risks_docs[] = array(
+                                            'id' => $doc['id'],
+                                            'url' => $upload_dir['baseurl'] . $doc['file_path'],
+                                            'path' => $doc['file_path'],
+                                            'name' => $doc['file_name'],
+                                            'size' => $doc['file_size'],
+                                            'type' => $doc['mime_type'] ?? 'application/octet-stream',
+                                            'extension' => strtolower(pathinfo($doc['file_name'], PATHINFO_EXTENSION)),
+                                            'category' => $doc['document_type_id'],
+                                            'category_name' => $doc_type_name,
+                                        );
                                     }
-                                    echo '</div>';
                                 }
                             }
                             ?>
                             
                             <div class="saw-documents-list" id="risks-docs-list-<?php echo esc_attr($language['id']); ?>">
                                 <div class="saw-document-item">
-                                    <div class="saw-doc-type-select">
-                                        <select name="risks_doc_type[]" class="saw-select">
-                                            <option value="">-- Vyberte typ dokumentu --</option>
-                                            <?php foreach ($document_types as $doc_type): ?>
-                                                <option value="<?php echo esc_attr($doc_type['id']); ?>">
-                                                    <?php echo esc_html($doc_type['name']); ?>
-                                                </option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    </div>
-                                    <input 
-                                        type="file" 
-                                        name="risks_documents[]" 
-                                        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.pages,.numbers,.key,.txt,.rtf"
-                                        class="saw-file-input"
-                                        data-requires-type="true"
-                                    >
+                                    <?php
+                                    saw_file_upload_input(array(
+                                        'name' => 'risks_documents[]',
+                                        'id' => 'risks-doc-input-' . $language['id'] . '-0',
+                                        'multiple' => true,
+                                        'accept' => '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.pages,.numbers,.key,.txt,.rtf',
+                                        'max_size' => 10485760, // 10MB
+                                        'context' => 'content_documents',
+                                        'class' => 'saw-document-upload',
+                                        'existing_files' => $existing_risks_docs,
+                                        'category_config' => array(
+                                            'enabled' => true,
+                                            'source' => 'config',
+                                            'required' => true,
+                                            'label' => 'Typ dokumentu',
+                                            'multiple' => false, // Single select
+                                            'options' => $document_types, // Pass directly
+                                        ),
+                                    ));
+                                    ?>
+                                    <button type="button" class="saw-remove-document" style="display: none;">🗑️</button>
                                 </div>
                             </div>
-                            
-                            <button 
-                                type="button" 
-                                class="saw-btn-secondary saw-add-document"
-                                data-target="risks-docs-list-<?php echo esc_attr($language['id']); ?>"
-                                data-doc-type="risks"
-                            >
-                                ➕ Přidat další dokument
-                            </button>
-                            
-                            <span class="saw-hint">PDF, DOC nebo DOCX</span>
                         </div>
                     </div>
                 </div>
@@ -264,11 +303,11 @@ function saw_get_file_icon($filename) {
                             
                             <?php
                             // Load existing documents
+                            $existing_additional_docs = array();
                             if (isset($lang_content['id'])) {
                                 $additional_docs = $model->get_documents('additional', $lang_content['id']);
                                 if (!empty($additional_docs)) {
-                                    echo '<div class="saw-existing-documents">';
-                                    echo '<h4 class="saw-docs-title">📎 Nahrané dokumenty:</h4>';
+                                    $upload_dir = wp_upload_dir();
                                     foreach ($additional_docs as $doc) {
                                         $doc_type_name = '';
                                         foreach ($document_types as $dt) {
@@ -277,50 +316,48 @@ function saw_get_file_icon($filename) {
                                                 break;
                                             }
                                         }
-                                        echo '<div class="saw-existing-doc">';
-                                        echo '<span class="saw-doc-badge">' . esc_html($doc_type_name) . '</span>';
-                                        echo '<span class="saw-doc-name">' . saw_get_file_icon($doc['file_name']) . ' ' . esc_html($doc['file_name']) . '</span>';
-                                        echo '<span class="saw-doc-size">' . size_format($doc['file_size']) . '</span>';
-                                        echo '<button type="button" class="saw-doc-delete" data-doc-id="' . $doc['id'] . '" onclick="if(confirm(\'Opravdu smazat tento dokument?\')) { this.closest(\'.saw-existing-doc\').style.display=\'none\'; var input = document.createElement(\'input\'); input.type=\'hidden\'; input.name=\'delete_document[]\'; input.value=\'' . $doc['id'] . '\'; this.closest(\'form\').appendChild(input); }">🗑️</button>';
-                                        echo '</div>';
+                                        
+                                        $existing_additional_docs[] = array(
+                                            'id' => $doc['id'],
+                                            'url' => $upload_dir['baseurl'] . $doc['file_path'],
+                                            'path' => $doc['file_path'],
+                                            'name' => $doc['file_name'],
+                                            'size' => $doc['file_size'],
+                                            'type' => $doc['mime_type'] ?? 'application/octet-stream',
+                                            'extension' => strtolower(pathinfo($doc['file_name'], PATHINFO_EXTENSION)),
+                                            'category' => $doc['document_type_id'],
+                                            'category_name' => $doc_type_name,
+                                        );
                                     }
-                                    echo '</div>';
                                 }
                             }
                             ?>
                             
                             <div class="saw-documents-list" id="additional-docs-list-<?php echo esc_attr($language['id']); ?>">
                                 <div class="saw-document-item">
-                                    <div class="saw-doc-type-select">
-                                        <select name="additional_doc_type[]" class="saw-select">
-                                            <option value="">-- Vyberte typ dokumentu --</option>
-                                            <?php foreach ($document_types as $doc_type): ?>
-                                                <option value="<?php echo esc_attr($doc_type['id']); ?>">
-                                                    <?php echo esc_html($doc_type['name']); ?>
-                                                </option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    </div>
-                                    <input 
-                                        type="file" 
-                                        name="additional_documents[]" 
-                                        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.pages,.numbers,.key,.txt,.rtf"
-                                        class="saw-file-input"
-                                        data-requires-type="true"
-                                    >
+                                    <?php
+                                    saw_file_upload_input(array(
+                                        'name' => 'additional_documents[]',
+                                        'id' => 'additional-doc-input-' . $language['id'] . '-0',
+                                        'multiple' => true,
+                                        'accept' => '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.pages,.numbers,.key,.txt,.rtf',
+                                        'max_size' => 10485760, // 10MB
+                                        'context' => 'content_documents',
+                                        'class' => 'saw-document-upload',
+                                        'existing_files' => $existing_additional_docs,
+                                        'category_config' => array(
+                                            'enabled' => true,
+                                            'source' => 'config',
+                                            'required' => true,
+                                            'label' => 'Typ dokumentu',
+                                            'multiple' => false, // Single select
+                                            'options' => $document_types,
+                                        ),
+                                    ));
+                                    ?>
+                                    <button type="button" class="saw-remove-document" style="display: none;">🗑️</button>
                                 </div>
                             </div>
-                            
-                            <button 
-                                type="button" 
-                                class="saw-btn-secondary saw-add-document"
-                                data-target="additional-docs-list-<?php echo esc_attr($language['id']); ?>"
-                                data-doc-type="additional"
-                            >
-                                ➕ Přidat další dokument
-                            </button>
-                            
-                            <span class="saw-hint">PDF, DOC nebo DOCX</span>
                         </div>
                     </div>
                 </div>
@@ -400,7 +437,8 @@ function saw_get_file_icon($filename) {
                                         <label class="saw-label">Textové informace pro oddělení</label>
                                         <?php
                                         $dept_text = isset($lang_content['id']) ? $model->get_department_content($lang_content['id'], $dept['id']) : '';
-                                        wp_editor($dept_text, 'dept_text_' . $dept['id'] . '_' . $language['id'], array(
+                                        $editor_id = 'dept_text_' . $dept['id'] . '_' . $language['id'];
+                                        $editor_settings = array(
                                             'textarea_name' => 'department_text[' . $dept['id'] . ']',
                                             'textarea_rows' => 30,
                                             'media_buttons' => true,
@@ -410,76 +448,95 @@ function saw_get_file_icon($filename) {
                                                 'toolbar2' => 'undo,redo,removeformat,code,hr,blockquote,subscript,superscript,charmap,indent,outdent,pastetext,fullscreen',
                                                 'block_formats' => 'Odstavec=p;Nadpis 2=h2;Nadpis 3=h3;Nadpis 4=h4;Citace=blockquote',
                                             ),
-                                        ));
+                                        );
+                                        wp_editor($dept_text, $editor_id, $editor_settings);
+                                        $editor_wrap_id = 'wp-' . $editor_id . '-wrap';
+                                        ?>
+                                        <script>
+                                        (function() {
+                                            var editorWrap = document.getElementById('<?php echo esc_js($editor_wrap_id); ?>');
+                                            if (editorWrap) {
+                                                var mediaButtons = editorWrap.querySelector('.wp-media-buttons');
+                                                if (!mediaButtons) {
+                                                    var mediaButtonsDiv = document.createElement('div');
+                                                    mediaButtonsDiv.className = 'wp-media-buttons';
+                                                    mediaButtonsDiv.innerHTML = '<button type="button" class="button insert-media add_media" data-editor="<?php echo esc_js($editor_id); ?>"><span class="wp-media-buttons-icon"></span> Přidat média</button>';
+                                                    var editorContainer = editorWrap.querySelector('.wp-editor-container');
+                                                    if (editorContainer) {
+                                                        editorWrap.insertBefore(mediaButtonsDiv, editorContainer);
+                                                    }
+                                                }
+                                            }
+                                        })();
+                                        </script>
                                         ?>
                                     </div>
                                     
                                     <div class="saw-form-field">
                                         <label class="saw-label">Dokumenty pro oddělení</label>
                                         
-                                        <?php
-                                        // Load existing department documents
-                                        if (isset($lang_content['id'])) {
-                                            $dept_content_id = $model->get_department_content_id($lang_content['id'], $dept['id']);
-                                            if ($dept_content_id) {
-                                                $dept_docs = $model->get_documents('department', $dept_content_id);
-                                                if (!empty($dept_docs)) {
-                                                    echo '<div class="saw-existing-documents">';
-                                                    echo '<h4 class="saw-docs-title">📎 Nahrané dokumenty:</h4>';
-                                                    foreach ($dept_docs as $doc) {
-                                                        $doc_type_name = '';
-                                                        foreach ($document_types as $dt) {
-                                                            if ($dt['id'] == $doc['document_type_id']) {
-                                                                $doc_type_name = $dt['name'];
-                                                                break;
-                                                            }
-                                                        }
-                                                        echo '<div class="saw-existing-doc">';
-                                                        echo '<span class="saw-doc-badge">' . esc_html($doc_type_name) . '</span>';
-                                                        echo '<span class="saw-doc-name">' . saw_get_file_icon($doc['file_name']) . ' ' . esc_html($doc['file_name']) . '</span>';
-                                                        echo '<span class="saw-doc-size">' . size_format($doc['file_size']) . '</span>';
-                                                        echo '<button type="button" class="saw-doc-delete" data-doc-id="' . $doc['id'] . '" onclick="if(confirm(\'Opravdu smazat tento dokument?\')) { this.closest(\'.saw-existing-doc\').style.display=\'none\'; var input = document.createElement(\'input\'); input.type=\'hidden\'; input.name=\'delete_document[]\'; input.value=\'' . $doc['id'] . '\'; this.closest(\'form\').appendChild(input); }">🗑️</button>';
-                                                        echo '</div>';
+                                <?php
+                                // Prepare existing department documents
+                                $existing_dept_docs = array();
+                                if (isset($lang_content['id'])) {
+                                    $dept_content_id = $model->get_department_content_id($lang_content['id'], $dept['id']);
+                                    if ($dept_content_id) {
+                                        $dept_docs = $model->get_documents('department', $dept_content_id);
+                                        if (!empty($dept_docs)) {
+                                            $upload_dir = wp_upload_dir();
+                                            foreach ($dept_docs as $doc) {
+                                                $doc_type_name = '';
+                                                foreach ($document_types as $dt) {
+                                                    if ($dt['id'] == $doc['document_type_id']) {
+                                                        $doc_type_name = $dt['name'];
+                                                        break;
                                                     }
-                                                    echo '</div>';
                                                 }
+                                                
+                                                $file_path = $doc['file_path'] ?? '';
+                                                $existing_dept_docs[] = array(
+                                                    'id' => $doc['id'],
+                                                    'url' => !empty($file_path) ? $upload_dir['baseurl'] . $file_path : '',
+                                                    'path' => $file_path,
+                                                    'name' => $doc['file_name'],
+                                                    'size' => $doc['file_size'],
+                                                    'type' => $doc['file_type'] ?? 'application/octet-stream',
+                                                    'extension' => strtolower(pathinfo($doc['file_name'], PATHINFO_EXTENSION)),
+                                                    'category' => $doc['document_type_id'],
+                                                    'category_name' => $doc_type_name,
+                                                );
                                             }
                                         }
+                                    }
+                                }
+                                ?>
+                                
+                                <div class="saw-documents-list" id="dept-docs-list-<?php echo esc_attr($dept['id']); ?>-<?php echo esc_attr($language['id']); ?>">
+                                    <div class="saw-document-item">
+                                        <?php
+                                        saw_file_upload_input(array(
+                                            'name' => 'department_documents[' . $dept['id'] . '][]',
+                                            'id' => 'dept-doc-input-' . $dept['id'] . '-' . $language['id'] . '-0',
+                                            'multiple' => true,
+                                            'accept' => '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.pages,.numbers,.key,.txt,.rtf',
+                                            'max_size' => 10485760, // 10MB
+                                            'context' => 'content_documents',
+                                            'class' => 'saw-document-upload',
+                                            'existing_files' => $existing_dept_docs,
+                                            'category_config' => array(
+                                                'enabled' => true,
+                                                'source' => 'config',
+                                                'required' => true,
+                                                'label' => 'Typ dokumentu',
+                                                'multiple' => false, // Single select
+                                                'options' => $document_types,
+                                            ),
+                                        ));
                                         ?>
+                                        <button type="button" class="saw-remove-document" style="display: none;">🗑️</button>
+                                    </div>
+                                </div>
                                         
-                                        <div class="saw-documents-list" id="dept-docs-list-<?php echo esc_attr($dept['id']); ?>-<?php echo esc_attr($language['id']); ?>">
-                                            <div class="saw-document-item">
-                                                <div class="saw-doc-type-select">
-                                                    <select name="department_doc_type[<?php echo esc_attr($dept['id']); ?>][]" class="saw-select">
-                                                        <option value="">-- Vyberte typ dokumentu --</option>
-                                                        <?php foreach ($document_types as $doc_type): ?>
-                                                            <option value="<?php echo esc_attr($doc_type['id']); ?>">
-                                                                <?php echo esc_html($doc_type['name']); ?>
-                                                            </option>
-                                                        <?php endforeach; ?>
-                                                    </select>
-                                                </div>
-                                                <input 
-                                                    type="file" 
-                                                    name="department_documents[<?php echo esc_attr($dept['id']); ?>][]" 
-                                                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.pages,.numbers,.key,.txt,.rtf"
-                                                    class="saw-file-input"
-                                                    data-requires-type="true"
-                                                >
-                                            </div>
-                                        </div>
-                                        
-                                        <button 
-                                            type="button" 
-                                            class="saw-btn-secondary saw-add-document"
-                                            data-target="dept-docs-list-<?php echo esc_attr($dept['id']); ?>-<?php echo esc_attr($language['id']); ?>"
-                                            data-dept-id="<?php echo esc_attr($dept['id']); ?>"
-                                            data-doc-type="department"
-                                        >
-                                            ➕ Přidat další dokument
-                                        </button>
-                                        
-                                        <span class="saw-hint">Dokumenty specifické pro toto oddělení</span>
                                     </div>
                                     
                                 </div>

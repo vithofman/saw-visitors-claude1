@@ -2,111 +2,95 @@
 /**
  * File Upload Input Template
  * 
- * Renders a complete file upload interface with preview box, file selection
- * controls, and file information display. Supports drag-and-drop and displays
- * current file if available.
+ * Renders the modern file upload component HTML.
  * 
  * @package     SAW_Visitors
  * @subpackage  Components/FileUpload
- * @version     1.0.0
- * @since       1.0.0
- * @author      SAW Visitors Team
- * 
- * Variables:
- * @var string $id                Field ID
- * @var string $name              Field name
- * @var array  $config            Upload configuration
- * @var string $current_file_url  Current file URL (if exists)
- * @var string $label             Upload label
- * @var string $current_label     Current file label
- * @var string $help_text         Help text
- * @var string $accept            Accepted MIME types
- * @var bool   $show_preview      Whether to show preview
- * @var string $custom_class      Custom CSS class
+ * @version     2.0.0
+ * @since       2.0.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-$id = $id ?? 'file';
-$name = $name ?? 'file';
-$config = $config ?? array();
-$current_file_url = $current_file_url ?? '';
-$label = $label ?? 'Nahrát soubor';
-$current_label = $current_label ?? 'Současný soubor';
-$help_text = $help_text ?? '';
-$accept = $accept ?? 'image/jpeg,image/png,image/gif';
-$show_preview = $show_preview ?? true;
-$custom_class = $custom_class ?? '';
-
-$uploader = new SAW_File_Uploader($config);
-$upload_config = $uploader->get_config();
-$max_size_mb = round($upload_config['max_file_size'] / 1048576, 1);
-
-$has_file = !empty($current_file_url);
-?>
-
-<div class="saw-file-upload-component <?php echo esc_attr($custom_class); ?>">
-    <div class="saw-file-upload-area">
-        <div class="saw-file-preview-section">
-            <label class="saw-label"><?php echo esc_html($current_label); ?></label>
-            <div class="saw-file-preview-box <?php echo $has_file ? 'has-file' : ''; ?>" 
-                 id="<?php echo esc_attr($id); ?>-preview">
-                <?php if ($has_file): ?>
-                    <img src="<?php echo esc_url($current_file_url); ?>" alt="<?php echo esc_attr($label); ?>" class="saw-preview-image">
-                    <button type="button" class="saw-file-remove-overlay" title="Odstranit">
-                        <span class="dashicons dashicons-no-alt"></span>
-                    </button>
-                <?php else: ?>
-                    <div class="saw-file-empty-state">
-                        <div class="saw-file-icon-wrapper">
-                            <span class="dashicons dashicons-format-image"></span>
-                        </div>
-                        <p class="saw-file-empty-text">Zatím žádné logo</p>
-                    </div>
-                <?php endif; ?>
-            </div>
-        </div>
-        
-        <div class="saw-file-upload-controls">
-            <label class="saw-label"><?php echo esc_html($label); ?></label>
-            
-            <input type="file" 
-                   id="<?php echo esc_attr($id); ?>" 
-                   name="<?php echo esc_attr($name); ?>" 
-                   class="saw-file-input"
-                   accept="<?php echo esc_attr($accept); ?>"
-                   data-max-size="<?php echo esc_attr($upload_config['max_file_size']); ?>">
-            
-            <label for="<?php echo esc_attr($id); ?>" class="saw-file-upload-trigger">
-                <span class="dashicons dashicons-upload"></span>
-                <span class="saw-upload-text">Vybrat soubor</span>
-            </label>
-            
-            <div class="saw-file-selected-info hidden">
-                <div class="saw-file-selected-icon">
-                    <span class="dashicons dashicons-yes-alt"></span>
-                </div>
-                <div class="saw-file-selected-details">
-                    <div class="saw-file-selected-name"></div>
-                    <div class="saw-file-selected-meta"></div>
-                </div>
-                <button type="button" class="saw-file-clear-btn" title="Zrušit výběr">
-                    <span class="dashicons dashicons-dismiss"></span>
-                </button>
-            </div>
-            
-            <?php if ($help_text): ?>
-                <p class="saw-help-text"><?php echo esc_html($help_text); ?></p>
-            <?php else: ?>
-                <p class="saw-help-text">Maximální velikost <?php echo esc_html($max_size_mb); ?>MB · Podporované formáty: JPG, PNG, GIF</p>
-            <?php endif; ?>
-        </div>
-    </div>
+/**
+ * Render file upload input
+ * 
+ * @since 2.0.0
+ * @param array $args Component arguments
+ * @return void
+ */
+function saw_file_upload_input($args = array()) {
+    $defaults = array(
+        'name' => 'file_upload',
+        'id' => '',
+        'multiple' => false,
+        'accept' => '',
+        'max_size' => 0, // 0 = no limit, in bytes
+        'max_files' => 0, // 0 = no limit, number of files
+        'context' => 'documents',
+        'class' => '',
+        'required' => false,
+        'existing_files' => array(), // Array of existing file metadata
+        'category_config' => array(), // Category/document type configuration
+        // category_config structure:
+        // 'enabled' => true/false
+        // 'source' => 'database' | 'config'
+        // 'options' => array() // For config source, array of ['id' => X, 'name' => 'Y']
+        // 'table' => 'table_name' // For database source
+        // 'id_field' => 'id'
+        // 'name_field' => 'name'
+        // 'required' => true/false
+        // 'label' => 'Typ dokumentu'
+        // 'multiple' => true/false // For multiselect
+    );
     
-    <input type="hidden" 
-           name="<?php echo esc_attr($name); ?>_remove" 
-           value="0" 
-           class="saw-file-remove-flag">
-</div>
+    $args = wp_parse_args($args, $defaults);
+    
+    // Generate unique ID if not provided
+    if (empty($args['id'])) {
+        $args['id'] = 'saw-file-upload-' . uniqid();
+    }
+    
+    // Enqueue assets
+    if (class_exists('SAW_Component_File_Upload')) {
+        SAW_Component_File_Upload::enqueue_assets();
+    }
+    
+    // Prepare options for JavaScript
+    $js_options = array(
+        'multiple' => $args['multiple'],
+        'accept' => $args['accept'],
+        'maxSize' => $args['max_size'],
+        'maxFiles' => $args['max_files'],
+        'uploadUrl' => admin_url('admin-ajax.php'),
+        'context' => $args['context'],
+        'name' => $args['name'],
+        'id' => $args['id'],
+        'existingFiles' => $args['existing_files'],
+        'categoryConfig' => $args['category_config'],
+    );
+    
+    $container_class = 'saw-file-upload-modern-container';
+    if (!empty($args['class'])) {
+        $container_class .= ' ' . esc_attr($args['class']);
+    }
+    
+    ?>
+    <div 
+        class="<?php echo esc_attr($container_class); ?>"
+        data-options="<?php echo esc_attr(json_encode($js_options)); ?>"
+        data-name="<?php echo esc_attr($args['name']); ?>"
+        data-context="<?php echo esc_attr($args['context']); ?>"
+    ></div>
+    
+    <?php if ($args['required']): ?>
+        <input 
+            type="hidden" 
+            name="<?php echo esc_attr($args['name']); ?>_required" 
+            value="1"
+        >
+    <?php endif; ?>
+    <?php
+}

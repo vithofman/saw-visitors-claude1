@@ -13,12 +13,12 @@
  * @version 6.0.0 - Consolidated with Enhanced Features
  */
 
-(function($) {
+(function ($) {
     'use strict';
 
     let isNavigating = false;
 
-    $(document).ready(function() {
+    $(document).ready(function () {
         console.log('🎯 SAW SPA Navigation: Initialized');
         initSPANavigation();
         initBrowserBackButton();
@@ -28,45 +28,45 @@
 
     function initSPANavigation() {
         console.log('✅ SPA Navigation ENABLED');
-        
+
         // CRITICAL: Remove existing handlers first to prevent duplicates
         // Use namespace to avoid conflicts
         $(document).off('click.saw-spa-nav', '.saw-app-sidebar a, .saw-page-wrapper a[href^="/admin"], .saw-page-wrapper a[href^="/manager"]');
-        
-        $(document).on('click.saw-spa-nav', '.saw-app-sidebar a, .saw-page-wrapper a[href^="/admin"], .saw-page-wrapper a[href^="/manager"]', function(e) {
+
+        $(document).on('click.saw-spa-nav', '.saw-app-sidebar a, .saw-page-wrapper a[href^="/admin"], .saw-page-wrapper a[href^="/manager"]', function (e) {
             const $link = $(this);
             const href = $link.attr('href');
-            
+
             // Skip AJAX-handled sidebar edit buttons
             if ($link.hasClass('saw-edit-ajax')) {
                 console.log('⏭️ SPA: Skipping - AJAX edit button');
                 return;
             }
-            
+
             // Skip sidebar close buttons (handled by admin-table.js)
             if ($link.hasClass('saw-sidebar-close')) {
                 console.log('⏭️ SPA: Skipping - Sidebar close button');
                 return;
             }
-            
+
             // Skip related item links (handled by sidebar.js)
             if ($link.hasClass('saw-related-item-link') && !$link.hasClass('saw-spa-link')) {
                 console.log('⏭️ SPA: Skipping - related item link');
                 return;
             }
-            
+
             const $parentRow = $link.closest('tr[data-detail-url]');
             if ($parentRow.length > 0) {
                 console.log('⏭️ SPA: Skipping - inside table row with sidebar');
                 return;
             }
-            
+
             const $parentTable = $link.closest('.saw-admin-table');
             if ($parentTable.length > 0) {
                 console.log('⏭️ SPA: Skipping - inside admin table');
                 return;
             }
-            
+
             const $actionButtons = $link.closest('.saw-action-buttons');
             if ($actionButtons.length > 0) {
                 console.log('⏭️ SPA: Skipping - inside action buttons');
@@ -78,21 +78,29 @@
             if ($link.attr('target') === '_blank') return;
             if ($link.data('no-ajax') === true) return;
 
+            // CRITICAL: Content page always uses full page reload (TinyMCE compatibility)
+            // TinyMCE and WordPress Media Library require full page context to work properly
+            if (href.indexOf('/admin/content') !== -1 || href.indexOf('/content') !== -1) {
+                console.log('🔗 Content page detected - using full page reload for TinyMCE compatibility');
+                window.location.href = href;
+                return;
+            }
+
             console.log('🔗 SPA Navigation: Intercepted link:', href, 'Link element:', $link[0], 'isNavigating:', isNavigating);
-            
+
             // CRITICAL: Check if navigation is already in progress
             if (isNavigating) {
                 console.warn('⚠️ Navigation already in progress, ignoring click');
                 return;
             }
-            
+
             e.preventDefault();
             e.stopPropagation(); // Prevent other handlers from interfering
-            
+
             if (window.innerWidth <= 1024) {
                 closeMobileSidebar();
             }
-            
+
             navigateToPage(href, 0);
         });
     }
@@ -103,25 +111,25 @@
         const $overlay = $('#sawSidebarOverlay');
         const $close = $('#sawSidebarClose');
 
-        $hamburger.on('click', function(e) {
+        $hamburger.on('click', function (e) {
             e.preventDefault();
             e.stopPropagation();
             openMobileSidebar();
         });
 
-        $overlay.on('click', function(e) {
+        $overlay.on('click', function (e) {
             e.preventDefault();
             e.stopPropagation();
             closeMobileSidebar();
         });
 
-        $close.on('click', function(e) {
+        $close.on('click', function (e) {
             e.preventDefault();
             e.stopPropagation();
             closeMobileSidebar();
         });
 
-        $(document).on('keydown', function(e) {
+        $(document).on('keydown', function (e) {
             if (e.key === 'Escape' && $sidebar.hasClass('open')) {
                 closeMobileSidebar();
             }
@@ -131,7 +139,7 @@
     function openMobileSidebar() {
         const $sidebar = $('#sawAppSidebar');
         const $overlay = $('#sawSidebarOverlay');
-        
+
         $sidebar.addClass('open');
         $overlay.addClass('active');
         $('body').css('overflow', 'hidden');
@@ -140,7 +148,7 @@
     function closeMobileSidebar() {
         const $sidebar = $('#sawAppSidebar');
         const $overlay = $('#sawSidebarOverlay');
-        
+
         $sidebar.removeClass('open');
         $overlay.removeClass('active');
         $('body').css('overflow', '');
@@ -151,7 +159,7 @@
      */
     function navigateToPage(url, retryCount) {
         retryCount = retryCount || 0;
-        
+
         if (isNavigating) {
             return;
         }
@@ -166,7 +174,7 @@
             type: 'GET',
             dataType: 'json',
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
-            success: function(response) {
+            success: function (response) {
                 if (response && response.success && response.data) {
                     console.log('📦 Navigation: Success');
 
@@ -189,15 +197,15 @@
                         console.log('📦 Loading assets from server response:', response.data.assets);
                         console.log('📦 Asset counts - CSS: ' + (response.data.assets.css ? response.data.assets.css.length : 0) + ', JS: ' + (response.data.assets.js ? response.data.assets.js.length : 0));
                         if (response.data.assets.css) {
-                            console.log('📦 CSS assets:', response.data.assets.css.map(function(a) { return a.handle + ' (' + a.src + ')'; }));
+                            console.log('📦 CSS assets:', response.data.assets.css.map(function (a) { return a.handle + ' (' + a.src + ')'; }));
                         }
                         if (response.data.assets.js) {
-                            console.log('📦 JS assets:', response.data.assets.js.map(function(a) { return a.handle + ' (' + a.src + ')'; }));
+                            console.log('📦 JS assets:', response.data.assets.js.map(function (a) { return a.handle + ' (' + a.src + ')'; }));
                         }
-                        loadAssetsFromResponse(response.data.assets, function() {
+                        loadAssetsFromResponse(response.data.assets, function () {
                             console.log('🔧 Assets loaded callback FIRED - reinitializing scripts...');
                             // CRITICAL: Wait a bit for all scripts to actually execute
-                            setTimeout(function() {
+                            setTimeout(function () {
                                 console.log('🔧 Executing reinitialization...');
                                 reinitializePageScripts();
                                 const moduleName = detectModuleFromURL(url);
@@ -213,11 +221,11 @@
                     } else {
                         console.warn('⚠️ No assets in response!');
                         // Fallback: try to detect and load module assets
-                        setTimeout(function() {
+                        setTimeout(function () {
                             const moduleName = detectModuleFromURL(url);
                             if (moduleName) {
                                 console.log('🔧 Loading module (fallback):', moduleName);
-                                loadModuleAssets(moduleName, function() {
+                                loadModuleAssets(moduleName, function () {
                                     reinitializePageScripts();
                                     reinitializeModuleScripts(moduleName);
                                 });
@@ -232,7 +240,7 @@
                     fallbackToFullPageLoad(url);
                 }
             },
-            error: function(xhr, status, error) {
+            error: function (xhr, status, error) {
                 console.error('❌ Navigation Error:', status);
 
                 // Retry mechanism
@@ -240,7 +248,7 @@
                     console.log('🔄 Retrying... (' + (retryCount + 1) + '/2)');
                     isNavigating = false;
                     hideLoading();
-                    setTimeout(function() {
+                    setTimeout(function () {
                         navigateToPage(url, retryCount + 1);
                     }, 1000);
                     return;
@@ -251,7 +259,7 @@
                 isNavigating = false;
                 hideLoading();
             },
-            complete: function() {
+            complete: function () {
                 // CRITICAL FIX: Always reset isNavigating in complete callback as fallback
                 // This ensures flag is reset even if success/error callbacks fail
                 if (retryCount >= 2) {
@@ -268,17 +276,17 @@
         if (!$content.length) {
             return;
         }
-        
+
         const $oldModals = $content.find('[id*="saw-modal-"], .saw-modal');
         if ($oldModals.length > 0) {
             $oldModals.remove();
         }
-        
+
         const $overlays = $('.saw-modal-overlay, .modal-backdrop').not('#sawSidebarOverlay');
         if ($overlays.length > 0) {
             $overlays.remove();
         }
-        
+
         const $oldStyles = $('style[id*="saw-module-css-"]');
         if ($oldStyles.length > 0) {
             $oldStyles.remove();
@@ -309,7 +317,7 @@
 
         // Destroy TinyMCE editors
         if (typeof tinymce !== 'undefined') {
-            tinymce.editors.forEach(function(editor) {
+            tinymce.editors.forEach(function (editor) {
                 try {
                     tinymce.remove('#' + editor.id);
                 } catch (e) { }
@@ -338,7 +346,7 @@
 
         $content.css('opacity', '0');
 
-        setTimeout(function() {
+        setTimeout(function () {
             $content.html(data.content || '');
 
             if (data.title) {
@@ -346,10 +354,10 @@
             }
 
             $content.css('opacity', '1');
-            
+
             // CRITICAL: Trigger page-loaded event AFTER content is in DOM
             // This ensures modules can find their elements
-            setTimeout(function() {
+            setTimeout(function () {
                 $(document).trigger('saw:page-loaded', [data]);
             }, 50);
         }, 150);
@@ -359,22 +367,22 @@
         console.log('🔄 Reinitializing page scripts...');
         let scriptsExecuted = 0;
 
-        $('#saw-app-content').find('script').each(function() {
+        $('#saw-app-content').find('script').each(function () {
             const $script = $(this);
             const scriptType = $script.attr('type') || '';
             const scriptContent = $script.html();
-            
+
             // CRITICAL: Skip Underscore/Backbone templates (type="text/template")
             if (scriptType === 'text/template' || scriptType === 'text/html' || scriptType === 'text/x-handlebars-template') {
                 return; // These are templates, not JavaScript
             }
-            
+
             if (!scriptContent || !scriptContent.trim()) return;
-            
+
             // CRITICAL: Skip if script content looks like HTML (404 page or error)
             // Check for common HTML tags that indicate this is not JavaScript
-            if (scriptContent.trim().startsWith('<') || 
-                scriptContent.includes('<!DOCTYPE') || 
+            if (scriptContent.trim().startsWith('<') ||
+                scriptContent.includes('<!DOCTYPE') ||
                 scriptContent.includes('<html') ||
                 scriptContent.includes('404') ||
                 scriptContent.includes('Not Found')) {
@@ -394,17 +402,17 @@
 
         console.log('✅ Executed ' + scriptsExecuted + ' inline scripts');
         $(document).trigger('saw:scripts-reinitialized');
-        
+
         // CRITICAL: Re-initialize SPA navigation handlers after AJAX content load
         // This ensures menu links continue to work after page navigation
         console.log('🔄 Re-initializing SPA navigation handlers');
         initSPANavigation();
-        
+
         initTableInteractions();
     }
 
     function initTableInteractions() {
-        $('.saw-search-form').off('submit').on('submit', function(e) {
+        $('.saw-search-form').off('submit').on('submit', function (e) {
             e.preventDefault();
             const searchValue = $(this).find('input[name="s"]').val();
             const currentUrl = window.location.pathname;
@@ -412,7 +420,7 @@
             navigateToPage(newUrl, 0);
         });
 
-        $('.saw-filter-select').off('change').on('change', function() {
+        $('.saw-filter-select').off('change').on('change', function () {
             const filterValue = $(this).val();
             const filterName = $(this).attr('name');
             const currentUrl = window.location.pathname;
@@ -420,11 +428,11 @@
             navigateToPage(newUrl, 0);
         });
 
-        $('.saw-delete-btn').off('click').on('click', function(e) {
+        $('.saw-delete-btn').off('click').on('click', function (e) {
             e.stopPropagation();
             const itemId = $(this).data('id');
             const itemName = $(this).data('name');
-            
+
             if (confirm('Opravdu chcete smazat: ' + itemName + '?')) {
                 deleteItem(itemId, $(this).data('entity'));
             }
@@ -436,7 +444,7 @@
             alert('Chyba: sawGlobal není definován.');
             return;
         }
-        
+
         $.ajax({
             url: sawGlobal.ajaxurl || '/wp-admin/admin-ajax.php',
             method: 'POST',
@@ -445,14 +453,14 @@
                 id: itemId,
                 nonce: sawGlobal.nonce
             },
-            success: function(response) {
+            success: function (response) {
                 if (response.success) {
                     window.location.reload();
                 } else {
                     alert('Chyba při mazání: ' + (response.data?.message || 'Neznámá chyba'));
                 }
             },
-            error: function() {
+            error: function () {
                 alert('Chyba při mazání');
             }
         });
@@ -486,8 +494,8 @@
                 $target.first().addClass('active');
                 return;
             }
-            
-            $target = $items.filter(function() {
+
+            $target = $items.filter(function () {
                 const href = ($(this).attr('href') || '').replace(/\/+$/, '');
                 return href.indexOf('/' + candidate) !== -1;
             });
@@ -500,39 +508,39 @@
     function updateActiveMenuItemOnLoad() {
         const pathname = window.location.pathname;
         const candidate = deriveMenuFromURL(pathname);
-        
+
         if (candidate) {
             const $items = $('.saw-nav-item, .saw-sidebar-nav-item');
             let $target = $items.filter('[data-menu="' + candidate + '"]');
-            
+
             if ($target.length) {
                 $target.first().addClass('active');
             }
         }
-        
+
         initTableInteractions();
     }
 
     function deriveMenuFromURL(pathname) {
         try {
             const parts = (pathname || '').replace(/\/+$/, '').split('/').filter(Boolean);
-            
+
             if (parts.length === 1 && parts[0] === 'admin') {
                 return 'dashboard';
             }
-            
+
             if (parts[0] === 'admin' && parts[1] === 'settings' && parts[2]) {
                 return parts[2];
             }
-            
+
             if (parts[0] === 'admin' && parts[1]) {
                 return parts[1];
             }
-            
+
             if (parts[0] === 'manager' && parts[1]) {
                 return parts[1];
             }
-            
+
             return parts[parts.length - 1] || null;
         } catch (e) {
             return null;
@@ -544,7 +552,7 @@
     }
 
     function hideLoading() {
-        setTimeout(function() {
+        setTimeout(function () {
             $('#saw-page-loading').removeClass('active');
         }, 200);
     }
@@ -554,13 +562,13 @@
     }
 
     function initBrowserBackButton() {
-        window.addEventListener('popstate', function(event) {
+        window.addEventListener('popstate', function (event) {
             // CRITICAL FIX: Ignore admin table pushState events
             if (event.state && event.state.sawAdminTable) {
                 console.log('⏭️ SPA: Ignoring admin table popstate event');
                 return;
             }
-            
+
             if (event.state && event.state.url) {
                 navigateToPage(event.state.url, 0);
             } else {
@@ -578,8 +586,8 @@
     }
 
     function cleanupPageScopedAssets() {
-        $('link[data-saw-scope="page"], style[data-saw-scope="page"]').each(function() {
-            try { this.parentNode.removeChild(this); } catch(e) {}
+        $('link[data-saw-scope="page"], style[data-saw-scope="page"]').each(function () {
+            try { this.parentNode.removeChild(this); } catch (e) { }
         });
     }
 
@@ -610,7 +618,7 @@
     function loadModuleAssets(moduleName, callback) {
         if (!moduleName || typeof sawGlobal === 'undefined') {
             // Even if no module, ensure admin-table assets are loaded
-            ensureAdminTableAssets(function() {
+            ensureAdminTableAssets(function () {
                 if (callback) callback();
             });
             return;
@@ -639,13 +647,13 @@
         // Load module JS if not already loaded
         if (!$('script[src*="' + moduleName + '.js"]').length) {
             $.getScript(jsUrl + '?v=' + sawGlobal.version)
-                .done(function() {
+                .done(function () {
                     console.log('  ✅ Loaded JS:', moduleName);
                     jsLoaded = true;
                     $(document).trigger('saw:module-loaded', [moduleName]);
                     checkAndCallback();
                 })
-                .fail(function() {
+                .fail(function () {
                     console.warn('  ⚠️ Failed to load JS for:', moduleName);
                     jsLoaded = true;
                     checkAndCallback();
@@ -656,7 +664,7 @@
         }
 
         // Ensure admin-table assets are loaded (needed by modules using admin-table)
-        ensureAdminTableAssets(function() {
+        ensureAdminTableAssets(function () {
             adminTableLoaded = true;
             checkAndCallback();
         });
@@ -676,7 +684,7 @@
         const sorted = [];
         const processed = {};
         const processing = {};
-        
+
         function processAsset(asset) {
             if (processed[asset.handle]) {
                 return;
@@ -689,27 +697,27 @@
                 }
                 return;
             }
-            
+
             processing[asset.handle] = true;
-            
+
             // Process dependencies first
             if (asset.deps && asset.deps.length > 0) {
-                asset.deps.forEach(function(dep) {
-                    const depAsset = assetsList.find(function(a) { return a.handle === dep; });
+                asset.deps.forEach(function (dep) {
+                    const depAsset = assetsList.find(function (a) { return a.handle === dep; });
                     if (depAsset && !processed[dep]) {
                         processAsset(depAsset);
                     }
                 });
             }
-            
+
             if (!processed[asset.handle]) {
                 sorted.push(asset);
                 processed[asset.handle] = true;
             }
-            
+
             delete processing[asset.handle];
         }
-        
+
         assetsList.forEach(processAsset);
         return sorted;
     }
@@ -751,7 +759,7 @@
                 console.log('  ✅ All assets loaded (' + totalCss + ' CSS, ' + totalJs + ' JS, ' + pendingJsCount + ' pending)');
                 if (callback) {
                     // Small delay to ensure all scripts have executed
-                    setTimeout(function() {
+                    setTimeout(function () {
                         callback();
                     }, 50);
                 }
@@ -764,14 +772,14 @@
         if (assets.css && assets.css.length > 0) {
             // Sort CSS by dependencies to ensure correct load order
             const sortedCss = sortAssetsByDependencies(assets.css);
-            
-            sortedCss.forEach(function(asset) {
+
+            sortedCss.forEach(function (asset) {
                 // CRITICAL: Check for existing CSS more carefully
                 // Check by exact href match, by handle in data attribute, or by filename in href
                 const srcCheck = asset.src.replace(/\?.*$/, ''); // Remove query string for comparison
                 const filename = srcCheck.split('/').pop(); // Get filename
                 const exists = $('link[href="' + asset.src + '"], link[href*="' + srcCheck + '"], link[data-saw-asset="' + asset.handle + '"], link[href*="' + filename + '"]').length > 0;
-                
+
                 if (exists) {
                     console.log('  ⏭️ CSS already loaded:', asset.handle, asset.src);
                     cssLoaded++;
@@ -796,12 +804,12 @@
         } else {
             cssLoaded = totalCss;
         }
-        
+
         // CRITICAL: After loading assets, initialize TinyMCE for content module
         // This is needed because wp_editor() is called in PHP but TinyMCE needs JS initialization
-        if (assets.css && assets.css.some(function(a) { return a.handle === 'saw-module-content'; })) {
+        if (assets.css && assets.css.some(function (a) { return a.handle === 'saw-module-content'; })) {
             // Wait a bit for all assets to load, then initialize TinyMCE
-            setTimeout(function() {
+            setTimeout(function () {
                 initTinyMCE();
             }, 500);
         }
@@ -810,22 +818,22 @@
         if (assets.js && assets.js.length > 0) {
             // Sort JS by dependencies to ensure correct load order
             const sortedJs = sortAssetsByDependencies(assets.js);
-            
+
             // Track which assets are already loaded (by handle)
             const loadedAssets = {};
             // pendingJsCount is already defined at function scope above
-            
+
             // Helper function to check if all dependencies are loaded
             function areDepsLoaded(asset) {
                 if (!asset.deps || asset.deps.length === 0) {
                     return true;
                 }
-                return asset.deps.every(function(dep) {
+                return asset.deps.every(function (dep) {
                     // Check if dependency is already loaded in DOM or in our tracking
                     if (loadedAssets[dep]) {
                         return true;
                     }
-                    
+
                     // CRITICAL: Global dependencies that are always loaded on first page load
                     // These don't need to be in the current assets list
                     const globalDeps = ['jquery', 'saw-app', 'saw-validation'];
@@ -849,12 +857,12 @@
                         console.log('  ⚠️ Global dependency not found in DOM, assuming loaded:', dep);
                         return true;
                     }
-                    
+
                     // Check if script is in DOM (for non-global dependencies)
                     if ($('script[src*="' + dep + '"], script[data-saw-asset="' + dep + '"]').length > 0) {
                         return true;
                     }
-                    
+
                     // Check for specific global objects
                     // underscore -> _
                     if (dep === 'underscore' && typeof window._ !== 'undefined') {
@@ -880,25 +888,25 @@
                     if (dep === 'media-models' && typeof window.wp !== 'undefined' && typeof window.wp.media !== 'undefined' && typeof window.wp.media.model !== 'undefined') {
                         return true;
                     }
-                    
+
                     // For other dependencies, check if they're in the assets list and already loaded
-                    const depAsset = sortedJs.find(function(a) { return a.handle === dep; });
+                    const depAsset = sortedJs.find(function (a) { return a.handle === dep; });
                     if (depAsset && loadedAssets[dep]) {
                         return true;
                     }
-                    
+
                     // If dependency is in sortedJs but not yet loaded, it's not ready
                     if (depAsset && !loadedAssets[dep]) {
                         return false;
                     }
-                    
+
                     // If we get here, dependency is not in sortedJs and not in DOM
                     // This might be a problem, but for now assume it's a global that's already loaded
                     console.log('  ⚠️ Dependency not found, assuming loaded:', dep);
                     return true;
                 });
             }
-            
+
             // Helper function to load a single JS asset
             function loadJsAsset(index) {
                 if (index >= sortedJs.length) {
@@ -909,14 +917,22 @@
                     checkComplete();
                     return;
                 }
-                
+
                 const asset = sortedJs[index];
-                
+
                 // Check if already loaded
+                if (!asset.src) {
+                    console.warn('  ⚠️ Skipping asset with null src:', asset.handle);
+                    loadedAssets[asset.handle] = true; // Mark as loaded to avoid blocking
+                    jsLoaded++;
+                    loadJsAsset(index + 1);
+                    return;
+                }
+
                 const srcCheck = asset.src.replace(/\?.*$/, '');
                 const filename = srcCheck.split('/').pop();
                 const exists = $('script[src="' + asset.src + '"], script[src*="' + srcCheck + '"], script[src*="' + filename + '"]').length > 0;
-                
+
                 if (exists || loadedAssets[asset.handle]) {
                     console.log('  ⏭️ JS already loaded:', asset.handle, asset.src);
                     loadedAssets[asset.handle] = true;
@@ -925,7 +941,7 @@
                     loadJsAsset(index + 1);
                     return;
                 }
-                
+
                 // Check if dependencies are loaded
                 if (!areDepsLoaded(asset)) {
                     console.log('  ⏳ Waiting for dependencies of:', asset.handle, 'deps:', asset.deps);
@@ -936,29 +952,29 @@
                         // Continue loading even if dependencies aren't ready
                     } else {
                         asset._retryCount = retryCount + 1;
-                        setTimeout(function() {
+                        setTimeout(function () {
                             loadJsAsset(index);
                         }, 50);
                         return;
                     }
                 }
-                
+
                 // Load the asset - mark as pending
                 pendingJsCount++;
                 console.log('  📥 Loading JS:', asset.handle, asset.src, '(pending:', pendingJsCount + ')', 'deps:', asset.deps);
-                
+
                 // CRITICAL: For media-views, use script tag with error handling instead of $.getScript
                 // This gives us better control and allows us to catch errors during execution
                 if (asset.handle === 'media-views') {
                     let retryCount = 0;
                     const maxRetries = 100; // Max 5 seconds (100 * 50ms)
-                    
+
                     function waitForBackboneView() {
                         // CRITICAL: Check multiple conditions to ensure Backbone is fully ready
                         const backboneReady = typeof window.Backbone !== 'undefined';
                         const viewExists = backboneReady && typeof window.Backbone.View !== 'undefined';
                         const viewIsFunction = viewExists && typeof window.Backbone.View === 'function';
-                        
+
                         if (backboneReady && viewExists && viewIsFunction) {
                             // Additional check: try to create a test instance to ensure it's fully ready
                             try {
@@ -966,7 +982,7 @@
                                 if (testView && typeof testView.render === 'function' && typeof testView.$el !== 'undefined') {
                                     console.log('  ✅ Backbone.View is fully ready, loading media-views with script tag');
                                     // Wait a bit more to ensure everything is settled
-                                    setTimeout(function() {
+                                    setTimeout(function () {
                                         loadScriptWithTag();
                                     }, 300);
                                     return;
@@ -980,46 +996,46 @@
                         } else {
                             console.log('  ⏳ Backbone not ready - backboneReady:', backboneReady, 'viewExists:', viewExists, 'viewIsFunction:', viewIsFunction);
                         }
-                        
+
                         retryCount++;
                         if (retryCount > maxRetries) {
                             console.warn('  ⚠️ Max retries reached for Backbone.View, loading media-views anyway');
                             loadScriptWithTag();
                             return;
                         }
-                        
+
                         console.log('  ⏳ Waiting for Backbone.View... (attempt ' + retryCount + '/' + maxRetries + ')');
                         setTimeout(waitForBackboneView, 50);
                     }
-                    
+
                     function loadScriptWithTag() {
                         // CRITICAL: Double-check Backbone is ready right before loading
                         if (typeof window.Backbone === 'undefined' || typeof window.Backbone.View === 'undefined') {
                             console.warn('  ⚠️ Backbone not ready at load time, retrying in 100ms...');
-                            setTimeout(function() {
+                            setTimeout(function () {
                                 loadScriptWithTag();
                             }, 100);
                             return;
                         }
-                        
+
                         // Use fetch + eval to have full control over execution timing
                         fetch(asset.src)
-                            .then(function(response) {
+                            .then(function (response) {
                                 if (!response.ok) {
                                     throw new Error('HTTP ' + response.status);
                                 }
                                 return response.text();
                             })
-                            .then(function(scriptContent) {
+                            .then(function (scriptContent) {
                                 // CRITICAL: Final check before executing
                                 if (typeof window.Backbone === 'undefined' || typeof window.Backbone.View === 'undefined') {
                                     console.warn('  ⚠️ Backbone disappeared before execution, retrying in 100ms...');
-                                    setTimeout(function() {
+                                    setTimeout(function () {
                                         loadScriptWithTag();
                                     }, 100);
                                     return;
                                 }
-                                
+
                                 // Execute script in global context
                                 try {
                                     // Create a script element and execute
@@ -1029,7 +1045,7 @@
                                     script.setAttribute('data-saw-module', 'ajax');
                                     script.setAttribute('data-saw-asset', asset.handle);
                                     document.head.appendChild(script);
-                                    
+
                                     loadedAssets[asset.handle] = true;
                                     console.log('  ✅ Loaded JS:', asset.handle, asset.src);
                                     jsLoaded++;
@@ -1048,7 +1064,7 @@
                                     loadJsAsset(index + 1);
                                 }
                             })
-                            .catch(function(error) {
+                            .catch(function (error) {
                                 console.warn('  ⚠️ Failed to load JS:', asset.handle, asset.src, error);
                                 loadedAssets[asset.handle] = true; // Mark as processed even if failed
                                 jsLoaded++;
@@ -1058,13 +1074,13 @@
                                 loadJsAsset(index + 1);
                             });
                     }
-                    
+
                     // Start waiting for Backbone
                     waitForBackboneView();
                 } else {
                     // Normal loading for other scripts
                     $.getScript(asset.src)
-                        .done(function() {
+                        .done(function () {
                             // Mark script as AJAX-loaded
                             $('script[src="' + asset.src + '"]').attr('data-saw-module', 'ajax');
                             loadedAssets[asset.handle] = true;
@@ -1073,10 +1089,10 @@
                             jsLoaded++;
                             pendingJsCount--;
                             console.log('  📊 Progress: jsLoaded:', jsLoaded, '/', totalJs, ', pendingJsCount:', pendingJsCount);
-                            
+
                             // CRITICAL: After loading editor.js, verify wp.editor is available
                             if (asset.handle === 'editor') {
-                                setTimeout(function() {
+                                setTimeout(function () {
                                     if (typeof wp !== 'undefined' && typeof wp.editor !== 'undefined') {
                                         console.log('  ✅ wp.editor is now available after loading editor.js');
                                     } else {
@@ -1084,11 +1100,11 @@
                                     }
                                 }, 100);
                             }
-                            
+
                             // Continue with next asset
                             loadJsAsset(index + 1);
                         })
-                        .fail(function() {
+                        .fail(function () {
                             console.warn('  ⚠️ Failed to load JS:', asset.handle, asset.src);
                             loadedAssets[asset.handle] = true; // Mark as processed even if failed
                             jsLoaded++;
@@ -1099,7 +1115,7 @@
                         });
                 }
             }
-            
+
             // Start loading from first asset
             console.log('  🚀 Starting JS asset loading sequence...');
             loadJsAsset(0);
@@ -1115,7 +1131,7 @@
         if (typeof tinymce !== 'undefined' && typeof wp !== 'undefined' && wp.editor) {
             console.log('  🔧 Initializing TinyMCE editors for content module...');
             // Find all textareas that should be TinyMCE editors
-            $('textarea.wp-editor-area').each(function() {
+            $('textarea.wp-editor-area').each(function () {
                 var editorId = $(this).attr('id');
                 if (editorId && !tinymce.get(editorId)) {
                     try {
@@ -1179,12 +1195,12 @@
     }
 
     window.SAW_Navigation = {
-        navigateTo: function(url) { navigateToPage(url, 0); },
-        reload: function() { navigateToPage(window.location.pathname, 0); },
-        reinitializeScripts: function() { reinitializePageScripts(); },
-        setActiveByMenuId: function(menuId) { updateActiveMenuItem(menuId); },
-        openSidebar: function() { openMobileSidebar(); },
-        closeSidebar: function() { closeMobileSidebar(); }
+        navigateTo: function (url) { navigateToPage(url, 0); },
+        reload: function () { navigateToPage(window.location.pathname, 0); },
+        reinitializeScripts: function () { reinitializePageScripts(); },
+        setActiveByMenuId: function (menuId) { updateActiveMenuItem(menuId); },
+        openSidebar: function () { openMobileSidebar(); },
+        closeSidebar: function () { closeMobileSidebar(); }
     };
 
 })(jQuery);

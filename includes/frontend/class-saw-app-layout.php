@@ -116,6 +116,16 @@ class SAW_App_Layout {
             return;
         }
         
+        // ✅ CRITICAL: Content page always uses full page reload (TinyMCE compatibility)
+        // TinyMCE and WordPress Media Library require full page context to work properly
+        if ($this->active_menu === 'content') {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[SAW_App_Layout] Content page detected - forcing full page render for TinyMCE compatibility');
+            }
+            $this->render_complete_page($content);
+            exit;
+        }
+        
         // ✅ Handle custom XHR requests (for SPA-like navigation)
         if ($this->is_ajax_request()) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
@@ -481,21 +491,6 @@ class SAW_App_Layout {
         }
         
         // Method 4: From router (fallback)
-        if (empty($active_module)) {
-            if (class_exists('SAW_Router')) {
-                try {
-                    $router = SAW_Router::get_instance();
-                    if ($router && method_exists($router, 'get_active_module')) {
-                        $active_module = $router->get_active_module();
-                        error_log('[SAW_App_Layout] Method 4: active_module from router: ' . ($active_module ?: 'null'));
-                    }
-                } catch (Exception $e) {
-                    error_log('[SAW_App_Layout] Method 4: Error getting router: ' . $e->getMessage());
-                }
-            }
-        }
-        
-        // Method 5: Check if active_module matches a known module route and convert to slug
         if (!empty($active_module)) {
             $modules = SAW_Module_Loader::get_all();
             foreach ($modules as $slug => $config) {
@@ -550,68 +545,6 @@ class SAW_App_Layout {
                     'src' => $module_js . '?v=' . SAW_VISITORS_VERSION,
                     'deps' => array('jquery', 'saw-app', 'saw-validation')
                 );
-                error_log('[SAW_App_Layout] Added module JS: saw-module-' . $active_module);
-            } else {
-                error_log('[SAW_App_Layout] WARNING: Module JS file not found: ' . $module_js_path);
-            }
-            
-            // CRITICAL: Content module needs WordPress Media Library and TinyMCE
-            error_log('[SAW_App_Layout] Checking if content module - active_module: ' . ($active_module ?: 'null'));
-            if ($active_module === 'content') {
-                error_log('[SAW_App_Layout] Content module detected - adding WordPress Media/TinyMCE assets');
-                
-                // CRITICAL: Add dependencies FIRST (underscore, backbone) - WordPress core libraries
-                // These are normally loaded by WordPress but not during AJAX
-                $underscore_js = includes_url('js/underscore.min.js');
-                $assets['js'][] = array(
-                    'handle' => 'underscore',
-                    'src' => $underscore_js,
-                    'deps' => array()
-                );
-                
-                $backbone_js = includes_url('js/backbone.min.js');
-                $assets['js'][] = array(
-                    'handle' => 'backbone',
-                    'src' => $backbone_js,
-                    'deps' => array('underscore', 'jquery')
-                );
-                
-                // WP Util (dependency for media) - must come after underscore
-                $wp_util_js = includes_url('js/wp-util.min.js');
-                $assets['js'][] = array(
-                    'handle' => 'wp-util',
-                    'src' => $wp_util_js,
-                    'deps' => array('jquery', 'underscore')
-                );
-                
-                // Media Models (dependency for media-views) - must come after wp-util and backbone
-                $media_models_js = includes_url('js/media-models.min.js');
-                $assets['js'][] = array(
-                    'handle' => 'media-models',
-                    'src' => $media_models_js,
-                    'deps' => array('jquery', 'wp-util', 'backbone')
-                );
-                
-                // WordPress Media Library JS - must come after media-models
-                $media_js = includes_url('js/media-views.min.js');
-                $assets['js'][] = array(
-                    'handle' => 'media-views',
-                    'src' => $media_js,
-                    'deps' => array('jquery', 'media-models', 'wp-util', 'backbone')
-                );
-                
-                // WordPress Media Library CSS - try multiple paths
-                $media_css_paths = array(
-                    ABSPATH . WPINC . '/css/media.css',
-                    ABSPATH . WPINC . '/css/media.min.css'
-                );
-                $media_css = null;
-                foreach ($media_css_paths as $path) {
-                    if (file_exists($path)) {
-                        $media_css = includes_url(str_replace(ABSPATH . WPINC . '/', '', $path));
-                        break;
-                    }
-                }
                 if ($media_css) {
                     $assets['css'][] = array(
                         'handle' => 'media',
@@ -744,6 +677,13 @@ class SAW_App_Layout {
             // No need for hardcoded script tag here!
             if (function_exists('wp_print_footer_scripts')) {
                 wp_print_footer_scripts();
+            }
+            
+            // CRITICAL: Print WordPress media templates for content module (TinyMCE media buttons)
+            if ($this->active_menu === 'content') {
+                if (function_exists('wp_print_media_templates')) {
+                    wp_print_media_templates();
+                }
             }
             ?>
         </body>
