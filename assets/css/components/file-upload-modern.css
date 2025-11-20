@@ -6,7 +6,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Components/FileUpload
- * @version     2.0.0
+ * @version     2.1.0 - Enhanced Dark Mode Support
  * @since       2.0.0
  */
 
@@ -122,7 +122,7 @@
     display: inline-flex;
     align-items: center;
     padding: 0.625rem 1.25rem;
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    background: linear-gradient(135deg, var(--saw-primary) 0%, var(--saw-primary-dark) 100%);
     color: #ffffff;
     border: none;
     border-radius: 8px;
@@ -136,7 +136,7 @@
 }
 
 .saw-upload-button:hover {
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, var(--saw-primary-dark) 0%, #1d4ed8 100%);
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
 }
@@ -158,7 +158,7 @@
 }
 
 /* ============================================
-   File List - Kompaktní řádky (40px)
+   File List - Kompaktní řádky
    ============================================ */
 
 .saw-file-list {
@@ -180,12 +180,13 @@
 }
 
 .saw-file-item:hover {
-    background: var(--saw-bg-secondary);
-    border-color: var(--saw-border-color);
+    background: var(--saw-bg-tertiary);
+    border-color: var(--saw-border-color-strong);
     box-shadow: var(--saw-shadow-md);
     transform: translateY(-1px);
 }
 
+/* Status States - Light Mode */
 .saw-file-item.status-error {
     background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
     border-left: 4px solid #ef4444;
@@ -202,6 +203,25 @@
     background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
     border-left: 4px solid #f59e0b;
     border-color: #fde68a;
+}
+
+/* Status States - Dark Mode */
+[data-theme="dark"] .saw-file-item.status-error {
+    background: rgba(248, 113, 113, 0.15);
+    border-left: 4px solid var(--saw-danger);
+    border-color: rgba(248, 113, 113, 0.3);
+}
+
+[data-theme="dark"] .saw-file-item.status-success {
+    background: rgba(52, 211, 153, 0.15);
+    border-left: 4px solid var(--saw-success);
+    border-color: rgba(52, 211, 153, 0.3);
+}
+
+[data-theme="dark"] .saw-file-item.status-waiting_category {
+    background: rgba(251, 191, 36, 0.15);
+    border-left: 4px solid var(--saw-warning);
+    border-color: rgba(251, 191, 36, 0.3);
 }
 
 .saw-file-item-row {
@@ -234,6 +254,7 @@
     border-radius: 6px;
     flex-shrink: 0;
     box-shadow: var(--saw-shadow-sm);
+    color: var(--saw-text-secondary);
 }
 
 .saw-file-category {
@@ -241,7 +262,7 @@
     align-items: center;
     padding: 0.25rem 0.625rem;
     background: var(--saw-primary-light);
-    color: var(--saw-primary-dark);
+    color: var(--saw-primary);
     border-radius: 6px;
     font-size: 0.75rem;
     font-weight: 600;
@@ -252,6 +273,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100%;
+    border: 1px solid rgba(96, 165, 250, 0.2);
 }
 
 .saw-file-name {
@@ -329,7 +351,7 @@
 
 .saw-file-progress-fill {
     height: 100%;
-    background: #2563eb;
+    background: var(--saw-primary);
     border-radius: 2px;
     transition: width 0.3s ease;
     animation: progress-pulse 1.5s ease-in-out infinite;
@@ -345,12 +367,12 @@
 }
 
 .saw-file-item.status-success .saw-file-progress-fill {
-    background: #10b981;
+    background: var(--saw-success);
     animation: none;
 }
 
 .saw-file-item.status-error .saw-file-progress-fill {
-    background: #ef4444;
+    background: var(--saw-danger);
     animation: none;
 }
 
@@ -362,16 +384,14 @@
 }
 
 .saw-file-remove,
-.saw-file-retry,
-.saw-file-view {
+.saw-file-view,
+.saw-file-retry {
     background: transparent;
     border: none;
     cursor: pointer;
-    font-size: 1rem;
-    padding: 0.5rem;
+    transition: all 0.2s ease;
     border-radius: 6px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    color: var(--saw-text-secondary);
+    padding: 0.25rem;
     width: 32px;
     height: 32px;
     display: flex;
@@ -379,34 +399,51 @@
     justify-content: center;
 }
 
+.saw-file-remove {
+    color: var(--saw-danger);
+}
+
 .saw-file-remove:hover {
-    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-    color: #dc2626;
+    background: var(--saw-danger-light);
+    color: var(--saw-danger-hover);
     transform: scale(1.1);
     box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
 }
 
 .saw-file-view {
-    color: #2563eb;
+    color: var(--saw-primary);
 }
 
 .saw-file-view:hover {
-    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-    color: #1d4ed8;
+    background: var(--saw-primary-light);
+    color: var(--saw-primary-hover);
     transform: scale(1.1);
     box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
 }
 
 .saw-file-retry {
-    color: #f59e0b;
+    color: var(--saw-warning);
     font-size: 0.875rem;
 }
 
 .saw-file-retry:hover {
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-    color: var(--saw-warning);
+    background: var(--saw-warning-light);
+    color: var(--saw-warning-hover);
     transform: scale(1.1);
     box-shadow: 0 2px 8px rgba(217, 119, 6, 0.2);
+}
+
+/* Dark Mode Button Adjustments */
+[data-theme="dark"] .saw-file-remove:hover {
+    background: rgba(248, 113, 113, 0.2);
+}
+
+[data-theme="dark"] .saw-file-view:hover {
+    background: rgba(96, 165, 250, 0.2);
+}
+
+[data-theme="dark"] .saw-file-retry:hover {
+    background: rgba(251, 191, 36, 0.2);
 }
 
 /* ============================================
@@ -433,7 +470,7 @@
 .saw-status-progress-bar {
     width: 100px;
     height: 3px;
-    background: var(--saw-bg-tertiary);
+    background: var(--saw-bg-quaternary);
     border-radius: 2px;
     overflow: hidden;
     flex-shrink: 0;
@@ -441,17 +478,17 @@
 
 .saw-status-progress-fill {
     height: 100%;
-    background: #2563eb;
+    background: var(--saw-primary);
     border-radius: 2px;
     transition: width 0.3s ease;
 }
 
 .saw-status-bar:has(.saw-file-item.status-success) .saw-status-progress-fill {
-    background: #10b981;
+    background: var(--saw-success);
 }
 
 /* ============================================
-   Info Bar - Informativní řádek pod status bar
+   Info Bar - Informativní řádek
    ============================================ */
 
 .saw-info-bar {
@@ -466,6 +503,7 @@
     transition: all 0.3s ease;
 }
 
+/* Light Mode Info Bars */
 .saw-info-bar.saw-info-success {
     background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
     border: 1px solid #bbf7d0;
@@ -488,6 +526,31 @@
     background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
     border: 1px solid #bfdbfe;
     color: #1e40af;
+}
+
+/* Dark Mode Info Bars */
+[data-theme="dark"] .saw-info-bar.saw-info-success {
+    background: rgba(52, 211, 153, 0.15);
+    border: 1px solid rgba(52, 211, 153, 0.3);
+    color: var(--saw-success);
+}
+
+[data-theme="dark"] .saw-info-bar.saw-info-error {
+    background: rgba(248, 113, 113, 0.15);
+    border: 1px solid rgba(248, 113, 113, 0.3);
+    color: var(--saw-danger);
+}
+
+[data-theme="dark"] .saw-info-bar.saw-info-warning {
+    background: rgba(251, 191, 36, 0.15);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    color: var(--saw-warning);
+}
+
+[data-theme="dark"] .saw-info-bar.saw-info-info {
+    background: rgba(96, 165, 250, 0.15);
+    border: 1px solid rgba(96, 165, 250, 0.3);
+    color: var(--saw-info);
 }
 
 .saw-info-icon {
@@ -522,6 +585,13 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+}
+
+[data-theme="dark"] .saw-validation-error {
+    background: rgba(248, 113, 113, 0.15);
+    border: 1px solid rgba(248, 113, 113, 0.3);
+    border-left: 3px solid var(--saw-danger);
+    color: var(--saw-danger);
 }
 
 .saw-validation-icon {
@@ -671,7 +741,7 @@
 }
 
 /* ============================================
-   Responsive Design
+   Responsive Design - General
    ============================================ */
 
 @media (max-width: 768px) {
@@ -708,14 +778,14 @@
    ============================================ */
 
 .saw-upload-zone:focus-within {
-    outline: 2px solid #2563eb;
+    outline: 2px solid var(--saw-primary);
     outline-offset: 2px;
 }
 
 .saw-file-remove:focus,
 .saw-file-retry:focus,
 .saw-upload-button:focus {
-    outline: 2px solid #2563eb;
+    outline: 2px solid var(--saw-primary);
     outline-offset: 2px;
 }
 
@@ -731,4 +801,3 @@
     white-space: nowrap;
     border-width: 0;
 }
-

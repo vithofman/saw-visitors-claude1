@@ -761,15 +761,15 @@ body, html {
 .saw-page-header {
     flex-shrink: 0 !important;
     margin-bottom: 0 !important;
-    padding: 20px !important;
+    padding: 0px 0px !important;
     background: var(--saw-page-header-bg);
-    border-bottom: 1px solid var(--saw-border-color);
+    border-bottom: 0px solid var(--saw-border-color);
 }
 
 .saw-page-header-content {
     max-width: 1600px;
     margin: 0 auto;
-    padding: 0 32px;
+    padding: 0 0px;
     display: flex !important;
     justify-content: space-between !important;
     align-items: center !important;

@@ -5,7 +5,7 @@
  * or fallback overlay (older browsers).
  * 
  * @package SAW_Visitors
- * @version 1.0.0
+ * @version 2.0.0 - SIMPLIFIED: No snapshot, just dark overlay
  */
 
 (function($) {
@@ -19,7 +19,7 @@
     class SAWViewTransition {
         constructor() {
             this.supportsViewTransition = 'startViewTransition' in document;
-            this.snapshotOverlay = null;
+            this.overlay = null;
             this.loadingSpinner = null;
         }
 
@@ -44,7 +44,7 @@
             if (this.supportsViewTransition) {
                 this.navigateWithViewTransition(url);
             } else {
-                this.navigateWithOverlay(url);
+                this.navigateWithSimpleOverlay(url);
             }
         }
 
@@ -62,22 +62,19 @@
                 });
             } catch (e) {
                 console.warn('View Transition API failed, falling back:', e);
-                this.navigateWithOverlay(url);
+                this.navigateWithSimpleOverlay(url);
             }
         }
 
         /**
-         * Navigate with frozen page overlay (fallback for older browsers)
+         * Navigate with simple dark overlay (NO SNAPSHOT)
          * 
          * @param {string} url - URL to navigate to
          * @return {void}
          */
-        navigateWithOverlay(url) {
-            // Create page snapshot
-            const snapshot = this.createPageSnapshot();
-            
-            // Show snapshot as overlay
-            this.showSnapshot(snapshot);
+        navigateWithSimpleOverlay(url) {
+            // 🔥 RADIKÁLNÍ ZMĚNA: Žádný snapshot, jen tmavý overlay
+            this.showSimpleOverlay();
             
             // Show loading spinner
             this.showLoadingSpinner();
@@ -97,40 +94,22 @@
         }
 
         /**
-         * Create a "frozen" snapshot of the current page
+         * Show simple dark overlay (respects dark mode)
          * 
-         * @return {HTMLElement} Cloned body element
-         */
-        createPageSnapshot() {
-            // Clone the entire body
-            const body = document.body.cloneNode(true);
-            
-            // Disable interactions on clone
-            body.style.pointerEvents = 'none';
-            body.style.userSelect = 'none';
-            body.style.cursor = 'wait';
-            
-            // Remove any existing overlays/modals from snapshot
-            $(body).find('.saw-modal-overlay, .modal-backdrop, #saw-loading-overlay').remove();
-            
-            return body;
-        }
-
-        /**
-         * Show snapshot as overlay
-         * 
-         * @param {HTMLElement} snapshot - Cloned body element
          * @return {void}
          */
-        showSnapshot(snapshot) {
+        showSimpleOverlay() {
             // Remove existing overlay if any
-            if (this.snapshotOverlay) {
-                this.snapshotOverlay.remove();
+            if (this.overlay) {
+                this.overlay.remove();
             }
 
-            // Create overlay container
+            // 🔥 Detekovat dark mode
+            const isDark = document.body.getAttribute('data-theme') === 'dark';
+            
+            // Create simple overlay
             const overlay = document.createElement('div');
-            overlay.id = 'saw-page-snapshot';
+            overlay.id = 'saw-transition-overlay';
             overlay.style.cssText = `
                 position: fixed;
                 top: 0;
@@ -138,29 +117,13 @@
                 width: 100%;
                 height: 100%;
                 z-index: 999999;
-                background: var(--saw-body-bg);
-                overflow: hidden;
+                background: ${isDark ? '#1a1d2e' : '#ffffff'};
+                pointer-events: none;
+                user-select: none;
             `;
 
-            overlay.appendChild(snapshot);
             document.body.appendChild(overlay);
-            
-            this.snapshotOverlay = overlay;
-
-            // Fade out after a delay (when new page loads)
-            setTimeout(() => {
-                if (this.snapshotOverlay) {
-                    this.snapshotOverlay.style.opacity = '0';
-                    this.snapshotOverlay.style.transition = 'opacity 0.3s ease-out';
-                    
-                    setTimeout(() => {
-                        if (this.snapshotOverlay) {
-                            this.snapshotOverlay.remove();
-                            this.snapshotOverlay = null;
-                        }
-                    }, 300);
-                }
-            }, 500);
+            this.overlay = overlay;
         }
 
         /**
@@ -173,6 +136,12 @@
             if (this.loadingSpinner) {
                 this.loadingSpinner.remove();
             }
+
+            // 🔥 Detekovat dark mode
+            const isDark = document.body.getAttribute('data-theme') === 'dark';
+            const borderColor = isDark ? 'rgba(156, 163, 175, 0.3)' : '#e5e7eb';
+            const borderTopColor = isDark ? '#60a5fa' : '#3b82f6';
+            const textColor = isDark ? '#9ca3af' : '#6b7280';
 
             const spinner = document.createElement('div');
             spinner.className = 'saw-transition-spinner';
@@ -189,13 +158,14 @@
                 <div class="spinner-icon" style="
                     width: 40px;
                     height: 40px;
-                    border: 4px solid #e5e7eb;
-                    border-top-color: #3b82f6;
+                    border: 4px solid ${borderColor};
+                    border-top-color: ${borderTopColor};
                     border-radius: 50%;
                     animation: saw-spin 0.8s linear infinite;
                     margin: 0 auto;
+                    ${isDark ? 'filter: drop-shadow(0 0 8px rgba(96, 165, 250, 0.3));' : ''}
                 "></div>
-                <p style="margin-top: 12px; font-size: 14px; color: #6b7280;">Načítání...</p>
+                <p style="margin-top: 12px; font-size: 14px; color: ${textColor}; font-weight: 500;">Načítání...</p>
             `;
 
             // Add spin animation if not already present
@@ -217,8 +187,17 @@
                 return;
             }
 
+            // 🔥 Detekovat dark mode
+            const isDark = document.body.getAttribute('data-theme') === 'dark';
+            const bgColor = isDark ? '#22253a' : '#ffffff';
+            const borderColor = isDark ? 'rgba(156, 163, 175, 0.15)' : '#e5e7eb';
+            const dangerColor = isDark ? '#f87171' : '#dc2626';
+            const primaryColor = isDark ? '#60a5fa' : '#3b82f6';
+            const primaryHover = isDark ? '#3b82f6' : '#2563eb';
+
             const error = document.createElement('div');
             error.className = 'saw-loading-error';
+            
             error.style.cssText = `
                 position: fixed;
                 top: 50%;
@@ -226,23 +205,26 @@
                 transform: translate(-50%, -50%);
                 z-index: 9999999;
                 text-align: center;
-                background: white;
+                background: ${bgColor};
                 padding: 2rem;
                 border-radius: 8px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, ${isDark ? '0.5' : '0.15'});
+                border: 1px solid ${borderColor};
             `;
             
             error.innerHTML = `
-                <p style="margin-bottom: 1rem; color: #dc2626;">⚠️ Načítání trvá déle než obvykle...</p>
+                <p style="margin-bottom: 1rem; color: ${dangerColor}; font-weight: 500;">⚠️ Načítání trvá déle než obvykle...</p>
                 <button onclick="location.reload()" style="
                     padding: 0.75rem 1.5rem;
-                    background: #3b82f6;
+                    background: ${primaryColor};
                     color: white;
                     border: none;
                     border-radius: 6px;
                     cursor: pointer;
                     font-size: 1rem;
-                ">Zkusit znovu</button>
+                    font-weight: 600;
+                    transition: background-color 0.2s;
+                " onmouseover="this.style.background='${primaryHover}'" onmouseout="this.style.background='${primaryColor}'">Zkusit znovu</button>
             `;
 
             if (this.loadingSpinner) {
@@ -297,4 +279,3 @@
     window.SAW.ViewTransition = SAWViewTransition;
 
 })(jQuery);
-
