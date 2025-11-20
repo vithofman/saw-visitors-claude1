@@ -119,11 +119,23 @@ jQuery(document).ready(function($) {
     }
     
     /**
-     * Auto-refresh every 60 seconds
+     * Auto-refresh every 60 seconds - ONLY on dashboard page
+     * CRITICAL: Check exact path to prevent reload on other pages
      */
-    setInterval(function() {
-        location.reload();
-    }, 60000);
+    const currentPath = window.location.pathname.replace(/\/+$/, ''); // Remove trailing slashes
+    if (currentPath === '/admin' || currentPath === '/admin/dashboard') {
+        console.log('[Dashboard] Auto-refresh enabled for dashboard only');
+        setInterval(function() {
+            // Double-check we're still on dashboard before reloading
+            const checkPath = window.location.pathname.replace(/\/+$/, '');
+            if (checkPath === '/admin' || checkPath === '/admin/dashboard') {
+                console.log('[Dashboard] Auto-refreshing dashboard...');
+                location.reload();
+            }
+        }, 60000);
+    } else {
+        console.log('[Dashboard] Auto-refresh disabled - not on dashboard:', currentPath);
+    }
 });
 
 /* Spin animation for loading */

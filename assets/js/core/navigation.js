@@ -346,7 +346,12 @@
             }
 
             $content.css('opacity', '1');
-            $(document).trigger('saw:page-loaded', [data]);
+            
+            // CRITICAL: Trigger page-loaded event AFTER content is in DOM
+            // This ensures modules can find their elements
+            setTimeout(function() {
+                $(document).trigger('saw:page-loaded', [data]);
+            }, 50);
         }, 150);
     }
 
@@ -855,12 +860,20 @@
                     if (dep === 'underscore' && typeof window._ !== 'undefined') {
                         return true;
                     }
-                    // backbone -> Backbone
-                    if (dep === 'backbone' && typeof window.Backbone !== 'undefined') {
+                    // backbone -> Backbone (must have View property)
+                    if (dep === 'backbone' && typeof window.Backbone !== 'undefined' && typeof window.Backbone.View !== 'undefined') {
                         return true;
                     }
                     // wp-util -> wp.util
                     if (dep === 'wp-util' && typeof window.wp !== 'undefined' && typeof window.wp.util !== 'undefined') {
+                        return true;
+                    }
+                    // tinymce -> tinymce global
+                    if (dep === 'tinymce' && typeof window.tinymce !== 'undefined') {
+                        return true;
+                    }
+                    // editor -> wp.editor (must check after wp-util is loaded)
+                    if (dep === 'editor' && typeof window.wp !== 'undefined' && typeof window.wp.editor !== 'undefined') {
                         return true;
                     }
                     // media-models -> wp.media.model
@@ -915,38 +928,176 @@
                 
                 // Check if dependencies are loaded
                 if (!areDepsLoaded(asset)) {
-                    console.log('  ⏳ Waiting for dependencies of:', asset.handle);
-                    // Wait a bit and retry
-                    setTimeout(function() {
-                        loadJsAsset(index);
-                    }, 50);
-                    return;
+                    console.log('  ⏳ Waiting for dependencies of:', asset.handle, 'deps:', asset.deps);
+                    // Wait a bit and retry (but limit retries to prevent infinite loop)
+                    const retryCount = asset._retryCount || 0;
+                    if (retryCount > 100) { // Max 5 seconds (100 * 50ms)
+                        console.warn('  ⚠️ Max retries reached for:', asset.handle, '- loading anyway');
+                        // Continue loading even if dependencies aren't ready
+                    } else {
+                        asset._retryCount = retryCount + 1;
+                        setTimeout(function() {
+                            loadJsAsset(index);
+                        }, 50);
+                        return;
+                    }
                 }
                 
                 // Load the asset - mark as pending
                 pendingJsCount++;
-                console.log('  📥 Loading JS:', asset.handle, asset.src, '(pending:', pendingJsCount + ')');
-                $.getScript(asset.src)
-                    .done(function() {
-                        // Mark script as AJAX-loaded
-                        $('script[src="' + asset.src + '"]').attr('data-saw-module', 'ajax');
-                        loadedAssets[asset.handle] = true;
-                        console.log('  ✅ Loaded JS:', asset.handle, asset.src);
-                        jsLoaded++;
-                        pendingJsCount--;
-                        console.log('  📊 Progress: jsLoaded:', jsLoaded, '/', totalJs, ', pendingJsCount:', pendingJsCount);
-                        // Continue with next asset
-                        loadJsAsset(index + 1);
-                    })
-                    .fail(function() {
-                        console.warn('  ⚠️ Failed to load JS:', asset.handle, asset.src);
-                        loadedAssets[asset.handle] = true; // Mark as processed even if failed
-                        jsLoaded++;
-                        pendingJsCount--;
-                        console.log('  📊 Progress: jsLoaded:', jsLoaded, '/', totalJs, ', pendingJsCount:', pendingJsCount);
-                        // Continue with next asset even on failure
-                        loadJsAsset(index + 1);
-                    });
+                console.log('  📥 Loading JS:', asset.handle, asset.src, '(pending:', pendingJsCount + ')', 'deps:', asset.deps);
+                
+                // CRITICAL: For media-views, use script tag with error handling instead of $.getScript
+                // This gives us better control and allows us to catch errors during execution
+                if (asset.handle === 'media-views') {
+                    let retryCount = 0;
+                    const maxRetries = 100; // Max 5 seconds (100 * 50ms)
+                    
+                    function waitForBackboneView() {
+                        // CRITICAL: Check multiple conditions to ensure Backbone is fully ready
+                        const backboneReady = typeof window.Backbone !== 'undefined';
+                        const viewExists = backboneReady && typeof window.Backbone.View !== 'undefined';
+                        const viewIsFunction = viewExists && typeof window.Backbone.View === 'function';
+                        
+                        if (backboneReady && viewExists && viewIsFunction) {
+                            // Additional check: try to create a test instance to ensure it's fully ready
+                            try {
+                                const testView = new window.Backbone.View();
+                                if (testView && typeof testView.render === 'function' && typeof testView.$el !== 'undefined') {
+                                    console.log('  ✅ Backbone.View is fully ready, loading media-views with script tag');
+                                    // Wait a bit more to ensure everything is settled
+                                    setTimeout(function() {
+                                        loadScriptWithTag();
+                                    }, 300);
+                                    return;
+                                } else {
+                                    console.log('  ⏳ Backbone.View exists but test instance failed, waiting...');
+                                }
+                            } catch (e) {
+                                // Backbone.View exists but might not be fully ready
+                                console.log('  ⏳ Backbone.View exists but not fully ready (error: ' + e.message + '), waiting...');
+                            }
+                        } else {
+                            console.log('  ⏳ Backbone not ready - backboneReady:', backboneReady, 'viewExists:', viewExists, 'viewIsFunction:', viewIsFunction);
+                        }
+                        
+                        retryCount++;
+                        if (retryCount > maxRetries) {
+                            console.warn('  ⚠️ Max retries reached for Backbone.View, loading media-views anyway');
+                            loadScriptWithTag();
+                            return;
+                        }
+                        
+                        console.log('  ⏳ Waiting for Backbone.View... (attempt ' + retryCount + '/' + maxRetries + ')');
+                        setTimeout(waitForBackboneView, 50);
+                    }
+                    
+                    function loadScriptWithTag() {
+                        // CRITICAL: Double-check Backbone is ready right before loading
+                        if (typeof window.Backbone === 'undefined' || typeof window.Backbone.View === 'undefined') {
+                            console.warn('  ⚠️ Backbone not ready at load time, retrying in 100ms...');
+                            setTimeout(function() {
+                                loadScriptWithTag();
+                            }, 100);
+                            return;
+                        }
+                        
+                        // Use fetch + eval to have full control over execution timing
+                        fetch(asset.src)
+                            .then(function(response) {
+                                if (!response.ok) {
+                                    throw new Error('HTTP ' + response.status);
+                                }
+                                return response.text();
+                            })
+                            .then(function(scriptContent) {
+                                // CRITICAL: Final check before executing
+                                if (typeof window.Backbone === 'undefined' || typeof window.Backbone.View === 'undefined') {
+                                    console.warn('  ⚠️ Backbone disappeared before execution, retrying in 100ms...');
+                                    setTimeout(function() {
+                                        loadScriptWithTag();
+                                    }, 100);
+                                    return;
+                                }
+                                
+                                // Execute script in global context
+                                try {
+                                    // Create a script element and execute
+                                    const script = document.createElement('script');
+                                    script.type = 'text/javascript';
+                                    script.textContent = scriptContent;
+                                    script.setAttribute('data-saw-module', 'ajax');
+                                    script.setAttribute('data-saw-asset', asset.handle);
+                                    document.head.appendChild(script);
+                                    
+                                    loadedAssets[asset.handle] = true;
+                                    console.log('  ✅ Loaded JS:', asset.handle, asset.src);
+                                    jsLoaded++;
+                                    pendingJsCount--;
+                                    console.log('  📊 Progress: jsLoaded:', jsLoaded, '/', totalJs, ', pendingJsCount:', pendingJsCount);
+                                    // Continue with next asset
+                                    loadJsAsset(index + 1);
+                                } catch (e) {
+                                    console.warn('  ⚠️ Error executing media-views:', e);
+                                    // Mark as processed even on error to prevent infinite loop
+                                    loadedAssets[asset.handle] = true;
+                                    jsLoaded++;
+                                    pendingJsCount--;
+                                    console.log('  📊 Progress: jsLoaded:', jsLoaded, '/', totalJs, ', pendingJsCount:', pendingJsCount);
+                                    // Continue with next asset
+                                    loadJsAsset(index + 1);
+                                }
+                            })
+                            .catch(function(error) {
+                                console.warn('  ⚠️ Failed to load JS:', asset.handle, asset.src, error);
+                                loadedAssets[asset.handle] = true; // Mark as processed even if failed
+                                jsLoaded++;
+                                pendingJsCount--;
+                                console.log('  📊 Progress: jsLoaded:', jsLoaded, '/', totalJs, ', pendingJsCount:', pendingJsCount);
+                                // Continue with next asset even on failure
+                                loadJsAsset(index + 1);
+                            });
+                    }
+                    
+                    // Start waiting for Backbone
+                    waitForBackboneView();
+                } else {
+                    // Normal loading for other scripts
+                    $.getScript(asset.src)
+                        .done(function() {
+                            // Mark script as AJAX-loaded
+                            $('script[src="' + asset.src + '"]').attr('data-saw-module', 'ajax');
+                            loadedAssets[asset.handle] = true;
+                            console.log('  ✅ Loaded JS:', asset.handle, asset.src);
+                            loadedAssets[asset.handle] = true;
+                            jsLoaded++;
+                            pendingJsCount--;
+                            console.log('  📊 Progress: jsLoaded:', jsLoaded, '/', totalJs, ', pendingJsCount:', pendingJsCount);
+                            
+                            // CRITICAL: After loading editor.js, verify wp.editor is available
+                            if (asset.handle === 'editor') {
+                                setTimeout(function() {
+                                    if (typeof wp !== 'undefined' && typeof wp.editor !== 'undefined') {
+                                        console.log('  ✅ wp.editor is now available after loading editor.js');
+                                    } else {
+                                        console.warn('  ⚠️ wp.editor is NOT available after loading editor.js');
+                                    }
+                                }, 100);
+                            }
+                            
+                            // Continue with next asset
+                            loadJsAsset(index + 1);
+                        })
+                        .fail(function() {
+                            console.warn('  ⚠️ Failed to load JS:', asset.handle, asset.src);
+                            loadedAssets[asset.handle] = true; // Mark as processed even if failed
+                            jsLoaded++;
+                            pendingJsCount--;
+                            console.log('  📊 Progress: jsLoaded:', jsLoaded, '/', totalJs, ', pendingJsCount:', pendingJsCount);
+                            // Continue with next asset even on failure
+                            loadJsAsset(index + 1);
+                        });
+                }
             }
             
             // Start loading from first asset

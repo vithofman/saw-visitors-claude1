@@ -255,8 +255,39 @@ class SAW_App_Layout {
     private function render_content_only($content) {
         header('Content-Type: application/json');
         
+        // CRITICAL: Ensure WordPress editor and media are enqueued for content module
+        if ($this->active_menu === 'content') {
+            wp_enqueue_media();
+            wp_enqueue_editor();
+        }
+        
         // Get required CSS/JS assets for current module
         $assets = $this->get_required_assets();
+        
+        // CRITICAL: Also get WordPress enqueued scripts/styles for content module
+        if ($this->active_menu === 'content') {
+            global $wp_scripts, $wp_styles;
+            
+            // Get WordPress enqueued editor scripts
+            if (isset($wp_scripts->registered['editor'])) {
+                $editor_script = $wp_scripts->registered['editor'];
+                $editor_already_added = false;
+                foreach ($assets['js'] as $js_asset) {
+                    if ($js_asset['handle'] === 'editor') {
+                        $editor_already_added = true;
+                        break;
+                    }
+                }
+                if (!$editor_already_added) {
+                    error_log('[SAW_App_Layout] Adding editor.js from wp_scripts: ' . $editor_script->src);
+                    $assets['js'][] = array(
+                        'handle' => 'editor',
+                        'src' => $editor_script->src,
+                        'deps' => $editor_script->deps
+                    );
+                }
+            }
+        }
         
         // DEBUG: Log response data
         error_log('[SAW_App_Layout] render_content_only() - active_menu: ' . ($this->active_menu ?: 'empty'));
@@ -566,7 +597,7 @@ class SAW_App_Layout {
                 $assets['js'][] = array(
                     'handle' => 'media-views',
                     'src' => $media_js,
-                    'deps' => array('jquery', 'media-models', 'wp-util')
+                    'deps' => array('jquery', 'media-models', 'wp-util', 'backbone')
                 );
                 
                 // WordPress Media Library CSS - try multiple paths
@@ -621,32 +652,42 @@ class SAW_App_Layout {
                     'deps' => array()
                 );
                 
-                // WordPress Editor JS (initializes TinyMCE) - try multiple paths
+                // WordPress Editor JS (initializes TinyMCE) - CRITICAL: Must be loaded after tinymce
+                // Try multiple paths and use WordPress function to get correct URL
                 $editor_js_paths = array(
                     ABSPATH . WPINC . '/js/editor.min.js',
                     ABSPATH . WPINC . '/js/editor.js'
                 );
                 $editor_js = null;
+                $editor_path_used = null;
                 foreach ($editor_js_paths as $path) {
                     if (file_exists($path)) {
+                        $editor_path_used = $path;
                         $editor_js = includes_url(str_replace(ABSPATH . WPINC . '/', '', $path));
                         break;
                     }
                 }
                 if ($editor_js) {
+                    error_log('[SAW_App_Layout] Adding editor.js: ' . $editor_js . ' (path: ' . $editor_path_used . ')');
                     $assets['js'][] = array(
                         'handle' => 'editor',
                         'src' => $editor_js,
-                        'deps' => array('jquery', 'tinymce', 'wp-util')
+                        'deps' => array('jquery', 'tinymce', 'wp-util') // Must come after tinymce
                     );
+                    error_log('[SAW_App_Layout] editor.js added to assets array');
                 } else {
-                    error_log('[SAW_App_Layout] WARNING: WordPress editor.js not found');
+                    error_log('[SAW_App_Layout] WARNING: WordPress editor.js not found. Checked paths: ' . implode(', ', $editor_js_paths));
                 }
             }
         }
         
-        // DEBUG: Log final asset count
+        // DEBUG: Log final asset count and list all JS handles
         error_log('[SAW_App_Layout] Final assets count - CSS: ' . count($assets['css']) . ', JS: ' . count($assets['js']));
+        $js_handles = array();
+        foreach ($assets['js'] as $js_asset) {
+            $js_handles[] = $js_asset['handle'] . ' (' . basename($js_asset['src']) . ')';
+        }
+        error_log('[SAW_App_Layout] JS asset handles: ' . implode(', ', $js_handles));
         
         return $assets;
     }
