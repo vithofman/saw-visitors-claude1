@@ -131,4 +131,182 @@
     --saw-icon-size-base: 18px;
     --saw-icon-size-lg: 20px;
     --saw-icon-size-xl: 24px;
+    
+    /* Light Mode Colors */
+    --saw-bg-primary: #ffffff;
+    --saw-bg-secondary: #f8fafc;
+    --saw-bg-tertiary: #f1f5f9;
+    --saw-text-primary: #111827;
+    --saw-text-secondary: #6b7280;
+    --saw-text-muted: #9ca3af;
+    --saw-border-color: #e5e7eb;
+    --saw-border-color-light: #f3f4f6;
+    --saw-shadow-color: rgba(0, 0, 0, 0.1);
+    --saw-shadow-color-strong: rgba(0, 0, 0, 0.2);
+    
+    /* App Layout - Component Specific Variables */
+    --saw-body-bg: #fafafa;
+    --saw-header-bg: #ffffff;
+    --saw-header-border: #eaeaea;
+    --saw-sidebar-bg: #ffffff;
+    --saw-sidebar-border: #eaeaea;
+    --saw-content-bg: #ffffff;
+    --saw-footer-bg: #f8f9fa;
+    --saw-footer-border: #e5e7eb;
+    
+    /* Page Elements */
+    --saw-page-header-bg: #ffffff;
+    --saw-page-header-border: #eaeaea;
+    --saw-content-main-bg: #f8fafc;
+    
+    /* Tables */
+    --saw-table-panel-bg: #ffffff;
+    --saw-table-controls-bg: #ffffff;
+    --saw-table-header-bg: #fafafa;
+    --saw-table-row-bg: #ffffff;
+    --saw-table-row-hover-bg: #f9fafb;
+    --saw-table-row-active-bg: #f0f9ff;
+    --saw-table-row-active-hover-bg: #e0f2fe;
+    
+    /* Navigation Switchers */
+    --saw-switcher-button-bg: #ffffff;
+    --saw-switcher-button-hover-bg: #f9fafb;
+    --saw-switcher-dropdown-bg: #ffffff;
+    --saw-switcher-input-bg: #ffffff;
+    
+    /* Forms */
+    --saw-form-section-bg: #ffffff;
+    --saw-form-section-header-bg: #f8fafc;
+    --saw-form-section-header-hover-bg: #eff6ff;
+    --saw-input-bg: #ffffff;
+    --saw-select-bg: #ffffff;
+    --saw-textarea-bg: #ffffff;
+    
+    /* Cards & Components */
+    --saw-card-bg: #ffffff;
+    --saw-sidebar-content-bg: #f8fafc;
+    --saw-detail-section-bg: #ffffff;
+    --saw-detail-header-bg: #ffffff;
+    
+    /* Dashboard Widgets */
+    --saw-widget-bg: #ffffff;
+    --saw-widget-header-bg: #f8fafc;
+    --saw-widget-body-bg: #ffffff;
+    
+    /* Form Summary Hover & Icons */
+    --saw-form-summary-hover-bg: #eff6ff;
+    --saw-form-summary-icon-bg: #eff6ff;
+    --saw-form-summary-icon-color: #2563eb;
+    
+    /* Sidebar Sections */
+    --saw-sidebar-section-bg: #ffffff;
+    
+    /* Navigation Hover */
+    --saw-nav-item-hover-bg: #f3f4f6;
+    --saw-nav-item-active-bg: #eff6ff;
+}
+
+/* Dark Mode - Terminal/Azura Glossy */
+[data-theme="dark"] {
+    /* Dark Mode Backgrounds */
+    --saw-bg-primary: #0a0e27;
+    --saw-bg-secondary: #0f172a;
+    --saw-bg-tertiary: #1e293b;
+    --saw-bg-quaternary: #334155;
+    
+    /* Dark Mode Text */
+    --saw-text-primary: #e2e8f0;
+    --saw-text-secondary: #94a3b8;
+    --saw-text-muted: #64748b;
+    
+    /* Dark Mode Borders */
+    --saw-border-color: rgba(148, 163, 184, 0.2);
+    --saw-border-color-light: rgba(148, 163, 184, 0.1);
+    
+    /* Dark Mode Shadows */
+    --saw-shadow-color: rgba(0, 0, 0, 0.5);
+    --saw-shadow-color-strong: rgba(0, 0, 0, 0.7);
+    
+    /* Glossy Effects - Terminal/Azura */
+    --saw-glossy-bg: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%);
+    --saw-glossy-border: rgba(59, 130, 246, 0.3);
+    --saw-glossy-shadow: 0 4px 20px rgba(59, 130, 246, 0.2);
+    
+    /* Dark Mode Primary Colors (adjusted for dark theme) */
+    --saw-primary: #3b82f6;
+    --saw-primary-hover: #60a5fa;
+    --saw-primary-light: rgba(59, 130, 246, 0.1);
+    --saw-primary-dark: #2563eb;
+    
+    /* Dark Mode Status Colors */
+    --saw-success: #10b981;
+    --saw-success-hover: #34d399;
+    --saw-success-light: rgba(16, 185, 129, 0.1);
+    
+    --saw-danger: #ef4444;
+    --saw-danger-hover: #f87171;
+    --saw-danger-light: rgba(239, 68, 68, 0.1);
+    
+    --saw-warning: #f59e0b;
+    --saw-warning-hover: #fbbf24;
+    --saw-warning-light: rgba(245, 158, 11, 0.1);
+    
+    --saw-info: #3b82f6;
+    --saw-info-hover: #60a5fa;
+    --saw-info-light: rgba(59, 130, 246, 0.1);
+    
+    /* Dark Mode - Component Specific Variables */
+    --saw-body-bg: var(--saw-bg-primary);
+    --saw-header-bg: var(--saw-bg-secondary);
+    --saw-header-border: var(--saw-border-color);
+    --saw-sidebar-bg: var(--saw-bg-secondary);
+    --saw-sidebar-border: var(--saw-border-color);
+    --saw-content-bg: var(--saw-bg-primary);
+    --saw-footer-bg: var(--saw-bg-secondary);
+    --saw-footer-border: var(--saw-border-color);
+    --saw-page-header-bg: var(--saw-bg-secondary);
+    --saw-page-header-border: var(--saw-border-color);
+    --saw-content-main-bg: var(--saw-bg-primary);
+    --saw-table-panel-bg: var(--saw-bg-secondary);
+    --saw-table-controls-bg: var(--saw-bg-secondary);
+    --saw-table-header-bg: var(--saw-bg-tertiary);
+    --saw-table-row-bg: var(--saw-bg-secondary);
+    --saw-table-row-hover-bg: var(--saw-bg-tertiary);
+    --saw-table-row-active-bg: var(--saw-primary-light);
+    --saw-table-row-active-hover-bg: rgba(59, 130, 246, 0.2);
+    --saw-switcher-button-bg: var(--saw-bg-tertiary);
+    --saw-switcher-button-hover-bg: var(--saw-bg-quaternary);
+    --saw-switcher-dropdown-bg: var(--saw-bg-tertiary);
+    --saw-switcher-input-bg: var(--saw-bg-quaternary);
+    --saw-form-section-bg: var(--saw-bg-secondary);
+    --saw-form-section-header-bg: var(--saw-bg-tertiary);
+    --saw-form-section-header-hover-bg: var(--saw-bg-quaternary);
+    --saw-input-bg: var(--saw-bg-tertiary);
+    --saw-select-bg: var(--saw-bg-tertiary);
+    --saw-textarea-bg: var(--saw-bg-tertiary);
+    --saw-card-bg: var(--saw-bg-secondary);
+    --saw-sidebar-content-bg: var(--saw-bg-secondary);
+    --saw-detail-section-bg: var(--saw-bg-secondary);
+    --saw-detail-header-bg: var(--saw-bg-secondary);
+    
+    /* Dashboard Widgets - Dark Mode */
+    --saw-widget-bg: var(--saw-bg-secondary);
+    --saw-widget-header-bg: var(--saw-bg-tertiary);
+    --saw-widget-body-bg: var(--saw-bg-secondary);
+    
+    /* Form Summary Hover & Icons - Dark Mode */
+    --saw-form-summary-hover-bg: var(--saw-bg-quaternary);
+    --saw-form-summary-icon-bg: rgba(59, 130, 246, 0.15);
+    --saw-form-summary-icon-color: #60a5fa;
+    
+    /* Sidebar Sections - Dark Mode */
+    --saw-sidebar-section-bg: var(--saw-bg-secondary);
+    
+    /* Navigation Hover - Dark Mode */
+    --saw-nav-item-hover-bg: var(--saw-bg-tertiary);
+    --saw-nav-item-active-bg: rgba(59, 130, 246, 0.15);
+    
+    /* Table Row Active - Dark Mode (jemnější kontrast) */
+    --saw-table-row-active-bg: rgba(59, 130, 246, 0.12);
+    --saw-table-row-active-hover-bg: rgba(59, 130, 246, 0.18);
 }

@@ -16,9 +16,11 @@ if (!defined('ABSPATH')) {
 $module_slug = str_replace('_', '-', $entity);
 $detail_template = SAW_VISITORS_PLUGIN_DIR . "includes/modules/{$module_slug}/detail-modal-template.php";
 
-$close_url = '#';
-$edit_url = home_url('/admin/' . str_replace('admin/', '', $config['route'] ?? '') . '/' . intval($item['id']) . '/edit');
-$delete_url = home_url('/admin/' . str_replace('admin/', '', $config['route'] ?? '') . '/delete/' . intval($item['id']));
+// Close URL: navigate back to list
+$route = str_replace('admin/', '', $config['route'] ?? $entity);
+$close_url = home_url('/admin/' . $route . '/');
+$edit_url = home_url('/admin/' . $route . '/' . intval($item['id']) . '/edit');
+$delete_url = home_url('/admin/' . $route . '/delete/' . intval($item['id']));
 
 $can_edit = function_exists('saw_can') ? saw_can('edit', $entity) : true;
 $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
@@ -145,11 +147,7 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
                         $full_url = home_url('/' . ltrim($item_route, '/'));
                         ?>
                         <a href="<?php echo esc_url($full_url); ?>" 
-                           class="saw-related-item-link saw-spa-link"
-                           data-spa-navigate="true"
-                           data-entity="<?php echo esc_attr($relation['entity']); ?>"
-                           data-id="<?php echo intval($related_item['id']); ?>"
-                           data-route="<?php echo esc_attr($item_route); ?>"
+                           class="saw-related-item-link"
                            title="<?php echo esc_attr__('Zobrazit detail', 'saw-visitors'); ?>">
                             <div class="saw-related-item-content">
                                 <span class="saw-related-item-dot"></span>
@@ -176,9 +174,7 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
     <div class="saw-sidebar-floating-actions">
         <?php if ($can_edit): ?>
         <a href="<?php echo esc_url($edit_url); ?>" 
-           class="saw-floating-action-btn edit saw-edit-ajax" 
-           data-entity="<?php echo esc_attr($entity); ?>"
-           data-id="<?php echo intval($item['id']); ?>"
+           class="saw-floating-action-btn edit" 
            title="Upravit">
             <span class="dashicons dashicons-edit"></span>
         </a>

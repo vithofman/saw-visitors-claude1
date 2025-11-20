@@ -111,7 +111,7 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
         return $item;
     }
     
-    protected function get_display_name($item) {
+    public function get_display_name($item) {
         return $item['name'] ?? 'Nová firma';
     }
     

@@ -17,8 +17,14 @@ if (!defined('ABSPATH')) {
 $module_slug = str_replace('_', '-', $entity);
 $form_template = SAW_VISITORS_PLUGIN_DIR . "includes/modules/{$module_slug}/form-template.php";
 
-// Close URL is now handled by JavaScript
-$close_url = '#';
+// Close URL: for create mode go back to list, for edit mode go back to detail
+if ($is_edit && !empty($item['id'])) {
+    // Edit mode: navigate back to detail
+    $close_url = home_url('/admin/' . $entity . '/' . intval($item['id']) . '/');
+} else {
+    // Create mode: navigate back to list
+    $close_url = home_url('/admin/' . $entity . '/');
+}
 ?>
 
 <div class="saw-sidebar" data-mode="<?php echo $is_edit ? 'edit' : 'create'; ?>" data-entity="<?php echo esc_attr($entity); ?>" <?php if ($is_edit && !empty($item['id'])): ?>data-current-id="<?php echo intval($item['id']); ?>"<?php endif; ?>>

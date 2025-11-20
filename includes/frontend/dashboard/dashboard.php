@@ -369,20 +369,20 @@ class SAW_Frontend_Dashboard {
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); 
     gap: 16px; 
     padding: 20px; 
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); 
+    background: var(--saw-widget-header-bg); 
     border-bottom: 1px solid #e5e7eb;
     flex-shrink: 0;
 }
 
 .saw-stat-card { 
-    background: white; 
+    background: var(--saw-widget-bg); 
     border-radius: 12px; 
     padding: 16px; 
     display: flex; 
     align-items: center; 
     gap: 12px; 
     box-shadow: 0 1px 3px rgba(0,0,0,0.08); 
-    border: 1px solid #e5e7eb; 
+    border: 1px solid var(--saw-border-color); 
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
@@ -443,7 +443,7 @@ class SAW_Frontend_Dashboard {
     font-weight: 600; 
     text-transform: uppercase; 
     letter-spacing: 0.5px; 
-    color: #64748b; 
+    color: var(--saw-text-secondary); 
     margin-bottom: 4px;
     white-space: nowrap;
     overflow: hidden;
@@ -457,7 +457,7 @@ class SAW_Frontend_Dashboard {
 .saw-stat-value { 
     font-size: 28px; 
     font-weight: 700; 
-    color: #1e293b; 
+    color: var(--saw-text-primary); 
     line-height: 1;
 }
 
@@ -478,10 +478,10 @@ class SAW_Frontend_Dashboard {
 }
 
 .saw-widget { 
-    background: white; 
+    background: var(--saw-widget-bg); 
     border-radius: 12px; 
     box-shadow: 0 1px 3px rgba(0,0,0,0.08); 
-    border: 1px solid #e5e7eb; 
+    border: 1px solid var(--saw-border-color); 
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -495,7 +495,7 @@ class SAW_Frontend_Dashboard {
 
 .saw-widget-header { 
     padding: 16px 20px; 
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); 
+    background: var(--saw-widget-header-bg); 
     border-bottom: 1px solid #e5e7eb; 
     display: flex; 
     justify-content: space-between; 
@@ -507,7 +507,7 @@ class SAW_Frontend_Dashboard {
     margin: 0; 
     font-size: 15px; 
     font-weight: 600; 
-    color: #1e293b;
+    color: var(--saw-text-primary);
     display: flex;
     align-items: center;
     gap: 8px;
@@ -530,11 +530,11 @@ class SAW_Frontend_Dashboard {
 }
 
 .saw-btn-refresh { 
-    background: white; 
-    border: 1px solid #e5e7eb; 
+    background: var(--saw-widget-bg); 
+    border: 1px solid var(--saw-border-color); 
     cursor: pointer; 
     padding: 8px; 
-    color: #64748b; 
+    color: var(--saw-text-secondary); 
     border-radius: 6px; 
     display: flex; 
     align-items: center;
@@ -543,7 +543,7 @@ class SAW_Frontend_Dashboard {
 
 .saw-btn-refresh:hover { 
     color: #2271b1;
-    background: #f8fafc;
+    background: var(--saw-bg-secondary);
     transform: rotate(180deg);
 }
 
@@ -562,7 +562,7 @@ class SAW_Frontend_Dashboard {
 
 .saw-widget-body::-webkit-scrollbar-track,
 .saw-widget-body-list::-webkit-scrollbar-track {
-    background: #f1f5f9;
+    background: var(--saw-bg-tertiary);
     border-radius: 4px;
 }
 
@@ -606,13 +606,13 @@ class SAW_Frontend_Dashboard {
 }
 
 .saw-list-item:hover { 
-    background: linear-gradient(90deg, #f8fafc, transparent);
+    background: linear-gradient(90deg, var(--saw-bg-secondary), transparent);
 }
 
 .saw-list-icon { 
     width: 40px; 
     height: 40px; 
-    background: linear-gradient(135deg, #f8fafc, #f1f5f9); 
+    background: linear-gradient(135deg, var(--saw-bg-secondary), var(--saw-bg-tertiary)); 
     border-radius: 10px; 
     display: flex; 
     align-items: center; 
@@ -628,7 +628,7 @@ class SAW_Frontend_Dashboard {
 
 .saw-list-title { 
     font-weight: 600; 
-    color: #1e293b; 
+    color: var(--saw-text-primary); 
     white-space: nowrap; 
     overflow: hidden; 
     text-overflow: ellipsis; 
@@ -637,7 +637,7 @@ class SAW_Frontend_Dashboard {
 
 .saw-list-meta { 
     font-size: 12px; 
-    color: #64748b; 
+    color: var(--saw-text-secondary); 
     margin-top: 2px; 
 }
 
@@ -674,7 +674,7 @@ class SAW_Frontend_Dashboard {
 }
 
 .saw-empty p { 
-    color: #64748b; 
+    color: var(--saw-text-secondary); 
     margin: 0;
     font-size: 14px;
 }
@@ -692,11 +692,11 @@ class SAW_Frontend_Dashboard {
     align-items: center; 
     gap: 10px; 
     padding: 20px 12px; 
-    background: linear-gradient(135deg, #f8fafc 0%, #fff 100%); 
-    border: 1px solid #e5e7eb; 
+    background: linear-gradient(135deg, var(--saw-bg-secondary) 0%, var(--saw-widget-bg) 100%); 
+    border: 1px solid var(--saw-border-color); 
     border-radius: 10px; 
     text-decoration: none; 
-    color: #1e293b; 
+    color: var(--saw-text-primary); 
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;

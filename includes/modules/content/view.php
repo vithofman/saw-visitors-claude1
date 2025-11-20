@@ -469,7 +469,6 @@ function saw_get_file_icon($filename) {
                                             }
                                         })();
                                         </script>
-                                        ?>
                                     </div>
                                     
                                     <div class="saw-form-field">

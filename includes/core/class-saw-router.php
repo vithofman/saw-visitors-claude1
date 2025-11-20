@@ -154,76 +154,53 @@ class SAW_Router {
      * @return void
      */
     public function dispatch($route = '', $path = '') {
-    // ✅ DEBUG
-    $log = WP_CONTENT_DIR . '/saw-dispatch-debug.log';
-    file_put_contents($log, "\n" . date('H:i:s') . " ==================\n", FILE_APPEND);
-    file_put_contents($log, "REQUEST_URI: " . ($_SERVER['REQUEST_URI'] ?? 'N/A') . "\n", FILE_APPEND);
-    file_put_contents($log, "is_ajax: " . (wp_doing_ajax() ? 'YES' : 'NO') . "\n", FILE_APPEND);
-    
-    if (wp_doing_ajax()) {
-        file_put_contents($log, "AJAX - skipping dispatch\n", FILE_APPEND);
-        return;
-    }
-    
-    if (empty($route)) {
-        $route = get_query_var('saw_route');
-        file_put_contents($log, "Route from query_var: '$route'\n", FILE_APPEND);
-    } else {
-        file_put_contents($log, "Route from param: '$route'\n", FILE_APPEND);
-    }
-    
-    if (empty($path)) {
-        $path = get_query_var('saw_path');
-        file_put_contents($log, "Path from query_var: '$path'\n", FILE_APPEND);
-    } else {
-        file_put_contents($log, "Path from param: '$path'\n", FILE_APPEND);
-    }
-    
-    if (empty($route)) {
-        file_put_contents($log, "Empty route - exiting dispatch\n", FILE_APPEND);
-        return;
-    }
-    
-    file_put_contents($log, "Loading frontend components\n", FILE_APPEND);
-    $this->load_frontend_components();
-    
-    file_put_contents($log, "Switching on route: '$route'\n", FILE_APPEND);
-    
-    switch ($route) {
-        case 'auth':
-            file_put_contents($log, "-> handle_auth_route()\n", FILE_APPEND);
-            $this->handle_auth_route();
-            break;
+        // Don't dispatch WordPress AJAX requests
+        if (wp_doing_ajax()) {
+            return;
+        }
         
-        case 'admin':
-            file_put_contents($log, "-> handle_admin_route('$path')\n", FILE_APPEND);
-            $this->handle_admin_route($path);
-            break;
+        if (empty($route)) {
+            $route = get_query_var('saw_route');
+        }
+        
+        if (empty($path)) {
+            $path = get_query_var('saw_path');
+        }
+        
+        if (empty($route)) {
+            return;
+        }
+        
+        $this->load_frontend_components();
+        
+        switch ($route) {
+            case 'auth':
+                $this->handle_auth_route();
+                break;
             
-        case 'manager':
-            file_put_contents($log, "-> handle_manager_route()\n", FILE_APPEND);
-            $this->handle_manager_route($path);
-            break;
+            case 'admin':
+                $this->handle_admin_route($path);
+                break;
+                
+            case 'manager':
+                $this->handle_manager_route($path);
+                break;
+                
+            case 'terminal':
+                $this->handle_terminal_route($path);
+                break;
+                
+            case 'visitor':
+                $this->handle_visitor_route($path);
+                break;
             
-        case 'terminal':
-            file_put_contents($log, "-> handle_terminal_route()\n", FILE_APPEND);
-            $this->handle_terminal_route($path);
-            break;
-            
-        case 'visitor':
-            file_put_contents($log, "-> handle_visitor_route()\n", FILE_APPEND);
-            $this->handle_visitor_route($path);
-            break;
-            
-        default:
-            file_put_contents($log, "-> handle_404() - unknown route\n", FILE_APPEND);
-            $this->handle_404();
-            break;
+            default:
+                $this->handle_404();
+                break;
+        }
+        
+        exit;
     }
-    
-    file_put_contents($log, "Exiting dispatch\n", FILE_APPEND);
-    exit;
-}
     
     /**
      * Handle authentication routes

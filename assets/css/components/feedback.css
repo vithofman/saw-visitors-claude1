@@ -481,7 +481,7 @@
     border: none;
     border-radius: 10px;
     background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    color: #64748b;
+    color: var(--saw-text-secondary);
     cursor: pointer;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     flex-shrink: 0;
@@ -616,7 +616,7 @@
 }
 
 .saw-modal-loading p {
-    color: #64748b;
+    color: var(--saw-text-secondary);
     font-size: 15px;
     font-weight: 600;
     margin: 0;
@@ -836,7 +836,7 @@ body.saw-modal-active {
 .saw-related-section-toggle::before {
     content: '▼';
     font-size: 12px;
-    color: #64748b;
+    color: var(--saw-text-secondary);
     transition: all 250ms ease;
 }
 
@@ -896,7 +896,7 @@ body.saw-modal-active {
 
 .saw-related-section-count {
     font-size: 13px;
-    color: #64748b;
+    color: var(--saw-text-secondary);
     font-weight: 500;
 }
 

@@ -28,10 +28,7 @@ class SAW_Module_Content_Controller
     }
     
     public function enqueue_assets() {
-        // CRITICAL: WordPress media library and editor
-        wp_enqueue_media();
-        wp_enqueue_editor();
-        
+        // WordPress editor is now handled by SAW_Asset_Loader::enqueue_module('content')
         SAW_Asset_Loader::enqueue_module('content');
     }
     

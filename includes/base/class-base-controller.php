@@ -1278,13 +1278,14 @@ protected function can($action) {
     /**
      * Universal AJAX sidebar loader
      * 
-     * Handles AJAX sidebar loading for detail/edit modes.
-     * Child controllers can override format_detail_data() for custom formatting.
+     * REMOVED v6.0.0: Sidebar now renders as full page via router, not AJAX.
      * 
-     * @since 12.1.0 - FÁZE 2
-     * @return void Outputs JSON
+     * @deprecated 6.0.0 - No longer used, sidebar renders as full page
+     * @return void
      */
     public function ajax_load_sidebar() {
+        // Method removed - sidebar now renders as full page via router
+        wp_send_json_error(array('message' => 'AJAX sidebar loading is no longer supported. Use full page navigation.'));
         check_ajax_referer('saw_ajax_nonce', 'nonce');
         
         $id = intval($_POST['id'] ?? 0);
@@ -1569,53 +1570,26 @@ protected function can($action) {
      * @return array|null Item data or null on error
      */
     protected function handle_detail_mode($context) {
-    // 🔥 MEGA DEBUG
-    error_log("=== HANDLE_DETAIL_MODE START ===");
-    error_log("Context received: " . print_r($context, true));
-    error_log("Context ID: " . ($context['id'] ?? 'MISSING'));
-    error_log("Context ID type: " . gettype($context['id'] ?? null));
-    
-    if (!$this->can('view')) {
-        $this->set_flash('Nemáte oprávnění zobrazit detail', 'error');
-        wp_redirect(home_url('/admin/' . $this->config['route'] . '/'));
-        exit;
+        if (!$this->can('view')) {
+            $this->set_flash('Nemáte oprávnění zobrazit detail', 'error');
+            wp_redirect(home_url('/admin/' . $this->config['route'] . '/'));
+            exit;
+        }
+        
+        $item = $this->model->get_by_id($context['id']);
+        
+        if (!$item) {
+            $this->set_flash('Záznam nenalezen', 'error');
+            wp_redirect(home_url('/admin/' . $this->config['route'] . '/'));
+            exit;
+        }
+        
+        if (method_exists($this, 'format_detail_data')) {
+            $item = $this->format_detail_data($item);
+        }
+        
+        return $item;
     }
-    
-    error_log("Calling get_by_id with ID: " . $context['id']);
-    error_log("Model class: " . get_class($this->model));
-
-    
-    // Add direct DB check
-    global $wpdb;
-    $direct_check = $wpdb->get_row($wpdb->prepare(
-        "SELECT * FROM {$wpdb->prefix}saw_branches WHERE id = %d",
-        $context['id']
-    ), ARRAY_A);
-    error_log("Direct DB check result: " . ($direct_check ? 'FOUND' : 'NOT FOUND'));
-    if ($direct_check) {
-        error_log("Direct DB data: " . print_r($direct_check, true));
-    }
-    
-    $item = $this->model->get_by_id($context['id']);
-    
-    error_log("Model get_by_id result: " . ($item ? 'FOUND' : 'NOT FOUND'));
-    if ($item) {
-        error_log("Model data: " . print_r($item, true));
-    }
-    error_log("=== HANDLE_DETAIL_MODE END ===");
-    
-    if (!$item) {
-        $this->set_flash('Záznam nenalezen', 'error');
-        wp_redirect(home_url('/admin/' . $this->config['route'] . '/'));
-        exit;
-    }
-    
-    if (method_exists($this, 'format_detail_data')) {
-        $item = $this->format_detail_data($item);
-    }
-    
-    return $item;
-}
     
     /**
      * Handle create sidebar mode
@@ -1810,7 +1784,7 @@ protected function can($action) {
      * @param array $item Created item data
      * @return string Display name
      */
-    protected function get_display_name($item) {
+    public function get_display_name($item) {
         // Try common name fields
         if (!empty($item['name'])) {
             return $item['name'];

@@ -40,10 +40,27 @@ if (!defined('ABSPATH')) {
     <div class="saw-settings-content">
         
         <div class="saw-tab-content" data-tab-content="general">
-            <div class="saw-empty-tab">
-                <span class="saw-empty-icon">ℹ️</span>
-                <h2>Základní nastavení</h2>
-                <p>Tato sekce je zatím prázdná a bude doplněna později.</p>
+            <div class="saw-form-section">
+                <h2 class="saw-section-title">🎨 Vzhled</h2>
+                
+                <div class="saw-form-field">
+                    <label class="saw-checkbox-label saw-dark-mode-toggle-label">
+                        <input 
+                            type="checkbox" 
+                            id="saw-dark-mode-toggle" 
+                            class="saw-dark-mode-toggle"
+                            <?php 
+                            $user_id = get_current_user_id();
+                            $dark_mode = get_user_meta($user_id, 'saw_dark_mode', true);
+                            checked($dark_mode, '1');
+                            ?>
+                        >
+                        <span>
+                            <strong>Tmavý režim</strong>
+                            <span class="saw-hint">Terminal/Azura glossy styl</span>
+                        </span>
+                    </label>
+                </div>
             </div>
         </div>
         

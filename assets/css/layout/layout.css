@@ -142,7 +142,7 @@
 }
 
 .saw-page-header {
-    background: #ffffff;
+    background: var(--saw-page-header-bg);
     border-bottom: var(--saw-border-width) solid var(--saw-border-color);
     padding: var(--saw-space-xl) 0;
     margin-bottom: var(--saw-space-2xl);

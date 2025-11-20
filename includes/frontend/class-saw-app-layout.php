@@ -84,12 +84,10 @@ class SAW_App_Layout {
     /**
      * Render page with layout
      *
-     * Main rendering method. Handles three request types:
-     * 1. WordPress AJAX (wp_ajax_*) - returns immediately without rendering
-     * 2. Custom AJAX (SPA navigation) - renders content only as JSON
-     * 3. Normal page request - renders complete HTML page
-     *
-     * ✅ FIX: Don't intercept WordPress AJAX requests
+     * Main rendering method. Always renders complete HTML page.
+     * 
+     * ✅ REFACTORED v6.0.0: Removed AJAX navigation support.
+     * All navigation now uses full page reload with View Transition API.
      *
      * @since 4.6.1
      * @param string     $content      Page content HTML
@@ -106,7 +104,7 @@ class SAW_App_Layout {
         $this->current_user = $user ?: $this->get_current_user_data();
         $this->current_customer = $customer ?: $this->get_current_customer_data();
         
-        // ✅ CRITICAL FIX: Don't intercept WordPress AJAX requests!
+        // ✅ CRITICAL: Don't intercept WordPress AJAX requests!
         // WordPress AJAX handlers (wp_ajax_*) must handle their own responses
         if (wp_doing_ajax()) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
@@ -116,31 +114,63 @@ class SAW_App_Layout {
             return;
         }
         
-        // ✅ CRITICAL: Content page always uses full page reload (TinyMCE compatibility)
-        // TinyMCE and WordPress Media Library require full page context to work properly
-        if ($this->active_menu === 'content') {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[SAW_App_Layout] Content page detected - forcing full page render for TinyMCE compatibility');
-            }
-            $this->render_complete_page($content);
-            exit;
-        }
-        
-        // ✅ Handle custom XHR requests (for SPA-like navigation)
-        if ($this->is_ajax_request()) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[SAW_App_Layout] Custom AJAX detected - rendering content only');
-            }
-            $this->render_content_only($content);
-            exit;
-        }
-        
-        // ✅ Normal page request - render complete page
+        // ✅ Always render complete page (full page reload)
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('[SAW_App_Layout] Normal request - rendering complete page');
+            error_log('[SAW_App_Layout] Rendering complete page');
+            error_log('[SAW_App_Layout] Page title: ' . $this->page_title);
+            error_log('[SAW_App_Layout] Active menu: ' . ($this->active_menu ?: 'empty'));
         }
-        $this->render_complete_page($content);
+        
+        // CRITICAL: Always render complete page
+        // This ensures layout is always present, even if something went wrong earlier
+        try {
+            $this->render_complete_page($content);
+        } catch (Exception $e) {
+            error_log('[SAW_App_Layout] ERROR rendering complete page: ' . $e->getMessage());
+            error_log('[SAW_App_Layout] Stack trace: ' . $e->getTraceAsString());
+            
+            // Fallback: render minimal page with error message
+            $this->render_error_fallback($content, $e->getMessage());
+        }
         exit;
+    }
+    
+    /**
+     * Render error fallback page
+     *
+     * Used when main render fails to ensure something is always displayed.
+     *
+     * @since 5.1.0
+     * @param string $content Original content
+     * @param string $error_message Error message
+     * @return void
+     */
+    private function render_error_fallback($content, $error_message) {
+        ?>
+        <!DOCTYPE html>
+        <html <?php language_attributes(); ?>>
+        <head>
+            <meta charset="<?php bloginfo('charset'); ?>">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title><?php echo esc_html($this->page_title ?: 'SAW Visitors'); ?> - SAW Visitors</title>
+            <?php wp_head(); ?>
+        </head>
+        <body class="saw-app-body">
+            <div style="padding: 20px; max-width: 800px; margin: 50px auto;">
+                <h1>SAW Visitors</h1>
+                <div class="error" style="background: #f8d7da; color: #721c24; padding: 15px; border-radius: 4px; margin: 20px 0;">
+                    <strong>Chyba při načítání stránky:</strong><br>
+                    <?php echo esc_html($error_message); ?>
+                </div>
+                <div style="margin-top: 20px;">
+                    <a href="<?php echo esc_url(home_url('/admin/')); ?>" class="button">Zpět na hlavní stránku</a>
+                </div>
+                <?php echo $content; ?>
+            </div>
+            <?php wp_footer(); ?>
+        </body>
+        </html>
+        <?php
     }
     
     /**
@@ -232,397 +262,24 @@ class SAW_App_Layout {
         );
     }
     
-    /**
-     * Check if request is custom AJAX (not WordPress AJAX)
-     *
-     * Detects custom XMLHttpRequest for SPA-like navigation.
-     * Does NOT detect WordPress admin-ajax.php requests.
-     *
-     * @since 4.6.1
-     * @return bool True if custom AJAX request
-     */
-    private function is_ajax_request() {
-        $http_x_requested_with = isset($_SERVER['HTTP_X_REQUESTED_WITH']) 
-            ? sanitize_text_field(wp_unslash($_SERVER['HTTP_X_REQUESTED_WITH'])) 
-            : '';
-        
-        return !empty($http_x_requested_with) && 
-               strtolower($http_x_requested_with) === 'xmlhttprequest';
-    }
     
     /**
-     * Render content only (for AJAX requests)
+     * Get body attributes (for dark mode, etc.)
      *
-     * Returns JSON response with content, title, active menu, and required assets.
-     * Used for SPA-like navigation without full page reload.
-     *
-     * CRITICAL FIX: Now includes CSS/JS assets that need to be loaded for the page.
-     *
-     * @since 4.6.1
-     * @param string $content Page content HTML
-     * @return void
+     * @since 1.0.0
+     * @return string Body attributes HTML
      */
-    private function render_content_only($content) {
-        header('Content-Type: application/json');
+    private function get_body_attributes() {
+        $user_id = get_current_user_id();
+        $dark_mode = get_user_meta($user_id, 'saw_dark_mode', true);
         
-        // CRITICAL: Ensure WordPress editor and media are enqueued for content module
-        if ($this->active_menu === 'content') {
-            wp_enqueue_media();
-            wp_enqueue_editor();
+        $attrs = array();
+        
+        if ($dark_mode === '1') {
+            $attrs[] = 'data-theme="dark"';
         }
         
-        // Get required CSS/JS assets for current module
-        $assets = $this->get_required_assets();
-        
-        // CRITICAL: Also get WordPress enqueued scripts/styles for content module
-        if ($this->active_menu === 'content') {
-            global $wp_scripts, $wp_styles;
-            
-            // Get WordPress enqueued editor scripts
-            if (isset($wp_scripts->registered['editor'])) {
-                $editor_script = $wp_scripts->registered['editor'];
-                $editor_already_added = false;
-                foreach ($assets['js'] as $js_asset) {
-                    if ($js_asset['handle'] === 'editor') {
-                        $editor_already_added = true;
-                        break;
-                    }
-                }
-                if (!$editor_already_added) {
-                    error_log('[SAW_App_Layout] Adding editor.js from wp_scripts: ' . $editor_script->src);
-                    $assets['js'][] = array(
-                        'handle' => 'editor',
-                        'src' => $editor_script->src,
-                        'deps' => $editor_script->deps
-                    );
-                }
-            }
-        }
-        
-        // DEBUG: Log response data
-        error_log('[SAW_App_Layout] render_content_only() - active_menu: ' . ($this->active_menu ?: 'empty'));
-        error_log('[SAW_App_Layout] render_content_only() - assets CSS count: ' . count($assets['css']));
-        error_log('[SAW_App_Layout] render_content_only() - assets JS count: ' . count($assets['js']));
-        
-        wp_send_json_success(array(
-            'content' => $content,
-            'title' => $this->page_title,
-            'active_menu' => $this->active_menu,
-            'assets' => $assets
-        ));
-    }
-    
-    /**
-     * Get required CSS/JS assets for current page
-     *
-     * Determines which CSS/JS files are needed based on active module.
-     * This is needed for AJAX navigation where wp_head() is not called.
-     * 
-     * CRITICAL: Always includes ALL global component CSS/JS files that are needed
-     * by admin-table and other components. This ensures everything works during AJAX navigation.
-     *
-     * @since 4.6.1
-     * @return array Array with 'css' and 'js' keys containing asset URLs
-     */
-    private function get_required_assets() {
-        $assets = array(
-            'css' => array(),
-            'js' => array()
-        );
-        
-        // DEBUG: Log asset detection
-        error_log('[SAW_App_Layout] get_required_assets() called');
-        error_log('[SAW_App_Layout] active_menu: ' . ($this->active_menu ?: 'empty'));
-        error_log('[SAW_App_Layout] REQUEST_URI: ' . ($_SERVER['REQUEST_URI'] ?? 'N/A'));
-        
-        // CRITICAL: Always include ALL global component CSS files needed by admin-table
-        // These are normally loaded via SAW_Asset_Loader::enqueue_global() but not during AJAX
-        
-        // Core CSS files (from SAW_Asset_Loader::CORE_STYLES)
-        $core_styles = array(
-            'saw-variables' => 'foundation/variables.css',
-            'saw-reset' => 'foundation/reset.css',
-            'saw-typography' => 'foundation/typography.css'
-        );
-        
-        foreach ($core_styles as $handle => $path) {
-            $css_url = SAW_VISITORS_PLUGIN_URL . 'assets/css/' . $path;
-            $css_path = SAW_VISITORS_PLUGIN_DIR . 'assets/css/' . $path;
-            if (file_exists($css_path)) {
-                $deps = ($handle === 'saw-variables') ? array() : array('saw-variables');
-                $assets['css'][] = array(
-                    'handle' => $handle,
-                    'src' => $css_url . '?v=' . SAW_VISITORS_VERSION,
-                    'deps' => $deps
-                );
-            }
-        }
-        
-        // Component CSS files (from SAW_Asset_Loader::COMPONENT_STYLES)
-        // Include all consolidated component styles
-        $component_styles = array(
-            'saw-base-components' => 'components/base-components.css',
-            'saw-forms' => 'components/forms.css', // Consolidated: forms, buttons, selectbox, select-create, color-picker, search-input
-            'saw-tables' => 'components/tables.css', // Consolidated: tables, table-column-types, admin-table, admin-table-sidebar
-            'saw-navigation' => 'components/navigation.css', // Consolidated: customer-switcher, branch-switcher, language-switcher
-            'saw-feedback' => 'components/feedback.css', // Consolidated: alerts, badges, cards, modals, pagination, detail-sections
-        );
-        
-        // Layout CSS files
-        $layout_styles = array(
-            'saw-layout' => 'layout/layout.css', // Consolidated: grid, containers, spacing
-        );
-        
-        // App CSS files
-        $app_styles = array(
-            'saw-app' => 'app/app.css', // Consolidated: base, header, sidebar, footer, fixed-layout, legacy-base
-        );
-        
-        // Combine all CSS
-        $all_css = array_merge($component_styles, $layout_styles, $app_styles);
-        
-        foreach ($all_css as $handle => $path) {
-            $css_url = SAW_VISITORS_PLUGIN_URL . 'assets/css/' . $path;
-            $css_path = SAW_VISITORS_PLUGIN_DIR . 'assets/css/' . $path;
-            if (file_exists($css_path)) {
-                // Determine dependencies based on file type
-                if ($handle === 'saw-base-components') {
-                    $deps = array('saw-variables');
-                } elseif (in_array($handle, array('saw-layout', 'saw-app'))) {
-                    $deps = array('saw-variables', 'saw-base-components');
-                } else {
-                    $deps = array('saw-variables', 'saw-base-components');
-                }
-                $assets['css'][] = array(
-                    'handle' => $handle,
-                    'src' => $css_url . '?v=' . SAW_VISITORS_VERSION,
-                    'deps' => $deps
-                );
-            }
-        }
-        
-        // Core JS files (from assets/js/core/)
-        // CRITICAL: Do NOT include saw-app and saw-app-navigation here - they are already loaded globally!
-        // Including them again would cause conflicts and duplicate loading
-        $core_js = array(
-            'saw-validation' => 'core/validation.js',
-        );
-        
-        foreach ($core_js as $handle => $path) {
-            $js_url = SAW_VISITORS_PLUGIN_URL . 'assets/js/' . $path;
-            $js_path = SAW_VISITORS_PLUGIN_DIR . 'assets/js/' . $path;
-            if (file_exists($js_path)) {
-                // CRITICAL: saw-app and saw-app-navigation are already loaded globally, don't include them
-                // Only include validation.js which is module-specific
-                $deps = array('jquery', 'saw-app');
-                $assets['js'][] = array(
-                    'handle' => $handle,
-                    'src' => $js_url . '?v=' . SAW_VISITORS_VERSION,
-                    'deps' => $deps
-                );
-            }
-        }
-        
-        // Component JS files (from assets/js/components/)
-        $component_js = array(
-            'saw-forms' => 'components/forms.js', // Consolidated: selectbox, select-create, color-picker, file-upload
-            'saw-navigation-components' => 'components/navigation-components.js', // Consolidated: customer-switcher, branch-switcher, language-switcher
-            'saw-ui' => 'components/ui.js', // Consolidated: modal, modal-triggers, search
-            'saw-admin-table-component' => 'components/admin-table.js',
-            'saw-admin-table-sidebar' => 'components/admin-table-sidebar.js',
-        );
-        
-        foreach ($component_js as $handle => $path) {
-            $js_url = SAW_VISITORS_PLUGIN_URL . 'assets/js/' . $path;
-            $js_path = SAW_VISITORS_PLUGIN_DIR . 'assets/js/' . $path;
-            if (file_exists($js_path)) {
-                $deps = ($handle === 'saw-admin-table-sidebar') 
-                    ? array('jquery', 'saw-app', 'saw-admin-table-component')
-                    : array('jquery', 'saw-app');
-                $assets['js'][] = array(
-                    'handle' => $handle,
-                    'src' => $js_url . '?v=' . SAW_VISITORS_VERSION,
-                    'deps' => $deps
-                );
-            }
-        }
-        
-        // CRITICAL: WordPress dashicons (needed for icons in buttons)
-        // Get dashicons URL from WordPress
-        $dashicons_url = includes_url('css/dashicons.min.css');
-        $assets['css'][] = array(
-            'handle' => 'dashicons',
-            'src' => $dashicons_url,
-            'deps' => array()
-        );
-        
-        // Get active module - try multiple methods
-        // CRITICAL: For AJAX requests, we need to detect module from URL since active_menu may not be set
-        $active_module = null;
-        
-        // Method 1: From active_menu (passed to render()) - only if not empty
-        if (!empty($this->active_menu)) {
-            $active_module = $this->active_menu;
-            error_log('[SAW_App_Layout] Method 1: active_module from active_menu: ' . $active_module);
-        }
-        
-        // Method 2: From REQUEST_URI (CRITICAL for AJAX - works even without query vars)
-        if (empty($active_module) && isset($_SERVER['REQUEST_URI'])) {
-            $uri = sanitize_text_field(wp_unslash($_SERVER['REQUEST_URI']));
-            if (preg_match('#/admin/([^/]+)#', $uri, $matches)) {
-                $active_module = $matches[1];
-                error_log('[SAW_App_Layout] Method 2: active_module from REQUEST_URI: ' . $active_module);
-            }
-        }
-        
-        // Method 3: From query var (for AJAX requests)
-        if (empty($active_module)) {
-            $path = get_query_var('saw_path');
-            if (!empty($path)) {
-                $clean_path = trim($path, '/');
-                // Remove 'admin/' prefix if present
-                $clean_path = preg_replace('#^admin/#', '', $clean_path);
-                $segments = explode('/', $clean_path);
-                if (isset($segments[0]) && $segments[0] !== 'admin' && !is_numeric($segments[0])) {
-                    $active_module = $segments[0];
-                    error_log('[SAW_App_Layout] Method 3: active_module from query var: ' . $active_module);
-                }
-            }
-        }
-        
-        // Method 4: From router (fallback)
-        if (!empty($active_module)) {
-            $modules = SAW_Module_Loader::get_all();
-            foreach ($modules as $slug => $config) {
-                $module_route = ltrim($config['route'] ?? '', '/');
-                $module_route_without_admin = str_replace('admin/', '', $module_route);
-                // If active_module matches route (e.g., 'content' matches 'admin/content')
-                if ($module_route_without_admin === $active_module || 
-                    strpos($module_route_without_admin, $active_module . '/') === 0) {
-                    $active_module = $slug;
-                    error_log('[SAW_App_Layout] Method 5: active_module converted to slug: ' . $active_module);
-                    break;
-                }
-            }
-        }
-        
-        error_log('[SAW_App_Layout] Final active_module: ' . ($active_module ?: 'null'));
-        
-        // Module-specific CSS
-        if ($active_module && $active_module !== 'dashboard' && $active_module !== 'settings') {
-            // CRITICAL: Some modules have subdirectories (e.g., content/content.css)
-            $module_css_path = SAW_VISITORS_PLUGIN_DIR . 'assets/css/modules/saw-' . $active_module . '.css';
-            $module_css = SAW_VISITORS_PLUGIN_URL . 'assets/css/modules/saw-' . $active_module . '.css';
-            
-            // Check for subdirectory structure (e.g., content/content.css)
-            if (!file_exists($module_css_path)) {
-                $module_css_path_alt = SAW_VISITORS_PLUGIN_DIR . 'assets/css/modules/' . $active_module . '/' . $active_module . '.css';
-                if (file_exists($module_css_path_alt)) {
-                    $module_css_path = $module_css_path_alt;
-                    $module_css = SAW_VISITORS_PLUGIN_URL . 'assets/css/modules/' . $active_module . '/' . $active_module . '.css';
-                }
-            }
-            
-            error_log('[SAW_App_Layout] Checking module CSS: ' . $module_css_path . ' - exists: ' . (file_exists($module_css_path) ? 'YES' : 'NO'));
-            if (file_exists($module_css_path)) {
-                $assets['css'][] = array(
-                    'handle' => 'saw-module-' . $active_module,
-                    'src' => $module_css . '?v=' . SAW_VISITORS_VERSION,
-                    'deps' => array('saw-variables', 'saw-base-components')
-                );
-                error_log('[SAW_App_Layout] Added module CSS: saw-module-' . $active_module);
-            } else {
-                error_log('[SAW_App_Layout] WARNING: Module CSS file not found: ' . $module_css_path);
-            }
-            
-            // Module-specific JS
-            $module_js = SAW_VISITORS_PLUGIN_URL . 'assets/js/modules/saw-' . $active_module . '.js';
-            $module_js_path = SAW_VISITORS_PLUGIN_DIR . 'assets/js/modules/saw-' . $active_module . '.js';
-            error_log('[SAW_App_Layout] Checking module JS: ' . $module_js_path . ' - exists: ' . (file_exists($module_js_path) ? 'YES' : 'NO'));
-            if (file_exists($module_js_path)) {
-                $assets['js'][] = array(
-                    'handle' => 'saw-module-' . $active_module,
-                    'src' => $module_js . '?v=' . SAW_VISITORS_VERSION,
-                    'deps' => array('jquery', 'saw-app', 'saw-validation')
-                );
-                if ($media_css) {
-                    $assets['css'][] = array(
-                        'handle' => 'media',
-                        'src' => $media_css,
-                        'deps' => array('dashicons')
-                    );
-                } else {
-                    error_log('[SAW_App_Layout] WARNING: WordPress media.css not found');
-                }
-                
-                // TinyMCE CSS (for wp_editor) - try multiple paths
-                $tinymce_css_paths = array(
-                    ABSPATH . WPINC . '/css/tinymce.css',
-                    ABSPATH . WPINC . '/css/editor.css'
-                );
-                $tinymce_css = null;
-                foreach ($tinymce_css_paths as $path) {
-                    if (file_exists($path)) {
-                        $tinymce_css = includes_url(str_replace(ABSPATH . WPINC . '/', '', $path));
-                        break;
-                    }
-                }
-                if ($tinymce_css) {
-                    $assets['css'][] = array(
-                        'handle' => 'tinymce',
-                        'src' => $tinymce_css,
-                        'deps' => array()
-                    );
-                } else {
-                    error_log('[SAW_App_Layout] WARNING: WordPress tinymce.css not found');
-                }
-                
-                // TinyMCE JS (core)
-                $tinymce_js = includes_url('js/tinymce/tinymce.min.js');
-                $assets['js'][] = array(
-                    'handle' => 'tinymce',
-                    'src' => $tinymce_js,
-                    'deps' => array()
-                );
-                
-                // WordPress Editor JS (initializes TinyMCE) - CRITICAL: Must be loaded after tinymce
-                // Try multiple paths and use WordPress function to get correct URL
-                $editor_js_paths = array(
-                    ABSPATH . WPINC . '/js/editor.min.js',
-                    ABSPATH . WPINC . '/js/editor.js'
-                );
-                $editor_js = null;
-                $editor_path_used = null;
-                foreach ($editor_js_paths as $path) {
-                    if (file_exists($path)) {
-                        $editor_path_used = $path;
-                        $editor_js = includes_url(str_replace(ABSPATH . WPINC . '/', '', $path));
-                        break;
-                    }
-                }
-                if ($editor_js) {
-                    error_log('[SAW_App_Layout] Adding editor.js: ' . $editor_js . ' (path: ' . $editor_path_used . ')');
-                    $assets['js'][] = array(
-                        'handle' => 'editor',
-                        'src' => $editor_js,
-                        'deps' => array('jquery', 'tinymce', 'wp-util') // Must come after tinymce
-                    );
-                    error_log('[SAW_App_Layout] editor.js added to assets array');
-                } else {
-                    error_log('[SAW_App_Layout] WARNING: WordPress editor.js not found. Checked paths: ' . implode(', ', $editor_js_paths));
-                }
-            }
-        }
-        
-        // DEBUG: Log final asset count and list all JS handles
-        error_log('[SAW_App_Layout] Final assets count - CSS: ' . count($assets['css']) . ', JS: ' . count($assets['js']));
-        $js_handles = array();
-        foreach ($assets['js'] as $js_asset) {
-            $js_handles[] = $js_asset['handle'] . ' (' . basename($js_asset['src']) . ')';
-        }
-        error_log('[SAW_App_Layout] JS asset handles: ' . implode(', ', $js_handles));
-        
-        return $assets;
+        return !empty($attrs) ? implode(' ', $attrs) : '';
     }
     
     /**
@@ -655,7 +312,7 @@ class SAW_App_Layout {
             }
             ?>
         </head>
-        <body class="saw-app-body">
+        <body class="saw-app-body" <?php echo $this->get_body_attributes(); ?>>
             
             <?php $this->render_header(); ?>
             

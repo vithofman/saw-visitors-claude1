@@ -29,6 +29,7 @@ class SAW_Module_Settings_Controller
         $this->file_uploader = new SAW_File_Uploader();
         
         add_action('wp_ajax_saw_delete_settings_logo', array($this, 'ajax_delete_logo'));
+        add_action('wp_ajax_saw_toggle_dark_mode', array($this, 'ajax_toggle_dark_mode'));
         add_action('wp_enqueue_scripts', array($this, 'enqueue_assets'));
     }
     
@@ -149,6 +150,30 @@ class SAW_Module_Settings_Controller
         $this->model->delete_logo($customer_id);
         
         wp_send_json_success(array('message' => 'Logo bylo smazáno'));
+    }
+    
+    /**
+     * AJAX handler for dark mode toggle
+     *
+     * @since 1.0.0
+     */
+    public function ajax_toggle_dark_mode() {
+        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        
+        $user_id = get_current_user_id();
+        if (!$user_id) {
+            wp_send_json_error(array('message' => 'Uživatel není přihlášen'));
+            return;
+        }
+        
+        $enabled = isset($_POST['enabled']) && $_POST['enabled'] === '1';
+        
+        update_user_meta($user_id, 'saw_dark_mode', $enabled ? '1' : '0');
+        
+        wp_send_json_success(array(
+            'message' => $enabled ? 'Tmavý režim zapnut' : 'Tmavý režim vypnut',
+            'enabled' => $enabled
+        ));
     }
     
     private function render_view($view_data) {

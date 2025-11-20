@@ -1,0 +1,111 @@
+/**
+ * SAW File Upload Dark Mode Styles
+ * Terminal/Azura Glossy Theme
+ * 
+ * @package SAW_Visitors
+ * @version 1.0.0
+ */
+
+/* ============================================
+   UPLOAD ZONE
+   ============================================ */
+
+[data-theme="dark"] .saw-upload-zone {
+    background: linear-gradient(135deg, var(--saw-bg-tertiary) 0%, var(--saw-bg-quaternary) 100%);
+    border-color: var(--saw-border-color);
+}
+
+[data-theme="dark"] .saw-upload-zone:hover {
+    background: linear-gradient(135deg, var(--saw-bg-quaternary) 0%, var(--saw-bg-tertiary) 100%);
+    border-color: var(--saw-primary);
+}
+
+[data-theme="dark"] .saw-upload-zone.dragging {
+    background: linear-gradient(135deg, var(--saw-primary-light) 0%, var(--saw-bg-quaternary) 100%);
+    border-color: var(--saw-primary);
+}
+
+[data-theme="dark"] .saw-upload-icon {
+    color: var(--saw-text-secondary);
+}
+
+[data-theme="dark"] .saw-upload-zone:hover .saw-upload-icon {
+    color: var(--saw-primary);
+}
+
+[data-theme="dark"] .saw-upload-text {
+    color: var(--saw-text-primary);
+}
+
+[data-theme="dark"] .saw-upload-hint {
+    color: var(--saw-text-secondary);
+}
+
+[data-theme="dark"] .saw-upload-category-row {
+    border-top-color: var(--saw-border-color);
+}
+
+[data-theme="dark"] .saw-upload-category-label {
+    color: var(--saw-text-secondary);
+}
+
+/* ============================================
+   FILE LIST
+   ============================================ */
+
+[data-theme="dark"] .saw-file-list {
+    background: var(--saw-bg-secondary);
+}
+
+[data-theme="dark"] .saw-file-item {
+    background: var(--saw-bg-secondary);
+    border-color: var(--saw-border-color);
+    color: var(--saw-text-primary);
+}
+
+[data-theme="dark"] .saw-file-item:hover {
+    background: var(--saw-bg-tertiary);
+}
+
+[data-theme="dark"] .saw-file-name {
+    color: var(--saw-text-primary);
+}
+
+[data-theme="dark"] .saw-file-size {
+    color: var(--saw-text-secondary);
+}
+
+[data-theme="dark"] .saw-file-remove {
+    color: var(--saw-text-secondary);
+}
+
+[data-theme="dark"] .saw-file-remove:hover {
+    background: var(--saw-danger-light);
+    color: var(--saw-danger);
+}
+
+/* ============================================
+   PROGRESS BAR
+   ============================================ */
+
+[data-theme="dark"] .saw-upload-progress {
+    background: var(--saw-bg-tertiary);
+}
+
+[data-theme="dark"] .saw-upload-progress-bar {
+    background: var(--saw-primary);
+}
+
+/* ============================================
+   PREVIEW
+   ============================================ */
+
+[data-theme="dark"] .saw-file-preview {
+    background: var(--saw-bg-secondary);
+    border-color: var(--saw-border-color);
+}
+
+[data-theme="dark"] .saw-file-preview-image {
+    background: var(--saw-bg-tertiary);
+}
+

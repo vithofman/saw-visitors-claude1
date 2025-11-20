@@ -85,18 +85,18 @@
 }
 
 /* Header - Clean White */
-.saw-page-header {
-    background: #fff;
+/* .saw-page-header is defined in app.css - this is module-specific override */
+.saw-module-content .saw-page-header {
+    background: var(--saw-content-main-bg);
     padding: 2rem 3rem;
     margin-bottom: 0;
-    border-bottom: 1px solid #e2e8f0;
 }
 
 .saw-page-title {
     font-size: 2rem;
     font-weight: 700;
     margin: 0;
-    color: #1e293b;
+    color: var(--saw-text-primary);
     display: flex;
     align-items: center;
     gap: 1rem;
@@ -112,8 +112,8 @@
     display: flex;
     gap: 0;
     padding: 0 3rem;
-    background: #fff;
-    border-bottom: 2px solid #e2e8f0;
+    background: var(--saw-form-section-bg);
+    border-bottom: 2px solid var(--saw-border-color);
     overflow-x: auto;
     overflow-y: hidden;
     -ms-overflow-style: none;
@@ -131,7 +131,7 @@
     border-bottom: 3px solid transparent;
     font-size: 0.9375rem;
     font-weight: 600;
-    color: #64748b;
+    color: var(--saw-text-secondary);
     cursor: pointer;
     transition: all 0.2s ease;
     white-space: nowrap;
@@ -139,18 +139,18 @@
 }
 
 .saw-tab-btn:hover {
-    color: #1a73e8;
-    background: #f8fafc;
+    color: var(--saw-primary);
+    background: var(--saw-content-main-bg);
 }
 
 .saw-tab-btn.active {
-    color: #1a73e8;
+    color: var(--saw-primary);
     border-bottom-color: #1a73e8;
 }
 
 /* Main */
 .saw-content-main {
-    background: #f8fafc;
+    background: var(--saw-content-main-bg);
     padding: 2.5rem 3rem;
     min-height: calc(100vh - 300px);
 }
@@ -165,7 +165,7 @@
     border: 1px solid #e2e8f0;
     border-radius: 12px;
     overflow: hidden;
-    background: #fff;
+    background: var(--saw-form-section-bg);
     transition: all 0.2s ease;
 }
 
@@ -180,7 +180,7 @@
     align-items: center;
     gap: 1rem;
     padding: 1.5rem 2rem;
-    background: #fff;
+    background: var(--saw-form-section-bg);
     border: none;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -189,12 +189,12 @@
 }
 
 .saw-section-header:hover {
-    background: #f8fafc;
+    background: var(--saw-content-main-bg);
 }
 
 .saw-collapsible-section.open .saw-section-header {
-    background: #f8fafc;
-    border-bottom: 1px solid #e2e8f0;
+    background: var(--saw-form-section-header-bg);
+    border-bottom: 1px solid var(--saw-border-color);
 }
 
 .saw-section-icon {
@@ -211,13 +211,13 @@
 
 .saw-collapsible-section.open .saw-section-icon {
     transform: rotate(90deg);
-    color: #1a73e8;
+    color: var(--saw-primary);
 }
 
 .saw-section-title {
     font-size: 1.125rem;
     font-weight: 600;
-    color: #1e293b;
+    color: var(--saw-text-primary);
     letter-spacing: -0.01em;
     flex: 1;
     text-align: left;
@@ -246,7 +246,7 @@
 /* Departments Section - Special Styling */
 .saw-section-departments {
     border: 2px solid #3b82f6;
-    background: linear-gradient(135deg, #eff6ff 0%, #fff 100%);
+    background: linear-gradient(135deg, var(--saw-primary-light) 0%, var(--saw-form-section-bg) 100%);
 }
 
 .saw-section-departments .saw-section-header {
@@ -287,7 +287,7 @@
     border: 2px solid #e5e7eb;
     border-radius: 10px;
     overflow: hidden;
-    background: #fff;
+    background: var(--saw-form-section-bg);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
@@ -301,7 +301,7 @@
     align-items: center;
     gap: 1rem;
     padding: 1.25rem 1.75rem;
-    background: linear-gradient(135deg, #f9fafb 0%, #fff 100%);
+    background: linear-gradient(135deg, var(--saw-gray-50) 0%, var(--saw-form-section-bg) 100%);
     border: none;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -309,12 +309,12 @@
 }
 
 .saw-department-header:hover {
-    background: linear-gradient(135deg, #f3f4f6 0%, #f9fafb 100%);
+    background: linear-gradient(135deg, var(--saw-bg-tertiary) 0%, var(--saw-bg-secondary) 100%);
 }
 
 .saw-department-subsection.open .saw-department-header {
-    background: #fff;
-    border-bottom: 2px solid #e5e7eb;
+    background: var(--saw-form-section-bg);
+    border-bottom: 2px solid var(--saw-border-color);
 }
 
 .saw-dept-icon {
@@ -340,7 +340,7 @@
 .saw-dept-name {
     font-size: 1.0625rem;
     font-weight: 700;
-    color: #1e293b;
+    color: var(--saw-text-primary);
     flex: 1;
     text-align: left;
     letter-spacing: -0.01em;
@@ -392,7 +392,7 @@
     border-radius: 8px;
     font-size: 0.9375rem;
     transition: all 0.2s ease;
-    background: #fff;
+    background: var(--saw-input-bg);
     font-family: inherit;
 }
 
@@ -484,7 +484,7 @@
 .saw-hint {
     display: block;
     font-size: 0.875rem;
-    color: #64748b;
+    color: var(--saw-text-secondary);
     margin-top: 0.5rem;
     text-align: left;
 }
@@ -510,7 +510,7 @@
 .wp-media-buttons {
     display: block !important;
     padding: 8px 12px;
-    background: #f9fafb;
+    background: var(--saw-bg-secondary);
     border-bottom: 1px solid #e5e7eb;
 }
 
@@ -614,8 +614,8 @@
     align-items: center;
     gap: 0.75rem;
     padding: 0.75rem 1rem;
-    background: #fff;
-    border: 1px solid #e0f2fe;
+    background: var(--saw-form-section-bg);
+    border: 1px solid var(--saw-primary-light);
     border-radius: 8px;
     margin-bottom: 0.5rem;
 }
@@ -649,7 +649,7 @@
 .saw-doc-size {
     flex-shrink: 0;
     font-size: 0.8125rem;
-    color: #64748b;
+    color: var(--saw-text-secondary);
     font-weight: 600;
     line-height: 1;
     align-self: center;
@@ -734,8 +734,8 @@
     flex-direction: column;
     gap: 1rem;
     padding: 1.25rem;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--saw-form-section-bg);
+    border: 1px solid var(--saw-border-color);
     border-radius: 12px;
     transition: all 0.2s ease;
     margin-bottom: 1rem;
@@ -839,7 +839,7 @@
     border: 1px solid #d1d5db;
     border-radius: 8px;
     font-size: 0.9375rem;
-    background: #fff;
+    background: var(--saw-form-section-bg);
     transition: all 0.2s ease;
     font-family: inherit;
 }
@@ -897,9 +897,9 @@
 }
 
 .saw-btn-secondary {
-    background: #f3f4f6;
-    border: 1px solid #d1d5db;
-    color: #374151;
+    background: var(--saw-bg-tertiary);
+    border: 1px solid var(--saw-border-color);
+    color: var(--saw-text-primary);
 }
 
 .saw-btn-secondary:hover {
