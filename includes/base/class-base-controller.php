@@ -346,7 +346,8 @@ protected function format_related_item_display($item, $relation) {
         if ($ctx['mode'] === 'detail' && $ctx['id']) {
             if (!$this->can('view')) {
                 $this->set_flash('Nemáte oprávnění zobrazit detail', 'error');
-                wp_redirect(home_url('/admin/' . $this->config['route'] . '/'));
+                $route = !empty($this->config['route']) ? trim($this->config['route'], '/') : $this->entity;
+                wp_redirect(home_url('/admin/' . $route . '/'));
                 exit;
             }
             
@@ -354,7 +355,8 @@ protected function format_related_item_display($item, $relation) {
             
             if (!$detail_item) {
                 $this->set_flash('Záznam nenalezen', 'error');
-                wp_redirect(home_url('/admin/' . $this->config['route'] . '/'));
+                $route = !empty($this->config['route']) ? trim($this->config['route'], '/') : $this->entity;
+                wp_redirect(home_url('/admin/' . $route . '/'));
                 exit;
             }
             
@@ -365,7 +367,8 @@ protected function format_related_item_display($item, $relation) {
         elseif ($ctx['mode'] === 'create') {
             if (!$this->can('create')) {
                 $this->set_flash('Nemáte oprávnění vytvářet záznamy', 'error');
-                wp_redirect(home_url('/admin/' . $this->config['route'] . '/'));
+                $route = !empty($this->config['route']) ? trim($this->config['route'], '/') : $this->entity;
+                wp_redirect(home_url('/admin/' . $route . '/'));
                 exit;
             }
             
@@ -379,7 +382,8 @@ protected function format_related_item_display($item, $relation) {
         elseif ($ctx['mode'] === 'edit' && $ctx['id']) {
             if (!$this->can('edit')) {
                 $this->set_flash('Nemáte oprávnění upravovat záznamy', 'error');
-                wp_redirect(home_url('/admin/' . $this->config['route'] . '/'));
+                $route = !empty($this->config['route']) ? trim($this->config['route'], '/') : $this->entity;
+                wp_redirect(home_url('/admin/' . $route . '/'));
                 exit;
             }
             
@@ -387,7 +391,8 @@ protected function format_related_item_display($item, $relation) {
             
             if (!$form_item) {
                 $this->set_flash('Záznam nenalezen', 'error');
-                wp_redirect(home_url('/admin/' . $this->config['route'] . '/'));
+                $route = !empty($this->config['route']) ? trim($this->config['route'], '/') : $this->entity;
+                wp_redirect(home_url('/admin/' . $route . '/'));
                 exit;
             }
             
@@ -412,10 +417,30 @@ protected function format_related_item_display($item, $relation) {
      * @return void (redirects)
      */
     protected function handle_create_post() {
+        // ✅ CRITICAL: Check for inline create FIRST, before nonce validation
+        // This handles cases where form is submitted as normal POST but should be AJAX
+        if (!empty($_POST['_ajax_inline_create'])) {
+            // Inline create mode - should be AJAX but handle gracefully if not
+            if (!wp_doing_ajax() && method_exists($this, 'ajax_inline_create')) {
+                // Normal POST with _ajax_inline_create - call ajax_inline_create() directly
+                // This provides server-side fallback when JS fails to intercept submission
+                // ajax_inline_create() will handle its own nonce check and return JSON
+                $this->ajax_inline_create();
+                return; // ajax_inline_create() will output JSON and exit
+            }
+            
+            // If wp_doing_ajax() is true, this is a proper AJAX request
+            // Use ajax nonce and continue with normal flow
+            // The _ajax_inline_create check at the end will handle JSON response
+            check_ajax_referer('saw_ajax_nonce', 'nonce');
+        }
+        
+        // Standard nonce validation for normal form submissions
         // For AJAX sidebar submit, use check_ajax_referer
         if (!empty($_POST['_ajax_sidebar_submit'])) {
             check_ajax_referer('saw_ajax_nonce', 'nonce');
-        } else {
+        } elseif (empty($_POST['_ajax_inline_create'])) {
+            // Only check admin referer if not inline create
             check_admin_referer('saw_create_' . $this->entity);
         }
         
@@ -431,7 +456,8 @@ protected function format_related_item_display($item, $relation) {
                 ));
             }
             $this->set_flash($scope_validation->get_error_message(), 'error');
-            wp_redirect(home_url('/admin/' . $this->config['route'] . '/create'));
+            $route = !empty($this->config['route']) ? trim($this->config['route'], '/') : $this->entity;
+            wp_redirect(home_url('/admin/' . $route . '/create'));
             exit;
         }
         
@@ -445,7 +471,8 @@ protected function format_related_item_display($item, $relation) {
                 ));
             }
             $this->set_flash($data->get_error_message(), 'error');
-            wp_redirect(home_url('/admin/' . $this->config['route'] . '/create'));
+            $route = !empty($this->config['route']) ? trim($this->config['route'], '/') : $this->entity;
+            wp_redirect(home_url('/admin/' . $route . '/create'));
             exit;
         }
         
@@ -460,7 +487,8 @@ protected function format_related_item_display($item, $relation) {
                 ));
             }
             $this->set_flash(implode('<br>', $errors), 'error');
-            wp_redirect(home_url('/admin/' . $this->config['route'] . '/create'));
+            $route = !empty($this->config['route']) ? trim($this->config['route'], '/') : $this->entity;
+            wp_redirect(home_url('/admin/' . $route . '/create'));
             exit;
         }
         
@@ -475,7 +503,8 @@ protected function format_related_item_display($item, $relation) {
                 ));
             }
             $this->set_flash($result->get_error_message(), 'error');
-            wp_redirect(home_url('/admin/' . $this->config['route'] . '/create'));
+            $route = !empty($this->config['route']) ? trim($this->config['route'], '/') : $this->entity;
+            wp_redirect(home_url('/admin/' . $route . '/create'));
             exit;
         }
 
@@ -501,16 +530,31 @@ protected function format_related_item_display($item, $relation) {
         }
         
         // ✅ NEW: AJAX inline create mode (for nested inline create)
+        // This should only be reached if wp_doing_ajax() is true
         if (!empty($_POST['_ajax_inline_create'])) {
-            $item = $this->model->get_by_id($result);
-            wp_send_json_success(array(
-                'id' => $result,
-                'name' => $this->get_display_name($item),
-            ));
+            // Only send JSON if this is actually an AJAX request
+            if (wp_doing_ajax()) {
+                $item = $this->model->get_by_id($result);
+                wp_send_json_success(array(
+                    'id' => $result,
+                    'name' => $this->get_display_name($item),
+                ));
+            } else {
+                // Fallback: should have been caught earlier, but handle gracefully
+                wp_send_json_error(array(
+                    'message' => 'Požadavek musí být odeslán přes AJAX'
+                ));
+            }
+            return;
         }
         
+        // Normal redirect after create
         $this->set_flash($this->config['singular'] . ' byl úspěšně vytvořen', 'success');
-        wp_redirect(home_url('/admin/' . $this->config['route'] . '/' . $result . '/'));
+        
+        // Fix URL construction to prevent double slashes
+        $route = !empty($this->config['route']) ? trim($this->config['route'], '/') : $this->entity;
+        $redirect_url = home_url('/admin/' . $route . '/' . $result . '/');
+        wp_redirect($redirect_url);
         exit;
     }
     
@@ -542,7 +586,8 @@ protected function format_related_item_display($item, $relation) {
                 ));
             }
             $this->set_flash($scope_validation->get_error_message(), 'error');
-            wp_redirect(home_url('/admin/' . $this->config['route'] . '/' . $id . '/edit'));
+            $route = !empty($this->config['route']) ? trim($this->config['route'], '/') : $this->entity;
+            wp_redirect(home_url('/admin/' . $route . '/' . $id . '/edit'));
             exit;
         }
         
@@ -556,7 +601,8 @@ protected function format_related_item_display($item, $relation) {
                 ));
             }
             $this->set_flash($data->get_error_message(), 'error');
-            wp_redirect(home_url('/admin/' . $this->config['route'] . '/' . $id . '/edit'));
+            $route = !empty($this->config['route']) ? trim($this->config['route'], '/') : $this->entity;
+            wp_redirect(home_url('/admin/' . $route . '/' . $id . '/edit'));
             exit;
         }
         
@@ -571,7 +617,8 @@ protected function format_related_item_display($item, $relation) {
                 ));
             }
             $this->set_flash(implode('<br>', $errors), 'error');
-            wp_redirect(home_url('/admin/' . $this->config['route'] . '/' . $id . '/edit'));
+            $route = !empty($this->config['route']) ? trim($this->config['route'], '/') : $this->entity;
+            wp_redirect(home_url('/admin/' . $route . '/' . $id . '/edit'));
             exit;
         }
         
@@ -586,7 +633,8 @@ protected function format_related_item_display($item, $relation) {
                 ));
             }
             $this->set_flash($result->get_error_message(), 'error');
-            wp_redirect(home_url('/admin/' . $this->config['route'] . '/' . $id . '/edit'));
+            $route = !empty($this->config['route']) ? trim($this->config['route'], '/') : $this->entity;
+            wp_redirect(home_url('/admin/' . $route . '/' . $id . '/edit'));
             exit;
         }
         
@@ -601,7 +649,8 @@ protected function format_related_item_display($item, $relation) {
         }
         
         $this->set_flash($this->config['singular'] . ' byl úspěšně aktualizován', 'success');
-        wp_redirect(home_url('/admin/' . $this->config['route'] . '/' . $id . '/'));
+        $route = !empty($this->config['route']) ? trim($this->config['route'], '/') : $this->entity;
+        wp_redirect(home_url('/admin/' . $route . '/' . $id . '/'));
         exit;
     }
     
@@ -1358,8 +1407,12 @@ protected function can($action) {
             
             // Allow modules to set header_meta via format_detail_data or get_detail_header_meta method
             // This way modules can customize header badges without rendering header themselves
-            if (!isset($item['header_meta']) && method_exists($this, 'get_detail_header_meta')) {
-                $item['header_meta'] = $this->get_detail_header_meta($item);
+            // Always call get_detail_header_meta if method exists, it can override existing header_meta
+            if (method_exists($this, 'get_detail_header_meta')) {
+                $header_meta = $this->get_detail_header_meta($item);
+                if (!empty($header_meta)) {
+                    $item['header_meta'] = $header_meta;
+                }
             }
             
             extract(compact('item', 'tab', 'config', 'entity', 'related_data'));
@@ -1471,6 +1524,376 @@ protected function can($action) {
     }
     
     /**
+     * AJAX handler for getting previous/next record ID
+     * 
+     * Returns the ID of the previous or next record based on current filters
+     * (customer_id, branch_id) with circular navigation.
+     * 
+     * @since 7.0.0
+     * @return void Outputs JSON
+     */
+    public function ajax_get_adjacent_id() {
+        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        
+        if (!$this->can('view')) {
+            wp_send_json_error(array(
+                'message' => 'Nemáte oprávnění zobrazit záznamy'
+            ));
+        }
+        
+        $current_id = intval($_POST['id'] ?? 0);
+        $direction = sanitize_text_field($_POST['direction'] ?? 'next'); // 'next' or 'prev'
+        
+        if (!$current_id) {
+            wp_send_json_error(array(
+                'message' => 'Chybí ID záznamu'
+            ));
+        }
+        
+        if (!in_array($direction, array('next', 'prev'))) {
+            wp_send_json_error(array(
+                'message' => 'Neplatný směr navigace'
+            ));
+        }
+        
+        // Get context filters
+        $customer_id = SAW_Context::get_customer_id();
+        $branch_id = SAW_Context::get_branch_id();
+        
+        // Get current record to determine its position
+        $current_item = $this->model->get_by_id($current_id);
+        if (!$current_item) {
+            wp_send_json_error(array(
+                'message' => 'Záznam nenalezen'
+            ));
+        }
+        
+        // Build query to get all IDs with same filters
+        global $wpdb;
+        $table = $this->model->table ?? $wpdb->prefix . $this->config['table'];
+        
+        $where = array('1=1');
+        $where_values = array();
+        
+        // Filter by customer_id if set
+        if ($customer_id) {
+            $where[] = 'customer_id = %d';
+            $where_values[] = $customer_id;
+        }
+        
+        // Filter by branch_id if set
+        if ($branch_id) {
+            $where[] = 'branch_id = %d';
+            $where_values[] = $branch_id;
+        }
+        
+        $where_clause = implode(' AND ', $where);
+        
+        // Get all IDs ordered by ID (or name if available)
+        $order_by = 'id ASC';
+        if ($this->model_has_column('name')) {
+            $order_by = 'name ASC, id ASC';
+        } elseif ($this->model_has_column('title')) {
+            $order_by = 'title ASC, id ASC';
+        }
+        
+        // Build query safely - use %i for table name
+        $query = "SELECT id FROM %i WHERE {$where_clause} ORDER BY {$order_by}";
+        $query_params = array_merge(array($table), $where_values);
+        $query = $wpdb->prepare($query, $query_params);
+        
+        $ids = $wpdb->get_col($query);
+        
+        if (empty($ids)) {
+            wp_send_json_error(array(
+                'message' => 'Žádné záznamy nenalezeny'
+            ));
+        }
+        
+        // Find current position
+        $current_index = array_search($current_id, $ids);
+        
+        if ($current_index === false) {
+            wp_send_json_error(array(
+                'message' => 'Aktuální záznam není v seznamu'
+            ));
+        }
+        
+        // Get adjacent ID with circular navigation
+        $adjacent_id = null;
+        
+        if ($direction === 'next') {
+            // Next: if last, go to first
+            $adjacent_index = ($current_index + 1) % count($ids);
+            $adjacent_id = $ids[$adjacent_index];
+        } else {
+            // Prev: if first, go to last
+            $adjacent_index = ($current_index - 1 + count($ids)) % count($ids);
+            $adjacent_id = $ids[$adjacent_index];
+        }
+        
+        if (!$adjacent_id) {
+            wp_send_json_error(array(
+                'message' => 'Nepodařilo se najít sousední záznam'
+            ));
+        }
+        
+        // Build detail URL
+        $route = $this->config['route'] ?? $this->entity;
+        $detail_url = home_url('/admin/' . $route . '/' . $adjacent_id . '/');
+        
+        wp_send_json_success(array(
+            'id' => $adjacent_id,
+            'url' => $detail_url
+        ));
+    }
+    
+    /**
+     * Check if model has a specific column
+     * Helper for ajax_get_adjacent_id
+     * 
+     * @since 7.0.0
+     * @param string $column Column name
+     * @return bool
+     */
+    private function model_has_column($column) {
+        if (!isset($this->model->table)) {
+            return false;
+        }
+        
+        global $wpdb;
+        $table = $this->model->table;
+        
+        // Cache column check
+        static $column_cache = array();
+        $cache_key = $table . ':' . $column;
+        
+        if (isset($column_cache[$cache_key])) {
+            return $column_cache[$cache_key];
+        }
+        
+        $columns = $wpdb->get_col($wpdb->prepare("DESCRIBE %i", $table));
+        $has_column = in_array($column, $columns);
+        $column_cache[$cache_key] = $has_column;
+        
+        return $has_column;
+    }
+    
+    /**
+     * AJAX handler to get items for infinite scroll
+     * 
+     * @since 7.0.0
+     * @return void Outputs JSON
+     */
+    public function ajax_get_items_infinite() {
+        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        
+        if (!$this->can('list')) {
+            wp_send_json_error(array(
+                'message' => 'Nemáte oprávnění zobrazit záznamy'
+            ));
+        }
+        
+        $page = isset($_POST['page']) ? max(1, intval($_POST['page'])) : 1;
+        $per_page = isset($_POST['per_page']) ? intval($_POST['per_page']) : 50;
+        
+        // Ensure per_page is reasonable
+        $per_page = max(1, min(100, $per_page));
+        
+        // Build filters from POST data
+        $filters = array(
+            'page' => $page,
+            'per_page' => $per_page,
+            'search' => isset($_POST['search']) ? sanitize_text_field($_POST['search']) : '',
+            'orderby' => isset($_POST['orderby']) ? sanitize_text_field($_POST['orderby']) : 'id',
+            'order' => isset($_POST['order']) ? strtoupper(sanitize_text_field($_POST['order'])) : 'DESC',
+        );
+        
+        // Add filter params
+        if (!empty($this->config['list_config']['filters'])) {
+            foreach ($this->config['list_config']['filters'] as $filter_key => $enabled) {
+                if ($enabled && isset($_POST[$filter_key])) {
+                    $filters[$filter_key] = sanitize_text_field($_POST[$filter_key]);
+                }
+            }
+        }
+        
+        // Get data from model
+        $data = $this->model->get_all($filters);
+        
+        // Get columns from POST (JSON) or use get_table_columns method
+        $columns = array();
+        if (isset($_POST['columns']) && !empty($_POST['columns'])) {
+            // Columns passed from JS as JSON string
+            $columns_json = wp_unslash($_POST['columns']);
+            if (is_string($columns_json)) {
+                $columns = json_decode($columns_json, true);
+                if (!is_array($columns)) {
+                    $columns = array();
+                }
+            } elseif (is_array($columns_json)) {
+                $columns = $columns_json;
+            }
+        }
+        
+        // Fallback: use get_table_columns method
+        if (empty($columns) && method_exists($this, 'get_table_columns')) {
+            $columns = $this->get_table_columns();
+        }
+        
+        // Last resort: generate from fields
+        if (empty($columns) && !empty($this->config['fields'])) {
+            foreach ($this->config['fields'] as $key => $field) {
+                if (!empty($field['hidden'])) continue;
+                $columns[$key] = array(
+                    'label' => $field['label'] ?? ucfirst($key),
+                    'type' => $this->map_field_type_to_column_type($field['type'] ?? 'text'),
+                );
+            }
+        }
+        
+        // Sanitize columns
+        if (!is_array($columns)) {
+            $columns = array();
+        }
+        
+        // Use admin-table component to render rows
+        if (!class_exists('SAW_Component_Admin_Table')) {
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/class-saw-component-admin-table.php';
+        }
+        
+        // Build table config for rendering
+        $table_config = array(
+            'columns' => $columns,
+            'actions' => $this->config['actions'] ?? array(),
+            'detail_url' => $this->get_detail_url(),
+            'rows' => $data['items'],
+            'module_config' => $this->config,
+        );
+        
+        $table = new SAW_Component_Admin_Table($this->entity, $table_config);
+        
+        // Render rows HTML - just the rows, not group headers
+        // For infinite scroll, we append rows to existing groups
+        $rows_html = '';
+        if (!empty($data['items'])) {
+            ob_start();
+            $actions = $this->config['actions'] ?? array();
+            foreach ($data['items'] as $row) {
+                $this->render_infinite_scroll_row($row, $table, $columns, $actions);
+            }
+            $rows_html = ob_get_clean();
+        }
+        
+        $has_more = ($page * $per_page) < $data['total'];
+        
+        wp_send_json_success(array(
+            'html' => $rows_html,
+            'has_more' => $has_more,
+            'page' => $page,
+            'total' => $data['total'],
+            'loaded' => count($data['items'])
+        ));
+    }
+    
+    /**
+     * Render a single row for infinite scroll
+     * 
+     * @since 7.0.0
+     * @param array $row Row data
+     * @param SAW_Component_Admin_Table $table Table component instance
+     * @param array $columns Columns configuration
+     * @param array $actions Actions configuration
+     * @return void Outputs HTML
+     */
+    private function render_infinite_scroll_row($row, $table, $columns, $actions) {
+        $detail_url = $this->get_detail_url();
+        if (!empty($detail_url) && !empty($row['id'])) {
+            $detail_url = str_replace('{id}', intval($row['id']), $detail_url);
+        } else {
+            $detail_url = '';
+        }
+        
+        // Check if grouping is enabled to determine row class
+        $is_grouped = !empty($this->config['grouping']['enabled']);
+        $row_class = $is_grouped ? 'saw-group-row' : 'saw-table-row';
+        
+        if (!empty($detail_url)) {
+            $row_class .= ' saw-clickable-row';
+        }
+        
+        // Get group_by value for grouped tables
+        $group_by = $is_grouped ? ($this->config['grouping']['group_by'] ?? '') : '';
+        $group_value = !empty($group_by) ? ($row[$group_by] ?? '') : '';
+        $group_id = 'group_' . $group_value;
+        
+        ?>
+        <tr class="<?php echo esc_attr($row_class); ?>" 
+            data-id="<?php echo esc_attr($row['id'] ?? ''); ?>"
+            <?php if ($is_grouped && !empty($group_id)): ?>
+                data-group-id="<?php echo esc_attr($group_id); ?>"
+            <?php endif; ?>
+            <?php if (!empty($detail_url)): ?>
+                data-detail-url="<?php echo esc_url($detail_url); ?>"
+            <?php endif; ?>>
+            
+            <?php foreach ($columns as $key => $column): ?>
+                <?php $table->render_table_cell_for_template($row, $key, $column); ?>
+            <?php endforeach; ?>
+            
+            <?php if (!empty($actions)): ?>
+                <?php $table->render_action_buttons_for_template($row); ?>
+            <?php endif; ?>
+        </tr>
+        <?php
+    }
+    
+    /**
+     * Get detail URL template
+     * 
+     * @since 7.0.0
+     * @return string Detail URL template
+     */
+    protected function get_detail_url() {
+        $route = $this->config['route'] ?? $this->entity;
+        return home_url('/admin/' . $route . '/{id}/');
+    }
+    
+    /**
+     * Get table columns configuration
+     * Can be overridden by child controllers
+     * 
+     * @since 7.0.0
+     * @return array Columns configuration
+     */
+    protected function get_table_columns() {
+        // Try to get from a static cache or method
+        // Child controllers can override this
+        return array();
+    }
+    
+    /**
+     * Map field type to column type
+     * 
+     * @since 7.0.0
+     * @param string $field_type Field type
+     * @return string Column type
+     */
+    private function map_field_type_to_column_type($field_type) {
+        $map = array(
+            'text' => 'text',
+            'email' => 'email',
+            'textarea' => 'text',
+            'select' => 'badge',
+            'file' => 'image',
+            'date' => 'date',
+            'checkbox' => 'boolean',
+            'number' => 'text',
+        );
+        return $map[$field_type] ?? 'text';
+    }
+    
+    /**
      * Universal list view renderer
      * 
      * Handles complete list page logic including sidebar modes.
@@ -1498,6 +1921,14 @@ protected function can($action) {
             $detail_item = $this->handle_detail_mode($sidebar_context);
             if ($detail_item) {
                 $related_data = $this->load_related_data($sidebar_context['id']);
+                
+                // Set header_meta for detail sidebar
+                if (method_exists($this, 'get_detail_header_meta')) {
+                    $header_meta = $this->get_detail_header_meta($detail_item);
+                    if (!empty($header_meta)) {
+                        $detail_item['header_meta'] = $header_meta;
+                    }
+                }
             }
         }
         elseif ($sidebar_mode === 'create') {
@@ -1572,7 +2003,8 @@ protected function can($action) {
     protected function handle_detail_mode($context) {
         if (!$this->can('view')) {
             $this->set_flash('Nemáte oprávnění zobrazit detail', 'error');
-            wp_redirect(home_url('/admin/' . $this->config['route'] . '/'));
+            $route = !empty($this->config['route']) ? trim($this->config['route'], '/') : $this->entity;
+            wp_redirect(home_url('/admin/' . $route . '/'));
             exit;
         }
         
@@ -1580,12 +2012,21 @@ protected function can($action) {
         
         if (!$item) {
             $this->set_flash('Záznam nenalezen', 'error');
-            wp_redirect(home_url('/admin/' . $this->config['route'] . '/'));
+            $route = !empty($this->config['route']) ? trim($this->config['route'], '/') : $this->entity;
+            wp_redirect(home_url('/admin/' . $route . '/'));
             exit;
         }
         
         if (method_exists($this, 'format_detail_data')) {
             $item = $this->format_detail_data($item);
+        }
+        
+        // Set header_meta if method exists
+        if (method_exists($this, 'get_detail_header_meta')) {
+            $header_meta = $this->get_detail_header_meta($item);
+            if (!empty($header_meta)) {
+                $item['header_meta'] = $header_meta;
+            }
         }
         
         return $item;
@@ -1600,7 +2041,8 @@ protected function can($action) {
     protected function handle_create_mode() {
         if (!$this->can('create')) {
             $this->set_flash('Nemáte oprávnění vytvářet záznamy', 'error');
-            wp_redirect(home_url('/admin/' . $this->config['route'] . '/'));
+            $route = !empty($this->config['route']) ? trim($this->config['route'], '/') : $this->entity;
+            wp_redirect(home_url('/admin/' . $route . '/'));
             exit;
         }
         
@@ -1622,7 +2064,8 @@ protected function can($action) {
     protected function handle_edit_mode($context) {
         if (!$this->can('edit')) {
             $this->set_flash('Nemáte oprávnění upravovat záznamy', 'error');
-            wp_redirect(home_url('/admin/' . $this->config['route'] . '/'));
+            $route = !empty($this->config['route']) ? trim($this->config['route'], '/') : $this->entity;
+            wp_redirect(home_url('/admin/' . $route . '/'));
             exit;
         }
         
@@ -1630,7 +2073,8 @@ protected function can($action) {
         
         if (!$item) {
             $this->set_flash('Záznam nenalezen', 'error');
-            wp_redirect(home_url('/admin/' . $this->config['route'] . '/'));
+            $route = !empty($this->config['route']) ? trim($this->config['route'], '/') : $this->entity;
+            wp_redirect(home_url('/admin/' . $route . '/'));
             exit;
         }
         
@@ -1653,7 +2097,12 @@ protected function can($action) {
         $orderby = isset($_GET['orderby']) ? sanitize_text_field(wp_unslash($_GET['orderby'])) : 'id';
         $order = isset($_GET['order']) ? strtoupper(sanitize_text_field(wp_unslash($_GET['order']))) : 'DESC';
         $page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
-        $per_page = $this->config['list_config']['per_page'] ?? 20;
+        
+        // Check if infinite scroll is enabled and use its per_page
+        $infinite_scroll_enabled = !empty($this->config['infinite_scroll']['enabled']);
+        $per_page = $infinite_scroll_enabled 
+            ? ($this->config['infinite_scroll']['per_page'] ?? 50)
+            : ($this->config['list_config']['per_page'] ?? 20);
         
         $filters = array(
             'search' => $search,
@@ -1746,8 +2195,15 @@ protected function can($action) {
             $form_item[$key] = sanitize_text_field($value);
         }
         
-        // Set nested flag
+        // Set nested flag BEFORE enqueueing assets
         $GLOBALS['saw_nested_inline_create'] = true;
+        
+        // Enqueue assets for the target module (so isNested is set correctly)
+        if (method_exists($controller, 'enqueue_assets')) {
+            $controller->enqueue_assets();
+        } elseif (class_exists('SAW_Asset_Loader')) {
+            SAW_Asset_Loader::enqueue_module($target_module);
+        }
         
         // Render sidebar
         ob_start();

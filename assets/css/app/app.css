@@ -1109,31 +1109,49 @@ body, html {
 
 .saw-table-panel {
     flex: 1 !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
     border-right: none !important;
     background: var(--saw-table-panel-bg);
-    padding-bottom: 250px !important;
+    min-height: 0 !important; /* DŮLEŽITÉ pro flex scrolling */
 }
 
 .saw-admin-table-split.has-sidebar .saw-table-panel {
     border-right: 1px solid #eaeaea !important;
 }
 
+/* Scrollovací oblast pro tabulku */
+.saw-table-scroll-area {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    min-height: 0 !important;
+}
+
+/* Pagination vždy dole */
+.saw-pagination {
+    flex-shrink: 0 !important;
+    padding: 16px 24px !important;
+    border-top: 1px solid var(--saw-border-color) !important;
+    background: var(--saw-table-header-bg) !important;
+    margin: 0 !important;
+}
+
 .saw-admin-table-wrapper {
-    padding-bottom: 150px !important;
+    padding-bottom: 0 !important; /* Už není potřeba */
 }
 
 .saw-admin-table {
-    margin-bottom: 100px !important;
+    margin-bottom: 0 !important; /* Už není potřeba */
 }
 
 .saw-admin-table tbody {
-    padding-bottom: 80px !important;
+    padding-bottom: 0 !important; /* Už není potřeba */
 }
 
 .saw-admin-table tbody tr:last-child td {
-    padding-bottom: 80px !important;
+    padding-bottom: 16px !important; /* Normální padding */
 }
 
 /* ============================================
@@ -1305,7 +1323,7 @@ body, html {
     }
     
     .saw-table-panel {
-        padding-bottom: 200px !important;
+        /* Layout už je správně nastavený */
     }
     
     .saw-sidebar-wrapper {

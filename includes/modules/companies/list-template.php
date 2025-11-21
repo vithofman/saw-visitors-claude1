@@ -81,10 +81,26 @@ $table_config['search_value'] = $search;
 $table_config['orderby'] = $orderby;
 $table_config['order'] = $order;
 
-// Features
-$table_config['enable_search'] = true;
-$table_config['search_placeholder'] = 'Hledat firmy...';
-$table_config['enable_filters'] = true;
+// Search configuration - NEW FORMAT
+$table_config['search'] = array(
+    'enabled' => true,
+    'placeholder' => 'Hledat firmy...',
+    'fields' => array('name', 'ico', 'email', 'phone', 'city'), // Pole pro vyhledávání
+    'show_info_banner' => true,
+);
+
+// Filters configuration - NEW FORMAT
+$table_config['filters'] = array(
+    'is_archived' => array(
+        'type' => 'select',
+        'label' => 'Status',
+        'options' => array(
+            '' => 'Všechny',
+            '0' => 'Aktivní',
+            '1' => 'Archivované',
+        ),
+    ),
+);
 
 // Sidebar context
 $table_config['sidebar_mode'] = $sidebar_mode;
@@ -96,6 +112,29 @@ $table_config['module_config'] = $config;
 // Actions
 $table_config['actions'] = array('view', 'edit', 'delete');
 $table_config['add_new'] = 'Nová firma';
+
+// Grouping configuration - group by status (is_archived)
+$table_config['grouping'] = array(
+    'enabled' => true,
+    'group_by' => 'is_archived',
+    'group_label_callback' => function($group_value, $items) {
+        // is_archived is 0 for active, 1 for archived
+        if (empty($group_value) || $group_value == '0' || $group_value === 0) {
+            return '✅ Aktivní firmy';
+        }
+        return '📦 Archivované firmy';
+    },
+    'default_collapsed' => true, // Collapse all groups by default, first will be expanded if is_first
+    'sort_groups_by' => 'value', // Sort by value so active (0) comes first
+    'show_count' => true,
+);
+
+// Infinite scroll configuration (optional - can be enabled later)
+$table_config['infinite_scroll'] = array(
+    'enabled' => false, // Set to true to enable infinite scroll
+    'per_page' => 50,
+    'threshold' => 300,
+);
 
 // Ensure Admin Table class is loaded
 if (!class_exists('SAW_Component_Admin_Table')) {

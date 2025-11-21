@@ -102,7 +102,10 @@ return array(
         'columns' => array('id', 'company_id', 'schedule_dates', 'status', 'started_at'),
         'searchable' => array(),
         'sortable' => array('id', 'first_schedule_date', 'started_at'),
-        'filters' => array(),
+        'filters' => array(
+            'status' => true, // Enable status filter
+            'visit_type' => true, // Enable visit_type filter
+        ),
         'per_page' => 20,
         'enable_detail_modal' => true,
     ),

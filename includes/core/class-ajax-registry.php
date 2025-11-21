@@ -91,6 +91,19 @@ class SAW_AJAX_Registry {
                 $this->dispatch($slug, 'ajax_load_sidebar');
             });
             
+            add_action("wp_ajax_saw_get_adjacent_{$slug}", function() use ($slug) {
+                $this->dispatch($slug, 'ajax_get_adjacent_id');
+            });
+            
+            add_action("wp_ajax_saw_get_items_infinite_{$slug}", function() use ($slug) {
+                $this->dispatch($slug, 'ajax_get_items_infinite');
+            });
+            
+            // Legacy handler using entity name
+            add_action("wp_ajax_saw_get_items_infinite_{$entity}", function() use ($slug) {
+                $this->dispatch($slug, 'ajax_get_items_infinite');
+            });
+            
             add_action("wp_ajax_saw_delete_{$slug}", function() use ($slug) {
                 $this->dispatch($slug, 'ajax_delete');
             });
@@ -106,6 +119,10 @@ class SAW_AJAX_Registry {
             // Legacy handlers using entity name
             add_action("wp_ajax_saw_get_{$entity}_detail", function() use ($slug) {
                 $this->dispatch($slug, 'ajax_get_detail');
+            });
+            
+            add_action("wp_ajax_saw_get_adjacent_{$entity}", function() use ($slug) {
+                $this->dispatch($slug, 'ajax_get_adjacent_id');
             });
             
             add_action("wp_ajax_saw_search_{$entity}", function() use ($slug) {

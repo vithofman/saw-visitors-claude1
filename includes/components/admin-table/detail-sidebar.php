@@ -17,10 +17,28 @@ $module_slug = str_replace('_', '-', $entity);
 $detail_template = SAW_VISITORS_PLUGIN_DIR . "includes/modules/{$module_slug}/detail-modal-template.php";
 
 // Close URL: navigate back to list
-$route = str_replace('admin/', '', $config['route'] ?? $entity);
-$close_url = home_url('/admin/' . $route . '/');
-$edit_url = home_url('/admin/' . $route . '/' . intval($item['id']) . '/edit');
-$delete_url = home_url('/admin/' . $route . '/delete/' . intval($item['id']));
+// Get route from config, fallback to entity
+$route = isset($config['route']) && $config['route'] !== '' ? $config['route'] : $entity;
+// Ensure route doesn't have 'admin/' prefix or leading/trailing slashes
+$route = str_replace('admin/', '', $route);
+$route = trim($route, '/');
+// Fallback to entity if route is empty
+if (empty($route)) {
+    $route = $entity;
+}
+// Ensure route is clean and not empty - final check
+$route = trim($route, '/');
+// Build close URL - ensure we have a valid route to prevent admin//
+if (!empty($route)) {
+    $close_url = home_url('/admin/' . $route . '/');
+    $edit_url = home_url('/admin/' . $route . '/' . intval($item['id']) . '/edit');
+    $delete_url = home_url('/admin/' . $route . '/delete/' . intval($item['id']));
+} else {
+    // Last resort fallback - use entity directly
+    $close_url = home_url('/admin/' . $entity . '/');
+    $edit_url = home_url('/admin/' . $entity . '/' . intval($item['id']) . '/edit');
+    $delete_url = home_url('/admin/' . $entity . '/delete/' . intval($item['id']));
+}
 
 $can_edit = function_exists('saw_can') ? saw_can('edit', $entity) : true;
 $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
@@ -73,7 +91,8 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
         
         // Get header meta (badges, additional info) - modules can override via $item['header_meta']
         $header_meta = $item['header_meta'] ?? '';
-        if (empty($header_meta) && !empty($item['id'])) {
+        // Only show ID fallback if header_meta is truly empty (not just whitespace)
+        if (empty(trim($header_meta)) && !empty($item['id'])) {
             $header_meta = '<span class="saw-badge-transparent">ID: ' . intval($item['id']) . '</span>';
         }
         ?>

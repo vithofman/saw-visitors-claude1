@@ -100,19 +100,27 @@ return array(
         'searchable' => array('first_name', 'last_name', 'email'),
         'sortable' => array('id', 'first_name', 'last_name', 'created_at'),
         'filters' => array(
-            'participation_status' => array(
-                'label' => 'Stav účasti',
-                'type' => 'select',
-                'options' => array(
-                    '' => 'Všechny',
-                    'planned' => 'Plánovaný',
-                    'confirmed' => 'Potvrzený',
-                    'no_show' => 'Nedostavil se',
-                ),
-            ),
+            'training_status' => true, // Filter by training status instead of training_required
         ),
         'per_page' => 20,
         'enable_detail_modal' => true,
+        'grouping' => array(
+            'enabled' => true,
+            'group_by' => 'current_status',
+            'group_label_callback' => function($group_value, $items) {
+                $labels = array(
+                    'present' => '✅ Přítomen',
+                    'checked_out' => '🚪 Odhlášen',
+                    'confirmed' => '⏳ Potvrzený',
+                    'planned' => '📅 Plánovaný',
+                    'no_show' => '❌ Nedostavil se',
+                );
+                return $labels[$group_value] ?? 'Stav: ' . ucfirst($group_value);
+            },
+            'default_collapsed' => true,
+            'sort_groups_by' => 'value',
+            'show_count' => true,
+        ),
     ),
     
     'cache' => array(

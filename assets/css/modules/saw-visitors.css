@@ -32,24 +32,8 @@
     --st-neutral-border: #e5e7eb;
 }
 
-.saw-detail-wrapper {
-    font-family: 'Roboto', sans-serif;
-    color: var(--p307-dark);
-    box-sizing: border-box;
-    max-width: 100%;
-}
-
-.saw-detail-wrapper * {
-    box-sizing: border-box;
-}
-
-/* LAYOUT - JEDEN SLOUPEC */
-.saw-detail-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    margin-top: 16px;
-}
+/* REMOVED: .saw-detail-wrapper and .saw-detail-stack styles moved to global admin-table-detail.css */
+/* These styles are now handled globally to ensure consistency across all modules */
 
 /* HEADER */
 .saw-industrial-header {
@@ -90,79 +74,10 @@
     border-bottom: 1px solid rgba(0, 0, 0, .1);
 }
 
-/* SECTION */
-.saw-industrial-section {
-    background: #fff;
-    border: 1px solid var(--p307-border);
-    border-radius: 4px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, .05);
-}
-
-.saw-section-head {
-    background: #fff;
-    padding: 14px 20px;
-    border-bottom: 2px solid var(--p307-gray);
-}
-
-.saw-section-title {
-    font-family: 'Oswald', sans-serif;
-    font-size: 16px;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: var(--p307-primary);
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.saw-section-body {
-    padding: 20px;
-}
-
-/* INFO ROWS - LEFT ALIGNED */
-.saw-info-row {
-    display: grid;
-    grid-template-columns: 140px 1fr;
-    /* Pevná šířka pro label, zbytek pro hodnotu */
-    gap: 12px;
-    align-items: baseline;
-    /* Zarovnání na řádek textu */
-    border-bottom: 1px dotted #e5e7eb;
-    padding-bottom: 8px;
-    margin-bottom: 8px;
-}
-
-.saw-info-row:last-child {
-    border-bottom: none;
-    margin-bottom: 0;
-    padding-bottom: 0;
-}
-
-.saw-info-label {
-    font-size: 12px;
-    color: #888;
-    font-weight: 700;
-    text-transform: uppercase;
-}
-
-.saw-info-val {
-    font-size: 14px;
-    color: var(--p307-dark);
-    font-weight: 500;
-    text-align: left;
-    /* ✅ ZAROVNÁNÍ DOLEVA */
-}
-
-.saw-info-val a {
-    color: var(--p307-accent);
-    text-decoration: none;
-    font-weight: 600;
-}
-
-.saw-info-val a:hover {
-    text-decoration: underline;
-}
+/* REMOVED: All detail sidebar styles moved to global admin-table-detail.css */
+/* These styles (.saw-industrial-section, .saw-section-head, .saw-section-title, */
+/* .saw-section-body, .saw-info-row, .saw-info-label, .saw-info-val) are now */
+/* handled globally with !important to ensure consistency across all modules */
 
 /* STATUS BOX */
 .saw-status-box {

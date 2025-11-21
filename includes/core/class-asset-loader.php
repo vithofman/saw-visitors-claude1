@@ -140,6 +140,8 @@ class SAW_Asset_Loader {
                 $deps = ['saw-variables'];
             } elseif ($handle === 'saw-admin-table-detail') {
                 // Admin table detail depends on tables component
+                // NOTE: This is ALSO enqueued per-module in enqueue_module() with module dependency
+                // to ensure it loads AFTER module-specific CSS and overrides module styles
                 $deps = ['saw-variables', 'saw-base-components', 'saw-tables'];
             } else {
                 $deps = ['saw-variables', 'saw-base-components'];
@@ -563,12 +565,19 @@ class SAW_Asset_Loader {
         }
         
         // Enqueue global admin-table detail CSS (used by all modules with admin-table)
+        // Load AFTER module CSS to ensure global styles override module-specific styles
         $admin_table_detail_css = 'assets/css/components/admin-table-detail.css';
         if (file_exists(SAW_VISITORS_PLUGIN_DIR . $admin_table_detail_css)) {
+            // Build dependencies - always include module CSS to ensure it loads after
+            $deps = ['saw-tables'];
+            $module_handle = 'saw-module-' . $slug;
+            // Add module as dependency to ensure admin-table-detail loads after module CSS
+            $deps[] = $module_handle;
+            
             wp_enqueue_style(
                 'saw-admin-table-detail',
                 SAW_VISITORS_PLUGIN_URL . $admin_table_detail_css,
-                ['saw-tables'],
+                $deps,
                 filemtime(SAW_VISITORS_PLUGIN_DIR . $admin_table_detail_css)
             );
         }
@@ -601,12 +610,20 @@ class SAW_Asset_Loader {
             );
             
             // Localize script
+            // Check for nested mode from GET param or global flag (for AJAX nested sidebar)
+            $is_nested = '0';
+            if (isset($_GET['nested']) && $_GET['nested'] === '1') {
+                $is_nested = '1';
+            } elseif (isset($GLOBALS['saw_nested_inline_create']) && $GLOBALS['saw_nested_inline_create']) {
+                $is_nested = '1';
+            }
+            
             wp_localize_script('saw-module-' . $slug, 'saw' . ucfirst($slug), [
                 'ajaxurl'  => admin_url('admin-ajax.php'),
                 'nonce'    => wp_create_nonce('saw_' . $slug . '_ajax'),
                 'entity'   => esc_js($slug),
                 'isEdit'   => isset($_GET['id']) || (isset($_GET['saw_path']) && strpos($_GET['saw_path'], 'edit') !== false),
-                'isNested' => isset($_GET['nested']) ? $_GET['nested'] : '0'
+                'isNested' => $is_nested
             ]);
             
             return; // Prefer new structure over legacy
@@ -620,12 +637,20 @@ class SAW_Asset_Loader {
             );
             
             // Localize script
+            // Check for nested mode from GET param or global flag (for AJAX nested sidebar)
+            $is_nested = '0';
+            if (isset($_GET['nested']) && $_GET['nested'] === '1') {
+                $is_nested = '1';
+            } elseif (isset($GLOBALS['saw_nested_inline_create']) && $GLOBALS['saw_nested_inline_create']) {
+                $is_nested = '1';
+            }
+            
             wp_localize_script('saw-module-' . $slug, 'saw' . ucfirst($slug), [
                 'ajaxurl'  => admin_url('admin-ajax.php'),
                 'nonce'    => wp_create_nonce('saw_' . $slug . '_ajax'),
                 'entity'   => esc_js($slug),
                 'isEdit'   => isset($_GET['id']) || (isset($_GET['saw_path']) && strpos($_GET['saw_path'], 'edit') !== false),
-                'isNested' => isset($_GET['nested']) ? $_GET['nested'] : '0'
+                'isNested' => $is_nested
             ]);
             
             return; // Prefer new structure over legacy

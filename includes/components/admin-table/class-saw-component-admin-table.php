@@ -91,14 +91,38 @@ class SAW_Component_Admin_Table {
             'orderby' => '',
             'order' => 'ASC',
             
-            // Search & Filters - NEW
-            'enable_search' => false,
-            'search_placeholder' => 'Hledat...',
-            'search_value' => '',
+            // Search & Filters - NEW FORMAT
+            'search' => array(
+                'enabled' => false,
+                'placeholder' => 'Hledat...',
+                'fields' => array(), // Fields to search in
+                'show_info_banner' => true,
+            ),
+            'search_value' => '', // Legacy support
             
-            'enable_filters' => false,
-            'filters' => array(),
+            'filters' => array(), // New format: array('filter_key' => array('type' => 'select', 'label' => '...', 'options' => array()))
             'active_filters' => array(),
+            
+            // Legacy support
+            'enable_search' => false,
+            'enable_filters' => false,
+            
+            // Grouping support
+            'grouping' => array(
+                'enabled' => false,
+                'group_by' => '',
+                'group_label_callback' => null,
+                'default_collapsed' => true,
+                'sort_groups_by' => 'label', // 'label', 'count', 'value'
+                'show_count' => true,
+            ),
+            
+            // Infinite scroll support
+            'infinite_scroll' => array(
+                'enabled' => false,
+                'per_page' => 50,
+                'threshold' => 300,
+            ),
             
             'actions' => array('edit', 'delete'),
             'create_url' => '',
@@ -122,24 +146,50 @@ class SAW_Component_Admin_Table {
             'related_data' => null,
         );
         
-        return wp_parse_args($config, $defaults);
+        $parsed = wp_parse_args($config, $defaults);
+        
+        // Legacy support: convert old format to new format
+        if (!empty($parsed['enable_search']) && empty($parsed['search']['enabled'])) {
+            $parsed['search']['enabled'] = true;
+            if (!empty($parsed['search_placeholder'])) {
+                $parsed['search']['placeholder'] = $parsed['search_placeholder'];
+            }
+        }
+        
+        return $parsed;
     }
     
     public function render() {
         $this->enqueue_assets();
+        $this->output_js_config();
         
         $has_sidebar = !empty($this->config['sidebar_mode']);
         
         if ($has_sidebar) {
             $this->render_split_layout();
         } else {
-            $this->render_header();
-            $this->render_controls();
-            $this->render_table_or_empty();
-            $this->render_pagination();
-            $this->render_modal();
-            $this->render_floating_button();
-            $this->render_delete_script();
+            ?>
+            <div class="saw-table-panel<?php echo !empty($this->config['infinite_scroll']['enabled']) ? ' saw-table-infinite-scroll-enabled' : ''; ?>">
+                <?php
+                $this->render_header();
+                $this->render_controls();
+                ?>
+                
+                <!-- Scrollovací oblast -->
+                <div class="saw-table-scroll-area">
+                    <?php $this->render_table_or_empty(); ?>
+                </div>
+                
+                <!-- Pagination vždy dole -->
+                <?php $this->render_pagination(); ?>
+                
+                <?php
+                $this->render_modal();
+                $this->render_floating_button();
+                $this->render_delete_script();
+                ?>
+            </div>
+            <?php
         }
     }
     
@@ -148,14 +198,21 @@ class SAW_Component_Admin_Table {
         $sidebar_class = $has_sidebar ? ' has-sidebar' : '';
         ?>
         <div class="saw-admin-table-split<?php echo $sidebar_class; ?>">
-            <div class="saw-table-panel">
+            <div class="saw-table-panel<?php echo !empty($this->config['infinite_scroll']['enabled']) ? ' saw-table-infinite-scroll-enabled' : ''; ?>">
                 <?php
                 $this->render_header();
                 $this->render_controls();
-                $this->render_table_or_empty();
-                $this->render_pagination();
-                $this->render_floating_button();
                 ?>
+                
+                <!-- Scrollovací oblast -->
+                <div class="saw-table-scroll-area">
+                    <?php $this->render_table_or_empty(); ?>
+                </div>
+                
+                <!-- Pagination vždy dole -->
+                <?php $this->render_pagination(); ?>
+                
+                <?php $this->render_floating_button(); ?>
             </div>
             
             <?php if ($has_sidebar): ?>
@@ -224,7 +281,14 @@ class SAW_Component_Admin_Table {
      * @since 6.0.0
      */
     private function render_controls() {
-        if (!$this->config['enable_search'] && !$this->config['enable_filters']) {
+        $search_config = $this->config['search'] ?? array();
+        $filters_config = $this->config['filters'] ?? array();
+        
+        // Legacy support
+        $search_enabled = !empty($search_config['enabled']) || !empty($this->config['enable_search']);
+        $filters_enabled = !empty($filters_config) || !empty($this->config['enable_filters']);
+        
+        if (!$search_enabled && !$filters_enabled) {
             return;
         }
         
@@ -233,12 +297,16 @@ class SAW_Component_Admin_Table {
         
         ?>
         <div class="saw-table-controls">
-            <?php if ($this->config['enable_search']): ?>
-                <?php $this->render_search_form($base_url, $current_params); ?>
+            <?php if ($search_enabled): ?>
+                <div class="saw-table-search">
+                    <?php $this->render_search_form($base_url, $current_params, $search_config); ?>
+                </div>
             <?php endif; ?>
             
-            <?php if ($this->config['enable_filters']): ?>
-                <?php $this->render_filters($base_url, $current_params); ?>
+            <?php if ($filters_enabled): ?>
+                <div class="saw-table-filters">
+                    <?php $this->render_filters($base_url, $current_params); ?>
+                </div>
             <?php endif; ?>
         </div>
         <?php
@@ -249,14 +317,19 @@ class SAW_Component_Admin_Table {
      * 
      * @since 6.0.0
      */
-    private function render_search_form($base_url, $current_params) {
-        $search_value = $this->config['search_value'];
-        $placeholder = $this->config['search_placeholder'];
+    private function render_search_form($base_url, $current_params, $search_config = array()) {
+        $search_value = $this->config['search_value'] ?? '';
+        if (empty($search_value) && !empty($_GET['s'])) {
+            $search_value = sanitize_text_field($_GET['s']);
+        }
+        
+        $placeholder = $search_config['placeholder'] ?? $this->config['search_placeholder'] ?? 'Hledat...';
+        $show_info_banner = $search_config['show_info_banner'] ?? true;
         
         ?>
         <form method="GET" action="<?php echo esc_url($base_url); ?>" class="saw-search-form">
             <?php
-            // Preserve filters
+            // Preserve filters and other params
             foreach ($current_params as $key => $value) {
                 if ($key !== 's' && $key !== 'paged') {
                     echo '<input type="hidden" name="' . esc_attr($key) . '" value="' . esc_attr($value) . '">';
@@ -264,18 +337,31 @@ class SAW_Component_Admin_Table {
             }
             ?>
             
-            <input type="search" 
+            <input type="text" 
                    name="s" 
                    value="<?php echo esc_attr($search_value); ?>" 
                    placeholder="<?php echo esc_attr($placeholder); ?>"
                    class="saw-search-input">
             
+            <button type="submit" class="saw-search-button" title="Hledat">
+                <span class="dashicons dashicons-search"></span>
+            </button>
+            
             <?php if (!empty($search_value)): ?>
                 <a href="<?php echo esc_url($this->build_url($base_url, array_diff_key($current_params, array('s' => '', 'paged' => '')))); ?>" 
                    class="saw-search-clear" 
-                   title="Zrušit vyhledávání">×</a>
+                   title="Zrušit vyhledávání">
+                    <span class="dashicons dashicons-no-alt"></span>
+                </a>
             <?php endif; ?>
         </form>
+        
+        <?php if (!empty($search_value) && $show_info_banner): ?>
+            <div class="saw-search-info">
+                Hledáte: <strong><?php echo esc_html($search_value); ?></strong>
+                <a href="<?php echo esc_url($this->build_url($base_url, array_diff_key($current_params, array('s' => '', 'paged' => '')))); ?>">Zrušit</a>
+            </div>
+        <?php endif; ?>
         <?php
     }
     
@@ -285,15 +371,65 @@ class SAW_Component_Admin_Table {
      * @since 6.0.0
      */
     private function render_filters($base_url, $current_params) {
-        if (empty($this->config['filters'])) {
+        $filters_config = $this->config['filters'] ?? array();
+        if (empty($filters_config)) {
             return;
         }
         
+        // Check if any filters are active
+        $has_active_filters = false;
+        $active_filters_count = 0;
+        foreach ($filters_config as $filter_key => $filter_config) {
+            if (!empty($_GET[$filter_key])) {
+                $has_active_filters = true;
+                $active_filters_count++;
+            }
+        }
+        
         ?>
-        <div class="saw-filters">
-            <?php foreach ($this->config['filters'] as $filter_key => $filter_config): ?>
-                <?php $this->render_single_filter($filter_key, $filter_config, $base_url, $current_params); ?>
-            <?php endforeach; ?>
+        <div class="saw-filters-dropdown-wrapper">
+            <button type="button" 
+                    class="saw-filters-trigger <?php echo $has_active_filters ? 'has-active' : ''; ?>"
+                    onclick="toggleFiltersMenu(this, event)"
+                    title="Filtry">
+                <span class="dashicons dashicons-filter"></span>
+                <?php if ($active_filters_count > 0): ?>
+                    <span class="saw-filter-badge"><?php echo $active_filters_count; ?></span>
+                <?php endif; ?>
+            </button>
+            
+            <div class="saw-filters-dropdown-menu">
+                <form method="GET" action="<?php echo esc_url($base_url); ?>" class="saw-filters-form">
+                    <?php
+                    // Preserve search
+                    if (!empty($_GET['s'])) {
+                        echo '<input type="hidden" name="s" value="' . esc_attr(sanitize_text_field($_GET['s'])) . '">';
+                    }
+                    
+                    // Preserve orderby/order
+                    if (!empty($_GET['orderby'])) {
+                        echo '<input type="hidden" name="orderby" value="' . esc_attr(sanitize_text_field($_GET['orderby'])) . '">';
+                    }
+                    if (!empty($_GET['order'])) {
+                        echo '<input type="hidden" name="order" value="' . esc_attr(sanitize_text_field($_GET['order'])) . '">';
+                    }
+                    
+                    foreach ($filters_config as $filter_key => $filter_config):
+                        $this->render_single_filter($filter_key, $filter_config, $current_params);
+                    endforeach;
+                    ?>
+                    
+                    <?php if ($has_active_filters): ?>
+                    <div class="saw-filters-actions">
+                        <a href="<?php echo esc_url($base_url); ?>" 
+                           class="saw-filter-clear-all"
+                           title="Vymazat všechny filtry">
+                            Vymazat filtry
+                        </a>
+                    </div>
+                    <?php endif; ?>
+                </form>
+            </div>
         </div>
         <?php
     }
@@ -303,12 +439,15 @@ class SAW_Component_Admin_Table {
      * 
      * @since 6.0.0
      */
-    private function render_single_filter($filter_key, $filter_config, $base_url, $current_params) {
+    private function render_single_filter($filter_key, $filter_config, $current_params) {
         $filter_type = $filter_config['type'] ?? 'select';
         $filter_value = $current_params[$filter_key] ?? '';
+        if (empty($filter_value) && !empty($_GET[$filter_key])) {
+            $filter_value = sanitize_text_field($_GET[$filter_key]);
+        }
         
         if ($filter_type === 'select') {
-            $this->render_select_filter($filter_key, $filter_config, $filter_value, $base_url, $current_params);
+            $this->render_select_filter($filter_key, $filter_config, $filter_value);
         }
         // Můžeš přidat další typy filtrů: date_range, multiselect, atd.
     }
@@ -318,42 +457,30 @@ class SAW_Component_Admin_Table {
      * 
      * @since 6.0.0
      */
-    private function render_select_filter($filter_key, $filter_config, $filter_value, $base_url, $current_params) {
+    private function render_select_filter($filter_key, $filter_config, $filter_value) {
         $options = $filter_config['options'] ?? array();
         $label = $filter_config['label'] ?? ucfirst($filter_key);
+        $placeholder = $filter_config['placeholder'] ?? 'Vyberte ' . strtolower($label);
+        
+        // Zjistit, jestli je něco vybráno (včetně '0' jako validní hodnoty)
+        // $filter_value může být '0', '1', nebo '' (prázdné)
+        $has_selection = $filter_value !== '' && $filter_value !== null;
         
         ?>
         <div class="saw-filter-item">
-            <form method="GET" action="<?php echo esc_url($base_url); ?>" class="saw-filter-form">
-                <?php
-                // Preserve other params
-                foreach ($current_params as $key => $value) {
-                    if ($key !== $filter_key && $key !== 'paged') {
-                        echo '<input type="hidden" name="' . esc_attr($key) . '" value="' . esc_attr($value) . '">';
-                    }
-                }
-                ?>
-                
-                <select name="<?php echo esc_attr($filter_key); ?>" 
-                        class="saw-select saw-filter-select" 
-                        onchange="this.form.submit()"
-                        aria-label="<?php echo esc_attr($label); ?>">
-                    <?php foreach ($options as $option_value => $option_label): ?>
-                        <option value="<?php echo esc_attr($option_value); ?>" 
-                                <?php selected($filter_value, $option_value); ?>>
-                            <?php echo esc_html($option_label); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </form>
-            
-            <?php if (!empty($filter_value)): ?>
-                <a href="<?php echo esc_url($this->build_url($base_url, array_diff_key($current_params, array($filter_key => '', 'paged' => '')))); ?>" 
-                   class="saw-filter-clear" 
-                   title="Zrušit filtr">
-                    <span class="dashicons dashicons-dismiss"></span>
-                </a>
-            <?php endif; ?>
+            <label class="saw-filter-label"><?php echo esc_html($label); ?></label>
+            <select name="<?php echo esc_attr($filter_key); ?>" 
+                    class="saw-select saw-filter-select <?php echo $has_selection ? 'has-value' : ''; ?>"
+                    onchange="this.classList.toggle('has-value', this.value !== ''); this.form.submit();"
+                    aria-label="<?php echo esc_attr($label); ?>">
+                <option value="" <?php echo !$has_selection ? 'selected' : ''; ?> disabled><?php echo esc_html($placeholder); ?></option>
+                <?php foreach ($options as $option_value => $option_label): ?>
+                    <option value="<?php echo esc_attr($option_value); ?>" 
+                            <?php selected($filter_value, $option_value); ?>>
+                        <?php echo esc_html($option_label); ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
         </div>
         <?php
     }
@@ -422,6 +549,12 @@ class SAW_Component_Admin_Table {
     private function render_table_or_empty() {
         if (empty($this->config['rows'])) {
             $this->render_empty_state();
+            return;
+        }
+        
+        // Check if grouping is enabled
+        if (!empty($this->config['grouping']['enabled']) && !empty($this->config['grouping']['group_by'])) {
+            $this->render_grouped_table();
         } else {
             $this->render_table();
         }
@@ -580,60 +713,85 @@ class SAW_Component_Admin_Table {
     }
     
     private function render_action_buttons($row) {
+        $actions = $this->config['actions'] ?? array();
+        if (empty($actions)) {
+            return;
+        }
+        
+        $item_id = intval($row['id'] ?? 0);
+        $can_edit = function_exists('saw_can') ? saw_can('edit', $this->entity) : true;
+        $can_delete = function_exists('saw_can') ? saw_can('delete', $this->entity) : true;
+        
+        // Check if we have any valid actions
+        $has_valid_actions = false;
+        if (in_array('view', $actions) && !empty($this->config['detail_url'])) {
+            $has_valid_actions = true;
+        }
+        if (in_array('edit', $actions) && $can_edit && !empty($this->config['edit_url'])) {
+            $has_valid_actions = true;
+        }
+        if (in_array('delete', $actions) && $can_delete) {
+            $has_valid_actions = true;
+        }
+        
+        if (!$has_valid_actions) {
+            return;
+        }
+        
         ?>
-        <td class="saw-actions-cell">
-            <div class="saw-action-buttons">
-                <?php
-                $can_edit = function_exists('saw_can') ? saw_can('edit', $this->entity) : true;
-                $can_delete = function_exists('saw_can') ? saw_can('delete', $this->entity) : true;
+        <td class="saw-actions-cell" onclick="event.stopPropagation();">
+            <div class="saw-action-dropdown">
+                <button type="button" 
+                        class="saw-action-trigger" 
+                        data-id="<?php echo esc_attr($item_id); ?>"
+                        onclick="toggleActionMenu(this, event)"
+                        title="Akce">
+                    <span class="dashicons dashicons-ellipsis"></span>
+                </button>
                 
-                if (is_array($this->config['actions'])) {
-                    foreach ($this->config['actions'] as $action) {
-                        if ($action === 'view' && !empty($this->config['detail_url'])) {
-                            $view_url = str_replace('{id}', intval($row['id'] ?? 0), $this->config['detail_url']);
-                            ?>
-                            <a href="<?php echo esc_url($view_url); ?>" 
-                               class="saw-action-btn saw-action-view" 
-                               title="Zobrazit"
-                               onclick="event.stopPropagation();">
-                                <span class="dashicons dashicons-visibility"></span>
-                            </a>
-                            <?php
-                        }
-                        
-                        if ($action === 'edit' && $can_edit && !empty($this->config['edit_url'])) {
-                            $edit_url = str_replace('{id}', intval($row['id'] ?? 0), $this->config['edit_url']);
-                            ?>
-                            <a href="<?php echo esc_url($edit_url); ?>" 
-                               class="saw-action-btn saw-action-edit" 
-                               title="Upravit"
-                               onclick="event.stopPropagation();">
-                                <span class="dashicons dashicons-edit"></span>
-                            </a>
-                            <?php
-                        }
-                        
-                        if ($action === 'delete' && $can_delete) {
-                            ?>
-                            <button type="button" 
-                                    class="saw-action-btn saw-action-delete" 
-                                    data-id="<?php echo esc_attr($row['id'] ?? ''); ?>" 
-                                    data-ajax-action="saw_delete_<?php echo esc_attr(str_replace('-', '_', $this->entity)); ?>"
-                                    title="Smazat" 
-                                    onclick="event.stopPropagation(); sawAdminTableDelete(this); return false;">
-                                <span class="dashicons dashicons-trash"></span>
-                            </button>
-                            <?php
-                        }
-                    }
-                }
-                ?>
+                <div class="saw-action-menu">
+                    <?php if (in_array('view', $actions) && !empty($this->config['detail_url'])): ?>
+                        <?php $view_url = str_replace('{id}', $item_id, $this->config['detail_url']); ?>
+                        <a href="<?php echo esc_url($view_url); ?>" 
+                           class="saw-action-item"
+                           onclick="event.stopPropagation();">
+                            <span class="dashicons dashicons-visibility"></span>
+                            <span>Detail</span>
+                        </a>
+                    <?php endif; ?>
+                    
+                    <?php if (in_array('edit', $actions) && $can_edit && !empty($this->config['edit_url'])): ?>
+                        <?php $edit_url = str_replace('{id}', $item_id, $this->config['edit_url']); ?>
+                        <a href="<?php echo esc_url($edit_url); ?>" 
+                           class="saw-action-item"
+                           onclick="event.stopPropagation();">
+                            <span class="dashicons dashicons-edit"></span>
+                            <span>Upravit</span>
+                        </a>
+                    <?php endif; ?>
+                    
+                    <?php if (in_array('delete', $actions) && $can_delete): ?>
+                        <button type="button" 
+                                class="saw-action-item saw-action-delete"
+                                data-id="<?php echo esc_attr($item_id); ?>"
+                                data-ajax-action="saw_delete_<?php echo esc_attr(str_replace('-', '_', $this->entity)); ?>"
+                                onclick="event.stopPropagation(); sawAdminTableDelete(this); return false;">
+                            <span class="dashicons dashicons-trash"></span>
+                            <span>Smazat</span>
+                        </button>
+                    <?php endif; ?>
+                </div>
             </div>
         </td>
         <?php
     }
     
     private function render_pagination() {
+        // Don't render pagination if infinite scroll is enabled
+        if (!empty($this->config['infinite_scroll']['enabled'])) {
+            return;
+        }
+        
         if ($this->config['total_pages'] <= 1) {
             return;
         }
@@ -820,5 +978,206 @@ class SAW_Component_Admin_Table {
         } else {
             return '<span class="dashicons dashicons-arrow-down saw-sort-icon"></span>';
         }
+    }
+    
+    /**
+     * Prepare grouped data from rows
+     * 
+     * @since 7.0.0
+     * @return array|null Grouped data or null if grouping disabled
+     */
+    private function prepare_grouped_data() {
+        if (empty($this->config['grouping']['enabled']) || empty($this->config['grouping']['group_by'])) {
+            return null;
+        }
+        
+        $group_by = $this->config['grouping']['group_by'];
+        $rows = $this->config['rows'];
+        $grouped = array();
+        
+        // Group rows by column value
+        foreach ($rows as $row) {
+            $group_value = $row[$group_by] ?? null;
+            
+            // Handle null/empty values - use 'ungrouped' for truly empty, but preserve 0 and false
+            if ($group_value === null || $group_value === '') {
+                $group_value = 'ungrouped';
+            } else {
+                // Normalize to string for consistent grouping (0, 1, etc.)
+                $group_value = (string)$group_value;
+            }
+            
+            if (!isset($grouped[$group_value])) {
+                $grouped[$group_value] = array(
+                    'value' => $group_value,
+                    'items' => array(),
+                    'count' => 0,
+                );
+            }
+            
+            $grouped[$group_value]['items'][] = $row;
+            $grouped[$group_value]['count']++;
+        }
+        
+        // Generate labels using callback
+        $label_callback = $this->config['grouping']['group_label_callback'];
+        foreach ($grouped as $group_value => &$group) {
+            if ($label_callback && is_callable($label_callback)) {
+                $group['label'] = call_user_func($label_callback, $group_value, $group['items']);
+            } else {
+                $group['label'] = $group_value;
+            }
+        }
+        unset($group);
+        
+        // Sort groups
+        $this->sort_groups($grouped);
+        
+        return $grouped;
+    }
+    
+    /**
+     * Sort groups by configured method
+     * 
+     * @since 7.0.0
+     * @param array &$grouped Grouped data (passed by reference)
+     */
+    private function sort_groups(&$grouped) {
+        $sort_by = $this->config['grouping']['sort_groups_by'] ?? 'label';
+        
+        switch ($sort_by) {
+            case 'count':
+                uasort($grouped, function($a, $b) {
+                    return $b['count'] - $a['count'];
+                });
+                break;
+                
+            case 'value':
+                // Sort by group value - numeric values first, then strings
+                uasort($grouped, function($a, $b) {
+                    $val_a = $a['value'];
+                    $val_b = $b['value'];
+                    
+                    // Handle numeric values
+                    if (is_numeric($val_a) && is_numeric($val_b)) {
+                        return $val_a <=> $val_b;
+                    }
+                    
+                    // Handle boolean-like values (0, 1, '0', '1')
+                    if (($val_a === 0 || $val_a === '0') && ($val_b === 1 || $val_b === '1')) {
+                        return -1;
+                    }
+                    if (($val_a === 1 || $val_a === '1') && ($val_b === 0 || $val_b === '0')) {
+                        return 1;
+                    }
+                    
+                    // Fallback to string comparison
+                    return strcmp((string)$val_a, (string)$val_b);
+                });
+                break;
+                
+            case 'label':
+            default:
+                uasort($grouped, function($a, $b) {
+                    return strcmp($a['label'], $b['label']);
+                });
+                break;
+        }
+    }
+    
+    /**
+     * Render grouped table
+     * 
+     * @since 7.0.0
+     */
+    private function render_grouped_table() {
+        $grouped_data = $this->prepare_grouped_data();
+        
+        if (!$grouped_data) {
+            $this->render_table();
+            return;
+        }
+        
+        // Pass grouped data to template
+        $entity = $this->entity;
+        $config = $this->config;
+        $config['grouped_data'] = $grouped_data;
+        $config['base_url'] = $this->get_base_url();
+        $config['current_params'] = $this->get_current_params();
+        $config['_table_instance'] = $this; // Pass instance for helper methods
+        
+        // Load grouped table template
+        $template_path = __DIR__ . '/grouped-body.php';
+        if (file_exists($template_path)) {
+            require $template_path;
+        } else {
+            // Fallback to normal table
+            $this->render_table();
+        }
+    }
+    
+    /**
+     * Get sort URL - public helper for templates
+     * 
+     * @since 7.0.0
+     * @param string $column Column key
+     * @return string Sort URL
+     */
+    public function get_sort_url_for_template($column) {
+        return $this->get_sort_url($column, $this->config['orderby'], $this->config['order']);
+    }
+    
+    /**
+     * Get sort icon - public helper for templates
+     * 
+     * @since 7.0.0
+     * @param string $column Column key
+     * @return string Sort icon HTML
+     */
+    public function get_sort_icon_for_template($column) {
+        return $this->get_sort_icon($column, $this->config['orderby'], $this->config['order']);
+    }
+    
+    /**
+     * Render table cell - public helper for templates
+     * 
+     * @since 7.0.0
+     * @param array $row Row data
+     * @param string $key Column key
+     * @param array|string $column Column config
+     */
+    public function render_table_cell_for_template($row, $key, $column) {
+        $this->render_table_cell($row, $key, $column);
+    }
+    
+    /**
+     * Render action buttons - public helper for templates
+     * 
+     * @since 7.0.0
+     * @param array $row Row data
+     */
+    public function render_action_buttons_for_template($row) {
+        $this->render_action_buttons($row);
+    }
+    
+    /**
+     * Output JS configuration for infinite scroll and grouping
+     * 
+     * @since 7.0.0
+     */
+    private function output_js_config() {
+        $config = array(
+            'entity' => $this->entity,
+            'columns' => $this->config['columns'],
+            'actions' => $this->config['actions'],
+            'detail_url' => $this->config['detail_url'],
+            'edit_url' => $this->config['edit_url'],
+            'infinite_scroll' => $this->config['infinite_scroll'],
+            'grouping' => $this->config['grouping'],
+        );
+        
+        echo '<script>';
+        echo 'window.sawInfiniteScrollConfig = ' . wp_json_encode($config) . ';';
+        echo '</script>';
     }
 }

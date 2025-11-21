@@ -114,6 +114,27 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
             $params[] = $filters['participation_status'];
         }
         
+        // Training status filter - filter by computed training_status
+        if (!empty($filters['training_status'])) {
+            $training_status = $filters['training_status'];
+            
+            // Map training_status to database conditions
+            switch ($training_status) {
+                case 'completed':
+                    $sql .= " AND vis.training_completed_at IS NOT NULL";
+                    break;
+                case 'in_progress':
+                    $sql .= " AND vis.training_started_at IS NOT NULL AND vis.training_completed_at IS NULL";
+                    break;
+                case 'skipped':
+                    $sql .= " AND vis.training_skipped = 1";
+                    break;
+                case 'not_started':
+                    $sql .= " AND vis.training_started_at IS NULL AND vis.training_completed_at IS NULL AND vis.training_skipped = 0";
+                    break;
+            }
+        }
+        
         // Count total
         $count_sql = preg_replace('/^SELECT .+ FROM/', 'SELECT COUNT(DISTINCT vis.id) FROM', $sql);
         $total = (int) $wpdb->get_var($wpdb->prepare($count_sql, $params));

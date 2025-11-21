@@ -212,7 +212,18 @@
         }
 
         // Set active row from URL (if we're on a detail page)
-        setActiveRowFromUrl();
+        // But prioritize sidebar data-current-id if available
+        const $sidebar = $('.saw-sidebar[data-current-id]');
+        if ($sidebar.length && $sidebar.data('current-id')) {
+            // Sidebar has current ID, will be handled by setActiveRowFromSidebar
+            console.log('ℹ️ Sidebar has current-id, will set active row from sidebar');
+        } else {
+            // No sidebar, try URL
+            setActiveRowFromUrl();
+        }
+        
+        // Also set active row from sidebar if it exists (runs after initAdminTable)
+        setActiveRowFromSidebar();
 
         // Clickable table rows - intercept clicks
         document.addEventListener('click', function (e) {
@@ -316,10 +327,643 @@
     }
 
     /**
+     * Toggle action dropdown menu
+     * 
+     * @param {HTMLElement} button - The trigger button
+     * @param {Event} event - Click event
+     * @return {void}
+     */
+    window.toggleActionMenu = function(button, event) {
+        if (event) {
+            event.stopPropagation();
+        }
+        
+        const dropdown = button.closest('.saw-action-dropdown');
+        if (!dropdown) {
+            return;
+        }
+        
+        const row = dropdown.closest('tr');
+        const isActive = dropdown.classList.contains('active');
+        
+        // Close all other dropdowns and remove row classes
+        document.querySelectorAll('.saw-action-dropdown.active').forEach(function(el) {
+            if (el !== dropdown) {
+                el.classList.remove('active');
+                const otherRow = el.closest('tr');
+                if (otherRow) {
+                    otherRow.classList.remove('saw-row-with-active-dropdown');
+                }
+            }
+        });
+        
+        // Toggle current dropdown
+        if (!isActive) {
+            dropdown.classList.add('active');
+            if (row) {
+                row.classList.add('saw-row-with-active-dropdown');
+            }
+        } else {
+            dropdown.classList.remove('active');
+            if (row) {
+                row.classList.remove('saw-row-with-active-dropdown');
+            }
+        }
+    };
+    
+    /**
+     * Toggle filters dropdown menu
+     * 
+     * @param {HTMLElement} button - The trigger button
+     * @param {Event} event - Click event
+     * @return {void}
+     */
+    window.toggleFiltersMenu = function(button, event) {
+        if (event) {
+            event.stopPropagation();
+        }
+        
+        const wrapper = button.closest('.saw-filters-dropdown-wrapper');
+        if (!wrapper) {
+            return;
+        }
+        
+        const isActive = wrapper.classList.contains('active');
+        
+        // Close all other filter dropdowns
+        document.querySelectorAll('.saw-filters-dropdown-wrapper.active').forEach(function(el) {
+            if (el !== wrapper) {
+                el.classList.remove('active');
+            }
+        });
+        
+        // Close action dropdowns when opening filters
+        document.querySelectorAll('.saw-action-dropdown.active').forEach(function(el) {
+            el.classList.remove('active');
+            const row = el.closest('tr');
+            if (row) {
+                row.classList.remove('saw-row-with-active-dropdown');
+            }
+        });
+        
+        // Toggle current dropdown
+        if (!isActive) {
+            wrapper.classList.add('active');
+        } else {
+            wrapper.classList.remove('active');
+        }
+    };
+    
+    /**
+     * Close dropdowns when clicking outside
+     */
+    document.addEventListener('click', function(e) {
+        // Close action dropdowns
+        if (!e.target.closest('.saw-action-dropdown')) {
+            document.querySelectorAll('.saw-action-dropdown.active').forEach(function(el) {
+                el.classList.remove('active');
+                const row = el.closest('tr');
+                if (row) {
+                    row.classList.remove('saw-row-with-active-dropdown');
+                }
+            });
+        }
+        
+        // Close filter dropdowns
+        if (!e.target.closest('.saw-filters-dropdown-wrapper')) {
+            document.querySelectorAll('.saw-filters-dropdown-wrapper.active').forEach(function(el) {
+                el.classList.remove('active');
+            });
+        }
+    });
+
+    /**
+     * Initialize grouping functionality
+     * 
+     * @since 7.0.0
+     */
+    function initGrouping() {
+        // Toggle group on header click
+        $(document).on('click', '.saw-group-header', function(e) {
+            e.stopPropagation();
+            
+            const $header = $(this);
+            const groupId = $header.data('group-id');
+            const isExpanded = $header.hasClass('saw-group-expanded');
+            
+            // Toggle header state
+            $header.toggleClass('saw-group-expanded saw-group-collapsed');
+            
+            // Toggle rows visibility
+            const $rows = $('.saw-group-row[data-group-id="' + groupId + '"]');
+            
+            if (isExpanded) {
+                // Collapse
+                $rows.addClass('saw-group-hidden');
+            } else {
+                // Expand
+                $rows.removeClass('saw-group-hidden');
+            }
+            
+            // Save state to sessionStorage
+            saveGroupState(groupId, !isExpanded);
+            
+            console.log('🔄 Group toggled:', groupId, 'expanded:', !isExpanded);
+        });
+    }
+    
+    /**
+     * Save group state to sessionStorage
+     * 
+     * @since 7.0.0
+     * @param {string} groupId - Group identifier
+     * @param {boolean} isExpanded - Whether group is expanded
+     */
+    function saveGroupState(groupId, isExpanded) {
+        try {
+            const key = 'saw_group_states_' + getCurrentEntity();
+            const states = JSON.parse(sessionStorage.getItem(key) || '{}');
+            states[groupId] = isExpanded;
+            sessionStorage.setItem(key, JSON.stringify(states));
+        } catch (e) {
+            console.error('Failed to save group state:', e);
+        }
+    }
+    
+    /**
+     * Restore group states from sessionStorage
+     * 
+     * @since 7.0.0
+     */
+    function restoreGroupStates() {
+        try {
+            const key = 'saw_group_states_' + getCurrentEntity();
+            const states = JSON.parse(sessionStorage.getItem(key) || '{}');
+            
+            Object.keys(states).forEach(function(groupId) {
+                const isExpanded = states[groupId];
+                const $header = $('.saw-group-header[data-group-id="' + groupId + '"]');
+                
+                if ($header.length) {
+                    if (isExpanded) {
+                        $header.addClass('saw-group-expanded').removeClass('saw-group-collapsed');
+                        $('.saw-group-row[data-group-id="' + groupId + '"]').removeClass('saw-group-hidden');
+                    } else {
+                        $header.addClass('saw-group-collapsed').removeClass('saw-group-expanded');
+                        $('.saw-group-row[data-group-id="' + groupId + '"]').addClass('saw-group-hidden');
+                    }
+                }
+            });
+            
+            console.log('✨ Group states restored');
+        } catch (e) {
+            console.error('Failed to restore group states:', e);
+        }
+    }
+    
+    /**
+     * Get current entity from URL or data attribute
+     * 
+     * @since 7.0.0
+     * @return {string} Entity name
+     */
+    function getCurrentEntity() {
+        const $table = $('.saw-admin-table');
+        if ($table.length && $table.data('entity')) {
+            return $table.data('entity');
+        }
+        
+        const path = window.location.pathname.split('/').filter(function(p) { return p; });
+        for (let i = 0; i < path.length; i++) {
+            if (path[i] === 'admin' && path[i + 1]) {
+                return path[i + 1];
+            }
+        }
+        
+        return 'unknown';
+    }
+    
+    /**
+     * Initialize sidebar navigation (prev/next buttons)
+     * 
+     * @since 7.0.0
+     */
+    function initSidebarNavigation() {
+        $(document).on('click', '.saw-sidebar-prev, .saw-sidebar-next', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const $button = $(this);
+            const $sidebar = $button.closest('.saw-sidebar');
+            const entity = $sidebar.data('entity');
+            const currentId = parseInt($sidebar.data('current-id') || 0);
+            const direction = $button.hasClass('saw-sidebar-prev') ? 'prev' : 'next';
+            
+            if (!entity || !currentId) {
+                console.warn('⚠️ Missing entity or current ID for sidebar navigation');
+                return;
+            }
+            
+            // Disable button during loading
+            $button.prop('disabled', true);
+            
+            // Get AJAX action name - try both slug and entity name
+            const moduleSlug = entity.replace(/_/g, '-');
+            const entityName = entity.replace(/-/g, '_');
+            // Try slug first, fallback to entity name
+            const ajaxAction = 'saw_get_adjacent_' + moduleSlug;
+            
+            console.log('🔄 Loading adjacent record:', { entity, currentId, direction });
+            
+            // Get AJAX URL and nonce
+            const ajaxUrl = (typeof ajaxurl !== 'undefined' ? ajaxurl : '/wp-admin/admin-ajax.php');
+            const nonce = (window.sawGlobal && window.sawGlobal.nonce) 
+                ? window.sawGlobal.nonce 
+                : (typeof sawAjaxNonce !== 'undefined' ? sawAjaxNonce : '');
+            
+            $.ajax({
+                url: ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: ajaxAction,
+                    id: currentId,
+                    direction: direction,
+                    nonce: nonce
+                },
+                success: function(response) {
+                    if (response.success && response.data && response.data.url) {
+                        // Navigate to adjacent record
+                        console.log('✅ Navigating to:', response.data.url);
+                        
+                        // Use view transition if available
+                        if (window.viewTransition && window.viewTransition.navigateTo) {
+                            window.viewTransition.navigateTo(response.data.url);
+                        } else {
+                            window.location.href = response.data.url;
+                        }
+                    } else {
+                        console.error('❌ Failed to get adjacent record:', response.data?.message || 'Unknown error');
+                        alert(response.data?.message || 'Nepodařilo se načíst sousední záznam');
+                        $button.prop('disabled', false);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('❌ AJAX error:', error);
+                    alert('Chyba při načítání sousedního záznamu');
+                    $button.prop('disabled', false);
+                }
+            });
+        });
+    }
+    
+    /**
+     * Set active row from sidebar data-current-id
+     * 
+     * @since 7.0.0
+     */
+    function setActiveRowFromSidebar() {
+        const $sidebar = $('.saw-sidebar[data-current-id]');
+        if ($sidebar.length) {
+            const currentId = $sidebar.data('current-id');
+            if (currentId) {
+                console.log('🎯 Setting active row from sidebar:', currentId);
+                // Wait for table to be fully rendered
+                setTimeout(function() {
+                    updateActiveRow(currentId, true);
+                    console.log('✨ Active row set from sidebar:', currentId);
+                }, 500);
+            }
+        }
+    }
+    
+    /**
+     * Initialize infinite scroll
+     * Vanilla JS implementation following best practices
+     * 
+     * @since 7.0.0
+     */
+    function initInfiniteScroll() {
+        const config = window.sawInfiniteScrollConfig;
+        
+        if (!config || !config.infinite_scroll || !config.infinite_scroll.enabled) {
+            return;
+        }
+        
+        const scrollArea = document.querySelector('.saw-table-scroll-area');
+        const tbody = document.querySelector('.saw-admin-table tbody, .saw-table-grouped tbody');
+        
+        if (!scrollArea || !tbody) {
+            return;
+        }
+        
+        let isLoading = false;
+        let currentPage = 1;
+        let hasMore = true;
+        const perPage = config.infinite_scroll.per_page || 50;
+        const threshold = config.infinite_scroll.threshold || 300;
+        const entity = config.entity;
+        const isGrouped = document.querySelector('.saw-table-grouped') !== null;
+        
+        // Cache loaded pages to prevent re-loading when scrolling back up
+        const loadedPages = new Set();
+        const loadedRowsCache = new Map(); // page -> array of row IDs
+        
+        // Get current filters and search from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const filters = {
+            search: urlParams.get('s') || '',
+            orderby: urlParams.get('orderby') || 'id',
+            order: urlParams.get('order') || 'DESC',
+        };
+        
+        // Add filter params
+        urlParams.forEach((value, key) => {
+            if (!['s', 'orderby', 'order', 'paged'].includes(key) && value) {
+                filters[key] = value;
+            }
+        });
+        
+        // Get columns from config
+        const columns = config.columns || {};
+        const actions = config.actions || [];
+        
+        // Count existing rows to determine starting page
+        // For grouped tables, count only data rows (not group headers)
+        const existingRows = isGrouped 
+            ? tbody.querySelectorAll('tr.saw-group-row').length
+            : tbody.querySelectorAll('tr.saw-table-row').length;
+        
+        if (existingRows > 0) {
+            // Calculate what page we're on based on existing rows
+            currentPage = Math.ceil(existingRows / perPage);
+            // Mark pages as loaded
+            for (let i = 1; i <= currentPage; i++) {
+                loadedPages.add(i);
+            }
+        }
+        
+        // Track loaded row IDs to prevent duplicates
+        const getRowIds = () => {
+            const rows = isGrouped 
+                ? tbody.querySelectorAll('tr.saw-group-row[data-id]')
+                : tbody.querySelectorAll('tr.saw-table-row[data-id]');
+            return Array.from(rows).map(row => row.getAttribute('data-id')).filter(Boolean);
+        };
+        
+        const loadedRowIds = new Set(getRowIds());
+        
+        /**
+         * Load next page of items
+         */
+        function loadNextPage() {
+            if (isLoading || !hasMore) {
+                return;
+            }
+            
+            // Check if page is already loaded
+            const nextPage = currentPage + 1;
+            if (loadedPages.has(nextPage)) {
+                return;
+            }
+            
+            isLoading = true;
+            currentPage = nextPage;
+            
+            // Remove existing loading indicator
+            const existingLoading = tbody.querySelector('.saw-infinite-scroll-loading');
+            if (existingLoading) {
+                existingLoading.remove();
+            }
+            
+            const loadingRow = document.createElement('tr');
+            loadingRow.className = 'saw-infinite-scroll-loading';
+            const colCount = document.querySelector('.saw-admin-table thead tr')?.querySelectorAll('th').length || 
+                           document.querySelector('.saw-table-grouped thead tr')?.querySelectorAll('th').length || 10;
+            loadingRow.innerHTML = `<td colspan="${colCount}" class="saw-infinite-scroll-loading-cell">
+                <div class="saw-infinite-scroll-loader">
+                    <span class="dashicons dashicons-update"></span>
+                    <span class="saw-infinite-scroll-loader-text">Načítání...</span>
+                </div>
+            </td>`;
+            tbody.appendChild(loadingRow);
+            
+            // Get AJAX URL and nonce
+            const ajaxUrl = (typeof ajaxurl !== 'undefined' ? ajaxurl : '/wp-admin/admin-ajax.php');
+            const nonce = (window.sawGlobal && window.sawGlobal.nonce) 
+                ? window.sawGlobal.nonce 
+                : (typeof sawAjaxNonce !== 'undefined' ? sawAjaxNonce : '');
+            
+            // Build request data
+            const requestData = new URLSearchParams({
+                action: 'saw_get_items_infinite_' + entity.replace(/_/g, '-'),
+                nonce: nonce,
+                page: currentPage,
+                per_page: perPage,
+                search: filters.search || '',
+                orderby: filters.orderby || 'id',
+                order: filters.order || 'DESC',
+            });
+            
+            // Add columns as JSON
+            if (columns && Object.keys(columns).length > 0) {
+                requestData.append('columns', JSON.stringify(columns));
+            }
+            
+            // Add filter params
+            Object.keys(filters).forEach(key => {
+                if (!['search', 'orderby', 'order'].includes(key) && filters[key]) {
+                    requestData.append(key, filters[key]);
+                }
+            });
+            
+            // Make AJAX request
+            fetch(ajaxUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: requestData
+            })
+            .then(response => response.json())
+                .then(data => {
+                // Remove loading indicator
+                const loadingEl = tbody.querySelector('.saw-infinite-scroll-loading');
+                if (loadingEl) {
+                    loadingEl.remove();
+                }
+                
+                if (data.success && data.data) {
+                    const { html, has_more, loaded } = data.data;
+                    
+                    hasMore = has_more;
+                    
+                    // If no more data, don't show loading indicator anymore
+                    if (!has_more) {
+                        // All data loaded
+                    }
+                    
+                    if (html && loaded > 0) {
+                        // Mark page as loaded
+                        loadedPages.add(currentPage);
+                        
+                        // Create temporary container to parse HTML
+                        const temp = document.createElement('tbody');
+                        temp.innerHTML = html;
+                        
+                        const rows = temp.querySelectorAll('tr');
+                        
+                        // Filter out rows that are already loaded (prevent duplicates)
+                        const rowsToAdd = Array.from(rows).filter(row => {
+                            const rowId = row.getAttribute('data-id');
+                            if (!rowId) {
+                                // Rows without ID (like group headers) - check if similar row exists
+                                return true;
+                            }
+                            if (loadedRowIds.has(rowId)) {
+                                return false;
+                            }
+                            loadedRowIds.add(rowId);
+                            return true;
+                        });
+                        
+                        if (rowsToAdd.length === 0) {
+                            isLoading = false;
+                            return;
+                        }
+                        
+                        if (isGrouped && config.grouping && config.grouping.enabled) {
+                            // For grouped tables, add rows to their respective groups
+                            const groupBy = config.grouping.group_by;
+                            
+                            rowsToAdd.forEach(row => {
+                                const groupId = row.getAttribute('data-group-id');
+                                
+                                if (groupId) {
+                                    // Find the group header for this group
+                                    const groupHeader = tbody.querySelector(`.saw-group-header[data-group-id="${groupId}"]`);
+                                    
+                                    if (groupHeader) {
+                                        // Find the last row in this group
+                                        const groupRows = tbody.querySelectorAll(`tr.saw-group-row[data-group-id="${groupId}"]`);
+                                        
+                                        if (groupRows.length > 0) {
+                                            // Insert after last row in group
+                                            const lastRow = groupRows[groupRows.length - 1];
+                                            lastRow.insertAdjacentElement('afterend', row);
+                                        } else {
+                                            // No rows in group yet, insert after header
+                                            groupHeader.insertAdjacentElement('afterend', row);
+                                        }
+                                        
+                                        // Update group count
+                                        const countEl = groupHeader.querySelector('.saw-group-count');
+                                        if (countEl) {
+                                            const currentCount = parseInt(countEl.textContent) || 0;
+                                            countEl.textContent = currentCount + 1;
+                                        }
+                                    } else {
+                                        // Group doesn't exist yet, append to end
+                                        tbody.appendChild(row);
+                                    }
+                                } else {
+                                    // No group ID, just append
+                                    tbody.appendChild(row);
+                                }
+                            });
+                            
+                            // Re-initialize grouping to attach handlers
+                            initGrouping();
+                        } else {
+                            // For non-grouped tables, just append rows
+                            rowsToAdd.forEach(row => {
+                                tbody.appendChild(row);
+                            });
+                        }
+                        
+                    }
+                } else {
+                    console.error('Failed to load items:', data.data?.message || 'Unknown error');
+                    hasMore = false;
+                }
+                
+                isLoading = false;
+            })
+            .catch(error => {
+                console.error('AJAX error loading items:', error);
+                const loadingEl = tbody.querySelector('.saw-infinite-scroll-loading');
+                if (loadingEl) {
+                    loadingEl.remove();
+                }
+                isLoading = false;
+            });
+        }
+        
+        /**
+         * Handle scroll event
+         * Only load when scrolling down, not when scrolling up
+         * Cache prevents re-loading when scrolling back up
+         */
+        let lastScrollTop = scrollArea.scrollTop;
+        let scrollTimeout;
+        
+        function handleScroll() {
+            const scrollTop = scrollArea.scrollTop;
+            const scrollHeight = scrollArea.scrollHeight;
+            const clientHeight = scrollArea.clientHeight;
+            
+            // Only load when scrolling down (with small threshold to avoid false positives)
+            const isScrollingDown = scrollTop > lastScrollTop + 5;
+            lastScrollTop = scrollTop;
+            
+            // Don't load when scrolling up - cached rows should already be in DOM
+            if (!isScrollingDown) {
+                return;
+            }
+            
+            if (isLoading || !hasMore) {
+                return;
+            }
+            
+            // Check if user is near bottom
+            const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+            
+            if (distanceFromBottom < threshold) {
+                loadNextPage();
+            }
+        }
+        
+        // Attach scroll listener with throttling
+        scrollArea.addEventListener('scroll', function() {
+            if (scrollTimeout) {
+                clearTimeout(scrollTimeout);
+            }
+            scrollTimeout = setTimeout(handleScroll, 100);
+        }, { passive: true });
+        
+        console.log('✅ Infinite scroll initialized for', entity);
+    }
+    
+    /**
      * Initialize on DOM ready
      */
     $(document).ready(function () {
         initAdminTable();
+        
+        // Check if we have a grouped table
+        if ($('.saw-table-grouped').length) {
+            initGrouping();
+            restoreGroupStates();
+            console.log('✅ Grouping initialized');
+        }
+        
+        // Initialize sidebar navigation
+        if ($('.saw-sidebar').length) {
+            initSidebarNavigation();
+            console.log('✅ Sidebar navigation initialized');
+        }
+        
+        // Initialize infinite scroll
+        initInfiniteScroll();
     });
 
 })(jQuery);

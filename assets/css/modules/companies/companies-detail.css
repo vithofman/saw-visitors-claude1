@@ -16,15 +16,8 @@
    BASE
    ============================================ */
 
-.saw-detail-sidebar-content {
-    font-family: var(--saw-font-family);
-    color: var(--saw-text-primary);
-    box-sizing: border-box;
-}
-
-.saw-detail-sidebar-content * {
-    box-sizing: border-box;
-}
+/* REMOVED: .saw-detail-sidebar-content styles moved to global admin-table-detail.css */
+/* These styles are now handled globally to ensure consistency across all modules */
 
 /* ============================================
    BADGES
@@ -58,33 +51,10 @@
    INDUSTRIAL SECTIONS
    ============================================ */
 
-.saw-industrial-section {
-    background: var(--saw-card-bg);
-    border: 1px solid var(--saw-border-color);
-    margin-bottom: 20px;
-    box-shadow: var(--saw-shadow-sm);
-}
-
-.saw-section-head {
-    background: var(--saw-form-section-header-bg);
-    padding: 15px 20px;
-    border-bottom: 2px solid var(--saw-border-color);
-}
-
-.saw-section-title {
-    font-size: 18px;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: var(--saw-primary);
-    margin: 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.saw-section-body {
-    padding: 20px;
-}
+/* REMOVED: All industrial section styles moved to global admin-table-detail.css */
+/* These styles (.saw-industrial-section, .saw-section-head, .saw-section-title, */
+/* .saw-section-body) are now handled globally with !important to ensure */
+/* consistency across all modules (companies, visits, visitors) */
 
 /* Warning Section */
 .saw-industrial-section.saw-warning-section {
@@ -126,42 +96,12 @@
    INFO GRID
    ============================================ */
 
-.saw-info-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 16px;
-}
+/* REMOVED: .saw-info-grid and .saw-info-item styles moved to global admin-table-detail.css */
+/* These styles are now handled globally with !important to ensure consistency */
+/* across all modules (companies, visits, visitors) */
 
-@media (min-width: 400px) {
-    .saw-info-grid {
-        grid-template-columns: 1fr 1fr;
-    }
-}
-
-.saw-info-item label {
-    display: block;
-    font-size: 11px;
-    text-transform: uppercase;
-    color: var(--saw-text-secondary);
-    font-weight: 700;
-    margin-bottom: 4px;
-}
-
-.saw-info-item span {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--saw-text-primary);
-}
-
-.saw-link {
-    color: var(--saw-primary);
-    text-decoration: none;
-    font-weight: 600;
-}
-
-.saw-link:hover {
-    text-decoration: underline;
-}
+/* REMOVED: .saw-link styles moved to global admin-table-detail.css */
+/* These styles are now handled globally with !important to ensure consistency */
 
 /* ============================================
    VISIT AGENDA CARDS

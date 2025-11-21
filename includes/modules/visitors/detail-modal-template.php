@@ -7,27 +7,14 @@ if (empty($item)) {
 }
 ?>
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+<!-- Fonts are now loaded globally in admin-table-detail.css -->
 
 
 
 <div class="saw-detail-wrapper">
-
-    <div class="saw-industrial-header">
-        <div class="saw-header-inner">
-            <h3><?php echo esc_html($item['first_name'] . ' ' . $item['last_name']); ?></h3>
-            <div class="saw-header-meta">
-                <?php if (!empty($item['position'])): ?>
-                    <span>💼 <?php echo esc_html($item['position']); ?></span> • 
-                <?php endif; ?>
-                <span>🆔 <?php echo esc_html($item['id']); ?></span>
-            </div>
-        </div>
-        <div class="saw-industrial-stripe"></div>
-    </div>
-
+    <!-- Header is now rendered by detail-sidebar.php via saw-detail-header-universal -->
+    <!-- Removed duplicate saw-industrial-header -->
+    
     <div class="saw-detail-stack">
         
         <div class="saw-industrial-section">

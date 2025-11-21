@@ -452,9 +452,33 @@
                     // Append to body
                     $('body').append($wrapper);
 
-                    // Trigger animation
+                    // Keep parent sidebar active but visually de-emphasize it
+                    const $parent = $('.saw-sidebar-wrapper').not('[data-is-nested="1"]').first();
+                    if ($parent.length) {
+                        $parent.addClass('has-nested');
+                    }
+
+                    // Trigger animation and re-initialize forms
                     setTimeout(() => {
                         $wrapper.addClass('saw-sidebar-active');
+                        
+                        // Trigger initialization for any forms in the nested sidebar
+                        // Use multiple delays to ensure DOM is fully ready and scripts are loaded
+                        setTimeout(() => {
+                            console.log('[Select-Create] Triggering saw:page-loaded event');
+                            $(document).trigger('saw:page-loaded');
+                            
+                            // Also manually trigger initialization for companies form if present
+                            if ($wrapper.find('.saw-company-form').length) {
+                                console.log('[Select-Create] Manually initializing companies form');
+                                setTimeout(() => {
+                                    if (typeof SAW_Companies !== 'undefined' && SAW_Companies.init) {
+                                        $('.saw-company-form').removeData('saw-initialized');
+                                        SAW_Companies.init();
+                                    }
+                                }, 100);
+                            }
+                        }, 200);
                     }, 10);
                 },
                 error: function (xhr, status, error) {
@@ -468,68 +492,317 @@
         }
 
         calculateZIndex() {
-            const sidebarCount = $('.saw-sidebar').length;
-            const baseZIndex = 1000;
+            // Count all sidebar wrappers (including parent and existing nested)
+            const wrapperCount = $('.saw-sidebar-wrapper').length;
+            const nestedCount = $('.saw-sidebar-wrapper[data-is-nested="1"]').length;
+            
+            // Parent sidebar has z-index: 100001
+            // Nested sidebars must be above parent
+            const parentZIndex = 100001;
             const increment = 100;
-
-            return baseZIndex + (sidebarCount * increment);
+            
+            // Calculate z-index: parent + increment for each nested level
+            // First nested: 100002, second nested: 100003, etc.
+            return parentZIndex + 1 + (nestedCount * increment);
         }
     }
+
+    /* ============================================
+       GLOBAL INLINE CREATE HANDLER
+       ============================================ */
+
+    /**
+     * Initialize global inline create form handlers
+     * 
+     * Universal handler that works for ALL modules with inline create.
+     * Detects _ajax_inline_create field and submits via AJAX.
+     * 
+     * @since 13.0.0
+     */
+    function initInlineCreateHandlers() {
+        console.log('[Forms] Initializing global inline create handlers');
+        
+        // Remove any existing handler to prevent duplicates
+        $(document).off('submit.saw-inline-create-global', 'form');
+        
+        // Attach universal handler with high priority
+        // Use event delegation on document to catch all forms, including AJAX-loaded ones
+        $(document).on('submit.saw-inline-create-global', 'form', function(e) {
+            const $form = $(this);
+            
+            // Check if this is an inline create form - PRIMARY INDICATOR
+            const $ajaxInlineCreate = $form.find('input[name="_ajax_inline_create"][value="1"]');
+            if (!$ajaxInlineCreate.length) {
+                // Not an inline create form, allow normal submission
+                return;
+            }
+            
+            console.log('[Inline-Create] Detected inline create form submission');
+            
+            // Prevent default submission
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            
+            // Extract module name from form
+            let moduleName = null;
+            
+            // 1. Check data-module attribute (most reliable)
+            moduleName = $form.attr('data-module') || $form.closest('.saw-sidebar').attr('data-module');
+            
+            // 2. Extract from form class pattern: .saw-{module}-form
+            if (!moduleName) {
+                const formClass = $form.attr('class') || '';
+                const match = formClass.match(/saw-(\w+)-form/);
+                if (match && match[1]) {
+                    moduleName = match[1];
+                }
+            }
+            
+            // 3. Extract from sidebar data-entity
+            if (!moduleName) {
+                const $sidebar = $form.closest('.saw-sidebar');
+                moduleName = $sidebar.attr('data-entity');
+            }
+            
+            if (!moduleName) {
+                console.error('[Inline-Create] Cannot determine module name from form');
+                alert('Chyba: Nelze určit modul. Zkuste obnovit stránku.');
+                return false;
+            }
+            
+            console.log('[Inline-Create] Module detected:', moduleName);
+            
+            // Get target field from nested wrapper
+            const $wrapper = $('.saw-sidebar-wrapper[data-is-nested="1"]').last();
+            const targetField = $wrapper.attr('data-target-field');
+            
+            console.log('[Inline-Create] Target field:', targetField);
+            
+            // Get nonce and AJAX URL from sawGlobal (always available)
+            const nonce = (typeof window.sawGlobal !== 'undefined' && window.sawGlobal.nonce) 
+                ? window.sawGlobal.nonce 
+                : '';
+            const ajaxurl = (typeof window.sawGlobal !== 'undefined' && window.sawGlobal.ajaxurl) 
+                ? window.sawGlobal.ajaxurl 
+                : '/wp-admin/admin-ajax.php';
+            
+            if (!nonce) {
+                console.error('[Inline-Create] No nonce available');
+                alert('Chyba: Nelze ověřit požadavek. Zkuste obnovit stránku.');
+                return false;
+            }
+            
+            // Construct AJAX action: saw_inline_create_{module}
+            const action = 'saw_inline_create_' + moduleName;
+            console.log('[Inline-Create] AJAX action:', action);
+            
+            // Check if module has custom handler (e.g., SAW_Companies.handleNestedSubmit)
+            // Handle both singular and plural module names
+            // Convert "companies" -> "Companies", "company" -> "Company"
+            const capitalizedModule = moduleName.charAt(0).toUpperCase() + moduleName.slice(1);
+            const moduleObjectName = 'SAW_' + capitalizedModule;
+            const moduleObject = window[moduleObjectName];
+            
+            console.log('[Inline-Create] Looking for module object:', moduleObjectName);
+            
+            if (moduleObject && typeof moduleObject.handleNestedSubmit === 'function') {
+                console.log('[Inline-Create] Using module-specific handler:', moduleObjectName);
+                const result = moduleObject.handleNestedSubmit($form);
+                return result === false ? false : undefined;
+            }
+            
+            // Generic AJAX submission
+            console.log('[Inline-Create] Using generic AJAX submission');
+            
+            const formData = $form.serialize() + '&action=' + encodeURIComponent(action) + '&nonce=' + encodeURIComponent(nonce);
+            
+            $.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: formData,
+                dataType: 'json',
+                success: function (response) {
+                    console.log('[Inline-Create] AJAX response:', response);
+                    
+                    if (response.success) {
+                        console.log('[Inline-Create] Success! Calling handleInlineSuccess');
+                        
+                        // Call global handler to update select and close nested sidebar
+                        if (window.SAWSelectCreate && window.SAWSelectCreate.handleInlineSuccess) {
+                            window.SAWSelectCreate.handleInlineSuccess(response.data, targetField);
+                        } else {
+                            console.error('[Inline-Create] SAWSelectCreate not available!');
+                            alert('Záznam byl vytvořen, ale nepodařilo se aktualizovat formulář.');
+                        }
+                    } else {
+                        alert(response.data?.message || 'Chyba při ukládání záznamu');
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error('[Inline-Create] AJAX error:', error);
+                    console.error('[Inline-Create] Status:', status);
+                    console.error('[Inline-Create] Response:', xhr.responseText);
+                    console.error('[Inline-Create] Status code:', xhr.status);
+                    
+                    if (xhr.status === 403) {
+                        alert('Chyba: Oprávnění zamítnuto. Možná problém s nonce. Zkuste obnovit stránku.');
+                    } else if (xhr.status === 0) {
+                        alert('Chyba: Nelze se připojit k serveru. Zkontrolujte připojení.');
+                    } else {
+                        const errorMsg = xhr.responseJSON?.data?.message || error;
+                        alert('Chyba při komunikaci se serverem: ' + errorMsg);
+                    }
+                }
+            });
+            
+            return false;
+        });
+    }
+    
+    // Initialize immediately when script loads (before DOM ready)
+    // This ensures handler is attached before any forms are loaded
+    if (typeof jQuery !== 'undefined') {
+        initInlineCreateHandlers();
+    }
+    
+    // Also initialize on document ready as backup
+    $(document).ready(function() {
+        initInlineCreateHandlers();
+    });
+    
+    // Re-initialize when new content is loaded via AJAX
+    $(document).on('saw:page-loaded', function() {
+        console.log('[Forms] saw:page-loaded triggered, re-initializing inline create handlers');
+        initInlineCreateHandlers();
+    });
 
     window.SAWSelectCreate = {
 
         handleInlineSuccess: function (data, targetField) {
             console.log('[Select-Create] Handling success', data, targetField);
 
-            const $select = $(`select[name="${targetField}"]`);
-
-            if (!$select.length) {
-                console.error('[Select-Create] Target select not found:', targetField);
+            if (!data || !data.id || !targetField) {
+                console.error('[Select-Create] Invalid data or targetField:', data, targetField);
                 return;
             }
 
-            const $option = $('<option>', {
-                value: data.id,
-                text: data.name,
-                selected: true
-            });
+            // Find select - search in all sidebars, prioritizing parent
+            const $parent = $('.saw-sidebar-wrapper').not('[data-is-nested="1"]').first();
+            let $select = null;
+            
+            console.log('[Select-Create] Looking for select with name:', targetField);
+            console.log('[Select-Create] Parent sidebar found:', $parent.length);
+            
+            // First, try to find in parent sidebar
+            if ($parent.length) {
+                $select = $parent.find('select[name="' + targetField + '"]');
+                console.log('[Select-Create] Searching in parent sidebar, found:', $select.length);
+                if ($select.length) {
+                    console.log('[Select-Create] Select found in parent sidebar');
+                }
+            }
+            
+            // Fallback: search globally but exclude nested sidebars
+            if (!$select || !$select.length) {
+                // Search all selects, but exclude those inside nested sidebars
+                $('select[name="' + targetField + '"]').each(function() {
+                    const $this = $(this);
+                    const $nestedParent = $this.closest('.saw-sidebar-wrapper[data-is-nested="1"]');
+                    if (!$nestedParent.length) {
+                        if (!$select || !$select.length) {
+                            $select = $this;
+                        }
+                    }
+                });
+                console.log('[Select-Create] Global search (excluding nested), found:', $select ? $select.length : 0);
+            }
 
-            $select.append($option);
-            $select.trigger('change');
+            if (!$select || !$select.length) {
+                console.error('[Select-Create] Target select not found:', targetField);
+                console.error('[Select-Create] Available selects:', $('select').map(function() { return $(this).attr('name'); }).get());
+                alert('Select pole "' + targetField + '" nebylo nalezeno. Formulář bude aktualizován po zavření.');
+                
+                // Still close nested sidebar even if select not found
+                const $nested = $('.saw-sidebar-wrapper[data-is-nested="1"]').last();
+                if ($nested.length) {
+                    this.closeNested($nested);
+                }
+                return;
+            }
 
+            console.log('[Select-Create] Found select, adding option:', data.id, data.name);
+
+            // Check if option already exists
+            const existingOption = $select.find(`option[value="${data.id}"]`);
+            if (existingOption.length) {
+                console.log('[Select-Create] Option already exists, selecting it');
+                $select.val(data.id).trigger('change');
+            } else {
+                // Add new option
+                const $option = $('<option>', {
+                    value: data.id,
+                    text: data.name || 'Firma #' + data.id,
+                    selected: true
+                });
+
+                $select.append($option);
+                $select.val(data.id).trigger('change');
+                console.log('[Select-Create] Added new option with value:', data.id, 'text:', data.name);
+            }
+
+            // Visual feedback
             $select.addClass('saw-field-updated');
             setTimeout(() => {
                 $select.removeClass('saw-field-updated');
             }, 2000);
 
+            // Close nested sidebar immediately
             const $nested = $('.saw-sidebar-wrapper[data-is-nested="1"]').last();
-            this.closeNested($nested);
+            if ($nested.length) {
+                this.closeNested($nested);
+            }
 
             console.log('[Select-Create] Option added successfully');
         },
 
         closeNested: function ($nested) {
-            if (!$nested || !$nested.length) return;
+            if (!$nested || !$nested.length) {
+                console.warn('[Select-Create] No nested sidebar to close');
+                return;
+            }
 
             console.log('[Select-Create] Closing nested, keeping parent');
 
-            // Zavři nested wrapper
+            // Remove active class and trigger close animation
             $nested.removeClass('active');
+            $nested.removeClass('saw-sidebar-active');
 
             setTimeout(() => {
+                // Remove nested from DOM
                 $nested.remove();
 
                 // Reaktivuj parent sidebar
                 const $parent = $('.saw-sidebar-wrapper').not('[data-is-nested="1"]').first();
                 if ($parent.length) {
                     console.log('[Select-Create] Reactivating parent sidebar');
+                    
+                    // Remove has-nested class to restore full interactivity
+                    $parent.removeClass('has-nested');
+                    
+                    // Ensure parent is active and visible
                     $parent.addClass('active');
-
-                    // Zajisti že je viditelný
+                    
+                    // Ensure inner sidebar is active
                     const $parentInner = $parent.find('.saw-sidebar');
-                    if ($parentInner.length && !$parentInner.hasClass('saw-sidebar-active')) {
+                    if ($parentInner.length) {
                         $parentInner.addClass('saw-sidebar-active');
                     }
+                    
+                    // Trigger custom event for any listeners
+                    $parent.trigger('saw:sidebar:reactivated');
+                } else {
+                    console.warn('[Select-Create] No parent sidebar found to reactivate');
                 }
             }, 300);
         }

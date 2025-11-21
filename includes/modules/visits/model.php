@@ -56,7 +56,7 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
         }
         
         $page = isset($filters['page']) ? intval($filters['page']) : 1;
-        $per_page = 20;
+        $per_page = isset($filters['per_page']) ? intval($filters['per_page']) : 20;
         $offset = ($page - 1) * $per_page;
         
         $where = array("v.customer_id = %d");
@@ -73,12 +73,31 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
             $where_values[] = $filters['status'];
         }
         
+        if (!empty($filters['visit_type'])) {
+            $where[] = "v.visit_type = %s";
+            $where_values[] = $filters['visit_type'];
+        }
+        
         if (!empty($filters['search'])) {
-            $where[] = "(c.name LIKE %s OR vis.first_name LIKE %s OR vis.last_name LIKE %s)";
-            $search_term = '%' . $wpdb->esc_like($filters['search']) . '%';
-            $where_values[] = $search_term;
-            $where_values[] = $search_term;
-            $where_values[] = $search_term;
+            $search = $filters['search'];
+            $search_conditions = array();
+            $search_params = array();
+            
+            // If search is numeric, try exact ID match
+            if (is_numeric($search)) {
+                $search_conditions[] = "v.id = %d";
+                $search_params[] = intval($search);
+            }
+            
+            // Always search in text fields
+            $search_term = '%' . $wpdb->esc_like($search) . '%';
+            $search_conditions[] = "(c.name LIKE %s OR vis.first_name LIKE %s OR vis.last_name LIKE %s)";
+            $search_params[] = $search_term;
+            $search_params[] = $search_term;
+            $search_params[] = $search_term;
+            
+            $where[] = "(" . implode(" OR ", $search_conditions) . ")";
+            $where_values = array_merge($where_values, $search_params);
         }
         
         $where_sql = implode(' AND ', $where);

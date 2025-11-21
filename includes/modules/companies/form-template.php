@@ -79,7 +79,7 @@ $form_action = $is_edit
 
 <!-- Form Container -->
 <div class="saw-form-container saw-module-companies">
-    <form method="POST" action="<?php echo esc_url($form_action); ?>" class="saw-company-form">
+    <form method="POST" action="<?php echo esc_url($form_action); ?>" class="saw-company-form" data-module="companies">
         <?php 
         // Correct nonce field matching Base Controller expectations
         $nonce_action = $is_edit ? 'saw_edit_companies' : 'saw_create_companies';

@@ -27,7 +27,11 @@ if ($is_edit && !empty($item['id'])) {
 }
 ?>
 
-<div class="saw-sidebar" data-mode="<?php echo $is_edit ? 'edit' : 'create'; ?>" data-entity="<?php echo esc_attr($entity); ?>" <?php if ($is_edit && !empty($item['id'])): ?>data-current-id="<?php echo intval($item['id']); ?>"<?php endif; ?>>
+<?php 
+// Check if this is a nested inline create
+$is_nested = isset($GLOBALS['saw_nested_inline_create']) && $GLOBALS['saw_nested_inline_create'];
+?>
+<div class="saw-sidebar" data-mode="<?php echo $is_edit ? 'edit' : 'create'; ?>" data-entity="<?php echo esc_attr($entity); ?>" data-module="<?php echo esc_attr($entity); ?>" data-is-nested="<?php echo $is_nested ? '1' : '0'; ?>" <?php if ($is_edit && !empty($item['id'])): ?>data-current-id="<?php echo intval($item['id']); ?>"<?php endif; ?>>
     <div class="saw-sidebar-header">
         <div class="saw-sidebar-title">
             <span><?php echo esc_html($config['icon'] ?? '📝'); ?></span>

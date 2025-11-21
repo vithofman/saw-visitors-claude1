@@ -1,17 +1,114 @@
 /**
- * Modern File Upload Component
+ * Modern File Upload Component - Version 3.0.1
  * 
- * Handles file uploads with AJAX, progress tracking, drag & drop,
- * toast notifications, and inline validation.
+ * FIX: Better error handling pro SyntaxError
+ * FIX: Response validation
  * 
  * @package     SAW_Visitors
  * @subpackage  Components/FileUpload
- * @version     2.0.0
- * @since       2.0.0
+ * @version     3.0.1
+ * @since       3.0.0
  */
 
 (function($) {
     'use strict';
+    
+    /**
+     * SVG Icons Library
+     * Professional SVG icons replacing emoji for better consistency
+     */
+    const SAWIcons = {
+        // Upload icon
+        upload: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+        </svg>`,
+        
+        // Info icon
+        info: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>`,
+        
+        // File type icons
+        document: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+        </svg>`,
+        
+        pdf: `<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 2l5 5h-5V4zM8 18v-1h2v1H8zm0-3v-1h8v1H8zm0-3v-1h8v1H8z"/>
+        </svg>`,
+        
+        image: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>`,
+        
+        excel: `<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 2l5 5h-5V4zm-3 10l-2 3h2l2-3-2-3H8l2 3z"/>
+        </svg>`,
+        
+        word: `<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 2l5 5h-5V4zM8 12h8v2H8v-2zm0 4h8v2H8v-2z"/>
+        </svg>`,
+        
+        // Action icons
+        trash: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>`,
+        
+        retry: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>`,
+        
+        close: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>`,
+        
+        // Status icons
+        check: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>`,
+        
+        exclamation: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>`,
+        
+        spinner: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" opacity="0.25"/>
+            <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" opacity="0.75"/>
+        </svg>`
+    };
+    
+    /**
+     * Get file icon by filename
+     * 
+     * @param {string} filename - File name
+     * @return {string} SVG icon HTML
+     */
+    function getFileIcon(filename) {
+        const ext = filename.split('.').pop().toLowerCase();
+        
+        // Images
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'].includes(ext)) {
+            return SAWIcons.image;
+        }
+        
+        // PDFs
+        if (ext === 'pdf') {
+            return SAWIcons.pdf;
+        }
+        
+        // Word documents
+        if (['doc', 'docx', 'odt', 'pages', 'rtf'].includes(ext)) {
+            return SAWIcons.word;
+        }
+        
+        // Excel spreadsheets
+        if (['xls', 'xlsx', 'ods', 'numbers', 'csv'].includes(ext)) {
+            return SAWIcons.excel;
+        }
+        
+        // Default document icon
+        return SAWIcons.document;
+    }
     
     /**
      * SAW Modern File Upload Class
@@ -20,13 +117,13 @@
      * progress tracking, and drag-and-drop support.
      * 
      * @class
-     * @since 2.0.0
+     * @since 3.0.1
      */
     class SAWModernFileUpload {
         /**
          * Constructor
          * 
-         * @since 2.0.0
+         * @since 3.0.1
          * @param {jQuery} $container - The component container element
          * @param {object} options - Configuration options
          */
@@ -35,20 +132,20 @@
             this.options = $.extend({
                 multiple: false,
                 accept: '',
-                maxSize: 0, // 0 = no limit
-                maxFiles: 0, // 0 = no limit
+                maxSize: 0,
+                maxFiles: 0,
                 uploadUrl: sawFileUpload.ajaxurl,
                 context: 'documents',
                 name: '',
                 id: '',
-                existingFiles: [], // Array of existing file metadata
-                categoryConfig: {}, // Category/document type configuration
+                existingFiles: [],
+                categoryConfig: {},
             }, options);
             
-            this.files = []; // Array of file objects with metadata
+            this.files = [];
             this.uploading = false;
             this.uploadQueue = [];
-            this.lastMessage = null; // Last status message for info bar
+            this.lastMessage = null;
             
             this.init();
         }
@@ -56,24 +153,24 @@
         /**
          * Initialize component
          * 
-         * @since 2.0.0
+         * @since 3.0.1
          * @return {void}
          */
         init() {
-            // Load existing files into files array BEFORE rendering
+            // Load existing files
             if (this.options.existingFiles && Array.isArray(this.options.existingFiles)) {
                 this.options.existingFiles.forEach(fileData => {
                     const fileObj = {
                         id: 'existing_' + (fileData.id || Date.now() + Math.random()),
-                        file: null, // No File object for existing files
+                        file: null,
                         name: fileData.name || (fileData.path ? fileData.path.split('/').pop() : 'Unknown'),
                         size: fileData.size || 0,
                         type: fileData.type || 'application/octet-stream',
                         status: 'success',
                         progress: 100,
                         error: null,
-                        metadata: fileData, // Store full metadata including id, url, path, category
-                        isExisting: true, // Flag to identify existing files
+                        metadata: fileData,
+                        isExisting: true,
                     };
                     this.files.push(fileObj);
                 });
@@ -86,7 +183,7 @@
         /**
          * Bind event handlers
          * 
-         * @since 2.0.0
+         * @since 3.0.1
          * @return {void}
          */
         bindEvents() {
@@ -120,27 +217,25 @@
                 self.handleFileSelect(files);
             });
             
-            // Category select change - auto-resume waiting uploads
-            // Use event delegation to catch changes even if select is created later
+            // Category select change
             this.$container.on('change', '.saw-category-select-input', function() {
-                // Check for files waiting for category
                 const waitingFiles = self.files.filter(f => f.status === 'waiting_category');
                 if (waitingFiles.length > 0) {
-                    // Get current category value
                     const $select = $(this);
                     const categoryValue = $select.is('select[multiple]') 
-                        ? $select.val() 
-                        : $select.val();
+                        ? $select.val() || []
+                        : $select.val() || null;
                     
-                    if (categoryValue && (!Array.isArray(categoryValue) || categoryValue.length > 0)) {
-                        // Update category for all waiting files and start upload
+                    if (categoryValue && (Array.isArray(categoryValue) ? categoryValue.length > 0 : true)) {
                         waitingFiles.forEach(fileObj => {
-                            fileObj.category = categoryValue;
-                            fileObj.status = 'pending';
+                            fileObj.status = 'uploading';
+                            fileObj.category = {
+                                id: Array.isArray(categoryValue) ? categoryValue : categoryValue,
+                                name: self.getCategoryName(Array.isArray(categoryValue) ? categoryValue[0] : categoryValue)
+                            };
+                            self.renderFileItem(fileObj);
                             self.uploadFile(fileObj);
                         });
-                        
-                        self.showInfoMessage('success', `Nahrávání ${waitingFiles.length} soubor${waitingFiles.length > 1 ? 'ů' : ''} bylo spuštěno`);
                     }
                 }
             });
@@ -149,25 +244,7 @@
             this.$container.on('click', '.saw-file-remove', function(e) {
                 e.preventDefault();
                 const fileId = $(this).data('file-id');
-                const fileObj = self.files.find(f => f.id === fileId);
-                
-                // If it's an existing file with DB ID, delete physically
-                if (fileObj && fileObj.isExisting && fileObj.metadata && fileObj.metadata.id) {
-                    self.deleteFile(fileObj.metadata.id, fileId);
-                } else {
-                    self.removeFile(fileId);
-                }
-            });
-            
-            // View file
-            this.$container.on('click', '.saw-file-view', function(e) {
-                e.preventDefault();
-                const fileId = $(this).data('file-id');
-                const fileObj = self.files.find(f => f.id === fileId);
-                
-                if (fileObj && fileObj.metadata && fileObj.metadata.url) {
-                    window.open(fileObj.metadata.url, '_blank');
-                }
+                self.removeFile(fileId);
             });
             
             // Retry upload
@@ -176,53 +253,67 @@
                 const fileId = $(this).data('file-id');
                 self.retryUpload(fileId);
             });
+            
+            // Keyboard support
+            this.$container.on('keydown', '.saw-upload-zone', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    $(this).find('.saw-file-input').trigger('click');
+                }
+            });
+            
+            this.$container.on('keydown', '.saw-file-remove, .saw-file-retry', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    $(this).trigger('click');
+                }
+            });
         }
         
         /**
          * Render component HTML
          * 
-         * @since 2.0.0
+         * @since 3.0.1
          * @return {void}
          */
         render() {
             const multiple = this.options.multiple ? 'multiple' : '';
             const accept = this.options.accept ? `accept="${this.options.accept}"` : '';
-            const inputId = this.options.id || 'saw-file-input-' + Math.random().toString(36).substr(2, 9);
+            const inputId = this.options.id || `saw-upload-${Date.now()}`;
             
-            // Category select HTML (if enabled) - INSIDE upload zone as second row
+            // Category select HTML
             let categorySelectHtml = '';
             if (this.options.categoryConfig && this.options.categoryConfig.enabled) {
-                const categoryOptions = this.options.categoryConfig.options || [];
-                const categoryLabel = this.options.categoryConfig.label || 'Kategorie';
-                const isMultiple = this.options.categoryConfig.multiple || false;
-                const categoryName = this.options.name + '_category';
-                // Don't set required attribute - validate in JS to prevent browser errors
+                const config = this.options.categoryConfig;
+                const categoryLabel = config.label || 'Kategorie';
+                const categoryOptions = config.options || [];
+                const isMultiple = config.multiple ? 'multiple' : '';
                 
-                if (isMultiple) {
+                if (categoryOptions.length > 0) {
                     categorySelectHtml = `
                         <div class="saw-upload-category-row">
-                            <label class="saw-upload-category-label">${categoryLabel}:</label>
-                            <select name="${categoryName}[]" class="saw-select saw-category-select-input" multiple size="3">
-                                ${categoryOptions.map(opt => `<option value="${opt.id}">${this.escapeHtml(opt.name)}</option>`).join('')}
-                            </select>
-                        </div>
-                    `;
-                } else {
-                    categorySelectHtml = `
-                        <div class="saw-upload-category-row">
-                            <label class="saw-upload-category-label">${categoryLabel}:</label>
-                            <select name="${categoryName}" class="saw-select saw-category-select-input">
-                                <option value="">-- Vyberte ${categoryLabel.toLowerCase()} --</option>
-                                ${categoryOptions.map(opt => `<option value="${opt.id}">${this.escapeHtml(opt.name)}</option>`).join('')}
-                            </select>
+                            <label class="saw-upload-category-label">${this.escapeHtml(categoryLabel)}</label>
+                            <div class="saw-category-select-wrapper">
+                                <select 
+                                    class="saw-category-select-input" 
+                                    ${isMultiple}
+                                    ${config.required ? 'required' : ''}
+                                    aria-label="${this.escapeHtml(categoryLabel)}"
+                                >
+                                    <option value="">-- Vyberte ${categoryLabel.toLowerCase()} --</option>
+                                    ${categoryOptions.map(opt => `
+                                        <option value="${opt.id}">${this.escapeHtml(opt.name)}</option>
+                                    `).join('')}
+                                </select>
+                            </div>
                         </div>
                     `;
                 }
             }
             
             const html = `
-                <div class="saw-file-upload-modern">
-                    <div class="saw-upload-zone">
+                <div class="saw-file-upload-modern" role="region" aria-label="Nahrávání souborů">
+                    <div class="saw-upload-zone" role="button" tabindex="0" aria-label="Oblast pro přetažení souborů">
                         <input 
                             type="file" 
                             id="${inputId}"
@@ -230,69 +321,192 @@
                             class="saw-file-input"
                             ${multiple}
                             ${accept}
+                            aria-label="Vybrat soubory k nahrání"
                             style="display: none;"
                         >
                         <div class="saw-upload-zone-content">
                             <div class="saw-upload-zone-row saw-upload-zone-row-main">
-                                <span class="saw-upload-icon">☁️</span>
+                                <div class="saw-upload-icon" aria-hidden="true">${SAWIcons.upload}</div>
                                 <span class="saw-upload-text">${sawFileUpload.strings.drag_drop}</span>
-                                <label for="${inputId}" class="saw-upload-button">${sawFileUpload.strings.select_files}</label>
-                                <span class="saw-upload-info" title="Povolené formáty: ${this.options.accept || 'Všechny'}">ℹ️</span>
+                                <label for="${inputId}" class="saw-upload-button">
+                                    ${sawFileUpload.strings.select_files}
+                                </label>
+                                <span class="saw-upload-info" title="Povolené formáty: ${this.options.accept || 'Všechny'}" aria-label="Informace o povolených formátech">${SAWIcons.info}</span>
                             </div>
                             ${categorySelectHtml}
                         </div>
                     </div>
-                    <div class="saw-file-list"></div>
-                    <div class="saw-status-bar" style="display: none;"></div>
-                    <div class="saw-info-bar" style="display: none;"></div>
-                    <div class="saw-validation-error" style="display: none;"></div>
+                    <div class="saw-file-list" role="list" aria-label="Seznam nahraných souborů"></div>
+                    <div class="saw-status-bar" style="display: none;" role="status" aria-live="polite"></div>
+                    <div class="saw-info-bar" style="display: none;" role="status" aria-live="polite"></div>
                 </div>
             `;
             
             this.$container.html(html);
-            this.$fileList = this.$container.find('.saw-file-list');
-            this.$statusBar = this.$container.find('.saw-status-bar');
-            this.$infoBar = this.$container.find('.saw-info-bar');
-            this.$validationError = this.$container.find('.saw-validation-error');
             this.$categorySelect = this.$container.find('.saw-category-select-input');
-            
-            // Render existing files after DOM is ready
             this.renderFileList();
-            this.updateStatusBar();
+        }
+        
+        /**
+         * Render file list
+         * 
+         * @since 3.0.1
+         * @return {void}
+         */
+        renderFileList() {
+            const $list = this.$container.find('.saw-file-list');
+            $list.empty();
+            
+            this.files.forEach(fileObj => {
+                this.renderFileItem(fileObj);
+            });
+        }
+        
+        /**
+         * Render single file item
+         * 
+         * @since 3.0.1
+         * @param {Object} fileObj - File object
+         * @return {void}
+         */
+        renderFileItem(fileObj) {
+            const $list = this.$container.find('.saw-file-list');
+            
+            let $item = $list.find(`[data-file-id="${fileObj.id}"]`);
+            if (!$item.length) {
+                $item = $('<div class="saw-file-item" role="listitem"></div>');
+                $item.attr('data-file-id', fileObj.id);
+                $list.append($item);
+            }
+            
+            const fileIcon = getFileIcon(fileObj.name);
+            
+            // Status
+            let statusClass = '';
+            let statusIcon = '';
+            let statusText = '';
+            
+            if (fileObj.status === 'uploading') {
+                statusClass = 'uploading';
+                statusIcon = SAWIcons.spinner;
+                statusText = 'Nahrávání...';
+            } else if (fileObj.status === 'success') {
+                statusClass = 'success';
+                statusIcon = SAWIcons.check;
+                statusText = 'Nahráno';
+            } else if (fileObj.status === 'error') {
+                statusClass = 'error';
+                statusIcon = SAWIcons.exclamation;
+                statusText = fileObj.error || 'Chyba';
+            } else if (fileObj.status === 'waiting_category') {
+                statusClass = 'uploading';
+                statusIcon = SAWIcons.info;
+                statusText = 'Čeká na kategorii';
+            }
+            
+            // Category badge
+            let categoryHtml = '';
+            if (fileObj.category && fileObj.category.name) {
+                categoryHtml = `<span class="saw-file-category">${this.escapeHtml(fileObj.category.name)}</span>`;
+            }
+            
+            const fileSize = this.formatFileSize(fileObj.size);
+            
+            // Actions
+            let actionsHtml = '';
+            if (fileObj.status === 'success' || fileObj.status === 'error') {
+                actionsHtml = `
+                    <div class="saw-file-actions">
+                        ${fileObj.status === 'error' ? `
+                            <button 
+                                type="button" 
+                                class="saw-file-retry" 
+                                data-file-id="${fileObj.id}" 
+                                title="Zkusit znovu"
+                                aria-label="Zkusit znovu nahrát ${this.escapeHtml(fileObj.name)}"
+                            >
+                                ${SAWIcons.retry}
+                            </button>
+                        ` : ''}
+                        <button 
+                            type="button" 
+                            class="saw-file-remove" 
+                            data-file-id="${fileObj.id}" 
+                            title="Odstranit"
+                            aria-label="Odstranit soubor ${this.escapeHtml(fileObj.name)}"
+                        >
+                            ${SAWIcons.trash}
+                        </button>
+                    </div>
+                `;
+            }
+            
+            // Progress bar
+            let progressHtml = '';
+            if (fileObj.status === 'uploading' && fileObj.progress !== undefined) {
+                progressHtml = `
+                    <div class="saw-file-progress" role="progressbar" aria-valuenow="${fileObj.progress}" aria-valuemin="0" aria-valuemax="100">
+                        <div class="saw-file-progress-bar" style="width: ${fileObj.progress}%"></div>
+                    </div>
+                `;
+            }
+            
+            const html = `
+                <div class="saw-file-icon-container" aria-hidden="true">${fileIcon}</div>
+                <div class="saw-file-info">
+                    <div class="saw-file-name" title="${this.escapeHtml(fileObj.name)}">${this.escapeHtml(fileObj.name)}</div>
+                    <div class="saw-file-meta">
+                        <span class="saw-file-size">${fileSize}</span>
+                        ${categoryHtml}
+                    </div>
+                    ${progressHtml}
+                </div>
+                ${statusIcon ? `
+                    <div class="saw-file-status ${statusClass}">
+                        ${statusIcon}
+                        <span>${statusText}</span>
+                    </div>
+                ` : ''}
+                ${actionsHtml}
+            `;
+            
+            $item.html(html);
+            $item.removeClass('uploading success error').addClass(statusClass);
+            $item.attr('aria-label', `${fileObj.name}, ${statusText}`);
         }
         
         /**
          * Handle file selection
          * 
-         * @since 2.0.0
+         * @since 3.0.1
          * @param {Array} files - Array of File objects
          * @return {void}
          */
         handleFileSelect(files) {
-            if (!this.options.multiple && files.length > 1) {
-                files = [files[0]]; // Take only first file
+            if (!files || files.length === 0) {
+                return;
             }
             
             // Check max files limit
-            const currentFileCount = this.files.filter(f => f.status === 'success' || f.status === 'uploading').length;
-            const totalAfterAdd = currentFileCount + files.length;
-            
-            if (this.options.maxFiles > 0 && totalAfterAdd > this.options.maxFiles) {
-                const allowed = this.options.maxFiles - currentFileCount;
+            if (this.options.maxFiles > 0) {
+                const currentCount = this.files.filter(f => !f.isExisting).length;
+                const allowed = this.options.maxFiles - currentCount;
+                
                 if (allowed <= 0) {
-                    this.showValidationError(`Maximální počet souborů je ${this.options.maxFiles}`);
+                    this.showToast(`Maximální počet souborů (${this.options.maxFiles}) byl dosažen`, 'error');
                     return;
                 }
-                files = files.slice(0, allowed);
-                this.showValidationError(`Můžete nahrát maximálně ${this.options.maxFiles} souborů. Přidáno ${allowed} z ${files.length + allowed - allowed}`);
+                
+                if (files.length > allowed) {
+                    this.showToast(`Můžete nahrát pouze ${allowed} souborů`, 'error');
+                    files = files.slice(0, allowed);
+                }
             }
             
-            // For single file mode (maxFiles = 1), remove existing file
+            // For single file mode, remove existing file
             if (this.options.maxFiles === 1 && this.files.length > 0) {
-                // Remove the first file (old one)
                 const oldFile = this.files[0];
                 if (oldFile.status === 'success' && oldFile.metadata) {
-                    // If it's an existing file, mark for deletion
                     if (oldFile.metadata.id) {
                         this.deleteFile(oldFile.metadata.id, oldFile.id);
                     } else {
@@ -332,7 +546,7 @@
         /**
          * Validate file
          * 
-         * @since 2.0.0
+         * @since 3.0.1
          * @param {File} file - File object
          * @return {object} Validation result
          */
@@ -354,15 +568,18 @@
                 const isAllowed = allowedTypes.some(type => {
                     if (type.startsWith('.')) {
                         return type === fileExtension;
+                    } else if (type.includes('/*')) {
+                        const baseType = type.split('/')[0];
+                        return file.type.startsWith(baseType + '/');
+                    } else {
+                        return file.type === type;
                     }
-                    // MIME type check
-                    return file.type && file.type.match(type.replace('*', ''));
                 });
                 
                 if (!isAllowed) {
                     return {
                         valid: false,
-                        error: `Soubor "${file.name}" má nepodporovaný formát`
+                        error: `Soubor "${file.name}" není podporovaný typ`
                     };
                 }
             }
@@ -371,112 +588,79 @@
         }
         
         /**
-         * Add file to list and start upload
+         * Add file to upload
          * 
-         * @since 2.0.0
+         * @since 3.0.1
          * @param {File} file - File object
          * @return {void}
          */
         addFile(file) {
-            const fileId = 'file_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            
-            // Get category value
-            let categoryValue = null;
-            if (this.$categorySelect && this.$categorySelect.length) {
-                if (this.$categorySelect.is('select[multiple]')) {
-                    categoryValue = this.$categorySelect.val(); // Array for multiple
-                } else {
-                    categoryValue = this.$categorySelect.val(); // Single value
-                }
-            }
-            
-            // Check if category is required but not selected
-            const categoryRequired = this.options.categoryConfig && 
-                                    this.options.categoryConfig.enabled && 
-                                    this.options.categoryConfig.required;
-            const categoryMissing = !categoryValue || 
-                                   (Array.isArray(categoryValue) && categoryValue.length === 0);
-            
-            // Max files check
-            if (this.options.maxFiles > 0 && this.files.length >= this.options.maxFiles) {
-                this.showValidationError(`Můžete nahrát maximálně ${this.options.maxFiles} souborů.`);
-                return;
-            }
-            
             const fileObj = {
-                id: fileId,
+                id: 'file_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
                 file: file,
                 name: file.name,
                 size: file.size,
                 type: file.type,
-                status: (categoryRequired && categoryMissing) ? 'waiting_category' : 'pending',
+                status: 'uploading',
                 progress: 0,
                 error: null,
                 metadata: null,
-                category: categoryValue, // Store category (can be single value or array)
+                category: null
             };
             
             this.files.push(fileObj);
-            this.renderFileList();
-            this.updateStatusBar();
+            this.renderFileItem(fileObj);
             
-            // Show info message if waiting for category
-            if (fileObj.status === 'waiting_category') {
-                this.showInfoMessage('info', 'Vyberte ' + (this.options.categoryConfig.label || 'kategorii') + ' pro pokračování nahrávání');
-                // Focus category select
-                if (this.$categorySelect && this.$categorySelect.length) {
-                    this.$categorySelect.focus();
+            // Check if category is required
+            if (this.options.categoryConfig && this.options.categoryConfig.enabled && this.options.categoryConfig.required) {
+                const categoryValue = this.getSelectedCategory();
+                if (!categoryValue || (Array.isArray(categoryValue) && categoryValue.length === 0)) {
+                    fileObj.status = 'waiting_category';
+                    this.renderFileItem(fileObj);
+                    this.showInfo('Vyberte kategorii pro pokračování nahrávání');
+                    return;
                 }
-            } else {
-                // Start upload immediately if category is selected
-                this.uploadFile(fileObj);
             }
+            
+            // Get category if selected
+            if (this.$categorySelect && this.$categorySelect.length) {
+                const categoryValue = this.getSelectedCategory();
+                if (categoryValue) {
+                    fileObj.category = {
+                        id: Array.isArray(categoryValue) ? categoryValue : categoryValue,
+                        name: this.getCategoryName(Array.isArray(categoryValue) ? categoryValue[0] : categoryValue)
+                    };
+                }
+            }
+            
+            this.uploadFile(fileObj);
         }
         
         /**
-         * Upload file via AJAX
+         * Upload file via AJAX - FIX: Better error handling
          * 
-         * @since 2.0.0
-         * @param {object} fileObj - File object with metadata
+         * @since 3.0.1
+         * @param {object} fileObj - File object
          * @return {void}
          */
         uploadFile(fileObj) {
-            // Check if category is required but missing
-            if (this.options.categoryConfig && 
-                this.options.categoryConfig.enabled && 
-                this.options.categoryConfig.required) {
-                const $categorySelect = this.$categorySelect;
-                if ($categorySelect && $categorySelect.length && $categorySelect.is(':visible')) {
-                    const categoryValue = $categorySelect.is('select[multiple]') 
-                        ? $categorySelect.val() 
-                        : $categorySelect.val();
-                    
-                    if (!categoryValue || (Array.isArray(categoryValue) && categoryValue.length === 0)) {
-                        // Pause upload - set status to waiting
-                        fileObj.status = 'waiting_category';
-                        fileObj.category = null; // Clear category
-                        this.renderFileList();
-                        this.updateStatusBar();
-                        this.showInfoMessage('info', 'Vyberte ' + (this.options.categoryConfig.label || 'kategorii') + ' pro pokračování nahrávání');
-                        return;
-                    }
-                    
-                    // Update category in fileObj
-                    fileObj.category = categoryValue;
-                }
-            }
-            
-            fileObj.status = 'uploading';
-            fileObj.progress = 0;
-            this.renderFileList();
-            
             const formData = new FormData();
+            formData.append('file', fileObj.file);
             formData.append('action', 'saw_upload_file');
             formData.append('nonce', sawFileUpload.nonce);
-            formData.append('file', fileObj.file);
             formData.append('context', this.options.context);
-            formData.append('max_size', this.options.maxSize);
-            formData.append('accept', this.options.accept);
+            
+            if (this.options.maxSize > 0) {
+                formData.append('max_size', this.options.maxSize);
+            }
+            
+            if (this.options.accept) {
+                formData.append('accept', this.options.accept);
+            }
+            
+            if (fileObj.category) {
+                formData.append('category', JSON.stringify(fileObj.category));
+            }
             
             const self = this;
             
@@ -486,351 +670,114 @@
                 data: formData,
                 processData: false,
                 contentType: false,
+                dataType: 'json', // FIX: Explicitly expect JSON
                 xhr: function() {
                     const xhr = new window.XMLHttpRequest();
-                    
-                    // Upload progress
                     xhr.upload.addEventListener('progress', function(e) {
                         if (e.lengthComputable) {
                             const percent = Math.round((e.loaded / e.total) * 100);
                             fileObj.progress = percent;
-                            self.updateFileProgress(fileObj.id, percent);
+                            self.renderFileItem(fileObj);
                         }
                     }, false);
-                    
                     return xhr;
                 },
                 success: function(response) {
-                    if (response.success && response.data && response.data.file) {
+                    if (response && response.success) {
                         fileObj.status = 'success';
                         fileObj.progress = 100;
                         fileObj.metadata = response.data.file;
-                        // Add category to metadata if available
-                        if (fileObj.category) {
-                            fileObj.metadata.category = fileObj.category;
-                            // If category is array, use first one for display
-                            if (Array.isArray(fileObj.category) && fileObj.category.length > 0) {
-                                fileObj.metadata.category_name = self.getCategoryName(fileObj.category[0]);
-                            } else if (!Array.isArray(fileObj.category)) {
-                                fileObj.metadata.category_name = self.getCategoryName(fileObj.category);
-                            }
-                        }
-                        // Show info message
-                        self.showInfoMessage('success', `Soubor "${fileObj.name}" byl úspěšně nahrán`);
-                        
-                        // After successful upload, refresh existing files if needed
-                        setTimeout(() => {
-                            self.renderFileList();
-                        }, 100);
+                        self.renderFileItem(fileObj);
+                        self.showToast(sawFileUpload.strings.success, 'success');
                     } else {
                         fileObj.status = 'error';
-                        fileObj.error = response.data?.message || 'Nepodařilo se nahrát soubor';
-                        self.showInfoMessage('error', fileObj.error);
+                        fileObj.error = (response && response.data && response.data.message) || sawFileUpload.strings.error;
+                        self.renderFileItem(fileObj);
+                        // self.showToast(fileObj.error, 'error');
                     }
-                    self.renderFileList();
-                    self.updateStatusBar();
                 },
                 error: function(xhr, status, error) {
+                    // FIX: Better error message
+                    let errorMessage = 'Chyba serveru';
+                    
+                    if (xhr.responseText) {
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            errorMessage = response.data?.message || errorMessage;
+                        } catch (e) {
+                            // Response is not JSON - server error
+                            errorMessage = 'Server vrátil neplatnou odpověď. Zkontrolujte PHP error log.';
+                            console.error('Server response:', xhr.responseText.substring(0, 500));
+                        }
+                    }
+                    
                     fileObj.status = 'error';
-                    fileObj.error = error || 'Chyba při nahrávání';
-                    self.showInfoMessage('error', fileObj.error);
-                    self.renderFileList();
-                    self.updateStatusBar();
+                    fileObj.error = errorMessage;
+                    self.renderFileItem(fileObj);
+                    // self.showToast(errorMessage, 'error');
                 }
             });
-        }
-        
-        /**
-         * Update file progress
-         * 
-         * @since 2.0.0
-         * @param {string} fileId - File ID
-         * @param {number} percent - Progress percentage
-         * @return {void}
-         */
-        updateFileProgress(fileId, percent) {
-            const $fileItem = this.$fileList.find(`[data-file-id="${fileId}"]`);
-            const $progressBar = $fileItem.find('.saw-file-progress-bar');
-            const $progressFill = $progressBar.find('.saw-file-progress-fill');
-            
-            $progressFill.css('width', percent + '%');
-        }
-        
-        /**
-         * Render file list
-         * 
-         * @since 2.0.0
-         * @return {void}
-         */
-        renderFileList() {
-            if (this.files.length === 0) {
-                this.$fileList.empty();
-                return;
-            }
-            
-            let html = '';
-            
-            this.files.forEach(fileObj => {
-                const fileIcon = this.getFileIcon(fileObj.type, fileObj.metadata?.extension);
-                const fileSize = this.formatFileSize(fileObj.size);
-                const statusIcon = this.getStatusIcon(fileObj.status);
-                const statusClass = 'status-' + fileObj.status;
-                
-                // Show category badge if available
-                let categoryBadge = '';
-                if (fileObj.metadata && fileObj.metadata.category_name) {
-                    categoryBadge = `<span class="saw-file-category">${this.escapeHtml(fileObj.metadata.category_name)}</span>`;
-                } else if (fileObj.category && this.options.categoryConfig && this.options.categoryConfig.options) {
-                    const categoryOption = this.options.categoryConfig.options.find(opt => opt.id == fileObj.category);
-                    if (categoryOption) {
-                        categoryBadge = `<span class="saw-file-category">${this.escapeHtml(categoryOption.name)}</span>`;
-                    }
-                }
-                
-                html += `
-                    <div class="saw-file-item ${statusClass}" data-file-id="${fileObj.id}">
-                        <div class="saw-file-item-row">
-                            <span class="saw-file-icon">${fileIcon}</span>
-                            <div class="saw-file-item-row-main">
-                                ${categoryBadge ? `<div class="saw-file-item-row">${categoryBadge}</div>` : ''}
-                                <div class="saw-file-item-row">
-                                    <span class="saw-file-name">${this.escapeHtml(fileObj.name)}</span>
-                                    <span class="saw-file-size">${fileSize}</span>
-                                </div>
-                            </div>
-                            <div class="saw-file-status">
-                                ${this.getStatusContent(fileObj)}
-                            </div>
-                            <div class="saw-file-item-row-actions">
-                                ${this.getActionButtons(fileObj)}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            this.$fileList.html(html);
-        }
-        
-        /**
-         * Get status content (progress bar or icon)
-         * 
-         * @since 2.0.0
-         * @param {object} fileObj - File object
-         * @return {string} HTML
-         */
-        getStatusContent(fileObj) {
-            if (fileObj.status === 'uploading') {
-                return `
-                    <div class="saw-file-progress-bar">
-                        <div class="saw-file-progress-fill" style="width: ${fileObj.progress}%"></div>
-                    </div>
-                `;
-            }
-            
-            if (fileObj.status === 'waiting_category') {
-                return `
-                    <div class="saw-file-status-waiting">
-                        <span class="saw-file-status-icon">⏸️</span>
-                        <span class="saw-file-status-text">Čeká na kategorii</span>
-                    </div>
-                `;
-            }
-            
-            return `<span class="saw-file-status-icon">${this.getStatusIcon(fileObj.status)}</span>`;
-        }
-        
-        /**
-         * Get action buttons
-         * 
-         * @since 2.0.0
-         * @param {object} fileObj - File object
-         * @return {string} HTML
-         */
-        getActionButtons(fileObj) {
-            let buttons = '';
-            
-            if (fileObj.status === 'error') {
-                buttons += `<button type="button" class="saw-file-retry" data-file-id="${fileObj.id}">Zkusit znovu</button>`;
-            }
-            
-            // View button for files with URL
-            if (fileObj.status === 'success' && fileObj.metadata && fileObj.metadata.url) {
-                buttons += `<button type="button" class="saw-file-view" data-file-id="${fileObj.id}" title="Zobrazit soubor">👁️</button>`;
-            }
-            
-            buttons += `<button type="button" class="saw-file-remove" data-file-id="${fileObj.id}" title="Smazat soubor">🗑️</button>`;
-            
-            return buttons;
-        }
-        
-        /**
-         * Get status icon
-         * 
-         * @since 2.0.0
-         * @param {string} status - File status
-         * @return {string} Icon
-         */
-        getStatusIcon(status) {
-            switch (status) {
-                case 'pending':
-                    return '⏳';
-                case 'uploading':
-                    return '⏳';
-                case 'success':
-                    return '✅';
-                case 'error':
-                    return '❌';
-                default:
-                    return '⏳';
-            }
-        }
-        
-        /**
-         * Get file icon
-         * 
-         * @since 2.0.0
-         * @param {string} type - MIME type
-         * @param {string} extension - File extension
-         * @return {string} Icon
-         */
-        getFileIcon(type, extension) {
-            const ext = extension || (type ? type.split('/').pop() : '');
-            
-            if (ext === 'pdf' || type === 'application/pdf') {
-                return '📄';
-            } else if (['doc', 'docx', 'odt', 'pages', 'rtf'].includes(ext) || type?.includes('word') || type?.includes('document')) {
-                return '📝';
-            } else if (['xls', 'xlsx', 'ods', 'numbers'].includes(ext) || type?.includes('excel') || type?.includes('spreadsheet')) {
-                return '📊';
-            } else if (['ppt', 'pptx', 'odp', 'key'].includes(ext) || type?.includes('powerpoint') || type?.includes('presentation')) {
-                return '📽️';
-            } else if (ext === 'txt' || type === 'text/plain') {
-                return '📃';
-            } else if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext) || type?.includes('image')) {
-                return '🖼️';
-            } else {
-                return '📎';
-            }
-        }
-        
-        /**
-         * Update status bar
-         * 
-         * @since 2.0.0
-         * @return {void}
-         */
-        updateStatusBar() {
-            const total = this.files.length;
-            const uploaded = this.files.filter(f => f.status === 'success').length;
-            const uploading = this.files.filter(f => f.status === 'uploading').length;
-            const errors = this.files.filter(f => f.status === 'error').length;
-            
-            if (total === 0) {
-                this.$statusBar.hide();
-                if (this.$infoBar && this.$infoBar.length) {
-                    this.lastMessage = null;
-                    this.updateInfoBar();
-                }
-                return;
-            }
-            
-            const percent = total > 0 ? Math.round((uploaded / total) * 100) : 0;
-            
-            const statusText = `${uploaded}/${total} souborů • ${percent}%`;
-            
-            this.$statusBar.html(`
-                <div class="saw-status-text">${statusText}</div>
-                <div class="saw-status-progress-bar">
-                    <div class="saw-status-progress-fill" style="width: ${percent}%"></div>
-                </div>
-            `).show();
-            
-            // Update info bar if there are errors
-            if (this.$infoBar && this.$infoBar.length) {
-                if (errors > 0) {
-                    const errorFiles = this.files.filter(f => f.status === 'error');
-                    if (errorFiles.length > 0 && errorFiles[0].error) {
-                        this.showInfoMessage('error', errorFiles[0].error);
-                    }
-                } else if (uploading > 0) {
-                    this.showInfoMessage('info', 'Nahrávání souborů...');
-                } else if (uploaded > 0 && uploaded === total) {
-                    this.showInfoMessage('success', `Všechny soubory (${uploaded}) byly úspěšně nahrány`);
-                } else {
-                    // Clear info bar if no special status
-                    this.lastMessage = null;
-                    this.updateInfoBar();
-                }
-            }
         }
         
         /**
          * Remove file
          * 
-         * @since 2.0.0
+         * @since 3.0.1
          * @param {string} fileId - File ID
          * @return {void}
          */
         removeFile(fileId) {
-            this.files = this.files.filter(f => f.id !== fileId);
-            this.renderFileList();
-            this.updateStatusBar();
+            const fileObj = this.files.find(f => f.id === fileId);
+            if (!fileObj) return;
             
-            // If max_files is 1 and we removed a file, allow new uploads
-            if (this.options.maxFiles === 1 && this.files.length === 0) {
-                // Reset the file input to allow re-selection
-                const $input = this.$container.find('.saw-file-input');
-                if ($input.length) {
-                    $input.val('');
-                }
+            if (fileObj.metadata && fileObj.metadata.url) {
+                this.deleteFile(fileObj.metadata.id, fileId);
+            } else {
+                this.files = this.files.filter(f => f.id !== fileId);
+                this.$container.find(`[data-file-id="${fileId}"]`).remove();
             }
         }
         
         /**
-         * Delete file physically from server
+         * Delete file from server
          * 
-         * @since 2.0.0
-         * @param {number|string} dbId - Database ID of the file
-         * @param {string} fileId - Frontend file ID
+         * @since 3.0.1
+         * @param {number} dbId - Database ID
+         * @param {string} fileId - Local file ID
          * @return {void}
          */
         deleteFile(dbId, fileId) {
-            const self = this;
             const fileObj = this.files.find(f => f.id === fileId);
+            if (!fileObj) return;
             
-            if (!fileObj) {
-                return;
-            }
+            const formData = new FormData();
+            formData.append('action', 'saw_delete_file');
+            formData.append('nonce', sawFileUpload.nonce);
+            formData.append('file_url', fileObj.metadata.url);
+            formData.append('file_path', fileObj.metadata.path);
+            formData.append('file_id', dbId);
+            formData.append('context', this.options.context);
             
-            // Show loading state
-            fileObj.status = 'deleting';
-            this.renderFileList();
+            const self = this;
             
             $.ajax({
                 url: this.options.uploadUrl,
                 type: 'POST',
-                data: {
-                    action: 'saw_delete_file',
-                    nonce: sawFileUpload.nonce,
-                    file_id: dbId,
-                    file_path: fileObj.metadata ? fileObj.metadata.path : null,
-                    context: this.options.context,
-                },
+                data: formData,
+                processData: false,
+                contentType: false,
+                dataType: 'json',
                 success: function(response) {
                     if (response.success) {
-                        self.removeFile(fileId);
-                        self.showInfoMessage('success', 'Soubor byl úspěšně smazán');
+                        self.files = self.files.filter(f => f.id !== fileId);
+                        self.$container.find(`[data-file-id="${fileId}"]`).remove();
+                        self.showToast('Soubor byl smazán', 'success');
                     } else {
-                        fileObj.status = 'success'; // Revert status
-                        self.renderFileList();
-                        self.showInfoMessage('error', response.data?.message || 'Chyba při mazání souboru');
+                        self.showToast(response.data.message || 'Chyba při mazání', 'error');
                     }
                 },
-                error: function(xhr, status, error) {
-                    fileObj.status = 'success'; // Revert status
-                    self.renderFileList();
-                    self.showInfoMessage('error', 'Chyba při mazání souboru: ' + error);
+                error: function() {
+                    self.showToast('Chyba serveru při mazání', 'error');
                 }
             });
         }
@@ -838,141 +785,159 @@
         /**
          * Retry upload
          * 
-         * @since 2.0.0
+         * @since 3.0.1
          * @param {string} fileId - File ID
          * @return {void}
          */
         retryUpload(fileId) {
             const fileObj = this.files.find(f => f.id === fileId);
-            if (fileObj) {
-                this.uploadFile(fileObj);
-            }
+            if (!fileObj || !fileObj.file) return;
+            
+            fileObj.status = 'uploading';
+            fileObj.progress = 0;
+            fileObj.error = null;
+            this.renderFileItem(fileObj);
+            this.uploadFile(fileObj);
         }
+        
+        /**
+ * Show toast notification
+ * 
+ * @param {string} message - Message text
+ * @param {string} type - Type: 'success', 'error', 'info'
+ * @param {number} duration - Duration in ms
+ * @return {void}
+ */
+showToast(message, type = 'info', duration = 5000) { // ← ZMĚŇ z 3000 na 5000
+    let $container = $('.saw-toast-container');
+    if (!$container.length) {
+        $container = $('<div class="saw-toast-container" aria-live="polite" aria-atomic="true"></div>');
+        $('body').append($container);
+    }
+    
+    let icon = SAWIcons.info;
+    let title = 'Informace';
+    
+    if (type === 'success') {
+        icon = SAWIcons.check;
+        title = 'Úspěch';
+    } else if (type === 'error') {
+        icon = SAWIcons.exclamation;
+        title = 'Chyba';
+    }
+    
+    const toastId = 'toast-' + Date.now();
+    
+    // ZKONTROLUJ jestli stejná zpráva už není zobrazená
+    const existingToast = $container.find('.saw-toast-message:contains("' + message + '")');
+    if (existingToast.length > 0) {
+        return; // ← ZABRAŇ DUPLICITÁM
+    }
+    
+    const $toast = $(`
+        <div class="saw-toast ${type}" id="${toastId}" role="alert">
+            <div class="saw-toast-icon" aria-hidden="true">${icon}</div>
+            <div class="saw-toast-content">
+                <div class="saw-toast-title">${title}</div>
+                <div class="saw-toast-message">${this.escapeHtml(message)}</div>
+            </div>
+            <button type="button" class="saw-toast-close" aria-label="Zavřít notifikaci">
+                ${SAWIcons.close}
+            </button>
+        </div>
+    `);
+    
+    $container.append($toast);
+    
+    $toast.find('.saw-toast-close').on('click', function() {
+        removeToast($toast);
+    });
+    
+    if (duration > 0) {
+        setTimeout(() => {
+            removeToast($toast);
+        }, duration);
+    }
+    
+    function removeToast($el) {
+        $el.addClass('removing');
+        setTimeout(() => {
+            $el.remove();
+            if ($container.find('.saw-toast').length === 0) {
+                $container.remove();
+            }
+        }, 300);
+    }
+}
         
         /**
          * Show validation error
          * 
-         * @since 2.0.0
+         * @since 3.0.1
          * @param {string} message - Error message
          * @return {void}
          */
         showValidationError(message) {
-            this.$validationError
-                .html(`<span class="saw-validation-icon">⚠️</span> ${message}`)
-                .show();
+            this.hideValidationError();
+            
+            const $error = $(`
+                <div class="saw-validation-error">
+                    <span class="saw-validation-icon">${SAWIcons.exclamation}</span>
+                    <span>${message}</span>
+                </div>
+            `);
+            
+            this.$container.find('.saw-upload-zone').after($error);
         }
         
         /**
          * Hide validation error
          * 
-         * @since 2.0.0
+         * @since 3.0.1
          * @return {void}
          */
         hideValidationError() {
-            this.$validationError.hide();
+            this.$container.find('.saw-validation-error').remove();
         }
         
         /**
-         * Show info message in info bar
+         * Show info message
          * 
-         * @since 2.0.0
-         * @param {string} type - Message type (success, error, warning, info)
-         * @param {string} message - Message text
+         * @since 3.0.1
+         * @param {string} message - Info message
          * @return {void}
          */
-        showInfoMessage(type, message) {
-            this.lastMessage = { type, message };
-            this.updateInfoBar();
+        showInfo(message) {
+            const $infoBar = this.$container.find('.saw-info-bar');
+            $infoBar.html(`
+                ${SAWIcons.info}
+                <span>${this.escapeHtml(message)}</span>
+            `).show();
+            this.lastMessage = message;
         }
         
         /**
-         * Update info bar with last message
+         * Hide info message
          * 
-         * @since 2.0.0
+         * @since 3.0.1
          * @return {void}
          */
-        updateInfoBar() {
-            if (!this.$infoBar || !this.$infoBar.length) {
-                return; // Info bar not initialized yet
-            }
-            
-            if (!this.lastMessage) {
-                this.$infoBar.hide();
-                return;
-            }
-            
-            const iconMap = {
-                success: '✓',
-                error: '×',
-                warning: '!',
-                info: 'i'
-            };
-            
-            const icon = iconMap[this.lastMessage.type] || '•';
-            const typeClass = 'saw-info-' + this.lastMessage.type;
-            
-            this.$infoBar
-                .removeClass('saw-info-success saw-info-error saw-info-warning saw-info-info')
-                .addClass(typeClass)
-                .html(`
-                    <span class="saw-info-icon">${icon}</span>
-                    <span class="saw-info-text">${this.escapeHtml(this.lastMessage.message)}</span>
-                `)
-                .show();
-            
-            // Auto-hide success messages after 3 seconds
-            if (this.lastMessage.type === 'success') {
-                setTimeout(() => {
-                    if (this.lastMessage && this.lastMessage.type === 'success') {
-                        this.lastMessage = null;
-                        this.updateInfoBar();
-                    }
-                }, 3000);
-            }
+        hideInfo() {
+            this.$container.find('.saw-info-bar').hide();
+            this.lastMessage = null;
         }
         
         /**
-         * Format file size
+         * Get uploaded files
          * 
-         * @since 2.0.0
-         * @param {number} bytes - File size in bytes
-         * @return {string} Formatted size
-         */
-        formatFileSize(bytes) {
-            if (bytes === 0) return '0 B';
-            const k = 1024;
-            const sizes = ['B', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
-        }
-        
-        /**
-         * Escape HTML
-         * 
-         * @since 2.0.0
-         * @param {string} text - Text to escape
-         * @return {string} Escaped text
-         */
-        escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-        
-        /**
-         * Get uploaded files metadata
-         * 
-         * Returns array of file metadata for form submission.
-         * 
-         * @since 2.0.0
+         * @since 3.0.1
          * @return {Array} Array of file metadata
          */
         getUploadedFiles() {
             return this.files
-                .filter(f => f.status === 'success' && f.metadata && !f.isExisting) // Only newly uploaded files
+                .filter(f => f.status === 'success' && f.metadata && !f.isExisting)
                 .map(f => {
                     const metadata = Object.assign({}, f.metadata);
-                    // Add category if available
                     if (f.category) {
                         metadata.category = f.category;
                     }
@@ -983,7 +948,7 @@
         /**
          * Get selected category value
          * 
-         * @since 2.0.0
+         * @since 3.0.1
          * @return {string|array|null} Category ID(s) or null
          */
         getSelectedCategory() {
@@ -992,16 +957,16 @@
             }
             
             if (this.$categorySelect.is('select[multiple]')) {
-                return this.$categorySelect.val() || []; // Return array for multiple
+                return this.$categorySelect.val() || [];
             } else {
-                return this.$categorySelect.val() || null; // Return single value
+                return this.$categorySelect.val() || null;
             }
         }
         
         /**
          * Get category name by ID
          * 
-         * @since 2.0.0
+         * @since 3.0.1
          * @param {string|number} categoryId - Category ID
          * @return {string} Category name or empty string
          */
@@ -1013,6 +978,34 @@
             const category = this.options.categoryConfig.options.find(opt => opt.id == categoryId);
             return category ? category.name : '';
         }
+        
+        /**
+         * Format file size
+         * 
+         * @since 3.0.1
+         * @param {number} bytes - File size in bytes
+         * @return {string} Formatted size
+         */
+        formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+        }
+        
+        /**
+         * Escape HTML
+         * 
+         * @since 3.0.1
+         * @param {string} text - Text to escape
+         * @return {string} Escaped text
+         */
+        escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
     }
     
     // Expose to global scope
@@ -1021,14 +1014,13 @@
     /**
      * Initialize all file upload components
      * 
-     * @since 2.0.0
+     * @since 3.0.1
      */
     $(document).ready(function() {
         $('.saw-file-upload-modern-container').each(function() {
             const $container = $(this);
             const options = $container.data('options') || {};
             
-            // Store instance for later access
             $container.data('saw-file-upload-instance', new SAWModernFileUpload($container, options));
         });
     });
@@ -1038,7 +1030,6 @@
         $('.saw-file-upload-modern-container').each(function() {
             const $container = $(this);
             
-            // Skip if already initialized
             if ($container.data('saw-file-upload-instance')) {
                 return;
             }

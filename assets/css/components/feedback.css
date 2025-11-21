@@ -734,6 +734,26 @@ body.saw-modal-active {
     margin-top: 40px;
     padding-top: 0;
     border-top: none;
+    /* Add padding to match saw-detail-content-wrapper */
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-bottom: 12px;
+}
+
+@media (min-width: 768px) {
+    .saw-related-sections {
+        padding-left: 20px;
+        padding-right: 20px;
+        padding-bottom: 20px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .saw-related-sections {
+        padding-left: 24px;
+        padding-right: 24px;
+        padding-bottom: 24px;
+    }
 }
 
 .saw-related-sections-title {

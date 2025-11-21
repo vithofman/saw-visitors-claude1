@@ -1,10 +1,10 @@
 <?php
 /**
- * Visits Detail Modal Template
+ * Visits Detail Sidebar Template
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visits
- * @version     3.0.0 - REFACTORED: Shows started_at, completed_at, physical/legal person
+ * @version     4.0.0 - REFACTORED: Uses saw-industrial-section structure like companies
  */
 
 if (!defined('ABSPATH')) exit;
@@ -13,6 +13,9 @@ if (empty($item)) {
     echo '<div class="saw-alert saw-alert-danger">Návštěva nebyla nalezena</div>';
     return;
 }
+
+// Header is now rendered by admin-table component (detail-sidebar.php)
+// Module only provides content
 
 // Load schedules
 global $wpdb;
@@ -25,84 +28,20 @@ if (!empty($item['id'])) {
     ), ARRAY_A);
 }
 
-// Load visitors count
-$visitors_count = 0;
-if (!empty($item['id'])) {
-    $visitors_count = $wpdb->get_var($wpdb->prepare(
-        "SELECT COUNT(*) FROM %i WHERE visit_id = %d",
-        $wpdb->prefix . 'saw_visitors',
-        $item['id']
-    ));
-}
+// Get visitor count from item (loaded in format_detail_data)
+$visitors_count = intval($item['visitor_count'] ?? 0);
 
 // Determine if physical or legal person
 $is_physical_person = empty($item['company_id']);
 ?>
 
-<div class="saw-detail-header">
-    <div class="saw-detail-header-info">
-        <h2 class="saw-detail-title">
-            #<?php echo esc_html($item['id']); ?> 
-            <?php if ($is_physical_person): ?>
-                <span style="color: #6366f1;">Fyzická osoba</span>
-            <?php else: ?>
-                <?php echo esc_html($item['company_name']); ?>
-            <?php endif; ?>
-        </h2>
-        <div class="saw-detail-badges">
-            <?php
-            $status_labels = array(
-                'draft' => 'Koncept',
-                'pending' => 'Čekající',
-                'confirmed' => 'Potvrzená',
-                'in_progress' => 'Probíhající',
-                'completed' => 'Dokončená',
-                'cancelled' => 'Zrušená',
-            );
-            $status_classes = array(
-                'draft' => 'saw-badge-secondary',
-                'pending' => 'saw-badge-warning',
-                'confirmed' => 'saw-badge-info',
-                'in_progress' => 'saw-badge-primary',
-                'completed' => 'saw-badge-success',
-                'cancelled' => 'saw-badge-danger',
-            );
-            $type_labels = array(
-                'planned' => 'Plánovaná',
-                'walk_in' => 'Walk-in',
-            );
-            ?>
-            <?php if (!empty($item['visit_type'])): ?>
-            <span class="saw-badge saw-badge-info">
-                <?php echo esc_html($type_labels[$item['visit_type']] ?? $item['visit_type']); ?>
-            </span>
-            <?php endif; ?>
-            
-            <?php if ($is_physical_person): ?>
-            <span class="saw-badge" style="background: #6366f1; color: white;">
-                👤 Fyzická osoba
-            </span>
-            <?php endif; ?>
-            
-            <?php if (!empty($item['status'])): ?>
-            <span class="saw-badge <?php echo esc_attr($status_classes[$item['status']] ?? 'saw-badge-secondary'); ?>">
-                <?php echo esc_html($status_labels[$item['status']] ?? $item['status']); ?>
-            </span>
-            <?php endif; ?>
-        </div>
+<!-- Tracking Timeline -->
+<?php if (!empty($item['started_at']) || !empty($item['completed_at'])): ?>
+<div class="saw-industrial-section">
+    <div class="saw-section-head">
+        <h4 class="saw-section-title saw-section-title-accent">⏱️ Průběh návštěvy</h4>
     </div>
-</div>
-
-<div class="saw-detail-sections">
-    
-    <!-- ⭐ NEW: Tracking Timeline -->
-    <?php if (!empty($item['started_at']) || !empty($item['completed_at'])): ?>
-    <div class="saw-detail-section">
-        <h3 class="saw-detail-section-title">
-            <span class="dashicons dashicons-clock"></span>
-            Průběh návštěvy
-        </h3>
-        
+    <div class="saw-section-body">
         <div class="saw-tracking-timeline">
             <?php if (!empty($item['started_at'])): ?>
             <div class="saw-tracking-event">
@@ -112,7 +51,7 @@ $is_physical_person = empty($item['company_id']);
                 <div class="saw-tracking-content">
                     <strong>Zahájeno</strong>
                     <span class="saw-tracking-time">
-                        <?php echo date('d.m.Y H:i', strtotime($item['started_at'])); ?>
+                        <?php echo date_i18n('d.m.Y H:i', strtotime($item['started_at'])); ?>
                     </span>
                 </div>
             </div>
@@ -126,7 +65,7 @@ $is_physical_person = empty($item['company_id']);
                 <div class="saw-tracking-content">
                     <strong>Dokončeno</strong>
                     <span class="saw-tracking-time">
-                        <?php echo date('d.m.Y H:i', strtotime($item['completed_at'])); ?>
+                        <?php echo date_i18n('d.m.Y H:i', strtotime($item['completed_at'])); ?>
                     </span>
                 </div>
             </div>
@@ -150,16 +89,16 @@ $is_physical_person = empty($item['company_id']);
             <?php endif; ?>
         </div>
     </div>
-    <?php endif; ?>
-    
-    <!-- Scheduled Days -->
-    <?php if (!empty($schedules)): ?>
-    <div class="saw-detail-section">
-        <h3 class="saw-detail-section-title">
-            <span class="dashicons dashicons-calendar-alt"></span>
-            Naplánované dny návštěvy
-        </h3>
-        
+</div>
+<?php endif; ?>
+
+<!-- Scheduled Days -->
+<?php if (!empty($schedules)): ?>
+<div class="saw-industrial-section">
+    <div class="saw-section-head">
+        <h4 class="saw-section-title saw-section-title-accent">📅 Naplánované dny návštěvy</h4>
+    </div>
+    <div class="saw-section-body">
         <div class="saw-visit-schedule-detail">
             <?php 
             $day_names = array(
@@ -206,85 +145,119 @@ $is_physical_person = empty($item['company_id']);
             <?php endforeach; ?>
         </div>
     </div>
-    <?php endif; ?>
-    
-    <!-- Visit Information -->
-    <div class="saw-detail-section">
-        <h3 class="saw-detail-section-title">
-            <span class="dashicons dashicons-info"></span>
-            Informace o návštěvě
-        </h3>
-        <dl class="saw-detail-list">
-            <dt class="saw-detail-label">Pobočka</dt>
-            <dd class="saw-detail-value"><?php echo esc_html($item['branch_name'] ?? '—'); ?></dd>
+</div>
+<?php endif; ?>
 
-<?php if (!empty($item['pin_code'])): ?>
-        <dt class="saw-detail-label">PIN kód</dt>
-        <dd class="saw-detail-value">
-            <div style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: #f0f9ff; border: 2px solid #0ea5e9; border-radius: 8px;">
-                <span class="dashicons dashicons-lock" style="color: #0ea5e9;"></span>
-                <span style="font-size: 24px; font-weight: 700; color: #0369a1; letter-spacing: 3px; font-family: monospace;">
-                    <?php echo esc_html($item['pin_code']); ?>
+<!-- Visit Information -->
+<div class="saw-industrial-section">
+    <div class="saw-section-head">
+        <h4 class="saw-section-title saw-section-title-accent">ℹ️ Informace o návštěvě</h4>
+    </div>
+    <div class="saw-section-body">
+        <div class="saw-info-grid">
+            <?php if (!empty($item['branch_name'])): ?>
+            <div class="saw-info-item">
+                <label>Pobočka</label>
+                <span><?php echo esc_html($item['branch_name']); ?></span>
+            </div>
+            <?php endif; ?>
+            
+            <?php if (!empty($item['pin_code'])): ?>
+            <div class="saw-info-item">
+                <label>PIN kód</label>
+                <span>
+                    <div style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: #f0f9ff; border: 2px solid #0ea5e9; border-radius: 8px;">
+                        <span class="dashicons dashicons-lock" style="color: #0ea5e9;"></span>
+                        <span style="font-size: 24px; font-weight: 700; color: #0369a1; letter-spacing: 3px; font-family: monospace;">
+                            <?php echo esc_html($item['pin_code']); ?>
+                        </span>
+                    </div>
                 </span>
             </div>
-        </dd>
-        <?php endif; ?>
+            <?php endif; ?>
             
-            <dt class="saw-detail-label">Návštěvník</dt>
-            <dd class="saw-detail-value">
-                <?php if ($is_physical_person): ?>
-                    <span style="color: #6366f1; font-weight: 600;">👤 Fyzická osoba</span>
-                <?php else: ?>
-                    <strong><?php echo esc_html($item['company_name']); ?></strong>
-                <?php endif; ?>
-            </dd>
-            
-            <dt class="saw-detail-label">Počet návštěvníků</dt>
-            <dd class="saw-detail-value">
-                <span class="saw-badge saw-badge-info">
-                    <?php echo $visitors_count; ?> 
-                    <?php echo $visitors_count === 1 ? 'osoba' : ($visitors_count < 5 ? 'osoby' : 'osob'); ?>
+            <div class="saw-info-item">
+                <label>Návštěvník</label>
+                <span>
+                    <?php if ($is_physical_person): ?>
+                        <?php if (!empty($item['first_visitor_name'])): ?>
+                            <strong style="color: #6366f1;"><?php echo esc_html($item['first_visitor_name']); ?></strong>
+                            <span class="saw-badge" style="background: #6366f1; color: white; font-size: 11px; margin-left: 8px;">👤 Fyzická</span>
+                        <?php else: ?>
+                            <span style="color: #6366f1; font-weight: 600;">👤 Fyzická osoba</span>
+                        <?php endif; ?>
+                    <?php else: ?>
+                        <strong><?php echo esc_html($item['company_name'] ?? 'Firma #' . $item['company_id']); ?></strong>
+                        <span class="saw-badge saw-badge-info" style="font-size: 11px; margin-left: 8px;">🏢 Firma</span>
+                    <?php endif; ?>
                 </span>
-            </dd>
+            </div>
+            
+            <?php if ($visitors_count > 0): ?>
+            <div class="saw-info-item">
+                <label>Počet návštěvníků</label>
+                <span>
+                    <span class="saw-badge saw-badge-info">
+                        👥 <?php echo $visitors_count; ?> 
+                        <?php echo $visitors_count === 1 ? 'osoba' : ($visitors_count < 5 ? 'osoby' : 'osob'); ?>
+                    </span>
+                </span>
+            </div>
+            <?php endif; ?>
             
             <?php if (!empty($item['invitation_email'])): ?>
-            <dt class="saw-detail-label">Email pro pozvánku</dt>
-            <dd class="saw-detail-value">
-                <a href="mailto:<?php echo esc_attr($item['invitation_email']); ?>">
-                    <?php echo esc_html($item['invitation_email']); ?>
-                </a>
-            </dd>
+            <div class="saw-info-item">
+                <label>Email pro pozvánku</label>
+                <span>
+                    <a href="mailto:<?php echo esc_attr($item['invitation_email']); ?>" class="saw-link">
+                        <?php echo esc_html($item['invitation_email']); ?>
+                    </a>
+                </span>
+            </div>
             <?php endif; ?>
             
-            <dt class="saw-detail-label">Účel návštěvy</dt>
-            <dd class="saw-detail-value"><?php echo !empty($item['purpose']) ? nl2br(esc_html($item['purpose'])) : '—'; ?></dd>
+            <?php if (!empty($item['purpose'])): ?>
+            <div class="saw-info-item">
+                <label>Účel návštěvy</label>
+                <span><?php echo nl2br(esc_html($item['purpose'])); ?></span>
+            </div>
+            <?php endif; ?>
             
-            <?php if (!empty($item['hosts'])): ?>
-            <dt class="saw-detail-label">Koho navštěvují</dt>
-            <dd class="saw-detail-value">
-                <div class="saw-hosts-list">
-                    <?php foreach ($item['hosts'] as $host): ?>
-                        <div class="saw-host-card">
-                            <span class="dashicons dashicons-businessman"></span>
-                            <div class="saw-host-info">
-                                <strong><?php echo esc_html($host['first_name'] . ' ' . $host['last_name']); ?></strong>
-                                <?php if (!empty($host['position'])): ?>
-                                    <span class="saw-host-email"><?php echo esc_html($host['position']); ?></span>
-                                <?php elseif (!empty($host['email'])): ?>
-                                    <span class="saw-host-email"><?php echo esc_html($host['email']); ?></span>
-                                <?php endif; ?>
-                            </div>
+            <?php if (!empty($item['notes'])): ?>
+            <div class="saw-info-item">
+                <label>Poznámky</label>
+                <span><?php echo nl2br(esc_html($item['notes'])); ?></span>
+            </div>
+            <?php endif; ?>
+        </div>
+        
+        <?php if (!empty($item['hosts'])): ?>
+        <div style="margin-top: 16px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #334155;">Koho navštěvují</label>
+            <div class="saw-hosts-list">
+                <?php foreach ($item['hosts'] as $host): ?>
+                    <div class="saw-host-card">
+                        <span class="dashicons dashicons-businessman"></span>
+                        <div class="saw-host-info">
+                            <strong><?php echo esc_html($host['first_name'] . ' ' . $host['last_name']); ?></strong>
+                            <?php if (!empty($host['role'])): ?>
+                                <span class="saw-host-email"><?php echo esc_html($host['role']); ?></span>
+                            <?php elseif (!empty($host['email'])): ?>
+                                <span class="saw-host-email"><?php echo esc_html($host['email']); ?></span>
+                            <?php endif; ?>
                         </div>
-                    <?php endforeach; ?>
-                </div>
-            </dd>
-            <?php endif; ?>
-        </dl>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
 </div>
 
+<!-- Visitors section will be rendered by related_data via detail-sidebar.php -->
+
 <style>
-/* ⭐ NEW: Tracking Timeline */
+/* Tracking Timeline */
 .saw-tracking-timeline {
     display: flex;
     flex-direction: column;

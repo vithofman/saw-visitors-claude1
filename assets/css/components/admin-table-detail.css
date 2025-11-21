@@ -3,24 +3,213 @@
  * 
  * Global styles for admin-table detail sidebars used by all modules.
  * Includes: sections, visit cards, merge UI, elegant alerts
+ * Applied visitors sidebar styles (Oswald, Roboto fonts)
  * 
  * @package     SAW_Visitors
  * @subpackage  Components/AdminTable
- * @version     1.0.0
+ * @version     4.0.0 - Refactored: All local detail sidebar styles moved to global, ensuring consistent spacing across all modules
  */
 
+/* Import fonts from visitors */
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap');
+
 /* ============================================
-   BASE
+   BASE - VISITORS SIDEBAR STYLES APPLIED GLOBALLY
    ============================================ */
 
 .saw-detail-sidebar-content {
-    font-family: var(--saw-font-family);
-    color: var(--saw-text-primary);
+    font-family: 'Roboto', sans-serif !important;
+    color: #1a1a1a !important;
     box-sizing: border-box;
 }
 
 .saw-detail-sidebar-content * {
     box-sizing: border-box;
+}
+
+/* Apply Roboto font to ALL sidebar content - override module-specific styles */
+.saw-detail-content-wrapper,
+.saw-sidebar-content,
+.saw-detail-wrapper,
+.saw-detail-stack {
+    font-family: 'Roboto', sans-serif !important;
+    color: #1a1a1a !important;
+}
+
+/* Detail stack layout from visitors - ensure consistent spacing */
+/* This is the container for sections within detail content */
+.saw-detail-stack {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+    margin-top: 0 !important; /* No margin-top - first section should start immediately after padding */
+    margin-bottom: 0 !important;
+    padding: 0 !important;
+}
+
+/* Detail wrapper - ensure consistent styling */
+.saw-detail-wrapper {
+    font-family: 'Roboto', sans-serif !important;
+    color: #1a1a1a !important;
+    box-sizing: border-box !important;
+    max-width: 100% !important;
+}
+
+.saw-detail-wrapper * {
+    box-sizing: border-box !important;
+}
+
+/* Detail sidebar content - ensure consistent padding and spacing */
+.saw-detail-sidebar-content {
+    font-family: 'Roboto', sans-serif !important;
+    color: #1a1a1a !important;
+    box-sizing: border-box !important;
+    padding: 0 !important; /* No padding - handled by .saw-detail-content-wrapper */
+    margin: 0 !important;
+}
+
+.saw-detail-sidebar-content * {
+    box-sizing: border-box !important;
+}
+
+/* Ensure .saw-detail-content-wrapper has consistent padding - override tables.css */
+.saw-detail-content-wrapper {
+    padding: 12px !important; /* Mobile-first: minimální padding */
+    font-family: 'Roboto', sans-serif !important;
+    color: #1a1a1a !important;
+    margin: 0 !important;
+}
+
+@media (min-width: 768px) {
+    .saw-detail-content-wrapper {
+        padding: 20px !important; /* Tablet */
+    }
+}
+
+@media (min-width: 1024px) {
+    .saw-detail-content-wrapper {
+        padding: 24px !important; /* Desktop */
+    }
+}
+
+/* Ensure first element in .saw-detail-content-wrapper has no extra margin */
+.saw-detail-content-wrapper > *:first-child {
+    margin-top: 0 !important;
+}
+
+/* Ensure .saw-detail-stack inside .saw-detail-content-wrapper has no margin */
+.saw-detail-content-wrapper > .saw-detail-stack {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+/* Ensure .saw-detail-sidebar-content inside .saw-detail-content-wrapper has no padding/margin */
+.saw-detail-content-wrapper > .saw-detail-sidebar-content {
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* Ensure .saw-detail-wrapper inside .saw-detail-content-wrapper has no padding/margin */
+.saw-detail-content-wrapper > .saw-detail-wrapper {
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* Ensure all sidebar content uses Roboto - override everything */
+.saw-detail-sidebar-content *,
+.saw-detail-content-wrapper *,
+.saw-sidebar-content *,
+.saw-detail-wrapper *,
+.saw-detail-stack * {
+    font-family: 'Roboto', sans-serif !important;
+}
+
+/* Except section titles which use Oswald */
+.saw-section-title,
+.saw-section-title *,
+.saw-industrial-section .saw-section-title,
+.saw-industrial-section .saw-section-title *,
+h4.saw-section-title,
+h4.saw-section-title * {
+    font-family: 'Oswald', sans-serif !important;
+}
+
+/* Apply Oswald to ALL section titles - override any module-specific styles */
+.saw-industrial-section .saw-section-title,
+.saw-section-title,
+.saw-section-title.saw-section-title-accent,
+h4.saw-section-title {
+    font-family: 'Oswald', sans-serif !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    color: #005A8C !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    justify-content: flex-start !important;
+    letter-spacing: 0;
+}
+
+/* Apply visitors styles to ALL industrial sections - override module-specific styles */
+.saw-industrial-section {
+    background: #fff !important;
+    border: 1px solid #dce1e5 !important;
+    border-radius: 4px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .05) !important;
+    margin-bottom: 20px !important;
+}
+
+.saw-section-head {
+    background: #fff !important;
+    padding: 14px 20px !important;
+    border-bottom: 2px solid #f4f6f8 !important;
+}
+
+.saw-section-body {
+    padding: 20px !important;
+}
+
+/* Apply visitors styles to ALL info rows - override module-specific styles */
+.saw-info-row {
+    display: grid !important;
+    grid-template-columns: 140px 1fr !important;
+    gap: 12px !important;
+    align-items: baseline !important;
+    border-bottom: 1px dotted #e5e7eb !important;
+    padding-bottom: 8px !important;
+    margin-bottom: 8px !important;
+}
+
+.saw-info-row:last-child {
+    border-bottom: none !important;
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+.saw-info-label {
+    font-size: 12px !important;
+    color: #888 !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+}
+
+.saw-info-val {
+    font-size: 14px !important;
+    color: #1a1a1a !important;
+    font-weight: 500 !important;
+    text-align: left !important;
+}
+
+.saw-info-val a {
+    color: #0077B5 !important;
+    text-decoration: none !important;
+    font-weight: 600 !important;
+}
+
+.saw-info-val a:hover {
+    text-decoration: underline !important;
 }
 
 /* ============================================
@@ -42,6 +231,43 @@
     background: rgba(0, 0, 0, 0.4);
 }
 
+/* Color variants for transparent badges in header */
+.saw-badge-transparent.saw-badge-warning {
+    background: rgba(251, 191, 36, 0.2);
+    border-color: rgba(251, 191, 36, 0.4);
+    color: #fbbf24;
+}
+
+.saw-badge-transparent.saw-badge-info {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.4);
+    color: #60a5fa;
+}
+
+.saw-badge-transparent.saw-badge-primary {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.4);
+    color: #60a5fa;
+}
+
+.saw-badge-transparent.saw-badge-success {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: rgba(16, 185, 129, 0.4);
+    color: #34d399;
+}
+
+.saw-badge-transparent.saw-badge-danger {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.4);
+    color: #f87171;
+}
+
+.saw-badge-transparent.saw-badge-secondary {
+    background: rgba(148, 163, 184, 0.2);
+    border-color: rgba(148, 163, 184, 0.4);
+    color: #cbd5e1;
+}
+
 [data-theme="dark"] .saw-badge-transparent {
     background: rgba(255, 255, 255, 0.1);
     border-color: rgba(255, 255, 255, 0.2);
@@ -55,43 +281,13 @@
    INDUSTRIAL SECTIONS
    ============================================ */
 
-.saw-industrial-section {
-    background: var(--saw-card-bg);
-    border: 1px solid var(--saw-border-color);
-    margin-bottom: 20px;
-    box-shadow: var(--saw-shadow-sm);
-}
+/* These duplicate styles removed - using visitors styles from above section */
 
-.saw-section-head {
-    background: var(--saw-form-section-header-bg);
-    padding: 15px 20px;
-    border-bottom: 2px solid var(--saw-border-color);
-}
-
-.saw-section-title {
-    font-size: 18px;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: var(--saw-text-primary);
-    margin: 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-/* Primary accent for section titles - only when needed */
-.saw-section-title.saw-section-title-accent {
-    color: var(--saw-primary);
-}
-
-.saw-section-body {
-    padding: 20px;
-}
-
-/* Warning Section */
+/* Warning Section - keep warning styles but override base */
 .saw-industrial-section.saw-warning-section {
-    background: var(--saw-warning-light);
-    border-left: 4px solid var(--saw-warning);
+    background: var(--saw-warning-light) !important;
+    border: 1px solid #dce1e5 !important;
+    border-left: 4px solid var(--saw-warning) !important;
 }
 
 .saw-warning-section .saw-section-body.saw-warning-section-body {
@@ -128,6 +324,7 @@
    INFO GRID
    ============================================ */
 
+/* Apply visitors styles to info grid - make it look like info-row */
 .saw-info-grid {
     display: grid;
     grid-template-columns: 1fr;
@@ -140,29 +337,49 @@
     }
 }
 
+/* Apply visitors label and value styles to info-item */
 .saw-info-item label {
-    display: block;
-    font-size: 11px;
-    text-transform: uppercase;
-    color: var(--saw-text-secondary);
-    font-weight: 700;
-    margin-bottom: 4px;
+    display: block !important;
+    font-size: 12px !important;
+    text-transform: uppercase !important;
+    color: #888 !important;
+    font-weight: 700 !important;
+    margin-bottom: 4px !important;
+    font-family: 'Roboto', sans-serif !important;
 }
 
 .saw-info-item span {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--saw-text-primary);
+    display: block !important;
+    font-size: 14px !important;
+    color: #1a1a1a !important;
+    font-weight: 500 !important;
+    font-family: 'Roboto', sans-serif !important;
 }
 
-.saw-link {
-    color: var(--saw-primary);
-    text-decoration: none;
-    font-weight: 600;
+.saw-info-item a {
+    color: #0077B5 !important;
+    text-decoration: none !important;
+    font-weight: 600 !important;
 }
 
-.saw-link:hover {
-    text-decoration: underline;
+.saw-info-item a:hover {
+    text-decoration: underline !important;
+}
+
+/* Apply visitors link styles */
+.saw-link,
+.saw-info-item a,
+.saw-info-val a {
+    color: #0077B5 !important;
+    text-decoration: none !important;
+    font-weight: 600 !important;
+    font-family: 'Roboto', sans-serif !important;
+}
+
+.saw-link:hover,
+.saw-info-item a:hover,
+.saw-info-val a:hover {
+    text-decoration: underline !important;
 }
 
 /* ============================================

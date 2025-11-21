@@ -107,7 +107,176 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
             $item['daily_logs'] = $this->model->get_daily_logs($item['id']);
         }
         
+        // Compute current status for detail view
+        global $wpdb;
+        $today = current_time('Y-m-d');
+        $log = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}saw_visit_daily_logs 
+             WHERE visitor_id = %d AND log_date = %s
+             ORDER BY checked_in_at DESC
+             LIMIT 1",
+            $item['id'], $today
+        ), ARRAY_A);
+        
+        if ($item['participation_status'] === 'confirmed') {
+            if ($log && $log['checked_in_at'] && !$log['checked_out_at']) {
+                $item['current_status'] = 'present';
+            } elseif ($log && $log['checked_out_at']) {
+                $item['current_status'] = 'checked_out';
+            } else {
+                $item['current_status'] = 'confirmed';
+            }
+        } elseif ($item['participation_status'] === 'no_show') {
+            $item['current_status'] = 'no_show';
+        } else {
+            $item['current_status'] = 'planned';
+        }
+        
         return $item;
+    }
+    
+    /**
+     * Get display name for detail header
+     * 
+     * @since 7.0.0
+     * @param array $item Item data
+     * @return string Display name
+     */
+    public function get_display_name($item) {
+        if (empty($item)) {
+            return '';
+        }
+        
+        $name = trim(($item['first_name'] ?? '') . ' ' . ($item['last_name'] ?? ''));
+        if (!empty($name)) {
+            return $name;
+        }
+        
+        return '#' . ($item['id'] ?? '');
+    }
+    
+    /**
+     * Get header meta badges for detail sidebar
+     * Shows: participation status, position
+     * 
+     * @since 7.0.0
+     * @param array $item Item data
+     * @return string HTML with badges
+     */
+    public function get_detail_header_meta($item) {
+        if (empty($item)) {
+            return '';
+        }
+        
+        $meta_parts = array();
+        
+        // Participation status badge (current_status)
+        if (!empty($item['current_status'])) {
+            $status_labels = array(
+                'present' => '✅ Přítomen',
+                'checked_out' => '🚪 Odhlášen',
+                'confirmed' => '⏳ Potvrzený',
+                'planned' => '📅 Plánovaný',
+                'no_show' => '❌ Nedostavil se',
+            );
+            $status_classes = array(
+                'present' => 'saw-badge-success',
+                'checked_out' => 'saw-badge-secondary',
+                'confirmed' => 'saw-badge-warning',
+                'planned' => 'saw-badge-info',
+                'no_show' => 'saw-badge-danger',
+            );
+            $status_label = $status_labels[$item['current_status']] ?? $item['current_status'];
+            $status_class = $status_classes[$item['current_status']] ?? 'saw-badge-secondary';
+            $meta_parts[] = '<span class="saw-badge-transparent ' . esc_attr($status_class) . '">' . esc_html($status_label) . '</span>';
+        }
+        
+        // Position badge
+        if (!empty($item['position'])) {
+            $meta_parts[] = '<span class="saw-badge-transparent">💼 ' . esc_html($item['position']) . '</span>';
+        }
+        
+        return implode('', $meta_parts);
+    }
+    
+    /**
+     * Get table columns configuration for infinite scroll
+     * 
+     * @since 7.0.0
+     * @return array Column configuration
+     */
+    public function get_table_columns() {
+        return array(
+            'first_name' => array(
+                'label' => 'Jméno',
+                'type' => 'text',
+                'class' => 'saw-table-cell-bold',
+                'sortable' => true,
+            ),
+            'last_name' => array(
+                'label' => 'Příjmení',
+                'type' => 'text',
+                'class' => 'saw-table-cell-bold',
+                'sortable' => true,
+            ),
+            'company_name' => array(
+                'label' => 'Firma',
+                'type' => 'text',
+            ),
+            'branch_name' => array(
+                'label' => 'Pobočka',
+                'type' => 'text',
+            ),
+            'current_status' => array(
+                'label' => 'Aktuální stav',
+                'type' => 'badge',
+                'sortable' => false,
+                'map' => array(
+                    'present' => 'success',
+                    'checked_out' => 'secondary',
+                    'confirmed' => 'warning',
+                    'planned' => 'info',
+                    'no_show' => 'danger',
+                ),
+                'labels' => array(
+                    'present' => '✅ Přítomen',
+                    'checked_out' => '🚪 Odhlášen',
+                    'confirmed' => '⏳ Potvrzený',
+                    'planned' => '📅 Plánovaný',
+                    'no_show' => '❌ Nedostavil se',
+                ),
+            ),
+            'first_checkin_at' => array(
+                'label' => 'První check-in',
+                'type' => 'callback',
+                'callback' => function($value) {
+                    return !empty($value) ? date('d.m.Y H:i', strtotime($value)) : '—';
+                },
+            ),
+            'last_checkout_at' => array(
+                'label' => 'Poslední check-out',
+                'type' => 'callback',
+                'callback' => function($value) {
+                    return !empty($value) ? date('d.m.Y H:i', strtotime($value)) : '—';
+                },
+            ),
+            'training_status' => array(
+                'label' => 'Školení',
+                'type' => 'badge',
+                'map' => array(
+                    'completed' => 'success',
+                    'in_progress' => 'info',
+                    'skipped' => 'warning',
+                    'not_started' => 'secondary',
+                ),
+                'labels' => array(
+                    'completed' => '✅ Dokončeno',
+                    'in_progress' => '🔄 Probíhá',
+                    'skipped' => '⏭️ Přeskočeno',
+                    'not_started' => '⚪ Nespuštěno',
+                ),
+            ),
+        );
     }
     
     // ============================================
