@@ -437,89 +437,8 @@
         }
     });
 
-    /**
-     * Initialize grouping functionality
-     * 
-     * @since 7.0.0
-     */
-    function initGrouping() {
-        // Toggle group on header click
-        $(document).on('click', '.saw-group-header', function(e) {
-            e.stopPropagation();
-            
-            const $header = $(this);
-            const groupId = $header.data('group-id');
-            const isExpanded = $header.hasClass('saw-group-expanded');
-            
-            // Toggle header state
-            $header.toggleClass('saw-group-expanded saw-group-collapsed');
-            
-            // Toggle rows visibility
-            const $rows = $('.saw-group-row[data-group-id="' + groupId + '"]');
-            
-            if (isExpanded) {
-                // Collapse
-                $rows.addClass('saw-group-hidden');
-            } else {
-                // Expand
-                $rows.removeClass('saw-group-hidden');
-            }
-            
-            // Save state to sessionStorage
-            saveGroupState(groupId, !isExpanded);
-            
-            console.log('🔄 Group toggled:', groupId, 'expanded:', !isExpanded);
-        });
-    }
-    
-    /**
-     * Save group state to sessionStorage
-     * 
-     * @since 7.0.0
-     * @param {string} groupId - Group identifier
-     * @param {boolean} isExpanded - Whether group is expanded
-     */
-    function saveGroupState(groupId, isExpanded) {
-        try {
-            const key = 'saw_group_states_' + getCurrentEntity();
-            const states = JSON.parse(sessionStorage.getItem(key) || '{}');
-            states[groupId] = isExpanded;
-            sessionStorage.setItem(key, JSON.stringify(states));
-        } catch (e) {
-            console.error('Failed to save group state:', e);
-        }
-    }
-    
-    /**
-     * Restore group states from sessionStorage
-     * 
-     * @since 7.0.0
-     */
-    function restoreGroupStates() {
-        try {
-            const key = 'saw_group_states_' + getCurrentEntity();
-            const states = JSON.parse(sessionStorage.getItem(key) || '{}');
-            
-            Object.keys(states).forEach(function(groupId) {
-                const isExpanded = states[groupId];
-                const $header = $('.saw-group-header[data-group-id="' + groupId + '"]');
-                
-                if ($header.length) {
-                    if (isExpanded) {
-                        $header.addClass('saw-group-expanded').removeClass('saw-group-collapsed');
-                        $('.saw-group-row[data-group-id="' + groupId + '"]').removeClass('saw-group-hidden');
-                    } else {
-                        $header.addClass('saw-group-collapsed').removeClass('saw-group-expanded');
-                        $('.saw-group-row[data-group-id="' + groupId + '"]').addClass('saw-group-hidden');
-                    }
-                }
-            });
-            
-            console.log('✨ Group states restored');
-        } catch (e) {
-            console.error('Failed to restore group states:', e);
-        }
-    }
+    // REMOVED: initGrouping(), saveGroupState(), restoreGroupStates()
+    // Grouping functionality replaced by tabs navigation in v7.1.0
     
     /**
      * Get current entity from URL or data attribute
@@ -688,7 +607,7 @@
         }
         
         const scrollArea = document.querySelector('.saw-table-scroll-area');
-        const tbody = document.querySelector('.saw-admin-table tbody, .saw-table-grouped tbody');
+        const tbody = document.querySelector('.saw-admin-table tbody');
         
         if (!scrollArea || !tbody) {
             return;
@@ -697,10 +616,12 @@
         let isLoading = false;
         let currentPage = 1;
         let hasMore = true;
+        
+        // NOVÁ logika pro initial load
+        const initialLoad = config.infinite_scroll.initial_load || 100;
         const perPage = config.infinite_scroll.per_page || 50;
-        const threshold = config.infinite_scroll.threshold || 300;
+        const threshold = config.infinite_scroll.threshold || 0.7; // 70% (changed from px to %)
         const entity = config.entity;
-        const isGrouped = document.querySelector('.saw-table-grouped') !== null;
         
         // Cache loaded pages to prevent re-loading when scrolling back up
         const loadedPages = new Set();
@@ -726,25 +647,26 @@
         const actions = config.actions || [];
         
         // Count existing rows to determine starting page
-        // For grouped tables, count only data rows (not group headers)
-        const existingRows = isGrouped 
-            ? tbody.querySelectorAll('tr.saw-group-row').length
-            : tbody.querySelectorAll('tr.saw-table-row').length;
+        const existingRows = tbody.querySelectorAll('tr.saw-table-row').length;
         
-        if (existingRows > 0) {
-            // Calculate what page we're on based on existing rows
+        if (existingRows >= initialLoad) {
+            // Already have initial load, use per_page for next loads
             currentPage = Math.ceil(existingRows / perPage);
             // Mark pages as loaded
             for (let i = 1; i <= currentPage; i++) {
                 loadedPages.add(i);
             }
+        } else {
+            // First load, use initial_load
+            currentPage = 1;
+            if (existingRows > 0) {
+                loadedPages.add(1);
+            }
         }
         
         // Track loaded row IDs to prevent duplicates
         const getRowIds = () => {
-            const rows = isGrouped 
-                ? tbody.querySelectorAll('tr.saw-group-row[data-id]')
-                : tbody.querySelectorAll('tr.saw-table-row[data-id]');
+            const rows = tbody.querySelectorAll('tr.saw-table-row[data-id]');
             return Array.from(rows).map(row => row.getAttribute('data-id')).filter(Boolean);
         };
         
@@ -775,8 +697,7 @@
             
             const loadingRow = document.createElement('tr');
             loadingRow.className = 'saw-infinite-scroll-loading';
-            const colCount = document.querySelector('.saw-admin-table thead tr')?.querySelectorAll('th').length || 
-                           document.querySelector('.saw-table-grouped thead tr')?.querySelectorAll('th').length || 10;
+            const colCount = document.querySelector('.saw-admin-table thead tr')?.querySelectorAll('th').length || 10;
             loadingRow.innerHTML = `<td colspan="${colCount}" class="saw-infinite-scroll-loading-cell">
                 <div class="saw-infinite-scroll-loader">
                     <span class="dashicons dashicons-update"></span>
@@ -813,6 +734,12 @@
                     requestData.append(key, filters[key]);
                 }
             });
+            
+            // NOVÉ: Add current tab filter
+            if (config.tabs && config.current_tab) {
+                const tabParam = config.tabs.tab_param || 'tab';
+                requestData.append(tabParam, config.current_tab);
+            }
             
             // Make AJAX request
             fetch(ajaxUrl, {
@@ -869,54 +796,10 @@
                             return;
                         }
                         
-                        if (isGrouped && config.grouping && config.grouping.enabled) {
-                            // For grouped tables, add rows to their respective groups
-                            const groupBy = config.grouping.group_by;
-                            
-                            rowsToAdd.forEach(row => {
-                                const groupId = row.getAttribute('data-group-id');
-                                
-                                if (groupId) {
-                                    // Find the group header for this group
-                                    const groupHeader = tbody.querySelector(`.saw-group-header[data-group-id="${groupId}"]`);
-                                    
-                                    if (groupHeader) {
-                                        // Find the last row in this group
-                                        const groupRows = tbody.querySelectorAll(`tr.saw-group-row[data-group-id="${groupId}"]`);
-                                        
-                                        if (groupRows.length > 0) {
-                                            // Insert after last row in group
-                                            const lastRow = groupRows[groupRows.length - 1];
-                                            lastRow.insertAdjacentElement('afterend', row);
-                                        } else {
-                                            // No rows in group yet, insert after header
-                                            groupHeader.insertAdjacentElement('afterend', row);
-                                        }
-                                        
-                                        // Update group count
-                                        const countEl = groupHeader.querySelector('.saw-group-count');
-                                        if (countEl) {
-                                            const currentCount = parseInt(countEl.textContent) || 0;
-                                            countEl.textContent = currentCount + 1;
-                                        }
-                                    } else {
-                                        // Group doesn't exist yet, append to end
-                                        tbody.appendChild(row);
-                                    }
-                                } else {
-                                    // No group ID, just append
-                                    tbody.appendChild(row);
-                                }
-                            });
-                            
-                            // Re-initialize grouping to attach handlers
-                            initGrouping();
-                        } else {
-                            // For non-grouped tables, just append rows
-                            rowsToAdd.forEach(row => {
-                                tbody.appendChild(row);
-                            });
-                        }
+                        // For tabs (non-grouped), just append rows
+                        rowsToAdd.forEach(row => {
+                            tbody.appendChild(row);
+                        });
                         
                     }
                 } else {
@@ -962,10 +845,11 @@
                 return;
             }
             
-            // Check if user is near bottom
-            const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+            // Check if user has scrolled to threshold percentage
+            // threshold is now a percentage (0.7 = 70%) instead of pixels
+            const scrollPercent = (scrollTop + clientHeight) / scrollHeight;
             
-            if (distanceFromBottom < threshold) {
+            if (scrollPercent >= threshold) {
                 loadNextPage();
             }
         }
@@ -984,15 +868,51 @@
     /**
      * Initialize on DOM ready
      */
+    /**
+     * Handle global search across all tabs
+     * 
+     * When searching, automatically switch to "all" tab if current tab has no results
+     */
+    function handleGlobalSearch() {
+        const $searchForm = $('.saw-search-form');
+        const $tabs = $('.saw-table-tabs');
+        
+        if (!$searchForm.length || !$tabs.length) {
+            return;
+        }
+        
+        $searchForm.on('submit', function() {
+            const searchValue = $('.saw-search-input').val();
+            
+            if (searchValue && searchValue.trim() !== '') {
+                // If searching, switch to "all" tab
+                const $allTab = $('.saw-table-tab[data-tab="all"]');
+                
+                if ($allTab.length && !$allTab.hasClass('active')) {
+                    // Modify form action to include "all" tab
+                    const currentAction = $searchForm.attr('action');
+                    const separator = currentAction.indexOf('?') !== -1 ? '&' : '?';
+                    // Get tab param from first tab's data attribute or URL
+                    const tabParam = $tabs.find('.saw-table-tab').first().attr('href').match(/\?([^=]+)=/)?.[1] || 'status';
+                    
+                    $searchForm.attr('action', currentAction + separator + tabParam + '=all');
+                }
+            }
+            
+            return true; // Allow form submission
+        });
+    }
+
     $(document).ready(function () {
         initAdminTable();
         
+        // REMOVED: Grouping initialization (replaced by tabs)
         // Check if we have a grouped table
-        if ($('.saw-table-grouped').length) {
-            initGrouping();
-            restoreGroupStates();
-            console.log('✅ Grouping initialized');
-        }
+        // if ($('.saw-table-grouped').length) {
+        //     initGrouping();
+        //     restoreGroupStates();
+        //     console.log('✅ Grouping initialized');
+        // }
         
         // Initialize sidebar navigation
         // Use event delegation so it works for dynamically loaded sidebars
@@ -1014,6 +934,9 @@
         
         // Initialize infinite scroll
         initInfiniteScroll();
+        
+        // Initialize global search handling
+        handleGlobalSearch();
     });
 
 })(jQuery);

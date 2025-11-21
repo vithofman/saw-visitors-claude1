@@ -107,12 +107,23 @@ abstract class SAW_Base_Model
             }
         }
         
+        // Apply filters from list_config
         foreach ($this->config['list_config']['filters'] ?? [] as $filter_key => $enabled) {
             if ($enabled && isset($filters[$filter_key]) && $filters[$filter_key] !== '') {
                 if ($this->is_valid_column($filter_key)) {
                     $sql .= " AND `{$filter_key}` = %s";
                     $params[] = $filters[$filter_key];
                 }
+            }
+        }
+        
+        // Apply TAB filter (if tabs are enabled)
+        if (!empty($this->config['tabs']['enabled'])) {
+            $tab_param = $this->config['tabs']['tab_param'] ?? 'tab';
+            
+            if (isset($filters[$tab_param]) && $filters[$tab_param] !== '' && $this->is_valid_column($tab_param)) {
+                $sql .= " AND `{$tab_param}` = %s";
+                $params[] = $filters[$tab_param];
             }
         }
         

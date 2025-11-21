@@ -107,7 +107,17 @@ class SAW_Component_Admin_Table {
             'enable_search' => false,
             'enable_filters' => false,
             
-            // Grouping support
+            // Tabs support (replaces grouping)
+            'tabs' => array(
+                'enabled' => false,
+                'tab_param' => 'tab',
+                'tabs' => array(),
+                'default_tab' => 'all',
+            ),
+            'current_tab' => null,
+            'tab_counts' => array(),
+            
+            // Grouping support (legacy - deprecated in favor of tabs)
             'grouping' => array(
                 'enabled' => false,
                 'group_by' => '',
@@ -120,8 +130,9 @@ class SAW_Component_Admin_Table {
             // Infinite scroll support
             'infinite_scroll' => array(
                 'enabled' => false,
+                'initial_load' => 100, // First load
                 'per_page' => 50,
-                'threshold' => 300,
+                'threshold' => 0.7, // 70% scroll (changed from 300px)
             ),
             
             'actions' => array('edit', 'delete'),
@@ -283,33 +294,91 @@ class SAW_Component_Admin_Table {
     private function render_controls() {
         $search_config = $this->config['search'] ?? array();
         $filters_config = $this->config['filters'] ?? array();
+        $tabs_enabled = !empty($this->config['tabs']['enabled']);
         
         // Legacy support
         $search_enabled = !empty($search_config['enabled']) || !empty($this->config['enable_search']);
         $filters_enabled = !empty($filters_config) || !empty($this->config['enable_filters']);
         
-        if (!$search_enabled && !$filters_enabled) {
-            return;
-        }
-        
         $base_url = $this->get_base_url();
         $current_params = $this->get_current_params();
         
-        ?>
-        <div class="saw-table-controls">
-            <?php if ($search_enabled): ?>
-                <div class="saw-table-search">
-                    <?php $this->render_search_form($base_url, $current_params, $search_config); ?>
-                </div>
-            <?php endif; ?>
-            
-            <?php if ($filters_enabled): ?>
-                <div class="saw-table-filters">
-                    <?php $this->render_filters($base_url, $current_params); ?>
-                </div>
-            <?php endif; ?>
-        </div>
-        <?php
+        // If tabs are enabled, render tabs with search/filters in the same row
+        if ($tabs_enabled) {
+            $this->render_tabs_navigation_with_controls($search_enabled, $filters_enabled, $search_config, $filters_config, $base_url, $current_params);
+        } else {
+            // Render search and filters only if at least one is enabled
+            if (!$search_enabled && !$filters_enabled) {
+                return;
+            }
+            ?>
+            <div class="saw-table-controls">
+                <?php if ($search_enabled): ?>
+                    <div class="saw-table-search">
+                        <?php $this->render_search_form($base_url, $current_params, $search_config); ?>
+                    </div>
+                <?php endif; ?>
+                
+                <?php if ($filters_enabled): ?>
+                    <div class="saw-table-filters">
+                        <?php $this->render_filters($base_url, $current_params); ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+            <?php
+        }
+    }
+    
+    /**
+     * Render tabs navigation
+     * 
+     * @since 7.1.0
+     */
+    private function render_tabs_navigation() {
+        // Prepare config for tabs template with base_url and current_params
+        $config = $this->config;
+        $config['base_url'] = $this->get_base_url();
+        $config['current_params'] = $this->get_current_params();
+        
+        $entity = $this->entity;
+        
+        require __DIR__ . '/tabs-navigation.php';
+    }
+    
+    /**
+     * Render tabs navigation with search and filters in the same row
+     * 
+     * @since 7.1.0
+     */
+    private function render_tabs_navigation_with_controls($search_enabled, $filters_enabled, $search_config, $filters_config, $base_url, $current_params) {
+        // Render search and filters HTML
+        $search_html = '';
+        $filters_html = '';
+        
+        if ($search_enabled) {
+            ob_start();
+            $this->render_search_form($base_url, $current_params, $search_config);
+            $search_html = ob_get_clean();
+        }
+        
+        if ($filters_enabled) {
+            ob_start();
+            $this->render_filters($base_url, $current_params);
+            $filters_html = ob_get_clean();
+        }
+        
+        // Prepare config for tabs template with base_url and current_params
+        $config = $this->config;
+        $config['base_url'] = $base_url;
+        $config['current_params'] = $current_params;
+        $config['search_enabled'] = $search_enabled;
+        $config['filters_enabled'] = $filters_enabled;
+        $config['search_html'] = $search_html;
+        $config['filters_html'] = $filters_html;
+        
+        $entity = $this->entity;
+        
+        require __DIR__ . '/tabs-navigation-with-controls.php';
     }
     
     /**
@@ -492,11 +561,13 @@ class SAW_Component_Admin_Table {
      * @return string
      */
     private function get_base_url() {
+        // Get current URL without query params
         $current_url = $_SERVER['REQUEST_URI'] ?? '';
         if (strpos($current_url, '?') !== false) {
-            return substr($current_url, 0, strpos($current_url, '?'));
+            $current_url = substr($current_url, 0, strpos($current_url, '?'));
         }
-        return $current_url;
+        // Return full URL with home_url for proper domain handling
+        return home_url($current_url);
     }
     
     /**
@@ -516,6 +587,14 @@ class SAW_Component_Admin_Table {
         foreach ($this->config['filters'] as $filter_key => $filter_config) {
             if (!empty($_GET[$filter_key])) {
                 $params[$filter_key] = sanitize_text_field($_GET[$filter_key]);
+            }
+        }
+        
+        // Get tab param if tabs are enabled - use sanitize_key to match get_list_data()
+        if (!empty($this->config['tabs']['enabled'])) {
+            $tab_param = $this->config['tabs']['tab_param'] ?? 'tab';
+            if (isset($_GET[$tab_param]) && $_GET[$tab_param] !== '') {
+                $params[$tab_param] = sanitize_key($_GET[$tab_param]);
             }
         }
         
@@ -552,12 +631,8 @@ class SAW_Component_Admin_Table {
             return;
         }
         
-        // Check if grouping is enabled
-        if (!empty($this->config['grouping']['enabled']) && !empty($this->config['grouping']['group_by'])) {
-            $this->render_grouped_table();
-        } else {
-            $this->render_table();
-        }
+        // Always render standard table (grouping removed, replaced by tabs)
+        $this->render_table();
     }
     
     private function render_empty_state() {
@@ -980,141 +1055,8 @@ class SAW_Component_Admin_Table {
         }
     }
     
-    /**
-     * Prepare grouped data from rows
-     * 
-     * @since 7.0.0
-     * @return array|null Grouped data or null if grouping disabled
-     */
-    private function prepare_grouped_data() {
-        if (empty($this->config['grouping']['enabled']) || empty($this->config['grouping']['group_by'])) {
-            return null;
-        }
-        
-        $group_by = $this->config['grouping']['group_by'];
-        $rows = $this->config['rows'];
-        $grouped = array();
-        
-        // Group rows by column value
-        foreach ($rows as $row) {
-            $group_value = $row[$group_by] ?? null;
-            
-            // Handle null/empty values - use 'ungrouped' for truly empty, but preserve 0 and false
-            if ($group_value === null || $group_value === '') {
-                $group_value = 'ungrouped';
-            } else {
-                // Normalize to string for consistent grouping (0, 1, etc.)
-                $group_value = (string)$group_value;
-            }
-            
-            if (!isset($grouped[$group_value])) {
-                $grouped[$group_value] = array(
-                    'value' => $group_value,
-                    'items' => array(),
-                    'count' => 0,
-                );
-            }
-            
-            $grouped[$group_value]['items'][] = $row;
-            $grouped[$group_value]['count']++;
-        }
-        
-        // Generate labels using callback
-        $label_callback = $this->config['grouping']['group_label_callback'];
-        foreach ($grouped as $group_value => &$group) {
-            if ($label_callback && is_callable($label_callback)) {
-                $group['label'] = call_user_func($label_callback, $group_value, $group['items']);
-            } else {
-                $group['label'] = $group_value;
-            }
-        }
-        unset($group);
-        
-        // Sort groups
-        $this->sort_groups($grouped);
-        
-        return $grouped;
-    }
-    
-    /**
-     * Sort groups by configured method
-     * 
-     * @since 7.0.0
-     * @param array &$grouped Grouped data (passed by reference)
-     */
-    private function sort_groups(&$grouped) {
-        $sort_by = $this->config['grouping']['sort_groups_by'] ?? 'label';
-        
-        switch ($sort_by) {
-            case 'count':
-                uasort($grouped, function($a, $b) {
-                    return $b['count'] - $a['count'];
-                });
-                break;
-                
-            case 'value':
-                // Sort by group value - numeric values first, then strings
-                uasort($grouped, function($a, $b) {
-                    $val_a = $a['value'];
-                    $val_b = $b['value'];
-                    
-                    // Handle numeric values
-                    if (is_numeric($val_a) && is_numeric($val_b)) {
-                        return $val_a <=> $val_b;
-                    }
-                    
-                    // Handle boolean-like values (0, 1, '0', '1')
-                    if (($val_a === 0 || $val_a === '0') && ($val_b === 1 || $val_b === '1')) {
-                        return -1;
-                    }
-                    if (($val_a === 1 || $val_a === '1') && ($val_b === 0 || $val_b === '0')) {
-                        return 1;
-                    }
-                    
-                    // Fallback to string comparison
-                    return strcmp((string)$val_a, (string)$val_b);
-                });
-                break;
-                
-            case 'label':
-            default:
-                uasort($grouped, function($a, $b) {
-                    return strcmp($a['label'], $b['label']);
-                });
-                break;
-        }
-    }
-    
-    /**
-     * Render grouped table
-     * 
-     * @since 7.0.0
-     */
-    private function render_grouped_table() {
-        $grouped_data = $this->prepare_grouped_data();
-        
-        if (!$grouped_data) {
-            $this->render_table();
-            return;
-        }
-        
-        // Pass grouped data to template
-        $entity = $this->entity;
-        $config = $this->config;
-        $config['grouped_data'] = $grouped_data;
-        $config['base_url'] = $this->get_base_url();
-        $config['current_params'] = $this->get_current_params();
-        $config['_table_instance'] = $this; // Pass instance for helper methods
-        
-        // Load grouped table template
-        $template_path = __DIR__ . '/grouped-body.php';
-        if (file_exists($template_path)) {
-            require $template_path;
-        } else {
-            // Fallback to normal table
-            $this->render_table();
-        }
-    }
+    // REMOVED: prepare_grouped_data(), sort_groups(), render_grouped_table()
+    // Grouping functionality replaced by tabs navigation
     
     /**
      * Get sort URL - public helper for templates
@@ -1161,9 +1103,9 @@ class SAW_Component_Admin_Table {
     }
     
     /**
-     * Output JS configuration for infinite scroll and grouping
+     * Output JS configuration for infinite scroll and tabs
      * 
-     * @since 7.0.0
+     * @since 7.1.0
      */
     private function output_js_config() {
         $config = array(
@@ -1173,7 +1115,8 @@ class SAW_Component_Admin_Table {
             'detail_url' => $this->config['detail_url'],
             'edit_url' => $this->config['edit_url'],
             'infinite_scroll' => $this->config['infinite_scroll'],
-            'grouping' => $this->config['grouping'],
+            'tabs' => $this->config['tabs'] ?? null,
+            'current_tab' => $this->config['current_tab'] ?? null,
         );
         
         echo '<script>';

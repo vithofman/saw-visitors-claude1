@@ -1709,10 +1709,37 @@ protected function can($action) {
             'order' => isset($_POST['order']) ? strtoupper(sanitize_text_field($_POST['order'])) : 'DESC',
         );
         
-        // Add filter params
+        // NOVÉ: Add TAB filter - use filter_value from tab config, not tab key
+        if (!empty($this->config['tabs']['enabled'])) {
+            $tab_param = $this->config['tabs']['tab_param'] ?? 'tab';
+            
+            // Get tab key from POST
+            if (isset($_POST[$tab_param]) && !empty($_POST[$tab_param])) {
+                $tab_key = sanitize_key($_POST[$tab_param]);
+                
+                // Look up the tab config and use filter_value (actual DB value)
+                if (isset($this->config['tabs']['tabs'][$tab_key])) {
+                    $tab_config = $this->config['tabs']['tabs'][$tab_key];
+                    
+                    // Apply filter only if filter_value is not null (null = "all" tab)
+                    if ($tab_config['filter_value'] !== null && $tab_config['filter_value'] !== '') {
+                        $filters[$tab_param] = $tab_config['filter_value'];
+                    }
+                }
+            }
+        }
+        
+        // Add filter params, but skip tab_param if tabs are enabled
         if (!empty($this->config['list_config']['filters'])) {
+            $tab_param = !empty($this->config['tabs']['enabled']) ? ($this->config['tabs']['tab_param'] ?? 'tab') : null;
+            
             foreach ($this->config['list_config']['filters'] as $filter_key => $enabled) {
-                if ($enabled && isset($_POST[$filter_key])) {
+                // Skip tab_param filter as it's handled by tabs system
+                if ($filter_key === $tab_param) {
+                    continue;
+                }
+                
+                if ($enabled && isset($_POST[$filter_key]) && $_POST[$filter_key] !== '') {
                     $filters[$filter_key] = sanitize_text_field($_POST[$filter_key]);
                 }
             }
@@ -1814,25 +1841,16 @@ protected function can($action) {
             $detail_url = '';
         }
         
-        // Check if grouping is enabled to determine row class
-        $is_grouped = !empty($this->config['grouping']['enabled']);
-        $row_class = $is_grouped ? 'saw-group-row' : 'saw-table-row';
+        // NOVÁ jednoduchá verze - no grouping
+        $row_class = 'saw-table-row';
         
         if (!empty($detail_url)) {
             $row_class .= ' saw-clickable-row';
         }
         
-        // Get group_by value for grouped tables
-        $group_by = $is_grouped ? ($this->config['grouping']['group_by'] ?? '') : '';
-        $group_value = !empty($group_by) ? ($row[$group_by] ?? '') : '';
-        $group_id = 'group_' . $group_value;
-        
         ?>
         <tr class="<?php echo esc_attr($row_class); ?>" 
             data-id="<?php echo esc_attr($row['id'] ?? ''); ?>"
-            <?php if ($is_grouped && !empty($group_id)): ?>
-                data-group-id="<?php echo esc_attr($group_id); ?>"
-            <?php endif; ?>
             <?php if (!empty($detail_url)): ?>
                 data-detail-url="<?php echo esc_url($detail_url); ?>"
             <?php endif; ?>>
@@ -2112,9 +2130,41 @@ protected function can($action) {
             'per_page' => $per_page,
         );
         
+        // Handle TAB filtering
+        $current_tab = null;
+        if (!empty($this->config['tabs']['enabled'])) {
+            $tab_param = $this->config['tabs']['tab_param'] ?? 'tab';
+            $current_tab = isset($_GET[$tab_param]) ? sanitize_key($_GET[$tab_param]) : ($this->config['tabs']['default_tab'] ?? 'all');
+            
+            // Ensure current_tab is a valid tab key
+            if (!isset($this->config['tabs']['tabs'][$current_tab])) {
+                $current_tab = $this->config['tabs']['default_tab'] ?? 'all';
+            }
+            
+            // Get filter value for current tab
+            if (isset($this->config['tabs']['tabs'][$current_tab])) {
+                $tab_config = $this->config['tabs']['tabs'][$current_tab];
+                
+                // Apply filter only if filter_value is not null (null = "all" tab)
+                // Use filter_value (the actual DB value), not the tab key
+                if ($tab_config['filter_value'] !== null && $tab_config['filter_value'] !== '') {
+                    $filters[$tab_param] = $tab_config['filter_value'];
+                }
+            }
+        }
+        
+        // Apply list_config filters, but skip tab_param if tabs are enabled
+        // (tab filter is already applied above with filter_value)
         if (!empty($this->config['list_config']['filters'])) {
+            $tab_param = !empty($this->config['tabs']['enabled']) ? ($this->config['tabs']['tab_param'] ?? 'tab') : null;
+            
             foreach ($this->config['list_config']['filters'] as $filter_key => $enabled) {
-                if ($enabled && isset($_GET[$filter_key])) {
+                // Skip tab_param filter as it's handled by tabs system
+                if ($filter_key === $tab_param) {
+                    continue;
+                }
+                
+                if ($enabled && isset($_GET[$filter_key]) && $_GET[$filter_key] !== '') {
                     $filters[$filter_key] = sanitize_text_field(wp_unslash($_GET[$filter_key]));
                 }
             }
@@ -2132,6 +2182,13 @@ protected function can($action) {
             'order' => $order,
         );
         
+        // NOVÉ: Add tab counts if tabs are enabled
+        if (!empty($this->config['tabs']['enabled'])) {
+            // Ensure current_tab is always a string
+            $result['current_tab'] = $current_tab ? (string) $current_tab : ($this->config['tabs']['default_tab'] ?? 'all');
+            $result['tab_counts'] = $this->get_tab_counts();
+        }
+        
         foreach ($_GET as $key => $value) {
             if (!in_array($key, array('s', 'orderby', 'order', 'paged'))) {
                 $result[$key] = sanitize_text_field(wp_unslash($value));
@@ -2139,6 +2196,68 @@ protected function can($action) {
         }
         
         return $result;
+    }
+    
+    /**
+     * Get tab counts for tabs navigation
+     * 
+     * Counts records for each tab based on tab configuration.
+     * 
+     * @since 7.1.0
+     * @return array Tab key => count
+     */
+    protected function get_tab_counts() {
+        if (empty($this->config['tabs']['enabled'])) {
+            return array();
+        }
+        
+        $tab_param = $this->config['tabs']['tab_param'] ?? 'tab';
+        $tabs = $this->config['tabs']['tabs'] ?? array();
+        $counts = array();
+        
+        foreach ($tabs as $tab_key => $tab_config) {
+            if (empty($tab_config['count_query'])) {
+                $counts[$tab_key] = 0;
+                continue;
+            }
+            
+            // Build filters for this tab
+            $filters = array(
+                'page' => 1,
+                'per_page' => 1, // We only need count, not items
+            );
+            
+            // Apply tab filter - use filter_value from tab config
+            // This is the actual database value, not the tab key
+            if ($tab_config['filter_value'] !== null && $tab_config['filter_value'] !== '') {
+                $filters[$tab_param] = $tab_config['filter_value'];
+            }
+            
+            // Apply other existing filters from GET (search, etc.)
+            $search = isset($_GET['s']) ? sanitize_text_field(wp_unslash($_GET['s'])) : '';
+            if (!empty($search)) {
+                $filters['search'] = $search;
+            }
+            
+            // Apply list_config filters (but exclude the tab_param to avoid conflicts)
+            if (!empty($this->config['list_config']['filters'])) {
+                foreach ($this->config['list_config']['filters'] as $filter_key => $enabled) {
+                    // Skip tab_param filter as we're applying it via filter_value
+                    if ($filter_key === $tab_param) {
+                        continue;
+                    }
+                    if ($enabled && isset($_GET[$filter_key]) && $_GET[$filter_key] !== '') {
+                        $filters[$filter_key] = sanitize_text_field(wp_unslash($_GET[$filter_key]));
+                    }
+                }
+            }
+            
+            // Get count from model
+            $data = $this->model->get_all($filters);
+            $counts[$tab_key] = isset($data['total']) ? intval($data['total']) : 0;
+        }
+        
+        return $counts;
     }
     
     /**

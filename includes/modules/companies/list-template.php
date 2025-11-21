@@ -113,28 +113,46 @@ $table_config['module_config'] = $config;
 $table_config['actions'] = array('view', 'edit', 'delete');
 $table_config['add_new'] = 'Nová firma';
 
-// Grouping configuration - group by status (is_archived)
-$table_config['grouping'] = array(
+// TABS configuration - NOVÝ formát (replaces grouping)
+$table_config['tabs'] = array(
     'enabled' => true,
-    'group_by' => 'is_archived',
-    'group_label_callback' => function($group_value, $items) {
-        // is_archived is 0 for active, 1 for archived
-        if (empty($group_value) || $group_value == '0' || $group_value === 0) {
-            return '✅ Aktivní firmy';
-        }
-        return '📦 Archivované firmy';
-    },
-    'default_collapsed' => true, // Collapse all groups by default, first will be expanded if is_first
-    'sort_groups_by' => 'value', // Sort by value so active (0) comes first
-    'show_count' => true,
+    'tab_param' => 'is_archived', // GET parameter pro tab (?is_archived=0)
+    'tabs' => array(
+        'all' => array(
+            'label' => 'Všechny',
+            'icon' => '📋',
+            'filter_value' => null, // null = no filter (all records)
+            'count_query' => true,
+        ),
+        'active' => array(
+            'label' => 'Aktivní',
+            'icon' => '✅',
+            'filter_value' => '0', // is_archived = 0
+            'count_query' => true,
+        ),
+        'archived' => array(
+            'label' => 'Archivované',
+            'icon' => '📦',
+            'filter_value' => '1', // is_archived = 1
+            'count_query' => true,
+        ),
+    ),
+    'default_tab' => 'all',
 );
 
-// Infinite scroll configuration (optional - can be enabled later)
+// Infinite scroll - UPRAVENÉ hodnoty
 $table_config['infinite_scroll'] = array(
-    'enabled' => false, // Set to true to enable infinite scroll
-    'per_page' => 50,
-    'threshold' => 300,
+    'enabled' => true, // Enable infinite scroll
+    'initial_load' => 100, // NOVÉ: První načtení 100 řádků
+    'per_page' => 50, // Poté po 50 řádcích
+    'threshold' => 0.7, // NOVÉ: 70% scroll (místo 300px)
 );
+
+// NOVÉ: Pass tab data from get_list_data() result
+if (!empty($table_config['tabs']['enabled'])) {
+    $table_config['current_tab'] = $current_tab ?? ($table_config['tabs']['default_tab'] ?? 'all');
+    $table_config['tab_counts'] = $tab_counts ?? array();
+}
 
 // Ensure Admin Table class is loaded
 if (!class_exists('SAW_Component_Admin_Table')) {

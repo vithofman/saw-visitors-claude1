@@ -195,31 +195,64 @@ $table_config['columns'] = array(
     ),
 );
 
-// Grouping configuration - group by current_status
-$table_config['grouping'] = array(
+// TABS configuration - NOVÝ formát (replaces grouping)
+$table_config['tabs'] = array(
     'enabled' => true,
-    'group_by' => 'current_status',
-    'group_label_callback' => function($group_value, $items) {
-        $labels = array(
-            'present' => '✅ Přítomen',
-            'checked_out' => '🚪 Odhlášen',
-            'confirmed' => '⏳ Potvrzený',
-            'planned' => '📅 Plánovaný',
-            'no_show' => '❌ Nedostavil se',
-        );
-        return $labels[$group_value] ?? 'Stav: ' . ucfirst($group_value);
-    },
-    'default_collapsed' => true,
-    'sort_groups_by' => 'value', // Sort by value to control order
-    'show_count' => true,
+    'tab_param' => 'current_status', // GET parameter pro tab (?current_status=present)
+    'tabs' => array(
+        'all' => array(
+            'label' => 'Všechny',
+            'icon' => '📋',
+            'filter_value' => null, // null = no filter (all records)
+            'count_query' => true,
+        ),
+        'present' => array(
+            'label' => 'Přítomen',
+            'icon' => '✅',
+            'filter_value' => 'present',
+            'count_query' => true,
+        ),
+        'checked_out' => array(
+            'label' => 'Odhlášen',
+            'icon' => '🚪',
+            'filter_value' => 'checked_out',
+            'count_query' => true,
+        ),
+        'confirmed' => array(
+            'label' => 'Potvrzený',
+            'icon' => '⏳',
+            'filter_value' => 'confirmed',
+            'count_query' => true,
+        ),
+        'planned' => array(
+            'label' => 'Plánovaný',
+            'icon' => '📅',
+            'filter_value' => 'planned',
+            'count_query' => true,
+        ),
+        'no_show' => array(
+            'label' => 'Nedostavil se',
+            'icon' => '❌',
+            'filter_value' => 'no_show',
+            'count_query' => true,
+        ),
+    ),
+    'default_tab' => 'all',
 );
 
-// Infinite scroll configuration
+// Infinite scroll - UPRAVENÉ hodnoty
 $table_config['infinite_scroll'] = array(
-    'enabled' => false, // Start with pagination
-    'per_page' => 50,
-    'threshold' => 300,
+    'enabled' => true, // Enable infinite scroll
+    'initial_load' => 100, // NOVÉ: První načtení 100 řádků
+    'per_page' => 50, // Poté po 50 řádcích
+    'threshold' => 0.7, // NOVÉ: 70% scroll (místo 300px)
 );
+
+// NOVÉ: Pass tab data from get_list_data() result
+if (!empty($table_config['tabs']['enabled'])) {
+    $table_config['current_tab'] = $current_tab ?? ($table_config['tabs']['default_tab'] ?? 'all');
+    $table_config['tab_counts'] = $tab_counts ?? array();
+}
 
 // Render
 $table = new SAW_Component_Admin_Table('visitors', $table_config);

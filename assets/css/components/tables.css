@@ -366,166 +366,9 @@
 }
 
 /* ============================================
-   GROUPED TABLE STYLES
+   GROUPED TABLE STYLES - REMOVED
    ============================================ */
-
-.saw-table-grouped {
-    /* Marker class for grouped tables */
-}
-
-/* GROUP HEADER ROW */
-.saw-group-header {
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
-    border-top: 2px solid #e2e8f0 !important;
-    border-bottom: 1px solid #cbd5e1 !important;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    user-select: none;
-}
-
-.saw-group-header:hover {
-    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.saw-group-header td {
-    padding: 14px 24px !important;
-    border-bottom: none !important;
-}
-
-.saw-group-header:first-of-type {
-    border-top: none !important;
-}
-
-/* GROUP TITLE CONTAINER */
-.saw-group-title {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-weight: 600;
-    color: #334155;
-    font-size: 14px;
-    line-height: 1.5;
-}
-
-/* GROUP TOGGLE ICON */
-.saw-group-toggle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    border-radius: 4px;
-    background: rgba(100, 116, 139, 0.1);
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    flex-shrink: 0;
-}
-
-.saw-group-header:hover .saw-group-toggle {
-    background: rgba(100, 116, 139, 0.15);
-}
-
-.saw-group-icon {
-    color: #64748b;
-    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* EXPANDED STATE */
-.saw-group-expanded .saw-group-icon {
-    transform: rotate(90deg);
-}
-
-/* COLLAPSED STATE */
-.saw-group-collapsed .saw-group-icon {
-    transform: rotate(0deg);
-}
-
-/* GROUP LABEL */
-.saw-group-label {
-    flex: 1;
-    font-size: 14px;
-    font-weight: 600;
-    color: #1e293b;
-}
-
-/* GROUP COUNT BADGE */
-.saw-group-count {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 28px;
-    height: 22px;
-    padding: 0 8px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: #ffffff;
-    font-size: 12px;
-    font-weight: 600;
-    border-radius: 11px;
-    box-shadow: 0 1px 3px rgba(102, 126, 234, 0.3);
-}
-
-/* GROUP ROWS */
-.saw-group-row {
-    transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-.saw-group-row.saw-group-hidden {
-    display: none;
-}
-
-/* Odsazení prvního sloupce v group rows */
-.saw-group-row td:first-child {
-    padding-left: 56px !important;
-    position: relative;
-}
-
-/* Vizuální indikátor příslušnosti ke skupině */
-.saw-group-row td:first-child::before {
-    content: '';
-    position: absolute;
-    left: 28px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 3px;
-    height: 60%;
-    background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
-    border-radius: 2px;
-    opacity: 0.2;
-}
-
-.saw-group-row:hover td:first-child::before {
-    opacity: 0.4;
-}
-
-/* ANIMATION: Smooth expand/collapse */
-@keyframes groupExpand {
-    from {
-        opacity: 0;
-        transform: translateY(-8px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.saw-group-row:not(.saw-group-hidden) {
-    animation: groupExpand 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* EMPTY GROUP MESSAGE */
-.saw-group-empty {
-    background: #fefce8 !important;
-}
-
-.saw-group-empty td {
-    padding: 20px 24px !important;
-    text-align: center;
-    color: #854d0e;
-    font-size: 13px;
-    font-style: italic;
-}
+/* Grouping functionality replaced by tabs navigation in v7.1.0 */
 
 /* INFINITE SCROLL LOADING INDICATOR */
 .saw-infinite-loading {
@@ -639,28 +482,7 @@
     border-top: 1px solid #f1f5f9;
 }
 
-/* RESPONSIVE: Mobile adjustments for grouping */
-@media (max-width: 768px) {
-    .saw-group-title {
-        font-size: 13px;
-        gap: 8px;
-    }
-    
-    .saw-group-count {
-        font-size: 11px;
-        min-width: 24px;
-        height: 20px;
-        padding: 0 6px;
-    }
-    
-    .saw-group-row td:first-child {
-        padding-left: 40px !important;
-    }
-    
-    .saw-group-row td:first-child::before {
-        left: 20px;
-    }
-}
+/* RESPONSIVE: Mobile adjustments - grouping removed */
 
 .saw-filters select:hover,
 .saw-filter-select:hover {
@@ -961,28 +783,7 @@
     transition: none !important;
 }
 
-/* Grouped table active row */
-.saw-table-grouped .saw-group-row.saw-row-active {
-    background: var(--saw-table-row-active-bg) !important;
-    border-left: 3px solid #3b82f6 !important;
-    /* Remove ALL transitions - instant visual feedback only */
-    transition: none !important;
-    animation: none !important;
-}
-
-/* Removed ::before pseudo-element with gradient and shadow - no animation */
-
-/* CRITICAL: Add explicit background to td elements in grouped tables */
-.saw-table-grouped .saw-group-row.saw-row-active td {
-    background: var(--saw-table-row-active-bg) !important;
-    transition: none !important;
-    animation: none !important;
-}
-
-.saw-table-grouped .saw-group-row.saw-row-active:hover td {
-    background: var(--saw-table-row-active-hover-bg) !important;
-    transition: none !important;
-}
+/* Grouped table active row - REMOVED (grouping replaced by tabs) */
 
 /* ============================================
    COLUMN ALIGNMENT

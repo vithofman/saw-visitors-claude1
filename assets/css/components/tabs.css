@@ -1,0 +1,222 @@
+/**
+ * Tabs Navigation Styling
+ * 
+ * @package SAW_Visitors
+ * @since 7.1.0
+ */
+
+/* ============================================
+   TABS WRAPPER
+   ============================================ */
+
+.saw-table-tabs-wrapper {
+    background: var(--saw-bg-primary);
+    border-bottom: 1px solid var(--saw-border-color);
+    padding: 0 24px;
+    position: sticky;
+    top: 0;
+    z-index: 15;
+    margin-bottom: 0;
+}
+
+.saw-table-tabs-container {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: nowrap;
+}
+
+.saw-table-tabs {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+    flex: 1 1 auto;
+    min-width: 0; /* Allow flex item to shrink below content size */
+}
+
+.saw-table-tabs::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+}
+
+/* Search and Filters inline with tabs */
+.saw-table-controls-inline {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 0 0 auto;
+    flex-shrink: 0;
+}
+
+.saw-table-controls-inline .saw-table-search {
+    flex: 0 0 auto;
+    max-width: 360px;
+    min-width: 200px;
+}
+
+.saw-table-controls-inline .saw-table-filters {
+    flex: 0 0 auto;
+}
+
+/* ============================================
+   TAB ITEM
+   ============================================ */
+
+.saw-table-tab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    color: var(--saw-text-secondary);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    cursor: pointer;
+    position: relative;
+}
+
+.saw-table-tab:hover {
+    color: var(--saw-text-primary);
+    background: var(--saw-bg-secondary);
+}
+
+.saw-table-tab.active {
+    color: var(--saw-primary) !important;
+    border-bottom-color: var(--saw-primary) !important;
+    background: var(--saw-bg-secondary) !important;
+    font-weight: 600;
+}
+
+/* ============================================
+   TAB CONTENT
+   ============================================ */
+
+.saw-tab-icon {
+    font-size: 16px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.saw-tab-label {
+    flex-shrink: 0;
+}
+
+.saw-tab-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 20px;
+    padding: 0 6px;
+    background: #e5e7eb;
+    color: var(--saw-text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 10px;
+    transition: all 0.2s ease;
+}
+
+.saw-table-tab.active .saw-tab-count {
+    background: var(--saw-primary) !important;
+    color: white !important;
+}
+
+/* ============================================
+   LOADING STATE
+   ============================================ */
+
+.saw-table-tabs.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.saw-table-tabs.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    border: 2px solid #d1d5db;
+    border-top-color: var(--saw-primary);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* ============================================
+   RESPONSIVE - MOBILE
+   ============================================ */
+
+@media (max-width: 768px) {
+    .saw-table-tabs-wrapper {
+        padding: 0 12px;
+    }
+    
+    .saw-table-tabs-container {
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    
+    .saw-table-tabs {
+        flex: 1 1 100%;
+        order: 1;
+    }
+    
+    .saw-table-controls-inline {
+        flex: 1 1 100%;
+        order: 2;
+        justify-content: space-between;
+    }
+    
+    .saw-table-controls-inline .saw-table-search {
+        flex: 1 1 auto;
+        min-width: 200px;
+        max-width: none;
+    }
+    
+    .saw-table-tab {
+        padding: 10px 16px;
+        font-size: 13px;
+    }
+    
+    .saw-tab-icon {
+        font-size: 14px;
+    }
+    
+    .saw-tab-count {
+        min-width: 20px;
+        height: 18px;
+        font-size: 11px;
+    }
+}
+
+@media (max-width: 480px) {
+    .saw-table-tabs-wrapper {
+        padding: 0 8px;
+    }
+    
+    .saw-table-tab {
+        padding: 8px 12px;
+        gap: 6px;
+    }
+    
+    .saw-tab-label {
+        display: none; /* Show only icon and count on very small screens */
+    }
+    
+    .saw-table-controls-inline .saw-table-search {
+        min-width: 150px;
+    }
+}
+

@@ -51,6 +51,7 @@ class SAW_Asset_Loader {
         'saw-base-components'     => 'components/base-components.css',
         'saw-forms'               => 'components/forms.css', // Consolidated: forms, buttons, selectbox, select-create, color-picker, search-input
         'saw-tables'              => 'components/tables.css', // Consolidated: tables, table-column-types, admin-table, admin-table-sidebar
+        'saw-tabs'                => 'components/tabs.css', // Tabs navigation styling
         'saw-feedback'            => 'components/feedback.css', // Consolidated: alerts, badges, cards, modals, pagination, detail-sections
         'saw-admin-table-detail'  => 'components/admin-table-detail.css', // Global styles for admin-table detail sidebars (all modules)
         
@@ -142,6 +143,9 @@ class SAW_Asset_Loader {
                 // Admin table detail depends on tables component
                 // NOTE: This is ALSO enqueued per-module in enqueue_module() with module dependency
                 // to ensure it loads AFTER module-specific CSS and overrides module styles
+                $deps = ['saw-variables', 'saw-base-components', 'saw-tables'];
+            } elseif ($handle === 'saw-tabs') {
+                // Tabs depend on base-components and tables
                 $deps = ['saw-variables', 'saw-base-components', 'saw-tables'];
             } else {
                 $deps = ['saw-variables', 'saw-base-components'];
@@ -432,6 +436,10 @@ class SAW_Asset_Loader {
             'saw-admin-table-component' => [
                 'path' => 'assets/js/components/admin-table.js',
                 'deps' => ['jquery', 'saw-app'],
+            ],
+            'saw-tabs-navigation' => [
+                'path' => 'assets/js/components/tabs-navigation.js',
+                'deps' => ['jquery', 'saw-app', 'saw-admin-table-component'],
             ],
         ];
         
