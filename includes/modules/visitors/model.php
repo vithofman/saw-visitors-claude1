@@ -135,6 +135,12 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
             }
         }
         
+        // Current status filter - filter by current_status (for tabs)
+        if (!empty($filters['current_status'])) {
+            $sql .= " AND vis.current_status = %s";
+            $params[] = $filters['current_status'];
+        }
+        
         // Count total
         $count_sql = preg_replace('/^SELECT .+ FROM/', 'SELECT COUNT(DISTINCT vis.id) FROM', $sql);
         $total = (int) $wpdb->get_var($wpdb->prepare($count_sql, $params));

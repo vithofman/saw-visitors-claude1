@@ -249,6 +249,8 @@ class SAW_Installer {
 	    array('table' => 'visit_schedules', 'constraint' => 'fk_schedule_visit', 'column' => 'visit_id', 'ref_table' => 'visits', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
 
             // visitors
+	    array('table' => 'visitors', 'constraint' => 'fk_visitor_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'RESTRICT'),
+	    array('table' => 'visitors', 'constraint' => 'fk_visitor_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'RESTRICT'),
             array('table' => 'visitors', 'constraint' => 'fk_visitor_visit', 'column' => 'visit_id', 'ref_table' => 'visits', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
             // visit_hosts

@@ -680,12 +680,18 @@
                 return;
             }
             
-            // Check if page is already loaded
             const nextPage = currentPage + 1;
+            
+            // CRITICAL: Check cache BEFORE incrementing currentPage
+            // This prevents re-loading when scrolling back up
             if (loadedPages.has(nextPage)) {
+                console.log('✅ Page', nextPage, 'already loaded, skipping');
                 return;
             }
             
+            console.log('📥 Loading page', nextPage);
+            
+            // NOW it's safe to increment
             isLoading = true;
             currentPage = nextPage;
             
@@ -762,14 +768,10 @@
                     
                     hasMore = has_more;
                     
-                    // If no more data, don't show loading indicator anymore
-                    if (!has_more) {
-                        // All data loaded
-                    }
-                    
                     if (html && loaded > 0) {
-                        // Mark page as loaded
+                        // ✅ Mark page as loaded ONLY after successful load
                         loadedPages.add(currentPage);
+                        console.log('✅ Page', currentPage, 'loaded successfully,', loaded, 'rows');
                         
                         // Create temporary container to parse HTML
                         const temp = document.createElement('tbody');
@@ -781,10 +783,11 @@
                         const rowsToAdd = Array.from(rows).filter(row => {
                             const rowId = row.getAttribute('data-id');
                             if (!rowId) {
-                                // Rows without ID (like group headers) - check if similar row exists
+                                // Rows without ID - allow them
                                 return true;
                             }
                             if (loadedRowIds.has(rowId)) {
+                                console.log('⚠️ Duplicate row detected:', rowId);
                                 return false;
                             }
                             loadedRowIds.add(rowId);
@@ -792,9 +795,12 @@
                         });
                         
                         if (rowsToAdd.length === 0) {
+                            console.log('⚠️ No new rows to add (all duplicates)');
                             isLoading = false;
                             return;
                         }
+                        
+                        console.log('✅ Adding', rowsToAdd.length, 'new rows');
                         
                         // For tabs (non-grouped), just append rows
                         rowsToAdd.forEach(row => {

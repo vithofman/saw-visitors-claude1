@@ -46,6 +46,8 @@ $filters_html = $config['filters_html'] ?? '';
                 // Ensure tab_key is string for comparison
                 $tab_key = (string) $tab_key;
                 $is_active = ($tab_key === $current_tab);
+                // Generate URL with tab_key (e.g., ?is_archived=active)
+                // get_list_data() will match this to find the correct tab
                 $tab_url = add_query_arg(array_merge($base_params, array($tab_param => $tab_key)), $base_url);
                 $count = $tab_counts[$tab_key] ?? 0;
                 ?>

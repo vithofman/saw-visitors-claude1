@@ -1709,16 +1709,31 @@ protected function can($action) {
             'order' => isset($_POST['order']) ? strtoupper(sanitize_text_field($_POST['order'])) : 'DESC',
         );
         
-        // NOVÉ: Add TAB filter - use filter_value from tab config, not tab key
+        // NOVÉ: Add TAB filter - handle both tab_key (from JS) and filter_value matching
         if (!empty($this->config['tabs']['enabled'])) {
             $tab_param = $this->config['tabs']['tab_param'] ?? 'tab';
             
-            // Get tab key from POST
-            if (isset($_POST[$tab_param]) && !empty($_POST[$tab_param])) {
-                $tab_key = sanitize_key($_POST[$tab_param]);
+            // Get value from POST (could be tab_key or filter_value)
+            if (isset($_POST[$tab_param]) && $_POST[$tab_param] !== '') {
+                $post_value = sanitize_text_field(wp_unslash($_POST[$tab_param]));
                 
-                // Look up the tab config and use filter_value (actual DB value)
-                if (isset($this->config['tabs']['tabs'][$tab_key])) {
+                // First try to match as tab_key
+                $tab_key = null;
+                if (isset($this->config['tabs']['tabs'][$post_value])) {
+                    $tab_key = $post_value;
+                } else {
+                    // If not found as tab_key, try to match by filter_value
+                    foreach ($this->config['tabs']['tabs'] as $key => $tab_config) {
+                        if ($tab_config['filter_value'] !== null && 
+                            (string)$tab_config['filter_value'] === (string)$post_value) {
+                            $tab_key = $key;
+                            break;
+                        }
+                    }
+                }
+                
+                // Apply filter using the matched tab's filter_value
+                if ($tab_key && isset($this->config['tabs']['tabs'][$tab_key])) {
                     $tab_config = $this->config['tabs']['tabs'][$tab_key];
                     
                     // Apply filter only if filter_value is not null (null = "all" tab)
@@ -2131,22 +2146,47 @@ protected function can($action) {
         );
         
         // Handle TAB filtering
+        // URL may contain either tab_key (e.g., ?is_archived=active) or filter_value (e.g., ?is_archived=0)
+        // We need to find the matching tab_key and use its filter_value for the query
         $current_tab = null;
         if (!empty($this->config['tabs']['enabled'])) {
             $tab_param = $this->config['tabs']['tab_param'] ?? 'tab';
-            $current_tab = isset($_GET[$tab_param]) ? sanitize_key($_GET[$tab_param]) : ($this->config['tabs']['default_tab'] ?? 'all');
+            $url_value = isset($_GET[$tab_param]) ? sanitize_text_field(wp_unslash($_GET[$tab_param])) : null;
             
-            // Ensure current_tab is a valid tab key
-            if (!isset($this->config['tabs']['tabs'][$current_tab])) {
+            // Find which tab_key matches the URL value
+            $current_tab = $this->config['tabs']['default_tab'] ?? 'all';
+            $tab_matched = false;
+            
+            if ($url_value !== null && $url_value !== '') {
+                // First, try to match as tab_key directly
+                if (isset($this->config['tabs']['tabs'][$url_value])) {
+                    $current_tab = $url_value;
+                    $tab_matched = true;
+                } else {
+                    // If not found as tab_key, try to match by filter_value
+                    // This handles cases where URL contains filter_value instead of tab_key
+                    foreach ($this->config['tabs']['tabs'] as $tab_key => $tab_config) {
+                        // Compare filter_value with URL value (both as strings for consistency)
+                        if ($tab_config['filter_value'] !== null && 
+                            (string)$tab_config['filter_value'] === (string)$url_value) {
+                            $current_tab = $tab_key;
+                            $tab_matched = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // If no match found (or URL is empty), use default tab
+            if (!$tab_matched) {
                 $current_tab = $this->config['tabs']['default_tab'] ?? 'all';
             }
             
-            // Get filter value for current tab
+            // Apply filter using the matched tab's filter_value
             if (isset($this->config['tabs']['tabs'][$current_tab])) {
                 $tab_config = $this->config['tabs']['tabs'][$current_tab];
                 
                 // Apply filter only if filter_value is not null (null = "all" tab)
-                // Use filter_value (the actual DB value), not the tab key
                 if ($tab_config['filter_value'] !== null && $tab_config['filter_value'] !== '') {
                     $filters[$tab_param] = $tab_config['filter_value'];
                 }
@@ -2229,6 +2269,7 @@ protected function can($action) {
             
             // Apply tab filter - use filter_value from tab config
             // This is the actual database value, not the tab key
+            // Only apply if filter_value is not null (null = "all" tab shows everything)
             if ($tab_config['filter_value'] !== null && $tab_config['filter_value'] !== '') {
                 $filters[$tab_param] = $tab_config['filter_value'];
             }

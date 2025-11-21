@@ -121,7 +121,12 @@ abstract class SAW_Base_Model
         if (!empty($this->config['tabs']['enabled'])) {
             $tab_param = $this->config['tabs']['tab_param'] ?? 'tab';
             
-            if (isset($filters[$tab_param]) && $filters[$tab_param] !== '' && $this->is_valid_column($tab_param)) {
+            // Only apply filter if value is set, not empty, AND not null
+            // This ensures "Všechny" tab (filter_value = null) shows all records
+            if (isset($filters[$tab_param]) && 
+                $filters[$tab_param] !== '' && 
+                $filters[$tab_param] !== null && 
+                $this->is_valid_column($tab_param)) {
                 $sql .= " AND `{$tab_param}` = %s";
                 $params[] = $filters[$tab_param];
             }

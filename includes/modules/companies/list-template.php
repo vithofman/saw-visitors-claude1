@@ -127,13 +127,13 @@ $table_config['tabs'] = array(
         'active' => array(
             'label' => 'Aktivní',
             'icon' => '✅',
-            'filter_value' => '0', // is_archived = 0
+            'filter_value' => 0, // is_archived = 0 (INT, not string)
             'count_query' => true,
         ),
         'archived' => array(
             'label' => 'Archivované',
             'icon' => '📦',
-            'filter_value' => '1', // is_archived = 1
+            'filter_value' => 1, // is_archived = 1 (INT, not string)
             'count_query' => true,
         ),
     ),
