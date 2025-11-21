@@ -51,6 +51,20 @@
     gap: 12px;
 }
 
+/* Responsive: wrap fields on mobile */
+@media (max-width: 768px) {
+    .saw-schedule-field-group {
+        grid-template-columns: 1fr !important; /* Stack all fields vertically on mobile */
+        gap: 12px;
+    }
+    
+    .saw-schedule-row-actions {
+        position: static !important; /* Move actions below fields on mobile */
+        margin-top: 12px;
+        justify-content: flex-end;
+    }
+}
+
 /* Schedule Field */
 .saw-schedule-field {
     display: flex;
@@ -69,19 +83,26 @@
 }
 
 /* Notes - full width */
-.saw-schedule-field-notes-full {
+.saw-schedule-field-notes-full,
+.saw-schedule-notes-full,
+.saw-schedule-field.saw-schedule-notes-full {
     display: flex;
     flex-direction: column;
+    width: 100%;
 }
 
-.saw-schedule-field-notes-full label {
+.saw-schedule-field-notes-full label,
+.saw-schedule-notes-full label,
+.saw-schedule-field.saw-schedule-notes-full label {
     font-size: 13px;
     font-weight: 600;
     color: #1e293b;
     margin-bottom: 6px;
 }
 
-.saw-schedule-field-notes-full input {
+.saw-schedule-field-notes-full input,
+.saw-schedule-notes-full input,
+.saw-schedule-field.saw-schedule-notes-full input {
     width: 100%;
 }
 
@@ -105,13 +126,24 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    min-width: 40px;
+    min-height: 40px;
+    margin: 0;
 }
 
 .saw-remove-schedule-day .dashicons {
-    color: #dc2626;
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
+    font-family: dashicons !important;
+    color: #dc2626 !important;
+    font-size: 18px !important;
+    width: 18px !important;
+    height: 18px !important;
+    line-height: 18px !important;
+    display: inline-block !important;
+    speak: none !important;
+    font-style: normal !important;
+    font-weight: normal !important;
+    font-variant: normal !important;
+    text-transform: none !important;
 }
 
 .saw-remove-schedule-day:hover:not(:disabled) {
@@ -136,13 +168,24 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    min-width: 40px;
+    min-height: 40px;
+    margin: 0;
 }
 
 .saw-add-schedule-day-inline .dashicons {
-    color: #16a34a;
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
+    font-family: dashicons !important;
+    color: #16a34a !important;
+    font-size: 18px !important;
+    width: 18px !important;
+    height: 18px !important;
+    line-height: 18px !important;
+    display: inline-block !important;
+    speak: none !important;
+    font-style: normal !important;
+    font-weight: normal !important;
+    font-variant: normal !important;
+    text-transform: none !important;
 }
 
 .saw-add-schedule-day-inline:hover {

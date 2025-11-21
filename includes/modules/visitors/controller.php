@@ -400,4 +400,166 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
             'message' => 'Návštěvník přidán',
         ));
     }
+    
+    /**
+     * Override ajax_get_adjacent_id for visitors
+     * Visitors table doesn't have customer_id/branch_id directly - they're in visits table
+     * 
+     * @since 7.0.0
+     * @return void Outputs JSON
+     */
+    public function ajax_get_adjacent_id() {
+        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        
+        // Check permissions
+        if (method_exists($this, 'can') && !$this->can('view')) {
+            wp_send_json_error(array(
+                'message' => 'Nemáte oprávnění zobrazit záznamy'
+            ));
+            return;
+        }
+        
+        $current_id = intval($_POST['id'] ?? 0);
+        $direction = sanitize_text_field($_POST['direction'] ?? 'next'); // 'next' or 'prev'
+        
+        if (!$current_id) {
+            wp_send_json_error(array(
+                'message' => 'Chybí ID záznamu'
+            ));
+        }
+        
+        if (!in_array($direction, array('next', 'prev'))) {
+            wp_send_json_error(array(
+                'message' => 'Neplatný směr navigace'
+            ));
+        }
+        
+        // Get context filters
+        $customer_id = 0;
+        $branch_id = 0;
+        
+        if (class_exists('SAW_Context')) {
+            $customer_id = SAW_Context::get_customer_id();
+            $branch_id = SAW_Context::get_branch_id();
+        }
+        
+        // Get current record to determine its position
+        $current_item = $this->model->get_by_id($current_id);
+        if (!$current_item) {
+            wp_send_json_error(array(
+                'message' => 'Záznam nenalezen'
+            ));
+        }
+        
+        // Build query to get all visitor IDs with same filters
+        // Visitors don't have customer_id/branch_id directly - need to JOIN with visits
+        global $wpdb;
+        
+        // Ensure table name is correct - model->table should already include prefix
+        $visitors_table = $this->model->table;
+        $visits_table = $wpdb->prefix . 'saw_visits';
+        
+        // Validate tables exist
+        if (empty($visitors_table) || empty($visits_table)) {
+            wp_send_json_error(array(
+                'message' => 'Chyba: Nelze určit tabulky databáze'
+            ));
+            return;
+        }
+        
+        // Table names are from internal config, safe to use directly
+        // $visitors_table already includes prefix from model
+        // $visits_table is built from $wpdb->prefix
+        
+        $where = array('1=1');
+        $where_values = array();
+        
+        // Filter by customer_id if set - through visits table
+        if ($customer_id) {
+            $where[] = "v.customer_id = %d";
+            $where_values[] = $customer_id;
+        }
+        
+        // Filter by branch_id if set - through visits table
+        if ($branch_id) {
+            $where[] = "v.branch_id = %d";
+            $where_values[] = $branch_id;
+        }
+        
+        $where_clause = implode(' AND ', $where);
+        
+        // Build query with table names directly (already escaped)
+        $query = "SELECT vis.id 
+                  FROM {$visitors_table} vis
+                  INNER JOIN {$visits_table} v ON vis.visit_id = v.id
+                  WHERE {$where_clause}
+                  ORDER BY vis.id ASC";
+        
+        // Prepare query with where values
+        if (!empty($where_values)) {
+            $query = $wpdb->prepare($query, $where_values);
+        }
+        
+        $ids = $wpdb->get_col($query);
+        
+        // Log error if query failed
+        if ($wpdb->last_error) {
+            error_log('Visitors ajax_get_adjacent_id query error: ' . $wpdb->last_error . ' Query: ' . $query);
+            wp_send_json_error(array(
+                'message' => 'Chyba při načítání záznamů: ' . $wpdb->last_error
+            ));
+            return;
+        }
+        
+        // Convert IDs to integers for consistent comparison
+        $ids = array_map('intval', $ids);
+        $current_id = intval($current_id);
+        
+        if (empty($ids)) {
+            error_log('Visitors ajax_get_adjacent_id: No IDs found. Query: ' . $query . ', Customer ID: ' . $customer_id . ', Branch ID: ' . $branch_id);
+            wp_send_json_error(array(
+                'message' => 'Žádné záznamy nenalezeny'
+            ));
+            return;
+        }
+        
+        // Find current position - use strict comparison
+        $current_index = array_search($current_id, $ids, true);
+        
+        if ($current_index === false) {
+            error_log('Visitors ajax_get_adjacent_id: Current ID ' . $current_id . ' not found in IDs: ' . implode(', ', array_slice($ids, 0, 10)));
+            wp_send_json_error(array(
+                'message' => 'Aktuální záznam není v seznamu'
+            ));
+            return;
+        }
+        
+        // Get adjacent ID with circular navigation
+        $adjacent_id = null;
+        
+        if ($direction === 'next') {
+            // Next: if last, go to first
+            $adjacent_index = ($current_index + 1) % count($ids);
+            $adjacent_id = $ids[$adjacent_index];
+        } else {
+            // Prev: if first, go to last
+            $adjacent_index = ($current_index - 1 + count($ids)) % count($ids);
+            $adjacent_id = $ids[$adjacent_index];
+        }
+        
+        if (!$adjacent_id) {
+            wp_send_json_error(array(
+                'message' => 'Nepodařilo se najít sousední záznam'
+            ));
+        }
+        
+        // Build detail URL
+        $route = $this->config['route'] ?? $this->entity;
+        $detail_url = home_url('/admin/' . $route . '/' . $adjacent_id . '/');
+        
+        wp_send_json_success(array(
+            'id' => $adjacent_id,
+            'url' => $detail_url
+        ));
+    }
 }

@@ -638,7 +638,7 @@ body, html {
     bottom: 0 !important;
     left: 0 !important;
     right: 0 !important;
-    height: 45px !important;
+    min-height: 45px !important; /* Changed from height to min-height to allow content expansion */
     z-index: 900 !important;
     flex-shrink: 0 !important;
     background: var(--saw-footer-bg);
@@ -669,6 +669,8 @@ body, html {
     max-width: 100%;
     gap: 20px;
     width: 100%;
+    flex-wrap: wrap; /* Allow content to wrap to multiple lines */
+    min-height: 100%; /* Ensure content fills footer height */
 }
 
 .saw-footer-left {
@@ -1294,12 +1296,52 @@ body, html {
     }
     
     .saw-app-content {
-        padding: 16px 12px;
+        padding: 12px 0 !important; /* Remove horizontal padding on mobile - table touches edges, reduce vertical padding */
+    }
+    
+    /* Add minimal padding only to page title text, not entire header */
+    .saw-app-content .saw-page-header {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+        margin-bottom: 0 !important; /* Reduce spacing above table */
+    }
+    
+    /* Ensure table panel and admin-table-split have no horizontal margin/padding */
+    .saw-app-content .saw-admin-table-split,
+    .saw-app-content .saw-table-panel {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        width: 100% !important;
+    }
+    
+    /* Ensure table wrapper and table have no margin and touch edges */
+    .saw-app-content .saw-table-responsive-wrapper,
+    .saw-app-content .saw-admin-table {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        width: 100% !important;
+    }
+    
+    /* Ensure table controls have minimal padding but table content touches edges */
+    .saw-app-content .saw-table-controls {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
     }
     
     .saw-app-footer {
         padding: 8px 16px !important;
-        height: 40px !important;
+        min-height: 40px !important; /* Changed from height to min-height to allow content expansion when text wraps */
+    }
+    
+    .saw-footer-content {
+        align-items: center !important; /* Ensure content is vertically centered when it wraps */
+    }
+    
+    .saw-footer-left,
+    .saw-footer-right {
+        align-items: center !important; /* Ensure flex items are centered when wrapping */
     }
     
     .saw-page-header {
@@ -1335,12 +1377,19 @@ body, html {
     .saw-footer-content {
         flex-direction: column;
         align-items: flex-start;
-        gap: 12px;
+        gap: 8px; /* Reduced gap */
+        min-height: auto !important; /* Allow natural height */
+    }
+    
+    .saw-footer-left,
+    .saw-footer-right {
+        width: 100%;
+        gap: 8px;
+        align-items: center !important; /* Center items when they wrap */
     }
     
     .saw-footer-right {
-        width: 100%;
-        gap: 12px;
+        justify-content: flex-start;
     }
 }
 

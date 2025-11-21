@@ -26,7 +26,7 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         // Register custom AJAX
         add_action('wp_ajax_saw_get_hosts_by_branch', array($this, 'ajax_get_hosts_by_branch'));
         
-        add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'));
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'), 20); // Priority 20 to run after asset loader (default 10)
     }
     
     public function index() {
@@ -40,19 +40,43 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         SAW_Asset_Loader::enqueue_module('visits');
         
         // Pass existing hosts to JS if editing
+        // Use get_sidebar_context() to get visit ID from URL path (e.g., /admin/visits/41/edit)
+        // This is more reliable than $_GET['id'] or $_GET['saw_path'] which may not be set
+        $visit_id = 0;
+        $context = $this->get_sidebar_context();
+        
+        // Get visit_id from sidebar context if in edit or detail mode
+        if (!empty($context['id']) && ($context['mode'] === 'edit' || $context['mode'] === 'detail')) {
+            $visit_id = intval($context['id']);
+        }
+        
+        // Fallback to $_GET['id'] for backward compatibility
+        if ($visit_id === 0 && isset($_GET['id'])) {
+            $visit_id = intval($_GET['id']);
+        }
+        
         $existing_hosts = array();
-        if (isset($_GET['id'])) {
+        if ($visit_id > 0) {
             global $wpdb;
             $existing_hosts = $wpdb->get_col($wpdb->prepare(
                 "SELECT user_id FROM {$wpdb->prefix}saw_visit_hosts WHERE visit_id = %d",
-                intval($_GET['id'])
+                $visit_id
             ));
             $existing_hosts = array_map('intval', $existing_hosts);
         }
         
-        wp_localize_script('saw-visits', 'sawVisits', array(
+        // Localize script with correct handle that matches asset loader
+        // Asset loader uses 'saw-module-visits' handle and creates 'sawVisits' object
+        // CRITICAL: Override asset loader's nonce (saw_visits_ajax) with saw_ajax_nonce to match AJAX handler
+        // Note: JS will use sawGlobal.nonce as primary source (saw_ajax_nonce) to avoid nonce conflicts
+        // This wp_localize_script runs after enqueue_module due to priority 20, so it should override asset loader's values
+        $script_handle = 'saw-module-visits';
+        
+        // Always localize - wp_localize_script will handle if script is not enqueued yet
+        // This ensures existing_hosts is available even if script loads later
+        wp_localize_script($script_handle, 'sawVisits', array(
             'ajaxurl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('saw_ajax_nonce'),
+            'nonce' => wp_create_nonce('saw_ajax_nonce'), // Must match check_ajax_referer('saw_ajax_nonce', 'nonce') in ajax_get_hosts_by_branch
             'existing_hosts' => $existing_hosts
         ));
     }
@@ -73,6 +97,98 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
             $data['customer_id'] = SAW_Context::get_customer_id();
         }
         return $data;
+    }
+    
+    /**
+     * Save visit schedules and hosts after main visit is saved
+     * 
+     * @since 7.0.0
+     * @param int $visit_id Visit ID
+     * @return void
+     */
+    protected function after_save($visit_id) {
+        global $wpdb;
+        
+        if (!$visit_id || !isset($_POST)) {
+            return;
+        }
+        
+        // Save visit schedules (days and times)
+        $schedule_table = $wpdb->prefix . 'saw_visit_schedules';
+        
+        // Delete existing schedules
+        $wpdb->delete($schedule_table, array('visit_id' => $visit_id), array('%d'));
+        
+        // Insert new schedules
+        $schedule_dates = isset($_POST['schedule_dates']) && is_array($_POST['schedule_dates']) ? $_POST['schedule_dates'] : array();
+        $schedule_times_from = isset($_POST['schedule_times_from']) && is_array($_POST['schedule_times_from']) ? $_POST['schedule_times_from'] : array();
+        $schedule_times_to = isset($_POST['schedule_times_to']) && is_array($_POST['schedule_times_to']) ? $_POST['schedule_times_to'] : array();
+        $schedule_notes = isset($_POST['schedule_notes']) && is_array($_POST['schedule_notes']) ? $_POST['schedule_notes'] : array();
+        
+        if (!empty($schedule_dates)) {
+            foreach ($schedule_dates as $index => $date) {
+                // Skip empty dates
+                $date = trim($date);
+                if (empty($date)) {
+                    continue;
+                }
+                
+                // Sanitize and get values
+                $date = sanitize_text_field($date);
+                $time_from = isset($schedule_times_from[$index]) ? sanitize_text_field(trim($schedule_times_from[$index])) : '';
+                $time_to = isset($schedule_times_to[$index]) ? sanitize_text_field(trim($schedule_times_to[$index])) : '';
+                $notes = isset($schedule_notes[$index]) ? sanitize_textarea_field(trim($schedule_notes[$index])) : '';
+                
+                // Insert schedule
+                $result = $wpdb->insert(
+                    $schedule_table,
+                    array(
+                        'visit_id' => $visit_id,
+                        'date' => $date,
+                        'time_from' => $time_from,
+                        'time_to' => $time_to,
+                        'notes' => $notes,
+                        'sort_order' => intval($index)
+                    ),
+                    array('%d', '%s', '%s', '%s', '%s', '%d')
+                );
+                
+                // Log error if insert failed
+                if ($result === false) {
+                    error_log('Failed to insert visit schedule: ' . $wpdb->last_error);
+                }
+            }
+        }
+        
+        // Save visit hosts
+        $hosts_table = $wpdb->prefix . 'saw_visit_hosts';
+        
+        // Delete existing hosts
+        $wpdb->delete($hosts_table, array('visit_id' => $visit_id), array('%d'));
+        
+        // Insert new hosts
+        $hosts = isset($_POST['hosts']) && is_array($_POST['hosts']) ? $_POST['hosts'] : array();
+        
+        if (!empty($hosts)) {
+            foreach ($hosts as $user_id) {
+                $user_id = intval($user_id);
+                if ($user_id > 0) {
+                    $result = $wpdb->insert(
+                        $hosts_table,
+                        array(
+                            'visit_id' => $visit_id,
+                            'user_id' => $user_id
+                        ),
+                        array('%d', '%d')
+                    );
+                    
+                    // Log error if insert failed
+                    if ($result === false) {
+                        error_log('Failed to insert visit host: ' . $wpdb->last_error);
+                    }
+                }
+            }
+        }
     }
 
     protected function format_detail_data($item) {
@@ -219,13 +335,55 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
             return;
         }
         
+        // Get customer_id from context for proper data isolation
+        $customer_id = 0;
+        if (class_exists('SAW_Context')) {
+            $customer_id = SAW_Context::get_customer_id();
+        }
+        
+        if (!$customer_id) {
+            wp_send_json_error(array('message' => 'Nelze určit zákazníka'));
+            return;
+        }
+        
         global $wpdb;
+        
+        // Verify branch belongs to customer (security check)
+        $branch_exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}saw_branches 
+             WHERE id = %d AND customer_id = %d AND is_active = 1",
+            $branch_id,
+            $customer_id
+        ));
+        
+        if (!$branch_exists) {
+            wp_send_json_error(array('message' => 'Pobočka nenalezena nebo nemáte oprávnění'));
+            return;
+        }
+        
+        // Query users with customer_id, branch_id, appropriate roles, and position field
+        // Filter by roles that can be hosts: admin, super_manager, manager (like terminal does)
         $hosts = $wpdb->get_results($wpdb->prepare(
-            "SELECT id, first_name, last_name, role FROM {$wpdb->prefix}saw_users WHERE branch_id = %d AND is_active = 1 ORDER BY last_name, first_name",
+            "SELECT id, first_name, last_name, role, position 
+             FROM {$wpdb->prefix}saw_users 
+             WHERE customer_id = %d 
+               AND branch_id = %d 
+               AND role IN ('admin', 'super_manager', 'manager')
+               AND is_active = 1 
+             ORDER BY last_name, first_name",
+            $customer_id,
             $branch_id
         ), ARRAY_A);
         
-        wp_send_json_success(array('hosts' => $hosts));
+        // Ensure position is always a string (handle NULL values)
+        if (is_array($hosts)) {
+            foreach ($hosts as &$host) {
+                $host['position'] = isset($host['position']) ? $host['position'] : '';
+            }
+            unset($host); // Break reference
+        }
+        
+        wp_send_json_success(array('hosts' => $hosts ? $hosts : array()));
     }
     
     /**

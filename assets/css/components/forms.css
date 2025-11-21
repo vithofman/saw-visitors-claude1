@@ -18,8 +18,8 @@
 }
 
 .saw-form-section {
-    background: var(--saw-form-section-bg);
-    border: none;
+    background: var(--saw-form-section-bg, #ffffff);
+    border: 1px solid #e5e7eb !important; /* Add visible border for contrast */
     border-radius: 12px;
     margin-bottom: 16px; /* Mobile-first: minimální mezera */
     overflow: hidden;
@@ -44,12 +44,16 @@
     padding: 14px 12px; /* Mobile-first: minimální padding */
     cursor: pointer;
     user-select: none;
-    background: linear-gradient(135deg, var(--saw-form-section-header-bg) 0%, var(--saw-bg-tertiary) 100%);
-    border-bottom: 2px solid transparent;
+    /* Increased contrast: use white background instead of gradient */
+    background: #ffffff !important;
+    border: none !important; /* Remove border from summary, section has border */
+    border-bottom: 2px solid #e5e7eb !important; /* Visible bottom border */
     transition: all 0.2s ease;
     font-size: 15px; /* Mobile-first: menší font */
     font-weight: 600;
     color: var(--saw-text-primary);
+    position: relative; /* For expand/collapse icon positioning */
+    margin: 0; /* Remove any default margin */
 }
 
 @media (min-width: 768px) {
@@ -67,25 +71,54 @@
     }
 }
 
+/* Very small mobile screens - further reduce padding */
+@media (max-width: 480px) {
+    .saw-form-section summary {
+        padding: 10px 8px !important; /* Minimal padding on very small screens */
+        gap: 8px !important;
+        font-size: 14px !important;
+    }
+    
+    .saw-form-section-content {
+        padding: 8px !important; /* Minimal content padding */
+    }
+    
+    /* Reduce icon size slightly on very small screens */
+    .saw-form-section summary .dashicons {
+        width: 36px !important;
+        height: 36px !important;
+        line-height: 36px !important;
+        font-size: 20px !important;
+    }
+}
+
 .saw-form-section summary:hover {
-    background: var(--saw-form-summary-hover-bg);
+    background: var(--saw-form-summary-hover-bg, #eff6ff) !important;
+    border-color: #2563eb !important;
 }
 
 .saw-form-section summary .dashicons {
     font-family: dashicons !important;
     font-size: 24px !important;
-    width: 24px !important;
-    height: 24px !important;
-    line-height: 24px !important;
+    width: 40px !important; /* Total width: 24px icon + 8px*2 padding */
+    height: 40px !important; /* Total height: 24px icon + 8px*2 padding */
+    line-height: 40px !important; /* Match height for vertical centering of font icon */
     color: var(--saw-form-summary-icon-color, #2563eb) !important;
     background: var(--saw-form-summary-icon-bg, #eff6ff) !important;
     border-radius: 10px !important;
-    padding: 8px !important;
+    padding: 0 !important; /* Remove padding, use line-height for centering */
     transition: all 0.2s ease !important;
     flex-shrink: 0 !important;
-    display: inline-block !important;
+    display: inline-block !important; /* Inline-block works better with line-height for font icons */
     text-align: center !important;
+    box-sizing: border-box !important;
     vertical-align: middle !important;
+    /* Ensure dashicons font renders correctly */
+    speak: none !important;
+    font-style: normal !important;
+    font-weight: normal !important;
+    font-variant: normal !important;
+    text-transform: none !important;
 }
 
 .saw-form-section summary:hover .dashicons {
@@ -99,13 +132,50 @@
 }
 
 .saw-form-section[open] summary {
-    border-bottom-color: #2563eb;
-    background: var(--saw-form-section-bg);
+    border-bottom-color: #2563eb !important; /* Blue bottom border when open */
+    background: var(--saw-form-section-bg, #ffffff) !important;
+}
+
+.saw-form-section[open] {
+    border-color: #2563eb !important; /* Blue border on entire section when open */
 }
 
 .saw-form-section[open] summary .dashicons {
     background: #2563eb;
     color: #ffffff;
+}
+
+/* Hide native details marker */
+.saw-form-section summary::-webkit-details-marker {
+    display: none !important;
+}
+
+.saw-form-section summary::marker {
+    display: none !important;
+    content: '' !important;
+}
+
+/* Add custom expand/collapse icon indicator */
+.saw-form-section summary::after {
+    content: '▶' !important; /* Right arrow when closed */
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 20px !important;
+    height: 20px !important;
+    margin-left: auto !important; /* Push to right side */
+    font-size: 12px !important;
+    color: var(--saw-text-secondary, #6b7280) !important;
+    transition: transform 0.2s ease !important;
+    flex-shrink: 0 !important;
+    line-height: 1 !important;
+}
+
+/* Rotate arrow when open */
+.saw-form-section[open] summary::after {
+    content: '▼' !important; /* Down arrow when open */
+    transform: rotate(0deg) !important;
+    color: #2563eb !important;
 }
 
 .saw-form-section-content {
@@ -124,6 +194,8 @@
         padding: 28px; /* Desktop */
     }
 }
+
+/* Mobile padding optimization is handled in the @media (max-width: 480px) block above */
 
 .saw-form-row {
     display: grid;
@@ -1021,7 +1093,7 @@
     right: 0 !important;
     bottom: 0 !important;
     width: 680px !important; /* 40px narrower than parent (720px) to show parent edge */
-    z-index: 100002 !important; /* Higher than parent (100001) - will be overridden by inline style */
+    z-index: 100011 !important; /* Higher than parent (100010) - will be overridden by inline style */
     box-shadow: -20px 0 60px rgba(0, 0, 0, 0.4) !important; /* Stronger shadow to emphasize overlay */
     pointer-events: auto !important; /* Ensure nested is fully interactive */
 }
@@ -1475,6 +1547,11 @@
 @media (max-width: 768px) {
     .saw-sidebar-wrapper[data-is-nested="1"] {
         width: 100% !important; /* Full width on mobile */
+        top: 0 !important; /* Ensure full coverage from top */
+        bottom: 0 !important; /* Ensure full coverage to bottom */
+        left: 0 !important; /* Cover entire screen width */
+        right: 0 !important; /* Cover entire screen width */
+        z-index: 100011 !important; /* Higher than parent sidebar and header/footer */
     }
 }
 

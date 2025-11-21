@@ -304,7 +304,7 @@
     // ========================================
     // HOSTS MANAGER
     // ========================================
-    $(document).ready(function () {
+    function initHostsManager() {
         const branchSelect = $('#branch_id');
         const hostList = $('#hosts-list');
         const hostControls = $('.saw-host-controls');
@@ -314,17 +314,52 @@
         const totalSpan = $('#host-total');
         const counterDiv = $('#host-counter');
 
+        // Skip if hosts section doesn't exist (not on visits form)
+        if (!branchSelect.length || !hostList.length) {
+            return;
+        }
+
         let allHosts = [];
-        // Use localized data instead of global window variable
-        let existingIds = (window.sawVisits && window.sawVisits.existing_hosts) ? window.sawVisits.existing_hosts : [];
+        
+        // Load existing hosts IDs fresh each time initHostsManager is called
+        // This ensures we get the latest data even after AJAX content loads
+        let existingIds = [];
+        if (window.sawVisits && Array.isArray(window.sawVisits.existing_hosts)) {
+            existingIds = window.sawVisits.existing_hosts.map(id => parseInt(id)).filter(id => !isNaN(id));
+        }
+        
+        console.log('[Visits] Initializing hosts manager with existing hosts:', existingIds, 'from window.sawVisits:', window.sawVisits);
 
-        const ajaxUrl = (window.sawVisits && window.sawVisits.ajaxurl) || '/wp-admin/admin-ajax.php';
-        const ajaxNonce = (window.sawVisits && window.sawVisits.nonce) || '';
+        // Use sawGlobal as primary source for nonce and ajaxurl (always available and consistent)
+        // sawGlobal.nonce is 'saw_ajax_nonce' which matches check_ajax_referer('saw_ajax_nonce', 'nonce') in PHP
+        // This is the global nonce used by all AJAX handlers, avoiding conflicts with asset loader's module-specific nonces
+        const ajaxUrl = (typeof window.sawGlobal !== 'undefined' && window.sawGlobal.ajaxurl) 
+            ? window.sawGlobal.ajaxurl 
+            : ((window.sawVisits && window.sawVisits.ajaxurl) || '/wp-admin/admin-ajax.php');
+        
+        // CRITICAL: Use sawGlobal.nonce (saw_ajax_nonce) which matches the AJAX handler expectation
+        // Asset loader may create saw_visits_ajax but we use sawGlobal.nonce for consistency
+        const ajaxNonce = (typeof window.sawGlobal !== 'undefined' && window.sawGlobal.nonce) 
+            ? window.sawGlobal.nonce 
+            : ((window.sawVisits && window.sawVisits.nonce) || '');
+        
+        // Validate nonce is available
+        if (!ajaxNonce) {
+            console.error('[Visits] No AJAX nonce available from sawGlobal or sawVisits');
+            return; // Cannot proceed without nonce
+        }
 
-        branchSelect.on('change', loadHosts);
-        searchInput.on('input', filterHosts);
-        selectAllCb.on('change', toggleAll);
+        // Remove existing handlers to prevent duplicates
+        branchSelect.off('change.hosts-manager');
+        searchInput.off('input.hosts-manager');
+        selectAllCb.off('change.hosts-manager');
 
+        // Bind event handlers with namespace
+        branchSelect.on('change.hosts-manager', loadHosts);
+        searchInput.on('input.hosts-manager', filterHosts);
+        selectAllCb.on('change.hosts-manager', toggleAll);
+
+        // Load hosts if branch is already selected
         if (branchSelect.val()) {
             loadHosts();
         }
@@ -334,6 +369,14 @@
 
             if (!branchId) {
                 hostList.html('<p class="saw-text-muted" style="padding: 20px; margin: 0; text-align: center;">Nejprve vyberte pobočku výše</p>');
+                hostControls.hide();
+                return;
+            }
+
+            // Validate nonce
+            if (!ajaxNonce) {
+                console.error('[Visits] No AJAX nonce available');
+                hostList.html('<p class="saw-text-muted" style="padding: 20px; margin: 0; text-align: center; color: #d63638;">❌ Chyba: Nelze ověřit požadavek. Zkuste obnovit stránku.</p>');
                 hostControls.hide();
                 return;
             }
@@ -349,17 +392,33 @@
                     branch_id: branchId
                 },
                 success: function (response) {
-                    if (response.success && response.data.hosts) {
+                    console.log('[Visits] Hosts AJAX response:', response);
+                    
+                    if (response.success && response.data && response.data.hosts) {
                         allHosts = response.data.hosts;
+                        console.log('[Visits] Loaded', allHosts.length, 'hosts');
                         renderHosts();
                         hostControls.show();
                     } else {
-                        hostList.html('<p class="saw-text-muted" style="padding: 20px; margin: 0; text-align: center;">Žádní uživatelé nenalezeni</p>');
+                        const message = response.data && response.data.message ? response.data.message : 'Žádní uživatelé nenalezeni';
+                        hostList.html('<p class="saw-text-muted" style="padding: 20px; margin: 0; text-align: center;">' + message + '</p>');
                         hostControls.hide();
                     }
                 },
-                error: function () {
-                    hostList.html('<p class="saw-text-muted" style="padding: 20px; margin: 0; text-align: center; color: #d63638;">❌ Chyba při načítání uživatelů</p>');
+                error: function (xhr, status, error) {
+                    console.error('[Visits] Hosts AJAX error:', error, 'Status:', xhr.status, 'Response:', xhr.responseText);
+                    
+                    let errorMessage = '❌ Chyba při načítání uživatelů';
+                    
+                    if (xhr.status === 403) {
+                        errorMessage = '❌ Chyba: Oprávnění zamítnuto. Možná problém s nonce.';
+                    } else if (xhr.status === 0) {
+                        errorMessage = '❌ Chyba: Nelze se připojit k serveru.';
+                    } else if (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
+                        errorMessage = '❌ ' + xhr.responseJSON.data.message;
+                    }
+                    
+                    hostList.html('<p class="saw-text-muted" style="padding: 20px; margin: 0; text-align: center; color: #d63638;">' + errorMessage + '</p>');
                     hostControls.hide();
                 }
             });
@@ -367,14 +426,32 @@
 
         function renderHosts() {
             let html = '';
+            
+            // Reload existing IDs fresh from window.sawVisits each time we render
+            // This ensures we have the latest data
+            let currentExistingIds = [];
+            if (window.sawVisits && Array.isArray(window.sawVisits.existing_hosts)) {
+                currentExistingIds = window.sawVisits.existing_hosts.map(id => parseInt(id)).filter(id => !isNaN(id));
+            }
+            
+            console.log('[Visits] Rendering hosts, existing IDs:', currentExistingIds, 'Total hosts:', allHosts.length);
 
             $.each(allHosts, function (index, h) {
                 const hostId = parseInt(h.id);
-                const checked = existingIds.includes(hostId);
+                const checked = currentExistingIds.includes(hostId);
 
-                const label = `<span class="saw-host-name">${h.first_name} ${h.last_name}</span><span class="saw-host-role">(${h.role})</span>`;
+                // Build label with name, position (if available), and role
+                const namePart = `${h.first_name} ${h.last_name}`;
+                const positionPart = h.position && h.position.trim() ? ` - ${h.position}` : '';
+                const rolePart = `(${h.role})`;
+                const label = `<span class="saw-host-name">${namePart}${positionPart}</span><span class="saw-host-role">${rolePart}</span>`;
 
-                html += `<div class="saw-host-item ${checked ? 'selected' : ''}" data-id="${hostId}" data-name="${(h.first_name + ' ' + h.last_name).toLowerCase()}" data-role="${h.role.toLowerCase()}">
+                // Store searchable data in data attributes for filtering
+                const nameLower = namePart.toLowerCase();
+                const positionLower = (h.position || '').toLowerCase();
+                const roleLower = (h.role || '').toLowerCase();
+
+                html += `<div class="saw-host-item ${checked ? 'selected' : ''}" data-id="${hostId}" data-name="${nameLower}" data-role="${roleLower}" data-position="${positionLower}">
                     <input type="checkbox" name="hosts[]" value="${hostId}" ${checked ? 'checked' : ''} id="host-${hostId}">
                     <label for="host-${hostId}">${label}</label>
                 </div>`;
@@ -404,10 +481,12 @@
 
             $('.saw-host-item').each(function () {
                 const $item = $(this);
-                const name = $item.data('name');
-                const role = $item.data('role');
+                const name = $item.data('name') || '';
+                const role = $item.data('role') || '';
+                const position = $item.data('position') || '';
 
-                const matches = name.includes(term) || role.includes(term);
+                // Search in name, role, and position
+                const matches = name.includes(term) || role.includes(term) || position.includes(term);
                 $item.toggle(matches);
             });
 
@@ -444,6 +523,19 @@
 
         // Initialize schedules
         SAWVisitSchedules.init();
+    }
+
+    // Initialize on document ready
+    $(document).ready(function () {
+        initHostsManager();
+    });
+
+    // Re-initialize when new content is loaded via AJAX (e.g., sidebar form)
+    $(document).on('saw:page-loaded', function () {
+        console.log('[Visits] saw:page-loaded event triggered, re-initializing hosts manager');
+        setTimeout(function() {
+            initHostsManager();
+        }, 50);
     });
 
 })(jQuery);

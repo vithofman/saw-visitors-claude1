@@ -14,6 +14,37 @@
 @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap');
 
 /* ============================================
+   GLOBAL DASHICONS FIX
+   ============================================ */
+
+/* Ensure dashicons font is loaded globally for all icons */
+.dashicons {
+    font-family: dashicons !important;
+    speak: none !important;
+    font-style: normal !important;
+    font-weight: normal !important;
+    font-variant: normal !important;
+    text-transform: none !important;
+    line-height: 1 !important;
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+    display: inline-block !important;
+    text-decoration: none !important;
+}
+
+/* Tracking timeline icons */
+.saw-tracking-icon .dashicons,
+.saw-tracking-event .dashicons {
+    font-family: dashicons !important;
+    speak: none !important;
+    font-style: normal !important;
+    font-weight: normal !important;
+    font-variant: normal !important;
+    text-transform: none !important;
+    display: inline-block !important;
+}
+
+/* ============================================
    BASE - VISITORS SIDEBAR STYLES APPLIED GLOBALLY
    ============================================ */
 
@@ -89,6 +120,13 @@
 @media (min-width: 1024px) {
     .saw-detail-content-wrapper {
         padding: 24px !important; /* Desktop */
+    }
+}
+
+/* Very small mobile screens - further reduce padding */
+@media (max-width: 480px) {
+    .saw-detail-content-wrapper {
+        padding: 8px !important; /* Minimal padding on very small screens */
     }
 }
 

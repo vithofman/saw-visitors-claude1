@@ -292,10 +292,18 @@ $is_physical_person = empty($item['company_id']);
 }
 
 .saw-tracking-icon .dashicons {
-    color: white;
-    font-size: 24px;
-    width: 24px;
-    height: 24px;
+    font-family: dashicons !important;
+    color: white !important;
+    font-size: 24px !important;
+    width: 24px !important;
+    height: 24px !important;
+    line-height: 24px !important;
+    display: inline-block !important;
+    speak: none !important;
+    font-style: normal !important;
+    font-weight: normal !important;
+    font-variant: normal !important;
+    text-transform: none !important;
 }
 
 .saw-tracking-content {
@@ -383,10 +391,18 @@ $is_physical_person = empty($item['company_id']);
 }
 
 .saw-schedule-day-time .dashicons {
-    color: #2271b1;
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
+    font-family: dashicons !important;
+    color: #2271b1 !important;
+    font-size: 18px !important;
+    width: 18px !important;
+    height: 18px !important;
+    line-height: 18px !important;
+    display: inline-block !important;
+    speak: none !important;
+    font-style: normal !important;
+    font-weight: normal !important;
+    font-variant: normal !important;
+    text-transform: none !important;
 }
 
 .saw-schedule-day-notes {
@@ -402,12 +418,20 @@ $is_physical_person = empty($item['company_id']);
 }
 
 .saw-schedule-day-notes .dashicons {
-    color: #ca8a04;
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
+    font-family: dashicons !important;
+    color: #ca8a04 !important;
+    font-size: 18px !important;
+    width: 18px !important;
+    height: 18px !important;
+    line-height: 18px !important;
+    display: inline-block !important;
     flex-shrink: 0;
     margin-top: 2px;
+    speak: none !important;
+    font-style: normal !important;
+    font-weight: normal !important;
+    font-variant: normal !important;
+    text-transform: none !important;
 }
 
 /* Hosts List */
@@ -434,10 +458,20 @@ $is_physical_person = empty($item['company_id']);
 }
 
 .saw-host-card .dashicons {
-    color: #2271b1;
-    font-size: 24px;
-    width: 24px;
-    height: 24px;
+    font-family: dashicons !important;
+    color: #2271b1 !important;
+    font-size: 24px !important;
+    width: 24px !important;
+    height: 24px !important;
+    line-height: 24px !important;
+    display: inline-block !important;
+    speak: none !important;
+    font-style: normal !important;
+    font-weight: normal !important;
+    font-variant: normal !important;
+    text-transform: none !important;
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
 }
 
 .saw-host-info {

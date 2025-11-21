@@ -559,8 +559,18 @@
             const currentId = parseInt($sidebar.data('current-id') || 0);
             const direction = $button.hasClass('saw-sidebar-prev') ? 'prev' : 'next';
             
+            console.log('🔄 Sidebar navigation clicked:', { 
+                entity, 
+                currentId, 
+                direction, 
+                sidebarExists: $sidebar.length > 0,
+                hasEntity: !!entity,
+                hasCurrentId: !!currentId
+            });
+            
             if (!entity || !currentId) {
-                console.warn('⚠️ Missing entity or current ID for sidebar navigation');
+                console.warn('⚠️ Missing entity or current ID for sidebar navigation', { entity, currentId });
+                alert('Chybí informace pro navigaci. Entity: ' + (entity || 'není') + ', ID: ' + (currentId || 'není'));
                 return;
             }
             
@@ -568,12 +578,21 @@
             $button.prop('disabled', true);
             
             // Get AJAX action name - try both slug and entity name
+            // Convert entity to slug format (underscores to hyphens)
             const moduleSlug = entity.replace(/_/g, '-');
             const entityName = entity.replace(/-/g, '_');
-            // Try slug first, fallback to entity name
-            const ajaxAction = 'saw_get_adjacent_' + moduleSlug;
             
-            console.log('🔄 Loading adjacent record:', { entity, currentId, direction });
+            // Try slug first (e.g., saw_get_adjacent_visitors)
+            let ajaxAction = 'saw_get_adjacent_' + moduleSlug;
+            
+            console.log('🔄 Loading adjacent record:', { 
+                entity, 
+                moduleSlug, 
+                entityName, 
+                ajaxAction, 
+                currentId, 
+                direction 
+            });
             
             // Get AJAX URL and nonce
             const ajaxUrl = (typeof ajaxurl !== 'undefined' ? ajaxurl : '/wp-admin/admin-ajax.php');
@@ -591,6 +610,8 @@
                     nonce: nonce
                 },
                 success: function(response) {
+                    console.log('📥 AJAX response received:', response);
+                    
                     if (response.success && response.data && response.data.url) {
                         // Navigate to adjacent record
                         console.log('✅ Navigating to:', response.data.url);
@@ -602,14 +623,31 @@
                             window.location.href = response.data.url;
                         }
                     } else {
-                        console.error('❌ Failed to get adjacent record:', response.data?.message || 'Unknown error');
-                        alert(response.data?.message || 'Nepodařilo se načíst sousední záznam');
+                        const errorMsg = response.data?.message || 'Unknown error';
+                        console.error('❌ Failed to get adjacent record:', errorMsg, response);
+                        alert('Nepodařilo se načíst sousední záznam: ' + errorMsg);
                         $button.prop('disabled', false);
                     }
                 },
                 error: function(xhr, status, error) {
-                    console.error('❌ AJAX error:', error);
-                    alert('Chyba při načítání sousedního záznamu');
+                    console.error('❌ AJAX error:', { 
+                        status: xhr.status, 
+                        statusText: xhr.statusText, 
+                        error, 
+                        responseText: xhr.responseText,
+                        ajaxAction 
+                    });
+                    
+                    let errorMsg = 'Chyba při načítání sousedního záznamu';
+                    if (xhr.status === 0) {
+                        errorMsg = 'Nelze se připojit k serveru';
+                    } else if (xhr.status === 404) {
+                        errorMsg = 'AJAX akce nenalezena: ' + ajaxAction;
+                    } else if (xhr.status === 403) {
+                        errorMsg = 'Oprávnění zamítnuto';
+                    }
+                    
+                    alert(errorMsg);
                     $button.prop('disabled', false);
                 }
             });
@@ -957,9 +995,21 @@
         }
         
         // Initialize sidebar navigation
-        if ($('.saw-sidebar').length) {
+        // Use event delegation so it works for dynamically loaded sidebars
+        // Only initialize once - event delegation handles dynamically loaded content
+        if (!window.sawSidebarNavigationInitialized) {
             initSidebarNavigation();
-            console.log('✅ Sidebar navigation initialized');
+            window.sawSidebarNavigationInitialized = true;
+            console.log('✅ Sidebar navigation initialized (event delegation)');
+        }
+        
+        if ($('.saw-sidebar').length) {
+            console.log('📋 Found', $('.saw-sidebar').length, 'sidebar(s) on page');
+            $('.saw-sidebar').each(function() {
+                const entity = $(this).data('entity');
+                const currentId = $(this).data('current-id');
+                console.log('  - Sidebar:', { entity, currentId, mode: $(this).data('mode') });
+            });
         }
         
         // Initialize infinite scroll

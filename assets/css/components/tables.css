@@ -735,6 +735,7 @@
     color: var(--saw-text-primary);
     letter-spacing: -0.01em;
     line-height: 1.4;
+    text-align: left; /* Ensure title is left-aligned */
 }
 
 .saw-page-header-controls {
@@ -849,13 +850,11 @@
 }
 
 .saw-admin-table tbody tr {
-    transition: background-color 0.12s ease;
     cursor: pointer;
 }
 
 .saw-admin-table tbody tr[data-detail-url] {
     cursor: pointer;
-    transition: background-color 0.12s ease;
 }
 
 .saw-admin-table tbody tr:hover td,
@@ -877,23 +876,15 @@
     position: relative;
 }
 
-.saw-admin-table tbody tr.saw-row-active::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 3px;
-    background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
-    box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
-}
+/* Removed ::before pseudo-element with gradient and shadow - no animation */
+/* Removed font-weight change - no visual animation */
 
 .saw-admin-table tbody tr.saw-row-active:hover td {
     background: var(--saw-table-row-active-hover-bg);
 }
 
 .saw-admin-table tbody tr.saw-row-active td {
-    font-weight: 500;
+    /* No font-weight change - instant visual feedback only */
 }
 
 /* ============================================
@@ -964,16 +955,7 @@
     border-left: 3px solid #3b82f6;
 }
 
-.saw-table-grouped .saw-group-row.saw-row-active::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 3px;
-    background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
-    box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
-}
+/* Removed ::before pseudo-element with gradient and shadow - no animation */
 
 .saw-table-grouped .saw-group-row.saw-row-active:hover td {
     background: var(--saw-table-row-active-hover-bg);
@@ -1519,7 +1501,7 @@
     right: 0;
     bottom: 0;
     width: 720px; /* Increased from 560px for better form visibility */
-    z-index: 100001; /* Higher than header (1000) and footer (999) to overlay both */
+    z-index: 100010; /* Higher than header (1000) and footer (900) to overlay both completely */
     display: none;
     flex-direction: column;
     background: #1e293b;
@@ -1701,7 +1683,23 @@
 .saw-sidebar-wrapper .saw-sidebar[data-mode="form"] .saw-sidebar-content,
 .saw-sidebar-wrapper .saw-sidebar[data-mode="edit"] .saw-sidebar-content,
 .saw-sidebar-wrapper .saw-sidebar[data-mode="create"] .saw-sidebar-content {
-    padding: 20px; /* Desktop padding for forms */
+    padding: 12px; /* Mobile-first: minimal padding */
+}
+
+@media (min-width: 768px) {
+    .saw-sidebar-wrapper .saw-sidebar[data-mode="form"] .saw-sidebar-content,
+    .saw-sidebar-wrapper .saw-sidebar[data-mode="edit"] .saw-sidebar-content,
+    .saw-sidebar-wrapper .saw-sidebar[data-mode="create"] .saw-sidebar-content {
+        padding: 16px; /* Tablet */
+    }
+}
+
+@media (min-width: 1024px) {
+    .saw-sidebar-wrapper .saw-sidebar[data-mode="form"] .saw-sidebar-content,
+    .saw-sidebar-wrapper .saw-sidebar[data-mode="edit"] .saw-sidebar-content,
+    .saw-sidebar-wrapper .saw-sidebar[data-mode="create"] .saw-sidebar-content {
+        padding: 20px; /* Desktop padding for forms */
+    }
 }
 
 .saw-sidebar-content::-webkit-scrollbar {
@@ -1735,7 +1733,7 @@
     box-sizing: border-box;
     box-shadow: 0 4px 15px rgba(0, 90, 140, 0.2);
     position: relative;
-    border-radius: 4px 4px 0 0;
+    border-radius: 0 !important; /* Remove border-radius as requested */
 }
 
 .saw-sidebar-wrapper .saw-detail-header-inner {
@@ -1769,17 +1767,30 @@
     opacity: 0.9;
 }
 
-.saw-detail-header-stripe {
+.saw-detail-header-stripe,
+.saw-industrial-stripe {
     height: 8px;
     width: 100%;
+    /* Clean diagonal stripe pattern - single clean lines, no double/frayed effect */
+    /* Use -45deg for clean diagonal from top-left to bottom-right, white stripes on blue background */
+    /* Start with blue, then white stripe, repeat */
     background-image: repeating-linear-gradient(
         -45deg,
-        #005A8C,
+        #005A8C 0px,
         #005A8C 10px,
-        #fff 10px,
-        #fff 20px
+        rgba(255, 255, 255, 0.25) 10px,
+        rgba(255, 255, 255, 0.25) 20px
     );
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    /* Remove border-bottom to prevent double/frayed effect */
+    border-bottom: none !important;
+    /* Ensure crisp rendering without anti-aliasing artifacts */
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    /* Prevent subpixel rendering issues and ensure clean edges */
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    /* Force hardware acceleration for smooth rendering */
+    will-change: auto;
 }
 
 .saw-detail-content-wrapper {
@@ -1996,7 +2007,16 @@
 .saw-sidebar[data-mode="edit"] .saw-form-container,
 .saw-sidebar[data-mode="create"] .saw-form-container {
     max-width: none !important;
-    padding: 20px !important;
+    padding: 20px !important; /* Desktop padding */
+}
+
+/* Mobile: Remove form container padding */
+@media (max-width: 480px) {
+    .saw-sidebar[data-mode="form"] .saw-form-container,
+    .saw-sidebar[data-mode="edit"] .saw-form-container,
+    .saw-sidebar[data-mode="create"] .saw-form-container {
+        padding: 0 !important;
+    }
 }
 
 .saw-sidebar[data-mode="form"] .saw-form-actions,
@@ -2100,21 +2120,31 @@
 
 @media (max-width: 768px) {
     .saw-page-header {
-        padding: 16px 20px;
+        padding: 12px 12px 8px 12px !important; /* Minimal padding, reduce bottom padding */
         flex-direction: column;
         align-items: flex-start;
+        margin-bottom: 0 !important; /* Reduce spacing above table */
+    }
+    
+    .saw-page-header-content {
+        padding: 0 !important; /* Remove padding from header content */
     }
     
     .saw-page-title {
         font-size: 18px;
+        text-align: left !important; /* Ensure title is left-aligned */
+        padding: 0 !important; /* No padding on title itself */
+        margin: 0 !important;
     }
     
     .saw-table-controls {
-        padding: 12px 16px !important;
-        flex-direction: row;
+        padding: 10px 12px !important; /* Minimal horizontal padding - search and filter on same row */
+        flex-direction: row !important; /* Keep search and filter on same row */
+        flex-wrap: wrap !important;
         justify-content: space-between;
         align-items: center;
-        gap: 12px;
+        gap: 8px;
+        margin: 0 !important;
     }
     
     .saw-table-search {
@@ -2125,7 +2155,14 @@
     
     .saw-table-filters {
         flex: 0 0 auto;
-        margin-left: 12px;
+        margin-left: 8px;
+    }
+    
+    /* Ensure table and wrapper have no horizontal margin/padding */
+    .saw-table-responsive-wrapper,
+    .saw-admin-table {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
     }
     
     .saw-filters-dropdown-menu {
@@ -2263,36 +2300,60 @@
    ============================================ */
 
 @media (max-width: 480px) {
+    .saw-page-header {
+        padding: 10px 12px 6px 12px !important; /* Further reduce padding on small mobile */
+        margin-bottom: 0 !important;
+    }
+    
+    .saw-page-title {
+        font-size: 16px;
+        text-align: left !important;
+    }
+    
     .saw-table-controls {
-        padding: 10px 12px;
-        flex-direction: column;
-        align-items: stretch;
+        padding: 8px 12px !important; /* Minimal horizontal padding - keep search and filter on same row */
+        flex-direction: row !important; /* Keep search and filter on same row */
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        gap: 6px !important;
+        margin: 0 !important;
     }
     
     .saw-table-search {
-        width: 100%;
-        max-width: 100%;
-        margin-bottom: 8px;
+        flex: 1 1 auto;
+        min-width: 0;
+        max-width: none;
+        margin-bottom: 0 !important;
     }
     
     .saw-table-filters {
-        width: 100%;
-        margin-left: 0;
-        align-self: flex-end;
+        flex: 0 0 auto !important;
+        width: auto !important;
+        margin-left: 6px !important;
+        align-self: auto !important;
     }
     
     .saw-search-form {
-        flex-wrap: wrap;
+        flex-wrap: nowrap !important;
+        gap: 4px;
     }
     
     .saw-search-input {
-        flex: 1 1 100%;
-        margin-bottom: 8px;
+        flex: 1;
+        margin-bottom: 0 !important;
     }
     
     .saw-search-button,
     .saw-search-clear {
         flex: 0 0 auto;
+    }
+    
+    /* Ensure table touches edges on small mobile */
+    .saw-table-responsive-wrapper,
+    .saw-admin-table {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        width: 100% !important;
     }
     
     .saw-filters-dropdown-menu {
@@ -2353,5 +2414,100 @@
 @media (max-width: 768px) {
     .saw-admin-table-split .saw-sidebar-wrapper {
         width: 100% !important; /* Full width on mobile */
+        top: 0 !important; /* Ensure full coverage from top */
+        bottom: 0 !important; /* Ensure full coverage to bottom */
+        left: 0 !important; /* Cover entire screen width */
+        right: 0 !important; /* Cover entire screen width */
+        z-index: 100010 !important; /* Higher than header (1000) and footer (900) */
+    }
+    
+    /* Ensure nested sidebars also cover full screen on mobile */
+    .saw-admin-table-split .saw-sidebar-wrapper[data-is-nested="1"] {
+        width: 100% !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        z-index: 100011 !important; /* Even higher than parent sidebar */
+    }
+}
+
+/* Very small mobile screens - Remove all padding and borders from form sections */
+@media (max-width: 480px) {
+    /* Remove padding from sidebar content - max 15px from edges, no vertical padding */
+    .saw-sidebar-wrapper .saw-sidebar[data-mode="create"] .saw-sidebar-content,
+    .saw-sidebar-wrapper .saw-sidebar[data-mode="edit"] .saw-sidebar-content,
+    .saw-sidebar-wrapper .saw-sidebar[data-mode="form"] .saw-sidebar-content {
+        padding: 0 15px !important; /* Only horizontal padding, no vertical */
+    }
+    
+    /* Detail sidebars keep minimal padding */
+    .saw-sidebar-wrapper .saw-sidebar:not([data-mode="form"]):not([data-mode="edit"]):not([data-mode="create"]) .saw-sidebar-content {
+        padding: 8px !important;
+    }
+    
+    /* Nested sidebars also get reduced padding */
+    .saw-sidebar-wrapper[data-is-nested="1"] .saw-sidebar-content {
+        padding: 0 15px !important;
+    }
+    
+    /* Remove borders and padding from form sections - no bordered sections on mobile */
+    .saw-sidebar-wrapper .saw-sidebar[data-mode="create"] .saw-form-section,
+    .saw-sidebar-wrapper .saw-sidebar[data-mode="edit"] .saw-form-section,
+    .saw-sidebar-wrapper .saw-sidebar[data-mode="form"] .saw-form-section {
+        border: none !important;
+        border-radius: 0 !important;
+        margin-bottom: 0 !important;
+        margin-top: 0 !important;
+        box-shadow: none !important;
+        background: transparent !important;
+        padding: 0 !important;
+    }
+    
+    /* Remove padding from form section content */
+    .saw-sidebar-wrapper .saw-sidebar[data-mode="create"] .saw-form-section-content,
+    .saw-sidebar-wrapper .saw-sidebar[data-mode="edit"] .saw-form-section-content,
+    .saw-sidebar-wrapper .saw-sidebar[data-mode="form"] .saw-form-section-content {
+        padding: 0 !important;
+        background: transparent !important;
+    }
+    
+    /* Remove padding and background from form section summary - just a subtle separator */
+    .saw-sidebar-wrapper .saw-sidebar[data-mode="create"] .saw-form-section summary,
+    .saw-sidebar-wrapper .saw-sidebar[data-mode="edit"] .saw-form-section summary,
+    .saw-sidebar-wrapper .saw-sidebar[data-mode="form"] .saw-form-section summary {
+        padding: 12px 0 !important; /* Minimal vertical padding only */
+        background: transparent !important;
+        border: none !important;
+        border-bottom: 1px solid #e5e7eb !important; /* Subtle separator */
+        border-radius: 0 !important;
+        margin-bottom: 8px !important;
+        margin-top: 0 !important;
+    }
+    
+    /* Ensure form fields have no extra padding - max 15px from edges is handled by sidebar-content */
+    .saw-sidebar-wrapper .saw-sidebar[data-mode="create"] .saw-form-row,
+    .saw-sidebar-wrapper .saw-sidebar[data-mode="edit"] .saw-form-row,
+    .saw-sidebar-wrapper .saw-sidebar[data-mode="form"] .saw-form-row {
+        padding: 0 !important;
+        margin-bottom: 16px !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+    
+    /* Form actions should also respect 15px padding from edges */
+    .saw-sidebar-wrapper .saw-sidebar[data-mode="create"] .saw-form-actions,
+    .saw-sidebar-wrapper .saw-sidebar[data-mode="edit"] .saw-form-actions,
+    .saw-sidebar-wrapper .saw-sidebar[data-mode="form"] .saw-form-actions {
+        padding: 16px 0 0 0 !important;
+        margin: 16px 0 0 0 !important;
+    }
+    
+    /* Remove form container padding */
+    .saw-sidebar-wrapper .saw-sidebar[data-mode="create"] .saw-form-container,
+    .saw-sidebar-wrapper .saw-sidebar[data-mode="edit"] .saw-form-container,
+    .saw-sidebar-wrapper .saw-sidebar[data-mode="form"] .saw-form-container {
+        padding: 0 !important;
+        margin: 0 !important;
     }
 }
