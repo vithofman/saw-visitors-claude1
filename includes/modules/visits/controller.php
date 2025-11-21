@@ -3,7 +3,7 @@
  * Visits Module Controller
  * @package     SAW_Visitors
  * @subpackage  Modules/Visits
- * @version     3.1.0 - FIXED: Simplified to match Departments pattern
+ * @version     3.2.0 - FIXED: Hosts checkbox loading via improved timing and detection
  */
 
 if (!defined('ABSPATH')) exit;
@@ -26,7 +26,9 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         // Register custom AJAX
         add_action('wp_ajax_saw_get_hosts_by_branch', array($this, 'ajax_get_hosts_by_branch'));
         
-        add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'), 20); // Priority 20 to run after asset loader (default 10)
+        // CRITICAL: Use priority 999 to ensure this runs AFTER all other enqueue operations
+        // This guarantees that saw-module-visits script is already registered when we localize
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'), 999);
     }
     
     public function index() {
@@ -37,10 +39,57 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
     }
     
     public function enqueue_assets() {
+        // Enqueue module assets FIRST
         SAW_Asset_Loader::enqueue_module('visits');
         
-        // Pass existing hosts to JS if editing
-        // Use multiple fallback methods to detect visit ID from URL path (e.g., /admin/visits/41/edit)
+        // Detect visit ID using multiple fallback methods
+        $visit_id = $this->detect_visit_id();
+        
+        // Load existing hosts from database if we have a visit_id
+        $existing_hosts = array();
+        if ($visit_id > 0) {
+            global $wpdb;
+            $existing_hosts = $wpdb->get_col($wpdb->prepare(
+                "SELECT user_id FROM {$wpdb->prefix}saw_visit_hosts WHERE visit_id = %d",
+                $visit_id
+            ));
+            $existing_hosts = array_map('intval', $existing_hosts);
+            
+            error_log(sprintf('[Visits] Loaded %d existing hosts for visit_id=%d', 
+                count($existing_hosts), 
+                $visit_id
+            ));
+        }
+        
+        // CRITICAL: Use sawVisitsData to avoid conflict with Asset Loader's sawVisits object
+        // Asset Loader creates sawVisits with basic data, we add existing_hosts separately
+        $script_handle = 'saw-module-visits';
+        
+        // Verify script is registered before localizing
+        if (wp_script_is($script_handle, 'registered') || wp_script_is($script_handle, 'enqueued')) {
+            wp_localize_script($script_handle, 'sawVisitsData', array(
+                'existing_hosts' => $existing_hosts,
+                'visit_id' => $visit_id,
+                'debug' => true
+            ));
+            
+            error_log(sprintf('[Visits] wp_localize_script successful for visit_id=%d with %d hosts: %s', 
+                $visit_id, 
+                count($existing_hosts),
+                json_encode($existing_hosts)
+            ));
+        } else {
+            error_log('[Visits] WARNING: Script handle saw-module-visits not registered, cannot localize');
+        }
+    }
+    
+    /**
+     * Detect visit ID from multiple sources with fallbacks
+     * 
+     * @since 3.2.0
+     * @return int Visit ID or 0 if not found
+     */
+    private function detect_visit_id() {
         $visit_id = 0;
         $detection_method = 'none';
         
@@ -51,7 +100,7 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
             $detection_method = 'sidebar_context';
         }
         
-        // Method 2: Parse URL from REQUEST_URI as fallback (if sidebar context not available yet)
+        // Method 2: Parse URL from REQUEST_URI as fallback
         if ($visit_id === 0 && isset($_SERVER['REQUEST_URI'])) {
             $request_uri = sanitize_text_field($_SERVER['REQUEST_URI']);
             // Match patterns like /admin/visits/41/edit or /admin/visits/41/ or /admin/visits/41
@@ -61,7 +110,7 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
             }
         }
         
-        // Method 3: Fallback to $_GET['id'] for backward compatibility
+        // Method 3: Fallback to $_GET['id']
         if ($visit_id === 0 && isset($_GET['id'])) {
             $visit_id = intval($_GET['id']);
             $detection_method = 'get_param';
@@ -78,42 +127,14 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         
         // Debug logging
         if ($visit_id > 0) {
-            error_log(sprintf('[Visits] enqueue_assets: Detected visit_id=%d using method=%s, REQUEST_URI=%s', 
+            error_log(sprintf('[Visits] Detected visit_id=%d using method=%s, REQUEST_URI=%s', 
                 $visit_id, 
                 $detection_method,
                 isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : 'N/A'
             ));
         }
         
-        $existing_hosts = array();
-        if ($visit_id > 0) {
-            global $wpdb;
-            $existing_hosts = $wpdb->get_col($wpdb->prepare(
-                "SELECT user_id FROM {$wpdb->prefix}saw_visit_hosts WHERE visit_id = %d",
-                $visit_id
-            ));
-            $existing_hosts = array_map('intval', $existing_hosts);
-            
-            error_log(sprintf('[Visits] enqueue_assets: Loaded %d existing hosts for visit_id=%d', 
-                count($existing_hosts), 
-                $visit_id
-            ));
-        }
-        
-        // Localize script with correct handle that matches asset loader
-        // Asset loader uses 'saw-module-visits' handle and creates 'sawVisits' object
-        // CRITICAL: Override asset loader's nonce (saw_visits_ajax) with saw_ajax_nonce to match AJAX handler
-        // Note: JS will use sawGlobal.nonce as primary source (saw_ajax_nonce) to avoid nonce conflicts
-        // This wp_localize_script runs after enqueue_module due to priority 20, so it should override asset loader's values
-        $script_handle = 'saw-module-visits';
-        
-        // Always localize - wp_localize_script will handle if script is not enqueued yet
-        // This ensures existing_hosts is available even if script loads later
-        wp_localize_script($script_handle, 'sawVisits', array(
-            'ajaxurl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('saw_ajax_nonce'), // Must match check_ajax_referer('saw_ajax_nonce', 'nonce') in ajax_get_hosts_by_branch
-            'existing_hosts' => $existing_hosts
-        ));
+        return $visit_id;
     }
 
     protected function prepare_form_data($post) {

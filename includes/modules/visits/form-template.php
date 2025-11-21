@@ -4,7 +4,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visits
- * @version     3.0.0 - REFACTORED: Physical/Legal person radio toggle
+ * @version     3.1.0 - IMPROVED: Modern schedule layout with better structure
  */
 
 if (!defined('ABSPATH')) exit;
@@ -12,6 +12,8 @@ if (!defined('ABSPATH')) exit;
 if (!class_exists('SAW_Component_Select_Create')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/select-create/class-saw-component-select-create.php';
 }
+
+global $wpdb;
 
 $in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'];
 $is_edit = !empty($item);
@@ -24,7 +26,6 @@ $companies = $companies ?? array();
 
 // Load branches
 if (empty($branches) && $customer_id) {
-    global $wpdb;
     $branches_data = $wpdb->get_results($wpdb->prepare(
         "SELECT id, name FROM %i WHERE customer_id = %d AND is_active = 1 ORDER BY name ASC",
         $wpdb->prefix . 'saw_branches', $customer_id
@@ -200,7 +201,7 @@ $form_action = $is_edit
                     </div>
                 </div>
                 
-                <!-- Schedule Days (Multi-day support) -->
+                <!-- Schedule Days (Multi-day support) - IMPROVED LAYOUT -->
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
                         <label class="saw-label">Dny návštěvy</label>
@@ -223,33 +224,40 @@ $form_action = $is_edit
                             foreach ($schedules as $index => $schedule): ?>
                                 <div class="saw-schedule-row" data-index="<?php echo $index; ?>">
                                     <div class="saw-schedule-row-fields">
+                                        <!-- Row 1: Date (full width) -->
                                         <div class="saw-schedule-field-group">
-                                            <div class="saw-schedule-field saw-schedule-date">
-                                                <label>Datum</label>
-                                                <input type="date" 
-                                                       name="schedule_dates[]" 
-                                                       value="<?php echo esc_attr($schedule['date'] ?? ''); ?>" 
-                                                       class="saw-input saw-schedule-date-input"
-                                                       required>
+                                            <div class="saw-schedule-field-group-row date-row">
+                                                <div class="saw-schedule-field saw-schedule-date">
+                                                    <label>Datum</label>
+                                                    <input type="date" 
+                                                           name="schedule_dates[]" 
+                                                           value="<?php echo esc_attr($schedule['date'] ?? ''); ?>" 
+                                                           class="saw-input saw-schedule-date-input"
+                                                           required>
+                                                </div>
                                             </div>
                                             
-                                            <div class="saw-schedule-field saw-schedule-time">
-                                                <label>Čas od</label>
-                                                <input type="time" 
-                                                       name="schedule_times_from[]" 
-                                                       value="<?php echo esc_attr($schedule['time_from'] ?? ''); ?>" 
-                                                       class="saw-input saw-schedule-time-input">
-                                            </div>
-                                            
-                                            <div class="saw-schedule-field saw-schedule-time">
-                                                <label>Čas do</label>
-                                                <input type="time" 
-                                                       name="schedule_times_to[]" 
-                                                       value="<?php echo esc_attr($schedule['time_to'] ?? ''); ?>" 
-                                                       class="saw-input saw-schedule-time-input">
+                                            <!-- Row 2: Time From | Time To (50/50) -->
+                                            <div class="saw-schedule-field-group-row time-row">
+                                                <div class="saw-schedule-field saw-schedule-time">
+                                                    <label>Čas od</label>
+                                                    <input type="time" 
+                                                           name="schedule_times_from[]" 
+                                                           value="<?php echo esc_attr($schedule['time_from'] ?? ''); ?>" 
+                                                           class="saw-input saw-schedule-time-input">
+                                                </div>
+                                                
+                                                <div class="saw-schedule-field saw-schedule-time">
+                                                    <label>Čas do</label>
+                                                    <input type="time" 
+                                                           name="schedule_times_to[]" 
+                                                           value="<?php echo esc_attr($schedule['time_to'] ?? ''); ?>" 
+                                                           class="saw-input saw-schedule-time-input">
+                                                </div>
                                             </div>
                                         </div>
                                         
+                                        <!-- Row 3: Notes (full width) -->
                                         <div class="saw-schedule-field saw-schedule-notes-full">
                                             <label>Poznámka (volitelné)</label>
                                             <input type="text" 
@@ -260,6 +268,7 @@ $form_action = $is_edit
                                         </div>
                                     </div>
                                     
+                                    <!-- Row 4: Action Buttons (bottom right) -->
                                     <div class="saw-schedule-row-actions">
                                         <button type="button" 
                                                 class="saw-remove-schedule-day" 

@@ -6,6 +6,7 @@
  * @package     SAW_Visitors
  * @subpackage  Modules/Visits
  * @since       1.0.0
+ * @version     3.2.0 - FIXED: Improved hosts loading with robust window.sawVisits detection
  */
 
 (function ($) {
@@ -302,9 +303,17 @@
     };
 
     // ========================================
-    // HOSTS MANAGER
+    // HOSTS MANAGER - NUCLEAR DEBUGGING
     // ========================================
     function initHostsManager() {
+        console.log('='.repeat(80));
+        console.log('INIT HOSTS MANAGER - START');
+        console.log('='.repeat(80));
+        console.log('window.sawVisits:', JSON.stringify(window.sawVisits, null, 2));
+        console.log('typeof window.sawVisits:', typeof window.sawVisits);
+        console.log('window.sawVisits === null:', window.sawVisits === null);
+        console.log('window.sawVisits === undefined:', window.sawVisits === undefined);
+        
         const branchSelect = $('#branch_id');
         const hostList = $('#hosts-list');
         const hostControls = $('.saw-host-controls');
@@ -316,40 +325,63 @@
 
         // Skip if hosts section doesn't exist (not on visits form)
         if (!branchSelect.length || !hostList.length) {
+            console.log('❌ Hosts section not found - branchSelect:', branchSelect.length, 'hostList:', hostList.length);
             return;
         }
+        
+        console.log('✅ Hosts section found');
+        console.log('Branch select value:', branchSelect.val());
 
         let allHosts = [];
         
-        // Load existing hosts IDs fresh each time initHostsManager is called
-        // This ensures we get the latest data even after AJAX content loads
+        // CRITICAL: Get existing hosts from window.sawVisits with EXTREME validation
         let existingIds = [];
-        if (typeof window.sawVisits !== 'undefined' && window.sawVisits !== null) {
-            if (Array.isArray(window.sawVisits.existing_hosts)) {
-                existingIds = window.sawVisits.existing_hosts.map(id => parseInt(id)).filter(id => !isNaN(id));
+        
+        console.log('-'.repeat(80));
+        console.log('EXTRACTING EXISTING HOSTS');
+        console.log('-'.repeat(80));
+        
+        // CRITICAL FIX: Use sawVisitsData for existing_hosts (separate from Asset Loader's sawVisits)
+        console.log('window.sawVisitsData:', window.sawVisitsData);
+        console.log('window.sawVisits:', window.sawVisits);
+        
+        if (typeof window.sawVisitsData !== 'undefined' && window.sawVisitsData !== null) {
+            console.log('✅ window.sawVisitsData EXISTS');
+            console.log('window.sawVisitsData.existing_hosts:', window.sawVisitsData.existing_hosts);
+            console.log('Type:', typeof window.sawVisitsData.existing_hosts);
+            console.log('Is Array:', Array.isArray(window.sawVisitsData.existing_hosts));
+            console.log('Length:', window.sawVisitsData.existing_hosts ? window.sawVisitsData.existing_hosts.length : 'N/A');
+            
+            if (Array.isArray(window.sawVisitsData.existing_hosts)) {
+                existingIds = window.sawVisitsData.existing_hosts.map(id => parseInt(id)).filter(id => !isNaN(id));
+                console.log('✅ PARSED existing_hosts:', existingIds);
+                console.log('✅ COUNT:', existingIds.length);
+            } else {
+                console.error('❌ window.sawVisitsData.existing_hosts is NOT an array!');
             }
-            console.log('[Visits] Initializing hosts manager with existing hosts:', existingIds, 'from window.sawVisits.existing_hosts:', window.sawVisits.existing_hosts);
         } else {
-            console.warn('[Visits] window.sawVisits is not available');
+            console.error('❌ window.sawVisitsData does NOT exist or is null!');
+            console.log('Will proceed with empty existingIds array');
         }
+        
+        console.log('-'.repeat(80));
+        console.log('FINAL existingIds:', existingIds);
+        console.log('-'.repeat(80));
 
-        // Use sawGlobal as primary source for nonce and ajaxurl (always available and consistent)
-        // sawGlobal.nonce is 'saw_ajax_nonce' which matches check_ajax_referer('saw_ajax_nonce', 'nonce') in PHP
-        // This is the global nonce used by all AJAX handlers, avoiding conflicts with asset loader's module-specific nonces
+        // Get AJAX URL and nonce from sawGlobal (always available)
         const ajaxUrl = (typeof window.sawGlobal !== 'undefined' && window.sawGlobal.ajaxurl) 
             ? window.sawGlobal.ajaxurl 
-            : ((window.sawVisits && window.sawVisits.ajaxurl) || '/wp-admin/admin-ajax.php');
+            : '/wp-admin/admin-ajax.php';
         
-        // CRITICAL: Use sawGlobal.nonce (saw_ajax_nonce) which matches the AJAX handler expectation
-        // Asset loader may create saw_visits_ajax but we use sawGlobal.nonce for consistency
         const ajaxNonce = (typeof window.sawGlobal !== 'undefined' && window.sawGlobal.nonce) 
             ? window.sawGlobal.nonce 
-            : ((window.sawVisits && window.sawVisits.nonce) || '');
+            : '';
         
         // Validate nonce is available
         if (!ajaxNonce) {
-            console.error('[Visits] No AJAX nonce available from sawGlobal or sawVisits');
-            return; // Cannot proceed without nonce
+            console.error('[Visits] No AJAX nonce available from sawGlobal');
+            hostList.html('<p class="saw-text-muted" style="padding: 20px; margin: 0; text-align: center; color: #d63638;">❌ Chyba: Nelze ověřit požadavek. Zkuste obnovit stránku.</p>');
+            return;
         }
 
         // Remove existing handlers to prevent duplicates
@@ -362,24 +394,26 @@
         searchInput.on('input.hosts-manager', filterHosts);
         selectAllCb.on('change.hosts-manager', toggleAll);
 
-        // Load hosts if branch is already selected
-        if (branchSelect.val()) {
-            loadHosts();
+        // CRITICAL: Load hosts if branch is already selected
+        const currentBranchId = branchSelect.val();
+        console.log('Current branch ID:', currentBranchId);
+        
+        if (currentBranchId) {
+            console.log('✅ Branch already selected, triggering loadHosts()');
+            // Small delay to ensure DOM is fully ready
+            setTimeout(function() {
+                loadHosts();
+            }, 100);
+        } else {
+            console.log('⚠️ No branch selected yet');
         }
 
         function loadHosts() {
             const branchId = branchSelect.val();
+            console.log('[Visits] loadHosts called with branchId:', branchId);
 
             if (!branchId) {
                 hostList.html('<p class="saw-text-muted" style="padding: 20px; margin: 0; text-align: center;">Nejprve vyberte pobočku výše</p>');
-                hostControls.hide();
-                return;
-            }
-
-            // Validate nonce
-            if (!ajaxNonce) {
-                console.error('[Visits] No AJAX nonce available');
-                hostList.html('<p class="saw-text-muted" style="padding: 20px; margin: 0; text-align: center; color: #d63638;">❌ Chyba: Nelze ověřit požadavek. Zkuste obnovit stránku.</p>');
                 hostControls.hide();
                 return;
             }
@@ -428,22 +462,38 @@
         }
 
         function renderHosts() {
-            let html = '';
+            console.log('='.repeat(80));
+            console.log('RENDER HOSTS - START');
+            console.log('='.repeat(80));
+            console.log('Total hosts to render:', allHosts.length);
+            console.log('existingIds from closure:', existingIds);
+            console.log('Type:', typeof existingIds);
+            console.log('Is Array:', Array.isArray(existingIds));
+            console.log('Length:', existingIds.length);
             
-            // Reload existing IDs fresh from window.sawVisits each time we render
-            // This ensures we have the latest data even if window.sawVisits was updated after init
-            let currentExistingIds = [];
-            if (typeof window.sawVisits !== 'undefined' && window.sawVisits !== null) {
-                if (Array.isArray(window.sawVisits.existing_hosts)) {
-                    currentExistingIds = window.sawVisits.existing_hosts.map(id => parseInt(id)).filter(id => !isNaN(id));
-                }
+            if (existingIds.length === 0) {
+                console.error('⚠️⚠️⚠️ existingIds is EMPTY! ⚠️⚠️⚠️');
+                console.log('Checking window.sawVisitsData again...');
+                console.log('window.sawVisitsData:', window.sawVisitsData);
+                console.log('window.sawVisitsData.existing_hosts:', window.sawVisitsData ? window.sawVisitsData.existing_hosts : 'N/A');
             }
             
-            console.log('[Visits] Rendering hosts, existing IDs:', currentExistingIds, 'Total hosts:', allHosts.length, 'window.sawVisits:', window.sawVisits);
+            let html = '';
+            
+            // Use existingIds from closure
+            const currentExistingIds = existingIds;
+            
+            console.log('-'.repeat(80));
+            console.log('RENDERING HOSTS WITH THESE CHECKED IDs:', currentExistingIds);
+            console.log('-'.repeat(80));
 
             $.each(allHosts, function (index, h) {
                 const hostId = parseInt(h.id);
                 const checked = currentExistingIds.includes(hostId);
+                
+                if (index < 3 || checked) {
+                    console.log(`Host #${index}: ID=${hostId}, Name=${h.first_name} ${h.last_name}, CHECKED=${checked}`);
+                }
 
                 // Build label with name, position (if available), and role
                 const namePart = `${h.first_name} ${h.last_name}`;
@@ -463,7 +513,26 @@
             });
 
             hostList.html(html);
+            
+            console.log('✅ HTML GENERATED');
+            console.log('Checking rendered checkboxes in DOM...');
+            
+            setTimeout(function() {
+                const checkedCount = $('#hosts-list input[type="checkbox"]:checked').length;
+                console.log('Checkboxes in DOM - Total:', $('#hosts-list input[type="checkbox"]').length, 'Checked:', checkedCount);
+                
+                if (checkedCount === 0 && currentExistingIds.length > 0) {
+                    console.error('❌❌❌ CHECKBOXES NOT CHECKED IN DOM! ❌❌❌');
+                } else if (checkedCount > 0) {
+                    console.log('✅✅✅ CHECKBOXES SUCCESSFULLY CHECKED! ✅✅✅');
+                }
+            }, 100);
+            
+            console.log('='.repeat(80));
+            console.log('RENDER HOSTS - END');
+            console.log('='.repeat(80));
 
+            // Bind click handler for host items
             $('.saw-host-item').on('click', function (e) {
                 if (e.target.type !== 'checkbox') {
                     const cb = $(this).find('input[type="checkbox"]');
@@ -471,6 +540,7 @@
                 }
             });
 
+            // Bind change handler for checkboxes
             hostList.on('change', 'input[type="checkbox"]', function () {
                 $(this).closest('.saw-host-item').toggleClass('selected', this.checked);
                 updateCounter();
@@ -530,37 +600,52 @@
         SAWVisitSchedules.init();
     }
 
-    // Initialize on document ready with retry logic if window.sawVisits not available
-    $(document).ready(function () {
-        // Wait for window.sawVisits to be available
-        let retryCount = 0;
-        const maxRetries = 10;
-        const retryDelay = 100; // ms
+    // ========================================
+    // INITIALIZATION
+    // ========================================
+    
+    /**
+     * Wait for window.sawVisitsData to be available before initializing
+     * Uses polling with exponential backoff for reliability
+     */
+    function waitForSawVisits(callback, maxAttempts = 20) {
+        let attempts = 0;
+        const baseDelay = 50; // Start with 50ms
         
-        function tryInitHostsManager() {
-            if (typeof window.sawVisits !== 'undefined' && window.sawVisits !== null) {
-                console.log('[Visits] window.sawVisits available, initializing hosts manager');
-                initHostsManager();
-            } else if (retryCount < maxRetries) {
-                retryCount++;
-                console.log('[Visits] window.sawVisits not available yet, retry', retryCount, 'of', maxRetries);
-                setTimeout(tryInitHostsManager, retryDelay);
+        function check() {
+            attempts++;
+            
+            // Check if sawVisitsData exists (contains existing_hosts)
+            if (typeof window.sawVisitsData !== 'undefined' && window.sawVisitsData !== null) {
+                console.log('[Visits] window.sawVisitsData available after', attempts, 'attempts');
+                callback();
+            } else if (attempts < maxAttempts) {
+                // Exponential backoff: 50ms, 100ms, 200ms, 400ms, ...
+                const delay = baseDelay * Math.pow(2, Math.min(attempts - 1, 5));
+                console.log('[Visits] window.sawVisitsData not available, retry', attempts, 'of', maxAttempts, 'in', delay, 'ms');
+                setTimeout(check, delay);
             } else {
-                console.warn('[Visits] window.sawVisits not available after', maxRetries, 'retries, initializing anyway');
-                initHostsManager(); // Initialize anyway, will handle missing data gracefully
+                console.warn('[Visits] window.sawVisitsData not available after', maxAttempts, 'attempts, initializing anyway');
+                callback(); // Initialize anyway, will handle gracefully
             }
         }
         
-        tryInitHostsManager();
+        check();
+    }
+
+    // Initialize on document ready
+    $(document).ready(function () {
+        console.log('[Visits] Document ready, waiting for window.sawVisitsData...');
+        waitForSawVisits(initHostsManager);
     });
 
     // Re-initialize when new content is loaded via AJAX (e.g., sidebar form)
     $(document).on('saw:page-loaded', function () {
-        console.log('[Visits] saw:page-loaded event triggered, re-initializing hosts manager');
-        // Give time for wp_localize_script to update window.sawVisits
+        console.log('[Visits] saw:page-loaded event triggered, re-initializing...');
+        // Wait a bit for wp_localize_script to update window.sawVisits
         setTimeout(function() {
-            initHostsManager();
-        }, 100);
+            waitForSawVisits(initHostsManager, 10); // Fewer attempts for re-init
+        }, 50);
     });
 
 })(jQuery);

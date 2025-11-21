@@ -1101,7 +1101,6 @@ body, html {
     background: var(--saw-card-bg);
     border-radius: 0 !important;
     border: none !important;
-    border-top: 1px solid #eaeaea !important;
 }
 
 .saw-admin-table-split.has-sidebar {
@@ -1303,7 +1302,7 @@ body, html {
     .saw-app-content .saw-page-header {
         padding-left: 12px !important;
         padding-right: 12px !important;
-        margin-bottom: 0 !important; /* Reduce spacing above table */
+        margin-bottom: 0px !important; /* Reduce spacing above table */
     }
     
     /* Ensure table panel and admin-table-split have no horizontal margin/padding */
@@ -1353,7 +1352,7 @@ body, html {
     }
     
     .saw-page-title {
-        font-size: 20px;
+        font-size: 30px;;
     }
     
     .saw-admin-table-split.has-sidebar {

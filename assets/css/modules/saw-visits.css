@@ -1,6 +1,6 @@
 /**
  * Visit Schedules Styling
- * @version 2.1.0 - FIXED: Table pagination overflow
+ * @version 3.0.0 - REDESIGNED: Modern layout with improved schedule rows and soft shadows
  */
 
 /* ✅ FIX: Ensure table wrapper doesn't overflow */
@@ -18,50 +18,63 @@
 .saw-schedule-container {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 16px;
     margin-bottom: 16px;
 }
 
-/* Schedule Row */
+/* Schedule Row - Modern Design with Soft Shadow */
 .saw-schedule-row {
-    background: white;
-    border: 2px solid #e5e7eb;
-    border-radius: 8px;
-    padding: 16px;
+    background: linear-gradient(to bottom, #ffffff, #fafbfc);
+    border: none;
+    border-radius: 12px;
+    padding: 20px;
     position: relative;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .saw-schedule-row:hover {
-    border-color: #2271b1;
-    box-shadow: 0 2px 8px rgba(34, 113, 177, 0.1);
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.12);
+    transform: translateY(-2px);
 }
 
-/* Row Fields Layout */
+/* Row Fields Layout - Improved Structure */
 .saw-schedule-row-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Field Group - Date on first row, times on second row */
+.saw-schedule-field-group {
     display: flex;
     flex-direction: column;
     gap: 12px;
 }
 
-/* Field Group - datum + časy vedle sebe */
-.saw-schedule-field-group {
+.saw-schedule-field-group-row {
     display: grid;
-    grid-template-columns: 180px 120px 120px;
     gap: 12px;
 }
 
-/* Responsive: wrap fields on mobile */
+/* First row: Date (full width) */
+.saw-schedule-field-group-row.date-row {
+    grid-template-columns: 1fr;
+}
+
+/* Second row: Time from | Time to (50/50) */
+.saw-schedule-field-group-row.time-row {
+    grid-template-columns: 1fr 1fr;
+}
+
+/* Responsive: maintain layout on mobile */
 @media (max-width: 768px) {
-    .saw-schedule-field-group {
-        grid-template-columns: 1fr !important; /* Stack all fields vertically on mobile */
-        gap: 12px;
+    .saw-schedule-field-group-row.time-row {
+        grid-template-columns: 1fr;
     }
     
-    .saw-schedule-row-actions {
-        position: static !important; /* Move actions below fields on mobile */
-        margin-top: 12px;
-        justify-content: flex-end;
+    .saw-schedule-row {
+        padding: 16px;
     }
 }
 
@@ -76,13 +89,35 @@
     font-weight: 600;
     color: #1e293b;
     margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.saw-schedule-field label::before {
+    content: '';
+    width: 3px;
+    height: 14px;
+    background: linear-gradient(to bottom, #2563eb, #3b82f6);
+    border-radius: 2px;
 }
 
 .saw-schedule-field input {
     width: 100%;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+    transition: all 0.2s ease;
 }
 
-/* Notes - full width */
+.saw-schedule-field input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Notes - full width on third row */
 .saw-schedule-field-notes-full,
 .saw-schedule-notes-full,
 .saw-schedule-field.saw-schedule-notes-full {
@@ -104,31 +139,48 @@
 .saw-schedule-notes-full input,
 .saw-schedule-field.saw-schedule-notes-full input {
     width: 100%;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+    transition: all 0.2s ease;
 }
 
-/* Actions - pravý horní roh */
+.saw-schedule-field-notes-full input:focus,
+.saw-schedule-notes-full input:focus,
+.saw-schedule-field.saw-schedule-notes-full input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Actions - Bottom right on fourth row */
 .saw-schedule-row-actions {
-    position: absolute;
-    top: 12px;
-    right: 12px;
     display: flex;
     gap: 8px;
+    justify-content: flex-end;
+    margin-top: 4px;
+    padding-top: 16px;
+    border-top: 1px solid #f1f5f9;
 }
 
-/* Remove Button */
+/* Remove Button - Modern Design */
 .saw-remove-schedule-day {
-    background: #fee2e2;
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
     border: 2px solid #fca5a5;
-    border-radius: 6px;
-    padding: 8px 12px;
+    border-radius: 8px;
+    padding: 10px 16px;
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 40px;
-    min-height: 40px;
+    gap: 6px;
+    min-height: 44px;
     margin: 0;
+    font-weight: 600;
+    color: #dc2626;
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.1);
 }
 
 .saw-remove-schedule-day .dashicons {
@@ -147,30 +199,39 @@
 }
 
 .saw-remove-schedule-day:hover:not(:disabled) {
-    background: #fecaca;
-    border-color: #f87171;
-    transform: scale(1.05);
+    background: linear-gradient(135deg, #fca5a5 0%, #f87171 100%);
+    border-color: #dc2626;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(220, 38, 38, 0.2);
+}
+
+.saw-remove-schedule-day:active:not(:disabled) {
+    transform: translateY(0);
 }
 
 .saw-remove-schedule-day:disabled {
-    opacity: 0.3;
+    opacity: 0.4;
     cursor: not-allowed;
+    box-shadow: none;
 }
 
-/* Add Button Inline */
+/* Add Button - Modern Design */
 .saw-add-schedule-day-inline {
-    background: #dcfce7;
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
     border: 2px solid #86efac;
-    border-radius: 6px;
-    padding: 8px 12px;
+    border-radius: 8px;
+    padding: 10px 16px;
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 40px;
-    min-height: 40px;
+    gap: 6px;
+    min-height: 44px;
     margin: 0;
+    font-weight: 600;
+    color: #16a34a;
+    box-shadow: 0 2px 4px rgba(22, 163, 74, 0.1);
 }
 
 .saw-add-schedule-day-inline .dashicons {
@@ -189,9 +250,14 @@
 }
 
 .saw-add-schedule-day-inline:hover {
-    background: #bbf7d0;
-    border-color: #4ade80;
-    transform: scale(1.05);
+    background: linear-gradient(135deg, #86efac 0%, #4ade80 100%);
+    border-color: #16a34a;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(22, 163, 74, 0.2);
+}
+
+.saw-add-schedule-day-inline:active {
+    transform: translateY(0);
 }
 
 /* Field Hint */
@@ -201,18 +267,20 @@
     margin-top: 8px;
     margin-bottom: 0;
     font-style: italic;
+    padding-left: 4px;
 }
 
 /* Validation Error */
 .saw-validation-error {
-    background: #fef2f2;
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
     border: 2px solid #fca5a5;
-    border-radius: 6px;
+    border-radius: 8px;
     padding: 12px 16px;
     color: #991b1b;
     font-size: 14px;
     font-weight: 500;
     margin-bottom: 12px;
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.1);
 }
 
 .saw-input-error {
@@ -243,33 +311,34 @@
     color: #6b7280;
 }
 
-/* Host List */
+/* Host List - Modern Design */
 .saw-host-list {
     max-height: 400px;
     overflow-y: auto;
-    border: 1px solid #dcdcde;
-    border-radius: 4px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
     background: white;
 }
 
 .saw-host-item {
-    padding: 12px 16px;
-    border-bottom: 1px solid #f0f0f1;
+    padding: 14px 18px;
+    border-bottom: 1px solid #f1f5f9;
     display: flex;
     align-items: center;
     gap: 12px;
-    transition: all 0.15s ease;
+    transition: all 0.2s ease;
     cursor: pointer;
     background: #fff;
 }
 
 .saw-host-item:hover {
-    background: #f6f7f7;
+    background: linear-gradient(to right, #f8fafc, #f1f5f9);
 }
 
 .saw-host-item.selected {
-    background: #e7f5ff;
-    border-left: 3px solid #0073aa;
+    background: linear-gradient(to right, #eff6ff, #dbeafe);
+    border-left: 4px solid #2563eb;
+    padding-left: 14px;
 }
 
 .saw-host-item:last-child {
@@ -282,6 +351,7 @@
     width: 18px;
     height: 18px;
     flex-shrink: 0;
+    accent-color: #2563eb;
 }
 
 .saw-host-item label {
@@ -297,11 +367,11 @@
 
 .saw-host-name {
     font-weight: 600;
-    color: #2c3338;
+    color: #1e293b;
 }
 
 .saw-host-role {
-    color: #666;
+    color: #64748b;
     font-size: 13px;
     font-weight: 400;
 }
@@ -311,16 +381,22 @@
 }
 
 #hosts-list::-webkit-scrollbar {
-    width: 8px;
+    width: 10px;
 }
 
 #hosts-list::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: #f8fafc;
+    border-radius: 8px;
 }
 
 #hosts-list::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 4px;
+    background: linear-gradient(to bottom, #cbd5e1, #94a3b8);
+    border-radius: 8px;
+    border: 2px solid #f8fafc;
+}
+
+#hosts-list::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(to bottom, #94a3b8, #64748b);
 }
 
 /* Animation */
@@ -328,8 +404,29 @@
     from {
         transform: rotate(0deg);
     }
-
     to {
         transform: rotate(360deg);
+    }
+}
+
+/* Mobile optimizations */
+@media (max-width: 480px) {
+    .saw-schedule-row {
+        padding: 16px;
+    }
+    
+    .saw-schedule-row-actions {
+        padding-top: 12px;
+    }
+    
+    .saw-remove-schedule-day,
+    .saw-add-schedule-day-inline {
+        padding: 8px 12px;
+        min-height: 40px;
+        font-size: 13px;
+    }
+    
+    .saw-host-item {
+        padding: 12px 14px;
     }
 }

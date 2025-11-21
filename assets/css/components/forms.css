@@ -1555,3 +1555,200 @@
     }
 }
 
+/**
+ * SAW Forms - Improved Form Sections
+ * Modern design with soft shadows instead of borders
+ * 
+ * @package SAW_Visitors
+ * @version 5.1.0 - IMPROVED: Soft shadow design for form sections
+ * 
+ * USAGE: Add this CSS AFTER the main forms.css to override specific form section styles
+ */
+
+/* ============================================
+   FORM SECTION - SOFT SHADOW DESIGN (Varianta A)
+   ============================================ */
+
+.saw-form-section {
+    background: linear-gradient(to bottom, #ffffff, #fafbfc);
+    border: none !important; /* Remove border completely */
+    border-radius: 12px;
+    margin-bottom: 20px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+}
+
+.saw-form-section:hover {
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.12);
+    transform: translateY(-2px);
+}
+
+.saw-form-section summary {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 24px;
+    cursor: pointer;
+    user-select: none;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+    border: none !important;
+    border-bottom: none !important; /* Remove bottom border */
+    transition: all 0.3s ease;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--saw-text-primary, #1e293b);
+    position: relative;
+    margin: 0;
+}
+
+.saw-form-section summary:hover {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
+}
+
+.saw-form-section[open] summary {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.08);
+}
+
+.saw-form-section summary .dashicons {
+    font-family: dashicons !important;
+    font-size: 24px !important;
+    width: 48px !important;
+    height: 48px !important;
+    line-height: 48px !important;
+    color: #ffffff !important;
+    background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%) !important;
+    border-radius: 12px !important;
+    padding: 0 !important;
+    transition: all 0.3s ease !important;
+    flex-shrink: 0 !important;
+    display: inline-block !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
+    vertical-align: middle !important;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+    speak: none !important;
+    font-style: normal !important;
+    font-weight: normal !important;
+    font-variant: normal !important;
+    text-transform: none !important;
+}
+
+.saw-form-section summary:hover .dashicons {
+    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%) !important;
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+}
+
+.saw-form-section[open] summary .dashicons {
+    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%) !important;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+}
+
+/* Expand/collapse icon */
+.saw-form-section summary::after {
+    content: '▶' !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 24px !important;
+    height: 24px !important;
+    margin-left: auto !important;
+    font-size: 12px !important;
+    color: #64748b !important;
+    transition: transform 0.3s ease !important;
+    flex-shrink: 0 !important;
+    line-height: 1 !important;
+    background: #f1f5f9;
+    border-radius: 6px;
+}
+
+.saw-form-section[open] summary::after {
+    content: '▼' !important;
+    transform: rotate(0deg) !important;
+    color: #2563eb !important;
+    background: #dbeafe;
+}
+
+.saw-form-section-content {
+    padding: 24px;
+    background: transparent !important;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .saw-form-section {
+        margin-bottom: 16px;
+    }
+    
+    .saw-form-section summary {
+        padding: 16px 18px;
+        font-size: 15px;
+        gap: 12px;
+    }
+    
+    .saw-form-section summary .dashicons {
+        width: 42px !important;
+        height: 42px !important;
+        line-height: 42px !important;
+        font-size: 22px !important;
+    }
+    
+    .saw-form-section-content {
+        padding: 18px;
+    }
+}
+
+@media (max-width: 480px) {
+    .saw-form-section summary {
+        padding: 12px 14px !important;
+        gap: 10px !important;
+        font-size: 14px !important;
+    }
+    
+    .saw-form-section summary .dashicons {
+        width: 38px !important;
+        height: 38px !important;
+        line-height: 38px !important;
+        font-size: 20px !important;
+    }
+    
+    .saw-form-section-content {
+        padding: 14px !important;
+    }
+}
+
+/* Hide native details marker */
+.saw-form-section summary::-webkit-details-marker {
+    display: none !important;
+}
+
+.saw-form-section summary::marker {
+    display: none !important;
+    content: '' !important;
+}
+
+/* ============================================
+   OPTIONAL: ACCENT BORDER VARIANT (Varianta B)
+   Uncomment to use accent border instead of soft shadow
+   ============================================ */
+
+/*
+.saw-form-section {
+    background: #ffffff;
+    border: 1px solid #e5e7eb !important;
+    border-left: 4px solid #2563eb !important;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+}
+
+.saw-form-section:hover {
+    border-left-color: #1d4ed8 !important;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12);
+}
+*/
+
