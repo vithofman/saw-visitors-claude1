@@ -40,19 +40,49 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         SAW_Asset_Loader::enqueue_module('visits');
         
         // Pass existing hosts to JS if editing
-        // Use get_sidebar_context() to get visit ID from URL path (e.g., /admin/visits/41/edit)
-        // This is more reliable than $_GET['id'] or $_GET['saw_path'] which may not be set
+        // Use multiple fallback methods to detect visit ID from URL path (e.g., /admin/visits/41/edit)
         $visit_id = 0;
-        $context = $this->get_sidebar_context();
+        $detection_method = 'none';
         
-        // Get visit_id from sidebar context if in edit or detail mode
+        // Method 1: Try get_sidebar_context() (primary - set by router)
+        $context = $this->get_sidebar_context();
         if (!empty($context['id']) && ($context['mode'] === 'edit' || $context['mode'] === 'detail')) {
             $visit_id = intval($context['id']);
+            $detection_method = 'sidebar_context';
         }
         
-        // Fallback to $_GET['id'] for backward compatibility
+        // Method 2: Parse URL from REQUEST_URI as fallback (if sidebar context not available yet)
+        if ($visit_id === 0 && isset($_SERVER['REQUEST_URI'])) {
+            $request_uri = sanitize_text_field($_SERVER['REQUEST_URI']);
+            // Match patterns like /admin/visits/41/edit or /admin/visits/41/ or /admin/visits/41
+            if (preg_match('#/admin/visits/(\d+)(?:/edit|/)?#', $request_uri, $matches)) {
+                $visit_id = intval($matches[1]);
+                $detection_method = 'url_parsing';
+            }
+        }
+        
+        // Method 3: Fallback to $_GET['id'] for backward compatibility
         if ($visit_id === 0 && isset($_GET['id'])) {
             $visit_id = intval($_GET['id']);
+            $detection_method = 'get_param';
+        }
+        
+        // Method 4: Try $_GET['saw_path'] as last resort
+        if ($visit_id === 0 && isset($_GET['saw_path'])) {
+            $path = sanitize_text_field($_GET['saw_path']);
+            if (preg_match('/visits\/(\d+)/', $path, $matches)) {
+                $visit_id = intval($matches[1]);
+                $detection_method = 'saw_path';
+            }
+        }
+        
+        // Debug logging
+        if ($visit_id > 0) {
+            error_log(sprintf('[Visits] enqueue_assets: Detected visit_id=%d using method=%s, REQUEST_URI=%s', 
+                $visit_id, 
+                $detection_method,
+                isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : 'N/A'
+            ));
         }
         
         $existing_hosts = array();
@@ -63,6 +93,11 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
                 $visit_id
             ));
             $existing_hosts = array_map('intval', $existing_hosts);
+            
+            error_log(sprintf('[Visits] enqueue_assets: Loaded %d existing hosts for visit_id=%d', 
+                count($existing_hosts), 
+                $visit_id
+            ));
         }
         
         // Localize script with correct handle that matches asset loader

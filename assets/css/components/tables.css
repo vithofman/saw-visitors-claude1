@@ -871,20 +871,29 @@
    ============================================ */
 
 .saw-admin-table tbody tr.saw-row-active {
-    background: var(--saw-table-row-active-bg);
-    border-left: 3px solid #3b82f6;
+    background: var(--saw-table-row-active-bg) !important;
+    border-left: 3px solid #3b82f6 !important;
     position: relative;
+    /* Remove ALL transitions - instant visual feedback only */
+    transition: none !important;
+    animation: none !important;
 }
 
 /* Removed ::before pseudo-element with gradient and shadow - no animation */
 /* Removed font-weight change - no visual animation */
 
-.saw-admin-table tbody tr.saw-row-active:hover td {
-    background: var(--saw-table-row-active-hover-bg);
+/* CRITICAL: Add explicit background to td elements - they don't inherit from tr */
+.saw-admin-table tbody tr.saw-row-active td {
+    background: var(--saw-table-row-active-bg) !important;
+    /* Remove ALL transitions - instant visual feedback only */
+    transition: none !important;
+    animation: none !important;
+    /* No font-weight change - instant visual feedback only */
 }
 
-.saw-admin-table tbody tr.saw-row-active td {
-    /* No font-weight change - instant visual feedback only */
+.saw-admin-table tbody tr.saw-row-active:hover td {
+    background: var(--saw-table-row-active-hover-bg) !important;
+    transition: none !important;
 }
 
 /* ============================================
@@ -942,23 +951,36 @@
 }
 
 .saw-admin-table tbody tr.saw-row-active td:last-child {
-    background: var(--saw-table-row-active-bg);
+    background: var(--saw-table-row-active-bg) !important;
+    transition: none !important;
 }
 
 .saw-admin-table tbody tr.saw-row-active:hover td:last-child {
-    background: var(--saw-table-row-active-hover-bg);
+    background: var(--saw-table-row-active-hover-bg) !important;
+    transition: none !important;
 }
 
 /* Grouped table active row */
 .saw-table-grouped .saw-group-row.saw-row-active {
-    background: var(--saw-table-row-active-bg);
-    border-left: 3px solid #3b82f6;
+    background: var(--saw-table-row-active-bg) !important;
+    border-left: 3px solid #3b82f6 !important;
+    /* Remove ALL transitions - instant visual feedback only */
+    transition: none !important;
+    animation: none !important;
 }
 
 /* Removed ::before pseudo-element with gradient and shadow - no animation */
 
+/* CRITICAL: Add explicit background to td elements in grouped tables */
+.saw-table-grouped .saw-group-row.saw-row-active td {
+    background: var(--saw-table-row-active-bg) !important;
+    transition: none !important;
+    animation: none !important;
+}
+
 .saw-table-grouped .saw-group-row.saw-row-active:hover td {
-    background: var(--saw-table-row-active-hover-bg);
+    background: var(--saw-table-row-active-hover-bg) !important;
+    transition: none !important;
 }
 
 /* ============================================

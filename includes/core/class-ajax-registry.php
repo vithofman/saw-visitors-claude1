@@ -245,9 +245,20 @@ class SAW_AJAX_Registry {
             
             $controller->$method();
         } catch (Throwable $e) {
+            error_log(sprintf(
+                '[AJAX Registry] dispatch() exception for slug=%s, method=%s: %s, Trace: %s',
+                $slug,
+                $method,
+                $e->getMessage(),
+                $e->getTraceAsString()
+            ));
             wp_send_json_error([
-                'message' => 'Controller error',
-                'error'   => $e->getMessage()
+                'message' => 'Controller error: ' . $e->getMessage(),
+                'error'   => $e->getMessage(),
+                'trace'   => $e->getTraceAsString(),
+                'slug'    => $slug,
+                'method'  => $method,
+                'class'   => $controller_class ?? 'unknown'
             ]);
         }
     }

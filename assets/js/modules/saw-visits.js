@@ -324,11 +324,14 @@
         // Load existing hosts IDs fresh each time initHostsManager is called
         // This ensures we get the latest data even after AJAX content loads
         let existingIds = [];
-        if (window.sawVisits && Array.isArray(window.sawVisits.existing_hosts)) {
-            existingIds = window.sawVisits.existing_hosts.map(id => parseInt(id)).filter(id => !isNaN(id));
+        if (typeof window.sawVisits !== 'undefined' && window.sawVisits !== null) {
+            if (Array.isArray(window.sawVisits.existing_hosts)) {
+                existingIds = window.sawVisits.existing_hosts.map(id => parseInt(id)).filter(id => !isNaN(id));
+            }
+            console.log('[Visits] Initializing hosts manager with existing hosts:', existingIds, 'from window.sawVisits.existing_hosts:', window.sawVisits.existing_hosts);
+        } else {
+            console.warn('[Visits] window.sawVisits is not available');
         }
-        
-        console.log('[Visits] Initializing hosts manager with existing hosts:', existingIds, 'from window.sawVisits:', window.sawVisits);
 
         // Use sawGlobal as primary source for nonce and ajaxurl (always available and consistent)
         // sawGlobal.nonce is 'saw_ajax_nonce' which matches check_ajax_referer('saw_ajax_nonce', 'nonce') in PHP
@@ -428,13 +431,15 @@
             let html = '';
             
             // Reload existing IDs fresh from window.sawVisits each time we render
-            // This ensures we have the latest data
+            // This ensures we have the latest data even if window.sawVisits was updated after init
             let currentExistingIds = [];
-            if (window.sawVisits && Array.isArray(window.sawVisits.existing_hosts)) {
-                currentExistingIds = window.sawVisits.existing_hosts.map(id => parseInt(id)).filter(id => !isNaN(id));
+            if (typeof window.sawVisits !== 'undefined' && window.sawVisits !== null) {
+                if (Array.isArray(window.sawVisits.existing_hosts)) {
+                    currentExistingIds = window.sawVisits.existing_hosts.map(id => parseInt(id)).filter(id => !isNaN(id));
+                }
             }
             
-            console.log('[Visits] Rendering hosts, existing IDs:', currentExistingIds, 'Total hosts:', allHosts.length);
+            console.log('[Visits] Rendering hosts, existing IDs:', currentExistingIds, 'Total hosts:', allHosts.length, 'window.sawVisits:', window.sawVisits);
 
             $.each(allHosts, function (index, h) {
                 const hostId = parseInt(h.id);
@@ -525,17 +530,37 @@
         SAWVisitSchedules.init();
     }
 
-    // Initialize on document ready
+    // Initialize on document ready with retry logic if window.sawVisits not available
     $(document).ready(function () {
-        initHostsManager();
+        // Wait for window.sawVisits to be available
+        let retryCount = 0;
+        const maxRetries = 10;
+        const retryDelay = 100; // ms
+        
+        function tryInitHostsManager() {
+            if (typeof window.sawVisits !== 'undefined' && window.sawVisits !== null) {
+                console.log('[Visits] window.sawVisits available, initializing hosts manager');
+                initHostsManager();
+            } else if (retryCount < maxRetries) {
+                retryCount++;
+                console.log('[Visits] window.sawVisits not available yet, retry', retryCount, 'of', maxRetries);
+                setTimeout(tryInitHostsManager, retryDelay);
+            } else {
+                console.warn('[Visits] window.sawVisits not available after', maxRetries, 'retries, initializing anyway');
+                initHostsManager(); // Initialize anyway, will handle missing data gracefully
+            }
+        }
+        
+        tryInitHostsManager();
     });
 
     // Re-initialize when new content is loaded via AJAX (e.g., sidebar form)
     $(document).on('saw:page-loaded', function () {
         console.log('[Visits] saw:page-loaded event triggered, re-initializing hosts manager');
+        // Give time for wp_localize_script to update window.sawVisits
         setTimeout(function() {
             initHostsManager();
-        }, 50);
+        }, 100);
     });
 
 })(jQuery);

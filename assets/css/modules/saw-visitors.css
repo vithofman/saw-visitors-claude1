@@ -382,6 +382,51 @@
     padding: 20px;
 }
 
+/* ============================================
+   DASHICONS FIX - Ensure icons load correctly
+   ============================================ */
+
+/* Global dashicons fix for visitors module */
+.saw-module-visitors .dashicons,
+.saw-visitor-form .dashicons,
+.saw-form-container.saw-module-visitors .dashicons {
+    font-family: dashicons !important;
+    speak: none !important;
+    font-style: normal !important;
+    font-weight: normal !important;
+    font-variant: normal !important;
+    text-transform: none !important;
+    line-height: 1 !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Specific fix for certificate section icons */
+.saw-certificate-row .dashicons,
+#add-certificate-btn .dashicons,
+.saw-remove-certificate .dashicons {
+    font-family: dashicons !important;
+    speak: none !important;
+    font-style: normal !important;
+    font-weight: normal !important;
+    font-variant: normal !important;
+    text-transform: none !important;
+    display: inline-block !important;
+    line-height: 1 !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Form section summary icons */
+.saw-form-section summary .dashicons {
+    font-family: dashicons !important;
+    speak: none !important;
+    font-style: normal !important;
+    font-weight: normal !important;
+    font-variant: normal !important;
+    text-transform: none !important;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
 
