@@ -12,12 +12,11 @@
 .saw-table-tabs-wrapper {
     background: var(--saw-bg-primary);
     border-bottom: 1px solid var(--saw-border-color);
-    padding: 0 0px;
-    margin-top: 10px;
+    margin: 0; /* OPRAVENO 2025-01-22: Explicitně odstranit všechny marginy */
+    padding: 0; /* OPRAVENO 2025-01-22: Explicitně odstranit všechny paddingy */
     position: sticky;
     top: 0;
-    z-index: 25; /* OPRAVENO 2025-01-22: Zvýšeno z 15 na 25, aby byl vždy nad table headerem (20) */
-    margin-bottom: 0;
+    z-index: 15; /* Už je správně - vyšší než table header (10) */
 }
 
 .saw-table-tabs-container {
@@ -25,10 +24,6 @@
     align-items: center;
     gap: 16px;
     flex-wrap: nowrap;
-}
-
-.saw-table-tabs-wrapper {
-    position: relative; /* For arrow positioning */
 }
 
 .saw-table-tabs {

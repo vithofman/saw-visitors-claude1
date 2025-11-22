@@ -1129,7 +1129,14 @@ body, html {
     overflow-x: hidden !important;
     min-height: 0 !important;
     -webkit-overflow-scrolling: touch;
-    padding-bottom: 80px; /* NOVÉ: Padding pro footer */
+    padding-bottom: 0; /* OPRAVENO 2025-01-22: Odstraněn padding */
+    position: relative; /* PŘIDÁNO: Pro sticky positioning */
+}
+
+/* OPRAVENO 2025-01-22: Ensure no double scrollbar */
+.saw-admin-table-split,
+.saw-table-panel {
+    overflow: hidden !important; /* KRITICKÉ: Zabránit double scrollbar */
 }
 
 /* Pagination vždy dole */

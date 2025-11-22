@@ -1720,7 +1720,14 @@ protected function can($action) {
         }
         
         $page = isset($_POST['page']) ? max(1, intval($_POST['page'])) : 1;
-        $per_page = isset($_POST['per_page']) ? intval($_POST['per_page']) : 50;
+        
+        // OPRAVENO 2025-01-22: Respektuj initial_load config pro první stránku
+        $infinite_scroll_enabled = !empty($this->config['infinite_scroll']['enabled']);
+        if ($infinite_scroll_enabled && $page === 1) {
+            $per_page = $this->config['infinite_scroll']['initial_load'] ?? 100;
+        } else {
+            $per_page = isset($_POST['per_page']) ? intval($_POST['per_page']) : 50;
+        }
         
         // Ensure per_page is reasonable
         $per_page = max(1, min(100, $per_page));
@@ -2134,11 +2141,20 @@ protected function can($action) {
         $order = isset($_GET['order']) ? strtoupper(sanitize_text_field(wp_unslash($_GET['order']))) : 'DESC';
         $page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
         
-        // Check if infinite scroll is enabled and use its per_page
+        // OPRAVENO 2025-01-22: Respektuj initial_load config
         $infinite_scroll_enabled = !empty($this->config['infinite_scroll']['enabled']);
-        $per_page = $infinite_scroll_enabled 
-            ? ($this->config['infinite_scroll']['per_page'] ?? 50)
-            : ($this->config['list_config']['per_page'] ?? 20);
+        
+        if ($infinite_scroll_enabled) {
+            // Pokud je první stránka, použij initial_load
+            if ($page === 1) {
+                $per_page = $this->config['infinite_scroll']['initial_load'] ?? 100;
+            } else {
+                // Další stránky používají per_page
+                $per_page = $this->config['infinite_scroll']['per_page'] ?? 50;
+            }
+        } else {
+            $per_page = $this->config['list_config']['per_page'] ?? 20;
+        }
         
         $filters = array(
             'search' => $search,

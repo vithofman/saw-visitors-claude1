@@ -1152,6 +1152,15 @@ class SAW_Component_Admin_Table {
      * @since 7.1.0
      */
     private function output_js_config() {
+        // OPRAVENO 2025-01-22: Ověřit že threshold je správně nastaven
+        if (!empty($this->config['infinite_scroll']['threshold'])) {
+            $threshold = floatval($this->config['infinite_scroll']['threshold']);
+            // Ensure threshold is 0.6 (60%) not 0.7 (70%)
+            if ($threshold !== 0.6) {
+                $this->config['infinite_scroll']['threshold'] = 0.6;
+            }
+        }
+        
         $config = array(
             'entity' => $this->entity,
             'columns' => $this->config['columns'],

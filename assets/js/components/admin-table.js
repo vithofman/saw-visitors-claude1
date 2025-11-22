@@ -765,7 +765,7 @@
                 action: 'saw_get_items_infinite_' + entity.replace(/_/g, '-'),
                 nonce: nonce,
                 page: currentPage,
-                per_page: perPage,
+                per_page: currentPage === 1 ? initialLoad : perPage, // OPRAVENO 2025-01-22: Použij initial_load pro první stránku
                 search: filters.search || '',
                 orderby: filters.orderby || 'id',
                 order: filters.order || 'DESC',
@@ -961,7 +961,7 @@
             if (scrollTimeout) {
                 clearTimeout(scrollTimeout);
             }
-            scrollTimeout = setTimeout(handleScroll, 50); // OPRAVENO 2025-01-22: Sníženo z 100ms na 50ms pro rychlejší response
+            scrollTimeout = setTimeout(handleScroll, 16); // OPRAVENO 2025-01-22: ~60fps pro plynulejší scroll (16ms = 1 frame)
         }, { passive: true });
         
         // Save scroll position on page unload
@@ -996,14 +996,13 @@
                 console.log('✅ Scroll position restored');
                 
                 // OPRAVENO 2025-01-22: Clear restoration flag after scroll settles
-                // Note: 300ms timeout is approximate - may fail on very slow devices
-                // TODO v3.0: Consider implementing debounce pattern for better reliability
+                // OPRAVENO 2025-01-22: Sníženo z 300ms na 100ms pro rychlejší obnovení scrollu
                 setTimeout(() => {
                     isRestoring = false;
                     if (DEBUG) {
                         console.log('✅ Restoration complete, infinite scroll re-enabled');
                     }
-                }, 300);
+                }, 100); // OPRAVENO 2025-01-22: Sníženo z 300ms na 100ms pro rychlejší obnovení scrollu
             }, 100);
             
             // Clear saved position
