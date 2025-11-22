@@ -11,16 +11,15 @@
 
 .saw-table-tabs-wrapper {
     background: var(--saw-bg-primary);
-    /* OPRAVENO 2025-01-22: border-bottom odstraněn - border je na table headeru */
-    margin: 0 !important; /* OPRAVENO 2025-01-22: Explicitně odstranit všechny marginy */
-    padding: 0 !important; /* OPRAVENO 2025-01-22: Explicitně odstranit všechny paddingy */
+    margin: 0 !important;
+    padding: 0 !important;
     position: sticky;
-    top: 0;
-    z-index: 15; /* Už je správně - vyšší než table header (11) */
-    height: 50px; /* PŘIDÁNO 2025-01-22: Fixní výška pro sticky header positioning */
+    top: 64px; /* Desktop: výška saw-page-header (~64px: 20px padding + 24px font + line-height) */
+    z-index: 15;
+    height: 50px;
     min-height: 50px;
-    overflow: hidden; /* PŘIDÁNO: Prevent height expansion */
-    margin-bottom: 0 !important; /* OPRAVENO 2025-01-22: Explicitně odstranit bottom margin */
+    overflow: hidden;
+    border-bottom: 1px solid var(--saw-border-color);
 }
 
 .saw-table-tabs-container {
@@ -228,6 +227,7 @@
 @media (max-width: 768px) {
     .saw-table-tabs-wrapper {
         padding: 0 12px;
+        top: 48px !important; /* Tablet/Mobile: výška saw-page-header (~48px: 12px top + 18px font + ~4px line + 8px bottom) */
     }
     
     .saw-table-tabs-container {
@@ -266,6 +266,11 @@
         height: 18px;
         font-size: 11px;
     }
+    
+    /* Odstranit šipky na mobilu - jde to swipe prstu */
+    .saw-tabs-nav-arrow {
+        display: none !important;
+    }
 }
 
 @media (max-width: 480px) {
@@ -294,20 +299,9 @@
         -webkit-overflow-scrolling: touch;
     }
     
-    /* Arrows on mobile - smaller */
+    /* Arrows on mobile - hidden (swipe gesture instead) */
     .saw-tabs-nav-arrow {
-        width: 28px;
-        height: 28px;
-        font-size: 14px;
-    }
-    
-    .saw-tabs-nav-arrow-left {
-        margin-right: 2px;
-    }
-    
-    .saw-tabs-nav-arrow-right {
-        margin-left: 2px;
-        margin-right: 4px;
+        display: none !important; /* Odstranit šipky na mobilu - jde to swipe prstu */
     }
 }
 

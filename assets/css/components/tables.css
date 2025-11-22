@@ -685,15 +685,9 @@
    TABLE WRAPPER
    ============================================ */
 
+/* DEPRECATED: .saw-table-responsive-wrapper je odstraněn z HTML, zachován pro zpětnou kompatibilitu */
 .saw-table-responsive-wrapper {
-    overflow: hidden; /* OPRAVENO 2025-01-22: Žádný scroll zde - scroll je na .saw-table-scroll-area */
-    -webkit-overflow-scrolling: touch;
-    width: 100%;
-    background: transparent !important; /* OPRAVENO 2025-01-22: Transparent místo šedého backgroundu - odstraní šedý prázdný řádek */
-    margin-top: 0 !important; /* OPRAVENO 2025-01-22: Odstranit margin mezi tabs a table */
-    padding-top: 0 !important; /* OPRAVENO 2025-01-22: Odstranit padding mezi tabs a table */
-    margin-bottom: 0 !important; /* OPRAVENO 2025-01-22: Odstranit bottom margin */
-    padding-bottom: 0 !important; /* OPRAVENO 2025-01-22: Odstranit bottom padding */
+    display: contents; /* Zruší wrapper efekt - wrapper je odstraněn z HTML */
 }
 
 .saw-table-responsive-wrapper::-webkit-scrollbar {
@@ -766,13 +760,13 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
     white-space: nowrap;
-    position: sticky !important; /* OPRAVENO 2025-01-22: Sticky je na th elementech */
-    top: 50px !important; /* OPRAVENO 2025-01-22: Přesně výška tabs (50px) */
-    background: var(--saw-table-header-bg) !important; /* OPRAVENO 2025-01-22: !important pro překrytí */
-    z-index: 11 !important; /* OPRAVENO 2025-01-22: Zvýšeno z 10 na 11, ale stále nižší než tabs (15) */
+    position: sticky !important;
+    top: 114px !important; /* Desktop: ~64px nadpis (20px padding + 24px font) + 50px tabs */
+    background: var(--saw-table-header-bg) !important;
+    z-index: 11 !important;
     border-bottom: 1px solid var(--saw-border-color);
-    margin: 0 !important; /* OPRAVENO 2025-01-22: Odstranit margin */
-    isolation: isolate; /* OPRAVENO 2025-01-22: Zajistit správný stacking context pro sticky */
+    margin: 0 !important;
+    isolation: isolate;
 }
 
 .saw-admin-table th a {
@@ -2164,6 +2158,7 @@
     
     .saw-admin-table th {
         font-size: 11px;
+        top: 98px !important; /* Tablet: ~48px nadpis + 50px tabs */
     }
     
     .saw-pagination {
@@ -2333,6 +2328,7 @@
     
     .saw-admin-table th {
         font-size: 10px;
+        top: 96px !important; /* Mobile: ~46px nadpis (10px top + 16px font + ~4px line + 6px bottom) + 50px tabs */
     }
     
     .saw-action-trigger {

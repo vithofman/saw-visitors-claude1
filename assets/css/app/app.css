@@ -761,11 +761,14 @@ body, html {
    ============================================ */
 
 .saw-page-header {
+    position: sticky;
+    top: 0;
+    z-index: 20; /* nejvyšší - nad tabs i thead */
     flex-shrink: 0 !important;
     margin-bottom: 0 !important;
-    padding: 0px 0px !important;
+    padding: 20px 24px !important; /* Desktop padding */
     background: var(--saw-page-header-bg);
-    border-bottom: 0px solid var(--saw-border-color);
+    border-bottom: 1px solid var(--saw-border-color);
 }
 
 .saw-page-header-content {
@@ -1354,15 +1357,18 @@ body, html {
     }
     
     .saw-page-header {
-        padding: 16px !important;
+        padding: 12px 12px 8px 12px !important; /* Sjednoceno s tables.css */
     }
     
     .saw-page-header-content {
-        padding: 0 16px;
+        padding: 0 !important; /* Remove padding from header content */
     }
     
     .saw-page-title {
-        font-size: 30px;;
+        font-size: 18px; /* Sjednoceno s tables.css */
+        text-align: left !important;
+        padding: 0 !important;
+        margin: 0 !important;
     }
     
     .saw-admin-table-split.has-sidebar {

@@ -209,10 +209,11 @@ class SAW_Component_Admin_Table {
                 $this->render_header();
                 ?>
                 
+                <?php $this->render_controls(); // VEN ze scroll area - bude sticky nebo se sloučí s tabs ?>
+                
                 <!-- Scrollovací oblast -->
                 <div class="saw-table-scroll-area">
-                    <?php $this->render_controls(); // OPRAVENO 2025-01-22: Přesunuto UVNITŘ scroll area pro stejný sticky kontext ?>
-                    <?php $this->render_table_or_empty(); ?>
+                    <?php $this->render_table_or_empty(); // POUZE tabulka uvnitř scroll area ?>
                 </div>
                 
                 <!-- Pagination vždy dole -->
@@ -238,10 +239,11 @@ class SAW_Component_Admin_Table {
                 $this->render_header();
                 ?>
                 
+                <?php $this->render_controls(); // VEN ze scroll area - bude sticky nebo se sloučí s tabs ?>
+                
                 <!-- Scrollovací oblast -->
                 <div class="saw-table-scroll-area">
-                    <?php $this->render_controls(); // OPRAVENO 2025-01-22: Přesunuto UVNITŘ scroll area pro stejný sticky kontext ?>
-                    <?php $this->render_table_or_empty(); ?>
+                    <?php $this->render_table_or_empty(); // POUZE tabulka uvnitř scroll area ?>
                 </div>
                 
                 <!-- Pagination vždy dole -->
@@ -703,64 +705,62 @@ class SAW_Component_Admin_Table {
     
     private function render_table() {
         ?>
-        <div class="saw-table-responsive-wrapper">
-            <table class="saw-admin-table">
-                <thead>
-                    <tr>
-                        <?php foreach ($this->config['columns'] as $key => $column): ?>
-                            <?php
-                            $label = is_array($column) ? ($column['label'] ?? ucfirst($key)) : $column;
-                            $sortable = is_array($column) && isset($column['sortable']) ? $column['sortable'] : false;
-                            $width = is_array($column) && isset($column['width']) ? $column['width'] : '';
-                            $align = is_array($column) && isset($column['align']) ? $column['align'] : 'left';
-                            ?>
-                            <th style="<?php echo $width ? 'width: ' . esc_attr($width) . ';' : ''; ?> text-align: <?php echo esc_attr($align); ?>;">
-                                <?php if ($sortable): ?>
-                                    <a href="<?php echo esc_url($this->get_sort_url($key, $this->config['orderby'], $this->config['order'])); ?>" class="saw-sortable">
-                                        <?php echo esc_html($label); ?>
-                                        <?php echo $this->get_sort_icon($key, $this->config['orderby'], $this->config['order']); ?>
-                                    </a>
-                                <?php else: ?>
+        <table class="saw-admin-table">
+            <thead>
+                <tr>
+                    <?php foreach ($this->config['columns'] as $key => $column): ?>
+                        <?php
+                        $label = is_array($column) ? ($column['label'] ?? ucfirst($key)) : $column;
+                        $sortable = is_array($column) && isset($column['sortable']) ? $column['sortable'] : false;
+                        $width = is_array($column) && isset($column['width']) ? $column['width'] : '';
+                        $align = is_array($column) && isset($column['align']) ? $column['align'] : 'left';
+                        ?>
+                        <th style="<?php echo $width ? 'width: ' . esc_attr($width) . ';' : ''; ?> text-align: <?php echo esc_attr($align); ?>;">
+                            <?php if ($sortable): ?>
+                                <a href="<?php echo esc_url($this->get_sort_url($key, $this->config['orderby'], $this->config['order'])); ?>" class="saw-sortable">
                                     <?php echo esc_html($label); ?>
-                                <?php endif; ?>
-                            </th>
+                                    <?php echo $this->get_sort_icon($key, $this->config['orderby'], $this->config['order']); ?>
+                                </a>
+                            <?php else: ?>
+                                <?php echo esc_html($label); ?>
+                            <?php endif; ?>
+                        </th>
+                    <?php endforeach; ?>
+                    
+                    <?php if (!empty($this->config['actions'])): ?>
+                        <th class="saw-actions-column">Akce</th>
+                    <?php endif; ?>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($this->config['rows'] as $row): ?>
+                    <?php
+                    $detail_url = !empty($this->config['detail_url']) 
+                        ? str_replace('{id}', intval($row['id'] ?? 0), $this->config['detail_url'])
+                        : '';
+                    
+                    $row_class = 'saw-table-row';
+                    if (!empty($detail_url)) {
+                        $row_class .= ' saw-clickable-row';
+                    }
+                    ?>
+                    <tr class="<?php echo esc_attr($row_class); ?>" 
+                        data-id="<?php echo esc_attr($row['id'] ?? ''); ?>"
+                        <?php if (!empty($detail_url)): ?>
+                            data-detail-url="<?php echo esc_url($detail_url); ?>"
+                        <?php endif; ?>>
+                        
+                        <?php foreach ($this->config['columns'] as $key => $column): ?>
+                            <?php $this->render_table_cell($row, $key, $column); ?>
                         <?php endforeach; ?>
                         
                         <?php if (!empty($this->config['actions'])): ?>
-                            <th class="saw-actions-column">Akce</th>
+                            <?php $this->render_action_buttons($row); ?>
                         <?php endif; ?>
                     </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($this->config['rows'] as $row): ?>
-                        <?php
-                        $detail_url = !empty($this->config['detail_url']) 
-                            ? str_replace('{id}', intval($row['id'] ?? 0), $this->config['detail_url'])
-                            : '';
-                        
-                        $row_class = 'saw-table-row';
-                        if (!empty($detail_url)) {
-                            $row_class .= ' saw-clickable-row';
-                        }
-                        ?>
-                        <tr class="<?php echo esc_attr($row_class); ?>" 
-                            data-id="<?php echo esc_attr($row['id'] ?? ''); ?>"
-                            <?php if (!empty($detail_url)): ?>
-                                data-detail-url="<?php echo esc_url($detail_url); ?>"
-                            <?php endif; ?>>
-                            
-                            <?php foreach ($this->config['columns'] as $key => $column): ?>
-                                <?php $this->render_table_cell($row, $key, $column); ?>
-                            <?php endforeach; ?>
-                            
-                            <?php if (!empty($this->config['actions'])): ?>
-                                <?php $this->render_action_buttons($row); ?>
-                            <?php endif; ?>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
         <?php
     }
     
