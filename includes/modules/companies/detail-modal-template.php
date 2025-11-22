@@ -16,6 +16,7 @@ if (empty($item)) {
 global $wpdb;
 $visits = array();
 if (!empty($item['id'])) {
+    // OPRAVENO: Přidána kontrola SQL chyb a intval pro bezpečnost
     $visits = $wpdb->get_results($wpdb->prepare(
         "SELECT 
             v.id,
@@ -30,28 +31,35 @@ if (!empty($item['id'])) {
          WHERE v.company_id = %d 
          GROUP BY v.id
          ORDER BY v.created_at DESC",
-        $item['id']
+        intval($item['id'])
     ), ARRAY_A);
-}
-
-function get_initials($first_name, $last_name) {
-    $first = mb_substr($first_name, 0, 1);
-    $last = mb_substr($last_name, 0, 1);
-    return strtoupper($first . $last);
+    
+    if ($wpdb->last_error) {
+        error_log('[Companies Detail] SQL error loading visits for company ' . intval($item['id']) . ': ' . $wpdb->last_error);
+        $visits = array();
+    }
 }
 
 $avatar_colors = array('#0077B5', '#005A8C', '#004466', '#003A57', '#0088CC', '#006699');
 
-// Get all companies for manual selection
-$all_companies = $wpdb->get_results($wpdb->prepare(
-    "SELECT id, name, ico,
-     (SELECT COUNT(*) FROM {$wpdb->prefix}saw_visits WHERE company_id = c.id) as visit_count
-     FROM {$wpdb->prefix}saw_companies c
-     WHERE branch_id = %d AND id != %d AND is_archived = 0
-     ORDER BY name ASC",
-    $item['branch_id'],
-    $item['id']
-), ARRAY_A);
+// Get all companies for manual selection - OPRAVENO: kontrola existence branch_id
+$all_companies = array();
+if (!empty($item['branch_id']) && !empty($item['id'])) {
+    $all_companies = $wpdb->get_results($wpdb->prepare(
+        "SELECT id, name, ico,
+         (SELECT COUNT(*) FROM {$wpdb->prefix}saw_visits WHERE company_id = c.id) as visit_count
+         FROM {$wpdb->prefix}saw_companies c
+         WHERE branch_id = %d AND id != %d AND is_archived = 0
+         ORDER BY name ASC",
+        intval($item['branch_id']),
+        intval($item['id'])
+    ), ARRAY_A);
+    
+    if ($wpdb->last_error) {
+        error_log('[Companies Detail] SQL error loading companies for merge: ' . $wpdb->last_error);
+        $all_companies = array();
+    }
+}
 ?>
 
 
@@ -189,7 +197,19 @@ $all_companies = $wpdb->get_results($wpdb->prepare(
                 $ts = strtotime($visit['created_at']);
                 $day = date_i18n('d', $ts);
                 $month = date_i18n('M', $ts);
-                $visitors = $wpdb->get_results($wpdb->prepare("SELECT v.id,v.first_name,v.last_name,v.email,v.phone,v.position,CASE WHEN EXISTS(SELECT 1 FROM {$wpdb->prefix}saw_visit_daily_logs dl WHERE dl.visitor_id=v.id)THEN 1 ELSE 0 END as has_attended FROM {$wpdb->prefix}saw_visitors v WHERE v.visit_id=%d ORDER BY v.last_name,v.first_name",$visit['id']),ARRAY_A);
+                // OPRAVENO: Kontrola existence visit_id před SQL dotazem
+                $visitors = array();
+                if (!empty($visit['id'])) {
+                    $visitors = $wpdb->get_results($wpdb->prepare(
+                        "SELECT v.id,v.first_name,v.last_name,v.email,v.phone,v.position,CASE WHEN EXISTS(SELECT 1 FROM {$wpdb->prefix}saw_visit_daily_logs dl WHERE dl.visitor_id=v.id)THEN 1 ELSE 0 END as has_attended FROM {$wpdb->prefix}saw_visitors v WHERE v.visit_id=%d ORDER BY v.last_name,v.first_name",
+                        intval($visit['id'])
+                    ), ARRAY_A);
+                    
+                    if ($wpdb->last_error) {
+                        error_log('[Companies Detail] SQL error loading visitors for visit ' . intval($visit['id']) . ': ' . $wpdb->last_error);
+                        $visitors = array();
+                    }
+                }
                 $visit_detail_url = home_url('/admin/visits/' . $visit['id'] . '/');
             ?>
             <div class="saw-visit-agenda-card <?php echo $border_class; ?>">
@@ -210,7 +230,7 @@ $all_companies = $wpdb->get_results($wpdb->prepare(
                         <a href="<?php echo esc_url($visit_detail_url); ?>" class="saw-detail-visit-btn" onclick="event.stopPropagation();">Detail →</a>
                     </div>
                     <?php if (!empty($visitors)): foreach ($visitors as $v_idx => $visitor): 
-                        $initials = get_initials($visitor['first_name'], $visitor['last_name']);
+                        $initials = SAW_Module_Companies_Controller::get_initials($visitor['first_name'], $visitor['last_name']);
                         $avatar_color = $avatar_colors[($idx + $v_idx) % count($avatar_colors)];
                         $visitor_url = home_url('/admin/visitors/' . $visitor['id'] . '/');
                         $did_not_attend = !(int)$visitor['has_attended'] && $visit['status'] === 'completed';

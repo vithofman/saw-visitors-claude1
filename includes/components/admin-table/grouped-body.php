@@ -14,9 +14,6 @@ if (!defined('ABSPATH')) {
 
 $columns = $config['columns'] ?? array();
 $grouped_data = $config['grouped_data'] ?? array();
-$actions = $config['actions'] ?? array();
-$edit_url = $config['edit_url'] ?? '';
-$detail_url = $config['detail_url'] ?? '';
 $grouping_config = $config['grouping'] ?? array();
 $show_count = $grouping_config['show_count'] ?? true;
 $default_collapsed = $grouping_config['default_collapsed'] ?? true;
@@ -29,7 +26,7 @@ $current_params = $config['current_params'] ?? array();
 $table_instance = isset($config['_table_instance']) ? $config['_table_instance'] : null;
 
 // Calculate colspan
-$colspan = count($columns) + (empty($actions) ? 0 : 1);
+$colspan = count($columns);
 
 // Helper function to get sort URL
 $get_sort_url = function($column) use ($table_instance, $orderby, $order, $base_url, $current_params) {
@@ -134,69 +131,6 @@ $render_cell = function($row, $key, $column) use ($table_instance) {
     echo '</td>';
 };
 
-// Helper function to render actions
-$render_actions = function($row) use ($table_instance, $actions, $edit_url, $detail_url, $entity) {
-    if ($table_instance && method_exists($table_instance, 'render_action_buttons_for_template')) {
-        $table_instance->render_action_buttons_for_template($row);
-        return;
-    }
-    
-    // Fallback: basic action rendering
-    if (empty($actions)) {
-        return;
-    }
-    
-    $item_id = intval($row['id'] ?? 0);
-    $can_edit = function_exists('saw_can') ? saw_can('edit', $entity) : true;
-    $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
-    
-    ?>
-    <td class="saw-actions-cell" onclick="event.stopPropagation();">
-        <div class="saw-action-dropdown">
-            <button type="button" 
-                    class="saw-action-trigger" 
-                    data-id="<?php echo esc_attr($item_id); ?>"
-                    onclick="toggleActionMenu(this, event)"
-                    title="Akce">
-                <span class="dashicons dashicons-ellipsis"></span>
-            </button>
-            
-            <div class="saw-action-menu">
-                <?php if (in_array('view', $actions) && !empty($detail_url)): ?>
-                    <?php $view_url = str_replace('{id}', $item_id, $detail_url); ?>
-                    <a href="<?php echo esc_url($view_url); ?>" 
-                       class="saw-action-item"
-                       onclick="event.stopPropagation();">
-                        <span class="dashicons dashicons-visibility"></span>
-                        <span>Detail</span>
-                    </a>
-                <?php endif; ?>
-                
-                <?php if (in_array('edit', $actions) && $can_edit && !empty($edit_url)): ?>
-                    <?php $edit_link = str_replace('{id}', $item_id, $edit_url); ?>
-                    <a href="<?php echo esc_url($edit_link); ?>" 
-                       class="saw-action-item"
-                       onclick="event.stopPropagation();">
-                        <span class="dashicons dashicons-edit"></span>
-                        <span>Upravit</span>
-                    </a>
-                <?php endif; ?>
-                
-                <?php if (in_array('delete', $actions) && $can_delete): ?>
-                    <button type="button" 
-                            class="saw-action-item saw-action-delete"
-                            data-id="<?php echo esc_attr($item_id); ?>"
-                            data-ajax-action="saw_delete_<?php echo esc_attr(str_replace('-', '_', $entity)); ?>"
-                            onclick="event.stopPropagation(); sawAdminTableDelete(this); return false;">
-                        <span class="dashicons dashicons-trash"></span>
-                        <span>Smazat</span>
-                    </button>
-                <?php endif; ?>
-            </div>
-        </div>
-    </td>
-    <?php
-};
 ?>
 
 <div class="saw-table-responsive-wrapper saw-table-grouped">
@@ -225,10 +159,6 @@ $render_actions = function($row) use ($table_instance, $actions, $edit_url, $det
                         <?php endif; ?>
                     </th>
                 <?php endforeach; ?>
-                
-                <?php if (!empty($actions)): ?>
-                    <th class="saw-actions-column">Akce</th>
-                <?php endif; ?>
             </tr>
         </thead>
         
@@ -282,10 +212,6 @@ $render_actions = function($row) use ($table_instance, $actions, $edit_url, $det
                         <?php foreach ($columns as $column_key => $column_config): ?>
                             <?php $render_cell($item, $column_key, $column_config); ?>
                         <?php endforeach; ?>
-                        
-                        <?php if (!empty($actions)): ?>
-                            <?php $render_actions($item); ?>
-                        <?php endif; ?>
                     </tr>
                 <?php endforeach; ?>
                 

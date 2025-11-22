@@ -16,17 +16,8 @@
    TABLE CONTROLS - SEARCH & FILTERS
    ============================================ */
 
-.saw-table-controls {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 16px 24px;
-    margin-top:10px;
-    background: var(--saw-table-header-bg);
-    border-bottom: 1px solid var(--saw-border-color);
-    flex-wrap: wrap;
-}
+/* DEPRECATED: .saw-table-controls - používá se .saw-table-controls-inline uvnitř tabs wrapperu */
+/* Základní styly pro search a filters jsou v tabs.css a zde níže */
 
 .saw-table-search {
     flex: 0 0 auto;
@@ -153,6 +144,7 @@
 .saw-filters-dropdown-wrapper {
     position: relative;
     display: inline-block;
+    z-index: 1; /* OPRAVENO: Zajistit správný stacking context */
 }
 
 .saw-filters-trigger {
@@ -210,6 +202,7 @@
 .saw-filters-dropdown-menu {
     position: absolute;
     right: 0;
+    left: auto; /* OPRAVENO: Explicitně nastavit auto pro desktop */
     top: 100%;
     margin-top: 8px;
     background: var(--saw-card-bg);
@@ -222,8 +215,36 @@
     visibility: hidden;
     transform: translateY(-8px);
     transition: all 0.2s ease;
-    z-index: 10003 !important; /* Vyšší než action menu */
+    z-index: 10004 !important; /* OPRAVENO: Vyšší než tabs wrapper (15) - zajistí zobrazení nad tabulkou */
     overflow: hidden;
+}
+
+/* OPRAVENO: Na mobilu použít absolute positioning zarovnané k levému okraji */
+@media (max-width: 768px) {
+    .saw-filters-dropdown-wrapper {
+        position: static !important; /* OPRAVENO: Změnit wrapper positioning pro lepší kontrolu */
+    }
+    
+    .saw-filters-dropdown-menu {
+        position: absolute !important;
+        left: 0 !important; /* Zarovnat k levému okraji wrapperu */
+        right: auto !important;
+        top: 100% !important;
+        width: calc(100vw - 16px) !important; /* OPRAVENO: Šířka podle viewportu s odsazením */
+        min-width: auto !important;
+        max-width: calc(100vw - 16px) !important;
+        transform: translateY(0) !important; /* Pouze vertikální transformace */
+        margin-top: 8px;
+        margin-left: 0;
+    }
+    
+    /* OPRAVENO: Zajistit, aby select hodnoty nebyly širší než menu */
+    .saw-filters-dropdown-menu .saw-filter-select,
+    .saw-filters-dropdown-menu select {
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        width: 100% !important;
+    }
 }
 
 .saw-filters-dropdown-wrapper.active .saw-filters-dropdown-menu {
@@ -260,6 +281,8 @@
     height: 40px;
     min-height: 40px;
     width: 100%;
+    max-width: 100%; /* OPRAVENO: Zajistit, aby select nebyl širší než container */
+    box-sizing: border-box !important; /* OPRAVENO: Zajistit správné box-sizing */
     padding: 0 36px 0 14px !important;
     border: 1.5px solid var(--saw-border-color);
     border-radius: 8px;
@@ -719,14 +742,10 @@
     padding: 0;
     border-collapse: separate;
     border-spacing: 0;
+    min-width: 1000px; /* OPRAVENO: Minimální šířka tabulky pro horizontální scrollování na mobilu */
 }
 
-.saw-admin-table table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    min-width: 1000px;
-}
+/* Nested table removed - not used */
 
 /* ============================================
    TABLE HEADER - STICKY
@@ -737,6 +756,8 @@
     border-bottom: 1px solid var(--saw-border-color);
     margin: 0;
     padding: 0;
+    position: relative; /* OPRAVENO: Zajistit stacking context */
+    z-index: 10; /* OPRAVENO: Sjednocený z-index - pod tabs wrapper (15) a dropdown menu (10004) */
 }
 
 .saw-admin-table thead tr {
@@ -862,26 +883,6 @@
     z-index: 9999 !important;
 }
 
-.saw-admin-table tbody tr.saw-row-with-active-dropdown td:last-child {
-    z-index: 10000 !important;
-    isolation: isolate; /* Vytvoří nový stacking context */
-}
-
-.saw-admin-table tbody tr .saw-action-dropdown.active {
-    position: relative;
-    z-index: 10001 !important;
-}
-
-/* Fallback s :has() pro moderní prohlížeče */
-.saw-admin-table tbody tr:has(.saw-action-dropdown.active) {
-    position: relative;
-    z-index: 9999 !important;
-}
-
-.saw-admin-table tbody tr:has(.saw-action-dropdown.active) td:last-child {
-    z-index: 10000 !important;
-    isolation: isolate;
-}
 
 .saw-admin-table tbody tr:hover td:last-child {
     background: var(--saw-table-row-hover-bg);
@@ -1057,122 +1058,6 @@
     color: var(--saw-info, #3b82f6) !important;
 }
 
-/* ============================================
-   ACTION DROPDOWN MENU (MODERN)
-   ============================================ */
-
-.saw-actions-cell {
-    width: 60px;
-    text-align: center;
-    position: relative;
-    z-index: auto; /* Reset z-index, aby neomezoval potomky */
-}
-
-.saw-action-dropdown {
-    position: relative;
-    display: inline-block;
-    z-index: auto; /* Reset z-index */
-}
-
-/* Když je dropdown aktivní, vytvořit nový stacking context */
-.saw-action-dropdown.active {
-    z-index: 10001 !important;
-    isolation: isolate; /* Vytvoří nový stacking context */
-}
-
-.saw-action-trigger {
-    width: 32px;
-    height: 32px;
-    border: none;
-    background: transparent;
-    border-radius: 6px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.15s ease;
-    padding: 0;
-    margin: 0;
-}
-
-.saw-action-trigger:hover {
-    background: var(--saw-bg-tertiary);
-}
-
-.saw-action-trigger .dashicons {
-    font-size: 20px;
-    width: 20px;
-    height: 20px;
-    color: var(--saw-text-secondary);
-}
-
-.saw-action-menu {
-    position: absolute;
-    right: 0;
-    top: 100%;
-    margin-top: 4px;
-    background: var(--saw-card-bg);
-    border: 1px solid var(--saw-border-color);
-    border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-    min-width: 160px;
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-8px);
-    transition: all 0.2s ease;
-    z-index: 10002 !important; /* Vyšší než parent z-index */
-    overflow: hidden;
-}
-
-[data-theme="dark"] .saw-action-menu {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-}
-
-.saw-action-dropdown.active .saw-action-menu {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-}
-
-.saw-action-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 16px;
-    border: none;
-    background: none;
-    width: 100%;
-    text-align: left;
-    font-size: 14px;
-    color: var(--saw-text-primary);
-    cursor: pointer;
-    transition: background 0.15s ease;
-    text-decoration: none;
-}
-
-.saw-action-item:first-child {
-    border-radius: 8px 8px 0 0;
-}
-
-.saw-action-item:last-child {
-    border-radius: 0 0 8px 8px;
-}
-
-.saw-action-item:hover {
-    background: var(--saw-bg-secondary);
-}
-
-.saw-action-item.saw-action-delete:hover {
-    background: var(--saw-danger-light);
-    color: var(--saw-danger);
-}
-
-.saw-action-item .dashicons {
-    font-size: 16px;
-    width: 16px;
-    height: 16px;
-    color: inherit;
-}
 
 /* ============================================
    BADGES - MODERN PILLS
@@ -2037,9 +1922,7 @@
         flex-wrap: wrap;
     }
     
-    .saw-table-controls {
-        flex-wrap: wrap;
-    }
+    /* DEPRECATED: .saw-table-controls removed - using .saw-table-controls-inline */
     
     .saw-search-form {
         flex: 1 1 100%;
@@ -2075,26 +1958,7 @@
         margin: 0 !important;
     }
     
-    .saw-table-controls {
-        padding: 10px 12px !important; /* Minimal horizontal padding - search and filter on same row */
-        flex-direction: row !important; /* Keep search and filter on same row */
-        flex-wrap: wrap !important;
-        justify-content: space-between;
-        align-items: center;
-        gap: 8px;
-        margin: 0 !important;
-    }
-    
-    .saw-table-search {
-        max-width: none;
-        flex: 1;
-        min-width: 0;
-    }
-    
-    .saw-table-filters {
-        flex: 0 0 auto;
-        margin-left: 8px;
-    }
+    /* DEPRECATED: .saw-table-controls removed - using .saw-table-controls-inline in tabs wrapper */
     
     /* Ensure table and wrapper have no horizontal margin/padding */
     .saw-table-responsive-wrapper,
@@ -2103,12 +1967,30 @@
         margin-right: 0 !important;
     }
     
+    .saw-filters-dropdown-wrapper {
+        position: static !important; /* OPRAVENO: Změnit wrapper positioning pro lepší kontrolu */
+    }
+    
     .saw-filters-dropdown-menu {
-        right: 0;
-        left: auto;
-        min-width: 280px;
-        max-width: calc(100vw - 32px);
-        z-index: 10003 !important;
+        position: absolute !important;
+        left: 0 !important; /* Zarovnat k levému okraji wrapperu */
+        right: auto !important;
+        top: 100% !important;
+        width: calc(100vw - 16px) !important; /* OPRAVENO: Šířka podle viewportu s odsazením */
+        min-width: auto !important;
+        max-width: calc(100vw - 16px) !important;
+        transform: translateY(0) !important; /* Pouze vertikální transformace */
+        margin-top: 8px;
+        margin-left: 0;
+        z-index: 10004 !important; /* OPRAVENO: Sjednocený z-index s desktop verzí */
+    }
+    
+    /* OPRAVENO: Zajistit, aby select hodnoty nebyly širší než menu */
+    .saw-filters-dropdown-menu .saw-filter-select,
+    .saw-filters-dropdown-menu select {
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        width: 100% !important;
     }
     
     .saw-filters-form {
@@ -2125,22 +2007,17 @@
         min-width: auto;
     }
     
-    /* Dropdown menu - upravit pro mobil */
-    .saw-action-menu {
-        right: auto;
-        left: 0;
-        min-width: 180px;
-        z-index: 10000 !important;
-    }
     
     .saw-admin-table th,
     .saw-admin-table td {
-        padding: 10px 12px;
+        padding: 14px 16px; /* OPRAVENO: Větší padding pro hlavičku */
         font-size: 13px;
     }
     
     .saw-admin-table th {
-        font-size: 11px;
+        font-size: 13px; /* OPRAVENO: Větší písmo pro hlavičku */
+        padding: 16px 16px; /* OPRAVENO: Ještě větší padding pro hlavičku */
+        font-weight: 600;
     }
     
     .saw-pagination {
@@ -2248,28 +2125,7 @@
         text-align: left !important;
     }
     
-    .saw-table-controls {
-        padding: 8px 12px !important; /* Minimal horizontal padding - keep search and filter on same row */
-        flex-direction: row !important; /* Keep search and filter on same row */
-        flex-wrap: wrap !important;
-        align-items: center !important;
-        gap: 6px !important;
-        margin: 0 !important;
-    }
-    
-    .saw-table-search {
-        flex: 1 1 auto;
-        min-width: 0;
-        max-width: none;
-        margin-bottom: 0 !important;
-    }
-    
-    .saw-table-filters {
-        flex: 0 0 auto !important;
-        width: auto !important;
-        margin-left: 6px !important;
-        align-self: auto !important;
-    }
+    /* DEPRECATED: .saw-table-controls removed - using .saw-table-controls-inline in tabs wrapper */
     
     .saw-search-form {
         flex-wrap: nowrap !important;
@@ -2294,38 +2150,44 @@
         width: 100% !important;
     }
     
+    .saw-filters-dropdown-wrapper {
+        position: static !important; /* OPRAVENO: Změnit wrapper positioning pro lepší kontrolu */
+    }
+    
     .saw-filters-dropdown-menu {
-        right: 0;
-        left: 0;
-        min-width: auto;
-        max-width: 100%;
-        z-index: 10003 !important;
+        position: absolute !important;
+        left: 0 !important; /* Zarovnat k levému okraji wrapperu */
+        right: auto !important;
+        top: 100% !important;
+        width: calc(100vw - 16px) !important; /* OPRAVENO: Šířka podle viewportu s odsazením */
+        min-width: auto !important;
+        max-width: calc(100vw - 16px) !important;
+        transform: translateY(0) !important; /* Pouze vertikální transformace */
+        margin-top: 8px;
+        margin-left: 0;
+        z-index: 10004 !important; /* OPRAVENO: Sjednocený z-index s desktop verzí */
+    }
+    
+    /* OPRAVENO: Zajistit, aby select hodnoty nebyly širší než menu */
+    .saw-filters-dropdown-menu .saw-filter-select,
+    .saw-filters-dropdown-menu select {
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        width: 100% !important;
     }
     
     .saw-admin-table th,
     .saw-admin-table td {
-        padding: 8px 10px;
-        font-size: 12px;
+        padding: 12px 14px; /* OPRAVENO: Větší padding pro hlavičku */
+        font-size: 13px;
     }
     
     .saw-admin-table th {
-        font-size: 10px;
+        font-size: 13px; /* OPRAVENO: Větší písmo pro hlavičku */
+        padding: 14px 14px; /* OPRAVENO: Ještě větší padding pro hlavičku */
+        font-weight: 600;
     }
     
-    .saw-action-trigger {
-        width: 28px;
-        height: 28px;
-    }
-    
-    .saw-action-menu {
-        min-width: 160px;
-        font-size: 13px;
-    }
-    
-    .saw-action-item {
-        padding: 8px 12px;
-        font-size: 13px;
-    }
     
     .saw-pagination {
         padding: 10px 12px;

@@ -1815,12 +1815,20 @@ protected function can($action) {
         }
         
         // Build table config for rendering
+        // OPRAVENO: Přidat edit_url pro infinite scroll - akční menu se nevykreslovalo bez edit_url
+        $base_url = home_url('/admin/' . ($this->config['route'] ?? $this->entity));
+        $edit_url = $base_url . '/{id}/edit';
+        $detail_url = $this->get_detail_url();
+        $actions = $this->config['actions'] ?? array();
+        
         $table_config = array(
             'columns' => $columns,
-            'actions' => $this->config['actions'] ?? array(),
-            'detail_url' => $this->get_detail_url(),
+            'actions' => $actions,
+            'detail_url' => $detail_url,
+            'edit_url' => $edit_url, // OPRAVENO: Přidat edit_url pro akční menu
             'rows' => $data['items'],
             'module_config' => $this->config,
+            'entity' => $this->entity, // OPRAVENO: Přidat entity pro render_action_buttons
         );
         
         $table = new SAW_Component_Admin_Table($this->entity, $table_config);
@@ -1830,9 +1838,8 @@ protected function can($action) {
         $rows_html = '';
         if (!empty($data['items'])) {
             ob_start();
-            $actions = $this->config['actions'] ?? array();
             foreach ($data['items'] as $row) {
-                $this->render_infinite_scroll_row($row, $table, $columns, $actions);
+                $this->render_infinite_scroll_row($row, $table, $columns);
             }
             $rows_html = ob_get_clean();
         }
@@ -1855,10 +1862,9 @@ protected function can($action) {
      * @param array $row Row data
      * @param SAW_Component_Admin_Table $table Table component instance
      * @param array $columns Columns configuration
-     * @param array $actions Actions configuration
      * @return void Outputs HTML
      */
-    private function render_infinite_scroll_row($row, $table, $columns, $actions) {
+    private function render_infinite_scroll_row($row, $table, $columns) {
         $detail_url = $this->get_detail_url();
         if (!empty($detail_url) && !empty($row['id'])) {
             $detail_url = str_replace('{id}', intval($row['id']), $detail_url);
@@ -1883,10 +1889,6 @@ protected function can($action) {
             <?php foreach ($columns as $key => $column): ?>
                 <?php $table->render_table_cell_for_template($row, $key, $column); ?>
             <?php endforeach; ?>
-            
-            <?php if (!empty($actions)): ?>
-                <?php $table->render_action_buttons_for_template($row); ?>
-            <?php endif; ?>
         </tr>
         <?php
     }

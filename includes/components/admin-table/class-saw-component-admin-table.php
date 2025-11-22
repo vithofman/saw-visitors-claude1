@@ -221,52 +221,43 @@ class SAW_Component_Admin_Table {
     <?php
     $this->render_modal();
     $this->render_floating_button();
-    $this->render_delete_script();
     ?>
 </div>
             <?php
         }
     }
     
-    private function render_split_layout() {
-        $has_sidebar = !empty($this->config['sidebar_mode']);
-        $sidebar_class = $has_sidebar ? ' has-sidebar' : '';
-        ?>
-        <div class="saw-admin-table-split<?php echo $sidebar_class; ?>">
-    <div class="saw-table-panel<?php echo !empty($this->config['infinite_scroll']['enabled']) ? ' saw-table-infinite-scroll-enabled' : ''; ?>">
-        <?php
-        $this->render_header();
-        $this->render_controls();
-        ?>
-        
-        <!-- Scrollovací oblast -->
-        <div class="saw-table-scroll-area">
-            <?php $this->render_table_or_empty(); ?>
-        </div>
-        
-        <!-- Pagination vždy dole -->
-        <?php $this->render_pagination(); ?>
-        
-        <?php $this->render_floating_button(); ?>
-    </div>
-    
-    <?php if ($has_sidebar): ?>
-    <div class="saw-sidebar-wrapper active">
-        <?php $this->render_sidebar(); ?>
-    </div>
-    <?php endif; ?>
-</div>
+   private function render_split_layout() {
+    $has_sidebar = !empty($this->config['sidebar_mode']);
+    $sidebar_class = $has_sidebar ? ' has-sidebar' : '';
+    ?>
+    <div class="saw-admin-table-split<?php echo $sidebar_class; ?>">
+        <div class="saw-table-panel<?php echo !empty($this->config['infinite_scroll']['enabled']) ? ' saw-table-infinite-scroll-enabled' : ''; ?>">
+            <?php
+            $this->render_header();
+            $this->render_controls();
+            ?>
             
-            <?php if ($has_sidebar): ?>
-            <div class="saw-sidebar-wrapper active">
-                <?php $this->render_sidebar(); ?>
+            <!-- Scrollovací oblast -->
+            <div class="saw-table-scroll-area">
+                <?php $this->render_table_or_empty(); ?>
             </div>
-            <?php endif; ?>
+            
+            <!-- Pagination vždy dole -->
+            <?php $this->render_pagination(); ?>
+            
+            <?php $this->render_floating_button(); ?>
         </div>
-        <?php
-        $this->render_delete_script();
-    }
-    
+        
+        <?php if ($has_sidebar): ?>
+        <div class="saw-sidebar-wrapper active">
+            <?php $this->render_sidebar(); ?>
+        </div>
+        <?php endif; ?>
+    </div>
+    <?php
+}
+
     private function render_sidebar() {
         $mode = $this->config['sidebar_mode'];
         $entity = $this->entity;
@@ -731,10 +722,6 @@ class SAW_Component_Admin_Table {
                             <?php endif; ?>
                         </th>
                     <?php endforeach; ?>
-                    
-                    <?php if (!empty($this->config['actions'])): ?>
-                        <th class="saw-actions-column">Akce</th>
-                    <?php endif; ?>
                 </tr>
             </thead>
             <tbody>
@@ -758,10 +745,6 @@ class SAW_Component_Admin_Table {
                         <?php foreach ($this->config['columns'] as $key => $column): ?>
                             <?php $this->render_table_cell($row, $key, $column); ?>
                         <?php endforeach; ?>
-                        
-                        <?php if (!empty($this->config['actions'])): ?>
-                            <?php $this->render_action_buttons($row); ?>
-                        <?php endif; ?>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
@@ -836,79 +819,6 @@ class SAW_Component_Admin_Table {
         echo '</td>';
     }
     
-    private function render_action_buttons($row) {
-        $actions = $this->config['actions'] ?? array();
-        if (empty($actions)) {
-            return;
-        }
-        
-        $item_id = intval($row['id'] ?? 0);
-        $can_edit = function_exists('saw_can') ? saw_can('edit', $this->entity) : true;
-        $can_delete = function_exists('saw_can') ? saw_can('delete', $this->entity) : true;
-        
-        // Check if we have any valid actions
-        $has_valid_actions = false;
-        if (in_array('view', $actions) && !empty($this->config['detail_url'])) {
-            $has_valid_actions = true;
-        }
-        if (in_array('edit', $actions) && $can_edit && !empty($this->config['edit_url'])) {
-            $has_valid_actions = true;
-        }
-        if (in_array('delete', $actions) && $can_delete) {
-            $has_valid_actions = true;
-        }
-        
-        if (!$has_valid_actions) {
-            return;
-        }
-        
-        ?>
-        <td class="saw-actions-cell" onclick="event.stopPropagation();">
-            <div class="saw-action-dropdown">
-                <button type="button" 
-                        class="saw-action-trigger" 
-                        data-id="<?php echo esc_attr($item_id); ?>"
-                        onclick="toggleActionMenu(this, event)"
-                        title="Akce">
-                    <span class="dashicons dashicons-ellipsis"></span>
-                </button>
-                
-                <div class="saw-action-menu">
-                    <?php if (in_array('view', $actions) && !empty($this->config['detail_url'])): ?>
-                        <?php $view_url = str_replace('{id}', $item_id, $this->config['detail_url']); ?>
-                        <a href="<?php echo esc_url($view_url); ?>" 
-                           class="saw-action-item"
-                           onclick="event.stopPropagation();">
-                            <span class="dashicons dashicons-visibility"></span>
-                            <span>Detail</span>
-                        </a>
-                    <?php endif; ?>
-                    
-                    <?php if (in_array('edit', $actions) && $can_edit && !empty($this->config['edit_url'])): ?>
-                        <?php $edit_url = str_replace('{id}', $item_id, $this->config['edit_url']); ?>
-                        <a href="<?php echo esc_url($edit_url); ?>" 
-                           class="saw-action-item"
-                           onclick="event.stopPropagation();">
-                            <span class="dashicons dashicons-edit"></span>
-                            <span>Upravit</span>
-                        </a>
-                    <?php endif; ?>
-                    
-                    <?php if (in_array('delete', $actions) && $can_delete): ?>
-                        <button type="button" 
-                                class="saw-action-item saw-action-delete"
-                                data-id="<?php echo esc_attr($item_id); ?>"
-                                data-ajax-action="saw_delete_<?php echo esc_attr(str_replace('-', '_', $this->entity)); ?>"
-                                onclick="event.stopPropagation(); sawAdminTableDelete(this); return false;">
-                            <span class="dashicons dashicons-trash"></span>
-                            <span>Smazat</span>
-                        </button>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </td>
-        <?php
-    }
     
     private function render_pagination() {
         // Don't render pagination if infinite scroll is enabled
@@ -1024,52 +934,6 @@ class SAW_Component_Admin_Table {
         $modal->render();
     }
     
-    private function render_delete_script() {
-        static $script_added = false;
-        
-        if ($script_added) {
-            return;
-        }
-        
-        $script_added = true;
-        
-        ?>
-        <script>
-        if (typeof sawAdminTableDelete === 'undefined') {
-            window.sawAdminTableDelete = function(btn) {
-                const id = btn.dataset.id;
-                const ajaxAction = btn.dataset.ajaxAction;
-                
-                if (!confirm('Opravdu chcete smazat tento záznam?')) {
-                    return false;
-                }
-                
-                jQuery.ajax({
-                    url: '<?php echo admin_url('admin-ajax.php'); ?>',
-                    type: 'POST',
-                    data: {
-                        action: ajaxAction,
-                        nonce: '<?php echo wp_create_nonce('saw_ajax_nonce'); ?>',
-                        id: id
-                    },
-                    success: function(response) {
-                        if (response.success) {
-                            location.reload();
-                        } else {
-                            alert(response.data.message || 'Chyba při mazání');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        alert('Chyba spojení se serverem');
-                    }
-                });
-                
-                return false;
-            };
-        }
-        </script>
-        <?php
-    }
     
     private function get_sort_url($column, $current_orderby, $current_order) {
         $new_order = 'ASC';
@@ -1141,15 +1005,6 @@ class SAW_Component_Admin_Table {
         $this->render_table_cell($row, $key, $column);
     }
     
-    /**
-     * Render action buttons - public helper for templates
-     * 
-     * @since 7.0.0
-     * @param array $row Row data
-     */
-    public function render_action_buttons_for_template($row) {
-        $this->render_action_buttons($row);
-    }
     
     /**
      * Output JS configuration for infinite scroll and tabs

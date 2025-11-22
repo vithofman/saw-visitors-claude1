@@ -376,6 +376,32 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
         ));
     }
     
+    /**
+     * Get initials from name
+     * 
+     * Robust implementation that handles missing mb_string extension
+     * and invalid input.
+     * 
+     * @since 18.0.1
+     * @param string $first_name First name
+     * @param string $last_name Last name
+     * @return string Initials (e.g. "JD")
+     */
+    public static function get_initials($first_name, $last_name) {
+        $first = '';
+        $last = '';
+        
+        if (function_exists('mb_substr')) {
+            $first = !empty($first_name) ? mb_substr($first_name, 0, 1) : '';
+            $last = !empty($last_name) ? mb_substr($last_name, 0, 1) : '';
+        } else {
+            $first = !empty($first_name) ? substr($first_name, 0, 1) : '';
+            $last = !empty($last_name) ? substr($last_name, 0, 1) : '';
+        }
+        
+        return strtoupper($first . $last);
+    }
+
     public function ajax_get_duplicate_stats() {
         saw_verify_ajax_unified();
         

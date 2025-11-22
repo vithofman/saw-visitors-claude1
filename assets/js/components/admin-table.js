@@ -40,10 +40,10 @@
         // Scroll active row into view
         if (scrollToRow) {
             setTimeout(function () {
-                const $scrollContainer = $('.saw-table-panel');
+                const $scrollContainer = $('.saw-table-scroll-area');
 
                 if (!$scrollContainer.length) {
-                    console.warn('⚠️ Scroll container (.saw-table-panel) not found');
+                    console.warn('⚠️ Scroll container (.saw-table-scroll-area) not found');
                     return;
                 }
 
@@ -153,20 +153,20 @@
         
         if (state) {
             // Restore scroll position
-            const $tablePanel = $('.saw-table-panel');
-            if ($tablePanel.length && state.scrollTop) {
+            const $scrollArea = $('.saw-table-scroll-area');
+            if ($scrollArea.length && state.scrollTop) {
                 setTimeout(function() {
-                    $tablePanel.scrollTop(state.scrollTop);
+                    $scrollArea.scrollTop(state.scrollTop);
                     console.log('📜 Table scroll position restored:', state.scrollTop);
                 }, 100);
             }
 
-            // Restore active row
+            // Restore active row - scroll to it so user can see it
             if (state.activeRowId) {
                 setTimeout(function() {
-                    updateActiveRow(state.activeRowId, false);
+                    updateActiveRow(state.activeRowId, true);
                     console.log('✨ Active row restored:', state.activeRowId);
-                }, 200);
+                }, 500); // Increased delay to ensure rows are loaded
             }
         }
     }
@@ -326,51 +326,6 @@
         console.log('✅ Admin Table initialized v6.0.0 - Full page reload with View Transition');
     }
 
-    /**
-     * Toggle action dropdown menu
-     * 
-     * @param {HTMLElement} button - The trigger button
-     * @param {Event} event - Click event
-     * @return {void}
-     */
-    window.toggleActionMenu = function(button, event) {
-        if (event) {
-            event.stopPropagation();
-        }
-        
-        const dropdown = button.closest('.saw-action-dropdown');
-        if (!dropdown) {
-            return;
-        }
-        
-        const row = dropdown.closest('tr');
-        const isActive = dropdown.classList.contains('active');
-        
-        // Close all other dropdowns and remove row classes
-        document.querySelectorAll('.saw-action-dropdown.active').forEach(function(el) {
-            if (el !== dropdown) {
-                el.classList.remove('active');
-                const otherRow = el.closest('tr');
-                if (otherRow) {
-                    otherRow.classList.remove('saw-row-with-active-dropdown');
-                }
-            }
-        });
-        
-        // Toggle current dropdown
-        if (!isActive) {
-            dropdown.classList.add('active');
-            if (row) {
-                row.classList.add('saw-row-with-active-dropdown');
-            }
-        } else {
-            dropdown.classList.remove('active');
-            if (row) {
-                row.classList.remove('saw-row-with-active-dropdown');
-            }
-        }
-    };
-    
     /**
      * Toggle filters dropdown menu
      * 
@@ -616,6 +571,16 @@
         }
         
         const scrollArea = document.querySelector('.saw-table-scroll-area');
+        
+        // Cleanup previous initialization if exists
+        if (scrollArea && scrollArea._sawInfiniteScrollHandler) {
+            scrollArea.removeEventListener('scroll', scrollArea._sawInfiniteScrollHandler);
+            scrollArea._sawInfiniteScrollHandler = null;
+            if (DEBUG) {
+                console.log('🧹 Cleaned up previous scroll listener');
+            }
+        }
+        
         const tbody = document.querySelector('.saw-admin-table tbody');
         
         if (!scrollArea || !tbody) {
@@ -891,12 +856,59 @@
                             }
                             
                             // PŘIDÁNO 2025-01-22: Unlock scroll after DOM settles
-                            setTimeout(() => {
+                            requestAnimationFrame(() => {
                                 isAppending = false;
                                 if (DEBUG) {
                                     console.log('🔓 Scroll unlocked');
                                 }
-                            }, 50); // Short delay for DOM to settle
+                                
+                                // Check if we need to restore scroll position after loading missing pages
+                                if (scrollArea._needsScrollRestore && scrollArea._pendingScrollRestore !== undefined) {
+                                    const pendingPage = scrollArea._pendingScrollPage || 1;
+                                    const currentRowCount = tbody.querySelectorAll('tr.saw-table-row[data-id]').length;
+                                    const expectedRowsForPage = pendingPage * perPage;
+                                    
+                                    // Check if we have enough rows now
+                                    if (currentRowCount >= expectedRowsForPage - 10) {
+                                        console.log('✅ Enough rows loaded, restoring scroll position');
+                                        
+                                        // Mark pages as loaded
+                                        for (let i = 1; i <= pendingPage; i++) {
+                                            if (!loadedPages.has(i)) {
+                                                loadedPages.add(i);
+                                            }
+                                        }
+                                        currentPage = pendingPage;
+                                        
+                                        // Restore scroll position
+                                        isRestoring = true;
+                                        scrollArea._isProgrammaticScroll = true;
+                                        
+                                        requestAnimationFrame(() => {
+                                            scrollArea.scrollTop = scrollArea._pendingScrollRestore;
+                                            console.log('✅ Scroll position restored after loading pages');
+                                            
+                                            // Reset flags after scroll settles
+                                            requestAnimationFrame(() => {
+                                                isRestoring = false;
+                                                scrollArea._isProgrammaticScroll = false;
+                                                scrollArea._needsScrollRestore = false;
+                                                scrollArea._pendingScrollRestore = undefined;
+                                                scrollArea._pendingScrollPage = undefined;
+                                                
+                                                if (DEBUG) {
+                                                    console.log('✅ Restoration complete, infinite scroll re-enabled');
+                                                }
+                                            });
+                                        });
+                                    } else {
+                                        // Not enough rows yet, will check again on next page load
+                                        if (DEBUG) {
+                                            console.log('⏳ Still need more rows, waiting for next page load');
+                                        }
+                                    }
+                                }
+                            });
                         });
                         
                     }
@@ -937,6 +949,11 @@
         let lastScrollTime = Date.now();
         
         function handleScroll() {
+            // Skip if programmatic scroll (restoration)
+            if (scrollArea._isProgrammaticScroll) {
+                return;
+            }
+            
             // PŘIDÁNO 2025-01-22: Skip if appending rows
             if (isRestoring || isAppending) {
                 if (DEBUG) {
@@ -1000,12 +1017,14 @@
         }
         
         // Attach scroll listener with throttling
-        scrollArea.addEventListener('scroll', function() {
+        const scrollHandler = function() {
             if (scrollTimeout) {
                 clearTimeout(scrollTimeout);
             }
             scrollTimeout = setTimeout(handleScroll, 16); // OPRAVENO 2025-01-22: ~60fps pro plynulejší scroll (16ms = 1 frame)
-        }, { passive: true });
+        };
+        scrollArea.addEventListener('scroll', scrollHandler, { passive: true });
+        scrollArea._sawInfiniteScrollHandler = scrollHandler; // Store reference for cleanup
         
         // Save scroll position on page unload
         window.addEventListener('beforeunload', function() {
@@ -1024,29 +1043,66 @@
             
             console.log('📍 Restoring scroll position:', scrollPos, 'page:', page);
             
-            // Mark pages as loaded up to saved page
-            for (let i = 1; i <= page; i++) {
-                loadedPages.add(i);
-            }
-            currentPage = page;
+            // CRITICAL: Only mark pages as loaded if rows actually exist in DOM
+            const existingRows = tbody.querySelectorAll('tr.saw-table-row[data-id]').length;
+            const expectedRowsForPage = page * perPage;
             
-            // OPRAVENO 2025-01-22: Set restoration flag to prevent loading during scroll
-            isRestoring = true;
-            
-            // Restore scroll position after a short delay
-            setTimeout(() => {
-                scrollArea.scrollTop = scrollPos;
-                console.log('✅ Scroll position restored');
+            if (existingRows >= expectedRowsForPage - 10) { // -10 for tolerance
+                // Rows exist in DOM, mark pages as loaded
+                if (DEBUG) {
+                    console.log('✅ Rows exist in DOM, marking pages as loaded');
+                }
+                for (let i = 1; i <= page; i++) {
+                    loadedPages.add(i);
+                }
+                currentPage = page;
                 
-                // OPRAVENO 2025-01-22: Clear restoration flag after scroll settles
-                // OPRAVENO 2025-01-22: Sníženo z 300ms na 100ms pro rychlejší obnovení scrollu
-                setTimeout(() => {
-                    isRestoring = false;
-                    if (DEBUG) {
-                        console.log('✅ Restoration complete, infinite scroll re-enabled');
-                    }
-                }, 100); // OPRAVENO 2025-01-22: Sníženo z 300ms na 100ms pro rychlejší obnovení scrollu
-            }, 100);
+                // OPRAVENO 2025-01-22: Set restoration flag to prevent loading during scroll
+                isRestoring = true;
+                scrollArea._isProgrammaticScroll = true; // Flag pro programatický scroll
+                
+                // Restore scroll position using requestAnimationFrame for better timing
+                requestAnimationFrame(() => {
+                    scrollArea.scrollTop = scrollPos;
+                    console.log('✅ Scroll position restored');
+                    
+                    // Reset flags after scroll settles
+                    requestAnimationFrame(() => {
+                        isRestoring = false;
+                        scrollArea._isProgrammaticScroll = false;
+                        if (DEBUG) {
+                            console.log('✅ Restoration complete, infinite scroll re-enabled');
+                        }
+                    });
+                });
+            } else {
+                // Rows don't exist, need to load them first
+                // Don't mark pages as loaded yet - they will be marked when actually loaded
+                console.log('⚠️ Rows missing for page', page, '- existing:', existingRows, 'expected:', expectedRowsForPage);
+                
+                // Calculate actual current page based on existing rows
+                currentPage = Math.ceil(existingRows / perPage);
+                if (currentPage < 1) currentPage = 1;
+                
+                // Mark only pages that actually have rows in DOM
+                for (let i = 1; i <= currentPage; i++) {
+                    loadedPages.add(i);
+                }
+                
+                // Don't restore scroll position yet - let infinite scroll load missing pages first
+                // The scroll will be restored naturally when user scrolls or when pages are loaded
+                // Store the target scroll position for later restoration
+                scrollArea._pendingScrollRestore = scrollPos;
+                scrollArea._pendingScrollPage = page;
+                
+                if (DEBUG) {
+                    console.log('⏳ Deferring scroll restoration - will restore after pages are loaded');
+                }
+                
+                // Set a flag to restore scroll after pages are loaded
+                // This will be checked in loadNextPage after successful load
+                scrollArea._needsScrollRestore = true;
+            }
             
             // Clear saved position
             sessionStorage.removeItem(`saw-scroll-${entity}`);

@@ -16,9 +16,8 @@
     position: sticky;
     top: 64px; /* Desktop: výška saw-page-header (~64px: 20px padding + 24px font + line-height) */
     z-index: 15 !important; /* Vyšší než table thead - zajistit viditelnost */
-    height: 50px;
-    min-height: 50px;
-    overflow: hidden;
+    min-height: 50px; /* OPRAVENO: min-height místo height - umožní dropdown menu přesáhnout wrapper */
+    overflow: visible; /* OPRAVENO: visible místo hidden - umožní zobrazení dropdown menu */
     border-bottom: 1px solid var(--saw-border-color);
 }
 
@@ -115,6 +114,8 @@
     flex: 0 0 auto;
     flex-shrink: 0;
     order: 4;
+    position: relative; /* OPRAVENO: Zajistit správný stacking context pro dropdown */
+    z-index: 1; /* OPRAVENO: Vytvořit stacking context pro dropdown menu */
 }
 
 .saw-table-controls-inline .saw-table-search {
@@ -245,12 +246,22 @@
         flex: 1 1 100%;
         order: 2;
         justify-content: space-between;
+        display: flex !important; /* OPRAVENO: Zajistit viditelnost na tabletu/mobilu */
+        align-items: center;
+        gap: 12px;
+        padding-bottom: 12px; /* OPRAVENO: Přidat mezeru pod search/filtrovacím tlačítkem */
     }
     
     .saw-table-controls-inline .saw-table-search {
         flex: 1 1 auto;
         min-width: 200px;
         max-width: none;
+        display: block !important; /* OPRAVENO: Zajistit viditelnost search boxu */
+    }
+    
+    .saw-table-controls-inline .saw-table-filters {
+        display: block !important; /* OPRAVENO: Zajistit viditelnost filtrovacího tlačítka */
+        flex: 0 0 auto;
     }
     
     .saw-table-tab {
@@ -292,8 +303,22 @@
         display: inline; /* Show labels on mobile too */
     }
     
+    .saw-table-controls-inline {
+        display: flex !important; /* OPRAVENO: Zajistit viditelnost na malém mobilu */
+        align-items: center;
+        gap: 8px;
+        padding-bottom: 12px; /* OPRAVENO: Přidat mezeru pod search/filtrovacím tlačítkem */
+    }
+    
     .saw-table-controls-inline .saw-table-search {
         min-width: 150px;
+        display: block !important; /* OPRAVENO: Zajistit viditelnost search boxu */
+        flex: 1 1 auto;
+    }
+    
+    .saw-table-controls-inline .saw-table-filters {
+        display: block !important; /* OPRAVENO: Zajistit viditelnost filtrovacího tlačítka */
+        flex: 0 0 auto;
     }
     
     /* Ensure tabs are scrollable on mobile */
