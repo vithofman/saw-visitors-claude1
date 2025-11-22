@@ -4,9 +4,13 @@ if (!defined('ABSPATH')) { exit; }
 function saw_get_schema_visit_hosts($table_name, $prefix, $charset_collate) {
 	$visits_table = $prefix . 'visits';
 	$users_table = $prefix . 'users';
+	$customers_table = $prefix . 'customers';
+	$branches_table = $prefix . 'branches';
 	
 	return "CREATE TABLE {$table_name} (
 		id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+		customer_id BIGINT(20) UNSIGNED NOT NULL DEFAULT 0,
+		branch_id BIGINT(20) UNSIGNED NOT NULL DEFAULT 0,
 		visit_id BIGINT(20) UNSIGNED NOT NULL,
 		user_id BIGINT(20) UNSIGNED NOT NULL,
 		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -14,7 +18,6 @@ function saw_get_schema_visit_hosts($table_name, $prefix, $charset_collate) {
 		UNIQUE KEY uk_visit_user (visit_id, user_id),
 		KEY idx_visit (visit_id),
 		KEY idx_user (user_id),
-		CONSTRAINT fk_host_visit FOREIGN KEY (visit_id) REFERENCES {$visits_table}(id) ON DELETE CASCADE,
-		CONSTRAINT fk_host_user FOREIGN KEY (user_id) REFERENCES {$users_table}(id) ON DELETE CASCADE
+		KEY idx_customer_branch (customer_id, branch_id)
 	) {$charset_collate};";
 }

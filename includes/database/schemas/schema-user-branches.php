@@ -13,10 +13,8 @@ function saw_get_schema_user_branches($table_name, $prefix, $charset_collate) {
         branch_id BIGINT(20) UNSIGNED NOT NULL COMMENT 'Odkaz na saw_branches.id',
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
-        UNIQUE KEY idx_user_branch (user_id, branch_id),
-        KEY idx_user (user_id),
-        KEY idx_branch (branch_id),
-        CONSTRAINT fk_ub_user FOREIGN KEY (user_id) REFERENCES {$users_table}(id) ON DELETE CASCADE,
-        CONSTRAINT fk_ub_branch FOREIGN KEY (branch_id) REFERENCES {$branches_table}(id) ON DELETE CASCADE
-    ) {$charset_collate} COMMENT='M:N: Users <-> Branches (pro super_manager)';";
+		UNIQUE KEY idx_user_branch (user_id, branch_id),
+		KEY idx_user (user_id),
+		KEY idx_branch (branch_id)
+	) {$charset_collate} COMMENT='M:N: Users <-> Branches (pro super_manager)';";
 }

@@ -8,12 +8,14 @@ function saw_get_schema_visits($table_name, $prefix, $charset_collate) {
 		branch_id BIGINT(20) UNSIGNED NOT NULL,
 		company_id BIGINT(20) UNSIGNED NULL COMMENT 'NULL = fyzická osoba',
 		visit_type ENUM('planned', 'walk_in') NOT NULL,
-		status ENUM('draft', 'pending', 'confirmed', 'in_progress', 'completed', 'cancelled') NOT NULL DEFAULT 'pending',
-		
+		status ENUM('draft', 'pending', 'in_progress', 'completed', 'cancelled') NOT NULL DEFAULT 'pending',
+		planned_date_from DATE DEFAULT NULL,
+		planned_date_to DATE DEFAULT NULL,
 		started_at DATETIME NULL COMMENT 'První check-in prvního dne',
 		completed_at DATETIME NULL COMMENT 'Poslední check-out posledního dne',
 		
 		pin_code VARCHAR(6) NULL,
+		pin_expires_at DATETIME DEFAULT NULL COMMENT 'Do kdy je PIN platný (24h od posledního použití)',
 		invitation_email VARCHAR(255) NULL,
 		invitation_token VARCHAR(64) NULL,
 		invitation_sent_at DATETIME NULL,
@@ -35,6 +37,8 @@ function saw_get_schema_visits($table_name, $prefix, $charset_collate) {
 		KEY idx_company (company_id),
 		KEY idx_status (status),
 		KEY idx_started (started_at),
-		KEY idx_in_progress (status, started_at)
+		KEY idx_in_progress (status, started_at),
+		KEY idx_dates (planned_date_from, planned_date_to),
+		KEY idx_pin_expires (pin_code, pin_expires_at)
 	) {$charset_collate};";
 }

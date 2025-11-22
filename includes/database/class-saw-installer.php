@@ -189,17 +189,19 @@ class SAW_Installer {
             // branches
             array('table' => 'branches', 'constraint' => 'fk_branch_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
-            // account_types
-            array('table' => 'account_types', 'constraint' => 'fk_acctype_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            // customers
+            array('table' => 'customers', 'constraint' => 'fk_customers_account_type', 'column' => 'account_type_id', 'ref_table' => 'account_types', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
             
             // users
             array('table' => 'users', 'constraint' => 'fk_user_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'users', 'constraint' => 'fk_user_acctype', 'column' => 'account_type_id', 'ref_table' => 'account_types', 'ref_column' => 'id', 'on_delete' => 'RESTRICT'),
             
             // sessions
+            array('table' => 'sessions', 'constraint' => 'fk_session_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'sessions', 'constraint' => 'fk_session_user', 'column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
             // password_resets
+            array('table' => 'password_resets', 'constraint' => 'fk_pwreset_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'password_resets', 'constraint' => 'fk_pwreset_user', 'column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
             // contact_persons
@@ -211,8 +213,8 @@ class SAW_Installer {
             array('table' => 'departments', 'constraint' => 'fk_dept_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
             // user_branches
-            array('table' => 'user_branches', 'constraint' => 'fk_userbranch_user', 'column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-            array('table' => 'user_branches', 'constraint' => 'fk_userbranch_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'user_branches', 'constraint' => 'fk_ub_user', 'column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'user_branches', 'constraint' => 'fk_ub_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
             // user_departments
             array('table' => 'user_departments', 'constraint' => 'fk_userdept_user', 'column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
@@ -225,7 +227,7 @@ class SAW_Installer {
             array('table' => 'training_languages', 'constraint' => 'fk_trainlang_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
             // training_language_branches
-            array('table' => 'training_language_branches', 'constraint' => 'fk_trainlangbranch_lang', 'column' => 'training_language_id', 'ref_table' => 'training_languages', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'training_language_branches', 'constraint' => 'fk_trainlangbranch_lang', 'column' => 'language_id', 'ref_table' => 'training_languages', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'training_language_branches', 'constraint' => 'fk_trainlangbranch_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
             // training_content
@@ -238,35 +240,46 @@ class SAW_Installer {
             array('table' => 'training_department_content', 'constraint' => 'fk_dept_content_department', 'column' => 'department_id', 'ref_table' => 'departments', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
             // training_documents
-            array('table' => 'training_documents', 'constraint' => 'fk_training_doc_type', 'column' => 'document_type_id', 'ref_table' => 'training_document_types', 'ref_column' => 'id', 'on_delete' => 'RESTRICT'),
+            array('table' => 'training_documents', 'constraint' => 'fk_training_doc_type', 'column' => 'document_type_id', 'ref_table' => 'training_document_types', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
             
             // visits
             array('table' => 'visits', 'constraint' => 'fk_visit_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'visits', 'constraint' => 'fk_visit_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'visits', 'constraint' => 'fk_visit_company', 'column' => 'company_id', 'ref_table' => 'companies', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
             
-	    // visit_schedules
+	    // visit_schedules - ✅ UPDATED: přidány customer a branch FKs
 	    array('table' => 'visit_schedules', 'constraint' => 'fk_schedule_visit', 'column' => 'visit_id', 'ref_table' => 'visits', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+	    array('table' => 'visit_schedules', 'constraint' => 'fk_schedule_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+	    array('table' => 'visit_schedules', 'constraint' => 'fk_schedule_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
 
             // visitors
-	    array('table' => 'visitors', 'constraint' => 'fk_visitor_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'RESTRICT'),
-	    array('table' => 'visitors', 'constraint' => 'fk_visitor_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'RESTRICT'),
             array('table' => 'visitors', 'constraint' => 'fk_visitor_visit', 'column' => 'visit_id', 'ref_table' => 'visits', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'visitors', 'constraint' => 'fk_visitor_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'RESTRICT'),
+            array('table' => 'visitors', 'constraint' => 'fk_visitor_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'RESTRICT'),
             
             // visit_hosts
             array('table' => 'visit_hosts', 'constraint' => 'fk_host_visit', 'column' => 'visit_id', 'ref_table' => 'visits', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'visit_hosts', 'constraint' => 'fk_host_user', 'column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'visit_hosts', 'constraint' => 'fk_host_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'visit_hosts', 'constraint' => 'fk_host_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
-            // visit_daily_logs
+            // visit_daily_logs - ✅ UPDATED: přidány customer a branch FKs
             array('table' => 'visit_daily_logs', 'constraint' => 'fk_daily_visit', 'column' => 'visit_id', 'ref_table' => 'visits', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'visit_daily_logs', 'constraint' => 'fk_daily_visitor', 'column' => 'visitor_id', 'ref_table' => 'visitors', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'visit_daily_logs', 'constraint' => 'fk_daily_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'visit_daily_logs', 'constraint' => 'fk_daily_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
-            // visitor_certificates
+            // visitor_certificates - ✅ PŘIDÁNO: customer a branch FKs
             array('table' => 'visitor_certificates', 'constraint' => 'fk_cert_visitor', 'column' => 'visitor_id', 'ref_table' => 'visitors', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'visitor_certificates', 'constraint' => 'fk_cert_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'visitor_certificates', 'constraint' => 'fk_cert_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
             // audit_log
-            array('table' => 'audit_log', 'constraint' => 'fk_audit_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
+            array('table' => 'audit_log', 'constraint' => 'fk_audit_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'audit_log', 'constraint' => 'fk_audit_user', 'column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
+            
+            // error_log
+            array('table' => 'error_log', 'constraint' => 'fk_error_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
         );
         
         foreach ($foreign_keys as $fk) {

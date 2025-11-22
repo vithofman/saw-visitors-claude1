@@ -23,52 +23,55 @@ $prefix = $wpdb->prefix . 'saw_';
 
 /**
  * 1. SMAZÁNÍ DATABÁZOVÝCH TABULEK
- * Všech 33 tabulek v obráceném pořadí (kvůli FK)
+ * Všech 25 tabulek v obráceném pořadí (kvůli FK)
+ * Seznam musí odpovídat SAW_Installer::get_tables_order()
  */
-$tables = array(
-    // System (5)
-    $prefix . 'email_queue',
-    $prefix . 'password_resets',
-    $prefix . 'sessions',
-    $prefix . 'rate_limits',
-    $prefix . 'error_log',
-    $prefix . 'audit_log',
+$tables = array_reverse(array(
+    // Core (4)
+    'customers',
+    'companies',
+    'branches',
+    'account_types',
     
-    // Visitor Management (8)
-    $prefix . 'visits',
-    $prefix . 'visitors',
-    $prefix . 'uploaded_docs',
-    $prefix . 'documents',
-    $prefix . 'materials',
-    $prefix . 'invitation_departments',
-    $prefix . 'invitations',
-    $prefix . 'companies',
+    // Users & Auth (4)
+    'users',
+    'sessions',
+    'password_resets',
+    'contact_persons',
     
-    // Multi-tenant Core (5)
-    $prefix . 'contact_persons',
-    $prefix . 'department_documents',
-    $prefix . 'department_materials',
-    $prefix . 'user_departments',
-    $prefix . 'departments',
+    // Departments & Relations (3)
+    'departments',
+    'user_branches',
+    'user_departments',
     
-    // POI System (9) - opravené pořadí
-    $prefix . 'poi_additional_info',
-    $prefix . 'poi_risks',
-    $prefix . 'poi_pdfs',
-    $prefix . 'poi_media',
-    $prefix . 'poi_content',
-    $prefix . 'route_pois',
-    $prefix . 'routes',
-    $prefix . 'pois',
-    $prefix . 'beacons',
+    // Permissions (1)
+    'permissions',
     
-    // Core (5)
-    $prefix . 'account_types',
-    $prefix . 'training_config',
-    $prefix . 'users',
-    $prefix . 'customer_api_keys',
-    $prefix . 'customers',
-);
+    // Training System (6)
+    'training_languages',
+    'training_language_branches',
+    'training_document_types',
+    'training_content',
+    'training_department_content',
+    'training_documents',
+    
+    // Visitor Training System (6)
+    'visits',
+    'visit_schedules',
+    'visitors',
+    'visit_hosts',
+    'visit_daily_logs',
+    'visitor_certificates',
+    
+    // System Logs (2)
+    'audit_log',
+    'error_log',
+));
+
+// Přidat prefix k názvům tabulek
+$tables = array_map(function($table) use ($prefix) {
+    return $prefix . $table;
+}, $tables);
 
 // Vypnout kontrolu foreign keys pro bezpečné mazání
 $wpdb->query('SET FOREIGN_KEY_CHECKS=0');

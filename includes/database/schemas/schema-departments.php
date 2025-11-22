@@ -21,10 +21,8 @@ function saw_get_schema_departments($table_name, $prefix, $charset_collate) {
         PRIMARY KEY (id),
         UNIQUE KEY uk_dept_number (customer_id, branch_id, department_number),
         KEY idx_customer (customer_id),
-        KEY idx_branch (branch_id),
-        KEY idx_active (customer_id, is_active),
-        KEY idx_name (customer_id, name(50)),
-        CONSTRAINT fk_dept_customer FOREIGN KEY (customer_id) REFERENCES {$customers_table}(id) ON DELETE CASCADE,
-        CONSTRAINT fk_dept_branch FOREIGN KEY (branch_id) REFERENCES {$branches_table}(id) ON DELETE CASCADE
-    ) {$charset_collate} COMMENT='Oddělení zákazníka';";
+		KEY idx_branch (branch_id),
+		KEY idx_active (customer_id, is_active),
+		KEY idx_name (customer_id, name(50))
+	) {$charset_collate} COMMENT='Oddělení zákazníka';";
 }

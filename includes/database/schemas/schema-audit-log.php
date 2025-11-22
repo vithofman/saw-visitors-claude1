@@ -23,10 +23,8 @@ function saw_get_schema_audit_log($table_name, $prefix, $charset_collate) {
         PRIMARY KEY (id),
         KEY idx_customer (customer_id),
         KEY idx_user (user_id),
-        KEY idx_action (action),
-        KEY idx_entity (entity_type, entity_id),
-        KEY idx_created (created_at),
-        CONSTRAINT fk_audit_customer FOREIGN KEY (customer_id) REFERENCES {$customers_table}(id) ON DELETE CASCADE,
-        CONSTRAINT fk_audit_user FOREIGN KEY (user_id) REFERENCES {$users_table}(id) ON DELETE SET NULL
-    ) {$charset_collate} COMMENT='Audit log';";
+		KEY idx_action (action),
+		KEY idx_entity (entity_type, entity_id),
+		KEY idx_created (created_at)
+	) {$charset_collate} COMMENT='Audit log';";
 }

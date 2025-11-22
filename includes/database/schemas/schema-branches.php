@@ -22,9 +22,7 @@ function saw_get_schema_branches($table_name, $prefix, $charset_collate) {
 		description TEXT NULL,
 		is_active TINYINT(1) NOT NULL DEFAULT 1,
 		is_headquarters TINYINT(1) NOT NULL DEFAULT 0,
-		opening_hours JSON NULL,
 		sort_order INT NOT NULL DEFAULT 0,
-		metadata JSON NULL,
 		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
 		PRIMARY KEY (id),
@@ -32,7 +30,6 @@ function saw_get_schema_branches($table_name, $prefix, $charset_collate) {
 		KEY idx_customer (customer_id),
 		KEY idx_active (is_active),
 		KEY idx_headquarters (is_headquarters),
-		KEY idx_sort (customer_id, sort_order),
-		CONSTRAINT fk_branch_customer FOREIGN KEY (customer_id) REFERENCES {$customers_table}(id) ON DELETE CASCADE
+		KEY idx_sort (customer_id, sort_order)
 	) {$charset_collate} COMMENT='Customer branches';";
 }

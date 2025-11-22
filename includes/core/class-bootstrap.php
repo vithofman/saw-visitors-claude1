@@ -151,7 +151,6 @@ class SAW_Bootstrap {
             'includes/core/class-saw-audit.php',
             'includes/auth/class-saw-auth.php',
             'includes/auth/class-saw-password.php',
-            'includes/database/class-saw-database.php',
         ];
         
         foreach ($optional as $file) {

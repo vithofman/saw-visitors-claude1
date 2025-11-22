@@ -19,7 +19,6 @@ function saw_get_schema_error_log($table_name, $prefix, $charset_collate) {
         PRIMARY KEY (id),
         KEY idx_customer (customer_id),
         KEY idx_level (error_level),
-        KEY idx_created (created_at),
-        CONSTRAINT fk_error_customer FOREIGN KEY (customer_id) REFERENCES {$customers_table}(id) ON DELETE SET NULL
+        KEY idx_created (created_at)
     ) {$charset_collate} COMMENT='Error logging';";
 }

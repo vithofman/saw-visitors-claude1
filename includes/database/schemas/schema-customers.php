@@ -39,7 +39,6 @@ function saw_get_schema_customers($table_name, $prefix, $charset_collate) {
 		KEY idx_status (status),
 		KEY idx_account_type (account_type_id),
 		KEY idx_contact_email (contact_email),
-		KEY idx_admin_language (admin_language_default),
-		CONSTRAINT fk_customers_account_type FOREIGN KEY (account_type_id) REFERENCES {$prefix}account_types(id) ON DELETE SET NULL
+		KEY idx_admin_language (admin_language_default)
 	) {$charset_collate};";
 }

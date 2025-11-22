@@ -25,7 +25,6 @@ function saw_get_schema_companies($table_name, $prefix, $charset_collate) {
 		KEY idx_branch (branch_id),
 		KEY idx_name (customer_id, name(50)),
 		KEY idx_archived (customer_id, is_archived),
-		FULLTEXT KEY ft_name (name),
-		CONSTRAINT fk_company_customer FOREIGN KEY (customer_id) REFERENCES {$customers_table}(id) ON DELETE CASCADE
+		FULLTEXT KEY ft_name (name)
 	) {$charset_collate} COMMENT='Firmy návštěvníků';";
 }

@@ -1601,6 +1601,12 @@ $wpdb->update(
                 
                 error_log("[SAW Checkin] Visitor #{$visitor_id} re-entering (was checked out at {$existing_log['checked_out_at']})");
                 
+                // ✅ UPDATED: Získej customer_id a branch_id z visitor
+                $visitor_data = $wpdb->get_row($wpdb->prepare(
+                    "SELECT customer_id, branch_id FROM {$wpdb->prefix}saw_visitors WHERE id = %d",
+                    $visitor_id
+                ), ARRAY_A);
+                
                 // ✅ TRANSACTION pro race condition protection
                 $wpdb->query('START TRANSACTION');
                 
@@ -1609,11 +1615,13 @@ $wpdb->update(
                     [
                         'visit_id' => $visit_id,
                         'visitor_id' => $visitor_id,
+                        'customer_id' => $visitor_data['customer_id'],  // ✅ Z visitor
+                        'branch_id' => $visitor_data['branch_id'],      // ✅ Z visitor
                         'log_date' => $log_date,
                         'checked_in_at' => $now,
                         'created_at' => $now,
                     ],
-                    ['%d', '%d', '%s', '%s', '%s']
+                    ['%d', '%d', '%d', '%d', '%s', '%s', '%s']
                 );
                 
                 if ($wpdb->insert_id) {
@@ -1647,16 +1655,24 @@ $wpdb->update(
             
             error_log("[SAW Checkin] Visitor #{$visitor_id} first check-in today");
             
+            // ✅ UPDATED: Získej customer_id a branch_id z visitor
+            $visitor_data = $wpdb->get_row($wpdb->prepare(
+                "SELECT customer_id, branch_id FROM {$wpdb->prefix}saw_visitors WHERE id = %d",
+                $visitor_id
+            ), ARRAY_A);
+            
             $wpdb->insert(
                 $wpdb->prefix . 'saw_visit_daily_logs',
                 [
                     'visit_id' => $visit_id,
                     'visitor_id' => $visitor_id,
+                    'customer_id' => $visitor_data['customer_id'],  // ✅ Z visitor
+                    'branch_id' => $visitor_data['branch_id'],      // ✅ Z visitor
                     'log_date' => $log_date,
                     'checked_in_at' => $now,
                     'created_at' => $now,
                 ],
-                ['%d', '%d', '%s', '%s', '%s']
+                ['%d', '%d', '%d', '%d', '%s', '%s', '%s']
             );
             
             if ($wpdb->insert_id) {
@@ -1685,8 +1701,11 @@ $wpdb->update(
                     $any_needs_training = true;
                 }
                 
+                // ✅ UPDATED: Přidán customer_id a branch_id z terminálu
                 $visitor_insert = [
                     'visit_id' => $visit_id,
+                    'customer_id' => $this->customer_id,  // ✅ Z terminálu
+                    'branch_id' => $this->branch_id,      // ✅ Z terminálu
                     'first_name' => sanitize_text_field($visitor_data['first_name']),
                     'last_name' => sanitize_text_field($visitor_data['last_name']),
                     'position' => !empty($visitor_data['position']) ? sanitize_text_field($visitor_data['position']) : null,
@@ -1704,10 +1723,11 @@ $wpdb->update(
                     'created_at' => current_time('mysql'),
                 ];
                 
+                // ✅ UPDATED format array - přidány 2× %d
                 $result = $wpdb->insert(
                     $wpdb->prefix . 'saw_visitors',
                     $visitor_insert,
-                    ['%d', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%d', '%d', '%d', '%d', '%d', '%s', '%s']
+                    ['%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%d', '%d', '%d', '%d', '%d', '%s', '%s']
                 );
                 
                 if (!$result) {
@@ -1729,12 +1749,14 @@ $wpdb->update(
                             $wpdb->prefix . 'saw_visitor_certificates',
                             [
                                 'visitor_id' => $visitor_id,
+                                'customer_id' => $this->customer_id,  // ✅ PŘIDÁNO
+                                'branch_id' => $this->branch_id,      // ✅ PŘIDÁNO
                                 'certificate_name' => sanitize_text_field($cert['name']),
                                 'certificate_number' => !empty($cert['number']) ? sanitize_text_field($cert['number']) : null,
                                 'valid_until' => !empty($cert['valid_until']) ? sanitize_text_field($cert['valid_until']) : null,
                                 'created_at' => current_time('mysql'),
                             ],
-                            ['%d', '%s', '%s', '%s', '%s']
+                            ['%d', '%d', '%d', '%s', '%s', '%s', '%s']  // ✅ Přidány 2× %d
                         );
                         
                         error_log("[SAW Terminal] Certificate saved for visitor #{$visitor_id}: {$cert['name']}");
@@ -1744,16 +1766,19 @@ $wpdb->update(
                 // Daily log
                 $log_date = current_time('Y-m-d');
                 
+                // ✅ UPDATED: Přidán customer_id a branch_id
                 $result = $wpdb->insert(
                     $wpdb->prefix . 'saw_visit_daily_logs',
                     [
                         'visit_id' => $visit_id,
                         'visitor_id' => $visitor_id,
+                        'customer_id' => $this->customer_id,  // ✅ Z terminálu
+                        'branch_id' => $this->branch_id,      // ✅ Z terminálu
                         'log_date' => $log_date,
                         'checked_in_at' => current_time('mysql'),
                         'created_at' => current_time('mysql'),
                     ],
-                    ['%d', '%d', '%s', '%s', '%s']
+                    ['%d', '%d', '%d', '%d', '%s', '%s', '%s']
                 );
                 
                 if (!$result) {

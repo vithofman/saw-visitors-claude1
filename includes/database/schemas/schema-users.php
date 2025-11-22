@@ -16,6 +16,7 @@ function saw_get_schema_users($table_name, $prefix, $wp_users_table, $charset_co
         email VARCHAR(255) NOT NULL,
         first_name VARCHAR(100) NULL,
         last_name VARCHAR(100) NULL,
+        position VARCHAR(100) NULL COMMENT 'Funkce/pozice uživatele',
         role ENUM('super_admin', 'admin', 'super_manager', 'manager', 'terminal') NOT NULL,
         language VARCHAR(5) DEFAULT 'cs' COMMENT 'Jazyk uživatelského rozhraní (cs, en)',
         pin VARCHAR(255) NULL COMMENT 'Hashed PIN pro terminál',
@@ -37,6 +38,8 @@ function saw_get_schema_users($table_name, $prefix, $wp_users_table, $charset_co
         KEY idx_branch (branch_id),
         KEY idx_customer_branch (customer_id, branch_id),
         KEY idx_role (role),
-        KEY idx_active (is_active)
+        KEY idx_active (is_active),
+        KEY idx_password_setup_token (password_setup_token),
+        KEY idx_password_reset_token (password_reset_token)
     ) {$charset_collate} COMMENT='SAW uživatelé s vazbou na WP';";
 }

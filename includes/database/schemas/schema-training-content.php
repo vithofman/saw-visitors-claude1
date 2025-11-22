@@ -21,11 +21,8 @@ function saw_get_schema_training_content($table_name, $prefix, $charset_collate)
         updated_at DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
         UNIQUE KEY unique_content (customer_id, branch_id, language_id),
-        KEY idx_customer (customer_id),
-        KEY idx_branch (branch_id),
-        KEY idx_language (language_id),
-        CONSTRAINT fk_training_content_customer FOREIGN KEY (customer_id) REFERENCES {$customers_table}(id) ON DELETE CASCADE,
-        CONSTRAINT fk_training_content_branch FOREIGN KEY (branch_id) REFERENCES {$branches_table}(id) ON DELETE CASCADE,
-        CONSTRAINT fk_training_content_language FOREIGN KEY (language_id) REFERENCES {$languages_table}(id) ON DELETE CASCADE
-    ) {$charset_collate} COMMENT='Hlavní obsah školení';";
+		KEY idx_customer (customer_id),
+		KEY idx_branch (branch_id),
+		KEY idx_language (language_id)
+	) {$charset_collate} COMMENT='Hlavní obsah školení';";
 }

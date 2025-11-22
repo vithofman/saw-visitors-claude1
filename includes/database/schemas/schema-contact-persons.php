@@ -18,7 +18,6 @@ function saw_get_schema_contact_persons($table_name, $prefix, $charset_collate) 
 		updated_at DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
 		PRIMARY KEY (id),
 		KEY idx_customer (customer_id),
-		KEY idx_visible (customer_id, is_visible),
-		CONSTRAINT fk_contact_customer FOREIGN KEY (customer_id) REFERENCES {$customers_table}(id) ON DELETE CASCADE
+		KEY idx_visible (customer_id, is_visible)
 	) {$charset_collate} COMMENT='Kontaktní osoby zákazníka';";
 }

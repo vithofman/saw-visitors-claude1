@@ -261,15 +261,18 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
         if ($existing_log) {
             // If already checked out, create new entry (re-entry)
             if (!empty($existing_log['checked_out_at'])) {
+                // ✅ UPDATED: Přidán customer_id a branch_id z visitor
                 $result = $wpdb->insert(
                     $wpdb->prefix . 'saw_visit_daily_logs',
                     array(
                         'visit_id' => $visit_id,
                         'visitor_id' => $visitor_id,
+                        'customer_id' => $visitor['customer_id'],  // ✅ Z visitor
+                        'branch_id' => $visitor['branch_id'],      // ✅ Z visitor
                         'log_date' => $log_date,
                         'checked_in_at' => current_time('mysql'),
                     ),
-                    array('%d', '%d', '%s', '%s')
+                    array('%d', '%d', '%d', '%d', '%s', '%s')
                 );
             } else {
                 // Update existing check-in time
@@ -283,15 +286,18 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
             }
         } else {
             // Create new log entry
+            // ✅ UPDATED: Přidán customer_id a branch_id z visitor
             $result = $wpdb->insert(
                 $wpdb->prefix . 'saw_visit_daily_logs',
                 array(
                     'visit_id' => $visit_id,
                     'visitor_id' => $visitor_id,
+                    'customer_id' => $visitor['customer_id'],  // ✅ Z visitor
+                    'branch_id' => $visitor['branch_id'],      // ✅ Z visitor
                     'log_date' => $log_date,
                     'checked_in_at' => current_time('mysql'),
                 ),
-                array('%d', '%d', '%s', '%s')
+                array('%d', '%d', '%d', '%d', '%s', '%s')
             );
         }
         
@@ -395,12 +401,15 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
     
     /**
      * Add ad-hoc visitor to existing visit
+     * 
+     * ✅ UPDATED: Fetches customer_id and branch_id from parent visit
      */
     public function add_adhoc_visitor($visit_id, $visitor_data) {
         global $wpdb;
         
+        // ✅ KROK 1: Fetch parent visit
         $visit = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_visits WHERE id = %d",
+            "SELECT customer_id, branch_id FROM {$wpdb->prefix}saw_visits WHERE id = %d",
             $visit_id
         ), ARRAY_A);
         
@@ -408,8 +417,11 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
             return new WP_Error('visit_not_found', 'Visit not found');
         }
         
+        // ✅ KROK 2: Build data WITH customer_id and branch_id
         $data = array(
             'visit_id' => $visit_id,
+            'customer_id' => $visit['customer_id'],
+            'branch_id' => $visit['branch_id'],
             'first_name' => sanitize_text_field($visitor_data['first_name']),
             'last_name' => sanitize_text_field($visitor_data['last_name']),
             'position' => !empty($visitor_data['position']) ? sanitize_text_field($visitor_data['position']) : null,
@@ -419,19 +431,18 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
             'training_skipped' => !empty($visitor_data['training_skipped']) ? 1 : 0,
         );
         
+        // ✅ KROK 3: Insert with correct format
         $result = $wpdb->insert(
             $this->table,
             $data,
-            array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%d')
+            array('%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%d')
         );
         
         if (!$result) {
             return new WP_Error('insert_failed', 'Failed to create ad-hoc visitor: ' . $wpdb->last_error);
         }
         
-        // 🔥 CRITICAL: Invalidate cache
         $this->invalidate_cache();
-        
         return $wpdb->insert_id;
     }
     
@@ -469,21 +480,27 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
             return true;
         }
         
+        // ✅ UPDATED: Získej customer_id a branch_id z visitor
+        $visitor = $this->get_by_id($visitor_id);
+        
         // Insert new certificates
         foreach ($certificates_data as $cert) {
             if (empty($cert['certificate_name'])) {
                 continue;
             }
             
+            // ✅ UPDATED: Získej customer_id a branch_id z visitor
             $wpdb->insert(
                 $wpdb->prefix . 'saw_visitor_certificates',
                 array(
                     'visitor_id' => $visitor_id,
+                    'customer_id' => $visitor['customer_id'],  // ✅ Z visitor
+                    'branch_id' => $visitor['branch_id'],      // ✅ Z visitor
                     'certificate_name' => sanitize_text_field($cert['certificate_name']),
                     'certificate_number' => !empty($cert['certificate_number']) ? sanitize_text_field($cert['certificate_number']) : null,
                     'valid_until' => !empty($cert['valid_until']) ? sanitize_text_field($cert['valid_until']) : null,
                 ),
-                array('%d', '%s', '%s', '%s')
+                array('%d', '%d', '%d', '%s', '%s', '%s')
             );
         }
         

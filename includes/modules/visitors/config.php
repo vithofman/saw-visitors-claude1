@@ -30,6 +30,22 @@ return array(
     ),
     
     'fields' => array(
+        // ✅ PŘIDÁNO - customer/branch isolation
+        'customer_id' => array(
+            'type' => 'number',
+            'label' => 'Zákazník ID',
+            'required' => true,
+            'hidden' => true,
+            'sanitize' => 'absint',
+        ),
+        'branch_id' => array(
+            'type' => 'number',
+            'label' => 'Pobočka ID',
+            'required' => true,
+            'hidden' => true,
+            'sanitize' => 'absint',
+        ),
+        
         'visit_id' => array(
             'type' => 'number',
             'label' => 'Návštěva ID',

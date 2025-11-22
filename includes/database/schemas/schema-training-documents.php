@@ -23,9 +23,8 @@ function saw_get_schema_training_documents($table_name, $prefix, $charset_collat
         KEY idx_customer (customer_id),
         KEY idx_branch (branch_id),
         KEY idx_document_type (document_type),
-        KEY idx_document_type_id (document_type_id),
-        KEY idx_reference (reference_id),
-        KEY idx_type_reference (document_type, reference_id),
-        CONSTRAINT fk_training_doc_type FOREIGN KEY (document_type_id) REFERENCES {$document_types_table}(id) ON DELETE RESTRICT
-    ) {$charset_collate} COMMENT='Dokumenty pro školení';";
+		KEY idx_document_type_id (document_type_id),
+		KEY idx_reference (reference_id),
+		KEY idx_type_reference (document_type, reference_id)
+	) {$charset_collate} COMMENT='Dokumenty pro školení';";
 }

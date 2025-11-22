@@ -17,8 +17,6 @@ function saw_get_schema_password_resets($table_name, $prefix, $charset_collate) 
 		UNIQUE KEY idx_token (token),
 		KEY idx_customer (customer_id),
 		KEY idx_user (user_id),
-		KEY idx_expires (expires_at),
-		CONSTRAINT fk_pwreset_customer FOREIGN KEY (customer_id) REFERENCES {$customers_table}(id) ON DELETE CASCADE,
-		CONSTRAINT fk_pwreset_user FOREIGN KEY (user_id) REFERENCES {$users_table}(id) ON DELETE CASCADE
+		KEY idx_expires (expires_at)
 	) {$charset_collate} COMMENT='Password reset tokens';";
 }
