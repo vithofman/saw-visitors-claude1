@@ -271,14 +271,31 @@ class SAW_Bootstrap {
             error_log('SAW Bootstrap: Failed to init component manager: ' . $e->getMessage());
         }
         
-        // Initialize AJAX Registry
+        // ✅ CRITICAL: Initialize AJAX Registry IMMEDIATELY during plugins_loaded hook
+        // AJAX handlers MUST be registered BEFORE WordPress processes AJAX requests (admin_init)
+        // This happens during plugins_loaded, which is BEFORE init and admin_init
         try {
             if (SAW_Service_Container::has('ajax_registry')) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('[SAW Bootstrap] Initializing AJAX Registry during plugins_loaded hook...');
+                }
+                
                 $ajax_registry = SAW_Service_Container::get('ajax_registry');
-                $ajax_registry->init();
+                if ($ajax_registry && method_exists($ajax_registry, 'init')) {
+                    $ajax_registry->init();
+                    
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('[SAW Bootstrap] ✅ AJAX Registry initialized successfully during plugins_loaded');
+                    }
+                } else {
+                    error_log('[SAW Bootstrap] ❌ AJAX Registry object invalid or missing init() method');
+                }
+            } else {
+                error_log('[SAW Bootstrap] ❌ AJAX Registry not found in Service Container');
             }
         } catch (Throwable $e) {
-            error_log('SAW Bootstrap: Failed to init AJAX registry: ' . $e->getMessage());
+            error_log('SAW Bootstrap: ❌ Failed to init AJAX registry: ' . $e->getMessage());
+            error_log('SAW Bootstrap: Error trace: ' . $e->getTraceAsString());
         }
         
         // Initialize Session Manager (optional)
@@ -338,6 +355,9 @@ class SAW_Bootstrap {
                 error_log('SAW Bootstrap CRITICAL: Router invalid or missing register_routes method');
                 return;
             }
+            
+            // AJAX Registry is initialized in init_services() during plugins_loaded hook
+            // This ensures handlers are registered BEFORE WordPress processes AJAX requests (admin_init)
             
             // Router hooks (CRITICAL for plugin to work)
             add_action('init', [$router, 'register_routes'], 10);

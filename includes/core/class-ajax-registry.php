@@ -24,17 +24,44 @@ if (!defined('ABSPATH')) {
 class SAW_AJAX_Registry {
     
     /**
+     * Whether registry has been initialized
+     *
+     * @since 5.0.0
+     * @var bool
+     */
+    private static $initialized = false;
+    
+    /**
      * Initialize AJAX registry
      *
      * Registers all AJAX handlers for components, modules, and custom endpoints.
+     * Prevents duplicate initialization.
      *
      * @since 5.0.0
      * @return void
      */
     public function init() {
+        // Prevent duplicate initialization
+        if (self::$initialized) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[AJAX Registry] Already initialized, skipping');
+            }
+            return;
+        }
+        
+        self::$initialized = true;
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[AJAX Registry] Initializing...');
+        }
+        
         $this->register_component_ajax();
         $this->register_module_ajax();
         $this->register_custom_ajax();
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[AJAX Registry] Initialization complete');
+        }
     }
     
     /**
@@ -133,15 +160,23 @@ class SAW_AJAX_Registry {
                 $this->dispatch($slug, 'ajax_delete');
             });
             
-            // Custom AJAX actions from module config
+            // ✅ Custom AJAX actions from module config
+            // These are registered for each module that defines custom_ajax_actions in config.php
             if (!empty($config['custom_ajax_actions']) && is_array($config['custom_ajax_actions'])) {
                 foreach ($config['custom_ajax_actions'] as $ajax_action => $controller_method) {
+                    // Log registration attempt
                     if (defined('WP_DEBUG') && WP_DEBUG) {
-                        error_log(sprintf('[AJAX Registry] Registering custom action: wp_ajax_%s for module=%s, method=%s', $ajax_action, $slug, $controller_method));
+                        error_log(sprintf(
+                            '[AJAX Registry] Registering custom action: wp_ajax_%s -> %s::%s()',
+                            $ajax_action,
+                            $slug,
+                            $controller_method
+                        ));
                     }
+                    
                     add_action("wp_ajax_{$ajax_action}", function() use ($slug, $controller_method, $ajax_action) {
                         if (defined('WP_DEBUG') && WP_DEBUG) {
-                            error_log(sprintf('[AJAX Registry] Handler called: wp_ajax_%s, dispatching to module=%s, method=%s', $ajax_action, $slug, $controller_method));
+                            error_log(sprintf('[AJAX Registry] Handler called: wp_ajax_%s, dispatching to module=%s, method=%s()', $ajax_action, $slug, $controller_method));
                         }
                         $this->dispatch($slug, $controller_method);
                     });
@@ -153,6 +188,16 @@ class SAW_AJAX_Registry {
         add_action('wp_ajax_saw_update_permission', [$this, 'handle_permissions_update']);
         add_action('wp_ajax_saw_get_permissions_for_role', [$this, 'handle_permissions_get_for_role']);
         add_action('wp_ajax_saw_reset_permissions', [$this, 'handle_permissions_reset']);
+        
+        // 🚨 EMERGENCY FALLBACK: Explicitly register PIN actions
+        // This bypasses potential cache issues in Module Loader
+        add_action('wp_ajax_saw_generate_pin', function() {
+            $this->dispatch('visits', 'ajax_generate_pin');
+        });
+        
+        add_action('wp_ajax_saw_extend_pin', function() {
+            $this->dispatch('visits', 'ajax_extend_pin');
+        });
     }
     
     /**

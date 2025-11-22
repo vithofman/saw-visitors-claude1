@@ -23,10 +23,11 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         require_once $module_path . 'model.php';
         $this->model = new SAW_Module_Visits_Model($this->config);
         
-        // Custom AJAX handlers are registered via AJAX Registry using custom_ajax_actions in config.php
-        // This ensures they're registered BEFORE WordPress processes AJAX requests
-        // FALLBACK: Also register directly in constructor as backup in case AJAX Registry fails
-        add_action('wp_ajax_saw_generate_pin', array($this, 'ajax_generate_pin'));
+        // ✅ NOTE: Custom AJAX actions are registered via AJAX Registry using custom_ajax_actions in config.php
+        // This ensures they're hooked BEFORE WordPress processes AJAX requests (during plugins_loaded hook)
+        // Controllers load on-demand (lazy loading), so registration here would be TOO LATE
+        // When AJAX Registry dispatches a request, it creates a NEW instance of this controller,
+        // but handlers must already be registered BEFORE that happens
         
         // CRITICAL: Use priority 999 to ensure this runs AFTER all other enqueue operations
         // This guarantees that saw-module-visits script is already registered when we localize
@@ -531,84 +532,6 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         if ($visit['visit_type'] !== 'planned') {
             wp_send_json_error(['message' => 'PIN lze vygenerovat pouze pro plánované návštěvy']);
         }
-        
-        if ($visit['status'] === 'cancelled') {
-            wp_send_json_error(['message' => 'Nelze vygenerovat PIN pro zrušenou návštěvu']);
-        }
-        
-        // Load password class for PIN generation
-        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-password.php';
-        $password_helper = new SAW_Password();
-        
-        // Generate unique PIN (retry if duplicate)
-        $max_attempts = 10;
-        $pin = null;
-        
-        for ($i = 0; $i < $max_attempts; $i++) {
-            $candidate_pin = $password_helper->generate_pin();
-            
-            // Check if PIN already exists for this customer
-            $exists = $wpdb->get_var($wpdb->prepare(
-                "SELECT COUNT(*) FROM {$wpdb->prefix}saw_visits 
-                 WHERE pin_code = %s AND customer_id = %d AND id != %d",
-                $candidate_pin,
-                $visit['customer_id'],
-                $visit_id
-            ));
-            
-            if (!$exists) {
-                $pin = $candidate_pin;
-                break;
-            }
-        }
-        
-        if (!$pin) {
-            wp_send_json_error(['message' => 'Nepodařilo se vygenerovat unikátní PIN. Zkuste to znovu.']);
-        }
-        
-        // Get last schedule date to calculate expiry
-        $last_schedule_date = $wpdb->get_var($wpdb->prepare(
-            "SELECT MAX(date) FROM {$wpdb->prefix}saw_visit_schedules WHERE visit_id = %d",
-            $visit_id
-        ));
-        
-        // Calculate PIN expiry (last schedule date + 1 day at 23:59:59, or today + 24h if no schedules)
-        $pin_expires_at = null;
-        if ($last_schedule_date) {
-            $pin_expires_at = date('Y-m-d 23:59:59', strtotime($last_schedule_date . ' +1 day'));
-        } else {
-            // If no schedules, set to 24h from now
-            $pin_expires_at = date('Y-m-d H:i:s', strtotime('+24 hours'));
-        }
-        
-        // Update visit with PIN
-        $result = $wpdb->update(
-            $wpdb->prefix . 'saw_visits',
-            [
-                'pin_code' => $pin,
-                'pin_expires_at' => $pin_expires_at
-            ],
-            ['id' => $visit_id],
-            ['%s', '%s'],
-            ['%d']
-        );
-        
-        if ($result === false) {
-            wp_send_json_error(['message' => 'Chyba databáze: ' . $wpdb->last_error]);
-        }
-        
-        // Invalidate cache
-        $this->model->invalidate_cache();
-        
-        if (class_exists('SAW_Logger')) {
-            SAW_Logger::info("PIN generated for visit #{$visit_id}: {$pin}, expires: {$pin_expires_at}");
-        }
-        
-        wp_send_json_success([
-            'pin_code' => $pin,
-            'pin_expires_at' => date('d.m.Y H:i', strtotime($pin_expires_at)),
-            'message' => 'PIN úspěšně vygenerován: ' . $pin
-        ]);
     }
     
     public function ajax_get_hosts_by_branch() {

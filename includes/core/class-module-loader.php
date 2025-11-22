@@ -29,7 +29,7 @@ class SAW_Module_Loader {
     /**
      * @var string Transient cache key for module manifest
      */
-    private static $manifest_cache_key = 'saw_module_manifest_v2';
+    private static $manifest_cache_key = 'saw_module_manifest_v3';
     
     /**
      * @var int Cache TTL in seconds (24 hours)

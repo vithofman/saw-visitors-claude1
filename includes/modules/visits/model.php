@@ -284,7 +284,78 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
         
         return $id;
     }
-    
+
+    /**
+     * Generate unique 6-digit PIN for visit
+     * 
+     * @since 5.1.0
+     * @param int $visit_id Visit ID
+     * @return string|false Generated PIN or false on failure
+     */
+    public function generate_pin($visit_id) {
+        global $wpdb;
+        
+        $visit_id = intval($visit_id);
+        if (!$visit_id) {
+            return false;
+        }
+        
+        // 1. Generate unique 6-digit PIN
+        $pin = '';
+        $max_attempts = 10;
+        $attempt = 0;
+        
+        do {
+            $pin = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            $exists = $wpdb->get_var($wpdb->prepare(
+                "SELECT id FROM {$this->table} WHERE pin_code = %s AND id != %d",
+                $pin,
+                $visit_id
+            ));
+            $attempt++;
+        } while ($exists && $attempt < $max_attempts);
+        
+        if ($exists) {
+            error_log("[Visits Model] Failed to generate unique PIN after {$max_attempts} attempts");
+            return false;
+        }
+        
+        // 2. Calculate expiry
+        // Default: 24h from now
+        // If schedule exists: last schedule date + 24h
+        $last_schedule_date = $wpdb->get_var($wpdb->prepare(
+            "SELECT MAX(date) FROM {$wpdb->prefix}saw_visit_schedules WHERE visit_id = %d",
+            $visit_id
+        ));
+        
+        if ($last_schedule_date) {
+            $pin_expires_at = date('Y-m-d 23:59:59', strtotime($last_schedule_date . ' +1 day'));
+        } else {
+            $pin_expires_at = date('Y-m-d H:i:s', strtotime('+24 hours'));
+        }
+        
+        // 3. Update visit
+        $result = $wpdb->update(
+            $this->table,
+            array(
+                'pin_code' => $pin,
+                'pin_expires_at' => $pin_expires_at
+            ),
+            array('id' => $visit_id),
+            array('%s', '%s'),
+            array('%d')
+        );
+        
+        if ($result === false) {
+            return false;
+        }
+        
+        // Invalidate cache
+        $this->invalidate_cache();
+        
+        return $pin;
+    }
+
     /**
      * Get status label in Czech
      * 

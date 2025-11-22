@@ -636,16 +636,19 @@ function generatePin(visitId) {
             visit_id: visitId,
             nonce: sawGlobal.nonce
         }, function(response) {
-            if (response.success) {
-                alert('✅ PIN úspěšně vygenerován: ' + response.data.pin_code + '\n\nPlatnost: ' + response.data.pin_expires_at);
+            console.log('[Generate PIN] Response:', response);
+            if (response && response.success) {
+                alert('✅ PIN úspěšně vygenerován: ' + (response.data.pin_code || 'N/A') + '\n\nPlatnost: ' + (response.data.pin_expires_at || 'N/A'));
                 location.reload(); // Reload to show PIN
             } else {
-                alert('❌ Chyba: ' + response.data.message);
+                const msg = (response && response.data && response.data.message) ? response.data.message : 'Neznámá chyba';
+                alert('❌ Chyba: ' + msg);
                 button.disabled = false;
                 button.innerHTML = originalText;
             }
-        }).fail(function() {
-            alert('❌ Chyba komunikace se serverem');
+        }).fail(function(xhr, status, error) {
+            console.error('[Generate PIN] AJAX Error:', status, error, xhr.responseText);
+            alert('❌ Chyba komunikace se serverem: ' + error);
             button.disabled = false;
             button.innerHTML = originalText;
         });
@@ -656,12 +659,17 @@ function generatePin(visitId) {
             visit_id: visitId,
             nonce: sawGlobal.nonce
         }, function(response) {
-            if (response.success) {
-                alert('✅ PIN úspěšně vygenerován: ' + response.data.pin_code + '\n\nPlatnost: ' + response.data.pin_expires_at);
+            console.log('[Generate PIN] Response:', response);
+            if (response && response.success) {
+                alert('✅ PIN úspěšně vygenerován: ' + (response.data.pin_code || 'N/A') + '\n\nPlatnost: ' + (response.data.pin_expires_at || 'N/A'));
                 location.reload();
             } else {
-                alert('❌ Chyba: ' + response.data.message);
+                const msg = (response && response.data && response.data.message) ? response.data.message : 'Neznámá chyba';
+                alert('❌ Chyba: ' + msg);
             }
+        }).fail(function(xhr, status, error) {
+            console.error('[Generate PIN] AJAX Error:', status, error, xhr.responseText);
+            alert('❌ Chyba komunikace se serverem: ' + error);
         });
     }
 }
