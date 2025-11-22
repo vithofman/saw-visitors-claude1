@@ -468,8 +468,8 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
             wp_send_json_error(['message' => 'Chyba databáze: ' . $wpdb->last_error]);
         }
         
-        // Invalidate cache
-        $this->model->invalidate_cache();
+        // ✅ OPRAVENO: Použij SAW_Cache::flush() místo $this->model->invalidate_cache()
+        SAW_Cache::flush('visits');
         
         if (class_exists('SAW_Logger')) {
             SAW_Logger::info("PIN extended for visit #{$visit_id} to {$new_expiry} (+{$hours}h)");
@@ -488,51 +488,129 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
      * @since 4.8.0
      */
     public function ajax_generate_pin() {
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('[AJAX] ajax_generate_pin() called');
-        }
-        
-        saw_verify_ajax_unified();
-        
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('[AJAX] ajax_generate_pin() nonce verified successfully');
-        }
-        
-        $visit_id = intval($_POST['visit_id'] ?? 0);
-        
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log(sprintf('[AJAX] ajax_generate_pin() visit_id=%d', $visit_id));
-        }
-        
-        if (!$visit_id) {
-            wp_send_json_error(['message' => 'Neplatné ID návštěvy']);
-        }
-        
-        if (!$this->can('edit')) {
-            wp_send_json_error(['message' => 'Nemáte oprávnění']);
-        }
-        
-        global $wpdb;
-        
-        // Check if visit exists and get details
-        $visit = $wpdb->get_row($wpdb->prepare(
-            "SELECT id, customer_id, pin_code, visit_type, status FROM {$wpdb->prefix}saw_visits WHERE id = %d",
-            $visit_id
-        ), ARRAY_A);
-        
-        if (!$visit) {
-            wp_send_json_error(['message' => 'Návštěva nenalezena']);
-        }
-        
-        // Validation checks
-        if (!empty($visit['pin_code'])) {
-            wp_send_json_error(['message' => 'PIN již existuje']);
-        }
-        
-        if ($visit['visit_type'] !== 'planned') {
-            wp_send_json_error(['message' => 'PIN lze vygenerovat pouze pro plánované návštěvy']);
+    // ==========================================
+    // KROK 1: DEBUG LOGGING
+    // ==========================================
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[AJAX] ajax_generate_pin() called');
+    }
+    
+    // ==========================================
+    // KROK 2: NONCE VERIFICATION
+    // ==========================================
+    saw_verify_ajax_unified();
+    
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[AJAX] ajax_generate_pin() nonce verified successfully');
+    }
+    
+    // ==========================================
+    // KROK 3: GET & VALIDATE INPUT
+    // ==========================================
+    $visit_id = intval($_POST['visit_id'] ?? 0);
+    
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log(sprintf('[AJAX] ajax_generate_pin() visit_id=%d', $visit_id));
+    }
+    
+    if (!$visit_id) {
+        wp_send_json_error(['message' => 'Neplatné ID návštěvy']);
+    }
+    
+    // ==========================================
+    // KROK 4: PERMISSION CHECK
+    // ==========================================
+    if (!$this->can('edit')) {
+        wp_send_json_error(['message' => 'Nemáte oprávnění']);
+    }
+    
+    // ==========================================
+    // KROK 5: CHECK VISIT EXISTS & GET DETAILS
+    // ==========================================
+    global $wpdb;
+    
+    $visit = $wpdb->get_row($wpdb->prepare(
+        "SELECT id, customer_id, pin_code, visit_type, status FROM {$wpdb->prefix}saw_visits WHERE id = %d",
+        $visit_id
+    ), ARRAY_A);
+    
+    if (!$visit) {
+        wp_send_json_error(['message' => 'Návštěva nenalezena']);
+    }
+    
+    // ==========================================
+    // KROK 6: BUSINESS VALIDATION
+    // ==========================================
+    if (!empty($visit['pin_code'])) {
+        wp_send_json_error(['message' => 'PIN již existuje']);
+    }
+    
+    if ($visit['visit_type'] !== 'planned') {
+        wp_send_json_error(['message' => 'PIN lze vygenerovat pouze pro plánované návštěvy']);
+    }
+    
+    // ==========================================
+    // KROK 7: ✅ GENERATE PIN (CHYBĚLO!!!)
+    // ==========================================
+    $pin_code = $this->model->generate_pin($visit_id);
+    
+    if (!$pin_code) {
+        error_log(sprintf('[AJAX] ajax_generate_pin() FAILED for visit_id=%d', $visit_id));
+        wp_send_json_error(['message' => 'Nepodařilo se vygenerovat PIN. Zkuste to znovu.']);
+    }
+    
+    // ==========================================
+    // KROK 8: GET FRESH DATA AFTER PIN GENERATION
+    // ==========================================
+    $updated_visit = $wpdb->get_row($wpdb->prepare(
+        "SELECT pin_code, pin_expires_at FROM {$wpdb->prefix}saw_visits WHERE id = %d",
+        $visit_id
+    ), ARRAY_A);
+    
+    if (!$updated_visit) {
+        wp_send_json_error(['message' => 'Chyba při načítání vygenerovaných dat']);
+    }
+    
+    // ==========================================
+    // KROK 9: FORMAT EXPIRY DATE FOR DISPLAY
+    // ==========================================
+    $expiry_formatted = 'N/A';
+    if (!empty($updated_visit['pin_expires_at'])) {
+        $expiry_timestamp = strtotime($updated_visit['pin_expires_at']);
+        if ($expiry_timestamp !== false) {
+            $expiry_formatted = date('d.m.Y H:i', $expiry_timestamp);
         }
     }
+    
+    // ==========================================
+    // KROK 10: LOG SUCCESS
+    // ==========================================
+    if (class_exists('SAW_Logger')) {
+        SAW_Logger::info(sprintf(
+            'PIN generated for visit #%d: %s (expires: %s)',
+            $visit_id,
+            $pin_code,
+            $updated_visit['pin_expires_at'] ?? 'no expiry'
+        ));
+    }
+    
+    error_log(sprintf(
+        '[AJAX] ajax_generate_pin() SUCCESS: visit_id=%d, pin=%s, expires=%s',
+        $visit_id,
+        $pin_code,
+        $updated_visit['pin_expires_at'] ?? 'N/A'
+    ));
+    
+    // ==========================================
+    // KROK 11: ✅ SEND SUCCESS RESPONSE (CHYBĚLO!!!)
+    // ==========================================
+    wp_send_json_success([
+        'pin_code' => $pin_code,
+        'pin_expires_at' => $expiry_formatted,
+        'pin_expires_at_raw' => $updated_visit['pin_expires_at'],
+        'message' => 'PIN byl úspěšně vygenerován'
+    ]);
+}
     
     public function ajax_get_hosts_by_branch() {
         saw_verify_ajax_unified();
