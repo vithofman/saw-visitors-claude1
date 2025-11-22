@@ -141,7 +141,7 @@ class SAW_Component_Admin_Table {
                 'enabled' => false,
                 'initial_load' => 100, // First load
                 'per_page' => 50,
-                'threshold' => 0.7, // 70% scroll (changed from 300px)
+                'threshold' => 0.6, // OPRAVENO 2025-01-22: 60% scroll pro dřívější loading
             ),
             
             'actions' => array('edit', 'delete'),

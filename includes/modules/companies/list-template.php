@@ -121,7 +121,7 @@ $table_config['infinite_scroll'] = array(
     'enabled' => true, // Enable infinite scroll
     'initial_load' => 100, // NOVÉ: První načtení 100 řádků
     'per_page' => 50, // Poté po 50 řádcích
-    'threshold' => 0.7, // NOVÉ: 70% scroll (místo 300px)
+    'threshold' => 0.6, // OPRAVENO 2025-01-22: 60% scroll pro dřívější loading
 );
 
 // NOVÉ: Pass tab data from get_list_data() result
