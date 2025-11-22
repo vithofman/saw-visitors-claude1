@@ -626,6 +626,7 @@
         let currentPage = 1;
         let hasMore = true;
         let isRestoring = false; // OPRAVENO 2025-01-22: Flag pro scroll restoration protection
+        let isAppending = false; // PŘIDÁNO 2025-01-22: Flag pro append lock
         
         // NOVÁ logika pro initial load
         const initialLoad = config.infinite_scroll.initial_load || 100;
@@ -848,14 +849,54 @@
                         if (rowsToAdd.length === 0) {
                             console.log('⚠️ No new rows to add (all duplicates)');
                             isLoading = false;
+                            isAppending = false; // PŘIDÁNO 2025-01-22: Unlock i při prázdném výsledku
                             return;
                         }
                         
-                        console.log('✅ Adding', rowsToAdd.length, 'new rows');
+                        // PŘIDÁNO 2025-01-22: Lock scroll during append
+                        isAppending = true;
                         
-                        // For tabs (non-grouped), just append rows
+                        // PŘIDÁNO 2025-01-22: Preserve scroll position BEFORE append
+                        const scrollPosBefore = scrollArea.scrollTop;
+                        const scrollHeightBefore = scrollArea.scrollHeight;
+                        
+                        // OPRAVENO 2025-01-22: Use DocumentFragment for batch append
+                        const fragment = document.createDocumentFragment();
+                        
+                        // OPRAVENO 2025-01-22: Reduced logging (only in DEBUG)
+                        if (DEBUG) {
+                            console.log('✅ Adding', rowsToAdd.length, 'new rows (batch append)');
+                        }
+                        
+                        // Append to fragment (NO reflow)
                         rowsToAdd.forEach(row => {
-                            tbody.appendChild(row);
+                            fragment.appendChild(row);
+                        });
+                        
+                        // KRITICKÉ: Jen JEDEN reflow!
+                        tbody.appendChild(fragment);
+                        
+                        // PŘIDÁNO 2025-01-22: Restore scroll position after reflow settles
+                        requestAnimationFrame(() => {
+                            const scrollHeightAfter = scrollArea.scrollHeight;
+                            const heightDiff = scrollHeightAfter - scrollHeightBefore;
+                            
+                            // Only adjust if height changed significantly
+                            if (heightDiff > 50) {
+                                scrollArea.scrollTop = scrollPosBefore; // RESTORE pozici
+                                
+                                if (DEBUG) {
+                                    console.log('📍 Scroll position restored:', scrollPosBefore, 'px');
+                                }
+                            }
+                            
+                            // PŘIDÁNO 2025-01-22: Unlock scroll after DOM settles
+                            setTimeout(() => {
+                                isAppending = false;
+                                if (DEBUG) {
+                                    console.log('🔓 Scroll unlocked');
+                                }
+                            }, 50); // Short delay for DOM to settle
                         });
                         
                     }
@@ -877,6 +918,7 @@
                     loadingEl.remove();
                 }
                 isLoading = false;
+                isAppending = false; // PŘIDÁNO 2025-01-22: Unlock i při erroru
                 
                 if (DEBUG) {
                     console.groupEnd();
@@ -895,10 +937,10 @@
         let lastScrollTime = Date.now();
         
         function handleScroll() {
-            // OPRAVENO 2025-01-22: Skip if restoring scroll position (prevents race condition)
-            if (isRestoring) {
+            // PŘIDÁNO 2025-01-22: Skip if appending rows
+            if (isRestoring || isAppending) {
                 if (DEBUG) {
-                    console.log('⏸️ Scroll handling paused - restoration in progress');
+                    console.log('⏸️ Scroll paused - restoration or append in progress');
                 }
                 return;
             }
@@ -932,7 +974,8 @@
             const scrollPercent = (scrollTop + clientHeight) / scrollHeight;
             const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
             
-            if (DEBUG) {
+            // OPRAVENO 2025-01-22: Reduced logging - only every 100px or threshold
+            if (DEBUG && (Math.round(scrollTop) % 100 === 0 || scrollPercent >= threshold)) {
                 console.log('📊 Scroll:', {
                     scrollTop: Math.round(scrollTop),
                     scrollPercent: Math.round(scrollPercent * 100) + '%',

@@ -207,11 +207,11 @@ class SAW_Component_Admin_Table {
             <div class="saw-table-panel<?php echo !empty($this->config['infinite_scroll']['enabled']) ? ' saw-table-infinite-scroll-enabled' : ''; ?>">
                 <?php
                 $this->render_header();
-                $this->render_controls();
                 ?>
                 
                 <!-- Scrollovací oblast -->
                 <div class="saw-table-scroll-area">
+                    <?php $this->render_controls(); // OPRAVENO 2025-01-22: Přesunuto UVNITŘ scroll area pro stejný sticky kontext ?>
                     <?php $this->render_table_or_empty(); ?>
                 </div>
                 
@@ -236,11 +236,11 @@ class SAW_Component_Admin_Table {
             <div class="saw-table-panel<?php echo !empty($this->config['infinite_scroll']['enabled']) ? ' saw-table-infinite-scroll-enabled' : ''; ?>">
                 <?php
                 $this->render_header();
-                $this->render_controls();
                 ?>
                 
                 <!-- Scrollovací oblast -->
                 <div class="saw-table-scroll-area">
+                    <?php $this->render_controls(); // OPRAVENO 2025-01-22: Přesunuto UVNITŘ scroll area pro stejný sticky kontext ?>
                     <?php $this->render_table_or_empty(); ?>
                 </div>
                 

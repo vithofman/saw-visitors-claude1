@@ -686,11 +686,14 @@
    ============================================ */
 
 .saw-table-responsive-wrapper {
-    overflow-x: auto; /* OPRAVENO 2025-01-22: Pouze horizontální scroll pro široké tabulky */
-    overflow-y: visible; /* OPRAVENO 2025-01-22: Vertikální scroll je na .saw-table-scroll-area */
+    overflow: hidden; /* OPRAVENO 2025-01-22: Žádný scroll zde - scroll je na .saw-table-scroll-area */
     -webkit-overflow-scrolling: touch;
     width: 100%;
-    background: var(--saw-table-row-bg);
+    background: transparent !important; /* OPRAVENO 2025-01-22: Transparent místo šedého backgroundu - odstraní šedý prázdný řádek */
+    margin-top: 0 !important; /* OPRAVENO 2025-01-22: Odstranit margin mezi tabs a table */
+    padding-top: 0 !important; /* OPRAVENO 2025-01-22: Odstranit padding mezi tabs a table */
+    margin-bottom: 0 !important; /* OPRAVENO 2025-01-22: Odstranit bottom margin */
+    padding-bottom: 0 !important; /* OPRAVENO 2025-01-22: Odstranit bottom padding */
 }
 
 .saw-table-responsive-wrapper::-webkit-scrollbar {
@@ -718,6 +721,12 @@
     width: 100%;
     background: var(--saw-table-row-bg);
     border: none;
+    margin-top: 0 !important; /* OPRAVENO 2025-01-22: Odstranit margin mezi tabs a table */
+    margin-bottom: 0 !important; /* OPRAVENO 2025-01-22: Odstranit bottom margin */
+    padding-top: 0 !important; /* OPRAVENO 2025-01-22: Odstranit top padding */
+    padding-bottom: 0 !important; /* OPRAVENO 2025-01-22: Odstranit bottom padding */
+    border-collapse: separate !important; /* OPRAVENO 2025-01-22: Důležité pro sticky positioning */
+    border-spacing: 0 !important; /* OPRAVENO 2025-01-22: Odstranit spacing mezi buňkami */
 }
 
 .saw-admin-table table {
@@ -734,6 +743,18 @@
 .saw-admin-table thead {
     background: var(--saw-table-header-bg);
     border-bottom: 1px solid var(--saw-border-color);
+    /* OPRAVENO 2025-01-22: thead NEMŮŽE být sticky - sticky funguje jen na th elementech */
+    margin: 0 !important; /* OPRAVENO 2025-01-22: Odstranit margin */
+    padding: 0 !important; /* OPRAVENO 2025-01-22: Odstranit padding */
+    margin-top: 0 !important; /* OPRAVENO 2025-01-22: Explicitně odstranit top margin */
+    margin-bottom: 0 !important; /* OPRAVENO 2025-01-22: Explicitně odstranit bottom margin */
+    padding-top: 0 !important; /* OPRAVENO 2025-01-22: Explicitně odstranit top padding */
+    padding-bottom: 0 !important; /* OPRAVENO 2025-01-22: Explicitně odstranit bottom padding */
+}
+
+.saw-admin-table thead tr {
+    margin: 0 !important; /* OPRAVENO 2025-01-22: Odstranit margin z tr */
+    padding: 0 !important; /* OPRAVENO 2025-01-22: Odstranit padding z tr */
 }
 
 .saw-admin-table th {
@@ -745,11 +766,13 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
     white-space: nowrap;
-    position: sticky !important;
-    top: 0 !important; /* OPRAVENO 2025-01-22: Tabs jsou PŘED scroll area, header je první sticky element uvnitř */
-    background: var(--saw-table-header-bg);
-    z-index: 10 !important; /* Nižší než tabs (15) - tabs jsou nad scroll area */
+    position: sticky !important; /* OPRAVENO 2025-01-22: Sticky je na th elementech */
+    top: 50px !important; /* OPRAVENO 2025-01-22: Přesně výška tabs (50px) */
+    background: var(--saw-table-header-bg) !important; /* OPRAVENO 2025-01-22: !important pro překrytí */
+    z-index: 11 !important; /* OPRAVENO 2025-01-22: Zvýšeno z 10 na 11, ale stále nižší než tabs (15) */
     border-bottom: 1px solid var(--saw-border-color);
+    margin: 0 !important; /* OPRAVENO 2025-01-22: Odstranit margin */
+    isolation: isolate; /* OPRAVENO 2025-01-22: Zajistit správný stacking context pro sticky */
 }
 
 .saw-admin-table th a {

@@ -11,12 +11,16 @@
 
 .saw-table-tabs-wrapper {
     background: var(--saw-bg-primary);
-    border-bottom: 1px solid var(--saw-border-color);
-    margin: 0; /* OPRAVENO 2025-01-22: Explicitně odstranit všechny marginy */
-    padding: 0; /* OPRAVENO 2025-01-22: Explicitně odstranit všechny paddingy */
+    /* OPRAVENO 2025-01-22: border-bottom odstraněn - border je na table headeru */
+    margin: 0 !important; /* OPRAVENO 2025-01-22: Explicitně odstranit všechny marginy */
+    padding: 0 !important; /* OPRAVENO 2025-01-22: Explicitně odstranit všechny paddingy */
     position: sticky;
     top: 0;
-    z-index: 15; /* Už je správně - vyšší než table header (10) */
+    z-index: 15; /* Už je správně - vyšší než table header (11) */
+    height: 50px; /* PŘIDÁNO 2025-01-22: Fixní výška pro sticky header positioning */
+    min-height: 50px;
+    overflow: hidden; /* PŘIDÁNO: Prevent height expansion */
+    margin-bottom: 0 !important; /* OPRAVENO 2025-01-22: Explicitně odstranit bottom margin */
 }
 
 .saw-table-tabs-container {
