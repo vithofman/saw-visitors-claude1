@@ -203,6 +203,269 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
     }
     
     /**
+     * Compute current_status for a visitor item
+     * 
+     * current_status is computed dynamically based on:
+     * - participation_status
+     * - today's daily log (checked_in_at, checked_out_at)
+     * 
+     * @since 7.1.0
+     * @param array $item Visitor item data
+     * @return string Computed current_status
+     */
+    protected function compute_current_status($item) {
+        global $wpdb;
+        $today = current_time('Y-m-d');
+        
+        // Get today's LATEST log (pro re-entry support)
+        $log = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}saw_visit_daily_logs 
+             WHERE visitor_id = %d AND log_date = %s
+             ORDER BY checked_in_at DESC
+             LIMIT 1",
+            $item['id'], $today
+        ), ARRAY_A);
+        
+        // Compute dynamic status
+        if ($item['participation_status'] === 'confirmed') {
+            if ($log && $log['checked_in_at'] && !$log['checked_out_at']) {
+                return 'present'; // Přítomen
+            } elseif ($log && $log['checked_out_at']) {
+                return 'checked_out'; // Odhlášen
+            } else {
+                return 'confirmed'; // Potvrzený (ale dnes ještě nepřišel)
+            }
+        } elseif ($item['participation_status'] === 'no_show') {
+            return 'no_show';
+        } else {
+            return 'planned';
+        }
+    }
+    
+    /**
+     * Override get_list_data() to handle current_status filtering in PHP
+     * 
+     * current_status is NOT a database column - it's computed dynamically.
+     * We must load all data, compute current_status, then filter in PHP.
+     * 
+     * @since 7.1.0
+     * @return array List data with computed current_status
+     */
+    protected function get_list_data() {
+        $search = isset($_GET['s']) ? sanitize_text_field(wp_unslash($_GET['s'])) : '';
+        $orderby = isset($_GET['orderby']) ? sanitize_text_field(wp_unslash($_GET['orderby'])) : 'vis.id';
+        $order = isset($_GET['order']) ? strtoupper(sanitize_text_field(wp_unslash($_GET['order']))) : 'DESC';
+        $page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
+        
+        // Check if infinite scroll is enabled and use its per_page
+        $infinite_scroll_enabled = !empty($this->config['infinite_scroll']['enabled']);
+        $per_page = $infinite_scroll_enabled 
+            ? ($this->config['infinite_scroll']['per_page'] ?? 50)
+            : ($this->config['list_config']['per_page'] ?? 20);
+        
+        // Build filters - but EXCLUDE current_status (it's not in DB)
+        $filters = array(
+            'search' => $search,
+            'orderby' => $orderby,
+            'order' => $order,
+            'page' => 1, // Load ALL data for PHP filtering
+            'per_page' => 9999, // Load ALL data for PHP filtering
+        );
+        
+        // Apply list_config filters (but exclude tab_param if tabs are enabled)
+        $tab_param = null;
+        if (!empty($this->config['tabs']['enabled'])) {
+            $tab_param = $this->config['tabs']['tab_param'] ?? 'tab';
+        }
+        
+        if (!empty($this->config['list_config']['filters'])) {
+            foreach ($this->config['list_config']['filters'] as $filter_key => $enabled) {
+                // Skip tab_param filter (current_status) - handled in PHP below
+                if ($filter_key === $tab_param) {
+                    continue;
+                }
+                
+                // Only apply if filter is enabled AND present in URL
+                if ($enabled && isset($_GET[$filter_key]) && $_GET[$filter_key] !== '') {
+                    $filters[$filter_key] = sanitize_text_field(wp_unslash($_GET[$filter_key]));
+                }
+            }
+        }
+        
+        // Load ALL data from model (without current_status filter)
+        $data = $this->model->get_all($filters);
+        $all_items = $data['items'] ?? array();
+        
+        // Compute current_status for each item
+        foreach ($all_items as &$item) {
+            $item['current_status'] = $this->compute_current_status($item);
+        }
+        unset($item);
+        
+        // Handle TAB filtering - filter by current_status in PHP
+        $current_tab = $this->config['tabs']['default_tab'] ?? 'all';
+        $url_value = null;
+        
+        if (!empty($this->config['tabs']['enabled'])) {
+            $tab_param = $this->config['tabs']['tab_param'] ?? 'tab';
+            $url_value = isset($_GET[$tab_param]) ? sanitize_text_field(wp_unslash($_GET[$tab_param])) : null;
+            
+            // If URL has no parameter, it's "all" tab
+            if ($url_value === null || $url_value === '') {
+                $current_tab = $this->config['tabs']['default_tab'] ?? 'all';
+            } else {
+                // URL contains filter_value, find matching tab_key
+                $tab_found = false;
+                foreach ($this->config['tabs']['tabs'] as $tab_key => $tab_config) {
+                    // Compare filter_value with URL value (both as strings for consistency)
+                    if ($tab_config['filter_value'] !== null && 
+                        (string)$tab_config['filter_value'] === (string)$url_value) {
+                        $current_tab = (string)$tab_key;
+                        $tab_found = true;
+                        break;
+                    }
+                }
+                
+                // If no tab found matching the URL value, default to "all"
+                if (!$tab_found) {
+                    $current_tab = $this->config['tabs']['default_tab'] ?? 'all';
+                }
+            }
+            
+            // Filter items by current_status in PHP (if not "all" tab)
+            if ($url_value !== null && $url_value !== '') {
+                $filtered_items = array();
+                foreach ($all_items as $item) {
+                    if ($item['current_status'] === $url_value) {
+                        $filtered_items[] = $item;
+                    }
+                }
+                $all_items = $filtered_items;
+            }
+        }
+        
+        // Apply pagination in PHP
+        $total_items = count($all_items);
+        $total_pages = ceil($total_items / $per_page);
+        $offset = ($page - 1) * $per_page;
+        $items = array_slice($all_items, $offset, $per_page);
+        
+        $result = array(
+            'items' => $items,
+            'total' => $total_items,
+            'page' => $page,
+            'total_pages' => $total_pages,
+            'search' => $search,
+            'orderby' => $orderby,
+            'order' => $order,
+        );
+        
+        // Add tab data if tabs are enabled
+        if (!empty($this->config['tabs']['enabled'])) {
+            // Ensure current_tab is always a valid string
+            if (isset($current_tab) && $current_tab !== null && $current_tab !== '') {
+                $result['current_tab'] = (string)$current_tab;
+            } else {
+                $result['current_tab'] = (string)($this->config['tabs']['default_tab'] ?? 'all');
+            }
+            
+            // Get tab counts - this returns array of tab_key => count
+            $result['tab_counts'] = $this->get_tab_counts();
+        }
+        
+        foreach ($_GET as $key => $value) {
+            if (!in_array($key, array('s', 'orderby', 'order', 'paged'))) {
+                $result[$key] = sanitize_text_field(wp_unslash($value));
+            }
+        }
+        
+        return $result;
+    }
+    
+    /**
+     * Override get_tab_counts() to handle current_status counting in PHP
+     * 
+     * current_status is NOT a database column - it's computed dynamically.
+     * We must load all data, compute current_status, then count in PHP.
+     * 
+     * @since 7.1.0
+     * @return array Tab key => count
+     */
+    protected function get_tab_counts() {
+        if (empty($this->config['tabs']['enabled'])) {
+            return array();
+        }
+        
+        $tab_param = $this->config['tabs']['tab_param'] ?? 'tab';
+        $tabs = $this->config['tabs']['tabs'] ?? array();
+        $counts = array();
+        
+        // Build filters - EXCLUDE current_status (it's not in DB)
+        $filters = array(
+            'page' => 1,
+            'per_page' => 9999, // Load ALL data for counting
+        );
+        
+        // Apply other existing filters from GET (search, etc.)
+        $search = isset($_GET['s']) ? sanitize_text_field(wp_unslash($_GET['s'])) : '';
+        if (!empty($search)) {
+            $filters['search'] = $search;
+        }
+        
+        // Apply list_config filters (but exclude the tab_param to avoid conflicts)
+        if (!empty($this->config['list_config']['filters'])) {
+            foreach ($this->config['list_config']['filters'] as $filter_key => $enabled) {
+                // Skip tab_param filter (current_status) - handled in PHP below
+                if ($filter_key === $tab_param) {
+                    continue;
+                }
+                
+                // Only apply if filter is enabled AND present in URL
+                if ($enabled && isset($_GET[$filter_key]) && $_GET[$filter_key] !== '') {
+                    $filters[$filter_key] = sanitize_text_field(wp_unslash($_GET[$filter_key]));
+                }
+            }
+        }
+        
+        // Load ALL data from model (without current_status filter)
+        $data = $this->model->get_all($filters);
+        $all_items = $data['items'] ?? array();
+        
+        // Compute current_status for each item
+        foreach ($all_items as &$item) {
+            $item['current_status'] = $this->compute_current_status($item);
+        }
+        unset($item);
+        
+        // Count items for each tab based on computed current_status
+        foreach ($tabs as $tab_key => $tab_config) {
+            if (empty($tab_config['count_query'])) {
+                $counts[$tab_key] = 0;
+                continue;
+            }
+            
+            $filter_value = $tab_config['filter_value'];
+            
+            // Count items matching this tab's filter_value
+            $count = 0;
+            foreach ($all_items as $item) {
+                // "all" tab - count all items
+                if ($filter_value === null || $filter_value === '') {
+                    $count++;
+                } 
+                // Other tabs - count items matching filter_value
+                elseif ($item['current_status'] === (string)$filter_value) {
+                    $count++;
+                }
+            }
+            
+            $counts[$tab_key] = $count;
+        }
+        
+        return $counts;
+    }
+    
+    /**
      * Get table columns configuration for infinite scroll
      * 
      * @since 7.0.0

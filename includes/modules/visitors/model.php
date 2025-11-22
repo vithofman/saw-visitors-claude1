@@ -53,7 +53,7 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
     
     /**
      * Get all visitors with proper scope filtering
-     * ✅ Uses Base Model's apply_data_scope()
+     * ✅ Refactored to use same logic as Visits model
      */
     public function get_all($filters = array()) {
         global $wpdb;
@@ -71,7 +71,95 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
             return $cached;
         }
         
-        // JOIN with visits for customer isolation
+        $page = isset($filters['page']) ? intval($filters['page']) : 1;
+        $per_page = isset($filters['per_page']) ? intval($filters['per_page']) : 20;
+        $offset = ($page - 1) * $per_page;
+        
+        // Build WHERE conditions like Visits model
+        $where = array("v.customer_id = %d");
+        $where_values = array($customer_id);
+        
+        // Branch isolation (if set)
+        $branch_id = SAW_Context::get_branch_id();
+        if ($branch_id) {
+            $where[] = "v.branch_id = %d";
+            $where_values[] = $branch_id;
+        }
+        
+        // NOTE: current_status is NOT a database column
+        // It's computed dynamically in PHP, so filtering must be done in Controller
+        // DO NOT filter by current_status in SQL - it will fail
+        
+        // Training status filter
+        if (!empty($filters['training_status'])) {
+            $training_status = $filters['training_status'];
+            switch ($training_status) {
+                case 'completed':
+                    $where[] = "vis.training_completed_at IS NOT NULL";
+                    break;
+                case 'in_progress':
+                    $where[] = "vis.training_started_at IS NOT NULL AND vis.training_completed_at IS NULL";
+                    break;
+                case 'skipped':
+                    $where[] = "vis.training_skipped = 1";
+                    break;
+                case 'not_started':
+                    $where[] = "vis.training_started_at IS NULL AND vis.training_completed_at IS NULL AND vis.training_skipped = 0";
+                    break;
+            }
+        }
+        
+        // Participation status filter
+        if (!empty($filters['participation_status'])) {
+            $where[] = "vis.participation_status = %s";
+            $where_values[] = $filters['participation_status'];
+        }
+        
+        // Search filter
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $search_conditions = array();
+            $search_params = array();
+            
+            // If search is numeric, try exact ID match
+            if (is_numeric($search)) {
+                $search_conditions[] = "vis.id = %d";
+                $search_params[] = intval($search);
+            }
+            
+            // Always search in text fields
+            $search_term = '%' . $wpdb->esc_like($search) . '%';
+            $search_conditions[] = "(vis.first_name LIKE %s OR vis.last_name LIKE %s OR vis.email LIKE %s)";
+            $search_params[] = $search_term;
+            $search_params[] = $search_term;
+            $search_params[] = $search_term;
+            
+            $where[] = "(" . implode(" OR ", $search_conditions) . ")";
+            $where_values = array_merge($where_values, $search_params);
+        }
+        
+        $where_sql = implode(' AND ', $where);
+        
+        // Count total
+        $count_sql = "SELECT COUNT(DISTINCT vis.id) 
+                      FROM {$this->table} vis
+                      INNER JOIN {$wpdb->prefix}saw_visits v ON vis.visit_id = v.id
+                      LEFT JOIN {$wpdb->prefix}saw_companies c ON v.company_id = c.id
+                      LEFT JOIN {$wpdb->prefix}saw_branches b ON v.branch_id = b.id
+                      WHERE {$where_sql}";
+        
+        $total = (int) $wpdb->get_var($wpdb->prepare($count_sql, ...$where_values));
+        
+        // Main query
+        $orderby = isset($filters['orderby']) ? $filters['orderby'] : 'vis.id';
+        $order = isset($filters['order']) && strtoupper($filters['order']) === 'ASC' ? 'ASC' : 'DESC';
+        
+        // Ensure orderby is safe
+        $allowed_orderby = array('vis.id', 'vis.first_name', 'vis.last_name', 'vis.created_at', 'vis.current_status');
+        if (!in_array($orderby, $allowed_orderby)) {
+            $orderby = 'vis.id';
+        }
+        
         $sql = "SELECT vis.*, 
                        v.customer_id,
                        v.company_id,
@@ -82,93 +170,18 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
                 INNER JOIN {$wpdb->prefix}saw_visits v ON vis.visit_id = v.id
                 LEFT JOIN {$wpdb->prefix}saw_companies c ON v.company_id = c.id
                 LEFT JOIN {$wpdb->prefix}saw_branches b ON v.branch_id = b.id
-                WHERE 1=1";
+                WHERE {$where_sql}
+                ORDER BY {$orderby} {$order}
+                LIMIT %d OFFSET %d";
         
-        $params = array();
+        $where_values[] = $per_page;
+        $where_values[] = $offset;
         
-        // Customer isolation
-        if ($customer_id) {
-            $sql .= " AND v.customer_id = %d";
-            $params[] = $customer_id;
-        }
-        
-        // ✅ Apply scope filtering (role-based access)
-        list($scope_where, $scope_params) = $this->apply_data_scope('v');
-        if (!empty($scope_where)) {
-            $sql .= $scope_where;
-            $params = array_merge($params, $scope_params);
-        }
-        
-        // Search filter
-        if (!empty($filters['search'])) {
-            $search_value = '%' . $wpdb->esc_like($filters['search']) . '%';
-            $sql .= " AND (vis.first_name LIKE %s OR vis.last_name LIKE %s OR vis.email LIKE %s)";
-            $params[] = $search_value;
-            $params[] = $search_value;
-            $params[] = $search_value;
-        }
-        
-        // Participation status filter
-        if (!empty($filters['participation_status'])) {
-            $sql .= " AND vis.participation_status = %s";
-            $params[] = $filters['participation_status'];
-        }
-        
-        // Training status filter - filter by computed training_status
-        if (!empty($filters['training_status'])) {
-            $training_status = $filters['training_status'];
-            
-            // Map training_status to database conditions
-            switch ($training_status) {
-                case 'completed':
-                    $sql .= " AND vis.training_completed_at IS NOT NULL";
-                    break;
-                case 'in_progress':
-                    $sql .= " AND vis.training_started_at IS NOT NULL AND vis.training_completed_at IS NULL";
-                    break;
-                case 'skipped':
-                    $sql .= " AND vis.training_skipped = 1";
-                    break;
-                case 'not_started':
-                    $sql .= " AND vis.training_started_at IS NULL AND vis.training_completed_at IS NULL AND vis.training_skipped = 0";
-                    break;
-            }
-        }
-        
-        // Current status filter - filter by current_status (for tabs)
-        if (!empty($filters['current_status'])) {
-            $sql .= " AND vis.current_status = %s";
-            $params[] = $filters['current_status'];
-        }
-        
-        // Count total
-        $count_sql = preg_replace('/^SELECT .+ FROM/', 'SELECT COUNT(DISTINCT vis.id) FROM', $sql);
-        $total = (int) $wpdb->get_var($wpdb->prepare($count_sql, $params));
-        
-        // Sorting
-        $orderby = $filters['orderby'] ?? 'vis.id';
-        $order = strtoupper($filters['order'] ?? 'DESC');
-        
-        if (!in_array($order, array('ASC', 'DESC'))) {
-            $order = 'DESC';
-        }
-        
-        $sql .= " ORDER BY {$orderby} {$order}";
-        
-        // Pagination
-        $page = isset($filters['page']) ? max(1, intval($filters['page'])) : 1;
-        $per_page = isset($filters['per_page']) ? intval($filters['per_page']) : 20;
-        $offset = ($page - 1) * $per_page;
-        
-        $sql .= " LIMIT %d OFFSET %d";
-        $params[] = $per_page;
-        $params[] = $offset;
-        
-        $items = $wpdb->get_results($wpdb->prepare($sql, $params), ARRAY_A);
+        $items = $wpdb->get_results($wpdb->prepare($sql, ...$where_values), ARRAY_A);
         
         $result = array(
             'items' => $items ?: array(),
-            'total' => $total,
+            'total' => intval($total),
             'page' => $page,
             'per_page' => $per_page,
             'total_pages' => $per_page > 0 ? ceil($total / $per_page) : 0,

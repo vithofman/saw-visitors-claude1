@@ -11,6 +11,48 @@
     'use strict';
 
     /**
+     * Scroll active tab into view
+     * Ensures active tab is visible after page load
+     */
+    function scrollActiveTabIntoView() {
+        const $tabs = $('.saw-table-tabs');
+        const $activeTab = $('.saw-table-tab.active');
+        
+        if (!$tabs.length || !$activeTab.length) {
+            return;
+        }
+        
+        const tabsElement = $tabs[0];
+        const activeTabElement = $activeTab[0];
+        
+        // Check if active tab is visible
+        const tabsRect = tabsElement.getBoundingClientRect();
+        const activeTabRect = activeTabElement.getBoundingClientRect();
+        
+        // Tab is visible if it's within tabs container bounds
+        const isVisible = (
+            activeTabRect.left >= tabsRect.left &&
+            activeTabRect.right <= tabsRect.right
+        );
+        
+        if (!isVisible) {
+            // Scroll active tab into view
+            activeTabElement.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest',
+                inline: 'center'
+            });
+            
+            // Also update arrow visibility after scroll
+            setTimeout(function() {
+                if (typeof window.updateArrowVisibility === 'function') {
+                    window.updateArrowVisibility();
+                }
+            }, 300);
+        }
+    }
+    
+    /**
      * Initialize tabs navigation
      */
     function initTabsNavigation() {
@@ -69,9 +111,12 @@
         
         /**
          * Update arrow visibility based on scroll position
+         * Exposed globally for use in scrollActiveTabIntoView
          */
-        function updateArrowVisibility() {
+        window.updateArrowVisibility = function() {
             const tabsElement = $tabs[0];
+            if (!tabsElement) return;
+            
             const scrollLeft = tabsElement.scrollLeft;
             const maxScroll = tabsElement.scrollWidth - tabsElement.clientWidth;
             
@@ -88,7 +133,10 @@
             } else {
                 $arrowRight.show().addClass('disabled');
             }
-        }
+        };
+        
+        // Local reference for internal use
+        const updateArrowVisibility = window.updateArrowVisibility;
         
         /**
          * Scroll tabs horizontally
@@ -137,12 +185,23 @@
             checkScrollability();
         }, 100);
     }
+    
 
     // Initialize on DOM ready
     $(document).ready(function() {
         if ($('.saw-table-tabs').length) {
             initTabsNavigation();
             initTabsArrowNavigation();
+            
+            // Scroll active tab into view after page load
+            setTimeout(function() {
+                scrollActiveTabIntoView();
+                // Update arrow visibility after scrolling
+                if (typeof window.updateArrowVisibility === 'function') {
+                    window.updateArrowVisibility();
+                }
+            }, 200);
+            
             console.log('✅ Tabs navigation initialized with arrow controls');
         }
     });
