@@ -1,7 +1,7 @@
 <?php
 /**
  * Companies Merge Modal Template
- * @version 1.1.0 - FIXED: Odstranění onclick z overlay + správná ajaxurl
+ * @version 2.0.0 - REFACTORED: JavaScript moved to assets
  */
 
 if (!defined('ABSPATH')) {
@@ -13,7 +13,9 @@ if (!defined('ABSPATH')) {
 <!-- ✅ OVERLAY BEZ onclick -->
 <div class="saw-modal-overlay" id="sawMergeModalOverlay">
     <!-- ✅ MODAL s onclick pro zastavení propagace -->
-    <div class="saw-merge-modal" onclick="event.stopPropagation()">
+    <div class="saw-merge-modal" 
+         onclick="event.stopPropagation()"
+         data-master-id="<?php echo intval($master['id']); ?>">
         
         <div class="saw-modal-header">
             <button class="saw-modal-close" onclick="closeMergeModal()" type="button">×</button>
@@ -102,104 +104,5 @@ if (!defined('ABSPATH')) {
     </div>
 </div>
 
-<script>
-function closeMergeModal() {
-    const overlay = document.getElementById('sawMergeModalOverlay');
-    if (overlay) {
-        overlay.style.animation = 'fadeOut 0.3s ease';
-        setTimeout(() => overlay.remove(), 300);
-    }
-}
-
-// ✅ KLIK NA OVERLAY ZAVŘE MODAL
-document.getElementById('sawMergeModalOverlay').addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeMergeModal();
-    }
-});
-
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closeMergeModal();
-    }
-});
-
-function updateMergeButton() {
-    const selected = document.querySelectorAll('input[name="duplicate_ids[]"]:checked');
-    const button = document.getElementById('sawMergeButton');
-    
-    if (button) {
-        button.disabled = selected.length === 0;
-        
-        if (selected.length > 0) {
-            button.textContent = `Sloučit ${selected.length} ${selected.length === 1 ? 'firmu' : selected.length < 5 ? 'firmy' : 'firem'}`;
-        } else {
-            button.textContent = 'Sloučit vybrané';
-        }
-    }
-}
-
-function confirmMerge() {
-    const selected = document.querySelectorAll('input[name="duplicate_ids[]"]:checked');
-    
-    if (selected.length === 0) {
-        alert('Vyberte alespoň jednu firmu ke sloučení');
-        return;
-    }
-    
-    const count = selected.length;
-    const totalVisits = Array.from(selected).reduce((sum, checkbox) => {
-        const visitCount = checkbox.closest('.saw-duplicate-item')
-            .querySelector('.saw-visit-count').textContent.match(/\d+/)[0];
-        return sum + parseInt(visitCount);
-    }, 0);
-    
-    const message = `Opravdu chcete sloučit ${count} ${count === 1 ? 'firmu' : count < 5 ? 'firmy' : 'firem'}?\n\n` +
-                    `Bude přesunuto celkem ${totalVisits} návštěv.\n\n` +
-                    `TATO AKCE JE NEVRATNÁ!`;
-    
-    if (!confirm(message)) {
-        return;
-    }
-    
-    const button = document.getElementById('sawMergeButton');
-    button.disabled = true;
-    button.textContent = 'Slučuji...';
-    
-    const duplicateIds = Array.from(selected).map(cb => cb.value);
-    
-    // ✅ SPRÁVNÁ CESTA
-    fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-            action: 'saw_merge_companies',
-            nonce: '<?php echo wp_create_nonce('saw_ajax_nonce'); ?>',
-            master_id: <?php echo intval($master['id']); ?>,
-            duplicate_ids: JSON.stringify(duplicateIds)
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('✓ ' + data.data.message);
-            closeMergeModal();
-            setTimeout(() => window.location.reload(), 500);
-        } else {
-            alert('❌ Chyba: ' + (data.data.message || 'Neznámá chyba'));
-            button.disabled = false;
-            button.textContent = `Sloučit ${count} ${count === 1 ? 'firmu' : count < 5 ? 'firmy' : 'firem'}`;
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('❌ Chyba při sloučení');
-        button.disabled = false;
-        button.textContent = `Sloučit ${count} ${count === 1 ? 'firmu' : count < 5 ? 'firmy' : 'firem'}`;
-    });
-}
-
-// fadeOut animation is now in CSS file
-</script>
+<!-- JavaScript moved to assets/js/modules/companies/companies-merge.js -->
+<!-- Asset is enqueued automatically by SAW_Asset_Loader -->

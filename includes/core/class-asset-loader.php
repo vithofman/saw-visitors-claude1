@@ -590,8 +590,9 @@ class SAW_Asset_Loader {
             );
         }
         
-        // Enqueue module-specific merge CSS (e.g., companies-merge)
+        // Enqueue module-specific assets for companies (CSS + JS)
         if ($slug === 'companies') {
+            // Merge CSS
             $merge_css = 'assets/css/modules/companies/companies-merge.css';
             
             if (file_exists(SAW_VISITORS_PLUGIN_DIR . $merge_css)) {
@@ -600,6 +601,32 @@ class SAW_Asset_Loader {
                     SAW_VISITORS_PLUGIN_URL . $merge_css,
                     ['saw-module-companies', 'saw-admin-table-detail', 'saw-feedback'],
                     filemtime(SAW_VISITORS_PLUGIN_DIR . $merge_css)
+                );
+            }
+            
+            // ✅ NEW: Detail modal JavaScript
+            $detail_js = 'assets/js/modules/companies/companies-detail.js';
+            
+            if (file_exists(SAW_VISITORS_PLUGIN_DIR . $detail_js)) {
+                wp_enqueue_script(
+                    'saw-companies-detail',
+                    SAW_VISITORS_PLUGIN_URL . $detail_js,
+                    ['jquery', 'saw-app', 'saw-module-companies'],
+                    filemtime(SAW_VISITORS_PLUGIN_DIR . $detail_js),
+                    true
+                );
+            }
+            
+            // ✅ NEW: Merge modal JavaScript
+            $merge_js = 'assets/js/modules/companies/companies-merge.js';
+            
+            if (file_exists(SAW_VISITORS_PLUGIN_DIR . $merge_js)) {
+                wp_enqueue_script(
+                    'saw-companies-merge',
+                    SAW_VISITORS_PLUGIN_URL . $merge_js,
+                    ['jquery', 'saw-app', 'saw-module-companies'],
+                    filemtime(SAW_VISITORS_PLUGIN_DIR . $merge_js),
+                    true
                 );
             }
         }
