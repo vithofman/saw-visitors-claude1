@@ -16,7 +16,7 @@
     margin-top: 10px;
     position: sticky;
     top: 0;
-    z-index: 15;
+    z-index: 25; /* OPRAVENO 2025-01-22: Zvýšeno z 15 na 25, aby byl vždy nad table headerem (20) */
     margin-bottom: 0;
 }
 

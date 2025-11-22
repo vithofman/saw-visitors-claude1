@@ -226,68 +226,95 @@ abstract class SAW_Base_Model
      * @param array $data Record data
      * @return int|WP_Error Insert ID or error
      */
+    /**
+     * Create new record
+     *
+     * ✅ ENHANCED: Auto-invalidates cache after successful insert
+     *
+     * @param array $data Record data
+     * @return int|WP_Error Inserted ID or error
+     */
     public function create($data) {
-    global $wpdb;
-    
-    $validation = $this->validate($data);
-    if (is_wp_error($validation)) {
-        return $validation;
+        global $wpdb;
+        
+        // Validate data
+        $validation = $this->validate($data);
+        if (is_wp_error($validation)) {
+            return $validation;
+        }
+        
+        // Prepare timestamps
+        if ($this->table_has_column('created_at')) {
+            $data['created_at'] = current_time('mysql');
+        }
+        if ($this->table_has_column('updated_at')) {
+            $data['updated_at'] = current_time('mysql');
+        }
+        
+        // Insert
+        $result = $wpdb->insert($this->table, $data);
+        
+        if ($result === false) {
+            return new WP_Error(
+                'db_error', 
+                'Failed to create record', 
+                array('db_error' => $wpdb->last_error)
+            );
+        }
+        
+        $inserted_id = $wpdb->insert_id;
+        
+        // ✅ Auto-invalidate cache after successful insert
+        $this->invalidate_cache();
+        
+        return $inserted_id;
     }
-    
-    $data['created_at'] = current_time('mysql');
-    $data['updated_at'] = current_time('mysql');
-    
-    $result = $wpdb->insert($this->table, $data);
-    
-    if ($result === false) {
-        return new WP_Error('db_error', __('Database insert failed', 'saw-visitors') . ': ' . $wpdb->last_error);
-    }
-    
-    $id = $wpdb->insert_id;
-    
-    // 🔥 CRITICAL FIX: Force commit
-    $wpdb->query('COMMIT');
-    
-    // Invalidate list caches
-    $this->invalidate_cache();
-    
-    return $id;
-}
     
     /**
      * Update existing record
      *
-     * ✅ IMPROVED: Invalidates both item and list cache
+     * ✅ ENHANCED: Auto-invalidates cache after successful update
      *
-     * @since 1.0.0
-     * @since 9.0.0 Improved cache invalidation
      * @param int   $id   Record ID
      * @param array $data Updated data
-     * @return bool|WP_Error True on success, error otherwise
+     * @return bool|WP_Error True on success or error
      */
     public function update($id, $data) {
         global $wpdb;
         
+        $id = intval($id);
+        
+        if (!$id) {
+            return new WP_Error('invalid_id', 'Invalid record ID');
+        }
+        
+        // Validate data
         $validation = $this->validate($data, $id);
         if (is_wp_error($validation)) {
             return $validation;
         }
         
-        $data['updated_at'] = current_time('mysql');
+        // Update timestamp
+        if ($this->table_has_column('updated_at')) {
+            $data['updated_at'] = current_time('mysql');
+        }
         
+        // Update
         $result = $wpdb->update(
             $this->table,
             $data,
-            ['id' => $id],
-            null,
-            ['%d']
+            array('id' => $id)
         );
         
         if ($result === false) {
-            return new WP_Error('db_error', __('Database update failed', 'saw-visitors') . ': ' . $wpdb->last_error);
+            return new WP_Error(
+                'db_error', 
+                'Failed to update record', 
+                array('db_error' => $wpdb->last_error)
+            );
         }
         
-        // Invalidate all caches
+        // ✅ Auto-invalidate cache after successful update
         $this->invalidate_cache();
         
         return true;
@@ -296,23 +323,35 @@ abstract class SAW_Base_Model
     /**
      * Delete record
      *
-     * @since 1.0.0
+     * ✅ ENHANCED: Auto-invalidates cache after successful delete
+     *
      * @param int $id Record ID
-     * @return bool|WP_Error True on success, error otherwise
+     * @return bool|WP_Error True on success or error
      */
     public function delete($id) {
         global $wpdb;
         
+        $id = intval($id);
+        
+        if (!$id) {
+            return new WP_Error('invalid_id', 'Invalid record ID');
+        }
+        
+        // Delete
         $result = $wpdb->delete(
             $this->table,
-            ['id' => $id],
-            ['%d']
+            array('id' => $id)
         );
         
         if ($result === false) {
-            return new WP_Error('db_error', __('Database delete failed', 'saw-visitors'));
+            return new WP_Error(
+                'db_error', 
+                'Failed to delete record', 
+                array('db_error' => $wpdb->last_error)
+            );
         }
         
+        // ✅ Auto-invalidate cache after successful delete
         $this->invalidate_cache();
         
         return true;

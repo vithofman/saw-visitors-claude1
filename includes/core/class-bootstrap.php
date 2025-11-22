@@ -98,12 +98,16 @@ class SAW_Bootstrap {
             // ✅ Cache Manager (PŘED Base Model!)
             'includes/core/class-saw-cache.php',
             
+            // CRITICAL: middleware.php must load BEFORE base classes
+            // because base classes use saw_verify_ajax_unified() which depends on saw_verify_ajax_nonce()
+            'includes/core/middleware.php',
+            
             // Service Container and Registry
             'includes/core/class-service-container.php',
             'includes/core/class-ajax-registry.php',
             'includes/core/class-hook-registry.php',
             
-            // Base classes (AFTER Cache - používají SAW_Cache)
+            // Base classes (AFTER Cache and Middleware - používají SAW_Cache a middleware functions)
             'includes/base/trait-ajax-handlers.php',
             'includes/base/class-base-model.php',
             'includes/base/class-base-controller.php',
@@ -113,6 +117,10 @@ class SAW_Bootstrap {
             'includes/core/class-asset-loader.php',
             'includes/core/class-saw-router.php',
             'includes/core/class-saw-component-manager.php',
+            
+            // CRITICAL: helpers.php must load AFTER middleware.php
+            // because it depends on saw_verify_ajax_nonce() from middleware.php
+            'includes/core/helpers.php',
         ];
         
         foreach ($files as $file) {
@@ -135,7 +143,6 @@ class SAW_Bootstrap {
      */
     private static function load_optional_files() {
         $optional = [
-            'includes/core/helpers.php',
             'includes/core/class-saw-session-manager.php',
             'includes/core/class-saw-context.php',
             'includes/core/class-saw-session.php',

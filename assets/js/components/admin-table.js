@@ -625,11 +625,12 @@
         let isLoading = false;
         let currentPage = 1;
         let hasMore = true;
+        let isRestoring = false; // OPRAVENO 2025-01-22: Flag pro scroll restoration protection
         
         // NOVÁ logika pro initial load
         const initialLoad = config.infinite_scroll.initial_load || 100;
         const perPage = config.infinite_scroll.per_page || 50;
-        const threshold = config.infinite_scroll.threshold || 0.7; // 70% (changed from px to %)
+        const threshold = config.infinite_scroll.threshold || 0.6; // OPRAVENO 2025-01-22: Sníženo z 70% na 60% pro dřívější loading
         const entity = config.entity;
         
         // Cache loaded pages to prevent re-loading when scrolling back up
@@ -894,23 +895,31 @@
         let lastScrollTime = Date.now();
         
         function handleScroll() {
+            // OPRAVENO 2025-01-22: Skip if restoring scroll position (prevents race condition)
+            if (isRestoring) {
+                if (DEBUG) {
+                    console.log('⏸️ Scroll handling paused - restoration in progress');
+                }
+                return;
+            }
+            
             const scrollTop = scrollArea.scrollTop;
             const scrollHeight = scrollArea.scrollHeight;
             const clientHeight = scrollArea.clientHeight;
             const now = Date.now();
             
-            // Calculate scroll velocity
+            // Calculate scroll velocity (kept for debug logging only)
             const deltaTime = now - lastScrollTime;
             const deltaScroll = scrollTop - lastScrollTop;
             scrollVelocity = deltaTime > 0 ? deltaScroll / deltaTime : 0;
             
-            // Only load when scrolling down with significant velocity
-            const isScrollingDown = deltaScroll > 5 && scrollVelocity > 0.1;
+            // OPRAVENO 2025-01-22: Check scroll direction (velocity threshold removed for consistent loading)
+            const isScrollingDown = deltaScroll > 5;
             
             lastScrollTop = scrollTop;
             lastScrollTime = now;
             
-            // Don't load when scrolling up OR when scroll is too slow (user might be browsing)
+            // Don't load when scrolling up
             if (!isScrollingDown) {
                 return;
             }
@@ -919,20 +928,30 @@
                 return;
             }
             
-            // Check if user has scrolled to threshold percentage
+            // Check if user has scrolled to threshold percentage OR is close to bottom
             const scrollPercent = (scrollTop + clientHeight) / scrollHeight;
+            const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
             
-            if (DEBUG && scrollVelocity > 0.1) {
+            if (DEBUG) {
                 console.log('📊 Scroll:', {
                     scrollTop: Math.round(scrollTop),
                     scrollPercent: Math.round(scrollPercent * 100) + '%',
+                    distanceFromBottom: Math.round(distanceFromBottom) + 'px',
                     velocity: scrollVelocity.toFixed(2),
                     direction: isScrollingDown ? 'DOWN ⬇️' : 'UP ⬆️'
                 });
             }
             
-            if (scrollPercent >= threshold) {
-                console.log('📊 Scroll threshold reached:', Math.round(scrollPercent * 100) + '%');
+            // OPRAVENO 2025-01-22: Dual-trigger system:
+            // - scrollPercent >= 60%: Works for large tables (many rows)
+            // - distanceFromBottom <= 200px: Works for small tables (few rows)
+            // Using OR (||) ensures at least one trigger always works
+            if (scrollPercent >= threshold || distanceFromBottom <= 200) {
+                console.log('📊 Scroll threshold reached:', {
+                    percent: Math.round(scrollPercent * 100) + '%',
+                    distance: Math.round(distanceFromBottom) + 'px',
+                    triggeredBy: scrollPercent >= threshold ? 'threshold' : 'distance'
+                });
                 loadNextPage();
             }
         }
@@ -942,7 +961,7 @@
             if (scrollTimeout) {
                 clearTimeout(scrollTimeout);
             }
-            scrollTimeout = setTimeout(handleScroll, 100);
+            scrollTimeout = setTimeout(handleScroll, 50); // OPRAVENO 2025-01-22: Sníženo z 100ms na 50ms pro rychlejší response
         }, { passive: true });
         
         // Save scroll position on page unload
@@ -968,10 +987,23 @@
             }
             currentPage = page;
             
+            // OPRAVENO 2025-01-22: Set restoration flag to prevent loading during scroll
+            isRestoring = true;
+            
             // Restore scroll position after a short delay
             setTimeout(() => {
                 scrollArea.scrollTop = scrollPos;
                 console.log('✅ Scroll position restored');
+                
+                // OPRAVENO 2025-01-22: Clear restoration flag after scroll settles
+                // Note: 300ms timeout is approximate - may fail on very slow devices
+                // TODO v3.0: Consider implementing debounce pattern for better reliability
+                setTimeout(() => {
+                    isRestoring = false;
+                    if (DEBUG) {
+                        console.log('✅ Restoration complete, infinite scroll re-enabled');
+                    }
+                }, 300);
             }, 100);
             
             // Clear saved position
