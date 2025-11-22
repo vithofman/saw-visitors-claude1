@@ -602,8 +602,17 @@
     function initInfiniteScroll() {
         const config = window.sawInfiniteScrollConfig;
         
+        // DEBUG MODE
+        const DEBUG = true;
+        
         if (!config || !config.infinite_scroll || !config.infinite_scroll.enabled) {
             return;
+        }
+        
+        if (DEBUG) {
+            console.group('🐛 Infinite Scroll Initialization');
+            console.log('Entity:', config.entity);
+            console.log('Config:', config);
         }
         
         const scrollArea = document.querySelector('.saw-table-scroll-area');
@@ -649,6 +658,13 @@
         // Count existing rows to determine starting page
         const existingRows = tbody.querySelectorAll('tr.saw-table-row').length;
         
+        if (DEBUG) {
+            console.log('Initial rows:', existingRows);
+            console.log('Initial load:', initialLoad);
+            console.log('Per page:', perPage);
+            console.log('Threshold:', threshold * 100 + '%');
+        }
+        
         if (existingRows >= initialLoad) {
             // Already have initial load, use per_page for next loads
             currentPage = Math.ceil(existingRows / perPage);
@@ -662,6 +678,11 @@
             if (existingRows > 0) {
                 loadedPages.add(1);
             }
+        }
+        
+        if (DEBUG) {
+            console.log('Loaded pages:', Array.from(loadedPages));
+            console.groupEnd();
         }
         
         // Track loaded row IDs to prevent duplicates
@@ -682,16 +703,36 @@
             
             const nextPage = currentPage + 1;
             
-            // CRITICAL: Check cache BEFORE incrementing currentPage
-            // This prevents re-loading when scrolling back up
+            // CRITICAL: Check cache BEFORE any state changes
             if (loadedPages.has(nextPage)) {
-                console.log('✅ Page', nextPage, 'already loaded, skipping');
+                console.log('✅ Page', nextPage, 'already cached, skipping');
                 return;
             }
             
-            console.log('📥 Loading page', nextPage);
+            // Check if rows from this page are already in DOM
+            const currentRowCount = tbody.querySelectorAll('tr.saw-table-row[data-id]').length;
+            const expectedRowsForNextPage = nextPage * perPage;
             
-            // NOW it's safe to increment
+            if (currentRowCount >= expectedRowsForNextPage - 10) { // -10 for tolerance
+                console.log('✅ Rows already in DOM, marking page as loaded');
+                loadedPages.add(nextPage);
+                currentPage = nextPage;
+                return;
+            }
+            
+            if (DEBUG) {
+                console.group('📥 Loading Page ' + nextPage);
+                console.log('Current page:', currentPage);
+                console.log('Loaded pages:', Array.from(loadedPages));
+                console.log('Current rows:', currentRowCount);
+                console.log('Expected rows:', expectedRowsForNextPage);
+                console.log('Has more:', hasMore);
+                console.log('Is loading:', isLoading);
+            }
+            
+            console.log('📥 Loading page', nextPage, '- Cache miss');
+            
+            // NOW increment and load
             isLoading = true;
             currentPage = nextPage;
             
@@ -741,10 +782,19 @@
                 }
             });
             
-            // NOVÉ: Add current tab filter
+            // NOVÉ: Add current tab filter using filter_value from data attribute
             if (config.tabs && config.current_tab) {
                 const tabParam = config.tabs.tab_param || 'tab';
-                requestData.append(tabParam, config.current_tab);
+                
+                // Get filter_value from active tab
+                const activeTab = document.querySelector('.saw-table-tab.active');
+                if (activeTab) {
+                    const filterValue = activeTab.getAttribute('data-filter-value');
+                    if (filterValue && filterValue !== '' && filterValue !== 'null') {
+                        requestData.append(tabParam, filterValue);
+                        console.log('📌 Adding tab filter:', tabParam, '=', filterValue);
+                    }
+                }
             }
             
             // Make AJAX request
@@ -814,6 +864,10 @@
                 }
                 
                 isLoading = false;
+                
+                if (DEBUG) {
+                    console.groupEnd();
+                }
             })
             .catch(error => {
                 console.error('AJAX error loading items:', error);
@@ -822,6 +876,10 @@
                     loadingEl.remove();
                 }
                 isLoading = false;
+                
+                if (DEBUG) {
+                    console.groupEnd();
+                }
             });
         }
         
@@ -832,17 +890,27 @@
          */
         let lastScrollTop = scrollArea.scrollTop;
         let scrollTimeout;
+        let scrollVelocity = 0;
+        let lastScrollTime = Date.now();
         
         function handleScroll() {
             const scrollTop = scrollArea.scrollTop;
             const scrollHeight = scrollArea.scrollHeight;
             const clientHeight = scrollArea.clientHeight;
+            const now = Date.now();
             
-            // Only load when scrolling down (with small threshold to avoid false positives)
-            const isScrollingDown = scrollTop > lastScrollTop + 5;
+            // Calculate scroll velocity
+            const deltaTime = now - lastScrollTime;
+            const deltaScroll = scrollTop - lastScrollTop;
+            scrollVelocity = deltaTime > 0 ? deltaScroll / deltaTime : 0;
+            
+            // Only load when scrolling down with significant velocity
+            const isScrollingDown = deltaScroll > 5 && scrollVelocity > 0.1;
+            
             lastScrollTop = scrollTop;
+            lastScrollTime = now;
             
-            // Don't load when scrolling up - cached rows should already be in DOM
+            // Don't load when scrolling up OR when scroll is too slow (user might be browsing)
             if (!isScrollingDown) {
                 return;
             }
@@ -852,10 +920,19 @@
             }
             
             // Check if user has scrolled to threshold percentage
-            // threshold is now a percentage (0.7 = 70%) instead of pixels
             const scrollPercent = (scrollTop + clientHeight) / scrollHeight;
             
+            if (DEBUG && scrollVelocity > 0.1) {
+                console.log('📊 Scroll:', {
+                    scrollTop: Math.round(scrollTop),
+                    scrollPercent: Math.round(scrollPercent * 100) + '%',
+                    velocity: scrollVelocity.toFixed(2),
+                    direction: isScrollingDown ? 'DOWN ⬇️' : 'UP ⬆️'
+                });
+            }
+            
             if (scrollPercent >= threshold) {
+                console.log('📊 Scroll threshold reached:', Math.round(scrollPercent * 100) + '%');
                 loadNextPage();
             }
         }
@@ -868,7 +945,41 @@
             scrollTimeout = setTimeout(handleScroll, 100);
         }, { passive: true });
         
-        console.log('✅ Infinite scroll initialized for', entity);
+        // Save scroll position on page unload
+        window.addEventListener('beforeunload', function() {
+            if (scrollArea && scrollArea.scrollTop > 0) {
+                sessionStorage.setItem(`saw-scroll-${entity}`, scrollArea.scrollTop.toString());
+                sessionStorage.setItem(`saw-page-${entity}`, currentPage.toString());
+            }
+        });
+        
+        // Restore scroll position on page load
+        const savedScroll = sessionStorage.getItem(`saw-scroll-${entity}`);
+        const savedPage = sessionStorage.getItem(`saw-page-${entity}`);
+        if (savedScroll && savedPage) {
+            const scrollPos = parseInt(savedScroll, 10);
+            const page = parseInt(savedPage, 10);
+            
+            console.log('📍 Restoring scroll position:', scrollPos, 'page:', page);
+            
+            // Mark pages as loaded up to saved page
+            for (let i = 1; i <= page; i++) {
+                loadedPages.add(i);
+            }
+            currentPage = page;
+            
+            // Restore scroll position after a short delay
+            setTimeout(() => {
+                scrollArea.scrollTop = scrollPos;
+                console.log('✅ Scroll position restored');
+            }, 100);
+            
+            // Clear saved position
+            sessionStorage.removeItem(`saw-scroll-${entity}`);
+            sessionStorage.removeItem(`saw-page-${entity}`);
+        }
+        
+        console.log('✅ Infinite scroll initialized for', entity, '- Enhanced cache mode');
     }
     
     /**

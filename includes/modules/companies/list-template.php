@@ -149,9 +149,13 @@ $table_config['infinite_scroll'] = array(
 );
 
 // NOVÉ: Pass tab data from get_list_data() result
+// CRITICAL: Ensure current_tab is always a valid string, never null
 if (!empty($table_config['tabs']['enabled'])) {
-    $table_config['current_tab'] = $current_tab ?? ($table_config['tabs']['default_tab'] ?? 'all');
-    $table_config['tab_counts'] = $tab_counts ?? array();
+    // Use isset() and !== null/'' to handle all cases, including '0' values
+    $table_config['current_tab'] = (isset($current_tab) && $current_tab !== null && $current_tab !== '') 
+        ? (string)$current_tab 
+        : ($table_config['tabs']['default_tab'] ?? 'all');
+    $table_config['tab_counts'] = (isset($tab_counts) && is_array($tab_counts)) ? $tab_counts : array();
 }
 
 // Ensure Admin Table class is loaded

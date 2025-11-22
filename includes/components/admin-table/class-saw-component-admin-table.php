@@ -340,6 +340,15 @@ class SAW_Component_Admin_Table {
         $config['base_url'] = $this->get_base_url();
         $config['current_params'] = $this->get_current_params();
         
+        // CRITICAL: Ensure current_tab and tab_counts are always set
+        // Fallback to defaults if not present
+        if (!isset($config['current_tab']) || $config['current_tab'] === null || $config['current_tab'] === '') {
+            $config['current_tab'] = $config['tabs']['default_tab'] ?? 'all';
+        }
+        if (!isset($config['tab_counts']) || !is_array($config['tab_counts'])) {
+            $config['tab_counts'] = array();
+        }
+        
         $entity = $this->entity;
         
         require __DIR__ . '/tabs-navigation.php';
@@ -375,6 +384,15 @@ class SAW_Component_Admin_Table {
         $config['filters_enabled'] = $filters_enabled;
         $config['search_html'] = $search_html;
         $config['filters_html'] = $filters_html;
+        
+        // CRITICAL: Ensure current_tab and tab_counts are always set
+        // Fallback to defaults if not present
+        if (!isset($config['current_tab']) || $config['current_tab'] === null || $config['current_tab'] === '') {
+            $config['current_tab'] = $config['tabs']['default_tab'] ?? 'all';
+        }
+        if (!isset($config['tab_counts']) || !is_array($config['tab_counts'])) {
+            $config['tab_counts'] = array();
+        }
         
         $entity = $this->entity;
         
@@ -590,11 +608,13 @@ class SAW_Component_Admin_Table {
             }
         }
         
-        // Get tab param if tabs are enabled - use sanitize_key to match get_list_data()
+        // Get tab param if tabs are enabled
+        // URL now contains filter_value (e.g., 0, 1, 'present'), not tab_key
         if (!empty($this->config['tabs']['enabled'])) {
             $tab_param = $this->config['tabs']['tab_param'] ?? 'tab';
             if (isset($_GET[$tab_param]) && $_GET[$tab_param] !== '') {
-                $params[$tab_param] = sanitize_key($_GET[$tab_param]);
+                // Use sanitize_text_field to preserve numeric values (0, 1) and strings
+                $params[$tab_param] = sanitize_text_field(wp_unslash($_GET[$tab_param]));
             }
         }
         

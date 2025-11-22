@@ -107,8 +107,21 @@ abstract class SAW_Base_Model
             }
         }
         
+        // Determine tab_param to skip from list_config filters
+        // This prevents double filtering when tabs are enabled
+        $tab_param_to_skip = null;
+        if (!empty($this->config['tabs']['enabled'])) {
+            $tab_param_to_skip = $this->config['tabs']['tab_param'] ?? 'tab';
+        }
+        
         // Apply filters from list_config
+        // CRITICAL: Skip tab_param if tabs are enabled (it's handled separately below)
         foreach ($this->config['list_config']['filters'] ?? [] as $filter_key => $enabled) {
+            // Skip tab_param filter as it's handled by tabs system
+            if ($filter_key === $tab_param_to_skip) {
+                continue;
+            }
+            
             if ($enabled && isset($filters[$filter_key]) && $filters[$filter_key] !== '') {
                 if ($this->is_valid_column($filter_key)) {
                     $sql .= " AND `{$filter_key}` = %s";
@@ -118,6 +131,7 @@ abstract class SAW_Base_Model
         }
         
         // Apply TAB filter (if tabs are enabled)
+        // This is separate from list_config filters to ensure proper handling
         if (!empty($this->config['tabs']['enabled'])) {
             $tab_param = $this->config['tabs']['tab_param'] ?? 'tab';
             
