@@ -141,7 +141,7 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
     }
     
     public function ajax_inline_create() {
-        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        saw_verify_ajax_unified();
         
         if (!$this->can('create')) {
             wp_send_json_error(array('message' => 'Nemáte oprávnění vytvářet firmy'));
@@ -190,7 +190,7 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
      * @return void Outputs HTML
      */
     public function ajax_show_merge_modal() {
-        check_ajax_referer('saw_admin_nonce', 'nonce');
+        saw_verify_ajax_unified();
         
         if (!$this->can('edit')) {
             echo '<div class="saw-error-state">❌ Nemáte oprávnění</div>';
@@ -296,7 +296,7 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
         // ✅ FIX: Start buffering immediately to catch any unexpected output
         ob_start();
         
-        check_ajax_referer('saw_admin_nonce', 'nonce');
+        saw_verify_ajax_unified();
         
         if (!$this->can('delete')) {
             wp_send_json_error(array(
@@ -377,7 +377,7 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
     }
     
     public function ajax_get_duplicate_stats() {
-        check_ajax_referer('saw_admin_nonce', 'nonce');
+        saw_verify_ajax_unified();
         
         if (!$this->can('view')) {
             wp_send_json_error(array('message' => 'Nemáte oprávnění'));

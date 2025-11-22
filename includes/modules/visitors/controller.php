@@ -550,7 +550,7 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
     // ============================================
     
     public function ajax_checkin() {
-        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        saw_verify_ajax_unified();
         
         if (!current_user_can('edit_posts')) {
             wp_send_json_error(array('message' => 'Nemáte oprávnění'));
@@ -579,7 +579,7 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
     }
     
     public function ajax_checkout() {
-        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        saw_verify_ajax_unified();
         
         if (!current_user_can('edit_posts')) {
             wp_send_json_error(array('message' => 'Nemáte oprávnění'));
@@ -626,7 +626,7 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
     }
     
     public function ajax_add_adhoc_visitor() {
-        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        saw_verify_ajax_unified();
         
         if (!current_user_can('edit_posts')) {
             wp_send_json_error(array('message' => 'Nemáte oprávnění'));
@@ -679,7 +679,7 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
             error_log('[Visitors] ajax_get_adjacent_id: Starting, POST data: ' . print_r($_POST, true));
             
             // Validate nonce
-            check_ajax_referer('saw_ajax_nonce', 'nonce');
+            saw_verify_ajax_unified();
             
             // Validate controller state
             if (!isset($this->model) || !$this->model) {

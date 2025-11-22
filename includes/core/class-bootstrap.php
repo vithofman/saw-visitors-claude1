@@ -132,6 +132,7 @@ class SAW_Bootstrap {
      */
     private static function load_optional_files() {
         $optional = [
+            'includes/core/helpers.php',
             'includes/core/class-saw-session-manager.php',
             'includes/core/class-saw-context.php',
             'includes/core/class-saw-session.php',

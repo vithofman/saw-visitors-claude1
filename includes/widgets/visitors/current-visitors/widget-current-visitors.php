@@ -140,7 +140,7 @@ class SAW_Widget_Current_Visitors {
      * AJAX: Manual checkout
      */
     public static function ajax_manual_checkout() {
-        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        saw_verify_ajax_unified();
         
         if (!current_user_can('edit_posts')) {
             wp_send_json_error(array('message' => 'Nemáte oprávnění'));

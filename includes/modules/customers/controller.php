@@ -97,7 +97,7 @@ class SAW_Module_Customers_Controller extends SAW_Base_Controller
      * @return void
      */
     public function ajax_delete() {
-        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        saw_verify_ajax_unified();
         
         if (!$this->can('delete')) {
             wp_send_json_error(array('message' => 'Nemáte oprávnění mazat záznamy'));

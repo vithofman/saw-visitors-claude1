@@ -176,7 +176,7 @@ function confirmMerge() {
         },
         body: new URLSearchParams({
             action: 'saw_merge_companies',
-            nonce: '<?php echo wp_create_nonce('saw_admin_nonce'); ?>',
+            nonce: '<?php echo wp_create_nonce('saw_ajax_nonce'); ?>',
             master_id: <?php echo intval($master['id']); ?>,
             duplicate_ids: JSON.stringify(duplicateIds)
         })

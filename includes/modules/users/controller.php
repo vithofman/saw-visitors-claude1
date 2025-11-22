@@ -403,7 +403,7 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
      */
     public function ajax_get_departments_by_branch() {
         // Verify nonce
-        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        saw_verify_ajax_unified();
         
         $branch_id = isset($_POST['branch_id']) ? intval($_POST['branch_id']) : 0;
         

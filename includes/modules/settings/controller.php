@@ -131,7 +131,7 @@ class SAW_Module_Settings_Controller
     }
     
     public function ajax_delete_logo() {
-        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        saw_verify_ajax_unified();
         
         $role = $this->get_current_role();
         
@@ -158,7 +158,7 @@ class SAW_Module_Settings_Controller
      * @since 1.0.0
      */
     public function ajax_toggle_dark_mode() {
-        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        saw_verify_ajax_unified();
         
         $user_id = get_current_user_id();
         if (!$user_id) {

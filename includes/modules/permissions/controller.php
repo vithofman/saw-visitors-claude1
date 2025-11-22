@@ -136,7 +136,7 @@ class SAW_Module_Permissions_Controller extends SAW_Base_Controller {
      * @return void Sends JSON response
      */
     public function ajax_update_permission() {
-        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        saw_verify_ajax_unified();
         
         // Only super admin can update permissions
         if (!current_user_can('manage_options')) {
@@ -182,7 +182,7 @@ class SAW_Module_Permissions_Controller extends SAW_Base_Controller {
      * @return void Sends JSON response
      */
     public function ajax_get_permissions_for_role() {
-        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        saw_verify_ajax_unified();
         
         // Only super admin can view permissions
         if (!current_user_can('manage_options')) {
@@ -220,7 +220,7 @@ class SAW_Module_Permissions_Controller extends SAW_Base_Controller {
      * @return void Sends JSON response
      */
     public function ajax_reset_permissions() {
-        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        saw_verify_ajax_unified();
         
         // Only super admin can reset permissions
         if (!current_user_can('manage_options')) {

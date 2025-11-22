@@ -626,9 +626,10 @@ class SAW_Asset_Loader {
                 $is_nested = '1';
             }
             
+            // NOTE: Module-specific nonce removed in v5.1.0
+            // All modules now use global sawGlobal.nonce for AJAX requests
             wp_localize_script('saw-module-' . $slug, 'saw' . ucfirst($slug), [
                 'ajaxurl'  => admin_url('admin-ajax.php'),
-                'nonce'    => wp_create_nonce('saw_' . $slug . '_ajax'),
                 'entity'   => esc_js($slug),
                 'isEdit'   => isset($_GET['id']) || (isset($_GET['saw_path']) && strpos($_GET['saw_path'], 'edit') !== false),
                 'isNested' => $is_nested
@@ -653,9 +654,10 @@ class SAW_Asset_Loader {
                 $is_nested = '1';
             }
             
+            // NOTE: Module-specific nonce removed in v5.1.0
+            // All modules now use global sawGlobal.nonce for AJAX requests
             wp_localize_script('saw-module-' . $slug, 'saw' . ucfirst($slug), [
                 'ajaxurl'  => admin_url('admin-ajax.php'),
-                'nonce'    => wp_create_nonce('saw_' . $slug . '_ajax'),
                 'entity'   => esc_js($slug),
                 'isEdit'   => isset($_GET['id']) || (isset($_GET['saw_path']) && strpos($_GET['saw_path'], 'edit') !== false),
                 'isNested' => $is_nested
@@ -679,9 +681,10 @@ class SAW_Asset_Loader {
             true
         );
         
+        // NOTE: Module-specific nonce removed in v5.1.0
+        // All modules now use global sawGlobal.nonce for AJAX requests
         wp_localize_script('saw-module-' . $slug, 'sawModule', [
             'ajaxurl'  => admin_url('admin-ajax.php'),
-            'nonce'    => wp_create_nonce('saw_' . $slug . '_ajax'),
             'entity'   => esc_js($slug),
             'singular' => esc_js($config['singular'] ?? ucfirst($slug)),
             'plural'   => esc_js($config['plural'] ?? ucfirst($slug) . 's')

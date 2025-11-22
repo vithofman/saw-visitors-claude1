@@ -383,7 +383,7 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
     }
     
     public function ajax_get_hosts_by_branch() {
-        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        saw_verify_ajax_unified();
         
         $branch_id = isset($_POST['branch_id']) ? intval($_POST['branch_id']) : 0;
         if (!$branch_id) {

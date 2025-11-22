@@ -273,7 +273,7 @@ class SAW_AJAX_Registry {
      * @return void
      */
     public function handle_nested_sidebar() {
-        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        saw_verify_ajax_unified();
         
         if (!current_user_can('edit_posts')) {
             wp_send_json_error(['message' => 'Nemáte oprávnění']);

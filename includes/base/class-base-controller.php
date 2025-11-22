@@ -1335,7 +1335,7 @@ protected function can($action) {
     public function ajax_load_sidebar() {
         // Method removed - sidebar now renders as full page via router
         wp_send_json_error(array('message' => 'AJAX sidebar loading is no longer supported. Use full page navigation.'));
-        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        saw_verify_ajax_unified();
         
         $id = intval($_POST['id'] ?? 0);
         $mode = sanitize_text_field($_POST['mode'] ?? 'detail');
@@ -1533,7 +1533,7 @@ protected function can($action) {
      * @return void Outputs JSON
      */
     public function ajax_get_adjacent_id() {
-        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        saw_verify_ajax_unified();
         
         if (!$this->can('view')) {
             wp_send_json_error(array(
@@ -1686,7 +1686,7 @@ protected function can($action) {
      * @return void Outputs JSON
      */
     public function ajax_get_items_infinite() {
-        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        saw_verify_ajax_unified();
         
         if (!$this->can('list')) {
             wp_send_json_error(array(
@@ -2313,7 +2313,7 @@ protected function can($action) {
      * @return void (JSON response)
      */
     public function ajax_load_nested_sidebar() {
-        check_ajax_referer('saw_ajax_nonce', 'nonce');
+        saw_verify_ajax_unified();
         
         if (!$this->can('create')) {
             wp_send_json_error(array('message' => 'Nemáte oprávnění'));
