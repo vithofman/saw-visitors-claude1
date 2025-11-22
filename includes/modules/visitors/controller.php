@@ -255,46 +255,6 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
     }
     
     /**
-     * Compute current_status for a visitor item
-     * 
-     * current_status is computed dynamically based on:
-     * - participation_status
-     * - today's daily log (checked_in_at, checked_out_at)
-     * 
-     * @since 7.1.0
-     * @param array $item Visitor item data
-     * @return string Computed current_status
-     */
-    protected function compute_current_status($item) {
-        global $wpdb;
-        $today = current_time('Y-m-d');
-        
-        // Get today's LATEST log (pro re-entry support)
-        $log = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_visit_daily_logs 
-             WHERE visitor_id = %d AND log_date = %s
-             ORDER BY checked_in_at DESC
-             LIMIT 1",
-            $item['id'], $today
-        ), ARRAY_A);
-        
-        // Compute dynamic status
-        if ($item['participation_status'] === 'confirmed') {
-            if ($log && $log['checked_in_at'] && !$log['checked_out_at']) {
-                return 'present'; // Přítomen
-            } elseif ($log && $log['checked_out_at']) {
-                return 'checked_out'; // Odhlášen
-            } else {
-                return 'confirmed'; // Potvrzený (ale dnes ještě nepřišel)
-            }
-        } elseif ($item['participation_status'] === 'no_show') {
-            return 'no_show';
-        } else {
-            return 'planned';
-        }
-    }
-    
-    /**
      * Override get_list_data() to handle current_status filtering in PHP
      * 
      * current_status is NOT a database column - it's computed dynamically.
@@ -348,11 +308,8 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
         $data = $this->model->get_all($filters);
         $all_items = $data['items'] ?? array();
         
-        // Compute current_status for each item
-        foreach ($all_items as &$item) {
-            $item['current_status'] = $this->compute_current_status($item);
-        }
-        unset($item);
+        // ✅ Virtual columns (current_status) jsou již aplikované v Model::get_all()
+        // Není třeba je počítat zde!
         
         // Handle TAB filtering - filter by current_status in PHP
         $current_tab = $this->config['tabs']['default_tab'] ?? 'all';
@@ -483,11 +440,8 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
         $data = $this->model->get_all($filters);
         $all_items = $data['items'] ?? array();
         
-        // Compute current_status for each item
-        foreach ($all_items as &$item) {
-            $item['current_status'] = $this->compute_current_status($item);
-        }
-        unset($item);
+        // ✅ Virtual columns (current_status) jsou již aplikované v Model::get_all()
+        // Není třeba je počítat zde!
         
         // Count items for each tab based on computed current_status
         foreach ($tabs as $tab_key => $tab_config) {
@@ -634,81 +588,91 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
         
         $per_page = max(1, min(100, $per_page));
         
-        // ===== BUILD FILTERS (same as parent) =====
+        // ===== BUILD FILTERS (EXCLUDE current_status - it's not in DB) =====
         $filters = array(
-            'page' => $page,
-            'per_page' => $per_page,
+            'page' => 1, // Load ALL data for PHP filtering
+            'per_page' => 9999, // Load ALL data for PHP filtering
             'search' => isset($_POST['search']) ? sanitize_text_field($_POST['search']) : '',
             'orderby' => isset($_POST['orderby']) ? sanitize_text_field($_POST['orderby']) : 'vis.id',
             'order' => isset($_POST['order']) ? strtoupper(sanitize_text_field($_POST['order'])) : 'DESC',
         );
         
-        // Add TAB filter if enabled
+        // Extract current_status filter (if tabs enabled) - will filter in PHP
+        $current_status_filter = null;
         if (!empty($this->config['tabs']['enabled'])) {
             $tab_param = $this->config['tabs']['tab_param'] ?? 'tab';
             if (isset($_POST[$tab_param]) && $_POST[$tab_param] !== '') {
-                $filters[$tab_param] = sanitize_text_field($_POST[$tab_param]);
+                $current_status_filter = sanitize_text_field($_POST[$tab_param]);
+                // DO NOT add to filters - it's not in DB!
             }
         }
         
-        // Add other filters from POST
+        // Add other filters from POST (but exclude tab_param)
+        $tab_param = !empty($this->config['tabs']['enabled']) ? ($this->config['tabs']['tab_param'] ?? 'tab') : null;
         foreach ($_POST as $key => $value) {
             if (!in_array($key, array('action', 'nonce', 'page', 'per_page', 'search', 'orderby', 'order', 'columns'))) {
+                // Skip tab_param filter (current_status) - handled in PHP below
+                if ($key === $tab_param) {
+                    continue;
+                }
                 if (!empty($this->config['list_config']['filters'][$key])) {
                     $filters[$key] = sanitize_text_field($value);
                 }
             }
         }
         
-        // ===== GET DATA FROM MODEL =====
-        $data = $this->model->get_all($filters);
+        // ===== CACHE KEY FOR FILTERED DATA =====
+        // Create cache key based on filters (excluding page/per_page)
+        $cache_key_parts = array(
+            'entity' => $this->entity,
+            'filters' => $filters,
+            'current_status' => $current_status_filter,
+        );
+        $cache_key = 'visitors_infinite_' . md5(serialize($cache_key_parts));
+        
+        // ===== GET FILTERED DATA (with cache) =====
+        $cached_all_items = wp_cache_get($cache_key, 'saw_visitors');
+        
+        if ($cached_all_items === false) {
+            // Cache miss - load from model
+            $data = $this->model->get_all($filters);
+            
+            // ✅ Virtual columns (current_status) jsou již aplikované v Model::get_all()
+            
+            // ===== FILTER BY current_status IN PHP (if tab filter is set) =====
+            $all_items = $data['items'] ?? array();
+            if ($current_status_filter !== null && $current_status_filter !== '') {
+                $filtered_items = array();
+                foreach ($all_items as $item) {
+                    if (($item['current_status'] ?? '') === $current_status_filter) {
+                        $filtered_items[] = $item;
+                    }
+                }
+                $all_items = $filtered_items;
+            }
+            
+            // Cache for 5 minutes
+            wp_cache_set($cache_key, $all_items, 'saw_visitors', 300);
+        } else {
+            // Cache hit
+            $all_items = $cached_all_items;
+        }
+        
+        // ===== APPLY PAGINATION IN PHP =====
+        $total_items = count($all_items);
+        $offset = ($page - 1) * $per_page;
+        $items = array_slice($all_items, $offset, $per_page);
+        
+        // Update data with filtered and paginated items
+        $data['items'] = $items;
+        $data['total'] = $total_items;
         
         // ╔═══════════════════════════════════════════════════════════╗
-        // ║ KRITICKÁ ČÁST: COMPUTE VIRTUAL COLUMNS                    ║
-        // ║ Toto je JEDINÝ rozdíl oproti Base_Controller metody      ║
+        // ║ VIRTUAL COLUMNS jsou nyní automaticky aplikované          ║
+        // ║ Visitors Model volá apply_virtual_columns() v get_all()  ║
+        // ║ → current_status a training_status jsou již v $data       ║
         // ╚═══════════════════════════════════════════════════════════╝
-        
-        if (!empty($data['items'])) {
-            global $wpdb;
-            $today = current_time('Y-m-d');
-            
-            foreach ($data['items'] as &$item) {
-                // 1. Compute current_status (same logic as list-template.php)
-                $log = $wpdb->get_row($wpdb->prepare(
-                    "SELECT * FROM {$wpdb->prefix}saw_visit_daily_logs 
-                     WHERE visitor_id = %d AND log_date = %s
-                     ORDER BY checked_in_at DESC
-                     LIMIT 1",
-                    $item['id'], $today
-                ), ARRAY_A);
-                
-                if ($item['participation_status'] === 'confirmed') {
-                    if ($log && $log['checked_in_at'] && !$log['checked_out_at']) {
-                        $item['current_status'] = 'present';
-                    } elseif ($log && $log['checked_out_at']) {
-                        $item['current_status'] = 'checked_out';
-                    } else {
-                        $item['current_status'] = 'confirmed';
-                    }
-                } elseif ($item['participation_status'] === 'no_show') {
-                    $item['current_status'] = 'no_show';
-                } else {
-                    $item['current_status'] = 'planned';
-                }
-                
-                // 2. Compute training_status (same logic as list-template.php)
-                if ($item['training_skipped']) {
-                    $item['training_status'] = 'skipped';
-                } elseif ($item['training_completed_at']) {
-                    $item['training_status'] = 'completed';
-                } elseif ($item['training_started_at']) {
-                    $item['training_status'] = 'in_progress';
-                } else {
-                    $item['training_status'] = 'not_started';
-                }
-            }
-            unset($item); // Break reference
-        }
+        // ✅ Virtual columns jsou již aplikované - není třeba je počítat zde!
         
         // ===== GET COLUMNS CONFIG (same as parent) =====
         $columns_json = isset($_POST['columns']) ? $_POST['columns'] : '';
@@ -754,46 +718,54 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
         $table = new SAW_Component_Admin_Table($this->entity, $table_config);
         
         // ===== RENDER ROWS HTML =====
-$rows_html = '';
-if (!empty($data['items'])) {
-    ob_start();
-    foreach ($data['items'] as $row) {
-        // INLINE render (bez volání parent metody)
-        $detail_url = $this->get_detail_url();
-        if (!empty($detail_url) && !empty($row['id'])) {
-            $detail_url = str_replace('{id}', intval($row['id']), $detail_url);
-        } else {
-            $detail_url = '';
+        // ✅ CRITICAL: Clear any previous output buffers
+        while (ob_get_level()) {
+            ob_end_clean();
         }
         
-        $row_class = 'saw-table-row';
-        if (!empty($detail_url)) {
-            $row_class .= ' saw-clickable-row';
+        $rows_html = '';
+        if (!empty($data['items'])) {
+            ob_start();
+            foreach ($data['items'] as $row) {
+                // INLINE render (bez volání parent metody)
+                $detail_url = $this->get_detail_url();
+                if (!empty($detail_url) && !empty($row['id'])) {
+                    $detail_url = str_replace('{id}', intval($row['id']), $detail_url);
+                } else {
+                    $detail_url = '';
+                }
+                
+                $row_class = 'saw-table-row';
+                if (!empty($detail_url)) {
+                    $row_class .= ' saw-clickable-row';
+                }
+                ?>
+                <tr class="<?php echo esc_attr($row_class); ?>" 
+                    data-id="<?php echo esc_attr($row['id'] ?? ''); ?>"
+                    <?php if (!empty($detail_url)): ?>
+                        data-detail-url="<?php echo esc_url($detail_url); ?>"
+                    <?php endif; ?>>
+                    
+                    <?php foreach ($columns as $key => $column): ?>
+                        <?php $table->render_table_cell_for_template($row, $key, $column); ?>
+                    <?php endforeach; ?>
+                </tr>
+                <?php
+            }
+            $rows_html = ob_get_clean();
         }
-        ?>
-        <tr class="<?php echo esc_attr($row_class); ?>" 
-            data-id="<?php echo esc_attr($row['id'] ?? ''); ?>"
-            <?php if (!empty($detail_url)): ?>
-                data-detail-url="<?php echo esc_url($detail_url); ?>"
-            <?php endif; ?>>
-            
-            <?php foreach ($columns as $key => $column): ?>
-                <?php $table->render_table_cell_for_template($row, $key, $column); ?>
-            <?php endforeach; ?>
-        </tr>
-        <?php
-    }
-    $rows_html = ob_get_clean();
-}
         
-        $has_more = ($page * $per_page) < $data['total'];
+        // ===== CALCULATE has_more CORRECTLY =====
+        // has_more = true if there are more items after current page
+        $has_more = ($page * $per_page) < $total_items;
         
         // ===== OUTPUT JSON (same as parent) =====
+        // ✅ CRITICAL: Ensure no output before JSON
         wp_send_json_success(array(
             'html' => $rows_html,
             'has_more' => $has_more,
             'page' => $page,
-            'total' => $data['total'],
+            'total' => $total_items,
             'loaded' => count($data['items'])
         ));
     }

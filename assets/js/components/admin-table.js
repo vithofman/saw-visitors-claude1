@@ -752,14 +752,31 @@ function setActiveRowFromSidebar() {
          */
         function loadNextPage() {
             if (isLoading || !hasMore) {
+                if (DEBUG && isLoading) {
+                    console.log('⏸️ Load skipped - already loading');
+                }
+                if (DEBUG && !hasMore) {
+                    console.log('⏸️ Load skipped - no more pages');
+                }
                 return;
             }
             
             const nextPage = currentPage + 1;
             
+            if (DEBUG) {
+                console.log('🔍 Checking next page:', {
+                    currentPage: currentPage,
+                    nextPage: nextPage,
+                    loadedPages: Array.from(loadedPages),
+                    hasMore: hasMore
+                });
+            }
+            
             // CRITICAL: Check cache BEFORE any state changes
             if (loadedPages.has(nextPage)) {
-                console.log('✅ Page', nextPage, 'already cached, skipping');
+                if (DEBUG) {
+                    console.log('✅ Page', nextPage, 'already cached, skipping');
+                }
                 return;
             }
             
@@ -879,14 +896,32 @@ console.log('🚀 SENDING AJAX REQUEST:', {
                 }
                 
                 if (data.success && data.data) {
-                    const { html, has_more, loaded } = data.data;
+                    const { html, has_more, loaded, page } = data.data;
                     
                     hasMore = has_more;
                     
+                    // ✅ CRITICAL: Update currentPage to the page that was actually loaded
+                    // Use the page number from response, not currentPage
+                    const loadedPage = page || currentPage;
+                    if (loadedPage !== currentPage) {
+                        if (DEBUG) {
+                            console.log('🔄 Updating currentPage:', currentPage, '→', loadedPage);
+                        }
+                        currentPage = loadedPage;
+                    }
+                    
                     if (html && loaded > 0) {
                         // ✅ Mark page as loaded ONLY after successful load
-                        loadedPages.add(currentPage);
-                        console.log('✅ Page', currentPage, 'loaded successfully,', loaded, 'rows');
+                        // Use loadedPage to ensure we mark the correct page
+                        loadedPages.add(loadedPage);
+                        if (DEBUG) {
+                            console.log('✅ Page', loadedPage, 'loaded successfully,', loaded, 'rows');
+                            console.log('📊 State after load:', {
+                                currentPage: currentPage,
+                                loadedPages: Array.from(loadedPages),
+                                hasMore: hasMore
+                            });
+                        }
                         
                         // Create temporary container to parse HTML
                         const temp = document.createElement('tbody');
@@ -913,6 +948,11 @@ console.log('🚀 SENDING AJAX REQUEST:', {
                             console.log('⚠️ No new rows to add (all duplicates)');
                             isLoading = false;
                             isAppending = false; // PŘIDÁNO 2025-01-22: Unlock i při prázdném výsledku
+                            // ✅ CRITICAL: Still update currentPage even if no rows added
+                            if (loadedPage !== currentPage) {
+                                currentPage = loadedPage;
+                                loadedPages.add(loadedPage);
+                            }
                             return;
                         }
                         

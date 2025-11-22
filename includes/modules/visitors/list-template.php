@@ -25,47 +25,8 @@ $search = $list_data['search'] ?? '';
 $orderby = $list_data['orderby'] ?? 'vis.id';
 $order = $list_data['order'] ?? 'DESC';
 
-// Compute current status for each visitor
-global $wpdb;
-$today = current_time('Y-m-d');
-
-foreach ($items as &$item) {
-    // Get today's LATEST log (pro re-entry support)
-    $log = $wpdb->get_row($wpdb->prepare(
-        "SELECT * FROM {$wpdb->prefix}saw_visit_daily_logs 
-         WHERE visitor_id = %d AND log_date = %s
-         ORDER BY checked_in_at DESC
-         LIMIT 1",
-        $item['id'], $today
-    ), ARRAY_A);
-    
-    // Compute dynamic status
-    if ($item['participation_status'] === 'confirmed') {
-        if ($log && $log['checked_in_at'] && !$log['checked_out_at']) {
-            $item['current_status'] = 'present'; // Přítomen
-        } elseif ($log && $log['checked_out_at']) {
-            $item['current_status'] = 'checked_out'; // Odhlášen
-        } else {
-            $item['current_status'] = 'confirmed'; // Potvrzený (ale dnes ještě nepřišel)
-        }
-    } elseif ($item['participation_status'] === 'no_show') {
-        $item['current_status'] = 'no_show';
-    } else {
-        $item['current_status'] = 'planned';
-    }
-    
-    // Compute training status
-    if ($item['training_skipped']) {
-        $item['training_status'] = 'skipped';
-    } elseif ($item['training_completed_at']) {
-        $item['training_status'] = 'completed';
-    } elseif ($item['training_started_at']) {
-        $item['training_status'] = 'in_progress';
-    } else {
-        $item['training_status'] = 'not_started';
-    }
-}
-unset($item); // Break reference
+// ✅ Virtual columns (current_status, training_status) jsou již aplikované v Model::get_all()
+// Data přichází s již vypočítanými hodnotami - není třeba je počítat zde!
 
 // Build table config
 $table_config = array(

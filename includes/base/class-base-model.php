@@ -664,4 +664,192 @@ abstract class SAW_Base_Model
         // Flush cache using SAW_Cache
         SAW_Cache::flush($this->config['entity']);
     }
+    
+    /**
+     * Apply virtual columns to items
+     * 
+     * Virtual columns jsou dynamicky počítané hodnoty které nejsou uložené v databázi.
+     * Konfigurace je v config.php modulu pod klíčem 'virtual_columns'.
+     * 
+     * Podporované typy:
+     * - 'computed': Jednoduchá funkce bez DB access
+     * - 'complex': Funkce s DB access (použij opatrně - N+1 problém)
+     * - 'batch_computed': Optimalizovaný batch processing s jediným query
+     * - 'concat': Spojí více polí dohromady
+     * - 'date_diff': Vypočítá rozdíl mezi daty
+     * 
+     * @since 8.0.0
+     * @param array $items Array položek z databáze
+     * @return array Položky s aplikovanými virtual columns
+     */
+    protected function apply_virtual_columns($items) {
+        if (empty($items) || empty($this->config['virtual_columns'])) {
+            return $items;
+        }
+        
+        // ✅ Validace vstupních dat
+        if (!is_array($items)) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[Base Model] apply_virtual_columns: Items is not an array');
+            }
+            return $items;
+        }
+        
+        global $wpdb;
+        
+        // ✅ Debugging info
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log(sprintf(
+                '[Base Model] Applying virtual columns to %d items. Columns: %s',
+                count($items),
+                implode(', ', array_keys($this->config['virtual_columns']))
+            ));
+        }
+        
+        // =====================================
+        // PRVNÍ PRŮCHOD: Batch computed columns
+        // =====================================
+        $batch_results = array();
+        foreach ($this->config['virtual_columns'] as $column_name => $column_config) {
+            if (($column_config['type'] ?? '') === 'batch_computed') {
+                $item_ids = array_column($items, 'id');
+                
+                // ✅ Ověř že máme nějaké IDs
+                if (empty($item_ids)) {
+                    continue;
+                }
+                
+                if (!empty($column_config['batch_query']) && is_callable($column_config['batch_query'])) {
+                    try {
+                        // Zavolej batch query callback
+                        $batch_data = call_user_func($column_config['batch_query'], $item_ids, $wpdb);
+                        
+                        // Indexuj podle visitor_id pro rychlé vyhledávání
+                        $indexed = array();
+                        if (is_array($batch_data)) {
+                            foreach ($batch_data as $row) {
+                                // Podporuj různé názvy ID sloupce
+                                $key = $row['visitor_id'] ?? $row['id'] ?? null;
+                                if ($key) {
+                                    $indexed[$key] = $row;
+                                }
+                            }
+                        }
+                        
+                        $batch_results[$column_name] = $indexed;
+                    } catch (Exception $e) {
+                        if (defined('WP_DEBUG') && WP_DEBUG) {
+                            error_log('[Base Model] Batch query error for ' . $column_name . ': ' . $e->getMessage());
+                        }
+                        $batch_results[$column_name] = array();
+                    }
+                }
+            }
+        }
+        
+        // =====================================
+        // DRUHÝ PRŮCHOD: Aplikuj všechny virtual columns
+        // =====================================
+        foreach ($items as &$item) {
+            // ✅ Zkontroluj že item má ID
+            if (empty($item['id'])) {
+                continue;
+            }
+            
+            foreach ($this->config['virtual_columns'] as $column_name => $column_config) {
+                $type = $column_config['type'] ?? 'computed';
+                
+                try {
+                    switch ($type) {
+                        case 'computed':
+                            // Jednoduchá computed column - bez DB access
+                            if (!empty($column_config['compute']) && is_callable($column_config['compute'])) {
+                                $item[$column_name] = call_user_func($column_config['compute'], $item);
+                            }
+                            break;
+                        
+                        case 'complex':
+                            // Komplexní computed column - s DB access
+                            // ⚠️ POZOR: N+1 problém! Používej jen když nezbytné!
+                            if (!empty($column_config['compute']) && is_callable($column_config['compute'])) {
+                                if (!empty($column_config['requires_db'])) {
+                                    $item[$column_name] = call_user_func($column_config['compute'], $item, $wpdb);
+                                } else {
+                                    $item[$column_name] = call_user_func($column_config['compute'], $item);
+                                }
+                            }
+                            break;
+                        
+                        case 'batch_computed':
+                            // Batch computed - použij předem načtené výsledky
+                            if (!empty($column_config['apply']) && is_callable($column_config['apply'])) {
+                                $batch_data = $batch_results[$column_name] ?? array();
+                                $item[$column_name] = call_user_func($column_config['apply'], $item, $batch_data);
+                            }
+                            break;
+                        
+                        case 'concat':
+                            // Spojí více polí dohromady
+                            $values = array();
+                            foreach (($column_config['fields'] ?? array()) as $field) {
+                                if (!empty($item[$field])) {
+                                    $values[] = $item[$field];
+                                }
+                            }
+                            $separator = $column_config['separator'] ?? ' ';
+                            $item[$column_name] = implode($separator, $values);
+                            break;
+                        
+                        case 'date_diff':
+                            // Vypočítá rozdíl mezi daty
+                            $from = $item[$column_config['from']] ?? null;
+                            $to_value = $column_config['to'] ?? 'NOW()';
+                            
+                            if ($from) {
+                                $from_time = strtotime($from);
+                                $to_time = ($to_value === 'NOW()') ? time() : strtotime($item[$to_value] ?? $to_value);
+                                
+                                $diff = $to_time - $from_time;
+                                $unit = $column_config['unit'] ?? 'days';
+                                
+                                switch ($unit) {
+                                    case 'years':
+                                        $item[$column_name] = floor($diff / (365 * 86400));
+                                        break;
+                                    case 'months':
+                                        $item[$column_name] = floor($diff / (30 * 86400));
+                                        break;
+                                    case 'days':
+                                        $item[$column_name] = floor($diff / 86400);
+                                        break;
+                                    case 'hours':
+                                        $item[$column_name] = floor($diff / 3600);
+                                        break;
+                                    default:
+                                        $item[$column_name] = $diff; // sekundy
+                                }
+                            } else {
+                                $item[$column_name] = null;
+                            }
+                            break;
+                        
+                        default:
+                            // Neznámý typ - ignoruj
+                            if (defined('WP_DEBUG') && WP_DEBUG) {
+                                error_log('[Base Model] Unknown virtual column type: ' . $type);
+                            }
+                    }
+                } catch (Exception $e) {
+                    // Loguj error ale pokračuj dál
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('[Base Model] Error applying virtual column ' . $column_name . ': ' . $e->getMessage());
+                    }
+                    $item[$column_name] = null;
+                }
+            }
+        }
+        unset($item); // Break reference
+        
+        return $items;
+    }
 }

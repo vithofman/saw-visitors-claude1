@@ -155,9 +155,16 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
         $order = isset($filters['order']) && strtoupper($filters['order']) === 'ASC' ? 'ASC' : 'DESC';
         
         // Ensure orderby is safe
-        $allowed_orderby = array('vis.id', 'vis.first_name', 'vis.last_name', 'vis.created_at', 'vis.current_status');
+        $allowed_orderby = array('vis.id', 'vis.first_name', 'vis.last_name', 'vis.created_at', 'first_name', 'last_name');
         if (!in_array($orderby, $allowed_orderby)) {
             $orderby = 'vis.id';
+        }
+        
+        // Map simple column names to full table references
+        if ($orderby === 'first_name') {
+            $orderby = 'vis.first_name';
+        } elseif ($orderby === 'last_name') {
+            $orderby = 'vis.last_name';
         }
         
         $sql = "SELECT vis.*, 
@@ -178,6 +185,11 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
         $where_values[] = $offset;
         
         $items = $wpdb->get_results($wpdb->prepare($sql, ...$where_values), ARRAY_A);
+        
+        // ✅ NOVĚ: Apply virtual columns if configured
+        if (!empty($this->config['virtual_columns'])) {
+            $items = $this->apply_virtual_columns($items ?: array());
+        }
         
         $result = array(
             'items' => $items ?: array(),
