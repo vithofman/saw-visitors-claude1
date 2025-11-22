@@ -597,6 +597,207 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
         );
     }
     
+    /**
+     * Override ajax_get_items_infinite for visitors module
+     * 
+     * CRITICAL: Adds virtual column computation (current_status, training_status)
+     * which are computed dynamically based on database state and not stored as columns.
+     * 
+     * This override is necessary because:
+     * - Parent method calls $this->model->get_all() directly
+     * - Does NOT go through list-template.php where virtual columns are computed
+     * - AJAX rows would be missing badges without this computation
+     * 
+     * @since 7.1.0
+     * @return void Outputs JSON
+     */
+    public function ajax_get_items_infinite() {
+        // ===== VALIDATION (same as parent) =====
+        saw_verify_ajax_unified();
+        
+        if (!$this->can('list')) {
+            wp_send_json_error(array(
+                'message' => 'Nemáte oprávnění zobrazit záznamy'
+            ));
+        }
+        
+        // ===== PAGINATION (same as parent) =====
+        $page = isset($_POST['page']) ? max(1, intval($_POST['page'])) : 1;
+        
+        // Respect initial_load config for first page
+        $infinite_scroll_enabled = !empty($this->config['infinite_scroll']['enabled']);
+        if ($infinite_scroll_enabled && $page === 1) {
+            $per_page = $this->config['infinite_scroll']['initial_load'] ?? 100;
+        } else {
+            $per_page = isset($_POST['per_page']) ? intval($_POST['per_page']) : 50;
+        }
+        
+        $per_page = max(1, min(100, $per_page));
+        
+        // ===== BUILD FILTERS (same as parent) =====
+        $filters = array(
+            'page' => $page,
+            'per_page' => $per_page,
+            'search' => isset($_POST['search']) ? sanitize_text_field($_POST['search']) : '',
+            'orderby' => isset($_POST['orderby']) ? sanitize_text_field($_POST['orderby']) : 'vis.id',
+            'order' => isset($_POST['order']) ? strtoupper(sanitize_text_field($_POST['order'])) : 'DESC',
+        );
+        
+        // Add TAB filter if enabled
+        if (!empty($this->config['tabs']['enabled'])) {
+            $tab_param = $this->config['tabs']['tab_param'] ?? 'tab';
+            if (isset($_POST[$tab_param]) && $_POST[$tab_param] !== '') {
+                $filters[$tab_param] = sanitize_text_field($_POST[$tab_param]);
+            }
+        }
+        
+        // Add other filters from POST
+        foreach ($_POST as $key => $value) {
+            if (!in_array($key, array('action', 'nonce', 'page', 'per_page', 'search', 'orderby', 'order', 'columns'))) {
+                if (!empty($this->config['list_config']['filters'][$key])) {
+                    $filters[$key] = sanitize_text_field($value);
+                }
+            }
+        }
+        
+        // ===== GET DATA FROM MODEL =====
+        $data = $this->model->get_all($filters);
+        
+        // ╔═══════════════════════════════════════════════════════════╗
+        // ║ KRITICKÁ ČÁST: COMPUTE VIRTUAL COLUMNS                    ║
+        // ║ Toto je JEDINÝ rozdíl oproti Base_Controller metody      ║
+        // ╚═══════════════════════════════════════════════════════════╝
+        
+        if (!empty($data['items'])) {
+            global $wpdb;
+            $today = current_time('Y-m-d');
+            
+            foreach ($data['items'] as &$item) {
+                // 1. Compute current_status (same logic as list-template.php)
+                $log = $wpdb->get_row($wpdb->prepare(
+                    "SELECT * FROM {$wpdb->prefix}saw_visit_daily_logs 
+                     WHERE visitor_id = %d AND log_date = %s
+                     ORDER BY checked_in_at DESC
+                     LIMIT 1",
+                    $item['id'], $today
+                ), ARRAY_A);
+                
+                if ($item['participation_status'] === 'confirmed') {
+                    if ($log && $log['checked_in_at'] && !$log['checked_out_at']) {
+                        $item['current_status'] = 'present';
+                    } elseif ($log && $log['checked_out_at']) {
+                        $item['current_status'] = 'checked_out';
+                    } else {
+                        $item['current_status'] = 'confirmed';
+                    }
+                } elseif ($item['participation_status'] === 'no_show') {
+                    $item['current_status'] = 'no_show';
+                } else {
+                    $item['current_status'] = 'planned';
+                }
+                
+                // 2. Compute training_status (same logic as list-template.php)
+                if ($item['training_skipped']) {
+                    $item['training_status'] = 'skipped';
+                } elseif ($item['training_completed_at']) {
+                    $item['training_status'] = 'completed';
+                } elseif ($item['training_started_at']) {
+                    $item['training_status'] = 'in_progress';
+                } else {
+                    $item['training_status'] = 'not_started';
+                }
+            }
+            unset($item); // Break reference
+        }
+        
+        // ===== GET COLUMNS CONFIG (same as parent) =====
+        $columns_json = isset($_POST['columns']) ? $_POST['columns'] : '';
+        $columns = array();
+        if (!empty($columns_json)) {
+            $decoded = json_decode(stripslashes($columns_json), true);
+            if (is_array($decoded)) {
+                $columns = $decoded;
+            }
+        }
+        
+        // If columns empty, try to get from get_table_columns()
+        if (empty($columns) && method_exists($this, 'get_table_columns')) {
+            $columns = $this->get_table_columns();
+        }
+        
+        // ===== SANITIZE COLUMNS (same as parent) =====
+        if (!is_array($columns)) {
+            $columns = array();
+        }
+        
+        // ===== LOAD ADMIN TABLE COMPONENT (same as parent) =====
+        if (!class_exists('SAW_Component_Admin_Table')) {
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/class-saw-component-admin-table.php';
+        }
+        
+        // ===== BUILD TABLE CONFIG FOR RENDERING (same as parent) =====
+        $base_url = home_url('/admin/' . ($this->config['route'] ?? $this->entity));
+        $edit_url = $base_url . '/{id}/edit';
+        $detail_url = $this->get_detail_url();
+        $actions = $this->config['actions'] ?? array();
+        
+        $table_config = array(
+            'columns' => $columns,
+            'actions' => $actions,
+            'detail_url' => $detail_url,
+            'edit_url' => $edit_url,
+            'rows' => $data['items'],
+            'module_config' => $this->config,
+            'entity' => $this->entity,
+        );
+        
+        $table = new SAW_Component_Admin_Table($this->entity, $table_config);
+        
+        // ===== RENDER ROWS HTML =====
+$rows_html = '';
+if (!empty($data['items'])) {
+    ob_start();
+    foreach ($data['items'] as $row) {
+        // INLINE render (bez volání parent metody)
+        $detail_url = $this->get_detail_url();
+        if (!empty($detail_url) && !empty($row['id'])) {
+            $detail_url = str_replace('{id}', intval($row['id']), $detail_url);
+        } else {
+            $detail_url = '';
+        }
+        
+        $row_class = 'saw-table-row';
+        if (!empty($detail_url)) {
+            $row_class .= ' saw-clickable-row';
+        }
+        ?>
+        <tr class="<?php echo esc_attr($row_class); ?>" 
+            data-id="<?php echo esc_attr($row['id'] ?? ''); ?>"
+            <?php if (!empty($detail_url)): ?>
+                data-detail-url="<?php echo esc_url($detail_url); ?>"
+            <?php endif; ?>>
+            
+            <?php foreach ($columns as $key => $column): ?>
+                <?php $table->render_table_cell_for_template($row, $key, $column); ?>
+            <?php endforeach; ?>
+        </tr>
+        <?php
+    }
+    $rows_html = ob_get_clean();
+}
+        
+        $has_more = ($page * $per_page) < $data['total'];
+        
+        // ===== OUTPUT JSON (same as parent) =====
+        wp_send_json_success(array(
+            'html' => $rows_html,
+            'has_more' => $has_more,
+            'page' => $page,
+            'total' => $data['total'],
+            'loaded' => count($data['items'])
+        ));
+    }
+    
     // ============================================
     // AJAX HANDLERS
     // ============================================

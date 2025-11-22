@@ -60,7 +60,7 @@
                 if (!isRowVisible) {
                     // Scroll so row is centered in viewport
                     const targetScrollTop = containerScrollTop + rowRelativeTop - (containerHeight / 2) + (rowHeight / 2);
-                    $scrollContainer.animate({ scrollTop: targetScrollTop }, 300);
+                    $scrollContainer.scrollTop(targetScrollTop);
                     console.log('📜 Scrolled active row into view');
                 } else {
                     console.log('✅ Active row already visible');
@@ -141,6 +141,8 @@
     /**
      * Restore table state after page load
      * 
+     * CRITICAL: Respects sidebar priority - skips if sidebar has active row
+     * 
      * @param {string} entity - Entity name
      * @return {void}
      */
@@ -149,26 +151,41 @@
             return;
         }
 
+        // ===== CRITICAL: SKIP IF SIDEBAR HAS PRIORITY =====
+        if (window._hasSidebarActiveRow) {
+            console.log('⏭️ Restore skipped - sidebar handling active row');
+            return;
+        }
+
         const state = window.stateManager.restoreTableState(entity);
         
-        if (state) {
-            // Restore scroll position
-            const $scrollArea = $('.saw-table-scroll-area');
-            if ($scrollArea.length && state.scrollTop) {
-                setTimeout(function() {
-                    $scrollArea.scrollTop(state.scrollTop);
-                    console.log('📜 Table scroll position restored:', state.scrollTop);
-                }, 100);
-            }
+        if (!state) {
+            return;
+        }
 
-            // Restore active row - scroll to it so user can see it
-            if (state.activeRowId) {
-                // Wait longer to ensure all rows are loaded
-                setTimeout(function() {
-                    updateActiveRow(state.activeRowId, true);
-                    console.log('✨ Active row restored:', state.activeRowId);
-                }, 800); // Increased delay to ensure rows are loaded
-            }
+        const $scrollArea = $('.saw-table-scroll-area');
+        
+        // Restore scroll position
+        if ($scrollArea.length && state.scrollTop) {
+            setTimeout(function() {
+                // Check again for lock (safety check)
+                const scrollArea = $scrollArea[0];
+                if (scrollArea && scrollArea._isLockedToActiveRow) {
+                    console.log('🔒 Scroll restore blocked - locked to active row');
+                    return;
+                }
+                
+                $scrollArea.scrollTop(state.scrollTop);
+                console.log('📜 Scroll position restored:', state.scrollTop);
+            }, 100);
+        }
+
+        // Restore active row
+        if (state.activeRowId) {
+            setTimeout(function() {
+                updateActiveRow(state.activeRowId, true);
+                console.log('✨ Active row restored:', state.activeRowId);
+            }, 800);
         }
     }
 
@@ -197,6 +214,10 @@
 
     /**
      * Initialize admin table component
+     * 
+     * PRIORITY LOGIC:
+     * 1. If sidebar has current-id → skip restore, let sidebar handle it
+     * 2. If no sidebar → try restore
      *
      * @return {void}
      */
@@ -205,26 +226,42 @@
         const $table = $('.saw-admin-table');
         const entity = $table.data('entity');
 
-        // Restore table state if we're on a list page
-        if (entity && window.location.pathname.indexOf('/' + entity + '/') === -1 || 
-            window.location.pathname.split('/').filter(p => p && !isNaN(p)).length === 0) {
-            // We're on a list page (not detail/edit)
-            restoreTableState(entity);
+        // ===== PRIORITY CHECK: SIDEBAR HAS HIGHEST PRIORITY =====
+        const $sidebar = $('.saw-sidebar[data-current-id]');
+        const hasSidebarActiveRow = $sidebar.length && $sidebar.data('current-id');
+        
+        // Store flag globally for restore logic
+        if (hasSidebarActiveRow) {
+            window._hasSidebarActiveRow = true;
+            window._sidebarActiveRowId = $sidebar.data('current-id');
+            console.log('🎯 Sidebar detected with active row:', window._sidebarActiveRowId);
         }
 
-        // Set active row from URL (if we're on a detail page)
-        // But prioritize sidebar data-current-id if available
-        const $sidebar = $('.saw-sidebar[data-current-id]');
-        if ($sidebar.length && $sidebar.data('current-id')) {
-            // Sidebar has current ID, will be handled by setActiveRowFromSidebar
-            console.log('ℹ️ Sidebar has current-id, will set active row from sidebar');
-        } else {
-            // No sidebar, try URL
+        // ===== CONDITIONAL LOGIC: RESTORE OR SIDEBAR =====
+        
+        // Check if we're on detail page
+        const isDetailPage = window.location.pathname.split('/').filter(p => p && !isNaN(p)).length > 0;
+        
+        if (entity && !isDetailPage) {
+            // We're on LIST page
+            if (!hasSidebarActiveRow) {
+                // No sidebar → safe to restore
+                console.log('📜 No sidebar, attempting restore');
+                restoreTableState(entity);
+            } else {
+                console.log('⏭️ Sidebar active row detected, skipping restore');
+            }
+        }
+
+        // Set active row from URL (only if no sidebar)
+        if (!hasSidebarActiveRow) {
             setActiveRowFromUrl();
         }
         
-        // Also set active row from sidebar if it exists (runs after initAdminTable)
-        setActiveRowFromSidebar();
+        // Set active row from sidebar (PRIORITY over everything)
+        if (hasSidebarActiveRow) {
+            setActiveRowFromSidebar();
+        }
 
         // Clickable table rows - intercept clicks
         document.addEventListener('click', function (e) {
@@ -530,57 +567,73 @@
     }
     
     /**
-     * Set active row from sidebar data-current-id
-     * 
-     * @since 7.0.0
-     */
-    function setActiveRowFromSidebar() {
-        const $sidebar = $('.saw-sidebar[data-current-id]');
-        if ($sidebar.length) {
-            const currentId = $sidebar.data('current-id');
-            if (currentId) {
-                console.log('🎯 Setting active row from sidebar:', currentId);
+ * Set active row from sidebar data-current-id
+ * 
+ * This has HIGHEST priority - overrides restore and URL
+ * 
+ * @since 7.0.0
+ */
+function setActiveRowFromSidebar() {
+    const $sidebar = $('.saw-sidebar[data-current-id]');
+    if (!$sidebar.length) {
+        return;
+    }
+    
+    const currentId = $sidebar.data('current-id');
+    if (!currentId) {
+        return;
+    }
+    
+    console.log('🎯 Setting active row from sidebar:', currentId);
+    
+    // Check if row exists in DOM
+    const checkAndSetActiveRow = () => {
+        const $activeRow = $('.saw-admin-table tbody tr[data-id="' + currentId + '"]');
+        
+        if ($activeRow.length) {
+            // ===== ROW FOUND: SET ACTIVE + SCROLL =====
+            console.log('✅ Row found in DOM, setting active');
+            updateActiveRow(currentId, true); // true = scroll to row
+            
+            // Clear any pending flags
+            const scrollArea = document.querySelector('.saw-table-scroll-area');
+            if (scrollArea) {
+                scrollArea._pendingActiveRowId = undefined;
+                scrollArea._needsActiveRow = false;
+            }
+        } else {
+            // ===== ROW NOT FOUND: SET FLAG FOR INFINITE SCROLL =====
+            console.log('⏳ Row not in DOM, setting pending flag for infinite scroll');
+            
+            const scrollArea = document.querySelector('.saw-table-scroll-area');
+            if (scrollArea) {
+                // Store pending active row ID
+                scrollArea._pendingActiveRowId = currentId;
+                scrollArea._needsActiveRow = true;
                 
-                // Check if row exists in DOM
-                const checkAndSetActiveRow = () => {
-                    const $activeRow = $('.saw-admin-table tbody tr[data-id="' + currentId + '"]');
-                    if ($activeRow.length) {
-                        // Row exists, set active
-                        updateActiveRow(currentId, true);
-                        console.log('✨ Active row set from sidebar:', currentId);
-                    } else {
-                        // Row doesn't exist, need to load pages
-                        console.log('⏳ Active row not found, will load pages and retry');
-                        // Store active row ID for later
-                        const scrollArea = document.querySelector('.saw-table-scroll-area');
-                        if (scrollArea) {
-                            scrollArea._pendingActiveRowId = currentId;
-                            scrollArea._needsActiveRow = true;
-                            
-                            // Try to load pages until row is found
-                            const tryLoadPages = () => {
-                                const $row = $('.saw-admin-table tbody tr[data-id="' + currentId + '"]');
-                                if ($row.length) {
-                                    updateActiveRow(currentId, true);
-                                    console.log('✨ Active row set after loading pages');
-                                    scrollArea._needsActiveRow = false;
-                                    scrollArea._pendingActiveRowId = undefined;
-                                } else {
-                                    // Check if we can load more - trigger infinite scroll load
-                                    // This will be handled by loadNextPage callback
-                                    setTimeout(tryLoadPages, 500);
-                                }
-                            };
-                            setTimeout(tryLoadPages, 1000);
-                        }
-                    }
-                };
+                console.log('📌 Pending active row set:', currentId);
+                console.log('ℹ️ Infinite scroll will load pages until row is found');
                 
-                // Wait for table to be fully rendered
-                setTimeout(checkAndSetActiveRow, 500);
+                // ===== KRITICKÉ: TRIGGER SCROLL DOWN TO START LOADING =====
+                // Simuluj scroll dolů aby se spustil infinite scroll
+                setTimeout(() => {
+                    const currentScroll = scrollArea.scrollTop;
+                    const scrollHeight = scrollArea.scrollHeight;
+                    const clientHeight = scrollArea.clientHeight;
+                    
+                    // Scroll na 70% aby se triggernul infinite scroll
+                    const targetScroll = scrollHeight * 0.7;
+                    
+                    console.log('🚀 Auto-scrolling to trigger infinite scroll loading');
+                    scrollArea.scrollTop = targetScroll;
+                }, 100);
             }
         }
-    }
+    };
+    
+    // Wait for table to be rendered
+    setTimeout(checkAndSetActiveRow, 500);
+}
     
     /**
      * Initialize infinite scroll
@@ -735,7 +788,6 @@
             
             // NOW increment and load
             isLoading = true;
-            currentPage = nextPage;
             
             // Remove existing loading indicator
             const existingLoading = tbody.querySelector('.saw-infinite-scroll-loading');
@@ -764,8 +816,8 @@
             const requestData = new URLSearchParams({
                 action: 'saw_get_items_infinite_' + entity.replace(/_/g, '-'),
                 nonce: nonce,
-                page: currentPage,
-                per_page: currentPage === 1 ? initialLoad : perPage, // OPRAVENO 2025-01-22: Použij initial_load pro první stránku
+                page: nextPage,
+                per_page: nextPage === 1 ? initialLoad : perPage, // OPRAVENO 2025-01-22: Použij initial_load pro první stránku
                 search: filters.search || '',
                 orderby: filters.orderby || 'id',
                 order: filters.order || 'DESC',
@@ -798,6 +850,18 @@
                 }
             }
             
+
+// ===== DEBUG LOG - PŘED FETCH =====
+console.log('🚀 SENDING AJAX REQUEST:', {
+    action: requestData.get('action'),
+    page: requestData.get('page'),
+    per_page: requestData.get('per_page'),
+    nextPage: nextPage,
+    currentPage: currentPage,
+    loadedPages: Array.from(loadedPages)
+});
+// ===== END DEBUG =====
+
             // Make AJAX request
             fetch(ajaxUrl, {
                 method: 'POST',
@@ -875,6 +939,37 @@
                         // KRITICKÉ: Jen JEDEN reflow!
                         tbody.appendChild(fragment);
                         
+                        // ╔═══════════════════════════════════════════════════════════╗
+                        // ║ NOVÁ LOGIKA: CHECK FOR PENDING ACTIVE ROW                ║
+                        // ╚═══════════════════════════════════════════════════════════╝
+                        if (scrollArea._needsActiveRow && scrollArea._pendingActiveRowId) {
+                            const activeRowId = scrollArea._pendingActiveRowId;
+                            const $activeRow = $('.saw-admin-table tbody tr[data-id="' + activeRowId + '"]');
+                            
+                            if ($activeRow.length) {
+                                // ===== ROW FOUND! SET IT ACTIVE AND SCROLL TO IT =====
+                                console.log('✅ Pending active row found after page load:', activeRowId);
+                                updateActiveRow(activeRowId, true); // true = scroll to row
+                                
+                                // Clear flags
+                                scrollArea._needsActiveRow = false;
+                                scrollArea._pendingActiveRowId = undefined;
+                                
+                                // ===== CRITICAL: LOCK SCROLL POSITION =====
+                                // Prevent restore from overwriting our scroll
+                                scrollArea._isLockedToActiveRow = true;
+                                setTimeout(() => {
+                                    scrollArea._isLockedToActiveRow = false;
+                                    console.log('🔓 Scroll lock released');
+                                }, 1000);
+                            } else {
+                                // Not found yet, will check on next page load
+                                if (DEBUG) {
+                                    console.log('⏳ Pending active row not found yet, will check again');
+                                }
+                            }
+                        }
+                        
                         // PŘIDÁNO 2025-01-22: Restore scroll position after reflow settles
                         requestAnimationFrame(() => {
                             const scrollHeightAfter = scrollArea.scrollHeight;
@@ -896,66 +991,58 @@
                                     console.log('🔓 Scroll unlocked');
                                 }
                                 
-                                // Check if we need to restore scroll position after loading missing pages
+                                // ╔═══════════════════════════════════════════════════════════╗
+                                // ║ EXISTUJÍCÍ LOGIKA: CHECK FOR SCROLL RESTORE              ║
+                                // ║ (Tato část už existuje, nechat beze změny)               ║
+                                // ╚═══════════════════════════════════════════════════════════╝
                                 if (scrollArea._needsScrollRestore && scrollArea._pendingScrollRestore !== undefined) {
-                                    const pendingPage = scrollArea._pendingScrollPage || 1;
-                                    const currentRowCount = tbody.querySelectorAll('tr.saw-table-row[data-id]').length;
-                                    const expectedRowsForPage = pendingPage * perPage;
-                                    
-                                    // Check if we have enough rows now
-                                    if (currentRowCount >= expectedRowsForPage - 10) {
-                                        console.log('✅ Enough rows loaded, restoring scroll position');
+                                    // Only restore if NOT locked to active row
+                                    if (!scrollArea._isLockedToActiveRow) {
+                                        const pendingPage = scrollArea._pendingScrollPage || 1;
+                                        const currentRowCount = tbody.querySelectorAll('tr.saw-table-row[data-id]').length;
+                                        const expectedRowsForPage = pendingPage * perPage;
                                         
-                                        // Mark pages as loaded
-                                        for (let i = 1; i <= pendingPage; i++) {
-                                            if (!loadedPages.has(i)) {
-                                                loadedPages.add(i);
+                                        // Check if we have enough rows now
+                                        if (currentRowCount >= expectedRowsForPage - 10) {
+                                            console.log('✅ Enough rows loaded, restoring scroll position');
+                                            
+                                            // Mark pages as loaded
+                                            for (let i = 1; i <= pendingPage; i++) {
+                                                if (!loadedPages.has(i)) {
+                                                    loadedPages.add(i);
+                                                }
+                                            }
+                                            currentPage = pendingPage;
+                                            
+                                            // Restore scroll position
+                                            isRestoring = true;
+                                            scrollArea._isProgrammaticScroll = true;
+                                            
+                                            requestAnimationFrame(() => {
+                                                scrollArea.scrollTop = scrollArea._pendingScrollRestore;
+                                                console.log('✅ Scroll position restored after loading pages');
+                                                
+                                                // Reset flags after scroll settles
+                                                requestAnimationFrame(() => {
+                                                    isRestoring = false;
+                                                    scrollArea._isProgrammaticScroll = false;
+                                                    scrollArea._needsScrollRestore = false;
+                                                    scrollArea._pendingScrollRestore = undefined;
+                                                    scrollArea._pendingScrollPage = undefined;
+                                                    
+                                                    if (DEBUG) {
+                                                        console.log('✅ Restoration complete, infinite scroll re-enabled');
+                                                    }
+                                                });
+                                            });
+                                        } else {
+                                            // Not enough rows yet, will check again on next page load
+                                            if (DEBUG) {
+                                                console.log('⏳ Still need more rows, waiting for next page load');
                                             }
                                         }
-                                        currentPage = pendingPage;
-                                        
-                                        // Restore scroll position
-                                        isRestoring = true;
-                                        scrollArea._isProgrammaticScroll = true;
-                                        
-                                        requestAnimationFrame(() => {
-                                            scrollArea.scrollTop = scrollArea._pendingScrollRestore;
-                                            console.log('✅ Scroll position restored after loading pages');
-                                            
-                                            // Reset flags after scroll settles
-                                            requestAnimationFrame(() => {
-                                                isRestoring = false;
-                                                scrollArea._isProgrammaticScroll = false;
-                                                scrollArea._needsScrollRestore = false;
-                                                scrollArea._pendingScrollRestore = undefined;
-                                                scrollArea._pendingScrollPage = undefined;
-                                                
-                                                if (DEBUG) {
-                                                    console.log('✅ Restoration complete, infinite scroll re-enabled');
-                                                }
-                                            });
-                                        });
                                     } else {
-                                        // Not enough rows yet, will check again on next page load
-                                        if (DEBUG) {
-                                            console.log('⏳ Still need more rows, waiting for next page load');
-                                        }
-                                    }
-                                }
-                                
-                                // Check if we need to set active row after loading pages
-                                if (scrollArea._needsActiveRow && scrollArea._pendingActiveRowId) {
-                                    const $activeRow = $('.saw-admin-table tbody tr[data-id="' + scrollArea._pendingActiveRowId + '"]');
-                                    if ($activeRow.length) {
-                                        updateActiveRow(scrollArea._pendingActiveRowId, true);
-                                        console.log('✨ Active row set after loading pages:', scrollArea._pendingActiveRowId);
-                                        scrollArea._needsActiveRow = false;
-                                        scrollArea._pendingActiveRowId = undefined;
-                                    } else {
-                                        // Not found yet, will check again on next page load
-                                        if (DEBUG) {
-                                            console.log('⏳ Active row still not found, waiting for next page load');
-                                        }
+                                        console.log('🔒 Scroll restore skipped - locked to active row');
                                     }
                                 }
                             });
@@ -1005,7 +1092,7 @@
             }
             
             // PŘIDÁNO 2025-01-22: Skip if appending rows
-            if (isRestoring || isAppending) {
+            if (isRestoring) {
                 if (DEBUG) {
                     console.log('⏸️ Scroll paused - restoration or append in progress');
                 }
