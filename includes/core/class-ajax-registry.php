@@ -136,7 +136,13 @@ class SAW_AJAX_Registry {
             // Custom AJAX actions from module config
             if (!empty($config['custom_ajax_actions']) && is_array($config['custom_ajax_actions'])) {
                 foreach ($config['custom_ajax_actions'] as $ajax_action => $controller_method) {
-                    add_action("wp_ajax_{$ajax_action}", function() use ($slug, $controller_method) {
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log(sprintf('[AJAX Registry] Registering custom action: wp_ajax_%s for module=%s, method=%s', $ajax_action, $slug, $controller_method));
+                    }
+                    add_action("wp_ajax_{$ajax_action}", function() use ($slug, $controller_method, $ajax_action) {
+                        if (defined('WP_DEBUG') && WP_DEBUG) {
+                            error_log(sprintf('[AJAX Registry] Handler called: wp_ajax_%s, dispatching to module=%s, method=%s', $ajax_action, $slug, $controller_method));
+                        }
                         $this->dispatch($slug, $controller_method);
                     });
                 }
@@ -195,6 +201,10 @@ class SAW_AJAX_Registry {
      * @return void
      */
     private function dispatch($slug, $method) {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log(sprintf('[AJAX Registry] dispatch() called: slug=%s, method=%s', $slug, $method));
+        }
+        
         // Load Base Controller if needed
         if (!class_exists('SAW_Base_Controller')) {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/class-base-controller.php';
@@ -202,6 +212,9 @@ class SAW_AJAX_Registry {
         
         // Get module config
         if (!class_exists('SAW_Module_Loader')) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[AJAX Registry] dispatch() ERROR: Module Loader not available');
+            }
             wp_send_json_error(['message' => 'Module Loader not available']);
             return;
         }
@@ -236,11 +249,22 @@ class SAW_AJAX_Registry {
         
         // Instantiate and call method
         try {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log(sprintf('[AJAX Registry] Instantiating controller: %s', $controller_class));
+            }
+            
             $controller = new $controller_class();
             
             if (!method_exists($controller, $method)) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log(sprintf('[AJAX Registry] ERROR: Method %s not found in controller %s', $method, $controller_class));
+                }
                 wp_send_json_error(['message' => "Method not found: {$method}"]);
                 return;
+            }
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log(sprintf('[AJAX Registry] Calling method: %s::%s()', $controller_class, $method));
             }
             
             $controller->$method();

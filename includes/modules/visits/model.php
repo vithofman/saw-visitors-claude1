@@ -241,6 +241,51 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
     }
     
     /**
+     * Create visit with automatic PIN expiry setting
+     * 
+     * ✅ PŘIDÁNO: Nastavení pin_expires_at při vytvoření
+     * 
+     * @since 4.8.0
+     * @param array $data Visit data
+     * @return int|WP_Error Visit ID or error
+     */
+    public function create($data) {
+        global $wpdb;
+        
+        // Use parent's create method
+        $id = parent::create($data);
+        
+        if (is_wp_error($id)) {
+            return $id;
+        }
+        
+        // ✅ PŘIDÁNO: Nastavit PIN platnost při vytvoření
+        if (!empty($id)) {
+            $last_schedule_date = $wpdb->get_var($wpdb->prepare(
+                "SELECT MAX(date) FROM {$wpdb->prefix}saw_visit_schedules WHERE visit_id = %d",
+                $id
+            ));
+            
+            if ($last_schedule_date) {
+                // PIN platí do: poslední den + 1 den (23:59:59)
+                $pin_expires_at = date('Y-m-d 23:59:59', strtotime($last_schedule_date . ' +1 day'));
+                
+                $wpdb->update(
+                    $this->table,
+                    ['pin_expires_at' => $pin_expires_at],
+                    ['id' => $id],
+                    ['%s'],
+                    ['%d']
+                );
+                
+                error_log("[Visits Model] PIN expiry set to {$pin_expires_at} for visit #{$id}");
+            }
+        }
+        
+        return $id;
+    }
+    
+    /**
      * Get status label in Czech
      * 
      * @param string $status Status code
@@ -250,7 +295,6 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
         $labels = array(
             'draft' => 'Koncept',
             'pending' => 'Čekající',
-            'confirmed' => 'Potvrzená',
             'in_progress' => 'Probíhající',
             'completed' => 'Dokončená',
             'cancelled' => 'Zrušená',

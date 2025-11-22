@@ -63,6 +63,13 @@ return array(
             'required' => true,
             'sanitize' => 'sanitize_text_field',
             'default' => 'pending',
+            'options' => array(
+                'draft' => 'Koncept',
+                'pending' => 'Čekající',
+                'in_progress' => 'Probíhající',
+                'completed' => 'Dokončená',
+                'cancelled' => 'Zrušená',
+            ),
         ),
         'started_at' => array(
             'type' => 'datetime',
@@ -95,6 +102,15 @@ return array(
             'label' => 'Poznámky',
             'required' => false,
             'sanitize' => 'sanitize_textarea_field',
+        ),
+        'pin_expires_at' => array(
+            'type' => 'datetime',
+            'label' => 'Platnost PIN',
+            'required' => false,
+            'hidden' => false,
+            'readonly' => true,
+            'sanitize' => 'sanitize_text_field',
+            'help' => 'Do kdy je PIN platný (automaticky se prodlužuje při použití)',
         ),
     ),
     
@@ -133,12 +149,6 @@ return array(
                 'filter_value' => 'pending',
                 'count_query' => true,
             ),
-            'confirmed' => array(
-                'label' => 'Potvrzená',
-                'icon' => '✅',
-                'filter_value' => 'confirmed',
-                'count_query' => true,
-            ),
             'in_progress' => array(
                 'label' => 'Probíhající',
                 'icon' => '🔄',
@@ -171,5 +181,7 @@ return array(
         'saw_get_hosts_by_branch' => 'ajax_get_hosts_by_branch',
         'saw_create_walkin' => 'ajax_create_walkin',
         'saw_send_invitation' => 'ajax_send_invitation',
+        'saw_extend_pin' => 'ajax_extend_pin',
+        'saw_generate_pin' => 'ajax_generate_pin',
     ),
 );

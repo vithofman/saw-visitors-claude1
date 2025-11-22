@@ -186,10 +186,8 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
         
         $items = $wpdb->get_results($wpdb->prepare($sql, ...$where_values), ARRAY_A);
         
-        // ✅ NOVĚ: Apply virtual columns if configured
-        if (!empty($this->config['virtual_columns'])) {
-            $items = $this->apply_virtual_columns($items ?: array());
-        }
+        // ✅ ODSTRANĚNO: Virtual columns už nejsou potřeba
+        // current_status a training_status se čtou přímo z DB!
         
         $result = array(
             'items' => $items ?: array(),

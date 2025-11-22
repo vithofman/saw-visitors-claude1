@@ -101,6 +101,39 @@ return array(
             'sanitize' => 'absint',
             'default' => 0,
         ),
+        
+        // ✅ PŘIDÁNO: Reálné sloupce místo virtual columns
+        'current_status' => array(
+            'type' => 'select',
+            'label' => 'Aktuální stav',
+            'required' => false,
+            'hidden' => true, // Admin nemění ručně
+            'sanitize' => 'sanitize_text_field',
+            'default' => 'planned',
+            'options' => array(
+                'planned' => 'Plánovaný',
+                'confirmed' => 'Potvrzený',
+                'present' => 'Přítomen',
+                'checked_out' => 'Odhlášen',
+                'no_show' => 'Nedostavil se',
+            ),
+        ),
+        
+        'training_status' => array(
+            'type' => 'select',
+            'label' => 'Stav školení',
+            'required' => false,
+            'hidden' => true, // Admin nemění ručně
+            'sanitize' => 'sanitize_text_field',
+            'default' => 'pending',
+            'options' => array(
+                'pending' => 'Čeká na check-in',
+                'not_available' => 'Nebylo k dispozici',
+                'skipped' => 'Přeskočeno (1 rok)',
+                'in_progress' => 'Probíhá',
+                'completed' => 'Dokončeno',
+            ),
+        ),
     ),
     
     'list_config' => array(
@@ -109,14 +142,22 @@ return array(
             'first_name',
             'last_name',
             'visit_id',
-            'current_status',
+            'current_status',   // ✅ Teď je normální sloupec - lze řadit!
+            'training_status',  // ✅ Teď je normální sloupec - lze řadit!
             'first_checkin_at',
             'last_checkout_at'
         ),
         'searchable' => array('first_name', 'last_name', 'email'),
-        'sortable' => array('id', 'first_name', 'last_name', 'created_at'),
+        'sortable' => array(
+            'id', 
+            'first_name', 
+            'last_name', 
+            'created_at',
+            'current_status',   // ✅ PŘIDÁNO - teď lze řadit!
+            'training_status',  // ✅ PŘIDÁNO - teď lze řadit!
+        ),
         'filters' => array(
-            'training_status' => true, // Filter by training status instead of training_required
+            'training_status' => true,
         ),
         'per_page' => 20,
         'enable_detail_modal' => true,
@@ -165,125 +206,6 @@ return array(
             ),
         ),
         'default_tab' => 'all',
-    ),
-    
-    // ========================================
-    // VIRTUAL COLUMNS CONFIGURATION
-    // ========================================
-    // Tyto sloupce nejsou v databázi, ale jsou počítané dynamicky.
-    // Base Model je aplikuje automaticky po načtení dat.
-    'virtual_columns' => array(
-        // ====================================
-        // current_status - Aktuální stav návštěvníka
-        // ====================================
-        'current_status' => array(
-            'type' => 'batch_computed',
-            
-            // Batch query - JEDEN dotaz pro VŠECHNY návštěvníky (efektivní)
-            'batch_query' => function($visitor_ids, $wpdb) {
-                $today = current_time('Y-m-d');
-                
-                // ✅ BEZPEČNOST: Získej scope
-                $customer_id = 0;
-                $branch_id = 0;
-                if (class_exists('SAW_Context')) {
-                    $customer_id = SAW_Context::get_customer_id();
-                    $branch_id = SAW_Context::get_branch_id();
-                }
-                
-                // Validace
-                if (empty($visitor_ids)) {
-                    return array();
-                }
-                
-                // Připrav placeholders
-                $placeholders = implode(',', array_fill(0, count($visitor_ids), '%d'));
-                
-                // Sestavení query
-                $query = "SELECT 
-                    visitor_id,
-                    MAX(checked_in_at) as last_checkin,
-                    MAX(checked_out_at) as last_checkout
-                 FROM {$wpdb->prefix}saw_visit_daily_logs 
-                 WHERE visitor_id IN ($placeholders)
-                   AND log_date = %s";
-                
-                $params = array_merge($visitor_ids, array($today));
-                
-                // ✅ KRITICKÉ: Přidej scope filtering (bezpečnost!)
-                if ($customer_id) {
-                    $query .= " AND customer_id = %d";
-                    $params[] = $customer_id;
-                }
-                if ($branch_id) {
-                    $query .= " AND branch_id = %d";
-                    $params[] = $branch_id;
-                }
-                
-                $query .= " GROUP BY visitor_id";
-                
-                return $wpdb->get_results($wpdb->prepare($query, $params), ARRAY_A);
-            },
-            
-            // Apply - Aplikuj výsledky batch query na konkrétní item
-            'apply' => function($item, $batch_results) {
-                // ✅ Zkontroluj že item má ID
-                if (empty($item['id'])) {
-                    return 'unknown';
-                }
-                
-                // ✅ Zkontroluj že participation_status existuje
-                $participation_status = $item['participation_status'] ?? 'planned';
-                
-                // Získej log pro tohoto návštěvníka z batch výsledků
-                $log = $batch_results[$item['id']] ?? null;
-                
-                // Výpočet statusu podle business logiky
-                if ($participation_status === 'confirmed') {
-                    if ($log && $log['last_checkin'] && !$log['last_checkout']) {
-                        return 'present'; // Checked in, not checked out
-                    } elseif ($log && $log['last_checkout']) {
-                        return 'checked_out'; // Checked out today
-                    } else {
-                        return 'confirmed'; // Confirmed but not checked in today
-                    }
-                } elseif ($participation_status === 'no_show') {
-                    return 'no_show';
-                } else {
-                    return 'planned';
-                }
-            }
-        ),
-        
-        // ====================================
-        // training_status - Stav školení
-        // ====================================
-        'training_status' => array(
-            'type' => 'computed',
-            
-            // Jednoduchý výpočet - bez DB access
-            'compute' => function($item) {
-                // Jednoduché rozhodování na základě existujících polí
-                if (!empty($item['training_skipped'])) {
-                    return 'skipped';
-                } elseif (!empty($item['training_completed_at'])) {
-                    return 'completed';
-                } elseif (!empty($item['training_started_at'])) {
-                    return 'in_progress';
-                } else {
-                    return 'not_started';
-                }
-            }
-        ),
-        
-        // ====================================
-        // full_name - Celé jméno (concat example)
-        // ====================================
-        'full_name' => array(
-            'type' => 'concat',
-            'fields' => array('first_name', 'last_name'),
-            'separator' => ' '
-        )
     ),
     
     'cache' => array(
