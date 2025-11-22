@@ -654,7 +654,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 20px;
-    padding: 20px 24px;
+    padding: 20px 0px;
     margin: 0;
 }
 
@@ -715,12 +715,10 @@
     width: 100%;
     background: var(--saw-table-row-bg);
     border: none;
-    margin-top: 0 !important; /* OPRAVENO 2025-01-22: Odstranit margin mezi tabs a table */
-    margin-bottom: 0 !important; /* OPRAVENO 2025-01-22: Odstranit bottom margin */
-    padding-top: 0 !important; /* OPRAVENO 2025-01-22: Odstranit top padding */
-    padding-bottom: 0 !important; /* OPRAVENO 2025-01-22: Odstranit bottom padding */
-    border-collapse: separate !important; /* OPRAVENO 2025-01-22: Důležité pro sticky positioning */
-    border-spacing: 0 !important; /* OPRAVENO 2025-01-22: Odstranit spacing mezi buňkami */
+    margin: 0;
+    padding: 0;
+    border-collapse: separate;
+    border-spacing: 0;
 }
 
 .saw-admin-table table {
@@ -737,18 +735,13 @@
 .saw-admin-table thead {
     background: var(--saw-table-header-bg);
     border-bottom: 1px solid var(--saw-border-color);
-    /* OPRAVENO 2025-01-22: thead NEMŮŽE být sticky - sticky funguje jen na th elementech */
-    margin: 0 !important; /* OPRAVENO 2025-01-22: Odstranit margin */
-    padding: 0 !important; /* OPRAVENO 2025-01-22: Odstranit padding */
-    margin-top: 0 !important; /* OPRAVENO 2025-01-22: Explicitně odstranit top margin */
-    margin-bottom: 0 !important; /* OPRAVENO 2025-01-22: Explicitně odstranit bottom margin */
-    padding-top: 0 !important; /* OPRAVENO 2025-01-22: Explicitně odstranit top padding */
-    padding-bottom: 0 !important; /* OPRAVENO 2025-01-22: Explicitně odstranit bottom padding */
+    margin: 0;
+    padding: 0;
 }
 
 .saw-admin-table thead tr {
-    margin: 0 !important; /* OPRAVENO 2025-01-22: Odstranit margin z tr */
-    padding: 0 !important; /* OPRAVENO 2025-01-22: Odstranit padding z tr */
+    margin: 0;
+    padding: 0;
 }
 
 .saw-admin-table th {
@@ -760,13 +753,9 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
     white-space: nowrap;
-    position: sticky !important;
-    top: 114px !important; /* Desktop: ~64px nadpis (20px padding + 24px font) + 50px tabs */
-    background: var(--saw-table-header-bg) !important;
-    z-index: 11 !important;
+    background: var(--saw-table-header-bg);
     border-bottom: 1px solid var(--saw-border-color);
-    margin: 0 !important;
-    isolation: isolate;
+    margin: 0;
 }
 
 .saw-admin-table th a {
@@ -851,21 +840,15 @@
 }
 
 /* ============================================
-   STICKY LAST COLUMN (Actions)
+   ACTIONS COLUMN (last column)
    ============================================ */
 
-.saw-admin-table thead th:last-child,
-.saw-admin-table tbody td:last-child {
-    position: sticky;
-    right: 0;
-    background: inherit;
-    box-shadow: -2px 0 4px rgba(0, 0, 0, 0.03);
-    z-index: 100; /* Vyšší základní z-index pro akční sloupec */
+.saw-admin-table thead th:last-child {
+    background: var(--saw-table-header-bg);
 }
 
-.saw-admin-table thead th:last-child {
-    z-index: 120 !important; /* Vyšší než tbody td:last-child */
-    background: var(--saw-table-header-bg);
+.saw-admin-table tbody td:last-child {
+    background: var(--saw-table-row-bg);
 }
 
 .saw-admin-table tbody td:last-child {
@@ -2158,7 +2141,6 @@
     
     .saw-admin-table th {
         font-size: 11px;
-        top: 98px !important; /* Tablet: ~48px nadpis + 50px tabs */
     }
     
     .saw-pagination {
@@ -2328,7 +2310,6 @@
     
     .saw-admin-table th {
         font-size: 10px;
-        top: 96px !important; /* Mobile: ~46px nadpis (10px top + 16px font + ~4px line + 6px bottom) + 50px tabs */
     }
     
     .saw-action-trigger {

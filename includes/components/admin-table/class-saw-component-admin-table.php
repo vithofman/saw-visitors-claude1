@@ -205,26 +205,25 @@ class SAW_Component_Admin_Table {
         } else {
             ?>
             <div class="saw-table-panel<?php echo !empty($this->config['infinite_scroll']['enabled']) ? ' saw-table-infinite-scroll-enabled' : ''; ?>">
-                <?php
-                $this->render_header();
-                ?>
-                
-                <?php $this->render_controls(); // VEN ze scroll area - bude sticky nebo se sloučí s tabs ?>
-                
-                <!-- Scrollovací oblast -->
-                <div class="saw-table-scroll-area">
-                    <?php $this->render_table_or_empty(); // POUZE tabulka uvnitř scroll area ?>
-                </div>
-                
-                <!-- Pagination vždy dole -->
-                <?php $this->render_pagination(); ?>
-                
-                <?php
-                $this->render_modal();
-                $this->render_floating_button();
-                $this->render_delete_script();
-                ?>
-            </div>
+    <?php
+    $this->render_header();
+    $this->render_controls();
+    ?>
+    
+    <!-- Scrollovací oblast -->
+    <div class="saw-table-scroll-area">
+        <?php $this->render_table_or_empty(); ?>
+    </div>
+    
+    <!-- Pagination vždy dole -->
+    <?php $this->render_pagination(); ?>
+    
+    <?php
+    $this->render_modal();
+    $this->render_floating_button();
+    $this->render_delete_script();
+    ?>
+</div>
             <?php
         }
     }
@@ -234,23 +233,29 @@ class SAW_Component_Admin_Table {
         $sidebar_class = $has_sidebar ? ' has-sidebar' : '';
         ?>
         <div class="saw-admin-table-split<?php echo $sidebar_class; ?>">
-            <div class="saw-table-panel<?php echo !empty($this->config['infinite_scroll']['enabled']) ? ' saw-table-infinite-scroll-enabled' : ''; ?>">
-                <?php
-                $this->render_header();
-                ?>
-                
-                <?php $this->render_controls(); // VEN ze scroll area - bude sticky nebo se sloučí s tabs ?>
-                
-                <!-- Scrollovací oblast -->
-                <div class="saw-table-scroll-area">
-                    <?php $this->render_table_or_empty(); // POUZE tabulka uvnitř scroll area ?>
-                </div>
-                
-                <!-- Pagination vždy dole -->
-                <?php $this->render_pagination(); ?>
-                
-                <?php $this->render_floating_button(); ?>
-            </div>
+    <div class="saw-table-panel<?php echo !empty($this->config['infinite_scroll']['enabled']) ? ' saw-table-infinite-scroll-enabled' : ''; ?>">
+        <?php
+        $this->render_header();
+        $this->render_controls();
+        ?>
+        
+        <!-- Scrollovací oblast -->
+        <div class="saw-table-scroll-area">
+            <?php $this->render_table_or_empty(); ?>
+        </div>
+        
+        <!-- Pagination vždy dole -->
+        <?php $this->render_pagination(); ?>
+        
+        <?php $this->render_floating_button(); ?>
+    </div>
+    
+    <?php if ($has_sidebar): ?>
+    <div class="saw-sidebar-wrapper active">
+        <?php $this->render_sidebar(); ?>
+    </div>
+    <?php endif; ?>
+</div>
             
             <?php if ($has_sidebar): ?>
             <div class="saw-sidebar-wrapper active">
