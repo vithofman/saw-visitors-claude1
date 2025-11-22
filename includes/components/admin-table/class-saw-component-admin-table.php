@@ -81,6 +81,15 @@ class SAW_Component_Admin_Table {
     }
     
     private function parse_config($config) {
+        // CRITICAL: Preserve current_tab and tab_counts from config BEFORE wp_parse_args
+        // wp_parse_args will overwrite with defaults if values are null/empty
+        $preserved_current_tab = isset($config['current_tab']) && $config['current_tab'] !== null && $config['current_tab'] !== '' 
+            ? (string)$config['current_tab'] 
+            : null;
+        $preserved_tab_counts = isset($config['tab_counts']) && is_array($config['tab_counts']) && !empty($config['tab_counts'])
+            ? $config['tab_counts']
+            : null;
+        
         $defaults = array(
             'columns' => array(),
             'rows' => array(),
@@ -158,6 +167,21 @@ class SAW_Component_Admin_Table {
         );
         
         $parsed = wp_parse_args($config, $defaults);
+        
+        // CRITICAL: Restore preserved current_tab and tab_counts if they exist
+        // wp_parse_args would overwrite them with null/empty defaults
+        if ($preserved_current_tab !== null) {
+            $parsed['current_tab'] = $preserved_current_tab;
+        } elseif (!isset($parsed['current_tab']) || $parsed['current_tab'] === null || $parsed['current_tab'] === '') {
+            // Fallback to default_tab if still empty
+            $parsed['current_tab'] = $parsed['tabs']['default_tab'] ?? 'all';
+        }
+        
+        if ($preserved_tab_counts !== null) {
+            $parsed['tab_counts'] = $preserved_tab_counts;
+        } elseif (!isset($parsed['tab_counts']) || !is_array($parsed['tab_counts'])) {
+            $parsed['tab_counts'] = array();
+        }
         
         // Legacy support: convert old format to new format
         if (!empty($parsed['enable_search']) && empty($parsed['search']['enabled'])) {

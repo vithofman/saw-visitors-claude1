@@ -113,32 +113,8 @@ $table_config['module_config'] = $config;
 $table_config['actions'] = array('view', 'edit', 'delete');
 $table_config['add_new'] = 'Nová firma';
 
-// TABS configuration - NOVÝ formát (replaces grouping)
-$table_config['tabs'] = array(
-    'enabled' => true,
-    'tab_param' => 'is_archived', // GET parameter pro tab (?is_archived=0)
-    'tabs' => array(
-        'all' => array(
-            'label' => 'Všechny',
-            'icon' => '📋',
-            'filter_value' => null, // null = no filter (all records)
-            'count_query' => true,
-        ),
-        'active' => array(
-            'label' => 'Aktivní',
-            'icon' => '✅',
-            'filter_value' => 0, // is_archived = 0 (INT, not string)
-            'count_query' => true,
-        ),
-        'archived' => array(
-            'label' => 'Archivované',
-            'icon' => '📦',
-            'filter_value' => 1, // is_archived = 1 (INT, not string)
-            'count_query' => true,
-        ),
-    ),
-    'default_tab' => 'all',
-);
+// TABS configuration - loaded from config.php
+$table_config['tabs'] = $config['tabs'] ?? null;
 
 // Infinite scroll - UPRAVENÉ hodnoty
 $table_config['infinite_scroll'] = array(

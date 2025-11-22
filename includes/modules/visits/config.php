@@ -110,6 +110,57 @@ return array(
         'enable_detail_modal' => true,
     ),
     
+    // TABS configuration - for horizontal tabs navigation
+    'tabs' => array(
+        'enabled' => true,
+        'tab_param' => 'status', // GET parameter (?status=confirmed)
+        'tabs' => array(
+            'all' => array(
+                'label' => 'Všechny',
+                'icon' => '📋',
+                'filter_value' => null, // null = no filter (all records)
+                'count_query' => true,
+            ),
+            'draft' => array(
+                'label' => 'Koncept',
+                'icon' => '📝',
+                'filter_value' => 'draft',
+                'count_query' => true,
+            ),
+            'pending' => array(
+                'label' => 'Čekající',
+                'icon' => '⏳',
+                'filter_value' => 'pending',
+                'count_query' => true,
+            ),
+            'confirmed' => array(
+                'label' => 'Potvrzená',
+                'icon' => '✅',
+                'filter_value' => 'confirmed',
+                'count_query' => true,
+            ),
+            'in_progress' => array(
+                'label' => 'Probíhající',
+                'icon' => '🔄',
+                'filter_value' => 'in_progress',
+                'count_query' => true,
+            ),
+            'completed' => array(
+                'label' => 'Dokončená',
+                'icon' => '✔️',
+                'filter_value' => 'completed',
+                'count_query' => true,
+            ),
+            'cancelled' => array(
+                'label' => 'Zrušená',
+                'icon' => '❌',
+                'filter_value' => 'cancelled',
+                'count_query' => true,
+            ),
+        ),
+        'default_tab' => 'all',
+    ),
+    
     'cache' => array(
         'enabled' => true,
         'ttl' => 300,

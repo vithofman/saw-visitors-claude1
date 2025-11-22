@@ -149,6 +149,33 @@ return array(
         'enable_detail_modal' => true,
     ),
     
+    // TABS configuration - for horizontal tabs navigation
+    'tabs' => array(
+        'enabled' => true,
+        'tab_param' => 'is_archived', // GET parameter (?is_archived=0)
+        'tabs' => array(
+            'all' => array(
+                'label' => 'Všechny',
+                'icon' => '📋',
+                'filter_value' => null, // null = no filter (all records)
+                'count_query' => true,
+            ),
+            'active' => array(
+                'label' => 'Aktivní',
+                'icon' => '✅',
+                'filter_value' => 0, // INT (is_archived = 0)
+                'count_query' => true,
+            ),
+            'archived' => array(
+                'label' => 'Archivované',
+                'icon' => '📦',
+                'filter_value' => 1, // INT (is_archived = 1)
+                'count_query' => true,
+            ),
+        ),
+        'default_tab' => 'all',
+    ),
+    
     'cache' => array(
         'enabled' => true,
         'ttl' => 300,

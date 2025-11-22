@@ -2277,6 +2277,9 @@ protected function can($action) {
                 }
             }
             
+            // Model already has tabs config from constructor (loaded from config.php)
+            // No need to access protected $config property
+            
             // Get count from model
             // CRITICAL: Add unique parameter to ensure cache key is unique for each tab
             // This prevents cache collisions between different tab counts

@@ -181,56 +181,8 @@ $table_config['actions'] = array('view', 'edit', 'delete');
 $table_config['add_new'] = 'Nová návštěva';
 $table_config['empty_message'] = 'Žádné návštěvy nenalezeny';
 
-// TABS configuration - NOVÝ formát (replaces grouping)
-$table_config['tabs'] = array(
-    'enabled' => true,
-    'tab_param' => 'status', // GET parameter pro tab (?status=confirmed)
-    'tabs' => array(
-        'all' => array(
-            'label' => 'Všechny',
-            'icon' => '📋',
-            'filter_value' => null, // null = no filter (all records)
-            'count_query' => true, // Automaticky spočítat
-        ),
-        'draft' => array(
-            'label' => 'Koncept',
-            'icon' => '📝',
-            'filter_value' => 'draft',
-            'count_query' => true,
-        ),
-        'pending' => array(
-            'label' => 'Čekající',
-            'icon' => '⏳',
-            'filter_value' => 'pending',
-            'count_query' => true,
-        ),
-        'confirmed' => array(
-            'label' => 'Potvrzená',
-            'icon' => '✅',
-            'filter_value' => 'confirmed',
-            'count_query' => true,
-        ),
-        'in_progress' => array(
-            'label' => 'Probíhající',
-            'icon' => '🔄',
-            'filter_value' => 'in_progress',
-            'count_query' => true,
-        ),
-        'completed' => array(
-            'label' => 'Dokončená',
-            'icon' => '✔️',
-            'filter_value' => 'completed',
-            'count_query' => true,
-        ),
-        'cancelled' => array(
-            'label' => 'Zrušená',
-            'icon' => '❌',
-            'filter_value' => 'cancelled',
-            'count_query' => true,
-        ),
-    ),
-    'default_tab' => 'all', // Výchozí aktivní tab
-);
+// TABS configuration - loaded from config.php
+$table_config['tabs'] = $config['tabs'] ?? null;
 
 // Infinite scroll - UPRAVENÉ hodnoty
 $table_config['infinite_scroll'] = array(

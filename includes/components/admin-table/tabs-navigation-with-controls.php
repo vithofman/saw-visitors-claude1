@@ -43,6 +43,16 @@ $filters_html = $config['filters_html'] ?? '';
 ?>
 
 <div class="saw-table-tabs-wrapper">
+    <!-- Left Arrow -->
+    <button type="button" class="saw-tabs-nav-arrow saw-tabs-nav-arrow-left" aria-label="Scroll left" style="display: none;">
+        <span class="dashicons dashicons-arrow-left-alt2"></span>
+    </button>
+    
+    <!-- Right Arrow -->
+    <button type="button" class="saw-tabs-nav-arrow saw-tabs-nav-arrow-right" aria-label="Scroll right" style="display: none;">
+        <span class="dashicons dashicons-arrow-right-alt2"></span>
+    </button>
+    
     <div class="saw-table-tabs-container">
         <!-- Tabs Navigation -->
         <div class="saw-table-tabs">

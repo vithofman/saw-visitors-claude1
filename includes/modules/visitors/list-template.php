@@ -195,50 +195,8 @@ $table_config['columns'] = array(
     ),
 );
 
-// TABS configuration - NOVÝ formát (replaces grouping)
-$table_config['tabs'] = array(
-    'enabled' => true,
-    'tab_param' => 'current_status', // GET parameter pro tab (?current_status=present)
-    'tabs' => array(
-        'all' => array(
-            'label' => 'Všechny',
-            'icon' => '📋',
-            'filter_value' => null, // null = no filter (all records)
-            'count_query' => true,
-        ),
-        'present' => array(
-            'label' => 'Přítomen',
-            'icon' => '✅',
-            'filter_value' => 'present',
-            'count_query' => true,
-        ),
-        'checked_out' => array(
-            'label' => 'Odhlášen',
-            'icon' => '🚪',
-            'filter_value' => 'checked_out',
-            'count_query' => true,
-        ),
-        'confirmed' => array(
-            'label' => 'Potvrzený',
-            'icon' => '⏳',
-            'filter_value' => 'confirmed',
-            'count_query' => true,
-        ),
-        'planned' => array(
-            'label' => 'Plánovaný',
-            'icon' => '📅',
-            'filter_value' => 'planned',
-            'count_query' => true,
-        ),
-        'no_show' => array(
-            'label' => 'Nedostavil se',
-            'icon' => '❌',
-            'filter_value' => 'no_show',
-            'count_query' => true,
-        ),
-    ),
-    'default_tab' => 'all',
-);
+// TABS configuration - loaded from config.php
+$table_config['tabs'] = $config['tabs'] ?? null;
 
 // Infinite scroll - UPRAVENÉ hodnoty
 $table_config['infinite_scroll'] = array(

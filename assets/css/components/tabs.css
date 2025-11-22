@@ -26,20 +26,81 @@
     flex-wrap: nowrap;
 }
 
+.saw-table-tabs-wrapper {
+    position: relative; /* For arrow positioning */
+}
+
 .saw-table-tabs {
     display: flex;
     gap: 4px;
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE/Edge */
+    scrollbar-width: none; /* Firefox - hide scrollbar */
+    -ms-overflow-style: none; /* IE/Edge - hide scrollbar */
     flex: 1 1 auto;
     min-width: 0; /* Allow flex item to shrink below content size */
+    scroll-behavior: smooth; /* Smooth scrolling */
 }
 
+/* Hide scrollbar completely */
 .saw-table-tabs::-webkit-scrollbar {
-    display: none; /* Chrome/Safari */
+    display: none; /* Chrome/Safari - hide scrollbar */
+}
+
+/* Navigation arrows */
+.saw-tabs-nav-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 32px;
+    height: 32px;
+    background: var(--saw-bg-primary);
+    border: 1px solid var(--saw-border-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    color: var(--saw-text-secondary);
+    font-size: 16px;
+}
+
+.saw-tabs-nav-arrow:hover {
+    background: var(--saw-bg-secondary);
+    border-color: var(--saw-primary);
+    color: var(--saw-primary);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.saw-tabs-nav-arrow:active {
+    transform: translateY(-50%) scale(0.95);
+}
+
+.saw-tabs-nav-arrow.disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.saw-tabs-nav-arrow-left {
+    left: 8px;
+}
+
+.saw-tabs-nav-arrow-right {
+    right: 8px;
+}
+
+/* Show arrows only when tabs are scrollable */
+.saw-table-tabs-wrapper.has-scroll .saw-tabs-nav-arrow {
+    display: flex;
+}
+
+.saw-table-tabs-wrapper:not(.has-scroll) .saw-tabs-nav-arrow {
+    display: none;
 }
 
 /* Search and Filters inline with tabs */
@@ -209,14 +270,37 @@
     .saw-table-tab {
         padding: 8px 12px;
         gap: 6px;
+        font-size: 12px; /* Slightly smaller on mobile */
     }
     
+    /* Keep labels visible on mobile */
     .saw-tab-label {
-        display: none; /* Show only icon and count on very small screens */
+        display: inline; /* Show labels on mobile too */
     }
     
     .saw-table-controls-inline .saw-table-search {
         min-width: 150px;
+    }
+    
+    /* Ensure tabs are scrollable on mobile */
+    .saw-table-tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Arrows on mobile - smaller */
+    .saw-tabs-nav-arrow {
+        width: 28px;
+        height: 28px;
+        font-size: 14px;
+    }
+    
+    .saw-tabs-nav-arrow-left {
+        left: 4px;
+    }
+    
+    .saw-tabs-nav-arrow-right {
+        right: 4px;
     }
 }
 
