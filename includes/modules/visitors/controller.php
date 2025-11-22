@@ -77,62 +77,114 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
         }
     }
 
+    /**
+     * Format detail data for sidebar
+     *
+     * ✅ OPTIMIZED: Eager loads visit data, certificates, daily logs
+     * ✅ FIXED: Uses GROUP_CONCAT for MySQL 5.7 compatibility
+     *
+     * @param array $item Visitor data
+     * @return array Formatted visitor data
+     */
     protected function format_detail_data($item) {
-        if (empty($item)) return $item;
+        if (empty($item) || empty($item['id'])) {
+            return $item;
+        }
         
-        // Load visit data
-        if (!empty($item['visit_id'])) {
-            $item['visit_data'] = $this->model->get_visit_data($item['visit_id']);
+        global $wpdb;
+        $visitor_id = $item['id'];
+        $visit_id = $item['visit_id'] ?? 0;
+        
+        // ✅ BATCH QUERY: Load visit data with company in one query
+        if ($visit_id) {
+            $visit_query = $wpdb->prepare(
+                "SELECT 
+                    v.id as visit_id,
+                    v.visit_type,
+                    v.status as visit_status,
+                    v.company_id,
+                    c.name as company_name,
+                    c.ico as company_ico
+                FROM {$wpdb->prefix}saw_visits v
+                LEFT JOIN {$wpdb->prefix}saw_companies c ON v.company_id = c.id
+                WHERE v.id = %d",
+                $visit_id
+            );
             
-            // Load hosts
-            if (!empty($item['visit_data'])) {
-                global $wpdb;
-                $hosts = $wpdb->get_results($wpdb->prepare(
-                    "SELECT u.id, u.first_name, u.last_name, u.email
-                     FROM {$wpdb->prefix}saw_visit_hosts vh
-                     INNER JOIN {$wpdb->prefix}saw_users u ON vh.user_id = u.id
-                     WHERE vh.visit_id = %d
-                     ORDER BY u.last_name, u.first_name",
-                    $item['visit_id']
-                ), ARRAY_A);
+            $visit_data = $wpdb->get_row($visit_query, ARRAY_A);
+            
+            if ($visit_data) {
+                // ✅ LOAD HOSTS: Uses GROUP_CONCAT for compatibility
+                $hosts_query = $wpdb->prepare(
+                    "SELECT 
+                        GROUP_CONCAT(
+                            CONCAT_WS(':', u.id, u.first_name, u.last_name, u.email)
+                            ORDER BY u.last_name
+                            SEPARATOR '|'
+                        ) as hosts_data
+                    FROM {$wpdb->prefix}saw_visit_hosts vh
+                    INNER JOIN {$wpdb->prefix}saw_users u ON vh.user_id = u.id
+                    WHERE vh.visit_id = %d",
+                    $visit_id
+                );
                 
-                $item['visit_data']['hosts'] = $hosts;
+                $hosts_result = $wpdb->get_row($hosts_query, ARRAY_A);
+                
+                // Parse hosts
+                $hosts = array();
+                if (!empty($hosts_result['hosts_data'])) {
+                    foreach (explode('|', $hosts_result['hosts_data']) as $host_str) {
+                        $parts = explode(':', $host_str);
+                        if (count($parts) >= 4) {
+                            $hosts[] = array(
+                                'id' => $parts[0],
+                                'first_name' => $parts[1],
+                                'last_name' => $parts[2],
+                                'email' => $parts[3],
+                            );
+                        }
+                    }
+                }
+                
+                $visit_data['hosts'] = $hosts;
+                $item['visit_data'] = $visit_data;
             }
         }
         
-        // Load certificates
-        if (!empty($item['id'])) {
-            $item['certificates'] = $this->model->get_certificates($item['id']);
+        // Load certificates (single query)
+        if (method_exists($this->model, 'get_certificates')) {
+            $item['certificates'] = $this->model->get_certificates($visitor_id);
         }
         
-        // Load daily logs
-        if (!empty($item['id'])) {
-            $item['daily_logs'] = $this->model->get_daily_logs($item['id']);
+        // Load daily logs (single query)
+        if (method_exists($this->model, 'get_daily_logs')) {
+            $item['daily_logs'] = $this->model->get_daily_logs($visitor_id);
         }
         
-        // Compute current status for detail view
-        global $wpdb;
+        // ✅ COMPUTE CURRENT STATUS: Single query for today's log
         $today = current_time('Y-m-d');
         $log = $wpdb->get_row($wpdb->prepare(
             "SELECT * FROM {$wpdb->prefix}saw_visit_daily_logs 
              WHERE visitor_id = %d AND log_date = %s
              ORDER BY checked_in_at DESC
              LIMIT 1",
-            $item['id'], $today
+            $visitor_id,
+            $today
         ), ARRAY_A);
         
-        if ($item['participation_status'] === 'confirmed') {
-            if ($log && $log['checked_in_at'] && !$log['checked_out_at']) {
-                $item['current_status'] = 'present';
-            } elseif ($log && $log['checked_out_at']) {
-                $item['current_status'] = 'checked_out';
+        if ($log) {
+            if (empty($log['checked_out_at'])) {
+                $item['current_status'] = 'checked_in';
+                $item['current_status_label'] = 'Přítomen';
+                $item['checked_in_at'] = $log['checked_in_at'];
             } else {
-                $item['current_status'] = 'confirmed';
+                $item['current_status'] = 'checked_out';
+                $item['current_status_label'] = 'Odhlášen';
+                $item['checked_out_at'] = $log['checked_out_at'];
             }
-        } elseif ($item['participation_status'] === 'no_show') {
-            $item['current_status'] = 'no_show';
         } else {
-            $item['current_status'] = 'planned';
+            $item['current_status'] = 'not_present';
+            $item['current_status_label'] = 'Nepřítomen';
         }
         
         return $item;

@@ -150,8 +150,7 @@ class SAW_Module_Customers_Model extends SAW_Base_Model
         $customer_id = parent::create($data);
         
         if ($customer_id && !is_wp_error($customer_id)) {
-            // Invalidate all list caches
-            $this->invalidate_list_cache();
+            // ✅ Base Model už volá invalidate_cache() automaticky
             
             // WordPress action hook
             do_action('saw_customer_created', $customer_id);
@@ -179,11 +178,7 @@ class SAW_Module_Customers_Model extends SAW_Base_Model
         $result = parent::update($id, $data);
         
         if ($result && !is_wp_error($result)) {
-            // Invalidate ITEM cache
-            $this->invalidate_item_cache($id);
-            
-            // Invalidate LIST cache
-            $this->invalidate_list_cache();
+            // ✅ Base Model už volá invalidate_cache() automaticky
             
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log(sprintf('[CUSTOMERS MODEL] Updated customer ID: %d - Cache invalidated', $id));
@@ -206,11 +201,7 @@ class SAW_Module_Customers_Model extends SAW_Base_Model
         $result = parent::delete($id);
         
         if ($result && !is_wp_error($result)) {
-            // Invalidate ITEM cache
-            $this->invalidate_item_cache($id);
-            
-            // Invalidate LIST cache
-            $this->invalidate_list_cache();
+            // ✅ Base Model už volá invalidate_cache() automaticky
             
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log(sprintf('[CUSTOMERS MODEL] Deleted customer ID: %d - Cache invalidated', $id));
@@ -218,65 +209,6 @@ class SAW_Module_Customers_Model extends SAW_Base_Model
         }
         
         return $result;
-    }
-    
-    /**
-     * Invalidate item cache for specific customer
-     * 
-     * Removes cached data for a single customer from all cache layers:
-     * - WordPress transients
-     * - SAW_Cache (if available)
-     * - WordPress object cache
-     * 
-     * @param int $id Customer ID
-     * @return void
-     * @since 1.0.0
-     */
-    private function invalidate_item_cache($id) {
-        $cache_key = sprintf('customers_item_%d', $id);
-        delete_transient($cache_key);
-        
-        // SAW_Cache if available
-        if (class_exists('SAW_Cache')) {
-            SAW_Cache::forget($cache_key);
-        }
-        
-        // WordPress object cache
-        wp_cache_delete($id, 'saw_customers');
-    }
-    
-    /**
-     * Invalidate all list caches
-     * 
-     * Removes all customer list caches from database and cache layers.
-     * Uses pattern matching to remove all variations of list caches.
-     * 
-     * @return void
-     * @since 1.0.0
-     */
-    private function invalidate_list_cache() {
-        global $wpdb;
-        
-        // Delete all transients starting with customers_list_
-        $wpdb->query($wpdb->prepare(
-            "DELETE FROM %i 
-             WHERE option_name LIKE %s 
-             OR option_name LIKE %s",
-            $wpdb->options,
-            $wpdb->esc_like('_transient_customers_list_') . '%',
-            $wpdb->esc_like('_transient_timeout_customers_list_') . '%'
-        ));
-        
-        delete_transient('customers_list');
-        delete_transient('customers_for_switcher');
-        
-        // SAW_Cache pattern delete
-        if (class_exists('SAW_Cache')) {
-            SAW_Cache::forget_pattern('customers_*');
-        }
-        
-        // WordPress object cache
-        wp_cache_delete('saw_customers_all', 'saw_customers');
     }
     
     /**

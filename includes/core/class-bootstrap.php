@@ -95,12 +95,15 @@ class SAW_Bootstrap {
             // Logger (must be first)
             'includes/core/class-saw-logger.php',
             
+            // ✅ Cache Manager (PŘED Base Model!)
+            'includes/core/class-saw-cache.php',
+            
             // Service Container and Registry
             'includes/core/class-service-container.php',
             'includes/core/class-ajax-registry.php',
             'includes/core/class-hook-registry.php',
             
-            // Base classes
+            // Base classes (AFTER Cache - používají SAW_Cache)
             'includes/base/trait-ajax-handlers.php',
             'includes/base/class-base-model.php',
             'includes/base/class-base-controller.php',

@@ -247,56 +247,104 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         }
     }
 
+    /**
+     * Format detail data for sidebar
+     *
+     * ✅ OPTIMIZED: Single query with JOINs + GROUP_CONCAT instead of 5 separate queries
+     * ✅ FIXED: Uses GROUP_CONCAT for MySQL 5.7+ compatibility (no JSON_ARRAYAGG)
+     *
+     * @param array $item Visit data
+     * @return array Formatted visit data
+     */
     protected function format_detail_data($item) {
-        if (empty($item)) return $item;
+        if (empty($item) || empty($item['id'])) {
+            return $item;
+        }
         
         global $wpdb;
         
-        // Load company data and name
+        // ✅ SINGLE QUERY: Load visit, company, branch, visitor count in ONE query
+        $query = $wpdb->prepare(
+            "SELECT 
+                v.*,
+                c.name as company_name,
+                c.ico as company_ico,
+                c.street as company_street,
+                c.city as company_city,
+                c.zip as company_zip,
+                b.name as branch_name,
+                COUNT(DISTINCT vis.id) as visitor_count,
+                (
+                    SELECT CONCAT(first_name, ' ', last_name)
+                    FROM {$wpdb->prefix}saw_visitors
+                    WHERE visit_id = v.id
+                    ORDER BY id ASC
+                    LIMIT 1
+                ) as first_visitor_name
+            FROM {$wpdb->prefix}saw_visits v
+            LEFT JOIN {$wpdb->prefix}saw_companies c ON v.company_id = c.id
+            LEFT JOIN {$wpdb->prefix}saw_branches b ON v.branch_id = b.id
+            LEFT JOIN {$wpdb->prefix}saw_visitors vis ON v.id = vis.visit_id
+            WHERE v.id = %d
+            GROUP BY v.id",
+            $item['id']
+        );
+        
+        $enriched = $wpdb->get_row($query, ARRAY_A);
+        
+        if (!$enriched) {
+            return $item;
+        }
+        
+        // Merge with original item (preserves any extra data)
+        $item = array_merge($item, $enriched);
+        
+        // ✅ LOAD HOSTS: Separate query (necessary due to many-to-many)
+        // Uses GROUP_CONCAT for MySQL 5.7 compatibility
+        $hosts_query = $wpdb->prepare(
+            "SELECT 
+                GROUP_CONCAT(
+                    CONCAT_WS(':', u.id, u.first_name, u.last_name, u.email, u.role)
+                    ORDER BY u.last_name, u.first_name
+                    SEPARATOR '|'
+                ) as hosts_data
+             FROM {$wpdb->prefix}saw_visit_hosts vh
+             INNER JOIN {$wpdb->prefix}saw_users u ON vh.user_id = u.id
+             WHERE vh.visit_id = %d",
+            $item['id']
+        );
+        
+        $hosts_result = $wpdb->get_row($hosts_query, ARRAY_A);
+        
+        // Parse hosts data
+        $hosts = array();
+        if (!empty($hosts_result['hosts_data'])) {
+            foreach (explode('|', $hosts_result['hosts_data']) as $host_str) {
+                $parts = explode(':', $host_str);
+                if (count($parts) >= 5) {
+                    $hosts[] = array(
+                        'id' => $parts[0],
+                        'first_name' => $parts[1],
+                        'last_name' => $parts[2],
+                        'email' => $parts[3],
+                        'role' => $parts[4],
+                    );
+                }
+            }
+        }
+        
+        $item['hosts'] = $hosts;
+        
+        // Format company data object (for backward compatibility)
         if (!empty($item['company_id'])) {
-            $company = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}saw_companies WHERE id = %d", $item['company_id']), ARRAY_A);
-            $item['company_data'] = $company;
-            if ($company) {
-                $item['company_name'] = $company['name'];
-            }
-        }
-        
-        // Load branch name
-        if (!empty($item['branch_id'])) {
-            $branch = $wpdb->get_row($wpdb->prepare("SELECT name FROM {$wpdb->prefix}saw_branches WHERE id = %d", $item['branch_id']), ARRAY_A);
-            if ($branch) $item['branch_name'] = $branch['name'];
-        }
-        
-        // Load visitor count
-        if (!empty($item['id'])) {
-            $item['visitor_count'] = $wpdb->get_var($wpdb->prepare(
-                "SELECT COUNT(*) FROM {$wpdb->prefix}saw_visitors WHERE visit_id = %d",
-                $item['id']
-            ));
-        }
-        
-        // Load first visitor name for physical persons
-        if (empty($item['company_id']) && !empty($item['id'])) {
-            $first_visitor = $wpdb->get_row($wpdb->prepare(
-                "SELECT CONCAT(first_name, ' ', last_name) as name FROM {$wpdb->prefix}saw_visitors WHERE visit_id = %d ORDER BY id ASC LIMIT 1",
-                $item['id']
-            ), ARRAY_A);
-            if ($first_visitor && !empty($first_visitor['name'])) {
-                $item['first_visitor_name'] = $first_visitor['name'];
-            }
-        }
-        
-        // Load hosts
-        if (!empty($item['id'])) {
-            $hosts = $wpdb->get_results($wpdb->prepare(
-                "SELECT u.id, u.first_name, u.last_name, u.email, u.role 
-                 FROM {$wpdb->prefix}saw_visit_hosts vh
-                 INNER JOIN {$wpdb->prefix}saw_users u ON vh.user_id = u.id
-                 WHERE vh.visit_id = %d
-                 ORDER BY u.last_name, u.first_name",
-                $item['id']
-            ), ARRAY_A);
-            $item['hosts'] = $hosts;
+            $item['company_data'] = array(
+                'id' => $item['company_id'],
+                'name' => $item['company_name'] ?? '',
+                'ico' => $item['company_ico'] ?? '',
+                'street' => $item['company_street'] ?? '',
+                'city' => $item['company_city'] ?? '',
+                'zip' => $item['company_zip'] ?? '',
+            );
         }
         
         return $item;

@@ -43,25 +43,19 @@ class SAW_Module_Users_Model extends SAW_Base_Model
         }
         
         $result = parent::create($data);
-        if (!is_wp_error($result)) $this->invalidate_list_cache();
+        // ✅ Base Model už volá invalidate_cache() automaticky
         return $result;
     }
     
     public function update($id, $data) {
         $result = parent::update($id, $data);
-        if (!is_wp_error($result)) {
-            $this->invalidate_item_cache($id);
-            $this->invalidate_list_cache();
-        }
+        // ✅ Base Model už volá invalidate_cache() automaticky
         return $result;
     }
     
     public function delete($id) {
         $result = parent::delete($id);
-        if (!is_wp_error($result)) {
-            $this->invalidate_item_cache($id);
-            $this->invalidate_list_cache();
-        }
+        // ✅ Base Model už volá invalidate_cache() automaticky
         return $result;
     }
 
@@ -234,9 +228,4 @@ class SAW_Module_Users_Model extends SAW_Base_Model
         return $this->get_all($filters);
     }
 
-    private function invalidate_item_cache($id) { delete_transient(sprintf('saw_users_item_%d', $id)); }
-    private function invalidate_list_cache() {
-        global $wpdb;
-        $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_saw_users_list_%' OR option_name LIKE '_transient_timeout_saw_users_list_%'");
-    }
 }

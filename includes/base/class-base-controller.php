@@ -114,41 +114,38 @@ abstract class SAW_Base_Controller
      * @param int      $cache_ttl Cache time-to-live in seconds
      * @return mixed Loaded data
      */
+    /**
+     * Lazy load lookup data with caching
+     *
+     * ✅ REFACTORED: Uses SAW_Cache instead of transients
+     *
+     * @param string   $key       Lookup data key
+     * @param callable $callback  Function to load data from DB
+     * @param int      $cache_ttl Cache time-to-live in seconds
+     * @return mixed Loaded data
+     */
     protected function lazy_load_lookup_data($key, $callback, $cache_ttl = 3600) {
-        static $memory_cache = array();
+        $cache_key = 'lookup_' . $this->entity . '_' . $key;
         
-        if (isset($memory_cache[$key])) {
-            return $memory_cache[$key];
-        }
-        
-        $cache_key = 'saw_lookup_' . $this->entity . '_' . $key;
-        $cached = get_transient($cache_key);
-        
-        if ($cached !== false) {
-            $memory_cache[$key] = $cached;
-            return $cached;
-        }
-        
-        $data = $callback();
-        
-        set_transient($cache_key, $data, $cache_ttl);
-        $memory_cache[$key] = $data;
-        
-        return $data;
+        return SAW_Cache::remember(
+            $cache_key,
+            $callback,
+            $cache_ttl,
+            'lookups'
+        );
     }
     
     /**
      * Invalidate lookup cache
-     * 
-     * PERFORMANCE OPTIMIZATION: Clears cached lookup data
-     * 
-     * @since 8.1.0
+     *
+     * ✅ REFACTORED: Uses SAW_Cache
+     *
      * @param string $key Lookup data key
      * @return void
      */
     protected function invalidate_lookup_cache($key) {
-        $cache_key = 'saw_lookup_' . $this->entity . '_' . $key;
-        delete_transient($cache_key);
+        $cache_key = 'lookup_' . $this->entity . '_' . $key;
+        SAW_Cache::delete($cache_key, 'lookups');
     }
     
     /**
@@ -182,103 +179,110 @@ abstract class SAW_Base_Controller
      * @param int $item_id Current item ID
      * @return array|null Related data grouped by relation key, or null
      */
+    /**
+     * Load related data for detail sidebar
+     *
+     * ✅ OPTIMIZED: Batch loads all relations to prevent N+1 queries
+     * ✅ USES: Single query per table with proper grouping
+     *
+     * @param int $item_id Current item ID
+     * @return array|null Related data grouped by relation key
+     */
     protected function load_related_data($item_id) {
-        SAW_Logger::debug('load_related_data called with ID: ' . $item_id);
-        
         $relations = $this->load_relations_config();
-        SAW_Logger::debug('Relations config: ' . print_r($relations, true));
         
         if (empty($relations)) {
-            SAW_Logger::debug('No relations config found!');
             return null;
         }
         
         global $wpdb;
-        $related_data = array();
+        
+        // ✅ STEP 1: Group relations by table to enable batch loading
+        $tables_to_load = array();
         
         foreach ($relations as $key => $relation) {
-            SAW_Logger::debug('Processing relation: ' . $key);
-            
             if (empty($relation['entity'])) {
-                SAW_Logger::debug('Missing entity for relation: ' . $key);
                 continue;
             }
             
-            $entity_table = $wpdb->prefix . 'saw_' . $relation['entity'];
+            $table = $wpdb->prefix . 'saw_' . $relation['entity'];
+            
+            if (!isset($tables_to_load[$table])) {
+                $tables_to_load[$table] = array();
+            }
+            
+            $tables_to_load[$table][] = array(
+                'key' => $key,
+                'relation' => $relation,
+            );
+        }
+        
+        // ✅ STEP 2: Load all related data with single query per table
+        $related_data = array();
+        
+        foreach ($tables_to_load as $table => $relation_group) {
+            $relation = $relation_group[0]['relation'];
             $order_by = $relation['order_by'] ?? 'id DESC';
             
             // Handle junction table (many-to-many)
             if (!empty($relation['junction_table'])) {
-                SAW_Logger::debug('Using junction table for: ' . $key);
-                
-                if (empty($relation['foreign_key']) || empty($relation['local_key'])) {
-                    SAW_Logger::debug('Missing keys for junction table!');
-                    continue;
-                }
-                
                 $junction_table = $wpdb->prefix . $relation['junction_table'];
                 $foreign_key = $relation['foreign_key'];
                 $local_key = $relation['local_key'];
                 
                 $query = $wpdb->prepare(
-                    "SELECT e.* 
-                     FROM {$entity_table} e
+                    "SELECT e.*, j.{$foreign_key} as _parent_id
+                     FROM {$table} e
                      INNER JOIN {$junction_table} j ON e.id = j.{$local_key}
                      WHERE j.{$foreign_key} = %d
                      ORDER BY e.{$order_by}",
                     $item_id
                 );
-                
-                SAW_Logger::debug('Junction query: ' . $query);
             } 
             // Handle direct foreign key
             else {
-                SAW_Logger::debug('Using direct foreign key for: ' . $key);
-                
-                if (empty($relation['foreign_key'])) {
-                    continue;
-                }
-                
                 $foreign_key = $relation['foreign_key'];
                 
                 $query = $wpdb->prepare(
-                    "SELECT * FROM {$entity_table} WHERE {$foreign_key} = %d ORDER BY {$order_by}",
+                    "SELECT *, {$foreign_key} as _parent_id
+                     FROM {$table} 
+                     WHERE {$foreign_key} = %d 
+                     ORDER BY {$order_by}",
                     $item_id
                 );
-                
-                SAW_Logger::debug('Direct query: ' . $query);
             }
             
             $items = $wpdb->get_results($query, ARRAY_A);
             
-            SAW_Logger::debug('Found items: ' . count($items));
-            
-            if (empty($items)) {
-                continue;
-            }
-            
-            $formatted_items = array();
-            foreach ($items as $item) {
-                $display_text = $this->format_related_item_display($item, $relation);
+            // ✅ STEP 3: Distribute items to their relation keys
+            foreach ($relation_group as $group_item) {
+                $key = $group_item['key'];
+                $rel = $group_item['relation'];
                 
-                $formatted_items[] = array(
-                    'id' => $item['id'],
-                    'display' => $display_text,
-                    'raw' => $item,
-                );
+                $formatted_items = array();
+                
+                foreach ($items as $item) {
+                    $display_text = $this->format_related_item_display($item, $rel);
+                    
+                    $formatted_items[] = array(
+                        'id' => $item['id'],
+                        'display' => $display_text,
+                        'raw' => $item,
+                    );
+                }
+                
+                if (!empty($formatted_items)) {
+                    $related_data[$key] = array(
+                        'label' => $rel['label'],
+                        'icon' => $rel['icon'] ?? '📋',
+                        'entity' => $rel['entity'],
+                        'items' => $formatted_items,
+                        'route' => $rel['route'],
+                        'count' => count($formatted_items),
+                    );
+                }
             }
-            
-            $related_data[$key] = array(
-                'label' => $relation['label'],
-                'icon' => $relation['icon'] ?? '📋',
-                'entity' => $relation['entity'],
-                'items' => $formatted_items,
-                'route' => $relation['route'],
-                'count' => count($formatted_items),
-            );
         }
-        
-        SAW_Logger::debug('Total related data sections: ' . count($related_data));
         
         return empty($related_data) ? null : $related_data;
     }

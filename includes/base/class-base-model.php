@@ -451,30 +451,46 @@ abstract class SAW_Base_Model
     // =========================================================================
     // CACHE VERSIONING - FIXED FOR OBJECT CACHE
     // =========================================================================
+    /**
+     * Get cache key with scope (customer/branch context)
+     *
+     * ✅ OPTIMIZED: Uses static cache PER REQUEST + SAW_Context
+     * ✅ FIXED: No DB query - SAW_Context has its own static cache
+     *
+     * @param string $type       Cache type (list, item, etc.)
+     * @param mixed  $identifier Additional identifier
+     * @return string Cache key
+     */
     protected function get_cache_key_with_scope($type, $identifier = '') {
-        $key = 'saw_' . $this->config['entity'] . '_' . $type;
-        $role = $this->get_current_user_role();
-        $key .= '_role_' . ($role ?: 'guest');
+        // ✅ STATIC CACHE: Prevents repeated SAW_Context calls within same request
+        static $context_loaded = false;
+        static $customer_id = 0;
+        static $branch_id = 0;
+        static $role = 'guest';
         
-        if (is_user_logged_in()) {
-            global $wpdb;
-            $ctx = $wpdb->get_row($wpdb->prepare(
-                "SELECT context_customer_id, context_branch_id FROM {$wpdb->prefix}saw_users WHERE wp_user_id = %d",
-                get_current_user_id()
-            ));
-            if ($ctx) {
-                $key .= '_cc' . ($ctx->context_customer_id ?? 0) . '_cb' . ($ctx->context_branch_id ?? 0);
-            } elseif ($role === 'super_admin') {
-                $mc = get_user_meta(get_current_user_id(), 'saw_context_customer_id', true);
-                $mb = get_user_meta(get_current_user_id(), 'saw_context_branch_id', true);
-                $key .= '_mcc' . ($mc ?: 0) . '_mcb' . ($mb ?: 0);
+        if (!$context_loaded) {
+            if (is_user_logged_in() && class_exists('SAW_Context')) {
+                // SAW_Context has its own static cache internally
+                $customer_id = SAW_Context::get_customer_id() ?? 0;
+                $branch_id = SAW_Context::get_branch_id() ?? 0;
+                $role = SAW_Context::get_role() ?? 'guest';
+            } else {
+                $role = $this->get_current_user_role() ?? 'guest';
             }
+            $context_loaded = true;
         }
         
-        if (is_array($identifier)) {
-            $key .= '_' . md5(serialize($identifier));
-        } elseif ($identifier) {
-            $key .= '_' . $identifier;
+        $key = $this->config['entity'] . '_' . $type;
+        $key .= '_role_' . $role;
+        $key .= '_cc' . $customer_id;
+        $key .= '_cb' . $branch_id;
+        
+        if (!empty($identifier)) {
+            if (is_array($identifier)) {
+                $key .= '_' . md5(serialize($identifier));
+            } else {
+                $key .= '_' . $identifier;
+            }
         }
         
         // Cache versioning using transient
@@ -553,64 +569,60 @@ abstract class SAW_Base_Model
         return SAW_Context::get_branch_id();
     }
 
+    /**
+     * Get value from cache
+     *
+     * ✅ REFACTORED: Uses SAW_Cache instead of duplicate logic
+     *
+     * @param string $key Cache key
+     * @return mixed Cached value or false
+     */
     protected function get_cache($key) {
         if (!($this->config['cache']['enabled'] ?? true)) {
             return false;
         }
         
-        $group = 'saw_' . $this->config['entity'];
-        $cached = wp_cache_get($key, $group);
-        if ($cached !== false) {
-            return $cached;
-        }
-        
-        $cached = get_transient($key);
-        if ($cached !== false) {
-            wp_cache_set($key, $cached, $group, 300);
-            return $cached;
-        }
-        
-        return false;
+        return SAW_Cache::get($key, $this->config['entity']);
     }
     
+    /**
+     * Set value in cache
+     *
+     * ✅ REFACTORED: Uses SAW_Cache instead of duplicate logic
+     *
+     * @param string $key  Cache key
+     * @param mixed  $data Data to cache
+     * @return bool True on success
+     */
     protected function set_cache($key, $data) {
         if (!($this->config['cache']['enabled'] ?? true)) {
             return false;
         }
         
         $ttl = $this->config['cache']['ttl'] ?? $this->cache_ttl;
-        $group = 'saw_' . $this->config['entity'];
-        wp_cache_set($key, $data, $group, min($ttl, 300));
-        
-        return set_transient($key, $data, $ttl);
+        return SAW_Cache::set($key, $data, $ttl, $this->config['entity']);
     }
     
     /**
-     * Invalidate cache with HARD FLUSH and TIMESTAMP VERSIONING
+     * Invalidate all cache for this entity
      *
-     * Updates transient version (instant) AND physically removes old DB entries.
+     * ✅ REFACTORED: Uses SAW_Cache flush
      *
-     * @since 8.1.0
-     * @since 9.0.0 Improved to handle both item and list caches
+     * @return void
+     */
+    /**
+     * Invalidate all cache for this entity
+     *
+     * ✅ REFACTORED: Uses SAW_Cache flush
+     *
+     * @return void
      */
     protected function invalidate_cache() {
-        // 1. Update timestamp transient (immediate version change)
+        // Update timestamp transient (immediate version change)
         $version_key = 'saw_' . $this->config['entity'] . '_cache_version';
         set_transient($version_key, time(), 0);
         
-        // 2. Flush object cache group (if supported)
-        wp_cache_flush_group('saw_' . $this->config['entity']);
-        
-        // 3. HARD DELETE: Remove persistent transients from DB
-        global $wpdb;
-        $entity_key = 'saw_' . $this->config['entity'];
-        
-        $wpdb->query($wpdb->prepare(
-            "DELETE FROM {$wpdb->options} 
-             WHERE option_name LIKE %s 
-             OR option_name LIKE %s",
-            '_transient_' . $wpdb->esc_like($entity_key) . '_%',
-            '_transient_timeout_' . $wpdb->esc_like($entity_key) . '_%'
-        ));
+        // Flush cache using SAW_Cache
+        SAW_Cache::flush($this->config['entity']);
     }
 }
