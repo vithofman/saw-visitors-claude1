@@ -127,8 +127,8 @@
             return;
         }
 
-        const $tablePanel = $('.saw-table-panel');
-        const scrollTop = $tablePanel.length ? $tablePanel.scrollTop() : 0;
+        const $scrollArea = $('.saw-table-scroll-area');
+        const scrollTop = $scrollArea.length ? $scrollArea.scrollTop() : 0;
 
         window.stateManager.saveTableState(entity, {
             scrollTop: scrollTop,
@@ -163,10 +163,11 @@
 
             // Restore active row - scroll to it so user can see it
             if (state.activeRowId) {
+                // Wait longer to ensure all rows are loaded
                 setTimeout(function() {
                     updateActiveRow(state.activeRowId, true);
                     console.log('✨ Active row restored:', state.activeRowId);
-                }, 500); // Increased delay to ensure rows are loaded
+                }, 800); // Increased delay to ensure rows are loaded
             }
         }
     }
@@ -539,11 +540,44 @@
             const currentId = $sidebar.data('current-id');
             if (currentId) {
                 console.log('🎯 Setting active row from sidebar:', currentId);
+                
+                // Check if row exists in DOM
+                const checkAndSetActiveRow = () => {
+                    const $activeRow = $('.saw-admin-table tbody tr[data-id="' + currentId + '"]');
+                    if ($activeRow.length) {
+                        // Row exists, set active
+                        updateActiveRow(currentId, true);
+                        console.log('✨ Active row set from sidebar:', currentId);
+                    } else {
+                        // Row doesn't exist, need to load pages
+                        console.log('⏳ Active row not found, will load pages and retry');
+                        // Store active row ID for later
+                        const scrollArea = document.querySelector('.saw-table-scroll-area');
+                        if (scrollArea) {
+                            scrollArea._pendingActiveRowId = currentId;
+                            scrollArea._needsActiveRow = true;
+                            
+                            // Try to load pages until row is found
+                            const tryLoadPages = () => {
+                                const $row = $('.saw-admin-table tbody tr[data-id="' + currentId + '"]');
+                                if ($row.length) {
+                                    updateActiveRow(currentId, true);
+                                    console.log('✨ Active row set after loading pages');
+                                    scrollArea._needsActiveRow = false;
+                                    scrollArea._pendingActiveRowId = undefined;
+                                } else {
+                                    // Check if we can load more - trigger infinite scroll load
+                                    // This will be handled by loadNextPage callback
+                                    setTimeout(tryLoadPages, 500);
+                                }
+                            };
+                            setTimeout(tryLoadPages, 1000);
+                        }
+                    }
+                };
+                
                 // Wait for table to be fully rendered
-                setTimeout(function() {
-                    updateActiveRow(currentId, true);
-                    console.log('✨ Active row set from sidebar:', currentId);
-                }, 500);
+                setTimeout(checkAndSetActiveRow, 500);
             }
         }
     }
@@ -908,6 +942,22 @@
                                         }
                                     }
                                 }
+                                
+                                // Check if we need to set active row after loading pages
+                                if (scrollArea._needsActiveRow && scrollArea._pendingActiveRowId) {
+                                    const $activeRow = $('.saw-admin-table tbody tr[data-id="' + scrollArea._pendingActiveRowId + '"]');
+                                    if ($activeRow.length) {
+                                        updateActiveRow(scrollArea._pendingActiveRowId, true);
+                                        console.log('✨ Active row set after loading pages:', scrollArea._pendingActiveRowId);
+                                        scrollArea._needsActiveRow = false;
+                                        scrollArea._pendingActiveRowId = undefined;
+                                    } else {
+                                        // Not found yet, will check again on next page load
+                                        if (DEBUG) {
+                                            console.log('⏳ Active row still not found, waiting for next page load');
+                                        }
+                                    }
+                                }
                             });
                         });
                         
@@ -1102,6 +1152,19 @@
                 // Set a flag to restore scroll after pages are loaded
                 // This will be checked in loadNextPage after successful load
                 scrollArea._needsScrollRestore = true;
+                
+                // If we have pending active row, also trigger page loading
+                if (scrollArea._needsActiveRow && scrollArea._pendingActiveRowId) {
+                    // Calculate which page might contain this row ID
+                    // For now, just start loading pages
+                    console.log('📥 Triggering page load for active row:', scrollArea._pendingActiveRowId);
+                    // Load next page to start the process
+                    setTimeout(() => {
+                        if (!isLoading && hasMore) {
+                            loadNextPage();
+                        }
+                    }, 200);
+                }
             }
             
             // Clear saved position

@@ -72,7 +72,7 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
         }
         
         $page = isset($filters['page']) ? intval($filters['page']) : 1;
-        $per_page = isset($filters['per_page']) ? intval($filters['per_page']) : 20;
+        $per_page = isset($filters['per_page']) ? intval($filters['per_page']) : 100; // OPRAVENO: Zvýšeno z 20 na 100 pro infinite scroll
         $offset = ($page - 1) * $per_page;
         
         // Build WHERE conditions like Visits model

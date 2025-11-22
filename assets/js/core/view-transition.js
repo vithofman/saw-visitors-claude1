@@ -251,8 +251,8 @@
             if ($table.length) {
                 const entity = $table.data('entity');
                 if (entity) {
-                    const $tablePanel = $('.saw-table-panel');
-                    const scrollTop = $tablePanel.length ? $tablePanel.scrollTop() : 0;
+                    const $scrollArea = $('.saw-table-scroll-area');
+                    const scrollTop = $scrollArea.length ? $scrollArea.scrollTop() : 0;
                     
                     // Find active row
                     const $activeRow = $table.find('tbody tr.saw-row-active');

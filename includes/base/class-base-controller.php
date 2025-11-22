@@ -1809,6 +1809,22 @@ protected function can($action) {
             $columns = array();
         }
         
+        // Debug: Check columns decoding and badge configuration
+        if (empty($columns)) {
+            error_log('[Infinite Scroll] Columns empty after decode');
+        } else {
+            error_log('[Infinite Scroll] Columns decoded: ' . count($columns) . ' columns');
+            // Check if badge columns have map and labels
+            foreach ($columns as $key => $column) {
+                if (isset($column['type']) && $column['type'] === 'badge') {
+                    error_log('[Infinite Scroll] Badge column found: ' . $key . ' - map: ' . (isset($column['map']) && is_array($column['map']) ? count($column['map']) . ' items' : 'missing') . ', labels: ' . (isset($column['labels']) && is_array($column['labels']) ? count($column['labels']) . ' items' : 'missing'));
+                    if (empty($column['map']) || empty($column['labels'])) {
+                        error_log('[Infinite Scroll] Badge column missing map/labels: ' . $key . ' - map: ' . (isset($column['map']) ? 'exists' : 'missing') . ', labels: ' . (isset($column['labels']) ? 'exists' : 'missing'));
+                    }
+                }
+            }
+        }
+        
         // Use admin-table component to render rows
         if (!class_exists('SAW_Component_Admin_Table')) {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/class-saw-component-admin-table.php';
