@@ -563,6 +563,58 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
 </script>
 <?php endif; ?>
 
+<?php 
+// Skip button for invitation mode
+$is_invitation = ($flow['mode'] ?? '') === 'invitation';
+if ($is_invitation): 
+?>
+    <div class="saw-training-skip-wrapper">
+        <p class="saw-skip-info">
+            💡 Toto školení je volitelné. Můžete ho přeskočit a projít si později.
+        </p>
+        <form method="POST" style="display: inline-block;">
+            <?php wp_nonce_field('saw_terminal_step', 'terminal_nonce'); ?>
+            <input type="hidden" name="terminal_action" value="skip_training">
+            <button type="submit" class="saw-btn-skip">
+                ⏭️ Přeskočit školení
+            </button>
+        </form>
+    </div>
+<?php endif; ?>
+
+<?php if ($is_invitation): ?>
+<style>
+.saw-training-skip-wrapper {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: rgba(139, 92, 246, 0.1);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: 12px;
+    text-align: center;
+}
+
+.saw-skip-info {
+    color: #c4b5fd;
+    margin-bottom: 1rem;
+}
+
+.saw-btn-skip {
+    padding: 0.75rem 1.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: #f9fafb;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.saw-btn-skip:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+</style>
+<?php endif; ?>
+
 <?php
 error_log("[MAP.PHP] Minimal template finished");
 ?>

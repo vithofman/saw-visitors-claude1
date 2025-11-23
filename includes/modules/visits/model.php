@@ -372,4 +372,78 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
         );
         return $labels[$status] ?? $status;
     }
+    
+    /**
+     * Generate unique invitation token
+     * 
+     * @since 1.0.0
+     * @param int $customer_id Customer ID for uniqueness check
+     * @return string Unique 64-character hex token
+     */
+    public function ensure_unique_token($customer_id) {
+        global $wpdb;
+        
+        do {
+            $token = bin2hex(random_bytes(32));
+            
+            $exists = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$this->table} 
+                 WHERE invitation_token = %s AND customer_id = %d",
+                $token, $customer_id
+            ));
+            
+        } while ($exists > 0);
+        
+        return $token;
+    }
+    
+    /**
+     * Get invitation materials
+     * 
+     * @since 1.0.0
+     * @param int $visit_id Visit ID
+     * @return array List of materials
+     */
+    public function get_invitation_materials($visit_id) {
+        global $wpdb;
+        
+        return $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}saw_visit_invitation_materials 
+             WHERE visit_id = %d 
+             ORDER BY material_type, uploaded_at ASC",
+            $visit_id
+        ), ARRAY_A);
+    }
+    
+    /**
+     * Delete invitation material
+     * 
+     * @since 1.0.0
+     * @param int $material_id Material ID
+     * @return bool|int Number of rows deleted or false on error
+     */
+    public function delete_invitation_material($material_id) {
+        global $wpdb;
+        
+        // Get file path first (pokud je to document)
+        $material = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}saw_visit_invitation_materials WHERE id = %d",
+            $material_id
+        ), ARRAY_A);
+        
+        if ($material && $material['material_type'] === 'document' && !empty($material['file_path'])) {
+            $upload_dir = wp_upload_dir();
+            $file = $upload_dir['basedir'] . $material['file_path'];
+            if (file_exists($file)) {
+                @unlink($file);
+            }
+        }
+        
+        // Delete from DB
+        return $wpdb->delete(
+            $wpdb->prefix . 'saw_visit_invitation_materials',
+            ['id' => $material_id],
+            ['%d']
+        );
+    }
 }

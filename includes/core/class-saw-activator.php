@@ -225,6 +225,19 @@ class SAW_Activator {
             $router->register_routes();
         }
         
+        // Register invitation router rewrite rules
+        $invitation_router_file = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/invitation/invitation-router.php';
+        if (file_exists($invitation_router_file)) {
+            require_once $invitation_router_file;
+            
+            if (class_exists('SAW_Invitation_Router')) {
+                $invitation_router = new SAW_Invitation_Router();
+                if (method_exists($invitation_router, 'register_routes')) {
+                    $invitation_router->register_routes();
+                }
+            }
+        }
+        
         flush_rewrite_rules();
     }
 }

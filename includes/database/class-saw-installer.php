@@ -153,13 +153,14 @@ class SAW_Installer {
             'training_department_content',
             'training_documents',
             
-            // Visitor Training System (5)
+            // Visitor Training System (6)
             'visits',
 	    'visit_schedules',
             'visitors',
             'visit_hosts',
             'visit_daily_logs',
             'visitor_certificates',
+            'visit_invitation_materials',
             
             // System Logs (2)
             'audit_log',
@@ -273,6 +274,11 @@ class SAW_Installer {
             array('table' => 'visitor_certificates', 'constraint' => 'fk_cert_visitor', 'column' => 'visitor_id', 'ref_table' => 'visitors', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'visitor_certificates', 'constraint' => 'fk_cert_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'visitor_certificates', 'constraint' => 'fk_cert_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            
+            // visit_invitation_materials
+            array('table' => 'visit_invitation_materials', 'constraint' => 'fk_invitation_materials_visit', 'column' => 'visit_id', 'ref_table' => 'visits', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'visit_invitation_materials', 'constraint' => 'fk_invitation_materials_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'visit_invitation_materials', 'constraint' => 'fk_invitation_materials_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
             // audit_log
             array('table' => 'audit_log', 'constraint' => 'fk_audit_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),

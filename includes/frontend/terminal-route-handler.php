@@ -13,6 +13,11 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Ensure SAW_Session_Manager is loaded before terminal.php
+if (!class_exists('SAW_Session_Manager')) {
+    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-session-manager.php';
+}
+
 // Load terminal controller
 require_once SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/terminal.php';
 

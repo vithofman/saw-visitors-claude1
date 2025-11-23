@@ -121,6 +121,9 @@ class SAW_Bootstrap {
             // CRITICAL: helpers.php must load AFTER middleware.php
             // because it depends on saw_verify_ajax_nonce() from middleware.php
             'includes/core/helpers.php',
+            
+            // Session Manager (must load early - used by terminal and other components)
+            'includes/core/class-saw-session-manager.php',
         ];
         
         foreach ($files as $file) {
@@ -143,7 +146,6 @@ class SAW_Bootstrap {
      */
     private static function load_optional_files() {
         $optional = [
-            'includes/core/class-saw-session-manager.php',
             'includes/core/class-saw-context.php',
             'includes/core/class-saw-session.php',
             'includes/core/class-saw-user-branches.php',
@@ -151,6 +153,10 @@ class SAW_Bootstrap {
             'includes/core/class-saw-audit.php',
             'includes/auth/class-saw-auth.php',
             'includes/auth/class-saw-password.php',
+            // Frontend invitation handlers (must load after middleware.php)
+            'includes/frontend/invitation-route-handler.php',
+            // AJAX handlers (must load after middleware.php for saw_verify_ajax_unified)
+            'includes/frontend/invitation/ajax-handlers.php',
         ];
         
         foreach ($optional as $file) {

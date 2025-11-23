@@ -379,6 +379,39 @@ $is_physical_person = empty($item['company_id']);
                     </a>
                 </span>
             </div>
+            <?php 
+            // Show send invitation button for pending/draft visits
+            $can_send_invitation = in_array($item['status'] ?? '', ['pending', 'draft']);
+            $invitation_sent = !empty($item['invitation_sent_at']);
+            ?>
+            <div class="saw-info-item" style="margin-top: 12px;">
+                <label>Emailová pozvánka</label>
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <?php if ($invitation_sent): ?>
+                        <span style="color: #00a32a; font-size: 13px;">
+                            <span class="dashicons dashicons-yes-alt" style="font-size: 16px; vertical-align: middle;"></span>
+                            Odesláno: <?php echo date_i18n('d.m.Y H:i', strtotime($item['invitation_sent_at'])); ?>
+                        </span>
+                    <?php endif; ?>
+                    
+                    <?php if ($can_send_invitation): ?>
+                        <button 
+                            type="button" 
+                            class="saw-button saw-button-primary" 
+                            id="send-invitation-btn-<?php echo $item['id']; ?>"
+                            onclick="sendInvitation(<?php echo $item['id']; ?>)"
+                            style="padding: 6px 12px; font-size: 13px; height: auto;"
+                        >
+                            <span class="dashicons dashicons-email-alt" style="font-size: 16px; vertical-align: middle;"></span>
+                            <?php echo $invitation_sent ? 'Odeslat znovu' : 'Odeslat pozvánku'; ?>
+                        </button>
+                    <?php else: ?>
+                        <span style="color: #646970; font-size: 13px;">
+                            Pozvánku lze odeslat pouze u plánovaných návštěv
+                        </span>
+                    <?php endif; ?>
+                </div>
+            </div>
             <?php endif; ?>
             
             <?php if (!empty($item['purpose'])): ?>
@@ -654,4 +687,258 @@ $is_physical_person = empty($item['company_id']);
     color: #64748b;
     font-size: 13px;
 }
+
+/* Invitation Materials Section */
+.saw-risks-section {
+    margin-top: 2rem;
+}
+
+.saw-risks-section .saw-section-content {
+    padding: 1.5rem;
+}
+
+.saw-empty-state {
+    color: #6b7280;
+    font-style: italic;
+    padding: 1rem;
+    text-align: center;
+    background: #f9fafb;
+    border-radius: 8px;
+}
+
+.saw-risk-text-block {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.saw-risk-text-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.saw-risk-text-header h4 {
+    margin: 0;
+    font-size: 1rem;
+    color: #111827;
+}
+
+.saw-timestamp {
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.saw-risk-text-content {
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 1rem;
+    background: #f9fafb;
+    border-radius: 6px;
+    line-height: 1.6;
+    color: #374151;
+}
+
+.saw-btn-fullscreen {
+    margin-top: 1rem;
+    padding: 0.5rem 1rem;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+.saw-btn-fullscreen:hover {
+    background: #5568d3;
+}
+
+.saw-risk-documents {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+.saw-risk-documents h4 {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    color: #111827;
+}
+
+.saw-documents-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.saw-document-item {
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.saw-document-item:last-child {
+    border-bottom: none;
+}
+
+.saw-doc-link {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.2s;
+}
+
+.saw-doc-link:hover {
+    background: #f9fafb;
+}
+
+.saw-doc-icon {
+    font-size: 1.5rem;
+}
+
+.saw-doc-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.saw-doc-info strong {
+    color: #111827;
+    font-weight: 600;
+}
+
+.saw-doc-info small {
+    color: #6b7280;
+    font-size: 0.8125rem;
+}
 </style>
+
+<?php
+// Load invitation materials
+$materials = [];
+if (!empty($item['id'])) {
+    global $wpdb;
+    $materials = $wpdb->get_results($wpdb->prepare(
+        "SELECT * FROM {$wpdb->prefix}saw_visit_invitation_materials 
+         WHERE visit_id = %d 
+         ORDER BY material_type, uploaded_at ASC",
+        $item['id']
+    ), ARRAY_A);
+}
+
+$texts = array_filter($materials, fn($m) => $m['material_type'] === 'text');
+$documents = array_filter($materials, fn($m) => $m['material_type'] === 'document');
+?>
+
+<!-- Invitation Materials Section -->
+<?php if (!empty($materials) || !empty($item['invitation_token'])): ?>
+<div class="saw-industrial-section saw-risks-section">
+    <div class="saw-section-header">
+        <h4 class="saw-section-title saw-section-title-accent">⚠️ Informace o rizicích (nahrál pozvaný)</h4>
+    </div>
+    <div class="saw-section-body">
+        
+        <?php if (empty($materials)): ?>
+            <p class="saw-empty-state">Pozvaný nenahrál žádné materiály o rizicích.</p>
+        <?php else: ?>
+            
+            <?php if (!empty($texts)): ?>
+                <?php foreach ($texts as $text): ?>
+                    <div class="saw-risk-text-block">
+                        <div class="saw-risk-text-header">
+                            <h4>📝 Textové informace</h4>
+                            <span class="saw-timestamp"><?= esc_html(date('d.m.Y H:i', strtotime($text['uploaded_at']))) ?></span>
+                        </div>
+                        <div class="saw-risk-text-content">
+                            <?= wp_kses_post($text['text_content']) ?>
+                        </div>
+                        <button class="saw-btn-fullscreen" onclick="openFullscreen(<?= $text['id'] ?>)">
+                            🖥️ Zobrazit na celou obrazovku
+                        </button>
+                    </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
+            
+            <?php if (!empty($documents)): ?>
+                <div class="saw-risk-documents">
+                    <h4>📎 Dokumenty (<?= count($documents) ?>):</h4>
+                    <ul class="saw-documents-list">
+                        <?php 
+                        $upload_dir = wp_upload_dir();
+                        foreach ($documents as $doc): 
+                            $file_url = $upload_dir['baseurl'] . $doc['file_path'];
+                        ?>
+                            <li class="saw-document-item">
+                                <a href="<?= esc_url($file_url) ?>" target="_blank" class="saw-doc-link">
+                                    <span class="saw-doc-icon">📄</span>
+                                    <span class="saw-doc-info">
+                                        <strong><?= esc_html($doc['file_name']) ?></strong>
+                                        <small><?= size_format($doc['file_size']) ?> · <?= esc_html(date('d.m.Y H:i', strtotime($doc['uploaded_at']))) ?></small>
+                                    </span>
+                                </a>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            <?php endif; ?>
+            
+        <?php endif; ?>
+        
+    </div>
+</div>
+<?php endif; ?>
+
+<script>
+function openFullscreen(materialId) {
+    // TODO: Implementovat fullscreen modal
+    alert('Fullscreen zobrazení pro material #' + materialId);
+}
+
+// Send invitation email
+function sendInvitation(visitId) {
+    const btn = document.getElementById('send-invitation-btn-' + visitId);
+    if (!btn) return;
+    
+    // Disable button and show loading
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="dashicons dashicons-update" style="animation: spin 1s linear infinite;"></span> Odesílám...';
+    
+    jQuery.post(sawGlobal.ajaxurl, {
+        action: 'saw_send_invitation',
+        visit_id: visitId,
+        nonce: sawGlobal.nonce
+    }, function(response) {
+        if (response.success) {
+            alert('✅ Pozvánka byla úspěšně odeslána na email: ' + (response.data?.email || ''));
+            location.reload(); // Reload to show updated invitation_sent_at
+        } else {
+            alert('❌ Chyba: ' + (response.data?.message || 'Nepodařilo se odeslat pozvánku'));
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }).fail(function(xhr, status, error) {
+        console.error('AJAX Error:', xhr.responseText);
+        alert('❌ Chyba komunikace se serverem\n\n' + error);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    });
+}
+
+// CSS for spinner animation
+if (!document.getElementById('saw-invitation-spinner-style')) {
+    const style = document.createElement('style');
+    style.id = 'saw-invitation-spinner-style';
+    style.textContent = '@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
+    document.head.appendChild(style);
+}
+</script>

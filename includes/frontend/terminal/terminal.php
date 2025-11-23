@@ -68,6 +68,11 @@ class SAW_Terminal_Controller {
      * @since 1.0.0
      */
     public function __construct() {
+        // Ensure SAW_Session_Manager is loaded (fallback check)
+        if (!class_exists('SAW_Session_Manager')) {
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-session-manager.php';
+        }
+        
         $this->session = SAW_Session_Manager::instance();
         
         // ✅ Získání customer_id a branch_id
@@ -77,7 +82,75 @@ class SAW_Terminal_Controller {
         $this->load_languages();
         
         $this->init_terminal_session();
+        
+        // ✅ Detekce invitation mode
+        $this->handle_invitation_mode();
+        
         $this->current_step = $this->get_current_step();
+    }
+    
+    /**
+     * Handle invitation mode detection and setup
+     * 
+     * @since 1.0.0
+     * @return void
+     */
+    private function handle_invitation_mode() {
+        // Check if invitation parameter is present
+        if (isset($_GET['invitation']) && $_GET['invitation'] == '1') {
+            // Check session for invitation flow
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
+            
+            $invitation = $_SESSION['invitation_flow'] ?? null;
+            
+            if ($invitation && $invitation['mode'] === 'invitation') {
+                $visit_id = $invitation['visit_id'];
+                
+                // Načti visit data
+                global $wpdb;
+                $visit = $wpdb->get_row($wpdb->prepare(
+                    "SELECT * FROM {$wpdb->prefix}saw_visits WHERE id = %d",
+                    $visit_id
+                ), ARRAY_A);
+                
+                if (!$visit) {
+                    wp_die('Návštěva nenalezena');
+                }
+                
+                // Nastav flow
+                $flow = $this->session->get('terminal_flow');
+                $flow['mode'] = 'invitation';
+                $flow['type'] = 'planned';
+                $flow['visit_id'] = $visit_id;
+                $flow['customer_id'] = $visit['customer_id'];
+                $flow['branch_id'] = $visit['branch_id'];
+                $flow['company_id'] = $visit['company_id'] ?? null;
+                
+                // Načti existing visitors
+                $flow['visitors'] = $wpdb->get_results($wpdb->prepare(
+                    "SELECT * FROM {$wpdb->prefix}saw_visitors 
+                     WHERE visit_id = %d AND participation_status = 'planned'",
+                    $visit_id
+                ), ARRAY_A);
+                
+                $this->session->set('terminal_flow', $flow);
+                
+                // Redirect na risks upload (první krok invitation) pokud ještě není jazyk
+                if (empty($flow['language'])) {
+                    // Necháme to projít přes language selection
+                    return;
+                }
+                
+                // Pokud už má jazyk, přesměruj na risks upload
+                $current_path = get_query_var('saw_path');
+                if (empty($current_path) || $current_path === 'terminal' || $current_path === '/') {
+                    wp_redirect(home_url('/terminal/invitation-risks/'));
+                    exit;
+                }
+            }
+        }
     }
     
     /**
@@ -329,6 +402,11 @@ class SAW_Terminal_Controller {
             case 'register':
                 error_log("Rendering registration form");
                 $this->render_registration_form();
+                break;
+                
+            case 'invitation-risks':
+                error_log("Rendering invitation risks upload");
+                $this->render_invitation_risks();
                 break;
                 
             case 'checkout-pin':
@@ -587,8 +665,19 @@ class SAW_Terminal_Controller {
      * @return void
      */
     private function render_success() {
-        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/success.php';
         $flow = $this->session->get('terminal_flow');
+        
+        // Check if invitation mode - show PIN success page
+        if (($flow['mode'] ?? '') === 'invitation') {
+            $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/invitation/pin-success.php';
+            $this->render_template($template, [
+                'flow' => $flow,
+            ]);
+            return;
+        }
+        
+        // Regular success page
+        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/success.php';
         $this->render_template($template, [
             'action' => $flow['action'] ?? 'checkin',
         ]);
@@ -944,6 +1033,14 @@ class SAW_Terminal_Controller {
                 $this->handle_training_additional_complete();
                 break;
                 
+            case 'save_invitation_risks':
+                $this->handle_save_invitation_risks();
+                break;
+                
+            case 'skip_training':
+                $this->handle_skip_training();
+                break;
+                
             default:
                 $this->set_error(__('Neplatná akce', 'saw-visitors'));
                 $this->render();
@@ -968,6 +1065,16 @@ class SAW_Terminal_Controller {
         
         $flow = $this->session->get('terminal_flow');
         $flow['language'] = $language;
+        
+        // Check if invitation flow - redirect to risks upload
+        if (($flow['mode'] ?? '') === 'invitation') {
+            $flow['step'] = 'invitation-risks';
+            $this->session->set('terminal_flow', $flow);
+            wp_redirect(home_url('/terminal/invitation-risks/'));
+            exit;
+        }
+        
+        // Regular flow - redirect to action choice
         $flow['step'] = 'action';
         $this->session->set('terminal_flow', $flow);
         
@@ -2272,97 +2379,367 @@ private function handle_training_additional_complete() {
      * @return void
      */
     private function enqueue_assets() {
-    $css_dir = SAW_VISITORS_PLUGIN_URL . 'includes/frontend/terminal/assets/css/';
-    $js_dir = SAW_VISITORS_PLUGIN_URL . 'includes/frontend/terminal/assets/js/';
-    
-    // CSS - Base (first, contains variables)
-    wp_enqueue_style(
-        'saw-terminal-base',
-        $css_dir . 'terminal/base.css',
-        array(),
-        '3.0.0'
-    );
-    
-    // CSS - Layout (depends on base)
-    wp_enqueue_style(
-        'saw-terminal-layout',
-        $css_dir . 'terminal/layout.css',
-        array('saw-terminal-base'),
-        '3.0.0'
-    );
-    
-    // CSS - Components (depends on base)
-    wp_enqueue_style(
-        'saw-terminal-components',
-        $css_dir . 'terminal/components.css',
-        array('saw-terminal-base'),
-        '3.0.0'
-    );
-    
-    // CSS - Training (depends on all)
-    wp_enqueue_style(
-        'saw-terminal-training',
-        $css_dir . 'terminal/training.css',
-        array('saw-terminal-base', 'saw-terminal-layout', 'saw-terminal-components'),
-        '3.0.0'
-    );
-    
-    // CSS - Old terminal.css (fallback compatibility - check if exists)
-    $terminal_css_legacy = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/terminal.css';
-    if (file_exists($terminal_css_legacy)) {
+        $css_dir = SAW_VISITORS_PLUGIN_URL . 'includes/frontend/terminal/assets/css/';
+        $js_dir = SAW_VISITORS_PLUGIN_URL . 'includes/frontend/terminal/assets/js/';
+        
+        // CSS - Base (first, contains variables)
         wp_enqueue_style(
-            'saw-terminal',
-            SAW_VISITORS_PLUGIN_URL . 'includes/frontend/terminal/terminal.css',
+            'saw-terminal-base',
+            $css_dir . 'terminal/base.css',
             array(),
-            SAW_VISITORS_VERSION
+            '3.0.0'
         );
-    }
-    
-    // JavaScript
-    wp_enqueue_script('jquery');
-    
-    // Touch gestures (dependency for PDF viewer)
-    wp_enqueue_script(
-        'saw-touch-gestures',
-        $js_dir . 'terminal/touch-gestures.js',
-        array(),
-        '3.0.0',
-        true
-    );
-    
-    // PDF viewer (depends on touch-gestures)
-    wp_enqueue_script(
-        'saw-pdf-viewer',
-        $js_dir . 'terminal/pdf-viewer.js',
-        array('saw-touch-gestures'),
-        '3.0.0',
-        true
-    );
-
-    //YOUTUBE / VIMEO VIDEO
-	wp_enqueue_script('saw-video-player', $js_dir . 'terminal/video-player.js', array(), '3.0.0', true);
-    
-    // Old terminal.js (legacy.js in new structure)
-    $terminal_js_legacy = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/assets/js/terminal/legacy.js';
-    if (file_exists($terminal_js_legacy)) {
+        
+        // CSS - Layout (depends on base)
+        wp_enqueue_style(
+            'saw-terminal-layout',
+            $css_dir . 'terminal/layout.css',
+            array('saw-terminal-base'),
+            '3.0.0'
+        );
+        
+        // CSS - Components (depends on base)
+        wp_enqueue_style(
+            'saw-terminal-components',
+            $css_dir . 'terminal/components.css',
+            array('saw-terminal-base'),
+            '3.0.0'
+        );
+        
+        // CSS - Training (depends on all)
+        wp_enqueue_style(
+            'saw-terminal-training',
+            $css_dir . 'terminal/training.css',
+            array('saw-terminal-base', 'saw-terminal-layout', 'saw-terminal-components'),
+            '3.0.0'
+        );
+        
+        // CSS - Old terminal.css (fallback compatibility - check if exists)
+        $terminal_css_legacy = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/terminal.css';
+        if (file_exists($terminal_css_legacy)) {
+            wp_enqueue_style(
+                'saw-terminal',
+                SAW_VISITORS_PLUGIN_URL . 'includes/frontend/terminal/terminal.css',
+                array(),
+                SAW_VISITORS_VERSION
+            );
+        }
+        
+        // JavaScript
+        wp_enqueue_script('jquery');
+        
+        // Touch gestures (dependency for PDF viewer)
         wp_enqueue_script(
-            'saw-terminal',
-            SAW_VISITORS_PLUGIN_URL . 'includes/frontend/terminal/assets/js/terminal/legacy.js',
-            array('jquery'),
-            SAW_VISITORS_VERSION,
+            'saw-touch-gestures',
+            $js_dir . 'terminal/touch-gestures.js',
+            array(),
+            '3.0.0',
             true
         );
-    } elseif (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/terminal.js')) {
-        // Fallback to old location if legacy.js doesn't exist
+        
+        // PDF viewer (depends on touch-gestures)
         wp_enqueue_script(
-            'saw-terminal',
-            SAW_VISITORS_PLUGIN_URL . 'includes/frontend/terminal/terminal.js',
-            array('jquery'),
-            SAW_VISITORS_VERSION,
+            'saw-pdf-viewer',
+            $js_dir . 'terminal/pdf-viewer.js',
+            array('saw-touch-gestures'),
+            '3.0.0',
             true
         );
-    }
-}
-    
 
+        //YOUTUBE / VIMEO VIDEO
+        wp_enqueue_script('saw-video-player', $js_dir . 'terminal/video-player.js', array(), '3.0.0', true);
+        
+        // Invitation autosave (only in invitation mode)
+        $flow = $this->session->get('terminal_flow');
+        if (($flow['mode'] ?? '') === 'invitation') {
+            // Enqueue WordPress editor for WYSIWYG editor in invitation risks step
+            $current_step = $this->get_current_step();
+            if ($current_step === 'invitation-risks') {
+                wp_enqueue_editor();
+                wp_enqueue_media();
+            }
+            
+            wp_enqueue_script(
+                'saw-invitation-autosave',
+                SAW_VISITORS_PLUGIN_URL . 'assets/js/invitation-autosave.js',
+                array('jquery'),
+                '1.0.0',
+                true
+            );
+            
+            // Pass invitation token to JS
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
+            $invitation = $_SESSION['invitation_flow'] ?? null;
+            $token = $invitation['token'] ?? '';
+            
+            wp_localize_script('saw-invitation-autosave', 'sawInvitation', [
+                'token' => $token,
+            ]);
+        }
+        
+        // Old terminal.js (legacy.js in new structure)
+        $terminal_js_legacy = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/assets/js/terminal/legacy.js';
+        if (file_exists($terminal_js_legacy)) {
+            wp_enqueue_script(
+                'saw-terminal',
+                SAW_VISITORS_PLUGIN_URL . 'includes/frontend/terminal/assets/js/terminal/legacy.js',
+                array('jquery'),
+                SAW_VISITORS_VERSION,
+                true
+            );
+        } elseif (file_exists(SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/terminal.js')) {
+            // Fallback to old location if legacy.js doesn't exist
+            wp_enqueue_script(
+                'saw-terminal',
+                SAW_VISITORS_PLUGIN_URL . 'includes/frontend/terminal/terminal.js',
+                array('jquery'),
+                SAW_VISITORS_VERSION,
+                true
+            );
+        }
+    }
+    
+    /**
+     * Render invitation risks upload step
+     * 
+     * @since 1.0.0
+     * @return void
+     */
+    private function render_invitation_risks() {
+        $flow = $this->session->get('terminal_flow');
+        $visit_id = $flow['visit_id'] ?? null;
+        $lang = $flow['language'] ?? 'cs';
+        
+        if (!$visit_id) {
+            wp_die('Návštěva nenalezena');
+        }
+        
+        // Načti existující data (pokud se vrací)
+        global $wpdb;
+        $existing_text = $wpdb->get_var($wpdb->prepare(
+            "SELECT text_content FROM {$wpdb->prefix}saw_visit_invitation_materials 
+             WHERE visit_id = %d AND material_type = 'text' 
+             ORDER BY uploaded_at DESC LIMIT 1",
+            $visit_id
+        ));
+        
+        $existing_docs = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}saw_visit_invitation_materials 
+             WHERE visit_id = %d AND material_type = 'document' 
+             ORDER BY uploaded_at ASC",
+            $visit_id
+        ), ARRAY_A);
+        
+        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/invitation/risks-upload.php';
+        $this->render_template($template, [
+            'visit_id' => $visit_id,
+            'lang' => $lang,
+            'existing_text' => $existing_text,
+            'existing_docs' => $existing_docs,
+        ]);
+    }
+    
+    /**
+     * Handle save invitation risks
+     * 
+     * @since 1.0.0
+     * @return void
+     */
+    private function handle_save_invitation_risks() {
+        // Verify nonce
+        if (!isset($_POST['risks_nonce']) || !wp_verify_nonce($_POST['risks_nonce'], 'saw_invitation_risks')) {
+            wp_die('Security check failed');
+        }
+        
+        $visit_id = intval($_POST['visit_id'] ?? 0);
+        $flow = $this->session->get('terminal_flow');
+        
+        // Verify visit_id matches session (convert both to int for comparison)
+        $session_visit_id = intval($flow['visit_id'] ?? 0);
+        if ($visit_id !== $session_visit_id || $visit_id === 0) {
+            error_log("[SAW Terminal] Security error: visit_id mismatch. POST: {$visit_id}, Session: {$session_visit_id}");
+            wp_die('Security error: Invalid visit ID');
+        }
+        
+        // Skip action
+        if (isset($_POST['action']) && $_POST['action'] === 'skip') {
+            wp_redirect(home_url('/terminal/register/'));
+            exit;
+        }
+        
+        global $wpdb;
+        
+        $customer_id = $flow['customer_id'];
+        $branch_id = $flow['branch_id'];
+        $company_id = $flow['company_id'] ?? null;
+        
+        // Save text (pokud vyplněný)
+        $risks_text = wp_kses_post($_POST['risks_text'] ?? '');
+        
+        if (!empty(trim($risks_text))) {
+            // Smaž starý text
+            $wpdb->delete(
+                $wpdb->prefix . 'saw_visit_invitation_materials',
+                [
+                    'visit_id' => $visit_id,
+                    'material_type' => 'text'
+                ],
+                ['%d', '%s']
+            );
+            
+            // Ulož nový
+            $wpdb->insert(
+                $wpdb->prefix . 'saw_visit_invitation_materials',
+                [
+                    'visit_id' => $visit_id,
+                    'customer_id' => $customer_id,
+                    'branch_id' => $branch_id,
+                    'company_id' => $company_id,
+                    'material_type' => 'text',
+                    'text_content' => $risks_text,
+                ],
+                ['%d', '%d', '%d', $company_id ? '%d' : null, '%s', '%s']
+            );
+        }
+        
+        // Handle file uploads from file-upload component
+        // File-upload component uploads files via AJAX and sends metadata in POST
+        $uploaded_files = [];
+        if (!empty($_POST['uploaded_files'])) {
+            $uploaded_files_json = stripslashes($_POST['uploaded_files']);
+            $uploaded_files = json_decode($uploaded_files_json, true);
+            if (!is_array($uploaded_files)) {
+                $uploaded_files = [];
+            }
+        }
+        
+        // Process uploaded files from file-upload component
+        $file_key = 'risks_documents[]';
+        if (!empty($uploaded_files[$file_key]) && is_array($uploaded_files[$file_key])) {
+            foreach ($uploaded_files[$file_key] as $file_data) {
+                if (empty($file_data['file']) || !is_array($file_data['file'])) {
+                    continue;
+                }
+                
+                $file_info = $file_data['file'];
+                
+                // Validate file exists
+                $upload_dir = wp_upload_dir();
+                $file_path = $upload_dir['basedir'] . $file_info['path'];
+                
+                if (!file_exists($file_path)) {
+                    continue;
+                }
+                
+                // Get file size if not provided
+                $file_size = !empty($file_info['size']) ? intval($file_info['size']) : filesize($file_path);
+                
+                // Validate size (10MB max)
+                if ($file_size > 10485760) {
+                    continue;
+                }
+                
+                // Ulož do DB
+                $wpdb->insert(
+                    $wpdb->prefix . 'saw_visit_invitation_materials',
+                    [
+                        'visit_id' => $visit_id,
+                        'customer_id' => $customer_id,
+                        'branch_id' => $branch_id,
+                        'company_id' => $company_id,
+                        'material_type' => 'document',
+                        'file_path' => $file_info['path'],
+                        'file_name' => $file_info['name'],
+                        'file_size' => $file_size,
+                        'mime_type' => $file_info['type'] ?? 'application/octet-stream',
+                    ],
+                    ['%d', '%d', '%d', $company_id ? '%d' : null, '%s', '%s', '%s', '%d', '%s']
+                );
+            }
+        }
+        
+        // Fallback: Handle traditional file uploads (if file-upload component not used)
+        if (empty($uploaded_files) && !empty($_FILES['risks_documents']['name'][0])) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            
+            $files = $_FILES['risks_documents'];
+            $count = min(count($files['name']), 10);
+            
+            for ($i = 0; $i < $count; $i++) {
+                if ($files['error'][$i] === UPLOAD_ERR_OK) {
+                    
+                    // Prepare file array
+                    $file = [
+                        'name' => $files['name'][$i],
+                        'type' => $files['type'][$i],
+                        'tmp_name' => $files['tmp_name'][$i],
+                        'error' => $files['error'][$i],
+                        'size' => $files['size'][$i],
+                    ];
+                    
+                    // Validate size (10MB max)
+                    if ($file['size'] > 10485760) {
+                        continue;
+                    }
+                    
+                    // Upload
+                    $uploaded = wp_handle_upload($file, [
+                        'test_form' => false,
+                        'mimes' => [
+                            'pdf' => 'application/pdf',
+                            'doc' => 'application/msword',
+                            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                            'xls' => 'application/vnd.ms-excel',
+                            'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                        ]
+                    ]);
+                    
+                    if (!isset($uploaded['error'])) {
+                        // Relativní cesta
+                        $upload_dir = wp_upload_dir();
+                        $relative_path = str_replace($upload_dir['basedir'], '', $uploaded['file']);
+                        
+                        // Ulož do DB
+                        $wpdb->insert(
+                            $wpdb->prefix . 'saw_visit_invitation_materials',
+                            [
+                                'visit_id' => $visit_id,
+                                'customer_id' => $customer_id,
+                                'branch_id' => $branch_id,
+                                'company_id' => $company_id,
+                                'material_type' => 'document',
+                                'file_path' => $relative_path,
+                                'file_name' => basename($uploaded['file']),
+                                'file_size' => $file['size'],
+                                'mime_type' => $uploaded['type'],
+                            ],
+                            ['%d', '%d', '%d', $company_id ? '%d' : null, '%s', '%s', '%s', '%d', '%s']
+                        );
+                    }
+                }
+            }
+        }
+        
+        // Redirect na registraci návštěvníků
+        wp_redirect(home_url('/terminal/register/'));
+        exit;
+    }
+    
+    /**
+     * Handle skip training
+     * 
+     * @since 1.0.0
+     * @return void
+     */
+    private function handle_skip_training() {
+        $flow = $this->session->get('terminal_flow');
+        $flow['training_viewed'] = true;
+        $this->session->set('terminal_flow', $flow);
+        
+        // Jdi rovnou na success
+        wp_redirect(home_url('/terminal/success/'));
+        exit;
+    }
 }

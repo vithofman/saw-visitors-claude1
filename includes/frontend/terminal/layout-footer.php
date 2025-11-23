@@ -25,7 +25,14 @@
     </div>
 </footer>
 
-<?php wp_footer(); ?>
+<?php 
+// Print media templates for WYSIWYG editor (if needed)
+$flow = $this->session->get('terminal_flow');
+if (($flow['step'] ?? '') === 'invitation-risks') {
+    wp_print_media_templates();
+}
+wp_footer(); 
+?>
 
 </body>
 </html>
