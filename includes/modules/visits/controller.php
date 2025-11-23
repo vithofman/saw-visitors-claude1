@@ -434,53 +434,111 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
     }
     
     /**
-     * AJAX: Extend PIN expiry
-     * 
-     * @since 4.8.0
-     */
-    public function ajax_extend_pin() {
-        saw_verify_ajax_unified();
+ * OPRAVENÁ FUNKCE ajax_extend_pin()
+ * 
+ * Nahraď tuto funkci ve svém controller.php souboru
+ * (SAW_Module_Visits_Controller class)
+ */
+
+/**
+ * AJAX: Extend PIN expiry
+ * 
+ * @since 4.8.0
+ * ✅ FIXED: Podporuje exact_expiry při hours=999
+ * ✅ FIXED: Počítá od expirace místo od TEĎ
+ */
+public function ajax_extend_pin() {
+    saw_verify_ajax_unified();
+    
+    $visit_id = intval($_POST['visit_id'] ?? 0);
+    $hours = intval($_POST['hours'] ?? 24);
+    
+    if (!$visit_id) {
+        wp_send_json_error(['message' => 'Neplatné ID návštěvy']);
+    }
+    
+    if (!$this->can('edit')) {
+        wp_send_json_error(['message' => 'Nemáte oprávnění']);
+    }
+    
+    global $wpdb;
+    
+    // ✅ NOVÁ LOGIKA: Pokud hours=999, použij exact_expiry místo výpočtu
+    if ($hours === 999 && !empty($_POST['exact_expiry'])) {
+        // Přijmout přesný čas z frontendu (už je v Prague timezone)
+        $new_expiry_input = sanitize_text_field($_POST['exact_expiry']);
         
-        $visit_id = intval($_POST['visit_id'] ?? 0);
-        $hours = intval($_POST['hours'] ?? 24);
+        // ✅ OPRAVA TIMEZONE: Frontend posílá čas v Prague timezone
+        // Musíme ho parsovat jako Prague čas a uložit do DB
+        try {
+            $tz_prague = new DateTimeZone('Europe/Prague');
+            $dt = new DateTime($new_expiry_input, $tz_prague);
+            
+            // Uložit v MySQL formátu (bez timezone - MySQL to bere jako lokální čas serveru)
+            $new_expiry = $dt->format('Y-m-d H:i:s');
+            
+            // Validace že čas je v budoucnosti (porovnání v Prague timezone)
+            $now = new DateTime('now', $tz_prague);
+            if ($dt <= $now) {
+                wp_send_json_error(['message' => 'Čas musí být v budoucnosti']);
+            }
+        } catch (Exception $e) {
+            wp_send_json_error(['message' => 'Neplatný formát data: ' . $e->getMessage()]);
+        }
         
-        if (!$visit_id || $hours < 1 || $hours > 720) {
+        if (class_exists('SAW_Logger')) {
+            SAW_Logger::info("PIN exact expiry for visit #{$visit_id}: {$new_expiry} (Prague)");
+        }
+    } else {
+        // STARÁ LOGIKA: Výpočet z hodin
+        if ($hours < 1 || $hours > 720) {
             wp_send_json_error(['message' => 'Neplatné parametry (1-720 hodin)']);
         }
         
-        if (!$this->can('edit')) {
-            wp_send_json_error(['message' => 'Nemáte oprávnění']);
+        // ✅ OPRAVA: Získat současnou expiraci a počítat od ní!
+        $current_expiry = $wpdb->get_var($wpdb->prepare(
+            "SELECT pin_expires_at FROM {$wpdb->prefix}saw_visits WHERE id = %d",
+            $visit_id
+        ));
+        
+        // Vypočítat nový čas OD EXPIRACE (ne od teď!)
+        if ($current_expiry && strtotime($current_expiry) > time()) {
+            // PIN je platný - přičti k expiraci
+            $new_expiry = date('Y-m-d H:i:s', strtotime($current_expiry . " +{$hours} hours"));
+        } else {
+            // PIN vypršel - přičti k TEĎ
+            $new_expiry = date('Y-m-d H:i:s', strtotime("+{$hours} hours"));
         }
-        
-        global $wpdb;
-        
-        $new_expiry = date('Y-m-d H:i:s', strtotime("+{$hours} hours"));
-        
-        $result = $wpdb->update(
-            $wpdb->prefix . 'saw_visits',
-            ['pin_expires_at' => $new_expiry],
-            ['id' => $visit_id],
-            ['%s'],
-            ['%d']
-        );
-        
-        if ($result === false) {
-            wp_send_json_error(['message' => 'Chyba databáze: ' . $wpdb->last_error]);
-        }
-        
-        // ✅ OPRAVENO: Použij SAW_Cache::flush() místo $this->model->invalidate_cache()
-        SAW_Cache::flush('visits');
         
         if (class_exists('SAW_Logger')) {
             SAW_Logger::info("PIN extended for visit #{$visit_id} to {$new_expiry} (+{$hours}h)");
         }
-        
-        wp_send_json_success([
-            'new_expiry' => date('d.m.Y H:i', strtotime($new_expiry)),
-            'hours' => $hours,
-            'message' => "PIN úspěšně prodloužen o {$hours} hodin"
-        ]);
     }
+    
+    // Uložit do databáze
+    $result = $wpdb->update(
+        $wpdb->prefix . 'saw_visits',
+        ['pin_expires_at' => $new_expiry],
+        ['id' => $visit_id],
+        ['%s'],
+        ['%d']
+    );
+    
+    if ($result === false) {
+        wp_send_json_error(['message' => 'Chyba databáze: ' . $wpdb->last_error]);
+    }
+    
+    // Invalidace cache
+    SAW_Cache::flush('visits');
+    
+    wp_send_json_success([
+        'new_expiry' => date('d.m.Y H:i', strtotime($new_expiry)),
+        'new_expiry_raw' => $new_expiry,
+        'hours' => $hours === 999 ? 'exact' : $hours,
+        'message' => "PIN úspěšně nastaven"
+    ]);
+}
+
     
     /**
      * AJAX: Generate PIN code for visit
