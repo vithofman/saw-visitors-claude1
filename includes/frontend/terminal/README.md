@@ -86,11 +86,11 @@ V `includes/core/class-saw-router.php` metoda `handle_terminal_route()`:
 
 ```php
 private function handle_terminal_route($path) {
-    // Autentizace pro terminal (pokud požadována)
-    // if (!$this->is_logged_in()) {
-    //     $this->redirect_to_login('terminal');
-    //     return;
-    // }
+    // Terminal - vyžaduje přihlášení
+    if (!$this->is_logged_in()) {
+        $this->redirect_to_login('terminal');
+        return;
+    }
     
     // Load terminal route handler
     $handler = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal-route-handler.php';
@@ -101,6 +101,21 @@ private function handle_terminal_route($path) {
     }
 }
 ```
+
+## Relationship with Invitation System
+
+Terminal and Invitation are **completely separate** systems:
+
+- **Invitation**: Public, unauthenticated, pre-registration
+- **Terminal**: Authenticated, check-in/out operations
+
+Communication:
+
+- Only through database (visits, visitors tables)
+- No session sharing
+- No code sharing (except training templates in `/shared/`)
+
+**Important:** Terminal NEVER handles invitation flow. All invitation-specific code has been removed.
 
 ### Asset Loading
 

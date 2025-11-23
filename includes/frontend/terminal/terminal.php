@@ -75,9 +75,6 @@ class SAW_Terminal_Controller {
         
         $this->session = SAW_Session_Manager::instance();
         
-        // ✅ Detekce invitation mode PŘED load_context (aby se mohlo přeskočit přihlášení)
-        $this->handle_invitation_mode();
-        
         // ✅ Získání customer_id a branch_id
         $this->load_context();
 
@@ -90,83 +87,12 @@ class SAW_Terminal_Controller {
     }
     
     /**
-     * Handle invitation mode detection and setup
-     * 
-     * @since 1.0.0
-     * @return void
-     */
-    private function handle_invitation_mode() {
-        // Check if invitation parameter is present
-        if (isset($_GET['invitation']) && $_GET['invitation'] == '1') {
-            // Check session for invitation flow
-            if (session_status() === PHP_SESSION_NONE) {
-                session_start();
-            }
-            
-            $invitation = $_SESSION['invitation_flow'] ?? null;
-            
-            if ($invitation && $invitation['mode'] === 'invitation') {
-                $visit_id = $invitation['visit_id'];
-                
-                // Načti visit data
-                global $wpdb;
-                $visit = $wpdb->get_row($wpdb->prepare(
-                    "SELECT * FROM {$wpdb->prefix}saw_visits WHERE id = %d",
-                    $visit_id
-                ), ARRAY_A);
-                
-                if (!$visit) {
-                    wp_die('Návštěva nenalezena');
-                }
-                
-                // Nastav flow
-                $flow = $this->session->get('terminal_flow');
-                $flow['mode'] = 'invitation';
-                $flow['type'] = 'planned';
-                $flow['visit_id'] = $visit_id;
-                $flow['customer_id'] = $visit['customer_id'];
-                $flow['branch_id'] = $visit['branch_id'];
-                $flow['company_id'] = $visit['company_id'] ?? null;
-                
-                // Načti existing visitors
-                $flow['visitors'] = $wpdb->get_results($wpdb->prepare(
-                    "SELECT * FROM {$wpdb->prefix}saw_visitors 
-                     WHERE visit_id = %d AND participation_status = 'planned'",
-                    $visit_id
-                ), ARRAY_A);
-                
-                $this->session->set('terminal_flow', $flow);
-                
-                // Pokud ještě není jazyk, přesměruj na language selection
-                if (empty($flow['language'])) {
-                    $current_path = get_query_var('saw_path');
-                    // Pokud už nejsme na language selection, přesměruj tam
-                    if ($current_path !== 'language' && $current_path !== '') {
-                        wp_redirect(home_url('/terminal/language/'));
-                        exit;
-                    }
-                    // Necháme to projít přes language selection
-                    return;
-                }
-                
-                // Pokud už má jazyk a jsme na root terminal, přesměruj na risks upload
-                $current_path = get_query_var('saw_path');
-                if (empty($current_path) || $current_path === 'terminal' || $current_path === '/') {
-                    wp_redirect(home_url('/terminal/invitation-risks/'));
-                    exit;
-                }
-            }
-        }
-    }
-    
-    /**
      * Load customer and branch context
      *
      * Logika:
      * 1. Terminal role → má pevné branch_id a customer_id
      * 2. Super admin → použije context_customer_id a context_branch_id
      * 3. Admin/Manager → použije své branch_id a customer_id
-     * 4. Invitation mode → použije data z session (bez přihlášení)
      *
      * @since 2.0.0
      * @return void
@@ -174,24 +100,7 @@ class SAW_Terminal_Controller {
     private function load_context() {
         global $wpdb;
         
-        // ✅ NOVÉ: V invitation mode NEPOVYŽUJ přihlášení
-        $flow = $this->session->get('terminal_flow');
-        $is_invitation = ($flow['mode'] ?? '') === 'invitation';
-        
-        if ($is_invitation) {
-            // V invitation mode použij data z session
-            $this->customer_id = $flow['customer_id'] ?? null;
-            $this->branch_id = $flow['branch_id'] ?? null;
-            
-            if (!$this->customer_id || !$this->branch_id) {
-                wp_die('Chyba: Chybí kontext návštěvy. Kontaktujte prosím osobu, která vám pozvánku zaslala.', 'Chyba', ['response' => 400]);
-            }
-            
-            error_log("[SAW Terminal] Invitation mode - customer_id={$this->customer_id}, branch_id={$this->branch_id}");
-            return; // Skip běžné načítání uživatele
-        }
-        
-        // Běžný terminal - vyžaduje přihlášení
+        // Terminal - vyžaduje přihlášení
         if (!is_user_logged_in()) {
             wp_die('Musíte být přihlášeni pro přístup k terminálu.', 'Přístup odepřen', ['response' => 403]);
         }
@@ -257,16 +166,6 @@ class SAW_Terminal_Controller {
      */
     private function load_languages() {
         global $wpdb;
-        
-        // ✅ NOVÉ: V invitation mode může být customer_id a branch_id nastaveno před voláním této metody
-        // Pokud ještě nejsou nastaveny, zkus je načíst z session
-        if (!$this->customer_id || !$this->branch_id) {
-            $flow = $this->session->get('terminal_flow');
-            if (($flow['mode'] ?? '') === 'invitation') {
-                $this->customer_id = $flow['customer_id'] ?? null;
-                $this->branch_id = $flow['branch_id'] ?? null;
-            }
-        }
         
         if (!$this->customer_id || !$this->branch_id) {
             error_log("[SAW Terminal] WARNING: Cannot load languages - missing customer_id or branch_id");
@@ -451,11 +350,6 @@ class SAW_Terminal_Controller {
             case 'register':
                 error_log("Rendering registration form");
                 $this->render_registration_form();
-                break;
-                
-            case 'invitation-risks':
-                error_log("Rendering invitation risks upload");
-                $this->render_invitation_risks();
                 break;
                 
             case 'checkout-pin':
@@ -716,15 +610,6 @@ class SAW_Terminal_Controller {
     private function render_success() {
         $flow = $this->session->get('terminal_flow');
         
-        // Check if invitation mode - show PIN success page
-        if (($flow['mode'] ?? '') === 'invitation') {
-            $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/invitation/pin-success.php';
-            $this->render_template($template, [
-                'flow' => $flow,
-            ]);
-            return;
-        }
-        
         // Regular success page
         $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/success.php';
         $this->render_template($template, [
@@ -765,10 +650,11 @@ class SAW_Terminal_Controller {
             return;
         }
         
-        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/training/video.php';
+        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/shared/training/video.php';
         
         $this->render_template($template, [
             'video_url' => $step_data['video_url'],
+            'is_invitation' => false,
         ]);
     }
     
@@ -805,10 +691,11 @@ class SAW_Terminal_Controller {
             return;
         }
         
-        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/training/map.php';
+        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/shared/training/map.php';
         
         $this->render_template($template, [
             'pdf_path' => $step_data['pdf_path'],
+            'is_invitation' => false,
         ]);
     }
     
@@ -874,10 +761,11 @@ class SAW_Terminal_Controller {
         
         error_log("[SAW Terminal Risks] Found " . count($documents) . " documents");
         
-        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/training/risks.php';
+        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/shared/training/risks.php';
         $this->render_template($template, [
             'risks_text' => $step_data['risks_text'],
             'documents' => $documents,
+            'is_invitation' => false,
         ]);
     }
     
@@ -928,9 +816,10 @@ class SAW_Terminal_Controller {
         }
     }
     
-    $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/training/department.php';
+    $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/shared/training/department.php';
     $this->render_template($template, [
         'departments' => $dept_steps,
+        'is_invitation' => false,
     ]);
 }
     
@@ -996,10 +885,11 @@ class SAW_Terminal_Controller {
         
         error_log("[SAW Terminal Additional] Found " . count($documents) . " documents");
         
-        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/training/additional.php';
+        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/shared/training/additional.php';
         $this->render_template($template, [
             'additional_text' => $step_data['additional_text'],
             'documents' => $documents,
+            'is_invitation' => false,
         ]);
     }
     
@@ -1082,10 +972,6 @@ class SAW_Terminal_Controller {
                 $this->handle_training_additional_complete();
                 break;
                 
-            case 'save_invitation_risks':
-                $this->handle_save_invitation_risks();
-                break;
-                
             case 'skip_training':
                 $this->handle_skip_training();
                 break;
@@ -1114,14 +1000,6 @@ class SAW_Terminal_Controller {
         
         $flow = $this->session->get('terminal_flow');
         $flow['language'] = $language;
-        
-        // Check if invitation flow - redirect to risks upload
-        if (($flow['mode'] ?? '') === 'invitation') {
-            $flow['step'] = 'invitation-risks';
-            $this->session->set('terminal_flow', $flow);
-            wp_redirect(home_url('/terminal/invitation-risks/?invitation=1'));
-            exit;
-        }
         
         // Regular flow - redirect to action choice
         $flow['step'] = 'action';
@@ -1669,9 +1547,6 @@ return $steps;
         // 3. ZPRACOVÁNÍ NÁVŠTĚVNÍKŮ
         // ===================================
         
-        // ✅ CHECK: Invitation mode - pouze registrace, ne check-in
-        $is_invitation = ($flow['mode'] ?? '') === 'invitation';
-        
         // ✅ PŘIDÁNO: Zjisti zda má firma školící obsah
         $language = $flow['language'] ?? 'cs';
         $has_training_content = false;
@@ -1749,9 +1624,10 @@ return $steps;
                 // ✅ UPDATE s NOVÝMI sloupci
                 if (!$training_skip && !$has_completed_training && $has_training_content) {
                     // Potřebuje školení - RESET progress
-                    // ✅ INVITATION MODE: Neukládat current_status = 'present' (není check-in)
+                    // ✅ UPDATE s current_status = 'present' (check-in)
                     $update_data = [
                         'participation_status' => 'confirmed',
+                        'current_status' => 'present',
                         'training_status' => $training_status,
                         'training_skipped' => 0,
                         'training_started_at' => current_time('mysql'),
@@ -1762,36 +1638,27 @@ return $steps;
                         'training_step_department' => 0,
                     ];
                     
-                    // Pouze pokud NENÍ invitation mode, přidej current_status
-                    if (!$is_invitation) {
-                        $update_data['current_status'] = 'present';
-                    }
-                    
                     $wpdb->update(
                         $wpdb->prefix . 'saw_visitors',
                         $update_data,
                         ['id' => $visitor_id],
-                        $is_invitation ? ['%s', '%s', '%d', '%s', '%d', '%d', '%d', '%d', '%d'] : ['%s', '%s', '%s', '%d', '%s', '%d', '%d', '%d', '%d', '%d'],
+                        ['%s', '%s', '%s', '%d', '%s', '%d', '%d', '%d', '%d', '%d'],
                         ['%d']
                     );
                 } else {
                     // Školení přeskočeno nebo hotové
                     $update_data = [
                         'participation_status' => 'confirmed',
+                        'current_status' => 'present',
                         'training_status' => $training_status,
                         'training_skipped' => $training_skip,
                     ];
-                    
-                    // Pouze pokud NENÍ invitation mode, přidej current_status
-                    if (!$is_invitation) {
-                        $update_data['current_status'] = 'present';
-                    }
                     
                     $wpdb->update(
                         $wpdb->prefix . 'saw_visitors',
                         $update_data,
                         ['id' => $visitor_id],
-                        $is_invitation ? ['%s', '%s', '%d'] : ['%s', '%s', '%s', '%d'],
+                        ['%s', '%s', '%s', '%d'],
                         ['%d']
                     );
                 }
@@ -1800,22 +1667,19 @@ return $steps;
         
                 
                 // ✅ INSERT daily log s customer_id a branch_id
-                // V INVITATION MODE: NEPROVÁDĚT check-in (neukládat checked_in_at)
-                if (!$is_invitation) {
-                    $wpdb->insert(
-                        $wpdb->prefix . 'saw_visit_daily_logs',
-                        [
-                            'customer_id' => $this->customer_id,
-                            'branch_id' => $this->branch_id,
-                            'visit_id' => $visit_id,
-                            'visitor_id' => $visitor_id,
-                            'log_date' => current_time('Y-m-d'),
-                            'checked_in_at' => current_time('mysql'),
-                            'created_at' => current_time('mysql'),
-                        ],
-                        ['%d', '%d', '%d', '%d', '%s', '%s', '%s']
-                    );
-                }
+                $wpdb->insert(
+                    $wpdb->prefix . 'saw_visit_daily_logs',
+                    [
+                        'customer_id' => $this->customer_id,
+                        'branch_id' => $this->branch_id,
+                        'visit_id' => $visit_id,
+                        'visitor_id' => $visitor_id,
+                        'log_date' => current_time('Y-m-d'),
+                        'checked_in_at' => current_time('mysql'),
+                        'created_at' => current_time('mysql'),
+                    ],
+                    ['%d', '%d', '%d', '%d', '%s', '%s', '%s']
+                );
                 
                 error_log("[SAW Terminal] Existing visitor #{$visitor_id} checked-in, training_status={$training_status}");
             }
@@ -1864,41 +1728,32 @@ return $steps;
                     'created_at' => current_time('mysql'),
                 ];
                 
-                // ✅ INVITATION MODE: Neukládat current_status = 'present' (není check-in)
-                if (!$is_invitation) {
-                    $visitor_insert['current_status'] = 'present';
-                }
-                
-                // Prepare format array based on invitation mode
-                $format_array = $is_invitation 
-                    ? ['%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s']
-                    : ['%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s'];
+                // ✅ INSERT s current_status = 'present' (check-in)
+                $visitor_insert['current_status'] = 'present';
                 
                 $wpdb->insert(
                     $wpdb->prefix . 'saw_visitors',
                     $visitor_insert,
-                    $format_array
+                    ['%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s']
                 );
                 
                 $visitor_id = $wpdb->insert_id;
                 $visitor_ids[] = $visitor_id;
                 
-                // ✅ INVITATION MODE: NEPROVÁDĚT check-in (neukládat daily_logs s checked_in_at)
-                if (!$is_invitation) {
-                    $wpdb->insert(
-                        $wpdb->prefix . 'saw_visit_daily_logs',
-                        [
-                            'customer_id' => $this->customer_id,
-                            'branch_id' => $this->branch_id,
-                            'visit_id' => $visit_id,
-                            'visitor_id' => $visitor_id,
-                            'log_date' => current_time('Y-m-d'),
-                            'checked_in_at' => current_time('mysql'),
-                            'created_at' => current_time('mysql'),
-                        ],
-                        ['%d', '%d', '%d', '%d', '%s', '%s', '%s']
-                    );
-                }
+                // ✅ INSERT daily log s customer_id a branch_id
+                $wpdb->insert(
+                    $wpdb->prefix . 'saw_visit_daily_logs',
+                    [
+                        'customer_id' => $this->customer_id,
+                        'branch_id' => $this->branch_id,
+                        'visit_id' => $visit_id,
+                        'visitor_id' => $visitor_id,
+                        'log_date' => current_time('Y-m-d'),
+                        'checked_in_at' => current_time('mysql'),
+                        'created_at' => current_time('mysql'),
+                    ],
+                    ['%d', '%d', '%d', '%d', '%s', '%s', '%s']
+                );
                 
                 error_log("[SAW Terminal] New visitor #{$visitor_id} created, training_status={$training_status}");
             }
@@ -2526,38 +2381,8 @@ private function handle_training_additional_complete() {
             true
         );
 
-        //YOUTUBE / VIMEO VIDEO - načíst vždy (i v invitation mode)
+        //YOUTUBE / VIMEO VIDEO
         wp_enqueue_script('saw-video-player', $js_dir . 'terminal/video-player.js', array(), '3.0.0', true);
-        
-        // Invitation autosave (only in invitation mode)
-        $flow = $this->session->get('terminal_flow');
-        if (($flow['mode'] ?? '') === 'invitation') {
-            // Enqueue WordPress editor for WYSIWYG editor in invitation risks step
-            $current_step = $this->get_current_step();
-            if ($current_step === 'invitation-risks') {
-                wp_enqueue_editor();
-                wp_enqueue_media();
-            }
-            
-            wp_enqueue_script(
-                'saw-invitation-autosave',
-                SAW_VISITORS_PLUGIN_URL . 'assets/js/invitation-autosave.js',
-                array('jquery'),
-                '1.0.0',
-                true
-            );
-            
-            // Pass invitation token to JS
-            if (session_status() === PHP_SESSION_NONE) {
-                session_start();
-            }
-            $invitation = $_SESSION['invitation_flow'] ?? null;
-            $token = $invitation['token'] ?? '';
-            
-            wp_localize_script('saw-invitation-autosave', 'sawInvitation', [
-                'token' => $token,
-            ]);
-        }
         
         // Old terminal.js (legacy.js in new structure)
         $terminal_js_legacy = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/assets/js/terminal/legacy.js';
@@ -2579,203 +2404,6 @@ private function handle_training_additional_complete() {
                 true
             );
         }
-    }
-    
-    /**
-     * Render invitation risks upload step
-     * 
-     * @since 1.0.0
-     * @return void
-     */
-    private function render_invitation_risks() {
-        $flow = $this->session->get('terminal_flow');
-        $visit_id = $flow['visit_id'] ?? null;
-        $lang = $flow['language'] ?? 'cs';
-        
-        error_log("[RENDER_INVITATION_RISKS] Starting render - visit_id: {$visit_id}, lang: {$lang}");
-        
-        if (!$visit_id) {
-            error_log("[RENDER_INVITATION_RISKS] ERROR: No visit_id in flow");
-            wp_die('Návštěva nenalezena');
-        }
-        
-        // ✅ CRITICAL: Enqueue WordPress editor and media BEFORE rendering template
-        // This ensures wp_editor() has all necessary assets loaded
-        wp_enqueue_editor();
-        wp_enqueue_media();
-        error_log("[RENDER_INVITATION_RISKS] WordPress editor and media enqueued");
-        
-        // Načti existující data (pokud se vrací)
-        global $wpdb;
-        $existing_text = $wpdb->get_var($wpdb->prepare(
-            "SELECT text_content FROM {$wpdb->prefix}saw_visit_invitation_materials 
-             WHERE visit_id = %d AND material_type = 'text' 
-             ORDER BY uploaded_at DESC LIMIT 1",
-            $visit_id
-        ));
-        
-        $existing_docs = $wpdb->get_results($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_visit_invitation_materials 
-             WHERE visit_id = %d AND material_type = 'document' 
-             ORDER BY uploaded_at ASC",
-            $visit_id
-        ), ARRAY_A);
-        
-        error_log("[RENDER_INVITATION_RISKS] Existing text: " . ($existing_text ? 'yes' : 'no') . ", docs: " . count($existing_docs));
-        
-        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/invitation/risks-upload.php';
-        
-        if (!file_exists($template)) {
-            error_log("[RENDER_INVITATION_RISKS] ERROR: Template file does not exist: {$template}");
-            wp_die("Template not found: {$template}");
-        }
-        
-        error_log("[RENDER_INVITATION_RISKS] Template exists, rendering with data: visit_id={$visit_id}, lang={$lang}");
-        
-        $this->render_template($template, [
-            'visit_id' => $visit_id,
-            'lang' => $lang,
-            'existing_text' => $existing_text,
-            'existing_docs' => $existing_docs,
-        ]);
-    }
-    
-    /**
-     * Handle save invitation risks
-     * 
-     * @since 1.0.0
-     * @return void
-     */
-    private function handle_save_invitation_risks() {
-        // Verify nonce
-        if (!isset($_POST['risks_nonce']) || !wp_verify_nonce($_POST['risks_nonce'], 'saw_invitation_risks')) {
-            wp_die('Security check failed');
-        }
-        
-        $visit_id = intval($_POST['visit_id'] ?? 0);
-        $flow = $this->session->get('terminal_flow');
-        
-        // Verify visit_id matches session (convert both to int for comparison)
-        $session_visit_id = intval($flow['visit_id'] ?? 0);
-        if ($visit_id !== $session_visit_id || $visit_id === 0) {
-            error_log("[SAW Terminal] Security error: visit_id mismatch. POST: {$visit_id}, Session: {$session_visit_id}");
-            wp_die('Security error: Invalid visit ID');
-        }
-        
-        // Skip action
-        if (isset($_POST['action']) && $_POST['action'] === 'skip') {
-            wp_redirect(home_url('/terminal/register/'));
-            exit;
-        }
-        
-        global $wpdb;
-        
-        $customer_id = $flow['customer_id'];
-        $branch_id = $flow['branch_id'];
-        $company_id = $flow['company_id'] ?? null;
-        
-        // Save text (pokud vyplněný)
-        $risks_text = wp_kses_post($_POST['risks_text'] ?? '');
-        
-        if (!empty(trim($risks_text))) {
-            // Smaž starý text
-            $wpdb->delete(
-                $wpdb->prefix . 'saw_visit_invitation_materials',
-                [
-                    'visit_id' => $visit_id,
-                    'material_type' => 'text'
-                ],
-                ['%d', '%s']
-            );
-            
-            // Ulož nový
-            $wpdb->insert(
-                $wpdb->prefix . 'saw_visit_invitation_materials',
-                [
-                    'visit_id' => $visit_id,
-                    'customer_id' => $customer_id,
-                    'branch_id' => $branch_id,
-                    'company_id' => $company_id,
-                    'material_type' => 'text',
-                    'text_content' => $risks_text,
-                ],
-                ['%d', '%d', '%d', $company_id ? '%d' : null, '%s', '%s']
-            );
-        }
-        
-        // Handle file uploads from file-upload component
-        // File-upload component uploads files via AJAX and sends metadata in POST
-        $uploaded_files = [];
-        if (!empty($_POST['uploaded_files'])) {
-            $uploaded_files_json = stripslashes($_POST['uploaded_files']);
-            $uploaded_files = json_decode($uploaded_files_json, true);
-            if (!is_array($uploaded_files)) {
-                $uploaded_files = [];
-            }
-        }
-        
-        // Process uploaded files from file-upload component
-        $file_key = 'risks_documents[]';
-        if (!empty($uploaded_files[$file_key]) && is_array($uploaded_files[$file_key])) {
-            foreach ($uploaded_files[$file_key] as $file_data) {
-                if (empty($file_data['file']) || !is_array($file_data['file'])) {
-                    continue;
-                }
-                
-                $file_info = $file_data['file'];
-                
-                // Validate file exists
-                $upload_dir = wp_upload_dir();
-                $file_path = $upload_dir['basedir'] . $file_info['path'];
-                
-                if (!file_exists($file_path)) {
-                    continue;
-                }
-                
-                // Check if file already exists in DB (prevent duplicates)
-                $existing = $wpdb->get_var($wpdb->prepare(
-                    "SELECT id FROM {$wpdb->prefix}saw_visit_invitation_materials 
-                     WHERE visit_id = %d AND file_path = %s AND material_type = 'document'",
-                    $visit_id, $file_info['path']
-                ));
-                
-                if ($existing) {
-                    continue; // File already exists, skip
-                }
-                
-                // Get file size if not provided
-                $file_size = !empty($file_info['size']) ? intval($file_info['size']) : filesize($file_path);
-                
-                // Validate size (10MB max)
-                if ($file_size > 10485760) {
-                    continue;
-                }
-                
-                // Ulož do DB
-                $wpdb->insert(
-                    $wpdb->prefix . 'saw_visit_invitation_materials',
-                    [
-                        'visit_id' => $visit_id,
-                        'customer_id' => $customer_id,
-                        'branch_id' => $branch_id,
-                        'company_id' => $company_id,
-                        'material_type' => 'document',
-                        'file_path' => $file_info['path'],
-                        'file_name' => $file_info['name'],
-                        'file_size' => $file_size,
-                        'mime_type' => $file_info['type'] ?? 'application/octet-stream',
-                    ],
-                    ['%d', '%d', '%d', $company_id ? '%d' : null, '%s', '%s', '%s', '%d', '%s']
-                );
-            }
-        }
-        
-        // ✅ ODSTRAŇENO: Fallback na $_FILES - file-upload komponenta vždy používá AJAX upload
-        // a posílá metadata v POST parametru uploaded_files. Fallback způsoboval duplikaci.
-        
-        // Redirect na registraci návštěvníků
-        wp_redirect(home_url('/terminal/register/'));
-        exit;
     }
     
     /**

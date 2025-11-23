@@ -1,9 +1,9 @@
 <?php
 /**
- * Terminal Layout Header
+ * Invitation Layout Header
  * 
  * Fullscreen layout WITHOUT WordPress header/footer
- * Clean terminal interface with home button
+ * Clean invitation interface with home button
  * 
  * @package SAW_Visitors
  * @version 1.0.0
@@ -12,6 +12,9 @@
 if (!defined('ABSPATH')) {
     exit;
 }
+
+$flow = $this->session->get('invitation_flow');
+$token = $flow['token'] ?? $this->token ?? '';
 ?>
 <!DOCTYPE html>
 <html <?php language_attributes(); ?>>
@@ -19,7 +22,7 @@ if (!defined('ABSPATH')) {
     <meta charset="<?php bloginfo('charset'); ?>">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <meta name="robots" content="noindex, nofollow">
-    <title><?php echo get_bloginfo('name'); ?> - Terminál</title>
+    <title><?php echo get_bloginfo('name'); ?> - Registrace návštěvy</title>
     
     <?php wp_head(); ?>
     
@@ -53,25 +56,34 @@ if (!defined('ABSPATH')) {
         }
     </style>
 </head>
-<body class="saw-terminal-body">
+<body class="saw-invitation-body">
 
 <!-- Home Button (kulaté tlačítko vlevo nahoře) -->
-<a href="<?php echo esc_url(home_url('/terminal/')); ?>" class="saw-terminal-home-btn" title="Začít znovu">
+<a href="<?php echo esc_url(home_url('/visitor-invitation/' . $token . '/')); ?>" class="saw-terminal-home-btn" title="Začít znovu">
     <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
         <polyline points="9 22 9 12 15 12 15 22"></polyline>
     </svg>
 </a>
 
-<!-- Main Terminal Container -->
+<!-- Main Invitation Container -->
 <div class="saw-terminal-wrapper">
     <div class="saw-terminal-content">
         
-        <?php if (isset($error) && !empty($error)): ?>
+        <?php 
+        $flow = $this->session->get('invitation_flow');
+        if (isset($flow['error']) && !empty($flow['error'])): 
+        ?>
         <div class="saw-terminal-error">
             <span class="saw-terminal-error-icon">⚠️</span>
-            <span class="saw-terminal-error-message"><?php echo esc_html($error); ?></span>
+            <span class="saw-terminal-error-message"><?php echo esc_html($flow['error']); ?></span>
         </div>
-        <?php endif; ?>
+        <?php 
+            // Clear error after display
+            unset($flow['error']);
+            $this->session->set('invitation_flow', $flow);
+        endif; 
+        ?>
         
         <!-- Template content will be inserted here -->
+

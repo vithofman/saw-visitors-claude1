@@ -238,6 +238,6 @@ class SAW_Activator {
             }
         }
         
-        flush_rewrite_rules();
+        flush_rewrite_rules(false);
     }
 }

@@ -1,4 +1,4 @@
-</div><!-- .saw-terminal-content -->
+    </div><!-- .saw-terminal-content -->
 </div><!-- .saw-terminal-wrapper -->
 
 <!-- Minimální footer -->
@@ -8,7 +8,7 @@
             © <?php echo date('Y'); ?> <?php echo get_bloginfo('name'); ?>
         </p>
         <?php 
-        $flow = $this->session->get('terminal_flow');
+        $flow = $this->session->get('invitation_flow');
         if (isset($flow['language'])): 
         ?>
         <p class="saw-terminal-footer-lang">
@@ -26,8 +26,16 @@
 </footer>
 
 <?php 
+// Print media templates for WYSIWYG editor (only on risks step)
+$current_step = $this->current_step ?? '';
+if ($current_step === 'risks') {
+    if (function_exists('wp_print_media_templates')) {
+        wp_print_media_templates();
+    }
+}
 wp_footer(); 
 ?>
 
 </body>
 </html>
+

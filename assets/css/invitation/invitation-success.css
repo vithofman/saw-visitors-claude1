@@ -1,0 +1,38 @@
+/* Invitation PIN Success Specific Styling */
+
+.saw-invitation-success-page {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+    text-align: center;
+}
+
+.saw-success-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    color: white;
+    margin: 0 auto 2rem;
+}
+
+.saw-pin-display {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 2rem;
+    margin: 2rem 0;
+}
+
+.saw-pin-code {
+    font-size: 48px;
+    font-weight: bold;
+    color: #667eea;
+    letter-spacing: 8px;
+    font-family: monospace;
+}
+
