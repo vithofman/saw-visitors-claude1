@@ -92,6 +92,13 @@ class SAW_Invitation_Router {
             session_start();
         }
         
+        // ✅ NOVÉ: RESET terminal_flow při každém kliknutí na odkaz
+        // Vymaž starý terminal_flow (aby se vždy zobrazil výběr jazyka)
+        if (isset($_SESSION['terminal_flow'])) {
+            unset($_SESSION['terminal_flow']);
+        }
+        
+        // Nastav nový invitation_flow
         $_SESSION['invitation_flow'] = [
             'mode' => 'invitation',
             'token' => $token,
@@ -103,7 +110,7 @@ class SAW_Invitation_Router {
         
         // Log
         if (class_exists('SAW_Logger')) {
-            SAW_Logger::info("Invitation accessed: visit #{$visit['id']}, token: {$token}");
+            SAW_Logger::info("Invitation accessed: visit #{$visit['id']}, token: {$token} (session reset)");
         }
         
         // Redirect na terminal

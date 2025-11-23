@@ -516,20 +516,43 @@ if ($saw_page === 'dashboard') {
      * @return void
      */
     private function handle_terminal_route($path) {
-    if (!$this->is_logged_in()) {
-        $this->redirect_to_login('terminal');
-        return;
-    }
+        // ✅ NOVÉ: Invitation flow - NEPOVYŽUJ přihlášení
+        if (isset($_GET['invitation']) && $_GET['invitation'] == '1') {
+            // Zkontroluj, zda existuje invitation_flow v session
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
+            
+            $invitation = $_SESSION['invitation_flow'] ?? null;
+            
+            if ($invitation && $invitation['mode'] === 'invitation') {
+                // Invitation flow - povolit bez přihlášení
+                $handler = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal-route-handler.php';
+                
+                if (file_exists($handler)) {
+                    require_once $handler;
+                    exit;
+                } else {
+                    wp_die('Terminal handler not found: ' . $handler);
+                }
+            }
+        }
+        
+        // Běžný terminal - vyžaduje přihlášení
+        if (!$this->is_logged_in()) {
+            $this->redirect_to_login('terminal');
+            return;
+        }
     
-    $handler = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal-route-handler.php';
+        $handler = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal-route-handler.php';
     
-    if (file_exists($handler)) {
-        require_once $handler;
-        exit;
-    } else {
-        wp_die('Terminal handler not found: ' . $handler);
+        if (file_exists($handler)) {
+            require_once $handler;
+            exit;
+        } else {
+            wp_die('Terminal handler not found: ' . $handler);
+        }
     }
-}
     
     /**
      * Handle visitor routes

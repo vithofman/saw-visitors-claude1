@@ -56,7 +56,20 @@ if (!defined('ABSPATH')) {
 <body class="saw-terminal-body">
 
 <!-- Home Button (kulaté tlačítko vlevo nahoře) -->
-<a href="<?php echo home_url('/terminal/'); ?>" class="saw-terminal-home-btn" title="Začít znovu">
+<?php
+// ✅ NOVÉ: Podmíněný odkaz podle invitation mode
+$flow = $flow ?? [];
+$is_invitation = ($flow['mode'] ?? '') === 'invitation';
+
+if ($is_invitation) {
+    // V invitation mode - tlačítko domů přesměruje na začátek invitation flow
+    $home_url = home_url('/terminal/?invitation=1');
+} else {
+    // Běžný terminal - vyžaduje přihlášení
+    $home_url = home_url('/terminal/');
+}
+?>
+<a href="<?php echo esc_url($home_url); ?>" class="saw-terminal-home-btn" title="Začít znovu">
     <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
         <polyline points="9 22 9 12 15 12 15 22"></polyline>

@@ -42,6 +42,9 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
     }
     
     public function enqueue_assets() {
+        // ✅ NOVÉ: Načíst dashicons pro ikony v detail modal
+        wp_enqueue_style('dashicons');
+        
         // Enqueue module assets FIRST
         SAW_Asset_Loader::enqueue_module('visits');
         
@@ -169,8 +172,12 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         global $wpdb;
         
         if (!$visit_id || !isset($_POST)) {
+            error_log("[VISITS after_save] ERROR: No visit_id or POST data");
             return;
         }
+        
+        error_log("[VISITS after_save] Starting for visit_id: {$visit_id}");
+        error_log("[VISITS after_save] POST keys: " . implode(', ', array_keys($_POST)));
         
         // Save visit schedules (days and times)
         $schedule_table = $wpdb->prefix . 'saw_visit_schedules';
@@ -183,6 +190,9 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         $schedule_times_from = isset($_POST['schedule_times_from']) && is_array($_POST['schedule_times_from']) ? $_POST['schedule_times_from'] : array();
         $schedule_times_to = isset($_POST['schedule_times_to']) && is_array($_POST['schedule_times_to']) ? $_POST['schedule_times_to'] : array();
         $schedule_notes = isset($_POST['schedule_notes']) && is_array($_POST['schedule_notes']) ? $_POST['schedule_notes'] : array();
+        
+        error_log("[VISITS after_save] schedule_dates count: " . count($schedule_dates));
+        error_log("[VISITS after_save] schedule_dates: " . json_encode($schedule_dates));
         
         if (!empty($schedule_dates)) {
             foreach ($schedule_dates as $index => $date) {
@@ -215,8 +225,78 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
                 // Log error if insert failed
                 if ($result === false) {
                     error_log('Failed to insert visit schedule: ' . $wpdb->last_error);
+                } else {
+                    error_log("[VISITS after_save] Inserted schedule: date={$date}, time_from={$time_from}, time_to={$time_to}");
                 }
             }
+        }
+        
+        // ✅ NOVÉ: Uložit planned_date_from a planned_date_to do hlavní tabulky
+        $planned_date_from = null;
+        $planned_date_to = null;
+        
+        // First, try to get from schedule_dates
+        if (!empty($schedule_dates)) {
+            // Najít nejmenší a největší datum
+            $dates = array();
+            foreach ($schedule_dates as $date) {
+                $date = trim($date);
+                if (!empty($date)) {
+                    $dates[] = $date;
+                }
+            }
+            
+            if (!empty($dates)) {
+                sort($dates);
+                $planned_date_from = $dates[0];
+                $planned_date_to = end($dates);
+                error_log("[VISITS after_save] Calculated from schedule_dates: from={$planned_date_from}, to={$planned_date_to}");
+            }
+        }
+        
+        // ✅ FALLBACK: If schedule_dates is empty, try to get directly from POST
+        if (empty($planned_date_from) && isset($_POST['planned_date_from'])) {
+            $planned_date_from = sanitize_text_field($_POST['planned_date_from']);
+            error_log("[VISITS after_save] Using planned_date_from from POST: {$planned_date_from}");
+        }
+        
+        if (empty($planned_date_to) && isset($_POST['planned_date_to'])) {
+            $planned_date_to = sanitize_text_field($_POST['planned_date_to']);
+            error_log("[VISITS after_save] Using planned_date_to from POST: {$planned_date_to}");
+        }
+        
+        // Update main table if we have dates
+        if (!empty($planned_date_from) || !empty($planned_date_to)) {
+            $update_data = array();
+            $update_format = array();
+            
+            if (!empty($planned_date_from)) {
+                $update_data['planned_date_from'] = $planned_date_from;
+                $update_format[] = '%s';
+            }
+            
+            if (!empty($planned_date_to)) {
+                $update_data['planned_date_to'] = $planned_date_to;
+                $update_format[] = '%s';
+            }
+            
+            if (!empty($update_data)) {
+                $result = $wpdb->update(
+                    $wpdb->prefix . 'saw_visits',
+                    $update_data,
+                    array('id' => $visit_id),
+                    $update_format,
+                    array('%d')
+                );
+                
+                if ($result === false) {
+                    error_log("[VISITS after_save] ERROR: Failed to update planned dates: " . $wpdb->last_error);
+                } else {
+                    error_log("[VISITS after_save] Successfully updated planned dates: " . json_encode($update_data));
+                }
+            }
+        } else {
+            error_log("[VISITS after_save] WARNING: No planned dates to save");
         }
         
         // Save visit hosts

@@ -38,7 +38,7 @@ if (empty($branches) && $customer_id) {
 // Load companies
 if (empty($companies) && $customer_id) {
     $sql = $wpdb->prepare(
-        "SELECT id, name FROM %i WHERE customer_id = %d",
+        "SELECT id, name FROM %i WHERE customer_id = %d AND is_archived = 0",
         $wpdb->prefix . 'saw_companies', $customer_id
     );
     if ($context_branch_id) {
@@ -349,3 +349,43 @@ $form_action = $is_edit
         
     </form>
 </div>
+
+<script>
+jQuery(document).ready(function($) {
+    // ✅ Automaticky vypočítat planned_date_from a planned_date_to z schedule_dates[]
+    // a přidat je jako hidden inputy před odesláním formuláře
+    $('.saw-visit-form').on('submit', function(e) {
+        var $form = $(this);
+        var dates = [];
+        
+        // Získat všechny hodnoty z schedule_dates[]
+        $form.find('input[name="schedule_dates[]"]').each(function() {
+            var date = $(this).val().trim();
+            if (date) {
+                dates.push(date);
+            }
+        });
+        
+        // Pokud máme data, vypočítat min a max
+        if (dates.length > 0) {
+            dates.sort();
+            var planned_date_from = dates[0];
+            var planned_date_to = dates[dates.length - 1];
+            
+            // Odstranit existující hidden inputy (pokud existují)
+            $form.find('input[name="planned_date_from"]').remove();
+            $form.find('input[name="planned_date_to"]').remove();
+            
+            // Přidat nové hidden inputy
+            $form.append('<input type="hidden" name="planned_date_from" value="' + planned_date_from + '">');
+            $form.append('<input type="hidden" name="planned_date_to" value="' + planned_date_to + '">');
+            
+            console.log('[Visits Form] Calculated planned dates:', {
+                from: planned_date_from,
+                to: planned_date_to,
+                all_dates: dates
+            });
+        }
+    });
+});
+</script>

@@ -28,8 +28,15 @@
 <?php 
 // Print media templates for WYSIWYG editor (if needed)
 $flow = $this->session->get('terminal_flow');
-if (($flow['step'] ?? '') === 'invitation-risks') {
-    wp_print_media_templates();
+$is_invitation = ($flow['mode'] ?? '') === 'invitation';
+
+// Check if we're on invitation-risks step
+// Use get_current_step() if available, otherwise check flow['step']
+$current_step = method_exists($this, 'get_current_step') ? $this->get_current_step() : ($flow['step'] ?? '');
+if ($is_invitation && $current_step === 'invitation-risks') {
+    if (function_exists('wp_print_media_templates')) {
+        wp_print_media_templates();
+    }
 }
 wp_footer(); 
 ?>

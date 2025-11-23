@@ -259,8 +259,25 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
             return $id;
         }
         
-        // ✅ PŘIDÁNO: Nastavit PIN platnost při vytvoření
+        // ✅ PŘIDÁNO: Automaticky vygenerovat PIN pokud není v datech
         if (!empty($id)) {
+            // Zkontroluj, zda už má PIN
+            $existing_pin = $wpdb->get_var($wpdb->prepare(
+                "SELECT pin_code FROM {$this->table} WHERE id = %d",
+                $id
+            ));
+            
+            // Pokud PIN neexistuje, vygeneruj ho
+            if (empty($existing_pin)) {
+                $pin = $this->generate_pin($id);
+                if ($pin) {
+                    error_log("[Visits Model] Auto-generated PIN {$pin} for visit #{$id}");
+                } else {
+                    error_log("[Visits Model] WARNING: Failed to auto-generate PIN for visit #{$id}");
+                }
+            }
+            
+            // ✅ PŘIDÁNO: Nastavit PIN platnost při vytvoření
             $last_schedule_date = $wpdb->get_var($wpdb->prepare(
                 "SELECT MAX(date) FROM {$wpdb->prefix}saw_visit_schedules WHERE visit_id = %d",
                 $id
