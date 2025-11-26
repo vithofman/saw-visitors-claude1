@@ -154,16 +154,12 @@ $t = $translations[$lang] ?? $translations['cs'];
                 </div>
                 <div class="saw-section-body">
                     <?php
-                    // Just use wp_editor - templates will be printed via wp_footer hook!
-                    wp_editor($existing_text, 'risks_text', array(
+                    // ✅ WYSIWYG editor with image upload support
+                    render_saw_richtext_editor('risks_text', $existing_text, array(
                         'textarea_name' => 'risks_text',
-                        'textarea_rows' => 20,
-                        'media_buttons' => true,
-                        'teeny' => false,
-                        'tinymce' => array(
-                            'toolbar1' => 'formatselect,bold,italic,underline,bullist,numlist,link,unlink',
-                            'height' => 350,
-                        ),
+                        'height' => 350,
+                        'dark_mode' => true,
+                        'toolbar_preset' => 'full', // Full toolbar with colors, headings, etc.
                     ));
                     ?>
                 </div>
@@ -272,6 +268,11 @@ jQuery(document).ready(function($){
         item.remove();
     });
     
-    $('form').on('submit', function(){ if(typeof tinyMCE !== 'undefined'){ tinyMCE.triggerSave(); } });
+    $('form').on('submit', function(){ 
+        // Save TinyMCE content to textarea before submit
+        if(typeof tinyMCE !== 'undefined'){ 
+            tinyMCE.triggerSave(); 
+        } 
+    });
 });
 </script>

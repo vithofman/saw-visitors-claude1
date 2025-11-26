@@ -334,3 +334,70 @@
         margin: 1px !important;
     }
 }
+
+
+/**
+ * ✅ DARK MODE FIX - iframe content
+ * 
+ * Přidej tento CSS na KONEC souboru:
+ * includes/components/richtext-editor/richtext-editor.css
+ */
+
+/* ========================================
+   DARK MODE - IFRAME CONTENT
+   ======================================== */
+
+/* Force dark background for editor iframe body */
+.saw-richtext-editor-wrapper[data-dark-mode="1"] .mce-content-body {
+    background-color: #1a202c !important;
+    color: #e2e8f0 !important;
+}
+
+/* Headings in dark mode */
+.saw-richtext-editor-wrapper[data-dark-mode="1"] .mce-content-body h1,
+.saw-richtext-editor-wrapper[data-dark-mode="1"] .mce-content-body h2,
+.saw-richtext-editor-wrapper[data-dark-mode="1"] .mce-content-body h3,
+.saw-richtext-editor-wrapper[data-dark-mode="1"] .mce-content-body h4,
+.saw-richtext-editor-wrapper[data-dark-mode="1"] .mce-content-body h5,
+.saw-richtext-editor-wrapper[data-dark-mode="1"] .mce-content-body h6 {
+    color: #f7fafc !important;
+}
+
+/* Paragraphs in dark mode */
+.saw-richtext-editor-wrapper[data-dark-mode="1"] .mce-content-body p {
+    color: #e2e8f0 !important;
+}
+
+/* Links in dark mode */
+.saw-richtext-editor-wrapper[data-dark-mode="1"] .mce-content-body a {
+    color: #667eea !important;
+}
+
+/* Lists in dark mode */
+.saw-richtext-editor-wrapper[data-dark-mode="1"] .mce-content-body ul,
+.saw-richtext-editor-wrapper[data-dark-mode="1"] .mce-content-body ol {
+    color: #e2e8f0 !important;
+}
+
+/* Blockquotes in dark mode */
+.saw-richtext-editor-wrapper[data-dark-mode="1"] .mce-content-body blockquote {
+    color: #cbd5e0 !important;
+    border-left-color: #4a5568 !important;
+}
+
+/* Strong/bold text in dark mode */
+.saw-richtext-editor-wrapper[data-dark-mode="1"] .mce-content-body strong,
+.saw-richtext-editor-wrapper[data-dark-mode="1"] .mce-content-body b {
+    color: #f7fafc !important;
+}
+
+/* Selection in dark mode */
+.saw-richtext-editor-wrapper[data-dark-mode="1"] .mce-content-body ::selection {
+    background-color: #667eea !important;
+    color: #fff !important;
+}
+
+/* Placeholder text in dark mode */
+.saw-richtext-editor-wrapper[data-dark-mode="1"] .mce-content-body.mce-placeholder::before {
+    color: #718096 !important;
+}

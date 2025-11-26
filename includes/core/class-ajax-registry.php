@@ -232,6 +232,11 @@ class SAW_AJAX_Registry {
         add_action('wp_ajax_saw_merge_companies', function() {
             $this->dispatch('companies', 'ajax_merge_companies');
         });
+        
+        // Register invitation AJAX handlers for media library
+        if (class_exists('SAW_Invitation_Controller')) {
+            SAW_Invitation_Controller::register_ajax_handlers();
+        }
     }
     
     /**

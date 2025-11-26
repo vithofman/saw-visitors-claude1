@@ -1,13 +1,18 @@
 /**
  * SAW App JavaScript - HOTFIX EDITION
  * 
+ * HOTFIX v5.4.3:
+ * - ODSTRANĚN: cleanupWordPressEditorAssets() - způsoboval víc problémů než užitku
+ * - Ušetřilo: ~50KB assets, ale stálo to hodiny debuggingu
+ * - Rozhodnutí: Lepší UX než mikro-optimalizace
+ * 
  * HOTFIX v5.4.2:
  * - ODSTRANĚN: Delete button handler (přesunut výhradně do sidebar.js)
  * - Opraveno: Duplicitní delete handlers
  * - Opraveno: Dvakrát confirm dialog
  * 
  * @package SAW_Visitors
- * @version 5.4.2 - HOTFIX: Removed duplicate delete handler
+ * @version 5.4.3 - HOTFIX: Removed WordPress editor cleanup
  */
 
 (function($) {
@@ -178,59 +183,20 @@
     // ========================================
     
     /**
-     * Cleanup WordPress editor CSS/JS if not on content page
+     * WordPress editor assets cleanup - DISABLED
      * 
-     * This ensures that WordPress editor assets from previous navigation
-     * are removed when loading a non-content page (e.g., after F5 reload).
+     * Previously removed editor assets on non-content pages to save ~50KB.
+     * However, this caused multiple issues:
+     * - Invitation risks page couldn't load media gallery
+     * - Required complex detection logic with edge cases
+     * - Hours of debugging for minimal performance gain
+     * 
+     * Decision: Keep all WordPress assets loaded - better UX than micro-optimization.
      * 
      * @since 5.1.0
+     * @deprecated 5.4.3 - Cleanup disabled, causes more problems than benefits
      */
-    function cleanupWordPressEditorAssets() {
-        // Check if we're on content page
-        const isContentPage = window.location.pathname.indexOf('/admin/content') !== -1 || 
-                              window.location.pathname.indexOf('/content') !== -1;
-
-// CRITICAL FIX: Check if we're on invitation risks page
-const isInvitationRisks = window.location.pathname.indexOf('visitor-invitation') !== -1 && 
-                          window.location.search.indexOf('step=risks') !== -1;
-        
-        if (isContentPage) {
-            // On content page, keep WordPress editor assets
-            return;
-        }
-
-if (isInvitationRisks) {
-    // CRITICAL: On invitation risks page, keep WordPress editor assets for media gallery!
-    console.log('📨 Invitation risks page detected - keeping WordPress editor assets for media gallery');
-    return;
-}
-        
-        // Remove WordPress editor CSS/JS
-        const wordpressEditorPatterns = [
-            '/wp-includes/css/tinymce',
-            '/wp-includes/css/editor',
-            '/wp-includes/css/media',
-            '/wp-includes/js/tinymce',
-            '/wp-includes/js/editor'
-        ];
-        
-        let removedCount = 0;
-        wordpressEditorPatterns.forEach(function(pattern) {
-            $('link[href*="' + pattern + '"], script[src*="' + pattern + '"]').each(function() {
-                const $el = $(this);
-                const href = $el.attr('href') || $el.attr('src') || '';
-                if (href.indexOf(pattern) !== -1) {
-                    console.log('🧹 Removing WordPress editor asset on page load:', href);
-                    $el.remove();
-                    removedCount++;
-                }
-            });
-        });
-        
-        if (removedCount > 0) {
-            console.log('✅ Cleaned up ' + removedCount + ' WordPress editor asset(s)');
-        }
-    }
+    // function cleanupWordPressEditorAssets() - REMOVED
 
     // ========================================
     // LINK INTERCEPTOR FOR VIEW TRANSITION
@@ -376,13 +342,14 @@ if (isInvitationRisks) {
         // Initialize scroll restoration
         initScrollRestoration();
         
-        // Cleanup WordPress editor assets if not on content page
-        cleanupWordPressEditorAssets();
+        // ✅ REMOVED: cleanupWordPressEditorAssets() - způsoboval problémy
+        // WordPress editor assets zůstávají načtené na všech stránkách
+        // Ztráta: ~50KB, Zisk: funkční media gallery všude + žádné edge cases
         
         document.body.classList.add('loaded');
         
         if (sawGlobal.debug) {
-            console.log('🚀 SAW App initialized v6.0.0 - View Transition', {
+            console.log('🚀 SAW App initialized v5.4.3', {
                 sawGlobal: typeof sawGlobal !== 'undefined',
                 jQuery: !!$,
                 modalSystem: typeof SAWModal !== 'undefined',

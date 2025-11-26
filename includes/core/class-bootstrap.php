@@ -140,6 +140,12 @@ class SAW_Bootstrap {
         if (class_exists('SAW_Invitation_Router') && !isset($GLOBALS['saw_invitation_router'])) {
             $GLOBALS['saw_invitation_router'] = new SAW_Invitation_Router();
         }
+
+// ✅ Load invitation controller for AJAX registry
+$invitation_controller_file = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/invitation/invitation-controller.php';
+if (file_exists($invitation_controller_file)) {
+    require_once $invitation_controller_file;
+}
         
         self::load_optional_files();
     }
