@@ -189,11 +189,21 @@
         // Check if we're on content page
         const isContentPage = window.location.pathname.indexOf('/admin/content') !== -1 || 
                               window.location.pathname.indexOf('/content') !== -1;
+
+// CRITICAL FIX: Check if we're on invitation risks page
+const isInvitationRisks = window.location.pathname.indexOf('visitor-invitation') !== -1 && 
+                          window.location.search.indexOf('step=risks') !== -1;
         
         if (isContentPage) {
             // On content page, keep WordPress editor assets
             return;
         }
+
+if (isInvitationRisks) {
+    // CRITICAL: On invitation risks page, keep WordPress editor assets for media gallery!
+    console.log('📨 Invitation risks page detected - keeping WordPress editor assets for media gallery');
+    return;
+}
         
         // Remove WordPress editor CSS/JS
         const wordpressEditorPatterns = [

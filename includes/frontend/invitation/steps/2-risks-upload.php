@@ -19,20 +19,19 @@ $t = $translations[$lang] ?? $translations['cs'];
 ?>
 
 <style>
-/* PROGRESS BAR - EXTRA VELKÉ MEZERY */
-.saw-progress-container{display:flex;align-items:center;justify-content:center;gap:2.5rem;margin-bottom:3rem;padding:2.5rem 0;}
-.saw-progress-steps{display:flex;align-items:center;gap:3rem;}
-.saw-progress-step{display:flex;align-items:center;gap:2rem;}
-.saw-step-circle{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.5rem;flex-shrink:0;}
-.saw-progress-step.completed .saw-step-circle{background:#10b981;color:#fff;box-shadow:0 0 0 6px rgba(16,185,129,0.2);}
-.saw-progress-step.active .saw-step-circle{background:#fff;color:#667eea;box-shadow:0 0 0 6px rgba(255,255,255,0.3);}
+.saw-progress-container{display:flex;align-items:center;justify-content:center;gap:1.5rem;margin-bottom:3rem;padding:2rem 0;}
+.saw-progress-steps{display:flex;align-items:center;gap:0.75rem;}
+.saw-progress-step{display:flex;align-items:center;gap:0.375rem;}
+.saw-step-circle{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;flex-shrink:0;}
+.saw-progress-step.completed .saw-step-circle{background:#10b981;color:#fff;box-shadow:0 0 0 3px rgba(16,185,129,0.2);}
+.saw-progress-step.active .saw-step-circle{background:#fff;color:#667eea;box-shadow:0 0 0 3px rgba(255,255,255,0.3);}
 .saw-progress-step.upcoming .saw-step-circle{background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.5);}
-.saw-step-line{width:120px;height:5px;flex-shrink:0;}
+.saw-step-line{width:30px;height:3px;flex-shrink:0;}
 .saw-progress-step.completed .saw-step-line{background:linear-gradient(90deg,#10b981 0%,rgba(16,185,129,0.3) 100%);}
 .saw-progress-step.active .saw-step-line{background:linear-gradient(90deg,rgba(255,255,255,0.5) 0%,rgba(255,255,255,0.1) 100%);}
 .saw-progress-step.upcoming .saw-step-line{background:rgba(255,255,255,0.1);}
 .saw-progress-step:last-child .saw-step-line{display:none;}
-.saw-step-label{color:rgba(255,255,255,0.7);font-size:1rem;font-weight:600;}
+.saw-step-label{color:rgba(255,255,255,0.7);font-size:0.875rem;font-weight:600;}
 
 .saw-risks-card{width:100%;max-width:1100px;margin:0 auto;background:#1a202c;border-radius:20px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);}
 .saw-risks-header{display:flex;align-items:center;gap:1rem;padding:1.5rem 2rem;border-bottom:1px solid #2d3748;}
@@ -56,7 +55,6 @@ $t = $translations[$lang] ?? $translations['cs'];
 .saw-section-title.docs-title{color:#10b981;}
 .saw-section-body{padding:1rem;flex:1;display:flex;flex-direction:column;}
 
-/* WORDPRESS EDITOR DARK MODE */
 .saw-section-body .wp-editor-wrap{border:1px solid #4a5568 !important;border-radius:10px;background:#1a202c !important;}
 .saw-section-body .wp-editor-container{border:none !important;background:#1a202c !important;}
 .saw-section-body textarea.wp-editor-area{background:#1a202c !important;color:#e2e8f0 !important;border:none !important;padding:12px !important;}
@@ -68,8 +66,6 @@ $t = $translations[$lang] ?? $translations['cs'];
 .saw-section-body .mce-btn.mce-active{background:#667eea !important;color:#fff !important;}
 .saw-section-body .mce-content-body{background:#1a202c !important;color:#e2e8f0 !important;padding:12px !important;}
 .saw-section-body .mce-content-body h1,.saw-section-body .mce-content-body h2,.saw-section-body .mce-content-body h3{color:#fff !important;}
-.saw-section-body .mce-content-body blockquote{border-left:4px solid #667eea !important;padding-left:1em !important;color:#a0aec0 !important;}
-.saw-section-body .mce-content-body a{color:#667eea !important;}
 
 .saw-upload-zone{position:relative;border:2px dashed #4a5568;border-radius:10px;padding:1.5rem 1rem;text-align:center;background:#1a202c;cursor:pointer;}
 .saw-upload-zone:hover{border-color:#667eea;background:rgba(102,126,234,0.05);}
@@ -98,25 +94,13 @@ $t = $translations[$lang] ?? $translations['cs'];
 .saw-btn-continue{display:inline-flex;align-items:center;gap:0.625rem;padding:0.875rem 1.5rem;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;border:none;border-radius:14px;font-size:1rem;font-weight:700;cursor:pointer;box-shadow:0 6px 20px rgba(102,126,234,0.4);}
 .saw-btn-continue svg{width:18px;height:18px;}
 
-@media (max-width:900px){
-    .saw-risks-columns{grid-template-columns:1fr;}
-    .saw-risks-actions{flex-direction:column-reverse;}
-    .saw-btn-skip,.saw-btn-continue{width:100%;justify-content:center;}
-    .saw-progress-steps{gap:1.5rem;}
-    .saw-progress-step{gap:1rem;}
-    .saw-step-circle{width:52px;height:52px;font-size:1.25rem;}
-    .saw-step-line{width:80px;}
-}
+@media (max-width:900px){.saw-risks-columns{grid-template-columns:1fr;}.saw-risks-actions{flex-direction:column-reverse;}.saw-btn-skip,.saw-btn-continue{width:100%;justify-content:center;}.saw-progress-steps{gap:0.5rem;}.saw-progress-step{gap:0.25rem;}.saw-step-circle{width:28px;height:28px;font-size:0.875rem;}.saw-step-line{width:24px;}.saw-step-label{font-size:0.8125rem;}}
 </style>
 
 <div class="saw-progress-container">
     <div class="saw-progress-steps">
         <div class="saw-progress-step completed">
-            <div class="saw-step-circle">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                    <polyline points="20,6 9,17 4,12"/>
-                </svg>
-            </div>
+            <div class="saw-step-circle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg></div>
             <div class="saw-step-line"></div>
         </div>
         <div class="saw-progress-step active">
@@ -163,50 +147,25 @@ $t = $translations[$lang] ?? $translations['cs'];
                             <polyline points="14,2 14,8 20,8"/>
                             <line x1="16" y1="13" x2="8" y2="13"/>
                             <line x1="16" y1="17" x2="8" y2="17"/>
+                            <polyline points="10,9 9,9 8,9"/>
                         </svg>
                     </div>
                     <h2 class="saw-section-title text-title"><?php echo esc_html($t['text_title']); ?></h2>
                 </div>
                 <div class="saw-section-body">
                     <?php
-                    $editor_settings = array(
+                    // Just use wp_editor - templates will be printed via wp_footer hook!
+                    wp_editor($existing_text, 'risks_text', array(
                         'textarea_name' => 'risks_text',
-                        'textarea_rows' => 15,
+                        'textarea_rows' => 20,
                         'media_buttons' => true,
                         'teeny' => false,
-                        'quicktags' => false,
                         'tinymce' => array(
-                            'toolbar1' => 'formatselect,bold,italic,underline,blockquote,bullist,numlist,link,unlink',
-                            'toolbar2' => '',
-                            'block_formats' => 'Odstavec=p;Nadpis 1=h1;Nadpis 2=h2;Nadpis 3=h3',
+                            'toolbar1' => 'formatselect,bold,italic,underline,bullist,numlist,link,unlink',
                             'height' => 350,
-                            'menubar' => false,
-                            'statusbar' => false,
                         ),
-                    );
-                    
-                    wp_editor($existing_text, 'risks_text', $editor_settings);
-                    
-                    // Podle content modulu - inline script pro media buttons
-                    $editor_wrap_id = 'wp-risks_text-wrap';
+                    ));
                     ?>
-                    <script>
-                    (function() {
-                        var editorWrap = document.getElementById('<?php echo esc_js($editor_wrap_id); ?>');
-                        if (editorWrap) {
-                            var mediaButtons = editorWrap.querySelector('.wp-media-buttons');
-                            if (!mediaButtons) {
-                                var mediaButtonsDiv = document.createElement('div');
-                                mediaButtonsDiv.className = 'wp-media-buttons';
-                                mediaButtonsDiv.innerHTML = '<button type="button" class="button insert-media add_media" data-editor="risks_text"><span class="wp-media-buttons-icon"></span> Přidat média</button>';
-                                var editorContainer = editorWrap.querySelector('.wp-editor-container');
-                                if (editorContainer) {
-                                    editorContainer.parentNode.insertBefore(mediaButtonsDiv, editorContainer);
-                                }
-                            }
-                        }
-                    })();
-                    </script>
                 </div>
             </div>
             
@@ -234,19 +193,13 @@ $t = $translations[$lang] ?? $translations['cs'];
                             </div>
                             <p class="saw-upload-text"><?php echo esc_html($t['drag']); ?></p>
                             <span class="saw-upload-or"><?php echo esc_html($t['or']); ?></span>
-                            <button type="button" class="saw-upload-browse-btn" onclick="document.getElementById('risks_documents').click()">
-                                <?php echo esc_html($t['browse']); ?>
-                            </button>
+                            <button type="button" class="saw-upload-browse-btn" onclick="document.getElementById('risks_documents').click()"><?php echo esc_html($t['browse']); ?></button>
                             <p class="saw-upload-help"><?php echo esc_html($t['doc_help']); ?></p>
                         </div>
                     </div>
                     <div class="saw-file-list" id="file-list">
-                        <?php foreach ($existing_files as $file): ?>
+                        <?php foreach ($existing_files as $file): $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)); $badge_class = in_array($ext, ['pdf']) ? 'pdf' : 'doc'; ?>
                             <div class="saw-file-item" data-file-id="<?php echo esc_attr($file['id']); ?>">
-                                <?php 
-                                $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-                                $badge_class = in_array($ext, ['pdf']) ? 'pdf' : 'doc';
-                                ?>
                                 <span class="saw-file-badge <?php echo $badge_class; ?>"><?php echo strtoupper($ext); ?></span>
                                 <div class="saw-file-info">
                                     <span class="saw-file-name"><?php echo esc_html($file['name']); ?></span>
@@ -254,8 +207,7 @@ $t = $translations[$lang] ?? $translations['cs'];
                                 </div>
                                 <button type="button" class="saw-file-remove" data-file-id="<?php echo esc_attr($file['id']); ?>">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <line x1="18" y1="6" x2="6" y2="18"/>
-                                        <line x1="6" y1="6" x2="18" y2="18"/>
+                                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                                     </svg>
                                 </button>
                             </div>
@@ -270,8 +222,7 @@ $t = $translations[$lang] ?? $translations['cs'];
             <button type="submit" name="action" value="save" class="saw-btn-continue">
                 <span><?php echo esc_html($t['continue']); ?></span>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <line x1="5" y1="12" x2="19" y2="12"/>
-                    <polyline points="12,5 19,12 12,19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12,5 19,12 12,19"/>
                 </svg>
             </button>
         </div>
@@ -287,24 +238,9 @@ jQuery(document).ready(function($){
     uploadZone.on('click', () => fileInput.click());
     fileInput.on('change', function(){ handleFiles(this.files); });
     
-    uploadZone.on('dragover', function(e){
-        e.preventDefault();
-        e.stopPropagation();
-        $(this).css('border-color', '#10b981');
-    });
-    
-    uploadZone.on('dragleave', function(e){
-        e.preventDefault();
-        e.stopPropagation();
-        $(this).css('border-color', '#4a5568');
-    });
-    
-    uploadZone.on('drop', function(e){
-        e.preventDefault();
-        e.stopPropagation();
-        $(this).css('border-color', '#4a5568');
-        handleFiles(e.originalEvent.dataTransfer.files);
-    });
+    uploadZone.on('dragover', function(e){ e.preventDefault(); e.stopPropagation(); $(this).css('border-color', '#10b981'); });
+    uploadZone.on('dragleave', function(e){ e.preventDefault(); e.stopPropagation(); $(this).css('border-color', '#4a5568'); });
+    uploadZone.on('drop', function(e){ e.preventDefault(); e.stopPropagation(); $(this).css('border-color', '#4a5568'); handleFiles(e.originalEvent.dataTransfer.files); });
     
     function handleFiles(files){
         Array.from(files).forEach(file => {
@@ -336,10 +272,6 @@ jQuery(document).ready(function($){
         item.remove();
     });
     
-    $('form').on('submit', function(){
-        if(typeof tinyMCE !== 'undefined'){
-            tinyMCE.triggerSave();
-        }
-    });
+    $('form').on('submit', function(){ if(typeof tinyMCE !== 'undefined'){ tinyMCE.triggerSave(); } });
 });
 </script>

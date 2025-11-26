@@ -3,7 +3,7 @@
  * Invitation Controller
  * 
  * @package SAW_Visitors
- * @version 1.2.0
+ * @version 1.4.0
  */
 
 if (!defined('ABSPATH')) exit;
@@ -32,6 +32,8 @@ class SAW_Invitation_Controller {
         $this->init_invitation_session();
         $this->load_languages();
         $this->current_step = $this->get_current_step();
+        
+        add_action('wp_enqueue_scripts', array($this, 'enqueue_assets'));
     }
     
     private function init_invitation_session() {
@@ -142,6 +144,54 @@ class SAW_Invitation_Controller {
         return $flow['step'] ?? 'language';
     }
     
+    public function enqueue_assets() {
+        $css_dir = SAW_VISITORS_PLUGIN_URL . 'includes/frontend/terminal/assets/css/';
+        
+        $base_css = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/assets/css/terminal/base.css';
+        if (file_exists($base_css)) {
+            wp_enqueue_style('saw-terminal-base', $css_dir . 'terminal/base.css', [], '3.0.0');
+        }
+        
+        $components_css = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/assets/css/terminal/components.css';
+        if (file_exists($components_css)) {
+            wp_enqueue_style('saw-terminal-components', $css_dir . 'terminal/components.css', ['saw-terminal-base'], '3.0.0');
+        }
+        
+        $layout_css = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/assets/css/terminal/layout.css';
+        if (file_exists($layout_css)) {
+            wp_enqueue_style('saw-terminal-layout', $css_dir . 'terminal/layout.css', ['saw-terminal-base'], '3.0.0');
+        }
+        
+        wp_enqueue_script('jquery');
+        
+        // CRITICAL: Media library for risks step
+        if ($this->current_step === 'risks') {
+            // Load WordPress media library JS
+            wp_enqueue_media();
+            
+            // CRITICAL: Load WordPress media library CSS manually for frontend!
+            wp_enqueue_style('media-views');
+            wp_enqueue_style('wp-mediaelement');
+            
+            // Load TinyMCE
+            wp_enqueue_editor();
+            
+            // Add inline CSS to hide media templates by default
+            wp_add_inline_style('media-views', '
+                .media-modal { display: none; }
+                .media-modal-backdrop { display: none; }
+                body.modal-open .media-modal { display: block; }
+                body.modal-open .media-modal-backdrop { display: block; }
+            ');
+        }
+        
+        wp_localize_script('jquery', 'sawInvitation', [
+            'token' => $this->token,
+            'ajaxurl' => admin_url('admin-ajax.php'),
+            'clearNonce' => wp_create_nonce('saw_clear_invitation_session'),
+        ]);
+    }
+    
     public function render() {
         $flow = $this->session->get('invitation_flow', []);
         $this->current_step = $this->get_current_step();
@@ -151,12 +201,23 @@ class SAW_Invitation_Controller {
             exit;
         }
         
-        // CRITICAL: Setup hooks BEFORE enqueue (podle content modulu)
         if ($this->current_step === 'risks') {
-            $this->setup_editor_hooks();
+            add_action('admin_footer', 'wp_print_media_templates');
+            add_action('wp_footer', 'wp_print_media_templates');
+            
+            add_filter('user_has_cap', function($allcaps) {
+                $allcaps['edit_posts'] = true;
+                $allcaps['upload_files'] = true;
+                return $allcaps;
+            });
+            
+            add_filter('wp_editor_settings', function($settings, $editor_id) {
+                if (strpos($editor_id, 'risks_text') !== false) {
+                    $settings['media_buttons'] = true;
+                }
+                return $settings;
+            }, 10, 2);
         }
-        
-        $this->enqueue_assets();
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $this->handle_post_actions();
@@ -197,58 +258,6 @@ class SAW_Invitation_Controller {
         }
         
         $this->render_footer();
-    }
-    
-    private function setup_editor_hooks() {
-        // CRITICAL: Podle content modulu
-        add_action('admin_footer', 'wp_print_media_templates');
-        add_action('wp_footer', 'wp_print_media_templates');
-        
-        add_filter('user_has_cap', function($allcaps) {
-            $allcaps['edit_posts'] = true;
-            $allcaps['upload_files'] = true;
-            $allcaps['edit_files'] = true;
-            return $allcaps;
-        });
-        
-        add_filter('wp_editor_settings', function($settings, $editor_id) {
-            if (strpos($editor_id, 'risks_text') !== false) {
-                $settings['media_buttons'] = true;
-            }
-            return $settings;
-        }, 10, 2);
-    }
-    
-    private function enqueue_assets() {
-        $css_dir = SAW_VISITORS_PLUGIN_URL . 'includes/frontend/terminal/assets/css/';
-        
-        $base_css = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/assets/css/terminal/base.css';
-        if (file_exists($base_css)) {
-            wp_enqueue_style('saw-terminal-base', $css_dir . 'terminal/base.css', [], '3.0.0');
-        }
-        
-        $components_css = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/assets/css/terminal/components.css';
-        if (file_exists($components_css)) {
-            wp_enqueue_style('saw-terminal-components', $css_dir . 'terminal/components.css', ['saw-terminal-base'], '3.0.0');
-        }
-        
-        $layout_css = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/assets/css/terminal/layout.css';
-        if (file_exists($layout_css)) {
-            wp_enqueue_style('saw-terminal-layout', $css_dir . 'terminal/layout.css', ['saw-terminal-base'], '3.0.0');
-        }
-        
-        wp_enqueue_script('jquery');
-        
-        if ($this->current_step === 'risks') {
-            wp_enqueue_media();
-            wp_enqueue_editor();
-        }
-        
-        wp_localize_script('jquery', 'sawInvitation', [
-            'token' => $this->token,
-            'ajaxurl' => admin_url('admin-ajax.php'),
-            'clearNonce' => wp_create_nonce('saw_clear_invitation_session'),
-        ]);
     }
     
     private function handle_post_actions() {
