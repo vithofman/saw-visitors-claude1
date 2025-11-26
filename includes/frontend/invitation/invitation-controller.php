@@ -2,11 +2,8 @@
 /**
  * Invitation Controller
  * 
- * Standalone system for online visitor pre-registration.
- * DOES NOT perform check-in/out - only saves data to DB.
- * 
  * @package SAW_Visitors
- * @version 1.1.0 - ADDED richtext-editor component support
+ * @version 1.2.0
  */
 
 if (!defined('ABSPATH')) exit;
@@ -23,7 +20,6 @@ class SAW_Invitation_Controller {
     private $languages = [];
     
     public function __construct() {
-        // Load dependencies
         if (!class_exists('SAW_Session_Manager')) {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-session-manager.php';
         }
@@ -33,8 +29,6 @@ class SAW_Invitation_Controller {
         }
         
         $this->session = SAW_Session_Manager::instance();
-        
-        // Initialize
         $this->init_invitation_session();
         $this->load_languages();
         $this->current_step = $this->get_current_step();
@@ -64,7 +58,7 @@ class SAW_Invitation_Controller {
         }
         
         if (!$this->visit_id || !$this->customer_id || !$this->branch_id) {
-            wp_die('Invalid invitation session. Please use the invitation link again.', 'Error', ['response' => 400]);
+            wp_die('Invalid invitation session', 'Error', ['response' => 400]);
         }
     }
     
@@ -112,9 +106,7 @@ class SAW_Invitation_Controller {
              FROM {$wpdb->prefix}saw_training_languages tl
              INNER JOIN {$wpdb->prefix}saw_training_language_branches tlb 
                 ON tl.id = tlb.language_id
-             WHERE tl.customer_id = %d
-               AND tlb.branch_id = %d
-               AND tlb.is_active = 1
+             WHERE tl.customer_id = %d AND tlb.branch_id = %d AND tlb.is_active = 1
              ORDER BY tlb.display_order ASC, tl.language_name ASC",
             $this->customer_id,
             $this->branch_id
@@ -159,13 +151,9 @@ class SAW_Invitation_Controller {
             exit;
         }
         
-        // CRITICAL: Load richtext-editor component BEFORE enqueue_assets
+        // CRITICAL: Setup hooks BEFORE enqueue (podle content modulu)
         if ($this->current_step === 'risks') {
-            $richtext_path = SAW_VISITORS_PLUGIN_DIR . 'includes/components/richtext-editor/richtext-editor.php';
-            if (file_exists($richtext_path)) {
-                require_once $richtext_path;
-                saw_richtext_editor_init();
-            }
+            $this->setup_editor_hooks();
         }
         
         $this->enqueue_assets();
@@ -211,16 +199,27 @@ class SAW_Invitation_Controller {
         $this->render_footer();
     }
     
-    /**
-     * Enqueue CSS and JS assets
-     * 
-     * @since 1.0.0
-     * @version 1.1.0 - Added richtext-editor component support
-     */
-    private function enqueue_assets() {
-        // ❌ CRITICAL: Do NOT enqueue app.js or admin scripts!
+    private function setup_editor_hooks() {
+        // CRITICAL: Podle content modulu
+        add_action('admin_footer', 'wp_print_media_templates');
+        add_action('wp_footer', 'wp_print_media_templates');
         
-        // CSS - Only essential terminal styles
+        add_filter('user_has_cap', function($allcaps) {
+            $allcaps['edit_posts'] = true;
+            $allcaps['upload_files'] = true;
+            $allcaps['edit_files'] = true;
+            return $allcaps;
+        });
+        
+        add_filter('wp_editor_settings', function($settings, $editor_id) {
+            if (strpos($editor_id, 'risks_text') !== false) {
+                $settings['media_buttons'] = true;
+            }
+            return $settings;
+        }, 10, 2);
+    }
+    
+    private function enqueue_assets() {
         $css_dir = SAW_VISITORS_PLUGIN_URL . 'includes/frontend/terminal/assets/css/';
         
         $base_css = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/assets/css/terminal/base.css';
@@ -238,18 +237,13 @@ class SAW_Invitation_Controller {
             wp_enqueue_style('saw-terminal-layout', $css_dir . 'terminal/layout.css', ['saw-terminal-base'], '3.0.0');
         }
         
-        // JS - Only jQuery
         wp_enqueue_script('jquery');
         
-        // Rich Text Editor (only on risks step)
         if ($this->current_step === 'risks') {
-            $richtext_path = SAW_VISITORS_PLUGIN_DIR . 'includes/components/richtext-editor/richtext-editor.php';
-            if (file_exists($richtext_path) && function_exists('saw_richtext_editor_enqueue_assets')) {
-                saw_richtext_editor_enqueue_assets();
-            }
+            wp_enqueue_media();
+            wp_enqueue_editor();
         }
         
-        // Localize script data
         wp_localize_script('jquery', 'sawInvitation', [
             'token' => $this->token,
             'ajaxurl' => admin_url('admin-ajax.php'),
@@ -281,10 +275,6 @@ class SAW_Invitation_Controller {
             case 'complete_training':
                 $this->handle_complete_training();
                 break;
-            default:
-                $this->set_error('Neplatná akce');
-                $this->render();
-                break;
         }
     }
     
@@ -293,7 +283,6 @@ class SAW_Invitation_Controller {
         
         if (!array_key_exists($language, $this->languages)) {
             $this->set_error('Neplatný jazyk');
-            $this->render_language_selection();
             return;
         }
         
@@ -315,7 +304,6 @@ class SAW_Invitation_Controller {
             $flow = $this->session->get('invitation_flow');
             $flow['step'] = 'visitors';
             $this->session->set('invitation_flow', $flow);
-            
             wp_redirect(home_url('/visitor-invitation/' . $this->token . '/?step=visitors'));
             exit;
         }
@@ -323,31 +311,20 @@ class SAW_Invitation_Controller {
         $risks_text = wp_kses_post($_POST['risks_text'] ?? '');
         
         if (!empty(trim($risks_text))) {
-            $wpdb->delete(
-                $wpdb->prefix . 'saw_visit_invitation_materials',
-                ['visit_id' => $this->visit_id, 'material_type' => 'text']
-            );
-            
-            $wpdb->insert(
-                $wpdb->prefix . 'saw_visit_invitation_materials',
-                [
-                    'visit_id' => $this->visit_id,
-                    'customer_id' => $this->customer_id,
-                    'branch_id' => $this->branch_id,
-                    'company_id' => $this->company_id,
-                    'material_type' => 'text',
-                    'text_content' => $risks_text,
-                ]
-            );
+            $wpdb->delete($wpdb->prefix . 'saw_visit_invitation_materials', ['visit_id' => $this->visit_id, 'material_type' => 'text']);
+            $wpdb->insert($wpdb->prefix . 'saw_visit_invitation_materials', [
+                'visit_id' => $this->visit_id,
+                'customer_id' => $this->customer_id,
+                'branch_id' => $this->branch_id,
+                'company_id' => $this->company_id,
+                'material_type' => 'text',
+                'text_content' => $risks_text,
+            ]);
         }
         
         $this->handle_file_uploads();
         
-        $wpdb->update(
-            $wpdb->prefix . 'saw_visits',
-            ['status' => 'draft'],
-            ['id' => $this->visit_id]
-        );
+        $wpdb->update($wpdb->prefix . 'saw_visits', ['status' => 'draft'], ['id' => $this->visit_id]);
         
         if (class_exists('SAW_Cache')) {
             SAW_Cache::delete('invitation_visit_' . $this->visit_id, 'invitations');
@@ -399,20 +376,17 @@ class SAW_Invitation_Controller {
                 $upload_dir = wp_upload_dir();
                 $relative_path = str_replace($upload_dir['basedir'], '', $uploaded['file']);
                 
-                $wpdb->insert(
-                    $wpdb->prefix . 'saw_visit_invitation_materials',
-                    [
-                        'visit_id' => $this->visit_id,
-                        'customer_id' => $this->customer_id,
-                        'branch_id' => $this->branch_id,
-                        'company_id' => $this->company_id,
-                        'material_type' => 'document',
-                        'file_path' => $relative_path,
-                        'file_name' => basename($uploaded['file']),
-                        'file_size' => $file['size'],
-                        'mime_type' => $uploaded['type'],
-                    ]
-                );
+                $wpdb->insert($wpdb->prefix . 'saw_visit_invitation_materials', [
+                    'visit_id' => $this->visit_id,
+                    'customer_id' => $this->customer_id,
+                    'branch_id' => $this->branch_id,
+                    'company_id' => $this->company_id,
+                    'material_type' => 'document',
+                    'file_path' => $relative_path,
+                    'file_name' => basename($uploaded['file']),
+                    'file_size' => $file['size'],
+                    'mime_type' => $uploaded['type'],
+                ]);
             }
         }
     }
@@ -426,22 +400,16 @@ class SAW_Invitation_Controller {
         
         if (empty($existing_ids) && empty($new_visitors)) {
             $this->set_error('Musíte vybrat nebo zadat alespoň jednoho návštěvníka');
-            $this->render_visitors_registration();
             return;
         }
         
         foreach ($existing_ids as $id) {
             $id = intval($id);
-            
-            $wpdb->update(
-                $wpdb->prefix . 'saw_visitors',
-                [
-                    'participation_status' => 'confirmed',
-                    'training_skipped' => isset($training_skip[$id]) ? 1 : 0,
-                    'training_status' => isset($training_skip[$id]) ? 'skipped' : 'pending',
-                ],
-                ['id' => $id]
-            );
+            $wpdb->update($wpdb->prefix . 'saw_visitors', [
+                'participation_status' => 'confirmed',
+                'training_skipped' => isset($training_skip[$id]) ? 1 : 0,
+                'training_status' => isset($training_skip[$id]) ? 'skipped' : 'pending',
+            ], ['id' => $id]);
         }
         
         $visitor_ids = $existing_ids;
@@ -453,42 +421,31 @@ class SAW_Invitation_Controller {
             
             $training_skipped = isset($visitor['training_skip']) ? 1 : 0;
             
-            $wpdb->insert(
-                $wpdb->prefix . 'saw_visitors',
-                [
-                    'visit_id' => $this->visit_id,
-                    'customer_id' => $this->customer_id,
-                    'branch_id' => $this->branch_id,
-                    'first_name' => sanitize_text_field($visitor['first_name']),
-                    'last_name' => sanitize_text_field($visitor['last_name']),
-                    'position' => sanitize_text_field($visitor['position'] ?? ''),
-                    'email' => sanitize_email($visitor['email'] ?? ''),
-                    'phone' => sanitize_text_field($visitor['phone'] ?? ''),
-                    'participation_status' => 'confirmed',
-                    'current_status' => 'confirmed',
-                    'training_skipped' => $training_skipped,
-                    'training_status' => $training_skipped ? 'skipped' : 'pending',
-                ]
-            );
+            $wpdb->insert($wpdb->prefix . 'saw_visitors', [
+                'visit_id' => $this->visit_id,
+                'customer_id' => $this->customer_id,
+                'branch_id' => $this->branch_id,
+                'first_name' => sanitize_text_field($visitor['first_name']),
+                'last_name' => sanitize_text_field($visitor['last_name']),
+                'position' => sanitize_text_field($visitor['position'] ?? ''),
+                'email' => sanitize_email($visitor['email'] ?? ''),
+                'phone' => sanitize_text_field($visitor['phone'] ?? ''),
+                'participation_status' => 'confirmed',
+                'current_status' => 'confirmed',
+                'training_skipped' => $training_skipped,
+                'training_status' => $training_skipped ? 'skipped' : 'pending',
+            ]);
             
             $visitor_ids[] = $wpdb->insert_id;
         }
         
-        $wpdb->update(
-            $wpdb->prefix . 'saw_visits',
-            ['status' => 'confirmed', 'invitation_confirmed_at' => current_time('mysql')],
-            ['id' => $this->visit_id]
-        );
+        $wpdb->update($wpdb->prefix . 'saw_visits', ['status' => 'confirmed', 'invitation_confirmed_at' => current_time('mysql')], ['id' => $this->visit_id]);
         
         $has_training = $this->has_training_content();
         $needs_training = false;
         
         foreach ($visitor_ids as $id) {
-            $visitor = $wpdb->get_row($wpdb->prepare(
-                "SELECT training_skipped FROM {$wpdb->prefix}saw_visitors WHERE id = %d",
-                $id
-            ));
-            
+            $visitor = $wpdb->get_row($wpdb->prepare("SELECT training_skipped FROM {$wpdb->prefix}saw_visitors WHERE id = %d", $id));
             if ($visitor && !$visitor->training_skipped) {
                 $needs_training = true;
                 break;
@@ -524,18 +481,12 @@ class SAW_Invitation_Controller {
         if (class_exists('SAW_Cache')) {
             $cache_key = 'training_company_' . $this->company_id . '_' . $language;
             $cached = SAW_Cache::get($cache_key, 'training');
-            
             if ($cached !== false) {
                 return !empty($cached);
             }
         }
         
-        $content = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_training_content 
-             WHERE company_id = %d AND language = %s",
-            $this->company_id,
-            $language
-        ), ARRAY_A);
+        $content = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}saw_training_content WHERE company_id = %d AND language = %s", $this->company_id, $language), ARRAY_A);
         
         if (class_exists('SAW_Cache')) {
             SAW_Cache::set($cache_key, $content, 600, 'training');
@@ -549,7 +500,6 @@ class SAW_Invitation_Controller {
         $flow['training_skipped'] = true;
         $flow['step'] = 'success';
         $this->session->set('invitation_flow', $flow);
-        
         wp_redirect(home_url('/visitor-invitation/' . $this->token . '/?step=success'));
         exit;
     }
@@ -575,7 +525,6 @@ class SAW_Invitation_Controller {
             $this->session->set('invitation_flow', $flow);
             wp_redirect(home_url('/visitor-invitation/' . $this->token . '/?step=success'));
         }
-        
         exit;
     }
     
@@ -583,16 +532,6 @@ class SAW_Invitation_Controller {
         $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/invitation/layout-header.php';
         if (file_exists($template)) {
             require $template;
-        } else {
-            ?><!DOCTYPE html>
-<html <?php language_attributes(); ?>>
-<head>
-    <meta charset="<?php bloginfo('charset'); ?>">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <?php wp_head(); ?>
-</head>
-<body <?php body_class(); ?>>
-<?php
         }
     }
     
@@ -600,11 +539,6 @@ class SAW_Invitation_Controller {
         $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/invitation/layout-footer.php';
         if (file_exists($template)) {
             require $template;
-        } else {
-            wp_footer(); ?>
-</body>
-</html>
-<?php
         }
     }
     
@@ -616,41 +550,19 @@ class SAW_Invitation_Controller {
     private function render_language_selection() {
         $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/invitation/steps/1-language.php';
         if (file_exists($template)) {
-            $this->render_template($template, [
-                'languages' => $this->languages,
-                'token' => $this->token,
-            ]);
-        } else {
-            echo '<p>Language selection template not found</p>';
+            $this->render_template($template, ['languages' => $this->languages, 'token' => $this->token]);
         }
     }
     
     private function render_risks_upload() {
         global $wpdb;
         
-        $existing_text = $wpdb->get_var($wpdb->prepare(
-            "SELECT text_content FROM {$wpdb->prefix}saw_visit_invitation_materials 
-             WHERE visit_id = %d AND material_type = 'text' 
-             ORDER BY uploaded_at DESC LIMIT 1",
-            $this->visit_id
-        ));
-        
-        $existing_docs = $wpdb->get_results($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_visit_invitation_materials 
-             WHERE visit_id = %d AND material_type = 'document' 
-             ORDER BY uploaded_at ASC",
-            $this->visit_id
-        ), ARRAY_A);
+        $existing_text = $wpdb->get_var($wpdb->prepare("SELECT text_content FROM {$wpdb->prefix}saw_visit_invitation_materials WHERE visit_id = %d AND material_type = 'text' ORDER BY uploaded_at DESC LIMIT 1", $this->visit_id));
+        $existing_docs = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}saw_visit_invitation_materials WHERE visit_id = %d AND material_type = 'document' ORDER BY uploaded_at ASC", $this->visit_id), ARRAY_A);
         
         $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/invitation/steps/2-risks-upload.php';
         if (file_exists($template)) {
-            $this->render_template($template, [
-                'existing_text' => $existing_text,
-                'existing_docs' => $existing_docs,
-                'token' => $this->token,
-            ]);
-        } else {
-            echo '<p>Risks upload template not found</p>';
+            $this->render_template($template, ['existing_text' => $existing_text, 'existing_docs' => $existing_docs, 'token' => $this->token]);
         }
     }
     
@@ -659,23 +571,11 @@ class SAW_Invitation_Controller {
         
         $flow = $this->session->get('invitation_flow');
         $lang = $flow['language'] ?? 'cs';
-        
-        $existing_visitors = $wpdb->get_results($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_visitors 
-             WHERE visit_id = %d 
-             ORDER BY created_at ASC",
-            $this->visit_id
-        ), ARRAY_A);
+        $existing_visitors = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}saw_visitors WHERE visit_id = %d ORDER BY created_at ASC", $this->visit_id), ARRAY_A);
         
         $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/invitation/steps/3-visitors-register.php';
         if (file_exists($template)) {
-            $this->render_template($template, [
-                'existing_visitors' => $existing_visitors,
-                'lang' => $lang,
-                'token' => $this->token,
-            ]);
-        } else {
-            echo '<p>Visitors registration template not found</p>';
+            $this->render_template($template, ['existing_visitors' => $existing_visitors, 'lang' => $lang, 'token' => $this->token]);
         }
     }
     
@@ -683,8 +583,6 @@ class SAW_Invitation_Controller {
         $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/shared/training/video.php';
         if (file_exists($template)) {
             $this->render_template($template, ['token' => $this->token, 'is_invitation' => true]);
-        } else {
-            echo '<p>Training video template not found</p>';
         }
     }
     
@@ -692,8 +590,6 @@ class SAW_Invitation_Controller {
         $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/shared/training/map.php';
         if (file_exists($template)) {
             $this->render_template($template, ['token' => $this->token, 'is_invitation' => true]);
-        } else {
-            echo '<p>Training map template not found</p>';
         }
     }
     
@@ -701,8 +597,6 @@ class SAW_Invitation_Controller {
         $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/shared/training/risks.php';
         if (file_exists($template)) {
             $this->render_template($template, ['token' => $this->token, 'is_invitation' => true]);
-        } else {
-            echo '<p>Training risks template not found</p>';
         }
     }
     
@@ -710,8 +604,6 @@ class SAW_Invitation_Controller {
         $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/shared/training/department.php';
         if (file_exists($template)) {
             $this->render_template($template, ['token' => $this->token, 'is_invitation' => true]);
-        } else {
-            echo '<p>Training department template not found</p>';
         }
     }
     
@@ -719,28 +611,17 @@ class SAW_Invitation_Controller {
         $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/shared/training/additional.php';
         if (file_exists($template)) {
             $this->render_template($template, ['token' => $this->token, 'is_invitation' => true]);
-        } else {
-            echo '<p>Training additional template not found</p>';
         }
     }
     
     private function render_pin_success() {
         global $wpdb;
         
-        $visit = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_visits WHERE id = %d",
-            $this->visit_id
-        ), ARRAY_A);
+        $visit = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}saw_visits WHERE id = %d", $this->visit_id), ARRAY_A);
         
         $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/invitation/steps/9-pin-success.php';
         if (file_exists($template)) {
-            $this->render_template($template, [
-                'visit' => $visit,
-                'pin' => $visit['pin_code'] ?? '',
-                'token' => $this->token,
-            ]);
-        } else {
-            echo '<p>PIN success template not found</p>';
+            $this->render_template($template, ['visit' => $visit, 'pin' => $visit['pin_code'] ?? '', 'token' => $this->token]);
         }
     }
     

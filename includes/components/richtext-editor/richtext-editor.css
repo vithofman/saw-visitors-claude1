@@ -1,0 +1,336 @@
+/**
+ * Rich Text Editor Component - CSS
+ * 
+ * Dark mode styling pro WordPress TinyMCE editor.
+ * Vychází z funkčního designu z content modulu.
+ * 
+ * @package SAW_Visitors
+ * @version 1.0.0
+ * @since 7.0.0
+ */
+
+/* ========================================
+   EDITOR WRAPPER
+   ======================================== */
+
+.saw-richtext-editor-wrapper {
+    margin-bottom: 1rem;
+}
+
+/* ========================================
+   WORDPRESS EDITOR WRAP
+   ======================================== */
+
+.saw-richtext-editor-wrapper .wp-editor-wrap {
+    border: 1px solid #4a5568 !important;
+    border-radius: 10px !important;
+    overflow: hidden !important;
+    background: #1a202c !important;
+}
+
+.saw-richtext-editor-wrapper .wp-editor-wrap:hover {
+    border-color: #667eea !important;
+}
+
+.saw-richtext-editor-wrapper .wp-editor-wrap:focus-within {
+    border-color: #667eea !important;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2) !important;
+}
+
+/* Hide Code/Visual tabs (we don't need them for rich text editor) */
+.saw-richtext-editor-wrapper .wp-editor-tabs {
+    display: none !important;
+}
+
+/* ========================================
+   MEDIA BUTTONS
+   ======================================== */
+
+.saw-richtext-editor-wrapper .wp-media-buttons {
+    padding: 10px 12px !important;
+    background: #1e2533 !important;
+    border-bottom: 1px solid #4a5568 !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.saw-richtext-editor-wrapper .wp-media-buttons .button,
+.saw-richtext-editor-wrapper .wp-media-buttons .insert-media,
+.saw-richtext-editor-wrapper .wp-media-buttons .add_media {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 8px 16px !important;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+    transition: all 0.3s ease !important;
+    cursor: pointer !important;
+    text-decoration: none !important;
+}
+
+.saw-richtext-editor-wrapper .wp-media-buttons .button:hover,
+.saw-richtext-editor-wrapper .wp-media-buttons .insert-media:hover,
+.saw-richtext-editor-wrapper .wp-media-buttons .add_media:hover {
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5) !important;
+}
+
+/* Media button icon */
+.saw-richtext-editor-wrapper .wp-media-buttons-icon {
+    display: inline-block !important;
+    width: 16px !important;
+    height: 16px !important;
+}
+
+.saw-richtext-editor-wrapper .wp-media-buttons-icon::before {
+    content: "📷" !important;
+    font-size: 14px !important;
+}
+
+/* ========================================
+   TINYMCE TOOLBAR
+   ======================================== */
+
+.saw-richtext-editor-wrapper .mce-toolbar-grp {
+    background: #1e2533 !important;
+    border-bottom: 1px solid #4a5568 !important;
+}
+
+.saw-richtext-editor-wrapper .mce-btn {
+    background: transparent !important;
+    color: #a0aec0 !important;
+    border: none !important;
+    margin: 0 2px !important;
+}
+
+.saw-richtext-editor-wrapper .mce-btn:hover {
+    background: #4a5568 !important;
+    color: #fff !important;
+}
+
+.saw-richtext-editor-wrapper .mce-btn.mce-active {
+    background: #667eea !important;
+    color: #fff !important;
+}
+
+/* Format select dropdown */
+.saw-richtext-editor-wrapper .mce-listbox button {
+    background: transparent !important;
+    color: #a0aec0 !important;
+    border: 1px solid #4a5568 !important;
+    padding: 4px 12px !important;
+    border-radius: 6px !important;
+}
+
+.saw-richtext-editor-wrapper .mce-listbox button:hover {
+    background: #4a5568 !important;
+    color: #fff !important;
+    border-color: #667eea !important;
+}
+
+/* Dropdown panels */
+.saw-richtext-editor-wrapper .mce-panel {
+    background: #1e2533 !important;
+    border-color: #4a5568 !important;
+}
+
+.saw-richtext-editor-wrapper .mce-menu {
+    background: #1e2533 !important;
+    border-color: #4a5568 !important;
+}
+
+.saw-richtext-editor-wrapper .mce-menu-item {
+    color: #e2e8f0 !important;
+}
+
+.saw-richtext-editor-wrapper .mce-menu-item:hover {
+    background: #4a5568 !important;
+}
+
+/* ========================================
+   EDITOR CONTAINER & TEXTAREA
+   ======================================== */
+
+.saw-richtext-editor-wrapper .wp-editor-container {
+    border: none !important;
+    background: #1a202c !important;
+}
+
+/* Textarea (Text mode) */
+.saw-richtext-editor-wrapper textarea.wp-editor-area {
+    background: #1a202c !important;
+    color: #e2e8f0 !important;
+    border: none !important;
+    font-size: 14px !important;
+    line-height: 1.6 !important;
+    padding: 12px !important;
+    font-family: 'Courier New', Courier, monospace !important;
+}
+
+/* ========================================
+   TINYMCE IFRAME CONTENT (Dark Mode)
+   ======================================== */
+
+.saw-richtext-editor-wrapper .mce-edit-area {
+    background: #1a202c !important;
+}
+
+/* Content body inside iframe */
+.saw-richtext-editor-wrapper .mce-content-body {
+    background: #1a202c !important;
+    color: #e2e8f0 !important;
+    padding: 12px !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    font-size: 14px !important;
+    line-height: 1.6 !important;
+}
+
+.saw-richtext-editor-wrapper .mce-content-body h1 {
+    color: #fff !important;
+    font-size: 2em !important;
+    margin: 0.67em 0 !important;
+}
+
+.saw-richtext-editor-wrapper .mce-content-body h2 {
+    color: #fff !important;
+    font-size: 1.5em !important;
+    margin: 0.75em 0 !important;
+}
+
+.saw-richtext-editor-wrapper .mce-content-body h3 {
+    color: #fff !important;
+    font-size: 1.17em !important;
+    margin: 0.83em 0 !important;
+}
+
+.saw-richtext-editor-wrapper .mce-content-body h4 {
+    color: #fff !important;
+    font-size: 1em !important;
+    margin: 1em 0 !important;
+}
+
+.saw-richtext-editor-wrapper .mce-content-body p {
+    color: #e2e8f0 !important;
+    margin: 1em 0 !important;
+}
+
+.saw-richtext-editor-wrapper .mce-content-body blockquote {
+    border-left: 4px solid #667eea !important;
+    padding-left: 1em !important;
+    margin-left: 0 !important;
+    color: #a0aec0 !important;
+    font-style: italic !important;
+}
+
+.saw-richtext-editor-wrapper .mce-content-body a {
+    color: #667eea !important;
+    text-decoration: underline !important;
+}
+
+.saw-richtext-editor-wrapper .mce-content-body a:hover {
+    color: #764ba2 !important;
+}
+
+.saw-richtext-editor-wrapper .mce-content-body ul,
+.saw-richtext-editor-wrapper .mce-content-body ol {
+    color: #e2e8f0 !important;
+    padding-left: 2em !important;
+}
+
+.saw-richtext-editor-wrapper .mce-content-body ul li,
+.saw-richtext-editor-wrapper .mce-content-body ol li {
+    margin: 0.5em 0 !important;
+}
+
+.saw-richtext-editor-wrapper .mce-content-body code {
+    background: #2d3748 !important;
+    color: #10b981 !important;
+    padding: 2px 6px !important;
+    border-radius: 4px !important;
+    font-family: 'Courier New', Courier, monospace !important;
+}
+
+.saw-richtext-editor-wrapper .mce-content-body pre {
+    background: #2d3748 !important;
+    color: #e2e8f0 !important;
+    padding: 12px !important;
+    border-radius: 6px !important;
+    overflow-x: auto !important;
+    font-family: 'Courier New', Courier, monospace !important;
+}
+
+.saw-richtext-editor-wrapper .mce-content-body img {
+    max-width: 100% !important;
+    height: auto !important;
+    display: block !important;
+    margin: 1em 0 !important;
+}
+
+/* ========================================
+   LIGHT MODE OVERRIDE
+   (Pro použití bez dark mode)
+   ======================================== */
+
+.saw-richtext-editor-wrapper[data-dark-mode="0"] .wp-editor-wrap {
+    background: #fff !important;
+    border-color: #d1d5db !important;
+}
+
+.saw-richtext-editor-wrapper[data-dark-mode="0"] .wp-media-buttons {
+    background: #f9fafb !important;
+    border-color: #e5e7eb !important;
+}
+
+.saw-richtext-editor-wrapper[data-dark-mode="0"] .mce-toolbar-grp {
+    background: #f9fafb !important;
+    border-color: #e5e7eb !important;
+}
+
+.saw-richtext-editor-wrapper[data-dark-mode="0"] .mce-btn {
+    color: #374151 !important;
+}
+
+.saw-richtext-editor-wrapper[data-dark-mode="0"] .wp-editor-container,
+.saw-richtext-editor-wrapper[data-dark-mode="0"] textarea.wp-editor-area,
+.saw-richtext-editor-wrapper[data-dark-mode="0"] .mce-edit-area,
+.saw-richtext-editor-wrapper[data-dark-mode="0"] .mce-content-body {
+    background: #fff !important;
+    color: #1f2937 !important;
+}
+
+.saw-richtext-editor-wrapper[data-dark-mode="0"] .mce-content-body h1,
+.saw-richtext-editor-wrapper[data-dark-mode="0"] .mce-content-body h2,
+.saw-richtext-editor-wrapper[data-dark-mode="0"] .mce-content-body h3,
+.saw-richtext-editor-wrapper[data-dark-mode="0"] .mce-content-body h4,
+.saw-richtext-editor-wrapper[data-dark-mode="0"] .mce-content-body p {
+    color: #1f2937 !important;
+}
+
+.saw-richtext-editor-wrapper[data-dark-mode="0"] .mce-content-body blockquote {
+    color: #6b7280 !important;
+}
+
+/* ========================================
+   RESPONSIVE
+   ======================================== */
+
+@media (max-width: 768px) {
+    .saw-richtext-editor-wrapper .wp-media-buttons {
+        padding: 8px 10px !important;
+    }
+    
+    .saw-richtext-editor-wrapper .mce-toolbar-grp {
+        flex-wrap: wrap !important;
+    }
+    
+    .saw-richtext-editor-wrapper .mce-btn {
+        margin: 1px !important;
+    }
+}
