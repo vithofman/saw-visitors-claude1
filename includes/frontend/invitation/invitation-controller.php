@@ -96,6 +96,10 @@ class SAW_Invitation_Controller {
     
     private function reload_visit_from_token() {
         global $wpdb;
+
+error_log("=== RELOAD_VISIT_FROM_TOKEN DEBUG ===");
+    error_log("Token: " . $this->token);
+    error_log("URL: " . $_SERVER['REQUEST_URI']);
         
         $visit = $wpdb->get_row($wpdb->prepare(
             "SELECT * FROM {$wpdb->prefix}saw_visits 
@@ -105,6 +109,17 @@ class SAW_Invitation_Controller {
             $this->token
         ), ARRAY_A);
         
+error_log("Visit found: " . ($visit ? "YES (ID: {$visit['id']})" : "NO"));
+    if ($visit) {
+        error_log("Expires at: " . $visit['invitation_token_expires_at']);
+        error_log("Current time: " . current_time('mysql'));
+        error_log("Status: " . $visit['status']);
+    } else {
+        error_log("Last SQL: " . $wpdb->last_query);
+        error_log("SQL Error: " . $wpdb->last_error);
+    }
+
+
         if (!$visit) {
             wp_die('Visit not found or expired', 'Error', ['response' => 404]);
         }
@@ -405,15 +420,18 @@ class SAW_Invitation_Controller {
         $delete_files = $_POST['delete_files'] ?? [];
         
         if (!empty($risks_text)) {
-            $wpdb->delete($wpdb->prefix . 'saw_visit_invitation_materials', ['visit_id' => $this->visit_id, 'material_type' => 'text']);
-            
-            $wpdb->insert($wpdb->prefix . 'saw_visit_invitation_materials', [
-                'visit_id' => $this->visit_id,
-                'material_type' => 'text',
-                'text_content' => $risks_text,
-                'uploaded_at' => current_time('mysql'),
-            ]);
-        }
+    $wpdb->insert(
+        $wpdb->prefix . 'saw_visit_invitation_materials',
+        [
+            'visit_id' => $this->visit_id,
+            'customer_id' => $this->customer_id,  // ✅ PŘIDÁNO
+            'branch_id' => $this->branch_id,      // ✅ PŘIDÁNO
+            'material_type' => 'text',
+            'text_content' => $risks_text,
+            'uploaded_at' => current_time('mysql')
+        ]
+    );
+}
         
         if (!empty($delete_files)) {
             foreach ($delete_files as $file_id) {
@@ -453,14 +471,16 @@ class SAW_Invitation_Controller {
                     $relative_path = str_replace($upload_dir['basedir'], '', $movefile['file']);
                     
                     $wpdb->insert($wpdb->prefix . 'saw_visit_invitation_materials', [
-                        'visit_id' => $this->visit_id,
-                        'material_type' => 'document',
-                        'file_name' => sanitize_file_name($file['name']),
-                        'file_path' => $relative_path,
-                        'file_size' => $file['size'],
-                        'mime_type' => $movefile['type'],
-                        'uploaded_at' => current_time('mysql'),
-                    ]);
+    'visit_id' => $this->visit_id,
+    'customer_id' => $this->customer_id,  // ✅ PŘIDÁNO
+    'branch_id' => $this->branch_id,      // ✅ PŘIDÁNO
+    'material_type' => 'document',
+    'file_name' => sanitize_file_name($file['name']),
+    'file_path' => $relative_path,
+    'file_size' => $file['size'],
+    'mime_type' => $movefile['type'],
+    'uploaded_at' => current_time('mysql'),
+]);
                 }
             }
         }
@@ -604,7 +624,7 @@ class SAW_Invitation_Controller {
         $wpdb->update(
             $wpdb->prefix . 'saw_visits',
             [
-                'status' => 'confirmed',
+                'status' => 'pending',
                 'invitation_confirmed_at' => current_time('mysql')
             ],
             ['id' => $this->visit_id]
@@ -648,15 +668,15 @@ class SAW_Invitation_Controller {
         }
         
         // ✅ 9. Redirect
-        if ($needs_training) {
-            $flow['step'] = 'training-video';
-            $this->session->set('invitation_flow', $flow);
-            wp_redirect(home_url('/visitor-invitation/' . $this->token . '/?step=training-video'));
-        } else {
-            $flow['step'] = 'success';
-            $this->session->set('invitation_flow', $flow);
-            wp_redirect(home_url('/visitor-invitation/' . $this->token . '/?step=success'));
-        }
+if ($needs_training) {
+    $flow['step'] = 'training-video';
+    $this->session->set('invitation_flow', $flow);
+    wp_redirect(home_url('/visitor-invitation/' . $this->token . '/'));
+} else {
+    $flow['step'] = 'success';
+    $this->session->set('invitation_flow', $flow);
+    wp_redirect(home_url('/visitor-invitation/' . $this->token . '/'));
+}
         
         exit;
     }
