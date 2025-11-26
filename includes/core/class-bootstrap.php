@@ -124,6 +124,9 @@ class SAW_Bootstrap {
             
             // Session Manager (must load early - used by terminal and other components)
             'includes/core/class-saw-session-manager.php',
+            
+            // Invitation Router (must load early for rewrite rules)
+            'includes/frontend/invitation/invitation-router.php',
         ];
         
         foreach ($files as $file) {
@@ -131,6 +134,11 @@ class SAW_Bootstrap {
             if (file_exists($path)) {
                 require_once $path;
             }
+        }
+        
+        // Initialize Invitation Router early
+        if (class_exists('SAW_Invitation_Router') && !isset($GLOBALS['saw_invitation_router'])) {
+            $GLOBALS['saw_invitation_router'] = new SAW_Invitation_Router();
         }
         
         self::load_optional_files();
@@ -153,8 +161,6 @@ class SAW_Bootstrap {
             'includes/core/class-saw-audit.php',
             'includes/auth/class-saw-auth.php',
             'includes/auth/class-saw-password.php',
-            // Frontend invitation handlers (must load after middleware.php)
-            'includes/frontend/invitation-route-handler.php',
             // AJAX handlers (must load after middleware.php for saw_verify_ajax_unified)
             'includes/frontend/invitation/ajax-handlers.php',
         ];

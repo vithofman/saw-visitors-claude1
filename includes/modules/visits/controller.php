@@ -184,6 +184,20 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         
         // Delete existing schedules
         $wpdb->delete($schedule_table, array('visit_id' => $visit_id), array('%d'));
+
+$visit_data = $wpdb->get_row($wpdb->prepare(
+    "SELECT customer_id, branch_id FROM {$wpdb->prefix}saw_visits WHERE id = %d",
+    $visit_id
+), ARRAY_A);
+
+if (!$visit_data || empty($visit_data['customer_id']) || empty($visit_data['branch_id'])) {
+    error_log("[VISITS after_save] ERROR: Cannot get customer_id/branch_id for visit_id={$visit_id}");
+    return;
+}
+
+$customer_id = intval($visit_data['customer_id']);
+$branch_id = intval($visit_data['branch_id']);
+
         
         // Insert new schedules
         $schedule_dates = isset($_POST['schedule_dates']) && is_array($_POST['schedule_dates']) ? $_POST['schedule_dates'] : array();
@@ -210,17 +224,19 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
                 
                 // Insert schedule
                 $result = $wpdb->insert(
-                    $schedule_table,
-                    array(
-                        'visit_id' => $visit_id,
-                        'date' => $date,
-                        'time_from' => $time_from,
-                        'time_to' => $time_to,
-                        'notes' => $notes,
-                        'sort_order' => intval($index)
-                    ),
-                    array('%d', '%s', '%s', '%s', '%s', '%d')
-                );
+    $schedule_table,
+    array(
+        'visit_id' => $visit_id,
+        'customer_id' => $customer_id,
+        'branch_id' => $branch_id,
+        'date' => $date,
+        'time_from' => $time_from,
+        'time_to' => $time_to,
+        'notes' => $notes,
+        'sort_order' => intval($index)
+    ),
+    array('%d', '%d', '%d', '%s', '%s', '%s', '%s', '%d')
+);
                 
                 // Log error if insert failed
                 if ($result === false) {
@@ -820,7 +836,7 @@ public function ajax_extend_pin() {
         $date_to = !empty($visit['planned_date_to']) ? date('d.m.Y', strtotime($visit['planned_date_to'])) : 'N/A';
         
         // Odešli email
-        $link = home_url('/visitor-training/' . $token . '/');
+        $link = home_url('/visitor-invitation/' . $token . '/');
         
         $subject = 'Pozvánka k návštěvě - ' . get_bloginfo('name');
         

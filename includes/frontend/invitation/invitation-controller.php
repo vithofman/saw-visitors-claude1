@@ -6,74 +6,22 @@
  * DOES NOT perform check-in/out - only saves data to DB.
  * 
  * @package SAW_Visitors
- * @version 1.0.0
+ * @version 1.1.0 - ADDED richtext-editor component support
  */
 
 if (!defined('ABSPATH')) exit;
 
 class SAW_Invitation_Controller {
     
-    /**
-     * Session manager instance
-     * 
-     * @var SAW_Session_Manager
-     */
     private $session;
-    
-    /**
-     * Current step in flow
-     * 
-     * @var string
-     */
     private $current_step;
-    
-    /**
-     * Invitation token
-     * 
-     * @var string
-     */
     private $token;
-    
-    /**
-     * Visit ID
-     * 
-     * @var int
-     */
     private $visit_id;
-    
-    /**
-     * Customer ID
-     * 
-     * @var int
-     */
     private $customer_id;
-    
-    /**
-     * Branch ID
-     * 
-     * @var int
-     */
     private $branch_id;
-    
-    /**
-     * Company ID
-     * 
-     * @var int|null
-     */
     private $company_id;
-    
-    /**
-     * Available languages
-     * 
-     * @var array
-     */
     private $languages = [];
     
-    /**
-     * Constructor
-     * 
-     * @since 1.0.0
-     */
     public function __construct() {
         // Load dependencies
         if (!class_exists('SAW_Session_Manager')) {
@@ -92,18 +40,10 @@ class SAW_Invitation_Controller {
         $this->current_step = $this->get_current_step();
     }
     
-    /**
-     * Initialize invitation session
-     * 
-     * @since 1.0.0
-     * @return void
-     */
     private function init_invitation_session() {
-        // Get token from query var (set by router)
         $this->token = get_query_var('saw_invitation_token');
         
         if (empty($this->token)) {
-            // Fallback: try from session
             $flow = $this->session->get('invitation_flow');
             $this->token = $flow['token'] ?? '';
         }
@@ -112,32 +52,22 @@ class SAW_Invitation_Controller {
             wp_die('Missing invitation token', 'Error', ['response' => 400]);
         }
         
-        // Load visit from session
         $flow = $this->session->get('invitation_flow');
         
         if (empty($flow) || ($flow['token'] ?? '') !== $this->token) {
-            // Session expired or token changed - reload from DB
             $this->reload_visit_from_token();
         } else {
-            // Load from session
             $this->visit_id = $flow['visit_id'] ?? null;
             $this->customer_id = $flow['customer_id'] ?? null;
             $this->branch_id = $flow['branch_id'] ?? null;
             $this->company_id = $flow['company_id'] ?? null;
         }
         
-        // Validate we have all required data
         if (!$this->visit_id || !$this->customer_id || !$this->branch_id) {
             wp_die('Invalid invitation session. Please use the invitation link again.', 'Error', ['response' => 400]);
         }
     }
     
-    /**
-     * Reload visit data from token
-     * 
-     * @since 1.0.0
-     * @return void
-     */
     private function reload_visit_from_token() {
         global $wpdb;
         
@@ -158,7 +88,6 @@ class SAW_Invitation_Controller {
         $this->branch_id = $visit['branch_id'];
         $this->company_id = $visit['company_id'] ?? null;
         
-        // Update session
         $flow = [
             'token' => $this->token,
             'visit_id' => $this->visit_id,
@@ -170,28 +99,16 @@ class SAW_Invitation_Controller {
         $this->session->set('invitation_flow', $flow);
     }
     
-    /**
-     * Load available languages from database
-     * 
-     * @since 1.0.0
-     * @return void
-     */
     private function load_languages() {
         global $wpdb;
         
         if (!$this->customer_id || !$this->branch_id) {
-            // Fallback languages
             $this->languages = ['cs' => 'Čeština', 'en' => 'English'];
             return;
         }
         
         $results = $wpdb->get_results($wpdb->prepare(
-            "SELECT 
-                tl.language_code,
-                tl.language_name,
-                tl.flag_emoji,
-                tlb.is_default,
-                tlb.display_order
+            "SELECT tl.language_code, tl.language_name
              FROM {$wpdb->prefix}saw_training_languages tl
              INNER JOIN {$wpdb->prefix}saw_training_language_branches tlb 
                 ON tl.id = tlb.language_id
@@ -203,91 +120,90 @@ class SAW_Invitation_Controller {
             $this->branch_id
         ));
         
-        // Create simple array: ['cs' => 'Čeština', 'en' => 'English']
         $this->languages = [];
         foreach ($results as $row) {
             $this->languages[$row->language_code] = $row->language_name;
         }
         
-        // Fallback if no languages found
         if (empty($this->languages)) {
             $this->languages = ['cs' => 'Čeština', 'en' => 'English'];
         }
     }
     
-    /**
-     * Get current step from query parameter or session
-     * 
-     * @since 1.0.0
-     * @return string
-     */
     private function get_current_step() {
+        $flow = $this->session->get('invitation_flow', []);
+        
+        if (empty($flow['language'])) {
+            return 'language';
+        }
+        
         $step = $_GET['step'] ?? '';
         
         if (!empty($step)) {
+            $steps_requiring_language = ['risks', 'visitors', 'training-video', 'training-map', 'training-risks', 'training-department', 'training-additional', 'success'];
+            if (in_array($step, $steps_requiring_language) && empty($flow['language'])) {
+                return 'language';
+            }
             return $step;
         }
         
-        $flow = $this->session->get('invitation_flow');
         return $flow['step'] ?? 'language';
     }
     
-    /**
-     * Main render method
-     * 
-     * @since 1.0.0
-     * @return void
-     */
     public function render() {
-        // Enqueue assets
+        $flow = $this->session->get('invitation_flow', []);
+        $this->current_step = $this->get_current_step();
+        
+        if ($this->current_step !== 'language' && empty($flow['language'])) {
+            wp_redirect(home_url('/visitor-invitation/' . $this->token . '/?step=language'));
+            exit;
+        }
+        
+        // CRITICAL: Load richtext-editor component BEFORE enqueue_assets
+        if ($this->current_step === 'risks') {
+            $richtext_path = SAW_VISITORS_PLUGIN_DIR . 'includes/components/richtext-editor/richtext-editor.php';
+            if (file_exists($richtext_path)) {
+                require_once $richtext_path;
+                saw_richtext_editor_init();
+            }
+        }
+        
         $this->enqueue_assets();
         
-        // Handle POST
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $this->handle_post_actions();
         }
         
-        // Render layout
         $this->render_header();
         
-        // Render step
         switch ($this->current_step) {
             case 'language':
                 $this->render_language_selection();
                 break;
-                
             case 'risks':
                 $this->render_risks_upload();
                 break;
-                
             case 'visitors':
                 $this->render_visitors_registration();
                 break;
-                
             case 'training-video':
                 $this->render_training_video();
                 break;
-                
             case 'training-map':
                 $this->render_training_map();
                 break;
-                
             case 'training-risks':
                 $this->render_training_risks();
                 break;
-                
             case 'training-department':
                 $this->render_training_department();
                 break;
-                
             case 'training-additional':
                 $this->render_training_additional();
                 break;
-                
             case 'success':
                 $this->render_pin_success();
                 break;
-                
             default:
                 $this->render_language_selection();
         }
@@ -299,68 +215,51 @@ class SAW_Invitation_Controller {
      * Enqueue CSS and JS assets
      * 
      * @since 1.0.0
-     * @return void
+     * @version 1.1.0 - Added richtext-editor component support
      */
     private function enqueue_assets() {
-        $css_dir = SAW_VISITORS_PLUGIN_URL . 'assets/css/';
-        $js_dir = SAW_VISITORS_PLUGIN_URL . 'assets/js/';
+        // ❌ CRITICAL: Do NOT enqueue app.js or admin scripts!
         
-        // CSS - Shared with terminal
-        wp_enqueue_style('saw-terminal-base', $css_dir . 'terminal/base.css', [], '3.0.0');
-        wp_enqueue_style('saw-terminal-components', $css_dir . 'terminal/components.css', ['saw-terminal-base'], '3.0.0');
-        wp_enqueue_style('saw-terminal-training', $css_dir . 'terminal/training.css', ['saw-terminal-base'], '3.0.0');
+        // CSS - Only essential terminal styles
+        $css_dir = SAW_VISITORS_PLUGIN_URL . 'includes/frontend/terminal/assets/css/';
         
-        // CSS - Invitation specific
-        wp_enqueue_style('saw-invitation-risks', $css_dir . 'invitation/invitation-risks.css', ['saw-terminal-base'], '1.0.0');
-        wp_enqueue_style('saw-invitation-success', $css_dir . 'invitation/invitation-success.css', ['saw-terminal-base'], '1.0.0');
-        
-        // JS - Shared
-        wp_enqueue_script('jquery');
-        wp_enqueue_script('saw-touch-gestures', $js_dir . 'terminal/touch-gestures.js', [], '3.0.0', true);
-        wp_enqueue_script('saw-pdf-viewer', $js_dir . 'terminal/pdf-viewer.js', ['saw-touch-gestures'], '3.0.0', true);
-        wp_enqueue_script('saw-video-player', $js_dir . 'terminal/video-player.js', [], '3.0.0', true);
-        
-        // JS - Invitation specific
-        wp_enqueue_script('saw-invitation-main', $js_dir . 'invitation/invitation-main.js', ['jquery'], '1.0.0', true);
-        
-        // Autosave (only on risks step)
-        if ($this->current_step === 'risks') {
-            wp_enqueue_editor();
-            wp_enqueue_media();
-            
-            wp_enqueue_script(
-                'saw-invitation-autosave',
-                $js_dir . 'invitation/invitation-autosave.js',
-                ['jquery'],
-                '1.0.0',
-                true
-            );
-            
-            wp_localize_script('saw-invitation-autosave', 'sawInvitation', [
-                'token' => $this->token,
-                'ajaxurl' => admin_url('admin-ajax.php'),
-                'autosaveNonce' => wp_create_nonce('saw_invitation_autosave'),
-            ]);
+        $base_css = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/assets/css/terminal/base.css';
+        if (file_exists($base_css)) {
+            wp_enqueue_style('saw-terminal-base', $css_dir . 'terminal/base.css', [], '3.0.0');
         }
         
-        // Localize for main JS
-        wp_localize_script('saw-invitation-main', 'sawInvitation', [
+        $components_css = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/assets/css/terminal/components.css';
+        if (file_exists($components_css)) {
+            wp_enqueue_style('saw-terminal-components', $css_dir . 'terminal/components.css', ['saw-terminal-base'], '3.0.0');
+        }
+        
+        $layout_css = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/assets/css/terminal/layout.css';
+        if (file_exists($layout_css)) {
+            wp_enqueue_style('saw-terminal-layout', $css_dir . 'terminal/layout.css', ['saw-terminal-base'], '3.0.0');
+        }
+        
+        // JS - Only jQuery
+        wp_enqueue_script('jquery');
+        
+        // Rich Text Editor (only on risks step)
+        if ($this->current_step === 'risks') {
+            $richtext_path = SAW_VISITORS_PLUGIN_DIR . 'includes/components/richtext-editor/richtext-editor.php';
+            if (file_exists($richtext_path) && function_exists('saw_richtext_editor_enqueue_assets')) {
+                saw_richtext_editor_enqueue_assets();
+            }
+        }
+        
+        // Localize script data
+        wp_localize_script('jquery', 'sawInvitation', [
             'token' => $this->token,
             'ajaxurl' => admin_url('admin-ajax.php'),
             'clearNonce' => wp_create_nonce('saw_clear_invitation_session'),
         ]);
     }
     
-    /**
-     * Handle POST actions
-     * 
-     * @since 1.0.0
-     * @return void
-     */
     private function handle_post_actions() {
         $action = $_POST['invitation_action'] ?? '';
         
-        // Verify nonce
         if (!isset($_POST['invitation_nonce']) || 
             !wp_verify_nonce($_POST['invitation_nonce'], 'saw_invitation_step')) {
             wp_die('Security check failed', 'Error', ['response' => 403]);
@@ -370,23 +269,18 @@ class SAW_Invitation_Controller {
             case 'set_language':
                 $this->handle_set_language();
                 break;
-                
             case 'save_risks':
                 $this->handle_save_risks();
                 break;
-                
             case 'save_visitors':
                 $this->handle_save_visitors();
                 break;
-                
             case 'skip_training':
                 $this->handle_skip_training();
                 break;
-                
             case 'complete_training':
                 $this->handle_complete_training();
                 break;
-                
             default:
                 $this->set_error('Neplatná akce');
                 $this->render();
@@ -394,12 +288,6 @@ class SAW_Invitation_Controller {
         }
     }
     
-    /**
-     * Handle language selection
-     * 
-     * @since 1.0.0
-     * @return void
-     */
     private function handle_set_language() {
         $language = sanitize_text_field($_POST['language'] ?? '');
         
@@ -418,18 +306,11 @@ class SAW_Invitation_Controller {
         exit;
     }
     
-    /**
-     * Handle save risks
-     * 
-     * @since 1.0.0
-     * @return void
-     */
     private function handle_save_risks() {
         global $wpdb;
         
         $action = $_POST['action'] ?? 'save';
         
-        // Skip pressed
         if ($action === 'skip') {
             $flow = $this->session->get('invitation_flow');
             $flow['step'] = 'visitors';
@@ -439,20 +320,14 @@ class SAW_Invitation_Controller {
             exit;
         }
         
-        // Save text
         $risks_text = wp_kses_post($_POST['risks_text'] ?? '');
         
         if (!empty(trim($risks_text))) {
-            // Delete old text
             $wpdb->delete(
                 $wpdb->prefix . 'saw_visit_invitation_materials',
-                [
-                    'visit_id' => $this->visit_id,
-                    'material_type' => 'text'
-                ]
+                ['visit_id' => $this->visit_id, 'material_type' => 'text']
             );
             
-            // Insert new
             $wpdb->insert(
                 $wpdb->prefix . 'saw_visit_invitation_materials',
                 [
@@ -466,22 +341,18 @@ class SAW_Invitation_Controller {
             );
         }
         
-        // Handle file uploads
         $this->handle_file_uploads();
         
-        // Update visit status
         $wpdb->update(
             $wpdb->prefix . 'saw_visits',
             ['status' => 'draft'],
             ['id' => $this->visit_id]
         );
         
-        // Invalidate cache
         if (class_exists('SAW_Cache')) {
             SAW_Cache::delete('invitation_visit_' . $this->visit_id, 'invitations');
         }
         
-        // Redirect
         $flow = $this->session->get('invitation_flow');
         $flow['step'] = 'visitors';
         $this->session->set('invitation_flow', $flow);
@@ -490,12 +361,6 @@ class SAW_Invitation_Controller {
         exit;
     }
     
-    /**
-     * Handle file uploads
-     * 
-     * @since 1.0.0
-     * @return void
-     */
     private function handle_file_uploads() {
         global $wpdb;
         
@@ -519,7 +384,6 @@ class SAW_Invitation_Controller {
                 'size' => $files['size'][$i],
             ];
             
-            // Validate size (10MB max)
             if ($file['size'] > 10485760) continue;
             
             $uploaded = wp_handle_upload($file, [
@@ -553,12 +417,6 @@ class SAW_Invitation_Controller {
         }
     }
     
-    /**
-     * Handle save visitors
-     * 
-     * @since 1.0.0
-     * @return void
-     */
     private function handle_save_visitors() {
         global $wpdb;
         
@@ -566,14 +424,12 @@ class SAW_Invitation_Controller {
         $new_visitors = $_POST['new_visitors'] ?? [];
         $training_skip = $_POST['training_skip'] ?? [];
         
-        // Validate: musí být alespoň jeden visitor
         if (empty($existing_ids) && empty($new_visitors)) {
             $this->set_error('Musíte vybrat nebo zadat alespoň jednoho návštěvníka');
             $this->render_visitors_registration();
             return;
         }
         
-        // Update existing visitors
         foreach ($existing_ids as $id) {
             $id = intval($id);
             
@@ -588,7 +444,6 @@ class SAW_Invitation_Controller {
             );
         }
         
-        // Create new visitors
         $visitor_ids = $existing_ids;
         
         foreach ($new_visitors as $visitor) {
@@ -619,14 +474,12 @@ class SAW_Invitation_Controller {
             $visitor_ids[] = $wpdb->insert_id;
         }
         
-        // Update visit status
         $wpdb->update(
             $wpdb->prefix . 'saw_visits',
             ['status' => 'confirmed', 'invitation_confirmed_at' => current_time('mysql')],
             ['id' => $this->visit_id]
         );
         
-        // Check if training needed
         $has_training = $this->has_training_content();
         $needs_training = false;
         
@@ -642,13 +495,11 @@ class SAW_Invitation_Controller {
             }
         }
         
-        // Invalidate cache
         if (class_exists('SAW_Cache')) {
             SAW_Cache::delete('invitation_visit_' . $this->visit_id, 'invitations');
             SAW_Cache::flush('invitations');
         }
         
-        // Redirect
         $flow = $this->session->get('invitation_flow');
         
         if ($has_training && $needs_training) {
@@ -664,19 +515,12 @@ class SAW_Invitation_Controller {
         exit;
     }
     
-    /**
-     * Check if training content exists
-     * 
-     * @since 1.0.0
-     * @return bool
-     */
     private function has_training_content() {
         global $wpdb;
         
         $flow = $this->session->get('invitation_flow');
         $language = $flow['language'] ?? 'cs';
         
-        // Check cache
         if (class_exists('SAW_Cache')) {
             $cache_key = 'training_company_' . $this->company_id . '_' . $language;
             $cached = SAW_Cache::get($cache_key, 'training');
@@ -686,7 +530,6 @@ class SAW_Invitation_Controller {
             }
         }
         
-        // Query DB
         $content = $wpdb->get_row($wpdb->prepare(
             "SELECT * FROM {$wpdb->prefix}saw_training_content 
              WHERE company_id = %d AND language = %s",
@@ -694,7 +537,6 @@ class SAW_Invitation_Controller {
             $language
         ), ARRAY_A);
         
-        // Cache result
         if (class_exists('SAW_Cache')) {
             SAW_Cache::set($cache_key, $content, 600, 'training');
         }
@@ -702,12 +544,6 @@ class SAW_Invitation_Controller {
         return !empty($content);
     }
     
-    /**
-     * Handle skip training
-     * 
-     * @since 1.0.0
-     * @return void
-     */
     private function handle_skip_training() {
         $flow = $this->session->get('invitation_flow');
         $flow['training_skipped'] = true;
@@ -718,23 +554,10 @@ class SAW_Invitation_Controller {
         exit;
     }
     
-    /**
-     * Handle complete training
-     * 
-     * @since 1.0.0
-     * @return void
-     */
     private function handle_complete_training() {
-        // Move to next training step or success
         $this->move_to_next_training_step();
     }
     
-    /**
-     * Move to next training step
-     * 
-     * @since 1.0.0
-     * @return void
-     */
     private function move_to_next_training_step() {
         $flow = $this->session->get('invitation_flow');
         $current = $this->current_step;
@@ -756,18 +579,11 @@ class SAW_Invitation_Controller {
         exit;
     }
     
-    /**
-     * Render header
-     * 
-     * @since 1.0.0
-     * @return void
-     */
     private function render_header() {
         $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/invitation/layout-header.php';
         if (file_exists($template)) {
             require $template;
         } else {
-            // Fallback minimal header
             ?><!DOCTYPE html>
 <html <?php language_attributes(); ?>>
 <head>
@@ -780,18 +596,11 @@ class SAW_Invitation_Controller {
         }
     }
     
-    /**
-     * Render footer
-     * 
-     * @since 1.0.0
-     * @return void
-     */
     private function render_footer() {
         $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/invitation/layout-footer.php';
         if (file_exists($template)) {
             require $template;
         } else {
-            // Fallback minimal footer
             wp_footer(); ?>
 </body>
 </html>
@@ -799,25 +608,11 @@ class SAW_Invitation_Controller {
         }
     }
     
-    /**
-     * Render template with data
-     * 
-     * @since 1.0.0
-     * @param string $template Template path
-     * @param array $data Data to extract
-     * @return void
-     */
     private function render_template($template, $data = []) {
         extract($data);
         require $template;
     }
     
-    /**
-     * Render language selection step
-     * 
-     * @since 1.0.0
-     * @return void
-     */
     private function render_language_selection() {
         $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/invitation/steps/1-language.php';
         if (file_exists($template)) {
@@ -830,12 +625,6 @@ class SAW_Invitation_Controller {
         }
     }
     
-    /**
-     * Render risks upload step
-     * 
-     * @since 1.0.0
-     * @return void
-     */
     private function render_risks_upload() {
         global $wpdb;
         
@@ -865,19 +654,12 @@ class SAW_Invitation_Controller {
         }
     }
     
-    /**
-     * Render visitors registration step
-     * 
-     * @since 1.0.0
-     * @return void
-     */
     private function render_visitors_registration() {
         global $wpdb;
         
         $flow = $this->session->get('invitation_flow');
         $lang = $flow['language'] ?? 'cs';
         
-        // Load existing visitors
         $existing_visitors = $wpdb->get_results($wpdb->prepare(
             "SELECT * FROM {$wpdb->prefix}saw_visitors 
              WHERE visit_id = %d 
@@ -897,107 +679,51 @@ class SAW_Invitation_Controller {
         }
     }
     
-    /**
-     * Render training video step
-     * 
-     * @since 1.0.0
-     * @return void
-     */
     private function render_training_video() {
-        // Use shared template
         $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/shared/training/video.php';
         if (file_exists($template)) {
-            $this->render_template($template, [
-                'token' => $this->token,
-                'is_invitation' => true,
-            ]);
+            $this->render_template($template, ['token' => $this->token, 'is_invitation' => true]);
         } else {
             echo '<p>Training video template not found</p>';
         }
     }
     
-    /**
-     * Render training map step
-     * 
-     * @since 1.0.0
-     * @return void
-     */
     private function render_training_map() {
-        // Use shared template
         $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/shared/training/map.php';
         if (file_exists($template)) {
-            $this->render_template($template, [
-                'token' => $this->token,
-                'is_invitation' => true,
-            ]);
+            $this->render_template($template, ['token' => $this->token, 'is_invitation' => true]);
         } else {
             echo '<p>Training map template not found</p>';
         }
     }
     
-    /**
-     * Render training risks step
-     * 
-     * @since 1.0.0
-     * @return void
-     */
     private function render_training_risks() {
-        // Use shared template
         $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/shared/training/risks.php';
         if (file_exists($template)) {
-            $this->render_template($template, [
-                'token' => $this->token,
-                'is_invitation' => true,
-            ]);
+            $this->render_template($template, ['token' => $this->token, 'is_invitation' => true]);
         } else {
             echo '<p>Training risks template not found</p>';
         }
     }
     
-    /**
-     * Render training department step
-     * 
-     * @since 1.0.0
-     * @return void
-     */
     private function render_training_department() {
-        // Use shared template
         $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/shared/training/department.php';
         if (file_exists($template)) {
-            $this->render_template($template, [
-                'token' => $this->token,
-                'is_invitation' => true,
-            ]);
+            $this->render_template($template, ['token' => $this->token, 'is_invitation' => true]);
         } else {
             echo '<p>Training department template not found</p>';
         }
     }
     
-    /**
-     * Render training additional step
-     * 
-     * @since 1.0.0
-     * @return void
-     */
     private function render_training_additional() {
-        // Use shared template
         $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/shared/training/additional.php';
         if (file_exists($template)) {
-            $this->render_template($template, [
-                'token' => $this->token,
-                'is_invitation' => true,
-            ]);
+            $this->render_template($template, ['token' => $this->token, 'is_invitation' => true]);
         } else {
             echo '<p>Training additional template not found</p>';
         }
     }
     
-    /**
-     * Render PIN success step
-     * 
-     * @since 1.0.0
-     * @return void
-     */
     private function render_pin_success() {
         global $wpdb;
         
@@ -1018,17 +744,9 @@ class SAW_Invitation_Controller {
         }
     }
     
-    /**
-     * Set error message
-     * 
-     * @since 1.0.0
-     * @param string $message Error message
-     * @return void
-     */
     private function set_error($message) {
         $flow = $this->session->get('invitation_flow');
         $flow['error'] = $message;
         $this->session->set('invitation_flow', $flow);
     }
 }
-

@@ -16,9 +16,11 @@ if (!defined('ABSPATH')) exit;
 class SAW_Invitation_Router {
     
     public function __construct() {
+        // Priority 5 for init (before main router at 10)
         add_action('init', [$this, 'register_routes'], 5);
         add_filter('query_vars', [$this, 'register_query_vars']);
-        add_action('template_redirect', [$this, 'handle_request'], 5);
+        // Priority 1 for template_redirect (before main router at 1, but we check token first)
+        add_action('template_redirect', [$this, 'handle_request'], 1);
     }
     
     /**

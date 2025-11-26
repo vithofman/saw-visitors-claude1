@@ -1,17 +1,5 @@
 <?php
-/**
- * Invitation Layout Header
- * 
- * Fullscreen layout WITHOUT WordPress header/footer
- * Clean invitation interface with home button
- * 
- * @package SAW_Visitors
- * @version 1.0.0
- */
-
-if (!defined('ABSPATH')) {
-    exit;
-}
+if (!defined('ABSPATH')) exit;
 
 $flow = $this->session->get('invitation_flow');
 $token = $flow['token'] ?? $this->token ?? '';
@@ -23,67 +11,138 @@ $token = $flow['token'] ?? $this->token ?? '';
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <meta name="robots" content="noindex, nofollow">
     <title><?php echo get_bloginfo('name'); ?> - Registrace návštěvy</title>
-    
     <?php wp_head(); ?>
-    
     <style>
-        /* Hide WordPress admin bar completely */
-        body {
+        /* ========================================
+           GLOBAL STYLES
+           ======================================== */
+        html, body {
             margin: 0 !important;
             padding: 0 !important;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%) !important;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
         }
+        
+        /* Hide WordPress admin bar */
         #wpadminbar {
             display: none !important;
         }
+        
         html {
             margin-top: 0 !important;
         }
         
-        /* Prevent text selection on touch devices */
-        * {
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
+        body {
+            overflow-x: hidden;
+            overflow-y: auto;
         }
         
-        input, textarea, select {
-            -webkit-user-select: text;
-            -moz-user-select: text;
-            -ms-user-select: text;
-            user-select: text;
+        /* ========================================
+           HOME BUTTON
+           ======================================== */
+        .saw-terminal-home-btn {
+            position: fixed;
+            top: 1.5rem;
+            left: 1.5rem;
+            z-index: 9999;
+            width: 3.5rem;
+            height: 3.5rem;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            color: #667eea;
+            transition: all 0.3s ease;
+        }
+        
+        .saw-terminal-home-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 12px 48px rgba(102, 126, 234, 0.4);
+            color: #667eea;
+        }
+        
+        .saw-terminal-home-btn svg {
+            width: 1.25rem;
+            height: 1.25rem;
+        }
+        
+        /* ========================================
+           LAYOUT WRAPPER
+           ======================================== */
+        .saw-terminal-wrapper {
+            min-height: 100vh;
+            padding: 2rem 1.5rem;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+        }
+        
+        .saw-terminal-content {
+            width: 100%;
+            max-width: 1400px;
+        }
+        
+        /* ========================================
+           ERROR MESSAGE
+           ======================================== */
+        .saw-error-message {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 1rem 1.25rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid #dc2626;
+            font-size: 0.9375rem;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.15);
+        }
+        
+        /* ========================================
+           RESPONSIVE
+           ======================================== */
+        @media (max-width: 768px) {
+            .saw-terminal-wrapper {
+                padding: 1.5rem 1rem;
+            }
+            
+            .saw-terminal-home-btn {
+                top: 1rem;
+                left: 1rem;
+                width: 3rem;
+                height: 3rem;
+            }
+            
+            .saw-terminal-home-btn svg {
+                width: 1rem;
+                height: 1rem;
+            }
         }
     </style>
 </head>
-<body class="saw-invitation-body">
+<body>
 
-<!-- Home Button (kulaté tlačítko vlevo nahoře) -->
-<a href="<?php echo esc_url(home_url('/visitor-invitation/' . $token . '/')); ?>" class="saw-terminal-home-btn" title="Začít znovu">
-    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+<a href="<?php echo esc_url(home_url('/visitor-invitation/' . $token . '/')); ?>" class="saw-terminal-home-btn" title="Domů">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <polyline points="9,22 9,12 15,12 15,22"/>
     </svg>
 </a>
 
-<!-- Main Invitation Container -->
 <div class="saw-terminal-wrapper">
     <div class="saw-terminal-content">
-        
         <?php 
-        $flow = $this->session->get('invitation_flow');
         if (isset($flow['error']) && !empty($flow['error'])): 
         ?>
-        <div class="saw-terminal-error">
-            <span class="saw-terminal-error-icon">⚠️</span>
-            <span class="saw-terminal-error-message"><?php echo esc_html($flow['error']); ?></span>
+        <div class="saw-error-message">
+            <?php echo esc_html($flow['error']); ?>
         </div>
         <?php 
-            // Clear error after display
             unset($flow['error']);
             $this->session->set('invitation_flow', $flow);
         endif; 
         ?>
-        
-        <!-- Template content will be inserted here -->
-

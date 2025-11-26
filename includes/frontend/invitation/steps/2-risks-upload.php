@@ -1,595 +1,758 @@
 <?php
-/**
- * Invitation Step - Risks Upload (volitelné)
- * 
- * @package SAW_Visitors
- * @version 1.0.0
- */
-
 if (!defined('ABSPATH')) exit;
 
-// Load file upload component
-$file_upload_path = SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/file-upload-input.php';
-if (!file_exists($file_upload_path)) {
-    wp_die("File upload component not found: {$file_upload_path}");
-}
-require_once $file_upload_path;
-
-// Get variables from template context
 $flow = $this->session->get('invitation_flow');
 $lang = $flow['language'] ?? 'cs';
-$existing_text = $existing_text ?? null;
+$existing_text = $existing_text ?? '';
 $existing_docs = $existing_docs ?? [];
 
-// Prepare existing files for file-upload component
 $existing_files = [];
 foreach ($existing_docs as $doc) {
-    $existing_files[] = [
-        'id' => $doc['id'],
-        'name' => $doc['file_name'],
-        'size' => $doc['file_size'],
-        'url' => wp_upload_dir()['baseurl'] . $doc['file_path'],
-        'path' => $doc['file_path'],
-    ];
+    $existing_files[] = ['id' => $doc['id'], 'name' => $doc['file_name'], 'size' => $doc['file_size']];
 }
 
 $translations = [
-    'cs' => [
-        'title' => 'Informace o rizicích',
-        'subtitle' => 'Nahrajte informace o rizicích při práci na vašem pracovišti (volitelné)',
-        'text_label' => 'Textový popis rizik:',
-        'doc_label' => 'Dokumenty o rizicích:',
-        'doc_help' => 'Povolené formáty: PDF, DOC, DOCX, XLS, XLSX (max 10MB na soubor, max 10 souborů)',
-        'continue' => 'Pokračovat',
-        'skip' => 'Přeskočit',
-        'uploaded_docs' => 'Nahrané dokumenty:',
-    ],
-    'en' => [
-        'title' => 'Risk Information',
-        'subtitle' => 'Upload information about workplace risks (optional)',
-        'text_label' => 'Text description of risks:',
-        'doc_label' => 'Risk documents:',
-        'doc_help' => 'Allowed formats: PDF, DOC, DOCX, XLS, XLSX (max 10MB per file, max 10 files)',
-        'continue' => 'Continue',
-        'skip' => 'Skip',
-        'uploaded_docs' => 'Uploaded documents:',
-    ],
+    'cs' => ['title' => 'Informace o rizicích', 'subtitle' => 'Nahrajte dokumenty a popište rizika', 'optional' => 'Volitelné', 'step' => 'Krok', 'text_title' => 'POPIS RIZIK', 'doc_title' => 'DOKUMENTY', 'doc_help' => 'PDF, DOC, DOCX • Max 10MB', 'drag' => 'Přetáhněte soubory', 'or' => 'nebo', 'browse' => 'Vyberte soubory', 'continue' => 'Pokračovat', 'skip' => 'Přeskočit'],
+    'en' => ['title' => 'Risk Information', 'subtitle' => 'Upload documents and describe risks', 'optional' => 'Optional', 'step' => 'Step', 'text_title' => 'RISK DESCRIPTION', 'doc_title' => 'DOCUMENTS', 'doc_help' => 'PDF, DOC, DOCX • Max 10MB', 'drag' => 'Drag files', 'or' => 'or', 'browse' => 'Browse', 'continue' => 'Continue', 'skip' => 'Skip'],
 ];
-
 $t = $translations[$lang] ?? $translations['cs'];
 ?>
+
 <style>
-/* === UNIFIED STYLE === */
-:root {
-    --theme-color: #667eea;
-    --theme-color-hover: #764ba2;
-    --bg-dark: #1a202c;
-    --bg-dark-medium: #2d3748;
-    --bg-glass: rgba(15, 23, 42, 0.6);
-    --bg-glass-light: rgba(255, 255, 255, 0.08);
-    --border-glass: rgba(148, 163, 184, 0.12);
-    --text-primary: #FFFFFF;
-    --text-secondary: #e5e7eb;
-    --text-muted: #9ca3af;
-}
-
-*,
-*::before,
-*::after {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-.saw-terminal-footer {
-    display: none !important;
-}
-
-/* Override terminal wrapper for invitation risks */
-.saw-terminal-wrapper.has-invitation-risks {
-    min-height: 100vh !important;
-    align-items: flex-start !important;
-    justify-content: flex-start !important;
-    overflow-y: auto !important;
-    padding: 2rem !important;
-    height: auto !important;
-    background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%) !important;
-}
-
-.saw-terminal-wrapper.has-invitation-risks .saw-terminal-content {
-    max-width: 1400px !important;
-    width: 100% !important;
-    height: auto !important;
-    margin: 0 auto !important;
-    padding: 0 !important;
-}
-
-.saw-risks-aurora {
-    position: relative;
-    width: 100%;
-    min-height: calc(100vh - 4rem);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    color: var(--text-secondary);
-    background: transparent;
-    padding: 0;
-    box-sizing: border-box;
+/* ========================================
+   PROGRESS BAR - FIXED SPACING
+   ======================================== */
+.saw-progress-container {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    margin-bottom: 2.5rem;
+    padding: 2rem 0;
 }
 
-.saw-risks-content {
-    max-width: 1400px;
+.saw-progress-steps {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.saw-progress-step {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.saw-step-circle {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+}
+
+.saw-progress-step.completed .saw-step-circle {
+    background: #10b981;
+    color: #fff;
+    box-shadow: 0 0 0 5px rgba(16, 185, 129, 0.2);
+}
+
+.saw-progress-step.active .saw-step-circle {
+    background: #fff;
+    color: #667eea;
+    box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.3);
+}
+
+.saw-progress-step.upcoming .saw-step-circle {
+    background: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.saw-step-line {
+    width: 80px;
+    height: 4px;
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+}
+
+.saw-progress-step.completed .saw-step-line {
+    background: linear-gradient(90deg, #10b981 0%, rgba(16, 185, 129, 0.3) 100%);
+}
+
+.saw-progress-step.active .saw-step-line {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.1) 100%);
+}
+
+.saw-progress-step.upcoming .saw-step-line {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.saw-progress-step:last-child .saw-step-line {
+    display: none;
+}
+
+.saw-step-label {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* ========================================
+   RISKS CARD
+   ======================================== */
+.saw-risks-card {
     width: 100%;
+    max-width: 1100px;
     margin: 0 auto;
-    animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-    display: flex;
-    flex-direction: column;
+    background: #1a202c;
+    border-radius: 20px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
 }
 
-@keyframes slideUp {
-    from { opacity: 0; transform: translateY(30px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* Header */
 .saw-risks-header {
-    text-align: center;
-    margin-bottom: 3rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #2d3748;
 }
 
 .saw-risks-icon {
-    font-size: 4rem;
-    margin-bottom: 1rem;
-    animation: scaleIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-@keyframes scaleIn {
-    from { opacity: 0; transform: scale(0.8); }
-    to { opacity: 1; transform: scale(1); }
+.saw-risks-icon svg {
+    width: 24px;
+    height: 24px;
+    color: #fff;
+}
+
+.saw-risks-title-group {
+    flex: 1;
 }
 
 .saw-risks-title {
-    font-size: 2rem;
+    margin: 0 0 0.25rem;
+    font-size: 1.5rem;
     font-weight: 700;
-    background: linear-gradient(135deg, #f9fafb 0%, #cbd5e1 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    letter-spacing: -0.02em;
-    margin-bottom: 0.75rem;
-    line-height: 1.3;
+    color: #fff;
 }
 
 .saw-risks-subtitle {
-    font-size: 1rem;
-    color: rgba(203, 213, 225, 0.8);
-    font-weight: 500;
+    margin: 0;
+    color: #a0aec0;
+    font-size: 0.9375rem;
 }
 
-/* Form */
-.saw-risks-form {
-    background: var(--bg-glass);
-    backdrop-filter: blur(20px) saturate(180%);
+.saw-risks-badge {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    padding: 0.4rem 0.875rem;
     border-radius: 20px;
-    border: 1px solid var(--border-glass);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-    padding: 2rem;
-    margin-bottom: 2rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+/* ========================================
+   FORM LAYOUT
+   ======================================== */
+.saw-risks-form {
+    padding: 1.5rem 2rem 2rem;
+}
+
+.saw-risks-columns {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.saw-risks-section {
+    background: #2d3748;
+    border-radius: 14px;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
-    min-height: 0;
-    width: 100%;
-    box-sizing: border-box;
 }
 
-/* Two Column Layout */
-.saw-risks-two-columns {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
-    align-items: start;
-    margin-bottom: 2rem;
-    width: 100%;
-    box-sizing: border-box;
+.saw-section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid #4a5568;
 }
 
-@media (max-width: 1024px) {
-    .saw-risks-two-columns {
+.saw-section-icon {
+    width: 20px;
+    height: 20px;
+}
+
+.saw-section-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+.saw-section-icon.text-icon svg {
+    color: #f59e0b;
+}
+
+.saw-section-icon.docs-icon svg {
+    color: #10b981;
+}
+
+.saw-section-title {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+}
+
+.saw-section-title.text-title {
+    color: #f59e0b;
+}
+
+.saw-section-title.docs-title {
+    color: #10b981;
+}
+
+.saw-section-body {
+    padding: 1rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ========================================
+   FILE UPLOAD ZONE
+   ======================================== */
+.saw-upload-zone {
+    position: relative;
+    border: 2px dashed #4a5568;
+    border-radius: 10px;
+    padding: 1.5rem 1rem;
+    text-align: center;
+    background: #1a202c;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.saw-upload-zone:hover {
+    border-color: #667eea;
+    background: rgba(102, 126, 234, 0.05);
+}
+
+.saw-file-input-hidden {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.saw-upload-content {
+    pointer-events: none;
+}
+
+.saw-upload-icon {
+    width: 44px;
+    height: 44px;
+    margin: 0 auto 0.75rem;
+    background: rgba(16, 185, 129, 0.15);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.saw-upload-icon svg {
+    width: 22px;
+    height: 22px;
+    color: #10b981;
+}
+
+.saw-upload-text {
+    margin: 0 0 0.375rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #e2e8f0;
+}
+
+.saw-upload-or {
+    display: block;
+    margin: 0.375rem 0;
+    font-size: 0.75rem;
+    color: #718096;
+}
+
+.saw-upload-browse-btn {
+    display: inline-flex;
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: all 0.3s;
+}
+
+.saw-upload-browse-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.saw-upload-help {
+    margin: 0.75rem 0 0;
+    font-size: 0.6875rem;
+    color: #718096;
+}
+
+/* ========================================
+   FILE LIST
+   ======================================== */
+.saw-file-list {
+    margin-top: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.saw-file-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.625rem;
+    background: #1a202c;
+    border: 1px solid #4a5568;
+    border-radius: 8px;
+}
+
+.saw-file-badge {
+    padding: 0.2rem 0.375rem;
+    border-radius: 4px;
+    font-size: 0.5625rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.saw-file-badge.pdf {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+}
+
+.saw-file-badge.doc {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+}
+
+.saw-file-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.saw-file-name {
+    display: block;
+    font-weight: 600;
+    color: #e2e8f0;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.saw-file-size {
+    display: block;
+    font-size: 0.625rem;
+    color: #718096;
+}
+
+.saw-file-remove {
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: rgba(239, 68, 68, 0.1);
+    border-radius: 5px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+}
+
+.saw-file-remove:hover {
+    background: rgba(239, 68, 68, 0.2);
+}
+
+.saw-file-remove svg {
+    width: 12px;
+    height: 12px;
+    color: #f87171;
+}
+
+/* ========================================
+   ACTION BUTTONS
+   ======================================== */
+.saw-risks-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+}
+
+.saw-btn-skip {
+    padding: 0.875rem 1.25rem;
+    background: transparent;
+    color: #a0aec0;
+    border: 2px solid #4a5568;
+    border-radius: 14px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.saw-btn-skip:hover {
+    background: #2d3748;
+    border-color: #667eea;
+    color: #e2e8f0;
+    transform: translateY(-2px);
+}
+
+.saw-btn-continue {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.875rem 1.5rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    transition: all 0.3s;
+}
+
+.saw-btn-continue:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(102, 126, 234, 0.5);
+}
+
+.saw-btn-continue svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* ========================================
+   RESPONSIVE
+   ======================================== */
+@media (max-width: 900px) {
+    .saw-risks-columns {
         grid-template-columns: 1fr;
     }
-}
-
-.saw-risks-column {
-    display: flex !important;
-    flex-direction: column;
-    width: 100%;
-    box-sizing: border-box;
-    min-width: 0;
-    visibility: visible !important;
-    opacity: 1 !important;
-}
-
-.saw-form-group {
-    margin-bottom: 2rem;
-}
-
-.saw-form-group label {
-    display: block;
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 0.75rem;
-}
-
-.saw-form-help {
-    display: block;
-    margin-top: 0.5rem;
-    font-size: 0.875rem;
-    color: var(--text-muted);
-}
-
-/* WYSIWYG Editor - white background for readability */
-.saw-text-editor-group {
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    width: 100%;
-}
-
-.saw-text-editor-group .wp-editor-wrap {
-    border-radius: 12px;
-    overflow: hidden;
-    background: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    display: block !important;
-    visibility: visible !important;
-    width: 100%;
-    min-height: 400px;
-}
-
-.saw-text-editor-group .wp-editor-container {
-    background: #fff;
-    display: block !important;
-    visibility: visible !important;
-}
-
-.saw-text-editor-group .mce-tinymce {
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    display: block !important;
-    visibility: visible !important;
-}
-
-.saw-text-editor-group .wp-editor-area {
-    background: #fff;
-    color: #333;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
-    display: block !important;
-    visibility: visible !important;
-}
-
-/* Buttons */
-.saw-form-actions {
-    display: flex !important;
-    gap: 1rem;
-    margin-top: 2rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid var(--border-glass);
-    flex-shrink: 0;
-    width: 100%;
-    box-sizing: border-box;
-    visibility: visible !important;
-    opacity: 1 !important;
-}
-
-.saw-btn-primary,
-.saw-btn-secondary {
-    flex: 1;
-    padding: 1.25rem 2rem;
-    font-size: 1.125rem;
-    font-weight: 600;
-    border-radius: 12px;
-    border: none;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.saw-btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
-}
-
-.saw-btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 30px rgba(102, 126, 234, 0.6);
-}
-
-.saw-btn-secondary {
-    background: var(--bg-glass-light);
-    color: var(--text-secondary);
-    border: 1px solid var(--border-glass);
-}
-
-.saw-btn-secondary:hover {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(148, 163, 184, 0.2);
-}
-
-@media (max-width: 768px) {
-    .saw-risks-aurora {
-        padding: 1rem;
+    
+    .saw-risks-actions {
+        flex-direction: column-reverse;
     }
     
-    .saw-risks-title {
-        font-size: 1.75rem;
+    .saw-btn-skip,
+    .saw-btn-continue {
+        width: 100%;
+        justify-content: center;
     }
     
-    .saw-form-actions {
-        flex-direction: column;
+    .saw-progress-container {
+        gap: 1rem;
+    }
+    
+    .saw-progress-steps {
+        gap: 0.75rem;
+    }
+    
+    .saw-progress-step {
+        gap: 0.75rem;
+    }
+    
+    .saw-step-circle {
+        width: 44px;
+        height: 44px;
+        font-size: 1rem;
+    }
+    
+    .saw-step-line {
+        width: 50px;
     }
 }
 </style>
 
-<div class="saw-risks-aurora">
-    <div class="saw-risks-content">
+<div class="saw-progress-container">
+    <div class="saw-progress-steps">
+        <div class="saw-progress-step completed">
+            <div class="saw-step-circle">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                    <polyline points="20,6 9,17 4,12"/>
+                </svg>
+            </div>
+            <div class="saw-step-line"></div>
+        </div>
+        <div class="saw-progress-step active">
+            <div class="saw-step-circle">2</div>
+            <div class="saw-step-line"></div>
+        </div>
+        <div class="saw-progress-step upcoming">
+            <div class="saw-step-circle">3</div>
+            <div class="saw-step-line"></div>
+        </div>
+        <div class="saw-progress-step upcoming">
+            <div class="saw-step-circle">4</div>
+        </div>
+    </div>
+    <span class="saw-step-label"><?php echo esc_html($t['step']); ?> 2/4</span>
+</div>
+
+<div class="saw-risks-card">
+    <div class="saw-risks-header">
+        <div class="saw-risks-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+        </div>
+        <div class="saw-risks-title-group">
+            <h1 class="saw-risks-title"><?php echo esc_html($t['title']); ?></h1>
+            <p class="saw-risks-subtitle"><?php echo esc_html($t['subtitle']); ?></p>
+        </div>
+        <span class="saw-risks-badge"><?php echo esc_html($t['optional']); ?></span>
+    </div>
+    
+    <form method="post" enctype="multipart/form-data" class="saw-risks-form">
+        <?php wp_nonce_field('saw_invitation_step', 'invitation_nonce'); ?>
+        <input type="hidden" name="invitation_action" value="save_risks">
         
-        <header class="saw-risks-header">
-            <div class="saw-risks-icon">📄</div>
-            <h1 class="saw-risks-title"><?= esc_html($t['title']) ?></h1>
-            <p class="saw-risks-subtitle"><?= esc_html($t['subtitle']) ?></p>
-        </header>
-        
-        <form method="POST" enctype="multipart/form-data" class="saw-risks-form" id="invitation-risks-form">
-            
-            <div class="saw-risks-two-columns">
-                <!-- Left Column: Rich Text Editor -->
-                <div class="saw-risks-column">
-                    <div class="saw-form-group saw-text-editor-group">
-                        <label><?= esc_html($t['text_label']) ?></label>
-                        <?php
-                        // Ensure user can upload files for media buttons
-                        $current_user_can_upload = current_user_can('upload_files');
-                        if (!$current_user_can_upload) {
-                            // Temporarily add capability for editor
-                            $user = wp_get_current_user();
-                            if ($user && $user->ID === 0) {
-                                // Guest user - add temporary capability
-                                add_filter('user_has_cap', function($caps, $cap, $user_id, $args) {
-                                    if (isset($args[0]) && $args[0] === 'upload_files') {
-                                        $caps['upload_files'] = true;
-                                    }
-                                    return $caps;
-                                }, 10, 4);
-                            }
-                        }
-                        
-                        // Check if wp_editor function exists
-                        if (!function_exists('wp_editor')) {
-                            echo '<textarea name="risks_text" id="risks_text" rows="15" style="width: 100%;">' . esc_textarea($existing_text ?? '') . '</textarea>';
-                        } else {
-                            wp_editor($existing_text ?? '', 'risks_text', [
+        <div class="saw-risks-columns">
+            <!-- LEFT: Rich Text Editor -->
+            <div class="saw-risks-section">
+                <div class="saw-section-header">
+                    <div class="saw-section-icon text-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14,2 14,8 20,8"/>
+                            <line x1="16" y1="13" x2="8" y2="13"/>
+                            <line x1="16" y1="17" x2="8" y2="17"/>
+                        </svg>
+                    </div>
+                    <h2 class="saw-section-title text-title"><?php echo esc_html($t['text_title']); ?></h2>
+                </div>
+                <div class="saw-section-body">
+                    <?php
+                    // Use richtext-editor component
+                    if (function_exists('render_saw_richtext_editor')) {
+                        render_saw_richtext_editor('risks_text', $existing_text, array(
+                            'textarea_name' => 'risks_text',
+                            'height' => 350,
+                            'dark_mode' => true,
+                            'toolbar_preset' => 'basic',
+                        ));
+                    } else {
+                        // Fallback to standard wp_editor
+                        $editor_settings = array(
                             'textarea_name' => 'risks_text',
                             'textarea_rows' => 15,
-                            'media_buttons' => false,
+                            'media_buttons' => true,
                             'teeny' => false,
-                            'quicktags' => true,
-                            'tinymce' => [
-                                'toolbar1' => 'formatselect,bold,italic,bullist,numlist,link,unlink',
+                            'quicktags' => false,
+                            'tinymce' => array(
+                                'toolbar1' => 'formatselect,bold,italic,underline,blockquote,bullist,numlist,link,unlink',
                                 'toolbar2' => '',
-                                'height' => 400,
-                                'content_css' => false,
-                                'skin' => false,
-                                'wp_autoresize_on' => true,
-                            ],
-                            ]);
-                        }
-                        ?>
-                    </div>
-                </div>
-                
-                <!-- Right Column: Document Upload -->
-                <div class="saw-risks-column">
-                    <div class="saw-form-group">
-                        <label><?= esc_html($t['doc_label']) ?></label>
-                        <small class="saw-form-help"><?= esc_html($t['doc_help']) ?></small>
-                        
-                        <?php
-                        // Check if function exists
-                        if (!function_exists('saw_file_upload_input')) {
-                            echo '<p style="color: red;">ERROR: File upload component not available.</p>';
-                            echo '<input type="file" name="risks_documents[]" id="risks-documents-input" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.odt">';
-                        } else {
-                            saw_file_upload_input([
-                            'name' => 'risks_documents[]',
-                            'id' => 'risks-documents-input',
-                            'multiple' => true,
-                            'accept' => '.pdf,.doc,.docx,.xls,.xlsx,.odt',
-                            'max_size' => 10485760, // 10MB
-                            'max_files' => 10,
-                            'context' => 'invitation_risks',
-                            'class' => 'saw-risks-document-upload',
-                            'existing_files' => $existing_files,
-                            ]);
-                        }
-                        ?>
-                    </div>
+                                'block_formats' => 'Odstavec=p;Nadpis 1=h1;Nadpis 2=h2;Nadpis 3=h3',
+                                'height' => 350,
+                                'menubar' => false,
+                                'statusbar' => false,
+                            ),
+                        );
+                        wp_editor($existing_text, 'risks_text', $editor_settings);
+                    }
+                    ?>
                 </div>
             </div>
             
-            <!-- Buttons -->
-            <div class="saw-form-actions">
-                <button type="submit" name="action" value="save" class="saw-btn-primary">
-                    <?= esc_html($t['continue']) ?> →
-                </button>
-                <button type="submit" name="action" value="skip" class="saw-btn-secondary">
-                    <?= esc_html($t['skip']) ?>
-                </button>
+            <!-- RIGHT: Document Upload -->
+            <div class="saw-risks-section">
+                <div class="saw-section-header">
+                    <div class="saw-section-icon docs-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="17,8 12,3 7,8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                        </svg>
+                    </div>
+                    <h2 class="saw-section-title docs-title"><?php echo esc_html($t['doc_title']); ?></h2>
+                </div>
+                <div class="saw-section-body">
+                    <div class="saw-upload-zone">
+                        <input type="file" name="risks_documents[]" id="risks_documents" multiple accept=".pdf,.doc,.docx" class="saw-file-input-hidden">
+                        <div class="saw-upload-content">
+                            <div class="saw-upload-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="17,8 12,3 7,8"/>
+                                    <line x1="12" y1="3" x2="12" y2="15"/>
+                                </svg>
+                            </div>
+                            <p class="saw-upload-text"><?php echo esc_html($t['drag']); ?></p>
+                            <span class="saw-upload-or"><?php echo esc_html($t['or']); ?></span>
+                            <button type="button" class="saw-upload-browse-btn" onclick="document.getElementById('risks_documents').click()">
+                                <?php echo esc_html($t['browse']); ?>
+                            </button>
+                            <p class="saw-upload-help"><?php echo esc_html($t['doc_help']); ?></p>
+                        </div>
+                    </div>
+                    <div class="saw-file-list" id="file-list">
+                        <?php foreach ($existing_files as $file): ?>
+                            <div class="saw-file-item" data-file-id="<?php echo esc_attr($file['id']); ?>">
+                                <?php 
+                                $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                                $badge_class = in_array($ext, ['pdf']) ? 'pdf' : 'doc';
+                                ?>
+                                <span class="saw-file-badge <?php echo $badge_class; ?>"><?php echo strtoupper($ext); ?></span>
+                                <div class="saw-file-info">
+                                    <span class="saw-file-name"><?php echo esc_html($file['name']); ?></span>
+                                    <span class="saw-file-size"><?php echo esc_html(size_format($file['size'])); ?></span>
+                                </div>
+                                <button type="button" class="saw-file-remove" data-file-id="<?php echo esc_attr($file['id']); ?>">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="18" y1="6" x2="6" y2="18"/>
+                                        <line x1="6" y1="6" x2="18" y2="18"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
             </div>
-            
-            <input type="hidden" name="invitation_action" value="save_risks">
-            <input type="hidden" name="uploaded_files" id="uploaded-files-data">
-            <?php wp_nonce_field('saw_invitation_step', 'invitation_nonce'); ?>
-        </form>
+        </div>
         
-    </div>
+        <div class="saw-risks-actions">
+            <button type="submit" name="action" value="skip" class="saw-btn-skip"><?php echo esc_html($t['skip']); ?></button>
+            <button type="submit" name="action" value="save" class="saw-btn-continue">
+                <span><?php echo esc_html($t['continue']); ?></span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                    <polyline points="12,5 19,12 12,19"/>
+                </svg>
+            </button>
+        </div>
+    </form>
 </div>
 
 <script>
-jQuery(document).ready(function($) {
-    let formIsSubmitting = false;
-    let beforeUnloadHandler = null;
+jQuery(document).ready(function($){
+    const uploadZone = $('.saw-upload-zone');
+    const fileInput = $('#risks_documents');
+    const fileList = $('#file-list');
     
-    // Handle beforeunload only if form is not submitting
-    function handleBeforeUnload(e) {
-        if (!formIsSubmitting) {
-            // Only show warning if there are unsaved changes
-            const hasText = $('#risks_text').val() && $('#risks_text').val().trim() !== '';
-            const hasFiles = $('#risks-documents-input').closest('.saw-file-upload-modern-container').find('.saw-file-item').length > 0;
-            
-            if (hasText || hasFiles) {
-                e.preventDefault();
-                e.returnValue = 'Máte neuložené změny. Opravdu chcete opustit stránku?';
-                return e.returnValue;
-            }
-        }
-    }
-    
-    // Store handler reference
-    beforeUnloadHandler = handleBeforeUnload;
-    
-    // Add beforeunload listener
-    window.addEventListener('beforeunload', beforeUnloadHandler);
-    
-    // Remove beforeunload warning when form is submitted
-    $('#invitation-risks-form').on('submit', function(e) {
-        formIsSubmitting = true;
-        
-        // Remove beforeunload listener to prevent warning
-        if (beforeUnloadHandler) {
-            window.removeEventListener('beforeunload', beforeUnloadHandler);
-        }
-        
-        // Save TinyMCE content
-        if (typeof tinymce !== 'undefined') {
-            tinymce.triggerSave();
-        }
-        
-        // Collect uploaded files from file-upload component
-        const uploadedFilesData = {};
-        
-        // Get files from risks documents upload component
-        const $risksUpload = $('#risks-documents-input').closest('.saw-file-upload-modern-container');
-        if ($risksUpload.length) {
-            const uploadInstance = $risksUpload.data('saw-file-upload-instance');
-            if (uploadInstance && typeof uploadInstance.getUploadedFiles === 'function') {
-                const files = uploadInstance.getUploadedFiles();
-                if (files.length > 0) {
-                    uploadedFilesData['risks_documents[]'] = files.map(function(file) {
-                        return {
-                            file: {
-                                id: file.id || null,
-                                name: file.name || file.fileName || '',
-                                size: file.size || 0,
-                                url: file.url || '',
-                                path: file.path || file.relativePath || '',
-                                type: file.type || file.mimeType || 'application/octet-stream',
-                            }
-                        };
-                    });
-                }
-            }
-        }
-        
-        // Add uploaded files data to form as hidden input
-        if (Object.keys(uploadedFilesData).length > 0) {
-            // Remove existing hidden input if any
-            $(this).find('input[name="uploaded_files"]').remove();
-            
-            // Add new hidden input with JSON data
-            $('<input>').attr({
-                type: 'hidden',
-                name: 'uploaded_files',
-                value: JSON.stringify(uploadedFilesData)
-            }).appendTo(this);
-        }
+    // Click handler
+    uploadZone.on('click', function() {
+        fileInput.click();
     });
     
-    // Add class to wrapper for CSS
-    $('.saw-terminal-wrapper').addClass('has-invitation-risks');
+    // File input change
+    fileInput.on('change', function() {
+        handleFiles(this.files);
+    });
     
-    // Initialize TinyMCE editor properly
-    function initTinyMCE() {
-        const editorId = 'risks_text';
-        const $textarea = $('#' + editorId);
-        
-        if (!$textarea.length) {
-            return;
-        }
-        
-        // Check if editor already exists
-        if (typeof tinymce !== 'undefined' && tinymce.get(editorId)) {
-            return;
-        }
-        
-        // Wait for WordPress editor API
-        if (typeof wp === 'undefined' || typeof wp.editor === 'undefined') {
-            setTimeout(initTinyMCE, 100);
-            return;
-        }
-        
-        // Initialize editor
-        try {
-            wp.editor.initialize(editorId, {
-                tinymce: {
-                    toolbar1: 'formatselect,bold,italic,bullist,numlist,link,unlink',
-                    toolbar2: '',
-                    height: 400,
-                    content_css: false,
-                    skin: false,
-                    wp_autoresize_on: true,
-                },
-                quicktags: true,
-                media_buttons: false,
+    // Drag & drop
+    uploadZone.on('dragover', function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        $(this).css('border-color', '#10b981');
+    });
+    
+    uploadZone.on('dragleave', function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        $(this).css('border-color', '#4a5568');
+    });
+    
+    uploadZone.on('drop', function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        $(this).css('border-color', '#4a5568');
+        handleFiles(e.originalEvent.dataTransfer.files);
+    });
+    
+    // Handle files
+    function handleFiles(files) {
+        Array.from(files).forEach(file => {
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (!['pdf','doc','docx'].includes(ext)) return;
+            if (file.size > 10485760) return;
+            
+            const badge_class = ext === 'pdf' ? 'pdf' : 'doc';
+            const item = $('<div class="saw-file-item">').html(`
+                <span class="saw-file-badge ${badge_class}">${ext.toUpperCase()}</span>
+                <div class="saw-file-info">
+                    <span class="saw-file-name">${$('<div>').text(file.name).html()}</span>
+                    <span class="saw-file-size">${(file.size/1024).toFixed(1)} KB</span>
+                </div>
+                <button type="button" class="saw-file-remove">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            `);
+            
+            item.find('.saw-file-remove').on('click', function() {
+                item.remove();
             });
-        } catch (e) {
-            console.error('[Risks Upload] Error initializing TinyMCE:', e);
-        }
-    }
-    
-    // Initialize file upload component after page load
-    function initFileUpload() {
-        if (typeof SAWModernFileUpload !== 'undefined') {
-            $('.saw-file-upload-modern-container').each(function() {
-                const $container = $(this);
-                if (!$container.data('saw-file-upload-instance')) {
-                    const options = $container.data('options');
-                    if (options) {
-                        try {
-                            const parsedOptions = typeof options === 'string' ? JSON.parse(options) : options;
-                            const instance = new SAWModernFileUpload($container, parsedOptions);
-                            $container.data('saw-file-upload-instance', instance);
-                        } catch (e) {
-                            console.error('Error initializing file upload:', e);
-                        }
-                    }
-                }
-            });
-        }
-    }
-    
-    // Initialize TinyMCE when WordPress editor is ready
-    if (typeof wp !== 'undefined' && wp.editor) {
-        setTimeout(initTinyMCE, 200);
-    } else {
-        // Wait for WordPress editor to load
-        $(window).on('load', function() {
-            setTimeout(initTinyMCE, 500);
+            
+            fileList.append(item);
         });
     }
     
-    // Initialize file upload
-    initFileUpload();
+    // Existing file remove
+    $('.saw-file-item .saw-file-remove').on('click', function(){
+        const item = $(this).closest('.saw-file-item');
+        const fileId = item.data('file-id');
+        
+        if (fileId) {
+            $('<input>').attr({
+                type: 'hidden',
+                name: 'delete_files[]',
+                value: fileId
+            }).appendTo('form');
+        }
+        
+        item.remove();
+    });
+    
+    // Form submit - ensure TinyMCE saves
+    $('form').on('submit', function(){
+        if (typeof tinyMCE !== 'undefined') {
+            tinyMCE.triggerSave();
+        }
+    });
 });
 </script>
-
