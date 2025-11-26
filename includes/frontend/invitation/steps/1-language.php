@@ -288,7 +288,7 @@ $has_languages = !empty($languages);
             <!-- Language Grid -->
             <form method="POST">
                 <?php wp_nonce_field('saw_invitation_step', 'invitation_nonce'); ?>
-                <input type="hidden" name="invitation_action" value="set_language">
+                <input type="hidden" name="invitation_action" value="select_language">
                 
                 <div class="saw-language-grid saw-lang-<?php echo min(count($languages), 6); ?>">
                     <?php 

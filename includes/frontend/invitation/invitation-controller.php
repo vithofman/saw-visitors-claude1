@@ -62,9 +62,27 @@ class SAW_Invitation_Controller {
         
         $flow = $this->session->get('invitation_flow');
         
+        // ✅ NOVÉ: Pokud session neexistuje nebo token se změnil, reload
         if (empty($flow) || ($flow['token'] ?? '') !== $this->token) {
             $this->reload_visit_from_token();
+            
+            // ✅ NOVÉ: Inicializuj session S historií
+            $flow = [
+                'token' => $this->token,
+                'visit_id' => $this->visit_id,
+                'customer_id' => $this->customer_id,
+                'branch_id' => $this->branch_id,
+                'company_id' => $this->company_id,
+                'step' => 'language',
+                'history' => [],                    // ✅ prázdná historie
+                'completed_steps' => [],            // ✅ žádné dokončené kroky
+                'language_locked' => false,         // ✅ jazyk není zamčený
+                'created_at' => time()              // ✅ timestamp vytvoření
+            ];
+            
+            $this->session->set('invitation_flow', $flow);
         } else {
+            // Session existuje, načti z ní
             $this->visit_id = $flow['visit_id'] ?? null;
             $this->customer_id = $flow['customer_id'] ?? null;
             $this->branch_id = $flow['branch_id'] ?? null;
@@ -96,15 +114,8 @@ class SAW_Invitation_Controller {
         $this->branch_id = $visit['branch_id'];
         $this->company_id = $visit['company_id'] ?? null;
         
-        $flow = [
-            'token' => $this->token,
-            'visit_id' => $this->visit_id,
-            'customer_id' => $this->customer_id,
-            'branch_id' => $this->branch_id,
-            'company_id' => $this->company_id,
-            'step' => 'language',
-        ];
-        $this->session->set('invitation_flow', $flow);
+        // Flow se inicializuje v init_invitation_session() s historií
+        // Tato metoda se volá pouze když je potřeba reload z tokenu
     }
     
     private function load_languages() {
@@ -248,6 +259,10 @@ class SAW_Invitation_Controller {
         }
         
         switch ($action) {
+            case 'go_back':  // ✅ NOVÝ case
+                $this->handle_go_back();
+                break;
+                
             case 'select_language':
                 $this->handle_language_selection();
                 break;
@@ -266,6 +281,67 @@ class SAW_Invitation_Controller {
         }
     }
     
+    /**
+     * Handle back navigation
+     * 
+     * Vrátí uživatele na předchozí krok v historii.
+     * Neruší žádná data, pouze mění current_step.
+     * 
+     * @since 2.0.0
+     */
+    private function handle_go_back() {
+        // Verify nonce
+        if (!isset($_POST['invitation_nonce']) || 
+            !wp_verify_nonce($_POST['invitation_nonce'], 'saw_invitation_step')) {
+            wp_die('Invalid nonce', 'Error', ['response' => 403]);
+        }
+        
+        $flow = $this->session->get('invitation_flow');
+        $history = $flow['history'] ?? [];
+        
+        // Nelze jít zpět pokud historie má méně než 2 kroky
+        if (count($history) < 2) {
+            wp_redirect(home_url('/visitor-invitation/' . $this->token . '/'));
+            exit;
+        }
+        
+        // Odeber poslední krok z historie (current step)
+        array_pop($history);
+        
+        // Poslední krok v historii je předchozí krok
+        $previous_step = end($history);
+        
+        // Update session
+        $flow['step'] = $previous_step;
+        $flow['history'] = $history;
+        $this->session->set('invitation_flow', $flow);
+        
+        // Log
+        if (class_exists('SAW_Logger')) {
+            SAW_Logger::debug(
+                "Back navigation: {$this->current_step} → {$previous_step}, visit #{$this->visit_id}"
+            );
+        }
+        
+        // Redirect
+        wp_redirect(home_url('/visitor-invitation/' . $this->token . '/?step=' . $previous_step));
+        exit;
+    }
+    
+    /**
+     * Check if user can navigate back
+     * 
+     * @since 2.0.0
+     * @return bool True pokud lze jít zpět
+     */
+    private function can_go_back() {
+        $flow = $this->session->get('invitation_flow');
+        $history = $flow['history'] ?? [];
+        
+        // Nelze zpět z language (první krok) nebo pokud historie je prázdná
+        return count($history) > 1 && $this->current_step !== 'language';
+    }
+    
     private function handle_language_selection() {
         if (!isset($_POST['invitation_nonce']) || !wp_verify_nonce($_POST['invitation_nonce'], 'saw_invitation_step')) {
             wp_die('Invalid nonce', 'Error', ['response' => 403]);
@@ -278,6 +354,21 @@ class SAW_Invitation_Controller {
         }
         
         $flow = $this->session->get('invitation_flow');
+        
+        // ✅ NOVÉ: Přidat do historie (pokud tam ještě není)
+        if (!in_array('language', $flow['history'] ?? [])) {
+            $flow['history'][] = 'language';
+        }
+        
+        // ✅ NOVÉ: Označit jako dokončený
+        if (!in_array('language', $flow['completed_steps'] ?? [])) {
+            $flow['completed_steps'][] = 'language';
+        }
+        
+        // ✅ NOVÉ: Zamknout jazyk po prvním výběru
+        $flow['language_locked'] = true;
+        
+        // Existující kód
         $flow['language'] = $language;
         $flow['step'] = 'risks';
         $this->session->set('invitation_flow', $flow);
@@ -297,6 +388,13 @@ class SAW_Invitation_Controller {
         
         if ($action_type === 'skip') {
             $flow = $this->session->get('invitation_flow');
+            
+            // ✅ NOVÉ: Přidat do historie i při skip (ale ne do completed_steps)
+            if (!in_array('risks', $flow['history'] ?? [])) {
+                $flow['history'][] = 'risks';
+            }
+            // Skip NEPŘIDÁVÁ do completed_steps
+            
             $flow['step'] = 'visitors';
             $this->session->set('invitation_flow', $flow);
             wp_redirect(home_url('/visitor-invitation/' . $this->token . '/?step=visitors'));
@@ -373,6 +471,17 @@ class SAW_Invitation_Controller {
         }
         
         $flow = $this->session->get('invitation_flow');
+        
+        // ✅ NOVÉ: Přidat do historie (pokud tam ještě není)
+        if (!in_array('risks', $flow['history'] ?? [])) {
+            $flow['history'][] = 'risks';
+        }
+        
+        // ✅ NOVÉ: Označit jako dokončený
+        if (!in_array('risks', $flow['completed_steps'] ?? [])) {
+            $flow['completed_steps'][] = 'risks';
+        }
+        
         $flow['step'] = 'visitors';
         $this->session->set('invitation_flow', $flow);
         
@@ -436,6 +545,16 @@ class SAW_Invitation_Controller {
         
         $flow = $this->session->get('invitation_flow');
         
+        // ✅ NOVÉ: Přidat do historie (pokud tam ještě není)
+        if (!in_array('visitors', $flow['history'] ?? [])) {
+            $flow['history'][] = 'visitors';
+        }
+        
+        // ✅ NOVÉ: Označit jako dokončený
+        if (!in_array('visitors', $flow['completed_steps'] ?? [])) {
+            $flow['completed_steps'][] = 'visitors';
+        }
+        
         if ($has_training && $needs_training) {
             $flow['step'] = 'training-video';
             $this->session->set('invitation_flow', $flow);
@@ -449,21 +568,99 @@ class SAW_Invitation_Controller {
         exit;
     }
     
+    /**
+     * Get best available language for training content
+     * 
+     * Fallback logika: zvolený jazyk → EN → CS
+     * 
+     * @since 2.0.0
+     * @param string $preferred_lang Preferovaný jazyk (např. 'es', 'de')
+     * @return string Nejlepší dostupný jazyk ('es', 'en', nebo 'cs')
+     */
+    private function get_best_available_language($preferred_lang) {
+        global $wpdb;
+        
+        if (!$this->customer_id || !$this->branch_id) {
+            return 'cs'; // Fallback
+        }
+        
+        // Pokus 1: Existuje obsah v preferovaném jazyce?
+        $content = $wpdb->get_row($wpdb->prepare(
+            "SELECT tc.id 
+             FROM {$wpdb->prefix}saw_training_content tc
+             INNER JOIN {$wpdb->prefix}saw_training_languages tl ON tc.language_id = tl.id
+             WHERE tc.customer_id = %d 
+             AND tc.branch_id = %d 
+             AND tl.language_code = %s
+             LIMIT 1",
+            $this->customer_id,
+            $this->branch_id,
+            $preferred_lang
+        ));
+        
+        if ($content) {
+            return $preferred_lang; // Našli jsme preferovaný
+        }
+        
+        // Pokus 2: Fallback na angličtinu
+        if ($preferred_lang !== 'en') {
+            $content = $wpdb->get_row($wpdb->prepare(
+                "SELECT tc.id 
+                 FROM {$wpdb->prefix}saw_training_content tc
+                 INNER JOIN {$wpdb->prefix}saw_training_languages tl ON tc.language_id = tl.id
+                 WHERE tc.customer_id = %d 
+                 AND tc.branch_id = %d 
+                 AND tl.language_code = 'en'
+                 LIMIT 1",
+                $this->customer_id,
+                $this->branch_id
+            ));
+            
+            if ($content) {
+                return 'en'; // Našli jsme angličtinu
+            }
+        }
+        
+        // Pokus 3: Fallback na češtinu (poslední možnost)
+        return 'cs';
+    }
+    
     private function has_training_content() {
         global $wpdb;
         
         $flow = $this->session->get('invitation_flow');
-        $language = $flow['language'] ?? 'cs';
+        $preferred_lang = $flow['language'] ?? 'cs';
+        
+        // ✅ NOVÉ: Získej nejlepší dostupný jazyk
+        $actual_lang = $this->get_best_available_language($preferred_lang);
         
         if (class_exists('SAW_Cache')) {
-            $cache_key = 'training_company_' . $this->company_id . '_' . $language;
+            $cache_key = 'training_company_' . $this->customer_id . '_' . $this->branch_id . '_' . $actual_lang;
             $cached = SAW_Cache::get($cache_key, 'training');
             if ($cached !== false) {
                 return !empty($cached);
             }
         }
         
-        $content = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}saw_training_content WHERE company_id = %d AND language = %s", $this->company_id, $language), ARRAY_A);
+        // Načti obsah v actual_lang
+        $language_id = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM {$wpdb->prefix}saw_training_languages 
+             WHERE customer_id = %d AND language_code = %s",
+            $this->customer_id,
+            $actual_lang
+        ));
+        
+        if (!$language_id) {
+            return false;
+        }
+        
+        $content = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}saw_training_content 
+             WHERE customer_id = %d AND branch_id = %d AND language_id = %d",
+            $this->customer_id,
+            $this->branch_id,
+            $language_id
+        ), ARRAY_A);
         
         if (class_exists('SAW_Cache')) {
             SAW_Cache::set($cache_key, $content, 600, 'training');
@@ -489,6 +686,16 @@ class SAW_Invitation_Controller {
         $flow = $this->session->get('invitation_flow');
         $current = $this->current_step;
         
+        // ✅ NOVÉ: Přidat aktuální training step do historie
+        if (!in_array($current, $flow['history'] ?? [])) {
+            $flow['history'][] = $current;
+        }
+        
+        // ✅ NOVÉ: Označit jako dokončený
+        if (!in_array($current, $flow['completed_steps'] ?? [])) {
+            $flow['completed_steps'][] = $current;
+        }
+        
         $steps = ['training-video', 'training-map', 'training-risks', 'training-department', 'training-additional'];
         $current_index = array_search($current, $steps);
         
@@ -509,6 +716,14 @@ class SAW_Invitation_Controller {
         $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/invitation/layout-header.php';
         if (file_exists($template)) {
             require $template;
+        }
+        
+        // ✅ NOVÉ: Přidat progress indicator (kromě success page)
+        if ($this->current_step !== 'success') {
+            $progress = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/invitation/components/progress-indicator.php';
+            if (file_exists($progress)) {
+                require $progress;
+            }
         }
     }
     
@@ -557,13 +772,54 @@ class SAW_Invitation_Controller {
     }
     
     private function render_training_video() {
+        global $wpdb;
+        
+        $flow = $this->session->get('invitation_flow');
+        $preferred_lang = $flow['language'] ?? 'cs';
+        
+        // ✅ NOVÉ: Získej nejlepší dostupný jazyk
+        $actual_lang = $this->get_best_available_language($preferred_lang);
+        
+        // ✅ NOVÉ: Pokud actual_lang != preferred_lang, loguj fallback
+        if ($actual_lang !== $preferred_lang && class_exists('SAW_Logger')) {
+            SAW_Logger::info(
+                "Training language fallback: {$preferred_lang} → {$actual_lang} for visit #{$this->visit_id}"
+            );
+        }
+        
+        // Dočasně změň flow['language'] na actual_lang pro template
+        $flow['language'] = $actual_lang;
+        $this->session->set('invitation_flow', $flow);
+        
         $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/shared/training/video.php';
         if (file_exists($template)) {
             $this->render_template($template, ['token' => $this->token, 'is_invitation' => true]);
         }
+        
+        // Vrať preferred_lang zpět (ale zachovej actual_lang pro další training kroky)
+        // $flow['language'] = $preferred_lang; // Není potřeba - actual_lang je správný pro training
     }
     
     private function render_training_map() {
+        global $wpdb;
+        
+        $flow = $this->session->get('invitation_flow');
+        $preferred_lang = $flow['language'] ?? 'cs';
+        
+        // ✅ NOVÉ: Získej nejlepší dostupný jazyk
+        $actual_lang = $this->get_best_available_language($preferred_lang);
+        
+        // ✅ NOVÉ: Pokud actual_lang != preferred_lang, loguj fallback
+        if ($actual_lang !== $preferred_lang && class_exists('SAW_Logger')) {
+            SAW_Logger::info(
+                "Training language fallback: {$preferred_lang} → {$actual_lang} for visit #{$this->visit_id}"
+            );
+        }
+        
+        // Dočasně změň flow['language'] na actual_lang pro template
+        $flow['language'] = $actual_lang;
+        $this->session->set('invitation_flow', $flow);
+        
         $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/shared/training/map.php';
         if (file_exists($template)) {
             $this->render_template($template, ['token' => $this->token, 'is_invitation' => true]);
@@ -571,6 +827,25 @@ class SAW_Invitation_Controller {
     }
     
     private function render_training_risks() {
+        global $wpdb;
+        
+        $flow = $this->session->get('invitation_flow');
+        $preferred_lang = $flow['language'] ?? 'cs';
+        
+        // ✅ NOVÉ: Získej nejlepší dostupný jazyk
+        $actual_lang = $this->get_best_available_language($preferred_lang);
+        
+        // ✅ NOVÉ: Pokud actual_lang != preferred_lang, loguj fallback
+        if ($actual_lang !== $preferred_lang && class_exists('SAW_Logger')) {
+            SAW_Logger::info(
+                "Training language fallback: {$preferred_lang} → {$actual_lang} for visit #{$this->visit_id}"
+            );
+        }
+        
+        // Dočasně změň flow['language'] na actual_lang pro template
+        $flow['language'] = $actual_lang;
+        $this->session->set('invitation_flow', $flow);
+        
         $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/shared/training/risks.php';
         if (file_exists($template)) {
             $this->render_template($template, ['token' => $this->token, 'is_invitation' => true]);
@@ -578,6 +853,25 @@ class SAW_Invitation_Controller {
     }
     
     private function render_training_department() {
+        global $wpdb;
+        
+        $flow = $this->session->get('invitation_flow');
+        $preferred_lang = $flow['language'] ?? 'cs';
+        
+        // ✅ NOVÉ: Získej nejlepší dostupný jazyk
+        $actual_lang = $this->get_best_available_language($preferred_lang);
+        
+        // ✅ NOVÉ: Pokud actual_lang != preferred_lang, loguj fallback
+        if ($actual_lang !== $preferred_lang && class_exists('SAW_Logger')) {
+            SAW_Logger::info(
+                "Training language fallback: {$preferred_lang} → {$actual_lang} for visit #{$this->visit_id}"
+            );
+        }
+        
+        // Dočasně změň flow['language'] na actual_lang pro template
+        $flow['language'] = $actual_lang;
+        $this->session->set('invitation_flow', $flow);
+        
         $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/shared/training/department.php';
         if (file_exists($template)) {
             $this->render_template($template, ['token' => $this->token, 'is_invitation' => true]);
@@ -585,6 +879,25 @@ class SAW_Invitation_Controller {
     }
     
     private function render_training_additional() {
+        global $wpdb;
+        
+        $flow = $this->session->get('invitation_flow');
+        $preferred_lang = $flow['language'] ?? 'cs';
+        
+        // ✅ NOVÉ: Získej nejlepší dostupný jazyk
+        $actual_lang = $this->get_best_available_language($preferred_lang);
+        
+        // ✅ NOVÉ: Pokud actual_lang != preferred_lang, loguj fallback
+        if ($actual_lang !== $preferred_lang && class_exists('SAW_Logger')) {
+            SAW_Logger::info(
+                "Training language fallback: {$preferred_lang} → {$actual_lang} for visit #{$this->visit_id}"
+            );
+        }
+        
+        // Dočasně změň flow['language'] na actual_lang pro template
+        $flow['language'] = $actual_lang;
+        $this->session->set('invitation_flow', $flow);
+        
         $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/shared/training/additional.php';
         if (file_exists($template)) {
             $this->render_template($template, ['token' => $this->token, 'is_invitation' => true]);

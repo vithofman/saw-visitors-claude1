@@ -212,9 +212,27 @@ $t = $translations[$lang] ?? $translations['cs'];
             </button>
         </div>
         
-        <button type="submit" class="saw-btn-primary saw-btn-submit">
-            <?= esc_html($t['submit']) ?>
-        </button>
+        <!-- ✅ NOVÝ form-actions s back button -->
+        <div class="form-actions" style="display: flex; gap: 1rem; justify-content: space-between; margin-top: 2rem; flex-wrap: wrap;">
+            
+            <?php if ($this->can_go_back()): ?>
+            <button type="submit" 
+                    name="invitation_action" 
+                    value="go_back" 
+                    class="btn btn-secondary">
+                <svg style="width:1.25rem;height:1.25rem;margin-right:0.5rem;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                <?php echo $lang === 'en' ? 'Back' : 'Zpět'; ?>
+            </button>
+            <?php else: ?>
+            <div></div><!-- Spacer pro layout -->
+            <?php endif; ?>
+            
+            <button type="submit" class="saw-btn-primary saw-btn-submit">
+                <?= esc_html($t['submit']) ?>
+            </button>
+        </div>
     </form>
 </div>
 

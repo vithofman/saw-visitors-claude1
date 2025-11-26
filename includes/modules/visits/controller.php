@@ -806,7 +806,16 @@ public function ajax_extend_pin() {
         
         // Generuj token
         $token = $this->model->ensure_unique_token($visit['customer_id']);
-        $expires = date('Y-m-d H:i:s', strtotime('+30 days'));
+        
+        // Dynamická expirace podle planned_date_to
+        // Výpočet expirace: planned_date_to + 24 hodin, fallback 30 dní
+        if (!empty($visit['planned_date_to'])) {
+            // Datum návštěvy + 24 hodin
+            $expires = date('Y-m-d H:i:s', strtotime($visit['planned_date_to'] . ' +1 day'));
+        } else {
+            // Fallback pokud není planned_date_to
+            $expires = date('Y-m-d H:i:s', strtotime('+30 days'));
+        }
         
         global $wpdb;
         $result = $wpdb->update(

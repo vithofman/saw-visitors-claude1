@@ -9,6 +9,57 @@
  * @since   3.0.0
  */
 
+/* ===================================
+   INVITATION NAVIGATION BUTTONS
+   =================================== */
+/* Secondary button (Back) */
+.btn-secondary {
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+    color: white;
+    border: none;
+    padding: 0.875rem 2rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.2);
+}
+
+.btn-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(108, 117, 125, 0.3);
+    background: linear-gradient(135deg, #5a6268 0%, #4e555b 100%);
+}
+
+.btn-secondary:active {
+    transform: translateY(0);
+}
+
+/* Form actions container */
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    margin-top: 2rem;
+    flex-wrap: wrap;
+}
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+    .form-actions {
+        flex-direction: column-reverse;
+    }
+    
+    .form-actions button {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
 /* ============================================
    BUTTONS - Touch-Friendly Action Buttons
    Min 64px height for optimal touch targets

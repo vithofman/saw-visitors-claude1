@@ -213,14 +213,32 @@ $t = $translations[$lang] ?? $translations['cs'];
             </div>
         </div>
         
-        <div class="saw-risks-actions">
-            <button type="submit" name="action" value="skip" class="saw-btn-skip"><?php echo esc_html($t['skip']); ?></button>
-            <button type="submit" name="action" value="save" class="saw-btn-continue">
-                <span><?php echo esc_html($t['continue']); ?></span>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12,5 19,12 12,19"/>
+        <!-- ✅ NOVÝ form-actions s back button -->
+        <div class="form-actions" style="display: flex; gap: 1rem; justify-content: space-between; margin-top: 2rem; flex-wrap: wrap;">
+            
+            <?php if ($this->can_go_back()): ?>
+            <button type="submit" 
+                    name="invitation_action" 
+                    value="go_back" 
+                    class="btn btn-secondary">
+                <svg style="width:1.25rem;height:1.25rem;margin-right:0.5rem;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
                 </svg>
+                <?php echo $lang === 'en' ? 'Back' : 'Zpět'; ?>
             </button>
+            <?php else: ?>
+            <div></div><!-- Spacer pro layout -->
+            <?php endif; ?>
+            
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" name="action" value="skip" class="saw-btn-skip"><?php echo esc_html($t['skip']); ?></button>
+                <button type="submit" name="action" value="save" class="saw-btn-continue">
+                    <span><?php echo esc_html($t['continue']); ?></span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12,5 19,12 12,19"/>
+                    </svg>
+                </button>
+            </div>
         </div>
     </form>
 </div>
