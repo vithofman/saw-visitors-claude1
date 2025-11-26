@@ -292,5 +292,65 @@ function removeVisitor(id) {
 if (document.querySelectorAll('.saw-visitor-card').length === 0) {
     addNewVisitor();
 }
+
+// ===================================
+// FORM VALIDATION
+// ===================================
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form[method="POST"]');
+    
+    if (!form) {
+        console.error('[Invitation] Form not found');
+        return;
+    }
+    
+    form.addEventListener('submit', function(e) {
+        // 1. Zkontroluj existing visitors (checkboxy)
+        const existingChecked = document.querySelectorAll('input[name="existing_visitor_ids[]"]:checked').length;
+        
+        // 2. Zkontroluj nové visitors (formuláře)
+        const newVisitorForms = document.querySelectorAll('.saw-visitor-form');
+        let hasValidNewVisitor = false;
+        
+        newVisitorForms.forEach(function(form) {
+            const firstName = form.querySelector('input[name*="[first_name]"]');
+            const lastName = form.querySelector('input[name*="[last_name]"]');
+            
+            // Pokud má OBOJÍ jméno i příjmení vyplněné, je to validní visitor
+            if (firstName && lastName && 
+                firstName.value.trim() !== '' && 
+                lastName.value.trim() !== '') {
+                hasValidNewVisitor = true;
+            }
+        });
+        
+        // 3. Validace: Musí být alespoň JEDEN visitor
+        if (existingChecked === 0 && !hasValidNewVisitor) {
+            e.preventDefault();
+            
+            // Zobraz chybu v jazyce uživatele
+            const lang = '<?php echo $lang; ?>';
+            const errorMsg = lang === 'en' 
+                ? 'Please add at least one visitor with first name and last name filled.'
+                : 'Přidejte alespoň jednoho návštěvníka s vyplněným jménem a příjmením.';
+            
+            alert(errorMsg);
+            
+            // Focus na první nový visitor formulář pokud existuje
+            if (newVisitorForms.length > 0) {
+                const firstForm = newVisitorForms[0];
+                const firstNameInput = firstForm.querySelector('input[name*="[first_name]"]');
+                if (firstNameInput) {
+                    firstNameInput.focus();
+                }
+            }
+            
+            return false;
+        }
+        
+        // Vše OK, formulář může být odeslán
+        return true;
+    });
+});
 </script>
 

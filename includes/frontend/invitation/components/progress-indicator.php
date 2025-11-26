@@ -11,9 +11,10 @@
 
 if (!defined('ABSPATH')) exit;
 
-$flow = $this->session->get('invitation_flow');
+// ✅ OPRAVA: Použij proměnné předané z render_header()
+// $flow a $current_step jsou předány jako proměnné z invitation-controller.php
 $completed = $flow['completed_steps'] ?? [];
-$current = $this->current_step;
+$current = $current_step;
 
 // Definuj všechny možné kroky
 $all_steps = [
@@ -34,8 +35,8 @@ $all_steps = [
     ],
 ];
 
-// Přidej training kroky pokud existují
-if ($this->has_training_content()) {
+// ✅ OPRAVA: Použij proměnnou $has_training z render_header()
+if (isset($has_training) && $has_training) {
     $training_steps = [
         'training-video' => [
             'icon' => '🎥',
