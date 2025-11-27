@@ -113,36 +113,6 @@ $progress_percent = round((($current_index) / ($total_steps - 1)) * 100);
 }
 
 /* ============================================
-   HOME BUTTON
-   ============================================ */
-#saw-pi-home {
-    position: fixed;
-    top: 1.5rem;
-    left: 1.5rem;
-    z-index: 9999;
-    width: 48px;
-    height: 48px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--pi-bg);
-    backdrop-filter: blur(20px);
-    border: 1px solid var(--pi-border);
-    border-radius: 14px;
-    color: var(--pi-text);
-    text-decoration: none;
-    font-size: 1.25rem;
-    transition: all 0.25s ease;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-}
-
-#saw-pi-home:hover {
-    background: rgba(102, 126, 234, 0.2);
-    border-color: var(--pi-accent);
-    transform: scale(1.05);
-}
-
-/* ============================================
    DESKTOP SIDEBAR
    ============================================ */
 #saw-pi-sidebar {
@@ -638,14 +608,7 @@ $progress_percent = round((($current_index) / ($total_steps - 1)) * 100);
 }
 </style>
 
-<div id="saw-pi-wrapper">
-    
-    <!-- Home Button -->
-    <a href="<?php echo esc_url(home_url('/visitor-invitation/' . $token . '/?step=language')); ?>" 
-       id="saw-pi-home" 
-       title="<?php echo $lang === 'en' ? 'Start' : 'Začátek'; ?>">
-        🏠
-    </a>
+<div id="saw-pi-wrapper">    
     
     <!-- Desktop Sidebar -->
     <div id="saw-pi-sidebar">

@@ -747,8 +747,14 @@ private function get_available_training_steps() {
     
     $steps = [];
     
-    $flow = $this->session->get('invitation_flow');
-    $lang = $flow['language'] ?? 'cs';  // ✅ Přímo zvolený jazyk, ŽÁDNÝ fallback
+    // ✅ OPRAVA: Session není dostupná přes $this v šabloně
+// Jazyk získáme z $visit nebo z globální session
+if (!class_exists('SAW_Session_Manager')) {
+    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-session-manager.php';
+}
+$session = SAW_Session_Manager::instance();
+$flow = $session->get('invitation_flow');
+$lang = $flow['language'] ?? 'cs';
     
     error_log("[Invitation] get_available_training_steps() - Language: {$lang}, Customer: {$this->customer_id}, Branch: {$this->branch_id}");
     
@@ -1268,13 +1274,13 @@ private function get_available_training_steps() {
     }
     
     // ✅ NOVÉ: Načíst schedule data (datum a čas)
-    $schedule = $wpdb->get_row($wpdb->prepare(
-        "SELECT * FROM {$wpdb->prefix}saw_visit_schedules 
-         WHERE visit_id = %d 
-         ORDER BY date ASC, sort_order ASC 
-         LIMIT 1",
-        $this->visit_id
-    ), ARRAY_A);
+    // ✅ OPRAVA: Načíst VŠECHNY schedule záznamy
+$schedules = $wpdb->get_results($wpdb->prepare(
+    "SELECT * FROM {$wpdb->prefix}saw_visit_schedules 
+     WHERE visit_id = %d 
+     ORDER BY sort_order ASC, datetime_from ASC",
+    $this->visit_id
+), ARRAY_A);
     
     // Načíst hosty (kontaktní osoby) - z SAW users tabulky
 $hosts = $wpdb->get_results($wpdb->prepare(
@@ -1318,7 +1324,7 @@ $hosts = $wpdb->get_results($wpdb->prepare(
         'visit' => $visit,
         'branch' => $branch,
         'company' => $company,
-        'schedule' => $schedule,  // ✅ NOVÉ
+        'schedules' => $schedules,
         'hosts' => $hosts,
         'visitors' => $visitors,
         'risks_text' => $risks_text,

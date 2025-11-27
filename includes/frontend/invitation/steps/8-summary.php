@@ -42,56 +42,70 @@ $translations = [
 
 $t = $translations[$lang] ?? $translations['cs'];
 
-// Formátování data a času
-$visit_date_formatted = $t['not_specified'];
-$visit_time_formatted = '';
+// ============================================
+// FORMÁTOVÁNÍ DAT A ČASŮ Z SCHEDULES
+// ============================================
+$formatted_schedules = [];
 
-// ✅ Priorita 1: saw_visit_schedules tabulka
-if (!empty($schedule['date'])) {
-    try {
-        $date = new DateTime($schedule['date']);
-        if ($lang === 'en') {
-            $visit_date_formatted = $date->format('F j, Y'); // "November 30, 2025"
-        } else {
-            $visit_date_formatted = $date->format('j. n. Y'); // "30. 11. 2025"
+if (!empty($schedules)) {
+    foreach ($schedules as $sched) {
+        $date_str = '';
+        $time_str = '';
+        
+        // Datum z datetime_from
+        if (!empty($sched['datetime_from'])) {
+            try {
+                $dt = new DateTime($sched['datetime_from']);
+                $date_str = ($lang === 'en') ? $dt->format('F j, Y') : $dt->format('j. n. Y');
+            } catch (Exception $e) {
+                $date_str = $sched['datetime_from'];
+            }
         }
-    } catch (Exception $e) {
-        $visit_date_formatted = $schedule['date'];
-    }
-    
-    // Čas ze schedule
-    if (!empty($schedule['time_from'])) {
-        $visit_time_formatted = substr($schedule['time_from'], 0, 5); // "07:21"
-        if (!empty($schedule['time_to'])) {
-            $visit_time_formatted .= ' - ' . substr($schedule['time_to'], 0, 5); // "07:21 - 08:21"
+        
+        // Čas z time_from a time_to
+        if (!empty($sched['time_from'])) {
+            $time_str = substr($sched['time_from'], 0, 5);
+            if (!empty($sched['time_to'])) {
+                $time_str .= ' – ' . substr($sched['time_to'], 0, 5);
+            }
+        }
+        
+        if ($date_str) {
+            $formatted_schedules[] = [
+                'date' => $date_str,
+                'time' => $time_str,
+                'notes' => $sched['notes'] ?? ''
+            ];
         }
     }
 }
-// ✅ Priorita 2: Fallback na planned_date_from z saw_visits
-elseif (!empty($visit['planned_date_from'])) {
+
+// Fallback na planned_date_from pokud nejsou schedules
+if (empty($formatted_schedules) && !empty($visit['planned_date_from'])) {
     try {
         $datetime = new DateTime($visit['planned_date_from']);
-        if ($lang === 'en') {
-            $visit_date_formatted = $datetime->format('F j, Y');
-        } else {
-            $visit_date_formatted = $datetime->format('j. n. Y');
-        }
+        $date_str = ($lang === 'en') ? $datetime->format('F j, Y') : $datetime->format('j. n. Y');
+        $time_str = '';
         
-        // Extrahuj čas pokud není 00:00
         $time_part = $datetime->format('H:i');
         if ($time_part !== '00:00') {
-            $visit_time_formatted = $time_part;
-            
+            $time_str = $time_part;
             if (!empty($visit['planned_date_to'])) {
                 $datetime_to = new DateTime($visit['planned_date_to']);
                 $time_to = $datetime_to->format('H:i');
                 if ($time_to !== '00:00' && $time_to !== $time_part) {
-                    $visit_time_formatted .= ' - ' . $time_to;
+                    $time_str .= ' – ' . $time_to;
                 }
             }
         }
+        
+        $formatted_schedules[] = [
+            'date' => $date_str,
+            'time' => $time_str,
+            'notes' => ''
+        ];
     } catch (Exception $e) {
-        $visit_date_formatted = $visit['planned_date_from'];
+        // Ignore
     }
 }
 
@@ -315,34 +329,52 @@ if ($branch) {
         <div class="pin-code"><?php echo esc_html($pin); ?></div>
     </div>
     
-    <!-- Visit Info Section -->
-    <div class="saw-summary-section">
-        <div class="saw-summary-section-header">
-            <span class="icon">📅</span>
-            <h3><?php echo esc_html($t['visit_date']); ?></h3>
-        </div>
-        <div class="saw-summary-section-content">
+    <!-- Visit Schedule Section -->
+<div class="saw-summary-section">
+    <div class="saw-summary-section-header">
+        <span class="icon">📅</span>
+        <h3><?php echo esc_html($t['visit_date']); ?></h3>
+    </div>
+    <div class="saw-summary-section-content">
+        <?php if (!empty($formatted_schedules)): ?>
+            <?php foreach ($formatted_schedules as $idx => $sched): ?>
             <div class="saw-summary-row">
-                <span class="label"><?php echo esc_html($t['visit_date']); ?></span>
-                <span class="value"><?php echo esc_html($visit_date_formatted); ?></span>
-            </div>
-            <?php if (!empty($visit_time_formatted)): ?>
-            <div class="saw-summary-row">
-                <span class="label"><?php echo esc_html($t['visit_time']); ?></span>
-                <span class="value"><?php echo esc_html($visit_time_formatted); ?></span>
-            </div>
-            <?php endif; ?>
-            <?php if ($address): ?>
-            <div class="saw-summary-row">
-                <span class="label"><?php echo esc_html($t['location']); ?></span>
+                <span class="label">
+                    <?php if (count($formatted_schedules) > 1): ?>
+                        <?php echo ($lang === 'en') ? 'Day' : 'Den'; ?> <?php echo $idx + 1; ?>
+                    <?php else: ?>
+                        <?php echo esc_html($t['visit_date']); ?>
+                    <?php endif; ?>
+                </span>
                 <span class="value">
-                    <?php echo esc_html($branch['name'] ?? ''); ?>
-                    <?php if ($address): ?><br><small style="color: rgba(255,255,255,0.6);"><?php echo esc_html($address); ?></small><?php endif; ?>
+                    <?php echo esc_html($sched['date']); ?>
+                    <?php if (!empty($sched['time'])): ?>
+                        <br><small style="color: rgba(255,255,255,0.6);">🕐 <?php echo esc_html($sched['time']); ?></small>
+                    <?php endif; ?>
+                    <?php if (!empty($sched['notes'])): ?>
+                        <br><small style="color: rgba(255,255,255,0.5); font-style: italic;"><?php echo esc_html($sched['notes']); ?></small>
+                    <?php endif; ?>
                 </span>
             </div>
-            <?php endif; ?>
+            <?php endforeach; ?>
+        <?php else: ?>
+            <div class="saw-summary-row">
+                <span class="label"><?php echo esc_html($t['visit_date']); ?></span>
+                <span class="value"><?php echo esc_html($t['not_specified']); ?></span>
+            </div>
+        <?php endif; ?>
+        
+        <?php if ($address): ?>
+        <div class="saw-summary-row">
+            <span class="label"><?php echo esc_html($t['location']); ?></span>
+            <span class="value">
+                <?php echo esc_html($branch['name'] ?? ''); ?>
+                <br><small style="color: rgba(255,255,255,0.6);">📍 <?php echo esc_html($address); ?></small>
+            </span>
         </div>
+        <?php endif; ?>
     </div>
+</div>
     
     <!-- Contact Person Section -->
     <?php if (!empty($hosts)): ?>
