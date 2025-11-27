@@ -47,18 +47,27 @@ $t = $translations[$lang] ?? $translations['cs'];
 // ============================================
 $formatted_schedules = [];
 
-if (!empty($schedules)) {
-    foreach ($schedules as $sched) {
+// ✅ DEBUG
+error_log("[SUMMARY] Processing schedules, count: " . (is_array($schedules) ? count($schedules) : 'NOT ARRAY'));
+
+if (!empty($schedules) && is_array($schedules)) {
+    foreach ($schedules as $idx => $sched) {
+        error_log("[SUMMARY] Schedule #{$idx}: " . json_encode($sched));
+        
         $date_str = '';
         $time_str = '';
         
-        // Datum z datetime_from
-        if (!empty($sched['datetime_from'])) {
+        // ✅ Zkus různé názvy sloupců pro datum
+        $date_value = $sched['datetime_from'] ?? $sched['date'] ?? $sched['visit_date'] ?? null;
+        
+        if (!empty($date_value)) {
             try {
-                $dt = new DateTime($sched['datetime_from']);
+                $dt = new DateTime($date_value);
                 $date_str = ($lang === 'en') ? $dt->format('F j, Y') : $dt->format('j. n. Y');
+                error_log("[SUMMARY] Parsed date: {$date_str}");
             } catch (Exception $e) {
-                $date_str = $sched['datetime_from'];
+                $date_str = $date_value;
+                error_log("[SUMMARY] Date parse error: " . $e->getMessage());
             }
         }
         
@@ -79,6 +88,8 @@ if (!empty($schedules)) {
         }
     }
 }
+
+error_log("[SUMMARY] Formatted schedules count: " . count($formatted_schedules));
 
 // Fallback na planned_date_from pokud nejsou schedules
 if (empty($formatted_schedules) && !empty($visit['planned_date_from'])) {
