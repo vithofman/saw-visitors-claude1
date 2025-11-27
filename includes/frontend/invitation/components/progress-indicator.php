@@ -1,13 +1,11 @@
 <?php
 /**
- * Progress Indicator Component
+ * Progress Indicator Component - Modern Dark Theme v2
  * 
- * Zobrazuje vizuální progres skrze invitation flow.
- * Ukazuje dokončené, aktuální a zbývající kroky.
- * Podporuje klikatelnou navigaci a mobilní verzi.
+ * IZOLOVANÉ CSS - všechny třídy mají prefix saw-pi-
  * 
  * @package SAW_Visitors
- * @since 2.0.0
+ * @since 3.0.0
  */
 
 if (!defined('ABSPATH')) exit;
@@ -41,17 +39,16 @@ $all_steps = [
     ],
 ];
 
-// ✅ OPRAVENO: Přidej POUZE DOSTUPNÉ training kroky
+// ✅ Přidej POUZE DOSTUPNÉ training kroky
 if (isset($available_training_steps) && !empty($available_training_steps)) {
     $training_step_definitions = [
         'training-video' => ['icon' => '🎥', 'title_cs' => 'Video', 'title_en' => 'Video'],
         'training-map' => ['icon' => '🗺️', 'title_cs' => 'Mapa', 'title_en' => 'Map'],
-        'training-risks' => ['icon' => '⚠️', 'title_cs' => 'Školení rizika', 'title_en' => 'Training Risks'],
+        'training-risks' => ['icon' => '⚠️', 'title_cs' => 'Rizika školení', 'title_en' => 'Training Risks'],
         'training-department' => ['icon' => '🏢', 'title_cs' => 'Oddělení', 'title_en' => 'Department'],
         'training-additional' => ['icon' => 'ℹ️', 'title_cs' => 'Další info', 'title_en' => 'Additional'],
     ];
     
-    // Přidej JEN kroky které jsou v $available_training_steps
     foreach ($available_training_steps as $step) {
         $step_key = $step['step'];
         if (isset($training_step_definitions[$step_key])) {
@@ -73,254 +70,596 @@ $all_steps['success'] = [
     'title_en' => 'Done'
 ];
 
-// Najdi index aktuálního kroku pro mobilní zobrazení
+// Najdi index aktuálního kroku
 $current_index = 0;
 $step_keys = array_keys($all_steps);
+$total_steps = count($all_steps);
+
 foreach ($step_keys as $index => $step) {
     if ($step === $current) {
         $current_index = $index;
         break;
     }
 }
+
+// Vypočítej progress procenta
+$progress_percent = round((($current_index) / ($total_steps - 1)) * 100);
 ?>
 
 <style>
-/* Desktop Progress Indicator */
-.progress-indicator {
+/* ============================================
+   PROGRESS INDICATOR v2 - ISOLATED CSS
+   Prefix: saw-pi- (progress indicator)
+   ============================================ */
+
+/* Reset pro celý wrapper */
+#saw-pi-wrapper,
+#saw-pi-wrapper * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+#saw-pi-wrapper {
+    --pi-bg: rgba(15, 23, 42, 0.95);
+    --pi-border: rgba(148, 163, 184, 0.15);
+    --pi-text: rgba(255, 255, 255, 0.9);
+    --pi-text-muted: rgba(148, 163, 184, 0.8);
+    --pi-accent: #667eea;
+    --pi-accent-glow: rgba(102, 126, 234, 0.4);
+    --pi-success: #10b981;
+    --pi-success-glow: rgba(16, 185, 129, 0.4);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* ============================================
+   HOME BUTTON
+   ============================================ */
+#saw-pi-home {
     position: fixed;
-    top: 6rem;
+    top: 1.5rem;
     left: 1.5rem;
+    z-index: 9999;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--pi-bg);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--pi-border);
+    border-radius: 14px;
+    color: var(--pi-text);
+    text-decoration: none;
+    font-size: 1.25rem;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+#saw-pi-home:hover {
+    background: rgba(102, 126, 234, 0.2);
+    border-color: var(--pi-accent);
+    transform: scale(1.05);
+}
+
+/* ============================================
+   DESKTOP SIDEBAR
+   ============================================ */
+#saw-pi-sidebar {
+    position: fixed;
+    top: 50%;
+    left: 1.5rem;
+    transform: translateY(-50%);
     z-index: 9998;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    padding: 1rem;
-    border-radius: 12px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-    max-width: 200px;
-    max-height: calc(100vh - 8rem);
+    width: 220px;
+    background: var(--pi-bg);
+    backdrop-filter: blur(20px);
+    border-radius: 20px;
+    border: 1px solid var(--pi-border);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+}
+
+/* Header */
+#saw-pi-sidebar .saw-pi-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--pi-border);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+#saw-pi-sidebar .saw-pi-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--pi-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.75rem;
+}
+
+/* Progress Bar */
+#saw-pi-sidebar .saw-pi-bar-wrap {
+    position: relative;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+#saw-pi-sidebar .saw-pi-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--pi-accent), #a78bfa);
+    border-radius: 999px;
+    transition: width 0.5s ease;
+    box-shadow: 0 0 12px var(--pi-accent-glow);
+}
+
+#saw-pi-sidebar .saw-pi-percent {
+    position: absolute;
+    right: 0;
+    top: -1.25rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--pi-accent);
+}
+
+/* Steps List */
+#saw-pi-sidebar .saw-pi-steps {
+    padding: 0.75rem 0;
+    max-height: 60vh;
     overflow-y: auto;
 }
 
-.progress-indicator-header {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #666;
-    margin-bottom: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-.progress-step {
+/* Individual Step */
+#saw-pi-sidebar .saw-pi-step {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.5rem;
-    transition: all 0.3s ease;
-    border-radius: 6px;
+    gap: 0.875rem;
+    padding: 0.75rem 1.5rem;
     text-decoration: none;
-    color: inherit;
+    color: var(--pi-text-muted);
+    transition: all 0.25s ease;
+    position: relative;
+    cursor: default;
 }
 
-.progress-step.clickable {
+#saw-pi-sidebar .saw-pi-step.clickable {
     cursor: pointer;
-    text-decoration: none;
+}
+
+#saw-pi-sidebar .saw-pi-step.clickable:hover {
+    background: rgba(102, 126, 234, 0.1);
+    color: var(--pi-text);
+}
+
+/* Current Step */
+#saw-pi-sidebar .saw-pi-step.current {
+    background: linear-gradient(90deg, rgba(102, 126, 234, 0.15), transparent);
+    color: var(--pi-text);
+}
+
+#saw-pi-sidebar .saw-pi-step.current::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--pi-accent), #a78bfa);
+    border-radius: 0 999px 999px 0;
+}
+
+/* Disabled Step */
+#saw-pi-sidebar .saw-pi-step.disabled {
+    opacity: 0.4;
+}
+
+/* Step Icon Box - SUPER SPECIFIC */
+#saw-pi-sidebar .saw-pi-icon-box {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    max-width: 36px !important;
+    min-height: 36px !important;
+    max-height: 36px !important;
+    flex: 0 0 36px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid var(--pi-border) !important;
+    border-radius: 10px !important;
+    transition: all 0.25s ease !important;
+    overflow: hidden !important;
+    position: relative !important;
+}
+
+#saw-pi-sidebar .saw-pi-step.current .saw-pi-icon-box {
+    background: linear-gradient(135deg, var(--pi-accent), #a78bfa) !important;
+    border-color: transparent !important;
+    box-shadow: 0 4px 16px var(--pi-accent-glow) !important;
+}
+
+#saw-pi-sidebar .saw-pi-step.completed .saw-pi-icon-box {
+    background: linear-gradient(135deg, var(--pi-success), #059669) !important;
+    border-color: transparent !important;
+    box-shadow: 0 4px 12px var(--pi-success-glow) !important;
+}
+
+/* Icon inside box */
+#saw-pi-sidebar .saw-pi-icon-box .saw-pi-emoji {
+    font-size: 16px !important;
+    line-height: 1 !important;
+    display: block !important;
+}
+
+#saw-pi-sidebar .saw-pi-icon-box .saw-pi-check {
+    width: 16px !important;
+    height: 16px !important;
+    color: white !important;
+    stroke-width: 3 !important;
+}
+
+/* Step Label */
+#saw-pi-sidebar .saw-pi-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.3;
     color: inherit;
 }
 
-.progress-step.clickable:hover {
-    background: rgba(102, 126, 234, 0.15);
-    transform: translateX(4px);
+#saw-pi-sidebar .saw-pi-step.current .saw-pi-label {
+    font-weight: 600;
 }
 
-.progress-step.disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-}
-
-.progress-step.current {
-    background: rgba(102, 126, 234, 0.1);
-    border-left: 3px solid #667eea;
-    padding-left: 0.5rem;
-    font-weight: 700;
-}
-
-.progress-step .step-icon {
-    font-size: 1.25rem;
-    flex-shrink: 0;
-}
-
-.progress-step .step-label {
-    font-size: 0.875rem;
-}
-
-/* Mobile trigger button */
-.progress-mobile-trigger {
+/* ============================================
+   MOBILE BOTTOM BAR
+   ============================================ */
+#saw-pi-mobile-bar {
     display: none;
     position: fixed;
-    top: 1.5rem;
-    right: 1.5rem;
-    z-index: 9999;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    border: none;
-    border-radius: 50px;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 9998;
+    background: var(--pi-bg);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid var(--pi-border);
     padding: 0.75rem 1rem;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-    cursor: pointer;
-    gap: 0.5rem;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0));
+}
+
+#saw-pi-mobile-bar .saw-pi-mobile-content {
+    display: flex;
     align-items: center;
-    font-size: 0.875rem;
+    gap: 1rem;
+}
+
+#saw-pi-mobile-bar .saw-pi-mobile-info {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+}
+
+#saw-pi-mobile-bar .saw-pi-mobile-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--pi-accent), #a78bfa);
+    border-radius: 12px;
+    font-size: 1.125rem;
+    box-shadow: 0 4px 16px var(--pi-accent-glow);
+}
+
+#saw-pi-mobile-bar .saw-pi-mobile-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+}
+
+#saw-pi-mobile-bar .saw-pi-mobile-step-name {
+    font-size: 0.9375rem;
     font-weight: 600;
-    color: #667eea;
+    color: var(--pi-text);
 }
 
-.progress-mobile-trigger .current-step-icon {
-    font-size: 1.25rem;
+#saw-pi-mobile-bar .saw-pi-mobile-counter {
+    font-size: 0.75rem;
+    color: var(--pi-text-muted);
 }
 
-.progress-mobile-trigger .current-step-number {
-    color: #666;
+/* Mobile Progress Ring */
+#saw-pi-mobile-bar .saw-pi-ring {
+    position: relative;
+    width: 48px;
+    height: 48px;
 }
 
-/* Bottom sheet overlay */
-.progress-mobile-overlay {
+#saw-pi-mobile-bar .saw-pi-ring svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+#saw-pi-mobile-bar .saw-pi-ring .ring-bg {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.1);
+    stroke-width: 3;
+}
+
+#saw-pi-mobile-bar .saw-pi-ring .ring-progress {
+    fill: none;
+    stroke: var(--pi-accent);
+    stroke-width: 3;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.5s ease;
+}
+
+#saw-pi-mobile-bar .saw-pi-ring-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--pi-text);
+}
+
+/* Mobile Menu Button */
+#saw-pi-mobile-bar .saw-pi-menu-btn {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--pi-border);
+    border-radius: 10px;
+    color: var(--pi-text);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#saw-pi-mobile-bar .saw-pi-menu-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+#saw-pi-mobile-bar .saw-pi-menu-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* ============================================
+   MOBILE SHEET
+   ============================================ */
+#saw-pi-sheet-overlay {
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.5);
     z-index: 10000;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
 
-.progress-mobile-overlay.active {
+#saw-pi-sheet-overlay.active {
     display: block;
+    opacity: 1;
 }
 
-.progress-mobile-sheet {
+#saw-pi-sheet {
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
-    background: #fff;
-    border-radius: 20px 20px 0 0;
-    padding: 1.5rem;
-    max-height: 70vh;
-    overflow-y: auto;
-    animation: slideUp 0.3s ease;
+    background: var(--pi-bg);
+    border-radius: 24px 24px 0 0;
+    border: 1px solid var(--pi-border);
+    border-bottom: none;
+    max-height: 80vh;
+    overflow: hidden;
+    transform: translateY(100%);
+    transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-@keyframes slideUp {
-    from { transform: translateY(100%); }
-    to { transform: translateY(0); }
+#saw-pi-sheet-overlay.active #saw-pi-sheet {
+    transform: translateY(0);
 }
 
-.sheet-header {
+#saw-pi-sheet .saw-pi-sheet-handle {
+    display: flex;
+    justify-content: center;
+    padding: 0.75rem;
+}
+
+#saw-pi-sheet .saw-pi-sheet-bar {
+    width: 36px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 999px;
+}
+
+#saw-pi-sheet .saw-pi-sheet-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 1rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid #e5e7eb;
-    font-weight: 600;
-    color: #333;
+    padding: 0.5rem 1.5rem 1rem;
+    border-bottom: 1px solid var(--pi-border);
 }
 
-.sheet-close {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    color: #666;
-    cursor: pointer;
-    padding: 0;
+#saw-pi-sheet .saw-pi-sheet-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--pi-text);
+}
+
+#saw-pi-sheet .saw-pi-sheet-close {
     width: 32px;
     height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 50%;
-    transition: background 0.2s;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 8px;
+    color: var(--pi-text-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
-.sheet-close:hover {
-    background: #f3f4f6;
+#saw-pi-sheet .saw-pi-sheet-close:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: var(--pi-text);
 }
 
-.sheet-content {
+#saw-pi-sheet .saw-pi-sheet-content {
+    padding: 1rem 0;
+    max-height: calc(80vh - 120px);
+    overflow-y: auto;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0));
+}
+
+/* Sheet Steps - copy from sidebar */
+#saw-pi-sheet .saw-pi-step {
     display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 1rem 1.5rem;
+    text-decoration: none;
+    color: var(--pi-text-muted);
+    transition: all 0.25s ease;
+    position: relative;
+    cursor: default;
 }
 
-/* Mobile styles */
+#saw-pi-sheet .saw-pi-step.clickable {
+    cursor: pointer;
+}
+
+#saw-pi-sheet .saw-pi-step.clickable:hover {
+    background: rgba(102, 126, 234, 0.1);
+    color: var(--pi-text);
+}
+
+#saw-pi-sheet .saw-pi-step.current {
+    background: linear-gradient(90deg, rgba(102, 126, 234, 0.15), transparent);
+    color: var(--pi-text);
+}
+
+#saw-pi-sheet .saw-pi-step.current::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--pi-accent), #a78bfa);
+}
+
+#saw-pi-sheet .saw-pi-step.disabled {
+    opacity: 0.4;
+}
+
+#saw-pi-sheet .saw-pi-icon-box {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    max-width: 36px !important;
+    flex: 0 0 36px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid var(--pi-border) !important;
+    border-radius: 10px !important;
+}
+
+#saw-pi-sheet .saw-pi-step.current .saw-pi-icon-box {
+    background: linear-gradient(135deg, var(--pi-accent), #a78bfa) !important;
+    border-color: transparent !important;
+}
+
+#saw-pi-sheet .saw-pi-step.completed .saw-pi-icon-box {
+    background: linear-gradient(135deg, var(--pi-success), #059669) !important;
+    border-color: transparent !important;
+}
+
+#saw-pi-sheet .saw-pi-icon-box .saw-pi-emoji {
+    font-size: 16px !important;
+    line-height: 1 !important;
+}
+
+#saw-pi-sheet .saw-pi-icon-box .saw-pi-check {
+    width: 16px !important;
+    height: 16px !important;
+    color: white !important;
+}
+
+#saw-pi-sheet .saw-pi-label {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: inherit;
+}
+
+#saw-pi-sheet .saw-pi-step.current .saw-pi-label {
+    font-weight: 600;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 1024px) {
+    #saw-pi-sidebar {
+        left: 1rem;
+        width: 200px;
+    }
+}
+
 @media (max-width: 768px) {
-    .progress-indicator {
+    #saw-pi-sidebar {
         display: none !important;
     }
     
-    .progress-mobile-trigger {
-        display: flex !important;
+    #saw-pi-mobile-bar {
+        display: block !important;
+    }
+    
+    #saw-pi-home {
+        top: 1rem;
+        left: 1rem;
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
     }
 }
 </style>
 
-<!-- Desktop Progress Indicator -->
-<div class="progress-indicator">
-    <div class="progress-indicator-header">
-        <?php echo $lang === 'en' ? 'Progress' : 'Průběh'; ?>
-    </div>
+<div id="saw-pi-wrapper">
     
-    <?php foreach ($all_steps as $step => $data): 
-        $is_completed = in_array($step, $completed);
-        $is_current = ($step === $current);
-        
-        // Logika navigace
-        $can_navigate = false;
-        if ($step === 'language') {
-            $can_navigate = true;
-        } elseif (in_array($step, $completed) || in_array($step, $history)) {
-            $can_navigate = true;
-        }
-        
-        if ($current === 'language' && empty($flow['language']) && $step !== 'language') {
-            $can_navigate = false;
-        }
-        
-        $step_url = home_url('/visitor-invitation/' . $token . '/?step=' . $step);
-    ?>
-        <?php if ($can_navigate && $step !== $current): ?>
-            <a href="<?php echo esc_url($step_url); ?>" class="progress-step clickable">
-        <?php else: ?>
-            <div class="progress-step <?php echo $is_current ? 'current' : 'disabled'; ?>">
-        <?php endif; ?>
-        
-        <span class="step-icon">
-            <?php echo $is_completed ? '✅' : $data['icon']; ?>
-        </span>
-        <span class="step-label">
-            <?php echo esc_html($data[$title_key]); ?>
-        </span>
-        
-        <?php if ($can_navigate && $step !== $current): ?>
-            </a>
-        <?php else: ?>
+    <!-- Home Button -->
+    <a href="<?php echo esc_url(home_url('/visitor-invitation/' . $token . '/?step=language')); ?>" 
+       id="saw-pi-home" 
+       title="<?php echo $lang === 'en' ? 'Start' : 'Začátek'; ?>">
+        🏠
+    </a>
+    
+    <!-- Desktop Sidebar -->
+    <div id="saw-pi-sidebar">
+        <div class="saw-pi-header">
+            <div class="saw-pi-title">
+                <?php echo $lang === 'en' ? 'Progress' : 'Průběh'; ?>
             </div>
-        <?php endif; ?>
-    <?php endforeach; ?>
-</div>
-
-<!-- Mobile: Floating button -->
-<button class="progress-mobile-trigger" id="progress-toggle">
-    <span class="current-step-icon"><?php echo $all_steps[$current]['icon'] ?? '📋'; ?></span>
-    <span class="current-step-number"><?php echo ($current_index + 1); ?>/<?php echo count($all_steps); ?></span>
-</button>
-
-<!-- Mobile: Bottom sheet overlay -->
-<div class="progress-mobile-overlay" id="progress-overlay">
-    <div class="progress-mobile-sheet">
-        <div class="sheet-header">
-            <span><?php echo $lang === 'en' ? 'Progress' : 'Průběh'; ?></span>
-            <button class="sheet-close" id="progress-close">✕</button>
+            <div class="saw-pi-bar-wrap">
+                <span class="saw-pi-percent"><?php echo $progress_percent; ?>%</span>
+                <div class="saw-pi-bar-fill" style="width: <?php echo $progress_percent; ?>%;"></div>
+            </div>
         </div>
-        <div class="sheet-content">
+        
+        <div class="saw-pi-steps">
             <?php foreach ($all_steps as $step => $data): 
                 $is_completed = in_array($step, $completed);
                 $is_current = ($step === $current);
@@ -337,21 +676,31 @@ foreach ($step_keys as $index => $step) {
                 }
                 
                 $step_url = home_url('/visitor-invitation/' . $token . '/?step=' . $step);
+                
+                $classes = ['saw-pi-step'];
+                if ($is_current) $classes[] = 'current';
+                if ($is_completed) $classes[] = 'completed';
+                if ($can_navigate && !$is_current) $classes[] = 'clickable';
+                if (!$can_navigate && !$is_current) $classes[] = 'disabled';
             ?>
-                <?php if ($can_navigate && $step !== $current): ?>
-                    <a href="<?php echo esc_url($step_url); ?>" class="progress-step clickable">
+                <?php if ($can_navigate && !$is_current): ?>
+                    <a href="<?php echo esc_url($step_url); ?>" class="<?php echo implode(' ', $classes); ?>">
                 <?php else: ?>
-                    <div class="progress-step <?php echo $is_current ? 'current' : 'disabled'; ?>">
+                    <div class="<?php echo implode(' ', $classes); ?>">
                 <?php endif; ?>
                 
-                <span class="step-icon">
-                    <?php echo $is_completed ? '✅' : $data['icon']; ?>
-                </span>
-                <span class="step-label">
-                    <?php echo esc_html($data[$title_key]); ?>
-                </span>
+                    <div class="saw-pi-icon-box">
+                        <?php if ($is_completed): ?>
+                            <svg class="saw-pi-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                        <?php else: ?>
+                            <span class="saw-pi-emoji"><?php echo $data['icon']; ?></span>
+                        <?php endif; ?>
+                    </div>
+                    <span class="saw-pi-label"><?php echo esc_html($data[$title_key]); ?></span>
                 
-                <?php if ($can_navigate && $step !== $current): ?>
+                <?php if ($can_navigate && !$is_current): ?>
                     </a>
                 <?php else: ?>
                     </div>
@@ -359,32 +708,161 @@ foreach ($step_keys as $index => $step) {
             <?php endforeach; ?>
         </div>
     </div>
+    
+    <!-- Mobile Bottom Bar -->
+    <div id="saw-pi-mobile-bar">
+        <div class="saw-pi-mobile-content">
+            <div class="saw-pi-mobile-info">
+                <div class="saw-pi-mobile-icon">
+                    <?php echo $all_steps[$current]['icon'] ?? '📋'; ?>
+                </div>
+                <div class="saw-pi-mobile-text">
+                    <span class="saw-pi-mobile-step-name">
+                        <?php echo esc_html($all_steps[$current][$title_key] ?? ''); ?>
+                    </span>
+                    <span class="saw-pi-mobile-counter">
+                        <?php echo $lang === 'en' ? 'Step' : 'Krok'; ?> <?php echo $current_index + 1; ?>/<?php echo $total_steps; ?>
+                    </span>
+                </div>
+            </div>
+            
+            <div class="saw-pi-ring">
+                <?php 
+                $circumference = 2 * 3.14159 * 18;
+                $offset = $circumference - ($progress_percent / 100) * $circumference;
+                ?>
+                <svg viewBox="0 0 48 48">
+                    <circle class="ring-bg" cx="24" cy="24" r="18"/>
+                    <circle class="ring-progress" cx="24" cy="24" r="18" 
+                            stroke-dasharray="<?php echo $circumference; ?>" 
+                            stroke-dashoffset="<?php echo $offset; ?>"/>
+                </svg>
+                <span class="saw-pi-ring-text"><?php echo $progress_percent; ?>%</span>
+            </div>
+            
+            <button type="button" class="saw-pi-menu-btn" id="saw-pi-menu-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Mobile Sheet Overlay -->
+    <div id="saw-pi-sheet-overlay">
+        <div id="saw-pi-sheet">
+            <div class="saw-pi-sheet-handle">
+                <div class="saw-pi-sheet-bar"></div>
+            </div>
+            
+            <div class="saw-pi-sheet-header">
+                <span class="saw-pi-sheet-title">
+                    <?php echo $lang === 'en' ? 'Progress' : 'Průběh'; ?> — <?php echo $progress_percent; ?>%
+                </span>
+                <button type="button" class="saw-pi-sheet-close" id="saw-pi-sheet-close">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="saw-pi-sheet-content">
+                <?php foreach ($all_steps as $step => $data): 
+                    $is_completed = in_array($step, $completed);
+                    $is_current = ($step === $current);
+                    
+                    $can_navigate = false;
+                    if ($step === 'language') {
+                        $can_navigate = true;
+                    } elseif (in_array($step, $completed) || in_array($step, $history)) {
+                        $can_navigate = true;
+                    }
+                    
+                    if ($current === 'language' && empty($flow['language']) && $step !== 'language') {
+                        $can_navigate = false;
+                    }
+                    
+                    $step_url = home_url('/visitor-invitation/' . $token . '/?step=' . $step);
+                    
+                    $classes = ['saw-pi-step'];
+                    if ($is_current) $classes[] = 'current';
+                    if ($is_completed) $classes[] = 'completed';
+                    if ($can_navigate && !$is_current) $classes[] = 'clickable';
+                    if (!$can_navigate && !$is_current) $classes[] = 'disabled';
+                ?>
+                    <?php if ($can_navigate && !$is_current): ?>
+                        <a href="<?php echo esc_url($step_url); ?>" class="<?php echo implode(' ', $classes); ?>">
+                    <?php else: ?>
+                        <div class="<?php echo implode(' ', $classes); ?>">
+                    <?php endif; ?>
+                    
+                        <div class="saw-pi-icon-box">
+                            <?php if ($is_completed): ?>
+                                <svg class="saw-pi-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            <?php else: ?>
+                                <span class="saw-pi-emoji"><?php echo $data['icon']; ?></span>
+                            <?php endif; ?>
+                        </div>
+                        <span class="saw-pi-label"><?php echo esc_html($data[$title_key]); ?></span>
+                    
+                    <?php if ($can_navigate && !$is_current): ?>
+                        </a>
+                    <?php else: ?>
+                        </div>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
 (function() {
-    var toggleBtn = document.getElementById('progress-toggle');
-    var overlay = document.getElementById('progress-overlay');
-    var closeBtn = document.getElementById('progress-close');
+    'use strict';
     
-    if (toggleBtn && overlay) {
-        toggleBtn.addEventListener('click', function() {
-            overlay.classList.add('active');
-        });
+    var menuBtn = document.getElementById('saw-pi-menu-btn');
+    var sheetOverlay = document.getElementById('saw-pi-sheet-overlay');
+    var closeBtn = document.getElementById('saw-pi-sheet-close');
+    
+    function openSheet() {
+        if (sheetOverlay) {
+            sheetOverlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
     }
     
-    if (closeBtn && overlay) {
-        closeBtn.addEventListener('click', function() {
-            overlay.classList.remove('active');
-        });
+    function closeSheet() {
+        if (sheetOverlay) {
+            sheetOverlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
     }
     
-    if (overlay) {
-        overlay.addEventListener('click', function(e) {
-            if (e.target === overlay) {
-                overlay.classList.remove('active');
+    if (menuBtn) {
+        menuBtn.addEventListener('click', openSheet);
+    }
+    
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeSheet);
+    }
+    
+    if (sheetOverlay) {
+        sheetOverlay.addEventListener('click', function(e) {
+            if (e.target === sheetOverlay) {
+                closeSheet();
             }
         });
     }
+    
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && sheetOverlay && sheetOverlay.classList.contains('active')) {
+            closeSheet();
+        }
+    });
 })();
 </script>

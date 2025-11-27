@@ -17,7 +17,7 @@ $is_invitation = isset($is_invitation) ? $is_invitation : false;
 // Get data from appropriate flow
 if ($is_invitation) {
     // Invitation flow
-    $session = SAW_Session_Manager::get_instance();
+    $session = SAW_Session_Manager::instance();  // ✅ OPRAVENO
     $flow = $session->get('invitation_flow');
     $lang = $flow['language'] ?? 'cs';
     
@@ -41,20 +41,99 @@ if ($is_invitation) {
         }
     }
     
-    // Get departments from training content (simplified - would need full implementation)
-    $departments = isset($departments) ? $departments : array();
+    // ✅ NOVÉ: Načíst departments z databáze
+    $departments = [];
+    if ($visit) {
+        // Najdi language_id
+        $language_id = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM {$wpdb->prefix}saw_training_languages 
+             WHERE customer_id = %d AND language_code = %s",
+            $visit->customer_id,
+            $lang
+        ));
+        
+        error_log("[SHARED DEPARTMENT.PHP] Looking for language_id, customer: {$visit->customer_id}, lang: {$lang}");
+        error_log("[SHARED DEPARTMENT.PHP] Found language_id: " . ($language_id ? $language_id : 'NOT FOUND'));
+        
+        if ($language_id) {
+            // Najdi training_content
+            $content = $wpdb->get_row($wpdb->prepare(
+                "SELECT id FROM {$wpdb->prefix}saw_training_content 
+                 WHERE customer_id = %d AND branch_id = %d AND language_id = %d",
+                $visit->customer_id,
+                $visit->branch_id,
+                $language_id
+            ));
+            
+            error_log("[SHARED DEPARTMENT.PHP] Found content_id: " . ($content ? $content->id : 'NOT FOUND'));
+            
+            if ($content) {
+    error_log("[DEPT] Content ID: " . $content->id);
+    
+    // Načti oddělení která mají text_content NEBO dokumenty
+$dept_rows = $wpdb->get_results($wpdb->prepare(
+    "SELECT tdc.*, d.name as department_name, d.description as department_description,
+            (SELECT COUNT(*) FROM {$wpdb->prefix}saw_training_documents td 
+             WHERE td.document_type = 'department' AND td.reference_id = tdc.id) as docs_count
+     FROM {$wpdb->prefix}saw_training_department_content tdc
+     LEFT JOIN {$wpdb->prefix}saw_departments d ON tdc.department_id = d.id
+     WHERE tdc.training_content_id = %d 
+       AND (
+           (tdc.text_content IS NOT NULL AND tdc.text_content != '')
+           OR EXISTS (
+               SELECT 1 FROM {$wpdb->prefix}saw_training_documents td 
+               WHERE td.document_type = 'department' AND td.reference_id = tdc.id
+           )
+       )
+     ORDER BY tdc.id ASC",
+    $content->id
+), ARRAY_A);
+    
+    error_log("[DEPT] SQL: " . $wpdb->last_query);
+    error_log("[DEPT] Error: " . $wpdb->last_error);
+    error_log("[DEPT] Rows found: " . count($dept_rows));
+    error_log("[DEPT] Raw result: " . json_encode($dept_rows));
+                
+                foreach ($dept_rows as $dept) {
+                    error_log("[SHARED DEPARTMENT.PHP] Processing dept: " . ($dept['department_name'] ?? 'NO NAME') . ", text_content: " . (!empty($dept['text_content']) ? 'YES' : 'NO'));
+                    
+                    // Načti dokumenty pro toto oddělení
+                    $docs = $wpdb->get_results($wpdb->prepare(
+                        "SELECT * FROM {$wpdb->prefix}saw_training_documents 
+                         WHERE document_type = 'department' AND reference_id = %d 
+                         ORDER BY uploaded_at ASC",
+                        $dept['id']
+                    ), ARRAY_A);
+                    
+                    // Použij text_content z training_department_content, nebo fallback na description z departments
+                    $text = $dept['text_content'];
+                    if (empty($text)) {
+                        $text = $dept['department_description'] ?? '';
+                    }
+                    
+                    $departments[] = [
+                        'department_name' => $dept['department_name'] ?? 'Oddělení #' . $dept['department_id'],
+                        'text_content' => $text,
+                        'documents' => $docs
+                    ];
+                }
+                
+                error_log("[SHARED DEPARTMENT.PHP Invitation] Loaded " . count($departments) . " departments with content");
+            }
+        }
+    }
 } else {
     // Terminal flow
     $flow = isset($flow) ? $flow : [];
     $lang = isset($flow['language']) ? $flow['language'] : 'cs';
     $visitor_id = isset($flow['visitor_ids'][0]) ? $flow['visitor_ids'][0] : null;
-    $departments = isset($departments) ? $departments : array();
+    $departments = isset($departments) ? $departments : [];
 }
 
 $has_departments = !empty($departments);
 
-error_log("[SHARED DEPARTMENT.PHP] Is Invitation: " . ($is_invitation ? 'yes' : 'no') . ", Language: {$lang}, Visitor ID: {$visitor_id}");
-error_log("[SHARED DEPARTMENT.PHP] Departments count: " . count($departments));
+error_log("[SHARED DEPARTMENT.PHP] Is Invitation: " . ($is_invitation ? 'yes' : 'no') . ", Language: {$lang}, Visitor ID: " . ($visitor_id ?? 'NULL'));
+error_log("[SHARED DEPARTMENT.PHP] Final departments count: " . count($departments));
 
 // Check if completed
 $completed = false;
@@ -646,6 +725,8 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
     }
 }
 </style>
+
+
 
 <div class="saw-department-aurora">
     

@@ -17,7 +17,7 @@ $is_invitation = isset($is_invitation) ? $is_invitation : false;
 // Get data from appropriate flow
 if ($is_invitation) {
     // Invitation flow
-    $session = SAW_Session_Manager::get_instance();
+    $session = SAW_Session_Manager::instance();
     $flow = $session->get('invitation_flow');
     $lang = $flow['language'] ?? 'cs';
     
@@ -525,7 +525,20 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
     
 </div>
 
+
 <?php if ($has_pdf): ?>
+    <?php 
+// ✅ Načti PDF viewer script
+$pdf_viewer_path = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/assets/js/terminal/pdf-viewer.js';
+$pdf_viewer_url = SAW_VISITORS_PLUGIN_URL . 'includes/frontend/terminal/assets/js/terminal/pdf-viewer.js';
+
+if (file_exists($pdf_viewer_path)):
+?>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="<?php echo esc_url($pdf_viewer_url); ?>?ver=<?php echo time(); ?>"></script>
+<?php else: ?>
+<!-- PDF viewer script not found at: <?php echo esc_html($pdf_viewer_path); ?> -->
+<?php endif; ?>
 <script>
 (function() {
     'use strict';
