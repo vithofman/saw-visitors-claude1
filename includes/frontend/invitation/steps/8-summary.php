@@ -181,6 +181,22 @@ if ($branch) {
     color: rgba(255, 255, 255, 0.85);
 }
 
+.saw-summary-section-content h1,
+.saw-summary-section-content h2,
+.saw-summary-section-content h3,
+.saw-summary-section-content h4,
+.saw-summary-section-content h5,
+.saw-summary-section-content h6 {
+    color: rgba(255, 255, 255, 0.9);
+    margin: 1rem 0 0.5rem 0;
+}
+
+.saw-summary-section-content h1:first-child,
+.saw-summary-section-content h2:first-child,
+.saw-summary-section-content h3:first-child {
+    margin-top: 0;
+}
+
 .saw-summary-row {
     display: flex;
     justify-content: space-between;

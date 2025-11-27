@@ -12,14 +12,17 @@
 
 if (!defined('ABSPATH')) exit;
 
-// ✅ OPRAVA: Použij proměnné předané z render_header()
-// $flow, $current_step, $has_training, $token jsou předány jako proměnné z invitation-controller.php
+// Použij proměnné předané z render_header()
 $completed = $flow['completed_steps'] ?? [];
 $history = $flow['history'] ?? [];
 $current = $current_step;
 $token = $token ?? ($flow['token'] ?? '');
 
-// Definuj všechny možné kroky
+// Zjisti jazyk pro UI
+$lang = $flow['language'] ?? 'cs';
+$title_key = ($lang === 'en') ? 'title_en' : 'title_cs';
+
+// Definuj ZÁKLADNÍ kroky (vždy zobrazené)
 $all_steps = [
     'language' => [
         'icon' => '🌐',
@@ -38,7 +41,7 @@ $all_steps = [
     ],
 ];
 
-// ✅ OPRAVENO: Přidej jen DOSTUPNÉ training kroky
+// ✅ OPRAVENO: Přidej POUZE DOSTUPNÉ training kroky
 if (isset($available_training_steps) && !empty($available_training_steps)) {
     $training_step_definitions = [
         'training-video' => ['icon' => '🎥', 'title_cs' => 'Video', 'title_en' => 'Video'],
@@ -48,6 +51,7 @@ if (isset($available_training_steps) && !empty($available_training_steps)) {
         'training-additional' => ['icon' => 'ℹ️', 'title_cs' => 'Další info', 'title_en' => 'Additional'],
     ];
     
+    // Přidej JEN kroky které jsou v $available_training_steps
     foreach ($available_training_steps as $step) {
         $step_key = $step['step'];
         if (isset($training_step_definitions[$step_key])) {
@@ -56,7 +60,7 @@ if (isset($available_training_steps) && !empty($available_training_steps)) {
     }
 }
 
-// ✅ NOVÉ: Přidat summary krok před success
+// Přidat summary a success na konec
 $all_steps['summary'] = [
     'icon' => '📋',
     'title_cs' => 'Přehled',
@@ -68,10 +72,6 @@ $all_steps['success'] = [
     'title_cs' => 'Hotovo',
     'title_en' => 'Done'
 ];
-
-// Zjisti jazyk pro UI
-$lang = $flow['language'] ?? 'cs';
-$title_key = ($lang === 'en') ? 'title_en' : 'title_cs';
 
 // Najdi index aktuálního kroku pro mobilní zobrazení
 $current_index = 0;
@@ -272,19 +272,14 @@ foreach ($step_keys as $index => $step) {
         $is_completed = in_array($step, $completed);
         $is_current = ($step === $current);
         
-        // Logika navigace: uživatel může navigovat pokud:
-        // - Krok je v completed_steps NEBO
-        // - Krok je v history NEBO
-        // - Krok je language (vždy přístupný)
-        // Výjimka: Z language kroku nelze navigovat jinam dokud není vybrán jazyk
+        // Logika navigace
         $can_navigate = false;
         if ($step === 'language') {
-            $can_navigate = true; // Language je vždy přístupný
+            $can_navigate = true;
         } elseif (in_array($step, $completed) || in_array($step, $history)) {
             $can_navigate = true;
         }
         
-        // Pokud jsme na language kroku a jazyk ještě není vybrán, nelze navigovat jinam
         if ($current === 'language' && empty($flow['language']) && $step !== 'language') {
             $can_navigate = false;
         }
@@ -314,7 +309,7 @@ foreach ($step_keys as $index => $step) {
 
 <!-- Mobile: Floating button -->
 <button class="progress-mobile-trigger" id="progress-toggle">
-    <span class="current-step-icon"><?php echo $all_steps[$current]['icon']; ?></span>
+    <span class="current-step-icon"><?php echo $all_steps[$current]['icon'] ?? '📋'; ?></span>
     <span class="current-step-number"><?php echo ($current_index + 1); ?>/<?php echo count($all_steps); ?></span>
 </button>
 
@@ -330,7 +325,6 @@ foreach ($step_keys as $index => $step) {
                 $is_completed = in_array($step, $completed);
                 $is_current = ($step === $current);
                 
-                // Stejná logika navigace jako v desktop verzi
                 $can_navigate = false;
                 if ($step === 'language') {
                     $can_navigate = true;
@@ -369,7 +363,6 @@ foreach ($step_keys as $index => $step) {
 
 <script>
 (function() {
-    // Toggle mobile menu
     var toggleBtn = document.getElementById('progress-toggle');
     var overlay = document.getElementById('progress-overlay');
     var closeBtn = document.getElementById('progress-close');
@@ -395,4 +388,3 @@ foreach ($step_keys as $index => $step) {
     }
 })();
 </script>
-

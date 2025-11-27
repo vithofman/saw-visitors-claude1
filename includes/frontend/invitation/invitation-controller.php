@@ -1276,15 +1276,17 @@ private function get_available_training_steps() {
         $this->visit_id
     ), ARRAY_A);
     
-    // Načíst hosty (kontaktní osoby)
-    $hosts = $wpdb->get_results($wpdb->prepare(
-        "SELECT u.display_name, u.user_email, um.meta_value as phone
-         FROM {$wpdb->prefix}saw_visit_hosts vh
-         JOIN {$wpdb->users} u ON vh.user_id = u.ID
-         LEFT JOIN {$wpdb->usermeta} um ON u.ID = um.user_id AND um.meta_key = 'phone'
-         WHERE vh.visit_id = %d",
-        $this->visit_id
-    ), ARRAY_A);
+    // Načíst hosty (kontaktní osoby) - z SAW users tabulky
+$hosts = $wpdb->get_results($wpdb->prepare(
+    "SELECT 
+        CONCAT(su.first_name, ' ', su.last_name) as display_name,
+        su.email as user_email,
+        su.position as phone
+     FROM {$wpdb->prefix}saw_visit_hosts vh
+     JOIN {$wpdb->prefix}saw_users su ON vh.user_id = su.id
+     WHERE vh.visit_id = %d",
+    $this->visit_id
+), ARRAY_A);
     
     // Načíst visitors
     $visitors = $wpdb->get_results($wpdb->prepare(
