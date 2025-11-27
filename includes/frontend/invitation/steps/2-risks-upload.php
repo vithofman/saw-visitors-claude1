@@ -19,20 +19,6 @@ $t = $translations[$lang] ?? $translations['cs'];
 ?>
 
 <style>
-.saw-progress-container{display:flex;align-items:center;justify-content:center;gap:1.5rem;margin-bottom:3rem;padding:2rem 0;}
-.saw-progress-steps{display:flex;align-items:center;gap:0.75rem;}
-.saw-progress-step{display:flex;align-items:center;gap:0.375rem;}
-.saw-step-circle{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;flex-shrink:0;}
-.saw-progress-step.completed .saw-step-circle{background:#10b981;color:#fff;box-shadow:0 0 0 3px rgba(16,185,129,0.2);}
-.saw-progress-step.active .saw-step-circle{background:#fff;color:#667eea;box-shadow:0 0 0 3px rgba(255,255,255,0.3);}
-.saw-progress-step.upcoming .saw-step-circle{background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.5);}
-.saw-step-line{width:30px;height:3px;flex-shrink:0;}
-.saw-progress-step.completed .saw-step-line{background:linear-gradient(90deg,#10b981 0%,rgba(16,185,129,0.3) 100%);}
-.saw-progress-step.active .saw-step-line{background:linear-gradient(90deg,rgba(255,255,255,0.5) 0%,rgba(255,255,255,0.1) 100%);}
-.saw-progress-step.upcoming .saw-step-line{background:rgba(255,255,255,0.1);}
-.saw-progress-step:last-child .saw-step-line{display:none;}
-.saw-step-label{color:rgba(255,255,255,0.7);font-size:0.875rem;font-weight:600;}
-
 .saw-risks-card{width:100%;max-width:1100px;margin:0 auto;background:#1a202c;border-radius:20px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);}
 .saw-risks-header{display:flex;align-items:center;gap:1rem;padding:1.5rem 2rem;border-bottom:1px solid #2d3748;}
 .saw-risks-icon{width:48px;height:48px;background:linear-gradient(135deg,#f59e0b 0%,#d97706 100%);border-radius:14px;display:flex;align-items:center;justify-content:center;}
@@ -94,29 +80,8 @@ $t = $translations[$lang] ?? $translations['cs'];
 .saw-btn-continue{display:inline-flex;align-items:center;gap:0.625rem;padding:0.875rem 1.5rem;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;border:none;border-radius:14px;font-size:1rem;font-weight:700;cursor:pointer;box-shadow:0 6px 20px rgba(102,126,234,0.4);}
 .saw-btn-continue svg{width:18px;height:18px;}
 
-@media (max-width:900px){.saw-risks-columns{grid-template-columns:1fr;}.saw-risks-actions{flex-direction:column-reverse;}.saw-btn-skip,.saw-btn-continue{width:100%;justify-content:center;}.saw-progress-steps{gap:0.5rem;}.saw-progress-step{gap:0.25rem;}.saw-step-circle{width:28px;height:28px;font-size:0.875rem;}.saw-step-line{width:24px;}.saw-step-label{font-size:0.8125rem;}}
+@media (max-width:900px){.saw-risks-columns{grid-template-columns:1fr;}.saw-risks-actions{flex-direction:column-reverse;}.saw-btn-skip,.saw-btn-continue{width:100%;justify-content:center;}}
 </style>
-
-<div class="saw-progress-container">
-    <div class="saw-progress-steps">
-        <div class="saw-progress-step completed">
-            <div class="saw-step-circle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg></div>
-            <div class="saw-step-line"></div>
-        </div>
-        <div class="saw-progress-step active">
-            <div class="saw-step-circle">2</div>
-            <div class="saw-step-line"></div>
-        </div>
-        <div class="saw-progress-step upcoming">
-            <div class="saw-step-circle">3</div>
-            <div class="saw-step-line"></div>
-        </div>
-        <div class="saw-progress-step upcoming">
-            <div class="saw-step-circle">4</div>
-        </div>
-    </div>
-    <span class="saw-step-label"><?php echo esc_html($t['step']); ?> 2/4</span>
-</div>
 
 <div class="saw-risks-card">
     <div class="saw-risks-header">

@@ -5,7 +5,7 @@ $flow = $this->session->get('invitation_flow');
 $token = $flow['token'] ?? $this->token ?? '';
 ?>
 <!DOCTYPE html>
-<html <?php language_attributes(); ?>>
+<html <?php language_attributes(); ?> class="saw-invitation-page">
 <head>
     <meta charset="<?php bloginfo('charset'); ?>">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
@@ -23,6 +23,16 @@ $token = $flow['token'] ?? $this->token ?? '';
         #wpadminbar { display: none !important; }
         html { margin-top: 0 !important; }
         body { overflow-x: hidden; overflow-y: auto; }
+        
+        /* ✅ OPRAVA SCROLLOVÁNÍ: Override globálních stylů pro invitation stránky */
+        html.saw-invitation-page,
+        html.saw-invitation-page body,
+        body.saw-invitation-page {
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
+            height: auto !important;
+            min-height: 100vh !important;
+        }
         
         .saw-terminal-home-btn {
             position: fixed;

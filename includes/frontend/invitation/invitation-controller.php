@@ -281,6 +281,10 @@ error_log("Visit found: " . ($visit ? "YES (ID: {$visit['id']})" : "NO"));
             error_log("Rendering: training-additional");
             $this->render_training_additional();
             break;
+        case 'summary':
+            error_log("Rendering: summary");
+            $this->render_summary();
+            break;
         case 'success':
             error_log("Rendering: success");
             $this->render_pin_success();
@@ -319,6 +323,9 @@ error_log("Visit found: " . ($visit ? "YES (ID: {$visit['id']})" : "NO"));
                 break;
             case 'complete_training':
                 $this->handle_complete_training();
+                break;
+            case 'confirm_summary':
+                $this->handle_confirm_summary();
                 break;
         }
     }
@@ -690,10 +697,10 @@ error_log("Visit found: " . ($visit ? "YES (ID: {$visit['id']})" : "NO"));
         error_log("Redirecting to: training-video");
         wp_redirect(home_url('/visitor-invitation/' . $this->token . '/'));
     } else {
-        $flow['step'] = 'success';
+        $flow['step'] = 'summary';
         $this->session->set('invitation_flow', $flow);
-        error_log("Redirecting to: success");
-        wp_redirect(home_url('/visitor-invitation/' . $this->token . '/'));
+        error_log("Redirecting to: summary");
+        wp_redirect(home_url('/visitor-invitation/' . $this->token . '/?step=summary'));
     }
     
     exit;
@@ -836,18 +843,18 @@ error_log("Visit found: " . ($visit ? "YES (ID: {$visit['id']})" : "NO"));
             require $template;
         }
         
-        // ✅ NOVÉ: Přidat progress indicator (kromě success page)
-        if ($this->current_step !== 'success') {
-            // ✅ OPRAVA: Vypočítej všechny potřebné hodnoty TADY (kde máme $this)
-            $has_training = $this->has_training_content();
-            $flow = $this->session->get('invitation_flow');
-            $current_step = $this->current_step;
-            
-            // Předej jako proměnné do template
-            $progress = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/invitation/components/progress-indicator.php';
-            if (file_exists($progress)) {
-                require $progress;  // $has_training, $flow, $current_step jsou teď dostupné v template
-            }
+        // ✅ NOVÉ: Přidat progress indicator (zobrazit i na success page pro navigaci zpět)
+        // Progress indicator se zobrazuje na všech stránkách včetně success
+        // ✅ OPRAVA: Vypočítej všechny potřebné hodnoty TADY (kde máme $this)
+        $has_training = $this->has_training_content();
+        $flow = $this->session->get('invitation_flow');
+        $current_step = $this->current_step;
+        $token = $this->token;
+        
+        // Předej jako proměnné do template
+        $progress = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/invitation/components/progress-indicator.php';
+        if (file_exists($progress)) {
+            require $progress;  // $has_training, $flow, $current_step, $token jsou teď dostupné v template
         }
     }
     
@@ -1026,6 +1033,178 @@ error_log("Visit found: " . ($visit ? "YES (ID: {$visit['id']})" : "NO"));
         if (file_exists($template)) {
             $this->render_template($template, ['token' => $this->token, 'is_invitation' => true]);
         }
+    }
+    
+    /**
+     * Handle complete training action
+     * Redirects to next training step or summary
+     */
+    private function handle_complete_training() {
+        if (!isset($_POST['invitation_nonce']) || 
+            !wp_verify_nonce($_POST['invitation_nonce'], 'saw_invitation_step')) {
+            wp_die('Invalid nonce', 'Error', ['response' => 403]);
+        }
+        
+        global $wpdb;
+        $flow = $this->session->get('invitation_flow');
+        $current = $this->current_step;
+        
+        // Mark current step as completed
+        if (!in_array($current, $flow['completed_steps'] ?? [])) {
+            $flow['completed_steps'][] = $current;
+        }
+        if (!in_array($current, $flow['history'] ?? [])) {
+            $flow['history'][] = $current;
+        }
+        
+        // Determine next step
+        $training_steps = ['training-video', 'training-map', 'training-risks', 'training-department', 'training-additional'];
+        $current_index = array_search($current, $training_steps);
+        
+        if ($current_index !== false && isset($training_steps[$current_index + 1])) {
+            // Next training step
+            $flow['step'] = $training_steps[$current_index + 1];
+        } else {
+            // Last training step completed, go to summary
+            $flow['step'] = 'summary';
+        }
+        
+        $this->session->set('invitation_flow', $flow);
+        wp_redirect(home_url('/visitor-invitation/' . $this->token . '/?step=' . $flow['step']));
+        exit;
+    }
+    
+    /**
+     * Handle skip training action
+     * Redirects to summary
+     */
+    private function handle_skip_training() {
+        if (!isset($_POST['invitation_nonce']) || 
+            !wp_verify_nonce($_POST['invitation_nonce'], 'saw_invitation_step')) {
+            wp_die('Invalid nonce', 'Error', ['response' => 403]);
+        }
+        
+        $flow = $this->session->get('invitation_flow');
+        
+        // Mark all training steps as skipped
+        $training_steps = ['training-video', 'training-map', 'training-risks', 'training-department', 'training-additional'];
+        foreach ($training_steps as $step) {
+            if (!in_array($step, $flow['history'] ?? [])) {
+                $flow['history'][] = $step;
+            }
+        }
+        
+        $flow['step'] = 'summary';
+        $this->session->set('invitation_flow', $flow);
+        wp_redirect(home_url('/visitor-invitation/' . $this->token . '/?step=summary'));
+        exit;
+    }
+    
+    /**
+     * Render summary page
+     */
+    private function render_summary() {
+        global $wpdb;
+        
+        // Načíst visit data
+        $visit = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}saw_visits WHERE id = %d",
+            $this->visit_id
+        ), ARRAY_A);
+        
+        // Načíst branch data (adresa)
+        $branch = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}saw_branches WHERE id = %d",
+            $this->branch_id
+        ), ARRAY_A);
+        
+        // Načíst company data (navštěvovaná firma)
+        $company = null;
+        if (!empty($visit['company_id'])) {
+            $company = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM {$wpdb->prefix}saw_companies WHERE id = %d",
+                $visit['company_id']
+            ), ARRAY_A);
+        }
+        
+        // Načíst hosty (kontaktní osoby)
+        $hosts = $wpdb->get_results($wpdb->prepare(
+            "SELECT u.display_name, u.user_email, um.meta_value as phone
+             FROM {$wpdb->prefix}saw_visit_hosts vh
+             JOIN {$wpdb->users} u ON vh.user_id = u.ID
+             LEFT JOIN {$wpdb->usermeta} um ON u.ID = um.user_id AND um.meta_key = 'phone'
+             WHERE vh.visit_id = %d",
+            $this->visit_id
+        ), ARRAY_A);
+        
+        // Načíst visitors
+        $visitors = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}saw_visitors 
+             WHERE visit_id = %d AND participation_status != 'cancelled'
+             ORDER BY id ASC",
+            $this->visit_id
+        ), ARRAY_A);
+        
+        // Načíst risks materials
+        $risks_text = $wpdb->get_var($wpdb->prepare(
+            "SELECT text_content FROM {$wpdb->prefix}saw_visit_invitation_materials 
+             WHERE visit_id = %d AND material_type = 'text' 
+             ORDER BY uploaded_at DESC LIMIT 1",
+            $this->visit_id
+        ));
+        
+        $risks_docs = $wpdb->get_results($wpdb->prepare(
+            "SELECT file_name, file_size FROM {$wpdb->prefix}saw_visit_invitation_materials 
+             WHERE visit_id = %d AND material_type = 'document'",
+            $this->visit_id
+        ), ARRAY_A);
+        
+        // PIN kód
+        $pin = $visit['pin_code'] ?? '';
+        
+        // Training status
+        $flow = $this->session->get('invitation_flow');
+        $completed_steps = $flow['completed_steps'] ?? [];
+        
+        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/invitation/steps/8-summary.php';
+        $this->render_template($template, [
+            'visit' => $visit,
+            'branch' => $branch,
+            'company' => $company,
+            'hosts' => $hosts,
+            'visitors' => $visitors,
+            'risks_text' => $risks_text,
+            'risks_docs' => $risks_docs,
+            'pin' => $pin,
+            'completed_steps' => $completed_steps,
+            'has_training' => $this->has_training_content(),
+        ]);
+    }
+    
+    /**
+     * Handle confirm summary action
+     */
+    private function handle_confirm_summary() {
+        if (!isset($_POST['invitation_nonce']) || 
+            !wp_verify_nonce($_POST['invitation_nonce'], 'saw_invitation_step')) {
+            wp_die('Invalid nonce', 'Error', ['response' => 403]);
+        }
+        
+        $flow = $this->session->get('invitation_flow');
+        
+        // Přidat summary do completed
+        if (!in_array('summary', $flow['completed_steps'] ?? [])) {
+            $flow['completed_steps'][] = 'summary';
+        }
+        if (!in_array('summary', $flow['history'] ?? [])) {
+            $flow['history'][] = 'summary';
+        }
+        
+        $flow['step'] = 'success';
+        $this->session->set('invitation_flow', $flow);
+        
+        wp_redirect(home_url('/visitor-invitation/' . $this->token . '/?step=success'));
+        exit;
     }
     
     private function render_pin_success() {

@@ -204,22 +204,23 @@ $t = $translations[$lang] ?? $translations['cs'];
             </div>
         </div>
     </div>
+    
+    <!-- Informační text o možnosti úpravy -->
+    <div class="saw-edit-info" style="
+        margin-top: 2rem;
+        padding: 1rem 1.5rem;
+        background: rgba(59, 130, 246, 0.1);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        border-radius: 12px;
+        text-align: center;
+        color: #93c5fd;
+    ">
+        <p style="margin: 0; font-size: 0.9375rem;">
+            <?php echo $lang === 'en' 
+                ? 'You can edit your information anytime using the menu on the left.' 
+                : 'Své údaje můžete kdykoliv upravit pomocí menu vlevo.'; 
+            ?>
+        </p>
+    </div>
 </div>
-
-<script>
-// Auto-cleanup session after 60s
-setTimeout(function() {
-    if (typeof sawInvitation !== 'undefined' && sawInvitation.clearNonce) {
-        fetch(sawInvitation.ajaxurl, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: new URLSearchParams({
-                action: 'saw_clear_invitation_session',
-                nonce: sawInvitation.clearNonce,
-                token: sawInvitation.token
-            })
-        });
-    }
-}, 60000);
-</script>
 
