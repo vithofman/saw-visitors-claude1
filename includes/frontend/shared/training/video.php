@@ -14,12 +14,18 @@ if (!defined('ABSPATH')) {
 // Detect flow type
 $is_invitation = isset($is_invitation) ? $is_invitation : false;
 
+error_log("=== VIDEO.PHP TEMPLATE START ===");
+error_log("is_invitation: " . ($is_invitation ? 'TRUE' : 'FALSE'));
+
 // Get data from appropriate flow
 if ($is_invitation) {
     // Invitation flow
-    $session = SAW_Session_Manager::get_instance();
+    // ✅ OPRAVA: Použij správnou metodu instance() místo get_instance()
+    $session = SAW_Session_Manager::instance();
     $flow = $session->get('invitation_flow');
     $lang = $flow['language'] ?? 'cs';
+    
+    error_log("[VIDEO.PHP Invitation] Language from session: {$lang}");
     
     // Get visitor ID from invitation flow
     global $wpdb;
@@ -27,6 +33,8 @@ if ($is_invitation) {
         "SELECT * FROM {$wpdb->prefix}saw_visits WHERE id = %d",
         $flow['visit_id'] ?? 0
     ));
+    
+    error_log("[VIDEO.PHP Invitation] Visit ID: " . ($flow['visit_id'] ?? 'N/A') . ", Found: " . ($visit ? 'YES' : 'NO'));
     
     $visitor_id = null;
     if ($visit) {
@@ -44,12 +52,16 @@ if ($is_invitation) {
     // Get video URL from training content
     $video_url = '';
     if ($visit) {
+        error_log("[VIDEO.PHP Invitation] Looking for language_id: customer_id={$visit->customer_id}, lang={$lang}");
+        
         $language_id = $wpdb->get_var($wpdb->prepare(
             "SELECT id FROM {$wpdb->prefix}saw_training_languages 
              WHERE customer_id = %d AND language_code = %s",
             $visit->customer_id,
             $lang
         ));
+        
+        error_log("[VIDEO.PHP Invitation] Found language_id: " . ($language_id ? $language_id : 'NOT FOUND'));
         
         if ($language_id) {
             $content = $wpdb->get_row($wpdb->prepare(
@@ -60,29 +72,40 @@ if ($is_invitation) {
                 $language_id
             ));
             
+            error_log("[VIDEO.PHP Invitation] Content found: " . ($content ? 'YES' : 'NO'));
+            if ($content) {
+                error_log("[VIDEO.PHP Invitation] Raw video_url: " . ($content->video_url ?? 'EMPTY'));
+            }
+            
             if ($content && !empty($content->video_url)) {
                 $video_url = $content->video_url;
-                // Convert YouTube/Vimeo URLs
+                // Convert YouTube/Vimeo URLs to embed format
                 if (strpos($video_url, 'youtube.com') !== false || strpos($video_url, 'youtu.be') !== false) {
                     preg_match('/(?:v=|youtu\.be\/)([^&]+)/', $video_url, $matches);
-                    if (!empty($matches[1])) $video_url = 'https://www.youtube.com/embed/' . $matches[1];
+                    if (!empty($matches[1])) {
+                        $video_url = 'https://www.youtube.com/embed/' . $matches[1];
+                    }
                 } elseif (strpos($video_url, 'vimeo.com') !== false) {
                     preg_match('/vimeo\.com\/(\d+)/', $video_url, $matches);
-                    if (!empty($matches[1])) $video_url = 'https://player.vimeo.com/video/' . $matches[1];
+                    if (!empty($matches[1])) {
+                        $video_url = 'https://player.vimeo.com/video/' . $matches[1];
+                    }
                 }
+                
+                error_log("[VIDEO.PHP Invitation] Converted video_url: " . $video_url);
             }
         }
     }
 } else {
-    // Terminal flow
+    // Terminal flow - beze změny
     $flow = isset($flow) ? $flow : [];
     $lang = isset($flow['language']) ? $flow['language'] : 'cs';
     $visitor_id = isset($flow['visitor_ids'][0]) ? $flow['visitor_ids'][0] : null;
     $video_url = isset($video_url) ? $video_url : '';
 }
 
-error_log("[SHARED VIDEO.PHP] Is Invitation: " . ($is_invitation ? 'yes' : 'no') . ", Language: {$lang}, Visitor ID: {$visitor_id}");
-error_log("[SHARED VIDEO.PHP] Video URL: " . ($video_url ? $video_url : 'NOT SET'));
+error_log("[SHARED VIDEO.PHP] Is Invitation: " . ($is_invitation ? 'yes' : 'no') . ", Language: {$lang}, Visitor ID: " . ($visitor_id ?? 'NULL'));
+error_log("[SHARED VIDEO.PHP] Final Video URL: " . ($video_url ? $video_url : 'NOT SET'));
 
 // Check if video exists
 $has_video = !empty($video_url);
@@ -553,6 +576,19 @@ $skip_action = $is_invitation ? 'skip_training' : 'skip_training';
 </div>
 
 <?php if ($has_video): ?>
+
+<?php 
+// ✅ Načti video player script ze správné cesty
+$video_player_path = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/assets/js/terminal/video-player.js';
+$video_player_url = SAW_VISITORS_PLUGIN_URL . 'includes/frontend/terminal/assets/js/terminal/video-player.js';
+
+if (file_exists($video_player_path)):
+?>
+<script src="<?php echo esc_url($video_player_url); ?>?ver=<?php echo time(); ?>"></script>
+<?php else: ?>
+<!-- Video player script not found at: <?php echo esc_html($video_player_path); ?> -->
+<?php endif; ?>
+
 <script>
 (function() {
     'use strict';
@@ -561,6 +597,7 @@ $skip_action = $is_invitation ? 'skip_training' : 'skip_training';
     
     function initWhenReady() {
         if (typeof SAWVideoPlayer === 'undefined') {
+            console.log('[SAW Video] Waiting for SAWVideoPlayer class...');
             setTimeout(initWhenReady, 100);
             return;
         }
@@ -639,6 +676,15 @@ $skip_action = $is_invitation ? 'skip_training' : 'skip_training';
 })();
 </script>
 <?php endif; ?>
+```
+
+Klíčová změna je cesta ke scriptu:
+```
+.../assets/js/video-player.js
+```
+→
+```
+.../assets/js/terminal/video-player.js
 
 <?php
 error_log("[SHARED VIDEO.PHP] Template finished");

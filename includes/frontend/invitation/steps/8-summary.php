@@ -10,53 +10,88 @@ $translations = [
         'title' => 'Přehled vaší návštěvy',
         'pin_label' => 'Váš PIN kód',
         'visit_date' => 'Termín návštěvy',
+        'visit_time' => 'Čas',
         'location' => 'Místo',
         'contact' => 'Kontaktní osoba',
         'visitors_title' => 'Návštěvníci',
         'risks_title' => 'Informace o rizicích',
         'risks_text' => 'Popis',
         'risks_docs' => 'Dokumenty',
-        'training_title' => 'Školení',
-        'training_completed' => 'Dokončeno',
-        'training_skipped' => 'Přeskočeno',
-        'training_pending' => 'Čeká',
         'confirm_btn' => 'Dokončit registraci',
         'no_risks' => 'Žádné informace o rizicích',
         'no_visitors' => 'Žádní návštěvníci',
+        'not_specified' => 'Nespecifikováno',
     ],
     'en' => [
         'title' => 'Your Visit Summary',
         'pin_label' => 'Your PIN Code',
         'visit_date' => 'Visit Date',
+        'visit_time' => 'Time',
         'location' => 'Location',
         'contact' => 'Contact Person',
         'visitors_title' => 'Visitors',
         'risks_title' => 'Risk Information',
         'risks_text' => 'Description',
         'risks_docs' => 'Documents',
-        'training_title' => 'Training',
-        'training_completed' => 'Completed',
-        'training_skipped' => 'Skipped',
-        'training_pending' => 'Pending',
         'confirm_btn' => 'Complete Registration',
         'no_risks' => 'No risk information',
         'no_visitors' => 'No visitors',
+        'not_specified' => 'Not specified',
     ],
 ];
 
 $t = $translations[$lang] ?? $translations['cs'];
 
-// Formátování data
-$visit_date = '';
-if (!empty($visit['scheduled_date'])) {
-    $date = new DateTime($visit['scheduled_date']);
-    $visit_date = $date->format('j. n. Y');
-    
-    if (!empty($visit['scheduled_time_from'])) {
-        $visit_date .= ', ' . substr($visit['scheduled_time_from'], 0, 5);
-        if (!empty($visit['scheduled_time_to'])) {
-            $visit_date .= ' - ' . substr($visit['scheduled_time_to'], 0, 5);
+// Formátování data a času
+$visit_date_formatted = $t['not_specified'];
+$visit_time_formatted = '';
+
+// ✅ Priorita 1: saw_visit_schedules tabulka
+if (!empty($schedule['date'])) {
+    try {
+        $date = new DateTime($schedule['date']);
+        if ($lang === 'en') {
+            $visit_date_formatted = $date->format('F j, Y'); // "November 30, 2025"
+        } else {
+            $visit_date_formatted = $date->format('j. n. Y'); // "30. 11. 2025"
         }
+    } catch (Exception $e) {
+        $visit_date_formatted = $schedule['date'];
+    }
+    
+    // Čas ze schedule
+    if (!empty($schedule['time_from'])) {
+        $visit_time_formatted = substr($schedule['time_from'], 0, 5); // "07:21"
+        if (!empty($schedule['time_to'])) {
+            $visit_time_formatted .= ' - ' . substr($schedule['time_to'], 0, 5); // "07:21 - 08:21"
+        }
+    }
+}
+// ✅ Priorita 2: Fallback na planned_date_from z saw_visits
+elseif (!empty($visit['planned_date_from'])) {
+    try {
+        $datetime = new DateTime($visit['planned_date_from']);
+        if ($lang === 'en') {
+            $visit_date_formatted = $datetime->format('F j, Y');
+        } else {
+            $visit_date_formatted = $datetime->format('j. n. Y');
+        }
+        
+        // Extrahuj čas pokud není 00:00
+        $time_part = $datetime->format('H:i');
+        if ($time_part !== '00:00') {
+            $visit_time_formatted = $time_part;
+            
+            if (!empty($visit['planned_date_to'])) {
+                $datetime_to = new DateTime($visit['planned_date_to']);
+                $time_to = $datetime_to->format('H:i');
+                if ($time_to !== '00:00' && $time_to !== $time_part) {
+                    $visit_time_formatted .= ' - ' . $time_to;
+                }
+            }
+        }
+    } catch (Exception $e) {
+        $visit_date_formatted = $visit['planned_date_from'];
     }
 }
 
@@ -165,6 +200,7 @@ if ($branch) {
 .saw-summary-row .value {
     color: #fff;
     font-weight: 500;
+    text-align: right;
 }
 
 .saw-visitor-item {
@@ -216,24 +252,6 @@ if ($branch) {
 
 .saw-doc-icon {
     color: #ef4444;
-}
-
-.saw-training-status {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.saw-training-status.completed {
-    color: #10b981;
-}
-
-.saw-training-status.skipped {
-    color: #f59e0b;
-}
-
-.saw-training-status.pending {
-    color: rgba(255, 255, 255, 0.5);
 }
 
 .saw-summary-actions {
@@ -290,12 +308,21 @@ if ($branch) {
         <div class="saw-summary-section-content">
             <div class="saw-summary-row">
                 <span class="label"><?php echo esc_html($t['visit_date']); ?></span>
-                <span class="value"><?php echo esc_html($visit_date); ?></span>
+                <span class="value"><?php echo esc_html($visit_date_formatted); ?></span>
             </div>
+            <?php if (!empty($visit_time_formatted)): ?>
+            <div class="saw-summary-row">
+                <span class="label"><?php echo esc_html($t['visit_time']); ?></span>
+                <span class="value"><?php echo esc_html($visit_time_formatted); ?></span>
+            </div>
+            <?php endif; ?>
             <?php if ($address): ?>
             <div class="saw-summary-row">
                 <span class="label"><?php echo esc_html($t['location']); ?></span>
-                <span class="value"><?php echo esc_html($branch['name'] ?? ''); ?><br><small><?php echo esc_html($address); ?></small></span>
+                <span class="value">
+                    <?php echo esc_html($branch['name'] ?? ''); ?>
+                    <?php if ($address): ?><br><small style="color: rgba(255,255,255,0.6);"><?php echo esc_html($address); ?></small><?php endif; ?>
+                </span>
             </div>
             <?php endif; ?>
         </div>
@@ -356,72 +383,35 @@ if ($branch) {
         </div>
     </div>
     
-    <!-- Risks Section -->
+    <!-- Risks Section (only if there are risks) -->
+    <?php if (!empty($risks_text) || !empty($risks_docs)): ?>
     <div class="saw-summary-section">
         <div class="saw-summary-section-header">
             <span class="icon">⚠️</span>
             <h3><?php echo esc_html($t['risks_title']); ?></h3>
         </div>
         <div class="saw-summary-section-content">
-            <?php if (!empty($risks_text) || !empty($risks_docs)): ?>
-                <?php if (!empty($risks_text)): ?>
-                <div style="margin-bottom: 1rem;">
-                    <div class="label" style="margin-bottom: 0.5rem;"><?php echo esc_html($t['risks_text']); ?>:</div>
-                    <div style="color: rgba(255,255,255,0.9);"><?php echo wp_kses_post($risks_text); ?></div>
-                </div>
-                <?php endif; ?>
-                
-                <?php if (!empty($risks_docs)): ?>
-                <div>
-                    <div class="label" style="margin-bottom: 0.5rem;"><?php echo esc_html($t['risks_docs']); ?>:</div>
-                    <?php foreach ($risks_docs as $doc): ?>
-                    <div class="saw-doc-item">
-                        <span class="saw-doc-icon">📄</span>
-                        <span><?php echo esc_html($doc['file_name']); ?></span>
-                        <small style="color: rgba(255,255,255,0.5);">
-                            (<?php echo size_format($doc['file_size']); ?>)
-                        </small>
-                    </div>
-                    <?php endforeach; ?>
-                </div>
-                <?php endif; ?>
-            <?php else: ?>
-                <div class="saw-empty-state"><?php echo esc_html($t['no_risks']); ?></div>
-            <?php endif; ?>
-        </div>
-    </div>
-    
-    <!-- Training Section (only if training exists) -->
-    <?php if ($has_training): ?>
-    <div class="saw-summary-section">
-        <div class="saw-summary-section-header">
-            <span class="icon">📚</span>
-            <h3><?php echo esc_html($t['training_title']); ?></h3>
-        </div>
-        <div class="saw-summary-section-content">
-            <?php
-            $training_steps = ['training-video', 'training-map', 'training-risks', 'training-department', 'training-additional'];
-            $training_labels = [
-                'training-video' => 'Video',
-                'training-map' => $lang === 'en' ? 'Map' : 'Mapa',
-                'training-risks' => $lang === 'en' ? 'Risks' : 'Rizika',
-                'training-department' => $lang === 'en' ? 'Department' : 'Oddělení',
-                'training-additional' => $lang === 'en' ? 'Additional' : 'Další',
-            ];
-            
-            foreach ($training_steps as $ts):
-                $is_completed = in_array($ts, $completed_steps);
-                $status_class = $is_completed ? 'completed' : 'pending';
-                $status_text = $is_completed ? $t['training_completed'] : $t['training_pending'];
-                $status_icon = $is_completed ? '✅' : '⏳';
-            ?>
-            <div class="saw-summary-row">
-                <span class="label"><?php echo esc_html($training_labels[$ts]); ?></span>
-                <span class="saw-training-status <?php echo $status_class; ?>">
-                    <?php echo $status_icon; ?> <?php echo esc_html($status_text); ?>
-                </span>
+            <?php if (!empty($risks_text)): ?>
+            <div style="margin-bottom: 1rem;">
+                <div class="label" style="margin-bottom: 0.5rem;"><?php echo esc_html($t['risks_text']); ?>:</div>
+                <div style="color: rgba(255,255,255,0.9);"><?php echo wp_kses_post($risks_text); ?></div>
             </div>
-            <?php endforeach; ?>
+            <?php endif; ?>
+            
+            <?php if (!empty($risks_docs)): ?>
+            <div>
+                <div class="label" style="margin-bottom: 0.5rem;"><?php echo esc_html($t['risks_docs']); ?>:</div>
+                <?php foreach ($risks_docs as $doc): ?>
+                <div class="saw-doc-item">
+                    <span class="saw-doc-icon">📄</span>
+                    <span><?php echo esc_html($doc['file_name']); ?></span>
+                    <small style="color: rgba(255,255,255,0.5);">
+                        (<?php echo size_format($doc['file_size']); ?>)
+                    </small>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
         </div>
     </div>
     <?php endif; ?>
@@ -437,4 +427,3 @@ if ($branch) {
         </form>
     </div>
 </div>
-

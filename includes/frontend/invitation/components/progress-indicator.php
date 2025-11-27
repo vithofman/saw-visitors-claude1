@@ -38,37 +38,22 @@ $all_steps = [
     ],
 ];
 
-// ✅ OPRAVA: Použij proměnnou $has_training z render_header()
-if (isset($has_training) && $has_training) {
-    $training_steps = [
-        'training-video' => [
-            'icon' => '🎥',
-            'title_cs' => 'Video',
-            'title_en' => 'Video'
-        ],
-        'training-map' => [
-            'icon' => '🗺️',
-            'title_cs' => 'Mapa',
-            'title_en' => 'Map'
-        ],
-        'training-risks' => [
-            'icon' => '⚠️',
-            'title_cs' => 'Školení rizika',
-            'title_en' => 'Training Risks'
-        ],
-        'training-department' => [
-            'icon' => '🏢',
-            'title_cs' => 'Oddělení',
-            'title_en' => 'Department'
-        ],
-        'training-additional' => [
-            'icon' => 'ℹ️',
-            'title_cs' => 'Další info',
-            'title_en' => 'Additional'
-        ],
+// ✅ OPRAVENO: Přidej jen DOSTUPNÉ training kroky
+if (isset($available_training_steps) && !empty($available_training_steps)) {
+    $training_step_definitions = [
+        'training-video' => ['icon' => '🎥', 'title_cs' => 'Video', 'title_en' => 'Video'],
+        'training-map' => ['icon' => '🗺️', 'title_cs' => 'Mapa', 'title_en' => 'Map'],
+        'training-risks' => ['icon' => '⚠️', 'title_cs' => 'Školení rizika', 'title_en' => 'Training Risks'],
+        'training-department' => ['icon' => '🏢', 'title_cs' => 'Oddělení', 'title_en' => 'Department'],
+        'training-additional' => ['icon' => 'ℹ️', 'title_cs' => 'Další info', 'title_en' => 'Additional'],
     ];
     
-    $all_steps = array_merge($all_steps, $training_steps);
+    foreach ($available_training_steps as $step) {
+        $step_key = $step['step'];
+        if (isset($training_step_definitions[$step_key])) {
+            $all_steps[$step_key] = $training_step_definitions[$step_key];
+        }
+    }
 }
 
 // ✅ NOVÉ: Přidat summary krok před success
