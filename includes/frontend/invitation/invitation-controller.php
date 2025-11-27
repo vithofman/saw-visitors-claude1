@@ -163,23 +163,30 @@ error_log("Visit found: " . ($visit ? "YES (ID: {$visit['id']})" : "NO"));
     }
     
     private function get_current_step() {
-        $flow = $this->session->get('invitation_flow', []);
-        
-        if (empty($flow['language'])) {
+    $flow = $this->session->get('invitation_flow', []);
+    
+    // 1. Pokud není jazyk, vždy jdi na language
+    if (empty($flow['language'])) {
+        return 'language';
+    }
+    
+    // 2. Pokud je ?step= v URL, použij ho (má přednost)
+    $step = $_GET['step'] ?? '';
+    if (!empty($step)) {
+        $steps_requiring_language = ['risks', 'visitors', 'training-video', 'training-map', 'training-risks', 'training-department', 'training-additional', 'success'];
+        if (in_array($step, $steps_requiring_language) && empty($flow['language'])) {
             return 'language';
         }
-        
-        $step = $_GET['step'] ?? '';
-        
-        if (!empty($step)) {
-            $steps_requiring_language = ['risks', 'visitors', 'training-video', 'training-map', 'training-risks', 'training-department', 'training-additional', 'success'];
-            if (in_array($step, $steps_requiring_language) && empty($flow['language'])) {
-                return 'language';
-            }
-            return $step;
-        }
-        
-        return $flow['step'] ?? 'language';
+        return $step;
+    }
+    
+    // 3. ✅ OPRAVA: Načti ze session, ale ověř že je validní
+    $session_step = $flow['step'] ?? 'language';
+    
+    // Debug log
+    error_log("[get_current_step] Session step: {$session_step}, URL: " . ($_SERVER['REQUEST_URI'] ?? 'N/A'));
+    
+    return $session_step;
     }
     
     public function enqueue_assets() {
@@ -210,61 +217,81 @@ error_log("Visit found: " . ($visit ? "YES (ID: {$visit['id']})" : "NO"));
     }
     
     public function render() {
-        $flow = $this->session->get('invitation_flow', []);
-        $this->current_step = $this->get_current_step();
-        
-        if ($this->current_step !== 'language' && empty($flow['language'])) {
-            wp_redirect(home_url('/visitor-invitation/' . $this->token . '/?step=language'));
-            exit;
-        }
-        
-        // ✅ Initialize richtext editor BEFORE render_header() for risks step
-        if ($this->current_step === 'risks') {
-            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/richtext-editor/richtext-editor.php';
-            saw_richtext_editor_init();
-            saw_richtext_editor_enqueue_assets();
-        }
-        
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $this->handle_post_actions();
-        }
-        
-        $this->render_header();
-        
-        switch ($this->current_step) {
-            case 'language':
-                $this->render_language_selection();
-                break;
-            case 'risks':
-                $this->render_risks_upload();
-                break;
-            case 'visitors':
-                $this->render_visitors_registration();
-                break;
-            case 'training-video':
-                $this->render_training_video();
-                break;
-            case 'training-map':
-                $this->render_training_map();
-                break;
-            case 'training-risks':
-                $this->render_training_risks();
-                break;
-            case 'training-department':
-                $this->render_training_department();
-                break;
-            case 'training-additional':
-                $this->render_training_additional();
-                break;
-            case 'success':
-                $this->render_pin_success();
-                break;
-            default:
-                $this->render_language_selection();
-        }
-        
-        $this->render_footer();
+    $flow = $this->session->get('invitation_flow', []);
+    $this->current_step = $this->get_current_step();
+    
+    // ✅ KRITICKÝ DEBUG
+    error_log("=== RENDER DEBUG ===");
+    error_log("Session step: " . ($flow['step'] ?? 'N/A'));
+    error_log("Current step: " . $this->current_step);
+    error_log("Language: " . ($flow['language'] ?? 'N/A'));
+    error_log("URL: " . ($_SERVER['REQUEST_URI'] ?? 'N/A'));
+    
+    if ($this->current_step !== 'language' && empty($flow['language'])) {
+        wp_redirect(home_url('/visitor-invitation/' . $this->token . '/?step=language'));
+        exit;
     }
+    
+    // ✅ Initialize richtext editor BEFORE render_header() for risks step
+    if ($this->current_step === 'risks') {
+        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/richtext-editor/richtext-editor.php';
+        saw_richtext_editor_init();
+        saw_richtext_editor_enqueue_assets();
+    }
+    
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $this->handle_post_actions();
+    }
+    
+    $this->render_header();
+    
+    // ✅ DEBUG PŘED SWITCH
+    error_log("About to render step: " . $this->current_step);
+    
+    switch ($this->current_step) {
+        case 'language':
+            error_log("Rendering: language");
+            $this->render_language_selection();
+            break;
+        case 'risks':
+            error_log("Rendering: risks");
+            $this->render_risks_upload();
+            break;
+        case 'visitors':
+            error_log("Rendering: visitors");
+            $this->render_visitors_registration();
+            break;
+        case 'training-video':
+            error_log("Rendering: training-video");
+            $this->render_training_video();
+            break;
+        case 'training-map':
+            error_log("Rendering: training-map");
+            $this->render_training_map();
+            break;
+        case 'training-risks':
+            error_log("Rendering: training-risks");
+            $this->render_training_risks();
+            break;
+        case 'training-department':
+            error_log("Rendering: training-department");
+            $this->render_training_department();
+            break;
+        case 'training-additional':
+            error_log("Rendering: training-additional");
+            $this->render_training_additional();
+            break;
+        case 'success':
+            error_log("Rendering: success");
+            $this->render_pin_success();
+            break;
+        default:
+            error_log("Rendering: default (language)");
+            $this->render_language_selection();
+    }
+    
+    $this->render_footer();
+}
     
     private function handle_post_actions() {
         $action = $_POST['invitation_action'] ?? '';
@@ -510,176 +537,167 @@ error_log("Visit found: " . ($visit ? "YES (ID: {$visit['id']})" : "NO"));
     }
     
     private function handle_save_visitors() {
-        // 1. Verify nonce
-        if (!isset($_POST['invitation_nonce']) || 
-            !wp_verify_nonce($_POST['invitation_nonce'], 'saw_invitation_step')) {
-            wp_die('Invalid nonce', 'Error', ['response' => 403]);
-        }
-        
-        global $wpdb;
-        
-        // ✅ OPRAVA: Čti správná pole z formuláře
-        $existing_visitor_ids = $_POST['existing_visitor_ids'] ?? [];
-        $new_visitors = $_POST['new_visitors'] ?? [];
-        $training_skip = $_POST['training_skip'] ?? [];
-        
-        // ✅ OPRAVA: Validace - musí být alespoň JEDEN visitor
-        if (empty($existing_visitor_ids) && empty($new_visitors)) {
-            $flow = $this->session->get('invitation_flow');
-            $flow['error'] = 'Please add at least one visitor';
-            $this->session->set('invitation_flow', $flow);
-            
-            wp_redirect(home_url('/visitor-invitation/' . $this->token . '/?step=visitors'));
-            exit;
-        }
-        
-        // ✅ 2. Smaž VŠECHNY existující visitors pro tuto visit
-        // (Budeme je znovu vytvářet podle toho co uživatel vybral)
-        $wpdb->delete(
-            $wpdb->prefix . 'saw_visitors',
-            ['visit_id' => $this->visit_id]
-        );
-        
-        $visitor_ids = [];
-        
-        // ✅ 3. Znovu vytvoř vybrané existing visitors
-        if (!empty($existing_visitor_ids)) {
-            foreach ($existing_visitor_ids as $old_id) {
-                $old_id = intval($old_id);
-                
-                // Načti původní data z jiné visit/source
-                // POZNÁMKA: existing_visitor_ids mohou být z původní planned visit
-                $old_visitor = $wpdb->get_row($wpdb->prepare(
-                    "SELECT * FROM {$wpdb->prefix}saw_visitors WHERE id = %d",
-                    $old_id
-                ), ARRAY_A);
-                
-                if (!$old_visitor) {
-                    continue; // Skip pokud visitor neexistuje
-                }
-                
-                // Zkontroluj jestli má training skip
-                $training_skipped = isset($training_skip[$old_id]) && $training_skip[$old_id] === '1';
-                
-                // Vytvoř nový záznam pro tuto visit
-                $wpdb->insert(
-                    $wpdb->prefix . 'saw_visitors',
-                    [
-                        'visit_id' => $this->visit_id,
-                        'customer_id' => $this->customer_id,
-                        'branch_id' => $this->branch_id,
-                        'first_name' => $old_visitor['first_name'],
-                        'last_name' => $old_visitor['last_name'],
-                        'position' => $old_visitor['position'] ?? '',
-                        'email' => $old_visitor['email'] ?? '',
-                        'phone' => $old_visitor['phone'] ?? '',
-                        'participation_status' => 'confirmed',
-                        'current_status' => 'confirmed',
-                        'training_skipped' => $training_skipped ? 1 : 0,
-                        'training_status' => $training_skipped ? 'skipped' : 'pending',
-                    ]
-                );
-                
-                if ($wpdb->insert_id) {
-                    $visitor_ids[] = $wpdb->insert_id;
-                }
-            }
-        }
-        
-        // ✅ 4. Přidej nové visitors
-        if (!empty($new_visitors) && is_array($new_visitors)) {
-            foreach ($new_visitors as $visitor) {
-                // Validace - musí mít alespoň jméno a příjmení
-                if (empty($visitor['first_name']) || empty($visitor['last_name'])) {
-                    continue; // Přeskoč neúplné visitors
-                }
-                
-                $training_skipped = isset($visitor['training_skip']) && $visitor['training_skip'] === '1';
-                
-                $wpdb->insert(
-                    $wpdb->prefix . 'saw_visitors',
-                    [
-                        'visit_id' => $this->visit_id,
-                        'customer_id' => $this->customer_id,
-                        'branch_id' => $this->branch_id,
-                        'first_name' => sanitize_text_field($visitor['first_name']),
-                        'last_name' => sanitize_text_field($visitor['last_name']),
-                        'position' => sanitize_text_field($visitor['position'] ?? ''),
-                        'email' => sanitize_email($visitor['email'] ?? ''),
-                        'phone' => sanitize_text_field($visitor['phone'] ?? ''),
-                        'participation_status' => 'confirmed',
-                        'current_status' => 'confirmed',
-                        'training_skipped' => $training_skipped ? 1 : 0,
-                        'training_status' => $training_skipped ? 'skipped' : 'pending',
-                    ]
-                );
-                
-                if ($wpdb->insert_id) {
-                    $visitor_ids[] = $wpdb->insert_id;
-                }
-            }
-        }
-        
-        // ✅ 5. Update visit status
-        $wpdb->update(
-            $wpdb->prefix . 'saw_visits',
-            [
-                'status' => 'pending',
-                'invitation_confirmed_at' => current_time('mysql')
-            ],
-            ['id' => $this->visit_id]
-        );
-        
-        // ✅ 6. Session tracking
+    // 1. Verify nonce
+    if (!isset($_POST['invitation_nonce']) || 
+        !wp_verify_nonce($_POST['invitation_nonce'], 'saw_invitation_step')) {
+        wp_die('Invalid nonce', 'Error', ['response' => 403]);
+    }
+    
+    global $wpdb;
+    
+    // ✅ DEBUG
+    error_log("=== HANDLE_SAVE_VISITORS DEBUG ===");
+    error_log("POST data: " . json_encode($_POST));
+    
+    // ✅ OPRAVA: Čti správná pole z formuláře
+    $existing_visitor_ids = $_POST['existing_visitor_ids'] ?? [];
+    $new_visitors = $_POST['new_visitors'] ?? [];
+    $training_skip = $_POST['training_skip'] ?? [];
+    
+    error_log("Existing IDs: " . json_encode($existing_visitor_ids));
+    error_log("New visitors: " . json_encode($new_visitors));
+    
+    // ✅ OPRAVA: Validace - musí být alespoň JEDEN visitor
+    if (empty($existing_visitor_ids) && empty($new_visitors)) {
         $flow = $this->session->get('invitation_flow');
+        $flow['error'] = 'Please add at least one visitor';
+        $this->session->set('invitation_flow', $flow);
         
-        // Přidej do historie
-        if (!in_array('visitors', $flow['history'] ?? [])) {
-            $flow['history'][] = 'visitors';
-        }
-        
-        // Označit jako dokončený
-        if (!in_array('visitors', $flow['completed_steps'] ?? [])) {
-            $flow['completed_steps'][] = 'visitors';
-        }
-        
-        // ✅ 7. Rozhodnutí kam dál - zkontroluj training
-        $has_training = $this->has_training_content();
-        $needs_training = false;
-        
-        if ($has_training) {
-            // Zkontroluj jestli NĚKDO z visitors potřebuje training
-            foreach ($visitor_ids as $id) {
-                $visitor = $wpdb->get_row($wpdb->prepare(
-                    "SELECT training_skipped FROM {$wpdb->prefix}saw_visitors WHERE id = %d",
-                    $id
-                ));
-                
-                if ($visitor && !$visitor->training_skipped) {
-                    $needs_training = true;
-                    break;
-                }
-            }
-        }
-        
-        // ✅ 8. Invalidate cache
-        if (class_exists('SAW_Cache')) {
-            SAW_Cache::delete('invitation_visit_' . $this->visit_id, 'invitations');
-        }
-        
-        // ✅ 9. Redirect
-if ($needs_training) {
-    $flow['step'] = 'training-video';
-    $this->session->set('invitation_flow', $flow);
-    wp_redirect(home_url('/visitor-invitation/' . $this->token . '/'));
-} else {
-    $flow['step'] = 'success';
-    $this->session->set('invitation_flow', $flow);
-    wp_redirect(home_url('/visitor-invitation/' . $this->token . '/'));
-}
-        
+        wp_redirect(home_url('/visitor-invitation/' . $this->token . '/?step=visitors'));
         exit;
     }
+    
+    // ✅ ZMĚNA: NEMAŽ visitors, jen přidej nové!
+    // (Existing visitors už v DB jsou, nepřevytvářej je)
+    
+    $visitor_ids = [];
+    
+    // ✅ 3. Existing visitors - POUZE přidej jejich IDs do listu
+    if (!empty($existing_visitor_ids)) {
+        foreach ($existing_visitor_ids as $id) {
+            $id = intval($id);
+            if ($id > 0) {
+                $visitor_ids[] = $id;
+                
+                // ✅ Update training_skipped pokud je v POST
+                $training_skipped = isset($training_skip[$id]) && $training_skip[$id] === '1';
+                
+                $wpdb->update(
+                    $wpdb->prefix . 'saw_visitors',
+                    [
+                        'training_skipped' => $training_skipped ? 1 : 0,
+                        'training_status' => $training_skipped ? 'skipped' : 'pending',
+                    ],
+                    ['id' => $id],
+                    ['%d', '%s'],
+                    ['%d']
+                );
+            }
+        }
+    }
+    
+    // ✅ 4. Přidej POUZE nové visitors
+    if (!empty($new_visitors) && is_array($new_visitors)) {
+        foreach ($new_visitors as $visitor) {
+            // Validace - musí mít alespoň jméno a příjmení
+            if (empty($visitor['first_name']) || empty($visitor['last_name'])) {
+                continue; // Přeskoč neúplné visitors
+            }
+            
+            $training_skipped = isset($visitor['training_skip']) && $visitor['training_skip'] === '1';
+            
+            $wpdb->insert(
+                $wpdb->prefix . 'saw_visitors',
+                [
+                    'visit_id' => $this->visit_id,
+                    'customer_id' => $this->customer_id,
+                    'branch_id' => $this->branch_id,
+                    'first_name' => sanitize_text_field($visitor['first_name']),
+                    'last_name' => sanitize_text_field($visitor['last_name']),
+                    'position' => sanitize_text_field($visitor['position'] ?? ''),
+                    'email' => sanitize_email($visitor['email'] ?? ''),
+                    'phone' => sanitize_text_field($visitor['phone'] ?? ''),
+                    'participation_status' => 'confirmed',
+                    'current_status' => 'confirmed',
+                    'training_skipped' => $training_skipped ? 1 : 0,
+                    'training_status' => $training_skipped ? 'skipped' : 'pending',
+                ]
+            );
+            
+            if ($wpdb->insert_id) {
+                $visitor_ids[] = $wpdb->insert_id;
+                error_log("Inserted new visitor ID: " . $wpdb->insert_id);
+            }
+        }
+    }
+    
+    // ✅ 5. Update visit status
+    $wpdb->update(
+        $wpdb->prefix . 'saw_visits',
+        [
+            'status' => 'pending',
+            'invitation_confirmed_at' => current_time('mysql')
+        ],
+        ['id' => $this->visit_id]
+    );
+    
+    // ✅ 6. Session tracking
+    $flow = $this->session->get('invitation_flow');
+    
+    // Přidej do historie
+    if (!in_array('visitors', $flow['history'] ?? [])) {
+        $flow['history'][] = 'visitors';
+    }
+    
+    // Označit jako dokončený
+    if (!in_array('visitors', $flow['completed_steps'] ?? [])) {
+        $flow['completed_steps'][] = 'visitors';
+    }
+    
+    // ✅ 7. Rozhodnutí kam dál - zkontroluj training
+    $has_training = $this->has_training_content();
+    $needs_training = false;
+    
+    error_log("Has training: " . ($has_training ? 'YES' : 'NO'));
+    
+    if ($has_training) {
+        // Zkontroluj jestli NĚKDO z visitors potřebuje training
+        foreach ($visitor_ids as $id) {
+            $visitor = $wpdb->get_row($wpdb->prepare(
+                "SELECT training_skipped FROM {$wpdb->prefix}saw_visitors WHERE id = %d",
+                $id
+            ));
+            
+            if ($visitor && !$visitor->training_skipped) {
+                $needs_training = true;
+                error_log("Visitor #{$id} needs training");
+                break;
+            }
+        }
+    }
+    
+    error_log("Needs training: " . ($needs_training ? 'YES' : 'NO'));
+    
+    // ✅ 8. Invalidate cache
+    if (class_exists('SAW_Cache')) {
+        SAW_Cache::delete('invitation_visit_' . $this->visit_id, 'invitations');
+    }
+    
+    // ✅ 9. Redirect
+    if ($needs_training) {
+        $flow['step'] = 'training-video';
+        $this->session->set('invitation_flow', $flow);
+        error_log("Redirecting to: training-video");
+        wp_redirect(home_url('/visitor-invitation/' . $this->token . '/'));
+    } else {
+        $flow['step'] = 'success';
+        $this->session->set('invitation_flow', $flow);
+        error_log("Redirecting to: success");
+        wp_redirect(home_url('/visitor-invitation/' . $this->token . '/'));
+    }
+    
+    exit;
+}
     
     /**
      * Get best available language for training content
@@ -739,91 +757,78 @@ if ($needs_training) {
     }
     
     private function has_training_content() {
-        global $wpdb;
-        
-        $flow = $this->session->get('invitation_flow');
-        $preferred_lang = $flow['language'] ?? 'cs';
-        
-        // ✅ NOVÉ: Získej nejlepší dostupný jazyk
-        $actual_lang = $this->get_best_available_language($preferred_lang);
-        
-        if (class_exists('SAW_Cache')) {
-            $cache_key = 'training_company_' . $this->customer_id . '_' . $this->branch_id . '_' . $actual_lang;
-            $cached = SAW_Cache::get($cache_key, 'training');
-            if ($cached !== false) {
-                return !empty($cached);
-            }
-        }
-        
-        // Načti obsah v actual_lang
-        $language_id = $wpdb->get_var($wpdb->prepare(
-            "SELECT id FROM {$wpdb->prefix}saw_training_languages 
-             WHERE customer_id = %d AND language_code = %s",
-            $this->customer_id,
-            $actual_lang
-        ));
-        
-        if (!$language_id) {
-            return false;
-        }
-        
-        $content = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_training_content 
-             WHERE customer_id = %d AND branch_id = %d AND language_id = %d",
-            $this->customer_id,
-            $this->branch_id,
-            $language_id
-        ), ARRAY_A);
-        
-        if (class_exists('SAW_Cache')) {
-            SAW_Cache::set($cache_key, $content, 600, 'training');
-        }
-        
-        return !empty($content);
+    global $wpdb;
+
+    // ✅ DEBUG
+    error_log("=== HAS_TRAINING_CONTENT DEBUG ===");
+    error_log("Customer ID: " . $this->customer_id);
+    error_log("Branch ID: " . $this->branch_id);
+    
+    $flow = $this->session->get('invitation_flow');
+    $preferred_lang = $flow['language'] ?? 'cs';
+    
+    error_log("Preferred lang: " . $preferred_lang);
+    
+    // ✅ Získej nejlepší dostupný jazyk
+    $actual_lang = $this->get_best_available_language($preferred_lang);
+    
+    error_log("Actual lang: " . $actual_lang);
+    
+    // ✅ NEKONTROLUJ CACHE - jdi rovnou do DB!
+    // (Cache způsobuje že vrací starý výsledek)
+    
+    // Načti language_id
+    $language_id = $wpdb->get_var($wpdb->prepare(
+        "SELECT id FROM {$wpdb->prefix}saw_training_languages 
+         WHERE customer_id = %d AND language_code = %s",
+        $this->customer_id,
+        $actual_lang
+    ));
+    
+    if (!$language_id) {
+        error_log("[has_training_content] No language found for: {$actual_lang}");
+        return false;
     }
     
-    private function handle_skip_training() {
-        $flow = $this->session->get('invitation_flow');
-        $flow['training_skipped'] = true;
-        $flow['step'] = 'success';
-        $this->session->set('invitation_flow', $flow);
-        wp_redirect(home_url('/visitor-invitation/' . $this->token . '/?step=success'));
-        exit;
+    error_log("[has_training_content] Language ID: " . $language_id);
+    
+    // Načti obsah
+    $content = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM {$wpdb->prefix}saw_training_content 
+         WHERE customer_id = %d AND branch_id = %d AND language_id = %d",
+        $this->customer_id,
+        $this->branch_id,
+        $language_id
+    ), ARRAY_A);
+    
+    error_log("[has_training_content] Content found: " . ($content ? 'YES' : 'NO'));
+    
+    // ✅ Zkontroluj jestli má OPRAVDU nějaký obsah!
+    $has_content = false;
+    
+    if (!empty($content)) {
+        // Zkontroluj jestli má alespoň JEDNO vyplněné pole
+        $has_content = (
+            !empty($content['video_url']) ||
+            !empty($content['video_content']) ||
+            !empty($content['map_content']) ||
+            !empty($content['risks_content']) ||
+            !empty($content['department_content']) ||
+            !empty($content['additional_content'])
+        );
+        
+        error_log("[has_training_content] Content fields: video_url=" . (!empty($content['video_url']) ? 'YES' : 'NO') . 
+                  ", video_content=" . (!empty($content['video_content']) ? 'YES' : 'NO') .
+                  ", map=" . (!empty($content['map_content']) ? 'YES' : 'NO') .
+                  ", risks=" . (!empty($content['risks_content']) ? 'YES' : 'NO') .
+                  ", department=" . (!empty($content['department_content']) ? 'YES' : 'NO') .
+                  ", additional=" . (!empty($content['additional_content']) ? 'YES' : 'NO'));
     }
     
-    private function handle_complete_training() {
-        $this->move_to_next_training_step();
-    }
+    error_log("[has_training_content] Final result: " . ($has_content ? 'YES' : 'NO'));
     
-    private function move_to_next_training_step() {
-        $flow = $this->session->get('invitation_flow');
-        $current = $this->current_step;
-        
-        // ✅ NOVÉ: Přidat aktuální training step do historie
-        if (!in_array($current, $flow['history'] ?? [])) {
-            $flow['history'][] = $current;
-        }
-        
-        // ✅ NOVÉ: Označit jako dokončený
-        if (!in_array($current, $flow['completed_steps'] ?? [])) {
-            $flow['completed_steps'][] = $current;
-        }
-        
-        $steps = ['training-video', 'training-map', 'training-risks', 'training-department', 'training-additional'];
-        $current_index = array_search($current, $steps);
-        
-        if ($current_index !== false && $current_index < count($steps) - 1) {
-            $next_step = $steps[$current_index + 1];
-            $flow['step'] = $next_step;
-            $this->session->set('invitation_flow', $flow);
-            wp_redirect(home_url('/visitor-invitation/' . $this->token . '/?step=' . $next_step));
-        } else {
-            $flow['step'] = 'success';
-            $this->session->set('invitation_flow', $flow);
-            wp_redirect(home_url('/visitor-invitation/' . $this->token . '/?step=success'));
-        }
-        exit;
-    }
+    return $has_content;
+}
     
     private function render_header() {
         $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/invitation/layout-header.php';
@@ -1024,15 +1029,31 @@ if ($needs_training) {
     }
     
     private function render_pin_success() {
-        global $wpdb;
-        
-        $visit = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}saw_visits WHERE id = %d", $this->visit_id), ARRAY_A);
-        
-        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/invitation/steps/9-pin-success.php';
-        if (file_exists($template)) {
-            $this->render_template($template, ['visit' => $visit, 'pin' => $visit['pin_code'] ?? '', 'token' => $this->token]);
-        }
+    global $wpdb;
+    
+    error_log("=== RENDER_PIN_SUCCESS DEBUG ===");
+    error_log("Visit ID: " . $this->visit_id);
+    
+    $visit = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}saw_visits WHERE id = %d", $this->visit_id), ARRAY_A);
+    
+    error_log("Visit found: " . ($visit ? 'YES' : 'NO'));
+    if ($visit) {
+        error_log("PIN code: " . ($visit['pin_code'] ?? 'N/A'));
+        error_log("Visit data: " . json_encode($visit));
     }
+    
+    $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/invitation/steps/9-pin-success.php';
+    
+    error_log("Template path: " . $template);
+    error_log("Template exists: " . (file_exists($template) ? 'YES' : 'NO'));
+    
+    if (file_exists($template)) {
+        error_log("About to render template with PIN: " . ($visit['pin_code'] ?? 'N/A'));
+        $this->render_template($template, ['visit' => $visit, 'pin' => $visit['pin_code'] ?? '', 'token' => $this->token]);
+    } else {
+        error_log("ERROR: Template does NOT exist!");
+    }
+}
     
     private function set_error($message) {
         $flow = $this->session->get('invitation_flow');
