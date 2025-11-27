@@ -1278,7 +1278,7 @@ $lang = $flow['language'] ?? 'cs';
 $schedules = $wpdb->get_results($wpdb->prepare(
     "SELECT * FROM {$wpdb->prefix}saw_visit_schedules 
      WHERE visit_id = %d 
-     ORDER BY sort_order ASC, datetime_from ASC",
+     ORDER BY sort_order ASC, date ASC",
     $this->visit_id
 ), ARRAY_A);
     
