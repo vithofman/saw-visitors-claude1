@@ -383,6 +383,7 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
         $labels = array(
             'draft' => 'Koncept',
             'pending' => 'Čekající',
+            'confirmed' => 'Potvrzená',
             'in_progress' => 'Probíhající',
             'completed' => 'Dokončená',
             'cancelled' => 'Zrušená',

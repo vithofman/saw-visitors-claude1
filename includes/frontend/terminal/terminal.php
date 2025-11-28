@@ -1827,7 +1827,7 @@ return $steps;
         "SELECT * FROM {$wpdb->prefix}saw_visits 
          WHERE pin_code = %s 
          AND customer_id = %d 
-         AND status IN ('in_progress', 'confirmed')",
+         AND status IN ('pending', 'confirmed', 'in_progress')",
         $pin,
         $this->customer_id
     ), ARRAY_A);

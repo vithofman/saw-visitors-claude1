@@ -66,6 +66,7 @@ return array(
             'options' => array(
                 'draft' => 'Koncept',
                 'pending' => 'Čekající',
+                'confirmed' => 'Potvrzená',
                 'in_progress' => 'Probíhající',
                 'completed' => 'Dokončená',
                 'cancelled' => 'Zrušená',
@@ -147,6 +148,12 @@ return array(
                 'label' => 'Čekající',
                 'icon' => '⏳',
                 'filter_value' => 'pending',
+                'count_query' => true,
+            ),
+            'confirmed' => array(
+                'label' => 'Potvrzená',
+                'icon' => '✅',
+                'filter_value' => 'confirmed',
                 'count_query' => true,
             ),
             'in_progress' => array(

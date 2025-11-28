@@ -1389,6 +1389,20 @@ $hosts = $wpdb->get_results($wpdb->prepare(
     error_log("=== RENDER_PIN_SUCCESS DEBUG ===");
     error_log("Visit ID: " . $this->visit_id);
     
+    // ✅ Update status to confirmed when invitation is completed
+    $wpdb->update(
+        $wpdb->prefix . 'saw_visits',
+        [
+            'status' => 'confirmed',
+            'invitation_confirmed_at' => current_time('mysql'),
+        ],
+        ['id' => $this->visit_id],
+        ['%s', '%s'],
+        ['%d']
+    );
+    
+    error_log("[Invitation] Visit #{$this->visit_id} status updated to 'confirmed'");
+    
     $visit = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}saw_visits WHERE id = %d", $this->visit_id), ARRAY_A);
     
     error_log("Visit found: " . ($visit ? 'YES' : 'NO'));
