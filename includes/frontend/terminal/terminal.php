@@ -2342,12 +2342,12 @@ private function handle_training_additional_complete() {
             '3.0.0'
         );
         
-        // CSS - Training (depends on all)
+        // CSS - Pages (unified styles for all frontend pages)
         wp_enqueue_style(
-            'saw-terminal-training',
-            $css_dir . 'terminal/training.css',
+            'saw-terminal-pages',
+            $css_dir . 'terminal/pages.css',
             array('saw-terminal-base', 'saw-terminal-layout', 'saw-terminal-components'),
-            '3.0.0'
+            '4.0.0'
         );
         
         // CSS - Old terminal.css (fallback compatibility - check if exists)

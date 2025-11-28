@@ -195,17 +195,28 @@ error_log("Visit found: " . ($visit ? "YES (ID: {$visit['id']})" : "NO"));
     
     $base_css = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/assets/css/terminal/base.css';
     if (file_exists($base_css)) {
-        wp_enqueue_style('saw-terminal-base', $css_dir . 'terminal/base.css', [], '3.0.0');
+        wp_enqueue_style('saw-terminal-base', $css_dir . 'terminal/base.css', [], '4.0.0');
     }
     
     $components_css = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/assets/css/terminal/components.css';
     if (file_exists($components_css)) {
-        wp_enqueue_style('saw-terminal-components', $css_dir . 'terminal/components.css', ['saw-terminal-base'], '3.0.0');
+        wp_enqueue_style('saw-terminal-components', $css_dir . 'terminal/components.css', ['saw-terminal-base'], '4.0.0');
     }
     
     $layout_css = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/assets/css/terminal/layout.css';
     if (file_exists($layout_css)) {
-        wp_enqueue_style('saw-terminal-layout', $css_dir . 'terminal/layout.css', ['saw-terminal-base'], '3.0.0');
+        wp_enqueue_style('saw-terminal-layout', $css_dir . 'terminal/layout.css', ['saw-terminal-base'], '4.0.0');
+    }
+    
+    // ✅ PŘIDAT: pages.css
+    $pages_css = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/assets/css/terminal/pages.css';
+    if (file_exists($pages_css)) {
+        wp_enqueue_style(
+            'saw-terminal-pages',
+            $css_dir . 'terminal/pages.css',
+            ['saw-terminal-base', 'saw-terminal-layout', 'saw-terminal-components'],
+            '4.0.0'
+        );
     }
     
     wp_enqueue_script('jquery');

@@ -11,263 +11,18 @@ if (!defined('ABSPATH')) exit;
 $languages = $languages ?? [];
 $has_languages = !empty($languages);
 ?>
-<style>
-/* === UNIFIED STYLE === */
-:root {
-    --theme-color: #667eea;
-    --theme-color-hover: #764ba2;
-    --bg-dark: #1a202c;
-    --bg-dark-medium: #2d3748;
-    --bg-glass: rgba(15, 23, 42, 0.6);
-    --bg-glass-light: rgba(255, 255, 255, 0.08);
-    --border-glass: rgba(148, 163, 184, 0.12);
-    --text-primary: #FFFFFF;
-    --text-secondary: #e5e7eb;
-    --text-muted: #9ca3af;
-}
+<!-- Žádný <style> blok! CSS je v pages.css -->
 
-*,
-*::before,
-*::after {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-.saw-terminal-footer {
-    display: none !important;
-}
-
-.saw-language-aurora {
-    position: fixed;
-    inset: 0;
-    width: 100vw;
-    height: 100vh;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    color: var(--text-secondary);
-    background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2rem;
-}
-
-.saw-language-content {
-    max-width: 900px;
-    width: 100%;
-    animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes slideUp {
-    from { opacity: 0; transform: translateY(30px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* Header */
-.saw-language-header {
-    text-align: center;
-    margin-bottom: 3rem;
-}
-
-.saw-language-icon {
-    font-size: 4rem;
-    margin-bottom: 1rem;
-    animation: scaleIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
-}
-
-@keyframes scaleIn {
-    from { opacity: 0; transform: scale(0.8); }
-    to { opacity: 1; transform: scale(1); }
-}
-
-.saw-language-title {
-    font-size: 2rem;
-    font-weight: 700;
-    background: linear-gradient(135deg, #f9fafb 0%, #cbd5e1 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    letter-spacing: -0.02em;
-    margin-bottom: 0.75rem;
-    line-height: 1.3;
-}
-
-.saw-language-subtitle {
-    font-size: 1rem;
-    color: rgba(203, 213, 225, 0.8);
-    font-weight: 500;
-}
-
-/* Language Grid */
-.saw-language-grid {
-    display: grid;
-    gap: 1.25rem;
-    animation: fadeIn 0.6s ease 0.3s both;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-/* Dynamic grid based on count */
-.saw-language-grid.saw-lang-1 {
-    grid-template-columns: 1fr;
-    max-width: 400px;
-    margin: 0 auto;
-}
-
-.saw-language-grid.saw-lang-2 {
-    grid-template-columns: repeat(2, 1fr);
-}
-
-.saw-language-grid.saw-lang-3 {
-    grid-template-columns: repeat(3, 1fr);
-}
-
-.saw-language-grid.saw-lang-4 {
-    grid-template-columns: repeat(2, 1fr);
-}
-
-.saw-language-grid.saw-lang-5,
-.saw-language-grid.saw-lang-6 {
-    grid-template-columns: repeat(3, 1fr);
-}
-
-/* Language Button */
-.saw-language-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
-    padding: 2rem 1.5rem;
-    background: var(--bg-glass);
-    backdrop-filter: blur(20px) saturate(180%);
-    border: 2px solid var(--border-glass);
-    border-radius: 20px;
-    color: var(--text-primary);
-    font-size: 1.125rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-    text-decoration: none;
-    min-height: 160px;
-    border: none;
-    width: 100%;
-}
-
-.saw-language-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(102, 126, 234, 0.6);
-    transform: translateY(-4px);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
-}
-
-.saw-language-btn:active {
-    transform: translateY(-2px);
-}
-
-.saw-language-flag {
-    font-size: 4rem;
-    line-height: 1;
-    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
-}
-
-.saw-language-name {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--text-primary);
-}
-
-/* Error State */
-.saw-language-error {
-    background: rgba(239, 68, 68, 0.15);
-    border: 2px solid rgba(239, 68, 68, 0.3);
-    border-radius: 16px;
-    padding: 2rem;
-    text-align: center;
-    animation: fadeIn 0.6s ease 0.3s both;
-}
-
-.saw-language-error-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-    display: block;
-}
-
-.saw-language-error-message {
-    font-size: 1.125rem;
-    color: #fca5a5;
-    font-weight: 600;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    .saw-language-aurora {
-        padding: 1rem;
-    }
-    
-    .saw-language-icon {
-        font-size: 3rem;
-    }
-    
-    .saw-language-title {
-        font-size: 1.5rem;
-    }
-    
-    .saw-language-subtitle {
-        font-size: 0.9375rem;
-    }
-    
-    .saw-language-header {
-        margin-bottom: 2rem;
-    }
-    
-    .saw-language-grid.saw-lang-3,
-    .saw-language-grid.saw-lang-4,
-    .saw-language-grid.saw-lang-5,
-    .saw-language-grid.saw-lang-6 {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    .saw-language-btn {
-        padding: 1.5rem 1rem;
-        min-height: 140px;
-    }
-    
-    .saw-language-flag {
-        font-size: 3rem;
-    }
-    
-    .saw-language-name {
-        font-size: 1.125rem;
-    }
-}
-
-@media (max-width: 480px) {
-    .saw-language-grid.saw-lang-2,
-    .saw-language-grid.saw-lang-3,
-    .saw-language-grid.saw-lang-4,
-    .saw-language-grid.saw-lang-5,
-    .saw-language-grid.saw-lang-6 {
-        grid-template-columns: 1fr;
-    }
-}
-</style>
-
-<div class="saw-language-aurora">
-    <div class="saw-language-content">
+<div class="saw-page-aurora saw-step-language">
+    <div class="saw-page-content saw-page-content-centered">
         
         <!-- Header -->
-        <div class="saw-language-header">
-            <div class="saw-language-icon">🌍</div>
-            <h1 class="saw-language-title">
+        <div class="saw-page-header saw-page-header-centered">
+            <div class="saw-header-icon">🌍</div>
+            <h1 class="saw-header-title">
                 Vyberte jazyk / Choose Language / Оберіть мову
             </h1>
-            <p class="saw-language-subtitle">
+            <p class="saw-header-subtitle">
                 Select your preferred language for this session
             </p>
         </div>
@@ -275,9 +30,9 @@ $has_languages = !empty($languages);
         <?php if (!$has_languages): ?>
             
             <!-- Error State -->
-            <div class="saw-language-error">
-                <span class="saw-language-error-icon">⚠️</span>
-                <p class="saw-language-error-message">
+            <div class="saw-empty-state">
+                <div class="saw-empty-state-icon">⚠️</div>
+                <p class="saw-empty-state-text">
                     Pro tuto pobočku nejsou nastaveny žádné jazyky.<br>
                     Kontaktujte správce.
                 </p>
@@ -290,7 +45,7 @@ $has_languages = !empty($languages);
                 <?php wp_nonce_field('saw_invitation_step', 'invitation_nonce'); ?>
                 <input type="hidden" name="invitation_action" value="select_language">
                 
-                <div class="saw-language-grid saw-lang-<?php echo min(count($languages), 6); ?>">
+                <div class="saw-selection-grid saw-lang-<?php echo min(count($languages), 6); ?>">
                     <?php 
                     $flags = ['cs' => '🇨🇿', 'en' => '🇬🇧', 'uk' => '🇺🇦', 'sk' => '🇸🇰', 'de' => '🇩🇪', 'pl' => '🇵🇱'];
                     foreach ($languages as $code => $name): 
@@ -298,11 +53,11 @@ $has_languages = !empty($languages);
                     <button type="submit" 
                             name="language" 
                             value="<?php echo esc_attr($code); ?>"
-                            class="saw-language-btn">
-                        <span class="saw-language-flag">
+                            class="saw-selection-card">
+                        <span class="saw-card-icon">
                             <?php echo $flags[$code] ?? '🌍'; ?>
                         </span>
-                        <span class="saw-language-name">
+                        <span class="saw-card-title">
                             <?php echo esc_html($name); ?>
                         </span>
                     </button>
