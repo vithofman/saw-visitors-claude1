@@ -444,7 +444,7 @@ $skip_action = $is_invitation ? 'skip_training' : 'skip_training';
 @media (max-width: 768px) {
     .saw-video-container {
         width: 95%;
-        top: 40%;
+        top: 35%;
     }
     
     .saw-video-progress-indicator {
@@ -471,8 +471,9 @@ $skip_action = $is_invitation ? 'skip_training' : 'skip_training';
         height: 10px;
     }
     
+    /* ✅ KLÍČOVÁ OPRAVA: Posun confirm panelu NAD mobilní progress indicator lištu */
     .saw-video-confirm-panel {
-        bottom: 1rem;
+        bottom: calc(90px + env(safe-area-inset-bottom, 0)); /* Bylo 1rem, teď 90px + safe area */
         right: 1rem;
         left: 1rem;
         min-width: 0;
