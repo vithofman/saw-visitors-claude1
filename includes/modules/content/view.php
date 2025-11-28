@@ -260,7 +260,7 @@ function saw_get_file_icon($filename) {
                                         'category_config' => array(
                                             'enabled' => true,
                                             'source' => 'config',
-                                            'required' => true,
+                                            'required' => false,
                                             'label' => 'Typ dokumentu',
                                             'multiple' => false, // Single select
                                             'options' => $document_types, // Pass directly

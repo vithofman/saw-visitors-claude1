@@ -17,7 +17,7 @@ $is_invitation = isset($is_invitation) ? $is_invitation : false;
 // Get data from appropriate flow
 if ($is_invitation) {
     // Invitation flow
-    $session = SAW_Session_Manager::get_instance();
+    $session = SAW_Session_Manager::instance();
     $flow = $session->get('invitation_flow');
     $lang = $flow['language'] ?? 'cs';
     
@@ -42,8 +42,38 @@ if ($is_invitation) {
     }
     
     // Get additional content from training content (simplified - would need full implementation)
-    $additional_text = isset($additional_text) ? $additional_text : '';
-    $documents = isset($documents) ? $documents : array();
+    $additional_text = '';
+$documents = [];
+if ($visit) {
+    $language_id = $wpdb->get_var($wpdb->prepare(
+        "SELECT id FROM {$wpdb->prefix}saw_training_languages 
+         WHERE customer_id = %d AND language_code = %s",
+        $visit->customer_id,
+        $lang
+    ));
+    
+    if ($language_id) {
+        $content = $wpdb->get_row($wpdb->prepare(
+            "SELECT id, additional_text FROM {$wpdb->prefix}saw_training_content 
+             WHERE customer_id = %d AND branch_id = %d AND language_id = %d",
+            $visit->customer_id,
+            $visit->branch_id,
+            $language_id
+        ));
+        
+        if ($content) {
+            $additional_text = $content->additional_text ?? '';
+            if ($content->id) {
+                $documents = $wpdb->get_results($wpdb->prepare(
+                    "SELECT * FROM {$wpdb->prefix}saw_training_documents 
+                     WHERE document_type = 'additional' AND reference_id = %d 
+                     ORDER BY uploaded_at ASC",
+                    $content->id
+                ), ARRAY_A);
+            }
+        }
+    }
+}
 } else {
     // Terminal flow
     $flow = isset($flow) ? $flow : [];

@@ -3,7 +3,7 @@
  * Invitation Step - Visitors Registration
  * 
  * @package SAW_Visitors
- * @version 1.0.0
+ * @version 2.0.0 - Added visitor status display
  */
 
 if (!defined('ABSPATH')) exit;
@@ -11,6 +11,13 @@ if (!defined('ABSPATH')) exit;
 $flow = $this->session->get('invitation_flow');
 $lang = $flow['language'] ?? 'cs';
 $existing_visitors = $existing_visitors ?? [];
+
+// Get visit status for context
+global $wpdb;
+$visit_status = $wpdb->get_var($wpdb->prepare(
+    "SELECT status FROM {$wpdb->prefix}saw_visits WHERE id = %d",
+    $flow['visit_id'] ?? 0
+));
 
 $translations = [
     'cs' => [
@@ -26,6 +33,16 @@ $translations = [
         'training_skip' => 'Školení absolvoval do 1 roku',
         'add_visitor' => '+ Přidat dalšího návštěvníka',
         'submit' => 'Pokračovat →',
+        // Status labels
+        'status_planned' => 'Plánovaný',
+        'status_confirmed' => 'Potvrzený',
+        'status_present' => 'Přítomen',
+        'status_checked_out' => 'Odhlášen',
+        'status_no_show' => 'Nedostavil se',
+        // Visit status banner
+        'visit_in_progress' => '🟢 Návštěva právě probíhá',
+        'visit_pending' => '⏳ Návštěva čeká na příchod',
+        'visit_confirmed' => '✅ Návštěva je potvrzena',
     ],
     'en' => [
         'title' => 'Visitor Registration',
@@ -40,10 +57,29 @@ $translations = [
         'training_skip' => 'Completed training within 1 year',
         'add_visitor' => '+ Add Another Visitor',
         'submit' => 'Continue →',
+        // Status labels
+        'status_planned' => 'Planned',
+        'status_confirmed' => 'Confirmed',
+        'status_present' => 'Present',
+        'status_checked_out' => 'Checked Out',
+        'status_no_show' => 'No Show',
+        // Visit status banner
+        'visit_in_progress' => '🟢 Visit is in progress',
+        'visit_pending' => '⏳ Waiting for arrival',
+        'visit_confirmed' => '✅ Visit is confirmed',
     ],
 ];
 
 $t = $translations[$lang] ?? $translations['cs'];
+
+// Status badge configuration
+$status_config = [
+    'planned' => ['label' => $t['status_planned'], 'color' => '#94a3b8', 'bg' => 'rgba(148, 163, 184, 0.2)'],
+    'confirmed' => ['label' => $t['status_confirmed'], 'color' => '#fbbf24', 'bg' => 'rgba(251, 191, 36, 0.2)'],
+    'present' => ['label' => $t['status_present'], 'color' => '#10b981', 'bg' => 'rgba(16, 185, 129, 0.2)'],
+    'checked_out' => ['label' => $t['status_checked_out'], 'color' => '#6366f1', 'bg' => 'rgba(99, 102, 241, 0.2)'],
+    'no_show' => ['label' => $t['status_no_show'], 'color' => '#ef4444', 'bg' => 'rgba(239, 68, 68, 0.2)'],
+];
 ?>
 <style>
 .saw-invitation-visitors-page {
@@ -54,7 +90,7 @@ $t = $translations[$lang] ?? $translations['cs'];
 
 .saw-visitors-header {
     text-align: center;
-    margin-bottom: 3rem;
+    margin-bottom: 2rem;
 }
 
 .saw-visitors-header h1 {
@@ -66,6 +102,36 @@ $t = $translations[$lang] ?? $translations['cs'];
 
 .saw-visitors-header p {
     color: rgba(255, 255, 255, 0.8);
+}
+
+/* Visit Status Banner */
+.saw-visit-status-banner {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 2rem;
+    text-align: center;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.saw-visit-status-banner.in_progress {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: rgba(16, 185, 129, 0.3);
+    color: #10b981;
+}
+
+.saw-visit-status-banner.pending {
+    background: rgba(251, 191, 36, 0.15);
+    border-color: rgba(251, 191, 36, 0.3);
+    color: #fbbf24;
+}
+
+.saw-visit-status-banner.confirmed {
+    background: rgba(99, 102, 241, 0.15);
+    border-color: rgba(99, 102, 241, 0.3);
+    color: #818cf8;
 }
 
 .saw-visitors-form {
@@ -96,18 +162,79 @@ $t = $translations[$lang] ?? $translations['cs'];
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+/* Status-based card styling */
+.saw-visitor-card[data-status="present"] {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.saw-visitor-card[data-status="checked_out"] {
+    background: rgba(99, 102, 241, 0.1);
+    border-color: rgba(99, 102, 241, 0.3);
 }
 
 .saw-visitor-select {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.75rem;
     cursor: pointer;
+    flex: 1;
+    min-width: 200px;
+}
+
+.saw-visitor-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
 }
 
 .saw-visitor-name {
     color: #fff;
     font-weight: 600;
+}
+
+.saw-visitor-position-text {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.875rem;
+}
+
+/* Status Badge */
+.saw-visitor-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.saw-visitor-status-badge .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+.saw-visitor-status-badge[data-status="present"] .status-dot {
+    background: #10b981;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.saw-visitor-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
 }
 
 .saw-training-skip {
@@ -116,6 +243,7 @@ $t = $translations[$lang] ?? $translations['cs'];
     gap: 0.5rem;
     color: rgba(255, 255, 255, 0.8);
     cursor: pointer;
+    font-size: 0.875rem;
 }
 
 .saw-visitor-form {
@@ -126,11 +254,41 @@ $t = $translations[$lang] ?? $translations['cs'];
     margin-bottom: 1rem;
 }
 
+.saw-visitor-form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.saw-visitor-form-header h4 {
+    color: #fff;
+    margin: 0;
+}
+
+.saw-btn-remove {
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
 .saw-form-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
     margin-bottom: 1rem;
+}
+
+@media (max-width: 600px) {
+    .saw-form-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .saw-input {
@@ -140,6 +298,10 @@ $t = $translations[$lang] ?? $translations['cs'];
     background: rgba(255, 255, 255, 0.1);
     color: #fff;
     width: 100%;
+}
+
+.saw-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
 }
 
 .saw-btn-add-visitor,
@@ -156,13 +318,51 @@ $t = $translations[$lang] ?? $translations['cs'];
     background: rgba(255, 255, 255, 0.1);
     color: #fff;
     border: 1px solid rgba(255, 255, 255, 0.2);
+    width: 100%;
+}
+
+.saw-btn-add-visitor:hover {
+    background: rgba(255, 255, 255, 0.15);
 }
 
 .saw-btn-primary {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
-    width: 100%;
+}
+
+.saw-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 1rem 2rem;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
     margin-top: 2rem;
+    flex-wrap: wrap;
+}
+
+/* Disabled state for checked-in visitors */
+.saw-visitor-card.is-checked-in .saw-visitor-select input[type="checkbox"] {
+    pointer-events: none;
+}
+
+.saw-visitor-card.is-checked-in .saw-training-skip {
+    opacity: 0.5;
+    pointer-events: none;
 }
 </style>
 
@@ -172,6 +372,22 @@ $t = $translations[$lang] ?? $translations['cs'];
         <p><?= esc_html($t['subtitle']) ?></p>
     </div>
     
+    <?php 
+    // Show visit status banner
+    if ($visit_status === 'in_progress'): ?>
+        <div class="saw-visit-status-banner in_progress">
+            <?= esc_html($t['visit_in_progress']) ?>
+        </div>
+    <?php elseif ($visit_status === 'confirmed'): ?>
+        <div class="saw-visit-status-banner confirmed">
+            <?= esc_html($t['visit_confirmed']) ?>
+        </div>
+    <?php elseif ($visit_status === 'pending'): ?>
+        <div class="saw-visit-status-banner pending">
+            <?= esc_html($t['visit_pending']) ?>
+        </div>
+    <?php endif; ?>
+    
     <form method="POST" id="visitors-form" class="saw-visitors-form">
         <?php wp_nonce_field('saw_invitation_step', 'invitation_nonce'); ?>
         <input type="hidden" name="invitation_action" value="save_visitors">
@@ -180,24 +396,57 @@ $t = $translations[$lang] ?? $translations['cs'];
             <div class="saw-visitors-existing">
                 <h3><?= esc_html($t['existing']) ?></h3>
                 
-                <?php foreach ($existing_visitors as $visitor): ?>
-                    <div class="saw-visitor-card">
+                <?php foreach ($existing_visitors as $visitor): 
+                    $current_status = $visitor['current_status'] ?? 'planned';
+                    $status_info = $status_config[$current_status] ?? $status_config['planned'];
+                    $is_checked_in = in_array($current_status, ['present', 'checked_out']);
+                ?>
+                    <div class="saw-visitor-card <?= $is_checked_in ? 'is-checked-in' : '' ?>" 
+                         data-status="<?= esc_attr($current_status) ?>">
+                        
                         <label class="saw-visitor-select">
                             <input type="checkbox" 
                                    name="existing_visitor_ids[]" 
                                    value="<?= $visitor['id'] ?>"
-                                   checked>
-                            <span class="saw-visitor-name">
-                                <?= esc_html($visitor['first_name'] . ' ' . $visitor['last_name']) ?>
-                            </span>
+                                   <?= $is_checked_in ? 'checked disabled' : 'checked' ?>>
+                            <?php if ($is_checked_in): ?>
+                                <!-- Hidden field to ensure checked-in visitors are always included -->
+                                <input type="hidden" name="existing_visitor_ids[]" value="<?= $visitor['id'] ?>">
+                            <?php endif; ?>
+                            
+                            <div class="saw-visitor-info">
+                                <span class="saw-visitor-name">
+                                    <?= esc_html($visitor['first_name'] . ' ' . $visitor['last_name']) ?>
+                                </span>
+                                <?php if (!empty($visitor['position'])): ?>
+                                    <span class="saw-visitor-position-text">
+                                        <?= esc_html($visitor['position']) ?>
+                                    </span>
+                                <?php endif; ?>
+                            </div>
                         </label>
                         
-                        <label class="saw-training-skip">
-                            <input type="checkbox" 
-                                   name="training_skip[<?= $visitor['id'] ?>]" 
-                                   value="1">
-                            <span><?= esc_html($t['training_skip']) ?></span>
-                        </label>
+                        <div class="saw-visitor-meta">
+                            <!-- Status Badge -->
+                            <span class="saw-visitor-status-badge" 
+                                  data-status="<?= esc_attr($current_status) ?>"
+                                  style="background: <?= $status_info['bg'] ?>; color: <?= $status_info['color'] ?>; border: 1px solid <?= $status_info['color'] ?>33;">
+                                <?php if ($current_status === 'present'): ?>
+                                    <span class="status-dot"></span>
+                                <?php endif; ?>
+                                <?= esc_html($status_info['label']) ?>
+                            </span>
+                            
+                            <?php if (!$is_checked_in): ?>
+                                <label class="saw-training-skip">
+                                    <input type="checkbox" 
+                                           name="training_skip[<?= $visitor['id'] ?>]" 
+                                           value="1"
+                                           <?= !empty($visitor['training_skipped']) ? 'checked' : '' ?>>
+                                    <span><?= esc_html($t['training_skip']) ?></span>
+                                </label>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -212,9 +461,7 @@ $t = $translations[$lang] ?? $translations['cs'];
             </button>
         </div>
         
-        <!-- ✅ NOVÝ form-actions s back button -->
-        <div class="form-actions" style="display: flex; gap: 1rem; justify-content: space-between; margin-top: 2rem; flex-wrap: wrap;">
-            
+        <div class="form-actions">
             <?php if ($this->can_go_back()): ?>
             <button type="submit" 
                     name="invitation_action" 
@@ -226,7 +473,7 @@ $t = $translations[$lang] ?? $translations['cs'];
                 <?php echo $lang === 'en' ? 'Back' : 'Zpět'; ?>
             </button>
             <?php else: ?>
-            <div></div><!-- Spacer pro layout -->
+            <div></div>
             <?php endif; ?>
             
             <button type="submit" class="saw-btn-primary saw-btn-submit">
@@ -238,12 +485,13 @@ $t = $translations[$lang] ?? $translations['cs'];
 
 <script>
 let visitorCount = 0;
+
 function addNewVisitor() {
     visitorCount++;
     const html = `
         <div class="saw-visitor-form" id="visitor-${visitorCount}">
             <div class="saw-visitor-form-header">
-                <h4>Návštěvník #${visitorCount}</h4>
+                <h4><?= $lang === 'en' ? 'Visitor' : 'Návštěvník' ?> #${visitorCount}</h4>
                 <button type="button" class="saw-btn-remove" onclick="removeVisitor(${visitorCount})">×</button>
             </div>
             
@@ -285,72 +533,45 @@ function addNewVisitor() {
     
     document.getElementById('new-visitors-container').insertAdjacentHTML('beforeend', html);
 }
+
 function removeVisitor(id) {
     document.getElementById(`visitor-${id}`).remove();
 }
-// Auto-add first visitor if no existing visitors
-if (document.querySelectorAll('.saw-visitor-card').length === 0) {
-    addNewVisitor();
-}
 
-// ===================================
-// FORM VALIDATION
-// ===================================
+// Auto-add first visitor form if no existing visitors
 document.addEventListener('DOMContentLoaded', function() {
-    const form = document.querySelector('form[method="POST"]');
-    
-    if (!form) {
-        console.error('[Invitation] Form not found');
-        return;
+    if (document.querySelectorAll('.saw-visitor-card').length === 0) {
+        addNewVisitor();
     }
     
-    form.addEventListener('submit', function(e) {
-        // 1. Zkontroluj existing visitors (checkboxy)
-        const existingChecked = document.querySelectorAll('input[name="existing_visitor_ids[]"]:checked').length;
-        
-        // 2. Zkontroluj nové visitors (formuláře)
-        const newVisitorForms = document.querySelectorAll('.saw-visitor-form');
-        let hasValidNewVisitor = false;
-        
-        newVisitorForms.forEach(function(form) {
-            const firstName = form.querySelector('input[name*="[first_name]"]');
-            const lastName = form.querySelector('input[name*="[last_name]"]');
+    // Form validation
+    const form = document.querySelector('form[method="POST"]');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const existingChecked = document.querySelectorAll('input[name="existing_visitor_ids[]"]:checked').length;
+            const existingHidden = document.querySelectorAll('input[type="hidden"][name="existing_visitor_ids[]"]').length;
             
-            // Pokud má OBOJÍ jméno i příjmení vyplněné, je to validní visitor
-            if (firstName && lastName && 
-                firstName.value.trim() !== '' && 
-                lastName.value.trim() !== '') {
-                hasValidNewVisitor = true;
+            const newVisitorForms = document.querySelectorAll('.saw-visitor-form');
+            let hasValidNewVisitor = false;
+            
+            newVisitorForms.forEach(function(formEl) {
+                const firstName = formEl.querySelector('input[name*="[first_name]"]');
+                const lastName = formEl.querySelector('input[name*="[last_name]"]');
+                
+                if (firstName && lastName && 
+                    firstName.value.trim() !== '' && 
+                    lastName.value.trim() !== '') {
+                    hasValidNewVisitor = true;
+                }
+            });
+            
+            const totalVisitors = existingChecked + existingHidden + (hasValidNewVisitor ? 1 : 0);
+            
+            if (totalVisitors === 0) {
+                e.preventDefault();
+                alert('<?= $lang === 'en' ? 'Please select or add at least one visitor' : 'Prosím vyberte nebo přidejte alespoň jednoho návštěvníka' ?>');
             }
         });
-        
-        // 3. Validace: Musí být alespoň JEDEN visitor
-        if (existingChecked === 0 && !hasValidNewVisitor) {
-            e.preventDefault();
-            
-            // Zobraz chybu v jazyce uživatele
-            const lang = '<?php echo $lang; ?>';
-            const errorMsg = lang === 'en' 
-                ? 'Please add at least one visitor with first name and last name filled.'
-                : 'Přidejte alespoň jednoho návštěvníka s vyplněným jménem a příjmením.';
-            
-            alert(errorMsg);
-            
-            // Focus na první nový visitor formulář pokud existuje
-            if (newVisitorForms.length > 0) {
-                const firstForm = newVisitorForms[0];
-                const firstNameInput = firstForm.querySelector('input[name*="[first_name]"]');
-                if (firstNameInput) {
-                    firstNameInput.focus();
-                }
-            }
-            
-            return false;
-        }
-        
-        // Vše OK, formulář může být odeslán
-        return true;
-    });
+    }
 });
 </script>
-

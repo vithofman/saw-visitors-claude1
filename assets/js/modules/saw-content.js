@@ -240,7 +240,6 @@
             // Validate document type selection for uploaded files
             $form.find('.saw-document-item').each(function () {
                 const $uploadContainer = $(this).find('.saw-file-upload-modern-container');
-                const $select = $(this).find('select');
                 
                 // Get uploaded files from modern upload component
                 if ($uploadContainer.length) {
@@ -248,11 +247,14 @@
                     if (uploadInstance) {
                         const uploadedFiles = uploadInstance.getUploadedFiles();
                         
-                        // If files are uploaded, document type must be selected
-                        if (uploadedFiles.length > 0 && !$select.val()) {
+                        // OPRAVA: Hledat select UVNITŘ upload containeru
+                        const $select = $uploadContainer.find('.saw-category-select-input');
+                        
+                        // OPRAVA: Kontrolovat pouze pokud select existuje A jsou nahrány soubory
+                        if ($select.length > 0 && uploadedFiles.length > 0 && !$select.val()) {
                             hasError = true;
                             $select.css('border', '2px solid #dc2626');
-
+                            
                             // Scroll to first error
                             if (!$form.find('.saw-validation-error').length) {
                                 $select.before('<div class="saw-validation-error">⚠️ Vyberte typ dokumentu pro nahraný soubor</div>');
@@ -260,9 +262,9 @@
                                     scrollTop: $select.offset().top - 100
                                 }, 500);
                             }
-                        } else {
+                        } else if ($select.length > 0) {
                             $select.css('border', '');
-                            $(this).find('.saw-validation-error').remove();
+                            $uploadContainer.find('.saw-validation-error').remove();
                         }
                     }
                 }
@@ -420,9 +422,9 @@
         });
 
         // Remove error on change
-        $(document).on('change', '.saw-document-item select', function () {
+        $(document).on('change', '.saw-category-select-input', function () {
             $(this).css('border', '');
-            $(this).siblings('.saw-validation-error').remove();
+            $(this).closest('.saw-file-upload-modern-container').find('.saw-validation-error').remove();
         });
 
         // Odstranit dokument (pro dynamicky přidané) - already using event delegation

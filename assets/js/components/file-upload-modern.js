@@ -296,8 +296,7 @@
                             <div class="saw-category-select-wrapper">
                                 <select 
                                     class="saw-category-select-input" 
-                                    ${isMultiple}
-                                    ${config.required ? 'required' : ''}
+                                    ${isMultiple}                                    
                                     aria-label="${this.escapeHtml(categoryLabel)}"
                                 >
                                     <option value="">-- Vyberte ${categoryLabel.toLowerCase()} --</option>

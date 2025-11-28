@@ -70,7 +70,7 @@ class SAW_Invitation_Router {
             "SELECT * FROM {$wpdb->prefix}saw_visits 
              WHERE invitation_token = %s 
              AND invitation_token_expires_at > NOW()
-             AND status IN ('pending', 'draft', 'confirmed')",
+             AND status IN ('pending', 'draft', 'confirmed', 'in_progress')",
             $token
         ), ARRAY_A);
         

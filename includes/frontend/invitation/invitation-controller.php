@@ -105,7 +105,7 @@ error_log("=== RELOAD_VISIT_FROM_TOKEN DEBUG ===");
             "SELECT * FROM {$wpdb->prefix}saw_visits 
              WHERE invitation_token = %s 
              AND invitation_token_expires_at > NOW()
-             AND status IN ('pending', 'draft', 'confirmed')",
+             AND status IN ('pending', 'draft', 'confirmed', 'in_progress')",
             $this->token
         ), ARRAY_A);
         
