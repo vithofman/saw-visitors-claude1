@@ -4,7 +4,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visits
- * @version     3.0.0 - REFACTORED: Added walk-in and invitation AJAX actions
+ * @version     3.1.0 - ENHANCED: Added virtual columns for risk checking
  */
 
 if (!defined('ABSPATH')) {
@@ -191,4 +191,19 @@ return array(
         'saw_extend_pin' => 'ajax_extend_pin',
         'saw_generate_pin' => 'ajax_generate_pin',
     ),
+    
+    // ============================================
+    // VIRTUAL COLUMNS
+    // Dynamically computed values not stored in database
+    // ============================================
+    'virtual_columns' => array(
+    'has_risks' => array(
+        'type' => 'computed',  // ← Změnil jsem na 'computed' (bez $wpdb)
+        'callback' => function($item) {
+            // ⚠️ TEST: Vždy vrať 'yes' abychom zjistili jestli se callback volá
+            error_log("[VIRTUAL COLUMN TEST] Visit ID: " . ($item['id'] ?? 'NULL') . " - Returning: yes");
+            return 'yes';
+        },
+    ),
+),
 );

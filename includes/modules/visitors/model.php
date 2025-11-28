@@ -560,26 +560,34 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
     }
     
     /**
-     * Mark visit as started if not already
-     */
-    private function mark_visit_as_started($visit_id) {
-        global $wpdb;
-        
-        $visit = $wpdb->get_row($wpdb->prepare(
-            "SELECT status FROM {$wpdb->prefix}saw_visits WHERE id = %d",
-            $visit_id
-        ), ARRAY_A);
-        
-        if ($visit && $visit['status'] === 'confirmed') {
-            $wpdb->update(
-                $wpdb->prefix . 'saw_visits',
-                array('status' => 'in_progress'),
-                array('id' => $visit_id),
-                array('%s'),
-                array('%d')
-            );
-        }
+ * Mark visit as started - sets started_at to earliest visitor check-in
+ */
+private function mark_visit_as_started($visit_id) {
+    global $wpdb;
+    
+    // Get earliest check-in time from all visitors
+    $earliest_checkin = $wpdb->get_var($wpdb->prepare(
+        "SELECT MIN(first_checkin_at) 
+         FROM {$wpdb->prefix}saw_visitors 
+         WHERE visit_id = %d 
+         AND first_checkin_at IS NOT NULL",
+        $visit_id
+    ));
+    
+    // Update visit status and started_at
+    if ($earliest_checkin) {
+        $wpdb->update(
+            $wpdb->prefix . 'saw_visits',
+            array(
+                'status' => 'in_progress',
+                'started_at' => $earliest_checkin  // ✅ Čas prvního návštěvníka
+            ),
+            array('id' => $visit_id),
+            array('%s', '%s'),
+            array('%d')
+        );
     }
+}
     
     /**
      * Check if all visitors checked out and mark visit as completed

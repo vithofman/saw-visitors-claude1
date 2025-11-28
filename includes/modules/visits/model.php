@@ -128,18 +128,21 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
         $where_values[] = $offset;
         
         $items = $wpdb->get_results($wpdb->prepare($sql, ...$where_values), ARRAY_A);
-        
-        foreach ($items as &$item) {
-            if (!empty($item['created_at'])) {
-                $item['created_at'] = date_i18n('d.m.Y H:i', strtotime($item['created_at']));
-            }
+    
+    foreach ($items as &$item) {
+        if (!empty($item['created_at'])) {
+            $item['created_at'] = date_i18n('d.m.Y H:i', strtotime($item['created_at']));
         }
-        
-        return array(
-            'items' => $items,
-            'total' => intval($total),
-        );
     }
+    
+    // ✅ PŘIDEJ TENTO ŘÁDEK:
+    $items = $this->apply_virtual_columns($items);
+    
+    return array(
+        'items' => $items,
+        'total' => intval($total),
+    );
+}
     
     /**
      * Get currently present visitors for dashboard widget

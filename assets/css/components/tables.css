@@ -1908,9 +1908,20 @@
 }
 
 .saw-floating-action-btn .dashicons {
+    font-family: dashicons !important;
     width: 24px;
     height: 24px;
     font-size: 24px;
+    line-height: 1;
+    display: inline-block;
+    /* Ensure proper dashicons rendering */
+    speak: none;
+    font-style: normal;
+    font-weight: normal;
+    font-variant: normal;
+    text-transform: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 /* ============================================

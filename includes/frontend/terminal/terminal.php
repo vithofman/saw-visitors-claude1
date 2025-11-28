@@ -2207,6 +2207,7 @@ private function handle_training_additional_complete() {
             $wpdb->update(
                 $wpdb->prefix . 'saw_visitors',
                 [
+                    'training_step_additional' => 1,
                     'training_completed_at' => current_time('mysql'),
                     'training_status' => 'completed',  // ✅ NOVÝ
                 ],
