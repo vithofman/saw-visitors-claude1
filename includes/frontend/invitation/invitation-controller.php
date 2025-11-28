@@ -222,10 +222,25 @@ error_log("Visit found: " . ($visit ? "YES (ID: {$visit['id']})" : "NO"));
         );
     }
     
+    // ✅ Load invitation autosave script
+    $autosave_js = SAW_VISITORS_PLUGIN_DIR . 'assets/js/invitation/invitation-autosave.js';
+    if (file_exists($autosave_js)) {
+        wp_enqueue_script(
+            'saw-invitation-autosave',
+            SAW_VISITORS_PLUGIN_URL . 'assets/js/invitation/invitation-autosave.js',
+            ['jquery'],
+            filemtime($autosave_js),
+            true  // V footeru
+        );
+    }
+    
+    // ✅ Localize script with autosave nonce and current step
     wp_localize_script('jquery', 'sawInvitation', [
         'token' => $this->token,
         'ajaxurl' => admin_url('admin-ajax.php'),
         'clearNonce' => wp_create_nonce('saw_clear_invitation_session'),
+        'autosaveNonce' => wp_create_nonce('saw_invitation_autosave'),  // ✅ PŘIDÁNO
+        'currentStep' => $this->current_step,  // ✅ PŘIDÁNO - pro autosave logiku
     ]);
 }
     

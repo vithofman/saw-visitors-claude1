@@ -20,6 +20,11 @@
         constructor() {
             // Timeout for scroll/table state (5 minutes)
             this.STATE_TIMEOUT = 5 * 60 * 1000; // 5 minutes in milliseconds
+            // Timeout for form data (5 minutes)
+            this.FORM_DATA_TIMEOUT = 5 * 60 * 1000; // 5 minutes in milliseconds
+            
+            // Cleanup expired form data on initialization
+            this.cleanupExpiredFormData();
         }
 
         /**
@@ -158,9 +163,13 @@
                 return;
             }
 
+            // Get full URL including query string
+            const fullUrl = window.location.pathname + window.location.search;
+
             const formData = {
                 data: data,
-                url: window.location.pathname,
+                url: fullUrl,
+                pathname: window.location.pathname, // For backward compatibility
                 timestamp: Date.now()
             };
 
@@ -170,7 +179,7 @@
                     JSON.stringify(formData)
                 );
             } catch (e) {
-                console.warn('Failed to save form data:', e);
+                console.warn('[StateManager] Failed to save form data:', e);
             }
         }
 
@@ -178,7 +187,7 @@
          * Restore form data from sessionStorage
          * 
          * @param {string} formId - Form ID or identifier
-         * @return {array|object|null} Form data or null if not found
+         * @return {array|object|null} Form data or null if not found/expired/invalid
          */
         restoreFormData(formId) {
             if (!this.supportsSessionStorage()) {
@@ -192,9 +201,38 @@
                 }
 
                 const parsed = JSON.parse(data);
+                
+                // Validate timestamp
+                if (!parsed.timestamp || (Date.now() - parsed.timestamp > this.FORM_DATA_TIMEOUT)) {
+                    console.log('[StateManager] Form data expired for:', formId);
+                    sessionStorage.removeItem('saw_form_' + formId);
+                    return null;
+                }
+                
+                // Validate URL match (pathname + search)
+                const currentUrl = window.location.pathname + window.location.search;
+                if (parsed.url !== currentUrl) {
+                    console.log('[StateManager] URL mismatch for form data:', formId, 'Expected:', parsed.url, 'Got:', currentUrl);
+                    sessionStorage.removeItem('saw_form_' + formId);
+                    return null;
+                }
+                
+                // Validate data is not empty
+                if (!parsed.data || (Array.isArray(parsed.data) && parsed.data.length === 0)) {
+                    console.log('[StateManager] Form data is empty for:', formId);
+                    sessionStorage.removeItem('saw_form_' + formId);
+                    return null;
+                }
+                
                 return parsed.data;
             } catch (e) {
-                console.warn('Failed to restore form data:', e);
+                console.warn('[StateManager] Failed to restore form data:', e);
+                // Remove corrupted data
+                try {
+                    sessionStorage.removeItem('saw_form_' + formId);
+                } catch (e2) {
+                    // Ignore
+                }
                 return null;
             }
         }
@@ -202,8 +240,14 @@
         /**
          * Check if form data exists for given form ID
          * 
+         * Validates:
+         * - Data exists
+         * - Timestamp is valid (< 5 minutes)
+         * - URL matches (pathname + search)
+         * - Data is not empty
+         * 
          * @param {string} formId - Form ID or identifier
-         * @return {boolean} True if form data exists
+         * @return {boolean} True if form data exists and is valid
          */
         hasFormData(formId) {
             if (!this.supportsSessionStorage()) {
@@ -211,8 +255,44 @@
             }
 
             try {
-                return sessionStorage.getItem('saw_form_' + formId) !== null;
+                const data = sessionStorage.getItem('saw_form_' + formId);
+                if (!data) {
+                    return false;
+                }
+
+                const parsed = JSON.parse(data);
+                
+                // Check timestamp
+                if (!parsed.timestamp || (Date.now() - parsed.timestamp > this.FORM_DATA_TIMEOUT)) {
+                    console.log('[StateManager] Form data expired for:', formId);
+                    sessionStorage.removeItem('saw_form_' + formId);
+                    return false;
+                }
+                
+                // Check URL match
+                const currentUrl = window.location.pathname + window.location.search;
+                if (parsed.url !== currentUrl) {
+                    console.log('[StateManager] URL mismatch for form data:', formId);
+                    sessionStorage.removeItem('saw_form_' + formId);
+                    return false;
+                }
+                
+                // Check data is not empty
+                if (!parsed.data || (Array.isArray(parsed.data) && parsed.data.length === 0)) {
+                    console.log('[StateManager] Form data is empty for:', formId);
+                    sessionStorage.removeItem('saw_form_' + formId);
+                    return false;
+                }
+                
+                return true;
             } catch (e) {
+                console.warn('[StateManager] Failed to check form data:', e);
+                // Remove corrupted data
+                try {
+                    sessionStorage.removeItem('saw_form_' + formId);
+                } catch (e2) {
+                    // Ignore
+                }
                 return false;
             }
         }
@@ -252,6 +332,47 @@
         }
 
         /**
+         * Cleanup expired form data
+         * 
+         * Removes all expired form data entries from sessionStorage
+         * 
+         * @return {void}
+         */
+        cleanupExpiredFormData() {
+            if (!this.supportsSessionStorage()) {
+                return;
+            }
+
+            try {
+                const keys = Object.keys(sessionStorage);
+                const now = Date.now();
+                
+                keys.forEach((key) => {
+                    if (key.indexOf('saw_form_') === 0) {
+                        try {
+                            const data = sessionStorage.getItem(key);
+                            if (data) {
+                                const parsed = JSON.parse(data);
+                                
+                                // Remove if expired
+                                if (!parsed.timestamp || (now - parsed.timestamp > this.FORM_DATA_TIMEOUT)) {
+                                    sessionStorage.removeItem(key);
+                                    console.log('[StateManager] Cleaned up expired form data:', key);
+                                }
+                            }
+                        } catch (e) {
+                            // Remove corrupted data
+                            sessionStorage.removeItem(key);
+                            console.log('[StateManager] Cleaned up corrupted form data:', key);
+                        }
+                    }
+                });
+            } catch (e) {
+                console.warn('[StateManager] Failed to cleanup expired form data:', e);
+            }
+        }
+
+        /**
          * Clear all SAW state data (for debugging/testing)
          * 
          * @return {void}
@@ -269,7 +390,7 @@
                     }
                 });
             } catch (e) {
-                console.warn('Failed to clear all state:', e);
+                console.warn('[StateManager] Failed to clear all state:', e);
             }
         }
     }

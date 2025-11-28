@@ -4,7 +4,10 @@
  * Works for both Terminal and Invitation flows
  * 
  * @package SAW_Visitors
- * @version 3.3.0
+ * @version 3.4.0
+ * 
+ * ZMĚNA v 3.4.0:
+ * - Sjednocený layout s risks.php (text + dokumenty ve stejné kartě)
  */
 
 if (!defined('ABSPATH')) {
@@ -41,39 +44,39 @@ if ($is_invitation) {
         }
     }
     
-    // Get additional content from training content (simplified - would need full implementation)
+    // Get additional content from training content
     $additional_text = '';
-$documents = [];
-if ($visit) {
-    $language_id = $wpdb->get_var($wpdb->prepare(
-        "SELECT id FROM {$wpdb->prefix}saw_training_languages 
-         WHERE customer_id = %d AND language_code = %s",
-        $visit->customer_id,
-        $lang
-    ));
-    
-    if ($language_id) {
-        $content = $wpdb->get_row($wpdb->prepare(
-            "SELECT id, additional_text FROM {$wpdb->prefix}saw_training_content 
-             WHERE customer_id = %d AND branch_id = %d AND language_id = %d",
+    $documents = [];
+    if ($visit) {
+        $language_id = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM {$wpdb->prefix}saw_training_languages 
+             WHERE customer_id = %d AND language_code = %s",
             $visit->customer_id,
-            $visit->branch_id,
-            $language_id
+            $lang
         ));
         
-        if ($content) {
-            $additional_text = $content->additional_text ?? '';
-            if ($content->id) {
-                $documents = $wpdb->get_results($wpdb->prepare(
-                    "SELECT * FROM {$wpdb->prefix}saw_training_documents 
-                     WHERE document_type = 'additional' AND reference_id = %d 
-                     ORDER BY uploaded_at ASC",
-                    $content->id
-                ), ARRAY_A);
+        if ($language_id) {
+            $content = $wpdb->get_row($wpdb->prepare(
+                "SELECT id, additional_text FROM {$wpdb->prefix}saw_training_content 
+                 WHERE customer_id = %d AND branch_id = %d AND language_id = %d",
+                $visit->customer_id,
+                $visit->branch_id,
+                $language_id
+            ));
+            
+            if ($content) {
+                $additional_text = $content->additional_text ?? '';
+                if ($content->id) {
+                    $documents = $wpdb->get_results($wpdb->prepare(
+                        "SELECT * FROM {$wpdb->prefix}saw_training_documents 
+                         WHERE document_type = 'additional' AND reference_id = %d 
+                         ORDER BY uploaded_at ASC",
+                        $content->id
+                    ), ARRAY_A);
+                }
             }
         }
     }
-}
 } else {
     // Terminal flow
     $flow = isset($flow) ? $flow : [];
@@ -112,6 +115,7 @@ $translations = array(
         'documents_title' => 'Související dokumenty',
         'no_content' => 'Obsah není k dispozici.',
         'download' => 'Stáhnout',
+        'no_documents' => 'Žádné dokumenty',
     ),
     'en' => array(
         'title' => 'Additional Information',
@@ -121,6 +125,7 @@ $translations = array(
         'documents_title' => 'Related Documents',
         'no_content' => 'Content not available.',
         'download' => 'Download',
+        'no_documents' => 'No documents',
     ),
     'sk' => array(
         'title' => 'Ďalšie informácie',
@@ -130,6 +135,7 @@ $translations = array(
         'documents_title' => 'Súvisiace dokumenty',
         'no_content' => 'Obsah nie je k dispozícii.',
         'download' => 'Stiahnuť',
+        'no_documents' => 'Žiadne dokumenty',
     ),
     'uk' => array(
         'title' => 'Додаткова інформація',
@@ -139,13 +145,14 @@ $translations = array(
         'documents_title' => 'Супровідні документи',
         'no_content' => 'Вміст недоступний.',
         'download' => 'Завантажити',
+        'no_documents' => 'Немає документів',
     ),
 );
 
 $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
 ?>
 <style>
-/* === EXACT COPY FROM RISKS.PHP === */
+/* === UNIFIED WITH RISKS.PHP - SAME CARD LAYOUT === */
 :root {
     --theme-color: #667eea;
     --theme-color-hover: #764ba2;
@@ -157,6 +164,7 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
     --text-primary: #FFFFFF;
     --text-secondary: #e5e7eb;
     --text-muted: #9ca3af;
+    --accent-info: #60a5fa;
 }
 
 *,
@@ -172,7 +180,8 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
     display: none !important;
 }
 
-.saw-risks-aurora {
+/* Main container */
+.saw-additional-aurora {
     position: fixed;
     inset: 0;
     width: 100vw;
@@ -183,36 +192,39 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
     overflow: hidden;
 }
 
-.saw-risks-content-wrapper {
+/* Scrollable wrapper */
+.saw-additional-content-wrapper {
     height: 100%;
     overflow-y: auto;
     overflow-x: hidden;
     padding: 3rem 2rem 10rem;
 }
 
-.saw-risks-content-wrapper::-webkit-scrollbar {
+.saw-additional-content-wrapper::-webkit-scrollbar {
     width: 8px;
 }
 
-.saw-risks-content-wrapper::-webkit-scrollbar-track {
+.saw-additional-content-wrapper::-webkit-scrollbar-track {
     background: rgba(0, 0, 0, 0.2);
 }
 
-.saw-risks-content-wrapper::-webkit-scrollbar-thumb {
+.saw-additional-content-wrapper::-webkit-scrollbar-thumb {
     background: rgba(148, 163, 184, 0.3);
     border-radius: 999px;
 }
 
-.saw-risks-content-wrapper::-webkit-scrollbar-thumb:hover {
+.saw-additional-content-wrapper::-webkit-scrollbar-thumb:hover {
     background: rgba(148, 163, 184, 0.5);
 }
 
-.saw-risks-layout {
-    max-width: 1600px;
+/* Layout */
+.saw-additional-layout {
+    max-width: 1400px;
     margin: 0 auto;
 }
 
-.saw-risks-header {
+/* Header */
+.saw-additional-header {
     display: flex;
     align-items: center;
     gap: 1.5rem;
@@ -225,7 +237,7 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
-.saw-risks-icon {
+.saw-additional-icon {
     width: 4rem;
     height: 4rem;
     flex-shrink: 0;
@@ -241,7 +253,7 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
     position: relative;
 }
 
-.saw-risks-icon::before {
+.saw-additional-icon::before {
     content: "";
     position: absolute;
     inset: -2px;
@@ -256,7 +268,7 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
     50% { opacity: 0.8; transform: scale(1.05); }
 }
 
-.saw-risks-title {
+.saw-additional-title {
     font-size: 2rem;
     font-weight: 700;
     background: linear-gradient(135deg, #f9fafb 0%, #cbd5e1 100%);
@@ -267,124 +279,113 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
     margin-bottom: 0.375rem;
 }
 
-.saw-risks-subtitle {
+.saw-additional-subtitle {
     font-size: 0.9375rem;
     color: rgba(203, 213, 225, 0.7);
     font-weight: 500;
     line-height: 1.5;
 }
 
-.saw-risks-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 2fr) minmax(0, 0.75fr);
-    gap: 2rem;
-    align-items: start;
-}
-
-.saw-risks-glass-card {
+/* Content card - UNIFIED with risks.php */
+.saw-additional-card {
     background: var(--bg-glass);
     backdrop-filter: blur(20px) saturate(180%);
     border-radius: 20px;
     border: 1px solid var(--border-glass);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+/* Card body with grid - SAME AS RISKS */
+.saw-additional-body {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 2rem;
     padding: 2rem;
 }
 
-.saw-text-content {
-    font-size: 1rem;
+/* Text content */
+.saw-additional-text {
+    /* No extra padding needed */
+}
+
+.saw-additional-text-content {
+    font-size: 0.9375rem;
     line-height: 1.75;
     font-weight: 400;
     color: var(--text-secondary);
 }
 
-.saw-text-content h1,
-.saw-text-content h2,
-.saw-text-content h3,
-.saw-text-content h4 {
+.saw-additional-text-content h1,
+.saw-additional-text-content h2,
+.saw-additional-text-content h3,
+.saw-additional-text-content h4 {
     color: var(--text-primary);
     font-weight: 700;
     letter-spacing: -0.01em;
-    margin-top: 2rem;
-    margin-bottom: 1rem;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
 }
 
-.saw-text-content h1 { font-size: 2rem; margin-top: 0; }
-.saw-text-content h2 { font-size: 1.75rem; }
-.saw-text-content h3 { font-size: 1.5rem; }
-.saw-text-content h4 { font-size: 1.25rem; }
-.saw-text-content p { margin-bottom: 1.25rem; }
+.saw-additional-text-content h1 { font-size: 1.5rem; margin-top: 0; }
+.saw-additional-text-content h2 { font-size: 1.25rem; }
+.saw-additional-text-content h3 { font-size: 1.125rem; }
+.saw-additional-text-content h4 { font-size: 1rem; }
+.saw-additional-text-content p { margin-bottom: 1rem; }
 
-.saw-text-content ul,
-.saw-text-content ol {
-    margin: 1.25rem 0 1.25rem 1.5rem;
+.saw-additional-text-content ul,
+.saw-additional-text-content ol {
+    margin: 1rem 0 1rem 1.5rem;
 }
 
-.saw-text-content li {
+.saw-additional-text-content li {
     margin-bottom: 0.5rem;
 }
 
-.saw-text-content strong {
+.saw-additional-text-content strong {
     color: var(--text-primary);
     font-weight: 600;
 }
 
-.saw-text-content a {
+.saw-additional-text-content a {
     color: #818cf8;
     text-decoration: none;
     border-bottom: 1px solid rgba(129, 140, 248, 0.3);
     transition: all 0.2s;
 }
 
-.saw-text-content a:hover {
+.saw-additional-text-content a:hover {
     color: #a5b4fc;
     border-bottom-color: rgba(165, 180, 252, 0.5);
 }
 
-.saw-risks-empty-text {
-    font-size: 1.2rem;
-    color: var(--text-muted);
-    text-align: center;
-    padding: 3rem 0;
+/* Documents sidebar - inside the same card */
+.saw-additional-docs {
+    border-left: 1px solid var(--border-glass);
+    padding-left: 2rem;
 }
 
-.saw-risks-sidebar {
-    position: sticky;
-    top: 2rem;
-}
-
-.saw-documents-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-}
-
-.saw-documents-title {
-    font-size: 1.125rem;
+.saw-additional-docs-title {
+    font-size: 1rem;
     font-weight: 600;
     color: var(--text-primary);
+    margin-bottom: 1rem;
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.5rem;
 }
 
-.saw-documents-count {
-    font-size: 0.875rem;
-    color: var(--text-muted);
-}
-
-.saw-documents-list {
+.saw-additional-docs-list {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
 }
 
-.saw-document-card {
+.saw-additional-doc-card {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    padding: 1rem;
+    gap: 0.875rem;
+    padding: 0.875rem;
     text-decoration: none;
     background: var(--bg-glass-light);
     border-radius: 12px;
@@ -392,69 +393,77 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.saw-document-card:hover {
+.saw-additional-doc-card:hover {
     background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(102, 126, 234, 0.4);
+    border-color: rgba(96, 165, 250, 0.4);
     transform: translateX(4px);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
-.saw-document-icon {
-    width: 2.5rem;
-    height: 2.5rem;
+.saw-additional-doc-icon {
+    width: 2.25rem;
+    height: 2.25rem;
     flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.25rem;
-    border-radius: 10px;
-    background: linear-gradient(135deg, var(--theme-color), var(--theme-color-hover));
+    font-size: 1.125rem;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #60a5fa, #3b82f6);
     color: var(--text-primary);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3);
 }
 
-.saw-document-info {
+.saw-additional-doc-info {
     flex: 1;
     min-width: 0;
 }
 
-.saw-document-name {
-    font-size: 0.875rem;
+.saw-additional-doc-name {
+    font-size: 0.8125rem;
     font-weight: 600;
     color: var(--text-primary);
-    margin-bottom: 0.375rem;
+    margin-bottom: 0.25rem;
     word-break: break-word;
     line-height: 1.3;
 }
 
-.saw-document-meta {
+.saw-additional-doc-meta {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    font-size: 0.75rem;
+    font-size: 0.6875rem;
 }
 
-.saw-doc-badge {
-    padding: 0.125rem 0.5rem;
-    background: rgba(102, 126, 234, 0.15);
-    border: 1px solid rgba(102, 126, 234, 0.3);
+.saw-additional-doc-badge {
+    padding: 0.125rem 0.4rem;
+    background: rgba(96, 165, 250, 0.15);
+    border: 1px solid rgba(96, 165, 250, 0.3);
     border-radius: 6px;
-    color: #818cf8;
+    color: #60a5fa;
     font-weight: 600;
     text-transform: uppercase;
 }
 
-.saw-doc-action {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
+.saw-additional-doc-size {
     color: var(--text-muted);
 }
 
-.saw-doc-action svg {
-    opacity: 0.7;
+/* Empty states */
+.saw-additional-empty-text {
+    font-size: 1rem;
+    color: var(--text-muted);
+    text-align: center;
+    padding: 3rem 0;
 }
 
+.saw-additional-no-docs {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* === UNIFIED FLOATING ACTION BAR === */
 .saw-confirm-panel {
     position: fixed;
     bottom: 2rem;
@@ -538,47 +547,53 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
     transform: none;
 }
 
-@media (max-width: 1200px) {
-    .saw-risks-grid {
-        grid-template-columns: minmax(0, 1fr);
+/* Responsive */
+@media (max-width: 1024px) {
+    .saw-additional-body {
+        grid-template-columns: 1fr;
     }
     
-    .saw-risks-sidebar {
-        position: static;
+    .saw-additional-docs {
+        border-left: none;
+        border-top: 1px solid var(--border-glass);
+        padding-left: 0;
+        padding-top: 2rem;
     }
 }
 
 @media (max-width: 768px) {
-    .saw-risks-content-wrapper {
+    .saw-additional-content-wrapper {
         padding: 2rem 1rem 12rem;
     }
     
-    .saw-risks-header {
+    .saw-additional-header {
+        flex-direction: column;
+        text-align: center;
         gap: 1rem;
         padding: 1.5rem;
         margin-bottom: 2rem;
     }
     
-    .saw-risks-icon {
+    .saw-additional-icon {
         width: 3rem;
         height: 3rem;
         font-size: 1.75rem;
     }
     
-    .saw-risks-title {
+    .saw-additional-title {
         font-size: 1.5rem;
     }
     
-    .saw-risks-subtitle {
+    .saw-additional-subtitle {
         font-size: 0.875rem;
     }
     
-    .saw-risks-glass-card {
+    .saw-additional-body {
         padding: 1.25rem;
     }
     
-    .saw-text-content {
-        font-size: 0.95rem;
+    .saw-additional-text-content {
+        font-size: 0.875rem;
     }
     
     .saw-confirm-panel {
@@ -600,92 +615,123 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
         padding: 0.875rem 1.25rem;
     }
 }
+
+/* Skip button styles */
+.saw-training-skip-wrapper {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: rgba(139, 92, 246, 0.1);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: 12px;
+    text-align: center;
+}
+
+.saw-skip-info {
+    color: #c4b5fd;
+    margin-bottom: 1rem;
+}
+
+.saw-btn-skip {
+    padding: 0.75rem 1.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: #f9fafb;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.saw-btn-skip:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
 </style>
 
-<div class="saw-risks-aurora">
+<div class="saw-additional-aurora">
     
-    <div class="saw-risks-content-wrapper">
-        <div class="saw-risks-layout">
+    <div class="saw-additional-content-wrapper">
+        <div class="saw-additional-layout">
 
-            <header class="saw-risks-header">
-                <div class="saw-risks-icon">ℹ️</div>
-                <div class="saw-risks-header-text">
-                    <h1 class="saw-risks-title"><?php echo esc_html($t['title']); ?></h1>
-                    <p class="saw-risks-subtitle"><?php echo esc_html($t['subtitle']); ?></p>
+            <!-- Header -->
+            <header class="saw-additional-header">
+                <div class="saw-additional-icon">ℹ️</div>
+                <div class="saw-additional-header-text">
+                    <h1 class="saw-additional-title"><?php echo esc_html($t['title']); ?></h1>
+                    <p class="saw-additional-subtitle"><?php echo esc_html($t['subtitle']); ?></p>
                 </div>
             </header>
 
-            <main class="saw-risks-grid">
-                
-                <section class="saw-risks-glass-card saw-risks-text-card">
-                    <?php if (!$has_content): ?>
-                        <p class="saw-risks-empty-text">
-                            <?php echo esc_html($t['no_content']); ?>
-                        </p>
-                    <?php else: ?>
-                        <div class="saw-text-content">
-                            <?php echo wp_kses_post($additional_text); ?>
+            <!-- Content Card - UNIFIED LAYOUT like risks.php -->
+            <?php if (!$has_content && !$has_documents): ?>
+                <div class="saw-additional-card">
+                    <div class="saw-additional-empty-text">
+                        <?php echo esc_html($t['no_content']); ?>
+                    </div>
+                </div>
+            <?php else: ?>
+                <div class="saw-additional-card">
+                    <div class="saw-additional-body">
+                        
+                        <!-- Text content -->
+                        <div class="saw-additional-text">
+                            <?php if ($has_content): ?>
+                                <div class="saw-additional-text-content">
+                                    <?php echo wp_kses_post($additional_text); ?>
+                                </div>
+                            <?php else: ?>
+                                <p class="saw-additional-no-docs"><?php echo esc_html($t['no_content']); ?></p>
+                            <?php endif; ?>
                         </div>
-                    <?php endif; ?>
-                </section>
-
-                <?php if ($has_documents): ?>
-                    <aside class="saw-risks-sidebar">
-                        <div class="saw-risks-glass-card saw-documents-card">
+                        
+                        <!-- Documents sidebar - INSIDE THE SAME CARD -->
+                        <div class="saw-additional-docs">
+                            <h4 class="saw-additional-docs-title">
+                                <span>📎</span>
+                                <span><?php echo esc_html($t['documents_title']); ?></span>
+                            </h4>
                             
-                            <div class="saw-documents-header">
-                                <h2 class="saw-documents-title">
-                                    <span>📎</span>
-                                    <span><?php echo esc_html($t['documents_title']); ?></span>
-                                </h2>
-                                <span class="saw-documents-count">
-                                    <?php echo count($documents); ?>
-                                </span>
-                            </div>
-
-                            <div class="saw-documents-list">
+                            <?php if ($has_documents): ?>
+                            <div class="saw-additional-docs-list">
                                 <?php foreach ($documents as $doc): ?>
-                                    <?php
-                                    $file_url = content_url() . '/uploads' . $doc['file_path'];
-                                    $filename = $doc['file_name'];
-                                    $file_ext = strtoupper(pathinfo($filename, PATHINFO_EXTENSION));
-                                    $file_size = isset($doc['file_size']) ? size_format($doc['file_size']) : '';
-                                    ?>
-                                    <a href="<?php echo esc_url($file_url); ?>"
-                                       class="saw-document-card"
-                                       download="<?php echo esc_attr($filename); ?>">
-                                        <div class="saw-document-icon">📄</div>
-                                        <div class="saw-document-info">
-                                            <div class="saw-document-name">
-                                                <?php echo esc_html($filename); ?>
-                                            </div>
-                                            <div class="saw-document-meta">
-                                                <?php if ($file_ext): ?>
-                                                <span class="saw-doc-badge"><?php echo esc_html($file_ext); ?></span>
-                                                <?php endif; ?>
-                                                <?php if ($file_size): ?>
-                                                <span class="saw-doc-action"><?php echo esc_html($file_size); ?></span>
-                                                <?php endif; ?>
-                                                <span class="saw-doc-action">
-                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
-                                                    </svg>
-                                                    <?php echo esc_html($t['download']); ?>
-                                                </span>
-                                            </div>
+                                <?php
+                                $file_url = content_url() . '/uploads' . $doc['file_path'];
+                                $filename = $doc['file_name'];
+                                $file_ext = strtoupper(pathinfo($filename, PATHINFO_EXTENSION));
+                                $file_size = isset($doc['file_size']) ? size_format($doc['file_size']) : '';
+                                ?>
+                                <a href="<?php echo esc_url($file_url); ?>"
+                                   class="saw-additional-doc-card"
+                                   download="<?php echo esc_attr($filename); ?>">
+                                    <div class="saw-additional-doc-icon">📄</div>
+                                    <div class="saw-additional-doc-info">
+                                        <div class="saw-additional-doc-name">
+                                            <?php echo esc_html($filename); ?>
                                         </div>
-                                    </a>
+                                        <div class="saw-additional-doc-meta">
+                                            <?php if ($file_ext): ?>
+                                            <span class="saw-additional-doc-badge"><?php echo esc_html($file_ext); ?></span>
+                                            <?php endif; ?>
+                                            <?php if ($file_size): ?>
+                                            <span class="saw-additional-doc-size"><?php echo esc_html($file_size); ?></span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </a>
                                 <?php endforeach; ?>
                             </div>
-
+                            <?php else: ?>
+                            <p class="saw-additional-no-docs"><?php echo esc_html($t['no_documents']); ?></p>
+                            <?php endif; ?>
                         </div>
-                    </aside>
-                <?php endif; ?>
+                        
+                    </div>
+                </div>
+            <?php endif; ?>
 
-            </main>
         </div>
     </div>
     
+    <!-- UNIFIED Floating Panel -->
     <form method="POST" id="additional-form" class="saw-confirm-panel">
         <?php 
         $nonce_name = $is_invitation ? 'saw_invitation_step' : 'saw_terminal_step';
@@ -741,7 +787,6 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
 
 <?php 
 // Skip button for invitation mode
-// $is_invitation already set above
 if ($is_invitation): 
 ?>
     <div class="saw-training-skip-wrapper">
@@ -758,39 +803,6 @@ if ($is_invitation):
     </div>
 <?php endif; ?>
 
-<?php if ($is_invitation): ?>
-<style>
-.saw-training-skip-wrapper {
-    margin-top: 2rem;
-    padding: 1.5rem;
-    background: rgba(139, 92, 246, 0.1);
-    border: 1px solid rgba(139, 92, 246, 0.3);
-    border-radius: 12px;
-    text-align: center;
-}
-
-.saw-skip-info {
-    color: #c4b5fd;
-    margin-bottom: 1rem;
-}
-
-.saw-btn-skip {
-    padding: 0.75rem 1.5rem;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
-    color: #f9fafb;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.saw-btn-skip:hover {
-    background: rgba(255, 255, 255, 0.15);
-}
-</style>
-<?php endif; ?>
-
 <?php
-error_log("[ADDITIONAL.PHP] Unified with risks.php (v3.3.0)");
+error_log("[ADDITIONAL.PHP] Unified layout with risks.php (v3.4.0 - text+docs in same card)");
 ?>

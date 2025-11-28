@@ -11,6 +11,18 @@
 (function($) {
     'use strict';
 
+    // Timeout for form data (5 minutes)
+    const FORM_DATA_TIMEOUT = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+    // Excluded form selectors (forms that should NOT use autosave)
+    const EXCLUDED_FORM_SELECTORS = [
+        '.saw-invitation-form',
+        '.saw-terminal-form',
+        '[data-no-autosave="true"]',
+        '#loginform',
+        '#search-form'
+    ];
+
     /**
      * Debounce function
      * 
@@ -31,6 +43,76 @@
     }
 
     /**
+     * Get full URL including query string
+     * 
+     * @return {string} Full URL (pathname + search)
+     */
+    function getFullUrl() {
+        return window.location.pathname + window.location.search;
+    }
+
+    /**
+     * Check if form should be excluded from autosave
+     * 
+     * @param {jQuery} $form - Form element
+     * @return {boolean} True if form should be excluded
+     */
+    function isExcludedForm($form) {
+        // Check selectors
+        for (let i = 0; i < EXCLUDED_FORM_SELECTORS.length; i++) {
+            if ($form.is(EXCLUDED_FORM_SELECTORS[i])) {
+                console.log('[FormAutosave] Form excluded by selector:', EXCLUDED_FORM_SELECTORS[i]);
+                return true;
+            }
+        }
+
+        // Check if form is inside excluded containers
+        if ($form.closest('.saw-invitation-container, .saw-terminal-container').length > 0) {
+            console.log('[FormAutosave] Form excluded - inside invitation/terminal container');
+            return true;
+        }
+
+        // Check data attribute
+        if ($form.attr('data-no-autosave') === 'true') {
+            console.log('[FormAutosave] Form excluded by data-no-autosave attribute');
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if form data is empty (ignoring nonce and action fields)
+     * 
+     * @param {array} data - Serialized form data
+     * @return {boolean} True if data is empty
+     */
+    function isEmptyFormData(data) {
+        if (!data || !Array.isArray(data) || data.length === 0) {
+            return true;
+        }
+
+        // Filter out nonce and action fields
+        const userFields = data.filter(function(item) {
+            const name = item.name || '';
+            return name.indexOf('_wpnonce') === -1 && 
+                   name.indexOf('_wp_http_referer') === -1 &&
+                   name !== 'action' &&
+                   name !== 'invitation_action';
+        });
+
+        // Check if any user field has a value
+        for (let i = 0; i < userFields.length; i++) {
+            const value = userFields[i].value || '';
+            if (value.trim() !== '') {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * Get form identifier
      * 
      * @param {jQuery} $form - Form element
@@ -40,19 +122,20 @@
         // Try ID first
         const id = $form.attr('id');
         if (id) {
-            return id;
+            // Include query string for unique ID
+            return id + '_' + getFullUrl().replace(/[^a-zA-Z0-9]/g, '_');
         }
 
         // Try name
         const name = $form.attr('name');
         if (name) {
-            return name;
+            return name + '_' + getFullUrl().replace(/[^a-zA-Z0-9]/g, '_');
         }
 
         // Try action URL
         const action = $form.attr('action');
         if (action) {
-            return action.replace(/[^a-zA-Z0-9]/g, '_');
+            return action.replace(/[^a-zA-Z0-9]/g, '_') + '_' + getFullUrl().replace(/[^a-zA-Z0-9]/g, '_');
         }
 
         // Fallback: use class or generate from URL
@@ -60,12 +143,12 @@
         if (classes) {
             const classMatch = classes.match(/saw-[\w-]+-form/);
             if (classMatch) {
-                return classMatch[0];
+                return classMatch[0] + '_' + getFullUrl().replace(/[^a-zA-Z0-9]/g, '_');
             }
         }
 
-        // Last resort: use current URL
-        return 'form_' + window.location.pathname.replace(/[^a-zA-Z0-9]/g, '_');
+        // Last resort: use current URL (with query string)
+        return 'form_' + getFullUrl().replace(/[^a-zA-Z0-9]/g, '_');
     }
 
     /**
@@ -142,10 +225,21 @@
      * 
      * @param {Function} onRestore - Callback when user chooses to restore
      * @param {Function} onDiscard - Callback when user chooses to discard
+     * @param {number} timestamp - Timestamp when data was saved
      * @return {void}
      */
-    function showRestorePrompt(onRestore, onDiscard) {
-        if (confirm('Máte neuložená data z předchozího sezení. Chcete je obnovit?')) {
+    function showRestorePrompt(onRestore, onDiscard, timestamp) {
+        let message = 'Máte neuložená data z předchozího sezení. Chcete je obnovit?';
+        
+        // Add time info if available
+        if (timestamp) {
+            const minutesAgo = Math.floor((Date.now() - timestamp) / 60000);
+            if (minutesAgo > 0) {
+                message += ' (uloženo před ' + minutesAgo + ' minutami)';
+            }
+        }
+        
+        if (confirm(message)) {
             if (onRestore) {
                 onRestore();
             }
@@ -167,27 +261,51 @@
             return;
         }
 
+        // Check if form should be excluded
+        if (isExcludedForm($form)) {
+            console.log('[FormAutosave] Form excluded from autosave:', $form.attr('id') || $form.attr('class'));
+            return;
+        }
+
         const formId = getFormId($form);
 
-        // Check if form data exists
+        // Check if form data exists (with validation)
         if (window.stateManager && window.stateManager.hasFormData(formId)) {
+            // Get saved data with timestamp for prompt
+            let savedTimestamp = null;
+            try {
+                const savedDataStr = sessionStorage.getItem('saw_form_' + formId);
+                if (savedDataStr) {
+                    const parsed = JSON.parse(savedDataStr);
+                    savedTimestamp = parsed.timestamp || null;
+                }
+            } catch (e) {
+                // Ignore
+            }
+            
             const savedData = window.stateManager.restoreFormData(formId);
             
-            if (savedData) {
+            if (savedData && !isEmptyFormData(savedData)) {
                 showRestorePrompt(
                     function() {
                         // Restore data
                         restoreFormData($form, savedData);
-                        console.log('✅ Form data restored for:', formId);
+                        console.log('[FormAutosave] ✅ Form data restored for:', formId);
                     },
                     function() {
                         // Discard data
                         if (window.stateManager) {
                             window.stateManager.clearFormData(formId);
                         }
-                        console.log('🗑️ Form data discarded for:', formId);
-                    }
+                        console.log('[FormAutosave] 🗑️ Form data discarded for:', formId);
+                    },
+                    savedTimestamp
                 );
+            } else {
+                // Data is empty or invalid, clear it
+                if (window.stateManager) {
+                    window.stateManager.clearFormData(formId);
+                }
             }
         }
 
@@ -198,6 +316,13 @@
             }
 
             const formData = serializeFormData($form);
+            
+            // Don't save if data is empty
+            if (isEmptyFormData(formData)) {
+                console.log('[FormAutosave] Skipping save - form data is empty');
+                return;
+            }
+            
             window.stateManager.saveFormData(formId, formData);
             
             // Show indicator (only once per session to avoid spam)
@@ -206,21 +331,19 @@
                 $form.data('autosave-indicator-shown', true);
             }
 
-            console.log('💾 Form data auto-saved for:', formId);
+            console.log('[FormAutosave] 💾 Form data auto-saved for:', formId);
         }, 2000);
 
         // Listen to form changes
         $form.on('input change', 'input, textarea, select', saveFormData);
 
-        // Clear data on successful submit
+        // Clear data on submit (BEFORE submit, not after)
         $form.on('submit', function() {
-            // Wait a bit to ensure form was actually submitted
-            setTimeout(function() {
-                if (window.stateManager) {
-                    window.stateManager.clearFormData(formId);
-                    console.log('🗑️ Form data cleared after submit for:', formId);
-                }
-            }, 500);
+            // Clear immediately (redirect may be faster than setTimeout)
+            if (window.stateManager) {
+                window.stateManager.clearFormData(formId);
+                console.log('[FormAutosave] 🗑️ Form data cleared on submit for:', formId);
+            }
         });
     }
 
@@ -230,6 +353,11 @@
      * @return {void}
      */
     function initAllForms() {
+        // Cleanup expired form data first
+        if (window.stateManager && typeof window.stateManager.cleanupExpiredFormData === 'function') {
+            window.stateManager.cleanupExpiredFormData();
+        }
+
         // Find all forms (with .saw-form class or any form with ID)
         const $forms = $('form.saw-form, form[id]');
 
@@ -238,7 +366,7 @@
             initFormAutosave($form);
         });
 
-        console.log('✅ Form autosave initialized for', $forms.length, 'form(s)');
+        console.log('[FormAutosave] ✅ Form autosave initialized for', $forms.length, 'form(s)');
     }
 
     /**

@@ -4,7 +4,11 @@
  * Works for both Terminal and Invitation flows
  * 
  * @package SAW_Visitors
- * @version 3.3.0
+ * @version 3.4.0
+ * 
+ * ZMĚNA v 3.4.0:
+ * - Invitation flow nyní filtruje departments podle navštěvovaných hostů
+ * - Stejná logika jako v Terminal (saw_visit_hosts → saw_user_departments)
  */
 
 if (!defined('ABSPATH')) {
@@ -41,7 +45,7 @@ if ($is_invitation) {
         }
     }
     
-    // ✅ NOVÉ: Načíst departments z databáze
+    // ✅ NOVÉ: Načíst departments z databáze - FILTROVANÉ PODLE HOSTŮ
     $departments = [];
     if ($visit) {
         // Najdi language_id
@@ -68,31 +72,80 @@ if ($is_invitation) {
             error_log("[SHARED DEPARTMENT.PHP] Found content_id: " . ($content ? $content->id : 'NOT FOUND'));
             
             if ($content) {
-    error_log("[DEPT] Content ID: " . $content->id);
-    
-    // Načti oddělení která mají text_content NEBO dokumenty
-$dept_rows = $wpdb->get_results($wpdb->prepare(
-    "SELECT tdc.*, d.name as department_name, d.description as department_description,
-            (SELECT COUNT(*) FROM {$wpdb->prefix}saw_training_documents td 
-             WHERE td.document_type = 'department' AND td.reference_id = tdc.id) as docs_count
-     FROM {$wpdb->prefix}saw_training_department_content tdc
-     LEFT JOIN {$wpdb->prefix}saw_departments d ON tdc.department_id = d.id
-     WHERE tdc.training_content_id = %d 
-       AND (
-           (tdc.text_content IS NOT NULL AND tdc.text_content != '')
-           OR EXISTS (
-               SELECT 1 FROM {$wpdb->prefix}saw_training_documents td 
-               WHERE td.document_type = 'department' AND td.reference_id = tdc.id
-           )
-       )
-     ORDER BY tdc.id ASC",
-    $content->id
-), ARRAY_A);
-    
-    error_log("[DEPT] SQL: " . $wpdb->last_query);
-    error_log("[DEPT] Error: " . $wpdb->last_error);
-    error_log("[DEPT] Rows found: " . count($dept_rows));
-    error_log("[DEPT] Raw result: " . json_encode($dept_rows));
+                error_log("[DEPT] Content ID: " . $content->id);
+                
+                // ✅ NOVÉ: Získej department IDs filtrované podle hostů (stejně jako Terminal)
+                $host_ids = $wpdb->get_col($wpdb->prepare(
+                    "SELECT user_id FROM {$wpdb->prefix}saw_visit_hosts WHERE visit_id = %d",
+                    $visit->id
+                ));
+                
+                error_log("[SHARED DEPARTMENT.PHP Invitation] Host IDs for visit #{$visit->id}: " . implode(', ', $host_ids));
+                
+                $department_ids = [];
+                
+                if (!empty($host_ids)) {
+                    foreach ($host_ids as $host_id) {
+                        // Získej departments přiřazené tomuto hostovi
+                        $host_dept_ids = $wpdb->get_col($wpdb->prepare(
+                            "SELECT department_id FROM {$wpdb->prefix}saw_user_departments WHERE user_id = %d",
+                            $host_id
+                        ));
+                        
+                        error_log("[SHARED DEPARTMENT.PHP Invitation] Host #{$host_id} departments: " . implode(', ', $host_dept_ids));
+                        
+                        // Pokud host nemá přiřazená oddělení (admin/super_manager) → všechna oddělení pobočky
+                        if (empty($host_dept_ids)) {
+                            $all_dept_ids = $wpdb->get_col($wpdb->prepare(
+                                "SELECT id FROM {$wpdb->prefix}saw_departments 
+                                 WHERE customer_id = %d AND branch_id = %d AND is_active = 1",
+                                $visit->customer_id,
+                                $visit->branch_id
+                            ));
+                            $department_ids = array_merge($department_ids, $all_dept_ids);
+                            error_log("[SHARED DEPARTMENT.PHP Invitation] Host #{$host_id} is admin - using ALL branch departments: " . implode(', ', $all_dept_ids));
+                        } else {
+                            $department_ids = array_merge($department_ids, $host_dept_ids);
+                        }
+                    }
+                    
+                    $department_ids = array_unique($department_ids);
+                    error_log("[SHARED DEPARTMENT.PHP Invitation] Final filtered department IDs: " . implode(', ', $department_ids));
+                }
+                
+                // ✅ Načti content JEN pro filtrovaná oddělení
+                if (!empty($department_ids)) {
+                    $placeholders = implode(',', array_fill(0, count($department_ids), '%d'));
+                    $query_params = array_merge([$content->id], $department_ids);
+                    
+                    $dept_rows = $wpdb->get_results($wpdb->prepare(
+                        "SELECT tdc.*, d.name as department_name, d.description as department_description,
+                                (SELECT COUNT(*) FROM {$wpdb->prefix}saw_training_documents td 
+                                 WHERE td.document_type = 'department' AND td.reference_id = tdc.id) as docs_count
+                         FROM {$wpdb->prefix}saw_training_department_content tdc
+                         LEFT JOIN {$wpdb->prefix}saw_departments d ON tdc.department_id = d.id
+                         WHERE tdc.training_content_id = %d 
+                           AND tdc.department_id IN ({$placeholders})
+                           AND (
+                               (tdc.text_content IS NOT NULL AND tdc.text_content != '')
+                               OR EXISTS (
+                                   SELECT 1 FROM {$wpdb->prefix}saw_training_documents td 
+                                   WHERE td.document_type = 'department' AND td.reference_id = tdc.id
+                               )
+                           )
+                         ORDER BY tdc.id ASC",
+                        ...$query_params
+                    ), ARRAY_A);
+                } else {
+                    // Žádní hosts = žádná oddělení
+                    error_log("[SHARED DEPARTMENT.PHP Invitation] No hosts found - showing no departments");
+                    $dept_rows = [];
+                }
+                
+                error_log("[DEPT] SQL: " . $wpdb->last_query);
+                error_log("[DEPT] Error: " . $wpdb->last_error);
+                error_log("[DEPT] Rows found: " . count($dept_rows));
+                error_log("[DEPT] Raw result: " . json_encode($dept_rows));
                 
                 foreach ($dept_rows as $dept) {
                     error_log("[SHARED DEPARTMENT.PHP] Processing dept: " . ($dept['department_name'] ?? 'NO NAME') . ", text_content: " . (!empty($dept['text_content']) ? 'YES' : 'NO'));
@@ -113,12 +166,13 @@ $dept_rows = $wpdb->get_results($wpdb->prepare(
                     
                     $departments[] = [
                         'department_name' => $dept['department_name'] ?? 'Oddělení #' . $dept['department_id'],
+                        'department_id' => $dept['department_id'],
                         'text_content' => $text,
                         'documents' => $docs
                     ];
                 }
                 
-                error_log("[SHARED DEPARTMENT.PHP Invitation] Loaded " . count($departments) . " departments with content");
+                error_log("[SHARED DEPARTMENT.PHP Invitation] Loaded " . count($departments) . " departments with content (filtered by hosts)");
             }
         }
     }
@@ -952,5 +1006,5 @@ if ($is_invitation):
 <?php endif; ?>
 
 <?php
-error_log("[DEPARTMENT.PHP] Unified design with departments accordion loaded (v3.3.0)");
+error_log("[DEPARTMENT.PHP] Unified design with departments accordion loaded (v3.4.0 - filtered by hosts)");
 ?>
