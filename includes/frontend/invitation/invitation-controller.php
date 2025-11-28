@@ -467,17 +467,40 @@ error_log("Visit found: " . ($visit ? "YES (ID: {$visit['id']})" : "NO"));
         $delete_files = $_POST['delete_files'] ?? [];
         
         if (!empty($risks_text)) {
-    $wpdb->insert(
-        $wpdb->prefix . 'saw_visit_invitation_materials',
-        [
-            'visit_id' => $this->visit_id,
-            'customer_id' => $this->customer_id,  // ✅ PŘIDÁNO
-            'branch_id' => $this->branch_id,      // ✅ PŘIDÁNO
-            'material_type' => 'text',
-            'text_content' => $risks_text,
-            'uploaded_at' => current_time('mysql')
-        ]
-    );
+    // ✅ Zkontroluj jestli už existuje text pro tento visit
+    $existing_text_id = $wpdb->get_var($wpdb->prepare(
+        "SELECT id FROM {$wpdb->prefix}saw_visit_invitation_materials 
+         WHERE visit_id = %d AND material_type = 'text'
+         ORDER BY uploaded_at DESC LIMIT 1",
+        $this->visit_id
+    ));
+    
+    if ($existing_text_id) {
+        // ✅ UPDATE existujícího záznamu
+        $wpdb->update(
+            $wpdb->prefix . 'saw_visit_invitation_materials',
+            [
+                'text_content' => $risks_text,
+                'uploaded_at' => current_time('mysql')
+            ],
+            ['id' => $existing_text_id],
+            ['%s', '%s'],
+            ['%d']
+        );
+    } else {
+        // ✅ INSERT nového záznamu (první save)
+        $wpdb->insert(
+            $wpdb->prefix . 'saw_visit_invitation_materials',
+            [
+                'visit_id' => $this->visit_id,
+                'customer_id' => $this->customer_id,
+                'branch_id' => $this->branch_id,
+                'material_type' => 'text',
+                'text_content' => $risks_text,
+                'uploaded_at' => current_time('mysql')
+            ]
+        );
+    }
 }
         
         if (!empty($delete_files)) {
