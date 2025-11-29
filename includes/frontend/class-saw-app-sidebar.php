@@ -7,7 +7,7 @@
  *
  * @package SAW_Visitors
  * @since   4.6.2
- * @version 4.6.3 - ADDED: Companies menu item in ORGANIZACE section
+ * @version 4.6.4 - UPDATED: Added OOPP, removed Pozvánky, Statistiky, Verze školení
  */
 
 if (!defined('ABSPATH')) {
@@ -346,7 +346,7 @@ class SAW_App_Sidebar {
      * Items are filtered by permissions during rendering.
      *
      * @since 4.6.1
-     * @version 4.6.3 - ADDED: Companies menu item in ORGANIZACE section
+     * @version 4.6.4 - ADDED: OOPP, REMOVED: Pozvánky, Statistiky, Verze školení
      * @return array Menu structure
      */
     private function get_menu_items() {
@@ -357,8 +357,6 @@ class SAW_App_Sidebar {
             array(
                 'items' => array(
                     array('id' => 'dashboard', 'label' => 'Dashboard', 'url' => '/admin/dashboard', 'icon' => '📊'),
-                    array('id' => 'invitations', 'label' => 'Pozvánky', 'url' => '/admin/invitations', 'icon' => '📧'),
-                    array('id' => 'statistics', 'label' => 'Statistiky', 'url' => '/admin/statistics', 'icon' => '📈'),
                 ),
             ),
             
@@ -368,10 +366,9 @@ class SAW_App_Sidebar {
             array(
                 'heading' => 'Návštěvy',
                 'items' => array(
-		    array('id' => 'companies', 'label' => 'Firmy', 'url' => '/admin/companies', 'icon' => '🏭'),
+                    array('id' => 'companies', 'label' => 'Firmy', 'url' => '/admin/companies', 'icon' => '🏭'),
                     array('id' => 'visits', 'label' => 'Přehled návštěv', 'url' => '/admin/visits', 'icon' => '👥'),
                     array('id' => 'visitors', 'label' => 'Návštěvníci', 'url' => '/admin/visitors', 'icon' => '👥'),
-
                 ),
             ),
 
@@ -395,7 +392,7 @@ class SAW_App_Sidebar {
                 'items' => array(
                     array('id' => 'training-languages', 'label' => 'Jazyky', 'url' => '/admin/training-languages', 'icon' => '🌍'),
                     array('id' => 'content', 'label' => 'Správa obsahu', 'url' => '/admin/content', 'icon' => '📚'),
-                    array('id' => 'training', 'label' => 'Verze školení', 'url' => '/admin/settings/training', 'icon' => '🎓'),
+                    array('id' => 'oopp', 'label' => 'OOPP', 'url' => '/admin/oopp', 'icon' => '🦺'),
                 ),
             ),
             

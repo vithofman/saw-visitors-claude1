@@ -118,7 +118,7 @@ class SAW_Installer {
      * Get tables order based on dependencies
      *
      * Tables are ordered to respect foreign key dependencies.
-     * Total: 25 tables
+     * Total: 29 tables
      *
      * @since 4.6.1
      * @return array Table names (without 'saw_' prefix)
@@ -152,6 +152,12 @@ class SAW_Installer {
             'training_content',
             'training_department_content',
             'training_documents',
+            
+            // OOPP System (4)
+            'oopp_groups',
+            'oopp',
+            'oopp_branches',
+            'oopp_departments',
             
             // Visitor Training System (6)
             'visits',
@@ -286,6 +292,18 @@ class SAW_Installer {
             
             // error_log
             array('table' => 'error_log', 'constraint' => 'fk_error_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
+            
+            // oopp
+            array('table' => 'oopp', 'constraint' => 'fk_oopp_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'oopp', 'constraint' => 'fk_oopp_group', 'column' => 'group_id', 'ref_table' => 'oopp_groups', 'ref_column' => 'id', 'on_delete' => 'RESTRICT'),
+            
+            // oopp_branches
+            array('table' => 'oopp_branches', 'constraint' => 'fk_oopp_branches_oopp', 'column' => 'oopp_id', 'ref_table' => 'oopp', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'oopp_branches', 'constraint' => 'fk_oopp_branches_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            
+            // oopp_departments
+            array('table' => 'oopp_departments', 'constraint' => 'fk_oopp_depts_oopp', 'column' => 'oopp_id', 'ref_table' => 'oopp', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'oopp_departments', 'constraint' => 'fk_oopp_depts_dept', 'column' => 'department_id', 'ref_table' => 'departments', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
         );
         
         foreach ($foreign_keys as $fk) {
@@ -416,6 +434,47 @@ class SAW_Installer {
                 error_log("[SAW Installer] Phase 3: Inserted 11 training document types");
             }
         }
+        
+        // Insert OOPP groups (static data)
+        self::insert_oopp_groups();
+    }
+    
+    /**
+     * Insert OOPP groups (static data)
+     * 
+     * 8 skupin dle nařízení vlády č. 390/2021 Sb.
+     *
+     * @since 4.6.1
+     * @return void
+     */
+    private static function insert_oopp_groups() {
+        global $wpdb;
+        $prefix = $wpdb->prefix . 'saw_';
+        $table = $prefix . 'oopp_groups';
+        
+        // Check if already populated
+        $count = $wpdb->get_var("SELECT COUNT(*) FROM " . esc_sql($table));
+        
+        if ($count > 0) {
+            return;
+        }
+        
+        $groups = [
+            ['code' => 'I',    'name' => 'Prostředky k ochraně hlavy', 'display_order' => 1],
+            ['code' => 'II',   'name' => 'Prostředky k ochraně sluchu', 'display_order' => 2],
+            ['code' => 'III',  'name' => 'Prostředky k ochraně očí a obličeje', 'display_order' => 3],
+            ['code' => 'IV',   'name' => 'Prostředky k ochraně dýchacích orgánů', 'display_order' => 4],
+            ['code' => 'V',    'name' => 'Prostředky k ochraně rukou a paží', 'display_order' => 5],
+            ['code' => 'VI',   'name' => 'Prostředky k ochraně nohou a ochraně před uklouznutím', 'display_order' => 6],
+            ['code' => 'VII',  'name' => 'Prostředky k ochraně pokožky', 'display_order' => 7],
+            ['code' => 'VIII', 'name' => 'Prostředky k ochraně těla a/nebo další ochraně pokožky', 'display_order' => 8],
+        ];
+        
+        foreach ($groups as $group) {
+            $wpdb->insert($table, $group, ['%s', '%s', '%d']);
+        }
+        
+        error_log('[SAW Installer] Inserted ' . count($groups) . ' OOPP groups');
     }
     
     /**

@@ -50,5 +50,6 @@ return array(
         'visitor-uploads' => '/saw-visitor-docs/visitor-uploads/',
         'risk-docs' => '/saw-visitor-docs/risk-docs/',
         'documents' => '/saw-training/documents/',
+        'oopp' => '/saw-oopp/',
     ),
 );

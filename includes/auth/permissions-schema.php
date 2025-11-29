@@ -114,6 +114,10 @@ return [
             'actions' => ['list', 'view', 'create', 'edit', 'delete'],
             'scope' => 'customer',
         ],
+        'oopp' => [
+            'actions' => ['list', 'view', 'create', 'edit', 'delete'],
+            'scope' => 'customer',
+        ],
         // Explicitly blocked modules
         'customers' => [
             'actions' => [],
@@ -177,6 +181,10 @@ return [
             'actions' => ['list', 'view'],
             'scope' => 'branch',
         ],
+        'oopp' => [
+            'actions' => ['list', 'view', 'create', 'edit'],
+            'scope' => 'branch',
+        ],
     ],
     
     /**
@@ -227,6 +235,10 @@ return [
             'scope' => 'department',
         ],
         'documents' => [
+            'actions' => ['list', 'view'],
+            'scope' => 'department',
+        ],
+        'oopp' => [
             'actions' => ['list', 'view'],
             'scope' => 'department',
         ],
