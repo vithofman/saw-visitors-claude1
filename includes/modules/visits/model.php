@@ -145,36 +145,36 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
 }
     
     /**
-     * Get currently present visitors for dashboard widget
-     * 
-     * @since 3.3.0
-     * @param int $branch_id Branch ID
-     * @return array List of currently present visitors
-     */
-    public function get_currently_present($branch_id) {
-        global $wpdb;
-        
-        $today = current_time('Y-m-d');
-        
-        $sql = "SELECT 
-                    vis.id as visitor_id,
-                    CONCAT(vis.first_name, ' ', vis.last_name) as visitor_name,
-                    vis.phone,
-                    c.name as company_name,
-                    log.checked_in_at as today_checkin,
-                    TIMESTAMPDIFF(MINUTE, log.checked_in_at, NOW()) as minutes_inside
-                FROM {$wpdb->prefix}saw_visit_daily_logs log
-                INNER JOIN {$wpdb->prefix}saw_visitors vis ON log.visitor_id = vis.id
-                INNER JOIN {$wpdb->prefix}saw_visits v ON log.visit_id = v.id
-                LEFT JOIN {$wpdb->prefix}saw_companies c ON v.company_id = c.id
-                WHERE v.branch_id = %d
-                  AND log.log_date = %s
-                  AND log.checked_in_at IS NOT NULL
-                  AND log.checked_out_at IS NULL
-                ORDER BY log.checked_in_at DESC";
-        
-        return $wpdb->get_results($wpdb->prepare($sql, $branch_id, $today), ARRAY_A);
-    }
+ * Get currently present visitors for dashboard widget
+ * 
+ * ✅ FIXED: Removed log_date filter to support overnight visits
+ * 
+ * @since 3.3.0
+ * @param int $branch_id Branch ID
+ * @return array List of currently present visitors
+ */
+public function get_currently_present($branch_id) {
+    global $wpdb;
+    
+    $sql = "SELECT 
+                vis.id as visitor_id,
+                CONCAT(vis.first_name, ' ', vis.last_name) as visitor_name,
+                vis.phone,
+                c.name as company_name,
+                log.checked_in_at as today_checkin,
+                log.log_date,
+                TIMESTAMPDIFF(MINUTE, log.checked_in_at, NOW()) as minutes_inside
+            FROM {$wpdb->prefix}saw_visit_daily_logs log
+            INNER JOIN {$wpdb->prefix}saw_visitors vis ON log.visitor_id = vis.id
+            INNER JOIN {$wpdb->prefix}saw_visits v ON log.visit_id = v.id
+            LEFT JOIN {$wpdb->prefix}saw_companies c ON v.company_id = c.id
+            WHERE v.branch_id = %d
+              AND log.checked_in_at IS NOT NULL
+              AND log.checked_out_at IS NULL
+            ORDER BY log.checked_in_at DESC";
+    
+    return $wpdb->get_results($wpdb->prepare($sql, $branch_id), ARRAY_A);
+}
     
     /**
      * Find or create company by name

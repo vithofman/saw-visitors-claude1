@@ -590,33 +590,36 @@ private function mark_visit_as_started($visit_id) {
 }
     
     /**
-     * Check if all visitors checked out and mark visit as completed
-     */
-    private function check_and_complete_visit($visit_id) {
-        global $wpdb;
-        
-        // Count visitors still checked in
-        $checked_in_count = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(DISTINCT vis.id)
-             FROM {$wpdb->prefix}saw_visitors vis
-             INNER JOIN {$wpdb->prefix}saw_visit_daily_logs log ON vis.id = log.visitor_id
-             WHERE vis.visit_id = %d
-             AND log.log_date = %s
-             AND log.checked_in_at IS NOT NULL
-             AND log.checked_out_at IS NULL",
-            $visit_id,
-            current_time('Y-m-d')
-        ));
-        
-        // If no one is checked in, mark visit as completed
-        if ($checked_in_count == 0) {
-            $wpdb->update(
-                $wpdb->prefix . 'saw_visits',
-                array('status' => 'completed'),
-                array('id' => $visit_id),
-                array('%s'),
-                array('%d')
-            );
-        }
+ * Check if all visitors checked out and mark visit as completed
+ * 
+ * ✅ FIXED: Removed log_date filter to support overnight visits
+ */
+private function check_and_complete_visit($visit_id) {
+    global $wpdb;
+    
+    // Count visitors still checked in (ANY day, not just today)
+    $checked_in_count = $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(DISTINCT vis.id)
+         FROM {$wpdb->prefix}saw_visitors vis
+         INNER JOIN {$wpdb->prefix}saw_visit_daily_logs log ON vis.id = log.visitor_id
+         WHERE vis.visit_id = %d
+         AND log.checked_in_at IS NOT NULL
+         AND log.checked_out_at IS NULL",
+        $visit_id
+    ));
+    
+    // If no one is checked in, mark visit as completed
+    if ($checked_in_count == 0) {
+        $wpdb->update(
+            $wpdb->prefix . 'saw_visits',
+            array(
+                'status' => 'completed',
+                'completed_at' => current_time('mysql')
+            ),
+            array('id' => $visit_id),
+            array('%s', '%s'),
+            array('%d')
+        );
     }
+}
 }
