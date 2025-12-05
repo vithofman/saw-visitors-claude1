@@ -6,7 +6,7 @@
  * OOPP jsou globální pro zákazníka (customer_id), volitelně omezené na pobočky.
  *
  * @package SAW_Visitors
- * @version 1.0.0
+ * @version 1.2.0 - FIXED: Tabs configuration matching companies module
  */
 
 if (!defined('ABSPATH')) {
@@ -27,7 +27,7 @@ return array(
     
     // OOPP jsou globální pro zákazníka, NE pro pobočku
     'has_customer_isolation' => true,
-    'has_branch_isolation' => false,  // Důležité: OOPP nejsou per-branch
+    'has_branch_isolation' => false,
     
     // ============================================
     // CAPABILITIES
@@ -38,6 +38,35 @@ return array(
         'create' => 'manage_options',
         'edit' => 'manage_options',
         'delete' => 'manage_options',
+    ),
+    
+    // ============================================
+    // TABS CONFIGURATION - MATCHING COMPANIES FORMAT
+    // ============================================
+    'tabs' => array(
+        'enabled' => true,
+        'tab_param' => 'is_active',
+        'default_tab' => 'all',
+        'tabs' => array(
+            'all' => array(
+                'label' => 'Všechny',
+                'icon' => '📋',
+                'filter_value' => null,
+                'count_query' => true,
+            ),
+            'active' => array(
+                'label' => 'Aktivní',
+                'icon' => '✅',
+                'filter_value' => 1,
+                'count_query' => true,
+            ),
+            'inactive' => array(
+                'label' => 'Neaktivní',
+                'icon' => '❌',
+                'filter_value' => 0,
+                'count_query' => true,
+            ),
+        ),
     ),
     
     // ============================================
@@ -56,7 +85,7 @@ return array(
             'label' => 'Skupina OOPP',
             'required' => true,
             'sanitize' => 'absint',
-            'lookup' => 'oopp_groups',  // Automatické načtení z lookup tabulky
+            'lookup' => 'oopp_groups',
             'placeholder' => 'Vyberte skupinu...',
         ),
         'name' => array(
@@ -73,7 +102,7 @@ return array(
             'required' => false,
             'sanitize' => 'sanitize_text_field',
             'accept' => 'image/jpeg,image/png,image/gif,image/webp',
-            'max_size' => 2097152,  // 2MB
+            'max_size' => 2097152,
             'context' => 'oopp',
         ),
         'standards' => array(
@@ -150,8 +179,8 @@ return array(
             'name_field' => 'name',
             'code_field' => 'code',
             'order_by' => 'display_order ASC',
-            'cache_ttl' => 3600,  // 1 hodina (statická data)
-            'format' => '{code}. {name}',  // Formát zobrazení: "I. Prostředky k ochraně hlavy"
+            'cache_ttl' => 3600,
+            'format' => '{code}. {name}',
         ),
     ),
     
@@ -167,6 +196,7 @@ return array(
             'group_id' => true,
             'is_active' => true,
         ),
+        'enable_detail_modal' => true,
     ),
     
     // ============================================
@@ -174,7 +204,7 @@ return array(
     // ============================================
     'cache' => array(
         'enabled' => true,
-        'ttl' => 600,  // 10 minut
+        'ttl' => 600,
         'group' => 'oopp',
     ),
     
@@ -188,4 +218,3 @@ return array(
         'saw_get_oopp_for_department' => 'ajax_get_for_department',
     ),
 );
-

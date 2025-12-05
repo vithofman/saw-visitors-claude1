@@ -73,6 +73,9 @@ class SAW_Terminal_Controller {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-session-manager.php';
         }
         
+        // Load OOPP Public helper
+        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/modules/oopp/class-saw-oopp-public.php';
+        
         $this->session = SAW_Session_Manager::instance();
         
         // ✅ Získání customer_id a branch_id
@@ -390,6 +393,11 @@ class SAW_Terminal_Controller {
             case 'training-department':
                 error_log("Rendering training department");
                 $this->render_training_department();
+                break;
+                
+            case 'training-oopp':
+                error_log("Rendering training OOPP");
+                $this->render_training_oopp();
                 break;
                 
             case 'training-additional':
@@ -824,6 +832,44 @@ class SAW_Terminal_Controller {
 }
     
     /**
+     * Render training OOPP step
+     *
+     * @since 3.0.0
+     * @return void
+     */
+    private function render_training_oopp() {
+        $flow = $this->session->get('terminal_flow');
+        $visit_id = $flow['visit_id'] ?? null;
+        
+        if (!$visit_id) {
+            $this->move_to_next_training_step();
+            return;
+        }
+        
+        // Načti OOPP items
+        $oopp_items = [];
+        if (class_exists('SAW_OOPP_Public')) {
+            $oopp_items = SAW_OOPP_Public::get_for_visitor(
+                $this->customer_id, 
+                $this->branch_id, 
+                $visit_id
+            );
+        }
+        
+        // Pokud nejsou žádné OOPP, přeskoč
+        if (empty($oopp_items)) {
+            $this->move_to_next_training_step();
+            return;
+        }
+        
+        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/shared/training/oopp.php';
+        $this->render_template($template, [
+            'oopp_items' => $oopp_items,
+            'is_invitation' => false,
+        ]);
+    }
+    
+    /**
      * Render training additional step
      *
      * @since 1.0.0
@@ -966,6 +1012,10 @@ class SAW_Terminal_Controller {
                 
             case 'complete_training_department':
                 $this->handle_training_department_complete();
+                break;
+                
+            case 'complete_training_oopp':
+                $this->handle_training_oopp_complete();
                 break;
                 
             case 'complete_training_additional':
@@ -1321,6 +1371,18 @@ if (!empty($host_ids)) {
         }
     }
 }
+
+    // 6.5 OOPP
+    if (class_exists('SAW_OOPP_Public')) {
+        $has_oopp = SAW_OOPP_Public::has_oopp($this->customer_id, $this->branch_id, $visit_id);
+        if ($has_oopp) {
+            $steps[] = [
+                'type' => 'oopp',
+                'url' => 'training-oopp',
+                'data' => []
+            ];
+        }
+    }
 
 // 7. Additional (POSLEDNÍ KROK)
 if (!empty($content['additional_text'])) {
@@ -2036,8 +2098,10 @@ private function handle_checkout_complete() {
         $current_step_type = 'map';
     } elseif (strpos($path, 'training-risks') !== false) {
         $current_step_type = 'risks';
-    } elseif (strpos($path, 'training-department') !== false) {
+    } else    if (strpos($path, 'training-department') !== false) {
         $current_step_type = 'department';
+    } elseif (strpos($path, 'training-oopp') !== false) {
+        $current_step_type = 'oopp';
     } elseif (strpos($path, 'training-additional') !== false) {
         $current_step_type = 'additional';
     }
@@ -2193,6 +2257,22 @@ private function handle_training_department_complete() {
             );
         }
         error_log("[SAW Terminal] Marked department training as complete for " . count($visitor_ids) . " visitors");
+    }
+    $this->move_to_next_training_step();
+}
+
+private function handle_training_oopp_complete() {
+    $flow = $this->session->get('terminal_flow');
+    $visitor_ids = $flow['visitor_ids'] ?? [];
+    
+    if (!empty($visitor_ids)) {
+        global $wpdb;
+        foreach ($visitor_ids as $vid) {
+            // Note: There's no training_step_oopp column yet, but we can mark it in training_status or add a flag
+            // For now, just log it
+            error_log("[SAW Terminal] OOPP training completed for visitor #{$vid}");
+        }
+        error_log("[SAW Terminal] Marked OOPP training as complete for " . count($visitor_ids) . " visitors");
     }
     $this->move_to_next_training_step();
 }

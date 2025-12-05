@@ -28,6 +28,7 @@ if (isset($available_training_steps) && !empty($available_training_steps)) {
         'training-map' => ['icon' => '🗺️', 'title_cs' => 'Mapa', 'title_en' => 'Map'],
         'training-risks' => ['icon' => '⚠️', 'title_cs' => 'Rizika školení', 'title_en' => 'Training Risks'],
         'training-department' => ['icon' => '🏢', 'title_cs' => 'Oddělení', 'title_en' => 'Department'],
+        'training-oopp' => ['icon' => '🦺', 'title_cs' => 'OOPP', 'title_en' => 'PPE'],
         'training-additional' => ['icon' => 'ℹ️', 'title_cs' => 'Další info', 'title_en' => 'Additional'],
     ];
     foreach ($available_training_steps as $step) {

@@ -4,7 +4,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/OOPP
- * @version     1.0.0
+ * @version     1.1.0 - FIXED: Protected property access error
  */
 
 if (!defined('ABSPATH')) {
@@ -25,12 +25,23 @@ class SAW_Module_OOPP_Controller extends SAW_Base_Controller
     
     private $file_uploader;
     
+    /**
+     * Název tabulky pro přímé DB operace
+     * @var string
+     */
+    private $table_name;
+    
     public function __construct() {
+        global $wpdb;
+        
         $module_path = SAW_VISITORS_PLUGIN_DIR . 'includes/modules/oopp/';
         
         $this->config = require $module_path . 'config.php';
         $this->entity = $this->config['entity'];
         $this->config['path'] = $module_path;
+        
+        // Uložíme název tabulky pro použití v after_save
+        $this->table_name = $wpdb->prefix . $this->config['table'];
         
         require_once $module_path . 'model.php';
         $this->model = new SAW_Module_OOPP_Model($this->config);
@@ -136,8 +147,12 @@ class SAW_Module_OOPP_Controller extends SAW_Base_Controller
     
     /**
      * After save - zpracuj file upload
+     * 
+     * FIXED: Používáme $this->table_name místo $this->model->table (protected property)
      */
     protected function after_save($id) {
+        global $wpdb;
+        
         // Handle image upload
         if (!empty($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
             $upload_result = $this->file_uploader->upload(
@@ -146,14 +161,13 @@ class SAW_Module_OOPP_Controller extends SAW_Base_Controller
             );
             
             if (!is_wp_error($upload_result)) {
-                global $wpdb;
-                
                 // Extract relative path from full path
                 $upload_dir = wp_upload_dir();
                 $relative_path = str_replace($upload_dir['basedir'] . '/', '', $upload_result['path']);
                 
+                // FIXED: Používáme $this->table_name
                 $wpdb->update(
-                    $this->model->table,
+                    $this->table_name,
                     array('image_path' => $relative_path),
                     array('id' => $id),
                     array('%s'),
@@ -164,11 +178,10 @@ class SAW_Module_OOPP_Controller extends SAW_Base_Controller
         
         // Handle image removal
         if (isset($_POST['remove_image']) && $_POST['remove_image'] === '1') {
-            global $wpdb;
-            
             // Get current image path for deletion
+            // FIXED: Používáme $this->table_name
             $current_path = $wpdb->get_var($wpdb->prepare(
-                "SELECT image_path FROM {$this->model->table} WHERE id = %d",
+                "SELECT image_path FROM {$this->table_name} WHERE id = %d",
                 $id
             ));
             
@@ -183,8 +196,9 @@ class SAW_Module_OOPP_Controller extends SAW_Base_Controller
             }
             
             // Clear path in DB
+            // FIXED: Používáme $this->table_name
             $wpdb->update(
-                $this->model->table,
+                $this->table_name,
                 array('image_path' => null),
                 array('id' => $id),
                 array('%s'),
@@ -349,4 +363,3 @@ class SAW_Module_OOPP_Controller extends SAW_Base_Controller
         ));
     }
 }
-

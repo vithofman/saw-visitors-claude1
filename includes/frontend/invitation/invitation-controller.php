@@ -28,6 +28,9 @@ class SAW_Invitation_Controller {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-cache.php';
         }
         
+        // Load OOPP Public helper
+        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/modules/oopp/class-saw-oopp-public.php';
+        
         $this->session = SAW_Session_Manager::instance();
         $this->init_invitation_session();
         $this->load_languages();
@@ -173,7 +176,7 @@ error_log("Visit found: " . ($visit ? "YES (ID: {$visit['id']})" : "NO"));
     // 2. Pokud je ?step= v URL, použij ho (má přednost)
     $step = $_GET['step'] ?? '';
     if (!empty($step)) {
-        $steps_requiring_language = ['risks', 'visitors', 'training-video', 'training-map', 'training-risks', 'training-department', 'training-additional', 'success'];
+        $steps_requiring_language = ['risks', 'visitors', 'training-video', 'training-map', 'training-risks', 'training-department', 'training-oopp', 'training-additional', 'success'];
         if (in_array($step, $steps_requiring_language) && empty($flow['language'])) {
             return 'language';
         }
@@ -315,6 +318,10 @@ error_log("Visit found: " . ($visit ? "YES (ID: {$visit['id']})" : "NO"));
         case 'training-department':
             error_log("Rendering: training-department");
             $this->render_training_department();
+            break;
+        case 'training-oopp':
+            error_log("Rendering: training-oopp");
+            $this->render_training_oopp();
             break;
         case 'training-additional':
             error_log("Rendering: training-additional");
@@ -894,6 +901,19 @@ $lang = $flow['language'] ?? 'cs';
         error_log("[Invitation] + Department step available");
     }
     
+    // 6.5 OOPP - kontroluj zda existují OOPP pro hosty/branch
+    if (class_exists('SAW_OOPP_Public')) {
+        $has_oopp = SAW_OOPP_Public::has_oopp($this->customer_id, $this->branch_id, $this->visit_id);
+        if ($has_oopp) {
+            $steps[] = [
+                'type' => 'oopp',
+                'step' => 'training-oopp',
+                'has_content' => true
+            ];
+            error_log("[Invitation] + OOPP step available");
+        }
+    }
+    
     // 7. Additional - kontroluj additional_text NEBO dokumenty
     $has_additional_text = !empty($content['additional_text']);
     $additional_docs = $wpdb->get_var($wpdb->prepare(
@@ -1152,6 +1172,48 @@ $lang = $flow['language'] ?? 'cs';
     }
 }
     
+    /**
+     * Render training OOPP step
+     * 
+     * @since 3.0.0
+     */
+    private function render_training_oopp() {
+        // Zkontroluj zda tento krok má obsah
+        $available_steps = $this->get_available_training_steps();
+        $has_oopp_step = false;
+        foreach ($available_steps as $step) {
+            if ($step['type'] === 'oopp') {
+                $has_oopp_step = true;
+                break;
+            }
+        }
+        
+        if (!$has_oopp_step) {
+            error_log("[Invitation] OOPP step has no content, skipping...");
+            $this->skip_to_next_available_step('training-oopp');
+            return;
+        }
+        
+        // Načti OOPP items
+        $oopp_items = [];
+        if (class_exists('SAW_OOPP_Public')) {
+            $oopp_items = SAW_OOPP_Public::get_for_visitor(
+                $this->customer_id, 
+                $this->branch_id, 
+                $this->visit_id
+            );
+        }
+        
+        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/shared/training/oopp.php';
+        if (file_exists($template)) {
+            $this->render_template($template, [
+                'oopp_items' => $oopp_items,
+                'token' => $this->token,
+                'is_invitation' => true,
+            ]);
+        }
+    }
+    
     private function render_training_additional() {
     // ✅ Zkontroluj zda tento krok má obsah
     $available_steps = $this->get_available_training_steps();
@@ -1196,7 +1258,7 @@ $lang = $flow['language'] ?? 'cs';
         }
         
         // Pokud aktuální krok není v seznamu, najdi první dostupný po něm
-        $step_order = ['training-video', 'training-map', 'training-risks', 'training-department', 'training-additional'];
+        $step_order = ['training-video', 'training-map', 'training-risks', 'training-department', 'training-oopp', 'training-additional'];
         $current_order_index = array_search($current_step, $step_order);
         
         $next_step = 'summary';
@@ -1282,7 +1344,7 @@ $lang = $flow['language'] ?? 'cs';
         $flow = $this->session->get('invitation_flow');
         
         // Mark all training steps as skipped
-        $training_steps = ['training-video', 'training-map', 'training-risks', 'training-department', 'training-additional'];
+        $training_steps = ['training-video', 'training-map', 'training-risks', 'training-department', 'training-oopp', 'training-additional'];
         foreach ($training_steps as $step) {
             if (!in_array($step, $flow['history'] ?? [])) {
                 $flow['history'][] = $step;
