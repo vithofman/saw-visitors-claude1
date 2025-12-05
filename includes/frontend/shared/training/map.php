@@ -104,119 +104,122 @@ $translations = array(
         'continue' => 'Pokračovat',
         'loading' => 'Načítání...',
         'hint' => 'Projděte si všechny stránky',
+        'prev' => 'Předchozí',
+        'next' => 'Další',
+        'no_pdf' => 'Mapa není k dispozici',
     ),
     'en' => array(
         'confirm' => 'I confirm map review',
         'continue' => 'Continue',
         'loading' => 'Loading...',
         'hint' => 'Review all pages',
+        'prev' => 'Previous',
+        'next' => 'Next',
+        'no_pdf' => 'Map not available',
     ),
     'sk' => array(
         'confirm' => 'Potvrdzujem oboznámenie s mapou',
         'continue' => 'Pokračovať',
         'loading' => 'Načítavanie...',
         'hint' => 'Prejdite si všetky stránky',
+        'prev' => 'Predchádzajúce',
+        'next' => 'Ďalšie',
+        'no_pdf' => 'Mapa nie je k dispozícii',
     ),
     'uk' => array(
         'confirm' => 'Підтверджую ознайомлення з картою',
         'continue' => 'Продовжити',
         'loading' => 'Завантаження...',
         'hint' => 'Перегляньте всі сторінки',
+        'prev' => 'Попередній',
+        'next' => 'Наступний',
+        'no_pdf' => 'Карта недоступна',
     ),
 );
 
 $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
 ?>
 
-<!-- Žádný <style> blok! CSS je v pages.css -->
-
-<div class="saw-page-aurora saw-step-map saw-page-scrollable">
-    <div class="saw-page-content saw-page-content-scroll">
-        <div class="saw-page-container saw-page-container-wide">
-
-
-            <?php if ($has_pdf): ?>
+<div class="saw-pdf-fullscreen">
     
-            
-            <!-- Loading -->
-            <div id="pdf-loading" class="saw-empty-state" style="display: block;">
-                <div class="saw-empty-state-icon">📄</div>
-                <p class="saw-empty-state-text"><?php echo esc_html($t['loading']); ?></p>
-            </div>
-            
-            <!-- Canvas -->
-            <canvas id="pdf-canvas" style="display: none;"></canvas>
-            
-            <!-- Navigation Arrows - LEFT & RIGHT EDGE -->
-            <button type="button" id="pdf-prev" class="saw-pdf-btn" style="position: fixed; left: 0; top: 50%; transform: translateY(-50%); display: none;" disabled>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 32px; height: 32px;">
-                    <polyline points="15 18 9 12 15 6"></polyline>
-                </svg>
-            </button>
-            
-            <button type="button" id="pdf-next" class="saw-pdf-btn" style="position: fixed; right: 0; top: 50%; transform: translateY(-50%); display: none;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 32px; height: 32px;">
-                    <polyline points="9 18 15 12 9 6"></polyline>
-                </svg>
-            </button>
-            
-            <!-- Page Indicator - Top Right -->
-            <div id="pdf-page-indicator" class="saw-pdf-page-info" style="position: fixed; top: 2rem; right: 2rem; background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(10px); padding: 0.625rem 1.25rem; border-radius: 50px; z-index: 100; display: none;">
-                1 / 1
-            </div>
-            
-            <!-- Hint Message - Above Progress Bar -->
-            <div id="pdf-hint-message" class="saw-video-hint" style="display: none;">
-                <span>💡</span>
-                <span><?php echo esc_html($t['hint']); ?></span>
-            </div>
-            
-            <!-- Progress Bar - Above Actions -->
-            <div id="pdf-progress-bar" class="saw-video-progress-bar" style="display: none;">
-                <div id="pdf-progress-fill" class="saw-video-progress-fill" style="width: 0%;"></div>
-            </div>
-            
-            <!-- Floating Confirmation Panel -->
-            <form method="POST" id="map-form" class="saw-panel-confirm">
-                <?php 
-                $nonce_name = $is_invitation ? 'saw_invitation_step' : 'saw_terminal_step';
-                $nonce_field = $is_invitation ? 'invitation_nonce' : 'terminal_nonce';
-                $action_name = $is_invitation ? 'invitation_action' : 'terminal_action';
-                $complete_action = $is_invitation ? 'complete_training' : 'complete_training_map';
-                wp_nonce_field($nonce_name, $nonce_field); 
-                ?>
-                <input type="hidden" name="<?php echo esc_attr($action_name); ?>" value="<?php echo esc_attr($complete_action); ?>">
-                
-                <?php if (!$completed): ?>
-                <label class="saw-panel-checkbox" id="checkbox-wrapper">
-                    <input type="checkbox" 
-                           name="map_confirmed" 
-                           id="map-confirmed"
-                           value="1"
-                           required
-                           disabled>
-                    <span><?php echo esc_html($t['confirm']); ?></span>
-                </label>
-                <?php endif; ?>
-                
-                <button type="submit" 
-                        class="saw-panel-btn"
-                        id="continue-btn"
-                        <?php echo !$completed ? 'disabled' : ''; ?>>
-                    <?php echo esc_html($t['continue']); ?> →
-                </button>
-            </form>
-            
-            <?php endif; ?>
-            
-            <?php if (!$has_pdf): ?>
-            <div class="saw-empty-state">
-                <div class="saw-empty-state-icon">⚠️</div>
-                <p class="saw-empty-state-text"><?php echo esc_html($t['loading']); ?></p>
-            </div>
-            <?php endif; ?>
-        </div>
+    <?php if (!$has_pdf): ?>
+    <div class="saw-pdf-loading">
+        <p style="font-size: 1.5rem; margin-bottom: 2rem;">⚠️</p>
+        <p style="font-size: 1.125rem; font-weight: 600;"><?php echo esc_html($t['no_pdf']); ?></p>
     </div>
+    <?php else: ?>
+    
+    <!-- Loading -->
+    <div id="pdf-loading" class="saw-pdf-loading">
+        <div class="saw-pdf-spinner"></div>
+        <p><?php echo esc_html($t['loading']); ?></p>
+    </div>
+    
+    <!-- PDF Canvas - fullscreen -->
+    <canvas id="pdf-canvas"></canvas>
+    
+    <!-- Page Indicator - Top Right -->
+    <div id="pdf-page-indicator" class="saw-video-progress-indicator" style="display: none;">
+        1 / 1
+    </div>
+    
+    <!-- Hint Message -->
+    <div id="pdf-hint-message" class="saw-video-hint-wrapper" style="display: none;">
+        <span class="saw-video-hint-icon">💡</span>
+        <span class="saw-video-hint-text"><?php echo esc_html($t['hint']); ?></span>
+    </div>
+    
+    <!-- Navigation Arrows - Above progress bar -->
+    <div id="pdf-navigation" class="saw-pdf-navigation-bar" style="display: none;">
+        <button type="button" id="pdf-prev" class="saw-pdf-nav-btn" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
+                <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+        </button>
+        <button type="button" id="pdf-next" class="saw-pdf-nav-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
+                <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+        </button>
+    </div>
+    
+    <!-- Progress Bar -->
+    <div id="pdf-progress-bar" class="saw-video-progress-bar" style="display: none;">
+        <div id="pdf-progress-fill" class="saw-video-progress-fill" style="width: 0%;"></div>
+    </div>
+    
+    <!-- Floating Actions -->
+    <form method="POST" id="map-form" class="saw-panel-confirm">
+        <?php 
+        $nonce_name = $is_invitation ? 'saw_invitation_step' : 'saw_terminal_step';
+        $nonce_field = $is_invitation ? 'invitation_nonce' : 'terminal_nonce';
+        $action_name = $is_invitation ? 'invitation_action' : 'terminal_action';
+        $complete_action = $is_invitation ? 'complete_training' : 'complete_training_map';
+        wp_nonce_field($nonce_name, $nonce_field); 
+        ?>
+        <input type="hidden" name="<?php echo esc_attr($action_name); ?>" value="<?php echo esc_attr($complete_action); ?>">
+        
+        <?php if (!$completed): ?>
+        <label class="saw-panel-checkbox" id="checkbox-wrapper">
+            <input type="checkbox" 
+                   name="map_confirmed" 
+                   id="map-confirmed"
+                   value="1"
+                   required
+                   disabled>
+            <span><?php echo esc_html($t['confirm']); ?></span>
+        </label>
+        <?php endif; ?>
+        
+        <button type="submit" 
+                class="saw-panel-btn"
+                id="continue-btn"
+                <?php echo !$completed ? 'disabled' : ''; ?>>
+            <?php echo esc_html($t['continue']); ?> →
+        </button>
+    </form>
+    
+    <?php endif; ?>
 </div>
 
 <?php if ($is_invitation): ?>
@@ -297,23 +300,24 @@ if (file_exists($pdf_viewer_path)):
                     if (loading) loading.style.display = 'none';
                     
                     const canvas = document.getElementById('pdf-canvas');
-                    const prevBtn = document.getElementById('pdf-prev');
-                    const nextBtn = document.getElementById('pdf-next');
                     const indicator = document.getElementById('pdf-page-indicator');
-                    const hint = document.getElementById('pdf-hint-message');
-                    const progressBar = document.getElementById('pdf-progress-bar');
                     
                     if (canvas) canvas.style.display = 'block';
-                    if (prevBtn) prevBtn.style.display = 'flex';
-                    if (nextBtn) nextBtn.style.display = 'flex';
                     if (indicator) indicator.style.display = 'block';
                     
                     // Show hint and progress bar only if multiple pages (> 1)
                     if (data.totalPages > 1) {
+                        const hint = document.getElementById('pdf-hint-message');
+                        const progressBar = document.getElementById('pdf-progress-bar');
                         if (hint) hint.style.display = 'flex';
                         if (progressBar) progressBar.style.display = 'block';
                     }
                 }
+
+                // Show navigation always (if it exists)
+                const navigation = document.getElementById('pdf-navigation');
+                if (navigation) navigation.style.display = 'flex';
+
                 
                 // Update progress bar
                 const progressFill = document.getElementById('pdf-progress-fill');
