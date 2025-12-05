@@ -2427,7 +2427,7 @@ private function handle_training_additional_complete() {
             'saw-terminal-pages',
             $css_dir . 'terminal/pages.css',
             array('saw-terminal-base', 'saw-terminal-layout', 'saw-terminal-components'),
-            '4.0.0'
+            '4.0.1'
         );
         
         // CSS - Old terminal.css (fallback compatibility - check if exists)

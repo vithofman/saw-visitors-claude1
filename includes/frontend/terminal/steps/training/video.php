@@ -96,34 +96,32 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
         <span class="saw-video-hint-text"><?php echo esc_html($t['hint']); ?></span>
     </div>
     
+    <!-- Progress Bar - samostatný element NAD formulářem -->
+    <div id="video-progress-bar" class="saw-video-progress-bar" style="display: none;">
+        <div id="video-progress-fill" class="saw-video-progress-fill" style="width: 0%;"></div>
+    </div>
+    
     <!-- Floating Actions -->
-    <form method="POST" id="video-form" class="saw-video-confirm-panel">
-        <?php wp_nonce_field('saw_terminal_step', 'terminal_nonce'); ?>
-        <input type="hidden" name="terminal_action" value="complete_training_video">
-        
-        <!-- Progress Bar (Moved here) -->
-        <div id="video-progress-bar" class="saw-video-progress-bar" style="display: none;">
-            <div id="video-progress-fill" class="saw-video-progress-fill" style="width: 0%;"></div>
-        </div>
-        
-        <?php if (!$completed): ?>
-        <label class="saw-video-confirm-checkbox" id="checkbox-wrapper">
-            <input type="checkbox" 
-                   name="video_confirmed" 
-                   id="video-confirmed"
-                   value="1"
-                   required
-                   disabled>
-            <span><?php echo esc_html($t['confirm']); ?></span>
-        </label>
-        <?php endif; ?>
-        
-        <button type="submit" 
-                class="saw-video-continue-btn"
-                id="continue-btn"
-                <?php echo !$completed ? 'disabled' : ''; ?>>
-            <?php echo esc_html($t['continue']); ?> →
-        </button>
+    <form method="POST" id="video-form" class="saw-panel-confirm">
+    
+    <?php if (!$completed): ?>
+    <label class="saw-panel-checkbox" id="checkbox-wrapper">
+        <input type="checkbox" 
+               name="video_confirmed" 
+               id="video-confirmed"
+               value="1"
+               required
+               disabled>
+        <span><?php echo esc_html($t['confirm']); ?></span>
+    </label>
+    <?php endif; ?>
+    
+    <button type="submit" 
+            class="saw-panel-btn"
+            id="continue-btn"
+            <?php echo !$completed ? 'disabled' : ''; ?>>
+        <?php echo esc_html($t['continue']); ?> →
+    </button>
     </form>
     
     <?php endif; ?>

@@ -219,35 +219,39 @@ $skip_action = $is_invitation ? 'skip_training' : 'skip_training';
         <span><?php echo esc_html($t['hint']); ?></span>
     </div>
     
-    <!-- Progress Bar -->
-    <div id="video-progress-bar" class="saw-video-progress-bar" style="display: none;">
-        <div id="video-progress-fill" class="saw-video-progress-fill" style="width: 0%;"></div>
-    </div>
-    
-    <!-- Floating Actions -->
-    <form method="POST" id="video-form" class="saw-panel-confirm">
-        <?php wp_nonce_field($nonce_name, $nonce_field); ?>
-        <input type="hidden" name="<?php echo esc_attr($action_name); ?>" value="<?php echo esc_attr($complete_action); ?>">
+    <!-- Controls Wrapper (Bottom Right) -->
+    <div class="saw-video-controls-wrapper">
+        <!-- Progress Bar -->
+        <div id="video-progress-bar" class="saw-video-progress-bar" style="display: none;">
+            <div id="video-progress-fill" class="saw-video-progress-fill" style="width: 0%;"></div>
+        </div>
         
-        <?php if (!$completed): ?>
-        <label class="saw-panel-checkbox" id="checkbox-wrapper">
-            <input type="checkbox" 
-                   name="video_confirmed" 
-                   id="video-confirmed"
-                   value="1"
-                   required
-                   disabled>
-            <span><?php echo esc_html($t['confirm']); ?></span>
-        </label>
-        <?php endif; ?>
-        
-        <button type="submit" 
-                class="saw-panel-btn"
-                id="continue-btn"
-                <?php echo !$completed ? 'disabled' : ''; ?>>
-            <?php echo esc_html($t['continue']); ?> →
-        </button>
-    </form>
+        <!-- Floating Actions -->
+        <form method="POST" id="video-form" class="saw-panel-confirm">
+            <?php wp_nonce_field($nonce_name, $nonce_field); ?>
+            <input type="hidden" name="<?php echo esc_attr($action_name); ?>" value="<?php echo esc_attr($complete_action); ?>">
+            
+            <?php if (!$completed): ?>
+            <label class="saw-panel-checkbox" id="checkbox-wrapper">
+                <input type="checkbox" 
+                       name="video_confirmed" 
+                       id="video-confirmed"
+                       value="1"
+                       required
+                       disabled>
+                <span><?php echo esc_html($t['confirm']); ?></span>
+            </label>
+            <?php endif; ?>
+            
+            <button type="submit" 
+                    class="saw-panel-btn"
+                    id="continue-btn"
+                    <?php echo !$completed ? 'disabled' : ''; ?>>
+                <?php echo esc_html($t['continue']); ?> →
+            </button>
+        </form>
+    </div><!-- .saw-video-controls-wrapper -->
+    </div><!-- .saw-video-controls-wrapper -->
     
     <?php endif; ?>
     </div>
