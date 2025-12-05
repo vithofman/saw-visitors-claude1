@@ -129,6 +129,31 @@
     margin: 0 auto 2rem;
 }
 
+/* Warning icon variant (risks page) */
+.saw-header-icon-warning {
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    color: #111827;
+    box-shadow:
+        0 10px 30px rgba(251, 191, 36, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.saw-header-icon-warning::before {
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.4), transparent);
+}
+
+.saw-docs-empty {
+    color: rgba(156, 163, 175, 0.7);
+    font-size: 15px !important;
+    /* Fixed px size to ensure consistency between Terminal and Invitation */
+    font-style: italic;
+}
+
+.saw-empty-text {
+    color: rgba(156, 163, 175, 0.7);
+    font-style: italic;
+}
+
 /* Header text */
 .saw-header-text {
     flex: 1;
@@ -154,13 +179,34 @@
 }
 
 /* Override admin layout.css styles on frontend pages */
-.saw-page-aurora .saw-page-header,
-.saw-terminal-wrapper .saw-page-header {
+/* BUT preserve styles for the specific Left Header card variant */
+.saw-page-aurora .saw-page-header:not(.saw-page-header-left),
+.saw-terminal-wrapper .saw-page-header:not(.saw-page-header-left) {
     position: static;
     background: transparent;
     border-bottom: none;
     padding: 0;
     flex-shrink: unset;
+}
+
+/* Ensure Left Header keeps its card look and spacing */
+/* Ensure Left Header keeps its card look and spacing */
+.saw-page-aurora .saw-page-header.saw-page-header-left,
+.saw-terminal-wrapper .saw-page-header.saw-page-header-left {
+    position: static;
+    /* still static in flow */
+    margin-bottom: 2rem !important;
+    /* Reduced gap as requested */
+    width: 100%;
+    padding: 2rem 2.5rem !important;
+    background: rgba(15, 23, 42, 0.6) !important;
+    border-radius: 20px !important;
+    border: 1px solid rgba(148, 163, 184, 0.12) !important;
+}
+
+/* CACHE SAFEGUARD: Force width on risks page even if 'wide' class is cached in HTML */
+.saw-step-risks .saw-page-container-wide {
+    max-width: 900px !important;
 }
 
 /* ============================================
@@ -525,6 +571,29 @@
     grid-template-columns: 1fr 320px;
     gap: 2rem;
     padding-top: 2rem;
+}
+
+/* OOPP Detail Grid: Image Left (smaller), Content Right */
+.saw-oopp-grid {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    /* Fixed width for image, rest for text */
+    gap: 2rem;
+    align-items: start;
+    padding-top: 2rem;
+}
+
+@media (max-width: 768px) {
+    .saw-oopp-grid {
+        grid-template-columns: 1fr;
+        /* Stack on mobile */
+    }
+
+    .saw-oopp-image-wrapper {
+        margin: 0 auto 1.5rem;
+        /* Center image on mobile */
+        max-width: 300px;
+    }
 }
 
 /* ============================================

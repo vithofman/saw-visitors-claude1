@@ -66,7 +66,7 @@ $form_action = $is_invitation
 
 <div class="saw-page-aurora saw-step-oopp saw-page-scrollable">
     <div class="saw-page-content saw-page-content-scroll">
-        <div class="saw-page-container saw-page-container-wide">
+        <div class="saw-page-container"> <!-- Fixed width (900px) -->
             
             <div class="saw-page-header saw-page-header-left">
                 <div class="saw-header-icon">🦺</div>
@@ -117,19 +117,26 @@ $form_action = $is_invitation
                         </button>
                         
                         <div class="saw-accordion-content">
-                            <div class="saw-accordion-body saw-accordion-body-grid">
+                            <!-- NEW GRID LAYOUT: Image Left (280px), Content Right (1fr) -->
+                            <div class="saw-accordion-body saw-oopp-grid">
                                 
-                                <!-- Large image -->
-                                <?php if (!empty($item['image_url'])): ?>
-                                    <div style="text-align: center; margin-bottom: 1.5rem; grid-column: 1 / -1;">
-                                        <img src="<?php echo esc_url($item['image_url']); ?>" 
-                                             alt="<?php echo esc_attr($item['name']); ?>"
-                                             style="max-width: 100%; max-height: 300px; object-fit: contain; border-radius: 12px; border: 2px solid rgba(255,255,255,0.1);">
-                                    </div>
-                                <?php endif; ?>
+                                <!-- LEFT COLUMN: Image -->
+                                <div class="saw-oopp-image-wrapper">
+                                    <?php if (!empty($item['image_url'])): ?>
+                                        <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);">
+                                            <img src="<?php echo esc_url($item['image_url']); ?>" 
+                                                 alt="<?php echo esc_attr($item['name']); ?>"
+                                                 style="width: 100%; height: auto; border-radius: 12px; display: block;">
+                                        </div>
+                                    <?php else: ?>
+                                        <div style="aspect-ratio: 1; background: rgba(255,255,255,0.05); border-radius: 16px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.1);">
+                                            <span style="font-size: 4rem;">🦺</span>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
                                 
-                                <!-- Text content -->
-                                <div class="saw-text-content">
+                                <!-- RIGHT COLUMN: Details -->
+                                <div class="saw-text-content" style="padding-top: 0 !important;">
                                     
                                     <!-- Risk description -->
                                     <?php if (!empty($item['risk_description'])): ?>
@@ -137,7 +144,7 @@ $form_action = $is_invitation
                                             <strong style="color: #ef4444; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 0.5rem;">
                                                 ⚠️ <?php echo esc_html($texts['risks']); ?>
                                             </strong>
-                                            <div>
+                                            <div style="color: #fecaca;">
                                                 <?php echo nl2br(esc_html($item['risk_description'])); ?>
                                             </div>
                                         </div>
@@ -149,7 +156,7 @@ $form_action = $is_invitation
                                             <strong style="color: #3b82f6; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 0.5rem;">
                                                 📋 <?php echo esc_html($texts['usage']); ?>
                                             </strong>
-                                            <div>
+                                            <div style="color: #bfdbfe;">
                                                 <?php echo nl2br(esc_html($item['usage_instructions'])); ?>
                                             </div>
                                         </div>
@@ -161,7 +168,7 @@ $form_action = $is_invitation
                                             <strong style="color: #10b981; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 0.5rem;">
                                                 🛡️ <?php echo $lang === 'en' ? 'Protective properties' : 'Ochranné vlastnosti'; ?>
                                             </strong>
-                                            <div>
+                                            <div style="color: #a7f3d0;">
                                                 <?php echo nl2br(esc_html($item['protective_properties'])); ?>
                                             </div>
                                         </div>

@@ -663,6 +663,7 @@ class SAW_Terminal_Controller {
         $this->render_template($template, [
             'video_url' => $step_data['video_url'],
             'is_invitation' => false,
+            'flow' => $flow,
         ]);
     }
     
@@ -704,6 +705,7 @@ class SAW_Terminal_Controller {
         $this->render_template($template, [
             'pdf_path' => $step_data['pdf_path'],
             'is_invitation' => false,
+            'flow' => $flow,
         ]);
     }
     
@@ -774,6 +776,7 @@ class SAW_Terminal_Controller {
             'risks_text' => $step_data['risks_text'],
             'documents' => $documents,
             'is_invitation' => false,
+            'flow' => $flow,
         ]);
     }
     
@@ -828,6 +831,7 @@ class SAW_Terminal_Controller {
     $this->render_template($template, [
         'departments' => $dept_steps,
         'is_invitation' => false,
+        'flow' => $flow,
     ]);
 }
     
@@ -866,6 +870,7 @@ class SAW_Terminal_Controller {
         $this->render_template($template, [
             'oopp_items' => $oopp_items,
             'is_invitation' => false,
+            'flow' => $flow,
         ]);
     }
     
@@ -936,6 +941,7 @@ class SAW_Terminal_Controller {
             'additional_text' => $step_data['additional_text'],
             'documents' => $documents,
             'is_invitation' => false,
+            'flow' => $flow,
         ]);
     }
     
@@ -2427,7 +2433,7 @@ private function handle_training_additional_complete() {
             'saw-terminal-pages',
             $css_dir . 'terminal/pages.css',
             array('saw-terminal-base', 'saw-terminal-layout', 'saw-terminal-components'),
-            '4.0.1'
+            '4.0.5'
         );
         
         // CSS - Old terminal.css (fallback compatibility - check if exists)

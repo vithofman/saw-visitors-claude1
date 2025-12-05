@@ -6,47 +6,46 @@
  * UNIFIED DESIGN matching department.php
  * 
  * @package SAW_Visitors
- * @version 3.4.0
+ * @version 3.4.1
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-// Detect flow type
+// Detective flow type and setup data
 $is_invitation = isset($is_invitation) ? $is_invitation : false;
 
-// Get data from appropriate flow
+// Initialize variables
+$risks_text = '';
+$documents = [];
+$visitor_id = null;
+$lang = 'cs';
+
+// Get data based on flow
 if ($is_invitation) {
-    // Invitation flow
+    // Invitation flow logic
     $session = SAW_Session_Manager::instance();
     $flow = $session->get('invitation_flow');
     $lang = $flow['language'] ?? 'cs';
     
-    // Get visitor ID from invitation flow
     global $wpdb;
     $visit = $wpdb->get_row($wpdb->prepare(
         "SELECT * FROM {$wpdb->prefix}saw_visits WHERE id = %d",
         $flow['visit_id'] ?? 0
     ));
     
-    $visitor_id = null;
     if ($visit) {
+        // Get visitor ID
         $visitor = $wpdb->get_row($wpdb->prepare(
             "SELECT id FROM {$wpdb->prefix}saw_visitors 
              WHERE visit_id = %d AND training_skipped = 0 
              ORDER BY created_at ASC LIMIT 1",
             $visit->id
         ));
-        if ($visitor) {
-            $visitor_id = $visitor->id;
-        }
-    }
-    
-    // Get risks content from training content
-    $risks_text = '';
-    $documents = [];
-    if ($visit) {
+        $visitor_id = $visitor ? $visitor->id : null;
+        
+        // Get content
         $language_id = $wpdb->get_var($wpdb->prepare(
             "SELECT id FROM {$wpdb->prefix}saw_training_languages 
              WHERE customer_id = %d AND language_code = %s",
@@ -77,7 +76,7 @@ if ($is_invitation) {
         }
     }
 } else {
-    // Terminal flow
+    // Terminal flow logic
     $flow = isset($flow) ? $flow : [];
     $lang = isset($flow['language']) ? $flow['language'] : 'cs';
     $visitor_id = isset($flow['visitor_ids'][0]) ? $flow['visitor_ids'][0] : null;
@@ -87,12 +86,8 @@ if ($is_invitation) {
 
 $has_content = !empty($risks_text);
 $has_documents = !empty($documents);
-$docs_count = count($documents);
 
-error_log("[SHARED RISKS.PHP] Is Invitation: " . ($is_invitation ? 'yes' : 'no') . ", Language: {$lang}, Visitor ID: {$visitor_id}");
-error_log("[SHARED RISKS.PHP] Has content: " . ($has_content ? 'yes' : 'no') . ", Documents: " . $docs_count);
-
-// Check if completed
+// Check completion status
 $completed = false;
 if ($visitor_id) {
     global $wpdb;
@@ -151,103 +146,103 @@ $translations = array(
 
 $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
 ?>
-<!-- Žádný <style> blok! CSS je v pages.css -->
 
 <div class="saw-page-aurora saw-step-risks saw-page-scrollable">
     <div class="saw-page-content saw-page-content-scroll">
-        <div class="saw-page-container saw-page-container-wide">
+        <div class="saw-page-container"> <!-- max-width: 900px -->
             
             <!-- Header -->
-            <div class="saw-page-header saw-page-header-left">
-                <div class="saw-header-icon">⚠️</div>
+            <header class="saw-page-header saw-page-header-left">
+                <div class="saw-header-icon saw-header-icon-warning">⚠️</div>
                 <div class="saw-header-text">
                     <h1 class="saw-header-title"><?php echo esc_html($t['title']); ?></h1>
                     <p class="saw-header-subtitle"><?php echo esc_html($t['subtitle']); ?></p>
                 </div>
-            </div>
-
+            </header>
+            
             <!-- Content Card -->
-            <?php if (!$has_content && !$has_documents): ?>
-                <div class="saw-card-content">
-                    <div class="saw-card-body">
-                        <div class="saw-empty-state">
-                            <div class="saw-empty-state-icon">⚠️</div>
-                            <p class="saw-empty-state-text"><?php echo esc_html($t['no_content']); ?></p>
-                        </div>
+            <div class="saw-card-content">
+                <div class="saw-card-body saw-card-body-grid">
+                    
+                    <!-- Text Content -->
+                    <div class="saw-text-content">
+                        <?php if ($has_content): ?>
+                            <?php echo wp_kses_post($risks_text); ?>
+                        <?php else: ?>
+                            <p class="saw-empty-text"><?php echo esc_html($t['no_content']); ?></p>
+                        <?php endif; ?>
                     </div>
-                </div>
-            <?php else: ?>
-                <div class="saw-card-content">
-                    <div class="saw-card-body saw-card-body-grid">
+                    
+                    <!-- Documents Sidebar -->
+                    <div class="saw-docs-sidebar">
+                        <h3 class="saw-docs-title">
+                            📎 <?php echo esc_html($t['documents_title']); ?>
+                        </h3>
                         
-                        <!-- Text content -->
-                        <div class="saw-text-content">
-                            <?php if ($has_content): ?>
-                                <?php echo wp_kses_post($risks_text); ?>
-                            <?php else: ?>
-                                <p><?php echo esc_html($t['no_content']); ?></p>
-                            <?php endif; ?>
-                        </div>
-                        
-                        <!-- Documents sidebar -->
-                        <div class="saw-docs-sidebar">
-                            <h4 class="saw-docs-title">
-                                <span>📎</span>
-                                <span><?php echo esc_html($t['documents_title']); ?></span>
-                            </h4>
-                            
-                            <?php if ($has_documents): ?>
-                            <div class="saw-docs-list">
-                                <?php foreach ($documents as $doc): ?>
-                                <?php
-                                $file_url = content_url() . '/uploads' . $doc['file_path'];
-                                $filename = $doc['file_name'];
+                        <?php if ($has_documents): ?>
+                        <div class="saw-docs-list">
+                            <?php foreach ($documents as $doc): ?>
+                            <?php
+                                // Normalize file URL/Path
+                                $file_url = '';
+                                if (isset($doc['file_url'])) {
+                                    $file_url = $doc['file_url'];
+                                } elseif (isset($doc['url'])) {
+                                    $file_url = $doc['url'];
+                                } elseif (isset($doc['file_path'])) {
+                                    $file_url = content_url() . '/uploads' . $doc['file_path'];
+                                }
+                                
+                                // Normalize filename
+                                $filename = '';
+                                if (isset($doc['file_name'])) {
+                                    $filename = $doc['file_name'];
+                                } elseif (isset($doc['name'])) {
+                                    $filename = $doc['name'];
+                                } elseif (isset($doc['original_name'])) {
+                                    $filename = $doc['original_name'];
+                                } else {
+                                    $filename = basename($file_url);
+                                }
+                                
                                 $file_ext = strtoupper(pathinfo($filename, PATHINFO_EXTENSION));
-                                $file_size = isset($doc['file_size']) ? size_format($doc['file_size']) : '';
-                                ?>
-                                <a href="<?php echo esc_url($file_url); ?>"
-                                   class="saw-doc-card"
-                                   download="<?php echo esc_attr($filename); ?>">
-                                    <div class="saw-doc-icon">📄</div>
-                                    <div class="saw-doc-info">
-                                        <div class="saw-doc-name">
-                                            <?php echo esc_html($filename); ?>
-                                        </div>
-                                        <div class="saw-doc-meta">
-                                            <?php if ($file_ext): ?>
-                                            <span class="saw-doc-badge"><?php echo esc_html($file_ext); ?></span>
-                                            <?php endif; ?>
-                                            <?php if ($file_size): ?>
-                                            <span class="saw-doc-size"><?php echo esc_html($file_size); ?></span>
-                                            <?php endif; ?>
-                                        </div>
+                            ?>
+                            <a href="<?php echo esc_url($file_url); ?>" 
+                               target="_blank" 
+                               class="saw-doc-card"
+                               download>
+                                <div class="saw-doc-icon">📄</div>
+                                <div class="saw-doc-info">
+                                    <div class="saw-doc-name"><?php echo esc_html($filename); ?></div>
+                                    <div class="saw-doc-meta">
+                                        <span class="saw-doc-badge"><?php echo esc_html($file_ext); ?></span>
                                     </div>
-                                </a>
-                                <?php endforeach; ?>
-                            </div>
-                            <?php else: ?>
-                            <p><?php echo esc_html($t['no_documents']); ?></p>
-                            <?php endif; ?>
+                                </div>
+                            </a>
+                            <?php endforeach; ?>
                         </div>
-                        
+                        <?php else: ?>
+                        <p class="saw-docs-empty"><?php echo esc_html($t['no_documents']); ?></p>
+                        <?php endif; ?>
                     </div>
+                    
                 </div>
-            <?php endif; ?>
-
+            </div>
+            
         </div>
     </div>
     
+    <!-- Skip button (invitation only) -->
     <?php if ($is_invitation): ?>
-    <!-- Skip button for invitation mode -->
     <div class="saw-panel-skip">
         <p class="saw-panel-skip-info">
             💡 Toto školení je volitelné. Můžete ho přeskočit a projít si později.
         </p>
         <form method="POST" style="display: inline-block;">
             <?php 
-            $nonce_name = $is_invitation ? 'saw_invitation_step' : 'saw_terminal_step';
-            $nonce_field = $is_invitation ? 'invitation_nonce' : 'terminal_nonce';
-            $action_name = $is_invitation ? 'invitation_action' : 'terminal_action';
+            $nonce_name = 'saw_invitation_step';
+            $nonce_field = 'invitation_nonce';
+            $action_name = 'invitation_action';
             wp_nonce_field($nonce_name, $nonce_field); 
             ?>
             <input type="hidden" name="<?php echo esc_attr($action_name); ?>" value="skip_training">
@@ -268,21 +263,21 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
         wp_nonce_field($nonce_name, $nonce_field); 
         ?>
         <input type="hidden" name="<?php echo esc_attr($action_name); ?>" value="<?php echo esc_attr($complete_action); ?>">
-
+        
         <?php if (!$completed): ?>
         <label class="saw-panel-checkbox" id="checkbox-wrapper">
-            <input type="checkbox"
-                   name="risks_confirmed"
-                   id="risks-confirmed"
-                   value="1"
+            <input type="checkbox" 
+                   name="risks_confirmed" 
+                   id="risks-confirmed" 
+                   value="1" 
                    required>
             <span><?php echo esc_html($t['confirm']); ?></span>
         </label>
         <?php endif; ?>
-
-        <button type="submit"
-                class="saw-panel-btn"
-                id="continue-btn"
+        
+        <button type="submit" 
+                class="saw-panel-btn" 
+                id="continue-btn" 
                 <?php echo !$completed ? 'disabled' : ''; ?>>
             <?php echo esc_html($t['continue']); ?> →
         </button>
@@ -292,7 +287,6 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
 <script>
 (function() {
     'use strict';
-
     const checkbox = document.getElementById('risks-confirmed');
     const continueBtn = document.getElementById('continue-btn');
     const wrapper = document.getElementById('checkbox-wrapper');
@@ -301,17 +295,10 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
         checkbox.addEventListener('change', function() {
             continueBtn.disabled = !this.checked;
             if (wrapper) {
-                if (this.checked) {
-                    wrapper.classList.add('checked');
-                } else {
-                    wrapper.classList.remove('checked');
-                }
+                if (this.checked) wrapper.classList.add('checked');
+                else wrapper.classList.remove('checked');
             }
         });
     }
 })();
 </script>
-
-<?php
-error_log("[RISKS.PHP] Unified design matching department.php (v3.4.0)");
-?>

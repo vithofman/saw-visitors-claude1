@@ -155,7 +155,7 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
 
 <div class="saw-page-aurora saw-step-additional saw-page-scrollable">
     <div class="saw-page-content saw-page-content-scroll">
-        <div class="saw-page-container saw-page-container-wide">
+        <div class="saw-page-container">
             
             <div class="saw-page-header saw-page-header-left">
                 <div class="saw-header-icon">ℹ️</div>
