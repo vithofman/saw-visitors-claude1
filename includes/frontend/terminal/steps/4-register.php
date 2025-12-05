@@ -111,785 +111,18 @@ if ($is_planned && !empty($existing_visitors)) {
     }
 }
 ?>
-<style>
-/* === UNIFIED STYLE === */
-:root {
-    --theme-color: #667eea;
-    --theme-color-hover: #764ba2;
-    --bg-dark: #1a202c;
-    --bg-dark-medium: #2d3748;
-    --bg-glass: rgba(15, 23, 42, 0.6);
-    --bg-glass-light: rgba(255, 255, 255, 0.08);
-    --border-glass: rgba(148, 163, 184, 0.12);
-    --text-primary: #FFFFFF;
-    --text-secondary: #e5e7eb;
-    --text-muted: #9ca3af;
-    --color-success: #10b981;
-}
-
-*,
-*::before,
-*::after {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-.saw-terminal-footer {
-    display: none !important;
-}
-
-.saw-register-aurora {
-    position: fixed;
-    inset: 0;
-    width: 100vw;
-    height: 100vh;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    color: var(--text-secondary);
-    background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
-    overflow: hidden;
-}
-
-.saw-register-content-wrapper {
-    height: 100%;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 3rem 2rem 10rem;
-}
-
-.saw-register-content-wrapper::-webkit-scrollbar {
-    width: 8px;
-}
-
-.saw-register-content-wrapper::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.2);
-}
-
-.saw-register-content-wrapper::-webkit-scrollbar-thumb {
-    background: rgba(148, 163, 184, 0.3);
-    border-radius: 999px;
-}
-
-.saw-register-layout {
-    max-width: 1600px;
-    margin: 0 auto;
-}
-
-/* Header */
-.saw-register-header {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-    margin-bottom: 2.5rem;
-    padding: 2rem 2.5rem;
-    background: rgba(15, 23, 42, 0.6);
-    backdrop-filter: blur(20px) saturate(180%);
-    border-radius: 20px;
-    border: 1px solid var(--border-glass);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-}
-
-.saw-register-icon {
-    width: 4rem;
-    height: 4rem;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2.25rem;
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-    border-radius: 18px;
-    box-shadow: 
-        0 10px 30px rgba(245, 158, 11, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    position: relative;
-}
-
-.saw-register-icon::before {
-    content: "";
-    position: absolute;
-    inset: -2px;
-    border-radius: 20px;
-    background: linear-gradient(135deg, rgba(245, 158, 11, 0.4), transparent);
-    z-index: -1;
-    animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 0.5; transform: scale(1); }
-    50% { opacity: 0.8; transform: scale(1.05); }
-}
-
-.saw-register-title {
-    font-size: 2rem;
-    font-weight: 700;
-    background: linear-gradient(135deg, #f9fafb 0%, #cbd5e1 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    letter-spacing: -0.02em;
-    margin-bottom: 0.375rem;
-}
-
-.saw-register-subtitle {
-    font-size: 0.9375rem;
-    color: rgba(203, 213, 225, 0.7);
-    font-weight: 500;
-    line-height: 1.5;
-}
-
-/* TWO COLUMN LAYOUT */
-.saw-register-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 2rem;
-    align-items: start;
-}
-
-/* Glass card sections */
-.saw-register-glass-card {
-    background: var(--bg-glass);
-    backdrop-filter: blur(20px) saturate(180%);
-    border-radius: 20px;
-    border: 1px solid var(--border-glass);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-    padding: 2rem;
-    margin-bottom: 2rem;
-}
-
-.saw-section-title {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin-bottom: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-/* Existing visitors - SUCCESS style */
-.saw-register-success-card {
-    background: rgba(16, 185, 129, 0.15);
-    border-color: rgba(16, 185, 129, 0.3);
-}
-
-.saw-visitor-info-item {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    border-radius: 12px;
-    padding: 1rem;
-    margin-bottom: 0.75rem;
-    border: 1px solid rgba(16, 185, 129, 0.3);
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-}
-
-.saw-visitor-name {
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: #10b981;
-}
-
-.saw-visitor-position {
-    font-size: 0.8125rem;
-    color: rgba(203, 213, 225, 0.9);
-    background: rgba(16, 185, 129, 0.2);
-    border: 1px solid rgba(16, 185, 129, 0.3);
-    padding: 0.25rem 0.625rem;
-    border-radius: 6px;
-    font-weight: 600;
-}
-
-/* Waiting visitors - checkbox style */
-.saw-visitor-checkbox-card {
-    background: rgba(255, 255, 255, 0.04);
-    backdrop-filter: blur(10px);
-    border-radius: 12px;
-    padding: 1.25rem;
-    margin-bottom: 1rem;
-    border: 1px solid rgba(148, 163, 184, 0.08);
-    transition: all 0.3s ease;
-    opacity: 0.6;
-    cursor: pointer;  /* ✅ PŘIDEJ */
-}
-
-/* ✅ KDYŽ JE ZAŠKRTNUTÝ - ZVÝRAZNI */
-.saw-visitor-checkbox-card.checked {
-    background: rgba(102, 126, 234, 0.15) !important;
-    border-color: rgba(102, 126, 234, 0.5) !important;
-    opacity: 1 !important;
-    transform: translateX(4px);
-}
-
-.saw-visitor-checkbox-card:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(102, 126, 234, 0.3);
-    opacity: 0.8;
-}
-
-.saw-visitor-checkbox-header {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    cursor: pointer;
-    pointer-events: none;  
-}
-
-.saw-visitor-checkbox-header input[type="checkbox"] {
-    width: 24px;
-    height: 24px;
-    cursor: pointer;
-    accent-color: var(--color-success);
-    flex-shrink: 0;
-    pointer-events: auto;  
-}
-.saw-visitor-info {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    pointer-events: none;  /* ✅ PŘIDEJ */
-}
-
-.saw-visitor-checkbox-card .saw-visitor-name {
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: rgba(255, 255, 255, 0.6);
-    transition: color 0.3s;
-    pointer-events: none;  /* ✅ PŘIDEJ */
-}
-
-/* ✅ KDYŽ CHECKED - BÍLÉ JMÉNO */
-.saw-visitor-checkbox-card.checked .saw-visitor-name {
-    color: var(--text-primary);
-}
-
-.saw-visitor-checkbox-card .saw-visitor-position {
-    font-size: 0.8125rem;
-    color: rgba(203, 213, 225, 0.6);
-    background: rgba(102, 126, 234, 0.1);
-    border: 1px solid rgba(102, 126, 234, 0.2);
-    padding: 0.25rem 0.625rem;
-    border-radius: 6px;
-    font-weight: 600;
-    transition: all 0.3s;
-    pointer-events: none;  /* ✅ PŘIDEJ - důležité! */
-}
-/* ✅ KDYŽ CHECKED - BAREVNÁ POZICE */
-.saw-visitor-checkbox-card.checked .saw-visitor-position {
-    color: rgba(203, 213, 225, 0.9);
-    background: rgba(102, 126, 234, 0.3);
-    border-color: rgba(102, 126, 234, 0.5);
-}
-
-.saw-visitor-training-skip {
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid rgba(148, 163, 184, 0.2);
-}
-
-/* ✅ TLAČÍTKO VYBRAT VŠE */
-.saw-btn-toggle-all {
-    padding: 0.75rem 1.5rem;
-    background: rgba(102, 126, 234, 0.2);
-    border: 1px solid rgba(102, 126, 234, 0.4);
-    border-radius: 10px;
-    color: #a5b4fc;
-    font-size: 0.9375rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.saw-btn-toggle-all:hover {
-    background: rgba(102, 126, 234, 0.3);
-    border-color: rgba(102, 126, 234, 0.6);
-    transform: translateY(-1px);
-}
-.saw-visitor-training-skip {
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid rgba(148, 163, 184, 0.2);
-}
-
-.saw-training-checkbox-label {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-size: 0.875rem;
-    color: rgba(203, 213, 225, 0.9);
-    cursor: pointer;
-    padding: 0.75rem;
-    background: rgba(255, 255, 255, 0.04);
-    border-radius: 8px;
-    transition: all 0.2s;
-}
-
-.saw-training-checkbox-label:hover {
-    background: rgba(255, 255, 255, 0.08);
-}
-
-.saw-training-checkbox-label input[type="checkbox"] {
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
-    accent-color: var(--color-success);
-    flex-shrink: 0;
-}
-
-/* Form fields */
-.saw-form-group {
-    margin-bottom: 1.25rem;
-}
-
-.saw-form-label {
-    display: block;
-    font-size: 0.9375rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 0.5rem;
-}
-
-.saw-form-input {
-    width: 100%;
-    padding: 0.875rem 1rem;
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--border-glass);
-    border-radius: 12px;
-    color: var(--text-primary);
-    font-size: 1rem;
-    transition: all 0.2s;
-}
-
-.saw-form-input:focus {
-    outline: none;
-    border-color: rgba(102, 126, 234, 0.5);
-    background: rgba(255, 255, 255, 0.12);
-}
-
-.saw-form-input::placeholder {
-    color: rgba(203, 213, 225, 0.5);
-}
-
-.saw-form-row {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1rem;
-}
-
-/* Visitor blocks - collapsible */
-.saw-visitor-block {
-    background: rgba(255, 255, 255, 0.06);
-    backdrop-filter: blur(10px);
-    border-radius: 16px;
-    border: 1px solid var(--border-glass);
-    margin-bottom: 1.5rem;
-    overflow: hidden;
-}
-
-.saw-visitor-block-header {
-    padding: 1.25rem;
-    background: rgba(255, 255, 255, 0.04);
-    border-bottom: 1px solid var(--border-glass);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    cursor: pointer;
-    user-select: none;
-}
-
-.saw-visitor-block-header-left {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.saw-visitor-toggle {
-    font-size: 1.125rem;
-    transition: transform 0.3s;
-}
-
-.saw-visitor-block-header h4 {
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0;
-}
-
-.saw-remove-visitor-btn {
-    padding: 0.5rem 1rem;
-    background: rgba(239, 68, 68, 0.2);
-    border: 1px solid rgba(239, 68, 68, 0.4);
-    border-radius: 8px;
-    color: #fca5a5;
-    font-size: 0.875rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.saw-remove-visitor-btn:hover {
-    background: rgba(239, 68, 68, 0.3);
-    border-color: rgba(239, 68, 68, 0.6);
-}
-
-.saw-visitor-block-content {
-    padding: 1.5rem;
-}
-
-/* Certificates */
-.saw-certificates-section {
-    margin-top: 1.5rem;
-    padding-top: 1.5rem;
-    border-top: 1px dashed rgba(148, 163, 184, 0.3);
-}
-
-.saw-certificates-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-}
-
-.saw-add-cert-btn {
-    padding: 0.5rem 1rem;
-    background: rgba(139, 92, 246, 0.2);
-    border: 1px solid rgba(139, 92, 246, 0.4);
-    border-radius: 8px;
-    color: #c4b5fd;
-    font-size: 0.875rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.saw-add-cert-btn:hover {
-    background: rgba(139, 92, 246, 0.3);
-    border-color: rgba(139, 92, 246, 0.6);
-}
-
-.saw-cert-row {
-    display: grid;
-    grid-template-columns: 2fr 1.5fr 1.5fr auto;
-    gap: 0.75rem;
-    align-items: end;
-    margin-bottom: 0.75rem;
-    padding: 0.75rem;
-    background: rgba(255, 255, 255, 0.04);
-    border-radius: 8px;
-}
-
-.saw-remove-cert-btn {
-    width: 40px;
-    height: 40px;
-    background: rgba(239, 68, 68, 0.2);
-    border: 1px solid rgba(239, 68, 68, 0.4);
-    border-radius: 8px;
-    color: #fca5a5;
-    font-size: 1.25rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.saw-remove-cert-btn:hover {
-    background: rgba(239, 68, 68, 0.3);
-}
-
-/* Checkbox style */
-.saw-form-checkbox {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 1rem;
-    background: rgba(255, 255, 255, 0.06);
-    backdrop-filter: blur(10px);
-    border-radius: 12px;
-    border: 1px solid var(--border-glass);
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.saw-form-checkbox:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(102, 126, 234, 0.5);
-}
-
-.saw-form-checkbox input[type="checkbox"] {
-    width: 22px;
-    height: 22px;
-    cursor: pointer;
-    accent-color: var(--color-success);
-}
-
-.saw-form-checkbox label {
-    flex: 1;
-    font-size: 0.9375rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    cursor: pointer;
-}
-
-/* Buttons */
-.saw-btn-add-visitor {
-    width: 100%;
-    padding: 1rem;
-    background: rgba(102, 126, 234, 0.2);
-    border: 1px solid rgba(102, 126, 234, 0.4);
-    border-radius: 12px;
-    color: #818cf8;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    margin-top: 1rem;
-}
-
-.saw-btn-add-visitor:hover {
-    background: rgba(102, 126, 234, 0.3);
-    border-color: rgba(102, 126, 234, 0.6);
-    transform: translateY(-2px);
-}
-
-.saw-submit-btn {
-    position: fixed;
-    bottom: 2rem;
-    right: 2rem;
-    padding: 1rem 2.5rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    border-radius: 16px;
-    font-weight: 700;
-    font-size: 1.125rem;
-    cursor: pointer;
-    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    z-index: 200;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.saw-submit-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 15px 40px rgba(102, 126, 234, 0.6);
-}
-
-.required {
-    color: #fca5a5;
-}
-
-.saw-form-help {
-    display: block;
-    margin-top: 0.5rem;
-    font-size: 0.875rem;
-    color: rgba(203, 213, 225, 0.7);
-}
-
-/* Select2 override */
-.select2-container--default .select2-selection--multiple {
-    background: rgba(255, 255, 255, 0.08) !important;
-    border: 1px solid var(--border-glass) !important;
-    border-radius: 12px !important;
-    min-height: 48px !important;
-    padding: 0.5rem !important;
-}
-
-.select2-container--default .select2-selection--multiple .select2-selection__choice {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-    border: none !important;
-    color: white !important;
-    border-radius: 6px !important;
-    padding: 0.5rem 0.75rem !important;
-    font-weight: 600 !important;
-}
-
-.select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
-    color: white !important;
-}
-
-/* Custom Hosts Multi-Select */
-.saw-hosts-dropdown {
-    position: relative;
-}
-
-.saw-hosts-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-    min-height: 42px;
-    padding: 0.5rem;
-    background: rgba(255, 255, 255, 0.04);
-    border-radius: 12px;
-    border: 1px solid var(--border-glass);
-}
-
-.saw-hosts-chips:empty {
-    display: none;
-}
-
-.saw-host-chip {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 8px;
-    color: white;
-    font-size: 0.875rem;
-    font-weight: 600;
-    animation: chipIn 0.2s ease;
-}
-
-@keyframes chipIn {
-    from { opacity: 0; transform: scale(0.8); }
-    to { opacity: 1; transform: scale(1); }
-}
-
-.saw-host-chip-name {
-    line-height: 1;
-}
-
-.saw-host-chip-remove {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.2);
-    border: none;
-    color: white;
-    font-size: 1rem;
-    font-weight: 700;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-    line-height: 1;
-}
-
-.saw-host-chip-remove:hover {
-    background: rgba(255, 255, 255, 0.3);
-    transform: scale(1.1);
-}
-
-.saw-hosts-list {
-    position: absolute;
-    top: calc(100% + 0.5rem);
-    left: 0;
-    right: 0;
-    max-height: 300px;
-    overflow-y: auto;
-    background: rgba(30, 41, 59, 0.95);
-    backdrop-filter: blur(20px);
-    border: 1px solid var(--border-glass);
-    border-radius: 12px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-    z-index: 100;
-}
-
-.saw-hosts-list::-webkit-scrollbar {
-    width: 8px;
-}
-
-.saw-hosts-list::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.2);
-}
-
-.saw-hosts-list::-webkit-scrollbar-thumb {
-    background: rgba(148, 163, 184, 0.3);
-    border-radius: 999px;
-}
-
-.saw-host-item {
-    padding: 1rem;
-    cursor: pointer;
-    transition: all 0.2s;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
-}
-
-.saw-host-item:last-child {
-    border-bottom: none;
-}
-
-.saw-host-item:hover {
-    background: rgba(102, 126, 234, 0.2);
-}
-
-.saw-host-item.selected {
-    background: rgba(102, 126, 234, 0.3);
-    pointer-events: none;
-    opacity: 0.5;
-}
-
-.saw-host-name {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 0.25rem;
-}
-
-.saw-host-position {
-    font-size: 0.8125rem;
-    color: rgba(203, 213, 225, 0.7);
-}
-
-.saw-hosts-empty {
-    padding: 1rem;
-    text-align: center;
-    color: rgba(203, 213, 225, 0.6);
-    font-size: 0.875rem;
-}
-
-/* Responsive */
-@media (max-width: 1200px) {
-    .saw-register-grid {
-        grid-template-columns: minmax(0, 1fr);
-    }
-}
-
-@media (max-width: 768px) {
-    .saw-register-content-wrapper {
-        padding: 2rem 1rem 12rem;
-    }
-    
-    .saw-register-header {
-        gap: 1rem;
-        padding: 1.5rem;
-    }
-    
-    .saw-register-icon {
-        width: 3rem;
-        height: 3rem;
-        font-size: 1.75rem;
-    }
-    
-    .saw-register-title {
-        font-size: 1.5rem;
-    }
-    
-    .saw-form-row {
-        grid-template-columns: 1fr;
-    }
-    
-    .saw-cert-row {
-        grid-template-columns: 1fr;
-    }
-    
-    .saw-submit-btn {
-        bottom: 1rem;
-        right: 1rem;
-        left: 1rem;
-        width: auto;
-    }
-}
-</style>
+<?php
+// CSS styly jsou nyní v externím souboru register.css
+// Zajistíme načtení pokud není načten z terminal.php
+if (!wp_style_is('saw-terminal-register', 'enqueued')) {
+    wp_enqueue_style(
+        'saw-terminal-register',
+        SAW_VISITORS_PLUGIN_URL . 'includes/frontend/terminal/assets/css/terminal/register.css',
+        array(),
+        '4.0.0'
+    );
+}
+?>
 
 <div class="saw-register-aurora">
     <div class="saw-register-content-wrapper">
@@ -945,14 +178,14 @@ if ($is_planned && !empty($existing_visitors)) {
                                     <span><?php echo esc_html($t['section_waiting']); ?> (<?php echo count($waiting_for_checkin); ?>)</span>
                                 </h3>
 
-<div style="margin-bottom: 1.5rem;">
-    <button type="button" 
-            id="toggle-all-visitors" 
-            class="saw-btn-toggle-all"
-            onclick="toggleAllVisitors()">
-        ✓ Vybrat vše
-    </button>
-</div>
+                                <div style="margin-bottom: 1.5rem;">
+                                    <button type="button" 
+                                            id="toggle-all-visitors" 
+                                            class="saw-btn-toggle-all"
+                                            onclick="toggleAllVisitors()">
+                                        ✓ Vybrat vše
+                                    </button>
+                                </div>
                                 
                                 <?php foreach ($waiting_for_checkin as $visitor): ?>
                                 <div class="saw-visitor-checkbox-card">
@@ -975,7 +208,7 @@ if ($is_planned && !empty($existing_visitors)) {
                                             <input type="checkbox" 
                                                    name="existing_training_skip[<?php echo $visitor['id']; ?>]" 
                                                    value="1">
-                                            <span>✅ <?php echo esc_html($t['training_skipped']); ?></span>
+                                            <span><?php echo esc_html($t['training_skipped']); ?></span>
                                         </label>
                                     </div>
                                 </div>
@@ -984,8 +217,60 @@ if ($is_planned && !empty($existing_visitors)) {
                             <?php endif; ?>
                             
                         <?php endif; ?>
-                        
+
                         <?php if (!$is_planned): ?>
+                        <!-- Hosts Section (walk-in only) - MOVED TO LEFT COLUMN -->
+                        <div class="saw-register-glass-card" style="position: relative; z-index: 50;">
+                            <h3 class="saw-section-title">
+                                <span>🎯</span>
+                                <span><?php echo esc_html($t['section_visit']); ?></span>
+                            </h3>
+                            
+                            <div class="saw-form-group">
+                                <label class="saw-form-label">
+                                    <?php echo esc_html($t['hosts']); ?> <span class="required">*</span>
+                                </label>
+                                
+                                <!-- Selected hosts chips -->
+                                <div id="selected-hosts-chips" class="saw-hosts-chips"></div>
+                                
+                                <!-- Searchable dropdown -->
+                                <div class="saw-hosts-dropdown">
+                                    <input type="text" 
+                                           id="hosts-search" 
+                                           class="saw-form-input" 
+                                           placeholder="<?php echo esc_attr($t['hosts_placeholder']); ?>"
+                                           autocomplete="off">
+                                    
+                                    <div id="hosts-list" class="saw-hosts-list" style="display: none;">
+                                        <?php if (empty($hosts)): ?>
+                                            <div class="saw-hosts-empty">Žádní hosté k dispozici</div>
+                                        <?php else: ?>
+                                            <?php foreach ($hosts as $host): ?>
+                                            <div class="saw-host-item" 
+                                                 data-id="<?php echo esc_attr($host['id']); ?>"
+                                                 data-name="<?php echo esc_attr($host['first_name'] . ' ' . $host['last_name']); ?>"
+                                                 data-position="<?php echo esc_attr($host['position'] ?? ''); ?>">
+                                                <div class="saw-host-name">
+                                                    <?php echo esc_html($host['first_name'] . ' ' . $host['last_name']); ?>
+                                                </div>
+                                                <?php if (!empty($host['position'])): ?>
+                                                <div class="saw-host-position">
+                                                    <?php echo esc_html($host['position']); ?>
+                                                </div>
+                                                <?php endif; ?>
+                                            </div>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                
+                                <small class="saw-form-help">
+                                    <?php echo esc_html($t['hosts_help']); ?>
+                                </small>
+                            </div>
+                        </div>
+                        
                         <!-- Company Section (walk-in only) -->
                         <div class="saw-register-glass-card">
                             <h3 class="saw-section-title">
@@ -1095,7 +380,7 @@ if ($is_planned && !empty($existing_visitors)) {
                                                    value="1"
                                                    id="new-training-skip-0">
                                             <label for="new-training-skip-0">
-                                                ✅ <?php echo esc_html($t['training_skipped']); ?>
+                                                <?php echo esc_html($t['training_skipped']); ?>
                                             </label>
                                         </div>
                                         
@@ -1123,60 +408,6 @@ if ($is_planned && !empty($existing_visitors)) {
                                 <?php echo esc_html($t['add_visitor']); ?>
                             </button>
                         </div>
-                        
-                        <?php if (!$is_planned): ?>
-                        <!-- Hosts Section (walk-in only) -->
-                        <div class="saw-register-glass-card">
-                            <h3 class="saw-section-title">
-                                <span>🎯</span>
-                                <span><?php echo esc_html($t['section_visit']); ?></span>
-                            </h3>
-                            
-                            <div class="saw-form-group">
-                                <label class="saw-form-label">
-                                    <?php echo esc_html($t['hosts']); ?> <span class="required">*</span>
-                                </label>
-                                
-                                <!-- Selected hosts chips -->
-                                <div id="selected-hosts-chips" class="saw-hosts-chips"></div>
-                                
-                                <!-- Searchable dropdown -->
-                                <div class="saw-hosts-dropdown">
-                                    <input type="text" 
-                                           id="hosts-search" 
-                                           class="saw-form-input" 
-                                           placeholder="<?php echo esc_attr($t['hosts_placeholder']); ?>"
-                                           autocomplete="off">
-                                    
-                                    <div id="hosts-list" class="saw-hosts-list" style="display: none;">
-                                        <?php if (empty($hosts)): ?>
-                                            <div class="saw-hosts-empty">Žádní hosté k dispozici</div>
-                                        <?php else: ?>
-                                            <?php foreach ($hosts as $host): ?>
-                                            <div class="saw-host-item" 
-                                                 data-id="<?php echo esc_attr($host['id']); ?>"
-                                                 data-name="<?php echo esc_attr($host['first_name'] . ' ' . $host['last_name']); ?>"
-                                                 data-position="<?php echo esc_attr($host['position'] ?? ''); ?>">
-                                                <div class="saw-host-name">
-                                                    <?php echo esc_html($host['first_name'] . ' ' . $host['last_name']); ?>
-                                                </div>
-                                                <?php if (!empty($host['position'])): ?>
-                                                <div class="saw-host-position">
-                                                    <?php echo esc_html($host['position']); ?>
-                                                </div>
-                                                <?php endif; ?>
-                                            </div>
-                                            <?php endforeach; ?>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                                
-                                <small class="saw-form-help">
-                                    <?php echo esc_html($t['hosts_help']); ?>
-                                </small>
-                            </div>
-                        </div>
-                        <?php endif; ?>
                         
                     </div>
                 </div>
@@ -1393,7 +624,7 @@ jQuery(document).ready(function($) {
                     
                     <div class="saw-form-checkbox">
                         <input type="checkbox" name="new_visitors[${newIndex}][training_skipped]" value="1" id="new-training-skip-${newIndex}">
-                        <label for="new-training-skip-${newIndex}">✅ <?php echo esc_js($t['training_skipped']); ?></label>
+                        <label for="new-training-skip-${newIndex}"><?php echo esc_js($t['training_skipped']); ?></label>
                     </div>
                     
                     <div class="saw-certificates-section">

@@ -164,6 +164,29 @@
 }
 
 /* ============================================
+   SECTION TITLES (pro frontend stránky)
+   ============================================ */
+.saw-page-aurora .saw-section-title,
+.saw-terminal-wrapper .saw-section-title {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: #a5b4fc;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin: 0 0 1.5rem 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border: none;
+    background: transparent;
+}
+
+.saw-page-aurora .saw-section-title span:first-child {
+    font-size: 1.25rem;
+}
+
+/* ============================================
    4. SELECTION CARDS GRID
    ============================================ */
 .saw-card-grid {
@@ -270,21 +293,40 @@
     margin-bottom: 0.75rem;
 }
 
-.saw-text-content h1 { font-size: 1.5rem; margin-top: 0; }
-.saw-text-content h2 { font-size: 1.25rem; }
-.saw-text-content h3 { font-size: 1.125rem; }
-.saw-text-content h4 { font-size: 1rem; }
+.saw-text-content h1 {
+    font-size: 1.5rem;
+    margin-top: 0;
+}
 
-.saw-text-content p { margin-bottom: 1rem; }
+.saw-text-content h2 {
+    font-size: 1.25rem;
+}
+
+.saw-text-content h3 {
+    font-size: 1.125rem;
+}
+
+.saw-text-content h4 {
+    font-size: 1rem;
+}
+
+.saw-text-content p {
+    margin-bottom: 1rem;
+}
 
 .saw-text-content ul,
 .saw-text-content ol {
     margin: 1rem 0 1rem 1.5rem;
 }
 
-.saw-text-content li { margin-bottom: 0.5rem; }
+.saw-text-content li {
+    margin-bottom: 0.5rem;
+}
 
-.saw-text-content strong { color: #ffffff; font-weight: 600; }
+.saw-text-content strong {
+    color: #ffffff;
+    font-weight: 600;
+}
 
 .saw-text-content a {
     color: #818cf8;
@@ -353,7 +395,10 @@
     color: #ffffff;
 }
 
-.saw-doc-info { flex: 1; min-width: 0; }
+.saw-doc-info {
+    flex: 1;
+    min-width: 0;
+}
 
 .saw-doc-name {
     font-size: 0.8125rem;
@@ -380,12 +425,18 @@
     text-transform: uppercase;
 }
 
-.saw-doc-size { color: #9ca3af; }
+.saw-doc-size {
+    color: #9ca3af;
+}
 
 /* ============================================
    8. ACCORDION (Departments)
    ============================================ */
-.saw-accordion { display: flex; flex-direction: column; gap: 1.25rem; }
+.saw-accordion {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
 
 .saw-accordion-item {
     background: rgba(15, 23, 42, 0.6);
@@ -595,7 +646,9 @@
     justify-content: center;
 }
 
-.saw-pdf-btn:hover { background: rgba(255, 255, 255, 0.2); }
+.saw-pdf-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
 
 .saw-pdf-page-info {
     display: flex;
@@ -985,6 +1038,7 @@
         opacity: 0;
         transform: translateY(30px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -996,6 +1050,7 @@
         opacity: 0;
         transform: scale(0.8);
     }
+
     to {
         opacity: 1;
         transform: scale(1);
@@ -1003,10 +1058,13 @@
 }
 
 @keyframes sawPulse {
-    0%, 100% {
+
+    0%,
+    100% {
         opacity: 0.5;
         transform: scale(1);
     }
+
     50% {
         opacity: 0.8;
         transform: scale(1.05);
@@ -1017,11 +1075,12 @@
    18. RESPONSIVE
    ============================================ */
 @media (max-width: 1024px) {
+
     .saw-card-body.saw-card-body-grid,
     .saw-accordion-body.saw-accordion-body-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .saw-docs-sidebar {
         border-left: none;
         border-top: 1px solid rgba(148, 163, 184, 0.12);
@@ -1029,7 +1088,7 @@
         padding-top: 2rem;
         margin-top: 2rem;
     }
-    
+
     .saw-card-grid.saw-card-grid-4 {
         grid-template-columns: repeat(2, 1fr);
     }
@@ -1039,107 +1098,107 @@
     .saw-page-content {
         padding: 1.5rem;
     }
-    
+
     .saw-page-content.saw-page-content-scroll {
         padding: 2rem 1rem 12rem;
     }
-    
+
     .saw-page-header {
         margin-bottom: 2rem;
     }
-    
+
     .saw-page-header.saw-page-header-left {
         flex-direction: column;
         text-align: center;
         gap: 1rem;
         padding: 1.5rem;
     }
-    
+
     .saw-header-icon {
         width: 3rem;
         height: 3rem;
         font-size: 1.75rem;
     }
-    
+
     .saw-header-icon.saw-header-icon-large {
         width: 5rem;
         height: 5rem;
         font-size: 2.5rem;
     }
-    
+
     .saw-header-title {
         font-size: 1.5rem;
     }
-    
+
     .saw-header-subtitle {
         font-size: 0.875rem;
     }
-    
+
     .saw-card-grid.saw-card-grid-2,
     .saw-card-grid.saw-card-grid-3,
     .saw-card-grid.saw-card-grid-4 {
         grid-template-columns: 1fr;
     }
-    
+
     .saw-card-selection {
         min-height: 100px;
         padding: 1.5rem 1rem;
     }
-    
+
     .saw-card-body {
         padding: 1.25rem;
     }
-    
+
     .saw-text-content {
         font-size: 0.875rem;
     }
-    
+
     .saw-form-grid.saw-form-grid-2 {
         grid-template-columns: 1fr;
     }
-    
+
     .saw-panel-confirm {
         bottom: 1rem;
         right: 1rem;
         left: 1rem;
         min-width: 0;
     }
-    
+
     .saw-panel-checkbox {
         padding: 0.875rem 1.25rem;
     }
-    
+
     .saw-panel-checkbox span {
         font-size: 0.875rem;
     }
-    
+
     .saw-panel-btn {
         padding: 0.875rem 1.25rem;
     }
-    
+
     .saw-panel-skip {
         top: 1rem;
         left: 1rem;
         right: 1rem;
         max-width: none;
     }
-    
+
     /* Video mobile */
     .saw-video-container {
         width: 95%;
     }
-    
+
     .saw-video-progress-bar {
         width: 80%;
         bottom: 8rem;
     }
-    
+
     .saw-video-hint {
         top: 4.5rem;
         right: 1rem;
         left: 1rem;
     }
-    
+
     /* PDF mobile */
     .saw-pdf-container {
         height: calc(100vh - 200px);
@@ -1150,7 +1209,9 @@
 /* ============================================
    19. UTILITIES
    ============================================ */
-.saw-hidden { display: none !important; }
+.saw-hidden {
+    display: none !important;
+}
 
 .saw-sr-only {
     position: absolute;
@@ -1184,7 +1245,9 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.saw-summary-section-header .icon { font-size: 1.25rem; }
+.saw-summary-section-header .icon {
+    font-size: 1.25rem;
+}
 
 .saw-summary-section-header h3 {
     color: #ffffff;
@@ -1206,7 +1269,9 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.saw-summary-row:last-child { border-bottom: none; }
+.saw-summary-row:last-child {
+    border-bottom: none;
+}
 
 .saw-summary-row .label {
     color: rgba(255, 255, 255, 0.6);
@@ -1420,16 +1485,136 @@
     color: #93c5fd;
 }
 
+/* ============================================
+   FORM COMPONENTS (reusable across pages)
+   ============================================ */
+
+/* Form group */
+.saw-form-group {
+    margin-bottom: 1.25rem;
+}
+
+.saw-form-label {
+    display: block;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-primary, #ffffff);
+    margin-bottom: 0.5rem;
+}
+
+.saw-form-label .required {
+    color: #fca5a5;
+}
+
+/* Form input */
+.saw-form-input {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    border-radius: 12px;
+    color: var(--text-primary, #ffffff);
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+
+.saw-form-input:focus {
+    outline: none;
+    border-color: rgba(102, 126, 234, 0.5);
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.saw-form-input::placeholder {
+    color: rgba(203, 213, 225, 0.5);
+}
+
+/* Form row (grid) */
+.saw-form-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+@media (max-width: 768px) {
+    .saw-form-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Form checkbox */
+.saw-form-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.saw-form-checkbox:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(102, 126, 234, 0.5);
+}
+
+.saw-form-checkbox input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+    cursor: pointer;
+    accent-color: #10b981;
+}
+
+.saw-form-checkbox label {
+    flex: 1;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-primary, #ffffff);
+    cursor: pointer;
+}
+
+/* Form help text */
+.saw-form-help {
+    display: block;
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: rgba(203, 213, 225, 0.7);
+}
+
+/* Page container widths */
+.saw-page-container-sm {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.saw-page-container-md {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.saw-page-container-lg {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.saw-page-container-xl {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
 /* Responsive for invitation */
 @media (max-width: 900px) {
     .saw-risks-columns {
         grid-template-columns: 1fr;
     }
-    
+
     .saw-steps-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .saw-progress-indicator {
         position: relative;
         width: 100%;
@@ -1439,7 +1624,7 @@
         overflow-x: auto;
         padding: 1rem;
     }
-    
+
     .saw-progress-step {
         flex-direction: column;
         padding: 0.5rem;
@@ -1447,4 +1632,3 @@
         text-align: center;
     }
 }
-

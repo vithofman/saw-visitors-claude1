@@ -13,4 +13,3 @@ function saw_get_schema_oopp_groups($table_name, $prefix, $charset_collate) {
 	) {$charset_collate} COMMENT='Skupiny OOPP dle nařízení vlády';";
 }
 
-

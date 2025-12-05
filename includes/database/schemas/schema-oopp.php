@@ -26,4 +26,3 @@ function saw_get_schema_oopp($table_name, $prefix, $charset_collate) {
 	) {$charset_collate} COMMENT='Osobní ochranné pracovní prostředky';";
 }
 
-
