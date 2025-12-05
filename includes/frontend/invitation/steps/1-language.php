@@ -2,22 +2,42 @@
 /**
  * Invitation Step - Language Selection
  * 
+ * SJEDNOCENO s terminal/steps/1-language.php
+ * Používá stejné CSS třídy: saw-card-grid, saw-card-selection
+ * 
  * @package SAW_Visitors
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 if (!defined('ABSPATH')) exit;
 
 $languages = $languages ?? [];
 $has_languages = !empty($languages);
+
+// Počet jazyků pro grid (max 4 sloupce)
+$lang_count = min(count($languages), 4);
+
+// Mapování vlajek pro jazyky
+$flags = [
+    'cs' => '🇨🇿', 
+    'en' => '🇬🇧', 
+    'uk' => '🇺🇦', 
+    'sk' => '🇸🇰', 
+    'de' => '🇩🇪', 
+    'pl' => '🇵🇱',
+    'vi' => '🇻🇳',
+    'ru' => '🇷🇺',
+    'hu' => '🇭🇺',
+    'ro' => '🇷🇴',
+];
 ?>
-<!-- Žádný <style> blok! CSS je v pages.css -->
+<!-- CSS je v pages.css - SJEDNOCENO s terminal -->
 
 <div class="saw-page-aurora saw-step-language">
-    <div class="saw-page-content saw-page-content-centered">
+    <div class="saw-page-content">
         
-        <!-- Header -->
-        <div class="saw-page-header saw-page-header-centered">
+        <!-- Header - stejná struktura jako terminal -->
+        <div class="saw-page-header">
             <div class="saw-header-icon">🌍</div>
             <h1 class="saw-header-title">
                 Vyberte jazyk / Choose Language / Оберіть мову
@@ -40,24 +60,25 @@ $has_languages = !empty($languages);
             
         <?php else: ?>
             
-            <!-- Language Grid -->
+            <!-- Language Grid - SJEDNOCENÉ TŘÍDY -->
             <form method="POST">
                 <?php wp_nonce_field('saw_invitation_step', 'invitation_nonce'); ?>
                 <input type="hidden" name="invitation_action" value="select_language">
                 
-                <div class="saw-selection-grid saw-lang-<?php echo min(count($languages), 6); ?>">
-                    <?php 
-                    $flags = ['cs' => '🇨🇿', 'en' => '🇬🇧', 'uk' => '🇺🇦', 'sk' => '🇸🇰', 'de' => '🇩🇪', 'pl' => '🇵🇱'];
-                    foreach ($languages as $code => $name): 
-                    ?>
+                <!-- saw-card-grid + saw-card-grid-X místo saw-selection-grid -->
+                <div class="saw-card-grid saw-card-grid-<?php echo esc_attr($lang_count); ?>">
+                    <?php foreach ($languages as $code => $name): ?>
+                    <!-- saw-card-selection místo saw-selection-card -->
                     <button type="submit" 
                             name="language" 
                             value="<?php echo esc_attr($code); ?>"
-                            class="saw-selection-card">
-                        <span class="saw-card-icon">
+                            class="saw-card-selection">
+                        <!-- saw-card-selection-icon místo saw-card-icon -->
+                        <span class="saw-card-selection-icon">
                             <?php echo $flags[$code] ?? '🌍'; ?>
                         </span>
-                        <span class="saw-card-title">
+                        <!-- saw-card-selection-title místo saw-card-title -->
+                        <span class="saw-card-selection-title">
                             <?php echo esc_html($name); ?>
                         </span>
                     </button>
@@ -69,4 +90,3 @@ $has_languages = !empty($languages);
         
     </div>
 </div>
-

@@ -2,8 +2,10 @@
 /**
  * Terminal Step - PIN Entry (Unified Design)
  * 
+ * OPRAVENO: Kompletní inline styly, čistá struktura
+ * 
  * @package SAW_Visitors
- * @version 3.3.0
+ * @version 4.0.0
  */
 
 if (!defined('ABSPATH')) {
@@ -42,172 +44,35 @@ $translations = [
         'backspace' => '⌫',
         'submit' => 'Підтвердити',
     ],
+    'de' => [
+        'title' => 'PIN-Code eingeben',
+        'subtitle' => 'Sie haben den PIN-Code per E-Mail erhalten',
+        'clear' => 'Löschen',
+        'backspace' => '⌫',
+        'submit' => 'Bestätigen',
+    ],
+    'pl' => [
+        'title' => 'Wprowadź kod PIN',
+        'subtitle' => 'Kod PIN otrzymałeś e-mailem',
+        'clear' => 'Wyczyść',
+        'backspace' => '⌫',
+        'submit' => 'Potwierdź',
+    ],
+    'vi' => [
+        'title' => 'Nhập mã PIN',
+        'subtitle' => 'Bạn đã nhận mã PIN qua email',
+        'clear' => 'Xóa',
+        'backspace' => '⌫',
+        'submit' => 'Xác nhận',
+    ],
 ];
 
 $t = $translations[$lang] ?? $translations['cs'];
 ?>
-<!-- Žádný <style> blok! CSS je v pages.css -->
-
-<div class="saw-page-aurora saw-step-pin">
-    <div class="saw-page-content saw-page-content-centered">
-        
-        <!-- Header -->
-        <div class="saw-page-header saw-page-header-centered">
-            <div class="saw-header-icon">🔐</div>
-            <h1 class="saw-header-title"><?php echo esc_html($t['title']); ?></h1>
-            <p class="saw-header-subtitle"><?php echo esc_html($t['subtitle']); ?></p>
-        </div>
-        
-        <!-- PIN Display -->
-        <div class="saw-pin-display">
-            <div class="saw-pin-dots">
-                <?php for ($i = 0; $i < 6; $i++): ?>
-                <div class="saw-pin-dot" data-index="<?php echo $i; ?>"></div>
-                <?php endfor; ?>
-            </div>
-        </div>
-        
-        <!-- Numpad -->
-        <div class="saw-pin-numpad">
-            <?php for ($i = 1; $i <= 9; $i++): ?>
-            <button type="button" 
-                    class="saw-pin-numpad-btn" 
-                    data-value="<?php echo $i; ?>">
-                <?php echo $i; ?>
-            </button>
-            <?php endfor; ?>
-            
-            <button type="button" class="saw-pin-numpad-btn clear">
-                <?php echo esc_html($t['clear']); ?>
-            </button>
-            
-            <button type="button" 
-                    class="saw-pin-numpad-btn" 
-                    data-value="0">
-                0
-            </button>
-            
-            <button type="button" class="saw-pin-numpad-btn backspace">
-                <?php echo $t['backspace']; ?>
-            </button>
-        </div>
-        
-        <!-- Submit Form -->
-        <form method="POST" id="pin-form">
-            <?php wp_nonce_field('saw_terminal_step', 'terminal_nonce'); ?>
-            <input type="hidden" name="terminal_action" value="verify_pin">
-            <input type="hidden" name="pin" id="pin-input" value="">
-            
-            <button type="submit" class="saw-btn saw-btn-primary" id="pin-submit" disabled>
-                <?php echo esc_html($t['submit']); ?> →
-            </button>
-        </form>
-        
-    </div>
-</div>
-
-<!-- CSS je v pages.css - žádný inline <style> -->
-
-<script>
-(function() {
-    'use strict';
-    
-    let pinValue = '';
-    const maxLength = 6;
-    
-    const pinInput = document.getElementById('pin-input');
-    const pinDots = document.querySelectorAll('.saw-pin-dot');
-    const submitBtn = document.getElementById('pin-submit');
-    const form = document.getElementById('pin-form');
-    
-    // Update display
-    function updateDisplay() {
-        pinDots.forEach((dot, index) => {
-            if (index < pinValue.length) {
-                dot.classList.add('filled');
-            } else {
-                dot.classList.remove('filled');
-            }
-        });
-        
-        pinInput.value = pinValue;
-        submitBtn.disabled = pinValue.length !== maxLength;
-        
-        // Auto-submit when complete
-        if (pinValue.length === maxLength) {
-            setTimeout(() => {
-                form.submit();
-            }, 300);
-        }
-    }
-    
-    // Number buttons
-    document.querySelectorAll('.saw-pin-numpad-btn[data-value]').forEach(btn => {
-        btn.addEventListener('click', function() {
-            if (pinValue.length < maxLength) {
-                pinValue += this.dataset.value;
-                updateDisplay();
-            }
-        });
-    });
-    
-    // Clear button
-    document.querySelector('.saw-pin-numpad-btn.clear').addEventListener('click', function() {
-        pinValue = '';
-        updateDisplay();
-    });
-    
-    // Backspace button
-    document.querySelector('.saw-pin-numpad-btn.backspace').addEventListener('click', function() {
-        pinValue = pinValue.slice(0, -1);
-        updateDisplay();
-    });
-    
-    // IMPROVED Keyboard support - autofocus on page load
-    document.addEventListener('keydown', function(e) {
-        // Only accept numbers
-        if (e.key >= '0' && e.key <= '9') {
-            e.preventDefault();
-            if (pinValue.length < maxLength) {
-                pinValue += e.key;
-                updateDisplay();
-            }
-        } 
-        // Backspace
-        else if (e.key === 'Backspace') {
-            e.preventDefault();
-            pinValue = pinValue.slice(0, -1);
-            updateDisplay();
-        } 
-        // Escape = clear all
-        else if (e.key === 'Escape') {
-            e.preventDefault();
-            pinValue = '';
-            updateDisplay();
-        } 
-        // Enter = submit (if complete)
-        else if (e.key === 'Enter' && pinValue.length === maxLength) {
-            e.preventDefault();
-            form.submit();
-        }
-    });
-    
-    // Auto-focus - make page ready for immediate typing
-    window.addEventListener('load', function() {
-        document.body.focus();
-        console.log('[PIN] Page ready - you can start typing numbers');
-    });
-    
-    // Initial state
-    updateDisplay();
-})();
-</script>
-
-<?php
-error_log("[PIN-ENTRY.PHP] Unified design loaded (v3.3.0)");
-?>
-
-<!-- CSS blok byl odstraněn - všechny styly jsou v pages.css -->
+<style>
+/* === PIN ENTRY - UNIFIED STYLE === */
+:root {
+    --theme-color: #667eea;
     --theme-color-hover: #764ba2;
     --bg-dark: #1a202c;
     --bg-dark-medium: #2d3748;
@@ -412,23 +277,23 @@ error_log("[PIN-ENTRY.PHP] Unified design loaded (v3.3.0)");
     }
     
     .saw-pin-icon {
-        font-size: 3rem;
+        font-size: 2.5rem;
     }
     
     .saw-pin-title {
-        font-size: 1.75rem;
+        font-size: 1.5rem;
     }
     
     .saw-pin-subtitle {
-        font-size: 0.9375rem;
+        font-size: 0.875rem;
     }
     
     .saw-pin-display {
-        padding: 1.5rem;
+        padding: 1.25rem;
     }
     
     .saw-pin-dots {
-        gap: 0.75rem;
+        gap: 0.625rem;
     }
     
     .saw-pin-dot {
@@ -441,12 +306,13 @@ error_log("[PIN-ENTRY.PHP] Unified design loaded (v3.3.0)");
     }
     
     .saw-pin-numpad-btn {
+        height: 54px;
         font-size: 1.25rem;
     }
     
     .saw-pin-submit {
-        padding: 0.875rem 1.5rem;
-        font-size: 1rem;
+        padding: 0.75rem 1.5rem;
+        font-size: 0.9375rem;
     }
 }
 
@@ -571,7 +437,7 @@ error_log("[PIN-ENTRY.PHP] Unified design loaded (v3.3.0)");
         updateDisplay();
     });
     
-    // IMPROVED Keyboard support - autofocus on page load
+    // Keyboard support
     document.addEventListener('keydown', function(e) {
         // Only accept numbers
         if (e.key >= '0' && e.key <= '9') {
@@ -612,5 +478,5 @@ error_log("[PIN-ENTRY.PHP] Unified design loaded (v3.3.0)");
 </script>
 
 <?php
-error_log("[PIN-ENTRY.PHP] Unified design loaded (v3.3.0)");
+error_log("[PIN-ENTRY.PHP] Unified design loaded (v4.0.0)");
 ?>
