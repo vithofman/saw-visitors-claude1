@@ -125,20 +125,33 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
      * @return string HTML for header meta
      */
     protected function get_detail_header_meta($item) {
-        $meta_parts = array();
-        
-        if (!empty($item['ico'])) {
-            $meta_parts[] = '<span class="saw-badge-transparent">IČO: ' . esc_html($item['ico']) . '</span>';
-        }
-        
-        if (!empty($item['is_archived'])) {
-            $meta_parts[] = '<span class="saw-badge-transparent saw-badge-archived">Archivováno</span>';
-        } else {
-            $meta_parts[] = '<span class="saw-badge-transparent">✓ Aktivní</span>';
-        }
-        
-        return implode('', $meta_parts);
+    // Načíst překlady
+    $lang = 'cs';
+    if (class_exists('SAW_Component_Language_Switcher')) {
+        $lang = SAW_Component_Language_Switcher::get_user_language();
     }
+    $t = function_exists('saw_get_translations') 
+        ? saw_get_translations($lang, 'admin', 'companies') 
+        : [];
+    
+    $tr = function($key, $fallback) use ($t) {
+        return $t[$key] ?? $fallback;
+    };
+    
+    $meta_parts = array();
+    
+    if (!empty($item['ico'])) {
+        $meta_parts[] = '<span class="saw-badge-transparent">' . esc_html($tr('ico_label', 'IČO')) . ': ' . esc_html($item['ico']) . '</span>';
+    }
+    
+    if (!empty($item['is_archived'])) {
+        $meta_parts[] = '<span class="saw-badge-transparent saw-badge-archived">' . esc_html($tr('status_archived', 'Archivováno')) . '</span>';
+    } else {
+        $meta_parts[] = '<span class="saw-badge-transparent">✓ ' . esc_html($tr('status_active', 'Aktivní')) . '</span>';
+    }
+    
+    return implode('', $meta_parts);
+}
     
     public function ajax_inline_create() {
         saw_verify_ajax_unified();

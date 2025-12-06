@@ -1,22 +1,39 @@
 <?php
 /**
- * Companies Detail Sidebar Template - v18.0.0 FINAL
- * @version 18.0.0 - Elegantní alerty + manuální výběr
+ * Companies Detail Sidebar Template
+ * @version 19.0.0 - ADDED: Multi-language support
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+// ============================================
+// LOAD TRANSLATIONS
+// ============================================
+$lang = 'cs';
+if (class_exists('SAW_Component_Language_Switcher')) {
+    $lang = SAW_Component_Language_Switcher::get_user_language();
+}
+$t = function_exists('saw_get_translations') 
+    ? saw_get_translations($lang, 'admin', 'companies') 
+    : [];
+
+$tr = function($key, $fallback = null) use ($t) {
+    return $t[$key] ?? $fallback ?? $key;
+};
+
+// ============================================
+// VALIDATION
+// ============================================
 if (empty($item)) {
-    echo '<div class="saw-alert saw-alert-danger">Firma nebyla nalezena</div>';
+    echo '<div class="saw-alert saw-alert-danger">' . esc_html($tr('error_not_found', 'Firma nebyla nalezena')) . '</div>';
     return;
 }
 
 global $wpdb;
 $visits = array();
 if (!empty($item['id'])) {
-    // OPRAVENO: Přidána kontrola SQL chyb a intval pro bezpečnost
     $visits = $wpdb->get_results($wpdb->prepare(
         "SELECT 
             v.id,
@@ -42,7 +59,7 @@ if (!empty($item['id'])) {
 
 $avatar_colors = array('#0077B5', '#005A8C', '#004466', '#003A57', '#0088CC', '#006699');
 
-// Get all companies for manual selection - OPRAVENO: kontrola existence branch_id
+// Get all companies for manual selection
 $all_companies = array();
 if (!empty($item['branch_id']) && !empty($item['id'])) {
     $all_companies = $wpdb->get_results($wpdb->prepare(
@@ -60,49 +77,61 @@ if (!empty($item['branch_id']) && !empty($item['id'])) {
         $all_companies = array();
     }
 }
+
+// Status labels with translations
+$status_labels = array(
+    'draft' => $tr('visit_status_draft', 'Koncept'),
+    'pending' => $tr('visit_status_pending', 'Čeká'),
+    'confirmed' => $tr('visit_status_confirmed', 'Potvrzeno'),
+    'in_progress' => $tr('visit_status_in_progress', 'Probíhá'),
+    'completed' => $tr('visit_status_completed', 'Dokončeno'),
+    'cancelled' => $tr('visit_status_cancelled', 'Zrušeno'),
+);
+
+$type_labels = array(
+    'planned' => $tr('visit_type_planned', 'Plánovaná'),
+    'walk_in' => $tr('visit_type_walk_in', 'Walk-in'),
+);
 ?>
 
 
 <div class="saw-detail-sidebar-content" data-company-id="<?php echo intval($item['id']); ?>">
-    <!-- Header is now rendered by admin-table component (detail-sidebar.php) -->
-    <!-- Module only provides content -->
-    <!-- Header meta (badges) is set via controller->get_detail_header_meta() -->
     
     <div class="saw-industrial-section saw-warning-section">
         <div class="saw-section-body saw-warning-section-body">
             <div class="saw-warning-content">
                 <div class="saw-warning-text">
-                    <strong class="saw-warning-title">⚠️ Možné duplicity</strong>
-                    <p class="saw-warning-description">Zkontrolujte, zda neexistují podobné firmy</p>
+                    <strong class="saw-warning-title">⚠️ <?php echo esc_html($tr('merge_possible_duplicates', 'Možné duplicity')); ?></strong>
+                    <p class="saw-warning-description"><?php echo esc_html($tr('merge_check_description', 'Zkontrolujte, zda neexistují podobné firmy')); ?></p>
                 </div>
                 <button id="sawMergeBtn" class="saw-detail-visit-btn" type="button">
-                    🔗 Zkontrolovat
+                    🔗 <?php echo esc_html($tr('merge_check_btn', 'Zkontrolovat')); ?>
                 </button>
             </div>
             
             <div id="sawMergeContainer">
                 <div class="saw-merge-header">
-                    <h4>🔗 Sloučit duplicity</h4>
+                    <h4>🔗 <?php echo esc_html($tr('merge_title', 'Sloučit duplicity')); ?></h4>
                     <button class="saw-merge-close" onclick="closeMerge()">×</button>
                 </div>
                 <div class="saw-merge-body">
                     <div class="saw-merge-tabs">
-                        <button class="saw-merge-tab active" onclick="switchTab('auto')">🤖 Auto detekce</button>
-                        <button class="saw-merge-tab" onclick="switchTab('manual')">✋ Manuální výběr</button>
+                        <button class="saw-merge-tab active" onclick="switchTab('auto')">🤖 <?php echo esc_html($tr('merge_auto_detection', 'Auto detekce')); ?></button>
+                        <button class="saw-merge-tab" onclick="switchTab('manual')">✋ <?php echo esc_html($tr('merge_manual_selection', 'Manuální výběr')); ?></button>
                     </div>
                     
                     <div id="sawMergeAuto" class="saw-merge-content active">
                         <div id="sawMergeAutoContent">
-                            <div class="saw-loading-state">⏳ Načítání...</div>
+                            <div class="saw-loading-state">⏳ <?php echo esc_html($tr('loading', 'Načítání...')); ?></div>
                         </div>
                     </div>
                     
                     <div id="sawMergeManual" class="saw-merge-content">
                         <div class="saw-help-text">
-                            💡 Vyhledejte a vyberte firmy, které chcete sloučit pod aktuální firmu
+                            💡 <?php echo esc_html($tr('merge_manual_help', 'Vyhledejte a vyberte firmy, které chcete sloučit pod aktuální firmu')); ?>
                         </div>
                         <div class="saw-manual-search">
-                            <input type="text" id="sawManualSearch" placeholder="🔍 Hledat firmu..." onkeyup="filterManualList()">
+                            <input type="text" id="sawManualSearch" placeholder="🔍 <?php echo esc_attr($tr('merge_search_placeholder', 'Hledat firmu...')); ?>" onkeyup="filterManualList()">
                         </div>
                         <div class="saw-duplicate-list" id="sawManualList">
                             <?php foreach ($all_companies as $company): ?>
@@ -111,9 +140,9 @@ if (!empty($item['branch_id']) && !empty($item['id'])) {
                                 <div class="saw-dup-info">
                                     <strong><?php echo esc_html($company['name']); ?></strong>
                                     <div class="saw-dup-meta">
-                                        <span class="saw-visit-count">📋 <?php echo intval($company['visit_count']); ?> návštěv</span>
+                                        <span class="saw-visit-count">📋 <?php echo intval($company['visit_count']); ?> <?php echo esc_html($tr('visits_count', 'návštěv')); ?></span>
                                         <?php if (!empty($company['ico'])): ?>
-                                        <span class="saw-ico-text">IČO: <?php echo esc_html($company['ico']); ?></span>
+                                        <span class="saw-ico-text"><?php echo esc_html($tr('ico_label', 'IČO')); ?>: <?php echo esc_html($company['ico']); ?></span>
                                         <?php endif; ?>
                                     </div>
                                 </div>
@@ -122,7 +151,7 @@ if (!empty($item['branch_id']) && !empty($item['id'])) {
                         </div>
                         <div class="saw-merge-actions">
                             <button class="saw-btn saw-btn-primary" id="sawMergeButton" onclick="confirmMerge()" disabled>
-                                Sloučit vybrané
+                                <?php echo esc_html($tr('merge_selected_btn', 'Sloučit vybrané')); ?>
                             </button>
                         </div>
                     </div>
@@ -132,17 +161,17 @@ if (!empty($item['branch_id']) && !empty($item['id'])) {
     </div>
     
     <div class="saw-industrial-section">
-        <div class="saw-section-head"><h4 class="saw-section-title saw-section-title-accent">📍 Adresa sídla</h4></div>
+        <div class="saw-section-head"><h4 class="saw-section-title saw-section-title-accent">📍 <?php echo esc_html($tr('section_address', 'Adresa sídla')); ?></h4></div>
         <div class="saw-section-body">
             <div class="saw-info-grid">
                 <?php if (!empty($item['street'])): ?>
-                <div class="saw-info-item"><label>Ulice</label><span><?php echo esc_html($item['street']); ?></span></div>
+                <div class="saw-info-item"><label><?php echo esc_html($tr('field_street', 'Ulice')); ?></label><span><?php echo esc_html($item['street']); ?></span></div>
                 <?php endif; ?>
                 <?php if (!empty($item['city']) || !empty($item['zip'])): ?>
-                <div class="saw-info-item"><label>Město a PSČ</label><span><?php echo esc_html(implode(' ', array_filter(array($item['zip'] ?? '', $item['city'] ?? '')))); ?></span></div>
+                <div class="saw-info-item"><label><?php echo esc_html($tr('field_city_zip', 'Město a PSČ')); ?></label><span><?php echo esc_html(implode(' ', array_filter(array($item['zip'] ?? '', $item['city'] ?? '')))); ?></span></div>
                 <?php endif; ?>
                 <?php if (!empty($item['country'])): ?>
-                <div class="saw-info-item"><label>Země</label><span><?php echo esc_html($item['country']); ?></span></div>
+                <div class="saw-info-item"><label><?php echo esc_html($tr('field_country', 'Země')); ?></label><span><?php echo esc_html($item['country']); ?></span></div>
                 <?php endif; ?>
             </div>
         </div>
@@ -150,17 +179,17 @@ if (!empty($item['branch_id']) && !empty($item['id'])) {
     
     <?php if (!empty($item['email']) || !empty($item['phone']) || !empty($item['website'])): ?>
     <div class="saw-industrial-section">
-        <div class="saw-section-head"><h4 class="saw-section-title saw-section-title-accent">📞 Kontakt</h4></div>
+        <div class="saw-section-head"><h4 class="saw-section-title saw-section-title-accent">📞 <?php echo esc_html($tr('section_contact', 'Kontakt')); ?></h4></div>
         <div class="saw-section-body">
             <div class="saw-info-grid">
                 <?php if (!empty($item['email'])): ?>
-                <div class="saw-info-item"><label>Email</label><span><a href="mailto:<?php echo esc_attr($item['email']); ?>" class="saw-link"><?php echo esc_html($item['email']); ?></a></span></div>
+                <div class="saw-info-item"><label><?php echo esc_html($tr('field_email', 'Email')); ?></label><span><a href="mailto:<?php echo esc_attr($item['email']); ?>" class="saw-link"><?php echo esc_html($item['email']); ?></a></span></div>
                 <?php endif; ?>
                 <?php if (!empty($item['phone'])): ?>
-                <div class="saw-info-item"><label>Telefon</label><span><a href="tel:<?php echo esc_attr(str_replace(' ', '', $item['phone'])); ?>" class="saw-link"><?php echo esc_html($item['phone']); ?></a></span></div>
+                <div class="saw-info-item"><label><?php echo esc_html($tr('field_phone', 'Telefon')); ?></label><span><a href="tel:<?php echo esc_attr(str_replace(' ', '', $item['phone'])); ?>" class="saw-link"><?php echo esc_html($item['phone']); ?></a></span></div>
                 <?php endif; ?>
                 <?php if (!empty($item['website'])): ?>
-                <div class="saw-info-item"><label>Web</label><span><a href="<?php echo esc_url($item['website']); ?>" target="_blank" class="saw-link"><?php echo esc_html($item['website']); ?> ↗</a></span></div>
+                <div class="saw-info-item"><label><?php echo esc_html($tr('field_website', 'Web')); ?></label><span><a href="<?php echo esc_url($item['website']); ?>" target="_blank" class="saw-link"><?php echo esc_html($item['website']); ?> ↗</a></span></div>
                 <?php endif; ?>
             </div>
         </div>
@@ -168,17 +197,17 @@ if (!empty($item['branch_id']) && !empty($item['id'])) {
     <?php endif; ?>
     
     <div class="saw-industrial-section">
-        <div class="saw-section-head"><h4 class="saw-section-title saw-section-title-accent">ℹ️ Info</h4></div>
+        <div class="saw-section-head"><h4 class="saw-section-title saw-section-title-accent">ℹ️ <?php echo esc_html($tr('section_info', 'Info')); ?></h4></div>
         <div class="saw-section-body">
             <div class="saw-info-grid">
                 <?php if (!empty($item['branch_name'])): ?>
-                <div class="saw-info-item"><label>Pobočka</label><span><?php echo esc_html($item['branch_name']); ?></span></div>
+                <div class="saw-info-item"><label><?php echo esc_html($tr('field_branch', 'Pobočka')); ?></label><span><?php echo esc_html($item['branch_name']); ?></span></div>
                 <?php endif; ?>
                 <?php if (!empty($item['created_at_formatted'])): ?>
-                <div class="saw-info-item"><label>Vytvořeno</label><span><?php echo esc_html($item['created_at_formatted']); ?></span></div>
+                <div class="saw-info-item"><label><?php echo esc_html($tr('field_created', 'Vytvořeno')); ?></label><span><?php echo esc_html($item['created_at_formatted']); ?></span></div>
                 <?php endif; ?>
                 <?php if (!empty($item['updated_at_formatted'])): ?>
-                <div class="saw-info-item"><label>Změněno</label><span><?php echo esc_html($item['updated_at_formatted']); ?></span></div>
+                <div class="saw-info-item"><label><?php echo esc_html($tr('field_updated', 'Změněno')); ?></label><span><?php echo esc_html($item['updated_at_formatted']); ?></span></div>
                 <?php endif; ?>
             </div>
         </div>
@@ -187,17 +216,14 @@ if (!empty($item['branch_id']) && !empty($item['id'])) {
     <?php if (!empty($visits)): ?>
     <div class="saw-industrial-section">
         <div class="saw-section-head">
-            <h4 class="saw-section-title saw-section-title-accent">📋 Návštěvy <span class="saw-visit-badge-count"><?php echo count($visits); ?></span></h4>
+            <h4 class="saw-section-title saw-section-title-accent">📋 <?php echo esc_html($tr('section_visits', 'Návštěvy')); ?> <span class="saw-visit-badge-count"><?php echo count($visits); ?></span></h4>
         </div>
         <div class="saw-section-body saw-visit-section-body">
             <?php foreach ($visits as $idx => $visit): 
-                $status_labels = array('draft' => 'Koncept', 'pending' => 'Čeká', 'confirmed' => 'Potvrzeno', 'in_progress' => 'Probíhá', 'completed' => 'Dokončeno', 'cancelled' => 'Zrušeno');
-                $type_labels = array('planned' => 'Plánovaná', 'walk_in' => 'Walk-in');
                 $border_class = 'status-' . $visit['status'];
                 $ts = strtotime($visit['created_at']);
                 $day = date_i18n('d', $ts);
                 $month = date_i18n('M', $ts);
-                // OPRAVENO: Kontrola existence visit_id před SQL dotazem
                 $visitors = array();
                 if (!empty($visit['id'])) {
                     $visitors = $wpdb->get_results($wpdb->prepare(
@@ -226,8 +252,8 @@ if (!empty($item['branch_id']) && !empty($item['id'])) {
                 </div>
                 <div id="visit-<?php echo $visit['id']; ?>" class="saw-visitors-wrap">
                     <div class="saw-visitors-header">
-                        <div class="saw-visitors-title">👥 Návštěvníci (<?php echo count($visitors); ?>)</div>
-                        <a href="<?php echo esc_url($visit_detail_url); ?>" class="saw-detail-visit-btn" onclick="event.stopPropagation();">Detail →</a>
+                        <div class="saw-visitors-title">👥 <?php echo esc_html($tr('visitors_title', 'Návštěvníci')); ?> (<?php echo count($visitors); ?>)</div>
+                        <a href="<?php echo esc_url($visit_detail_url); ?>" class="saw-detail-visit-btn" onclick="event.stopPropagation();"><?php echo esc_html($tr('detail_link', 'Detail')); ?> →</a>
                     </div>
                     <?php if (!empty($visitors)): foreach ($visitors as $v_idx => $visitor): 
                         $initials = SAW_Module_Companies_Controller::get_initials($visitor['first_name'], $visitor['last_name']);
@@ -238,14 +264,14 @@ if (!empty($item['branch_id']) && !empty($item['id'])) {
                     <a href="<?php echo esc_url($visitor_url); ?>" class="saw-visitor-row <?php echo $did_not_attend ? 'not-attended' : ''; ?>">
                         <div class="saw-v-avatar" style="background-color:<?php echo esc_attr($avatar_color); ?>"><?php echo esc_html($initials); ?></div>
                         <div class="saw-v-info">
-                            <h5><?php echo esc_html($visitor['first_name'] . ' ' . $visitor['last_name']); ?><?php if ($did_not_attend): ?> <span class="saw-not-attended-badge">Nezúčastnil se</span><?php endif; ?></h5>
+                            <h5><?php echo esc_html($visitor['first_name'] . ' ' . $visitor['last_name']); ?><?php if ($did_not_attend): ?> <span class="saw-not-attended-badge"><?php echo esc_html($tr('not_attended', 'Nezúčastnil se')); ?></span><?php endif; ?></h5>
                             <?php if(!empty($visitor['position'])): ?><p><?php echo esc_html($visitor['position']); ?></p><?php endif; ?>
                             <?php if(!empty($visitor['email']) || !empty($visitor['phone'])): ?>
                                 <p class="saw-v-info-meta"><?php if(!empty($visitor['email'])): ?>📧 <?php echo esc_html($visitor['email']); ?><?php endif; ?><?php if(!empty($visitor['phone'])): ?><?php if(!empty($visitor['email'])) echo ' • '; ?>📱 <?php echo esc_html($visitor['phone']); ?><?php endif; ?></p>
                             <?php endif; ?>
                         </div>
                     </a>
-                    <?php endforeach; else: ?><p class="saw-empty-visitors">Žádní návštěvníci</p><?php endif; ?>
+                    <?php endforeach; else: ?><p class="saw-empty-visitors"><?php echo esc_html($tr('no_visitors', 'Žádní návštěvníci')); ?></p><?php endif; ?>
                 </div>
             </div>
             <?php endforeach; ?>
@@ -253,6 +279,3 @@ if (!empty($item['branch_id']) && !empty($item['id'])) {
     </div>
     <?php endif; ?>
 </div>
-
-<!-- JavaScript moved to assets/js/modules/companies/companies-detail.js -->
-<!-- Asset is enqueued automatically by SAW_Asset_Loader -->

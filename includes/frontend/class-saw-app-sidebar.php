@@ -7,7 +7,7 @@
  *
  * @package SAW_Visitors
  * @since   4.6.2
- * @version 4.6.4 - UPDATED: Added OOPP, removed Pozvánky, Statistiky, Verze školení
+ * @version 5.1.0 - ADDED: Multi-language support via SAW_Translations
  */
 
 if (!defined('ABSPATH')) {
@@ -66,6 +66,14 @@ class SAW_App_Sidebar {
     private $saw_role;
     
     /**
+     * Current UI language
+     *
+     * @since 5.1.0
+     * @var string
+     */
+    private $lang;
+    
+    /**
      * Constructor
      *
      * Initializes sidebar with user, customer, and menu state.
@@ -87,9 +95,38 @@ class SAW_App_Sidebar {
         $this->current_branch = $current_branch ?: $this->load_current_branch();
         $this->saw_role = $this->get_current_saw_role();
         
+        // Load user's UI language
+        $this->lang = $this->get_user_ui_language();
+        
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log(sprintf('[Sidebar] Role: %s, Active menu: %s', $this->saw_role ?? 'NULL', $active_menu));
+            error_log(sprintf('[Sidebar] Role: %s, Active menu: %s, Language: %s', $this->saw_role ?? 'NULL', $active_menu, $this->lang));
         }
+    }
+    
+    /**
+     * Get user's UI language
+     *
+     * Retrieves language preference from Language Switcher component.
+     *
+     * @since 5.1.0
+     * @return string Language code (cs, en)
+     */
+    private function get_user_ui_language() {
+        // Try Language Switcher component first
+        if (class_exists('SAW_Component_Language_Switcher')) {
+            return SAW_Component_Language_Switcher::get_user_language();
+        }
+        
+        // Fallback: check user meta
+        if (is_user_logged_in()) {
+            $lang = get_user_meta(get_current_user_id(), 'saw_current_language', true);
+            if ($lang) {
+                return $lang;
+            }
+        }
+        
+        // Default
+        return 'cs';
     }
     
     /**
@@ -242,6 +279,24 @@ class SAW_App_Sidebar {
     }
     
     /**
+     * Get translated text
+     *
+     * Helper method to get translation with fallback.
+     *
+     * @since 5.1.0
+     * @param string $key Translation key
+     * @return string Translated text or key as fallback
+     */
+    private function t($key) {
+        if (function_exists('saw_t')) {
+            return saw_t($key, $this->lang, 'admin', 'sidebar');
+        }
+        
+        // Fallback to key if translations not available
+        return $key;
+    }
+    
+    /**
      * Render sidebar
      *
      * Outputs complete sidebar HTML including branch switcher
@@ -343,10 +398,10 @@ class SAW_App_Sidebar {
      * Get menu items
      *
      * Returns complete menu structure with sections and items.
-     * Items are filtered by permissions during rendering.
+     * All labels are translated using SAW_Translations.
      *
      * @since 4.6.1
-     * @version 4.6.4 - ADDED: OOPP, REMOVED: Pozvánky, Statistiky, Verze školení
+     * @version 5.1.0 - ADDED: Multi-language support
      * @return array Menu structure
      */
     private function get_menu_items() {
@@ -356,7 +411,12 @@ class SAW_App_Sidebar {
             // ===============================================
             array(
                 'items' => array(
-                    array('id' => 'dashboard', 'label' => 'Dashboard', 'url' => '/admin/dashboard', 'icon' => '📊'),
+                    array(
+                        'id' => 'dashboard', 
+                        'label' => $this->t('dashboard'), 
+                        'url' => '/admin/dashboard', 
+                        'icon' => '📊'
+                    ),
                 ),
             ),
             
@@ -364,11 +424,26 @@ class SAW_App_Sidebar {
             // NÁVŠTĚVY
             // ===============================================
             array(
-                'heading' => 'Návštěvy',
+                'heading' => $this->t('section_visits'),
                 'items' => array(
-                    array('id' => 'companies', 'label' => 'Firmy', 'url' => '/admin/companies', 'icon' => '🏭'),
-                    array('id' => 'visits', 'label' => 'Přehled návštěv', 'url' => '/admin/visits', 'icon' => '👥'),
-                    array('id' => 'visitors', 'label' => 'Návštěvníci', 'url' => '/admin/visitors', 'icon' => '👥'),
+                    array(
+                        'id' => 'companies', 
+                        'label' => $this->t('companies'), 
+                        'url' => '/admin/companies', 
+                        'icon' => '🏭'
+                    ),
+                    array(
+                        'id' => 'visits', 
+                        'label' => $this->t('visits'), 
+                        'url' => '/admin/visits', 
+                        'icon' => '👥'
+                    ),
+                    array(
+                        'id' => 'visitors', 
+                        'label' => $this->t('visitors'), 
+                        'url' => '/admin/visitors', 
+                        'icon' => '👥'
+                    ),
                 ),
             ),
 
@@ -376,11 +451,26 @@ class SAW_App_Sidebar {
             // ORGANIZACE
             // ===============================================
             array(
-                'heading' => 'Organizace',
+                'heading' => $this->t('section_organization'),
                 'items' => array(
-                    array('id' => 'branches', 'label' => 'Pobočky', 'url' => '/admin/branches', 'icon' => '🏢'),                    
-                    array('id' => 'departments', 'label' => 'Oddělení', 'url' => '/admin/departments', 'icon' => '📂'),
-                    array('id' => 'users', 'label' => 'Uživatelé', 'url' => '/admin/users', 'icon' => '👤'),
+                    array(
+                        'id' => 'branches', 
+                        'label' => $this->t('branches'), 
+                        'url' => '/admin/branches', 
+                        'icon' => '🏢'
+                    ),                    
+                    array(
+                        'id' => 'departments', 
+                        'label' => $this->t('departments'), 
+                        'url' => '/admin/departments', 
+                        'icon' => '📂'
+                    ),
+                    array(
+                        'id' => 'users', 
+                        'label' => $this->t('users'), 
+                        'url' => '/admin/users', 
+                        'icon' => '👤'
+                    ),
                 ),
             ),
             
@@ -388,11 +478,26 @@ class SAW_App_Sidebar {
             // ŠKOLENÍ
             // ===============================================
             array(
-                'heading' => 'Školení',
+                'heading' => $this->t('section_training'),
                 'items' => array(
-                    array('id' => 'training-languages', 'label' => 'Jazyky', 'url' => '/admin/training-languages', 'icon' => '🌍'),
-                    array('id' => 'content', 'label' => 'Správa obsahu', 'url' => '/admin/content', 'icon' => '📚'),
-                    array('id' => 'oopp', 'label' => 'OOPP', 'url' => '/admin/oopp', 'icon' => '🦺'),
+                    array(
+                        'id' => 'training-languages', 
+                        'label' => $this->t('training_languages'), 
+                        'url' => '/admin/training-languages', 
+                        'icon' => '🌍'
+                    ),
+                    array(
+                        'id' => 'content', 
+                        'label' => $this->t('content'), 
+                        'url' => '/admin/content', 
+                        'icon' => '📚'
+                    ),
+                    array(
+                        'id' => 'oopp', 
+                        'label' => $this->t('oopp'), 
+                        'url' => '/admin/oopp', 
+                        'icon' => '🦺'
+                    ),
                 ),
             ),
             
@@ -400,13 +505,38 @@ class SAW_App_Sidebar {
             // SYSTÉM
             // ===============================================
             array(
-                'heading' => 'Systém',
+                'heading' => $this->t('section_system'),
                 'items' => array(
-                    array('id' => 'permissions', 'label' => 'Oprávnění', 'url' => '/admin/permissions', 'icon' => '🔒'),
-                    array('id' => 'customers', 'label' => 'Zákazníci', 'url' => '/admin/customers', 'icon' => '🏬'),
-                    array('id' => 'account-types', 'label' => 'Typy účtů', 'url' => '/admin/account-types', 'icon' => '💳'),
-                    array('id' => 'settings', 'label' => 'Nastavení', 'url' => '/admin/settings', 'icon' => '⚙️'),
-                    array('id' => 'about', 'label' => 'O aplikaci', 'url' => '/admin/about', 'icon' => 'ℹ️'),
+                    array(
+                        'id' => 'permissions', 
+                        'label' => $this->t('permissions'), 
+                        'url' => '/admin/permissions', 
+                        'icon' => '🔒'
+                    ),
+                    array(
+                        'id' => 'customers', 
+                        'label' => $this->t('customers'), 
+                        'url' => '/admin/customers', 
+                        'icon' => '🏬'
+                    ),
+                    array(
+                        'id' => 'account-types', 
+                        'label' => $this->t('account_types'), 
+                        'url' => '/admin/account-types', 
+                        'icon' => '💳'
+                    ),
+                    array(
+                        'id' => 'settings', 
+                        'label' => $this->t('settings'), 
+                        'url' => '/admin/settings', 
+                        'icon' => '⚙️'
+                    ),
+                    array(
+                        'id' => 'about', 
+                        'label' => $this->t('about'), 
+                        'url' => '/admin/about', 
+                        'icon' => 'ℹ️'
+                    ),
                 ),
             ),
         );

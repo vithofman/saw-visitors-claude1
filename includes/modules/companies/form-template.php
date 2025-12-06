@@ -2,38 +2,44 @@
 /**
  * Companies Form Template
  * 
- * Form for creating/editing companies with auto-prefilled branch from branch switcher.
- * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Companies
  * @since       1.0.0
- * @version     1.1.0 - Added AJAX inline create support
+ * @version     2.0.0 - ADDED: Multi-language support
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-// Check if we're in sidebar mode
+// ============================================
+// LOAD TRANSLATIONS
+// ============================================
+$lang = 'cs';
+if (class_exists('SAW_Component_Language_Switcher')) {
+    $lang = SAW_Component_Language_Switcher::get_user_language();
+}
+$t = function_exists('saw_get_translations') 
+    ? saw_get_translations($lang, 'admin', 'companies') 
+    : [];
+
+$tr = function($key, $fallback = null) use ($t) {
+    return $t[$key] ?? $fallback ?? $key;
+};
+
+// ============================================
+// CONTEXT
+// ============================================
 $in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'];
-
-// ✅ NEW: Check if we're in nested inline create mode
 $is_nested = isset($GLOBALS['saw_nested_inline_create']) && $GLOBALS['saw_nested_inline_create'];
-
-// Determine if this is edit mode
 $is_edit = !empty($item);
 $item = $item ?? array();
 
-// Get current customer context
 $customer_id = SAW_Context::get_customer_id();
-
-// Get branch_id from branch switcher
 $context_branch_id = SAW_Context::get_branch_id();
 
-// Get branches from parent scope (passed from list-template or controller)
+// Get branches
 $branches = $branches ?? array();
-
-// If branches not provided, fetch them
 if (empty($branches) && $customer_id) {
     global $wpdb;
     $branches_data = $wpdb->get_results($wpdb->prepare(
@@ -48,7 +54,7 @@ if (empty($branches) && $customer_id) {
     }
 }
 
-// Pre-fill branch logic: 1) Existing value (edit) -> 2) Branch switcher -> 3) Empty
+// Pre-fill branch
 $selected_branch_id = null;
 if ($is_edit && !empty($item['branch_id'])) {
     $selected_branch_id = $item['branch_id'];
@@ -56,32 +62,28 @@ if ($is_edit && !empty($item['branch_id'])) {
     $selected_branch_id = $context_branch_id;
 }
 
-// Form action URL
 $form_action = $is_edit 
     ? home_url('/admin/companies/' . $item['id'] . '/edit')
     : home_url('/admin/companies/create');
 ?>
 
 <?php if (!$in_sidebar): ?>
-<!-- Page Header (only when NOT in sidebar) -->
 <div class="saw-page-header">
     <div class="saw-page-header-content">
         <h1 class="saw-page-title">
-            <?php echo $is_edit ? 'Upravit firmu' : 'Nová firma'; ?>
+            <?php echo $is_edit ? esc_html($tr('form_title_edit', 'Upravit firmu')) : esc_html($tr('form_title_create', 'Nová firma')); ?>
         </h1>
         <a href="<?php echo esc_url(home_url('/admin/companies/')); ?>" class="saw-back-button">
             <span class="dashicons dashicons-arrow-left-alt2"></span>
-            Zpět na seznam
+            <?php echo esc_html($tr('btn_back_to_list', 'Zpět na seznam')); ?>
         </a>
     </div>
 </div>
 <?php endif; ?>
 
-<!-- Form Container -->
 <div class="saw-form-container saw-module-companies">
     <form method="POST" action="<?php echo esc_url($form_action); ?>" class="saw-company-form" data-module="companies">
         <?php 
-        // Correct nonce field matching Base Controller expectations
         $nonce_action = $is_edit ? 'saw_edit_companies' : 'saw_create_companies';
         wp_nonce_field($nonce_action, '_wpnonce', false);
         ?>
@@ -90,11 +92,9 @@ $form_action = $is_edit
             <input type="hidden" name="id" value="<?php echo esc_attr($item['id']); ?>">
         <?php endif; ?>
         
-        <!-- Hidden Fields -->
         <input type="hidden" name="customer_id" value="<?php echo esc_attr($customer_id); ?>">
         
         <?php if ($is_nested): ?>
-            <!-- ✅ NEW: Hidden field to trigger AJAX mode in Base Controller -->
             <input type="hidden" name="_ajax_inline_create" value="1">
         <?php endif; ?>
         
@@ -104,7 +104,7 @@ $form_action = $is_edit
         <details class="saw-form-section" open>
             <summary>
                 <span class="dashicons dashicons-admin-generic"></span>
-                <strong>Základní informace</strong>
+                <strong><?php echo esc_html($tr('form_section_basic', 'Základní informace')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
                 
@@ -112,7 +112,7 @@ $form_action = $is_edit
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-8">
                         <label for="branch_id" class="saw-label saw-required">
-                            Pobočka
+                            <?php echo esc_html($tr('form_branch', 'Pobočka')); ?>
                         </label>
                         <select 
                             name="branch_id" 
@@ -121,7 +121,7 @@ $form_action = $is_edit
                             required
                             <?php echo $is_edit ? 'disabled' : ''; ?>
                         >
-                            <option value="">-- Vyberte pobočku --</option>
+                            <option value="">-- <?php echo esc_html($tr('form_select_branch', 'Vyberte pobočku')); ?> --</option>
                             <?php foreach ($branches as $branch_id => $branch_name): ?>
                                 <option 
                                     value="<?php echo esc_attr($branch_id); ?>"
@@ -132,26 +132,25 @@ $form_action = $is_edit
                             <?php endforeach; ?>
                         </select>
                         <?php if ($is_edit): ?>
-                            <!-- Hidden field to submit branch_id when disabled -->
                             <input type="hidden" name="branch_id" value="<?php echo esc_attr($item['branch_id'] ?? ''); ?>">
                         <?php endif; ?>
                         
                         <?php if (!$is_edit && !$context_branch_id): ?>
                             <p class="saw-help-text saw-help-text-error">
-                                ⚠️ Není vybrána žádná pobočka v branch switcheru. Vyberte pobočku manuálně.
+                                ⚠️ <?php echo esc_html($tr('form_no_branch_warning', 'Není vybrána žádná pobočka v branch switcheru. Vyberte pobočku manuálně.')); ?>
                             </p>
                         <?php elseif (!$is_edit && $context_branch_id): ?>
                             <p class="saw-help-text saw-help-text-success">
-                                ✅ Pobočka předvyplněna z branch switcheru
+                                ✅ <?php echo esc_html($tr('form_branch_prefilled', 'Pobočka předvyplněna z branch switcheru')); ?>
                             </p>
                         <?php else: ?>
-                            <p class="saw-help-text">Pobočka ke které firma patří</p>
+                            <p class="saw-help-text"><?php echo esc_html($tr('form_branch_help', 'Pobočka ke které firma patří')); ?></p>
                         <?php endif; ?>
                     </div>
                     
                     <div class="saw-form-group saw-col-4">
                         <label for="ico" class="saw-label">
-                            IČO
+                            <?php echo esc_html($tr('ico_label', 'IČO')); ?>
                         </label>
                         <input 
                             type="text" 
@@ -159,7 +158,7 @@ $form_action = $is_edit
                             id="ico" 
                             class="saw-input"
                             value="<?php echo esc_attr($item['ico'] ?? ''); ?>"
-                            placeholder="např. 12345678"
+                            placeholder="<?php echo esc_attr($tr('form_ico_placeholder', 'např. 12345678')); ?>"
                             maxlength="20"
                         >
                     </div>
@@ -169,7 +168,7 @@ $form_action = $is_edit
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
                         <label for="name" class="saw-label saw-required">
-                            Název firmy
+                            <?php echo esc_html($tr('form_name', 'Název firmy')); ?>
                         </label>
                         <input 
                             type="text" 
@@ -177,7 +176,7 @@ $form_action = $is_edit
                             id="name" 
                             class="saw-input"
                             value="<?php echo esc_attr($item['name'] ?? ''); ?>"
-                            placeholder="např. ABC s.r.o., XYZ a.s."
+                            placeholder="<?php echo esc_attr($tr('form_name_placeholder', 'např. ABC s.r.o., XYZ a.s.')); ?>"
                             required
                         >
                     </div>
@@ -194,9 +193,9 @@ $form_action = $is_edit
                                 value="1"
                                 <?php checked(isset($item['is_archived']) ? $item['is_archived'] : 0, 1); ?>
                             >
-                            <span>Archivovat firmu</span>
+                            <span><?php echo esc_html($tr('form_archive_company', 'Archivovat firmu')); ?></span>
                         </label>
-                        <p class="saw-help-text">Archivované firmy nejsou dostupné pro výběr</p>
+                        <p class="saw-help-text"><?php echo esc_html($tr('form_archive_help', 'Archivované firmy nejsou dostupné pro výběr')); ?></p>
                     </div>
                 </div>
                 
@@ -209,7 +208,7 @@ $form_action = $is_edit
         <details class="saw-form-section">
             <summary>
                 <span class="dashicons dashicons-location"></span>
-                <strong>Adresa sídla</strong>
+                <strong><?php echo esc_html($tr('form_section_address', 'Adresa sídla')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
                 
@@ -217,7 +216,7 @@ $form_action = $is_edit
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
                         <label for="street" class="saw-label">
-                            Ulice a číslo popisné
+                            <?php echo esc_html($tr('form_street', 'Ulice a číslo popisné')); ?>
                         </label>
                         <input 
                             type="text" 
@@ -225,7 +224,7 @@ $form_action = $is_edit
                             id="street" 
                             class="saw-input"
                             value="<?php echo esc_attr($item['street'] ?? ''); ?>"
-                            placeholder="např. Hlavní 123"
+                            placeholder="<?php echo esc_attr($tr('form_street_placeholder', 'např. Hlavní 123')); ?>"
                         >
                     </div>
                 </div>
@@ -234,7 +233,7 @@ $form_action = $is_edit
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-8">
                         <label for="city" class="saw-label">
-                            Město
+                            <?php echo esc_html($tr('form_city', 'Město')); ?>
                         </label>
                         <input 
                             type="text" 
@@ -242,13 +241,13 @@ $form_action = $is_edit
                             id="city" 
                             class="saw-input"
                             value="<?php echo esc_attr($item['city'] ?? ''); ?>"
-                            placeholder="např. Praha, Brno"
+                            placeholder="<?php echo esc_attr($tr('form_city_placeholder', 'např. Praha, Brno')); ?>"
                         >
                     </div>
                     
                     <div class="saw-form-group saw-col-4">
                         <label for="zip" class="saw-label">
-                            PSČ
+                            <?php echo esc_html($tr('form_zip', 'PSČ')); ?>
                         </label>
                         <input 
                             type="text" 
@@ -256,7 +255,7 @@ $form_action = $is_edit
                             id="zip" 
                             class="saw-input"
                             value="<?php echo esc_attr($item['zip'] ?? ''); ?>"
-                            placeholder="např. 110 00"
+                            placeholder="<?php echo esc_attr($tr('form_zip_placeholder', 'např. 110 00')); ?>"
                             maxlength="20"
                         >
                     </div>
@@ -266,15 +265,15 @@ $form_action = $is_edit
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
                         <label for="country" class="saw-label">
-                            Země
+                            <?php echo esc_html($tr('form_country', 'Země')); ?>
                         </label>
                         <input 
                             type="text" 
                             name="country" 
                             id="country" 
                             class="saw-input"
-                            value="<?php echo esc_attr($item['country'] ?? 'Česká republika'); ?>"
-                            placeholder="Česká republika"
+                            value="<?php echo esc_attr($item['country'] ?? $tr('form_country_default', 'Česká republika')); ?>"
+                            placeholder="<?php echo esc_attr($tr('form_country_default', 'Česká republika')); ?>"
                         >
                     </div>
                 </div>
@@ -288,7 +287,7 @@ $form_action = $is_edit
         <details class="saw-form-section">
             <summary>
                 <span class="dashicons dashicons-email"></span>
-                <strong>Kontaktní údaje</strong>
+                <strong><?php echo esc_html($tr('form_section_contact', 'Kontaktní údaje')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
                 
@@ -296,7 +295,7 @@ $form_action = $is_edit
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
                         <label for="email" class="saw-label">
-                            Email
+                            <?php echo esc_html($tr('field_email', 'Email')); ?>
                         </label>
                         <input 
                             type="email" 
@@ -304,7 +303,7 @@ $form_action = $is_edit
                             id="email" 
                             class="saw-input"
                             value="<?php echo esc_attr($item['email'] ?? ''); ?>"
-                            placeholder="např. info@firma.cz"
+                            placeholder="<?php echo esc_attr($tr('form_email_placeholder', 'např. info@firma.cz')); ?>"
                         >
                     </div>
                 </div>
@@ -313,7 +312,7 @@ $form_action = $is_edit
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
                         <label for="phone" class="saw-label">
-                            Telefon
+                            <?php echo esc_html($tr('field_phone', 'Telefon')); ?>
                         </label>
                         <input 
                             type="text" 
@@ -321,7 +320,7 @@ $form_action = $is_edit
                             id="phone" 
                             class="saw-input"
                             value="<?php echo esc_attr($item['phone'] ?? ''); ?>"
-                            placeholder="např. +420 123 456 789"
+                            placeholder="<?php echo esc_attr($tr('form_phone_placeholder', 'např. +420 123 456 789')); ?>"
                             maxlength="50"
                         >
                     </div>
@@ -331,7 +330,7 @@ $form_action = $is_edit
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
                         <label for="website" class="saw-label">
-                            Web
+                            <?php echo esc_html($tr('field_website', 'Web')); ?>
                         </label>
                         <input 
                             type="url" 
@@ -339,9 +338,9 @@ $form_action = $is_edit
                             id="website" 
                             class="saw-input"
                             value="<?php echo esc_attr($item['website'] ?? ''); ?>"
-                            placeholder="např. https://www.firma.cz"
+                            placeholder="<?php echo esc_attr($tr('form_website_placeholder', 'např. https://www.firma.cz')); ?>"
                         >
-                        <p class="saw-help-text">Webová stránka firmy (včetně https://)</p>
+                        <p class="saw-help-text"><?php echo esc_html($tr('form_website_help', 'Webová stránka firmy (včetně https://)')); ?></p>
                     </div>
                 </div>
                 
@@ -353,16 +352,15 @@ $form_action = $is_edit
         <!-- ================================================ -->
         <div class="saw-form-actions">
             <button type="submit" class="saw-button saw-button-primary">
-                <?php echo $is_edit ? 'Uložit změny' : 'Vytvořit firmu'; ?>
+                <?php echo $is_edit ? esc_html($tr('btn_save_changes', 'Uložit změny')) : esc_html($tr('btn_create_company', 'Vytvořit firmu')); ?>
             </button>
             
             <?php if (!$in_sidebar): ?>
                 <a href="<?php echo esc_url(home_url('/admin/companies/')); ?>" class="saw-button saw-button-secondary">
-                    Zrušit
+                    <?php echo esc_html($tr('btn_cancel', 'Zrušit')); ?>
                 </a>
             <?php endif; ?>
         </div>
         
     </form>
 </div>
-<!-- End Form Container -->

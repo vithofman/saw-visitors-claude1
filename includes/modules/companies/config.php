@@ -4,7 +4,10 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Companies
- * @version     1.1.0 - Added custom_ajax_actions for inline create
+ * @version     1.1.0
+ * 
+ * POZNÁMKA: Překlady jsou řešeny v list-template.php
+ * Config obsahuje pouze české fallback texty.
  */
 
 if (!defined('ABSPATH')) {
@@ -29,7 +32,6 @@ return array(
         'delete' => 'manage_options',
     ),
     
-    // ✅ NOVÉ: Custom AJAX actions - automaticky se zaregistrují v class-saw-visitors.php
     'custom_ajax_actions' => array(
         'saw_inline_create_companies' => 'ajax_inline_create',
     ),
@@ -37,7 +39,7 @@ return array(
     'fields' => array(
         'customer_id' => array(
             'type' => 'number',
-            'label' => 'Zákaznık ID',
+            'label' => 'Zákazník ID',
             'required' => true,
             'hidden' => true,
             'sanitize' => 'absint',
@@ -49,7 +51,7 @@ return array(
             'required' => true,
             'sanitize' => 'absint',
             'help' => 'Pobočka ke které firma patří',
-            'hidden' => true, // Hidden from auto-generation
+            'hidden' => true,
         ),
         
         'name' => array(
@@ -135,41 +137,37 @@ return array(
     ),
     
     'list_config' => array(
-        // Define which columns to display in table
         'columns' => array('name', 'ico', 'street', 'city', 'zip', 'email', 'phone', 'website', 'is_archived'),
-        
         'searchable' => array('name', 'ico', 'street', 'city', 'email', 'phone'),
         'sortable' => array('name', 'ico', 'city', 'created_at'),
-        
         'filters' => array(
             'is_archived' => true,
         ),
-        
         'per_page' => 20,
         'enable_detail_modal' => true,
     ),
     
-    // TABS configuration - for horizontal tabs navigation
+    // TABS - labels budou přepsány v list-template.php
     'tabs' => array(
         'enabled' => true,
-        'tab_param' => 'is_archived', // GET parameter (?is_archived=0)
+        'tab_param' => 'is_archived',
         'tabs' => array(
             'all' => array(
                 'label' => 'Všechny',
                 'icon' => '📋',
-                'filter_value' => null, // null = no filter (all records)
+                'filter_value' => null,
                 'count_query' => true,
             ),
             'active' => array(
                 'label' => 'Aktivní',
                 'icon' => '✅',
-                'filter_value' => 0, // INT (is_archived = 0)
+                'filter_value' => 0,
                 'count_query' => true,
             ),
             'archived' => array(
                 'label' => 'Archivované',
                 'icon' => '📦',
-                'filter_value' => 1, // INT (is_archived = 1)
+                'filter_value' => 1,
                 'count_query' => true,
             ),
         ),
