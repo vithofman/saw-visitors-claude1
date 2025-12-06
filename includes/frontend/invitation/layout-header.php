@@ -73,6 +73,7 @@ $token = $flow['token'] ?? $this->token ?? '';
             max-width: 1400px;
         }
     </style>
+    <?php include SAW_VISITORS_PLUGIN_DIR . 'includes/pwa/pwa-head-tags.php'; ?>
 </head>
 <body>
 

@@ -52,6 +52,7 @@ if (!defined('ABSPATH')) {
             user-select: text;
         }
     </style>
+    <?php include SAW_VISITORS_PLUGIN_DIR . 'includes/pwa/pwa-head-tags.php'; ?>
 </head>
 <body class="saw-terminal-body">
 

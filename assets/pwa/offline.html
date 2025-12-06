@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Offline - SAW Visitors</title>
+    <style>
+        :root {
+            --color-primary: #667eea;
+            --color-primary-dark: #764ba2;
+            --color-bg: #1a202c;
+            --color-surface: #2d3748;
+            --color-text: #e2e8f0;
+            --color-text-muted: #a0aec0;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, var(--color-bg) 0%, var(--color-surface) 100%);
+            color: var(--color-text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .offline-container {
+            text-align: center;
+            max-width: 400px;
+            padding: 40px;
+            background: rgba(45, 55, 72, 0.8);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        
+        .offline-icon {
+            font-size: 80px;
+            margin-bottom: 24px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+        
+        .offline-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .offline-message {
+            font-size: 16px;
+            color: var(--color-text-muted);
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+        
+        .offline-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 28px;
+            background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+        
+        .offline-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+        
+        .offline-button:active {
+            transform: translateY(0);
+        }
+        
+        .offline-button svg {
+            width: 20px;
+            height: 20px;
+        }
+        
+        .offline-hint {
+            margin-top: 24px;
+            font-size: 13px;
+            color: var(--color-text-muted);
+            opacity: 0.7;
+        }
+        
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 20px;
+            padding: 8px 16px;
+            background: rgba(239, 68, 68, 0.2);
+            border-radius: 20px;
+            font-size: 14px;
+            color: #f87171;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #ef4444;
+            border-radius: 50%;
+            animation: blink 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        
+        /* Online detection */
+        .online-detected {
+            display: none;
+        }
+        
+        body.is-online .offline-container {
+            display: none;
+        }
+        
+        body.is-online .online-detected {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <div class="offline-icon">📡</div>
+        <h1 class="offline-title">Jste offline</h1>
+        <p class="offline-message">
+            Nemáte připojení k internetu. Zkontrolujte své připojení a zkuste to znovu.
+        </p>
+        
+        <button class="offline-button" onclick="tryReconnect()">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Zkusit znovu
+        </button>
+        
+        <div class="status-indicator">
+            <span class="status-dot"></span>
+            Offline
+        </div>
+        
+        <p class="offline-hint">
+            Některé funkce mohou být dostupné v offline režimu.
+        </p>
+    </div>
+    
+    <div class="online-detected">
+        <div class="offline-container">
+            <div class="offline-icon">✅</div>
+            <h1 class="offline-title">Připojeno!</h1>
+            <p class="offline-message">Připojení obnoveno. Přesměrovávám...</p>
+        </div>
+    </div>
+    
+    <script>
+        // Detekce online stavu
+        function checkOnline() {
+            if (navigator.onLine) {
+                document.body.classList.add('is-online');
+                // Přesměruj zpět po 1 sekundě
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                document.body.classList.remove('is-online');
+            }
+        }
+        
+        // Tlačítko "Zkusit znovu"
+        function tryReconnect() {
+            window.location.reload();
+        }
+        
+        // Event listeners pro změnu stavu připojení
+        window.addEventListener('online', checkOnline);
+        window.addEventListener('offline', checkOnline);
+        
+        // Initial check
+        checkOnline();
+    </script>
+</body>
+</html>

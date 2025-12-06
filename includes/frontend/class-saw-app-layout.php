@@ -306,6 +306,8 @@ class SAW_App_Layout {
             
             <!-- CSS assets are loaded via SAW_Asset_Loader::enqueue_global() in wp_enqueue_scripts hook -->
             
+            <?php include SAW_VISITORS_PLUGIN_DIR . 'includes/pwa/pwa-head-tags.php'; ?>
+            
             <?php
             if (function_exists('wp_head')) {
                 wp_head();

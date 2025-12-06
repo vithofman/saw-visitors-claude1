@@ -125,6 +125,9 @@ class SAW_Bootstrap {
             // Session Manager (must load early - used by terminal and other components)
             'includes/core/class-saw-session-manager.php',
             
+            // PWA Support
+            'includes/pwa/class-saw-pwa.php',
+
             // Invitation Router (must load early for rewrite rules)
             'includes/frontend/invitation/invitation-router.php',
         ];

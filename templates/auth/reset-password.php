@@ -175,6 +175,7 @@
             }
         }
     </style>
+    <?php include SAW_VISITORS_PLUGIN_DIR . 'includes/pwa/pwa-head-tags.php'; ?>
 </head>
 <body>
     <div class="reset-container">

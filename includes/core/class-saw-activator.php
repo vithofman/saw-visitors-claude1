@@ -238,6 +238,15 @@ class SAW_Activator {
             }
         }
         
+        // PWA rewrite rules
+        $pwa_file = SAW_VISITORS_PLUGIN_DIR . 'includes/pwa/class-saw-pwa.php';
+        if (file_exists($pwa_file)) {
+            require_once $pwa_file;
+            if (class_exists('SAW_PWA')) {
+                SAW_PWA::flush_rules();
+            }
+        }
+
         flush_rewrite_rules(false);
     }
 }
