@@ -4,18 +4,50 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visits
- * @version     4.0.0 - REFACTORED: Uses saw-industrial-section structure like companies
+ * @version     4.2.0
  */
 
 if (!defined('ABSPATH')) exit;
 
+// Load translations
+$lang = 'cs';
+if (class_exists('SAW_Component_Language_Switcher')) {
+    $lang = SAW_Component_Language_Switcher::get_user_language();
+}
+$t = function_exists('saw_get_translations') 
+    ? saw_get_translations($lang, 'admin', 'visits') 
+    : [];
+
+$tr = function($key, $fallback = null) use ($t) {
+    return $t[$key] ?? $fallback ?? $key;
+};
+
+// Day names translations
+$day_names = array(
+    'Mon' => $tr('day_mon', 'Pondělí'),
+    'Tue' => $tr('day_tue', 'Úterý'),
+    'Wed' => $tr('day_wed', 'Středa'),
+    'Thu' => $tr('day_thu', 'Čtvrtek'),
+    'Fri' => $tr('day_fri', 'Pátek'),
+    'Sat' => $tr('day_sat', 'Sobota'),
+    'Sun' => $tr('day_sun', 'Neděle'),
+);
+
+// Person count helper (Czech grammar)
+$person_count_label = function($count) use ($tr) {
+    if ($count === 1) {
+        return $tr('person_singular', 'osoba');
+    } elseif ($count >= 2 && $count <= 4) {
+        return $tr('person_few', 'osoby');
+    } else {
+        return $tr('person_many', 'osob');
+    }
+};
+
 if (empty($item)) {
-    echo '<div class="saw-alert saw-alert-danger">Návštěva nebyla nalezena</div>';
+    echo '<div class="saw-alert saw-alert-danger">' . esc_html($tr('error_not_found', 'Návštěva nebyla nalezena')) . '</div>';
     return;
 }
-
-// Header is now rendered by admin-table component (detail-sidebar.php)
-// Module only provides content
 
 // Load schedules
 global $wpdb;
@@ -28,10 +60,10 @@ if (!empty($item['id'])) {
     ), ARRAY_A);
 }
 
-// Get visitor count from item (loaded in format_detail_data)
+// Get visitor count
 $visitors_count = intval($item['visitor_count'] ?? 0);
 
-// Determine if physical or legal person
+// Determine visitor type
 $is_physical_person = empty($item['company_id']);
 ?>
 
@@ -39,7 +71,7 @@ $is_physical_person = empty($item['company_id']);
 <?php if (!empty($item['started_at']) || !empty($item['completed_at'])): ?>
 <div class="saw-industrial-section">
     <div class="saw-section-head">
-        <h4 class="saw-section-title saw-section-title-accent">⏱️ Průběh návštěvy</h4>
+        <h4 class="saw-section-title saw-section-title-accent">⏱️ <?php echo esc_html($tr('section_timeline', 'Průběh návštěvy')); ?></h4>
     </div>
     <div class="saw-section-body">
         <div class="saw-tracking-timeline">
@@ -49,7 +81,7 @@ $is_physical_person = empty($item['company_id']);
                     <span class="dashicons dashicons-arrow-down-alt"></span>
                 </div>
                 <div class="saw-tracking-content">
-                    <strong>Zahájeno</strong>
+                    <strong><?php echo esc_html($tr('field_started', 'Zahájeno')); ?></strong>
                     <span class="saw-tracking-time">
                         <?php echo date_i18n('d.m.Y H:i', strtotime($item['started_at'])); ?>
                     </span>
@@ -63,7 +95,7 @@ $is_physical_person = empty($item['company_id']);
                     <span class="dashicons dashicons-arrow-up-alt"></span>
                 </div>
                 <div class="saw-tracking-content">
-                    <strong>Dokončeno</strong>
+                    <strong><?php echo esc_html($tr('field_completed', 'Dokončeno')); ?></strong>
                     <span class="saw-tracking-time">
                         <?php echo date_i18n('d.m.Y H:i', strtotime($item['completed_at'])); ?>
                     </span>
@@ -79,11 +111,11 @@ $is_physical_person = empty($item['company_id']);
                 $diff = $start->diff($end);
                 
                 $duration_parts = array();
-                if ($diff->d > 0) $duration_parts[] = $diff->d . ' dní';
-                if ($diff->h > 0) $duration_parts[] = $diff->h . ' h';
-                if ($diff->i > 0) $duration_parts[] = $diff->i . ' min';
+                if ($diff->d > 0) $duration_parts[] = $diff->d . ' ' . $tr('field_days', 'dní');
+                if ($diff->h > 0) $duration_parts[] = $diff->h . ' ' . $tr('field_hours', 'h');
+                if ($diff->i > 0) $duration_parts[] = $diff->i . ' ' . $tr('field_minutes', 'min');
                 
-                echo '⏱️ Celková doba: ' . implode(', ', $duration_parts);
+                echo '⏱️ ' . esc_html($tr('field_duration', 'Celková doba')) . ': ' . implode(', ', $duration_parts);
                 ?>
             </div>
             <?php endif; ?>
@@ -96,24 +128,15 @@ $is_physical_person = empty($item['company_id']);
 <?php if (!empty($schedules)): ?>
 <div class="saw-industrial-section">
     <div class="saw-section-head">
-        <h4 class="saw-section-title saw-section-title-accent">📅 Naplánované dny návštěvy</h4>
+        <h4 class="saw-section-title saw-section-title-accent">📅 <?php echo esc_html($tr('section_schedule', 'Naplánované dny návštěvy')); ?></h4>
     </div>
     <div class="saw-section-body">
         <div class="saw-visit-schedule-detail">
             <?php 
-            $day_names = array(
-                'Mon' => 'Pondělí',
-                'Tue' => 'Úterý',
-                'Wed' => 'Středa',
-                'Thu' => 'Čtvrtek',
-                'Fri' => 'Pátek',
-                'Sat' => 'Sobota',
-                'Sun' => 'Neděle',
-            );
-            
             foreach ($schedules as $schedule): 
                 $date = new DateTime($schedule['date']);
-                $day_name = $day_names[date('D', strtotime($schedule['date']))] ?? '';
+                $day_key = date('D', strtotime($schedule['date']));
+                $day_name = $day_names[$day_key] ?? '';
                 $formatted_date = $date->format('d.m.Y');
             ?>
                 <div class="saw-schedule-day-card">
@@ -151,59 +174,50 @@ $is_physical_person = empty($item['company_id']);
 <!-- Visit Information -->
 <div class="saw-industrial-section">
     <div class="saw-section-head">
-        <h4 class="saw-section-title saw-section-title-accent">ℹ️ Informace o návštěvě</h4>
+        <h4 class="saw-section-title saw-section-title-accent">ℹ️ <?php echo esc_html($tr('section_info', 'Informace o návštěvě')); ?></h4>
     </div>
     <div class="saw-section-body">
         <div class="saw-info-grid">
             <?php if (!empty($item['branch_name'])): ?>
             <div class="saw-info-item">
-                <label>Pobočka</label>
+                <label><?php echo esc_html($tr('field_branch', 'Pobočka')); ?></label>
                 <span><?php echo esc_html($item['branch_name']); ?></span>
             </div>
             <?php endif; ?>
             
             <?php
-            // PIN SEKCE
+            // PIN Section
             include(dirname(__FILE__) . '/parts/pin-section.php');
             ?>
             
             <script>
-            // PIN Management Functions
             function extendPinQuick(visitId, hours) {
-                // Získat kartu s data-current-expiry
                 const card = document.getElementById('pin-card-' + visitId);
                 if (!card) {
-                    alert('Chyba: Nenalezen PIN element');
+                    alert('<?php echo esc_js($tr('alert_error', 'Chyba')); ?>: Nenalezen PIN element');
                     return;
                 }
                 
-                // Získat aktuální expiraci (timestamp v ms)
                 let currentExpiry = parseInt(card.getAttribute('data-current-expiry'));
                 let now = Date.now();
                 let baseTime;
                 
-                // KLÍČOVÁ LOGIKA: Počítat OD EXPIRACE, ne od TEĎ
                 if (currentExpiry && currentExpiry > now) {
-                    // PIN je platný -> přičti k expiraci
                     baseTime = currentExpiry;
                 } else {
-                    // PIN vypršel -> přičti k TEĎ
                     baseTime = now;
                 }
                 
-                // Vypočítat nový čas
                 let newTimeMs = baseTime + (hours * 3600 * 1000);
                 let newDate = new Date(newTimeMs);
-                newDate.setSeconds(0, 0); // Zaokrouhlit na celé minuty
+                newDate.setSeconds(0, 0);
                 
-                // Formátovat pro zobrazení
                 const displayDate = formatDateTime(newDate);
                 
                 if (!confirm(`Prodloužit platnost PIN o ${hours} hodin?\n\nNová expirace: ${displayDate}`)) {
                     return;
                 }
                 
-                // Poslat PŘESNÝ čas na backend
                 const sqlDate = formatSQLDateTime(newDate);
                 extendPinToExactTime(visitId, sqlDate, newDate);
             }
@@ -218,46 +232,35 @@ $is_physical_person = empty($item['company_id']);
             }
             
             function formatSQLDateTime(date) {
-                // ✅ OPRAVA: Převést na Prahu timezone
-                // JavaScript Date je v lokálním čase, ale potřebujeme explicitní Prague čas pro backend
-                
                 const year = date.getFullYear();
                 const month = (date.getMonth() + 1).toString().padStart(2, '0');
                 const day = date.getDate().toString().padStart(2, '0');
                 const hours = date.getHours().toString().padStart(2, '0');
                 const minutes = date.getMinutes().toString().padStart(2, '0');
                 const seconds = date.getSeconds().toString().padStart(2, '0');
-                
-                // Vrátit přesný lokální čas (browser timezone = Prague)
                 return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
             }
             
             function extendPinToExactTime(visitId, sqlDate, dateObj) {
-                // Poslat přesný čas v parametru exact_expiry
-                // a hours=-1 jako flag pro backend že má použít exact_expiry
                 jQuery.post(sawGlobal.ajaxurl, {
                     action: 'saw_extend_pin',
                     visit_id: visitId,
-                    hours: 999, // Flag pro backend: použij exact_expiry
-                    exact_expiry: sqlDate, // Přesný čas: "2025-11-24 10:37:00"
+                    hours: 999,
+                    exact_expiry: sqlDate,
                     nonce: sawGlobal.nonce
                 }, function(response) {
-                    console.log('Server response:', response);
                     if (response.success) {
-                        // Aktualizovat data atribut
                         const card = document.getElementById('pin-card-' + visitId);
                         if (card) {
                             card.setAttribute('data-current-expiry', dateObj.getTime());
                         }
-                        
-                        alert('✅ PIN prodloužen do: ' + formatDateTime(dateObj));
+                        alert('✅ <?php echo esc_js($tr('alert_pin_extended', 'PIN prodloužen do')); ?>: ' + formatDateTime(dateObj));
                         location.reload();
                     } else {
-                        alert('❌ Chyba: ' + (response.data?.message || 'Neznámá chyba'));
+                        alert('❌ <?php echo esc_js($tr('alert_error', 'Chyba')); ?>: ' + (response.data?.message || 'Neznámá chyba'));
                     }
                 }).fail(function(xhr, status, error) {
-                    console.error('AJAX Error:', xhr.responseText);
-                    alert('❌ Chyba komunikace se serverem\n\n' + error);
+                    alert('❌ <?php echo esc_js($tr('alert_error', 'Chyba')); ?> komunikace se serverem\n\n' + error);
                 });
             }
 
@@ -265,7 +268,6 @@ $is_physical_person = empty($item['company_id']);
                 document.getElementById('pin-extend-buttons-' + visitId).style.display = 'none';
                 const form = document.getElementById('pin-extend-form-' + visitId);
                 form.style.display = 'block';
-                
                 const datetimeInput = document.getElementById('pin-expiry-datetime-' + visitId);
                 datetimeInput.min = new Date().toISOString().slice(0, 16);
             }
@@ -284,7 +286,6 @@ $is_physical_person = empty($item['company_id']);
                     return;
                 }
                 
-                // Parsovat datetime
                 const newDate = new Date(datetimeValue);
                 
                 if (isNaN(newDate.getTime())) {
@@ -298,7 +299,6 @@ $is_physical_person = empty($item['company_id']);
                     return;
                 }
                 
-                // Poslat PŘESNÝ čas
                 const sqlDate = formatSQLDateTime(newDate);
                 extendPinToExactTime(visitId, sqlDate, newDate);
             }
@@ -314,26 +314,24 @@ $is_physical_person = empty($item['company_id']);
                 if (button) {
                     const originalText = button.innerHTML;
                     button.disabled = true;
-                    button.innerHTML = '⏳ Generování...';
+                    button.innerHTML = '⏳ <?php echo esc_js($tr('generating', 'Generování...')); ?>';
                     
                     jQuery.post(sawGlobal.ajaxurl, {
                         action: 'saw_generate_pin',
                         visit_id: visitId,
                         nonce: sawGlobal.nonce
                     }, function(response) {
-                        console.log('[Generate PIN] Response:', response);
                         if (response && response.success) {
-                            alert('✅ PIN úspěšně vygenerován: ' + (response.data.pin_code || 'N/A') + '\n\nPlatnost: ' + (response.data.pin_expires_at || 'N/A'));
+                            alert('✅ <?php echo esc_js($tr('alert_pin_generated', 'PIN úspěšně vygenerován')); ?>: ' + (response.data.pin_code || 'N/A') + '\n\nPlatnost: ' + (response.data.pin_expires_at || 'N/A'));
                             location.reload();
                         } else {
                             const msg = (response && response.data && response.data.message) ? response.data.message : 'Neznámá chyba';
-                            alert('❌ Chyba: ' + msg);
+                            alert('❌ <?php echo esc_js($tr('alert_error', 'Chyba')); ?>: ' + msg);
                             button.disabled = false;
                             button.innerHTML = originalText;
                         }
                     }).fail(function(xhr, status, error) {
-                        console.error('[Generate PIN] AJAX Error:', status, error, xhr.responseText);
-                        alert('❌ Chyba komunikace se serverem: ' + error);
+                        alert('❌ <?php echo esc_js($tr('alert_error', 'Chyba')); ?> komunikace se serverem: ' + error);
                         button.disabled = false;
                         button.innerHTML = originalText;
                     });
@@ -341,9 +339,6 @@ $is_physical_person = empty($item['company_id']);
             }
             </script>
          
-            <!-- ================================================
-     VISITOR INFO CARD - Full Width
-     ================================================ -->
 <?php 
 $can_send_invitation = in_array($item['status'] ?? '', ['pending', 'draft']);
 $invitation_sent = !empty($item['invitation_sent_at']);
@@ -373,14 +368,14 @@ $has_invitation_email = !empty($item['invitation_email']);
                 </div>
                 <div class="saw-visitor-card-info">
                     <div class="saw-visitor-card-label">
-                        <span>Návštěvník</span>
+                        <span><?php echo esc_html($tr('section_visitor', 'Návštěvník')); ?></span>
                         <span class="saw-visitor-type-badge <?php echo $is_physical_person ? 'saw-type-person' : 'saw-type-company'; ?>">
-                            <?php echo $is_physical_person ? 'Fyzická osoba' : 'Firma'; ?>
+                            <?php echo $is_physical_person ? esc_html($tr('visitor_physical', 'Fyzická osoba')) : esc_html($tr('visitor_company', 'Firma')); ?>
                         </span>
                     </div>
                     <div class="saw-visitor-card-name">
                         <?php if ($is_physical_person): ?>
-                            <?php echo esc_html($item['first_visitor_name'] ?? 'Neuvedeno'); ?>
+                            <?php echo esc_html($item['first_visitor_name'] ?? $tr('not_specified', 'Neuvedeno')); ?>
                         <?php else: ?>
                             <?php echo esc_html($item['company_name'] ?? 'Firma #' . $item['company_id']); ?>
                         <?php endif; ?>
@@ -396,7 +391,7 @@ $has_invitation_email = !empty($item['invitation_email']);
                         <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
                     </svg>
                     <span class="saw-visitor-count-number"><?php echo $visitors_count; ?></span>
-                    <span class="saw-visitor-count-label"><?php echo $visitors_count === 1 ? 'osoba' : ($visitors_count < 5 ? 'osoby' : 'osob'); ?></span>
+                    <span class="saw-visitor-count-label"><?php echo $person_count_label($visitors_count); ?></span>
                 </div>
             </div>
         </div>
@@ -415,21 +410,21 @@ $has_invitation_email = !empty($item['invitation_email']);
                 </div>
                 <div class="saw-invitation-card-info">
                     <div class="saw-invitation-card-label">
-                        <span>Emailová pozvánka</span>
+                        <span><?php echo esc_html($tr('email_invitation', 'Emailová pozvánka')); ?></span>
                         <?php if ($invitation_confirmed): ?>
                             <span class="saw-invitation-status saw-invitation-status-confirmed">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-                                Potvrzeno
+                                <?php echo esc_html($tr('invitation_confirmed', 'Potvrzeno')); ?>
                             </span>
                         <?php elseif ($invitation_sent): ?>
                             <span class="saw-invitation-status saw-invitation-status-sent">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-                                Odesláno
+                                <?php echo esc_html($tr('invitation_sent', 'Odesláno')); ?>
                             </span>
                         <?php else: ?>
                             <span class="saw-invitation-status saw-invitation-status-pending">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                                Čeká
+                                <?php echo esc_html($tr('invitation_pending', 'Čeká')); ?>
                             </span>
                         <?php endif; ?>
                     </div>
@@ -439,7 +434,7 @@ $has_invitation_email = !empty($item['invitation_email']);
                     <?php if ($invitation_sent): ?>
                     <div class="saw-invitation-sent-info">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                        Odesláno: <?php echo date_i18n('d.m.Y H:i', strtotime($item['invitation_sent_at'])); ?>
+                        <?php echo esc_html($tr('invitation_sent_at', 'Odesláno')); ?>: <?php echo date_i18n('d.m.Y H:i', strtotime($item['invitation_sent_at'])); ?>
                     </div>
                     <?php endif; ?>
                 </div>
@@ -455,14 +450,14 @@ $has_invitation_email = !empty($item['invitation_email']);
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/>
                         </svg>
-                        <?php echo $invitation_sent ? 'Odeslat znovu' : 'Odeslat pozvánku'; ?>
+                        <?php echo $invitation_sent ? esc_html($tr('btn_send_again', 'Odeslat znovu')) : esc_html($tr('btn_send_invitation', 'Odeslat pozvánku')); ?>
                     </button>
                 <?php else: ?>
                     <div class="saw-invitation-note">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
                         </svg>
-                        Pouze u čekajících
+                        <?php echo esc_html($tr('invitation_only_pending', 'Pouze u čekajících')); ?>
                     </div>
                 <?php endif; ?>
             </div>
@@ -484,7 +479,7 @@ $has_invitation_email = !empty($item['invitation_email']);
                 </svg>
             </div>
             <div class="saw-purpose-content">
-                <div class="saw-purpose-label">Účel návštěvy</div>
+                <div class="saw-purpose-label"><?php echo esc_html($tr('purpose_label', 'Účel návštěvy')); ?></div>
                 <div class="saw-purpose-text"><?php echo nl2br(esc_html($item['purpose'])); ?></div>
             </div>
         </div>
@@ -501,14 +496,14 @@ $has_invitation_email = !empty($item['invitation_email']);
                 </svg>
             </div>
             <div class="saw-notes-content">
-                <div class="saw-notes-label">Poznámky</div>
+                <div class="saw-notes-label"><?php echo esc_html($tr('notes_label', 'Poznámky')); ?></div>
                 <div class="saw-notes-text"><?php echo nl2br(esc_html($item['notes'])); ?></div>
             </div>
         </div>
     </div>
     <?php endif; ?>
 
-<!-- HOSTS CARD -->
+    <!-- HOSTS CARD -->
     <?php if (!empty($item['hosts'])): ?>
     <div class="saw-hosts-card">
         <div class="saw-hosts-card-inner">
@@ -522,8 +517,8 @@ $has_invitation_email = !empty($item['invitation_email']);
                     </svg>
                 </div>
                 <div class="saw-hosts-card-title">
-                    <span class="saw-hosts-label">Koho navštěvují</span>
-                    <span class="saw-hosts-count"><?php echo count($item['hosts']); ?> <?php echo count($item['hosts']) === 1 ? 'osoba' : (count($item['hosts']) < 5 ? 'osoby' : 'osob'); ?></span>
+                    <span class="saw-hosts-label"><?php echo esc_html($tr('hosts_label', 'Koho navštěvují')); ?></span>
+                    <span class="saw-hosts-count"><?php echo count($item['hosts']); ?> <?php echo $person_count_label(count($item['hosts'])); ?></span>
                 </div>
             </div>
             <div class="saw-hosts-card-body">
@@ -552,17 +547,101 @@ $has_invitation_email = !empty($item['invitation_email']);
 
 </div>
         
-        
     </div>
 </div>
 
-<!-- Visitors section will be rendered by related_data via detail-sidebar.php -->
-
 <style>
+/* Schedule Day Cards */
+.saw-visit-schedule-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
 
-/* ================================================
-   FIX: Cards stack full width
-   ================================================ */
+.saw-schedule-day-card {
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-left: 4px solid #2271b1;
+    border-radius: 8px;
+    padding: 16px;
+    transition: all 0.2s ease;
+}
+
+.saw-schedule-day-card:hover {
+    box-shadow: 0 2px 8px rgba(34, 113, 177, 0.15);
+    border-left-color: #135e96;
+}
+
+.saw-schedule-day-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.saw-schedule-day-date {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.saw-schedule-day-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #2271b1;
+    text-transform: uppercase;
+}
+
+.saw-schedule-day-number {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.saw-schedule-day-time {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #f8fafc;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-weight: 600;
+    color: #475569;
+}
+
+.saw-schedule-day-time .dashicons {
+    font-family: dashicons !important;
+    color: #2271b1 !important;
+    font-size: 18px !important;
+    width: 18px !important;
+    height: 18px !important;
+    line-height: 18px !important;
+}
+
+.saw-schedule-day-notes {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 12px;
+    background: #fef9e7;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #854d0e;
+    margin-top: 8px;
+}
+
+.saw-schedule-day-notes .dashicons {
+    font-family: dashicons !important;
+    color: #ca8a04 !important;
+    font-size: 18px !important;
+    width: 18px !important;
+    height: 18px !important;
+    line-height: 18px !important;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+/* Detail Cards Stack */
 .saw-detail-cards-stack {
     display: flex;
     flex-direction: column;
@@ -572,13 +651,11 @@ $has_invitation_email = !empty($item['invitation_email']);
     max-width: 100%;
 }
 
-/* Zajistit že parent container neomezuje šířku */
 .saw-info-grid .saw-detail-cards-stack {
     grid-column: 1 / -1;
     width: 100%;
 }
 
-/* Každá karta na 100% */
 .saw-visitor-card,
 .saw-invitation-card,
 .saw-purpose-card,
@@ -588,19 +665,6 @@ $has_invitation_email = !empty($item['invitation_email']);
     box-sizing: border-box;
 }
 
-/* ================================================
-   DETAIL CARDS STACK - Vertical Layout
-   ================================================ */
-.saw-detail-cards-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin: 16px 0;
-}
-
-/* ================================================
-   VISITOR CARD - Horizontal Layout
-   ================================================ */
 .saw-visitor-card {
     background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
     border-radius: 14px;
@@ -698,37 +762,38 @@ $has_invitation_email = !empty($item['invitation_email']);
 
 .saw-visitor-count-box {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 8px;
-    padding: 10px 16px;
+    justify-content: center;
     background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-    border-radius: 10px;
-    border: 1px solid #bae6fd;
+    border: 2px solid #bae6fd;
+    border-radius: 12px;
+    padding: 12px 16px;
+    min-width: 80px;
+    color: #0284c7;
 }
 
 .saw-visitor-count-box svg {
-    color: #0284c7;
-    flex-shrink: 0;
+    margin-bottom: 4px;
+    opacity: 0.8;
 }
 
 .saw-visitor-count-number {
     font-size: 24px;
     font-weight: 800;
-    color: #0369a1;
     line-height: 1;
 }
 
 .saw-visitor-count-label {
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 600;
-    color: #0284c7;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
 }
 
-/* ================================================
-   INVITATION CARD - Horizontal Layout
-   ================================================ */
 .saw-invitation-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     border-radius: 14px;
     padding: 2px;
 }
@@ -745,21 +810,21 @@ $has_invitation_email = !empty($item['invitation_email']);
 
 .saw-invitation-card-left {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 14px;
     flex: 1;
     min-width: 0;
 }
 
 .saw-invitation-icon {
-    width: 52px;
-    height: 52px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
     border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
+    color: #059669;
     flex-shrink: 0;
 }
 
@@ -790,42 +855,35 @@ $has_invitation_email = !empty($item['invitation_email']);
     align-items: center;
     gap: 4px;
     font-size: 11px;
-    font-weight: 600;
+    font-weight: 700;
     padding: 3px 8px;
     border-radius: 20px;
 }
 
-.saw-invitation-status svg {
-    flex-shrink: 0;
-}
-
 .saw-invitation-status-confirmed {
-    background: #dcfce7;
-    color: #15803d;
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    color: #059669;
 }
 
 .saw-invitation-status-sent {
-    background: #dbeafe;
-    color: #1d4ed8;
+    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+    color: #0284c7;
 }
 
 .saw-invitation-status-pending {
-    background: #fef3c7;
-    color: #b45309;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #d97706;
 }
 
 .saw-invitation-card-email {
     font-size: 15px;
     font-weight: 600;
-    color: #667eea;
+    color: #059669;
     text-decoration: none;
-    transition: color 0.2s;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    word-break: break-all;
 }
 
 .saw-invitation-card-email:hover {
-    color: #764ba2;
     text-decoration: underline;
 }
 
@@ -835,12 +893,7 @@ $has_invitation_email = !empty($item['invitation_email']);
     gap: 6px;
     font-size: 12px;
     color: #64748b;
-    margin-top: 2px;
-}
-
-.saw-invitation-sent-info svg {
-    color: #94a3b8;
-    flex-shrink: 0;
+    margin-top: 4px;
 }
 
 .saw-invitation-card-right {
@@ -851,70 +904,48 @@ $has_invitation_email = !empty($item['invitation_email']);
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 12px 20px;
+    padding: 10px 16px;
     border-radius: 10px;
     font-size: 14px;
     font-weight: 600;
-    border: none;
     cursor: pointer;
+    border: none;
     transition: all 0.2s ease;
-    white-space: nowrap;
-}
-
-.saw-invitation-btn svg {
-    flex-shrink: 0;
 }
 
 .saw-invitation-btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     color: white;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.35);
 }
 
 .saw-invitation-btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.45);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
 
 .saw-invitation-btn-secondary {
     background: #f1f5f9;
     color: #475569;
-    border: 2px solid #e2e8f0;
+    border: 1px solid #e2e8f0;
 }
 
 .saw-invitation-btn-secondary:hover {
     background: #e2e8f0;
-    border-color: #cbd5e1;
-}
-
-.saw-invitation-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none !important;
 }
 
 .saw-invitation-note {
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 10px 14px;
+    font-size: 12px;
+    color: #94a3b8;
+    padding: 8px 12px;
     background: #f8fafc;
     border-radius: 8px;
-    font-size: 12px;
-    color: #64748b;
-    white-space: nowrap;
 }
 
-.saw-invitation-note svg {
-    flex-shrink: 0;
-    color: #94a3b8;
-}
-
-/* ================================================
-   PURPOSE CARD
-   ================================================ */
 .saw-purpose-card {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
     border-radius: 14px;
     padding: 2px;
 }
@@ -924,19 +955,18 @@ $has_invitation_email = !empty($item['invitation_email']);
     border-radius: 12px;
     padding: 16px;
     display: flex;
-    align-items: flex-start;
     gap: 14px;
 }
 
 .saw-purpose-icon {
-    width: 48px;
-    height: 48px;
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    border-radius: 12px;
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
+    color: #7c3aed;
     flex-shrink: 0;
 }
 
@@ -955,14 +985,11 @@ $has_invitation_email = !empty($item['invitation_email']);
 }
 
 .saw-purpose-text {
-    font-size: 15px;
-    color: #1e293b;
-    line-height: 1.6;
+    font-size: 14px;
+    color: #334155;
+    line-height: 1.5;
 }
 
-/* ================================================
-   NOTES CARD
-   ================================================ */
 .saw-notes-card {
     background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
     border-radius: 14px;
@@ -974,19 +1001,18 @@ $has_invitation_email = !empty($item['invitation_email']);
     border-radius: 12px;
     padding: 16px;
     display: flex;
-    align-items: flex-start;
     gap: 14px;
 }
 
 .saw-notes-icon {
-    width: 48px;
-    height: 48px;
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-    border-radius: 12px;
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
+    color: #d97706;
     flex-shrink: 0;
 }
 
@@ -1005,14 +1031,11 @@ $has_invitation_email = !empty($item['invitation_email']);
 }
 
 .saw-notes-text {
-    font-size: 15px;
-    color: #1e293b;
-    line-height: 1.6;
+    font-size: 14px;
+    color: #334155;
+    line-height: 1.5;
 }
 
-/* ================================================
-   HOSTS CARD
-   ================================================ */
 .saw-hosts-card {
     background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
     border-radius: 14px;
@@ -1028,20 +1051,20 @@ $has_invitation_email = !empty($item['invitation_email']);
 .saw-hosts-card-header {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
     padding: 16px;
     border-bottom: 1px solid #f1f5f9;
 }
 
 .saw-hosts-icon {
-    width: 48px;
-    height: 48px;
-    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-    border-radius: 12px;
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
+    color: #4f46e5;
     flex-shrink: 0;
 }
 
@@ -1060,23 +1083,25 @@ $has_invitation_email = !empty($item['invitation_email']);
 }
 
 .saw-hosts-count {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
-    color: #1e293b;
+    color: #4f46e5;
 }
 
 .saw-hosts-card-body {
-    padding: 8px;
+    padding: 12px 16px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 8px;
+    max-height: 200px;
+    overflow-y: auto;
 }
 
 .saw-host-item {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 12px;
+    padding: 10px 12px;
     background: #f8fafc;
     border-radius: 10px;
     transition: all 0.2s ease;
@@ -1087,14 +1112,14 @@ $has_invitation_email = !empty($item['invitation_email']);
 }
 
 .saw-host-avatar {
-    width: 40px;
-    height: 40px;
-    background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
-    border-radius: 10px;
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #6366f1;
+    color: #4f46e5;
     flex-shrink: 0;
 }
 
@@ -1116,9 +1141,6 @@ $has_invitation_email = !empty($item['invitation_email']);
     color: #64748b;
 }
 
-/* ================================================
-   RESPONSIVE - Mobile
-   ================================================ */
 @media (max-width: 600px) {
     .saw-visitor-card-inner,
     .saw-invitation-card-inner {
@@ -1126,391 +1148,22 @@ $has_invitation_email = !empty($item['invitation_email']);
         align-items: stretch;
     }
     
-    .saw-visitor-card-left,
-    .saw-invitation-card-left {
-        flex-direction: column;
-        align-items: flex-start;
-        text-align: left;
-    }
-    
     .saw-visitor-card-right,
     .saw-invitation-card-right {
-        width: 100%;
+        margin-top: 12px;
     }
     
     .saw-visitor-count-box {
-        justify-content: center;
-        width: 100%;
-    }
-    
-    .saw-invitation-btn {
-        width: 100%;
+        flex-direction: row;
+        gap: 12px;
         justify-content: center;
     }
     
-    .saw-invitation-note {
-        justify-content: center;
-        width: 100%;
+    .saw-visitor-count-box svg {
+        margin-bottom: 0;
     }
 }
 
-/* ================================================
-   TRACKING TIMELINE (keep existing)
-   ================================================ */
-.saw-tracking-timeline {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    padding: 16px;
-    background: #f8fafc;
-    border-radius: 8px;
-}
-
-.saw-tracking-event {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.saw-tracking-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.saw-tracking-icon-start {
-    background: #10b981;
-}
-
-.saw-tracking-icon-end {
-    background: #3b82f6;
-}
-
-.saw-tracking-icon .dashicons {
-    font-family: dashicons !important;
-    color: white !important;
-    font-size: 24px !important;
-    width: 24px !important;
-    height: 24px !important;
-    line-height: 24px !important;
-}
-
-.saw-tracking-content {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.saw-tracking-content strong {
-    font-size: 16px;
-    color: #1e293b;
-}
-
-.saw-tracking-time {
-    font-size: 14px;
-    color: #64748b;
-}
-
-.saw-tracking-duration {
-    padding: 12px;
-    background: white;
-    border: 2px dashed #cbd5e1;
-    border-radius: 6px;
-    text-align: center;
-    font-weight: 600;
-    color: #475569;
-}
-
-/* ================================================
-   SCHEDULE DAY CARDS (keep existing)
-   ================================================ */
-.saw-visit-schedule-detail {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.saw-schedule-day-card {
-    background: white;
-    border: 2px solid #e5e7eb;
-    border-left: 4px solid #2271b1;
-    border-radius: 8px;
-    padding: 16px;
-    transition: all 0.2s ease;
-}
-
-.saw-schedule-day-card:hover {
-    box-shadow: 0 2px 8px rgba(34, 113, 177, 0.15);
-    border-left-color: #135e96;
-}
-
-.saw-schedule-day-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-}
-
-.saw-schedule-day-date {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.saw-schedule-day-name {
-    font-size: 13px;
-    font-weight: 600;
-    color: #2271b1;
-    text-transform: uppercase;
-}
-
-.saw-schedule-day-number {
-    font-size: 18px;
-    font-weight: 700;
-    color: #1e293b;
-}
-
-.saw-schedule-day-time {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: #f8fafc;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-weight: 600;
-    color: #475569;
-}
-
-.saw-schedule-day-time .dashicons {
-    font-family: dashicons !important;
-    color: #2271b1 !important;
-    font-size: 18px !important;
-    width: 18px !important;
-    height: 18px !important;
-    line-height: 18px !important;
-}
-
-.saw-schedule-day-notes {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    padding: 12px;
-    background: #fef9e7;
-    border-radius: 6px;
-    font-size: 14px;
-    color: #854d0e;
-    margin-top: 8px;
-}
-
-.saw-schedule-day-notes .dashicons {
-    font-family: dashicons !important;
-    color: #ca8a04 !important;
-    font-size: 18px !important;
-    width: 18px !important;
-    height: 18px !important;
-    line-height: 18px !important;
-    flex-shrink: 0;
-    margin-top: 2px;
-}
-
-/* ================================================
-   HOSTS LIST (keep existing)
-   ================================================ */
-.saw-hosts-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.saw-host-card {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    transition: all 0.2s ease;
-}
-
-.saw-host-card:hover {
-    background: #f1f5f9;
-    border-color: #cbd5e1;
-}
-
-.saw-host-card .dashicons {
-    font-family: dashicons !important;
-    color: #2271b1 !important;
-    font-size: 24px !important;
-    width: 24px !important;
-    height: 24px !important;
-    line-height: 24px !important;
-}
-
-.saw-host-info {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.saw-host-info strong {
-    color: #1e293b;
-    font-size: 15px;
-}
-
-.saw-host-email {
-    color: #64748b;
-    font-size: 13px;
-}
-
-/* ================================================
-   RISKS / MATERIALS SECTION (keep existing)
-   ================================================ */
-.saw-risks-section {
-    margin-top: 2rem;
-}
-
-.saw-empty-state {
-    color: #6b7280;
-    font-style: italic;
-    padding: 1rem;
-    text-align: center;
-    background: #f9fafb;
-    border-radius: 8px;
-}
-
-.saw-risk-text-block {
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-}
-
-.saw-risk-text-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-.saw-risk-text-header h4 {
-    margin: 0;
-    font-size: 1rem;
-    color: #111827;
-}
-
-.saw-timestamp {
-    font-size: 0.875rem;
-    color: #6b7280;
-}
-
-.saw-risk-text-content {
-    max-height: 300px;
-    overflow-y: auto;
-    padding: 1rem;
-    background: #f9fafb;
-    border-radius: 6px;
-    line-height: 1.6;
-    color: #374151;
-}
-
-.saw-btn-fullscreen {
-    margin-top: 1rem;
-    padding: 0.5rem 1rem;
-    background: #667eea;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.875rem;
-    transition: all 0.2s;
-}
-
-.saw-btn-fullscreen:hover {
-    background: #5568d3;
-}
-
-.saw-risk-documents {
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    padding: 1.5rem;
-}
-
-.saw-risk-documents h4 {
-    margin: 0 0 1rem 0;
-    font-size: 1rem;
-    color: #111827;
-}
-
-.saw-documents-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.saw-document-item {
-    border-bottom: 1px solid #e5e7eb;
-}
-
-.saw-document-item:last-child {
-    border-bottom: none;
-}
-
-.saw-doc-link {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem;
-    text-decoration: none;
-    color: inherit;
-    transition: background 0.2s;
-}
-
-.saw-doc-link:hover {
-    background: #f9fafb;
-}
-
-.saw-doc-icon {
-    font-size: 1.5rem;
-}
-
-.saw-doc-info {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-}
-
-.saw-doc-info strong {
-    color: #111827;
-    font-weight: 600;
-}
-
-.saw-doc-info small {
-    color: #6b7280;
-    font-size: 0.8125rem;
-}
-
-/* Spinner animation */
-@keyframes saw-spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-
-.saw-invitation-btn .saw-spinner {
-    animation: saw-spin 1s linear infinite;
-}
-
-/* ================================================
-   RISKS CARD
-   ================================================ */
 .saw-risks-card {
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
     border-radius: 14px;
@@ -1527,21 +1180,20 @@ $has_invitation_email = !empty($item['invitation_email']);
 .saw-risks-card-header {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
     padding: 16px;
     border-bottom: 1px solid #f1f5f9;
-    flex-wrap: wrap;
 }
 
 .saw-risks-icon {
-    width: 48px;
-    height: 48px;
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-    border-radius: 12px;
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
+    color: #dc2626;
     flex-shrink: 0;
 }
 
@@ -1550,43 +1202,34 @@ $has_invitation_email = !empty($item['invitation_email']);
     flex-direction: column;
     gap: 2px;
     flex: 1;
-    min-width: 0;
 }
 
 .saw-risks-label {
-    font-size: 12px;
-    font-weight: 600;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e293b;
 }
 
 .saw-risks-subtitle {
-    font-size: 14px;
-    font-weight: 600;
-    color: #1e293b;
+    font-size: 12px;
+    color: #64748b;
 }
 
 .saw-risks-badge {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 6px 10px;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 6px 12px;
     border-radius: 20px;
-    background: #dcfce7;
-    color: #15803d;
-    flex-shrink: 0;
-}
-
-.saw-risks-badge svg {
-    flex-shrink: 0;
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    color: #059669;
 }
 
 .saw-risks-badge-empty {
-    background: #fef3c7;
-    color: #b45309;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #d97706;
 }
 
 .saw-risks-card-body {
@@ -1598,24 +1241,24 @@ $has_invitation_email = !empty($item['invitation_email']);
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 12px;
     padding: 32px 16px;
     text-align: center;
-    color: #94a3b8;
-    font-size: 14px;
+    color: #64748b;
+    gap: 12px;
 }
 
-/* Text Items */
+.saw-risks-empty span {
+    font-size: 14px;
+    max-width: 280px;
+    line-height: 1.5;
+}
+
 .saw-risks-text-item {
-    background: #fef2f2;
-    border: 1px solid #fecaca;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
     border-radius: 12px;
     overflow: hidden;
     margin-bottom: 12px;
-}
-
-.saw-risks-text-item:last-child {
-    margin-bottom: 0;
 }
 
 .saw-risks-text-header {
@@ -1623,14 +1266,14 @@ $has_invitation_email = !empty($item['invitation_email']);
     align-items: center;
     gap: 12px;
     padding: 12px 16px;
-    background: #fff;
-    border-bottom: 1px solid #fecaca;
+    background: #f1f5f9;
+    border-bottom: 1px solid #e2e8f0;
 }
 
 .saw-risks-text-icon {
     width: 36px;
     height: 36px;
-    background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
     border-radius: 8px;
     display: flex;
     align-items: center;
@@ -1644,25 +1287,24 @@ $has_invitation_email = !empty($item['invitation_email']);
     flex-direction: column;
     gap: 2px;
     flex: 1;
-    min-width: 0;
 }
 
 .saw-risks-text-title {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     color: #1e293b;
 }
 
 .saw-risks-text-date {
-    font-size: 12px;
+    font-size: 11px;
     color: #64748b;
 }
 
 .saw-risks-fullscreen-btn {
     width: 36px;
     height: 36px;
-    background: #f1f5f9;
-    border: none;
+    background: #fff;
+    border: 1px solid #e2e8f0;
     border-radius: 8px;
     display: flex;
     align-items: center;
@@ -1670,26 +1312,25 @@ $has_invitation_email = !empty($item['invitation_email']);
     color: #64748b;
     cursor: pointer;
     transition: all 0.2s ease;
-    flex-shrink: 0;
 }
 
 .saw-risks-fullscreen-btn:hover {
-    background: #e2e8f0;
-    color: #1e293b;
+    background: #ef4444;
+    border-color: #ef4444;
+    color: white;
 }
 
 .saw-risks-text-content {
     padding: 16px;
     font-size: 14px;
-    line-height: 1.7;
-    color: #374151;
+    color: #334155;
+    line-height: 1.6;
     max-height: 200px;
     overflow-y: auto;
 }
 
-/* Documents Section */
 .saw-risks-documents-section {
-    margin-top: 12px;
+    margin-top: 16px;
 }
 
 .saw-risks-documents-header {
@@ -1798,7 +1439,6 @@ $has_invitation_email = !empty($item['invitation_email']);
     color: white;
 }
 
-/* Mobile */
 @media (max-width: 600px) {
     .saw-risks-card-header {
         flex-direction: column;
@@ -1817,14 +1457,12 @@ $has_invitation_email = !empty($item['invitation_email']);
         margin-left: auto;
     }
 }
-
-
 </style>
+
 <?php
 // Load invitation materials
 $materials = [];
 if (!empty($item['id'])) {
-    global $wpdb;
     $materials = $wpdb->get_results($wpdb->prepare(
         "SELECT * FROM {$wpdb->prefix}saw_visit_invitation_materials 
          WHERE visit_id = %d 
@@ -1850,15 +1488,15 @@ $documents = array_filter($materials, fn($m) => $m['material_type'] === 'documen
                 </svg>
             </div>
             <div class="saw-risks-card-title">
-                <span class="saw-risks-label">Informace o rizicích</span>
-                <span class="saw-risks-subtitle">Nahrál pozvaný návštěvník</span>
+                <span class="saw-risks-label"><?php echo esc_html($tr('section_risks', 'Informace o rizicích')); ?></span>
+                <span class="saw-risks-subtitle"><?php echo esc_html($tr('risks_subtitle', 'Nahrál pozvaný návštěvník')); ?></span>
             </div>
             <?php if (!empty($materials)): ?>
             <div class="saw-risks-badge">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="20 6 9 17 4 12"/>
                 </svg>
-                Nahráno
+                <?php echo esc_html($tr('risks_uploaded', 'Nahráno')); ?>
             </div>
             <?php else: ?>
             <div class="saw-risks-badge saw-risks-badge-empty">
@@ -1866,7 +1504,7 @@ $documents = array_filter($materials, fn($m) => $m['material_type'] === 'documen
                     <circle cx="12" cy="12" r="10"/>
                     <path d="M12 6v6l4 2"/>
                 </svg>
-                Čeká na nahrání
+                <?php echo esc_html($tr('risks_waiting', 'Čeká na nahrání')); ?>
             </div>
             <?php endif; ?>
         </div>
@@ -1880,7 +1518,7 @@ $documents = array_filter($materials, fn($m) => $m['material_type'] === 'documen
                         <line x1="12" y1="18" x2="12" y2="12"/>
                         <line x1="9" y1="15" x2="15" y2="15"/>
                     </svg>
-                    <span>Pozvaný zatím nenahrál žádné materiály o rizicích</span>
+                    <span><?php echo esc_html($tr('risks_empty', 'Pozvaný zatím nenahrál žádné materiály o rizicích')); ?></span>
                 </div>
             <?php else: ?>
                 
@@ -1897,10 +1535,10 @@ $documents = array_filter($materials, fn($m) => $m['material_type'] === 'documen
                                 </svg>
                             </div>
                             <div class="saw-risks-text-meta">
-                                <span class="saw-risks-text-title">Textové informace</span>
+                                <span class="saw-risks-text-title"><?php echo esc_html($tr('risks_text_info', 'Textové informace')); ?></span>
                                 <span class="saw-risks-text-date"><?php echo esc_html(date('d.m.Y H:i', strtotime($text['uploaded_at']))); ?></span>
                             </div>
-                            <button class="saw-risks-fullscreen-btn" onclick="openFullscreen(<?php echo $text['id']; ?>)" title="Zobrazit na celou obrazovku">
+                            <button class="saw-risks-fullscreen-btn" onclick="openFullscreen(<?php echo $text['id']; ?>)" title="<?php echo esc_attr($tr('risks_fullscreen', 'Zobrazit na celou obrazovku')); ?>">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <polyline points="15 3 21 3 21 9"/>
                                     <polyline points="9 21 3 21 3 15"/>
@@ -1922,7 +1560,7 @@ $documents = array_filter($materials, fn($m) => $m['material_type'] === 'documen
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
                         </svg>
-                        <span>Dokumenty (<?php echo count($documents); ?>)</span>
+                        <span><?php echo esc_html($tr('risks_documents', 'Dokumenty')); ?> (<?php echo count($documents); ?>)</span>
                     </div>
                     <div class="saw-risks-documents-list">
                         <?php 
@@ -1978,21 +1616,19 @@ $documents = array_filter($materials, fn($m) => $m['material_type'] === 'documen
     </div>
 </div>
 <?php endif; ?>
+
 <script>
 function openFullscreen(materialId) {
-    // TODO: Implementovat fullscreen modal
     alert('Fullscreen zobrazení pro material #' + materialId);
 }
 
-// Send invitation email
 function sendInvitation(visitId) {
     const btn = document.getElementById('send-invitation-btn-' + visitId);
     if (!btn) return;
     
-    // Disable button and show loading
     const originalText = btn.innerHTML;
     btn.disabled = true;
-    btn.innerHTML = '<span class="dashicons dashicons-update" style="animation: spin 1s linear infinite;"></span> Odesílám...';
+    btn.innerHTML = '<span class="dashicons dashicons-update" style="animation: spin 1s linear infinite;"></span> <?php echo esc_js($tr('sending', 'Odesílám...')); ?>';
     
     jQuery.post(sawGlobal.ajaxurl, {
         action: 'saw_send_invitation',
@@ -2000,22 +1636,20 @@ function sendInvitation(visitId) {
         nonce: sawGlobal.nonce
     }, function(response) {
         if (response.success) {
-            alert('✅ Pozvánka byla úspěšně odeslána na email: ' + (response.data?.email || ''));
-            location.reload(); // Reload to show updated invitation_sent_at
+            alert('✅ <?php echo esc_js($tr('alert_invitation_sent', 'Pozvánka byla úspěšně odeslána na email')); ?>: ' + (response.data?.email || ''));
+            location.reload();
         } else {
-            alert('❌ Chyba: ' + (response.data?.message || 'Nepodařilo se odeslat pozvánku'));
+            alert('❌ <?php echo esc_js($tr('alert_error', 'Chyba')); ?>: ' + (response.data?.message || 'Nepodařilo se odeslat pozvánku'));
             btn.disabled = false;
             btn.innerHTML = originalText;
         }
     }).fail(function(xhr, status, error) {
-        console.error('AJAX Error:', xhr.responseText);
-        alert('❌ Chyba komunikace se serverem\n\n' + error);
+        alert('❌ <?php echo esc_js($tr('alert_error', 'Chyba')); ?> komunikace se serverem\n\n' + error);
         btn.disabled = false;
         btn.innerHTML = originalText;
     });
 }
 
-// CSS for spinner animation
 if (!document.getElementById('saw-invitation-spinner-style')) {
     const style = document.createElement('style');
     style.id = 'saw-invitation-spinner-style';

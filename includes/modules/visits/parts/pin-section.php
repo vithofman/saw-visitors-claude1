@@ -1,7 +1,303 @@
+<?php
+/**
+ * PIN Section - Detail Sidebar Part
+ * 
+ * @package     SAW_Visitors
+ * @subpackage  Modules/Visits/Parts
+ * @version     4.2.0
+ */
+
+if (!defined('ABSPATH')) exit;
+
+// Load translations (inherited from parent template, but ensure available)
+if (!isset($tr) || !is_callable($tr)) {
+    $lang = 'cs';
+    if (class_exists('SAW_Component_Language_Switcher')) {
+        $lang = SAW_Component_Language_Switcher::get_user_language();
+    }
+    $t = function_exists('saw_get_translations') 
+        ? saw_get_translations($lang, 'admin', 'visits') 
+        : [];
+    $tr = function($key, $fallback = null) use ($t) {
+        return $t[$key] ?? $fallback ?? $key;
+    };
+}
+
+// Pre-load labels for JavaScript
+$pin_label = $tr('pin_label', 'PIN kód pro vstup');
+$pin_copy = $tr('pin_copy', 'Kopírovat');
+$pin_copied = $tr('pin_copied', 'Zkopírováno');
+$pin_status = $tr('pin_status', 'Stav');
+$pin_expiration = $tr('pin_expiration', 'Expirace');
+$pin_unlimited = $tr('pin_unlimited', 'Bez omezení');
+$pin_permanent = $tr('pin_permanent', 'Trvalý přístup');
+$pin_expired = $tr('pin_expired', 'Vypršelo');
+$pin_expired_ago = $tr('pin_expired_ago', 'Před');
+$pin_remaining = $tr('pin_remaining', 'Zbývá');
+$pin_extend_24h = $tr('pin_extend_24h', '+24h');
+$pin_extend_48h = $tr('pin_extend_48h', '+48h');
+$pin_extend_7d = $tr('pin_extend_7d', '+7 dní');
+$pin_extend_manual = $tr('pin_extend_manual', 'Ručně');
+$pin_set_expiry = $tr('pin_set_expiry', 'Nastavit novou expiraci');
+$pin_save = $tr('pin_save', 'Uložit');
+$pin_back = $tr('pin_back', 'Zpět');
+$pin_not_generated = $tr('pin_not_generated', 'PIN kód nebyl vygenerován.');
+$pin_generate = $tr('pin_generate', 'Vygenerovat PIN');
+
+// Duration labels
+$day_singular = $tr('duration_day', 'den');
+$day_few = $tr('duration_days_few', 'dny');
+$day_many = $tr('duration_days_many', 'dní');
+$hour_singular = $tr('duration_hour', 'hodina');
+$hour_few = $tr('duration_hours_few', 'hodiny');
+$hour_many = $tr('duration_hours_many', 'hodin');
+$min_label = $tr('duration_min', 'min');
+
+$prague_tz = new DateTimeZone('Europe/Prague');
+$now_dt = new DateTime('now', $prague_tz);
+
+/**
+ * Format duration in Czech
+ */
+function saw_format_czech_duration_tr($diff, $day_s, $day_f, $day_m, $hour_s, $hour_f, $hour_m, $min_l) {
+    $parts = [];
+    
+    if ($diff->days > 0) {
+        $d = $diff->days;
+        if ($d == 1) $word = $day_s;
+        elseif ($d >= 2 && $d <= 4) $word = $day_f;
+        else $word = $day_m;
+        $parts[] = "$d $word";
+    }
+    
+    $h = $diff->h;
+    if ($diff->days == 0 || $h > 0) {
+        if ($h == 1) $word = $hour_s;
+        elseif ($h >= 2 && $h <= 4) $word = $hour_f;
+        else $word = $hour_m;
+        $parts[] = "$h $word";
+    }
+    
+    if ($diff->days == 0) {
+        $m = $diff->i;
+        $parts[] = "$m $min_l";
+    }
+
+    return implode(", ", $parts);
+}
+
+if (!empty($item['pin_code'])): 
+    $js_expiry_ts = 0;
+    if (!empty($item['pin_expires_at'])) {
+        $exp_dt = new DateTime($item['pin_expires_at'], $prague_tz);
+        $js_expiry_ts = $exp_dt->getTimestamp() * 1000;
+    }
+?>
+
+<div class="saw-info-item" style="grid-column: 1 / -1; width: 100%;">
+    <label style="margin-bottom: 10px; display:block; font-weight:600; color:#475569;">
+        🔐 <?php echo esc_html($pin_label); ?>
+    </label>
+    
+    <div class="saw-pin-modern-card" 
+         id="pin-card-<?php echo $item['id']; ?>" 
+         data-current-expiry="<?php echo $js_expiry_ts; ?>">
+        
+        <div class="saw-pin-display-box" 
+             onclick="copyPinToClipboard('<?php echo esc_js($item['pin_code']); ?>', <?php echo $item['id']; ?>)">
+            <div class="saw-pin-left-section">
+                <div class="saw-pin-icon-wrapper">
+                    <span>🔒</span>
+                </div>
+                <div class="saw-pin-code-display" id="pin-code-<?php echo $item['id']; ?>">
+                    <?php echo esc_html($item['pin_code']); ?>
+                </div>
+            </div>
+            <div class="saw-pin-copy-badge" id="pin-badge-<?php echo $item['id']; ?>">
+                <span>📋</span> 
+                <span class="saw-badge-text"><?php echo esc_html($pin_copy); ?></span>
+            </div>
+        </div>
+        
+        <?php 
+        $expiry_status_class = '';
+        $expiry_text_main = $pin_unlimited;
+        $expiry_text_sub = $pin_permanent;
+        $dot_class = 'valid';
+        
+        $calendar_val = (clone $now_dt)->modify('+24 hours')->format('Y-m-d\TH:i');
+
+        if (!empty($item['pin_expires_at'])) {
+            $expiry_dt = new DateTime($item['pin_expires_at'], $prague_tz);
+            $current_now = new DateTime('now', $prague_tz);
+            
+            if ($expiry_dt < $current_now) {
+                $diff = $current_now->diff($expiry_dt);
+                $expiry_text_main = $pin_expired;
+                $duration = saw_format_czech_duration_tr($diff, $day_singular, $day_few, $day_many, $hour_singular, $hour_few, $hour_many, $min_label);
+                $expiry_text_sub = $pin_expired_ago . " " . $duration;
+                $dot_class = 'expired';
+                $expiry_status_class = 'expired';
+                $calendar_val = (clone $current_now)->modify('+24 hours')->format('Y-m-d\TH:i');
+            } else {
+                $diff = $expiry_dt->diff($current_now);
+                $total_hours = ($diff->days * 24) + $diff->h;
+                
+                $duration = saw_format_czech_duration_tr($diff, $day_singular, $day_few, $day_many, $hour_singular, $hour_few, $hour_many, $min_label);
+                $expiry_text_main = $pin_remaining . " " . $duration;
+                $expiry_text_sub = $expiry_dt->format('d.m.Y H:i');
+                
+                $dot_class = ($total_hours < 6) ? 'warning' : 'valid';
+                $expiry_status_class = ($total_hours < 6) ? 'warning' : 'valid';
+                
+                $calendar_val = (clone $expiry_dt)->modify('+24 hours')->format('Y-m-d\TH:i');
+            }
+        }
+        ?>
+        
+        <div class="saw-pin-status-bar">
+            <div class="saw-pin-status-info">
+                <div class="saw-status-dot <?php echo $dot_class; ?>"></div>
+                <div class="saw-pin-status-text">
+                    <span class="saw-pin-status-title"><?php echo esc_html($pin_status); ?></span>
+                    <span class="saw-pin-status-value <?php echo $expiry_status_class; ?>" 
+                          id="status-val-<?php echo $item['id']; ?>">
+                        <?php echo esc_html($expiry_text_main); ?>
+                    </span>
+                </div>
+            </div>
+            <div class="saw-pin-status-text saw-pin-status-right">
+                <span class="saw-pin-status-title"><?php echo esc_html($pin_expiration); ?></span>
+                <span style="font-size: 13px; color: #64748b; font-weight: 500;" 
+                      id="expiry-val-<?php echo $item['id']; ?>">
+                    <?php echo esc_html($expiry_text_sub); ?>
+                </span>
+            </div>
+        </div>
+
+        <?php if ($item['status'] !== 'cancelled'): ?>
+        
+        <div id="pin-extend-buttons-<?php echo $item['id']; ?>" class="saw-pin-buttons-wrapper">
+            <div class="saw-pin-actions-grid">
+                <button type="button" 
+                        class="saw-pin-action-btn" 
+                        onclick="extendPinQuick(<?php echo $item['id']; ?>, 24)">
+                    <span>🔄</span> <?php echo esc_html($pin_extend_24h); ?>
+                </button>
+                <button type="button" 
+                        class="saw-pin-action-btn" 
+                        onclick="extendPinQuick(<?php echo $item['id']; ?>, 48)">
+                    <span>⏱️</span> <?php echo esc_html($pin_extend_48h); ?>
+                </button>
+                <button type="button" 
+                        class="saw-pin-action-btn" 
+                        onclick="extendPinQuick(<?php echo $item['id']; ?>, 168)">
+                    <span>📅</span> <?php echo esc_html($pin_extend_7d); ?>
+                </button>
+                <button type="button" 
+                        class="saw-pin-action-btn primary" 
+                        onclick="showExtendPinForm(<?php echo $item['id']; ?>)">
+                    <span>⚙️</span> <?php echo esc_html($pin_extend_manual); ?>
+                </button>
+            </div>
+        </div>
+
+        <div id="pin-extend-form-<?php echo $item['id']; ?>" 
+             style="display: none; width: 100%;">
+            <div class="saw-pin-custom-form">
+                <div class="saw-pin-form-title">
+                    <span>📆</span> <?php echo esc_html($pin_set_expiry); ?>
+                </div>
+                
+                <input type="datetime-local" 
+                       id="pin-expiry-datetime-<?php echo $item['id']; ?>" 
+                       class="saw-pin-datetime-input"
+                       value="<?php echo $calendar_val; ?>">
+                
+                <div class="saw-pin-actions-grid">
+                    <button type="button" 
+                            class="saw-pin-action-btn" 
+                            style="background:#10b981; color:white; border:none; justify-content: center;" 
+                            onclick="extendPinCustom(<?php echo $item['id']; ?>)">
+                        <span>✅</span> <?php echo esc_html($pin_save); ?>
+                    </button>
+                    <button type="button" 
+                            class="saw-pin-action-btn" 
+                            style="justify-content: center;" 
+                            onclick="hideExtendPinForm(<?php echo $item['id']; ?>)">
+                        <span>❌</span> <?php echo esc_html($pin_back); ?>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php 
+if (empty($item['pin_code']) && 
+    $item['status'] !== 'cancelled' && 
+    ($item['visit_type'] ?? '') === 'planned'): 
+?>
+<div class="saw-info-item" style="grid-column: 1 / -1; width: 100%;">
+    <div class="saw-pin-modern-card">
+        <div class="saw-pin-empty-state">
+            <div class="saw-pin-empty-icon">🔓</div>
+            <p style="margin:0 0 20px 0; color:#94a3b8; font-size:14px; line-height: 1.5;">
+                <?php echo esc_html($pin_not_generated); ?>
+            </p>
+            <button type="button" 
+                    class="saw-pin-generate-btn" 
+                    onclick="generatePin(<?php echo $item['id']; ?>)">
+                <span>✨</span> <?php echo esc_html($pin_generate); ?>
+            </button>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<script>
+if (typeof copyPinToClipboard === 'undefined') {
+    function copyPinToClipboard(pin, visitId) {
+        if (!pin) return;
+        
+        const displayEl = document.getElementById('pin-code-' + visitId);
+        const badgeEl = document.getElementById('pin-badge-' + visitId);
+        
+        if (!displayEl || !badgeEl) return;
+        
+        const originalText = displayEl.innerText;
+        const originalBadge = badgeEl.innerHTML;
+        
+        navigator.clipboard.writeText(pin).then(() => {
+            displayEl.innerText = "✓";
+            displayEl.classList.add('copied');
+            badgeEl.classList.add('copied');
+            
+            const badgeText = badgeEl.querySelector('.saw-badge-text');
+            if (badgeText && getComputedStyle(badgeText).display !== 'none') {
+                badgeText.innerText = "<?php echo esc_js($pin_copied); ?>";
+            }
+            
+            if (window.navigator && window.navigator.vibrate) {
+                window.navigator.vibrate([50]);
+            }
+            
+            setTimeout(() => {
+                displayEl.classList.remove('copied');
+                displayEl.innerText = originalText;
+                badgeEl.classList.remove('copied');
+                badgeEl.innerHTML = originalBadge;
+            }, 1500);
+        }).catch(err => {
+            console.error('Copy error:', err);
+        });
+    }
+}
+</script>
+
 <style>
-/* ========================================
-   PROMĚNNÉ
-   ======================================== */
 :root {
     --saw-primary: #4f46e5;
     --saw-success: #10b981;
@@ -317,373 +613,38 @@
 }
 
 @keyframes sawPop {
-    0% {
-        transform: scale(0.5);
-        opacity: 0.5;
-    }
-    50% {
-        transform: scale(1.1);
-    }
-    100% {
-        transform: scale(1);
-        opacity: 1;
-    }
+    0% { transform: scale(0.5); opacity: 0.5; }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
 }
 
 @media (max-width: 420px) {
-    .saw-pin-modern-card {
-        padding: 16px 12px;
-    }
-    
-    .saw-pin-code-display {
-        font-size: 24px;
-        letter-spacing: 0;
-    }
-    
-    .saw-badge-text {
-        display: none;
-    }
-    
-    .saw-pin-copy-badge {
-        padding: 8px;
-        border-radius: 8px;
-    }
-    
-    .saw-pin-status-bar {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
-    }
-    
-    .saw-pin-status-right {
-        text-align: left;
-        margin-left: 0;
-        width: 100%;
-        padding-top: 10px;
-        border-top: 1px dashed #cbd5e1;
-    }
-    
-    .saw-pin-status-value {
-        white-space: normal;
-        line-height: 1.4;
-    }
-    
-    .saw-pin-actions-grid {
-        grid-template-columns: 1fr;
-        gap: 8px;
-    }
-    
-    .saw-pin-action-btn {
-        justify-content: flex-start;
-        padding-left: 16px;
-    }
+    .saw-pin-modern-card { padding: 16px 12px; }
+    .saw-pin-code-display { font-size: 24px; letter-spacing: 0; }
+    .saw-badge-text { display: none; }
+    .saw-pin-copy-badge { padding: 8px; border-radius: 8px; }
+    .saw-pin-status-bar { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .saw-pin-status-right { text-align: left; margin-left: 0; width: 100%; padding-top: 10px; border-top: 1px dashed #cbd5e1; }
+    .saw-pin-status-value { white-space: normal; line-height: 1.4; }
+    .saw-pin-actions-grid { grid-template-columns: 1fr; gap: 8px; }
+    .saw-pin-action-btn { justify-content: flex-start; padding-left: 16px; }
 }
 
 @media (max-width: 380px) {
-    .saw-pin-modern-card {
-        padding: 12px 8px;
-        border-radius: 16px;
-    }
-    
-    .saw-pin-display-box {
-        padding: 12px;
-        gap: 8px;
-    }
-    
-    .saw-pin-icon-wrapper {
-        width: 36px;
-        height: 36px;
-        font-size: 16px;
-    }
-    
-    .saw-pin-code-display {
-        font-size: 22px;
-    }
-    
-    .saw-pin-status-bar {
-        padding: 12px;
-    }
-    
-    .saw-pin-status-title {
-        font-size: 9px;
-    }
-    
-    .saw-pin-status-value {
-        font-size: 12px;
-    }
-    
-    .saw-pin-custom-form {
-        padding: 12px;
-    }
-    
-    .saw-pin-action-btn {
-        font-size: 12px;
-        min-height: 40px;
-        padding: 10px 12px;
-    }
+    .saw-pin-modern-card { padding: 12px 8px; border-radius: 16px; }
+    .saw-pin-display-box { padding: 12px; gap: 8px; }
+    .saw-pin-icon-wrapper { width: 36px; height: 36px; font-size: 16px; }
+    .saw-pin-code-display { font-size: 22px; }
+    .saw-pin-status-bar { padding: 12px; }
+    .saw-pin-status-title { font-size: 9px; }
+    .saw-pin-status-value { font-size: 12px; }
+    .saw-pin-custom-form { padding: 12px; }
+    .saw-pin-action-btn { font-size: 12px; min-height: 40px; padding: 10px 12px; }
 }
 
 @media (max-width: 340px) {
-    .saw-pin-code-display {
-        font-size: 20px;
-    }
-    
-    .saw-pin-action-btn span:first-child {
-        font-size: 14px;
-    }
-    
-    .saw-pin-form-title {
-        font-size: 13px;
-    }
+    .saw-pin-code-display { font-size: 20px; }
+    .saw-pin-action-btn span:first-child { font-size: 14px; }
+    .saw-pin-form-title { font-size: 13px; }
 }
 </style>
-
-<?php 
-/**
- * PIN SECTION - FIXED VERSION
- * Oprava: Správné zobrazení času v Prague timezone
- */
-
-$prague_tz = new DateTimeZone('Europe/Prague');
-$now_dt = new DateTime('now', $prague_tz);
-
-function saw_format_czech_duration($diff) {
-    $parts = [];
-    
-    if ($diff->days > 0) {
-        $d = $diff->days;
-        if ($d == 1) $word = "den";
-        elseif ($d >= 2 && $d <= 4) $word = "dny";
-        else $word = "dní";
-        $parts[] = "$d $word";
-    }
-    
-    $h = $diff->h;
-    if ($diff->days == 0 || $h > 0) {
-        if ($h == 1) $word = "hodina";
-        elseif ($h >= 2 && $h <= 4) $word = "hodiny";
-        else $word = "hodin";
-        $parts[] = "$h $word";
-    }
-    
-    if ($diff->days == 0) {
-        $m = $diff->i;
-        $parts[] = "$m min";
-    }
-
-    return implode(", ", $parts);
-}
-
-if (!empty($item['pin_code'])): 
-    $js_expiry_ts = 0;
-    if (!empty($item['pin_expires_at'])) {
-        // ✅ OPRAVA: Parsovat jako Prague timezone
-        $exp_dt = new DateTime($item['pin_expires_at'], $prague_tz);
-        $js_expiry_ts = $exp_dt->getTimestamp() * 1000;
-    }
-?>
-
-<div class="saw-info-item" style="grid-column: 1 / -1; width: 100%;">
-    <label style="margin-bottom: 10px; display:block; font-weight:600; color:#475569;">
-        🔐 PIN kód pro vstup
-    </label>
-    
-    <div class="saw-pin-modern-card" 
-         id="pin-card-<?php echo $item['id']; ?>" 
-         data-current-expiry="<?php echo $js_expiry_ts; ?>">
-        
-        <div class="saw-pin-display-box" 
-             onclick="copyPinToClipboard('<?php echo esc_js($item['pin_code']); ?>', <?php echo $item['id']; ?>)">
-            <div class="saw-pin-left-section">
-                <div class="saw-pin-icon-wrapper">
-                    <span>🔒</span>
-                </div>
-                <div class="saw-pin-code-display" id="pin-code-<?php echo $item['id']; ?>">
-                    <?php echo esc_html($item['pin_code']); ?>
-                </div>
-            </div>
-            <div class="saw-pin-copy-badge" id="pin-badge-<?php echo $item['id']; ?>">
-                <span>📋</span> 
-                <span class="saw-badge-text">Kopírovat</span>
-            </div>
-        </div>
-        
-        <?php 
-        $expiry_status_class = '';
-        $expiry_text_main = 'Bez omezení';
-        $expiry_text_sub = 'Trvalý přístup';
-        $dot_class = 'valid';
-        
-        $calendar_val = (clone $now_dt)->modify('+24 hours')->format('Y-m-d\TH:i');
-
-        if (!empty($item['pin_expires_at'])) {
-            // ✅ KRITICKÁ OPRAVA: Parsovat čas z DB jako Prague timezone
-            $expiry_dt = new DateTime($item['pin_expires_at'], $prague_tz);
-            $current_now = new DateTime('now', $prague_tz);
-            
-            if ($expiry_dt < $current_now) {
-                $diff = $current_now->diff($expiry_dt);
-                $expiry_text_main = 'Vypršelo';
-                $expiry_text_sub = "Před " . saw_format_czech_duration($diff);
-                $dot_class = 'expired';
-                $expiry_status_class = 'expired';
-                $calendar_val = (clone $current_now)->modify('+24 hours')->format('Y-m-d\TH:i');
-            } else {
-                $diff = $expiry_dt->diff($current_now);
-                $total_hours = ($diff->days * 24) + $diff->h;
-                
-                $expiry_text_main = "Zbývá " . saw_format_czech_duration($diff);
-                
-                // ✅ OPRAVA: Zobrazit v Prague timezone (ne UTC!)
-                $expiry_text_sub = $expiry_dt->format('d.m.Y H:i');
-                
-                $dot_class = ($total_hours < 6) ? 'warning' : 'valid';
-                $expiry_status_class = ($total_hours < 6) ? 'warning' : 'valid';
-                
-                $calendar_val = (clone $expiry_dt)->modify('+24 hours')->format('Y-m-d\TH:i');
-            }
-        }
-        ?>
-        
-        <div class="saw-pin-status-bar">
-            <div class="saw-pin-status-info">
-                <div class="saw-status-dot <?php echo $dot_class; ?>"></div>
-                <div class="saw-pin-status-text">
-                    <span class="saw-pin-status-title">Stav</span>
-                    <span class="saw-pin-status-value <?php echo $expiry_status_class; ?>" 
-                          id="status-val-<?php echo $item['id']; ?>">
-                        <?php echo $expiry_text_main; ?>
-                    </span>
-                </div>
-            </div>
-            <div class="saw-pin-status-text saw-pin-status-right">
-                <span class="saw-pin-status-title">Expirace</span>
-                <span style="font-size: 13px; color: #64748b; font-weight: 500;" 
-                      id="expiry-val-<?php echo $item['id']; ?>">
-                    <?php echo $expiry_text_sub; ?>
-                </span>
-            </div>
-        </div>
-
-        <?php if ($item['status'] !== 'cancelled'): ?>
-        
-        <div id="pin-extend-buttons-<?php echo $item['id']; ?>" class="saw-pin-buttons-wrapper">
-            <div class="saw-pin-actions-grid">
-                <button type="button" 
-                        class="saw-pin-action-btn" 
-                        onclick="extendPinQuick(<?php echo $item['id']; ?>, 24)">
-                    <span>🔄</span> +24h
-                </button>
-                <button type="button" 
-                        class="saw-pin-action-btn" 
-                        onclick="extendPinQuick(<?php echo $item['id']; ?>, 48)">
-                    <span>⏱️</span> +48h
-                </button>
-                <button type="button" 
-                        class="saw-pin-action-btn" 
-                        onclick="extendPinQuick(<?php echo $item['id']; ?>, 168)">
-                    <span>📅</span> +7 dní
-                </button>
-                <button type="button" 
-                        class="saw-pin-action-btn primary" 
-                        onclick="showExtendPinForm(<?php echo $item['id']; ?>)">
-                    <span>⚙️</span> Ručně
-                </button>
-            </div>
-        </div>
-
-        <div id="pin-extend-form-<?php echo $item['id']; ?>" 
-             style="display: none; width: 100%;">
-            <div class="saw-pin-custom-form">
-                <div class="saw-pin-form-title">
-                    <span>📆</span> Nastavit novou expiraci
-                </div>
-                
-                <input type="datetime-local" 
-                       id="pin-expiry-datetime-<?php echo $item['id']; ?>" 
-                       class="saw-pin-datetime-input"
-                       value="<?php echo $calendar_val; ?>">
-                
-                <div class="saw-pin-actions-grid">
-                    <button type="button" 
-                            class="saw-pin-action-btn" 
-                            style="background:#10b981; color:white; border:none; justify-content: center;" 
-                            onclick="extendPinCustom(<?php echo $item['id']; ?>)">
-                        <span>✅</span> Uložit
-                    </button>
-                    <button type="button" 
-                            class="saw-pin-action-btn" 
-                            style="justify-content: center;" 
-                            onclick="hideExtendPinForm(<?php echo $item['id']; ?>)">
-                        <span>❌</span> Zpět
-                    </button>
-                </div>
-            </div>
-        </div>
-        <?php endif; ?>
-    </div>
-</div>
-<?php endif; ?>
-
-<?php 
-if (empty($item['pin_code']) && 
-    $item['status'] !== 'cancelled' && 
-    ($item['visit_type'] ?? '') === 'planned'): 
-?>
-<div class="saw-info-item" style="grid-column: 1 / -1; width: 100%;">
-    <div class="saw-pin-modern-card">
-        <div class="saw-pin-empty-state">
-            <div class="saw-pin-empty-icon">🔓</div>
-            <p style="margin:0 0 20px 0; color:#94a3b8; font-size:14px; line-height: 1.5;">
-                PIN kód nebyl vygenerován.
-            </p>
-            <button type="button" 
-                    class="saw-pin-generate-btn" 
-                    onclick="generatePin(<?php echo $item['id']; ?>)">
-                <span>✨</span> Vygenerovat PIN
-            </button>
-        </div>
-    </div>
-</div>
-<?php endif; ?>
-
-<script>
-// Pomocná funkce pro kopírování PIN
-if (typeof copyPinToClipboard === 'undefined') {
-    function copyPinToClipboard(pin, visitId) {
-        if (!pin) return;
-        
-        const displayEl = document.getElementById('pin-code-' + visitId);
-        const badgeEl = document.getElementById('pin-badge-' + visitId);
-        
-        if (!displayEl || !badgeEl) return;
-        
-        const originalText = displayEl.innerText;
-        const originalBadge = badgeEl.innerHTML;
-        
-        navigator.clipboard.writeText(pin).then(() => {
-            displayEl.innerText = "✓";
-            displayEl.classList.add('copied');
-            badgeEl.classList.add('copied');
-            
-            const badgeText = badgeEl.querySelector('.saw-badge-text');
-            if (badgeText && getComputedStyle(badgeText).display !== 'none') {
-                badgeText.innerText = "Zkopírováno";
-            }
-            
-            if (window.navigator && window.navigator.vibrate) {
-                window.navigator.vibrate([50]);
-            }
-            
-            setTimeout(() => {
-                displayEl.classList.remove('copied');
-                displayEl.innerText = originalText;
-                badgeEl.classList.remove('copied');
-                badgeEl.innerHTML = originalBadge;
-            }, 1500);
-        }).catch(err => {
-            console.error('Chyba při kopírování:', err);
-        });
-    }
-}
-</script>

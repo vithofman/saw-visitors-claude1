@@ -4,18 +4,31 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visits
- * @version     3.1.0 - ENHANCED: Added virtual columns for risk checking
+ * @version     4.2.0 - TRANSLATIONS SUPPORT
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+// Load translations for config labels
+$lang = 'cs';
+if (class_exists('SAW_Component_Language_Switcher')) {
+    $lang = SAW_Component_Language_Switcher::get_user_language();
+}
+$t = function_exists('saw_get_translations') 
+    ? saw_get_translations($lang, 'admin', 'visits') 
+    : [];
+
+$tr = function($key, $fallback = null) use ($t) {
+    return $t[$key] ?? $fallback ?? $key;
+};
+
 return array(
     'entity' => 'visits',
     'table' => 'saw_visits',
-    'singular' => 'Návštěva',
-    'plural' => 'Návštěvy',
+    'singular' => $tr('config_singular', 'Návštěva'),
+    'plural' => $tr('config_plural', 'Návštěvy'),
     'route' => 'visits',
     'icon' => '📅',
     'has_customer_isolation' => true,

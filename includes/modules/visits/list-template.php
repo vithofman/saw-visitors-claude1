@@ -1,33 +1,34 @@
 <?php
 /**
- * Visits List Template - REFACTORED & OPTIMIZED
- * 
- * Features:
- * - Modern admin-table component
- * - Integrated search & filters
- * - Risk information column with warnings
- * - Infinite scroll support
- * - Tab-based filtering
- * - Responsive design
+ * Visits List Template
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visits
- * @version     4.1.0 - ENHANCED: Added risk check column, optimized callbacks
- * @since       4.0.0
+ * @version     4.2.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-// Load admin-table component if not already loaded
+// Load translations
+$lang = 'cs';
+if (class_exists('SAW_Component_Language_Switcher')) {
+    $lang = SAW_Component_Language_Switcher::get_user_language();
+}
+$t = function_exists('saw_get_translations') 
+    ? saw_get_translations($lang, 'admin', 'visits') 
+    : [];
+
+$tr = function($key, $fallback = null) use ($t) {
+    return $t[$key] ?? $fallback ?? $key;
+};
+
 if (!class_exists('SAW_Component_Admin_Table')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/class-saw-component-admin-table.php';
 }
 
-// ============================================
-// LOAD BRANCHES FOR FILTER
-// ============================================
+// Load branches for filter
 global $wpdb;
 $customer_id = SAW_Context::get_customer_id();
 $branches = array();
@@ -44,58 +45,50 @@ if ($customer_id) {
     }
 }
 
-// ============================================
-// BASE CONFIGURATION
-// ============================================
+// Base configuration
 $table_config = $config;
 $base_url = home_url('/admin/' . ($config['route'] ?? 'visits'));
 
-$table_config['title'] = $config['plural'];
+$table_config['title'] = $tr('title', 'Návštěvy');
 $table_config['create_url'] = $base_url . '/create';
 $table_config['detail_url'] = $base_url . '/{id}/';
 $table_config['edit_url'] = $base_url . '/{id}/edit';
 
-// ============================================
-// SEARCH CONFIGURATION
-// ============================================
+// Search configuration
 $table_config['search'] = array(
     'enabled' => true,
-    'placeholder' => 'Hledat návštěvy...',
+    'placeholder' => $tr('search_placeholder', 'Hledat návštěvy...'),
     'fields' => array('id', 'company_name', 'first_visitor_name', 'last_name'),
     'show_info_banner' => true,
 );
 
-// ============================================
-// FILTERS CONFIGURATION
-// ============================================
+// Filters configuration
 $table_config['filters'] = array(
     'status' => array(
         'type' => 'select',
-        'label' => 'Stav',
+        'label' => $tr('filter_status', 'Stav'),
         'options' => array(
-            '' => 'Všechny stavy',
-            'draft' => 'Koncept',
-            'pending' => 'Čekající',
-            'confirmed' => 'Potvrzená',
-            'in_progress' => 'Probíhající',
-            'completed' => 'Dokončená',
-            'cancelled' => 'Zrušená',
+            '' => $tr('filter_all_statuses', 'Všechny stavy'),
+            'draft' => $tr('status_draft', 'Koncept'),
+            'pending' => $tr('status_pending', 'Čekající'),
+            'confirmed' => $tr('status_confirmed', 'Potvrzená'),
+            'in_progress' => $tr('status_in_progress', 'Probíhající'),
+            'completed' => $tr('status_completed', 'Dokončená'),
+            'cancelled' => $tr('status_cancelled', 'Zrušená'),
         ),
     ),
     'visit_type' => array(
         'type' => 'select',
-        'label' => 'Typ návštěvy',
+        'label' => $tr('filter_visit_type', 'Typ návštěvy'),
         'options' => array(
-            '' => 'Všechny typy',
-            'planned' => 'Plánovaná',
-            'walk_in' => 'Walk-in',
+            '' => $tr('filter_all_types', 'Všechny typy'),
+            'planned' => $tr('visit_type_planned', 'Plánovaná'),
+            'walk_in' => $tr('visit_type_walk_in', 'Walk-in'),
         ),
     ),
 );
 
-// ============================================
-// SIDEBAR CONTEXT
-// ============================================
+// Sidebar context
 $table_config['sidebar_mode'] = $sidebar_mode ?? null;
 $table_config['detail_item'] = $detail_item ?? null;
 $table_config['form_item'] = $form_item ?? null;
@@ -104,50 +97,51 @@ $table_config['module_config'] = $config;
 $table_config['related_data'] = $related_data ?? null;
 $table_config['branches'] = $branches;
 
-// ============================================
-// COLUMN DEFINITIONS
-// ============================================
+// Translated labels for callbacks
+$visitor_company_label = $tr('visitor_company', 'Firma');
+$visitor_physical_label = $tr('visitor_physical', 'Fyzická osoba');
+$visitor_physical_short = $tr('visitor_physical_short', 'Fyzická');
+$risks_missing_label = $tr('risks_missing', 'Chybí');
+$risks_ok_label = $tr('risks_ok', 'OK');
+$risks_missing_title = $tr('risks_missing_title', 'Chybí informace o rizicích');
+$risks_ok_title = $tr('risks_ok_title', 'Informace o rizicích jsou dostupné');
+
+// Column definitions
 $table_config['columns'] = array(
-    // Visitor/Company column - combined display
     'company_person' => array(
-        'label' => 'Návštěvník',
+        'label' => $tr('col_visitor', 'Návštěvník'),
         'type' => 'custom',
         'sortable' => false,
         'class' => 'saw-table-cell-bold',
-        'callback' => function($value, $item) {
-            // Company visit
+        'callback' => function($value, $item) use ($visitor_company_label, $visitor_physical_label, $visitor_physical_short) {
             if (!empty($item['company_id'])) {
                 $company_name = esc_html($item['company_name'] ?? 'Firma #' . $item['company_id']);
                 echo '<div style="display: flex; align-items: center; gap: 8px;">';
                 echo '<strong>' . $company_name . '</strong>';
-                echo '<span class="saw-badge saw-badge-info" style="font-size: 11px;">🏢 Firma</span>';
+                echo '<span class="saw-badge saw-badge-info" style="font-size: 11px;">🏢 ' . esc_html($visitor_company_label) . '</span>';
                 echo '</div>';
-            } 
-            // Individual person
-            else {
+            } else {
                 $person_name = !empty($item['first_visitor_name']) 
                     ? esc_html($item['first_visitor_name']) 
-                    : 'Fyzická osoba';
+                    : esc_html($visitor_physical_label);
                     
                 echo '<div style="display: flex; align-items: center; gap: 8px;">';
                 echo '<strong style="color: #6366f1;">' . $person_name . '</strong>';
-                echo '<span class="saw-badge" style="background: #6366f1; color: white; font-size: 11px;">👤 Fyzická</span>';
+                echo '<span class="saw-badge" style="background: #6366f1; color: white; font-size: 11px;">👤 ' . esc_html($visitor_physical_short) . '</span>';
                 echo '</div>';
             }
         },
     ),
     
-    // Branch name
     'branch_name' => array(
-        'label' => 'Pobočka',
+        'label' => $tr('col_branch', 'Pobočka'),
         'type' => 'text',
         'sortable' => false,
         'width' => '150px',
     ),
     
-    // Visit type
     'visit_type' => array(
-        'label' => 'Typ',
+        'label' => $tr('col_type', 'Typ'),
         'type' => 'badge',
         'sortable' => false,
         'width' => '110px',
@@ -156,21 +150,19 @@ $table_config['columns'] = array(
             'walk_in' => 'warning',
         ),
         'labels' => array(
-            'planned' => 'Plánovaná',
-            'walk_in' => 'Walk-in',
+            'planned' => $tr('visit_type_planned', 'Plánovaná'),
+            'walk_in' => $tr('visit_type_walk_in', 'Walk-in'),
         ),
     ),
     
-    // Visitor count
     'visitor_count' => array(
-        'label' => 'Počet',
+        'label' => $tr('col_count', 'Počet'),
         'type' => 'custom',
         'width' => '90px',
         'align' => 'center',
         'sortable' => false,
         'callback' => function($value, $item) {
             $count = intval($item['visitor_count'] ?? 0);
-            
             if ($count === 0) {
                 echo '<span style="color: #999;">—</span>';
             } else {
@@ -179,36 +171,28 @@ $table_config['columns'] = array(
         },
     ),
     
-    // ✅ NEW: Risk information check
     'has_risks' => array(
-        'label' => 'Rizika',
+        'label' => $tr('col_risks', 'Rizika'),
         'type' => 'custom',
         'sortable' => false,
         'width' => '100px',
         'align' => 'center',
-        'callback' => function($value, $item) {
-            // Get has_risks from virtual column (computed in config.php)
+        'callback' => function($value, $item) use ($risks_missing_label, $risks_ok_label, $risks_missing_title, $risks_ok_title) {
             $has_risks = $item['has_risks'] ?? 'no';
             $status = $item['status'] ?? '';
             
-            // Show warning ONLY for confirmed visits without risks
             if ($status === 'confirmed' && $has_risks === 'no') {
-                echo '<span class="saw-badge saw-badge-danger" style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px;" title="Chybí informace o rizicích">⚠️ Chybí</span>';
-            } 
-            // Show OK for visits with risks
-            elseif ($has_risks === 'yes') {
-                echo '<span class="saw-badge saw-badge-success" style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px;" title="Informace o rizicích jsou dostupné">✅ OK</span>';
-            } 
-            // For other statuses or unknown, show dash
-            else {
+                echo '<span class="saw-badge saw-badge-danger" style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px;" title="' . esc_attr($risks_missing_title) . '">⚠️ ' . esc_html($risks_missing_label) . '</span>';
+            } elseif ($has_risks === 'yes') {
+                echo '<span class="saw-badge saw-badge-success" style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px;" title="' . esc_attr($risks_ok_title) . '">✅ ' . esc_html($risks_ok_label) . '</span>';
+            } else {
                 echo '<span style="color: #999;">—</span>';
             }
         },
     ),
     
-    // Visit status
     'status' => array(
-        'label' => 'Stav',
+        'label' => $tr('col_status', 'Stav'),
         'type' => 'badge',
         'sortable' => true,
         'width' => '130px',
@@ -221,18 +205,17 @@ $table_config['columns'] = array(
             'cancelled' => 'danger',
         ),
         'labels' => array(
-            'draft' => 'Koncept',
-            'pending' => 'Čekající',
-            'confirmed' => 'Potvrzená',
-            'in_progress' => 'Probíhající',
-            'completed' => 'Dokončená',
-            'cancelled' => 'Zrušená',
+            'draft' => $tr('status_draft', 'Koncept'),
+            'pending' => $tr('status_pending', 'Čekající'),
+            'confirmed' => $tr('status_confirmed', 'Potvrzená'),
+            'in_progress' => $tr('status_in_progress', 'Probíhající'),
+            'completed' => $tr('status_completed', 'Dokončená'),
+            'cancelled' => $tr('status_cancelled', 'Zrušená'),
         ),
     ),
     
-    // Created date
     'created_at' => array(
-        'label' => 'Vytvořeno',
+        'label' => $tr('col_created_at', 'Vytvořeno'),
         'type' => 'date',
         'sortable' => true,
         'width' => '110px',
@@ -240,9 +223,7 @@ $table_config['columns'] = array(
     ),
 );
 
-// ============================================
-// DATA & PAGINATION
-// ============================================
+// Data & pagination
 $table_config['rows'] = $items;
 $table_config['total_items'] = $total;
 $table_config['current_page'] = $page;
@@ -250,20 +231,33 @@ $table_config['total_pages'] = $total_pages;
 $table_config['orderby'] = $orderby;
 $table_config['order'] = $order;
 
-// ============================================
-// ACTIONS & MESSAGES
-// ============================================
+// Actions & messages
 $table_config['actions'] = array('view', 'edit', 'delete');
-$table_config['add_new'] = 'Nová návštěva';
-$table_config['empty_message'] = 'Žádné návštěvy nenalezeny';
+$table_config['add_new'] = $tr('add_new', 'Nová návštěva');
+$table_config['empty_message'] = $tr('empty_message', 'Žádné návštěvy nenalezeny');
 
-// ============================================
-// TABS CONFIGURATION
-// Loaded from config.php if enabled
-// ============================================
+// Tabs configuration
 $table_config['tabs'] = $config['tabs'] ?? null;
 
-// Ensure current_tab is always a valid string
+if (!empty($table_config['tabs']['enabled']) && !empty($table_config['tabs']['tabs'])) {
+    $tab_translations = array(
+        'all' => $tr('tab_all', 'Všechny'),
+        'draft' => $tr('tab_draft', 'Koncept'),
+        'pending' => $tr('tab_pending', 'Čekající'),
+        'confirmed' => $tr('tab_confirmed', 'Potvrzená'),
+        'in_progress' => $tr('tab_in_progress', 'Probíhající'),
+        'completed' => $tr('tab_completed', 'Dokončená'),
+        'cancelled' => $tr('tab_cancelled', 'Zrušená'),
+    );
+    
+    foreach ($table_config['tabs']['tabs'] as $tab_key => &$tab_config) {
+        if (isset($tab_translations[$tab_key])) {
+            $tab_config['label'] = $tab_translations[$tab_key];
+        }
+    }
+    unset($tab_config);
+}
+
 if (!empty($table_config['tabs']['enabled'])) {
     $table_config['current_tab'] = (isset($current_tab) && $current_tab !== null && $current_tab !== '') 
         ? (string)$current_tab 
@@ -271,18 +265,14 @@ if (!empty($table_config['tabs']['enabled'])) {
     $table_config['tab_counts'] = (isset($tab_counts) && is_array($tab_counts)) ? $tab_counts : array();
 }
 
-// ============================================
-// INFINITE SCROLL CONFIGURATION
-// ============================================
+// Infinite scroll configuration
 $table_config['infinite_scroll'] = array(
     'enabled' => true,
-    'initial_load' => 100,  // First load: 100 rows
-    'per_page' => 50,       // Subsequent loads: 50 rows
-    'threshold' => 0.6,     // Load more at 60% scroll
+    'initial_load' => 100,
+    'per_page' => 50,
+    'threshold' => 0.6,
 );
 
-// ============================================
-// RENDER TABLE
-// ============================================
+// Render
 $table = new SAW_Component_Admin_Table('visits', $table_config);
 $table->render();

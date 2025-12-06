@@ -4,10 +4,20 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visits
- * @version     3.1.0 - IMPROVED: Modern schedule layout with better structure
+ * @version     3.2.0 - Multi-language support
  */
 
 if (!defined('ABSPATH')) exit;
+
+// Translations
+$lang = 'cs';
+if (class_exists('SAW_Component_Language_Switcher')) {
+    $lang = SAW_Component_Language_Switcher::get_user_language();
+}
+$t = function_exists('saw_get_translations') ? saw_get_translations($lang, 'admin', 'visits') : [];
+$tr = function($key, $fallback = null) use ($t) {
+    return $t[$key] ?? $fallback ?? $key;
+};
 
 if (!class_exists('SAW_Component_Select_Create')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/select-create/class-saw-component-select-create.php';
@@ -83,11 +93,11 @@ $form_action = $is_edit
 <div class="saw-page-header">
     <div class="saw-page-header-content">
         <h1 class="saw-page-title">
-            <?php echo $is_edit ? 'Upravit návštěvu' : 'Nová návštěva'; ?>
+            <?php echo $is_edit ? $tr('form_title_edit', 'Upravit návštěvu') : $tr('form_title_create', 'Nová návštěva'); ?>
         </h1>
         <a href="<?php echo esc_url(home_url('/admin/visits/')); ?>" class="saw-back-button">
             <span class="dashicons dashicons-arrow-left-alt2"></span>
-            Zpět na seznam
+            <?php echo $tr('btn_back_to_list', 'Zpět na seznam'); ?>
         </a>
     </div>
 </div>
@@ -109,16 +119,16 @@ $form_action = $is_edit
         <details class="saw-form-section" open>
             <summary>
                 <span class="dashicons dashicons-admin-generic"></span>
-                <strong>Základní informace</strong>
+                <strong><?php echo $tr('form_section_basic', 'Základní informace'); ?></strong>
             </summary>
             <div class="saw-form-section-content">
                 
                 <!-- Branch -->
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
-                        <label for="branch_id" class="saw-label saw-required">Pobočka</label>
+                        <label for="branch_id" class="saw-label saw-required"><?php echo $tr('form_branch', 'Pobočka'); ?></label>
                         <select name="branch_id" id="branch_id" class="saw-input" required>
-                            <option value="">-- Vyberte pobočku --</option>
+                            <option value="">-- <?php echo $tr('form_select_branch', 'Vyberte pobočku'); ?> --</option>
                             <?php foreach ($branches as $branch_id => $branch_name): ?>
                                 <option value="<?php echo esc_attr($branch_id); ?>" <?php selected($selected_branch_id, $branch_id); ?>>
                                     <?php echo esc_html($branch_name); ?>
@@ -131,7 +141,7 @@ $form_action = $is_edit
                 <!-- ⭐ NEW: Physical vs Legal Person Radio -->
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
-                        <label class="saw-label saw-required">Typ návštěvníka</label>
+                        <label class="saw-label saw-required"><?php echo $tr('form_visitor_type', 'Typ návštěvníka'); ?></label>
                         <div class="saw-radio-group" style="display: flex; gap: 24px; margin-top: 8px;">
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                                 <input type="radio" 
@@ -139,7 +149,7 @@ $form_action = $is_edit
                                        value="1" 
                                        <?php checked($has_company, 1); ?>
                                        style="margin: 0;">
-                                <span style="font-weight: 500;">Právnická osoba (firma, instituce)</span>
+                                <span style="font-weight: 500;"><?php echo $tr('form_legal_person', 'Právnická osoba (firma, instituce)'); ?></span>
                             </label>
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                                 <input type="radio" 
@@ -147,7 +157,7 @@ $form_action = $is_edit
                                        value="0" 
                                        <?php checked($has_company, 0); ?>
                                        style="margin: 0;">
-                                <span style="font-weight: 500;">Fyzická osoba</span>
+                                <span style="font-weight: 500;"><?php echo $tr('form_physical_person', 'Fyzická osoba'); ?></span>
                             </label>
                         </div>
                     </div>
@@ -158,15 +168,15 @@ $form_action = $is_edit
                     <div class="saw-form-group saw-col-12">
                         <?php
                         $company_select = new SAW_Component_Select_Create('company_id', array(
-                            'label' => 'Firma',
+                            'label' => $tr('form_company', 'Firma'),
                             'options' => $companies,
                             'selected' => $item['company_id'] ?? '',
                             'required' => false, // JavaScript will handle this dynamically
-                            'placeholder' => '-- Vyberte firmu --',
+                            'placeholder' => '-- ' . $tr('form_select_company', 'Vyberte firmu') . ' --',
                             'inline_create' => array(
                                 'enabled' => true,
                                 'target_module' => 'companies',
-                                'button_text' => '+ Nová firma',
+                                'button_text' => '+ ' . $tr('form_new_company', 'Nová firma'),
                                 'prefill' => array(
                                     'branch_id' => $selected_branch_id,
                                     'customer_id' => $customer_id,
@@ -181,22 +191,22 @@ $form_action = $is_edit
                 <!-- Visit Type & Status -->
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-6">
-                        <label for="visit_type" class="saw-label saw-required">Typ návštěvy</label>
+                        <label for="visit_type" class="saw-label saw-required"><?php echo $tr('form_visit_type', 'Typ návštěvy'); ?></label>
                         <select name="visit_type" id="visit_type" class="saw-input" required>
-                            <option value="planned" <?php selected($item['visit_type'] ?? 'planned', 'planned'); ?>>Plánovaná</option>
-                            <option value="walk_in" <?php selected($item['visit_type'] ?? '', 'walk_in'); ?>>Walk-in</option>
+                            <option value="planned" <?php selected($item['visit_type'] ?? 'planned', 'planned'); ?>><?php echo $tr('type_planned', 'Plánovaná'); ?></option>
+                            <option value="walk_in" <?php selected($item['visit_type'] ?? '', 'walk_in'); ?>><?php echo $tr('type_walk_in', 'Walk-in'); ?></option>
                         </select>
                     </div>
                     
                     <div class="saw-form-group saw-col-6">
-                        <label for="status" class="saw-label saw-required">Stav</label>
+                        <label for="status" class="saw-label saw-required"><?php echo $tr('form_status', 'Stav'); ?></label>
                         <select name="status" id="status" class="saw-input" required>
-                            <option value="draft" <?php selected($item['status'] ?? '', 'draft'); ?>>Koncept</option>
-                            <option value="pending" <?php selected($item['status'] ?? 'pending', 'pending'); ?>>Čekající</option>
-                            <option value="confirmed" <?php selected($item['status'] ?? '', 'confirmed'); ?>>Potvrzená</option>
-                            <option value="in_progress" <?php selected($item['status'] ?? '', 'in_progress'); ?>>Probíhající</option>
-                            <option value="completed" <?php selected($item['status'] ?? '', 'completed'); ?>>Dokončená</option>
-                            <option value="cancelled" <?php selected($item['status'] ?? '', 'cancelled'); ?>>Zrušená</option>
+                            <option value="draft" <?php selected($item['status'] ?? '', 'draft'); ?>><?php echo $tr('status_draft', 'Koncept'); ?></option>
+                            <option value="pending" <?php selected($item['status'] ?? 'pending', 'pending'); ?>><?php echo $tr('status_pending', 'Čekající'); ?></option>
+                            <option value="confirmed" <?php selected($item['status'] ?? '', 'confirmed'); ?>><?php echo $tr('status_confirmed', 'Potvrzená'); ?></option>
+                            <option value="in_progress" <?php selected($item['status'] ?? '', 'in_progress'); ?>><?php echo $tr('status_in_progress', 'Probíhající'); ?></option>
+                            <option value="completed" <?php selected($item['status'] ?? '', 'completed'); ?>><?php echo $tr('status_completed', 'Dokončená'); ?></option>
+                            <option value="cancelled" <?php selected($item['status'] ?? '', 'cancelled'); ?>><?php echo $tr('status_cancelled', 'Zrušená'); ?></option>
                         </select>
                     </div>
                 </div>
@@ -204,7 +214,7 @@ $form_action = $is_edit
                 <!-- Schedule Days (Multi-day support) - IMPROVED LAYOUT -->
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
-                        <label class="saw-label">Dny návštěvy</label>
+                        <label class="saw-label"><?php echo $tr('form_schedule_days', 'Dny návštěvy'); ?></label>
                         
                         <div id="visit-schedule-container" class="saw-schedule-container">
                             <?php
@@ -228,7 +238,7 @@ $form_action = $is_edit
                                         <div class="saw-schedule-field-group">
                                             <div class="saw-schedule-field-group-row date-row">
                                                 <div class="saw-schedule-field saw-schedule-date">
-                                                    <label>Datum</label>
+                                                    <label><?php echo $tr('form_date', 'Datum'); ?></label>
                                                     <input type="date" 
                                                            name="schedule_dates[]" 
                                                            value="<?php echo esc_attr($schedule['date'] ?? ''); ?>" 
@@ -240,7 +250,7 @@ $form_action = $is_edit
                                             <!-- Row 2: Time From | Time To (50/50) -->
                                             <div class="saw-schedule-field-group-row time-row">
                                                 <div class="saw-schedule-field saw-schedule-time">
-                                                    <label>Čas od</label>
+                                                    <label><?php echo $tr('form_time_from', 'Čas od'); ?></label>
                                                     <input type="time" 
                                                            name="schedule_times_from[]" 
                                                            value="<?php echo esc_attr($schedule['time_from'] ?? ''); ?>" 
@@ -248,7 +258,7 @@ $form_action = $is_edit
                                                 </div>
                                                 
                                                 <div class="saw-schedule-field saw-schedule-time">
-                                                    <label>Čas do</label>
+                                                    <label><?php echo $tr('form_time_to', 'Čas do'); ?></label>
                                                     <input type="time" 
                                                            name="schedule_times_to[]" 
                                                            value="<?php echo esc_attr($schedule['time_to'] ?? ''); ?>" 
@@ -259,12 +269,12 @@ $form_action = $is_edit
                                         
                                         <!-- Row 3: Notes (full width) -->
                                         <div class="saw-schedule-field saw-schedule-notes-full">
-                                            <label>Poznámka (volitelné)</label>
+                                            <label><?php echo $tr('form_note', 'Poznámka (volitelné)'); ?></label>
                                             <input type="text" 
                                                    name="schedule_notes[]" 
                                                    value="<?php echo esc_attr($schedule['notes'] ?? ''); ?>" 
                                                    class="saw-input saw-schedule-notes-input"
-                                                   placeholder="Poznámka k danému dni">
+                                                   placeholder="<?php echo esc_attr($tr('form_note_placeholder', 'Poznámka k danému dni')); ?>">
                                         </div>
                                     </div>
                                     
@@ -272,11 +282,11 @@ $form_action = $is_edit
                                     <div class="saw-schedule-row-actions">
                                         <button type="button" 
                                                 class="saw-remove-schedule-day" 
-                                                title="Odstranit den"
+                                                title="<?php echo esc_attr($tr('btn_remove_day', 'Odstranit den')); ?>"
                                                 <?php echo count($schedules) === 1 ? 'disabled' : ''; ?>>
                                             <span class="dashicons dashicons-trash"></span>
                                         </button>
-                                        <button type="button" class="saw-add-schedule-day-inline" title="Přidat další den">
+                                        <button type="button" class="saw-add-schedule-day-inline" title="<?php echo esc_attr($tr('btn_add_day', 'Přidat další den')); ?>">
                                             <span class="dashicons dashicons-plus-alt"></span>
                                         </button>
                                     </div>
@@ -285,7 +295,7 @@ $form_action = $is_edit
                         </div>
                         
                         <p class="saw-field-hint">
-                            Přidejte jeden nebo více dnů, kdy návštěva proběhne. Každý den může mít různý čas.
+                            <?php echo $tr('form_schedule_hint', 'Přidejte jeden nebo více dnů, kdy návštěva proběhne. Každý den může mít různý čas.'); ?>
                         </p>
                     </div>
                 </div>
@@ -293,7 +303,7 @@ $form_action = $is_edit
                 <!-- Invitation Email -->
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
-                        <label for="invitation_email" class="saw-label">Email pro pozvánku</label>
+                        <label for="invitation_email" class="saw-label"><?php echo $tr('form_invitation_email', 'Email pro pozvánku'); ?></label>
                         <input type="email" name="invitation_email" id="invitation_email" class="saw-input" value="<?php echo esc_attr($item['invitation_email'] ?? ''); ?>" placeholder="email@example.com">
                     </div>
                 </div>
@@ -301,8 +311,8 @@ $form_action = $is_edit
                 <!-- Purpose -->
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
-                        <label for="purpose" class="saw-label">Účel návštěvy</label>
-                        <textarea name="purpose" id="purpose" class="saw-input" rows="3" placeholder="Stručný popis účelu návštěvy..."><?php echo esc_textarea($item['purpose'] ?? ''); ?></textarea>
+                        <label for="purpose" class="saw-label"><?php echo $tr('form_purpose', 'Účel návštěvy'); ?></label>
+                        <textarea name="purpose" id="purpose" class="saw-input" rows="3" placeholder="<?php echo esc_attr($tr('form_purpose_placeholder', 'Stručný popis účelu návštěvy...')); ?>"><?php echo esc_textarea($item['purpose'] ?? ''); ?></textarea>
                     </div>
                 </div>
                 
@@ -310,23 +320,23 @@ $form_action = $is_edit
                 <div class="saw-form-row field-hosts-row">
                     <div class="saw-form-group saw-col-12">
                         <label class="saw-label saw-required">
-                            Koho navštěvují
+                            <?php echo $tr('form_hosts', 'Koho navštěvují'); ?>
                             <span id="host-counter" style="display: inline-block; margin-left: 12px; padding: 4px 12px; background: #0073aa; color: white; border-radius: 4px; font-size: 13px; font-weight: 600;">
                                 <span id="host-selected">0</span> / <span id="host-total">0</span>
                             </span>
                         </label>
                         
                         <div class="saw-host-controls" style="display: none; margin-bottom: 12px; gap: 12px; align-items: center;">
-                            <input type="text" id="host-search" class="saw-input" placeholder="🔍 Hledat uživatele..." style="flex: 1; max-width: 300px;">
+                            <input type="text" id="host-search" class="saw-input" placeholder="🔍 <?php echo esc_attr($tr('form_hosts_search', 'Hledat uživatele...')); ?>" style="flex: 1; max-width: 300px;">
                             <label style="display: flex; align-items: center; gap: 6px; margin: 0; cursor: pointer; user-select: none;">
                                 <input type="checkbox" id="select-all-host" style="margin: 0; cursor: pointer;">
-                                <span style="font-weight: 600; color: #2c3338;">Vybrat vše</span>
+                                <span style="font-weight: 600; color: #2c3338;"><?php echo $tr('form_select_all', 'Vybrat vše'); ?></span>
                             </label>
                         </div>
                         
                         <div id="hosts-list" style="border: 2px solid #dcdcde; border-radius: 6px; max-height: 320px; overflow-y: auto; background: #fff;">
                             <p class="saw-text-muted" style="padding: 20px; margin: 0; text-align: center;">
-                                Nejprve vyberte pobočku výše
+                                <?php echo $tr('form_select_branch_first', 'Nejprve vyberte pobočku výše'); ?>
                             </p>
                         </div>
                     </div>
@@ -337,12 +347,12 @@ $form_action = $is_edit
         
         <div class="saw-form-actions">
             <button type="submit" class="saw-button saw-button-primary">
-                <?php echo $is_edit ? 'Uložit změny' : 'Vytvořit návštěvu'; ?>
+                <?php echo $is_edit ? $tr('btn_save_changes', 'Uložit změny') : $tr('btn_create_visit', 'Vytvořit návštěvu'); ?>
             </button>
             
             <?php if (!$in_sidebar): ?>
                 <a href="<?php echo esc_url(home_url('/admin/visits/')); ?>" class="saw-button saw-button-secondary">
-                    Zrušit
+                    <?php echo $tr('btn_cancel', 'Zrušit'); ?>
                 </a>
             <?php endif; ?>
         </div>

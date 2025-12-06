@@ -1,11 +1,13 @@
 <?php
 /**
- * Detail Sidebar Template - ULTRA MODERN + COLLAPSIBLE
+ * Detail Sidebar Template - ULTRA MODERN + COLLAPSIBLE + TRANSLATIONS
  *
- * Card-based layout with smooth collapse/expand
+ * Card-based layout with smooth collapse/expand and multi-language support.
+ * Uses hierarchical translation system: common → admin → admin/module
  *
  * @package     SAW_Visitors
- * @version     5.2.0 - Fixed related links to navigate properly
+ * @subpackage  Components/AdminTable
+ * @version     5.4.0 - Uses common translations (global UI keys)
  * @since       4.0.0
  */
 
@@ -13,54 +15,109 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// ============================================
+// TRANSLATIONS SETUP
+// ============================================
+// Get user's language
+$_sidebar_lang = 'cs';
+if (class_exists('SAW_Component_Language_Switcher')) {
+    $_sidebar_lang = SAW_Component_Language_Switcher::get_user_language();
+}
+
+// Load translations - hierarchicky načte:
+// 1. common (section=NULL) - globální UI texty
+// 2. admin (section=NULL) - admin-wide texty  
+// 3. admin/$entity - module-specific texty
+$_module_section = $entity ?? 'visits';
+$t = function_exists('saw_get_translations') 
+    ? saw_get_translations($_sidebar_lang, 'admin', $_module_section) 
+    : [];
+
+// Translation helper with fallback
+$tr = function($key, $fallback = null) use ($t) {
+    return $t[$key] ?? $fallback ?? $key;
+};
+
+// Helper for Czech record count grammar (1 záznam, 2-4 záznamy, 5+ záznamů)
+$record_label = function($count) use ($tr) {
+    $count = intval($count);
+    if ($count === 1) {
+        return $tr('record_singular', 'záznam');
+    } elseif ($count >= 2 && $count <= 4) {
+        return $tr('record_few', 'záznamy');
+    } else {
+        return $tr('record_many', 'záznamů');
+    }
+};
+
+// ============================================
+// URL SETUP
+// ============================================
 $module_slug = str_replace('_', '-', $entity);
 $detail_template = SAW_VISITORS_PLUGIN_DIR . "includes/modules/{$module_slug}/detail-modal-template.php";
 
 // Close URL: navigate back to list
-// Get route from config, fallback to entity
 $route = isset($config['route']) && $config['route'] !== '' ? $config['route'] : $entity;
-// Ensure route doesn't have 'admin/' prefix or leading/trailing slashes
 $route = str_replace('admin/', '', $route);
 $route = trim($route, '/');
-// Fallback to entity if route is empty
+
 if (empty($route)) {
     $route = $entity;
 }
-// Ensure route is clean and not empty - final check
+
 $route = trim($route, '/');
-// Build close URL - ensure we have a valid route to prevent admin//
+
 if (!empty($route)) {
     $close_url = home_url('/admin/' . $route . '/');
     $edit_url = home_url('/admin/' . $route . '/' . intval($item['id']) . '/edit');
     $delete_url = home_url('/admin/' . $route . '/delete/' . intval($item['id']));
 } else {
-    // Last resort fallback - use entity directly
     $close_url = home_url('/admin/' . $entity . '/');
     $edit_url = home_url('/admin/' . $entity . '/' . intval($item['id']) . '/edit');
     $delete_url = home_url('/admin/' . $entity . '/delete/' . intval($item['id']));
 }
 
+// ============================================
+// PERMISSIONS
+// ============================================
 $can_edit = function_exists('saw_can') ? saw_can('edit', $entity) : true;
 $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
 ?>
 
-<div class="saw-sidebar saw-sidebar-detail" data-mode="detail" data-entity="<?php echo esc_attr($entity); ?>" data-current-id="<?php echo esc_attr($item['id']); ?>">
+<div class="saw-sidebar saw-sidebar-detail" 
+     data-mode="detail" 
+     data-entity="<?php echo esc_attr($entity); ?>" 
+     data-current-id="<?php echo esc_attr($item['id']); ?>">
+    
+    <!-- ============================================
+         SIDEBAR HEADER
+         ============================================ -->
     <div class="saw-sidebar-header">
         <div class="saw-sidebar-title">
             <span class="saw-sidebar-icon"><?php echo esc_html($config['icon'] ?? '📋'); ?></span>
-            <h2 class="saw-sidebar-heading"><?php echo esc_html($config['singular'] ?? 'Detail'); ?> #<?php echo intval($item['id']); ?></h2>
+            <h2 class="saw-sidebar-heading">
+                <?php echo esc_html($config['singular'] ?? 'Detail'); ?> #<?php echo intval($item['id']); ?>
+            </h2>
         </div>
         <div class="saw-sidebar-nav-controls">
-            <button type="button" class="saw-sidebar-nav-btn saw-sidebar-prev" title="Předchozí">&lt;</button>
-            <button type="button" class="saw-sidebar-nav-btn saw-sidebar-next" title="Další">&gt;</button>
+            <button type="button" 
+                    class="saw-sidebar-nav-btn saw-sidebar-prev" 
+                    title="<?php echo esc_attr($tr('sidebar_previous', 'Předchozí')); ?>">&lt;</button>
+            <button type="button" 
+                    class="saw-sidebar-nav-btn saw-sidebar-next" 
+                    title="<?php echo esc_attr($tr('sidebar_next', 'Další')); ?>">&gt;</button>
         </div>
-        <a href="<?php echo esc_url($close_url); ?>" class="saw-sidebar-close" title="Zavřít">&times;</a>
+        <a href="<?php echo esc_url($close_url); ?>" 
+           class="saw-sidebar-close" 
+           title="<?php echo esc_attr($tr('sidebar_close', 'Zavřít')); ?>">&times;</a>
     </div>
     
+    <!-- ============================================
+         SIDEBAR CONTENT
+         ============================================ -->
     <div class="saw-sidebar-content">
         <?php 
         // Get display name - try to get controller instance from global context
-        // Controller is passed via ajax_load_sidebar() in Base Controller
         global $saw_current_controller;
         $controller_instance = $saw_current_controller ?? null;
         
@@ -91,14 +148,14 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
         
         // Get header meta (badges, additional info) - modules can override via $item['header_meta']
         $header_meta = $item['header_meta'] ?? '';
-        // Only show ID fallback if header_meta is truly empty (not just whitespace)
         if (empty(trim($header_meta)) && !empty($item['id'])) {
             $header_meta = '<span class="saw-badge-transparent">ID: ' . intval($item['id']) . '</span>';
         }
         ?>
         
-        <!-- Universal Detail Header - Rendered by admin-table component -->
-        <!-- Goes from sidebar header to edges, no margin -->
+        <!-- ============================================
+             UNIVERSAL DETAIL HEADER
+             ============================================ -->
         <div class="saw-detail-header-universal">
             <div class="saw-detail-header-inner">
                 <h3 class="saw-detail-header-title"><?php echo esc_html($display_name); ?></h3>
@@ -111,7 +168,9 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
             <div class="saw-detail-header-stripe"></div>
         </div>
         
-        <!-- Module-specific content wrapper (has padding) -->
+        <!-- ============================================
+             MODULE-SPECIFIC CONTENT
+             ============================================ -->
         <div class="saw-detail-content-wrapper">
             <?php 
             if (file_exists($detail_template)) {
@@ -122,10 +181,13 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
             ?>
         </div>
         
+        <!-- ============================================
+             RELATED SECTIONS
+             ============================================ -->
         <?php if (!empty($related_data) && is_array($related_data)): ?>
         <div class="saw-related-sections">
             <h3 class="saw-related-sections-title">
-                <?php echo esc_html__('Související záznamy', 'saw-visitors'); ?>
+                <?php echo esc_html($tr('related_records', 'Související záznamy')); ?>
             </h3>
             
             <?php foreach ($related_data as $key => $relation): ?>
@@ -144,10 +206,8 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
                         </h4>
                         <div class="saw-related-section-count">
                             <?php 
-                            printf(
-                                _n('%d záznam', '%d záznamy', $relation['count'], 'saw-visitors'),
-                                $relation['count']
-                            );
+                            $count = intval($relation['count']);
+                            echo $count . ' ' . esc_html($record_label($count));
                             ?>
                         </div>
                     </div>
@@ -167,7 +227,7 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
                         ?>
                         <a href="<?php echo esc_url($full_url); ?>" 
                            class="saw-related-item-link"
-                           title="<?php echo esc_attr__('Zobrazit detail', 'saw-visitors'); ?>">
+                           title="<?php echo esc_attr($tr('view_detail', 'Zobrazit detail')); ?>">
                             <div class="saw-related-item-content">
                                 <span class="saw-related-item-dot"></span>
                                 <span class="saw-related-item-text">
@@ -179,7 +239,7 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
                         <?php endforeach; ?>
                     <?php else: ?>
                         <p class="saw-related-empty">
-                            <?php echo esc_html__('Žádné záznamy', 'saw-visitors'); ?>
+                            <?php echo esc_html($tr('no_records', 'Žádné záznamy')); ?>
                         </p>
                     <?php endif; ?>
                 </div>
@@ -189,12 +249,15 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
         <?php endif; ?>
     </div>
     
+    <!-- ============================================
+         FLOATING ACTION BUTTONS
+         ============================================ -->
     <?php if ($can_edit || $can_delete): ?>
     <div class="saw-sidebar-floating-actions">
         <?php if ($can_edit): ?>
         <a href="<?php echo esc_url($edit_url); ?>" 
            class="saw-floating-action-btn edit" 
-           title="Upravit">
+           title="<?php echo esc_attr($tr('btn_edit', 'Upravit')); ?>">
             <span class="dashicons dashicons-edit"></span>
         </a>
         <?php endif; ?>
@@ -205,15 +268,10 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
                 data-id="<?php echo intval($item['id']); ?>"
                 data-entity="<?php echo esc_attr($entity); ?>"
                 data-name="<?php echo esc_attr($item['name'] ?? '#' . $item['id']); ?>"
-                title="Smazat">
+                title="<?php echo esc_attr($tr('btn_delete', 'Smazat')); ?>">
             <span class="dashicons dashicons-trash"></span>
         </button>
         <?php endif; ?>
     </div>
     <?php endif; ?>
 </div>
-
-<!-- 
-    JS logika byla přesunuta do sidebar.js pro sjednocení.
-    Moduly mohou přidat vlastní JS do svých detail-modal-template.php souborů.
--->

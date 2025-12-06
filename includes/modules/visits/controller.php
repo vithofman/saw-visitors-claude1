@@ -481,53 +481,76 @@ $branch_id = intval($visit_data['branch_id']);
      * @param array $item Item data
      * @return string HTML for header meta
      */
-    public function get_detail_header_meta($item) {
-        if (empty($item)) {
-            return '';
-        }
-        
-        $meta_parts = array();
-        
-        // Visitor count badge - always show
-        $visitor_count = intval($item['visitor_count'] ?? 0);
-        $meta_parts[] = '<span class="saw-badge-transparent">👥 ' . $visitor_count . ' ' . ($visitor_count === 1 ? 'osoba' : ($visitor_count < 5 ? 'osoby' : 'osob')) . '</span>';
-        
-        // Visit type badge
-        if (!empty($item['visit_type'])) {
-            $type_labels = array(
-                'planned' => 'Plánovaná',
-                'walk_in' => 'Walk-in',
-            );
-            $type_label = $type_labels[$item['visit_type']] ?? $item['visit_type'];
-            $type_class = $item['visit_type'] === 'walk_in' ? 'saw-badge-warning' : 'saw-badge-info';
-            $meta_parts[] = '<span class="saw-badge-transparent ' . esc_attr($type_class) . '">' . esc_html($type_label) . '</span>';
-        }
-        
-        // Status badge
-        if (!empty($item['status'])) {
-            $status_labels = array(
-                'draft' => 'Koncept',
-                'pending' => 'Čekající',
-                'confirmed' => 'Potvrzená',
-                'in_progress' => 'Probíhající',
-                'completed' => 'Dokončená',
-                'cancelled' => 'Zrušená',
-            );
-            $status_classes = array(
-                'draft' => 'saw-badge-secondary',
-                'pending' => 'saw-badge-warning',
-                'confirmed' => 'saw-badge-info',
-                'in_progress' => 'saw-badge-primary',
-                'completed' => 'saw-badge-success',
-                'cancelled' => 'saw-badge-danger',
-            );
-            $status_label = $status_labels[$item['status']] ?? $item['status'];
-            $status_class = $status_classes[$item['status']] ?? 'saw-badge-secondary';
-            $meta_parts[] = '<span class="saw-badge-transparent ' . esc_attr($status_class) . '">' . esc_html($status_label) . '</span>';
-        }
-        
-        return implode('', $meta_parts);
+    public function get_detail_header_meta($item = null) {
+    if (empty($item)) {
+        return '';
     }
+    
+    // Load translations
+    $lang = 'cs';
+    if (class_exists('SAW_Component_Language_Switcher')) {
+        $lang = SAW_Component_Language_Switcher::get_user_language();
+    }
+    $t = function_exists('saw_get_translations') 
+        ? saw_get_translations($lang, 'admin', 'visits') 
+        : [];
+    
+    $tr = function($key, $fallback = null) use ($t) {
+        return $t[$key] ?? $fallback ?? $key;
+    };
+    
+    $meta_parts = array();
+    
+    // Visitor count badge - always show
+    $visitor_count = intval($item['visitor_count'] ?? 0);
+    
+    // Person count with translation
+    if ($visitor_count === 1) {
+        $person_word = $tr('person_singular', 'osoba');
+    } elseif ($visitor_count >= 2 && $visitor_count <= 4) {
+        $person_word = $tr('person_few', 'osoby');
+    } else {
+        $person_word = $tr('person_many', 'osob');
+    }
+    
+    $meta_parts[] = '<span class="saw-badge-transparent">👥 ' . $visitor_count . ' ' . esc_html($person_word) . '</span>';
+    
+    // Visit type badge
+    if (!empty($item['visit_type'])) {
+        $type_labels = array(
+            'planned' => $tr('type_planned', 'Plánovaná'),
+            'walk_in' => $tr('type_walk_in', 'Walk-in'),
+        );
+        $type_label = $type_labels[$item['visit_type']] ?? $item['visit_type'];
+        $type_class = $item['visit_type'] === 'walk_in' ? 'saw-badge-warning' : 'saw-badge-info';
+        $meta_parts[] = '<span class="saw-badge-transparent ' . esc_attr($type_class) . '">' . esc_html($type_label) . '</span>';
+    }
+    
+    // Status badge
+    if (!empty($item['status'])) {
+        $status_labels = array(
+            'draft' => $tr('status_draft', 'Koncept'),
+            'pending' => $tr('status_pending', 'Čekající'),
+            'confirmed' => $tr('status_confirmed', 'Potvrzená'),
+            'in_progress' => $tr('status_in_progress', 'Probíhající'),
+            'completed' => $tr('status_completed', 'Dokončená'),
+            'cancelled' => $tr('status_cancelled', 'Zrušená'),
+        );
+        $status_classes = array(
+            'draft' => 'saw-badge-secondary',
+            'pending' => 'saw-badge-warning',
+            'confirmed' => 'saw-badge-info',
+            'in_progress' => 'saw-badge-primary',
+            'completed' => 'saw-badge-success',
+            'cancelled' => 'saw-badge-danger',
+        );
+        $status_label = $status_labels[$item['status']] ?? $item['status'];
+        $status_class = $status_classes[$item['status']] ?? 'saw-badge-secondary';
+        $meta_parts[] = '<span class="saw-badge-transparent ' . esc_attr($status_class) . '">' . esc_html($status_label) . '</span>';
+    }
+    
+    return implode('', $meta_parts);
+}
     
     /**
  * OPRAVENÁ FUNKCE ajax_extend_pin()
