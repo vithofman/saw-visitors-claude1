@@ -4,13 +4,31 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visitors
- * @version     3.0.0 - Refactored to use new admin-table structure
+ * @version     4.0.0 - Multi-language support
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+// ============================================
+// TRANSLATIONS SETUP
+// ============================================
+$lang = 'cs';
+if (class_exists('SAW_Component_Language_Switcher')) {
+    $lang = SAW_Component_Language_Switcher::get_user_language();
+}
+$t = function_exists('saw_get_translations') 
+    ? saw_get_translations($lang, 'admin', 'visitors') 
+    : [];
+
+$tr = function($key, $fallback = null) use ($t) {
+    return $t[$key] ?? $fallback ?? $key;
+};
+
+// ============================================
+// COMPONENT LOADING
+// ============================================
 if (!class_exists('SAW_Component_Admin_Table')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/class-saw-component-admin-table.php';
 }
@@ -25,12 +43,11 @@ $search = $list_data['search'] ?? '';
 $orderby = $list_data['orderby'] ?? 'vis.id';
 $order = $list_data['order'] ?? 'DESC';
 
-// ✅ Virtual columns (current_status, training_status) jsou již aplikované v Model::get_all()
-// Data přichází s již vypočítanými hodnotami - není třeba je počítat zde!
-
-// Build table config
+// ============================================
+// TABLE CONFIGURATION
+// ============================================
 $table_config = array(
-    'title' => 'Návštěvníci',
+    'title' => $tr('title', 'Návštěvníci'),
     'create_url' => home_url('/admin/visitors/create'),
     'edit_url' => home_url('/admin/visitors/{id}/edit'),
     'detail_url' => home_url('/admin/visitors/{id}/'),
@@ -41,7 +58,6 @@ $table_config = array(
     'detail_tab' => $detail_tab ?? 'overview',
     'related_data' => $related_data ?? null,
     
-    // Pass module config for sidebar (singular, route, etc.)
     'module_config' => isset($config) ? $config : array(),
     
     'rows' => $items,
@@ -52,61 +68,66 @@ $table_config = array(
     'order' => $order,
     
     'actions' => array('view', 'edit', 'delete'),
-    'empty_message' => 'Žádní návštěvníci nenalezeni',
-    'add_new' => 'Nový návštěvník',
+    'empty_message' => $tr('empty_message', 'Žádní návštěvníci nenalezeni'),
+    'add_new' => $tr('add_new', 'Nový návštěvník'),
     
     'ajax_enabled' => true,
     'ajax_nonce' => $ajax_nonce,
 );
 
-// Search configuration
+// ============================================
+// SEARCH CONFIGURATION
+// ============================================
 $table_config['search'] = array(
     'enabled' => true,
-    'placeholder' => 'Hledat návštěvníky...',
+    'placeholder' => $tr('search_placeholder', 'Hledat návštěvníky...'),
     'fields' => array('first_name', 'last_name', 'email'),
     'show_info_banner' => true,
 );
 
-// Filters configuration
-// Removed participation_status filter - not needed due to grouping by current_status
+// ============================================
+// FILTERS CONFIGURATION
+// ============================================
 $table_config['filters'] = array(
     'training_status' => array(
-        'label' => 'Školení',
+        'label' => $tr('filter_training', 'Školení'),
         'type' => 'select',
         'options' => array(
-            '' => 'Všechny',
-            'completed' => '✅ Dokončeno',
-            'in_progress' => '🔄 Probíhá',
-            'skipped' => '⏭️ Přeskočeno',
-            'not_started' => '⚪ Nespuštěno',
+            '' => $tr('filter_all', 'Všechny'),
+            'completed' => $tr('filter_training_completed', '✅ Dokončeno'),
+            'in_progress' => $tr('filter_training_in_progress', '🔄 Probíhá'),
+            'skipped' => $tr('filter_training_skipped', '⏭️ Přeskočeno'),
+            'not_started' => $tr('filter_training_not_started', '⚪ Nespuštěno'),
         ),
     ),
 );
 
-// Columns configuration
+// ============================================
+// COLUMNS CONFIGURATION
+// ============================================
 $table_config['columns'] = array(
     'first_name' => array(
-        'label' => 'Jméno',
+        'label' => $tr('col_first_name', 'Jméno'),
         'type' => 'text',
         'class' => 'saw-table-cell-bold',
         'sortable' => true,
     ),
     'last_name' => array(
-        'label' => 'Příjmení',
+        'label' => $tr('col_last_name', 'Příjmení'),
         'type' => 'text',
         'class' => 'saw-table-cell-bold',
         'sortable' => true,
     ),
     'company_name' => array(
-        'label' => 'Firma',
+        'label' => $tr('col_company', 'Firma'),
         'type' => 'text',
     ),
     'branch_name' => array(
-        'label' => 'Pobočka',
+        'label' => $tr('col_branch', 'Pobočka'),
         'type' => 'text',
     ),
     'current_status' => array(
-        'label' => 'Aktuální stav',
+        'label' => $tr('col_current_status', 'Aktuální stav'),
         'type' => 'badge',
         'sortable' => false,
         'map' => array(
@@ -117,29 +138,29 @@ $table_config['columns'] = array(
             'no_show' => 'danger',
         ),
         'labels' => array(
-            'present' => '✅ Přítomen',
-            'checked_out' => '🚪 Odhlášen',
-            'confirmed' => '⏳ Potvrzený',
-            'planned' => '📅 Plánovaný',
-            'no_show' => '❌ Nedostavil se',
+            'present' => $tr('status_present', '✅ Přítomen'),
+            'checked_out' => $tr('status_checked_out', '🚪 Odhlášen'),
+            'confirmed' => $tr('status_confirmed', '⏳ Potvrzený'),
+            'planned' => $tr('status_planned', '📅 Plánovaný'),
+            'no_show' => $tr('status_no_show', '❌ Nedostavil se'),
         ),
     ),
     'first_checkin_at' => array(
-        'label' => 'První check-in',
+        'label' => $tr('col_first_checkin', 'První check-in'),
         'type' => 'callback',
         'callback' => function($value) {
             return !empty($value) ? date('d.m.Y H:i', strtotime($value)) : '—';
         },
     ),
     'last_checkout_at' => array(
-        'label' => 'Poslední check-out',
+        'label' => $tr('col_last_checkout', 'Poslední check-out'),
         'type' => 'callback',
         'callback' => function($value) {
             return !empty($value) ? date('d.m.Y H:i', strtotime($value)) : '—';
         },
     ),
     'training_status' => array(
-        'label' => 'Školení',
+        'label' => $tr('col_training', 'Školení'),
         'type' => 'badge',
         'map' => array(
             'completed' => 'success',
@@ -148,36 +169,56 @@ $table_config['columns'] = array(
             'not_started' => 'secondary',
         ),
         'labels' => array(
-            'completed' => '✅ Dokončeno',
-            'in_progress' => '🔄 Probíhá',
-            'skipped' => '⏭️ Přeskočeno',
-            'not_started' => '⚪ Nespuštěno',
+            'completed' => $tr('training_completed', '✅ Dokončeno'),
+            'in_progress' => $tr('training_in_progress', '🔄 Probíhá'),
+            'skipped' => $tr('training_skipped', '⏭️ Přeskočeno'),
+            'not_started' => $tr('training_not_started', '⚪ Nespuštěno'),
         ),
     ),
 );
 
-// TABS configuration - loaded from config.php
+// ============================================
+// TABS CONFIGURATION
+// ============================================
 $table_config['tabs'] = $config['tabs'] ?? null;
 
-// Infinite scroll - UPRAVENÉ hodnoty
-$table_config['infinite_scroll'] = array(
-    'enabled' => true, // Enable infinite scroll
-    'initial_load' => 100, // NOVÉ: První načtení 100 řádků
-    'per_page' => 50, // Poté po 50 řádcích
-    'threshold' => 0.6, // OPRAVENO 2025-01-22: 60% scroll pro dřívější loading
-);
+if (!empty($table_config['tabs']['enabled']) && !empty($table_config['tabs']['tabs'])) {
+    $tab_translations = array(
+        'all' => $tr('tab_all', 'Všichni'),
+        'present' => $tr('tab_present', 'Přítomní'),
+        'checked_out' => $tr('tab_checked_out', 'Odhlášení'),
+        'confirmed' => $tr('tab_confirmed', 'Potvrzení'),
+        'planned' => $tr('tab_planned', 'Plánovaní'),
+        'no_show' => $tr('tab_no_show', 'Nedostavili se'),
+    );
+    
+    foreach ($table_config['tabs']['tabs'] as $tab_key => &$tab_config_item) {
+        if (isset($tab_translations[$tab_key])) {
+            $tab_config_item['label'] = $tab_translations[$tab_key];
+        }
+    }
+    unset($tab_config_item);
+}
 
-// NOVÉ: Pass tab data from get_list_data() result
-// CRITICAL: Ensure current_tab is always a valid string, never null
 if (!empty($table_config['tabs']['enabled'])) {
-    // Use isset() and !== null/'' to handle all cases
     $table_config['current_tab'] = (isset($current_tab) && $current_tab !== null && $current_tab !== '') 
         ? (string)$current_tab 
         : ($table_config['tabs']['default_tab'] ?? 'all');
     $table_config['tab_counts'] = (isset($tab_counts) && is_array($tab_counts)) ? $tab_counts : array();
 }
 
-// Render
+// ============================================
+// INFINITE SCROLL CONFIGURATION
+// ============================================
+$table_config['infinite_scroll'] = array(
+    'enabled' => true,
+    'initial_load' => 100,
+    'per_page' => 50,
+    'threshold' => 0.6,
+);
+
+// ============================================
+// RENDER TABLE
+// ============================================
 $table = new SAW_Component_Admin_Table('visitors', $table_config);
 $table->render();
-?>

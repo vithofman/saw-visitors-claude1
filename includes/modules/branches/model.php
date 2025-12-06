@@ -4,7 +4,7 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Modules/Branches
- * @version     20.0.0 - FINAL FIX: Override get_by_id to skip scope filtering
+ * @version     21.0.0 - Combined tabs support (headquarters/other/inactive)
  */
 
 if (!defined('ABSPATH')) {
@@ -25,10 +25,7 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
     }
     
     /**
-     * ✅ Override get_by_id to SKIP scope filtering
-     * 
-     * CRITICAL: Branches are the source of branch switcher, not its target.
-     * Must be accessible regardless of branch filter.
+     * Override get_by_id to SKIP scope filtering
      */
     public function get_by_id($id, $bypass_cache = false) {
         global $wpdb;
@@ -38,7 +35,6 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
             return null;
         }
         
-        // ⚠️ CRITICAL: NO SCOPE - direct DB query
         $item = $wpdb->get_row($wpdb->prepare(
             "SELECT * FROM %i WHERE id = %d",
             $this->table,
@@ -49,10 +45,13 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
     }
     
     /**
-     * ✅ Override get_all to SKIP scope filtering
+     * Override get_all with combined tab filtering
      * 
-     * CRITICAL: Branches are the source of branch switcher, not its target.
-     * Must show ALL branches for customer, regardless of branch filter.
+     * Tab values:
+     * - null/empty = all
+     * - headquarters = is_headquarters=1 AND is_active=1
+     * - other = is_headquarters=0 AND is_active=1
+     * - inactive = is_active=0
      */
     public function get_all($filters = array()) {
         global $wpdb;
@@ -71,7 +70,21 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
             $params[] = $customer_id;
         }
         
-        // ⚠️ CRITICAL: NO SCOPE FILTERING - branches are the switcher source
+        // Combined tab filtering
+        if (!empty($filters['tab'])) {
+            switch ($filters['tab']) {
+                case 'headquarters':
+                    $sql .= " AND is_headquarters = 1 AND is_active = 1";
+                    break;
+                case 'other':
+                    $sql .= " AND is_headquarters = 0 AND is_active = 1";
+                    break;
+                case 'inactive':
+                    $sql .= " AND is_active = 0";
+                    break;
+                // 'all' = no filter
+            }
+        }
         
         // Search
         if (!empty($filters['search'])) {
@@ -86,15 +99,11 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
             $sql .= " AND (" . implode(' OR ', $search_conditions) . ")";
         }
         
-        // Filters
-        if (isset($filters['is_active']) && $filters['is_active'] !== '') {
-            $sql .= " AND is_active = %d";
-            $params[] = intval($filters['is_active']);
-        }
-        
         // Count
         $count_sql = str_replace('SELECT *', 'SELECT COUNT(*)', $sql);
-        $total = (int) $wpdb->get_var($wpdb->prepare($count_sql, $params));
+        $total = !empty($params) 
+            ? (int) $wpdb->get_var($wpdb->prepare($count_sql, $params))
+            : (int) $wpdb->get_var($count_sql);
         
         // Order
         $orderby = !empty($filters['orderby']) ? sanitize_key($filters['orderby']) : 'is_headquarters';
@@ -125,24 +134,35 @@ class SAW_Module_Branches_Model extends SAW_Base_Model
     }
     
     /**
-     * ✅ Uses parent create() - works with improved Base Model
+     * Get counts for each tab
      */
-    public function create($data) {
-        return parent::create($data);
-    }
-    
-    /**
-     * ✅ Uses parent update()
-     */
-    public function update($id, $data) {
-        return parent::update($id, $data);
-    }
-    
-    /**
-     * ✅ Uses parent delete()
-     */
-    public function delete($id) {
-        return parent::delete($id);
+    public function get_tab_counts() {
+        global $wpdb;
+        
+        $customer_id = SAW_Context::get_customer_id();
+        
+        if (!$customer_id && !saw_is_super_admin()) {
+            return array('all' => 0, 'headquarters' => 0, 'other' => 0, 'inactive' => 0);
+        }
+        
+        $where = $customer_id ? $wpdb->prepare("WHERE customer_id = %d", $customer_id) : "WHERE 1=1";
+        
+        $counts = $wpdb->get_row("
+            SELECT 
+                COUNT(*) as total,
+                SUM(CASE WHEN is_headquarters = 1 AND is_active = 1 THEN 1 ELSE 0 END) as headquarters,
+                SUM(CASE WHEN is_headquarters = 0 AND is_active = 1 THEN 1 ELSE 0 END) as other,
+                SUM(CASE WHEN is_active = 0 THEN 1 ELSE 0 END) as inactive
+            FROM {$this->table}
+            {$where}
+        ", ARRAY_A);
+        
+        return array(
+            'all' => (int) ($counts['total'] ?? 0),
+            'headquarters' => (int) ($counts['headquarters'] ?? 0),
+            'other' => (int) ($counts['other'] ?? 0),
+            'inactive' => (int) ($counts['inactive'] ?? 0),
+        );
     }
     
     /**

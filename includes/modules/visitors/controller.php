@@ -1,21 +1,31 @@
 <?php
 /**
  * Visitors Module Controller
+ * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visitors
  * @since       1.0.0
- * @version     3.0.0 - FINAL: Assets in module root, not assets/
+ * @version     4.0.0 - Production: translations, fixed current_status, removed debug logs
  */
 
-if (!defined('ABSPATH')) exit;
+if (!defined('ABSPATH')) {
+    exit;
+}
 
-if (!class_exists('SAW_Base_Controller')) require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/class-base-controller.php';
-if (!trait_exists('SAW_AJAX_Handlers')) require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/trait-ajax-handlers.php';
+if (!class_exists('SAW_Base_Controller')) {
+    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/class-base-controller.php';
+}
+if (!trait_exists('SAW_AJAX_Handlers')) {
+    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/trait-ajax-handlers.php';
+}
 
 class SAW_Module_Visitors_Controller extends SAW_Base_Controller 
 {
     use SAW_AJAX_Handlers;
     
+    /**
+     * Constructor
+     */
     public function __construct() {
         $module_path = SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visitors/';
         $this->config = require $module_path . 'config.php';
@@ -33,6 +43,9 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
         add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'));
     }
     
+    /**
+     * Index action - display list view
+     */
     public function index() {
         if (function_exists('saw_can') && !saw_can('list', $this->entity)) {
             wp_die('Nemáte oprávnění.', 403);
@@ -42,12 +55,10 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
     
     /**
      * Enqueue module assets
-     * CSS and JS files are DIRECTLY in module folder (not in assets/)
      */
     public function enqueue_assets() {
         SAW_Asset_Loader::enqueue_module('visitors');
         
-        // Ensure dashicons font is loaded for form icons
         wp_enqueue_style('dashicons');
         
         wp_localize_script('saw-visitors', 'sawVisitorsData', array(
@@ -56,6 +67,12 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
         ));
     }
 
+    /**
+     * Prepare form data from POST
+     * 
+     * @param array $post POST data
+     * @return array Sanitized form data
+     */
     protected function prepare_form_data($post) {
         $data = array();
         
@@ -71,6 +88,11 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
         return $data;
     }
     
+    /**
+     * After save hook - save certificates
+     * 
+     * @param int $id Visitor ID
+     */
     protected function after_save($id) {
         if (isset($_POST['certificates']) && is_array($_POST['certificates'])) {
             $this->model->save_certificates($id, $_POST['certificates']);
@@ -80,8 +102,8 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
     /**
      * Format detail data for sidebar
      *
-     * ✅ OPTIMIZED: Eager loads visit data, certificates, daily logs
-     * ✅ FIXED: Uses GROUP_CONCAT for MySQL 5.7 compatibility
+     * Eager loads visit data, certificates, daily logs.
+     * Computes current_status based on today's check-in/out log.
      *
      * @param array $item Visitor data
      * @return array Formatted visitor data
@@ -95,7 +117,7 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
         $visitor_id = $item['id'];
         $visit_id = $item['visit_id'] ?? 0;
         
-        // ✅ BATCH QUERY: Load visit data with company in one query
+        // Load visit data with company in one query
         if ($visit_id) {
             $visit_query = $wpdb->prepare(
                 "SELECT 
@@ -103,10 +125,13 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
                     v.visit_type,
                     v.status as visit_status,
                     v.company_id,
+                    v.branch_id,
                     c.name as company_name,
-                    c.ico as company_ico
+                    c.ico as company_ico,
+                    b.name as branch_name
                 FROM {$wpdb->prefix}saw_visits v
                 LEFT JOIN {$wpdb->prefix}saw_companies c ON v.company_id = c.id
+                LEFT JOIN {$wpdb->prefix}saw_branches b ON v.branch_id = b.id
                 WHERE v.id = %d",
                 $visit_id
             );
@@ -114,7 +139,7 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
             $visit_data = $wpdb->get_row($visit_query, ARRAY_A);
             
             if ($visit_data) {
-                // ✅ LOAD HOSTS: Uses GROUP_CONCAT for compatibility
+                // Load hosts using GROUP_CONCAT for MySQL 5.7 compatibility
                 $hosts_query = $wpdb->prepare(
                     "SELECT 
                         GROUP_CONCAT(
@@ -151,17 +176,17 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
             }
         }
         
-        // Load certificates (single query)
+        // Load certificates
         if (method_exists($this->model, 'get_certificates')) {
             $item['certificates'] = $this->model->get_certificates($visitor_id);
         }
         
-        // Load daily logs (single query)
+        // Load daily logs
         if (method_exists($this->model, 'get_daily_logs')) {
             $item['daily_logs'] = $this->model->get_daily_logs($visitor_id);
         }
         
-        // ✅ COMPUTE CURRENT STATUS: Single query for today's log
+        // Compute current status based on today's log
         $today = current_time('Y-m-d');
         $log = $wpdb->get_row($wpdb->prepare(
             "SELECT * FROM {$wpdb->prefix}saw_visit_daily_logs 
@@ -173,18 +198,29 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
         ), ARRAY_A);
         
         if ($log) {
-            if (empty($log['checked_out_at'])) {
-                $item['current_status'] = 'checked_in';
-                $item['current_status_label'] = 'Přítomen';
+            // Has today's log
+            if (!empty($log['checked_in_at']) && empty($log['checked_out_at'])) {
+                // Checked in but not out = present
+                $item['current_status'] = 'present';
                 $item['checked_in_at'] = $log['checked_in_at'];
             } else {
+                // Has check-out = checked out
                 $item['current_status'] = 'checked_out';
-                $item['current_status_label'] = 'Odhlášen';
                 $item['checked_out_at'] = $log['checked_out_at'];
             }
         } else {
-            $item['current_status'] = 'not_present';
-            $item['current_status_label'] = 'Nepřítomen';
+            // No today's log - use participation_status from database
+            // Valid values: planned, confirmed, no_show
+            $participation_status = $item['participation_status'] ?? 'planned';
+            
+            // Map participation_status to current_status
+            // (they use same values, but we ensure only valid ones)
+            $valid_statuses = array('planned', 'confirmed', 'no_show');
+            if (in_array($participation_status, $valid_statuses)) {
+                $item['current_status'] = $participation_status;
+            } else {
+                $item['current_status'] = 'planned';
+            }
         }
         
         return $item;
@@ -193,7 +229,6 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
     /**
      * Get display name for detail header
      * 
-     * @since 7.0.0
      * @param array $item Item data
      * @return string Display name
      */
@@ -212,9 +247,9 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
     
     /**
      * Get header meta badges for detail sidebar
-     * Shows: participation status, position
      * 
-     * @since 7.0.0
+     * Shows: current status badge, position badge
+     * 
      * @param array $item Item data
      * @return string HTML with badges
      */
@@ -223,16 +258,29 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
             return '';
         }
         
+        // Load translations
+        $lang = 'cs';
+        if (class_exists('SAW_Component_Language_Switcher')) {
+            $lang = SAW_Component_Language_Switcher::get_user_language();
+        }
+        $t = function_exists('saw_get_translations') 
+            ? saw_get_translations($lang, 'admin', 'visitors') 
+            : [];
+        
+        $tr = function($key, $fallback = null) use ($t) {
+            return $t[$key] ?? $fallback ?? $key;
+        };
+        
         $meta_parts = array();
         
-        // Participation status badge (current_status)
+        // Current status badge
         if (!empty($item['current_status'])) {
             $status_labels = array(
-                'present' => '✅ Přítomen',
-                'checked_out' => '🚪 Odhlášen',
-                'confirmed' => '⏳ Potvrzený',
-                'planned' => '📅 Plánovaný',
-                'no_show' => '❌ Nedostavil se',
+                'present' => $tr('status_present', '✅ Přítomen'),
+                'checked_out' => $tr('status_checked_out', '🚪 Odhlášen'),
+                'confirmed' => $tr('status_confirmed', '⏳ Potvrzený'),
+                'planned' => $tr('status_planned', '📅 Plánovaný'),
+                'no_show' => $tr('status_no_show', '❌ Nedostavil se'),
             );
             $status_classes = array(
                 'present' => 'saw-badge-success',
@@ -241,6 +289,7 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
                 'planned' => 'saw-badge-info',
                 'no_show' => 'saw-badge-danger',
             );
+            
             $status_label = $status_labels[$item['current_status']] ?? $item['current_status'];
             $status_class = $status_classes[$item['current_status']] ?? 'saw-badge-secondary';
             $meta_parts[] = '<span class="saw-badge-transparent ' . esc_attr($status_class) . '">' . esc_html($status_label) . '</span>';
@@ -255,12 +304,11 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
     }
     
     /**
-     * Override get_list_data() to handle current_status filtering in PHP
+     * Get list data with current_status filtering
      * 
-     * current_status is NOT a database column - it's computed dynamically.
-     * We must load all data, compute current_status, then filter in PHP.
+     * current_status is computed dynamically, not stored in DB.
+     * We load all data, then filter by current_status in PHP.
      * 
-     * @since 7.1.0
      * @return array List data with computed current_status
      */
     protected function get_list_data() {
@@ -269,49 +317,44 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
         $order = isset($_GET['order']) ? strtoupper(sanitize_text_field(wp_unslash($_GET['order']))) : 'DESC';
         $page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
         
-        // Check if infinite scroll is enabled and use its per_page
+        // Check if infinite scroll is enabled
         $infinite_scroll_enabled = !empty($this->config['infinite_scroll']['enabled']);
         $per_page = $infinite_scroll_enabled 
             ? ($this->config['infinite_scroll']['per_page'] ?? 50)
             : ($this->config['list_config']['per_page'] ?? 20);
         
-        // Build filters - but EXCLUDE current_status (it's not in DB)
+        // Build filters - exclude current_status (not in DB)
         $filters = array(
             'search' => $search,
             'orderby' => $orderby,
             'order' => $order,
-            'page' => 1, // Load ALL data for PHP filtering
-            'per_page' => 9999, // Load ALL data for PHP filtering
+            'page' => 1,
+            'per_page' => 9999,
         );
         
-        // Apply list_config filters (but exclude tab_param if tabs are enabled)
+        // Get tab parameter name
         $tab_param = null;
         if (!empty($this->config['tabs']['enabled'])) {
             $tab_param = $this->config['tabs']['tab_param'] ?? 'tab';
         }
         
+        // Apply list_config filters (except tab_param)
         if (!empty($this->config['list_config']['filters'])) {
             foreach ($this->config['list_config']['filters'] as $filter_key => $enabled) {
-                // Skip tab_param filter (current_status) - handled in PHP below
                 if ($filter_key === $tab_param) {
                     continue;
                 }
-                
-                // Only apply if filter is enabled AND present in URL
                 if ($enabled && isset($_GET[$filter_key]) && $_GET[$filter_key] !== '') {
                     $filters[$filter_key] = sanitize_text_field(wp_unslash($_GET[$filter_key]));
                 }
             }
         }
         
-        // Load ALL data from model (without current_status filter)
+        // Load all data from model
         $data = $this->model->get_all($filters);
         $all_items = $data['items'] ?? array();
         
-        // ✅ Virtual columns (current_status) jsou již aplikované v Model::get_all()
-        // Není třeba je počítat zde!
-        
-        // Handle TAB filtering - filter by current_status in PHP
+        // Handle TAB filtering by current_status in PHP
         $current_tab = $this->config['tabs']['default_tab'] ?? 'all';
         $url_value = null;
         
@@ -319,14 +362,11 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
             $tab_param = $this->config['tabs']['tab_param'] ?? 'tab';
             $url_value = isset($_GET[$tab_param]) ? sanitize_text_field(wp_unslash($_GET[$tab_param])) : null;
             
-            // If URL has no parameter, it's "all" tab
             if ($url_value === null || $url_value === '') {
                 $current_tab = $this->config['tabs']['default_tab'] ?? 'all';
             } else {
-                // URL contains filter_value, find matching tab_key
                 $tab_found = false;
                 foreach ($this->config['tabs']['tabs'] as $tab_key => $tab_config) {
-                    // Compare filter_value with URL value (both as strings for consistency)
                     if ($tab_config['filter_value'] !== null && 
                         (string)$tab_config['filter_value'] === (string)$url_value) {
                         $current_tab = (string)$tab_key;
@@ -335,13 +375,12 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
                     }
                 }
                 
-                // If no tab found matching the URL value, default to "all"
                 if (!$tab_found) {
                     $current_tab = $this->config['tabs']['default_tab'] ?? 'all';
                 }
             }
             
-            // Filter items by current_status in PHP (if not "all" tab)
+            // Filter items by current_status
             if ($url_value !== null && $url_value !== '') {
                 $filtered_items = array();
                 foreach ($all_items as $item) {
@@ -369,19 +408,15 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
             'order' => $order,
         );
         
-        // Add tab data if tabs are enabled
+        // Add tab data
         if (!empty($this->config['tabs']['enabled'])) {
-            // Ensure current_tab is always a valid string
-            if (isset($current_tab) && $current_tab !== null && $current_tab !== '') {
-                $result['current_tab'] = (string)$current_tab;
-            } else {
-                $result['current_tab'] = (string)($this->config['tabs']['default_tab'] ?? 'all');
-            }
-            
-            // Get tab counts - this returns array of tab_key => count
+            $result['current_tab'] = (isset($current_tab) && $current_tab !== null && $current_tab !== '') 
+                ? (string)$current_tab 
+                : (string)($this->config['tabs']['default_tab'] ?? 'all');
             $result['tab_counts'] = $this->get_tab_counts();
         }
         
+        // Pass through other GET parameters
         foreach ($_GET as $key => $value) {
             if (!in_array($key, array('s', 'orderby', 'order', 'paged'))) {
                 $result[$key] = sanitize_text_field(wp_unslash($value));
@@ -392,12 +427,8 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
     }
     
     /**
-     * Override get_tab_counts() to handle current_status counting in PHP
+     * Get tab counts with current_status counting in PHP
      * 
-     * current_status is NOT a database column - it's computed dynamically.
-     * We must load all data, compute current_status, then count in PHP.
-     * 
-     * @since 7.1.0
      * @return array Tab key => count
      */
     protected function get_tab_counts() {
@@ -409,41 +440,34 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
         $tabs = $this->config['tabs']['tabs'] ?? array();
         $counts = array();
         
-        // Build filters - EXCLUDE current_status (it's not in DB)
+        // Build filters - exclude current_status
         $filters = array(
             'page' => 1,
-            'per_page' => 9999, // Load ALL data for counting
+            'per_page' => 9999,
         );
         
-        // Apply other existing filters from GET (search, etc.)
         $search = isset($_GET['s']) ? sanitize_text_field(wp_unslash($_GET['s'])) : '';
         if (!empty($search)) {
             $filters['search'] = $search;
         }
         
-        // Apply list_config filters (but exclude the tab_param to avoid conflicts)
+        // Apply list_config filters (except tab_param)
         if (!empty($this->config['list_config']['filters'])) {
             foreach ($this->config['list_config']['filters'] as $filter_key => $enabled) {
-                // Skip tab_param filter (current_status) - handled in PHP below
                 if ($filter_key === $tab_param) {
                     continue;
                 }
-                
-                // Only apply if filter is enabled AND present in URL
                 if ($enabled && isset($_GET[$filter_key]) && $_GET[$filter_key] !== '') {
                     $filters[$filter_key] = sanitize_text_field(wp_unslash($_GET[$filter_key]));
                 }
             }
         }
         
-        // Load ALL data from model (without current_status filter)
+        // Load all data
         $data = $this->model->get_all($filters);
         $all_items = $data['items'] ?? array();
         
-        // ✅ Virtual columns (current_status) jsou již aplikované v Model::get_all()
-        // Není třeba je počítat zde!
-        
-        // Count items for each tab based on computed current_status
+        // Count items for each tab
         foreach ($tabs as $tab_key => $tab_config) {
             if (empty($tab_config['count_query'])) {
                 $counts[$tab_key] = 0;
@@ -451,16 +475,12 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
             }
             
             $filter_value = $tab_config['filter_value'];
-            
-            // Count items matching this tab's filter_value
             $count = 0;
+            
             foreach ($all_items as $item) {
-                // "all" tab - count all items
                 if ($filter_value === null || $filter_value === '') {
                     $count++;
-                } 
-                // Other tabs - count items matching filter_value
-                elseif ($item['current_status'] === (string)$filter_value) {
+                } elseif ($item['current_status'] === (string)$filter_value) {
                     $count++;
                 }
             }
@@ -472,35 +492,47 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
     }
     
     /**
-     * Get table columns configuration for infinite scroll
+     * Get table columns configuration
      * 
-     * @since 7.0.0
      * @return array Column configuration
      */
     public function get_table_columns() {
+        // Load translations
+        $lang = 'cs';
+        if (class_exists('SAW_Component_Language_Switcher')) {
+            $lang = SAW_Component_Language_Switcher::get_user_language();
+        }
+        $t = function_exists('saw_get_translations') 
+            ? saw_get_translations($lang, 'admin', 'visitors') 
+            : [];
+        
+        $tr = function($key, $fallback = null) use ($t) {
+            return $t[$key] ?? $fallback ?? $key;
+        };
+        
         return array(
             'first_name' => array(
-                'label' => 'Jméno',
+                'label' => $tr('col_first_name', 'Jméno'),
                 'type' => 'text',
                 'class' => 'saw-table-cell-bold',
                 'sortable' => true,
             ),
             'last_name' => array(
-                'label' => 'Příjmení',
+                'label' => $tr('col_last_name', 'Příjmení'),
                 'type' => 'text',
                 'class' => 'saw-table-cell-bold',
                 'sortable' => true,
             ),
             'company_name' => array(
-                'label' => 'Firma',
+                'label' => $tr('col_company', 'Firma'),
                 'type' => 'text',
             ),
             'branch_name' => array(
-                'label' => 'Pobočka',
+                'label' => $tr('col_branch', 'Pobočka'),
                 'type' => 'text',
             ),
             'current_status' => array(
-                'label' => 'Aktuální stav',
+                'label' => $tr('col_current_status', 'Aktuální stav'),
                 'type' => 'badge',
                 'sortable' => false,
                 'map' => array(
@@ -511,29 +543,29 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
                     'no_show' => 'danger',
                 ),
                 'labels' => array(
-                    'present' => '✅ Přítomen',
-                    'checked_out' => '🚪 Odhlášen',
-                    'confirmed' => '⏳ Potvrzený',
-                    'planned' => '📅 Plánovaný',
-                    'no_show' => '❌ Nedostavil se',
+                    'present' => $tr('status_present', '✅ Přítomen'),
+                    'checked_out' => $tr('status_checked_out', '🚪 Odhlášen'),
+                    'confirmed' => $tr('status_confirmed', '⏳ Potvrzený'),
+                    'planned' => $tr('status_planned', '📅 Plánovaný'),
+                    'no_show' => $tr('status_no_show', '❌ Nedostavil se'),
                 ),
             ),
             'first_checkin_at' => array(
-                'label' => 'První check-in',
+                'label' => $tr('col_first_checkin', 'První check-in'),
                 'type' => 'callback',
                 'callback' => function($value) {
                     return !empty($value) ? date('d.m.Y H:i', strtotime($value)) : '—';
                 },
             ),
             'last_checkout_at' => array(
-                'label' => 'Poslední check-out',
+                'label' => $tr('col_last_checkout', 'Poslední check-out'),
                 'type' => 'callback',
                 'callback' => function($value) {
                     return !empty($value) ? date('d.m.Y H:i', strtotime($value)) : '—';
                 },
             ),
             'training_status' => array(
-                'label' => 'Školení',
+                'label' => $tr('col_training', 'Školení'),
                 'type' => 'badge',
                 'map' => array(
                     'completed' => 'success',
@@ -542,31 +574,23 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
                     'not_started' => 'secondary',
                 ),
                 'labels' => array(
-                    'completed' => '✅ Dokončeno',
-                    'in_progress' => '🔄 Probíhá',
-                    'skipped' => '⏭️ Přeskočeno',
-                    'not_started' => '⚪ Nespuštěno',
+                    'completed' => $tr('training_completed', '✅ Dokončeno'),
+                    'in_progress' => $tr('training_in_progress', '🔄 Probíhá'),
+                    'skipped' => $tr('training_skipped', '⏭️ Přeskočeno'),
+                    'not_started' => $tr('training_not_started', '⚪ Nespuštěno'),
                 ),
             ),
         );
     }
     
     /**
-     * Override ajax_get_items_infinite for visitors module
+     * AJAX handler for infinite scroll
      * 
-     * CRITICAL: Adds virtual column computation (current_status, training_status)
-     * which are computed dynamically based on database state and not stored as columns.
+     * Overrides parent to handle current_status filtering in PHP.
      * 
-     * This override is necessary because:
-     * - Parent method calls $this->model->get_all() directly
-     * - Does NOT go through list-template.php where virtual columns are computed
-     * - AJAX rows would be missing badges without this computation
-     * 
-     * @since 7.1.0
      * @return void Outputs JSON
      */
     public function ajax_get_items_infinite() {
-        // ===== VALIDATION (same as parent) =====
         saw_verify_ajax_unified();
         
         if (!$this->can('list')) {
@@ -575,7 +599,6 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
             ));
         }
         
-        // ===== PAGINATION (same as parent) =====
         $page = isset($_POST['page']) ? max(1, intval($_POST['page'])) : 1;
         
         // Respect initial_load config for first page
@@ -588,30 +611,28 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
         
         $per_page = max(1, min(100, $per_page));
         
-        // ===== BUILD FILTERS (EXCLUDE current_status - it's not in DB) =====
+        // Build filters - exclude current_status (not in DB)
         $filters = array(
-            'page' => 1, // Load ALL data for PHP filtering
-            'per_page' => 9999, // Load ALL data for PHP filtering
+            'page' => 1,
+            'per_page' => 9999,
             'search' => isset($_POST['search']) ? sanitize_text_field($_POST['search']) : '',
             'orderby' => isset($_POST['orderby']) ? sanitize_text_field($_POST['orderby']) : 'vis.id',
             'order' => isset($_POST['order']) ? strtoupper(sanitize_text_field($_POST['order'])) : 'DESC',
         );
         
-        // Extract current_status filter (if tabs enabled) - will filter in PHP
+        // Extract current_status filter for PHP filtering
         $current_status_filter = null;
         if (!empty($this->config['tabs']['enabled'])) {
             $tab_param = $this->config['tabs']['tab_param'] ?? 'tab';
             if (isset($_POST[$tab_param]) && $_POST[$tab_param] !== '') {
                 $current_status_filter = sanitize_text_field($_POST[$tab_param]);
-                // DO NOT add to filters - it's not in DB!
             }
         }
         
-        // Add other filters from POST (but exclude tab_param)
+        // Add other filters from POST (except tab_param)
         $tab_param = !empty($this->config['tabs']['enabled']) ? ($this->config['tabs']['tab_param'] ?? 'tab') : null;
         foreach ($_POST as $key => $value) {
             if (!in_array($key, array('action', 'nonce', 'page', 'per_page', 'search', 'orderby', 'order', 'columns'))) {
-                // Skip tab_param filter (current_status) - handled in PHP below
                 if ($key === $tab_param) {
                     continue;
                 }
@@ -621,8 +642,7 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
             }
         }
         
-        // ===== CACHE KEY FOR FILTERED DATA =====
-        // Create cache key based on filters (excluding page/per_page)
+        // Cache key for filtered data
         $cache_key_parts = array(
             'entity' => $this->entity,
             'filters' => $filters,
@@ -630,17 +650,14 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
         );
         $cache_key = 'visitors_infinite_' . md5(serialize($cache_key_parts));
         
-        // ===== GET FILTERED DATA (with cache) =====
+        // Get filtered data with cache
         $cached_all_items = wp_cache_get($cache_key, 'saw_visitors');
         
         if ($cached_all_items === false) {
-            // Cache miss - load from model
             $data = $this->model->get_all($filters);
-            
-            // ✅ Virtual columns (current_status) jsou již aplikované v Model::get_all()
-            
-            // ===== FILTER BY current_status IN PHP (if tab filter is set) =====
             $all_items = $data['items'] ?? array();
+            
+            // Filter by current_status in PHP
             if ($current_status_filter !== null && $current_status_filter !== '') {
                 $filtered_items = array();
                 foreach ($all_items as $item) {
@@ -651,30 +668,20 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
                 $all_items = $filtered_items;
             }
             
-            // Cache for 5 minutes
             wp_cache_set($cache_key, $all_items, 'saw_visitors', 300);
         } else {
-            // Cache hit
             $all_items = $cached_all_items;
         }
         
-        // ===== APPLY PAGINATION IN PHP =====
+        // Apply pagination in PHP
         $total_items = count($all_items);
         $offset = ($page - 1) * $per_page;
         $items = array_slice($all_items, $offset, $per_page);
         
-        // Update data with filtered and paginated items
         $data['items'] = $items;
         $data['total'] = $total_items;
         
-        // ╔═══════════════════════════════════════════════════════════╗
-        // ║ VIRTUAL COLUMNS jsou nyní automaticky aplikované          ║
-        // ║ Visitors Model volá apply_virtual_columns() v get_all()  ║
-        // ║ → current_status a training_status jsou již v $data       ║
-        // ╚═══════════════════════════════════════════════════════════╝
-        // ✅ Virtual columns jsou již aplikované - není třeba je počítat zde!
-        
-        // ===== GET COLUMNS CONFIG (same as parent) =====
+        // Get columns config
         $columns_json = isset($_POST['columns']) ? $_POST['columns'] : '';
         $columns = array();
         if (!empty($columns_json)) {
@@ -684,22 +691,20 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
             }
         }
         
-        // If columns empty, try to get from get_table_columns()
         if (empty($columns) && method_exists($this, 'get_table_columns')) {
             $columns = $this->get_table_columns();
         }
         
-        // ===== SANITIZE COLUMNS (same as parent) =====
         if (!is_array($columns)) {
             $columns = array();
         }
         
-        // ===== LOAD ADMIN TABLE COMPONENT (same as parent) =====
+        // Load admin table component
         if (!class_exists('SAW_Component_Admin_Table')) {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/class-saw-component-admin-table.php';
         }
         
-        // ===== BUILD TABLE CONFIG FOR RENDERING (same as parent) =====
+        // Build table config for rendering
         $base_url = home_url('/admin/' . ($this->config['route'] ?? $this->entity));
         $edit_url = $base_url . '/{id}/edit';
         $detail_url = $this->get_detail_url();
@@ -717,33 +722,32 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
         
         $table = new SAW_Component_Admin_Table($this->entity, $table_config);
         
-        // ===== RENDER ROWS HTML =====
-        // ✅ CRITICAL: Clear any previous output buffers
+        // Clear output buffers
         while (ob_get_level()) {
             ob_end_clean();
         }
         
+        // Render rows HTML
         $rows_html = '';
         if (!empty($data['items'])) {
             ob_start();
             foreach ($data['items'] as $row) {
-                // INLINE render (bez volání parent metody)
-                $detail_url = $this->get_detail_url();
-                if (!empty($detail_url) && !empty($row['id'])) {
-                    $detail_url = str_replace('{id}', intval($row['id']), $detail_url);
+                $row_detail_url = $this->get_detail_url();
+                if (!empty($row_detail_url) && !empty($row['id'])) {
+                    $row_detail_url = str_replace('{id}', intval($row['id']), $row_detail_url);
                 } else {
-                    $detail_url = '';
+                    $row_detail_url = '';
                 }
                 
                 $row_class = 'saw-table-row';
-                if (!empty($detail_url)) {
+                if (!empty($row_detail_url)) {
                     $row_class .= ' saw-clickable-row';
                 }
                 ?>
                 <tr class="<?php echo esc_attr($row_class); ?>" 
                     data-id="<?php echo esc_attr($row['id'] ?? ''); ?>"
-                    <?php if (!empty($detail_url)): ?>
-                        data-detail-url="<?php echo esc_url($detail_url); ?>"
+                    <?php if (!empty($row_detail_url)): ?>
+                        data-detail-url="<?php echo esc_url($row_detail_url); ?>"
                     <?php endif; ?>>
                     
                     <?php foreach ($columns as $key => $column): ?>
@@ -755,12 +759,9 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
             $rows_html = ob_get_clean();
         }
         
-        // ===== CALCULATE has_more CORRECTLY =====
-        // has_more = true if there are more items after current page
+        // Calculate has_more
         $has_more = ($page * $per_page) < $total_items;
         
-        // ===== OUTPUT JSON (same as parent) =====
-        // ✅ CRITICAL: Ensure no output before JSON
         wp_send_json_success(array(
             'html' => $rows_html,
             'has_more' => $has_more,
@@ -774,6 +775,9 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
     // AJAX HANDLERS
     // ============================================
     
+    /**
+     * AJAX: Check-in visitor
+     */
     public function ajax_checkin() {
         saw_verify_ajax_unified();
         
@@ -803,6 +807,9 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
         ));
     }
     
+    /**
+     * AJAX: Check-out visitor
+     */
     public function ajax_checkout() {
         saw_verify_ajax_unified();
         
@@ -850,6 +857,9 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
         ));
     }
     
+    /**
+     * AJAX: Add ad-hoc visitor
+     */
     public function ajax_add_adhoc_visitor() {
         saw_verify_ajax_unified();
         
@@ -893,22 +903,15 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
     }
     
     /**
-     * Override ajax_get_adjacent_id for visitors
-     * Visitors table doesn't have customer_id/branch_id directly - they're in visits table
+     * AJAX: Get adjacent visitor ID for navigation
      * 
-     * @since 7.0.0
-     * @return void Outputs JSON
+     * Visitors don't have customer_id/branch_id directly - need to JOIN with visits.
      */
     public function ajax_get_adjacent_id() {
         try {
-            error_log('[Visitors] ajax_get_adjacent_id: Starting, POST data: ' . print_r($_POST, true));
-            
-            // Validate nonce
             saw_verify_ajax_unified();
             
-            // Validate controller state
             if (!isset($this->model) || !$this->model) {
-                error_log('[Visitors] ajax_get_adjacent_id: $this->model is not set');
                 wp_send_json_error(array(
                     'message' => 'Chyba: Model není inicializován'
                 ));
@@ -916,16 +919,13 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
             }
             
             if (!isset($this->config) || empty($this->config)) {
-                error_log('[Visitors] ajax_get_adjacent_id: $this->config is not set');
                 wp_send_json_error(array(
                     'message' => 'Chyba: Konfigurace není inicializována'
                 ));
                 return;
             }
             
-            // Check permissions
             if (method_exists($this, 'can') && !$this->can('view')) {
-                error_log('[Visitors] ajax_get_adjacent_id: Permission denied');
                 wp_send_json_error(array(
                     'message' => 'Nemáte oprávnění zobrazit záznamy'
                 ));
@@ -933,12 +933,9 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
             }
             
             $current_id = intval($_POST['id'] ?? 0);
-            $direction = sanitize_text_field($_POST['direction'] ?? 'next'); // 'next' or 'prev'
-            
-            error_log('[Visitors] ajax_get_adjacent_id: current_id=' . $current_id . ', direction=' . $direction);
+            $direction = sanitize_text_field($_POST['direction'] ?? 'next');
             
             if (!$current_id) {
-                error_log('[Visitors] ajax_get_adjacent_id: Missing ID in POST');
                 wp_send_json_error(array(
                     'message' => 'Chybí ID záznamu'
                 ));
@@ -946,7 +943,6 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
             }
             
             if (!in_array($direction, array('next', 'prev'))) {
-                error_log('[Visitors] ajax_get_adjacent_id: Invalid direction: ' . $direction);
                 wp_send_json_error(array(
                     'message' => 'Neplatný směr navigace'
                 ));
@@ -966,11 +962,7 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
                 }
             }
             
-            error_log('[Visitors] ajax_get_adjacent_id: Context - customer_id=' . $customer_id . ', branch_id=' . $branch_id);
-            
-            // Get current record to determine its position
             if (!method_exists($this->model, 'get_by_id')) {
-                error_log('[Visitors] ajax_get_adjacent_id: Model does not have get_by_id method');
                 wp_send_json_error(array(
                     'message' => 'Chyba: Model nemá metodu get_by_id'
                 ));
@@ -979,46 +971,33 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
             
             $current_item = $this->model->get_by_id($current_id);
             if (!$current_item) {
-                error_log('[Visitors] ajax_get_adjacent_id: Current record not found, ID=' . $current_id);
                 wp_send_json_error(array(
                     'message' => 'Záznam nenalezen'
                 ));
                 return;
             }
             
-            // Build query to get all visitor IDs with same filters
-            // Visitors don't have customer_id/branch_id directly - need to JOIN with visits
+            // Build query - visitors need JOIN with visits for customer/branch filtering
             global $wpdb;
             
-            // Ensure table name is correct - model->table should already include prefix
             $visitors_table = $this->model->table;
             $visits_table = $wpdb->prefix . 'saw_visits';
             
-            error_log('[Visitors] ajax_get_adjacent_id: Table names - visitors=' . $visitors_table . ', visits=' . $visits_table);
-            
-            // Validate tables exist
             if (empty($visitors_table) || empty($visits_table)) {
-                error_log('[Visitors] ajax_get_adjacent_id: Empty table names');
                 wp_send_json_error(array(
                     'message' => 'Chyba: Nelze určit tabulky databáze'
                 ));
                 return;
             }
             
-            // Table names are from internal config, safe to use directly
-            // $visitors_table already includes prefix from model
-            // $visits_table is built from $wpdb->prefix
-            
             $where = array('1=1');
             $where_values = array();
             
-            // Filter by customer_id if set - through visits table
             if ($customer_id) {
                 $where[] = "v.customer_id = %d";
                 $where_values[] = $customer_id;
             }
             
-            // Filter by branch_id if set - through visits table
             if ($branch_id) {
                 $where[] = "v.branch_id = %d";
                 $where_values[] = $branch_id;
@@ -1026,89 +1005,62 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
             
             $where_clause = implode(' AND ', $where);
             
-            // Build query with table names directly (already escaped)
             $query = "SELECT vis.id 
                       FROM {$visitors_table} vis
                       INNER JOIN {$visits_table} v ON vis.visit_id = v.id
                       WHERE {$where_clause}
                       ORDER BY vis.id ASC";
             
-            error_log('[Visitors] ajax_get_adjacent_id: Query before prepare: ' . $query);
-            error_log('[Visitors] ajax_get_adjacent_id: Where values: ' . print_r($where_values, true));
-            
-            // Prepare query with where values
             if (!empty($where_values)) {
                 $query = $wpdb->prepare($query, $where_values);
             }
             
-            error_log('[Visitors] ajax_get_adjacent_id: Executing query: ' . $query);
-            
             $ids = $wpdb->get_col($query);
             
-            // Log error if query failed
             if ($wpdb->last_error) {
-                error_log('[Visitors] ajax_get_adjacent_id: Query error: ' . $wpdb->last_error . ', Query: ' . $query);
                 wp_send_json_error(array(
-                    'message' => 'Chyba při načítání záznamů: ' . $wpdb->last_error
+                    'message' => 'Chyba při načítání záznamů'
                 ));
                 return;
             }
             
-            error_log('[Visitors] ajax_get_adjacent_id: Query returned ' . count($ids) . ' IDs');
-            
-            // Convert IDs to integers for consistent comparison
             $ids = array_map('intval', $ids);
             $current_id = intval($current_id);
             
             if (empty($ids)) {
-                error_log('[Visitors] ajax_get_adjacent_id: No IDs found. Query: ' . $query . ', Customer ID: ' . $customer_id . ', Branch ID: ' . $branch_id);
                 wp_send_json_error(array(
                     'message' => 'Žádné záznamy nenalezeny'
                 ));
                 return;
             }
             
-            // Find current position - use strict comparison
             $current_index = array_search($current_id, $ids, true);
             
             if ($current_index === false) {
-                error_log('[Visitors] ajax_get_adjacent_id: Current ID ' . $current_id . ' not found in IDs. First 10 IDs: ' . implode(', ', array_slice($ids, 0, 10)));
                 wp_send_json_error(array(
                     'message' => 'Aktuální záznam není v seznamu'
                 ));
                 return;
             }
             
-            error_log('[Visitors] ajax_get_adjacent_id: Current index: ' . $current_index . ' of ' . count($ids));
-            
             // Get adjacent ID with circular navigation
-            $adjacent_id = null;
-            
             if ($direction === 'next') {
-                // Next: if last, go to first
                 $adjacent_index = ($current_index + 1) % count($ids);
-                $adjacent_id = $ids[$adjacent_index];
             } else {
-                // Prev: if first, go to last
                 $adjacent_index = ($current_index - 1 + count($ids)) % count($ids);
-                $adjacent_id = $ids[$adjacent_index];
             }
             
-            error_log('[Visitors] ajax_get_adjacent_id: Adjacent index: ' . $adjacent_index . ', Adjacent ID: ' . $adjacent_id);
+            $adjacent_id = $ids[$adjacent_index];
             
             if (!$adjacent_id) {
-                error_log('[Visitors] ajax_get_adjacent_id: Failed to find adjacent ID');
                 wp_send_json_error(array(
                     'message' => 'Nepodařilo se najít sousední záznam'
                 ));
                 return;
             }
             
-            // Build detail URL
             $route = $this->config['route'] ?? $this->entity;
             $detail_url = home_url('/admin/' . $route . '/' . $adjacent_id . '/');
-            
-            error_log('[Visitors] ajax_get_adjacent_id: Success - adjacent_id=' . $adjacent_id . ', url=' . $detail_url);
             
             wp_send_json_success(array(
                 'id' => $adjacent_id,
@@ -1116,11 +1068,8 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
             ));
             
         } catch (Throwable $e) {
-            error_log('[Visitors] ajax_get_adjacent_id: Exception caught - ' . $e->getMessage() . ', Trace: ' . $e->getTraceAsString());
             wp_send_json_error(array(
-                'message' => 'Chyba při načítání sousedního záznamu: ' . $e->getMessage(),
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'message' => 'Chyba při načítání sousedního záznamu'
             ));
         }
     }

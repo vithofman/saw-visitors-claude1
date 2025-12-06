@@ -7,7 +7,7 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Components/AdminTable
- * @version     5.4.0 - Uses common translations (global UI keys)
+ * @version     5.5.0 - ADDED: Header image support (logo/image in header)
  * @since       4.0.0
  */
 
@@ -151,19 +151,54 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
         if (empty(trim($header_meta)) && !empty($item['id'])) {
             $header_meta = '<span class="saw-badge-transparent">ID: ' . intval($item['id']) . '</span>';
         }
+        
+        // ============================================
+        // HEADER IMAGE DETECTION
+        // Supports: header_image, logo_url, image_url
+        // ============================================
+        $header_image = '';
+        if (!empty($item['header_image'])) {
+            $header_image = $item['header_image'];
+        } elseif (!empty($item['logo_url'])) {
+            $header_image = $item['logo_url'];
+        } elseif (!empty($item['image_url'])) {
+            $header_image = $item['image_url'];
+        }
         ?>
         
         <!-- ============================================
              UNIVERSAL DETAIL HEADER
              ============================================ -->
-        <div class="saw-detail-header-universal">
+        <div class="saw-detail-header-universal<?php echo !empty($header_image) ? ' has-image' : ''; ?>">
             <div class="saw-detail-header-inner">
+                
+                <?php if (!empty($header_image)): ?>
+                <!-- ========== HEADER WITH IMAGE - TWO COLUMN ========== -->
+                <div class="saw-detail-header-with-image">
+                    <div class="saw-detail-header-image-col">
+                        <img src="<?php echo esc_url($header_image); ?>" 
+                             alt="<?php echo esc_attr($display_name); ?>"
+                             class="saw-detail-header-image">
+                    </div>
+                    <div class="saw-detail-header-text-col">
+                        <h3 class="saw-detail-header-title"><?php echo esc_html($display_name); ?></h3>
+                        <?php if (!empty($header_meta)): ?>
+                        <div class="saw-detail-header-meta">
+                            <?php echo $header_meta; ?>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php else: ?>
+                <!-- ========== HEADER WITHOUT IMAGE - ORIGINAL ========== -->
                 <h3 class="saw-detail-header-title"><?php echo esc_html($display_name); ?></h3>
                 <?php if (!empty($header_meta)): ?>
                 <div class="saw-detail-header-meta">
                     <?php echo $header_meta; ?>
                 </div>
                 <?php endif; ?>
+                <?php endif; ?>
+                
             </div>
             <div class="saw-detail-header-stripe"></div>
         </div>
@@ -275,3 +310,63 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
     </div>
     <?php endif; ?>
 </div>
+
+<!-- ============================================
+     HEADER IMAGE STYLES
+     ============================================ -->
+<style>
+/* Two-column header layout when image exists */
+.saw-detail-header-with-image {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.saw-detail-header-image-col {
+    flex-shrink: 0;
+    width: 80px;
+    height: 80px;
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.saw-detail-header-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 6px;
+    background: #fff;
+}
+
+.saw-detail-header-text-col {
+    flex: 1;
+    min-width: 0;
+}
+
+.saw-detail-header-text-col .saw-detail-header-title {
+    margin: 0 0 8px 0;
+}
+
+.saw-detail-header-text-col .saw-detail-header-meta {
+    margin: 0;
+}
+
+/* Responsive - smaller image on mobile */
+@media (max-width: 400px) {
+    .saw-detail-header-image-col {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .saw-detail-header-with-image {
+        gap: 12px;
+    }
+    
+    .saw-detail-header-text-col .saw-detail-header-title {
+        font-size: 22px !important;
+    }
+}
+</style>

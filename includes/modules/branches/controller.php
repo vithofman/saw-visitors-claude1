@@ -4,7 +4,7 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Modules/Branches
- * @version     16.1.0 - Simplified after_save (cache handled by model)
+ * @version     17.0.0 - Tabs + Infinite Scroll support
  */
 
 if (!defined('ABSPATH')) {
@@ -48,6 +48,91 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
 
     public function index() {
         $this->render_list_view();
+    }
+
+    /**
+     * Override get_list_data for tabs + infinite scroll support
+     */
+    protected function get_list_data() {
+        $search = isset($_GET['s']) ? sanitize_text_field(wp_unslash($_GET['s'])) : '';
+        $orderby = isset($_GET['orderby']) ? sanitize_key($_GET['orderby']) : 'is_headquarters';
+        $order = isset($_GET['order']) ? strtoupper(sanitize_text_field(wp_unslash($_GET['order']))) : 'DESC';
+        $page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
+        
+        // Infinite scroll support
+        $infinite_scroll_enabled = !empty($this->config['infinite_scroll']['enabled']);
+        if ($infinite_scroll_enabled) {
+            $per_page = ($page === 1) 
+                ? ($this->config['infinite_scroll']['initial_load'] ?? 100)
+                : ($this->config['infinite_scroll']['per_page'] ?? 50);
+        } else {
+            $per_page = $this->config['list_config']['per_page'] ?? 20;
+        }
+        
+        // Build filters
+        $filters = array(
+            'search' => $search,
+            'orderby' => $orderby,
+            'order' => $order,
+            'page' => $page,
+            'per_page' => $per_page,
+        );
+        
+        // Handle TAB filtering
+        $current_tab = $this->config['tabs']['default_tab'] ?? 'all';
+        
+        if (!empty($this->config['tabs']['enabled'])) {
+            $tab_param = $this->config['tabs']['tab_param'] ?? 'tab';
+            $url_value = isset($_GET[$tab_param]) ? sanitize_text_field(wp_unslash($_GET[$tab_param])) : null;
+            
+            if ($url_value === null || $url_value === '') {
+                $current_tab = $this->config['tabs']['default_tab'] ?? 'all';
+            } else {
+                // Find matching tab by filter_value
+                $tab_found = false;
+                foreach ($this->config['tabs']['tabs'] as $tab_key => $tab_config) {
+                    if ($tab_config['filter_value'] !== null && 
+                        (string)$tab_config['filter_value'] === (string)$url_value) {
+                        $current_tab = (string)$tab_key;
+                        $tab_found = true;
+                        break;
+                    }
+                }
+                
+                if (!$tab_found) {
+                    $current_tab = $this->config['tabs']['default_tab'] ?? 'all';
+                }
+                
+                // Pass tab filter to model
+                if ($url_value !== null && $url_value !== '') {
+                    $filters['tab'] = $url_value;
+                }
+            }
+        }
+        
+        // Get data from model
+        $data = $this->model->get_all($filters);
+        $items = $data['items'] ?? array();
+        $total = $data['total'] ?? 0;
+        $total_pages = ceil($total / $per_page);
+        
+        // Get tab counts
+        $tab_counts = array();
+        if (!empty($this->config['tabs']['enabled'])) {
+            $tab_counts = $this->model->get_tab_counts();
+        }
+        
+        return array(
+            'items' => $items,
+            'total' => $total,
+            'page' => $page,
+            'total_pages' => $total_pages,
+            'search' => $search,
+            'orderby' => $orderby,
+            'order' => $order,
+            'current_tab' => $current_tab,
+            'tab_counts' => $tab_counts,
+        );
     }
 
     public function ajax_delete() {
@@ -192,13 +277,10 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
 
     /**
      * Auto-assign Czech language to new branch
-     * 
-     * Model already invalidated cache, so we don't need to here.
      */
     protected function after_save($id) {
         global $wpdb;
         
-        // Get branch (bypass cache if needed)
         $branch = $wpdb->get_row($wpdb->prepare(
             "SELECT * FROM {$wpdb->prefix}saw_branches WHERE id = %d",
             $id
@@ -273,17 +355,56 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
 
         wp_enqueue_style(
             'saw-file-upload',
-            SAW_VISITORS_PLUGIN_URL . 'assets/css/components/forms.css', // Consolidated: includes file-upload styles
+            SAW_VISITORS_PLUGIN_URL . 'assets/css/components/forms.css',
             array(),
             SAW_VISITORS_VERSION
         );
 
         wp_enqueue_script(
             'saw-file-upload',
-            SAW_VISITORS_PLUGIN_URL . 'assets/js/components/forms.js', // Consolidated: includes file-upload
+            SAW_VISITORS_PLUGIN_URL . 'assets/js/components/forms.js',
             array('jquery'),
             SAW_VISITORS_VERSION,
             true
         );
+    }
+
+    /**
+     * Get header meta for detail sidebar
+     * 
+     * Returns HTML for badges displayed in universal detail header.
+     * Shows: code, headquarters badge, status
+     * 
+     * @since 17.0.0
+     * @param array $item Item data
+     * @return string HTML for header meta
+     */
+    public function get_detail_header_meta($item) {
+        if (empty($item)) {
+            return '';
+        }
+        
+        $meta_parts = array();
+        
+        // 1. Kód pobočky
+        if (!empty($item['code'])) {
+            $meta_parts[] = '<span class="saw-badge-transparent">' . esc_html($item['code']) . '</span>';
+        }
+        
+        // 2. Sídlo firmy / Pobočka
+        if (!empty($item['is_headquarters'])) {
+            $meta_parts[] = '<span class="saw-badge-transparent saw-badge-primary">🏛️ Sídlo firmy</span>';
+        } else {
+            $meta_parts[] = '<span class="saw-badge-transparent">🏢 Pobočka</span>';
+        }
+        
+        // 3. Status
+        if (!empty($item['is_active'])) {
+            $meta_parts[] = '<span class="saw-badge-transparent saw-badge-success">✓ Aktivní</span>';
+        } else {
+            $meta_parts[] = '<span class="saw-badge-transparent saw-badge-secondary">Neaktivní</span>';
+        }
+        
+        return implode(' ', $meta_parts);
     }
 }

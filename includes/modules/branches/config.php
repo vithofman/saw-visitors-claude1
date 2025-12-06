@@ -1,14 +1,16 @@
 <?php
-
 /**
  * Branches Module Configuration
  *
- * FINAL v13.5.0 - CLEAN UTF-8
- * Bez GPS, bez opening_hours
+ * MODERNIZOVANÁ VERZE s tabs, překlady a infinite scroll podporou
+ * Struktura shodná s companies modulem
  *
  * @package     SAW_Visitors
  * @subpackage  Modules/Branches
- * @version     13.5.0
+ * @version     15.0.0
+ * 
+ * POZNÁMKA: Překlady jsou řešeny v list-template.php
+ * Config obsahuje pouze české fallback texty.
  */
 
 if (!defined('ABSPATH')) {
@@ -170,14 +172,15 @@ return array(
     ),
 
     // ============================================
-    // LOOKUP TABLES
-    // ============================================
-	'lookup_tables' => array(),
-    // ============================================
     // LIST CONFIGURATION
     // ============================================
     'list_config' => array(
-        'search_fields' => array('name', 'code', 'city', 'email'),
+        'columns' => array('image_url', 'name', 'code', 'is_headquarters', 'city', 'phone', 'is_active'),
+        'searchable' => array('name', 'code', 'city', 'email', 'phone'),
+        'sortable' => array('name', 'code', 'city', 'sort_order', 'is_headquarters'),
+        'filters' => array(
+            'is_active' => true,
+        ),
         'per_page' => 20,
         'enable_detail_modal' => true,
         'default_sort' => array(
@@ -187,6 +190,48 @@ return array(
             'secondary_order' => 'ASC',
         ),
     ),
+
+    // ============================================
+    // TABS CONFIGURATION
+    // Kombinované tabs: Sídla / Ostatní / Neaktivní
+    // Labels budou přepsány v list-template.php pro překlady
+    // ============================================
+    'tabs' => array(
+        'enabled' => true,
+        'tab_param' => 'tab',
+        'tabs' => array(
+            'all' => array(
+                'label' => 'Všechny',
+                'icon' => '📋',
+                'filter_value' => null,
+                'count_query' => true,
+            ),
+            'headquarters' => array(
+                'label' => 'Sídla',
+                'icon' => '🏛️',
+                'filter_value' => 'headquarters',
+                'count_query' => true,
+            ),
+            'other' => array(
+                'label' => 'Ostatní',
+                'icon' => '🏢',
+                'filter_value' => 'other',
+                'count_query' => true,
+            ),
+            'inactive' => array(
+                'label' => 'Neaktivní',
+                'icon' => '⏸️',
+                'filter_value' => 'inactive',
+                'count_query' => true,
+            ),
+        ),
+        'default_tab' => 'all',
+    ),
+
+    // ============================================
+    // LOOKUP TABLES
+    // ============================================
+    'lookup_tables' => array(),
 
     // ============================================
     // CACHE CONFIGURATION
