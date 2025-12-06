@@ -171,6 +171,10 @@ class SAW_Installer {
             // System Logs (2)
             'audit_log',
             'error_log',
+            
+            // UI Translations
+            'ui_languages',
+            'ui_translations',
         );
     }
     

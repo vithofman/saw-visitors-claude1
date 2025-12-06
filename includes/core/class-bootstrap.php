@@ -101,6 +101,10 @@ class SAW_Bootstrap {
             // CRITICAL: middleware.php must load BEFORE base classes
             // because base classes use saw_verify_ajax_unified() which depends on saw_verify_ajax_nonce()
             'includes/core/middleware.php',
+
+            // ✅ PŘIDAT: Translations system
+            'includes/core/class-saw-translations.php',
+            'includes/core/translations-helpers.php',
             
             // Service Container and Registry
             'includes/core/class-service-container.php',
