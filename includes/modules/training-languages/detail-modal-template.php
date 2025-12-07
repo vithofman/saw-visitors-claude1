@@ -1,147 +1,205 @@
 <?php
 /**
- * Detail Content Template
- * Used inside the sidebar structure
+ * Training Languages Detail Sidebar Template
+ *
+ * Header with flag, code, branches count is rendered by detail-sidebar.php
+ * via get_detail_header_meta() in controller.
+ *
+ * @package    SAW_Visitors
+ * @subpackage Modules/TrainingLanguages
+ * @version    5.0.0 - REDESIGNED: No hero card (in blue header), no ID
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-$active_branches = $item['active_branches'] ?? [];
+// ============================================
+// TRANSLATIONS
+// ============================================
+$lang = 'cs';
+if (class_exists('SAW_Component_Language_Switcher')) {
+    $lang = SAW_Component_Language_Switcher::get_user_language();
+}
+
+$t = function_exists('saw_get_translations') 
+    ? saw_get_translations($lang, 'admin', 'training_languages') 
+    : array();
+
+$tr = function($key, $fallback = null) use ($t) {
+    return $t[$key] ?? $fallback ?? $key;
+};
+
+// ============================================
+// VALIDATION
+// ============================================
+if (empty($item)) {
+    echo '<div class="saw-alert saw-alert-danger">' . esc_html($tr('error_not_found', 'Jazyk nebyl nalezen')) . '</div>';
+    return;
+}
+
+// ============================================
+// PREPARE DATA
+// ============================================
+$active_branches = $item['active_branches'] ?? array();
 $is_protected = ($item['language_code'] === 'cs');
+$branches_count = count($active_branches);
+
+// Count default branches
+$default_count = 0;
+foreach ($active_branches as $b) {
+    if (!empty($b['is_default'])) $default_count++;
+}
 ?>
 
-<div class="saw-detail-header">
-    <div class="saw-language-flag-large">
-        <?php echo esc_html($item['flag_emoji']); ?>
-    </div>
-    
-    <div class="saw-detail-header-info">
-        <h2 class="saw-detail-header-title">
-            <?php echo esc_html($item['language_name']); ?>
-            <?php if ($is_protected): ?>
-                <span class="saw-badge saw-badge-info">Povinný</span>
-            <?php endif; ?>
-        </h2>
-        <div class="saw-detail-header-meta">
-            <span>Kód: <strong><?php echo esc_html(strtoupper($item['language_code'])); ?></strong></span>
-            <span>•</span>
-            <span>Pobočky: <strong><?php echo count($active_branches); ?></strong></span>
-        </div>
-    </div>
-</div>
+<!-- Header is rendered by detail-sidebar.php using get_detail_header_meta() -->
 
-<div class="saw-detail-sections">
-    
-    <div class="saw-detail-section">
-        <div class="saw-detail-section-title">
-            <span class="dashicons dashicons-building"></span> Aktivní pobočky
+<div class="saw-detail-wrapper">
+    <div class="saw-detail-stack">
+        
+        <!-- STATISTICS -->
+        <div class="saw-industrial-section">
+            <div class="saw-section-head">
+                <h4 class="saw-section-title">📊 <?php echo esc_html($tr('section_statistics', 'Statistiky')); ?></h4>
+            </div>
+            <div class="saw-section-body">
+                <div class="saw-info-row">
+                    <span class="saw-info-label"><?php echo esc_html($tr('stat_active_branches', 'Aktivních poboček')); ?></span>
+                    <span class="saw-info-val"><strong><?php echo $branches_count; ?></strong></span>
+                </div>
+                <div class="saw-info-row">
+                    <span class="saw-info-label"><?php echo esc_html($tr('stat_default_branches', 'Výchozí na pobočkách')); ?></span>
+                    <span class="saw-info-val"><strong><?php echo $default_count; ?></strong></span>
+                </div>
+            </div>
         </div>
         
+        <!-- ACTIVE BRANCHES -->
         <?php if (!empty($active_branches)): ?>
-            <div class="saw-branches-detail-list">
+        <div class="saw-industrial-section">
+            <div class="saw-section-head">
+                <h4 class="saw-section-title">🏢 <?php echo esc_html($tr('section_branches', 'Pobočky')); ?> <span class="saw-visit-badge-count"><?php echo $branches_count; ?></span></h4>
+            </div>
+            <div class="saw-section-body" style="padding: 0;">
                 <?php foreach ($active_branches as $branch): ?>
-                    <div class="saw-branch-detail-item">
-                        <div class="saw-branch-detail-name">
-                            <strong><?php echo esc_html($branch['name']); ?></strong>
-                            <?php if (!empty($branch['code'])): ?>
-                                <span class="saw-branch-code"><?php echo esc_html($branch['code']); ?></span>
-                            <?php endif; ?>
-                        </div>
-                        <div class="saw-branch-detail-meta">
-                            <?php if (!empty($branch['is_default'])): ?>
-                                <span class="saw-badge saw-badge-success">Výchozí</span>
-                            <?php endif; ?>
-                            <?php if (!empty($branch['display_order'])): ?>
-                                <span class="saw-badge saw-badge-default">Pořadí: <?php echo esc_html($branch['display_order']); ?></span>
-                            <?php endif; ?>
-                        </div>
-                    </div>
+                <a href="<?php echo esc_url(home_url('/admin/branches/' . intval($branch['id']) . '/')); ?>" 
+                   class="saw-info-row" 
+                   style="display: flex; padding: 12px 20px; text-decoration: none; border-bottom: 1px solid #f0f0f0;">
+                    <span class="saw-info-label" style="flex-shrink: 0;">
+                        <?php echo !empty($branch['is_default']) ? '⭐' : '🏢'; ?>
+                    </span>
+                    <span class="saw-info-val" style="flex: 1;">
+                        <?php echo esc_html($branch['name']); ?>
+                        <?php if (!empty($branch['code'])): ?>
+                            <span style="color: #888; font-size: 12px;"><?php echo esc_html($branch['code']); ?></span>
+                        <?php endif; ?>
+                        <?php if (!empty($branch['is_default'])): ?>
+                            <span class="saw-badge saw-badge-success" style="margin-left: 8px; font-size: 10px;"><?php echo esc_html($tr('badge_default', 'Výchozí')); ?></span>
+                        <?php endif; ?>
+                    </span>
+                    <?php if (!empty($branch['display_order'])): ?>
+                    <span style="color: #888; font-size: 12px;">#<?php echo intval($branch['display_order']); ?></span>
+                    <?php endif; ?>
+                </a>
                 <?php endforeach; ?>
             </div>
+        </div>
         <?php else: ?>
-            <div class="saw-notice saw-notice-warning">
-                <p>Tento jazyk není aktivován pro žádnou pobočku.</p>
+        <div class="saw-industrial-section">
+            <div class="saw-section-head">
+                <h4 class="saw-section-title">🏢 <?php echo esc_html($tr('section_branches', 'Pobočky')); ?></h4>
             </div>
+            <div class="saw-section-body">
+                <div class="saw-notice saw-notice-warning" style="margin: 0;">
+                    <p style="margin: 0;"><?php echo esc_html($tr('detail_no_branches', 'Tento jazyk není aktivován pro žádnou pobočku.')); ?></p>
+                </div>
+            </div>
+        </div>
         <?php endif; ?>
-    </div>
-    
-    <div class="saw-detail-section">
-        <div class="saw-detail-section-title">
-            <span class="dashicons dashicons-info"></span> Systémové informace
+        
+        <!-- INFO (without ID) -->
+        <div class="saw-industrial-section">
+            <div class="saw-section-head">
+                <h4 class="saw-section-title">ℹ️ <?php echo esc_html($tr('section_info', 'Informace')); ?></h4>
+            </div>
+            <div class="saw-section-body">
+                <div class="saw-info-row">
+                    <span class="saw-info-label"><?php echo esc_html($tr('detail_language_code', 'Kód jazyka')); ?></span>
+                    <span class="saw-info-val"><code><?php echo esc_html(strtoupper($item['language_code'])); ?></code></span>
+                </div>
+                <div class="saw-info-row">
+                    <span class="saw-info-label"><?php echo esc_html($tr('detail_language_name', 'Název')); ?></span>
+                    <span class="saw-info-val"><?php echo esc_html($item['language_name']); ?></span>
+                </div>
+                <?php if ($is_protected): ?>
+                <div class="saw-info-row">
+                    <span class="saw-info-label"><?php echo esc_html($tr('detail_protection', 'Ochrana')); ?></span>
+                    <span class="saw-info-val">
+                        <span class="saw-badge saw-badge-info"><?php echo esc_html($tr('badge_system_language', 'Systémový jazyk')); ?></span>
+                    </span>
+                </div>
+                <?php endif; ?>
+            </div>
         </div>
-        <div class="saw-detail-section-content">
-            <dl class="saw-detail-list">
-                <dt>Vytvořeno</dt>
-                <dd><?php echo $item['created_at_formatted'] ?? '—'; ?></dd>
+        
+        <!-- METADATA -->
+        <div class="saw-industrial-section">
+            <div class="saw-section-head">
+                <h4 class="saw-section-title">🕐 <?php echo esc_html($tr('section_metadata', 'Metadata')); ?></h4>
+            </div>
+            <div class="saw-section-body">
+                <?php if (!empty($item['created_at_formatted'])): ?>
+                <div class="saw-info-row">
+                    <span class="saw-info-label"><?php echo esc_html($tr('detail_created_at', 'Vytvořeno')); ?></span>
+                    <span class="saw-info-val"><?php echo esc_html($item['created_at_formatted']); ?></span>
+                </div>
+                <?php elseif (!empty($item['created_at'])): ?>
+                <div class="saw-info-row">
+                    <span class="saw-info-label"><?php echo esc_html($tr('detail_created_at', 'Vytvořeno')); ?></span>
+                    <span class="saw-info-val"><?php echo esc_html(date_i18n('d.m.Y H:i', strtotime($item['created_at']))); ?></span>
+                </div>
+                <?php endif; ?>
                 
-                <dt>Naposledy upraveno</dt>
-                <dd><?php echo $item['updated_at_formatted'] ?? '—'; ?></dd>
-                
-                <dt>ID záznamu</dt>
-                <dd>#<?php echo esc_html($item['id']); ?></dd>
-            </dl>
+                <?php if (!empty($item['updated_at_formatted'])): ?>
+                <div class="saw-info-row">
+                    <span class="saw-info-label"><?php echo esc_html($tr('detail_updated_at', 'Změněno')); ?></span>
+                    <span class="saw-info-val"><?php echo esc_html($item['updated_at_formatted']); ?></span>
+                </div>
+                <?php elseif (!empty($item['updated_at'])): ?>
+                <div class="saw-info-row">
+                    <span class="saw-info-label"><?php echo esc_html($tr('detail_updated_at', 'Změněno')); ?></span>
+                    <span class="saw-info-val"><?php echo esc_html(date_i18n('d.m.Y H:i', strtotime($item['updated_at']))); ?></span>
+                </div>
+                <?php endif; ?>
+            </div>
         </div>
+        
     </div>
-    
 </div>
 
+<!-- ============================================
+     HEADER FLAG STYLE (for blue header)
+     ============================================ -->
 <style>
-.saw-language-flag-large {
-    width: 64px;
-    height: 64px;
-    display: flex;
+/* Large flag emoji in blue header */
+.saw-header-flag {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-    border-radius: 12px;
-    border: 1px solid #cbd5e1;
-    font-size: 32px;
-    flex-shrink: 0;
-}
-
-.saw-branches-detail-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.saw-branch-detail-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 14px;
-    background: #ffffff;
+    width: 48px;
+    height: 48px;
+    background: rgba(255, 255, 255, 0.15);
     border-radius: 8px;
-    border: 1px solid #e2e8f0;
+    font-size: 28px;
+    margin-right: 8px;
+    vertical-align: middle;
 }
 
-.saw-branch-detail-name {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.saw-branch-detail-name strong {
-    font-size: 14px;
-    color: #0f172a;
-}
-
-.saw-branch-code {
-    display: inline-block;
-    padding: 1px 6px;
-    background: #f1f5f9;
-    border-radius: 4px;
-    font-size: 10px;
-    font-weight: 600;
-    color: #64748b;
+/* Code badge in header */
+.saw-badge-code {
     font-family: monospace;
-}
-
-.saw-branch-detail-meta {
-    display: flex;
-    gap: 6px;
-    align-items: center;
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: 1px;
 }
 </style>

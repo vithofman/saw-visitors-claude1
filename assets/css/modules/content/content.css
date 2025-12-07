@@ -86,7 +86,8 @@
 
 /* Header - Clean White */
 /* .saw-page-header is defined in app.css - this is module-specific override */
-.saw-module-content .saw-page-header {
+.saw-content-page .saw-page-header {
+    position: static !important; 
     background: var(--saw-content-main-bg);
     padding: 2rem 3rem;
     margin-bottom: 0;
@@ -852,11 +853,6 @@
     outline: none;
     border-color: #1a73e8;
     box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
-}
-
-/* CRITICAL: File input in document items must be visible */
-/* REMOVED DUPLICATE - using definition above */
-    background: var(--saw-form-section-bg);
 }
 
 .saw-remove-document {

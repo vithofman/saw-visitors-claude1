@@ -4,24 +4,42 @@
  *
  * @package    SAW_Visitors
  * @subpackage Modules/TrainingLanguages
- * @version    3.2.0 - FIXED: Route path
+ * @version    4.0.0 - ADDED: Full translation support
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+// ============================================
+// TRANSLATIONS
+// ============================================
+$lang = 'cs';
+if (class_exists('SAW_Component_Language_Switcher')) {
+    $lang = SAW_Component_Language_Switcher::get_user_language();
+}
+
+$t = function_exists('saw_get_translations') 
+    ? saw_get_translations($lang, 'admin', 'training_languages') 
+    : array();
+
+$tr = function($key, $fallback = null) use ($t) {
+    return $t[$key] ?? $fallback ?? $key;
+};
+
+// ============================================
+// CONFIGURATION
+// ============================================
 return [
     'slug' => 'training-languages',
     'entity' => 'training_languages',
     'table' => 'saw_training_languages',
     
-    'singular' => 'Jazyk školení',
-    'plural' => 'Jazyky školení',
+    'singular' => $tr('singular', 'Jazyk školení'),
+    'plural' => $tr('plural', 'Jazyky školení'),
     'icon' => '🌐',
     
-    // ✅ OPRAVENO: Odstraněno "settings/", aby odkazy vedly správně
-    'route' => 'training-languages', 
+    'route' => 'training-languages',
     
     'has_customer_isolation' => true,
     'has_branch_isolation' => false,
@@ -39,7 +57,6 @@ return [
         'searchable' => ['language_name', 'language_code'],
     ],
     
-    // Ponecháme cache zapnutou, model ji umí mazat
     'cache' => [
         'enabled' => true,
         'ttl' => 3600,

@@ -6,7 +6,7 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Components/AdminTable
- * @version     4.0.0 - ADDED: Multi-language support
+ * @version     4.1.0 - FIXED: Use config['route'] instead of entity for URLs
  * @since       4.0.0
  */
 
@@ -37,11 +37,22 @@ $tr = function($key, $fallback = null) use ($t) {
 $module_slug = str_replace('_', '-', $entity);
 $form_template = SAW_VISITORS_PLUGIN_DIR . "includes/modules/{$module_slug}/form-template.php";
 
+// ============================================
+// URL SETUP - Use route from config, fallback to entity
+// ============================================
+$route = isset($config['route']) && $config['route'] !== '' ? $config['route'] : $entity;
+$route = str_replace('admin/', '', $route);
+$route = trim($route, '/');
+
+if (empty($route)) {
+    $route = $entity;
+}
+
 // Close URL: for create mode go back to list, for edit mode go back to detail
 if ($is_edit && !empty($item['id'])) {
-    $close_url = home_url('/admin/' . $entity . '/' . intval($item['id']) . '/');
+    $close_url = home_url('/admin/' . $route . '/' . intval($item['id']) . '/');
 } else {
-    $close_url = home_url('/admin/' . $entity . '/');
+    $close_url = home_url('/admin/' . $route . '/');
 }
 
 // Get sidebar title from translations

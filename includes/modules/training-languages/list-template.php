@@ -2,52 +2,78 @@
 /**
  * Training Languages List Template
  *
- * @package SAW_Visitors
- * @version 3.1.0 - FIXED: Added Title + URLs for Sidebar/Edit/Create
+ * @package    SAW_Visitors
+ * @subpackage Modules/TrainingLanguages
+ * @version    4.1.0 - FIXED: Match departments pattern
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-// 1. Příprava konfigurace pro tabulku
-$table_config = $config; // Načte základ z config.php
+// ============================================
+// LOAD TRANSLATIONS
+// ============================================
+$lang = 'cs';
+if (class_exists('SAW_Component_Language_Switcher')) {
+    $lang = SAW_Component_Language_Switcher::get_user_language();
+}
 
-// 2. 🔥 CRITICAL: Doplnění URL adres a Nadpisu pro komponentu
+$t = function_exists('saw_get_translations') 
+    ? saw_get_translations($lang, 'admin', 'training_languages') 
+    : array();
+
+$tr = function($key, $fallback = null) use ($t) {
+    return $t[$key] ?? $fallback ?? $key;
+};
+
+// ============================================
+// ENSURE COMPONENTS ARE LOADED
+// ============================================
+if (!class_exists('SAW_Component_Admin_Table')) {
+    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/class-saw-component-admin-table.php';
+}
+
+// ============================================
+// PREPARE CONFIG FOR ADMIN TABLE
+// ============================================
+$entity = $config['entity'] ?? 'training_languages';
+$table_config = $config;
 $base_url = home_url('/admin/' . ($config['route'] ?? 'training-languages'));
 
-$table_config['title']      = $config['plural']; // Nadpis (Jazyky školení)
-$table_config['create_url'] = $base_url . '/create'; // Tlačítko "Přidat nový"
-$table_config['detail_url'] = $base_url . '/{id}/'; // Kliknutí na řádek (Sidebar)
-$table_config['edit_url']   = $base_url . '/{id}/edit'; // Tlačítko Edit (Tužka)
+$table_config['title'] = $tr('title', $config['plural']);
+$table_config['create_url'] = $base_url . '/create';
+$table_config['detail_url'] = $base_url . '/{id}/';
+$table_config['edit_url'] = $base_url . '/{id}/edit';
 
-// 3. Konfigurace sloupců
-$table_config['columns'] = [
-    'flag_emoji' => [
-        'label' => 'Vlajka',
+// ============================================
+// COLUMN DEFINITIONS
+// ============================================
+$table_config['columns'] = array(
+    'flag_emoji' => array(
+        'label' => $tr('col_flag', 'Vlajka'),
         'type' => 'custom',
         'width' => '60px',
         'align' => 'center',
         'callback' => function($value) {
             return '<span style="font-size: 24px;">' . esc_html($value) . '</span>';
         }
-    ],
-    'language_name' => [
-        'label' => 'Název jazyka',
+    ),
+    'language_name' => array(
+        'label' => $tr('col_name', 'Název jazyka'),
         'type' => 'custom',
         'sortable' => true,
         'class' => 'saw-table-cell-bold',
-        'callback' => function($value, $item) {
+        'callback' => function($value, $item) use ($tr) {
             $html = esc_html($value);
-            // Check for Czech (protected)
             if (($item['language_code'] ?? '') === 'cs') {
-                $html .= ' <span class="saw-badge saw-badge-info">Povinný</span>';
+                $html .= ' <span class="saw-badge saw-badge-info">' . esc_html($tr('badge_required', 'Povinný')) . '</span>';
             }
             return $html;
         }
-    ],
-    'language_code' => [
-        'label' => 'Kód',
+    ),
+    'language_code' => array(
+        'label' => $tr('col_code', 'Kód'),
         'type' => 'custom',
         'width' => '80px',
         'align' => 'center',
@@ -55,9 +81,9 @@ $table_config['columns'] = [
         'callback' => function($value) {
             return '<code style="background:#f1f5f9; padding:2px 6px; border-radius:4px; font-weight:600; color:#475569;">' . esc_html(strtoupper($value)) . '</code>';
         }
-    ],
-    'branches_count' => [
-        'label' => 'Aktivní pobočky',
+    ),
+    'branches_count' => array(
+        'label' => $tr('col_branches', 'Aktivní pobočky'),
         'type' => 'custom',
         'align' => 'center',
         'width' => '150px',
@@ -69,42 +95,56 @@ $table_config['columns'] = [
                 return '<span class="saw-text-muted" style="color:#cbd5e1;">—</span>';
             }
         }
-    ],
-    'created_at' => [
-        'label' => 'Vytvořeno',
+    ),
+    'created_at' => array(
+        'label' => $tr('col_created', 'Vytvořeno'),
         'type' => 'date',
         'width' => '120px',
         'sortable' => true,
         'format' => 'd.m.Y'
-    ]
-];
+    ),
+);
 
-// 4. Data a stránkování
-$table_config['rows'] = $items;
-$table_config['total_items'] = $total;
-$table_config['current_page'] = $page;
-$table_config['total_pages'] = $total_pages;
-$table_config['search_value'] = $search;
-$table_config['orderby'] = $orderby;
-$table_config['order'] = $order;
+// ============================================
+// DATA
+// ============================================
+$table_config['rows'] = $items ?? array();
+$table_config['total_items'] = $total ?? 0;
+$table_config['current_page'] = $page ?? 1;
+$table_config['total_pages'] = $total_pages ?? 1;
+$table_config['search_value'] = $search ?? '';
+$table_config['orderby'] = $orderby ?? 'language_name';
+$table_config['order'] = $order ?? 'ASC';
 
-// 5. Zapnutí funkcí
-$table_config['enable_search'] = true;
-$table_config['search_placeholder'] = 'Hledat jazyk...';
-$table_config['enable_filters'] = false; // Zatím žádné filtry nejsou potřeba
+// ============================================
+// SEARCH CONFIGURATION
+// ============================================
+$table_config['search'] = array(
+    'enabled' => true,
+    'placeholder' => $tr('search_placeholder', 'Hledat jazyk...'),
+    'fields' => array('language_name', 'language_code'),
+    'show_info_banner' => true,
+);
 
-// 6. Sidebar kontext (předává se z controlleru)
-$table_config['sidebar_mode'] = $sidebar_mode;
+// ============================================
+// SIDEBAR CONTEXT
+// ============================================
+$table_config['sidebar_mode'] = $sidebar_mode ?? null;
 $table_config['detail_item'] = $detail_item ?? null;
 $table_config['form_item'] = $form_item ?? null;
-$table_config['detail_tab'] = $detail_tab;
-$table_config['module_config'] = $config; 
+$table_config['detail_tab'] = $detail_tab ?? 'overview';
+$table_config['module_config'] = $config;
 
-// 7. Akce v tabulce
-$table_config['actions'] = ['view', 'edit', 'delete'];
-$table_config['add_new'] = 'Nový jazyk';
+// ============================================
+// ACTIONS
+// ============================================
+$table_config['actions'] = array('view', 'edit', 'delete');
+$table_config['add_new'] = $tr('btn_add_new', 'Nový jazyk');
+$table_config['empty_message'] = $tr('empty_message', 'Žádné jazyky nenalezeny');
 
-// 8. Renderování
+// ============================================
+// RENDER
+// ============================================
 $table = new SAW_Component_Admin_Table($entity, $table_config);
 $table->render();
 ?>
@@ -113,13 +153,12 @@ $table->render();
 document.addEventListener('DOMContentLoaded', function() {
     jQuery(document).on('click', '.saw-action-delete', function(e) {
         const row = jQuery(this).closest('tr');
-        // Hledáme buňku s kódem (3. sloupec)
         const codeCell = row.find('td:nth-child(3)').text().trim().toLowerCase();
         
         if (codeCell === 'cs') {
             e.preventDefault();
             e.stopImmediatePropagation();
-            alert('Češtinu nelze smazat, je to výchozí jazyk systému.');
+            alert('<?php echo esc_js($tr('error_cannot_delete_czech', 'Češtinu nelze smazat, je to výchozí jazyk systému.')); ?>');
             return false;
         }
     });

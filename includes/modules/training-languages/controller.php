@@ -4,7 +4,7 @@
  *
  * @package    SAW_Visitors
  * @subpackage Modules/TrainingLanguages
- * @version    3.9.0 - FIXED: Type casting + debugging for branches
+ * @version    5.0.0 - ADDED: get_display_name, get_detail_header_meta for blue header
  */
 
 if (!defined('ABSPATH')) {
@@ -14,6 +14,9 @@ if (!defined('ABSPATH')) {
 class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller 
 {
     use SAW_AJAX_Handlers;
+    
+    /** @var array Translation strings */
+    private $translations = array();
     
     public function __construct() {
         $module_path = SAW_VISITORS_PLUGIN_DIR . 'includes/modules/training-languages/';
@@ -28,6 +31,37 @@ class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller
         if (file_exists($module_path . 'class-auto-setup.php')) {
             require_once $module_path . 'class-auto-setup.php';
         }
+        
+        // Initialize translations
+        $this->init_translations();
+        
+        // Enqueue assets with high priority
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'), 999);
+    }
+    
+    /**
+     * Initialize translations
+     */
+    private function init_translations() {
+        $lang = 'cs';
+        if (class_exists('SAW_Component_Language_Switcher')) {
+            $lang = SAW_Component_Language_Switcher::get_user_language();
+        }
+        
+        $this->translations = function_exists('saw_get_translations') 
+            ? saw_get_translations($lang, 'admin', 'training_languages') 
+            : array();
+    }
+    
+    /**
+     * Get translation
+     * 
+     * @param string $key Translation key
+     * @param string $fallback Fallback text
+     * @return string
+     */
+    private function tr($key, $fallback = null) {
+        return $this->translations[$key] ?? $fallback ?? $key;
     }
     
     /**
@@ -51,7 +85,80 @@ class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller
     }
     
     /**
-     * Prepare form data from POST - FIXED TYPE CASTING
+     * Get display name for detail header
+     * 
+     * @param array $item Item data
+     * @return string Display name
+     */
+    public function get_display_name($item) {
+        return $item['language_name'] ?? $this->tr('singular', 'Jazyk školení');
+    }
+    
+    /**
+     * Get header meta for detail sidebar (blue header)
+     * 
+     * Shows: flag emoji, language code, branches count
+     * NO ID displayed!
+     * 
+     * @param array $item Item data
+     * @return string HTML for header meta
+     */
+    public function get_detail_header_meta($item) {
+        if (empty($item)) {
+            return '';
+        }
+        
+        $meta = array();
+        
+        // Flag emoji (large)
+        if (!empty($item['flag_emoji'])) {
+            $meta[] = '<span class="saw-header-flag">' . esc_html($item['flag_emoji']) . '</span>';
+        }
+        
+        // Language code
+        if (!empty($item['language_code'])) {
+            $meta[] = '<span class="saw-badge-transparent saw-badge-code">' . esc_html(strtoupper($item['language_code'])) . '</span>';
+        }
+        
+        // Branches count
+        $branches_count = 0;
+        if (!empty($item['active_branches'])) {
+            $branches_count = count($item['active_branches']);
+        }
+        $meta[] = '<span class="saw-badge-transparent">' . $branches_count . ' ' . esc_html($this->tr('header_branches', 'poboček')) . '</span>';
+        
+        // Required badge for Czech
+        if (($item['language_code'] ?? '') === 'cs') {
+            $meta[] = '<span class="saw-badge-transparent saw-badge-info">' . esc_html($this->tr('badge_required', 'Povinný')) . '</span>';
+        }
+        
+        return implode(' ', $meta);
+    }
+    
+    /**
+     * Format detail data
+     * 
+     * @param array $item Item data
+     * @return array Formatted item
+     */
+    protected function format_detail_data($item) {
+        if (empty($item)) {
+            return $item;
+        }
+        
+        // Format dates
+        if (!empty($item['created_at'])) {
+            $item['created_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['created_at']));
+        }
+        if (!empty($item['updated_at'])) {
+            $item['updated_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['updated_at']));
+        }
+        
+        return $item;
+    }
+    
+    /**
+     * Prepare form data from POST
      */
     protected function prepare_form_data($post) {
         $data = [];
@@ -63,17 +170,10 @@ class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller
             }
         }
         
-        // 🔥 DEBUG: Log what arrives from POST
-        SAW_Logger::debug('=== TRAINING LANGUAGES DEBUG ===');
-        SAW_Logger::debug('POST branches raw', ['branches' => $post['branches'] ?? []]);
-        
         if (!empty($post['branches'])) {
             $branches = [];
             foreach ($post['branches'] as $branch_id => $branch_data) {
-                // 🔥 CRITICAL FIX: Type casting - HTML sends string "1", not integer
                 $is_active = intval($branch_data['active'] ?? 0);
-                
-                SAW_Logger::debug("Branch #{$branch_id}: active={$is_active}, is_default=" . intval($branch_data['is_default'] ?? 0));
                 
                 if ($is_active === 1) {
                     $branches[intval($branch_id)] = [
@@ -84,13 +184,9 @@ class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller
                 }
             }
             $data['branches'] = $branches;
-            SAW_Logger::debug('Processed branches count: ' . count($branches));
         } else {
             $data['branches'] = [];
-            SAW_Logger::debug('NO branches in POST data!');
         }
-        
-        SAW_Logger::debug('=== END DEBUG ===');
         
         return $data;
     }
@@ -108,7 +204,8 @@ class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller
     /**
      * Enqueue assets
      */
-    protected function enqueue_assets() {
+    public function enqueue_assets() {
+        wp_enqueue_style('dashicons');
         SAW_Asset_Loader::enqueue_module('training-languages');
     }
 }
