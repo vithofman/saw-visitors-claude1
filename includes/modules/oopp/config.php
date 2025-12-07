@@ -6,21 +6,40 @@
  * OOPP jsou globální pro zákazníka (customer_id), volitelně omezené na pobočky.
  *
  * @package SAW_Visitors
- * @version 1.2.0 - FIXED: Tabs configuration matching companies module
+ * @version 2.0.0 - ADDED: Translation support
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+// ============================================
+// TRANSLATIONS SETUP
+// ============================================
+$lang = 'cs';
+if (class_exists('SAW_Component_Language_Switcher')) {
+    $lang = SAW_Component_Language_Switcher::get_user_language();
+}
+
+$t = function_exists('saw_get_translations') 
+    ? saw_get_translations($lang, 'admin', 'oopp') 
+    : array();
+
+$tr = function($key, $fallback = null) use ($t) {
+    return $t[$key] ?? $fallback ?? $key;
+};
+
+// ============================================
+// CONFIGURATION
+// ============================================
 return array(
     // ============================================
     // ENTITY DEFINITION
     // ============================================
     'entity' => 'oopp',
     'table' => 'saw_oopp',
-    'singular' => 'OOPP',
-    'plural' => 'Osobní ochranné pracovní prostředky',
+    'singular' => $tr('singular', 'OOPP'),
+    'plural' => $tr('plural', 'Osobní ochranné pracovní prostředky'),
     'route' => 'oopp',
     'icon' => '🦺',
     'edit_url' => 'oopp/{id}/edit',
@@ -41,7 +60,7 @@ return array(
     ),
     
     // ============================================
-    // TABS CONFIGURATION - MATCHING COMPANIES FORMAT
+    // TABS CONFIGURATION
     // ============================================
     'tabs' => array(
         'enabled' => true,
@@ -49,19 +68,19 @@ return array(
         'default_tab' => 'all',
         'tabs' => array(
             'all' => array(
-                'label' => 'Všechny',
+                'label' => $tr('tab_all', 'Všechny'),
                 'icon' => '📋',
                 'filter_value' => null,
                 'count_query' => true,
             ),
             'active' => array(
-                'label' => 'Aktivní',
+                'label' => $tr('tab_active', 'Aktivní'),
                 'icon' => '✅',
                 'filter_value' => 1,
                 'count_query' => true,
             ),
             'inactive' => array(
-                'label' => 'Neaktivní',
+                'label' => $tr('tab_inactive', 'Neaktivní'),
                 'icon' => '❌',
                 'filter_value' => 0,
                 'count_query' => true,
@@ -75,30 +94,30 @@ return array(
     'fields' => array(
         'customer_id' => array(
             'type' => 'number',
-            'label' => 'Zákazník ID',
+            'label' => $tr('field_customer_id', 'Zákazník ID'),
             'required' => true,
             'hidden' => true,
             'sanitize' => 'absint',
         ),
         'group_id' => array(
             'type' => 'select',
-            'label' => 'Skupina OOPP',
+            'label' => $tr('field_group', 'Skupina OOPP'),
             'required' => true,
             'sanitize' => 'absint',
             'lookup' => 'oopp_groups',
-            'placeholder' => 'Vyberte skupinu...',
+            'placeholder' => $tr('placeholder_group', 'Vyberte skupinu...'),
         ),
         'name' => array(
             'type' => 'text',
-            'label' => 'Název',
+            'label' => $tr('field_name', 'Název'),
             'required' => true,
             'sanitize' => 'sanitize_text_field',
-            'placeholder' => 'např. Ochranné brýle proti UV záření',
+            'placeholder' => $tr('placeholder_name', 'např. Ochranné brýle proti UV záření'),
             'max_length' => 255,
         ),
         'image_path' => array(
             'type' => 'file',
-            'label' => 'Fotografie',
+            'label' => $tr('field_image', 'Fotografie'),
             'required' => false,
             'sanitize' => 'sanitize_text_field',
             'accept' => 'image/jpeg,image/png,image/gif,image/webp',
@@ -107,62 +126,62 @@ return array(
         ),
         'standards' => array(
             'type' => 'textarea',
-            'label' => 'Související předpisy / normy',
+            'label' => $tr('field_standards', 'Související předpisy / normy'),
             'required' => false,
             'sanitize' => 'sanitize_textarea_field',
-            'placeholder' => 'např. ČSN EN 166, EN 172...',
+            'placeholder' => $tr('placeholder_standards', 'např. ČSN EN 166, EN 172...'),
             'rows' => 3,
         ),
         'risk_description' => array(
             'type' => 'textarea',
-            'label' => 'Popis rizik, proti kterým OOPP chrání',
+            'label' => $tr('field_risks', 'Popis rizik, proti kterým OOPP chrání'),
             'required' => false,
             'sanitize' => 'sanitize_textarea_field',
-            'placeholder' => 'Popište rizika, před kterými tento prostředek chrání...',
+            'placeholder' => $tr('placeholder_risks', 'Popište rizika, před kterými tento prostředek chrání...'),
             'rows' => 4,
         ),
         'protective_properties' => array(
             'type' => 'textarea',
-            'label' => 'Ochranné vlastnosti',
+            'label' => $tr('field_properties', 'Ochranné vlastnosti'),
             'required' => false,
             'sanitize' => 'sanitize_textarea_field',
-            'placeholder' => 'Popište ochranné vlastnosti prostředku...',
+            'placeholder' => $tr('placeholder_properties', 'Popište ochranné vlastnosti prostředku...'),
             'rows' => 4,
         ),
         'usage_instructions' => array(
             'type' => 'textarea',
-            'label' => 'Pokyny pro použití',
+            'label' => $tr('field_usage', 'Pokyny pro použití'),
             'required' => false,
             'sanitize' => 'sanitize_textarea_field',
-            'placeholder' => 'Jak správně používat tento prostředek...',
+            'placeholder' => $tr('placeholder_usage', 'Jak správně používat tento prostředek...'),
             'rows' => 4,
         ),
         'maintenance_instructions' => array(
             'type' => 'textarea',
-            'label' => 'Pokyny pro údržbu',
+            'label' => $tr('field_maintenance', 'Pokyny pro údržbu'),
             'required' => false,
             'sanitize' => 'sanitize_textarea_field',
-            'placeholder' => 'Jak správně udržovat a čistit prostředek...',
+            'placeholder' => $tr('placeholder_maintenance', 'Jak správně udržovat a čistit prostředek...'),
             'rows' => 3,
         ),
         'storage_instructions' => array(
             'type' => 'textarea',
-            'label' => 'Pokyny pro skladování',
+            'label' => $tr('field_storage', 'Pokyny pro skladování'),
             'required' => false,
             'sanitize' => 'sanitize_textarea_field',
-            'placeholder' => 'Jak správně skladovat prostředek...',
+            'placeholder' => $tr('placeholder_storage', 'Jak správně skladovat prostředek...'),
             'rows' => 3,
         ),
         'is_active' => array(
             'type' => 'checkbox',
-            'label' => 'Aktivní',
+            'label' => $tr('field_active', 'Aktivní'),
             'required' => false,
             'sanitize' => 'absint',
             'default' => 1,
         ),
         'display_order' => array(
             'type' => 'number',
-            'label' => 'Pořadí zobrazení',
+            'label' => $tr('field_order', 'Pořadí zobrazení'),
             'required' => false,
             'sanitize' => 'absint',
             'default' => 0,

@@ -6,12 +6,28 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/OOPP
- * @version     1.4.0 - FIXED: image_path vs image_url, proper URL generation
+ * @version     2.0.0 - ADDED: Translation support
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
+
+// ============================================
+// TRANSLATIONS SETUP
+// ============================================
+$lang = 'cs';
+if (class_exists('SAW_Component_Language_Switcher')) {
+    $lang = SAW_Component_Language_Switcher::get_user_language();
+}
+
+$t = function_exists('saw_get_translations') 
+    ? saw_get_translations($lang, 'admin', 'oopp') 
+    : array();
+
+$tr = function($key, $fallback = null) use ($t) {
+    return $t[$key] ?? $fallback ?? $key;
+};
 
 // Check if we're in sidebar mode
 $in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'];
@@ -59,7 +75,7 @@ if ($customer_id) {
         $branch_id = $dept['branch_id'] ?: 0;
         if (!isset($departments_by_branch[$branch_id])) {
             $departments_by_branch[$branch_id] = array(
-                'branch_name' => $dept['branch_name'] ?: 'Bez pobočky',
+                'branch_name' => $dept['branch_name'] ?: $tr('form_no_branch', 'Bez pobočky'),
                 'departments' => array()
             );
         }
@@ -95,6 +111,18 @@ $has_image = !empty($current_image_url);
 $form_action = $is_edit 
     ? home_url('/admin/oopp/' . $item['id'] . '/edit')
     : home_url('/admin/oopp/create');
+
+// ============================================
+// TRANSLATIONS FOR JS (will be passed via data attributes)
+// ============================================
+$js_translations = array(
+    'file_too_large' => $tr('js_file_too_large', 'Soubor je příliš velký. Maximální velikost je {size}MB.'),
+    'invalid_file_type' => $tr('js_invalid_file_type', 'Neplatný typ souboru!'),
+    'file_size_label' => $tr('js_file_size', 'Velikost'),
+    'file_type_label' => $tr('js_file_type', 'Typ'),
+    'no_photo' => $tr('form_no_photo', 'Žádná fotografie'),
+    'remove' => $tr('form_remove', 'Odstranit'),
+);
 ?>
 
 <?php if (!$in_sidebar): ?>
@@ -102,18 +130,20 @@ $form_action = $is_edit
 <div class="saw-page-header">
     <div class="saw-page-header-content">
         <h1 class="saw-page-title">
-            <?php echo $is_edit ? 'Upravit OOPP' : 'Nový OOPP'; ?>
+            <?php echo $is_edit 
+                ? esc_html($tr('form_title_edit', 'Upravit OOPP')) 
+                : esc_html($tr('form_title_create', 'Nový OOPP')); ?>
         </h1>
         <a href="<?php echo esc_url(home_url('/admin/oopp/')); ?>" class="saw-back-button">
             <span class="dashicons dashicons-arrow-left-alt2"></span>
-            Zpět na seznam
+            <?php echo esc_html($tr('form_back_to_list', 'Zpět na seznam')); ?>
         </a>
     </div>
 </div>
 <?php endif; ?>
 
 <!-- Form Container -->
-<div class="saw-form-container saw-module-oopp">
+<div class="saw-form-container saw-module-oopp" data-translations="<?php echo esc_attr(json_encode($js_translations)); ?>">
     <form method="POST" action="<?php echo esc_url($form_action); ?>" enctype="multipart/form-data" class="saw-oopp-form">
         <?php 
         $nonce_action = $is_edit ? 'saw_edit_oopp' : 'saw_create_oopp';
@@ -133,7 +163,7 @@ $form_action = $is_edit
         <details class="saw-form-section" open>
             <summary>
                 <span class="dashicons dashicons-admin-generic"></span>
-                <strong>Základní informace</strong>
+                <strong><?php echo esc_html($tr('section_basic', 'Základní informace')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
                 
@@ -141,7 +171,7 @@ $form_action = $is_edit
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
                         <label for="group_id" class="saw-label saw-required">
-                            Skupina OOPP
+                            <?php echo esc_html($tr('field_group', 'Skupina OOPP')); ?>
                         </label>
                         <select 
                             name="group_id" 
@@ -149,7 +179,7 @@ $form_action = $is_edit
                             class="saw-input" 
                             required
                         >
-                            <option value="">-- Vyberte skupinu --</option>
+                            <option value=""><?php echo esc_html($tr('form_select_group', '-- Vyberte skupinu --')); ?></option>
                             <?php foreach ($oopp_groups as $group): ?>
                                 <option 
                                     value="<?php echo esc_attr($group['id']); ?>"
@@ -159,7 +189,7 @@ $form_action = $is_edit
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                        <p class="saw-help-text">Vyberte skupinu, do které OOPP patří</p>
+                        <p class="saw-help-text"><?php echo esc_html($tr('form_group_help', 'Vyberte skupinu, do které OOPP patří')); ?></p>
                     </div>
                 </div>
                 
@@ -167,7 +197,7 @@ $form_action = $is_edit
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
                         <label for="name" class="saw-label saw-required">
-                            Název
+                            <?php echo esc_html($tr('field_name', 'Název')); ?>
                         </label>
                         <input 
                             type="text" 
@@ -175,7 +205,7 @@ $form_action = $is_edit
                             id="name" 
                             class="saw-input" 
                             value="<?php echo esc_attr($item['name'] ?? ''); ?>"
-                            placeholder="např. Ochranné brýle proti UV záření"
+                            placeholder="<?php echo esc_attr($tr('placeholder_name', 'např. Ochranné brýle proti UV záření')); ?>"
                             required
                         >
                     </div>
@@ -186,7 +216,7 @@ $form_action = $is_edit
                 <!-- ================================================ -->
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
-                        <label class="saw-label">Fotografie</label>
+                        <label class="saw-label"><?php echo esc_html($tr('field_image', 'Fotografie')); ?></label>
                         
                         <div class="saw-file-upload-component" data-context="oopp">
                             <div class="saw-file-upload-area">
@@ -195,8 +225,8 @@ $form_action = $is_edit
                                 <div class="saw-file-preview-section">
                                     <div class="saw-file-preview-box<?php echo $has_image ? ' has-file' : ''; ?>">
                                         <?php if ($has_image): ?>
-                                            <img src="<?php echo esc_url($current_image_url); ?>" alt="Aktuální fotografie" class="saw-preview-image">
-                                            <button type="button" class="saw-file-remove-overlay" title="Odstranit fotografii">
+                                            <img src="<?php echo esc_url($current_image_url); ?>" alt="<?php echo esc_attr($tr('form_current_photo', 'Aktuální fotografie')); ?>" class="saw-preview-image">
+                                            <button type="button" class="saw-file-remove-overlay" title="<?php echo esc_attr($tr('form_remove_photo', 'Odstranit fotografii')); ?>">
                                                 <span class="dashicons dashicons-no-alt"></span>
                                             </button>
                                         <?php else: ?>
@@ -204,12 +234,12 @@ $form_action = $is_edit
                                                 <div class="saw-file-icon-wrapper">
                                                     <span class="dashicons dashicons-format-image"></span>
                                                 </div>
-                                                <p class="saw-file-empty-text">Žádná fotografie</p>
+                                                <p class="saw-file-empty-text"><?php echo esc_html($tr('form_no_photo', 'Žádná fotografie')); ?></p>
                                             </div>
                                         <?php endif; ?>
                                     </div>
                                     <?php if ($has_image): ?>
-                                        <p class="saw-current-file-label">Současná fotografie</p>
+                                        <p class="saw-current-file-label"><?php echo esc_html($tr('form_current_photo_label', 'Současná fotografie')); ?></p>
                                     <?php endif; ?>
                                 </div>
                                 
@@ -225,7 +255,7 @@ $form_action = $is_edit
                                     >
                                     <label for="image" class="saw-file-upload-trigger">
                                         <span class="dashicons dashicons-upload"></span>
-                                        Nahrát fotografii
+                                        <?php echo esc_html($tr('form_upload_photo', 'Nahrát fotografii')); ?>
                                     </label>
                                     
                                     <!-- Selected File Info (hidden by default) -->
@@ -237,13 +267,13 @@ $form_action = $is_edit
                                             <span class="saw-file-selected-name"></span>
                                             <span class="saw-file-selected-meta"></span>
                                         </div>
-                                        <button type="button" class="saw-file-clear-btn" title="Zrušit výběr">
+                                        <button type="button" class="saw-file-clear-btn" title="<?php echo esc_attr($tr('form_cancel_selection', 'Zrušit výběr')); ?>">
                                             <span class="dashicons dashicons-dismiss"></span>
                                         </button>
                                     </div>
                                     
                                     <p class="saw-help-text">
-                                        Nahrajte obrázek ve formátu JPG, PNG, GIF nebo WebP (max 2MB)
+                                        <?php echo esc_html($tr('form_image_help', 'Nahrajte obrázek ve formátu JPG, PNG, GIF nebo WebP (max 2MB)')); ?>
                                     </p>
                                 </div>
                                 
@@ -270,7 +300,7 @@ $form_action = $is_edit
         <details class="saw-form-section">
             <summary>
                 <span class="dashicons dashicons-location"></span>
-                <strong>Platnost</strong>
+                <strong><?php echo esc_html($tr('section_validity', 'Platnost')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
                 
@@ -278,26 +308,26 @@ $form_action = $is_edit
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
                         <label class="saw-label">
-                            Pobočky
+                            <?php echo esc_html($tr('label_branches', 'Pobočky')); ?>
                             <span id="branch-counter" class="saw-counter">
                                 <span id="branch-selected"><?php echo count($selected_branch_ids); ?></span> / <span id="branch-total"><?php echo count($branches); ?></span>
                             </span>
                         </label>
                         <p class="saw-help-text" style="margin-bottom: 12px;">
-                            Vyberte pobočky, pro které platí tento OOPP. Pokud nic nevyberete, platí pro všechny pobočky.
+                            <?php echo esc_html($tr('form_branches_help', 'Vyberte pobočky, pro které platí tento OOPP. Pokud nic nevyberete, platí pro všechny pobočky.')); ?>
                         </p>
                         
                         <div class="saw-selection-controls">
-                            <input type="text" id="branch-search" class="saw-input" placeholder="🔍 Hledat pobočku...">
+                            <input type="text" id="branch-search" class="saw-input" placeholder="<?php echo esc_attr($tr('form_search_branch', '🔍 Hledat pobočku...')); ?>">
                             <label class="saw-select-all-label">
                                 <input type="checkbox" id="select-all-branches">
-                                <span>Vybrat vše</span>
+                                <span><?php echo esc_html($tr('form_select_all', 'Vybrat vše')); ?></span>
                             </label>
                         </div>
                         
                         <div id="branches-list" class="saw-selection-list">
                             <?php if (empty($branches)): ?>
-                                <p class="saw-empty-message">Žádné pobočky k dispozici</p>
+                                <p class="saw-empty-message"><?php echo esc_html($tr('form_no_branches', 'Žádné pobočky k dispozici')); ?></p>
                             <?php else: ?>
                                 <?php foreach ($branches as $branch): 
                                     $is_checked = in_array($branch['id'], $selected_branch_ids);
@@ -322,33 +352,33 @@ $form_action = $is_edit
                 <div class="saw-form-row" style="margin-top: 24px;">
                     <div class="saw-form-group saw-col-12">
                         <label class="saw-label">
-                            Oddělení
+                            <?php echo esc_html($tr('label_departments', 'Oddělení')); ?>
                             <span id="department-counter" class="saw-counter">
                                 <span id="department-selected"><?php echo count($selected_department_ids); ?></span> / <span id="department-total"><?php echo $total_departments; ?></span>
                             </span>
                         </label>
                         <p class="saw-help-text" style="margin-bottom: 12px;">
-                            Zobrazují se oddělení pro vybrané pobočky. Pokud není vybraná žádná pobočka, zobrazují se všechna oddělení.
+                            <?php echo esc_html($tr('form_departments_help', 'Zobrazují se oddělení pro vybrané pobočky. Pokud není vybraná žádná pobočka, zobrazují se všechna oddělení.')); ?>
                         </p>
                         
                         <div class="saw-selection-controls">
-                            <input type="text" id="department-search" class="saw-input" placeholder="🔍 Hledat oddělení...">
+                            <input type="text" id="department-search" class="saw-input" placeholder="<?php echo esc_attr($tr('form_search_department', '🔍 Hledat oddělení...')); ?>">
                             <label class="saw-select-all-label">
                                 <input type="checkbox" id="select-all-departments">
-                                <span>Vybrat vše</span>
+                                <span><?php echo esc_html($tr('form_select_all', 'Vybrat vše')); ?></span>
                             </label>
                         </div>
                         
                         <div id="departments-list" class="saw-selection-list saw-grouped-list">
                             <?php if (empty($departments_by_branch)): ?>
-                                <p class="saw-empty-message">Žádná oddělení k dispozici</p>
+                                <p class="saw-empty-message"><?php echo esc_html($tr('form_no_departments', 'Žádná oddělení k dispozici')); ?></p>
                             <?php else: ?>
                                 <?php foreach ($departments_by_branch as $branch_id => $group): ?>
                                     <div class="saw-selection-group" data-branch-id="<?php echo esc_attr($branch_id); ?>">
                                         <div class="saw-group-header">
                                             <span class="saw-group-icon">🏢</span>
                                             <span class="saw-group-name"><?php echo esc_html($group['branch_name']); ?></span>
-                                            <span class="saw-group-count"><?php echo count($group['departments']); ?> oddělení</span>
+                                            <span class="saw-group-count"><?php echo count($group['departments']); ?> <?php echo esc_html($tr('form_departments_count', 'oddělení')); ?></span>
                                         </div>
                                         <?php foreach ($group['departments'] as $dept): 
                                             $is_checked = in_array($dept['id'], $selected_department_ids);
@@ -381,7 +411,7 @@ $form_action = $is_edit
         <details class="saw-form-section">
             <summary>
                 <span class="dashicons dashicons-admin-settings"></span>
-                <strong>Technické informace</strong>
+                <strong><?php echo esc_html($tr('section_technical', 'Technické informace')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
                 
@@ -389,14 +419,14 @@ $form_action = $is_edit
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
                         <label for="standards" class="saw-label">
-                            Související předpisy / normy
+                            <?php echo esc_html($tr('field_standards', 'Související předpisy / normy')); ?>
                         </label>
                         <textarea 
                             name="standards" 
                             id="standards" 
                             class="saw-input saw-textarea" 
                             rows="3"
-                            placeholder="např. ČSN EN 166, EN 172..."
+                            placeholder="<?php echo esc_attr($tr('placeholder_standards', 'např. ČSN EN 166, EN 172...')); ?>"
                         ><?php echo esc_textarea($item['standards'] ?? ''); ?></textarea>
                     </div>
                 </div>
@@ -405,14 +435,14 @@ $form_action = $is_edit
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
                         <label for="risk_description" class="saw-label">
-                            Popis rizik, proti kterým OOPP chrání
+                            <?php echo esc_html($tr('field_risks', 'Popis rizik, proti kterým OOPP chrání')); ?>
                         </label>
                         <textarea 
                             name="risk_description" 
                             id="risk_description" 
                             class="saw-input saw-textarea" 
                             rows="4"
-                            placeholder="Popište rizika, před kterými tento prostředek chrání..."
+                            placeholder="<?php echo esc_attr($tr('placeholder_risks', 'Popište rizika, před kterými tento prostředek chrání...')); ?>"
                         ><?php echo esc_textarea($item['risk_description'] ?? ''); ?></textarea>
                     </div>
                 </div>
@@ -421,14 +451,14 @@ $form_action = $is_edit
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
                         <label for="protective_properties" class="saw-label">
-                            Ochranné vlastnosti
+                            <?php echo esc_html($tr('field_properties', 'Ochranné vlastnosti')); ?>
                         </label>
                         <textarea 
                             name="protective_properties" 
                             id="protective_properties" 
                             class="saw-input saw-textarea" 
                             rows="4"
-                            placeholder="Popište ochranné vlastnosti prostředku..."
+                            placeholder="<?php echo esc_attr($tr('placeholder_properties', 'Popište ochranné vlastnosti prostředku...')); ?>"
                         ><?php echo esc_textarea($item['protective_properties'] ?? ''); ?></textarea>
                     </div>
                 </div>
@@ -442,7 +472,7 @@ $form_action = $is_edit
         <details class="saw-form-section">
             <summary>
                 <span class="dashicons dashicons-info"></span>
-                <strong>Pokyny</strong>
+                <strong><?php echo esc_html($tr('section_instructions', 'Pokyny')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
                 
@@ -450,14 +480,14 @@ $form_action = $is_edit
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
                         <label for="usage_instructions" class="saw-label">
-                            Pokyny pro použití
+                            <?php echo esc_html($tr('field_usage', 'Pokyny pro použití')); ?>
                         </label>
                         <textarea 
                             name="usage_instructions" 
                             id="usage_instructions" 
                             class="saw-input saw-textarea" 
                             rows="4"
-                            placeholder="Jak správně používat tento prostředek..."
+                            placeholder="<?php echo esc_attr($tr('placeholder_usage', 'Jak správně používat tento prostředek...')); ?>"
                         ><?php echo esc_textarea($item['usage_instructions'] ?? ''); ?></textarea>
                     </div>
                 </div>
@@ -466,14 +496,14 @@ $form_action = $is_edit
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
                         <label for="maintenance_instructions" class="saw-label">
-                            Pokyny pro údržbu
+                            <?php echo esc_html($tr('field_maintenance', 'Pokyny pro údržbu')); ?>
                         </label>
                         <textarea 
                             name="maintenance_instructions" 
                             id="maintenance_instructions" 
                             class="saw-input saw-textarea" 
                             rows="3"
-                            placeholder="Jak správně udržovat a čistit prostředek..."
+                            placeholder="<?php echo esc_attr($tr('placeholder_maintenance', 'Jak správně udržovat a čistit prostředek...')); ?>"
                         ><?php echo esc_textarea($item['maintenance_instructions'] ?? ''); ?></textarea>
                     </div>
                 </div>
@@ -482,14 +512,14 @@ $form_action = $is_edit
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
                         <label for="storage_instructions" class="saw-label">
-                            Pokyny pro skladování
+                            <?php echo esc_html($tr('field_storage', 'Pokyny pro skladování')); ?>
                         </label>
                         <textarea 
                             name="storage_instructions" 
                             id="storage_instructions" 
                             class="saw-input saw-textarea" 
                             rows="3"
-                            placeholder="Jak správně skladovat prostředek..."
+                            placeholder="<?php echo esc_attr($tr('placeholder_storage', 'Jak správně skladovat prostředek...')); ?>"
                         ><?php echo esc_textarea($item['storage_instructions'] ?? ''); ?></textarea>
                     </div>
                 </div>
@@ -503,7 +533,7 @@ $form_action = $is_edit
         <details class="saw-form-section">
             <summary>
                 <span class="dashicons dashicons-admin-settings"></span>
-                <strong>Nastavení</strong>
+                <strong><?php echo esc_html($tr('section_settings', 'Nastavení')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
                 
@@ -517,9 +547,9 @@ $form_action = $is_edit
                                 value="1"
                                 <?php checked(empty($item) || !empty($item['is_active'])); ?>
                             >
-                            <span>Aktivní</span>
+                            <span><?php echo esc_html($tr('field_active', 'Aktivní')); ?></span>
                         </label>
-                        <p class="saw-help-text">Neaktivní OOPP se nezobrazí v seznamu pro výběr</p>
+                        <p class="saw-help-text"><?php echo esc_html($tr('form_active_help', 'Neaktivní OOPP se nezobrazí v seznamu pro výběr')); ?></p>
                     </div>
                 </div>
                 
@@ -527,7 +557,7 @@ $form_action = $is_edit
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-6">
                         <label for="display_order" class="saw-label">
-                            Pořadí zobrazení
+                            <?php echo esc_html($tr('field_order', 'Pořadí zobrazení')); ?>
                         </label>
                         <input 
                             type="number" 
@@ -537,7 +567,7 @@ $form_action = $is_edit
                             value="<?php echo esc_attr($item['display_order'] ?? 0); ?>"
                             min="0"
                         >
-                        <p class="saw-help-text">Nižší číslo = výše v seznamu</p>
+                        <p class="saw-help-text"><?php echo esc_html($tr('form_order_help', 'Nižší číslo = výše v seznamu')); ?></p>
                     </div>
                 </div>
                 
@@ -548,10 +578,12 @@ $form_action = $is_edit
         <div class="saw-form-actions">
             <button type="submit" class="saw-btn saw-btn-primary">
                 <span class="dashicons dashicons-saved"></span>
-                <?php echo $is_edit ? 'Uložit změny' : 'Vytvořit OOPP'; ?>
+                <?php echo $is_edit 
+                    ? esc_html($tr('btn_save_changes', 'Uložit změny')) 
+                    : esc_html($tr('btn_create', 'Vytvořit OOPP')); ?>
             </button>
             <a href="<?php echo esc_url(home_url('/admin/oopp/')); ?>" class="saw-btn saw-btn-secondary">
-                Zrušit
+                <?php echo esc_html($tr('btn_cancel', 'Zrušit')); ?>
             </a>
         </div>
     </form>
@@ -991,6 +1023,21 @@ $form_action = $is_edit
 jQuery(document).ready(function($) {
     
     // ========================================
+    // GET TRANSLATIONS FROM DATA ATTRIBUTE
+    // ========================================
+    var $container = $('.saw-form-container');
+    var translations = {};
+    try {
+        translations = JSON.parse($container.attr('data-translations') || '{}');
+    } catch(e) {
+        console.warn('Failed to parse translations');
+    }
+    
+    function tr(key, fallback) {
+        return translations[key] || fallback || key;
+    }
+    
+    // ========================================
     // FILE UPLOAD COMPONENT
     // ========================================
     
@@ -1014,7 +1061,8 @@ jQuery(document).ready(function($) {
         // Validate size
         if (file.size > maxSize) {
             var maxMB = (maxSize / 1024 / 1024).toFixed(1);
-            showError('Soubor je příliš velký. Maximální velikost je ' + maxMB + 'MB.');
+            var errorMsg = tr('file_too_large', 'Soubor je příliš velký. Maximální velikost je {size}MB.');
+            showError(errorMsg.replace('{size}', maxMB));
             $input.val('');
             return;
         }
@@ -1024,7 +1072,7 @@ jQuery(document).ready(function($) {
             return file.type.match(type.replace('*', '.*'));
         });
         if (allowedTypes.length > 0 && !isValidType) {
-            showError('Neplatný typ souboru!');
+            showError(tr('invalid_file_type', 'Neplatný typ souboru!'));
             $input.val('');
             return;
         }
@@ -1093,7 +1141,7 @@ jQuery(document).ready(function($) {
     function showPreview(src) {
         $preview.html(
             '<img src="' + src + '" alt="Preview" class="saw-preview-image">' +
-            '<button type="button" class="saw-file-remove-overlay" title="Odstranit">' +
+            '<button type="button" class="saw-file-remove-overlay" title="' + tr('remove', 'Odstranit') + '">' +
             '<span class="dashicons dashicons-no-alt"></span>' +
             '</button>'
         );
@@ -1105,7 +1153,10 @@ jQuery(document).ready(function($) {
         var ext = file.name.split('.').pop().toUpperCase();
         
         $selectedInfo.find('.saw-file-selected-name').text(file.name);
-        $selectedInfo.find('.saw-file-selected-meta').text('Velikost: ' + size + ' • Typ: ' + ext);
+        $selectedInfo.find('.saw-file-selected-meta').text(
+            tr('file_size_label', 'Velikost') + ': ' + size + ' • ' + 
+            tr('file_type_label', 'Typ') + ': ' + ext
+        );
         $selectedInfo.removeClass('hidden');
     }
     
@@ -1117,7 +1168,7 @@ jQuery(document).ready(function($) {
             '<div class="saw-file-icon-wrapper">' +
             '<span class="dashicons dashicons-format-image"></span>' +
             '</div>' +
-            '<p class="saw-file-empty-text">Žádná fotografie</p>' +
+            '<p class="saw-file-empty-text">' + tr('no_photo', 'Žádná fotografie') + '</p>' +
             '</div>'
         );
         $preview.removeClass('has-file');

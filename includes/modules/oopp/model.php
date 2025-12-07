@@ -4,7 +4,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/OOPP
- * @version     1.0.0
+ * @version     2.0.0 - ADDED: Translation support
  */
 
 if (!defined('ABSPATH')) {
@@ -17,12 +17,34 @@ if (!class_exists('SAW_Base_Model')) {
 
 class SAW_Module_OOPP_Model extends SAW_Base_Model 
 {
+    /**
+     * Translation function
+     * @var callable
+     */
+    private $tr;
+    
     public function __construct($config) {
         global $wpdb;
         
         $this->table = $wpdb->prefix . $config['table'];
         $this->config = $config;
         $this->cache_ttl = $config['cache']['ttl'] ?? 600;
+        
+        // ============================================
+        // TRANSLATIONS SETUP
+        // ============================================
+        $lang = 'cs';
+        if (class_exists('SAW_Component_Language_Switcher')) {
+            $lang = SAW_Component_Language_Switcher::get_user_language();
+        }
+        
+        $t = function_exists('saw_get_translations') 
+            ? saw_get_translations($lang, 'admin', 'oopp') 
+            : array();
+        
+        $this->tr = function($key, $fallback = null) use ($t) {
+            return $t[$key] ?? $fallback ?? $key;
+        };
     }
     
     /**
@@ -30,13 +52,14 @@ class SAW_Module_OOPP_Model extends SAW_Base_Model
      */
     public function validate($data, $id = 0) {
         $errors = array();
+        $tr = $this->tr;
         
         if (empty($data['name'])) {
-            $errors['name'] = 'Název je povinný';
+            $errors['name'] = $tr('validation_name_required', 'Název je povinný');
         }
         
         if (empty($data['group_id'])) {
-            $errors['group_id'] = 'Skupina OOPP je povinná';
+            $errors['group_id'] = $tr('validation_group_required', 'Skupina OOPP je povinná');
         } else {
             // Ověř že skupina existuje
             global $wpdb;
@@ -45,7 +68,7 @@ class SAW_Module_OOPP_Model extends SAW_Base_Model
                 $data['group_id']
             ));
             if (!$group_exists) {
-                $errors['group_id'] = 'Neplatná skupina OOPP';
+                $errors['group_id'] = $tr('validation_group_invalid', 'Neplatná skupina OOPP');
             }
         }
         
@@ -380,4 +403,3 @@ class SAW_Module_OOPP_Model extends SAW_Base_Model
         return $result;
     }
 }
-

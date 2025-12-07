@@ -3,18 +3,34 @@
  * OOPP Module - List Template
  * 
  * @package SAW_Visitors
- * @version 1.5.0 - FIXED: Inline styles for guaranteed visibility
+ * @version 2.0.0 - ADDED: Translation support
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+// ============================================
+// TRANSLATIONS SETUP
+// ============================================
+$lang = 'cs';
+if (class_exists('SAW_Component_Language_Switcher')) {
+    $lang = SAW_Component_Language_Switcher::get_user_language();
+}
+
+$t = function_exists('saw_get_translations') 
+    ? saw_get_translations($lang, 'admin', 'oopp') 
+    : array();
+
+$tr = function($key, $fallback = null) use ($t) {
+    return $t[$key] ?? $fallback ?? $key;
+};
+
 global $wpdb;
 $customer_id = class_exists('SAW_Context') ? SAW_Context::get_customer_id() : 0;
 
 // Načti OOPP skupiny pro filtr
-$oopp_groups_options = array('' => 'Všechny skupiny');
+$oopp_groups_options = array('' => $tr('filter_all_groups', 'Všechny skupiny'));
 $groups = $wpdb->get_results(
     "SELECT id, code, name FROM {$wpdb->prefix}saw_oopp_groups ORDER BY display_order ASC",
     ARRAY_A
@@ -26,7 +42,7 @@ if ($groups) {
 }
 
 // Načti pobočky pro filtr
-$branches_options = array('' => 'Všechny pobočky');
+$branches_options = array('' => $tr('filter_all_branches', 'Všechny pobočky'));
 if ($customer_id) {
     $branches = $wpdb->get_results($wpdb->prepare(
         "SELECT id, name FROM {$wpdb->prefix}saw_branches WHERE customer_id = %d AND is_active = 1 ORDER BY name ASC",
@@ -40,7 +56,7 @@ if ($customer_id) {
 }
 
 // Načti oddělení pro filtr
-$departments_options = array('' => 'Všechna oddělení');
+$departments_options = array('' => $tr('filter_all_departments', 'Všechna oddělení'));
 if ($customer_id) {
     $departments = $wpdb->get_results($wpdb->prepare(
         "SELECT d.id, d.name, b.name as branch_name 
@@ -65,7 +81,7 @@ if ($customer_id) {
 $table_config = $config;
 $base_url = home_url('/admin/' . ($config['route'] ?? 'oopp'));
 
-$table_config['title'] = $config['plural'] ?? 'Osobní ochranné pracovní prostředky';
+$table_config['title'] = $config['plural'] ?? $tr('plural', 'Osobní ochranné pracovní prostředky');
 $table_config['create_url'] = $base_url . '/create';
 $table_config['detail_url'] = $base_url . '/{id}/';
 $table_config['edit_url'] = $base_url . '/{id}/edit';
@@ -73,6 +89,23 @@ $table_config['edit_url'] = $base_url . '/{id}/edit';
 // ============================================
 // COLUMN DEFINITIONS - INLINE STYLES
 // ============================================
+
+// Store translations for use in callbacks
+$list_translations = array(
+    'col_group' => $tr('col_group', 'Skupina'),
+    'col_name' => $tr('col_name', 'Název'),
+    'col_standards' => $tr('col_standards', 'Normy'),
+    'col_scope' => $tr('col_scope', 'Platnost'),
+    'col_status' => $tr('col_status', 'Stav'),
+    'branch_singular' => $tr('list_branch_singular', 'pobočka'),
+    'branch_plural' => $tr('list_branch_plural', 'poboček'),
+    'all_branches' => $tr('all_branches', 'Všechny pobočky'),
+    'departments_count' => $tr('list_departments_count', 'oddělení'),
+    'all_departments' => $tr('all_departments', 'Všechna oddělení'),
+    'status_active' => $tr('status_active', 'Aktivní'),
+    'status_inactive' => $tr('status_inactive', 'Neaktivní'),
+);
+
 $table_config['columns'] = array(
     
     // ============================================
@@ -105,7 +138,7 @@ $table_config['columns'] = array(
     // SKUPINA OOPP - Čitelné, tmavé písmo
     // ============================================
     'group_display' => array(
-        'label' => 'Skupina',
+        'label' => $list_translations['col_group'],
         'type' => 'custom',
         'width' => '300px',
         'sortable' => true,
@@ -149,7 +182,7 @@ $table_config['columns'] = array(
     // NÁZEV - Tmavé, tučné písmo
     // ============================================
     'name' => array(
-        'label' => 'Název',
+        'label' => $list_translations['col_name'],
         'type' => 'custom',
         'sortable' => true,
         'callback' => function($value, $item) {
@@ -168,7 +201,7 @@ $table_config['columns'] = array(
     // NORMY - Chip styl, čitelné
     // ============================================
     'standards' => array(
-        'label' => 'Normy',
+        'label' => $list_translations['col_standards'],
         'type' => 'custom',
         'width' => '160px',
         'callback' => function($value, $item) {
@@ -206,10 +239,10 @@ $table_config['columns'] = array(
     // PLATNOST - Badges s ikonami
     // ============================================
     'scope' => array(
-        'label' => 'Platnost',
+        'label' => $list_translations['col_scope'],
         'type' => 'custom',
         'width' => '180px',
-        'callback' => function($value, $item) {
+        'callback' => function($value, $item) use ($list_translations) {
             $branch_count = intval($item['branch_count'] ?? 0);
             $dept_count = intval($item['department_count'] ?? 0);
             ?>
@@ -227,7 +260,7 @@ $table_config['columns'] = array(
                         border-radius: 6px;
                         border: 1px solid #93c5fd;
                     ">
-                        🏢 <?php echo $branch_count; ?> <?php echo $branch_count === 1 ? 'pobočka' : 'poboček'; ?>
+                        🏢 <?php echo $branch_count; ?> <?php echo $branch_count === 1 ? $list_translations['branch_singular'] : $list_translations['branch_plural']; ?>
                     </span>
                 <?php else: ?>
                     <span style="
@@ -242,7 +275,7 @@ $table_config['columns'] = array(
                         border-radius: 6px;
                         border: 1px solid #86efac;
                     ">
-                        ✓ Všechny pobočky
+                        ✓ <?php echo esc_html($list_translations['all_branches']); ?>
                     </span>
                 <?php endif; ?>
                 
@@ -259,7 +292,7 @@ $table_config['columns'] = array(
                         border-radius: 6px;
                         border: 1px solid #fcd34d;
                     ">
-                        📁 <?php echo $dept_count; ?> oddělení
+                        📁 <?php echo $dept_count; ?> <?php echo esc_html($list_translations['departments_count']); ?>
                     </span>
                 <?php else: ?>
                     <span style="
@@ -274,7 +307,7 @@ $table_config['columns'] = array(
                         border-radius: 6px;
                         border: 1px solid #86efac;
                     ">
-                        ✓ Všechna oddělení
+                        ✓ <?php echo esc_html($list_translations['all_departments']); ?>
                     </span>
                 <?php endif; ?>
             </div>
@@ -286,11 +319,11 @@ $table_config['columns'] = array(
     // STAV - Badge
     // ============================================
     'is_active' => array(
-        'label' => 'Stav',
+        'label' => $list_translations['col_status'],
         'type' => 'custom',
         'width' => '110px',
         'align' => 'center',
-        'callback' => function($value) {
+        'callback' => function($value) use ($list_translations) {
             if (!empty($value)) {
                 ?>
                 <span style="
@@ -306,7 +339,7 @@ $table_config['columns'] = array(
                     text-transform: uppercase;
                     letter-spacing: 0.5px;
                     box-shadow: 0 2px 6px rgba(22, 163, 74, 0.4);
-                ">Aktivní</span>
+                "><?php echo esc_html($list_translations['status_active']); ?></span>
                 <?php
             } else {
                 ?>
@@ -322,7 +355,7 @@ $table_config['columns'] = array(
                     border-radius: 20px;
                     text-transform: uppercase;
                     letter-spacing: 0.5px;
-                ">Neaktivní</span>
+                "><?php echo esc_html($list_translations['status_inactive']); ?></span>
                 <?php
             }
         },
@@ -341,7 +374,7 @@ $table_config['order'] = $order;
 // Search configuration
 $table_config['search'] = array(
     'enabled' => true,
-    'placeholder' => 'Hledat OOPP...',
+    'placeholder' => $tr('search_placeholder', 'Hledat OOPP...'),
     'fields' => array('name', 'standards', 'risk_description'),
     'show_info_banner' => true,
 );
@@ -350,17 +383,17 @@ $table_config['search'] = array(
 $table_config['filters'] = array(
     'group_id' => array(
         'type' => 'select',
-        'label' => 'Skupina',
+        'label' => $tr('filter_group', 'Skupina'),
         'options' => $oopp_groups_options,
     ),
     'branch_id' => array(
         'type' => 'select',
-        'label' => 'Pobočka',
+        'label' => $tr('filter_branch', 'Pobočka'),
         'options' => $branches_options,
     ),
     'department_id' => array(
         'type' => 'select',
-        'label' => 'Oddělení',
+        'label' => $tr('filter_department', 'Oddělení'),
         'options' => $departments_options,
     ),
 );
@@ -375,7 +408,7 @@ $table_config['related_data'] = $related_data ?? null;
 
 // Actions
 $table_config['actions'] = array('view', 'edit', 'delete');
-$table_config['add_new'] = 'Nový OOPP';
+$table_config['add_new'] = $tr('btn_add_new', 'Nový OOPP');
 
 // TABS configuration - loaded from config.php
 $table_config['tabs'] = $config['tabs'] ?? null;

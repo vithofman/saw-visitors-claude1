@@ -3,14 +3,32 @@
  * Content Module View
  *
  * @package SAW_Visitors
- * @version 2.0.0
+ * @version 3.0.0 - ADDED: Multi-language translation support
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-// Load file upload component template
+// ============================================
+// TRANSLATIONS SETUP
+// ============================================
+$lang = 'cs';
+if (class_exists('SAW_Component_Language_Switcher')) {
+    $lang = SAW_Component_Language_Switcher::get_user_language();
+}
+
+$t = function_exists('saw_get_translations') 
+    ? saw_get_translations($lang, 'admin', 'content') 
+    : array();
+
+$tr = function($key, $fallback = null) use ($t) {
+    return $t[$key] ?? $fallback ?? $key;
+};
+
+// ============================================
+// LOAD FILE UPLOAD COMPONENT
+// ============================================
 require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/file-upload-input.php';
 
 /**
@@ -39,14 +57,14 @@ function saw_get_file_icon($filename) {
     
     <?php if (isset($_GET['saved']) && $_GET['saved'] == '1'): ?>
     <div class="saw-success-notification">
-        Obsah byl úspěšně uložen
+        <?php echo esc_html($tr('msg_saved', 'Obsah byl úspěšně uložen')); ?>
     </div>
     <?php endif; ?>
     
     <div class="saw-page-header">
         <h1 class="saw-page-title">
             <span class="saw-page-icon"><?php echo esc_html($icon); ?></span>
-            Správa obsahu školení
+            <?php echo esc_html($tr('page_title', 'Správa obsahu školení')); ?>
         </h1>
     </div>
     
@@ -93,15 +111,17 @@ function saw_get_file_icon($filename) {
                 
                 <?php if ($show_main_sections): ?>
                 
-                <!-- Sekce 1: Video -->
+                <!-- ============================================
+                     SECTION 1: Video
+                     ============================================ -->
                 <div class="saw-collapsible-section">
                     <button type="button" class="saw-section-header">
                         <span class="saw-section-icon">▶</span>
-                        <span class="saw-section-title">📹 Video (YouTube / Vimeo)</span>
+                        <span class="saw-section-title">📹 <?php echo esc_html($tr('section_video', 'Video (YouTube / Vimeo)')); ?></span>
                     </button>
                     <div class="saw-section-content">
                         <div class="saw-form-field">
-                            <label class="saw-label">URL adresa videa</label>
+                            <label class="saw-label"><?php echo esc_html($tr('label_video_url', 'URL adresa videa')); ?></label>
                             <input 
                                 type="url" 
                                 name="video_url" 
@@ -109,20 +129,22 @@ function saw_get_file_icon($filename) {
                                 placeholder="https://www.youtube.com/watch?v=..."
                                 value="<?php echo esc_attr($lang_content['video_url'] ?? ''); ?>"
                             >
-                            <span class="saw-hint">Vložte odkaz na YouTube nebo Vimeo video</span>
+                            <span class="saw-hint"><?php echo esc_html($tr('hint_video_url', 'Vložte odkaz na YouTube nebo Vimeo video')); ?></span>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Sekce 2: PDF Mapa -->
+                <!-- ============================================
+                     SECTION 2: PDF Map
+                     ============================================ -->
                 <div class="saw-collapsible-section">
                     <button type="button" class="saw-section-header">
                         <span class="saw-section-icon">▶</span>
-                        <span class="saw-section-title">🗺️ PDF Mapa</span>
+                        <span class="saw-section-title">🗺️ <?php echo esc_html($tr('section_pdf_map', 'PDF Mapa')); ?></span>
                     </button>
                     <div class="saw-section-content">
                         <div class="saw-form-field">
-                            <label class="saw-label">Nahrát PDF mapu</label>
+                            <label class="saw-label"><?php echo esc_html($tr('label_upload_pdf', 'Nahrát PDF mapu')); ?></label>
                             <?php
                             // Prepare existing PDF map file
                             $existing_pdf_map = array();
@@ -152,20 +174,22 @@ function saw_get_file_icon($filename) {
                                 'existing_files' => $existing_pdf_map,
                             ));
                             ?>
-                            <span class="saw-hint">Nahrajte PDF soubor s mapou objektu</span>
+                            <span class="saw-hint"><?php echo esc_html($tr('hint_pdf_map', 'Nahrajte PDF soubor s mapou objektu')); ?></span>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Sekce 3: Informace o rizicích -->
+                <!-- ============================================
+                     SECTION 3: Risk Information
+                     ============================================ -->
                 <div class="saw-collapsible-section">
                     <button type="button" class="saw-section-header">
                         <span class="saw-section-icon">▶</span>
-                        <span class="saw-section-title">⚠️ Informace o rizicích</span>
+                        <span class="saw-section-title">⚠️ <?php echo esc_html($tr('section_risks', 'Informace o rizicích')); ?></span>
                     </button>
                     <div class="saw-section-content">
                         <div class="saw-form-field">
-                            <label class="saw-label">Textový obsah</label>
+                            <label class="saw-label"><?php echo esc_html($tr('label_text_content', 'Textový obsah')); ?></label>
                             <?php
                             // CRITICAL: Ensure media buttons are shown by checking user capabilities first
                             $editor_id = 'risks_text_' . $language['id'];
@@ -177,7 +201,7 @@ function saw_get_file_icon($filename) {
                                 'tinymce' => array(
                                     'toolbar1' => 'formatselect,bold,italic,underline,strikethrough,forecolor,backcolor,bullist,numlist,alignleft,aligncenter,alignright,link,unlink',
                                     'toolbar2' => 'undo,redo,removeformat,code,hr,blockquote,subscript,superscript,charmap,indent,outdent,pastetext,searchreplace,fullscreen',
-                                    'block_formats' => 'Odstavec=p;Nadpis 1=h1;Nadpis 2=h2;Nadpis 3=h3;Nadpis 4=h4;Citace=blockquote',
+                                    'block_formats' => $tr('editor_formats', 'Odstavec=p;Nadpis 1=h1;Nadpis 2=h2;Nadpis 3=h3;Nadpis 4=h4;Citace=blockquote'),
                                 ),
                             );
                             
@@ -185,9 +209,8 @@ function saw_get_file_icon($filename) {
                             wp_editor($lang_content['risks_text'] ?? '', $editor_id, $editor_settings);
                             
                             // CRITICAL: Manually ensure media buttons are rendered if WordPress didn't add them
-                            // WordPress checks current_user_can('upload_files') before showing media buttons
-                            // We already set this capability in controller, but double-check here
                             $editor_wrap_id = 'wp-' . $editor_id . '-wrap';
+                            $add_media_text = esc_js($tr('btn_add_media', 'Přidat média'));
                             ?>
                             <script>
                             (function() {
@@ -199,7 +222,7 @@ function saw_get_file_icon($filename) {
                                         // Media buttons missing - add them manually
                                         var mediaButtonsDiv = document.createElement('div');
                                         mediaButtonsDiv.className = 'wp-media-buttons';
-                                        mediaButtonsDiv.innerHTML = '<button type="button" class="button insert-media add_media" data-editor="<?php echo esc_js($editor_id); ?>"><span class="wp-media-buttons-icon"></span> Přidat média</button>';
+                                        mediaButtonsDiv.innerHTML = '<button type="button" class="button insert-media add_media" data-editor="<?php echo esc_js($editor_id); ?>"><span class="wp-media-buttons-icon"></span> <?php echo $add_media_text; ?></button>';
                                         var editorContainer = editorWrap.querySelector('.wp-editor-container');
                                         if (editorContainer) {
                                             editorWrap.insertBefore(mediaButtonsDiv, editorContainer);
@@ -211,7 +234,7 @@ function saw_get_file_icon($filename) {
                         </div>
                         
                         <div class="saw-form-field">
-                            <label class="saw-label">Dokumenty o rizicích</label>
+                            <label class="saw-label"><?php echo esc_html($tr('label_risks_documents', 'Dokumenty o rizicích')); ?></label>
                             
                             <?php
                             // Load existing documents
@@ -261,7 +284,7 @@ function saw_get_file_icon($filename) {
                                             'enabled' => true,
                                             'source' => 'config',
                                             'required' => false,
-                                            'label' => 'Typ dokumentu',
+                                            'label' => $tr('label_document_type', 'Typ dokumentu'),
                                             'multiple' => false, // Single select
                                             'options' => $document_types, // Pass directly
                                         ),
@@ -274,15 +297,17 @@ function saw_get_file_icon($filename) {
                     </div>
                 </div>
                 
-                <!-- Sekce 4: Další informace -->
+                <!-- ============================================
+                     SECTION 4: Additional Information
+                     ============================================ -->
                 <div class="saw-collapsible-section">
                     <button type="button" class="saw-section-header">
                         <span class="saw-section-icon">▶</span>
-                        <span class="saw-section-title">📄 Další informace</span>
+                        <span class="saw-section-title">📄 <?php echo esc_html($tr('section_additional', 'Další informace')); ?></span>
                     </button>
                     <div class="saw-section-content">
                         <div class="saw-form-field">
-                            <label class="saw-label">Textový obsah</label>
+                            <label class="saw-label"><?php echo esc_html($tr('label_text_content', 'Textový obsah')); ?></label>
                             <?php
                             wp_editor($lang_content['additional_text'] ?? '', 'additional_text_' . $language['id'], array(
                                 'textarea_name' => 'additional_text',
@@ -292,14 +317,14 @@ function saw_get_file_icon($filename) {
                                 'tinymce' => array(
                                     'toolbar1' => 'formatselect,bold,italic,underline,strikethrough,forecolor,backcolor,bullist,numlist,alignleft,aligncenter,alignright,link,unlink',
                                     'toolbar2' => 'undo,redo,removeformat,code,hr,blockquote,subscript,superscript,charmap,indent,outdent,pastetext,searchreplace,fullscreen',
-                                    'block_formats' => 'Odstavec=p;Nadpis 1=h1;Nadpis 2=h2;Nadpis 3=h3;Nadpis 4=h4;Citace=blockquote',
+                                    'block_formats' => $tr('editor_formats', 'Odstavec=p;Nadpis 1=h1;Nadpis 2=h2;Nadpis 3=h3;Nadpis 4=h4;Citace=blockquote'),
                                 ),
                             ));
                             ?>
                         </div>
                         
                         <div class="saw-form-field">
-                            <label class="saw-label">Dokumenty</label>
+                            <label class="saw-label"><?php echo esc_html($tr('label_documents', 'Dokumenty')); ?></label>
                             
                             <?php
                             // Load existing documents
@@ -349,7 +374,7 @@ function saw_get_file_icon($filename) {
                                             'enabled' => true,
                                             'source' => 'config',
                                             'required' => true,
-                                            'label' => 'Typ dokumentu',
+                                            'label' => $tr('label_document_type', 'Typ dokumentu'),
                                             'multiple' => false, // Single select
                                             'options' => $document_types,
                                         ),
@@ -364,7 +389,9 @@ function saw_get_file_icon($filename) {
                 
                 <?php endif; ?>
                 
-                <!-- Sekce 5: Specifické informace pracovišť (pro všechny kromě terminalu) -->
+                <!-- ============================================
+                     SECTION 5: Department-Specific Information
+                     ============================================ -->
                 <?php if ($current_user_role !== 'terminal'): ?>
                 
                     <?php
@@ -411,13 +438,13 @@ function saw_get_file_icon($filename) {
                     <div class="saw-collapsible-section saw-section-departments">
                         <button type="button" class="saw-section-header">
                             <span class="saw-section-icon">▶</span>
-                            <span class="saw-section-title">🏢 Specifické informace pracovišť</span>
-                            <span class="saw-section-badge"><?php echo count($departments); ?> oddělení</span>
+                            <span class="saw-section-title">🏢 <?php echo esc_html($tr('section_departments', 'Specifické informace pracovišť')); ?></span>
+                            <span class="saw-section-badge"><?php echo count($departments); ?> <?php echo esc_html($tr('badge_departments', 'oddělení')); ?></span>
                         </button>
                         <div class="saw-section-content">
                             
                             <div class="saw-departments-intro">
-                                <p>Každé oddělení může mít své specifické instrukce a dokumenty pro školení návštěvníků.</p>
+                                <p><?php echo esc_html($tr('departments_intro', 'Každé oddělení může mít své specifické instrukce a dokumenty pro školení návštěvníků.')); ?></p>
                             </div>
                             
                             <?php foreach ($departments as $dept): ?>
@@ -434,7 +461,7 @@ function saw_get_file_icon($filename) {
                                 <div class="saw-department-content">
                                     
                                     <div class="saw-form-field">
-                                        <label class="saw-label">Textové informace pro oddělení</label>
+                                        <label class="saw-label"><?php echo esc_html($tr('label_dept_text', 'Textové informace pro oddělení')); ?></label>
                                         <?php
                                         $dept_text = isset($lang_content['id']) ? $model->get_department_content($lang_content['id'], $dept['id']) : '';
                                         $editor_id = 'dept_text_' . $dept['id'] . '_' . $language['id'];
@@ -446,11 +473,12 @@ function saw_get_file_icon($filename) {
                                             'tinymce' => array(
                                                 'toolbar1' => 'formatselect,bold,italic,underline,strikethrough,forecolor,backcolor,bullist,numlist,alignleft,aligncenter,alignright,link,unlink',
                                                 'toolbar2' => 'undo,redo,removeformat,code,hr,blockquote,subscript,superscript,charmap,indent,outdent,pastetext,fullscreen',
-                                                'block_formats' => 'Odstavec=p;Nadpis 2=h2;Nadpis 3=h3;Nadpis 4=h4;Citace=blockquote',
+                                                'block_formats' => $tr('editor_formats', 'Odstavec=p;Nadpis 2=h2;Nadpis 3=h3;Nadpis 4=h4;Citace=blockquote'),
                                             ),
                                         );
                                         wp_editor($dept_text, $editor_id, $editor_settings);
                                         $editor_wrap_id = 'wp-' . $editor_id . '-wrap';
+                                        $add_media_text = esc_js($tr('btn_add_media', 'Přidat média'));
                                         ?>
                                         <script>
                                         (function() {
@@ -460,7 +488,7 @@ function saw_get_file_icon($filename) {
                                                 if (!mediaButtons) {
                                                     var mediaButtonsDiv = document.createElement('div');
                                                     mediaButtonsDiv.className = 'wp-media-buttons';
-                                                    mediaButtonsDiv.innerHTML = '<button type="button" class="button insert-media add_media" data-editor="<?php echo esc_js($editor_id); ?>"><span class="wp-media-buttons-icon"></span> Přidat média</button>';
+                                                    mediaButtonsDiv.innerHTML = '<button type="button" class="button insert-media add_media" data-editor="<?php echo esc_js($editor_id); ?>"><span class="wp-media-buttons-icon"></span> <?php echo $add_media_text; ?></button>';
                                                     var editorContainer = editorWrap.querySelector('.wp-editor-container');
                                                     if (editorContainer) {
                                                         editorWrap.insertBefore(mediaButtonsDiv, editorContainer);
@@ -472,7 +500,7 @@ function saw_get_file_icon($filename) {
                                     </div>
                                     
                                     <div class="saw-form-field">
-                                        <label class="saw-label">Dokumenty pro oddělení</label>
+                                        <label class="saw-label"><?php echo esc_html($tr('label_dept_documents', 'Dokumenty pro oddělení')); ?></label>
                                         
                                 <?php
                                 // Prepare existing department documents
@@ -526,7 +554,7 @@ function saw_get_file_icon($filename) {
                                                 'enabled' => true,
                                                 'source' => 'config',
                                                 'required' => true,
-                                                'label' => 'Typ dokumentu',
+                                                'label' => $tr('label_document_type', 'Typ dokumentu'),
                                                 'multiple' => false, // Single select
                                                 'options' => $document_types,
                                             ),
@@ -548,9 +576,12 @@ function saw_get_file_icon($filename) {
                 
                 <?php endif; ?>
                 
+                <!-- ============================================
+                     FORM ACTIONS
+                     ============================================ -->
                 <div class="saw-form-actions">
                     <button type="submit" class="saw-btn-primary">
-                        💾 Uložit obsah
+                        💾 <?php echo esc_html($tr('btn_save', 'Uložit obsah')); ?>
                     </button>
                 </div>
                 

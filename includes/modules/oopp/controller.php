@@ -4,7 +4,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/OOPP
- * @version     1.1.0 - FIXED: Protected property access error
+ * @version     2.0.0 - ADDED: Translation support
  */
 
 if (!defined('ABSPATH')) {
@@ -31,9 +31,34 @@ class SAW_Module_OOPP_Controller extends SAW_Base_Controller
      */
     private $table_name;
     
+    /**
+     * Translation function
+     * @var callable
+     */
+    private $tr;
+    
     public function __construct() {
         global $wpdb;
         
+        // ============================================
+        // TRANSLATIONS SETUP
+        // ============================================
+        $lang = 'cs';
+        if (class_exists('SAW_Component_Language_Switcher')) {
+            $lang = SAW_Component_Language_Switcher::get_user_language();
+        }
+        
+        $t = function_exists('saw_get_translations') 
+            ? saw_get_translations($lang, 'admin', 'oopp') 
+            : array();
+        
+        $this->tr = function($key, $fallback = null) use ($t) {
+            return $t[$key] ?? $fallback ?? $key;
+        };
+        
+        // ============================================
+        // MODULE SETUP
+        // ============================================
         $module_path = SAW_VISITORS_PLUGIN_DIR . 'includes/modules/oopp/';
         
         $this->config = require $module_path . 'config.php';
@@ -58,8 +83,10 @@ class SAW_Module_OOPP_Controller extends SAW_Base_Controller
      * Index - seznam OOPP
      */
     public function index() {
+        $tr = $this->tr;
+        
         if (function_exists('saw_can') && !saw_can('list', $this->entity)) {
-            wp_die('Nemáte oprávnění.', 403);
+            wp_die($tr('error_no_permission', 'Nemáte oprávnění.'), 403);
         }
         $this->render_list_view();
     }
@@ -298,21 +325,23 @@ class SAW_Module_OOPP_Controller extends SAW_Base_Controller
     public function ajax_save_branches() {
         saw_verify_ajax_unified();
         
+        $tr = $this->tr;
+        
         if (!$this->can('edit')) {
-            wp_send_json_error(array('message' => 'Nemáte oprávnění'));
+            wp_send_json_error(array('message' => $tr('error_no_permission_short', 'Nemáte oprávnění')));
         }
         
         $oopp_id = intval($_POST['oopp_id'] ?? 0);
         $branch_ids = isset($_POST['branch_ids']) ? array_map('intval', (array)$_POST['branch_ids']) : array();
         
         if (!$oopp_id) {
-            wp_send_json_error(array('message' => 'Neplatné ID'));
+            wp_send_json_error(array('message' => $tr('error_invalid_id', 'Neplatné ID')));
         }
         
         $this->model->save_branch_relations($oopp_id, $branch_ids);
         
         wp_send_json_success(array(
-            'message' => 'Pobočky uloženy',
+            'message' => $tr('msg_branches_saved', 'Pobočky uloženy'),
             'branch_count' => count($branch_ids),
         ));
     }
@@ -323,21 +352,23 @@ class SAW_Module_OOPP_Controller extends SAW_Base_Controller
     public function ajax_save_departments() {
         saw_verify_ajax_unified();
         
+        $tr = $this->tr;
+        
         if (!$this->can('edit')) {
-            wp_send_json_error(array('message' => 'Nemáte oprávnění'));
+            wp_send_json_error(array('message' => $tr('error_no_permission_short', 'Nemáte oprávnění')));
         }
         
         $oopp_id = intval($_POST['oopp_id'] ?? 0);
         $department_ids = isset($_POST['department_ids']) ? array_map('intval', (array)$_POST['department_ids']) : array();
         
         if (!$oopp_id) {
-            wp_send_json_error(array('message' => 'Neplatné ID'));
+            wp_send_json_error(array('message' => $tr('error_invalid_id', 'Neplatné ID')));
         }
         
         $this->model->save_department_relations($oopp_id, $department_ids);
         
         wp_send_json_success(array(
-            'message' => 'Oddělení uložena',
+            'message' => $tr('msg_departments_saved', 'Oddělení uložena'),
             'department_count' => count($department_ids),
         ));
     }
@@ -348,11 +379,13 @@ class SAW_Module_OOPP_Controller extends SAW_Base_Controller
     public function ajax_get_for_department() {
         saw_verify_ajax_unified();
         
+        $tr = $this->tr;
+        
         $department_id = intval($_POST['department_id'] ?? 0);
         $branch_id = intval($_POST['branch_id'] ?? 0);
         
         if (!$department_id) {
-            wp_send_json_error(array('message' => 'Neplatné oddělení'));
+            wp_send_json_error(array('message' => $tr('error_invalid_department', 'Neplatné oddělení')));
         }
         
         $oopp_items = $this->model->get_for_department($department_id, $branch_id);

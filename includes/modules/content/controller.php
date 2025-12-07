@@ -3,7 +3,7 @@
  * Content Module Controller
  *
  * @package SAW_Visitors
- * @version 1.0.0
+ * @version 2.0.0 - ADDED: Translation support
  */
 
 if (!defined('ABSPATH')) {
@@ -14,6 +14,7 @@ class SAW_Module_Content_Controller
 {
     protected $config;
     protected $model;
+    protected $t;  // Translations array
     
     public function __construct() {
         $module_path = SAW_VISITORS_PLUGIN_DIR . 'includes/modules/content/';
@@ -24,7 +25,31 @@ class SAW_Module_Content_Controller
         require_once $module_path . 'model.php';
         $this->model = new SAW_Module_Content_Model();
         
+        // Load translations
+        $this->load_translations();
+        
         add_action('wp_enqueue_scripts', array($this, 'enqueue_assets'));
+    }
+    
+    /**
+     * Load translations for this module
+     */
+    private function load_translations() {
+        $lang = 'cs';
+        if (class_exists('SAW_Component_Language_Switcher')) {
+            $lang = SAW_Component_Language_Switcher::get_user_language();
+        }
+        
+        $this->t = function_exists('saw_get_translations') 
+            ? saw_get_translations($lang, 'admin', 'content') 
+            : array();
+    }
+    
+    /**
+     * Get translation
+     */
+    private function tr($key, $fallback = null) {
+        return $this->t[$key] ?? $fallback ?? $key;
     }
     
     public function enqueue_assets() {
@@ -36,15 +61,10 @@ class SAW_Module_Content_Controller
         $role = $this->get_current_role();
         
         // Kontrola oprávnění
-        // super_admin - vidí vše
-        // admin - vidí všechny pobočky svého zákazníka
-        // super_manager - vidí obsah pro svou pobočku (všechna oddělení)
-        // manager - vidí pouze svá přiřazená oddělení
-        // terminal - nemá přístup
         if (!in_array($role, array('admin', 'super_admin', 'manager', 'super_manager'))) {
             wp_die(
-                'Nemáte oprávnění zobrazit tuto stránku.',
-                'Přístup odepřen',
+                $this->tr('error_no_permission', 'Nemáte oprávnění zobrazit tuto stránku.'),
+                $this->tr('error_access_denied', 'Přístup odepřen'),
                 array('response' => 403)
             );
         }
@@ -52,10 +72,9 @@ class SAW_Module_Content_Controller
         // HANDLE FORM SUBMISSION FIRST
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['saw_content_nonce'])) {
             $this->handle_save();
-            // handle_save() ends with exit, so code below won't execute
         }
         
-        // Get customer and branch from context (same way as in handle_save)
+        // Get customer and branch from context
         global $wpdb;
         $wp_user_id = get_current_user_id();
         $saw_user = $wpdb->get_row($wpdb->prepare(
@@ -66,8 +85,8 @@ class SAW_Module_Content_Controller
         
         if (!$saw_user || !$saw_user->context_customer_id || !$saw_user->context_branch_id) {
             wp_die(
-                'Chybí kontext zákazníka nebo pobočky.',
-                'Chyba konfigurace',
+                $this->tr('error_missing_context', 'Chybí kontext zákazníka nebo pobočky.'),
+                $this->tr('error_config', 'Chyba konfigurace'),
                 array('response' => 500)
             );
         }
@@ -90,9 +109,7 @@ class SAW_Module_Content_Controller
         });
         
         // CRITICAL: Force media buttons to be displayed in wp_editor
-        // WordPress checks user capabilities and this filter
         add_filter('wp_editor_settings', function($settings, $editor_id) {
-            // Ensure media_buttons is always true for content module editors
             if (strpos($editor_id, 'risks_text_') !== false || 
                 strpos($editor_id, 'additional_text_') !== false || 
                 strpos($editor_id, 'dept_text_') !== false) {
@@ -102,18 +119,15 @@ class SAW_Module_Content_Controller
         }, 10, 2);
         
         // CRITICAL: Ensure media buttons HTML is output
-        // This hook allows us to add custom media buttons or ensure default ones are shown
         add_action('media_buttons', function($editor_id = '') {
-            // WordPress should automatically add media buttons, but we ensure they're there
-            // This action is fired by wp_editor() when media_buttons is true
         }, 1);
         
         $languages = $this->model->get_training_languages($customer_id);
         
         if (empty($languages)) {
             wp_die(
-                'Nejdříve musíte vytvořit alespoň jeden jazyk školení.',
-                'Žádné jazyky',
+                $this->tr('error_no_languages', 'Nejdříve musíte vytvořit alespoň jeden jazyk školení.'),
+                $this->tr('error_no_languages_title', 'Žádné jazyky'),
                 array('response' => 404)
             );
         }
@@ -150,7 +164,7 @@ class SAW_Module_Content_Controller
         $content = ob_get_clean();
         
         $layout = new SAW_App_Layout();
-        $layout->render($content, 'Správa obsahu', 'content');
+        $layout->render($content, $this->tr('page_title', 'Správa obsahu'), 'content');
     }
     
     private function get_current_role() {
@@ -166,27 +180,19 @@ class SAW_Module_Content_Controller
     }
     
     /**
-     * Handle form save
-     */
-    /**
      * Get existing files for refresh
-     * 
-     * Returns list of existing files for a specific context.
-     * 
-     * @since 2.0.0
-     * @return void
      */
     public function ajax_get_existing_files() {
         // Verify nonce
         if (!isset($_GET['nonce']) || !wp_verify_nonce($_GET['nonce'], 'saw_content_action')) {
-            wp_send_json_error('Bezpečnostní chyba: Neplatný nonce');
+            wp_send_json_error($this->tr('error_invalid_nonce', 'Bezpečnostní chyba: Neplatný nonce'));
             return;
         }
         
         // Check permissions
         $role = $this->get_current_role();
         if (!in_array($role, ['admin', 'super_admin', 'manager', 'super_manager'])) {
-            wp_send_json_error('Nemáte oprávnění');
+            wp_send_json_error($this->tr('error_no_permission_short', 'Nemáte oprávnění'));
             return;
         }
         
@@ -200,7 +206,7 @@ class SAW_Module_Content_Controller
         ));
         
         if (!$saw_user || !$saw_user->context_customer_id || !$saw_user->context_branch_id) {
-            wp_send_json_error('Chyba kontextu');
+            wp_send_json_error($this->tr('error_context', 'Chyba kontextu'));
             return;
         }
         
@@ -210,7 +216,7 @@ class SAW_Module_Content_Controller
         $context = sanitize_text_field($_GET['context'] ?? '');
         
         if (!$language_id) {
-            wp_send_json_error('Chybí language_id');
+            wp_send_json_error($this->tr('error_missing_language', 'Chybí language_id'));
             return;
         }
         
@@ -283,9 +289,10 @@ class SAW_Module_Content_Controller
         wp_send_json_success(array('files' => $files));
     }
     
+    /**
+     * Handle form save
+     */
     public function handle_save() {
-        // Debug log
-        $log = WP_CONTENT_DIR . '/saw-content-save-debug.log';
         SAW_Logger::debug("Handling content upload", [
             'post' => $_POST,
             'files' => $_FILES
@@ -294,23 +301,23 @@ class SAW_Module_Content_Controller
         // Verify nonce
         if (!isset($_POST['saw_content_nonce'])) {
             SAW_Logger::error("Nonce not found in POST");
-            wp_send_json_error('Bezpečnostní chyba: Chybí nonce');
+            wp_send_json_error($this->tr('error_missing_nonce', 'Bezpečnostní chyba: Chybí nonce'));
         }
         
         if (!wp_verify_nonce($_POST['saw_content_nonce'], 'saw_content_action')) {
             SAW_Logger::error("Nonce verification failed");
-            wp_send_json_error('Bezpečnostní chyba: Neplatný nonce');
+            wp_send_json_error($this->tr('error_invalid_nonce', 'Bezpečnostní chyba: Neplatný nonce'));
         }
         
         SAW_Logger::debug("Nonce OK");
         
         // Check permissions
-        $role = $this->get_current_role(); // Changed from get_current_user_role() to get_current_role() to match existing method
+        $role = $this->get_current_role();
         SAW_Logger::debug("Role: " . $role);
         
-        if (!in_array($role, ['admin', 'super_admin', 'manager', 'super_manager'])) { // Reverted roles to match original logic
+        if (!in_array($role, ['admin', 'super_admin', 'manager', 'super_manager'])) {
             SAW_Logger::error("Unauthorized role");
-            wp_send_json_error('Nemáte oprávnění pro tuto akci');
+            wp_send_json_error($this->tr('error_no_permission_action', 'Nemáte oprávnění pro tuto akci'));
         }
         
         // Get customer and branch from context
@@ -328,26 +335,23 @@ class SAW_Module_Content_Controller
         
         if (!$saw_user || !$saw_user->context_customer_id || !$saw_user->context_branch_id) {
             SAW_Logger::error("Missing context");
-            wp_send_json_error('Chyba kontextu: Uživatel nenalezen');
+            wp_send_json_error($this->tr('error_user_not_found', 'Chyba kontextu: Uživatel nenalezen'));
         }
         
         $customer_id = $saw_user->context_customer_id;
         $branch_id = $saw_user->context_branch_id;
         $language_id = intval($_POST['language_id']);
         
-        // Handle document deletions (from old delete buttons - kept for backward compatibility)
-        // New delete is handled via AJAX in file upload component
+        // Handle document deletions (backward compatibility)
         if (isset($_POST['delete_document']) && is_array($_POST['delete_document'])) {
             foreach ($_POST['delete_document'] as $doc_id) {
                 $doc = $this->model->get_document_by_id(intval($doc_id));
                 if ($doc) {
-                    // Delete file physically
                     $upload_dir = wp_upload_dir();
                     $file_path = $upload_dir['basedir'] . $doc['file_path'];
                     if (file_exists($file_path)) {
                         @unlink($file_path);
                     }
-                    // Delete from database
                     $this->model->delete_document_by_id(intval($doc_id));
                 }
             }
@@ -361,7 +365,7 @@ class SAW_Module_Content_Controller
         
         if (!$content_id) {
             SAW_Logger::error("Failed to create content record");
-            wp_send_json_error('Nepodařilo se vytvořit záznam obsahu');
+            wp_send_json_error($this->tr('error_create_content', 'Nepodařilo se vytvořit záznam obsahu'));
         }
         
         // Save main content (all roles except manager)
@@ -387,22 +391,19 @@ class SAW_Module_Content_Controller
                 }
             }
             
-            // Handle PDF map upload (from modern upload component)
+            // Handle PDF map upload
             if (!empty($uploaded_files['pdf_map'])) {
                 $pdf_file_data = $uploaded_files['pdf_map'];
                 
-                // Delete old PDF map if exists
                 $old_content = $this->model->get_content($customer_id, $branch_id, $language_id);
                 if ($old_content && !empty($old_content['pdf_map_path'])) {
                     $upload_dir = wp_upload_dir();
                     $old_file = $upload_dir['basedir'] . $old_content['pdf_map_path'];
                     if (file_exists($old_file)) {
                         @unlink($old_file);
-                        error_log("SAW Content: Deleted old PDF map: " . $old_file);
                     }
                 }
                 
-                // File is already uploaded via AJAX, just save the path
                 if (!empty($pdf_file_data['path'])) {
                     $this->model->save_main_content($content_id, array(
                         'pdf_map_path' => $pdf_file_data['path'],
@@ -410,8 +411,7 @@ class SAW_Module_Content_Controller
                 }
             }
             
-            // Handle risks documents (from modern upload component)
-            // JavaScript sends: uploaded_files['risks_documents[]_category'] = [{file: {...}, doc_type: ...}, ...]
+            // Handle risks documents
             $risks_keys = array('risks_documents[]_category', 'risks_doc_type[]');
             foreach ($risks_keys as $key) {
                 if (!empty($uploaded_files[$key]) && is_array($uploaded_files[$key])) {
@@ -435,11 +435,11 @@ class SAW_Module_Content_Controller
                             }
                         }
                     }
-                    break; // Found the right key
+                    break;
                 }
             }
             
-            // Handle additional documents (from modern upload component)
+            // Handle additional documents
             $additional_keys = array('additional_documents[]_category', 'additional_doc_type[]');
             foreach ($additional_keys as $key) {
                 if (!empty($uploaded_files[$key]) && is_array($uploaded_files[$key])) {
@@ -463,19 +463,17 @@ class SAW_Module_Content_Controller
                             }
                         }
                     }
-                    break; // Found the right key
+                    break;
                 }
             }
         }
         
-        // Handle department content (for all roles except terminal)
+        // Handle department content
         if (isset($_POST['department_text']) && is_array($_POST['department_text'])) {
             foreach ($_POST['department_text'] as $dept_id => $text) {
                 $dept_id = intval($dept_id);
                 $dept_content_id = $this->model->save_department_content($content_id, $dept_id, wp_kses_post($text), $customer_id, $branch_id);
                 
-                // Handle department documents (from modern upload component)
-                // JavaScript sends: uploaded_files['department_documents[ID][]_category'] = [{file: {...}, doc_type: ...}, ...]
                 $dept_doc_keys = array(
                     'department_documents[' . $dept_id . '][]_category',
                     'department_doc_type[' . $dept_id . '][]',
@@ -503,20 +501,19 @@ class SAW_Module_Content_Controller
                                 }
                             }
                         }
-                        break; // Found the right key
+                        break;
                     }
                 }
             }
         }
         
-        // Return success with updated file list for refresh
+        // Return success
         $updated_content = $this->model->get_content($customer_id, $branch_id, $language_id);
         $response_data = array(
-            'message' => 'Obsah byl úspěšně uložen',
+            'message' => $this->tr('msg_saved', 'Obsah byl úspěšně uložen'),
             'content_id' => $content_id,
         );
         
-        // Include updated PDF map path if exists
         if (!empty($updated_content['pdf_map_path'])) {
             $upload_dir = wp_upload_dir();
             $response_data['pdf_map'] = array(
@@ -534,10 +531,6 @@ class SAW_Module_Content_Controller
     
     /**
      * Handle file upload
-     *
-     * @param array $file
-     * @param string $type
-     * @return array|false
      */
     private function handle_file_upload($file, $type = 'document') {
         if ($file['error'] !== UPLOAD_ERR_OK) {
