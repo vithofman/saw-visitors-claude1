@@ -486,10 +486,11 @@ class SAW_Component_Admin_Table {
         }
         
         // Check if any filters are active
+        // FIXED: Use isset() && !== '' instead of !empty() because empty("0") === true in PHP
         $has_active_filters = false;
         $active_filters_count = 0;
         foreach ($filters_config as $filter_key => $filter_config) {
-            if (!empty($_GET[$filter_key])) {
+            if (isset($_GET[$filter_key]) && $_GET[$filter_key] !== '') {
                 $has_active_filters = true;
                 $active_filters_count++;
             }
@@ -551,7 +552,8 @@ class SAW_Component_Admin_Table {
     private function render_single_filter($filter_key, $filter_config, $current_params) {
         $filter_type = $filter_config['type'] ?? 'select';
         $filter_value = $current_params[$filter_key] ?? '';
-        if (empty($filter_value) && !empty($_GET[$filter_key])) {
+        // FIXED: Use isset() && !== '' instead of empty() because empty("0") === true in PHP
+        if (($filter_value === '' || $filter_value === null) && isset($_GET[$filter_key]) && $_GET[$filter_key] !== '') {
             $filter_value = sanitize_text_field($_GET[$filter_key]);
         }
         

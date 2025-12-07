@@ -4,7 +4,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Users
- * @version     5.2.0 - FIXED: AJAX handler registration (uses universal handler)
+ * @version     7.0.0 - External JS with waitFor pattern, priority 999 enqueue
  */
 
 if (!defined('ABSPATH')) {
@@ -23,9 +23,18 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
 {
     use SAW_AJAX_Handlers;
     
+    /** @var array|null Pending department assignments */
     private $pending_departments = null;
+    
+    /** @var array|null Pending setup email data */
     private $pending_setup_email = null;
     
+    /** @var array Translation strings */
+    private $translations = array();
+    
+    /**
+     * Constructor
+     */
     public function __construct() {
         $module_path = SAW_VISITORS_PLUGIN_DIR . 'includes/modules/users/';
         
@@ -36,46 +45,127 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
         require_once $module_path . 'model.php';
         $this->model = new SAW_Module_Users_Model($this->config);
         
-        // ✅ REMOVED: AJAX handler registration from constructor
-        // Universal handler in saw-visitors.php will handle it:
-        // saw_get_departments_by_branch -> ajax_get_departments_by_branch()
+        // Initialize translations
+        $this->init_translations();
+        
+        // ✅ Register standard AJAX handlers
+        // NOTE: saw_get_departments_by_branch is registered via custom_ajax_actions in config.php
+        add_action('wp_ajax_saw_get_users_detail',       array($this, 'ajax_get_detail'));
+        add_action('wp_ajax_saw_search_users',           array($this, 'ajax_search'));
+        add_action('wp_ajax_saw_delete_users',           array($this, 'ajax_delete'));
+        add_action('wp_ajax_saw_load_sidebar_users',     array($this, 'ajax_load_sidebar'));
+        add_action('wp_ajax_saw_get_adjacent_users',     array($this, 'ajax_get_adjacent_id'));
+        
+        // CRITICAL: Use priority 999 to ensure script is registered before wp_localize_script
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'), 999);
+    }
+    
+    /**
+     * Initialize translations
+     */
+    private function init_translations() {
+        $lang = 'cs';
+        if (class_exists('SAW_Component_Language_Switcher')) {
+            $lang = SAW_Component_Language_Switcher::get_user_language();
+        }
+        
+        $this->translations = function_exists('saw_get_translations') 
+            ? saw_get_translations($lang, 'admin', 'users') 
+            : array();
+    }
+    
+    /**
+     * Get translation
+     * 
+     * @param string $key Translation key
+     * @param string $fallback Fallback text
+     * @return string
+     */
+    private function tr($key, $fallback = null) {
+        return $this->translations[$key] ?? $fallback ?? $key;
     }
     
     /**
      * Display list page with optional sidebar
      */
     public function index() {
+        if (function_exists('saw_can') && !saw_can('list', $this->entity)) {
+            wp_die($this->tr('error_no_view_permission', 'Nemáte oprávnění'), 403);
+        }
         $this->render_list_view();
     }
 
-    protected function enqueue_assets() {
+    /**
+     * Enqueue module assets
+     */
+    /**
+     * Enqueue module assets
+     * 
+     * CRITICAL: Use priority 999 to ensure saw-module-users is already registered
+     * before we call wp_localize_script (same pattern as visits module)
+     * 
+     * @since 7.0.0
+     */
+    public function enqueue_assets() {
+        // Enqueue dashicons
+        wp_enqueue_style('dashicons');
+        
+        // Enqueue module assets FIRST
         if (class_exists('SAW_Asset_Loader')) {
             SAW_Asset_Loader::enqueue_module('users');
-            
-            // Pass existing department IDs for edit mode
-            if (isset($_GET['id']) && isset($_GET['mode']) && $_GET['mode'] === 'edit') {
-                $id = intval($_GET['id']);
-                $item = $this->model->get_by_id($id);
-                
-                $existing_ids = [];
-                if ($item && isset($item['department_ids'])) {
-                    $existing_ids = array_map('intval', $item['department_ids']);
-                } else {
-                    // Fallback direct query
-                    global $wpdb;
-                    $existing_ids = $wpdb->get_col($wpdb->prepare(
-                        "SELECT department_id FROM %i WHERE user_id = %d",
-                        $wpdb->prefix . 'saw_user_departments',
-                        $id
-                    ));
-                    $existing_ids = array_map('intval', $existing_ids);
-                }
-                
-                wp_localize_script('saw-users', 'sawUsers', array(
-                    'existingIds' => $existing_ids
-                ));
+        }
+        
+        // Detect user ID using multiple fallback methods (like visits module)
+        $user_id = $this->detect_user_id();
+        
+        // Load existing departments from database if we have a user_id
+        $existing_departments = array();
+        if ($user_id > 0) {
+            global $wpdb;
+            $existing_departments = $wpdb->get_col($wpdb->prepare(
+                "SELECT department_id FROM {$wpdb->prefix}saw_user_departments WHERE user_id = %d",
+                $user_id
+            ));
+            $existing_departments = array_map('intval', $existing_departments);
+        }
+        
+        // CRITICAL: Use sawUsersData to pass data to external JS (like sawVisitsData)
+        $script_handle = 'saw-module-users';
+        
+        if (wp_script_is($script_handle, 'registered') || wp_script_is($script_handle, 'enqueued')) {
+            wp_localize_script($script_handle, 'sawUsersData', array(
+                'existing_departments' => $existing_departments,
+                'user_id' => $user_id,
+                'debug' => defined('WP_DEBUG') && WP_DEBUG
+            ));
+        }
+    }
+    
+    /**
+     * Detect user ID from multiple sources with fallbacks
+     * 
+     * @since 7.0.0
+     * @return int User ID or 0 if not found
+     */
+    private function detect_user_id() {
+        $user_id = 0;
+        
+        // Method 1: Try get_sidebar_context() (primary - set by router)
+        $context = $this->get_sidebar_context();
+        if (!empty($context['id']) && ($context['mode'] === 'edit' || $context['mode'] === 'detail')) {
+            $user_id = intval($context['id']);
+        }
+        
+        // Method 2: Parse URL from REQUEST_URI as fallback
+        if ($user_id === 0 && isset($_SERVER['REQUEST_URI'])) {
+            $request_uri = sanitize_text_field($_SERVER['REQUEST_URI']);
+            // Match patterns like /admin/users/41/edit or /admin/users/41/
+            if (preg_match('#/admin/users/(\d+)(?:/|$)#', $request_uri, $matches)) {
+                $user_id = intval($matches[1]);
             }
         }
+        
+        return $user_id;
     }
     
     /**
@@ -95,7 +185,7 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
                 }
                 
                 $data[$field_name] = $value;
-            } elseif ($field_config['type'] === 'checkbox') {
+            } elseif ($field_config['type'] === 'checkbox' || $field_config['type'] === 'boolean') {
                 $data[$field_name] = 0;
             }
         }
@@ -116,21 +206,162 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
     
     /**
      * Format data for detail view
+     * 
+     * ✅ FIXED: Cannot use parent:: with trait - duplicate formatting logic
      */
     protected function format_detail_data($item) {
+        if (empty($item)) {
+            return $item;
+        }
+        
+        // Format dates
         if (!empty($item['created_at'])) {
-            $item['created_at_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['created_at']));
+            $item['created_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['created_at']));
         }
-        
         if (!empty($item['updated_at'])) {
-            $item['updated_at_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['updated_at']));
+            $item['updated_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['updated_at']));
+        }
+        if (!empty($item['last_login'])) {
+            $item['last_login_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['last_login']));
         }
         
-        if (!empty($item['last_login'])) {
-            $item['last_login_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['last_login']));
+        // Add branch info
+        if (!empty($item['branch_id'])) {
+            global $wpdb;
+            $branch = $wpdb->get_row($wpdb->prepare(
+                "SELECT name, code FROM %i WHERE id = %d",
+                $wpdb->prefix . 'saw_branches',
+                intval($item['branch_id'])
+            ), ARRAY_A);
+            
+            if ($branch) {
+                $item['branch_name'] = $branch['name'];
+                $item['branch_code'] = $branch['code'] ?? '';
+            }
+        }
+        
+        // Add email from WordPress user
+        if (!empty($item['wp_user_id'])) {
+            $wp_user = get_userdata($item['wp_user_id']);
+            if ($wp_user) {
+                $item['email'] = $wp_user->user_email;
+            }
+        }
+        
+        // Add department count
+        if (!empty($item['id'])) {
+            global $wpdb;
+            $item['department_count'] = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM %i WHERE user_id = %d",
+                $wpdb->prefix . 'saw_user_departments',
+                intval($item['id'])
+            ));
         }
         
         return $item;
+    }
+    
+    /**
+     * Get header meta badges for detail sidebar
+     * 
+     * @param array $item User data
+     * @return string HTML badges
+     */
+    public function get_detail_header_meta($item) {
+        if (empty($item)) {
+            return '';
+        }
+        
+        $meta = array();
+        
+        // Role badge
+        $role_labels = array(
+            'super_admin' => $this->tr('role_super_admin', 'Super Admin'),
+            'admin' => $this->tr('role_admin', 'Admin'),
+            'super_manager' => $this->tr('role_super_manager', 'Super Manager'),
+            'manager' => $this->tr('role_manager', 'Manager'),
+            'terminal' => $this->tr('role_terminal', 'Terminál'),
+        );
+        
+        $role_label = $role_labels[$item['role']] ?? $item['role'];
+        $meta[] = '<span class="saw-role-badge saw-role-' . esc_attr($item['role']) . '">' . esc_html($role_label) . '</span>';
+        
+        // Branch badge
+        if (!empty($item['branch_name'])) {
+            $meta[] = '<span class="saw-badge-transparent saw-badge-info">🏢 ' . esc_html($item['branch_name']) . '</span>';
+        }
+        
+        // Status badge
+        if (!empty($item['is_active'])) {
+            $meta[] = '<span class="saw-badge-transparent saw-badge-success">✓ ' . esc_html($this->tr('status_active', 'Aktivní')) . '</span>';
+        } else {
+            $meta[] = '<span class="saw-badge-transparent saw-badge-secondary">' . esc_html($this->tr('status_inactive', 'Neaktivní')) . '</span>';
+        }
+        
+        return implode(' ', $meta);
+    }
+    
+    /**
+     * AJAX: Get adjacent ID for prev/next navigation
+     */
+    public function ajax_get_adjacent_id() {
+        saw_verify_ajax_unified();
+        
+        if (!$this->can('view')) {
+            wp_send_json_error(array('message' => $this->tr('error_no_view_permission', 'Nemáte oprávnění')));
+        }
+        
+        $current_id = intval($_POST['id'] ?? 0);
+        $direction = sanitize_text_field($_POST['direction'] ?? 'next');
+        
+        if (!$current_id || !in_array($direction, array('next', 'prev'))) {
+            wp_send_json_error(array('message' => $this->tr('error_missing_id', 'Chybí ID')));
+        }
+        
+        global $wpdb;
+        $table = $wpdb->prefix . 'saw_users';
+        
+        // Build query with context filters
+        $where = array('1=1');
+        $params = array();
+        
+        $customer_id = SAW_Context::get_customer_id();
+        $branch_id = SAW_Context::get_branch_id();
+        
+        if ($customer_id) {
+            $where[] = 'customer_id = %d';
+            $params[] = $customer_id;
+        }
+        if ($branch_id) {
+            $where[] = '(branch_id = %d OR branch_id IS NULL)';
+            $params[] = $branch_id;
+        }
+        
+        $sql = "SELECT id FROM {$table} WHERE " . implode(' AND ', $where) . " ORDER BY last_name ASC, first_name ASC, id ASC";
+        $ids = $params ? $wpdb->get_col($wpdb->prepare($sql, $params)) : $wpdb->get_col($sql);
+        
+        if (empty($ids)) {
+            wp_send_json_error(array('message' => $this->tr('error_no_records', 'Žádní uživatelé')));
+        }
+        
+        $ids = array_map('intval', $ids);
+        $current_index = array_search($current_id, $ids, true);
+        
+        if ($current_index === false) {
+            wp_send_json_error(array('message' => $this->tr('error_not_in_list', 'Nenalezeno')));
+        }
+        
+        // Circular navigation
+        $adjacent_index = $direction === 'next' 
+            ? ($current_index + 1) % count($ids)
+            : ($current_index - 1 + count($ids)) % count($ids);
+        
+        $adjacent_id = $ids[$adjacent_index];
+        
+        wp_send_json_success(array(
+            'id' => $adjacent_id,
+            'url' => home_url('/admin/users/' . $adjacent_id . '/'),
+        ));
     }
     
     /**
@@ -144,7 +375,7 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
             } else {
                 $data['customer_id'] = SAW_Context::get_customer_id();
                 if (!$data['customer_id']) {
-                    return new WP_Error('no_customer', 'Customer ID is required');
+                    return new WP_Error('no_customer', $this->tr('error_database', 'Customer ID is required'));
                 }
             }
         } else {
@@ -159,7 +390,7 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
         if (empty($data['id'])) {
             $existing_wp_user = get_user_by('email', $data['email']);
             if ($existing_wp_user) {
-                return new WP_Error('email_exists', 'Email je již používán jiným WordPress uživatelem');
+                return new WP_Error('email_exists', $this->tr('error_email_exists', 'Email je již používán'));
             }
             
             @set_time_limit(30);
@@ -175,11 +406,11 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
             ));
             
             if (is_wp_error($wp_user_id)) {
-                return new WP_Error('wp_user_error', 'Chyba při vytváření WordPress uživatele: ' . $wp_user_id->get_error_message());
+                return new WP_Error('wp_user_error', $this->tr('error_database', 'Chyba při vytváření uživatele') . ': ' . $wp_user_id->get_error_message());
             }
             
             if (!$wp_user_id || !is_numeric($wp_user_id)) {
-                return new WP_Error('wp_user_invalid', 'Chyba: Vytvoření WordPress uživatele selhalo (invalid ID)');
+                return new WP_Error('wp_user_invalid', $this->tr('error_database', 'Vytvoření uživatele selhalo'));
             }
             
             $data['wp_user_id'] = $wp_user_id;
@@ -196,7 +427,7 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
             $existing_user = $this->model->get_by_id($data['id']);
             
             if (!$existing_user) {
-                return new WP_Error('user_not_found', 'Uživatel nenalezen');
+                return new WP_Error('user_not_found', $this->tr('error_not_found', 'Uživatel nenalezen'));
             }
             
             // Clear departments if role changes from manager
@@ -236,7 +467,7 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
         // Hash PIN for terminal users
         if ($data['role'] === 'terminal' && !empty($data['pin'])) {
             if (!preg_match('/^\d{4}$/', $data['pin'])) {
-                return new WP_Error('invalid_pin', 'PIN musí být 4 číslice');
+                return new WP_Error('invalid_pin', $this->tr('error_pin_invalid', 'PIN musí být 4 číslice'));
             }
             $data['pin'] = password_hash($data['pin'], PASSWORD_BCRYPT);
         } else {
@@ -251,9 +482,9 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
                 $this->pending_departments = array();
             }
             
-            // Validace: Manager MUSÍ mít alespoň jedno oddělení
+            // Validation: Manager MUST have at least one department
             if ($data['role'] === 'manager' && empty($this->pending_departments)) {
-                return new WP_Error('departments_required', 'Manager musí mít přiřazeno alespoň jedno oddělení');
+                return new WP_Error('departments_required', $this->tr('hint_departments_visible', 'Manager musí mít přiřazeno alespoň jedno oddělení'));
             }
         }
         
@@ -279,7 +510,7 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
                 array('%d')
             );
             
-            // Insert new assignments (pokud jsou nějaká vybraná oddělení)
+            // Insert new assignments
             if (!empty($this->pending_departments)) {
                 foreach ($this->pending_departments as $dept_id) {
                     $wpdb->insert(
@@ -319,7 +550,7 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
                     );
                 } else {
                     if (defined('WP_DEBUG') && WP_DEBUG) {
-                        SAW_Logger::error('[Users] Failed to create setup token for user: ' . $user_id);
+                        error_log('[Users] Failed to create setup token for user: ' . $user_id);
                     }
                 }
             }
@@ -340,6 +571,10 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
                 ))
             ));
         }
+        
+        // Reset pending data
+        $this->pending_departments = null;
+        $this->pending_setup_email = null;
     }
     
     /**
@@ -357,7 +592,12 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
             $wp_user_id = intval($user['wp_user_id']);
             
             if ($wp_user_id === get_current_user_id()) {
-                return new WP_Error('delete_self', 'Nemůžete smazat sami sebe');
+                return new WP_Error('delete_self', $this->tr('error_cannot_delete_self', 'Nemůžete smazat sami sebe'));
+            }
+            
+            // Check if user is in use
+            if ($this->model->is_used_in_system($id)) {
+                return new WP_Error('user_in_use', $this->tr('error_user_in_use', 'Uživatel má záznamy v systému a nelze smazat'));
             }
             
             // Delete WordPress user
@@ -365,7 +605,7 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
             $deleted = wp_delete_user($wp_user_id);
             
             if (is_wp_error($deleted)) {
-                return new WP_Error('wp_delete_failed', 'Chyba při mazání WordPress uživatele: ' . $deleted->get_error_message());
+                return new WP_Error('wp_delete_failed', $this->tr('error_database', 'Chyba při mazání'));
             }
         }
         
@@ -382,6 +622,9 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
     
     /**
      * Map SAW role to WordPress role
+     * 
+     * @param string $saw_role SAW role name
+     * @return string WordPress role name
      */
     private function map_saw_to_wp_role($saw_role) {
         $mapping = array(
@@ -397,12 +640,9 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
     
     /**
      * AJAX: Get departments by branch
-     * 
-     * Called by universal AJAX handler: saw_get_departments_by_branch
-     * Pattern: saw_{method}_{module} -> ajax_{method}()
      */
     public function ajax_get_departments_by_branch() {
-        // Verify nonce
+        // ✅ SPRÁVNĚ: Unified nonce verification
         saw_verify_ajax_unified();
         
         $branch_id = isset($_POST['branch_id']) ? intval($_POST['branch_id']) : 0;
@@ -412,34 +652,17 @@ class SAW_Module_Users_Controller extends SAW_Base_Controller
             return;
         }
         
-        // Security: Ověření, že branch patří k customer_id z kontextu
-        $customer_id = SAW_Context::get_customer_id();
-        
         global $wpdb;
+        $table = $wpdb->prefix . 'saw_departments';
         
-        // Nejdřív ověříme, že branch patří k customer_id
-        $branch_check = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM %i WHERE id = %d AND customer_id = %d AND is_active = 1",
-            $wpdb->prefix . 'saw_branches',
-            $branch_id,
-            $customer_id
-        ));
-        
-        if (!$branch_check) {
-            wp_send_json_error(array('message' => 'Nemáte přístup k této pobočce'));
-            return;
-        }
-        
-        // Načteme departments pro danou pobočku
         $departments = $wpdb->get_results($wpdb->prepare(
             "SELECT id, name, department_number 
-             FROM %i 
+             FROM {$table}
              WHERE branch_id = %d AND is_active = 1 
              ORDER BY name ASC",
-            $wpdb->prefix . 'saw_departments',
             $branch_id
         ), ARRAY_A);
         
-        wp_send_json_success(array('departments' => $departments));
+        wp_send_json_success(array('departments' => $departments ?: array()));
     }
 }

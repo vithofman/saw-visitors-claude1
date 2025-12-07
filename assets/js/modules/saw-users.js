@@ -1,187 +1,154 @@
-jQuery(document).ready(function ($) {
-    const roleSelect = $('#role');
-    const branchSelect = $('#branch_id');
-    const deptList = $('#departments-list');
-    const deptControls = $('.saw-dept-controls');
-    const searchInput = $('#dept-search');
-    const selectAllCb = $('#select-all-dept');
-    const selectedSpan = $('#dept-selected');
-    const totalSpan = $('#dept-total');
-    const counterDiv = $('#dept-counter');
-
-    let allDepts = [];
-
-    // Data passed from Controller via wp_localize_script
-    // sawUsers.existingIds is already an array of integers
-    let existingIds = (window.sawUsers && window.sawUsers.existingIds) || [];
-
-    const ajaxUrl = (window.sawGlobal && window.sawGlobal.ajaxurl) || '/wp-admin/admin-ajax.php';
-    const ajaxNonce = (window.sawGlobal && window.sawGlobal.nonce) || '';
-
-    roleSelect.on('change', updateFields);
-    branchSelect.on('change', loadDepts);
-    searchInput.on('input', filterDepts);
-    selectAllCb.on('change', toggleAll);
-
-    function updateFields() {
-        const role = roleSelect.val();
-
-        $('.field-customer').toggle(role === 'super_admin');
-        $('.field-branch-departments').toggle(['super_manager', 'manager', 'terminal'].includes(role));
-        $('.field-pin').toggle(role === 'terminal');
-        $('.field-departments-row').toggle(role === 'manager');
-        $('.field-branch-required').toggle(['manager', 'super_manager', 'terminal'].includes(role));
-
-        if (role === 'manager' && branchSelect.val()) {
-            // If we already have departments loaded (e.g. from previous load), don't reload unnecessarily
-            // unless list is empty
-            if (deptList.children().length <= 1) {
+/**
+ * SAW Users Module - Departments Management
+ * 
+ * @package     SAW_Visitors
+ * @subpackage  Modules/Users
+ * @version     14.1.0 - Search by name AND department_number
+ */
+(function($) {
+    'use strict';
+    
+    function initDepartmentsManager() {
+        var $role = $('#role');
+        var $branch = $('#branch_id');
+        var $deptList = $('#departments-list');
+        var $deptControls = $('.saw-dept-controls');
+        var $search = $('#dept-search');
+        var $selectAll = $('#select-all-dept');
+        var $selectedSpan = $('#dept-selected');
+        var $totalSpan = $('#dept-total');
+        var $counter = $('#dept-counter');
+        
+        if (!$role.length) return;
+        if ($role.data('saw-v13')) return;
+        $role.data('saw-v13', true);
+        
+        // Read from DOM data-existing attribute
+        var existingDeptIds = [];
+        var raw = $deptList.attr('data-existing');
+        if (raw) {
+            try {
+                var arr = JSON.parse(raw);
+                if (Array.isArray(arr)) {
+                    existingDeptIds = arr.map(function(x) { return parseInt(x, 10); }).filter(function(x) { return x > 0; });
+                }
+            } catch(e) {}
+        }
+        console.log('[SAW Users] existingDeptIds from DOM:', existingDeptIds);
+        
+        var ajaxUrl = window.sawGlobal ? window.sawGlobal.ajaxurl : '/wp-admin/admin-ajax.php';
+        var ajaxNonce = window.sawGlobal ? window.sawGlobal.nonce : '';
+        var allDepts = [];
+        
+        function updateFields() {
+            var role = $role.val();
+            $('.field-customer').toggle(role === 'super_admin');
+            $('.field-branch-departments').toggle(['super_manager', 'manager', 'terminal'].indexOf(role) !== -1);
+            $('.field-pin').toggle(role === 'terminal');
+            $('.field-departments-row').toggle(role === 'manager');
+            $('.field-branch-required').toggle(['manager', 'super_manager', 'terminal'].indexOf(role) !== -1);
+            
+            if (role === 'manager' && $branch.val() && allDepts.length === 0) {
                 loadDepts();
+            } else if (role !== 'manager') {
+                $deptList.html('<p style="padding:20px;text-align:center;">Nejprve vyberte pobočku</p>');
+                $deptControls.hide();
             }
-        } else if (role !== 'manager') {
-            deptList.html('<p class="saw-text-muted" style="padding: 20px; margin: 0; text-align: center;">Nejprve vyberte pobočku výše</p>');
-            deptControls.hide();
         }
-    }
-
-    function loadDepts() {
-        const branchId = branchSelect.val();
-        const role = roleSelect.val();
-
-        if (role !== 'manager' || !branchId) {
-            deptList.html('<p class="saw-text-muted" style="padding: 20px; margin: 0; text-align: center;">Nejprve vyberte pobočku výše</p>');
-            deptControls.hide();
-            return;
-        }
-
-        deptList.html('<p class="saw-text-muted" style="padding: 20px; margin: 0; text-align: center;"><span class="dashicons dashicons-update-alt" style="animation: spin 1s linear infinite;"></span> Načítám...</p>');
-        deptControls.hide();
-
-        // Add spin animation if not exists
-        if ($('#saw-spin-style').length === 0) {
-            $('<style id="saw-spin-style">@keyframes spin { to { transform: rotate(360deg); }}</style>').appendTo('head');
-        }
-
-        $.ajax({
-            url: ajaxUrl,
-            type: 'POST',
-            data: {
+        
+        function loadDepts() {
+            var branchId = $branch.val();
+            if (!branchId || $role.val() !== 'manager') return;
+            
+            $deptList.html('<p style="padding:20px;text-align:center;">Načítám...</p>');
+            $deptControls.hide();
+            
+            $.post(ajaxUrl, {
                 action: 'saw_get_departments_by_branch',
                 branch_id: branchId,
                 nonce: ajaxNonce
-            },
-            success: function (response) {
-                if (response.success) {
-                    allDepts = response.data.departments;
-                    renderDepts(allDepts);
-                    if (allDepts.length > 0) {
-                        deptControls.show();
-                        updateCounter();
-                    }
+            }).done(function(res) {
+                if (res.success && res.data.departments) {
+                    allDepts = res.data.departments;
+                    renderDepts();
                 } else {
-                    deptList.html('<p class="saw-text-muted" style="padding: 20px; margin: 0; text-align: center; color: #d63638;">' + (response.data.message || 'Chyba') + '</p>');
+                    $deptList.html('<p style="padding:20px;text-align:center;color:#d63638;">Chyba</p>');
                 }
-            },
-            error: function () {
-                deptList.html('<p class="saw-text-muted" style="padding: 20px; margin: 0; text-align: center; color: #d63638;">Chyba při načítání</p>');
-            }
-        });
-    }
-
-    function renderDepts(depts) {
-        if (depts.length === 0) {
-            deptList.html('<p class="saw-text-muted" style="padding: 40px 20px; margin: 0; text-align: center;">Pobočka nemá žádná oddělení</p>');
-            deptControls.hide();
-            return;
+            });
         }
-
-        let html = '';
-        depts.forEach(d => {
-            // Convert d.id to integer for proper comparison
-            const deptId = parseInt(d.id, 10);
-            const checked = existingIds.includes(deptId);
-
-            // Format: "111 | Name" or just "Name"
-            const label = d.department_number
-                ? `<span class="saw-dept-number">${d.department_number}</span><span class="saw-dept-separator">|</span><span class="saw-dept-name">${d.name}</span>`
-                : `<span class="saw-dept-name">${d.name}</span>`;
-
-            html += `<div class="saw-dept-item ${checked ? 'selected' : ''}" data-id="${deptId}" data-name="${d.name.toLowerCase()}" data-number="${(d.department_number || '').toLowerCase()}">
-                <input type="checkbox" name="department_ids[]" value="${deptId}" ${checked ? 'checked' : ''} id="dept-${deptId}">
-                <label for="dept-${deptId}">${label}</label>
-            </div>`;
-        });
-
-        deptList.html(html);
-
-        // Click on row toggles checkbox
-        $('.saw-dept-item').on('click', function (e) {
-            // Don't trigger if clicking directly on checkbox
-            if (e.target.type !== 'checkbox') {
-                const cb = $(this).find('input[type="checkbox"]');
-                cb.prop('checked', !cb.prop('checked')).trigger('change');
+        
+        function renderDepts() {
+            if (!allDepts.length) {
+                $deptList.html('<p style="padding:20px;text-align:center;">Žádná oddělení</p>');
+                $deptControls.hide();
+                return;
             }
+            
+            var html = '';
+            for (var i = 0; i < allDepts.length; i++) {
+                var d = allDepts[i];
+                var id = parseInt(d.id, 10);
+                var checked = existingDeptIds.indexOf(id) !== -1;
+                if (checked) console.log('[SAW Users] PRE-CHECK:', id, d.name);
+                
+                html += '<div class="saw-dept-item' + (checked ? ' selected' : '') + '" data-id="' + id + '" data-name="' + (d.name||'').toLowerCase() + '" data-number="' + (d.department_number||'').toLowerCase() + '">' +
+                    '<input type="checkbox" name="department_ids[]" value="' + id + '"' + (checked ? ' checked' : '') + ' id="dept-' + id + '">' +
+                    '<label for="dept-' + id + '">' + (d.department_number ? d.department_number + ' | ' : '') + d.name + '</label>' +
+                '</div>';
+            }
+            
+            $deptList.html(html);
+            $deptControls.show();
+            updateCounter();
+        }
+        
+        function updateCounter() {
+            var vis = $deptList.find('.saw-dept-item:visible').length;
+            var sel = $deptList.find('.saw-dept-item:visible input:checked').length;
+            $selectedSpan.text(sel);
+            $totalSpan.text(vis);
+            $counter.css('background', sel === 0 ? '#d63638' : (sel === vis ? '#00a32a' : '#0073aa'));
+            $selectAll.prop('checked', vis > 0 && sel === vis);
+        }
+        
+        $role.off('.saw').on('change.saw', updateFields);
+        $branch.off('.saw').on('change.saw', function() { allDepts = []; loadDepts(); });
+        $search.off('.saw').on('input.saw', function() {
+            var t = $(this).val().toLowerCase();
+            $deptList.find('.saw-dept-item').each(function() {
+                var name = ($(this).data('name') || '').toString().toLowerCase();
+                var num = ($(this).data('number') || '').toString().toLowerCase();
+                $(this).toggle(name.indexOf(t) !== -1 || num.indexOf(t) !== -1);
+            });
+            updateCounter();
         });
-
-        deptList.on('change', 'input[type="checkbox"]', function () {
+        $selectAll.off('.saw').on('change.saw', function() {
+            $deptList.find('.saw-dept-item:visible input').prop('checked', this.checked).trigger('change');
+        });
+        $deptList.off('.saw').on('click.saw', '.saw-dept-item', function(e) {
+            if (e.target.tagName !== 'INPUT') {
+                $(this).find('input').click();
+            }
+        }).on('change.saw', 'input', function() {
             $(this).closest('.saw-dept-item').toggleClass('selected', this.checked);
             updateCounter();
-            updateSelectAllState();
         });
-    }
-
-    function filterDepts() {
-        const term = searchInput.val().toLowerCase().trim();
-
-        $('.saw-dept-item').each(function () {
-            const $item = $(this);
-            const name = $item.data('name');
-            const number = $item.data('number');
-
-            // Safe check if number exists
-            const numberStr = number ? String(number) : '';
-
-            const matches = name.includes(term) || numberStr.includes(term);
-            $item.toggle(matches);
-        });
-
-        updateCounter();
-    }
-
-    function toggleAll() {
-        const checked = selectAllCb.prop('checked');
-        $('.saw-dept-item:visible input[type="checkbox"]').prop('checked', checked).trigger('change');
-    }
-
-    function updateCounter() {
-        const visible = $('.saw-dept-item:visible').length;
-        const selected = $('.saw-dept-item:visible input[type="checkbox"]:checked').length;
-
-        selectedSpan.text(selected);
-        totalSpan.text(visible);
-
-        // Change color based on selection
-        if (selected === 0) {
-            counterDiv.css('background', '#d63638'); // red
-        } else if (selected === visible) {
-            counterDiv.css('background', '#00a32a'); // green
-        } else {
-            counterDiv.css('background', '#0073aa'); // blue
+        
+        updateFields();
+        if (existingDeptIds.length && $branch.val() && $role.val() === 'manager') {
+            loadDepts();
         }
     }
-
-    function updateSelectAllState() {
-        const visible = $('.saw-dept-item:visible').length;
-        const selected = $('.saw-dept-item:visible input[type="checkbox"]:checked').length;
-
-        selectAllCb.prop('checked', visible > 0 && selected === visible);
-    }
-
-    // Initialize on load
-    updateFields();
-
-    // If we have existing IDs and branch is selected, trigger load to show them
-    if (existingIds.length > 0 && branchSelect.val() && roleSelect.val() === 'manager') {
-        loadDepts();
-    }
-});
+    
+    $(document).ready(function() {
+        if ($('#role').length && window.sawGlobal) initDepartmentsManager();
+    });
+    
+    $(document).on('saw:page-loaded', function() {
+        setTimeout(function() {
+            $('#role').removeData('saw-v13');
+            if ($('#role').length && window.sawGlobal) initDepartmentsManager();
+        }, 100);
+    });
+    
+})(jQuery);
