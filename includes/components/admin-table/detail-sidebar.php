@@ -7,7 +7,7 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Components/AdminTable
- * @version     5.5.0 - ADDED: Header image support (logo/image in header)
+ * @version     5.5.0 - ADDED: Header image support (logo/image in blue header)
  * @since       4.0.0
  */
 
@@ -312,7 +312,7 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
 </div>
 
 <!-- ============================================
-     HEADER IMAGE STYLES
+     HEADER IMAGE STYLES (v5.5.0)
      ============================================ -->
 <style>
 /* Two-column header layout when image exists */

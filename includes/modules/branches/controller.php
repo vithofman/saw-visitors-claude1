@@ -4,7 +4,7 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Modules/Branches
- * @version     17.0.0 - Tabs + Infinite Scroll support
+ * @version     17.1.0 - FIXED: Added ajax_get_adjacent_id for prev/next navigation
  */
 
 if (!defined('ABSPATH')) {
@@ -42,8 +42,110 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         add_action('wp_ajax_saw_search_branches',       array($this, 'ajax_search'));
         add_action('wp_ajax_saw_delete_branches',       array($this, 'ajax_delete'));
         add_action('wp_ajax_saw_load_sidebar_branches', array($this, 'ajax_load_sidebar'));
+        add_action('wp_ajax_saw_get_adjacent_branches', array($this, 'ajax_get_adjacent_id'));
 
         add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'));
+    }
+
+    /**
+     * Override ajax_get_adjacent_id for branches
+     * Branches table doesn't have branch_id column - it IS the branches table
+     * Only filter by customer_id
+     * 
+     * @since 17.1.0
+     * @return void Outputs JSON
+     */
+    public function ajax_get_adjacent_id() {
+        saw_verify_ajax_unified();
+        
+        if (!$this->can('view')) {
+            wp_send_json_error(array('message' => 'Nemáte oprávnění zobrazit záznamy'));
+            return;
+        }
+        
+        $current_id = intval($_POST['id'] ?? 0);
+        $direction = sanitize_text_field($_POST['direction'] ?? 'next');
+        
+        if (!$current_id) {
+            wp_send_json_error(array('message' => 'Chybí ID záznamu'));
+            return;
+        }
+        
+        if (!in_array($direction, array('next', 'prev'))) {
+            wp_send_json_error(array('message' => 'Neplatný směr navigace'));
+            return;
+        }
+        
+        // Get current record
+        $current_item = $this->model->get_by_id($current_id);
+        if (!$current_item) {
+            wp_send_json_error(array('message' => 'Záznam nenalezen'));
+            return;
+        }
+        
+        // Get customer_id filter (branches don't filter by branch_id - they ARE branches)
+        $customer_id = SAW_Context::get_customer_id();
+        
+        global $wpdb;
+        $table = $wpdb->prefix . 'saw_branches';
+        
+        $where = array('1=1');
+        $where_values = array();
+        
+        if ($customer_id) {
+            $where[] = 'customer_id = %d';
+            $where_values[] = $customer_id;
+        }
+        
+        $where_clause = implode(' AND ', $where);
+        $query = "SELECT id FROM {$table} WHERE {$where_clause} ORDER BY name ASC, id ASC";
+        
+        if (!empty($where_values)) {
+            $query = $wpdb->prepare($query, $where_values);
+        }
+        
+        $ids = $wpdb->get_col($query);
+        
+        if ($wpdb->last_error) {
+            wp_send_json_error(array('message' => 'Chyba databáze'));
+            return;
+        }
+        
+        if (empty($ids)) {
+            wp_send_json_error(array('message' => 'Žádné záznamy nenalezeny'));
+            return;
+        }
+        
+        $ids = array_map('intval', $ids);
+        $current_id = intval($current_id);
+        $current_index = array_search($current_id, $ids, true);
+        
+        if ($current_index === false) {
+            wp_send_json_error(array('message' => 'Aktuální záznam není v seznamu'));
+            return;
+        }
+        
+        // Circular navigation
+        if ($direction === 'next') {
+            $adjacent_index = ($current_index + 1) % count($ids);
+        } else {
+            $adjacent_index = ($current_index - 1 + count($ids)) % count($ids);
+        }
+        
+        $adjacent_id = $ids[$adjacent_index];
+        
+        if (!$adjacent_id) {
+            wp_send_json_error(array('message' => 'Nepodařilo se najít sousední záznam'));
+            return;
+        }
+        
+        $route = $this->config['route'] ?? $this->entity;
+        $detail_url = home_url('/admin/' . $route . '/' . $adjacent_id . '/');
+        
+        wp_send_json_success(array(
+            'id' => $adjacent_id,
+            'url' => $detail_url,
+        ));
     }
 
     public function index() {
