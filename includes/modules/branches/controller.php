@@ -4,7 +4,7 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Modules/Branches
- * @version     17.1.0 - FIXED: Added ajax_get_adjacent_id for prev/next navigation
+ * @version     17.2.0 - ADDED: Translation support for all messages
  */
 
 if (!defined('ABSPATH')) {
@@ -24,6 +24,9 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
     use SAW_AJAX_Handlers;
 
     private $file_uploader;
+    
+    /** @var array Translation strings */
+    private $translations = array();
 
     public function __construct() {
         $module_path = SAW_VISITORS_PLUGIN_DIR . 'includes/modules/branches/';
@@ -37,6 +40,9 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
 
         require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/class-saw-file-uploader.php';
         $this->file_uploader = new SAW_File_Uploader();
+        
+        // Initialize translations
+        $this->init_translations();
 
         add_action('wp_ajax_saw_get_branches_detail',   array($this, 'ajax_get_detail'));
         add_action('wp_ajax_saw_search_branches',       array($this, 'ajax_search'));
@@ -45,6 +51,31 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         add_action('wp_ajax_saw_get_adjacent_branches', array($this, 'ajax_get_adjacent_id'));
 
         add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'));
+    }
+    
+    /**
+     * Initialize translations
+     */
+    private function init_translations() {
+        $lang = 'cs';
+        if (class_exists('SAW_Component_Language_Switcher')) {
+            $lang = SAW_Component_Language_Switcher::get_user_language();
+        }
+        
+        $this->translations = function_exists('saw_get_translations') 
+            ? saw_get_translations($lang, 'admin', 'branches') 
+            : array();
+    }
+    
+    /**
+     * Get translation
+     * 
+     * @param string $key Translation key
+     * @param string $fallback Fallback text
+     * @return string
+     */
+    private function tr($key, $fallback = null) {
+        return $this->translations[$key] ?? $fallback ?? $key;
     }
 
     /**
@@ -59,7 +90,7 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         saw_verify_ajax_unified();
         
         if (!$this->can('view')) {
-            wp_send_json_error(array('message' => 'Nemáte oprávnění zobrazit záznamy'));
+            wp_send_json_error(array('message' => $this->tr('error_no_view_permission', 'Nemáte oprávnění zobrazit záznamy')));
             return;
         }
         
@@ -67,23 +98,21 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         $direction = sanitize_text_field($_POST['direction'] ?? 'next');
         
         if (!$current_id) {
-            wp_send_json_error(array('message' => 'Chybí ID záznamu'));
+            wp_send_json_error(array('message' => $this->tr('error_missing_id', 'Chybí ID záznamu')));
             return;
         }
         
         if (!in_array($direction, array('next', 'prev'))) {
-            wp_send_json_error(array('message' => 'Neplatný směr navigace'));
+            wp_send_json_error(array('message' => $this->tr('error_invalid_direction', 'Neplatný směr navigace')));
             return;
         }
         
-        // Get current record
         $current_item = $this->model->get_by_id($current_id);
         if (!$current_item) {
-            wp_send_json_error(array('message' => 'Záznam nenalezen'));
+            wp_send_json_error(array('message' => $this->tr('error_not_found', 'Záznam nenalezen')));
             return;
         }
         
-        // Get customer_id filter (branches don't filter by branch_id - they ARE branches)
         $customer_id = SAW_Context::get_customer_id();
         
         global $wpdb;
@@ -107,12 +136,12 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         $ids = $wpdb->get_col($query);
         
         if ($wpdb->last_error) {
-            wp_send_json_error(array('message' => 'Chyba databáze'));
+            wp_send_json_error(array('message' => $this->tr('error_database', 'Chyba databáze')));
             return;
         }
         
         if (empty($ids)) {
-            wp_send_json_error(array('message' => 'Žádné záznamy nenalezeny'));
+            wp_send_json_error(array('message' => $this->tr('error_no_records', 'Žádné záznamy nenalezeny')));
             return;
         }
         
@@ -121,11 +150,10 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         $current_index = array_search($current_id, $ids, true);
         
         if ($current_index === false) {
-            wp_send_json_error(array('message' => 'Aktuální záznam není v seznamu'));
+            wp_send_json_error(array('message' => $this->tr('error_not_in_list', 'Aktuální záznam není v seznamu')));
             return;
         }
         
-        // Circular navigation
         if ($direction === 'next') {
             $adjacent_index = ($current_index + 1) % count($ids);
         } else {
@@ -135,7 +163,7 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         $adjacent_id = $ids[$adjacent_index];
         
         if (!$adjacent_id) {
-            wp_send_json_error(array('message' => 'Nepodařilo se najít sousední záznam'));
+            wp_send_json_error(array('message' => $this->tr('error_adjacent_not_found', 'Nepodařilo se najít sousední záznam')));
             return;
         }
         
@@ -161,7 +189,6 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         $order = isset($_GET['order']) ? strtoupper(sanitize_text_field(wp_unslash($_GET['order']))) : 'DESC';
         $page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
         
-        // Infinite scroll support
         $infinite_scroll_enabled = !empty($this->config['infinite_scroll']['enabled']);
         if ($infinite_scroll_enabled) {
             $per_page = ($page === 1) 
@@ -171,7 +198,6 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
             $per_page = $this->config['list_config']['per_page'] ?? 20;
         }
         
-        // Build filters
         $filters = array(
             'search' => $search,
             'orderby' => $orderby,
@@ -180,7 +206,6 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
             'per_page' => $per_page,
         );
         
-        // Handle TAB filtering
         $current_tab = $this->config['tabs']['default_tab'] ?? 'all';
         
         if (!empty($this->config['tabs']['enabled'])) {
@@ -190,7 +215,6 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
             if ($url_value === null || $url_value === '') {
                 $current_tab = $this->config['tabs']['default_tab'] ?? 'all';
             } else {
-                // Find matching tab by filter_value
                 $tab_found = false;
                 foreach ($this->config['tabs']['tabs'] as $tab_key => $tab_config) {
                     if ($tab_config['filter_value'] !== null && 
@@ -205,20 +229,17 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
                     $current_tab = $this->config['tabs']['default_tab'] ?? 'all';
                 }
                 
-                // Pass tab filter to model
                 if ($url_value !== null && $url_value !== '') {
                     $filters['tab'] = $url_value;
                 }
             }
         }
         
-        // Get data from model
         $data = $this->model->get_all($filters);
         $items = $data['items'] ?? array();
         $total = $data['total'] ?? 0;
         $total_pages = ceil($total / $per_page);
         
-        // Get tab counts
         $tab_counts = array();
         if (!empty($this->config['tabs']['enabled'])) {
             $tab_counts = $this->model->get_tab_counts();
@@ -241,18 +262,18 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         saw_verify_ajax_unified();
 
         if (!$this->can('delete')) {
-            wp_send_json_error(array('message' => 'Nemáte oprávnění mazat záznamy'));
+            wp_send_json_error(array('message' => $this->tr('error_no_delete_permission', 'Nemáte oprávnění mazat záznamy')));
             return;
         }
 
         $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
         if (!$id) {
-            wp_send_json_error(array('message' => 'Chybí ID'));
+            wp_send_json_error(array('message' => $this->tr('error_missing_id', 'Chybí ID')));
             return;
         }
 
         if ($this->before_delete($id) === false) {
-            wp_send_json_error(array('message' => 'Nelze smazat pobočku – má navázaná oddělení.'));
+            wp_send_json_error(array('message' => $this->tr('error_has_departments', 'Nelze smazat pobočku – má navázaná oddělení.')));
             return;
         }
 
@@ -262,7 +283,7 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
             return;
         }
 
-        wp_send_json_success(array('message' => 'Pobočka byla smazána'));
+        wp_send_json_success(array('message' => $this->tr('success_deleted', 'Pobočka byla smazána')));
     }
 
     protected function prepare_form_data($post) {
@@ -320,8 +341,12 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
             $item['image_url'] = $upload_dir['baseurl'] . '/' . ltrim($item['image_url'], '/');
         }
 
-        $item['is_headquarters_label'] = !empty($item['is_headquarters']) ? 'Ano' : 'Ne';
-        $item['is_active_label']       = !empty($item['is_active']) ? 'Aktivní' : 'Neaktivní';
+        $item['is_headquarters_label'] = !empty($item['is_headquarters']) 
+            ? $this->tr('yes', 'Ano') 
+            : $this->tr('no', 'Ne');
+        $item['is_active_label'] = !empty($item['is_active']) 
+            ? $this->tr('status_active', 'Aktivní') 
+            : $this->tr('status_inactive', 'Neaktivní');
 
         return $item;
     }
@@ -368,7 +393,7 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
 
         if ($departments_count > 0) {
             $this->set_flash(
-                sprintf('Nelze smazat pobočku – obsahuje %d oddělení', $departments_count),
+                sprintf($this->tr('error_has_departments_count', 'Nelze smazat pobočku – obsahuje %d oddělení'), $departments_count),
                 'error'
             );
             return false;
@@ -394,7 +419,6 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         
         $customer_id = $branch['customer_id'];
         
-        // Find or create Czech language
         $czech_lang = $wpdb->get_row($wpdb->prepare(
             "SELECT id FROM {$wpdb->prefix}saw_training_languages 
              WHERE customer_id = %d AND language_code = 'cs'",
@@ -417,7 +441,6 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
             $czech_lang = (object) array('id' => $wpdb->insert_id);
         }
         
-        // Check if already assigned
         $existing = $wpdb->get_var($wpdb->prepare(
             "SELECT id FROM {$wpdb->prefix}saw_training_language_branches 
              WHERE language_id = %d AND branch_id = %d",
@@ -429,14 +452,12 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
             return;
         }
         
-        // Check if first branch
         $branch_count = $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$wpdb->prefix}saw_branches 
              WHERE customer_id = %d",
             $customer_id
         ));
         
-        // Assign Czech to branch
         $wpdb->insert(
             $wpdb->prefix . 'saw_training_language_branches',
             array(
@@ -495,16 +516,16 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         
         // 2. Sídlo firmy / Pobočka
         if (!empty($item['is_headquarters'])) {
-            $meta_parts[] = '<span class="saw-badge-transparent saw-badge-primary">🏛️ Sídlo firmy</span>';
+            $meta_parts[] = '<span class="saw-badge-transparent saw-badge-primary">🏛️ ' . esc_html($this->tr('badge_headquarters', 'Sídlo firmy')) . '</span>';
         } else {
-            $meta_parts[] = '<span class="saw-badge-transparent">🏢 Pobočka</span>';
+            $meta_parts[] = '<span class="saw-badge-transparent">🏢 ' . esc_html($this->tr('badge_branch', 'Pobočka')) . '</span>';
         }
         
         // 3. Status
         if (!empty($item['is_active'])) {
-            $meta_parts[] = '<span class="saw-badge-transparent saw-badge-success">✓ Aktivní</span>';
+            $meta_parts[] = '<span class="saw-badge-transparent saw-badge-success">✓ ' . esc_html($this->tr('status_active', 'Aktivní')) . '</span>';
         } else {
-            $meta_parts[] = '<span class="saw-badge-transparent saw-badge-secondary">Neaktivní</span>';
+            $meta_parts[] = '<span class="saw-badge-transparent saw-badge-secondary">' . esc_html($this->tr('status_inactive', 'Neaktivní')) . '</span>';
         }
         
         return implode(' ', $meta_parts);

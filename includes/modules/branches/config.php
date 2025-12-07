@@ -7,24 +7,40 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Modules/Branches
- * @version     15.0.0
- * 
- * POZNÁMKA: Překlady jsou řešeny v list-template.php
- * Config obsahuje pouze české fallback texty.
+ * @version     15.1.0 - ADDED: Translation support
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+// ============================================
+// TRANSLATIONS
+// ============================================
+$lang = 'cs';
+if (class_exists('SAW_Component_Language_Switcher')) {
+    $lang = SAW_Component_Language_Switcher::get_user_language();
+}
+
+$t = function_exists('saw_get_translations') 
+    ? saw_get_translations($lang, 'admin', 'branches') 
+    : array();
+
+$tr = function($key, $fallback = null) use ($t) {
+    return $t[$key] ?? $fallback ?? $key;
+};
+
+// ============================================
+// CONFIGURATION
+// ============================================
 return array(
     // ============================================
     // ENTITY DEFINITION
     // ============================================
     'entity' => 'branches',
     'table' => 'saw_branches',
-    'singular' => 'Pobočka',
-    'plural' => 'Pobočky',
+    'singular' => $tr('singular', 'Pobočka'),
+    'plural' => $tr('plural', 'Pobočky'),
     'route' => 'branches',
     'icon' => '🏢',
     'has_customer_isolation' => true,
@@ -48,38 +64,38 @@ return array(
         // Core Fields
         'name' => array(
             'type' => 'text',
-            'label' => 'Název pobočky',
+            'label' => $tr('field_name', 'Název pobočky'),
             'required' => true,
             'sanitize' => 'sanitize_text_field',
         ),
         'customer_id' => array(
             'type' => 'number',
-            'label' => 'Zákazník ID',
+            'label' => $tr('field_customer_id', 'Zákazník ID'),
             'required' => true,
             'hidden' => true,
             'sanitize' => 'absint',
         ),
         'is_headquarters' => array(
             'type' => 'boolean',
-            'label' => 'Sídlo firmy',
+            'label' => $tr('field_is_headquarters', 'Sídlo firmy'),
             'default' => 0,
             'sanitize' => 'absint',
         ),
         'is_active' => array(
             'type' => 'boolean',
-            'label' => 'Aktivní',
+            'label' => $tr('field_is_active', 'Aktivní'),
             'default' => 1,
             'sanitize' => 'absint',
         ),
         'code' => array(
             'type' => 'text',
-            'label' => 'Kód pobočky',
+            'label' => $tr('field_code', 'Kód pobočky'),
             'required' => false,
             'sanitize' => 'sanitize_text_field',
         ),
         'sort_order' => array(
             'type' => 'number',
-            'label' => 'Pořadí',
+            'label' => $tr('field_sort_order', 'Pořadí'),
             'default' => 10,
             'sanitize' => 'absint',
         ),
@@ -87,12 +103,12 @@ return array(
         // Branding
         'image_url' => array(
             'type' => 'file',
-            'label' => 'Obrázek (Logo)',
+            'label' => $tr('field_image', 'Obrázek (Logo)'),
             'required' => false,
         ),
         'image_thumbnail' => array(
             'type' => 'text',
-            'label' => 'Náhled',
+            'label' => $tr('field_thumbnail', 'Náhled'),
             'required' => false,
             'hidden' => true,
         ),
@@ -100,13 +116,13 @@ return array(
         // Contact
         'phone' => array(
             'type' => 'text',
-            'label' => 'Telefon',
+            'label' => $tr('field_phone', 'Telefon'),
             'required' => false,
             'sanitize' => 'sanitize_text_field',
         ),
         'email' => array(
             'type' => 'email',
-            'label' => 'Email',
+            'label' => $tr('field_email', 'Email'),
             'required' => false,
             'sanitize' => 'sanitize_email',
         ),
@@ -114,25 +130,25 @@ return array(
         // Address
         'street' => array(
             'type' => 'text',
-            'label' => 'Ulice a č.p.',
+            'label' => $tr('field_street', 'Ulice a č.p.'),
             'required' => false,
             'sanitize' => 'sanitize_text_field',
         ),
         'city' => array(
             'type' => 'text',
-            'label' => 'Město',
+            'label' => $tr('field_city', 'Město'),
             'required' => false,
             'sanitize' => 'sanitize_text_field',
         ),
         'postal_code' => array(
             'type' => 'text',
-            'label' => 'PSČ',
+            'label' => $tr('field_postal_code', 'PSČ'),
             'required' => false,
             'sanitize' => 'sanitize_text_field',
         ),
         'country' => array(
             'type' => 'text',
-            'label' => 'Země (kód)',
+            'label' => $tr('field_country', 'Země (kód)'),
             'default' => 'CZ',
             'sanitize' => 'sanitize_text_field',
         ),
@@ -140,13 +156,13 @@ return array(
         // Data
         'notes' => array(
             'type' => 'textarea',
-            'label' => 'Poznámky',
+            'label' => $tr('field_notes', 'Poznámky'),
             'required' => false,
             'sanitize' => 'sanitize_textarea_field',
         ),
         'description' => array(
             'type' => 'textarea',
-            'label' => 'Popis',
+            'label' => $tr('field_description', 'Popis'),
             'required' => false,
             'sanitize' => 'sanitize_textarea_field',
         ),
@@ -161,12 +177,12 @@ return array(
         // Timestamps
         'created_at' => array(
             'type' => 'date',
-            'label' => 'Vytvořeno',
+            'label' => $tr('field_created_at', 'Vytvořeno'),
             'required' => false,
         ),
         'updated_at' => array(
             'type' => 'date',
-            'label' => 'Aktualizováno',
+            'label' => $tr('field_updated_at', 'Aktualizováno'),
             'required' => false,
         ),
     ),
@@ -193,33 +209,31 @@ return array(
 
     // ============================================
     // TABS CONFIGURATION
-    // Kombinované tabs: Sídla / Ostatní / Neaktivní
-    // Labels budou přepsány v list-template.php pro překlady
     // ============================================
     'tabs' => array(
         'enabled' => true,
         'tab_param' => 'tab',
         'tabs' => array(
             'all' => array(
-                'label' => 'Všechny',
+                'label' => $tr('tab_all', 'Všechny'),
                 'icon' => '📋',
                 'filter_value' => null,
                 'count_query' => true,
             ),
             'headquarters' => array(
-                'label' => 'Sídla',
+                'label' => $tr('tab_headquarters', 'Sídla'),
                 'icon' => '🏛️',
                 'filter_value' => 'headquarters',
                 'count_query' => true,
             ),
             'other' => array(
-                'label' => 'Ostatní',
+                'label' => $tr('tab_other', 'Ostatní'),
                 'icon' => '🏢',
                 'filter_value' => 'other',
                 'count_query' => true,
             ),
             'inactive' => array(
-                'label' => 'Neaktivní',
+                'label' => $tr('tab_inactive', 'Neaktivní'),
                 'icon' => '⏸️',
                 'filter_value' => 'inactive',
                 'count_query' => true,
