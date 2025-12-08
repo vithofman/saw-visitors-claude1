@@ -4,7 +4,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visits
- * @version     4.2.0
+ * @version     4.5.0
  */
 
 if (!defined('ABSPATH')) exit;
@@ -65,58 +65,143 @@ $visitors_count = intval($item['visitor_count'] ?? 0);
 
 // Determine visitor type
 $is_physical_person = empty($item['company_id']);
+
+// Current status
+$current_status = $item['status'] ?? 'draft';
+
+// Status configuration
+$all_statuses = array(
+    'draft' => array(
+        'label' => $tr('status_draft', 'Koncept'),
+        'icon' => '📝',
+    ),
+    'pending' => array(
+        'label' => $tr('status_pending', 'Čekající'),
+        'icon' => '⏳',
+    ),
+    'confirmed' => array(
+        'label' => $tr('status_confirmed', 'Potvrzená'),
+        'icon' => '✅',
+    ),
+    'in_progress' => array(
+        'label' => $tr('status_in_progress', 'Probíhající'),
+        'icon' => '🔄',
+    ),
+    'completed' => array(
+        'label' => $tr('status_completed', 'Dokončená'),
+        'icon' => '🏁',
+    ),
+    'cancelled' => array(
+        'label' => $tr('status_cancelled', 'Zrušená'),
+        'icon' => '❌',
+    ),
+);
 ?>
 
-<!-- Tracking Timeline -->
+<!-- ============================================ -->
+<!-- STATUS QUICK CHANGE BUTTONS                  -->
+<!-- ============================================ -->
+<div class="saw-industrial-section">
+    <div class="saw-section-head">
+        <h4 class="saw-section-title saw-section-title-accent">🔄 <?php echo esc_html($tr('change_status', 'Změnit stav')); ?></h4>
+    </div>
+    <div class="saw-section-body">
+        <div class="saw-status-buttons-grid">
+            <?php foreach ($all_statuses as $status_key => $status_config): 
+                $is_current = ($status_key === $current_status);
+            ?>
+            <button 
+                type="button" 
+                class="saw-status-btn <?php echo $is_current ? 'saw-status-btn-current' : ''; ?>"
+                data-status="<?php echo esc_attr($status_key); ?>"
+                data-visit-id="<?php echo esc_attr($item['id']); ?>"
+                data-status-label="<?php echo esc_attr($status_config['label']); ?>"
+                <?php echo $is_current ? 'disabled' : ''; ?>
+            >
+                <span class="saw-status-btn-icon"><?php echo $status_config['icon']; ?></span>
+                <span class="saw-status-btn-label"><?php echo esc_html($status_config['label']); ?></span>
+                <?php if ($is_current): ?>
+                <span class="saw-status-btn-check">✓</span>
+                <?php endif; ?>
+            </button>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- VISIT PROGRESS TIMELINE                      -->
+<!-- ============================================ -->
 <?php if (!empty($item['started_at']) || !empty($item['completed_at'])): ?>
 <div class="saw-industrial-section">
     <div class="saw-section-head">
         <h4 class="saw-section-title saw-section-title-accent">⏱️ <?php echo esc_html($tr('section_timeline', 'Průběh návštěvy')); ?></h4>
     </div>
     <div class="saw-section-body">
-        <div class="saw-tracking-timeline">
+        <div class="saw-visit-timeline">
             <?php if (!empty($item['started_at'])): ?>
-            <div class="saw-tracking-event">
-                <div class="saw-tracking-icon saw-tracking-icon-start">
-                    <span class="dashicons dashicons-arrow-down-alt"></span>
+            <div class="saw-timeline-row">
+                <div class="saw-timeline-dot saw-timeline-dot-start">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"/>
+                    </svg>
                 </div>
-                <div class="saw-tracking-content">
-                    <strong><?php echo esc_html($tr('field_started', 'Zahájeno')); ?></strong>
-                    <span class="saw-tracking-time">
-                        <?php echo date_i18n('d.m.Y H:i', strtotime($item['started_at'])); ?>
-                    </span>
-                </div>
-            </div>
-            <?php endif; ?>
-            
-            <?php if (!empty($item['completed_at'])): ?>
-            <div class="saw-tracking-event">
-                <div class="saw-tracking-icon saw-tracking-icon-end">
-                    <span class="dashicons dashicons-arrow-up-alt"></span>
-                </div>
-                <div class="saw-tracking-content">
-                    <strong><?php echo esc_html($tr('field_completed', 'Dokončeno')); ?></strong>
-                    <span class="saw-tracking-time">
-                        <?php echo date_i18n('d.m.Y H:i', strtotime($item['completed_at'])); ?>
-                    </span>
+                <div class="saw-timeline-info">
+                    <span class="saw-timeline-label"><?php echo esc_html($tr('field_started', 'Zahájeno')); ?></span>
+                    <span class="saw-timeline-value"><?php echo date_i18n('d.m.Y', strtotime($item['started_at'])); ?></span>
+                    <span class="saw-timeline-time"><?php echo date_i18n('H:i', strtotime($item['started_at'])); ?></span>
                 </div>
             </div>
             <?php endif; ?>
             
             <?php if (!empty($item['started_at']) && !empty($item['completed_at'])): ?>
-            <div class="saw-tracking-duration">
-                <?php
-                $start = new DateTime($item['started_at']);
-                $end = new DateTime($item['completed_at']);
-                $diff = $start->diff($end);
-                
-                $duration_parts = array();
-                if ($diff->d > 0) $duration_parts[] = $diff->d . ' ' . $tr('field_days', 'dní');
-                if ($diff->h > 0) $duration_parts[] = $diff->h . ' ' . $tr('field_hours', 'h');
-                if ($diff->i > 0) $duration_parts[] = $diff->i . ' ' . $tr('field_minutes', 'min');
-                
-                echo '⏱️ ' . esc_html($tr('field_duration', 'Celková doba')) . ': ' . implode(', ', $duration_parts);
-                ?>
+            <?php
+            $start = new DateTime($item['started_at']);
+            $end = new DateTime($item['completed_at']);
+            $diff = $start->diff($end);
+            
+            $duration_parts = [];
+            if ($diff->d > 0) $duration_parts[] = $diff->d . 'd';
+            if ($diff->h > 0) $duration_parts[] = $diff->h . 'h';
+            if ($diff->i > 0 && $diff->d == 0) $duration_parts[] = $diff->i . 'm';
+            $duration_str = implode(' ', $duration_parts) ?: '< 1m';
+            ?>
+            <div class="saw-timeline-connector">
+                <div class="saw-timeline-line"></div>
+                <span class="saw-timeline-duration"><?php echo esc_html($duration_str); ?></span>
+            </div>
+            <?php elseif (!empty($item['started_at']) && empty($item['completed_at'])): ?>
+            <div class="saw-timeline-connector saw-timeline-active">
+                <div class="saw-timeline-line"></div>
+                <span class="saw-timeline-duration saw-timeline-now"><?php echo esc_html($tr('now', 'Probíhá')); ?></span>
+            </div>
+            <?php endif; ?>
+            
+            <?php if (!empty($item['completed_at'])): ?>
+            <div class="saw-timeline-row">
+                <div class="saw-timeline-dot saw-timeline-dot-end">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="18 15 12 9 6 15"/>
+                    </svg>
+                </div>
+                <div class="saw-timeline-info">
+                    <span class="saw-timeline-label"><?php echo esc_html($tr('field_completed', 'Dokončeno')); ?></span>
+                    <span class="saw-timeline-value"><?php echo date_i18n('d.m.Y', strtotime($item['completed_at'])); ?></span>
+                    <span class="saw-timeline-time"><?php echo date_i18n('H:i', strtotime($item['completed_at'])); ?></span>
+                </div>
+            </div>
+            <?php elseif (!empty($item['started_at'])): ?>
+            <div class="saw-timeline-row">
+                <div class="saw-timeline-dot saw-timeline-dot-active">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                </div>
+                <div class="saw-timeline-info">
+                    <span class="saw-timeline-label"><?php echo esc_html($tr('in_progress', 'Probíhá')); ?></span>
+                    <span class="saw-timeline-value saw-timeline-value-active"><?php echo esc_html($tr('now', 'Nyní')); ?></span>
+                </div>
             </div>
             <?php endif; ?>
         </div>
@@ -124,7 +209,9 @@ $is_physical_person = empty($item['company_id']);
 </div>
 <?php endif; ?>
 
-<!-- Scheduled Days -->
+<!-- ============================================ -->
+<!-- SCHEDULED DAYS                               -->
+<!-- ============================================ -->
 <?php if (!empty($schedules)): ?>
 <div class="saw-industrial-section">
     <div class="saw-section-head">
@@ -171,7 +258,9 @@ $is_physical_person = empty($item['company_id']);
 </div>
 <?php endif; ?>
 
-<!-- Visit Information -->
+<!-- ============================================ -->
+<!-- VISIT INFORMATION                            -->
+<!-- ============================================ -->
 <div class="saw-industrial-section">
     <div class="saw-section-head">
         <h4 class="saw-section-title saw-section-title-accent">ℹ️ <?php echo esc_html($tr('section_info', 'Informace o návštěvě')); ?></h4>
@@ -190,155 +279,6 @@ $is_physical_person = empty($item['company_id']);
             include(dirname(__FILE__) . '/parts/pin-section.php');
             ?>
             
-            <script>
-            function extendPinQuick(visitId, hours) {
-                const card = document.getElementById('pin-card-' + visitId);
-                if (!card) {
-                    alert('<?php echo esc_js($tr('alert_error', 'Chyba')); ?>: Nenalezen PIN element');
-                    return;
-                }
-                
-                let currentExpiry = parseInt(card.getAttribute('data-current-expiry'));
-                let now = Date.now();
-                let baseTime;
-                
-                if (currentExpiry && currentExpiry > now) {
-                    baseTime = currentExpiry;
-                } else {
-                    baseTime = now;
-                }
-                
-                let newTimeMs = baseTime + (hours * 3600 * 1000);
-                let newDate = new Date(newTimeMs);
-                newDate.setSeconds(0, 0);
-                
-                const displayDate = formatDateTime(newDate);
-                
-                if (!confirm(`Prodloužit platnost PIN o ${hours} hodin?\n\nNová expirace: ${displayDate}`)) {
-                    return;
-                }
-                
-                const sqlDate = formatSQLDateTime(newDate);
-                extendPinToExactTime(visitId, sqlDate, newDate);
-            }
-            
-            function formatDateTime(date) {
-                const d = date.getDate().toString().padStart(2, '0');
-                const m = (date.getMonth() + 1).toString().padStart(2, '0');
-                const y = date.getFullYear();
-                const h = date.getHours().toString().padStart(2, '0');
-                const min = date.getMinutes().toString().padStart(2, '0');
-                return `${d}.${m}.${y} ${h}:${min}`;
-            }
-            
-            function formatSQLDateTime(date) {
-                const year = date.getFullYear();
-                const month = (date.getMonth() + 1).toString().padStart(2, '0');
-                const day = date.getDate().toString().padStart(2, '0');
-                const hours = date.getHours().toString().padStart(2, '0');
-                const minutes = date.getMinutes().toString().padStart(2, '0');
-                const seconds = date.getSeconds().toString().padStart(2, '0');
-                return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-            }
-            
-            function extendPinToExactTime(visitId, sqlDate, dateObj) {
-                jQuery.post(sawGlobal.ajaxurl, {
-                    action: 'saw_extend_pin',
-                    visit_id: visitId,
-                    hours: 999,
-                    exact_expiry: sqlDate,
-                    nonce: sawGlobal.nonce
-                }, function(response) {
-                    if (response.success) {
-                        const card = document.getElementById('pin-card-' + visitId);
-                        if (card) {
-                            card.setAttribute('data-current-expiry', dateObj.getTime());
-                        }
-                        alert('✅ <?php echo esc_js($tr('alert_pin_extended', 'PIN prodloužen do')); ?>: ' + formatDateTime(dateObj));
-                        location.reload();
-                    } else {
-                        alert('❌ <?php echo esc_js($tr('alert_error', 'Chyba')); ?>: ' + (response.data?.message || 'Neznámá chyba'));
-                    }
-                }).fail(function(xhr, status, error) {
-                    alert('❌ <?php echo esc_js($tr('alert_error', 'Chyba')); ?> komunikace se serverem\n\n' + error);
-                });
-            }
-
-            function showExtendPinForm(visitId) {
-                document.getElementById('pin-extend-buttons-' + visitId).style.display = 'none';
-                const form = document.getElementById('pin-extend-form-' + visitId);
-                form.style.display = 'block';
-                const datetimeInput = document.getElementById('pin-expiry-datetime-' + visitId);
-                datetimeInput.min = new Date().toISOString().slice(0, 16);
-            }
-
-            function hideExtendPinForm(visitId) {
-                document.getElementById('pin-extend-form-' + visitId).style.display = 'none';
-                document.getElementById('pin-extend-buttons-' + visitId).style.display = 'flex';
-            }
-
-            function extendPinCustom(visitId) {
-                const datetimeInput = document.getElementById('pin-expiry-datetime-' + visitId);
-                const datetimeValue = datetimeInput.value;
-                
-                if (!datetimeValue) {
-                    alert('Prosím zadejte datum a čas.');
-                    return;
-                }
-                
-                const newDate = new Date(datetimeValue);
-                
-                if (isNaN(newDate.getTime())) {
-                    alert('Neplatné datum');
-                    return;
-                }
-                
-                const displayDate = formatDateTime(newDate);
-                
-                if (!confirm(`Nastavit expiraci PIN na:\n${displayDate}?`)) {
-                    return;
-                }
-                
-                const sqlDate = formatSQLDateTime(newDate);
-                extendPinToExactTime(visitId, sqlDate, newDate);
-            }
-
-            function generatePin(visitId) {
-                if (!confirm('Vygenerovat PIN kód pro tuto návštěvu?\n\nPIN bude platný do posledního plánovaného dne návštěvy + 24 hodin.')) {
-                    return;
-                }
-                
-                const buttons = document.querySelectorAll(`button[onclick*="generatePin(${visitId})"]`);
-                let button = buttons.length > 0 ? buttons[0] : event?.target;
-                
-                if (button) {
-                    const originalText = button.innerHTML;
-                    button.disabled = true;
-                    button.innerHTML = '⏳ <?php echo esc_js($tr('generating', 'Generování...')); ?>';
-                    
-                    jQuery.post(sawGlobal.ajaxurl, {
-                        action: 'saw_generate_pin',
-                        visit_id: visitId,
-                        nonce: sawGlobal.nonce
-                    }, function(response) {
-                        if (response && response.success) {
-                            alert('✅ <?php echo esc_js($tr('alert_pin_generated', 'PIN úspěšně vygenerován')); ?>: ' + (response.data.pin_code || 'N/A') + '\n\nPlatnost: ' + (response.data.pin_expires_at || 'N/A'));
-                            location.reload();
-                        } else {
-                            const msg = (response && response.data && response.data.message) ? response.data.message : 'Neznámá chyba';
-                            alert('❌ <?php echo esc_js($tr('alert_error', 'Chyba')); ?>: ' + msg);
-                            button.disabled = false;
-                            button.innerHTML = originalText;
-                        }
-                    }).fail(function(xhr, status, error) {
-                        alert('❌ <?php echo esc_js($tr('alert_error', 'Chyba')); ?> komunikace se serverem: ' + error);
-                        button.disabled = false;
-                        button.innerHTML = originalText;
-                    });
-                }
-            }
-            </script>
-         
 <?php 
 $can_send_invitation = in_array($item['status'] ?? '', ['pending', 'draft']);
 $invitation_sent = !empty($item['invitation_sent_at']);
@@ -550,8 +490,353 @@ $has_invitation_email = !empty($item['invitation_email']);
     </div>
 </div>
 
+<?php
+// Load invitation materials
+$materials = [];
+if (!empty($item['id'])) {
+    $materials = $wpdb->get_results($wpdb->prepare(
+        "SELECT * FROM {$wpdb->prefix}saw_visit_invitation_materials 
+         WHERE visit_id = %d 
+         ORDER BY material_type, uploaded_at ASC",
+        $item['id']
+    ), ARRAY_A);
+}
+
+$texts = array_filter($materials, fn($m) => $m['material_type'] === 'text');
+$documents = array_filter($materials, fn($m) => $m['material_type'] === 'document');
+?>
+
+<!-- ============================================ -->
+<!-- RISKS INFORMATION CARD                       -->
+<!-- ============================================ -->
+<?php if (!empty($materials) || !empty($item['invitation_token'])): ?>
+<div class="saw-industrial-section saw-risks-section">
+    <div class="saw-section-head">
+        <h4 class="saw-section-title saw-section-title-accent">⚠️ <?php echo esc_html($tr('section_risks', 'Informace o rizicích')); ?></h4>
+        <?php if (!empty($materials)): ?>
+        <span class="saw-risks-badge saw-risks-badge-uploaded">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <?php echo esc_html($tr('risks_uploaded', 'Nahráno')); ?>
+        </span>
+        <?php else: ?>
+        <span class="saw-risks-badge saw-risks-badge-waiting">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 6v6l4 2"/>
+            </svg>
+            <?php echo esc_html($tr('risks_waiting', 'Čeká na nahrání')); ?>
+        </span>
+        <?php endif; ?>
+    </div>
+    <div class="saw-section-body">
+        <?php if (empty($materials)): ?>
+            <div class="saw-risks-empty">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="12" y1="18" x2="12" y2="12"/>
+                    <line x1="9" y1="15" x2="15" y2="15"/>
+                </svg>
+                <span><?php echo esc_html($tr('risks_empty', 'Pozvaný zatím nenahrál žádné materiály o rizicích')); ?></span>
+            </div>
+        <?php else: ?>
+            
+            <?php if (!empty($texts)): ?>
+                <?php foreach ($texts as $text): ?>
+                <div class="saw-risks-text-item">
+                    <div class="saw-risks-text-header">
+                        <div class="saw-risks-text-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                                <line x1="16" y1="13" x2="8" y2="13"/>
+                                <line x1="16" y1="17" x2="8" y2="17"/>
+                            </svg>
+                        </div>
+                        <div class="saw-risks-text-meta">
+                            <span class="saw-risks-text-title"><?php echo esc_html($tr('risks_text_info', 'Textové informace')); ?></span>
+                            <span class="saw-risks-text-date"><?php echo esc_html(date('d.m.Y H:i', strtotime($text['uploaded_at']))); ?></span>
+                        </div>
+                        <button class="saw-risks-fullscreen-btn" onclick="openRisksFullscreen(<?php echo $text['id']; ?>)" title="<?php echo esc_attr($tr('risks_fullscreen', 'Zobrazit na celou obrazovku')); ?>">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="15 3 21 3 21 9"/>
+                                <polyline points="9 21 3 21 3 15"/>
+                                <line x1="21" y1="3" x2="14" y2="10"/>
+                                <line x1="3" y1="21" x2="10" y2="14"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="saw-risks-text-content">
+                        <?php echo wp_kses_post($text['text_content']); ?>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
+            
+            <?php if (!empty($documents)): ?>
+            <div class="saw-risks-documents-section">
+                <div class="saw-risks-documents-header">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                    </svg>
+                    <span><?php echo esc_html($tr('risks_documents', 'Dokumenty')); ?> (<?php echo count($documents); ?>)</span>
+                </div>
+                <div class="saw-risks-documents-list">
+                    <?php 
+                    $upload_dir = wp_upload_dir();
+                    foreach ($documents as $doc): 
+                        $file_url = $upload_dir['baseurl'] . $doc['file_path'];
+                        $file_ext = strtoupper(pathinfo($doc['file_name'], PATHINFO_EXTENSION));
+                    ?>
+                    <a href="<?php echo esc_url($file_url); ?>" target="_blank" class="saw-risks-document-item">
+                        <div class="saw-risks-document-icon">
+                            <?php if (in_array($file_ext, ['PDF'])): ?>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                                <path d="M9 15h6"/>
+                            </svg>
+                            <?php elseif (in_array($file_ext, ['JPG', 'JPEG', 'PNG', 'GIF', 'WEBP'])): ?>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                <circle cx="8.5" cy="8.5" r="1.5"/>
+                                <polyline points="21 15 16 10 5 21"/>
+                            </svg>
+                            <?php else: ?>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                            </svg>
+                            <?php endif; ?>
+                        </div>
+                        <div class="saw-risks-document-info">
+                            <span class="saw-risks-document-name"><?php echo esc_html($doc['file_name']); ?></span>
+                            <span class="saw-risks-document-meta">
+                                <span class="saw-risks-document-ext"><?php echo $file_ext; ?></span>
+                                <span><?php echo size_format($doc['file_size']); ?></span>
+                                <span><?php echo esc_html(date('d.m.Y', strtotime($doc['uploaded_at']))); ?></span>
+                            </span>
+                        </div>
+                        <div class="saw-risks-document-download">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                        </div>
+                    </a>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+            
+        <?php endif; ?>
+    </div>
+</div>
+<?php endif; ?>
+
+<!-- ============================================ -->
+<!-- STYLES                                       -->
+<!-- ============================================ -->
 <style>
-/* Schedule Day Cards */
+/* ============================================
+   STATUS BUTTONS - Light Theme
+   ============================================ */
+.saw-status-buttons-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.saw-status-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 10px 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    min-height: 56px;
+    font-family: inherit;
+}
+
+.saw-status-btn:hover:not(:disabled) {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.saw-status-btn:disabled {
+    cursor: default;
+}
+
+.saw-status-btn-current {
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+    border: 2px solid #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.saw-status-btn-icon {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.saw-status-btn-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #475569;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.saw-status-btn-current .saw-status-btn-label {
+    color: #047857;
+}
+
+.saw-status-btn-check {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 16px;
+    height: 16px;
+    background: #10b981;
+    color: white;
+    border-radius: 50%;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+@media (max-width: 400px) {
+    .saw-status-buttons-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* ============================================
+   TIMELINE - Compact
+   ============================================ */
+.saw-visit-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.saw-timeline-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+}
+
+.saw-timeline-dot {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: white;
+}
+
+.saw-timeline-dot svg {
+    flex-shrink: 0;
+}
+
+.saw-timeline-dot-start {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.saw-timeline-dot-end {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.saw-timeline-dot-active {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(139, 92, 246, 0); }
+}
+
+.saw-timeline-info {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex: 1;
+}
+
+.saw-timeline-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #64748b;
+    min-width: 70px;
+}
+
+.saw-timeline-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.saw-timeline-value-active {
+    color: #7c3aed;
+}
+
+.saw-timeline-time {
+    font-size: 13px;
+    color: #64748b;
+}
+
+.saw-timeline-connector {
+    display: flex;
+    align-items: center;
+    padding: 4px 0 4px 15px;
+    gap: 8px;
+}
+
+.saw-timeline-line {
+    width: 2px;
+    height: 20px;
+    background: #e2e8f0;
+    border-radius: 1px;
+}
+
+.saw-timeline-active .saw-timeline-line {
+    background: linear-gradient(to bottom, #10b981, #8b5cf6);
+}
+
+.saw-timeline-duration {
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.saw-timeline-now {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    color: #92400e;
+}
+
+/* ============================================
+   SCHEDULE DAY CARDS
+   ============================================ */
 .saw-visit-schedule-detail {
     display: flex;
     flex-direction: column;
@@ -641,7 +926,9 @@ $has_invitation_email = !empty($item['invitation_email']);
     margin-top: 2px;
 }
 
-/* Detail Cards Stack */
+/* ============================================
+   DETAIL CARDS STACK
+   ============================================ */
 .saw-detail-cards-stack {
     display: flex;
     flex-direction: column;
@@ -792,6 +1079,7 @@ $has_invitation_email = !empty($item['invitation_email']);
     margin-top: 2px;
 }
 
+/* Invitation Card */
 .saw-invitation-card {
     background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     border-radius: 14px;
@@ -911,6 +1199,7 @@ $has_invitation_email = !empty($item['invitation_email']);
     cursor: pointer;
     border: none;
     transition: all 0.2s ease;
+    font-family: inherit;
 }
 
 .saw-invitation-btn-primary {
@@ -944,6 +1233,7 @@ $has_invitation_email = !empty($item['invitation_email']);
     border-radius: 8px;
 }
 
+/* Purpose Card */
 .saw-purpose-card {
     background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
     border-radius: 14px;
@@ -990,6 +1280,7 @@ $has_invitation_email = !empty($item['invitation_email']);
     line-height: 1.5;
 }
 
+/* Notes Card */
 .saw-notes-card {
     background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
     border-radius: 14px;
@@ -1036,6 +1327,7 @@ $has_invitation_email = !empty($item['invitation_email']);
     line-height: 1.5;
 }
 
+/* Hosts Card */
 .saw-hosts-card {
     background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
     border-radius: 14px;
@@ -1141,99 +1433,33 @@ $has_invitation_email = !empty($item['invitation_email']);
     color: #64748b;
 }
 
-@media (max-width: 600px) {
-    .saw-visitor-card-inner,
-    .saw-invitation-card-inner {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .saw-visitor-card-right,
-    .saw-invitation-card-right {
-        margin-top: 12px;
-    }
-    
-    .saw-visitor-count-box {
-        flex-direction: row;
-        gap: 12px;
-        justify-content: center;
-    }
-    
-    .saw-visitor-count-box svg {
-        margin-bottom: 0;
-    }
-}
-
-.saw-risks-card {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-    border-radius: 14px;
-    padding: 2px;
-    margin: 20px;
-}
-
-.saw-risks-card-inner {
-    background: #ffffff;
-    border-radius: 12px;
-    overflow: hidden;
-}
-
-.saw-risks-card-header {
+/* ============================================
+   RISKS SECTION
+   ============================================ */
+.saw-risks-section .saw-section-head {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 16px;
-    border-bottom: 1px solid #f1f5f9;
-}
-
-.saw-risks-icon {
-    width: 44px;
-    height: 44px;
-    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #dc2626;
-    flex-shrink: 0;
-}
-
-.saw-risks-card-title {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    flex: 1;
-}
-
-.saw-risks-label {
-    font-size: 14px;
-    font-weight: 700;
-    color: #1e293b;
-}
-
-.saw-risks-subtitle {
-    font-size: 12px;
-    color: #64748b;
+    justify-content: space-between;
 }
 
 .saw-risks-badge {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    font-size: 12px;
+    gap: 4px;
+    font-size: 11px;
     font-weight: 700;
-    padding: 6px 12px;
+    padding: 4px 10px;
     border-radius: 20px;
+}
+
+.saw-risks-badge-uploaded {
     background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
     color: #059669;
 }
 
-.saw-risks-badge-empty {
+.saw-risks-badge-waiting {
     background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
     color: #d97706;
-}
-
-.saw-risks-card-body {
-    padding: 16px;
 }
 
 .saw-risks-empty {
@@ -1439,14 +1665,29 @@ $has_invitation_email = !empty($item['invitation_email']);
     color: white;
 }
 
+/* ============================================
+   RESPONSIVE
+   ============================================ */
 @media (max-width: 600px) {
-    .saw-risks-card-header {
+    .saw-visitor-card-inner,
+    .saw-invitation-card-inner {
         flex-direction: column;
-        align-items: flex-start;
+        align-items: stretch;
     }
     
-    .saw-risks-badge {
-        margin-top: 8px;
+    .saw-visitor-card-right,
+    .saw-invitation-card-right {
+        margin-top: 12px;
+    }
+    
+    .saw-visitor-count-box {
+        flex-direction: row;
+        gap: 12px;
+        justify-content: center;
+    }
+    
+    .saw-visitor-count-box svg {
+        margin-bottom: 0;
     }
     
     .saw-risks-document-item {
@@ -1459,174 +1700,206 @@ $has_invitation_email = !empty($item['invitation_email']);
 }
 </style>
 
-<?php
-// Load invitation materials
-$materials = [];
-if (!empty($item['id'])) {
-    $materials = $wpdb->get_results($wpdb->prepare(
-        "SELECT * FROM {$wpdb->prefix}saw_visit_invitation_materials 
-         WHERE visit_id = %d 
-         ORDER BY material_type, uploaded_at ASC",
-        $item['id']
-    ), ARRAY_A);
-}
-
-$texts = array_filter($materials, fn($m) => $m['material_type'] === 'text');
-$documents = array_filter($materials, fn($m) => $m['material_type'] === 'document');
-?>
-
-<!-- RISKS CARD -->
-<?php if (!empty($materials) || !empty($item['invitation_token'])): ?>
-<div class="saw-risks-card">
-    <div class="saw-risks-card-inner">
-        <div class="saw-risks-card-header">
-            <div class="saw-risks-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                    <line x1="12" y1="9" x2="12" y2="13"/>
-                    <line x1="12" y1="17" x2="12.01" y2="17"/>
-                </svg>
-            </div>
-            <div class="saw-risks-card-title">
-                <span class="saw-risks-label"><?php echo esc_html($tr('section_risks', 'Informace o rizicích')); ?></span>
-                <span class="saw-risks-subtitle"><?php echo esc_html($tr('risks_subtitle', 'Nahrál pozvaný návštěvník')); ?></span>
-            </div>
-            <?php if (!empty($materials)): ?>
-            <div class="saw-risks-badge">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="20 6 9 17 4 12"/>
-                </svg>
-                <?php echo esc_html($tr('risks_uploaded', 'Nahráno')); ?>
-            </div>
-            <?php else: ?>
-            <div class="saw-risks-badge saw-risks-badge-empty">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <path d="M12 6v6l4 2"/>
-                </svg>
-                <?php echo esc_html($tr('risks_waiting', 'Čeká na nahrání')); ?>
-            </div>
-            <?php endif; ?>
-        </div>
-        
-        <div class="saw-risks-card-body">
-            <?php if (empty($materials)): ?>
-                <div class="saw-risks-empty">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                        <polyline points="14 2 14 8 20 8"/>
-                        <line x1="12" y1="18" x2="12" y2="12"/>
-                        <line x1="9" y1="15" x2="15" y2="15"/>
-                    </svg>
-                    <span><?php echo esc_html($tr('risks_empty', 'Pozvaný zatím nenahrál žádné materiály o rizicích')); ?></span>
-                </div>
-            <?php else: ?>
-                
-                <?php if (!empty($texts)): ?>
-                    <?php foreach ($texts as $text): ?>
-                    <div class="saw-risks-text-item">
-                        <div class="saw-risks-text-header">
-                            <div class="saw-risks-text-icon">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                                    <polyline points="14 2 14 8 20 8"/>
-                                    <line x1="16" y1="13" x2="8" y2="13"/>
-                                    <line x1="16" y1="17" x2="8" y2="17"/>
-                                </svg>
-                            </div>
-                            <div class="saw-risks-text-meta">
-                                <span class="saw-risks-text-title"><?php echo esc_html($tr('risks_text_info', 'Textové informace')); ?></span>
-                                <span class="saw-risks-text-date"><?php echo esc_html(date('d.m.Y H:i', strtotime($text['uploaded_at']))); ?></span>
-                            </div>
-                            <button class="saw-risks-fullscreen-btn" onclick="openFullscreen(<?php echo $text['id']; ?>)" title="<?php echo esc_attr($tr('risks_fullscreen', 'Zobrazit na celou obrazovku')); ?>">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <polyline points="15 3 21 3 21 9"/>
-                                    <polyline points="9 21 3 21 3 15"/>
-                                    <line x1="21" y1="3" x2="14" y2="10"/>
-                                    <line x1="3" y1="21" x2="10" y2="14"/>
-                                </svg>
-                            </button>
-                        </div>
-                        <div class="saw-risks-text-content">
-                            <?php echo wp_kses_post($text['text_content']); ?>
-                        </div>
-                    </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-                
-                <?php if (!empty($documents)): ?>
-                <div class="saw-risks-documents-section">
-                    <div class="saw-risks-documents-header">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-                        </svg>
-                        <span><?php echo esc_html($tr('risks_documents', 'Dokumenty')); ?> (<?php echo count($documents); ?>)</span>
-                    </div>
-                    <div class="saw-risks-documents-list">
-                        <?php 
-                        $upload_dir = wp_upload_dir();
-                        foreach ($documents as $doc): 
-                            $file_url = $upload_dir['baseurl'] . $doc['file_path'];
-                            $file_ext = strtoupper(pathinfo($doc['file_name'], PATHINFO_EXTENSION));
-                        ?>
-                        <a href="<?php echo esc_url($file_url); ?>" target="_blank" class="saw-risks-document-item">
-                            <div class="saw-risks-document-icon">
-                                <?php if (in_array($file_ext, ['PDF'])): ?>
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                                    <polyline points="14 2 14 8 20 8"/>
-                                    <path d="M9 15h6"/>
-                                </svg>
-                                <?php elseif (in_array($file_ext, ['JPG', 'JPEG', 'PNG', 'GIF', 'WEBP'])): ?>
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                                    <circle cx="8.5" cy="8.5" r="1.5"/>
-                                    <polyline points="21 15 16 10 5 21"/>
-                                </svg>
-                                <?php else: ?>
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                                    <polyline points="14 2 14 8 20 8"/>
-                                </svg>
-                                <?php endif; ?>
-                            </div>
-                            <div class="saw-risks-document-info">
-                                <span class="saw-risks-document-name"><?php echo esc_html($doc['file_name']); ?></span>
-                                <span class="saw-risks-document-meta">
-                                    <span class="saw-risks-document-ext"><?php echo $file_ext; ?></span>
-                                    <span><?php echo size_format($doc['file_size']); ?></span>
-                                    <span><?php echo esc_html(date('d.m.Y', strtotime($doc['uploaded_at']))); ?></span>
-                                </span>
-                            </div>
-                            <div class="saw-risks-document-download">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                                    <polyline points="7 10 12 15 17 10"/>
-                                    <line x1="12" y1="15" x2="12" y2="3"/>
-                                </svg>
-                            </div>
-                        </a>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-                <?php endif; ?>
-                
-            <?php endif; ?>
-        </div>
-    </div>
-</div>
-<?php endif; ?>
-
+<!-- ============================================ -->
+<!-- JAVASCRIPT                                   -->
+<!-- ============================================ -->
 <script>
-function openFullscreen(materialId) {
-    alert('Fullscreen zobrazení pro material #' + materialId);
+(function() {
+    // Status change handler
+    document.querySelectorAll('.saw-status-btn:not(:disabled)').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var visitId = this.dataset.visitId;
+            var newStatus = this.dataset.status;
+            var statusLabel = this.dataset.statusLabel;
+            
+            var confirmMsg = '<?php echo esc_js($tr('confirm_status_change', 'Opravdu chcete změnit stav návštěvy na')); ?>:\n\n' + statusLabel + '?';
+            
+            if (!confirm(confirmMsg)) {
+                return;
+            }
+            
+            // Disable all buttons during request
+            document.querySelectorAll('.saw-status-btn').forEach(function(b) {
+                b.disabled = true;
+                b.style.opacity = '0.5';
+            });
+            
+            this.innerHTML = '<span class="saw-status-btn-icon">⏳</span><span class="saw-status-btn-label"><?php echo esc_js($tr('saving', 'Ukládám...')); ?></span>';
+            
+            jQuery.post(sawGlobal.ajaxurl, {
+                action: 'saw_change_visit_status',
+                visit_id: visitId,
+                new_status: newStatus,
+                nonce: sawGlobal.nonce
+            }, function(response) {
+                if (response.success) {
+                    location.reload();
+                } else {
+                    alert('<?php echo esc_js($tr('alert_error', 'Chyba')); ?>: ' + (response.data?.message || '<?php echo esc_js($tr('unknown_error', 'Neznámá chyba')); ?>'));
+                    location.reload();
+                }
+            }).fail(function(xhr, status, error) {
+                alert('<?php echo esc_js($tr('alert_error', 'Chyba')); ?> komunikace se serverem: ' + error);
+                location.reload();
+            });
+        });
+    });
+})();
+
+// PIN Functions
+function extendPinQuick(visitId, hours) {
+    var card = document.getElementById('pin-card-' + visitId);
+    if (!card) {
+        alert('<?php echo esc_js($tr('alert_error', 'Chyba')); ?>: Nenalezen PIN element');
+        return;
+    }
+    
+    var currentExpiry = parseInt(card.getAttribute('data-current-expiry'));
+    var now = Date.now();
+    var baseTime;
+    
+    if (currentExpiry && currentExpiry > now) {
+        baseTime = currentExpiry;
+    } else {
+        baseTime = now;
+    }
+    
+    var newTimeMs = baseTime + (hours * 3600 * 1000);
+    var newDate = new Date(newTimeMs);
+    newDate.setSeconds(0, 0);
+    
+    var displayDate = formatDateTime(newDate);
+    
+    if (!confirm('Prodloužit platnost PIN o ' + hours + ' hodin?\n\nNová expirace: ' + displayDate)) {
+        return;
+    }
+    
+    var sqlDate = formatSQLDateTime(newDate);
+    extendPinToExactTime(visitId, sqlDate, newDate);
 }
 
+function formatDateTime(date) {
+    var d = date.getDate().toString().padStart(2, '0');
+    var m = (date.getMonth() + 1).toString().padStart(2, '0');
+    var y = date.getFullYear();
+    var h = date.getHours().toString().padStart(2, '0');
+    var min = date.getMinutes().toString().padStart(2, '0');
+    return d + '.' + m + '.' + y + ' ' + h + ':' + min;
+}
+
+function formatSQLDateTime(date) {
+    var year = date.getFullYear();
+    var month = (date.getMonth() + 1).toString().padStart(2, '0');
+    var day = date.getDate().toString().padStart(2, '0');
+    var hours = date.getHours().toString().padStart(2, '0');
+    var minutes = date.getMinutes().toString().padStart(2, '0');
+    var seconds = date.getSeconds().toString().padStart(2, '0');
+    return year + '-' + month + '-' + day + ' ' + hours + ':' + minutes + ':' + seconds;
+}
+
+function extendPinToExactTime(visitId, sqlDate, dateObj) {
+    jQuery.post(sawGlobal.ajaxurl, {
+        action: 'saw_extend_pin',
+        visit_id: visitId,
+        hours: 999,
+        exact_expiry: sqlDate,
+        nonce: sawGlobal.nonce
+    }, function(response) {
+        if (response.success) {
+            var card = document.getElementById('pin-card-' + visitId);
+            if (card) {
+                card.setAttribute('data-current-expiry', dateObj.getTime());
+            }
+            alert('✅ <?php echo esc_js($tr('alert_pin_extended', 'PIN prodloužen do')); ?>: ' + formatDateTime(dateObj));
+            location.reload();
+        } else {
+            alert('<?php echo esc_js($tr('alert_error', 'Chyba')); ?>: ' + (response.data?.message || 'Neznámá chyba'));
+        }
+    }).fail(function(xhr, status, error) {
+        alert('<?php echo esc_js($tr('alert_error', 'Chyba')); ?> komunikace se serverem\n\n' + error);
+    });
+}
+
+function showExtendPinForm(visitId) {
+    document.getElementById('pin-extend-buttons-' + visitId).style.display = 'none';
+    var form = document.getElementById('pin-extend-form-' + visitId);
+    form.style.display = 'block';
+    var datetimeInput = document.getElementById('pin-expiry-datetime-' + visitId);
+    datetimeInput.min = new Date().toISOString().slice(0, 16);
+}
+
+function hideExtendPinForm(visitId) {
+    document.getElementById('pin-extend-form-' + visitId).style.display = 'none';
+    document.getElementById('pin-extend-buttons-' + visitId).style.display = 'flex';
+}
+
+function extendPinCustom(visitId) {
+    var datetimeInput = document.getElementById('pin-expiry-datetime-' + visitId);
+    var datetimeValue = datetimeInput.value;
+    
+    if (!datetimeValue) {
+        alert('Prosím zadejte datum a čas.');
+        return;
+    }
+    
+    var newDate = new Date(datetimeValue);
+    
+    if (isNaN(newDate.getTime())) {
+        alert('Neplatné datum');
+        return;
+    }
+    
+    var displayDate = formatDateTime(newDate);
+    
+    if (!confirm('Nastavit expiraci PIN na:\n' + displayDate + '?')) {
+        return;
+    }
+    
+    var sqlDate = formatSQLDateTime(newDate);
+    extendPinToExactTime(visitId, sqlDate, newDate);
+}
+
+function generatePin(visitId) {
+    if (!confirm('Vygenerovat PIN kód pro tuto návštěvu?\n\nPIN bude platný do posledního plánovaného dne návštěvy + 24 hodin.')) {
+        return;
+    }
+    
+    var buttons = document.querySelectorAll('button[onclick*="generatePin(' + visitId + ')"]');
+    var button = buttons.length > 0 ? buttons[0] : (event ? event.target : null);
+    
+    if (button) {
+        var originalText = button.innerHTML;
+        button.disabled = true;
+        button.innerHTML = '⏳ <?php echo esc_js($tr('generating', 'Generování...')); ?>';
+        
+        jQuery.post(sawGlobal.ajaxurl, {
+            action: 'saw_generate_pin',
+            visit_id: visitId,
+            nonce: sawGlobal.nonce
+        }, function(response) {
+            if (response && response.success) {
+                alert('✅ <?php echo esc_js($tr('alert_pin_generated', 'PIN úspěšně vygenerován')); ?>: ' + (response.data.pin_code || 'N/A') + '\n\nPlatnost: ' + (response.data.pin_expires_at || 'N/A'));
+                location.reload();
+            } else {
+                var msg = (response && response.data && response.data.message) ? response.data.message : 'Neznámá chyba';
+                alert('<?php echo esc_js($tr('alert_error', 'Chyba')); ?>: ' + msg);
+                button.disabled = false;
+                button.innerHTML = originalText;
+            }
+        }).fail(function(xhr, status, error) {
+            alert('<?php echo esc_js($tr('alert_error', 'Chyba')); ?> komunikace se serverem: ' + error);
+            button.disabled = false;
+            button.innerHTML = originalText;
+        });
+    }
+}
+
+// Invitation functions
 function sendInvitation(visitId) {
-    const btn = document.getElementById('send-invitation-btn-' + visitId);
+    var btn = document.getElementById('send-invitation-btn-' + visitId);
     if (!btn) return;
     
-    const originalText = btn.innerHTML;
+    var originalText = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<span class="dashicons dashicons-update" style="animation: spin 1s linear infinite;"></span> <?php echo esc_js($tr('sending', 'Odesílám...')); ?>';
     
@@ -1639,20 +1912,25 @@ function sendInvitation(visitId) {
             alert('✅ <?php echo esc_js($tr('alert_invitation_sent', 'Pozvánka byla úspěšně odeslána na email')); ?>: ' + (response.data?.email || ''));
             location.reload();
         } else {
-            alert('❌ <?php echo esc_js($tr('alert_error', 'Chyba')); ?>: ' + (response.data?.message || 'Nepodařilo se odeslat pozvánku'));
+            alert('<?php echo esc_js($tr('alert_error', 'Chyba')); ?>: ' + (response.data?.message || 'Nepodařilo se odeslat pozvánku'));
             btn.disabled = false;
             btn.innerHTML = originalText;
         }
     }).fail(function(xhr, status, error) {
-        alert('❌ <?php echo esc_js($tr('alert_error', 'Chyba')); ?> komunikace se serverem\n\n' + error);
+        alert('<?php echo esc_js($tr('alert_error', 'Chyba')); ?> komunikace se serverem\n\n' + error);
         btn.disabled = false;
         btn.innerHTML = originalText;
     });
 }
 
-if (!document.getElementById('saw-invitation-spinner-style')) {
-    const style = document.createElement('style');
-    style.id = 'saw-invitation-spinner-style';
+function openRisksFullscreen(materialId) {
+    alert('Fullscreen zobrazení pro material #' + materialId);
+}
+
+// Add spinner animation
+if (!document.getElementById('saw-spinner-style')) {
+    var style = document.createElement('style');
+    style.id = 'saw-spinner-style';
     style.textContent = '@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
     document.head.appendChild(style);
 }

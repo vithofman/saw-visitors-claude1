@@ -2102,7 +2102,7 @@ class SAW_Terminal_Controller {
         }
         
         // ============================================
-        // NEW v3.1.0: Check if this is the last checkout
+        // NEW v3.2.0: Check if this is the last checkout AND visit has PIN
         // ============================================
         if ($visit_id) {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visitors/model.php';
@@ -2111,17 +2111,43 @@ class SAW_Terminal_Controller {
             
             $is_last_checkout = $visitors_model->will_be_last_checkout($visit_id, $visitor_ids);
             
-            if ($is_last_checkout) {
+            // Check if visit has PIN (only show dialog for visits with PIN)
+            $visit_has_pin = (bool) $wpdb->get_var($wpdb->prepare(
+                "SELECT pin_code FROM {$wpdb->prefix}saw_visits WHERE id = %d AND pin_code IS NOT NULL AND pin_code != ''",
+                $visit_id
+            ));
+            
+            // Show confirmation dialog ONLY if:
+            // 1. This is the last checkout (no one will remain)
+            // 2. Visit has a PIN (so visitor can return)
+            if ($is_last_checkout && $visit_has_pin) {
                 // Store data in session and show confirmation dialog
                 $flow['pending_checkout_visitor_ids'] = $visitor_ids;
                 $flow['checkout_visit_id'] = $visit_id;
                 $flow['step'] = 'checkout-confirm';
                 $this->session->set('terminal_flow', $flow);
                 
-                error_log("[SAW Terminal] Last checkout detected - showing confirmation dialog for visit #{$visit_id}");
+                error_log("[SAW Terminal] Last checkout with PIN - showing confirmation dialog for visit #{$visit_id}");
                 
                 wp_redirect(home_url('/terminal/checkout-confirm/'));
                 exit;
+            }
+            
+            // Auto-complete walk-in visits (no PIN = no way to return)
+            if ($is_last_checkout && !$visit_has_pin) {
+                error_log("[SAW Terminal] Last checkout WITHOUT PIN (walk-in) - auto-completing visit #{$visit_id}");
+                
+                // Mark visit as completed
+                $wpdb->update(
+                    $wpdb->prefix . 'saw_visits',
+                    [
+                        'status' => 'completed',
+                        'completed_at' => current_time('mysql')
+                    ],
+                    ['id' => $visit_id],
+                    ['%s', '%s'],
+                    ['%d']
+                );
             }
         }
         // ============================================

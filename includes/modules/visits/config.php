@@ -203,6 +203,7 @@ return array(
         'saw_send_invitation' => 'ajax_send_invitation',
         'saw_extend_pin' => 'ajax_extend_pin',
         'saw_generate_pin' => 'ajax_generate_pin',
+        'saw_change_visit_status' => 'ajax_change_visit_status',
     ),
     
     // ============================================

@@ -4,7 +4,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visits
- * @version     3.3.0
+ * @version     3.4.0
  */
 
 if (!defined('ABSPATH')) exit;
@@ -468,6 +468,127 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         
         return implode('', $meta_parts);
     }
+    
+    // ============================================
+    // AJAX HANDLERS
+    // ============================================
+    
+    /**
+     * AJAX: Change visit status
+     * 
+     * @since 3.4.0
+     */
+    public function ajax_change_visit_status() {
+    // Verify nonce
+    saw_verify_ajax_unified();
+    
+    $visit_id = intval($_POST['visit_id'] ?? 0);
+    $new_status = sanitize_text_field($_POST['new_status'] ?? '');
+    
+    // Validate inputs
+    if (!$visit_id) {
+        wp_send_json_error(['message' => 'Neplatné ID návštěvy']);
+    }
+    
+    // Check permissions
+    if (!$this->can('edit')) {
+        wp_send_json_error(['message' => 'Nemáte oprávnění měnit stav návštěvy']);
+    }
+    
+    // Validate status
+    $valid_statuses = ['draft', 'pending', 'confirmed', 'in_progress', 'completed', 'cancelled'];
+    if (!in_array($new_status, $valid_statuses)) {
+        wp_send_json_error(['message' => 'Neplatný stav: ' . $new_status]);
+    }
+    
+    global $wpdb;
+    $table = $wpdb->prefix . 'saw_visits';
+    
+    // Get current visit
+    $visit = $wpdb->get_row($wpdb->prepare(
+        "SELECT id, status, started_at, completed_at FROM {$table} WHERE id = %d",
+        $visit_id
+    ), ARRAY_A);
+    
+    if (!$visit) {
+        wp_send_json_error(['message' => 'Návštěva nenalezena']);
+    }
+    
+    // Check if status is already set
+    if ($visit['status'] === $new_status) {
+        wp_send_json_error(['message' => 'Návštěva již má tento stav']);
+    }
+    
+    // Prepare update data
+    $update_data = ['status' => $new_status];
+    $update_format = ['%s'];
+    
+    // Handle timestamps based on status change
+    $now = current_time('mysql');
+    
+    // If changing TO in_progress and started_at is empty, set it
+    if ($new_status === 'in_progress' && empty($visit['started_at'])) {
+        $update_data['started_at'] = $now;
+        $update_format[] = '%s';
+    }
+    
+    // If changing TO completed, set completed_at
+    if ($new_status === 'completed') {
+        $update_data['completed_at'] = $now;
+        $update_format[] = '%s';
+    }
+    
+    // If changing FROM completed to something else, clear completed_at
+    if ($visit['status'] === 'completed' && $new_status !== 'completed') {
+        $update_data['completed_at'] = null;
+        $update_format[] = null; // NULL format
+    }
+    
+    // Perform update
+    $result = $wpdb->update(
+        $table,
+        $update_data,
+        ['id' => $visit_id],
+        $update_format,
+        ['%d']
+    );
+    
+    if ($result === false) {
+        wp_send_json_error(['message' => 'Chyba databáze: ' . $wpdb->last_error]);
+    }
+    
+    // Clear cache
+    if (class_exists('SAW_Cache')) {
+        SAW_Cache::flush('visits');
+    }
+    
+    // Log change
+    if (class_exists('SAW_Logger')) {
+        SAW_Logger::info(sprintf(
+            'Visit #%d status changed from "%s" to "%s" by user #%d',
+            $visit_id,
+            $visit['status'],
+            $new_status,
+            get_current_user_id()
+        ));
+    }
+    
+    // Status labels for response
+    $status_labels = [
+        'draft' => 'Koncept',
+        'pending' => 'Čeká',
+        'confirmed' => 'Potvrzeno',
+        'in_progress' => 'Probíhá',
+        'completed' => 'Dokončeno',
+        'cancelled' => 'Zrušeno',
+    ];
+    
+    wp_send_json_success([
+        'message' => 'Stav byl úspěšně změněn',
+        'new_status' => $new_status,
+        'new_status_label' => $status_labels[$new_status] ?? $new_status,
+    ]);
+}
     
     /**
      * AJAX: Extend PIN expiry

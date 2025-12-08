@@ -213,7 +213,7 @@ $form_action = $is_invitation
         $nonce_name = $is_invitation ? 'saw_invitation_step' : 'saw_terminal_step';
         $nonce_field = $is_invitation ? 'invitation_nonce' : 'terminal_nonce';
         $action_name = $is_invitation ? 'invitation_action' : 'terminal_action';
-        $complete_action = $is_invitation ? 'complete_training' : 'complete_training';
+        $complete_action = $is_invitation ? 'complete_training' : 'complete_training_oopp';
         wp_nonce_field($nonce_name, $nonce_field); 
         ?>
         <input type="hidden" name="<?php echo esc_attr($action_name); ?>" value="<?php echo esc_attr($complete_action); ?>">
