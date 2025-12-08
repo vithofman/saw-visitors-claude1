@@ -162,8 +162,8 @@ class SAW_Widget_Current_Visitors {
         
         $result = $visitors_model->daily_checkout(
             $visitor_id, 
-            current_time('Y-m-d'), 
-            true, // manual
+            null,  // Find any active log regardless of date (supports multi-day visits)
+            true,  // manual
             get_current_user_id(), 
             $reason
         );

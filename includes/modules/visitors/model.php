@@ -4,9 +4,10 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visitors
- * @version     3.1.0 - Added Checkout Confirmation System v2 support
+ * @version     3.2.0 - Fixed daily_checkout to support null log_date for multi-day visits
  * 
  * Changelog:
+ * - 3.2.0 (2025-12-08): Fixed daily_checkout() to find any active log when log_date is null
  * - 3.1.0 (2025-12-08): Added count_checked_in_visitors(), will_be_last_checkout()
  *                        Modified check_and_complete_visit() to not auto-complete
  *                        Modified daily_checkin() to handle completed visit reopening
@@ -253,9 +254,7 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
         
         $visit_id = $visitor['visit_id'];
         
-        // ============================================
-        // NEW v3.1.0: Check visit status before check-in
-        // ============================================
+        // Check visit status before check-in
         $visit_status = $wpdb->get_var($wpdb->prepare(
             "SELECT status FROM {$wpdb->prefix}saw_visits WHERE id = %d",
             $visit_id
@@ -263,13 +262,11 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
         
         // Cannot check-in to cancelled visit
         if ($visit_status === 'cancelled') {
-            error_log("[SAW Visitors] Cannot check-in visitor #{$visitor_id}: visit #{$visit_id} is cancelled");
             return new WP_Error('visit_cancelled', 'Tato návštěva byla zrušena');
         }
         
         // If visit was completed, try to reopen it
         if ($visit_status === 'completed') {
-            // Load visits model to use reopen_visit method
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/model.php';
             $visits_config = require SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/config.php';
             $visits_model = new SAW_Module_Visits_Model($visits_config);
@@ -277,16 +274,9 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
             $reopen_result = $visits_model->reopen_visit($visit_id);
             
             if (is_wp_error($reopen_result)) {
-                // Return the error (e.g., PIN expired)
-                error_log("[SAW Visitors] Cannot reopen visit #{$visit_id} for check-in: " . $reopen_result->get_error_message());
                 return $reopen_result;
             }
-            
-            error_log("[SAW Visitors] Visit #{$visit_id} reopened for check-in of visitor #{$visitor_id}");
         }
-        // ============================================
-        // END NEW v3.1.0
-        // ============================================
         
         // Check for existing log today
         $existing_log = $wpdb->get_row($wpdb->prepare(
@@ -376,13 +366,17 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
      * 
      * @since 3.0.0
      * @updated 3.1.0 - check_and_complete_visit no longer auto-completes
+     * @updated 3.2.0 - Support null log_date to find any active log (multi-day visits)
+     * 
+     * @param int $visitor_id Visitor ID
+     * @param string|null $log_date Date in Y-m-d format. If null, finds ANY active log regardless of date.
+     * @param bool $manual Whether this is a manual checkout by admin
+     * @param int|null $admin_id Admin user ID who performed manual checkout
+     * @param string|null $reason Reason for manual checkout
+     * @return bool|WP_Error True on success, WP_Error on failure
      */
     public function daily_checkout($visitor_id, $log_date = null, $manual = false, $admin_id = null, $reason = null) {
         global $wpdb;
-        
-        if (!$log_date) {
-            $log_date = current_time('Y-m-d');
-        }
         
         $visitor = $this->get_by_id($visitor_id);
         if (!$visitor) {
@@ -391,14 +385,28 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
         
         $visit_id = $visitor['visit_id'];
         
-        // Find latest active check-in for today
-        $log = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_visit_daily_logs 
-             WHERE visit_id = %d AND visitor_id = %d AND log_date = %s
-             AND checked_in_at IS NOT NULL AND checked_out_at IS NULL
-             ORDER BY checked_in_at DESC LIMIT 1",
-            $visit_id, $visitor_id, $log_date
-        ), ARRAY_A);
+        // Find latest active check-in
+        // If log_date is null, find ANY active log (for dashboard/manual checkout of multi-day visits)
+        // If log_date is specified, filter by that date (for terminal same-day checkout)
+        if ($log_date === null) {
+            // Find ANY active log regardless of date
+            $log = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM {$wpdb->prefix}saw_visit_daily_logs 
+                 WHERE visit_id = %d AND visitor_id = %d
+                 AND checked_in_at IS NOT NULL AND checked_out_at IS NULL
+                 ORDER BY checked_in_at DESC LIMIT 1",
+                $visit_id, $visitor_id
+            ), ARRAY_A);
+        } else {
+            // Find active log for specific date
+            $log = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM {$wpdb->prefix}saw_visit_daily_logs 
+                 WHERE visit_id = %d AND visitor_id = %d AND log_date = %s
+                 AND checked_in_at IS NOT NULL AND checked_out_at IS NULL
+                 ORDER BY checked_in_at DESC LIMIT 1",
+                $visit_id, $visitor_id, $log_date
+            ), ARRAY_A);
+        }
         
         if (!$log) {
             return new WP_Error('no_active_checkin', 'Návštěvník není momentálně přítomen');
@@ -502,14 +510,10 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
     
     // ============================================
     // CHECKOUT CONFIRMATION SYSTEM v2 METHODS
-    // Added: 2025-12-08
     // ============================================
     
     /**
      * Count currently checked-in visitors for a visit
-     * 
-     * Returns the number of visitors who are currently inside (checked in but not out).
-     * Supports overnight visits by not filtering on log_date.
      * 
      * @since 3.1.0
      * @param int $visit_id Visit ID
@@ -537,10 +541,6 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
     /**
      * Check if this checkout will result in zero visitors remaining
      * 
-     * Used by terminal to determine if the checkout confirmation dialog
-     * should be shown. Returns true if after checking out the given visitors,
-     * no one from the visit will remain inside.
-     * 
      * @since 3.1.0
      * @param int $visit_id Visit ID
      * @param array $visitor_ids Array of visitor IDs about to be checked out
@@ -556,16 +556,9 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
             return false;
         }
         
-        // Get current count of checked-in visitors
         $current_count = $this->count_checked_in_visitors($visit_id);
-        
-        // Count how many are being checked out
         $checkout_count = count($visitor_ids);
-        
-        // Calculate remaining
         $remaining = $current_count - $checkout_count;
-        
-        error_log("[SAW Visitors] will_be_last_checkout: visit #{$visit_id}, current={$current_count}, checking_out={$checkout_count}, remaining={$remaining}");
         
         return $remaining <= 0;
     }
@@ -721,11 +714,6 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
      * Check if all visitors checked out
      * 
      * NOTE: As of v3.1.0, this method NO LONGER auto-completes the visit.
-     * The decision to complete or keep the visit active is now made by the user
-     * via the checkout confirmation dialog in the terminal.
-     * 
-     * This method is kept for backward compatibility with daily_checkout()
-     * but now only logs the status without taking action.
      * 
      * @since 3.0.0
      * @updated 3.1.0 - Removed auto-completion logic
@@ -735,7 +723,7 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
     private function check_and_complete_visit($visit_id) {
         global $wpdb;
         
-        // Count visitors still checked in (ANY day, not just today - supports overnight visits)
+        // Count visitors still checked in (ANY day - supports overnight visits)
         $checked_in_count = $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(DISTINCT vis.id)
              FROM {$wpdb->prefix}saw_visitors vis
@@ -746,30 +734,6 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
             $visit_id
         ));
         
-        $all_checked_out = ((int)$checked_in_count === 0);
-        
-        if ($all_checked_out) {
-            error_log("[SAW Visitors] Visit #{$visit_id}: All visitors checked out - awaiting user decision via terminal dialog");
-        }
-        
-        // ============================================
-        // REMOVED in v3.1.0: Auto-completion logic
-        // ============================================
-        // Old code that was here:
-        // if ($checked_in_count == 0) {
-        //     $wpdb->update(
-        //         $wpdb->prefix . 'saw_visits',
-        //         array(
-        //             'status' => 'completed',
-        //             'completed_at' => current_time('mysql')
-        //         ),
-        //         array('id' => $visit_id),
-        //         array('%s', '%s'),
-        //         array('%d')
-        //     );
-        // }
-        // ============================================
-        
-        return $all_checked_out;
+        return ((int)$checked_in_count === 0);
     }
 }
