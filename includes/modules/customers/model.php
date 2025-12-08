@@ -9,12 +9,11 @@
  * - Cache bypass option for fresh data
  * - Automatic cache invalidation on write operations
  * - Integration with SAW_Cache system
- * - Multi-language validation messages
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Customers
  * @since       1.0.0
- * @version     3.1.0 - ADDED: Translation system for validation messages
+ * @version     3.0.0
  */
 
 if (!defined('ABSPATH')) {
@@ -29,14 +28,6 @@ if (!defined('ABSPATH')) {
 class SAW_Module_Customers_Model extends SAW_Base_Model 
 {
     /**
-     * Translations array
-     *
-     * @since 3.1.0
-     * @var array
-     */
-    private $translations = array();
-    
-    /**
      * Constructor
      * 
      * @param array $config Module configuration
@@ -48,38 +39,6 @@ class SAW_Module_Customers_Model extends SAW_Base_Model
         $this->table = $wpdb->prefix . $config['table'];
         $this->config = $config;
         $this->cache_ttl = $config['cache']['ttl'] ?? 300;
-        
-        // Load translations
-        $this->load_translations();
-    }
-    
-    /**
-     * Load translations for this module
-     *
-     * @since 3.1.0
-     * @return void
-     */
-    private function load_translations() {
-        $lang = 'cs';
-        if (class_exists('SAW_Component_Language_Switcher')) {
-            $lang = SAW_Component_Language_Switcher::get_user_language();
-        }
-        
-        $this->translations = function_exists('saw_get_translations') 
-            ? saw_get_translations($lang, 'admin', 'customers') 
-            : array();
-    }
-    
-    /**
-     * Get translation for key
-     *
-     * @since 3.1.0
-     * @param string $key Translation key
-     * @param string $fallback Fallback text
-     * @return string Translated text
-     */
-    private function tr($key, $fallback = null) {
-        return $this->translations[$key] ?? $fallback ?? $key;
     }
     
     /**
@@ -269,44 +228,29 @@ class SAW_Module_Customers_Model extends SAW_Base_Model
     public function validate($data, $id = 0) {
         $errors = array();
         
-        // Name is required
         if (empty($data['name'])) {
-            $errors['name'] = $this->tr('validation_name_required', 'Název je povinný');
+            $errors['name'] = __('Název je povinný', 'saw-visitors');
         }
         
-        // IČO validation (if provided)
         if (!empty($data['ico'])) {
-            // Must be 8 digits
             if (!preg_match('/^\d{8}$/', $data['ico'])) {
-                $errors['ico'] = $this->tr('validation_ico_format', 'IČO musí být 8 číslic');
+                $errors['ico'] = __('IČO musí být 8 číslic', 'saw-visitors');
             }
             
-            // Must be unique
             if ($this->ico_exists($data['ico'], $id)) {
-                $errors['ico'] = $this->tr('validation_ico_exists', 'Zákazník s tímto IČO již existuje');
+                $errors['ico'] = __('Zákazník s tímto IČO již existuje', 'saw-visitors');
             }
         }
         
-        // Email format validation (if provided)
         if (!empty($data['contact_email']) && !is_email($data['contact_email'])) {
-            $errors['contact_email'] = $this->tr('validation_email_format', 'Neplatný formát emailu');
+            $errors['contact_email'] = __('Neplatný formát emailu', 'saw-visitors');
         }
         
-        // Status is required
         if (empty($data['status'])) {
-            $errors['status'] = $this->tr('validation_status_required', 'Status je povinný');
+            $errors['status'] = __('Status je povinný', 'saw-visitors');
         }
         
-        // Return true if no errors, otherwise WP_Error
-        if (empty($errors)) {
-            return true;
-        }
-        
-        return new WP_Error(
-            'validation_error', 
-            $this->tr('validation_failed', 'Validace selhala'), 
-            $errors
-        );
+        return empty($errors) ? true : new WP_Error('validation_error', __('Validation failed', 'saw-visitors'), $errors);
     }
     
     /**

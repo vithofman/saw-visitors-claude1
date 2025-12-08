@@ -4,7 +4,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/AccountTypes
- * @version     4.0.0 - FIXED: Sidebar compatibility
+ * @version     3.2.0
  */
 
 if (!defined('ABSPATH')) {
@@ -15,7 +15,7 @@ $is_edit = !empty($item);
 $item = $item ?? array();
 $in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'];
 
-// Prepare features text from JSON array
+// Prepare features text
 $features_text = '';
 if (!empty($item['features'])) {
     $features_array = json_decode($item['features'], true);
@@ -32,8 +32,7 @@ if (!empty($item['features'])) {
             <?php echo $is_edit ? 'Upravit typ účtu' : 'Nový typ účtu'; ?>
         </h1>
         <a href="<?php echo esc_url(home_url('/admin/account-types/')); ?>" class="saw-back-button">
-            <span class="dashicons dashicons-arrow-left-alt2"></span>
-            Zpět na seznam
+            ← Zpět na seznam
         </a>
     </div>
 </div>
@@ -50,43 +49,39 @@ if (!empty($item['features'])) {
             <input type="hidden" name="id" value="<?php echo esc_attr($item['id']); ?>">
         <?php endif; ?>
         
-        <!-- BASIC INFORMATION -->
+        <!-- BASIC INFO -->
         <details class="saw-form-section" open>
             <summary>
-                <span class="dashicons dashicons-admin-generic"></span>
+                <span class="saw-section-emoji">💳</span>
                 <strong>Základní informace</strong>
             </summary>
             <div class="saw-form-section-content">
                 
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-6">
-                        <label for="name" class="saw-label saw-required">
-                            Interní název
-                        </label>
+                        <label for="name" class="saw-label saw-required">Interní název</label>
                         <input 
                             type="text" 
                             id="name" 
                             name="name" 
-                            class="saw-input <?php echo $is_edit ? 'saw-input-readonly' : ''; ?>"
+                            class="saw-input"
                             value="<?php echo esc_attr($item['name'] ?? ''); ?>" 
                             required
-                            pattern="[a-z0-9\-]+"
+                            pattern="[a-z0-9\-_]+"
                             placeholder="free"
-                            <?php echo $is_edit ? 'readonly style="background-color: #f3f4f6; cursor: not-allowed; color: #6b7280;"' : ''; ?>
+                            <?php echo $is_edit ? 'readonly style="background-color: #f3f4f6; cursor: not-allowed;"' : ''; ?>
                         >
-                        <span class="saw-help-text">
+                        <p class="saw-help-text">
                             <?php if ($is_edit): ?>
-                                🔒 Po vytvoření nelze měnit (zajištění integrity dat)
+                                🔒 Po vytvoření nelze měnit
                             <?php else: ?>
-                                Unikátní slug (jen malá písmena, číslice a pomlčky)
+                                Unikátní slug (malá písmena, číslice, pomlčky)
                             <?php endif; ?>
-                        </span>
+                        </p>
                     </div>
                     
                     <div class="saw-form-group saw-col-6">
-                        <label for="display_name" class="saw-label saw-required">
-                            Zobrazovaný název
-                        </label>
+                        <label for="display_name" class="saw-label saw-required">Zobrazovaný název</label>
                         <input 
                             type="text" 
                             id="display_name" 
@@ -96,36 +91,28 @@ if (!empty($item['features'])) {
                             required
                             placeholder="Free"
                         >
-                        <span class="saw-help-text">
-                            Název který uvidí uživatelé
-                        </span>
+                        <p class="saw-help-text">Název který uvidí uživatelé</p>
                     </div>
                 </div>
                 
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-6">
-                        <label for="price" class="saw-label">
-                            Cena (Kč/měsíc)
-                        </label>
+                        <label for="price" class="saw-label">Cena (Kč/měsíc)</label>
                         <input 
                             type="number" 
                             id="price" 
                             name="price" 
                             class="saw-input"
-                            value="<?php echo esc_attr($item['price'] ?? '0.00'); ?>"
-                            step="0.01"
+                            value="<?php echo esc_attr($item['price'] ?? '0'); ?>"
+                            step="1"
                             min="0"
-                            placeholder="0.00"
+                            placeholder="0"
                         >
-                        <span class="saw-help-text">
-                            Měsíční cena v Kč (0 = zdarma)
-                        </span>
+                        <p class="saw-help-text">0 = zdarma</p>
                     </div>
                     
                     <div class="saw-form-group saw-col-6">
-                        <label for="sort_order" class="saw-label">
-                            Pořadí řazení
-                        </label>
+                        <label for="sort_order" class="saw-label">Pořadí řazení</label>
                         <input 
                             type="number" 
                             id="sort_order" 
@@ -135,38 +122,46 @@ if (!empty($item['features'])) {
                             min="0"
                             placeholder="0"
                         >
-                        <span class="saw-help-text">
-                            Nižší číslo = vyšší v seznamu
-                        </span>
+                        <p class="saw-help-text">Nižší číslo = vyšší v seznamu</p>
                     </div>
                 </div>
                 
             </div>
         </details>
         
-        <!-- VISUAL IDENTIFICATION -->
+        <!-- VISUAL -->
         <details class="saw-form-section" open>
             <summary>
-                <span class="dashicons dashicons-art"></span>
+                <span class="saw-section-emoji">🎨</span>
                 <strong>Vizuální označení</strong>
             </summary>
             <div class="saw-form-section-content">
                 
-                <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-12">
-                        <?php
-                        // ✅ CORRECT: Use color picker component via include
+                <div class="saw-form-group">
+                    <?php
+                    $color_picker_file = SAW_VISITORS_PLUGIN_DIR . 'includes/components/color-picker/color-picker-input.php';
+                    if (file_exists($color_picker_file)):
                         $id = 'color';
                         $name = 'color';
                         $value = $item['color'] ?? '#6b7280';
                         $label = 'Barva';
                         $show_preview = true;
                         $preview_text = 'Náhled';
-                        $help_text = 'Barva pro vizuální označení typu účtu v seznamech';
-                        
-                        include SAW_VISITORS_PLUGIN_DIR . 'includes/components/color-picker/color-picker-input.php';
-                        ?>
-                    </div>
+                        $help_text = 'Barva pro vizuální označení typu účtu';
+                        include $color_picker_file;
+                    else:
+                    ?>
+                    <label for="color" class="saw-label">Barva</label>
+                    <input 
+                        type="color" 
+                        id="color" 
+                        name="color" 
+                        class="saw-input"
+                        value="<?php echo esc_attr($item['color'] ?? '#6b7280'); ?>"
+                        style="height: 40px; padding: 4px;"
+                    >
+                    <p class="saw-help-text">Barva pro vizuální označení typu účtu</p>
+                    <?php endif; ?>
                 </div>
                 
             </div>
@@ -175,25 +170,21 @@ if (!empty($item['features'])) {
         <!-- FEATURES -->
         <details class="saw-form-section">
             <summary>
-                <span class="dashicons dashicons-list-view"></span>
+                <span class="saw-section-emoji">✨</span>
                 <strong>Funkce a možnosti</strong>
             </summary>
             <div class="saw-form-section-content">
                 
                 <div class="saw-form-group">
-                    <label for="features" class="saw-label">
-                        Seznam funkcí
-                    </label>
+                    <label for="features" class="saw-label">Seznam funkcí</label>
                     <textarea 
                         id="features" 
                         name="features" 
                         class="saw-textarea" 
                         rows="8"
-                        placeholder="Každou funkci napište na nový řádek, např.:&#10;✓ 10 návštěvníků měsíčně&#10;✓ Základní reporty&#10;✓ Email notifikace"
+                        placeholder="Každou funkci napište na nový řádek:&#10;✓ 10 návštěvníků měsíčně&#10;✓ Základní reporty&#10;✓ Email notifikace"
                     ><?php echo esc_textarea($features_text); ?></textarea>
-                    <span class="saw-help-text">
-                        Každá funkce na nový řádek. Můžete použít emoji (✓, ✗, 🎯)
-                    </span>
+                    <p class="saw-help-text">Každá funkce na nový řádek</p>
                 </div>
                 
             </div>
@@ -202,23 +193,22 @@ if (!empty($item['features'])) {
         <!-- STATUS -->
         <details class="saw-form-section" open>
             <summary>
-                <span class="dashicons dashicons-admin-settings"></span>
-                <strong>Nastavení dostupnosti</strong>
+                <span class="saw-section-emoji">⚙️</span>
+                <strong>Nastavení</strong>
             </summary>
             <div class="saw-form-section-content">
                 
-                <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-12">
-                        <label class="saw-checkbox-label">
-                            <input 
-                                type="checkbox" 
-                                name="is_active" 
-                                value="1"
-                                <?php checked(!empty($item['is_active']) ? $item['is_active'] : 1, 1); ?>
-                            >
-                            <span>Aktivní typ účtu</span>
-                        </label>
-                    </div>
+                <div class="saw-form-group">
+                    <label class="saw-checkbox-label">
+                        <input 
+                            type="checkbox" 
+                            name="is_active" 
+                            value="1"
+                            <?php checked(!empty($item['is_active']) || !$is_edit, true); ?>
+                        >
+                        <span>Aktivní typ účtu</span>
+                    </label>
+                    <p class="saw-help-text">Pouze aktivní typy jsou dostupné při výběru</p>
                 </div>
                 
             </div>
@@ -227,7 +217,7 @@ if (!empty($item['features'])) {
         <!-- ACTIONS -->
         <div class="saw-form-actions">
             <button type="submit" class="saw-button saw-button-primary">
-                <?php echo $is_edit ? 'Uložit změny' : 'Vytvořit typ účtu'; ?>
+                💾 <?php echo $is_edit ? 'Uložit změny' : 'Vytvořit typ účtu'; ?>
             </button>
             
             <?php if (!$in_sidebar): ?>
@@ -239,3 +229,26 @@ if (!empty($item['features'])) {
         
     </form>
 </div>
+
+<style>
+.saw-section-emoji { font-size: 16px; margin-right: 8px; }
+.saw-help-text { font-size: 12px; color: #64748b; margin-top: 4px; margin-bottom: 0; }
+.saw-textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.6;
+    resize: vertical;
+}
+.saw-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-weight: 500;
+}
+.saw-checkbox-label input { width: 18px; height: 18px; }
+</style>

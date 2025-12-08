@@ -4,7 +4,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/AccountTypes
- * @version     3.0.0 - REFACTORED: New architecture compatibility
+ * @version     3.2.0 - FIXED: tab_param = 'is_active' (DB column name!)
  */
 
 if (!defined('ABSPATH')) {
@@ -12,6 +12,9 @@ if (!defined('ABSPATH')) {
 }
 
 return array(
+    // ==========================================
+    // ENTITY IDENTIFICATION
+    // ==========================================
     'entity' => 'account_types',
     'table' => 'saw_account_types',
     'singular' => 'Typ účtu',
@@ -19,9 +22,15 @@ return array(
     'route' => 'account-types',
     'icon' => '💳',
     
+    // ==========================================
+    // DATA ISOLATION (none - super_admin only)
+    // ==========================================
     'has_customer_isolation' => false,
     'has_branch_isolation' => false,
     
+    // ==========================================
+    // CAPABILITIES (super_admin only)
+    // ==========================================
     'capabilities' => array(
         'list' => 'manage_options',
         'view' => 'manage_options',
@@ -30,64 +39,54 @@ return array(
         'delete' => 'manage_options',
     ),
     
-    'fields' => array(
-        'name' => array(
-            'type' => 'text',
-            'label' => 'Interní název',
-            'required' => true,
-            'sanitize' => 'sanitize_text_field',
-        ),
-        'display_name' => array(
-            'type' => 'text',
-            'label' => 'Zobrazovaný název',
-            'required' => true,
-            'sanitize' => 'sanitize_text_field',
-        ),
-        'price' => array(
-            'type' => 'number',
-            'label' => 'Cena (Kč/měsíc)',
-            'required' => false,
-            'default' => 0.00,
-            'sanitize' => 'floatval',
-        ),
-        'color' => array(
-            'type' => 'color',
-            'label' => 'Barva',
-            'required' => false,
-            'default' => '#6b7280',
-            'sanitize' => 'sanitize_hex_color',
-        ),
-        'features' => array(
-            'type' => 'textarea',
-            'label' => 'Seznam funkcí',
-            'required' => false,
-            'sanitize' => 'sanitize_textarea_field',
-        ),
-        'sort_order' => array(
-            'type' => 'number',
-            'label' => 'Pořadí řazení',
-            'required' => false,
-            'default' => 0,
-            'sanitize' => 'intval',
-        ),
-        'is_active' => array(
-            'type' => 'checkbox',
-            'label' => 'Aktivní typ účtu',
-            'required' => false,
-            'default' => 1,
+    // ==========================================
+    // TABS CONFIGURATION
+    // CRITICAL: tab_param MUST be the DB column name!
+    // ==========================================
+    'tabs' => array(
+        'enabled' => true,
+        'tab_param' => 'is_active',  // ← MUSÍ BÝT NÁZEV DB SLOUPCE!
+        'default_tab' => 'all',
+        'tabs' => array(
+            'all' => array(
+                'label' => 'Všechny',
+                'filter_value' => null,
+                'icon' => '📋',
+                'count_query' => true,
+            ),
+            'active' => array(
+                'label' => 'Aktivní',
+                'filter_value' => 1,  // ← DB hodnota pro is_active=1
+                'icon' => '✓',
+                'count_query' => true,
+            ),
+            'inactive' => array(
+                'label' => 'Neaktivní',
+                'filter_value' => 0,  // ← DB hodnota pro is_active=0
+                'icon' => '✕',
+                'count_query' => true,
+            ),
         ),
     ),
     
+    // ==========================================
+    // LIST CONFIGURATION
+    // ==========================================
     'list_config' => array(
-        'per_page' => 20,
-        'searchable' => array('name', 'display_name', 'description'),
-        'sortable' => array('name', 'display_name', 'price', 'sort_order'),
+        'per_page' => 50,
+        'searchable' => array('name', 'display_name'),
+        'sortable' => array('name', 'display_name', 'price', 'sort_order', 'created_at'),
+        'default_orderby' => 'sort_order',
+        'default_order' => 'ASC',
         'filters' => array(
             'is_active' => true,
         ),
         'enable_detail_modal' => true,
     ),
     
+    // ==========================================
+    // CACHE CONFIGURATION
+    // ==========================================
     'cache' => array(
         'enabled' => true,
         'ttl' => 300,

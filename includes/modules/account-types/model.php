@@ -4,7 +4,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/AccountTypes
- * @version     3.0.0 - REFACTORED: New architecture with COMMIT + bypass_cache
+ * @version     3.2.0
  */
 
 if (!defined('ABSPATH')) {
@@ -22,48 +22,52 @@ class SAW_Module_Account_Types_Model extends SAW_Base_Model
     }
     
     /**
-     * Validate account type data
+     * Validate data
      */
     public function validate($data, $id = 0) {
         $errors = array();
         
         if (empty($data['name'])) {
-            $errors['name'] = __('Interní název je povinný', 'saw-visitors');
+            $errors['name'] = 'Interní název je povinný';
         }
         
         if (empty($data['display_name'])) {
-            $errors['display_name'] = __('Zobrazovaný název je povinný', 'saw-visitors');
+            $errors['display_name'] = 'Zobrazovaný název je povinný';
         }
         
+        // Check name format (slug)
+        if (!empty($data['name']) && !preg_match('/^[a-z0-9\-_]+$/', $data['name'])) {
+            $errors['name'] = 'Interní název může obsahovat pouze malá písmena, číslice, pomlčky a podtržítka';
+        }
+        
+        // Check unique name
         if (!empty($data['name']) && $this->name_exists($data['name'], $id)) {
-            $errors['name'] = __('Typ účtu s tímto názvem již existuje', 'saw-visitors');
+            $errors['name'] = 'Typ účtu s tímto názvem již existuje';
         }
         
-        return empty($errors) ? true : new WP_Error('validation_error', __('Validace selhala', 'saw-visitors'), $errors);
+        if (empty($errors)) {
+            return true;
+        }
+        
+        return new WP_Error('validation_error', 'Validace selhala', $errors);
     }
     
     /**
-     * Check if internal name already exists
+     * Check if name exists
      */
     private function name_exists($name, $exclude_id = 0) {
         global $wpdb;
         
-        if (empty($name)) {
-            return false;
-        }
-        
-        $query = $wpdb->prepare(
+        return (bool) $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM %i WHERE name = %s AND id != %d",
             $this->table,
             $name,
             $exclude_id
-        );
-        
-        return (bool) $wpdb->get_var($query);
+        ));
     }
     
     /**
-     * ✅ FIXED: Added $bypass_cache parameter
+     * Get by ID with formatting
      */
     public function get_by_id($id, $bypass_cache = false) {
         $item = parent::get_by_id($id, $bypass_cache);
@@ -72,7 +76,7 @@ class SAW_Module_Account_Types_Model extends SAW_Base_Model
             return null;
         }
         
-        // Format features (JSON to array)
+        // Features
         if (!empty($item['features'])) {
             $features = json_decode($item['features'], true);
             $item['features_array'] = is_array($features) ? $features : array();
@@ -80,23 +84,16 @@ class SAW_Module_Account_Types_Model extends SAW_Base_Model
             $item['features_array'] = array();
         }
         
-        // Format price
+        // Price
         $price = floatval($item['price'] ?? 0);
-        if ($price > 0) {
-            $item['price_formatted'] = number_format($price, 2, ',', ' ') . ' ' . __('Kč', 'saw-visitors');
-        } else {
-            $item['price_formatted'] = __('Zdarma', 'saw-visitors');
-        }
+        $item['price_formatted'] = $price > 0 
+            ? number_format($price, 0, ',', ' ') . ' Kč' 
+            : 'Zdarma';
         
-        // Format status
-        $item['is_active_label'] = !empty($item['is_active']) ? __('Aktivní', 'saw-visitors') : __('Neaktivní', 'saw-visitors');
-        $item['is_active_badge_class'] = !empty($item['is_active']) ? 'saw-badge-success' : 'saw-badge-secondary';
-        
-        // Format dates
+        // Dates
         if (!empty($item['created_at'])) {
             $item['created_at_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['created_at']));
         }
-        
         if (!empty($item['updated_at'])) {
             $item['updated_at_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['updated_at']));
         }
@@ -117,39 +114,33 @@ class SAW_Module_Account_Types_Model extends SAW_Base_Model
     }
     
     /**
-     * ✅ USES: parent::create() - COMMIT handled automatically
+     * Create with features processing
      */
     public function create($data) {
-        $data = $this->process_features_for_save($data);
+        $data = $this->process_features($data);
         return parent::create($data);
     }
     
     /**
-     * ✅ USES: parent::update() - COMMIT handled automatically
+     * Update with features processing
      */
     public function update($id, $data) {
-        $data = $this->process_features_for_save($data);
+        $data = $this->process_features($data);
         return parent::update($id, $data);
-    }
-    
-    /**
-     * ✅ USES: parent::delete() - COMMIT handled automatically
-     */
-    public function delete($id) {
-        return parent::delete($id);
     }
     
     /**
      * Process features array to JSON
      */
-    private function process_features_for_save($data) {
+    private function process_features($data) {
         if (isset($data['features']) && is_array($data['features'])) {
-            $features = array_filter($data['features'], function($feature) {
-                return !empty(trim($feature));
+            $features = array_filter($data['features'], function($f) {
+                return !empty(trim($f));
             });
-            $data['features'] = !empty($features) ? json_encode(array_values($features), JSON_UNESCAPED_UNICODE) : null;
+            $data['features'] = !empty($features) 
+                ? json_encode(array_values($features), JSON_UNESCAPED_UNICODE) 
+                : null;
         }
-        
         return $data;
     }
 }
