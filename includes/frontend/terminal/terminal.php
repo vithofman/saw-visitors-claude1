@@ -5,6 +5,12 @@
  * Main routing and session management for visitor terminal.
  * Handles multi-step check-in/out flow with language support.
  *
+ * CHANGES v3.1:
+ * - ✅ Added Checkout Confirmation System v2
+ * - ✅ Added checkout-confirm step and routing
+ * - ✅ Added will_be_last_checkout() check before checkout
+ * - ✅ Walk-in visits now include planned_date_from/to
+ *
  * CHANGES v3.0:
  * - ✅ Implementována handle_registration_submission() - kompletní walk-in registrace
  * - ✅ Vytváření visit + visitor + hosts + daily_log
@@ -13,7 +19,7 @@
  * @package    SAW_Visitors
  * @subpackage Frontend/Terminal
  * @since      1.0.0
- * @version    3.0.0
+ * @version    3.1.0
  */
 
 if (!defined('ABSPATH')) {
@@ -78,10 +84,10 @@ class SAW_Terminal_Controller {
         
         $this->session = SAW_Session_Manager::instance();
         
-        // ✅ Získání customer_id a branch_id
+        // Získání customer_id a branch_id
         $this->load_context();
 
-        // ✅ Načtení jazyků z DB
+        // Načtení jazyků z DB
         $this->load_languages();
         
         $this->init_terminal_session();
@@ -126,7 +132,7 @@ class SAW_Terminal_Controller {
             wp_die('SAW uživatel nenalezen.', 'Chyba', ['response' => 500]);
         }
         
-        // ✅ Logika podle role
+        // Logika podle role
         switch ($saw_user->role) {
             case 'super_admin':
                 // Super admin používá context (customer switcher)
@@ -204,7 +210,7 @@ class SAW_Terminal_Controller {
             ];
         }
         
-        // ✅ Fallback pokud nejsou žádné jazyky
+        // Fallback pokud nejsou žádné jazyky
         if (empty($this->languages)) {
             SAW_Logger::warning("[SAW Terminal] WARNING: No languages found for customer #{$this->customer_id}, branch #{$this->branch_id}");
             
@@ -255,7 +261,7 @@ class SAW_Terminal_Controller {
         
         error_log("[GET_CURRENT_STEP] saw_path query var: " . ($path ?: 'empty'));
         
-        // ✅ If URL is exactly /terminal/ (home button), always return 'language'
+        // If URL is exactly /terminal/ (home button), always return 'language'
         if (empty($path) || $path === '/' || $path === 'terminal') {
             error_log("[GET_CURRENT_STEP] Returning 'language' (empty path)");
             return 'language';
@@ -290,7 +296,7 @@ class SAW_Terminal_Controller {
      * @return void
      */
     public function render() {
-        // ✅ DEBUG - zjistíme co se děje
+        // DEBUG - zjistíme co se děje
         $path = get_query_var('saw_path');
         $request_uri = $_SERVER['REQUEST_URI'] ?? '';
         
@@ -303,7 +309,7 @@ class SAW_Terminal_Controller {
         $flow = $this->session->get('terminal_flow');
         SAW_Logger::debug("Flow data", ['flow' => $flow]);
         
-        // ✅ Reset flow when returning to language step via home button
+        // Reset flow when returning to language step via home button
         if ($this->current_step === 'language') {
             // If we have progress but we're back at language, reset
             if (!empty($flow['language']) || !empty($flow['action'])) {
@@ -360,7 +366,7 @@ class SAW_Terminal_Controller {
                 $this->render_checkout_pin();
                 break;
 
-	    case 'checkout-select':
+            case 'checkout-select':
                 error_log("Rendering checkout visitor selection");
                 $this->render_checkout_select();
                 break;
@@ -368,6 +374,14 @@ class SAW_Terminal_Controller {
             case 'checkout-search':
                 error_log("Rendering checkout search");
                 $this->render_checkout_search();
+                break;
+            
+            // ============================================
+            // NEW v3.1.0: Checkout Confirmation Dialog
+            // ============================================
+            case 'checkout-confirm':
+                error_log("Rendering checkout confirmation dialog");
+                $this->render_checkout_confirmation();
                 break;
                 
             case 'success':
@@ -405,7 +419,7 @@ class SAW_Terminal_Controller {
                 $this->render_training_additional();
                 break;
 
-	    case 'select-visitors':
+            case 'select-visitors':
                 error_log("Redirecting select-visitors to register");
                 wp_redirect(home_url('/terminal/register/'));
                 exit;
@@ -429,7 +443,7 @@ class SAW_Terminal_Controller {
     private function render_language_selection() {
         $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/1-language.php';
         $this->render_template($template, [
-            'languages' => $this->languages, // ✅ Nyní z DB
+            'languages' => $this->languages,
         ]);
     }
     
@@ -484,55 +498,55 @@ class SAW_Terminal_Controller {
      * @return void
      */
     private function render_registration_form() {
-    global $wpdb;
-    
-    // ✅ Load hosts from database
-    $hosts = $wpdb->get_results($wpdb->prepare(
-        "SELECT id, first_name, last_name, position, role
-         FROM {$wpdb->prefix}saw_users
-         WHERE customer_id = %d 
-           AND branch_id = %d
-           AND role IN ('admin', 'super_manager', 'manager')
-           AND is_active = 1
-         ORDER BY last_name ASC, first_name ASC",
-        $this->customer_id,
-        $this->branch_id
-    ), ARRAY_A);
-    
-    // ✅ OPRAVA: Reload visitors from DB if visit_id exists
-    $flow = $this->session->get('terminal_flow');
-    $visit_id = $flow['visit_id'] ?? null;
-    
-    if ($visit_id) {
-        // ✅ FRESH DATA z DB (ne ze session)
-        $visitors = $wpdb->get_results($wpdb->prepare(
-            "SELECT vis.*, 
-                    CASE 
-                        WHEN EXISTS (
-                            SELECT 1 FROM {$wpdb->prefix}saw_visit_daily_logs dl2
-                            WHERE dl2.visitor_id = vis.id 
-                            AND dl2.checked_in_at IS NOT NULL 
-                            AND dl2.checked_out_at IS NULL
-                        ) THEN 1
-                        ELSE 0
-                    END as is_currently_inside
-             FROM {$wpdb->prefix}saw_visitors vis
-             WHERE vis.visit_id = %d 
-             AND vis.participation_status IN ('planned', 'confirmed')
-             ORDER BY vis.last_name, vis.first_name",
-            $visit_id
+        global $wpdb;
+        
+        // Load hosts from database
+        $hosts = $wpdb->get_results($wpdb->prepare(
+            "SELECT id, first_name, last_name, position, role
+             FROM {$wpdb->prefix}saw_users
+             WHERE customer_id = %d 
+               AND branch_id = %d
+               AND role IN ('admin', 'super_manager', 'manager')
+               AND is_active = 1
+             ORDER BY last_name ASC, first_name ASC",
+            $this->customer_id,
+            $this->branch_id
         ), ARRAY_A);
         
-        // ✅ UPDATE SESSION s fresh data
-        $flow['visitors'] = $visitors;
-        $this->session->set('terminal_flow', $flow);
+        // OPRAVA: Reload visitors from DB if visit_id exists
+        $flow = $this->session->get('terminal_flow');
+        $visit_id = $flow['visit_id'] ?? null;
+        
+        if ($visit_id) {
+            // FRESH DATA z DB (ne ze session)
+            $visitors = $wpdb->get_results($wpdb->prepare(
+                "SELECT vis.*, 
+                        CASE 
+                            WHEN EXISTS (
+                                SELECT 1 FROM {$wpdb->prefix}saw_visit_daily_logs dl2
+                                WHERE dl2.visitor_id = vis.id 
+                                AND dl2.checked_in_at IS NOT NULL 
+                                AND dl2.checked_out_at IS NULL
+                            ) THEN 1
+                            ELSE 0
+                        END as is_currently_inside
+                 FROM {$wpdb->prefix}saw_visitors vis
+                 WHERE vis.visit_id = %d 
+                 AND vis.participation_status IN ('planned', 'confirmed')
+                 ORDER BY vis.last_name, vis.first_name",
+                $visit_id
+            ), ARRAY_A);
+            
+            // UPDATE SESSION s fresh data
+            $flow['visitors'] = $visitors;
+            $this->session->set('terminal_flow', $flow);
+        }
+        
+        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/4-register.php';
+        $this->render_template($template, [
+            'hosts' => $hosts,
+        ]);
     }
-    
-    $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/4-register.php';
-    $this->render_template($template, [
-        'hosts' => $hosts,
-    ]);
-}
     
     /**
      * Render checkout PIN form
@@ -545,57 +559,57 @@ class SAW_Terminal_Controller {
         $this->render_template($template, []);
     }
 
-/**
+    /**
      * Render checkout visitor selection
      */
     private function render_checkout_select() {
-    global $wpdb;
-    
-    $flow = $this->session->get('terminal_flow');
-    $visit_id = $flow['checkout_visit_id'] ?? null;
-    
-    // ✅ RELOAD FRESH DATA from DB (ne ze session)
-    if ($visit_id) {
-        $visitors = $wpdb->get_results($wpdb->prepare(
-            "SELECT DISTINCT 
-                vis.id,
-                vis.first_name,
-                vis.last_name,
-                vis.position,
-                vis.email,
-                vis.phone,
-                vis.participation_status,
-                dl.log_date,
-                dl.checked_in_at,
-                dl.id as log_id
-             FROM {$wpdb->prefix}saw_visitors vis
-             INNER JOIN {$wpdb->prefix}saw_visit_daily_logs dl 
-                ON vis.id = dl.visitor_id
-             WHERE vis.visit_id = %d
-               AND dl.checked_in_at IS NOT NULL
-               AND dl.checked_out_at IS NULL
-             ORDER BY dl.checked_in_at DESC, vis.last_name, vis.first_name",
-            $visit_id
-        ), ARRAY_A);
+        global $wpdb;
         
-        // ✅ UPDATE SESSION s fresh data
-        $flow['checkout_visitors'] = $visitors;
-        $this->session->set('terminal_flow', $flow);
+        $flow = $this->session->get('terminal_flow');
+        $visit_id = $flow['checkout_visit_id'] ?? null;
         
-        error_log(sprintf(
-            "[SAW Checkout Select RELOAD] Visit #%d - Reloaded %d visitors from DB",
-            $visit_id,
-            count($visitors)
-        ));
-    } else {
-        $visitors = $flow['checkout_visitors'] ?? [];
+        // RELOAD FRESH DATA from DB (ne ze session)
+        if ($visit_id) {
+            $visitors = $wpdb->get_results($wpdb->prepare(
+                "SELECT DISTINCT 
+                    vis.id,
+                    vis.first_name,
+                    vis.last_name,
+                    vis.position,
+                    vis.email,
+                    vis.phone,
+                    vis.participation_status,
+                    dl.log_date,
+                    dl.checked_in_at,
+                    dl.id as log_id
+                 FROM {$wpdb->prefix}saw_visitors vis
+                 INNER JOIN {$wpdb->prefix}saw_visit_daily_logs dl 
+                    ON vis.id = dl.visitor_id
+                 WHERE vis.visit_id = %d
+                   AND dl.checked_in_at IS NOT NULL
+                   AND dl.checked_out_at IS NULL
+                 ORDER BY dl.checked_in_at DESC, vis.last_name, vis.first_name",
+                $visit_id
+            ), ARRAY_A);
+            
+            // UPDATE SESSION s fresh data
+            $flow['checkout_visitors'] = $visitors;
+            $this->session->set('terminal_flow', $flow);
+            
+            error_log(sprintf(
+                "[SAW Checkout Select RELOAD] Visit #%d - Reloaded %d visitors from DB",
+                $visit_id,
+                count($visitors)
+            ));
+        } else {
+            $visitors = $flow['checkout_visitors'] ?? [];
+        }
+        
+        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/checkout/select.php';
+        $this->render_template($template, [
+            'visitors' => $visitors,
+        ]);
     }
-    
-    $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/checkout/select.php';
-    $this->render_template($template, [
-        'visitors' => $visitors,
-    ]);
-}
     
     /**
      * Render checkout search form
@@ -608,7 +622,52 @@ class SAW_Terminal_Controller {
         $this->render_template($template, []);
     }
 
-   
+    // ============================================
+    // NEW v3.1.0: Checkout Confirmation Dialog
+    // ============================================
+    
+    /**
+     * Render checkout confirmation dialog
+     * 
+     * Shown when last visitor(s) are checking out.
+     * Allows user to choose between "We will return" and "Complete visit".
+     * 
+     * @since 3.1.0
+     * @return void
+     */
+    private function render_checkout_confirmation() {
+        $flow = $this->session->get('terminal_flow');
+        
+        $visit_id = $flow['checkout_visit_id'] ?? null;
+        $visitor_ids = $flow['pending_checkout_visitor_ids'] ?? [];
+        
+        if (!$visit_id || empty($visitor_ids)) {
+            error_log("[SAW Terminal] render_checkout_confirmation: Missing data, redirecting to home");
+            wp_redirect(home_url('/terminal/'));
+            exit;
+        }
+        
+        // Get visit info using visits model
+        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/model.php';
+        $visits_config = require SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/config.php';
+        $visits_model = new SAW_Module_Visits_Model($visits_config);
+        
+        $visit_info = $visits_model->get_visit_info_for_checkout($visit_id);
+        
+        if (!$visit_info) {
+            error_log("[SAW Terminal] render_checkout_confirmation: Visit not found");
+            wp_redirect(home_url('/terminal/'));
+            exit;
+        }
+        
+        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/steps/checkout/confirmation-dialog.php';
+        $this->render_template($template, [
+            'visit_info' => $visit_info,
+            'visitor_ids' => $visitor_ids,
+            'flow' => $flow,
+        ]);
+    }
+
     /**
      * Render success page
      *
@@ -636,7 +695,7 @@ class SAW_Terminal_Controller {
         $visit_id = $flow['visit_id'] ?? null;
         $language = $flow['language'] ?? 'cs';
         
-        // ✅ OPRAVENO: Načíst fresh training steps z DB (ne ze session)
+        // OPRAVENO: Načíst fresh training steps z DB (ne ze session)
         $training_steps = $this->get_training_steps($visit_id, $language);
         
         error_log("[SAW Terminal Video] Loaded fresh training steps: " . count($training_steps));
@@ -678,7 +737,7 @@ class SAW_Terminal_Controller {
         $visit_id = $flow['visit_id'] ?? null;
         $language = $flow['language'] ?? 'cs';
         
-        // ✅ OPRAVENO: Načíst fresh training steps z DB (ne ze session)
+        // OPRAVENO: Načíst fresh training steps z DB (ne ze session)
         $training_steps = $this->get_training_steps($visit_id, $language);
         
         error_log("[SAW Terminal Map] Loaded fresh training steps: " . count($training_steps));
@@ -722,7 +781,7 @@ class SAW_Terminal_Controller {
         $visit_id = $flow['visit_id'] ?? null;
         $language = $flow['language'] ?? 'cs';
         
-        // ✅ Načíst fresh training steps z DB
+        // Načíst fresh training steps z DB
         $training_steps = $this->get_training_steps($visit_id, $language);
         
         // Najdi risks step
@@ -739,7 +798,7 @@ class SAW_Terminal_Controller {
             return;
         }
         
-        // ✅ Načíst training_content.id pro načtení dokumentů
+        // Načíst training_content.id pro načtení dokumentů
         $language_id = $wpdb->get_var($wpdb->prepare(
             "SELECT id FROM {$wpdb->prefix}saw_training_languages 
              WHERE customer_id = %d AND language_code = %s",
@@ -758,7 +817,7 @@ class SAW_Terminal_Controller {
             ));
         }
         
-        // ✅ Načíst dokumenty k risks
+        // Načíst dokumenty k risks
         $documents = [];
         if ($content_id) {
             $documents = $wpdb->get_results($wpdb->prepare(
@@ -787,53 +846,53 @@ class SAW_Terminal_Controller {
      * @return void
      */
     private function render_training_department() {
-    global $wpdb;
-    
-    $flow = $this->session->get('terminal_flow');
-    $visit_id = $flow['visit_id'] ?? null;
-    $language = $flow['language'] ?? 'cs';
-    
-    // ✅ Načíst fresh training steps z DB
-    $training_steps = $this->get_training_steps($visit_id, $language);
-    
-    // ✅ Najdi VŠECHNY department steps
-    $dept_steps = [];
-    foreach ($training_steps as $step) {
-        if ($step['type'] == 'department') {
-            $dept_steps[] = $step['data'];
-        }
-    }
-    
-    if (empty($dept_steps)) {
-        $this->move_to_next_training_step();
-        return;
-    }
-    
-    // ✅ Pro každé oddělení načíst dokumenty
-    foreach ($dept_steps as &$dept) {
-        $dept_content_id = $dept['department_content_id'] ?? null;
+        global $wpdb;
         
-        if ($dept_content_id) {
-            $documents = $wpdb->get_results($wpdb->prepare(
-                "SELECT * FROM {$wpdb->prefix}saw_training_documents 
-                 WHERE document_type = 'department' AND reference_id = %d 
-                 ORDER BY uploaded_at ASC",
-                $dept_content_id
-            ), ARRAY_A);
-            
-            $dept['documents'] = $documents;
-        } else {
-            $dept['documents'] = [];
+        $flow = $this->session->get('terminal_flow');
+        $visit_id = $flow['visit_id'] ?? null;
+        $language = $flow['language'] ?? 'cs';
+        
+        // Načíst fresh training steps z DB
+        $training_steps = $this->get_training_steps($visit_id, $language);
+        
+        // Najdi VŠECHNY department steps
+        $dept_steps = [];
+        foreach ($training_steps as $step) {
+            if ($step['type'] == 'department') {
+                $dept_steps[] = $step['data'];
+            }
         }
+        
+        if (empty($dept_steps)) {
+            $this->move_to_next_training_step();
+            return;
+        }
+        
+        // Pro každé oddělení načíst dokumenty
+        foreach ($dept_steps as &$dept) {
+            $dept_content_id = $dept['department_content_id'] ?? null;
+            
+            if ($dept_content_id) {
+                $documents = $wpdb->get_results($wpdb->prepare(
+                    "SELECT * FROM {$wpdb->prefix}saw_training_documents 
+                     WHERE document_type = 'department' AND reference_id = %d 
+                     ORDER BY uploaded_at ASC",
+                    $dept_content_id
+                ), ARRAY_A);
+                
+                $dept['documents'] = $documents;
+            } else {
+                $dept['documents'] = [];
+            }
+        }
+        
+        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/shared/training/department.php';
+        $this->render_template($template, [
+            'departments' => $dept_steps,
+            'is_invitation' => false,
+            'flow' => $flow,
+        ]);
     }
-    
-    $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/shared/training/department.php';
-    $this->render_template($template, [
-        'departments' => $dept_steps,
-        'is_invitation' => false,
-        'flow' => $flow,
-    ]);
-}
     
     /**
      * Render training OOPP step
@@ -887,7 +946,7 @@ class SAW_Terminal_Controller {
         $visit_id = $flow['visit_id'] ?? null;
         $language = $flow['language'] ?? 'cs';
         
-        // ✅ Načíst fresh training steps z DB
+        // Načíst fresh training steps z DB
         $training_steps = $this->get_training_steps($visit_id, $language);
         
         // Najdi additional step
@@ -904,7 +963,7 @@ class SAW_Terminal_Controller {
             return;
         }
         
-        // ✅ Načíst training_content.id pro načtení dokumentů
+        // Načíst training_content.id pro načtení dokumentů
         $language_id = $wpdb->get_var($wpdb->prepare(
             "SELECT id FROM {$wpdb->prefix}saw_training_languages 
              WHERE customer_id = %d AND language_code = %s",
@@ -923,7 +982,7 @@ class SAW_Terminal_Controller {
             ));
         }
         
-        // ✅ Načíst dokumenty pro additional
+        // Načíst dokumenty pro additional
         $documents = [];
         if ($content_id) {
             $documents = $wpdb->get_results($wpdb->prepare(
@@ -952,7 +1011,7 @@ class SAW_Terminal_Controller {
      * @return void
      */
     private function handle_post() {
-	error_log("[SAW Terminal] handle_post() CALLED - POST data: " . print_r($_POST, true));
+        error_log("[SAW Terminal] handle_post() CALLED - POST data: " . print_r($_POST, true));
         // Verify nonce
         if (!isset($_POST['terminal_nonce']) || !wp_verify_nonce($_POST['terminal_nonce'], 'saw_terminal_step')) {
             $this->set_error(__('Bezpečnostní kontrola selhala', 'saw-visitors'));
@@ -986,8 +1045,15 @@ class SAW_Terminal_Controller {
             case 'checkout_complete':
                 $this->handle_checkout_complete();
                 break;
+            
+            // ============================================
+            // NEW v3.1.0: Checkout Confirmation Handler
+            // ============================================
+            case 'checkout_confirm':
+                $this->handle_checkout_confirm();
+                break;
 
-	    case 'submit_unified_registration':
+            case 'submit_unified_registration':
                 $this->handle_unified_registration();
                 break;
                 
@@ -1128,102 +1194,100 @@ class SAW_Terminal_Controller {
     /**
      * Handle PIN verification
      *
-     * TODO: Implement actual DB lookup
-     *
      * @since 1.0.0
      * @return void
      */
     private function handle_pin_verification() {
-    global $wpdb;
-    
-    $pin = sanitize_text_field($_POST['pin'] ?? '');
-    
-    if (empty($pin) || strlen($pin) !== 6) {
-        $this->set_error(__('Neplatný PIN kód', 'saw-visitors'));
-        $this->render_pin_entry();
-        return;
-    }
-    
-    // ✅ UPRAVENO: Kontrola PIN platnosti včetně pin_expires_at
-    $visit = $wpdb->get_row($wpdb->prepare(
-        "SELECT * FROM {$wpdb->prefix}saw_visits 
-         WHERE pin_code = %s 
-           AND customer_id = %d 
-           AND visit_type = 'planned'
-           AND status != 'cancelled'
-           AND (pin_expires_at IS NULL OR pin_expires_at >= NOW())
-         LIMIT 1",
-        $pin,
-        $this->customer_id
-    ), ARRAY_A);
-    
-    if (!$visit) {
-        $this->set_error(__('PIN kód je neplatný nebo již vypršel', 'saw-visitors'));
-        $this->render_pin_entry();
-        return;
-    }
-    
-    // ✅ PŘIDÁNO: Re-aktivace completed visit
-    if ($visit['status'] === 'completed') {
+        global $wpdb;
+        
+        $pin = sanitize_text_field($_POST['pin'] ?? '');
+        
+        if (empty($pin) || strlen($pin) !== 6) {
+            $this->set_error(__('Neplatný PIN kód', 'saw-visitors'));
+            $this->render_pin_entry();
+            return;
+        }
+        
+        // UPRAVENO: Kontrola PIN platnosti včetně pin_expires_at
+        $visit = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}saw_visits 
+             WHERE pin_code = %s 
+               AND customer_id = %d 
+               AND visit_type = 'planned'
+               AND status != 'cancelled'
+               AND (pin_expires_at IS NULL OR pin_expires_at >= NOW())
+             LIMIT 1",
+            $pin,
+            $this->customer_id
+        ), ARRAY_A);
+        
+        if (!$visit) {
+            $this->set_error(__('PIN kód je neplatný nebo již vypršel', 'saw-visitors'));
+            $this->render_pin_entry();
+            return;
+        }
+        
+        // PŘIDÁNO: Re-aktivace completed visit
+        if ($visit['status'] === 'completed') {
+            $wpdb->update(
+                $wpdb->prefix . 'saw_visits',
+                [
+                    'status' => 'in_progress',
+                    'completed_at' => null,
+                ],
+                ['id' => $visit['id']],
+                ['%s', '%s'],
+                ['%d']
+            );
+            error_log("[SAW Terminal] Visit #{$visit['id']} re-activated");
+        }
+        
+        // PŘIDÁNO: Automaticky prodloužit PIN o 24h
+        $new_expiry = date('Y-m-d H:i:s', strtotime('+24 hours'));
         $wpdb->update(
             $wpdb->prefix . 'saw_visits',
-            [
-                'status' => 'in_progress',
-                'completed_at' => null,
-            ],
+            ['pin_expires_at' => $new_expiry],
             ['id' => $visit['id']],
-            ['%s', '%s'],
+            ['%s'],
             ['%d']
         );
-        error_log("[SAW Terminal] Visit #{$visit['id']} re-activated");
+        error_log("[SAW Terminal] PIN extended to {$new_expiry}");   
+        
+        
+        // OPRAVENO: Načti VŠECHNY návštěvníky + zjisti kdo je uvnitř
+        $visitors = $wpdb->get_results($wpdb->prepare(
+            "SELECT 
+                vis.*,
+                CASE 
+                    WHEN EXISTS (
+                        SELECT 1 FROM {$wpdb->prefix}saw_visit_daily_logs dl2
+                        WHERE dl2.visitor_id = vis.id 
+                        AND dl2.checked_in_at IS NOT NULL 
+                        AND dl2.checked_out_at IS NULL
+                    ) THEN 1
+                    ELSE 0
+                END as is_currently_inside
+             FROM {$wpdb->prefix}saw_visitors vis
+             WHERE vis.visit_id = %d 
+             AND vis.participation_status IN ('planned', 'confirmed')
+             ORDER BY vis.last_name, vis.first_name",
+            $visit['id']
+        ), ARRAY_A);
+        
+        // Ulož do session
+        $flow = $this->session->get('terminal_flow');
+        $flow['visit_id'] = $visit['id'];
+        $flow['pin'] = $pin;
+        $flow['type'] = 'planned'; // Označit jako plánovanou
+        
+        // Ulož visitors do session (ať už jsou nebo ne)
+        $flow['visitors'] = $visitors; // může být prázdné pole
+        $this->session->set('terminal_flow', $flow);
+        
+        // VŽDY jdi na registrační formulář (univerzální)
+        wp_redirect(home_url('/terminal/register/'));
+        exit;
     }
-    
-    // ✅ PŘIDÁNO: Automaticky prodloužit PIN o 24h
-    $new_expiry = date('Y-m-d H:i:s', strtotime('+24 hours'));
-    $wpdb->update(
-        $wpdb->prefix . 'saw_visits',
-        ['pin_expires_at' => $new_expiry],
-        ['id' => $visit['id']],
-        ['%s'],
-        ['%d']
-    );
-    error_log("[SAW Terminal] PIN extended to {$new_expiry}");   
-    
-    
-    // ✅ OPRAVENO: Načti VŠECHNY návštěvníky + zjisti kdo je uvnitř
-$visitors = $wpdb->get_results($wpdb->prepare(
-    "SELECT 
-        vis.*,
-        CASE 
-            WHEN EXISTS (
-                SELECT 1 FROM {$wpdb->prefix}saw_visit_daily_logs dl2
-                WHERE dl2.visitor_id = vis.id 
-                AND dl2.checked_in_at IS NOT NULL 
-                AND dl2.checked_out_at IS NULL
-            ) THEN 1
-            ELSE 0
-        END as is_currently_inside
-     FROM {$wpdb->prefix}saw_visitors vis
-     WHERE vis.visit_id = %d 
-     AND vis.participation_status IN ('planned', 'confirmed')
-     ORDER BY vis.last_name, vis.first_name",
-    $visit['id']
-), ARRAY_A);
-    
-    // Ulož do session
-    $flow = $this->session->get('terminal_flow');
-    $flow['visit_id'] = $visit['id'];
-    $flow['pin'] = $pin;
-    $flow['type'] = 'planned'; // ✅ Označit jako plánovanou
-    
-    // ✅ Ulož visitors do session (ať už jsou nebo ne)
-    $flow['visitors'] = $visitors; // může být prázdné pole
-    $this->session->set('terminal_flow', $flow);
-    
-    // ✅ VŽDY jdi na registrační formulář (univerzální)
-    wp_redirect(home_url('/terminal/register/'));
-    exit;
-}
     
     /**
      * Convert YouTube/Vimeo URL to embed format
@@ -1275,128 +1339,128 @@ $visitors = $wpdb->get_results($wpdb->prepare(
      * @return array Training steps
      */
     private function get_training_steps($visit_id, $language_code) {
-    global $wpdb;
-    
-    $steps = [];
-
-	error_log("[DEBUG get_training_steps] customer_id={$this->customer_id}, branch_id={$this->branch_id}, language_code={$language_code}, visit_id={$visit_id}");
-    
-    // 1. Language ID
-    $language_id = $wpdb->get_var($wpdb->prepare(
-        "SELECT id FROM {$wpdb->prefix}saw_training_languages 
-         WHERE customer_id = %d AND language_code = %s",
-        $this->customer_id, $language_code
-    ));
-    
-    if (!$language_id) return $steps;
-    
-    // 2. Training content
-    $content = $wpdb->get_row($wpdb->prepare(
-        "SELECT * FROM {$wpdb->prefix}saw_training_content 
-         WHERE customer_id = %d AND branch_id = %d AND language_id = %d",
-        $this->customer_id, $this->branch_id, $language_id
-    ), ARRAY_A);
-    
-    if (!$content) return $steps;
-    
-    $content_id = $content['id'];
-    
-    // 3. Video
-    if (!empty($content['video_url'])) {
-        $video_url = $content['video_url'];
-        if (strpos($video_url, 'youtube.com') !== false || strpos($video_url, 'youtu.be') !== false) {
-            preg_match('/(?:v=|youtu\.be\/)([^&]+)/', $video_url, $matches);
-            if (!empty($matches[1])) $video_url = 'https://www.youtube.com/embed/' . $matches[1];
-        } elseif (strpos($video_url, 'vimeo.com') !== false) {
-            preg_match('/vimeo\.com\/(\d+)/', $video_url, $matches);
-            if (!empty($matches[1])) $video_url = 'https://player.vimeo.com/video/' . $matches[1];
-        }
+        global $wpdb;
         
-        $steps[] = ['type' => 'video', 'url' => 'training-video', 'data' => ['video_url' => $video_url]];
-    }
-    
-    // 4. Map
-    if (!empty($content['pdf_map_path'])) {
-        $steps[] = ['type' => 'map', 'url' => 'training-map', 'data' => ['pdf_path' => $content['pdf_map_path']]];
-    }
-    
-    // 5. Risks
-    if (!empty($content['risks_text'])) {
-        $steps[] = ['type' => 'risks', 'url' => 'training-risks', 'data' => ['risks_text' => $content['risks_text']]];
-    }
-    
-    // 6. DEPARTMENTS - odvozené z hostů (PŘEDPOSLEDNÍ)
-$host_ids = $wpdb->get_col($wpdb->prepare(
-    "SELECT user_id FROM {$wpdb->prefix}saw_visit_hosts WHERE visit_id = %d", $visit_id
-));
+        $steps = [];
 
-if (!empty($host_ids)) {
-    $department_ids = [];
-    
-    foreach ($host_ids as $host_id) {
-        $host_dept_ids = $wpdb->get_col($wpdb->prepare(
-            "SELECT department_id FROM {$wpdb->prefix}saw_user_departments WHERE user_id = %d", $host_id
+        error_log("[DEBUG get_training_steps] customer_id={$this->customer_id}, branch_id={$this->branch_id}, language_code={$language_code}, visit_id={$visit_id}");
+        
+        // 1. Language ID
+        $language_id = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM {$wpdb->prefix}saw_training_languages 
+             WHERE customer_id = %d AND language_code = %s",
+            $this->customer_id, $language_code
         ));
         
-        // Pokud NULL (admin/super_manager) → všechna oddělení pobočky
-        if (empty($host_dept_ids)) {
-            $all_dept_ids = $wpdb->get_col($wpdb->prepare(
-                "SELECT id FROM {$wpdb->prefix}saw_departments 
-                 WHERE customer_id = %d AND branch_id = %d AND is_active = 1",
-                $this->customer_id, $this->branch_id
-            ));
-            $department_ids = array_merge($department_ids, $all_dept_ids);
-        } else {
-            $department_ids = array_merge($department_ids, $host_dept_ids);
-        }
-    }
-    
-    $department_ids = array_unique($department_ids);
-    
-    // Načti content pro každé oddělení
-    foreach ($department_ids as $dept_id) {
-        $dept_content = $wpdb->get_row($wpdb->prepare(
-            "SELECT dc.id as department_content_id, dc.text_content, d.name as department_name
-             FROM {$wpdb->prefix}saw_training_department_content dc
-             INNER JOIN {$wpdb->prefix}saw_departments d ON dc.department_id = d.id
-             WHERE dc.training_content_id = %d AND dc.department_id = %d",
-            $content_id, $dept_id
+        if (!$language_id) return $steps;
+        
+        // 2. Training content
+        $content = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}saw_training_content 
+             WHERE customer_id = %d AND branch_id = %d AND language_id = %d",
+            $this->customer_id, $this->branch_id, $language_id
         ), ARRAY_A);
         
-        if ($dept_content) {
-            $steps[] = [
-                'type' => 'department',
-                'url' => 'training-department',
-                'data' => [
-                    'department_id' => $dept_id,
-                    'department_name' => $dept_content['department_name'],
-                    'text_content' => $dept_content['text_content'] ?? '',
-                    'department_content_id' => $dept_content['department_content_id']
-                ]
-            ];
+        if (!$content) return $steps;
+        
+        $content_id = $content['id'];
+        
+        // 3. Video
+        if (!empty($content['video_url'])) {
+            $video_url = $content['video_url'];
+            if (strpos($video_url, 'youtube.com') !== false || strpos($video_url, 'youtu.be') !== false) {
+                preg_match('/(?:v=|youtu\.be\/)([^&]+)/', $video_url, $matches);
+                if (!empty($matches[1])) $video_url = 'https://www.youtube.com/embed/' . $matches[1];
+            } elseif (strpos($video_url, 'vimeo.com') !== false) {
+                preg_match('/vimeo\.com\/(\d+)/', $video_url, $matches);
+                if (!empty($matches[1])) $video_url = 'https://player.vimeo.com/video/' . $matches[1];
+            }
+            
+            $steps[] = ['type' => 'video', 'url' => 'training-video', 'data' => ['video_url' => $video_url]];
         }
-    }
-}
-
-    // 6.5 OOPP
-    if (class_exists('SAW_OOPP_Public')) {
-        $has_oopp = SAW_OOPP_Public::has_oopp($this->customer_id, $this->branch_id, $visit_id);
-        if ($has_oopp) {
-            $steps[] = [
-                'type' => 'oopp',
-                'url' => 'training-oopp',
-                'data' => []
-            ];
+        
+        // 4. Map
+        if (!empty($content['pdf_map_path'])) {
+            $steps[] = ['type' => 'map', 'url' => 'training-map', 'data' => ['pdf_path' => $content['pdf_map_path']]];
         }
+        
+        // 5. Risks
+        if (!empty($content['risks_text'])) {
+            $steps[] = ['type' => 'risks', 'url' => 'training-risks', 'data' => ['risks_text' => $content['risks_text']]];
+        }
+        
+        // 6. DEPARTMENTS - odvozené z hostů (PŘEDPOSLEDNÍ)
+        $host_ids = $wpdb->get_col($wpdb->prepare(
+            "SELECT user_id FROM {$wpdb->prefix}saw_visit_hosts WHERE visit_id = %d", $visit_id
+        ));
+
+        if (!empty($host_ids)) {
+            $department_ids = [];
+            
+            foreach ($host_ids as $host_id) {
+                $host_dept_ids = $wpdb->get_col($wpdb->prepare(
+                    "SELECT department_id FROM {$wpdb->prefix}saw_user_departments WHERE user_id = %d", $host_id
+                ));
+                
+                // Pokud NULL (admin/super_manager) → všechna oddělení pobočky
+                if (empty($host_dept_ids)) {
+                    $all_dept_ids = $wpdb->get_col($wpdb->prepare(
+                        "SELECT id FROM {$wpdb->prefix}saw_departments 
+                         WHERE customer_id = %d AND branch_id = %d AND is_active = 1",
+                        $this->customer_id, $this->branch_id
+                    ));
+                    $department_ids = array_merge($department_ids, $all_dept_ids);
+                } else {
+                    $department_ids = array_merge($department_ids, $host_dept_ids);
+                }
+            }
+            
+            $department_ids = array_unique($department_ids);
+            
+            // Načti content pro každé oddělení
+            foreach ($department_ids as $dept_id) {
+                $dept_content = $wpdb->get_row($wpdb->prepare(
+                    "SELECT dc.id as department_content_id, dc.text_content, d.name as department_name
+                     FROM {$wpdb->prefix}saw_training_department_content dc
+                     INNER JOIN {$wpdb->prefix}saw_departments d ON dc.department_id = d.id
+                     WHERE dc.training_content_id = %d AND dc.department_id = %d",
+                    $content_id, $dept_id
+                ), ARRAY_A);
+                
+                if ($dept_content) {
+                    $steps[] = [
+                        'type' => 'department',
+                        'url' => 'training-department',
+                        'data' => [
+                            'department_id' => $dept_id,
+                            'department_name' => $dept_content['department_name'],
+                            'text_content' => $dept_content['text_content'] ?? '',
+                            'department_content_id' => $dept_content['department_content_id']
+                        ]
+                    ];
+                }
+            }
+        }
+
+        // 6.5 OOPP
+        if (class_exists('SAW_OOPP_Public')) {
+            $has_oopp = SAW_OOPP_Public::has_oopp($this->customer_id, $this->branch_id, $visit_id);
+            if ($has_oopp) {
+                $steps[] = [
+                    'type' => 'oopp',
+                    'url' => 'training-oopp',
+                    'data' => []
+                ];
+            }
+        }
+
+        // 7. Additional (POSLEDNÍ KROK)
+        if (!empty($content['additional_text'])) {
+            $steps[] = ['type' => 'additional', 'url' => 'training-additional', 'data' => ['additional_text' => $content['additional_text']]];
+        }
+
+        return $steps;
     }
-
-// 7. Additional (POSLEDNÍ KROK)
-if (!empty($content['additional_text'])) {
-    $steps[] = ['type' => 'additional', 'url' => 'training-additional', 'data' => ['additional_text' => $content['additional_text']]];
-}
-
-return $steps;
-}
     
     /**
      * Handle registration submission
@@ -1408,24 +1472,25 @@ return $steps;
      * Podporuje více osob a profesní průkazy
      *
      * @since 3.0.0
+     * @updated 3.1.0 - Walk-in visits now include planned_date_from/to
      * @return void
      */
     private function handle_unified_registration() {
         global $wpdb;
 
-	error_log("[SAW Terminal] handle_unified_registration() STARTED");
+        error_log("[SAW Terminal] handle_unified_registration() STARTED");
 
-	error_log("[SAW Terminal] Getting flow from session...");
-	$flow = $this->session->get('terminal_flow');
-	error_log("[SAW Terminal] Flow retrieved: " . print_r($flow, true));
+        error_log("[SAW Terminal] Getting flow from session...");
+        $flow = $this->session->get('terminal_flow');
+        error_log("[SAW Terminal] Flow retrieved: " . print_r($flow, true));
 
-	$is_planned = ($flow['type'] ?? '') === 'planned';
-	error_log("[SAW Terminal] is_planned: " . ($is_planned ? 'YES' : 'NO'));
+        $is_planned = ($flow['type'] ?? '') === 'planned';
+        error_log("[SAW Terminal] is_planned: " . ($is_planned ? 'YES' : 'NO'));
 
-	$visit_id = $flow['visit_id'] ?? null;
-	error_log("[SAW Terminal] visit_id: " . ($visit_id ?? 'NULL'));
+        $visit_id = $flow['visit_id'] ?? null;
+        error_log("[SAW Terminal] visit_id: " . ($visit_id ?? 'NULL'));
 
-	error_log("[SAW Terminal] Starting validation...");
+        error_log("[SAW Terminal] Starting validation...");
         
         // ===================================
         // 1. VALIDACE FORMULÁŘE
@@ -1434,30 +1499,25 @@ return $steps;
         $errors = [];
         
         // Zjisti zda jsou existing nebo new visitors
-	$existing_visitor_ids = $_POST['existing_visitor_ids'] ?? [];
-	$new_visitors = $_POST['new_visitors'] ?? [];
+        $existing_visitor_ids = $_POST['existing_visitor_ids'] ?? [];
+        $new_visitors = $_POST['new_visitors'] ?? [];
 
-	error_log("[SAW Terminal] existing_visitor_ids: " . print_r($existing_visitor_ids, true));
-	error_log("[SAW Terminal] new_visitors count: " . count($new_visitors));
+        error_log("[SAW Terminal] existing_visitor_ids: " . print_r($existing_visitor_ids, true));
+        error_log("[SAW Terminal] new_visitors count: " . count($new_visitors));
 
-	// Musí být alespoň jeden visitor (existing NEBO new)
-	if (empty($existing_visitor_ids) && empty($new_visitors)) {
-	    error_log("[SAW Terminal] VALIDATION ERROR: No visitors");
-	    $errors[] = __('Musíte vybrat nebo zadat alespoň jednoho návštěvníka', 'saw-visitors');
-	}
-
-	error_log("[SAW Terminal] Validating new visitors...");
-        
         // Musí být alespoň jeden visitor (existing NEBO new)
         if (empty($existing_visitor_ids) && empty($new_visitors)) {
+            error_log("[SAW Terminal] VALIDATION ERROR: No visitors");
             $errors[] = __('Musíte vybrat nebo zadat alespoň jednoho návštěvníka', 'saw-visitors');
         }
+
+        error_log("[SAW Terminal] Validating new visitors...");
         
         // Validace new visitors
         if (!empty($new_visitors) && is_array($new_visitors)) {
-	    error_log("[SAW Terminal] Entering new_visitors validation loop");
-	    foreach ($new_visitors as $idx => $visitor) {
-	        error_log("[SAW Terminal] Validating visitor #{$idx}: " . print_r($visitor, true));
+            error_log("[SAW Terminal] Entering new_visitors validation loop");
+            foreach ($new_visitors as $idx => $visitor) {
+                error_log("[SAW Terminal] Validating visitor #{$idx}: " . print_r($visitor, true));
                 // Přeskoč prázdné řádky
                 $is_empty = empty($visitor['first_name']) && empty($visitor['last_name']) && empty($visitor['position']) && empty($visitor['email']) && empty($visitor['phone']);
                 
@@ -1480,10 +1540,10 @@ return $steps;
         
         // Pro walk-in: validace company a hosts
 
-	error_log("[SAW Terminal] New visitors validation complete");
+        error_log("[SAW Terminal] New visitors validation complete");
 
         if (!$is_planned) {
-		error_log("[SAW Terminal] Validating walk-in specific data...");
+            error_log("[SAW Terminal] Validating walk-in specific data...");
 
             $is_individual = isset($_POST['is_individual']) && $_POST['is_individual'] == '1';
             
@@ -1497,22 +1557,21 @@ return $steps;
         }
         
         if (!empty($errors)) {
-	
-		error_log("[SAW Terminal] VALIDATION FAILED: " . implode(', ', $errors));
+            error_log("[SAW Terminal] VALIDATION FAILED: " . implode(', ', $errors));
 
             $this->set_error(implode('<br>', $errors));
             $this->render_registration_form();
             return;
         }
 
-	error_log("[SAW Terminal] Validation passed, creating visit...");
+        error_log("[SAW Terminal] Validation passed, creating visit...");
         
         // ===================================
         // 2. VYTVOŘENÍ/POUŽITÍ VISIT
         // ===================================
         
         if ($is_planned) {
-            // ✅ PLANNED: Použij existující visit_id z PIN
+            // PLANNED: Použij existující visit_id z PIN
             if (!$visit_id) {
                 $this->set_error(__('Chyba: Návštěva nebyla nalezena', 'saw-visitors'));
                 $this->render_registration_form();
@@ -1534,31 +1593,30 @@ return $steps;
             error_log("[SAW Terminal] Planned visit #{$visit_id} started");
             
         } else {
-            // ✅ WALK-IN: Vytvoř novou visit
+            // WALK-IN: Vytvoř novou visit
             
             // Company
             $company_id = null;
             $is_individual = isset($_POST['is_individual']) && $_POST['is_individual'] == '1';
 
-		error_log("[SAW Terminal] is_individual: " . ($is_individual ? 'YES' : 'NO'));
+            error_log("[SAW Terminal] is_individual: " . ($is_individual ? 'YES' : 'NO'));
             
             if (!$is_individual) {
+                error_log("[SAW Terminal] Creating/finding company...");
+                require_once SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/model.php';
+                error_log("[SAW Terminal] Visits model.php loaded");
 
-		error_log("[SAW Terminal] Creating/finding company...");
-		require_once SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/model.php';
-		error_log("[SAW Terminal] Visits model.php loaded");
+                $visits_config = require SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/config.php';
+                error_log("[SAW Terminal] Visits config loaded");
 
-		$visits_config = require SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/config.php';
-		error_log("[SAW Terminal] Visits config loaded");
+                $visits_model = new SAW_Module_Visits_Model($visits_config);
+                error_log("[SAW Terminal] Visits model instantiated");
 
-		$visits_model = new SAW_Module_Visits_Model($visits_config);
-		error_log("[SAW Terminal] Visits model instantiated");
+                $company_name = sanitize_text_field($_POST['company_name']);
+                error_log("[SAW Terminal] Company name: {$company_name}, branch_id: {$this->branch_id}");
 
-		$company_name = sanitize_text_field($_POST['company_name']);
-		error_log("[SAW Terminal] Company name: {$company_name}, branch_id: {$this->branch_id}");
-
-		$company_id = $visits_model->find_or_create_company($this->branch_id, $company_name, $this->customer_id);
-		error_log("[SAW Terminal] Company ID returned: " . ($company_id ?: 'NULL'));
+                $company_id = $visits_model->find_or_create_company($this->branch_id, $company_name, $this->customer_id);
+                error_log("[SAW Terminal] Company ID returned: " . ($company_id ?: 'NULL'));
                 
                 if (is_wp_error($company_id)) {
                     $this->set_error(__('Chyba při vytváření firmy: ', 'saw-visitors') . $company_id->get_error_message());
@@ -1567,6 +1625,11 @@ return $steps;
                 }
             }
             
+            // ============================================
+            // NEW v3.1.0: Walk-in visit with planned dates
+            // ============================================
+            $today = current_time('Y-m-d');
+            
             // Create visit
             $visit_data = [
                 'customer_id' => $this->customer_id,
@@ -1574,6 +1637,8 @@ return $steps;
                 'company_id' => $company_id,
                 'visit_type' => 'walk_in',
                 'status' => 'in_progress',
+                'planned_date_from' => $today,  // NEW v3.1.0
+                'planned_date_to' => $today,    // NEW v3.1.0
                 'started_at' => current_time('mysql'),
                 'purpose' => null,
                 'created_at' => current_time('mysql'),
@@ -1582,7 +1647,8 @@ return $steps;
             $result = $wpdb->insert(
                 $wpdb->prefix . 'saw_visits',
                 $visit_data,
-                ['%d', '%d', $company_id ? '%d' : '%s', '%s', '%s', '%s', '%s', '%s']
+                ['%d', '%d', $company_id ? '%d' : '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s']
+                // Added two '%s' for planned_date_from and planned_date_to
             );
             
             if (!$result) {
@@ -1594,7 +1660,7 @@ return $steps;
             
             $visit_id = $wpdb->insert_id;
             
-            error_log("[SAW Terminal] Walk-in visit #{$visit_id} created");
+            error_log("[SAW Terminal] Walk-in visit #{$visit_id} created with planned_date_from={$today}, planned_date_to={$today}");
             
             // Save hosts
             $host_ids = array_map('intval', $_POST['host_ids']);
@@ -1615,7 +1681,7 @@ return $steps;
         // 3. ZPRACOVÁNÍ NÁVŠTĚVNÍKŮ
         // ===================================
         
-        // ✅ PŘIDÁNO: Zjisti zda má firma školící obsah
+        // PŘIDÁNO: Zjisti zda má firma školící obsah
         $language = $flow['language'] ?? 'cs';
         $has_training_content = false;
         $language_id = $wpdb->get_var($wpdb->prepare(
@@ -1676,7 +1742,7 @@ return $steps;
                 // Training skip checkbox
                 $training_skip = isset($_POST['existing_training_skip'][$visitor_id]) ? 1 : 0;
                 
-                // ✅ URČIT training_status
+                // URČIT training_status
                 $training_status = 'pending';
                 if ($training_skip) {
                     $training_status = 'skipped';
@@ -1689,10 +1755,10 @@ return $steps;
                     $any_needs_training = true;
                 }
                 
-                // ✅ UPDATE s NOVÝMI sloupci
+                // UPDATE s NOVÝMI sloupci
                 if (!$training_skip && !$has_completed_training && $has_training_content) {
                     // Potřebuje školení - RESET progress
-                    // ✅ UPDATE s current_status = 'present' (check-in)
+                    // UPDATE s current_status = 'present' (check-in)
                     $update_data = [
                         'participation_status' => 'confirmed',
                         'current_status' => 'present',
@@ -1734,7 +1800,7 @@ return $steps;
                 $visitor_ids[] = $visitor_id;
         
                 
-                // ✅ INSERT daily log s customer_id a branch_id
+                // INSERT daily log s customer_id a branch_id
                 $wpdb->insert(
                     $wpdb->prefix . 'saw_visit_daily_logs',
                     [
@@ -1760,14 +1826,14 @@ return $steps;
             error_log("[SAW Terminal] Processing " . count($new_visitors) . " new visitors");
             
             foreach ($new_visitors as $idx => $visitor_data) {
-                // ✅ SKIP prázdné řádky
+                // SKIP prázdné řádky
                 if (empty($visitor_data['first_name']) && empty($visitor_data['last_name'])) {
                     continue;
                 }
                 
                 $training_skipped = isset($visitor_data['training_skipped']) && $visitor_data['training_skipped'] == '1' ? 1 : 0;
                 
-                // ✅ URČIT training_status
+                // URČIT training_status
                 $training_status = 'pending';
                 if ($training_skipped) {
                     $training_status = 'skipped';
@@ -1778,7 +1844,7 @@ return $steps;
                     $any_needs_training = true;
                 }
                 
-                // ✅ INSERT s NOVÝMI sloupci
+                // INSERT s NOVÝMI sloupci
                 $visitor_insert = [
                     'customer_id' => $this->customer_id,
                     'branch_id' => $this->branch_id,
@@ -1796,7 +1862,7 @@ return $steps;
                     'created_at' => current_time('mysql'),
                 ];
                 
-                // ✅ INSERT s current_status = 'present' (check-in)
+                // INSERT s current_status = 'present' (check-in)
                 $visitor_insert['current_status'] = 'present';
                 
                 $wpdb->insert(
@@ -1808,7 +1874,7 @@ return $steps;
                 $visitor_id = $wpdb->insert_id;
                 $visitor_ids[] = $visitor_id;
                 
-                // ✅ INSERT daily log s customer_id a branch_id
+                // INSERT daily log s customer_id a branch_id
                 $wpdb->insert(
                     $wpdb->prefix . 'saw_visit_daily_logs',
                     [
@@ -1855,10 +1921,10 @@ return $steps;
             wp_redirect(home_url('/terminal/success/'));
         } else {
             error_log("[SAW Terminal DEBUG] About to call get_training_steps with visit_id={$visit_id}, language={$flow['language']}");
-    $training_steps = $this->get_training_steps($visit_id, $flow['language']);
-    
-    error_log("[SAW Terminal] Training required - " . count($training_steps) . " steps found");
-    error_log("[SAW Terminal DEBUG] Training steps: " . print_r($training_steps, true));
+            $training_steps = $this->get_training_steps($visit_id, $flow['language']);
+            
+            error_log("[SAW Terminal] Training required - " . count($training_steps) . " steps found");
+            error_log("[SAW Terminal DEBUG] Training steps: " . print_r($training_steps, true));
             
             if (!empty($training_steps) && isset($training_steps[0])) {
                 $first_step_url = $training_steps[0]['url'];
@@ -1880,91 +1946,91 @@ return $steps;
      * Loads visitors who are currently checked in
      */
     private function handle_checkout_pin_verify() {
-    global $wpdb;
-    
-    $pin = sanitize_text_field($_POST['pin'] ?? '');
-    
-    if (empty($pin) || strlen($pin) !== 6) {
-        $this->set_error(__('Neplatný PIN kód', 'saw-visitors'));
-        $this->render_checkout_pin();
-        return;
-    }
-    
-    // Find visit by PIN
-    $visit = $wpdb->get_row($wpdb->prepare(
-        "SELECT * FROM {$wpdb->prefix}saw_visits 
-         WHERE pin_code = %s 
-         AND customer_id = %d 
-         AND status IN ('pending', 'confirmed', 'in_progress')",
-        $pin,
-        $this->customer_id
-    ), ARRAY_A);
-    
-    if (!$visit) {
-        $this->set_error(__('PIN kód nenalezen nebo návštěva již ukončena', 'saw-visitors'));
-        $this->render_checkout_pin();
-        return;
-    }
-    
-    // ✅ OPRAVENO: Načti JEN visitors s AKTIVNÍM neukončeným check-in
-    $visitors = $wpdb->get_results($wpdb->prepare(
-        "SELECT DISTINCT 
-            vis.id,
-            vis.first_name,
-            vis.last_name,
-            vis.position,
-            vis.email,
-            vis.phone,
-            vis.participation_status,
-            dl.log_date,
-            dl.checked_in_at,
-            dl.id as log_id
-         FROM {$wpdb->prefix}saw_visitors vis
-         INNER JOIN {$wpdb->prefix}saw_visit_daily_logs dl 
-            ON vis.id = dl.visitor_id
-         WHERE vis.visit_id = %d
-           AND dl.checked_in_at IS NOT NULL
-           AND dl.checked_out_at IS NULL
-         ORDER BY dl.checked_in_at DESC, vis.last_name, vis.first_name",
-        $visit['id']
-    ), ARRAY_A);
-    
-    // ✅ DEBUG
-    error_log(sprintf(
-        "[SAW Checkout PIN] Visit #%d - Found %d visitors with active check-in",
-        $visit['id'],
-        count($visitors)
-    ));
-    
-    if (!empty($visitors)) {
-        foreach ($visitors as $v) {
-            error_log(sprintf(
-                "  - %s %s (log_date: %s, checked_in: %s)",
-                $v['first_name'],
-                $v['last_name'],
-                $v['log_date'],
-                $v['checked_in_at']
-            ));
+        global $wpdb;
+        
+        $pin = sanitize_text_field($_POST['pin'] ?? '');
+        
+        if (empty($pin) || strlen($pin) !== 6) {
+            $this->set_error(__('Neplatný PIN kód', 'saw-visitors'));
+            $this->render_checkout_pin();
+            return;
         }
+        
+        // Find visit by PIN
+        $visit = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}saw_visits 
+             WHERE pin_code = %s 
+             AND customer_id = %d 
+             AND status IN ('pending', 'confirmed', 'in_progress')",
+            $pin,
+            $this->customer_id
+        ), ARRAY_A);
+        
+        if (!$visit) {
+            $this->set_error(__('PIN kód nenalezen nebo návštěva již ukončena', 'saw-visitors'));
+            $this->render_checkout_pin();
+            return;
+        }
+        
+        // OPRAVENO: Načti JEN visitors s AKTIVNÍM neukončeným check-in
+        $visitors = $wpdb->get_results($wpdb->prepare(
+            "SELECT DISTINCT 
+                vis.id,
+                vis.first_name,
+                vis.last_name,
+                vis.position,
+                vis.email,
+                vis.phone,
+                vis.participation_status,
+                dl.log_date,
+                dl.checked_in_at,
+                dl.id as log_id
+             FROM {$wpdb->prefix}saw_visitors vis
+             INNER JOIN {$wpdb->prefix}saw_visit_daily_logs dl 
+                ON vis.id = dl.visitor_id
+             WHERE vis.visit_id = %d
+               AND dl.checked_in_at IS NOT NULL
+               AND dl.checked_out_at IS NULL
+             ORDER BY dl.checked_in_at DESC, vis.last_name, vis.first_name",
+            $visit['id']
+        ), ARRAY_A);
+        
+        // DEBUG
+        error_log(sprintf(
+            "[SAW Checkout PIN] Visit #%d - Found %d visitors with active check-in",
+            $visit['id'],
+            count($visitors)
+        ));
+        
+        if (!empty($visitors)) {
+            foreach ($visitors as $v) {
+                error_log(sprintf(
+                    "  - %s %s (log_date: %s, checked_in: %s)",
+                    $v['first_name'],
+                    $v['last_name'],
+                    $v['log_date'],
+                    $v['checked_in_at']
+                ));
+            }
+        }
+        
+        if (empty($visitors)) {
+            $this->set_error(__('Nikdo z této návštěvy není momentálně přítomen', 'saw-visitors'));
+            $this->render_checkout_pin();
+            return;
+        }
+        
+        // Save to session
+        $flow = $this->session->get('terminal_flow');
+        $flow['checkout_visit_id'] = $visit['id'];
+        $flow['checkout_visitors'] = $visitors;
+        $flow['step'] = 'checkout-select';
+        $this->session->set('terminal_flow', $flow);
+        
+        // Redirect to selection
+        wp_redirect(home_url('/terminal/checkout-select/'));
+        exit;
     }
-    
-    if (empty($visitors)) {
-        $this->set_error(__('Nikdo z této návštěvy není momentálně přítomen', 'saw-visitors'));
-        $this->render_checkout_pin();
-        return;
-    }
-    
-    // Save to session
-    $flow = $this->session->get('terminal_flow');
-    $flow['checkout_visit_id'] = $visit['id'];
-    $flow['checkout_visitors'] = $visitors;
-    $flow['step'] = 'checkout-select';
-    $this->session->set('terminal_flow', $flow);
-    
-    // Redirect to selection
-    wp_redirect(home_url('/terminal/checkout-select/'));
-    exit;
-}
     
     /**
      * Handle checkout via search
@@ -1980,103 +2046,207 @@ return $steps;
         $this->render_checkout_search();
     }
 
-/**
- * Handle checkout completion
- * Updates daily_logs and completes visit if needed
- */
-private function handle_checkout_complete() {
-    global $wpdb;
-    
-    $flow = $this->session->get('terminal_flow');
-    
-    // ✅ OPRAVENO: Support both PIN and SEARCH checkout
-    $visitor_ids_input = $_POST['visitor_ids'] ?? [];
-    
-    // Handle comma-separated string (from search) OR array (from PIN)
-    if (is_string($visitor_ids_input)) {
-        $visitor_ids = array_map('intval', explode(',', $visitor_ids_input));
-    } else {
-        $visitor_ids = $visitor_ids_input;
-    }
-    
-    if (empty($visitor_ids)) {
-        $this->set_error(__('Musíte vybrat alespoň jednoho návštěvníka', 'saw-visitors'));
+    // ============================================
+    // CHECKOUT CONFIRMATION SYSTEM v2 METHODS
+    // Added: 2025-12-08
+    // ============================================
+
+    /**
+     * Handle checkout completion
+     * 
+     * Now checks if confirmation dialog is needed before completing checkout.
+     * If this is the last checkout (no visitors will remain), redirects to
+     * confirmation dialog. Otherwise, proceeds with checkout directly.
+     * 
+     * @since 1.0.0
+     * @updated 3.1.0 - Added will_be_last_checkout check and confirmation dialog redirect
+     * @return void
+     */
+    private function handle_checkout_complete() {
+        global $wpdb;
         
-        // Redirect back based on method
-        if (!empty($flow['checkout_visit_id'])) {
-            $this->render_checkout_select();
+        $flow = $this->session->get('terminal_flow');
+        
+        // Get visitor IDs - support both PIN and SEARCH checkout
+        $visitor_ids_input = $_POST['visitor_ids'] ?? [];
+        
+        // Handle comma-separated string (from search) OR array (from PIN)
+        if (is_string($visitor_ids_input)) {
+            $visitor_ids = array_map('intval', explode(',', $visitor_ids_input));
         } else {
-            $this->render_checkout_search();
-        }
-        return;
-    }
-    
-    $checkout_time = current_time('mysql');
-    
-    // ✅ OPRAVENO: Checkout BEZ visit_id (hledej podle visitor_id)
-    foreach ($visitor_ids as $visitor_id) {
-        $visitor_id = intval($visitor_id);
-        
-        // 1. NAJDI poslední aktivní log (BEZ visit_id filtru)
-        $log_id = $wpdb->get_var($wpdb->prepare(
-            "SELECT id FROM {$wpdb->prefix}saw_visit_daily_logs
-             WHERE visitor_id = %d
-             AND checked_in_at IS NOT NULL
-             AND checked_out_at IS NULL
-             ORDER BY checked_in_at DESC
-             LIMIT 1",
-            $visitor_id
-        ));
-        
-        if (!$log_id) {
-            error_log("[SAW Terminal] WARNING: No active log found for visitor #{$visitor_id}");
-            continue;
+            $visitor_ids = array_map('intval', $visitor_ids_input);
         }
         
-        // 2. UPDATE log
-        $wpdb->update(
-            $wpdb->prefix . 'saw_visit_daily_logs',
-            ['checked_out_at' => $checkout_time],
-            ['id' => $log_id],
-            ['%s'],
-            ['%d']
-        );
+        $visitor_ids = array_filter($visitor_ids); // Remove zeros
         
-        // 3. ✅ UPDATE visitor current_status
-        $wpdb->update(
-            $wpdb->prefix . 'saw_visitors',
-            [
-                'current_status' => 'checked_out',  // ✅ NOVÝ
-                'last_checkout_at' => $checkout_time,
-            ],
-            ['id' => $visitor_id],
-            ['%s', '%s'],
-            ['%d']
-        );
+        if (empty($visitor_ids)) {
+            $this->set_error(__('Musíte vybrat alespoň jednoho návštěvníka', 'saw-visitors'));
+            
+            // Redirect back based on method
+            if (!empty($flow['checkout_visit_id'])) {
+                $this->render_checkout_select();
+            } else {
+                $this->render_checkout_search();
+            }
+            return;
+        }
         
-        error_log("[SAW Terminal] Visitor #{$visitor_id} checked out");
+        // Get visit_id from flow or from first visitor
+        $visit_id = $flow['checkout_visit_id'] ?? null;
+        
+        if (!$visit_id && !empty($visitor_ids[0])) {
+            $visit_id = $wpdb->get_var($wpdb->prepare(
+                "SELECT visit_id FROM {$wpdb->prefix}saw_visitors WHERE id = %d",
+                $visitor_ids[0]
+            ));
+        }
+        
+        // ============================================
+        // NEW v3.1.0: Check if this is the last checkout
+        // ============================================
+        if ($visit_id) {
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visitors/model.php';
+            $visitors_config = require SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visitors/config.php';
+            $visitors_model = new SAW_Module_Visitors_Model($visitors_config);
+            
+            $is_last_checkout = $visitors_model->will_be_last_checkout($visit_id, $visitor_ids);
+            
+            if ($is_last_checkout) {
+                // Store data in session and show confirmation dialog
+                $flow['pending_checkout_visitor_ids'] = $visitor_ids;
+                $flow['checkout_visit_id'] = $visit_id;
+                $flow['step'] = 'checkout-confirm';
+                $this->session->set('terminal_flow', $flow);
+                
+                error_log("[SAW Terminal] Last checkout detected - showing confirmation dialog for visit #{$visit_id}");
+                
+                wp_redirect(home_url('/terminal/checkout-confirm/'));
+                exit;
+            }
+        }
+        // ============================================
+        // END NEW v3.1.0
+        // ============================================
+        
+        // Not last checkout - proceed with checkout directly
+        $this->perform_checkout($visitor_ids);
+        
+        // Clear session and redirect to success
+        $this->reset_flow();
+        wp_redirect(home_url('/terminal/success/?action=checkout'));
+        exit;
     }
     
-    // ✅ Check if visits should be completed (pokud máme visit_id z PIN checkout)
-    if (!empty($flow['checkout_visit_id'])) {
-        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/model.php';
-        $visits_config = require SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/config.php';
-        $visits_model = new SAW_Module_Visits_Model($visits_config);
+    /**
+     * Handle checkout confirmation form submission
+     * 
+     * Called when user clicks "We will return" or "Complete visit" in the
+     * checkout confirmation dialog.
+     * 
+     * @since 3.1.0
+     * @return void
+     */
+    private function handle_checkout_confirm() {
+        $action = sanitize_text_field($_POST['checkout_action'] ?? '');
+        $visitor_ids_input = $_POST['visitor_ids'] ?? '';
+        $visit_id = intval($_POST['visit_id'] ?? 0);
         
-        $completed = $visits_model->check_and_complete_visit($flow['checkout_visit_id']);
+        // Parse visitor IDs from comma-separated string
+        $visitor_ids = array_map('intval', explode(',', $visitor_ids_input));
+        $visitor_ids = array_filter($visitor_ids);
         
-        if ($completed) {
-            error_log("[SAW Terminal] Visit #{$flow['checkout_visit_id']} automatically completed");
+        if (empty($visitor_ids) || !$visit_id) {
+            $this->set_error(__('Chybějící data', 'saw-visitors'));
+            wp_redirect(home_url('/terminal/'));
+            exit;
+        }
+        
+        // 1. Perform the checkout for all visitors
+        $this->perform_checkout($visitor_ids);
+        
+        // 2. Handle based on user's choice
+        if ($action === 'complete') {
+            // User chose "Complete visit" - mark visit as completed
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/model.php';
+            $visits_config = require SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/config.php';
+            $visits_model = new SAW_Module_Visits_Model($visits_config);
+            
+            $result = $visits_model->complete_visit($visit_id);
+            
+            if (is_wp_error($result)) {
+                error_log("[SAW Terminal] Failed to complete visit #{$visit_id}: " . $result->get_error_message());
+            } else {
+                error_log("[SAW Terminal] Checkout with completion - visit #{$visit_id} marked as completed");
+            }
+        } else {
+            // User chose "We will return" - visit stays in_progress
+            error_log("[SAW Terminal] Checkout with return - visit #{$visit_id} stays in_progress");
+        }
+        
+        // 3. Clear session and redirect to success
+        $this->reset_flow();
+        wp_redirect(home_url('/terminal/success/?action=checkout'));
+        exit;
+    }
+    
+    /**
+     * Perform actual checkout for visitors
+     * 
+     * Updates daily_logs and visitor records. Extracted from handle_checkout_complete
+     * for reuse in both regular checkout and confirmation-based checkout.
+     * 
+     * @since 3.1.0
+     * @param array $visitor_ids Array of visitor IDs to check out
+     * @return void
+     */
+    private function perform_checkout($visitor_ids) {
+        global $wpdb;
+        
+        $checkout_time = current_time('mysql');
+        
+        foreach ($visitor_ids as $visitor_id) {
+            $visitor_id = intval($visitor_id);
+            
+            // 1. Find latest active log (without visit_id filter - supports search checkout)
+            $log_id = $wpdb->get_var($wpdb->prepare(
+                "SELECT id FROM {$wpdb->prefix}saw_visit_daily_logs
+                 WHERE visitor_id = %d
+                 AND checked_in_at IS NOT NULL
+                 AND checked_out_at IS NULL
+                 ORDER BY checked_in_at DESC
+                 LIMIT 1",
+                $visitor_id
+            ));
+            
+            if (!$log_id) {
+                error_log("[SAW Terminal] perform_checkout: No active log found for visitor #{$visitor_id}");
+                continue;
+            }
+            
+            // 2. Update log with checkout time
+            $wpdb->update(
+                $wpdb->prefix . 'saw_visit_daily_logs',
+                ['checked_out_at' => $checkout_time],
+                ['id' => $log_id],
+                ['%s'],
+                ['%d']
+            );
+            
+            // 3. Update visitor current_status and last_checkout_at
+            $wpdb->update(
+                $wpdb->prefix . 'saw_visitors',
+                [
+                    'current_status' => 'checked_out',
+                    'last_checkout_at' => $checkout_time,
+                ],
+                ['id' => $visitor_id],
+                ['%s', '%s'],
+                ['%d']
+            );
+            
+            error_log("[SAW Terminal] perform_checkout: Visitor #{$visitor_id} checked out");
         }
     }
-    
-    // Clear session
-    $this->reset_flow();
-    
-    // Redirect to success
-    wp_redirect(home_url('/terminal/success/?action=checkout'));
-    exit;
-}
     
     /**
      * Move to next training step
@@ -2085,227 +2255,225 @@ private function handle_checkout_complete() {
      * @return void
      */
     private function move_to_next_training_step() {
-    $flow = $this->session->get('terminal_flow');
-    $visit_id = $flow['visit_id'] ?? null;
-    $language = $flow['language'] ?? 'cs';
-    
-    // ✅ Načíst fresh training steps z DB
-    $steps = $this->get_training_steps($visit_id, $language);
-    
-    error_log("[MOVE_TO_NEXT] Total steps: " . count($steps));
-    
-    // Určit aktuální krok podle URL
-    $path = get_query_var('saw_path');
-    $current_step_type = null;
-    
-    if (strpos($path, 'training-video') !== false) {
-        $current_step_type = 'video';
-    } elseif (strpos($path, 'training-map') !== false) {
-        $current_step_type = 'map';
-    } elseif (strpos($path, 'training-risks') !== false) {
-        $current_step_type = 'risks';
-    } else    if (strpos($path, 'training-department') !== false) {
-        $current_step_type = 'department';
-    } elseif (strpos($path, 'training-oopp') !== false) {
-        $current_step_type = 'oopp';
-    } elseif (strpos($path, 'training-additional') !== false) {
-        $current_step_type = 'additional';
-    }
-    
-    error_log("[MOVE_TO_NEXT] Current step type: {$current_step_type}");
-    
-    // ✅ JEDNODUCHÁ LOGIKA - najdi aktuální krok a jdi na další
-    $current_index = -1;
-    
-    // Pro department - najdi PRVNÍ department (všechny se počítají jako JEDEN krok)
-    if ($current_step_type === 'department') {
-        foreach ($steps as $index => $step) {
-            if ($step['type'] === 'department') {
-                $current_index = $index;
-                break; // ✅ První department = aktuální pozice
-            }
+        $flow = $this->session->get('terminal_flow');
+        $visit_id = $flow['visit_id'] ?? null;
+        $language = $flow['language'] ?? 'cs';
+        
+        // Načíst fresh training steps z DB
+        $steps = $this->get_training_steps($visit_id, $language);
+        
+        error_log("[MOVE_TO_NEXT] Total steps: " . count($steps));
+        
+        // Určit aktuální krok podle URL
+        $path = get_query_var('saw_path');
+        $current_step_type = null;
+        
+        if (strpos($path, 'training-video') !== false) {
+            $current_step_type = 'video';
+        } elseif (strpos($path, 'training-map') !== false) {
+            $current_step_type = 'map';
+        } elseif (strpos($path, 'training-risks') !== false) {
+            $current_step_type = 'risks';
+        } else if (strpos($path, 'training-department') !== false) {
+            $current_step_type = 'department';
+        } elseif (strpos($path, 'training-oopp') !== false) {
+            $current_step_type = 'oopp';
+        } elseif (strpos($path, 'training-additional') !== false) {
+            $current_step_type = 'additional';
         }
         
-        // Přeskoč VŠECHNY departments najednou
-        $next_index = $current_index + 1;
-        while ($next_index < count($steps) && $steps[$next_index]['type'] === 'department') {
-            $next_index++;
-        }
-    } else {
-        // Pro ostatní kroky
-        foreach ($steps as $index => $step) {
-            if ($step['type'] === $current_step_type) {
-                $current_index = $index;
-                break;
+        error_log("[MOVE_TO_NEXT] Current step type: {$current_step_type}");
+        
+        // JEDNODUCHÁ LOGIKA - najdi aktuální krok a jdi na další
+        $current_index = -1;
+        
+        // Pro department - najdi PRVNÍ department (všechny se počítají jako JEDEN krok)
+        if ($current_step_type === 'department') {
+            foreach ($steps as $index => $step) {
+                if ($step['type'] === 'department') {
+                    $current_index = $index;
+                    break; // První department = aktuální pozice
+                }
             }
+            
+            // Přeskoč VŠECHNY departments najednou
+            $next_index = $current_index + 1;
+            while ($next_index < count($steps) && $steps[$next_index]['type'] === 'department') {
+                $next_index++;
+            }
+        } else {
+            // Pro ostatní kroky
+            foreach ($steps as $index => $step) {
+                if ($step['type'] === $current_step_type) {
+                    $current_index = $index;
+                    break;
+                }
+            }
+            $next_index = $current_index + 1;
         }
-        $next_index = $current_index + 1;
+        
+        error_log("[MOVE_TO_NEXT] Current index: {$current_index}, next: {$next_index}");
+        
+        if ($next_index < count($steps)) {
+            $next_step = $steps[$next_index];
+            error_log("[MOVE_TO_NEXT] Redirecting to: {$next_step['url']}");
+            wp_redirect(home_url('/terminal/' . $next_step['url'] . '/'));
+            exit;
+        } else {
+            // Všechny kroky hotové
+            $this->complete_training($flow);
+        }
     }
-    
-    error_log("[MOVE_TO_NEXT] Current index: {$current_index}, next: {$next_index}");
-    
-    if ($next_index < count($steps)) {
-        $next_step = $steps[$next_index];
-        error_log("[MOVE_TO_NEXT] Redirecting to: {$next_step['url']}");
-        wp_redirect(home_url('/terminal/' . $next_step['url'] . '/'));
-        exit;
-    } else {
-        // Všechny kroky hotové
-        $this->complete_training($flow);
-    }
-}
 
-/**
- * Complete training and mark visitor
- */
-private function complete_training($flow) {
-    $visitor_ids = $flow['visitor_ids'] ?? [];
-    
-    if (!empty($visitor_ids)) {
-        global $wpdb;
-        foreach ($visitor_ids as $vid) {
-            $wpdb->update(
-                $wpdb->prefix . 'saw_visitors',
-                [
-                    'training_completed_at' => current_time('mysql'),
-                    'training_status' => 'completed',  // ✅ NOVÝ
-                ],
-                ['id' => intval($vid)],
-                ['%s', '%s'],
-                ['%d']
-            );
-        }
-        error_log("[SAW Terminal] Training completed for " . count($visitor_ids) . " visitors");
-    }
-    
-    wp_redirect(home_url('/terminal/success/'));
-    exit;
-}    
     /**
-     * Training step completion handlers (stubs for now)
+     * Complete training and mark visitor
      */
+    private function complete_training($flow) {
+        $visitor_ids = $flow['visitor_ids'] ?? [];
+        
+        if (!empty($visitor_ids)) {
+            global $wpdb;
+            foreach ($visitor_ids as $vid) {
+                $wpdb->update(
+                    $wpdb->prefix . 'saw_visitors',
+                    [
+                        'training_completed_at' => current_time('mysql'),
+                        'training_status' => 'completed',
+                    ],
+                    ['id' => intval($vid)],
+                    ['%s', '%s'],
+                    ['%d']
+                );
+            }
+            error_log("[SAW Terminal] Training completed for " . count($visitor_ids) . " visitors");
+        }
+        
+        wp_redirect(home_url('/terminal/success/'));
+        exit;
+    }    
+    
     /**
      * Training step completion handlers
      */
     private function handle_training_video_complete() {
-    $flow = $this->session->get('terminal_flow');
-    $visitor_ids = $flow['visitor_ids'] ?? [];
-    
-    if (!empty($visitor_ids)) {
-        global $wpdb;
-        foreach ($visitor_ids as $vid) {
-            $wpdb->update(
-                $wpdb->prefix . 'saw_visitors',
-                ['training_step_video' => 1],
-                ['id' => intval($vid)],
-                ['%d'],
-                ['%d']
-            );
+        $flow = $this->session->get('terminal_flow');
+        $visitor_ids = $flow['visitor_ids'] ?? [];
+        
+        if (!empty($visitor_ids)) {
+            global $wpdb;
+            foreach ($visitor_ids as $vid) {
+                $wpdb->update(
+                    $wpdb->prefix . 'saw_visitors',
+                    ['training_step_video' => 1],
+                    ['id' => intval($vid)],
+                    ['%d'],
+                    ['%d']
+                );
+            }
+            error_log("[SAW Terminal] Marked video training as complete for " . count($visitor_ids) . " visitors");
         }
-        error_log("[SAW Terminal] Marked video training as complete for " . count($visitor_ids) . " visitors");
+        $this->move_to_next_training_step();
     }
-    $this->move_to_next_training_step();
-}
 
-private function handle_training_map_complete() {
-    $flow = $this->session->get('terminal_flow');
-    $visitor_ids = $flow['visitor_ids'] ?? [];
-    
-    if (!empty($visitor_ids)) {
-        global $wpdb;
-        foreach ($visitor_ids as $vid) {
-            $wpdb->update(
-                $wpdb->prefix . 'saw_visitors',
-                ['training_step_map' => 1],
-                ['id' => intval($vid)],
-                ['%d'],
-                ['%d']
-            );
+    private function handle_training_map_complete() {
+        $flow = $this->session->get('terminal_flow');
+        $visitor_ids = $flow['visitor_ids'] ?? [];
+        
+        if (!empty($visitor_ids)) {
+            global $wpdb;
+            foreach ($visitor_ids as $vid) {
+                $wpdb->update(
+                    $wpdb->prefix . 'saw_visitors',
+                    ['training_step_map' => 1],
+                    ['id' => intval($vid)],
+                    ['%d'],
+                    ['%d']
+                );
+            }
+            error_log("[SAW Terminal] Marked map training as complete for " . count($visitor_ids) . " visitors");
         }
-        error_log("[SAW Terminal] Marked map training as complete for " . count($visitor_ids) . " visitors");
+        $this->move_to_next_training_step();
     }
-    $this->move_to_next_training_step();
-}
 
-private function handle_training_risks_complete() {
-    $flow = $this->session->get('terminal_flow');
-    $visitor_ids = $flow['visitor_ids'] ?? [];
-    
-    if (!empty($visitor_ids)) {
-        global $wpdb;
-        foreach ($visitor_ids as $vid) {
-            $wpdb->update(
-                $wpdb->prefix . 'saw_visitors',
-                ['training_step_risks' => 1],
-                ['id' => intval($vid)],
-                ['%d'],
-                ['%d']
-            );
+    private function handle_training_risks_complete() {
+        $flow = $this->session->get('terminal_flow');
+        $visitor_ids = $flow['visitor_ids'] ?? [];
+        
+        if (!empty($visitor_ids)) {
+            global $wpdb;
+            foreach ($visitor_ids as $vid) {
+                $wpdb->update(
+                    $wpdb->prefix . 'saw_visitors',
+                    ['training_step_risks' => 1],
+                    ['id' => intval($vid)],
+                    ['%d'],
+                    ['%d']
+                );
+            }
+            error_log("[SAW Terminal] Marked risks training as complete for " . count($visitor_ids) . " visitors");
         }
-        error_log("[SAW Terminal] Marked risks training as complete for " . count($visitor_ids) . " visitors");
+        $this->move_to_next_training_step();
     }
-    $this->move_to_next_training_step();
-}
 
-private function handle_training_department_complete() {
-    $flow = $this->session->get('terminal_flow');
-    $visitor_ids = $flow['visitor_ids'] ?? [];
-    
-    if (!empty($visitor_ids)) {
-        global $wpdb;
-        foreach ($visitor_ids as $vid) {
-            $wpdb->update(
-                $wpdb->prefix . 'saw_visitors',
-                ['training_step_department' => 1],
-                ['id' => intval($vid)],
-                ['%d'],
-                ['%d']
-            );
+    private function handle_training_department_complete() {
+        $flow = $this->session->get('terminal_flow');
+        $visitor_ids = $flow['visitor_ids'] ?? [];
+        
+        if (!empty($visitor_ids)) {
+            global $wpdb;
+            foreach ($visitor_ids as $vid) {
+                $wpdb->update(
+                    $wpdb->prefix . 'saw_visitors',
+                    ['training_step_department' => 1],
+                    ['id' => intval($vid)],
+                    ['%d'],
+                    ['%d']
+                );
+            }
+            error_log("[SAW Terminal] Marked department training as complete for " . count($visitor_ids) . " visitors");
         }
-        error_log("[SAW Terminal] Marked department training as complete for " . count($visitor_ids) . " visitors");
+        $this->move_to_next_training_step();
     }
-    $this->move_to_next_training_step();
-}
 
-private function handle_training_oopp_complete() {
-    $flow = $this->session->get('terminal_flow');
-    $visitor_ids = $flow['visitor_ids'] ?? [];
-    
-    if (!empty($visitor_ids)) {
-        global $wpdb;
-        foreach ($visitor_ids as $vid) {
-            // Note: There's no training_step_oopp column yet, but we can mark it in training_status or add a flag
-            // For now, just log it
-            error_log("[SAW Terminal] OOPP training completed for visitor #{$vid}");
+    private function handle_training_oopp_complete() {
+        $flow = $this->session->get('terminal_flow');
+        $visitor_ids = $flow['visitor_ids'] ?? [];
+        
+        if (!empty($visitor_ids)) {
+            global $wpdb;
+            foreach ($visitor_ids as $vid) {
+                // Note: There's no training_step_oopp column yet, but we can mark it in training_status or add a flag
+                // For now, just log it
+                error_log("[SAW Terminal] OOPP training completed for visitor #{$vid}");
+            }
+            error_log("[SAW Terminal] Marked OOPP training as complete for " . count($visitor_ids) . " visitors");
         }
-        error_log("[SAW Terminal] Marked OOPP training as complete for " . count($visitor_ids) . " visitors");
+        $this->move_to_next_training_step();
     }
-    $this->move_to_next_training_step();
-}
 
-private function handle_training_additional_complete() {
-    $flow = $this->session->get('terminal_flow');
-    $visitor_ids = $flow['visitor_ids'] ?? [];
-    
-    if (!empty($visitor_ids)) {
-        global $wpdb;
-        foreach ($visitor_ids as $vid) {
-            $wpdb->update(
-                $wpdb->prefix . 'saw_visitors',
-                [
-                    'training_step_additional' => 1,
-                    'training_completed_at' => current_time('mysql'),
-                    'training_status' => 'completed',  // ✅ NOVÝ
-                ],
-                ['id' => intval($vid)],
-                ['%s', '%s'],
-                ['%d']
-            );
+    private function handle_training_additional_complete() {
+        $flow = $this->session->get('terminal_flow');
+        $visitor_ids = $flow['visitor_ids'] ?? [];
+        
+        if (!empty($visitor_ids)) {
+            global $wpdb;
+            foreach ($visitor_ids as $vid) {
+                $wpdb->update(
+                    $wpdb->prefix . 'saw_visitors',
+                    [
+                        'training_step_additional' => 1,
+                        'training_completed_at' => current_time('mysql'),
+                        'training_status' => 'completed',
+                    ],
+                    ['id' => intval($vid)],
+                    ['%s', '%s'],
+                    ['%d']
+                );
+            }
+            error_log("[SAW Terminal] Training completed for " . count($visitor_ids) . " visitors");
         }
-        error_log("[SAW Terminal] Training completed for " . count($visitor_ids) . " visitors");
+        $this->move_to_next_training_step();
     }
-    $this->move_to_next_training_step();
-}
     
     /**
      * Render template with layout
@@ -2333,7 +2501,7 @@ private function handle_training_additional_complete() {
         $error = $this->session->get('terminal_error');
         $this->session->unset('terminal_error');
         
-        // ✅ Provide flow to layouts (header/footer need it)
+        // Provide flow to layouts (header/footer need it)
         $flow = $this->session->get('terminal_flow');
         
         error_log("[RENDER_TEMPLATE] Including layout-header");

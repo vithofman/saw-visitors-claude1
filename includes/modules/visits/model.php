@@ -1,7 +1,17 @@
 <?php
 /**
  * Visits Module Model
- * @version 3.4.0 - Added find_or_create_company() method for terminal
+ * 
+ * @package     SAW_Visitors
+ * @subpackage  Modules/Visits
+ * @version     3.5.0 - Added Checkout Confirmation System v2 methods
+ * 
+ * Changelog:
+ * - 3.5.0 (2025-12-08): Added check_and_complete_visit(), complete_visit(), 
+ *                        reopen_visit(), get_visit_info_for_checkout(), 
+ *                        update_pin_expiration() for Checkout Confirmation System v2
+ *                        Updated generate_pin() to prioritize planned_date_to
+ * - 3.4.0: Added find_or_create_company() method for terminal
  */
 
 if (!defined('ABSPATH')) exit;
@@ -129,52 +139,49 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
         
         $items = $wpdb->get_results($wpdb->prepare($sql, ...$where_values), ARRAY_A);
     
-    foreach ($items as &$item) {
-        if (!empty($item['created_at'])) {
-            $item['created_at'] = date_i18n('d.m.Y H:i', strtotime($item['created_at']));
+        foreach ($items as &$item) {
+            if (!empty($item['created_at'])) {
+                $item['created_at'] = date_i18n('d.m.Y H:i', strtotime($item['created_at']));
+            }
         }
+        
+        $items = $this->apply_virtual_columns($items);
+        
+        return array(
+            'items' => $items,
+            'total' => intval($total),
+        );
     }
     
-    // ✅ PŘIDEJ TENTO ŘÁDEK:
-    $items = $this->apply_virtual_columns($items);
-    
-    return array(
-        'items' => $items,
-        'total' => intval($total),
-    );
-}
-    
     /**
- * Get currently present visitors for dashboard widget
- * 
- * ✅ FIXED: Removed log_date filter to support overnight visits
- * 
- * @since 3.3.0
- * @param int $branch_id Branch ID
- * @return array List of currently present visitors
- */
-public function get_currently_present($branch_id) {
-    global $wpdb;
-    
-    $sql = "SELECT 
-                vis.id as visitor_id,
-                CONCAT(vis.first_name, ' ', vis.last_name) as visitor_name,
-                vis.phone,
-                c.name as company_name,
-                log.checked_in_at as today_checkin,
-                log.log_date,
-                TIMESTAMPDIFF(MINUTE, log.checked_in_at, NOW()) as minutes_inside
-            FROM {$wpdb->prefix}saw_visit_daily_logs log
-            INNER JOIN {$wpdb->prefix}saw_visitors vis ON log.visitor_id = vis.id
-            INNER JOIN {$wpdb->prefix}saw_visits v ON log.visit_id = v.id
-            LEFT JOIN {$wpdb->prefix}saw_companies c ON v.company_id = c.id
-            WHERE v.branch_id = %d
-              AND log.checked_in_at IS NOT NULL
-              AND log.checked_out_at IS NULL
-            ORDER BY log.checked_in_at DESC";
-    
-    return $wpdb->get_results($wpdb->prepare($sql, $branch_id), ARRAY_A);
-}
+     * Get currently present visitors for dashboard widget
+     * 
+     * @since 3.3.0
+     * @param int $branch_id Branch ID
+     * @return array List of currently present visitors
+     */
+    public function get_currently_present($branch_id) {
+        global $wpdb;
+        
+        $sql = "SELECT 
+                    vis.id as visitor_id,
+                    CONCAT(vis.first_name, ' ', vis.last_name) as visitor_name,
+                    vis.phone,
+                    c.name as company_name,
+                    log.checked_in_at as today_checkin,
+                    log.log_date,
+                    TIMESTAMPDIFF(MINUTE, log.checked_in_at, NOW()) as minutes_inside
+                FROM {$wpdb->prefix}saw_visit_daily_logs log
+                INNER JOIN {$wpdb->prefix}saw_visitors vis ON log.visitor_id = vis.id
+                INNER JOIN {$wpdb->prefix}saw_visits v ON log.visit_id = v.id
+                LEFT JOIN {$wpdb->prefix}saw_companies c ON v.company_id = c.id
+                WHERE v.branch_id = %d
+                  AND log.checked_in_at IS NOT NULL
+                  AND log.checked_out_at IS NULL
+                ORDER BY log.checked_in_at DESC";
+        
+        return $wpdb->get_results($wpdb->prepare($sql, $branch_id), ARRAY_A);
+    }
     
     /**
      * Find or create company by name
@@ -246,8 +253,6 @@ public function get_currently_present($branch_id) {
     /**
      * Create visit with automatic PIN expiry setting
      * 
-     * ✅ PŘIDÁNO: Nastavení pin_expires_at při vytvoření
-     * 
      * @since 4.8.0
      * @param array $data Visit data
      * @return int|WP_Error Visit ID or error
@@ -262,7 +267,7 @@ public function get_currently_present($branch_id) {
             return $id;
         }
         
-        // ✅ PŘIDÁNO: Automaticky vygenerovat PIN pokud není v datech
+        // Automaticky vygenerovat PIN pokud není v datech
         if (!empty($id)) {
             // Zkontroluj, zda už má PIN
             $existing_pin = $wpdb->get_var($wpdb->prepare(
@@ -280,7 +285,7 @@ public function get_currently_present($branch_id) {
                 }
             }
             
-            // ✅ PŘIDÁNO: Nastavit PIN platnost při vytvoření
+            // Nastavit PIN platnost při vytvoření
             $last_schedule_date = $wpdb->get_var($wpdb->prepare(
                 "SELECT MAX(date) FROM {$wpdb->prefix}saw_visit_schedules WHERE visit_id = %d",
                 $id
@@ -309,6 +314,7 @@ public function get_currently_present($branch_id) {
      * Generate unique 6-digit PIN for visit
      * 
      * @since 5.1.0
+     * @updated 3.5.0 - Added planned_date_to priority for expiration calculation
      * @param int $visit_id Visit ID
      * @return string|false Generated PIN or false on failure
      */
@@ -340,18 +346,36 @@ public function get_currently_present($branch_id) {
             return false;
         }
         
-        // 2. Calculate expiry
-        // Default: 24h from now
-        // If schedule exists: last schedule date + 24h
+        // 2. Calculate expiry based on planned_date_to (preferred) or schedule
+        // Priority: planned_date_to > last_schedule_date > planned_date_from > now+24h
+        $visit_dates = $wpdb->get_row($wpdb->prepare(
+            "SELECT planned_date_to, planned_date_from FROM {$this->table} WHERE id = %d",
+            $visit_id
+        ), ARRAY_A);
+        
         $last_schedule_date = $wpdb->get_var($wpdb->prepare(
             "SELECT MAX(date) FROM {$wpdb->prefix}saw_visit_schedules WHERE visit_id = %d",
             $visit_id
         ));
         
-        if ($last_schedule_date) {
-            $pin_expires_at = date('Y-m-d 23:59:59', strtotime($last_schedule_date . ' +1 day'));
+        if (!empty($visit_dates['planned_date_to'])) {
+            // Preferred: Use planned_date_to
+            $end_date = $visit_dates['planned_date_to'];
+            $pin_expires_at = date('Y-m-d H:i:s', strtotime($end_date . ' 23:59:59 +24 hours'));
+            error_log("[Visits Model] PIN expiry from planned_date_to: {$end_date} -> {$pin_expires_at}");
+        } elseif ($last_schedule_date) {
+            // Fallback 1: Use last schedule date
+            $pin_expires_at = date('Y-m-d H:i:s', strtotime($last_schedule_date . ' 23:59:59 +24 hours'));
+            error_log("[Visits Model] PIN expiry from schedule: {$last_schedule_date} -> {$pin_expires_at}");
+        } elseif (!empty($visit_dates['planned_date_from'])) {
+            // Fallback 2: Use planned_date_from (single-day visit)
+            $end_date = $visit_dates['planned_date_from'];
+            $pin_expires_at = date('Y-m-d H:i:s', strtotime($end_date . ' 23:59:59 +24 hours'));
+            error_log("[Visits Model] PIN expiry from planned_date_from: {$end_date} -> {$pin_expires_at}");
         } else {
+            // Fallback 3: Default 24h from now
             $pin_expires_at = date('Y-m-d H:i:s', strtotime('+24 hours'));
+            error_log("[Visits Model] PIN expiry default: +24h -> {$pin_expires_at}");
         }
         
         // 3. Update visit
@@ -466,5 +490,312 @@ public function get_currently_present($branch_id) {
             ['id' => $material_id],
             ['%d']
         );
+    }
+
+    // ============================================
+    // CHECKOUT CONFIRMATION SYSTEM v2 METHODS
+    // Added: 2025-12-08
+    // ============================================
+
+    /**
+     * Check if all visitors checked out (PUBLIC version)
+     * 
+     * Used by terminal.php to determine if checkout confirmation dialog should be shown.
+     * This method DOES NOT auto-complete the visit - it only returns the status.
+     * The actual completion decision is made by the user via the terminal dialog.
+     * 
+     * @since 3.5.0
+     * @param int $visit_id Visit ID
+     * @return bool True if all visitors are checked out
+     */
+    public function check_and_complete_visit($visit_id) {
+        global $wpdb;
+        
+        $visit_id = intval($visit_id);
+        if (!$visit_id) {
+            return false;
+        }
+        
+        // Count visitors still checked in (ANY day, not just today - supports overnight visits)
+        $checked_in_count = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(DISTINCT vis.id)
+             FROM {$wpdb->prefix}saw_visitors vis
+             INNER JOIN {$wpdb->prefix}saw_visit_daily_logs log ON vis.id = log.visitor_id
+             WHERE vis.visit_id = %d
+             AND log.checked_in_at IS NOT NULL
+             AND log.checked_out_at IS NULL",
+            $visit_id
+        ));
+        
+        $all_checked_out = ((int)$checked_in_count === 0);
+        
+        error_log("[SAW Visits Model] check_and_complete_visit: visit #{$visit_id}, checked_in_count={$checked_in_count}, all_out=" . ($all_checked_out ? 'YES' : 'NO'));
+        
+        // NOTE: Auto-completion logic was REMOVED in v3.5.0
+        // The decision to complete or keep the visit active is now made by the user
+        // via the checkout confirmation dialog in the terminal.
+        // This method now only returns a boolean status.
+        
+        return $all_checked_out;
+    }
+
+    /**
+     * Explicitly complete a visit
+     * 
+     * Called when user confirms visit completion in terminal dialog by clicking
+     * "Ukončit návštěvu" button. This explicitly marks the visit as completed.
+     * 
+     * @since 3.5.0
+     * @param int $visit_id Visit ID
+     * @return bool|WP_Error True on success, WP_Error on failure
+     */
+    public function complete_visit($visit_id) {
+        global $wpdb;
+        
+        $visit_id = intval($visit_id);
+        if (!$visit_id) {
+            return new WP_Error('invalid_visit_id', 'Neplatné ID návštěvy');
+        }
+        
+        // Get current visit status
+        $visit = $wpdb->get_row($wpdb->prepare(
+            "SELECT id, status FROM {$this->table} WHERE id = %d",
+            $visit_id
+        ), ARRAY_A);
+        
+        if (!$visit) {
+            return new WP_Error('visit_not_found', 'Návštěva nenalezena');
+        }
+        
+        // Validate status transitions
+        if ($visit['status'] === 'completed') {
+            // Already completed - not an error, just return success
+            error_log("[SAW Visits] Visit #{$visit_id} is already completed");
+            return true;
+        }
+        
+        if ($visit['status'] === 'cancelled') {
+            return new WP_Error('visit_cancelled', 'Nelze dokončit zrušenou návštěvu');
+        }
+        
+        // Update visit status to completed
+        $result = $wpdb->update(
+            $this->table,
+            [
+                'status' => 'completed',
+                'completed_at' => current_time('mysql')
+            ],
+            ['id' => $visit_id],
+            ['%s', '%s'],
+            ['%d']
+        );
+        
+        if ($result === false) {
+            error_log("[SAW Visits] Failed to complete visit #{$visit_id}: " . $wpdb->last_error);
+            return new WP_Error('update_failed', 'Nepodařilo se dokončit návštěvu: ' . $wpdb->last_error);
+        }
+        
+        error_log("[SAW Visits] Visit #{$visit_id} explicitly completed by user via terminal dialog");
+        
+        // Invalidate cache
+        $this->invalidate_cache();
+        
+        return true;
+    }
+
+    /**
+     * Reopen a completed visit
+     * 
+     * Called when a visitor tries to check in after the visit was marked as completed
+     * (e.g., they selected "Ukončit návštěvu" but came back the next day).
+     * This allows the visit to be reopened if the PIN is still valid.
+     * 
+     * @since 3.5.0
+     * @param int $visit_id Visit ID
+     * @return bool|WP_Error True on success, WP_Error on failure
+     */
+    public function reopen_visit($visit_id) {
+        global $wpdb;
+        
+        $visit_id = intval($visit_id);
+        if (!$visit_id) {
+            return new WP_Error('invalid_visit_id', 'Neplatné ID návštěvy');
+        }
+        
+        // Get current visit status and PIN expiration
+        $visit = $wpdb->get_row($wpdb->prepare(
+            "SELECT id, status, pin_expires_at FROM {$this->table} WHERE id = %d",
+            $visit_id
+        ), ARRAY_A);
+        
+        if (!$visit) {
+            return new WP_Error('visit_not_found', 'Návštěva nenalezena');
+        }
+        
+        // Cannot reopen cancelled visits
+        if ($visit['status'] === 'cancelled') {
+            return new WP_Error('visit_cancelled', 'Nelze znovu otevřít zrušenou návštěvu');
+        }
+        
+        // If not completed, nothing to reopen
+        if ($visit['status'] !== 'completed') {
+            error_log("[SAW Visits] Visit #{$visit_id} is not completed (status: {$visit['status']}), no reopen needed");
+            return true; // Already open, nothing to do
+        }
+        
+        // Check PIN expiration - cannot reopen if PIN has expired
+        if (!empty($visit['pin_expires_at']) && strtotime($visit['pin_expires_at']) < time()) {
+            error_log("[SAW Visits] Cannot reopen visit #{$visit_id}: PIN expired at {$visit['pin_expires_at']}");
+            return new WP_Error('pin_expired', 'PIN kód vypršel, nelze znovu otevřít návštěvu. Kontaktujte recepci.');
+        }
+        
+        // Reopen the visit
+        $result = $wpdb->update(
+            $this->table,
+            [
+                'status' => 'in_progress',
+                'completed_at' => null
+            ],
+            ['id' => $visit_id],
+            ['%s', null],
+            ['%d']
+        );
+        
+        if ($result === false) {
+            error_log("[SAW Visits] Failed to reopen visit #{$visit_id}: " . $wpdb->last_error);
+            return new WP_Error('update_failed', 'Nepodařilo se znovu otevřít návštěvu');
+        }
+        
+        error_log("[SAW Visits] Visit #{$visit_id} reopened from completed status (visitor check-in after completion)");
+        
+        // Invalidate cache
+        $this->invalidate_cache();
+        
+        return true;
+    }
+
+    /**
+     * Get visit information needed for checkout confirmation dialog
+     * 
+     * Returns visit data enriched with computed fields needed for the
+     * checkout confirmation dialog UI (effective end date, is_last_day flag, etc.)
+     * 
+     * @since 3.5.0
+     * @param int $visit_id Visit ID
+     * @return array|null Visit info array or null if not found
+     */
+    public function get_visit_info_for_checkout($visit_id) {
+        global $wpdb;
+        
+        $visit_id = intval($visit_id);
+        if (!$visit_id) {
+            return null;
+        }
+        
+        // Get visit with company name
+        $visit = $wpdb->get_row($wpdb->prepare(
+            "SELECT 
+                v.id,
+                v.status,
+                v.visit_type,
+                v.planned_date_from,
+                v.planned_date_to,
+                v.started_at,
+                v.pin_expires_at,
+                c.name as company_name
+             FROM {$this->table} v
+             LEFT JOIN {$wpdb->prefix}saw_companies c ON v.company_id = c.id
+             WHERE v.id = %d",
+            $visit_id
+        ), ARRAY_A);
+        
+        if (!$visit) {
+            return null;
+        }
+        
+        // Compute effective end date with fallbacks
+        // Priority: planned_date_to > planned_date_from > started_at > today
+        $today = current_time('Y-m-d');
+        
+        if (!empty($visit['planned_date_to'])) {
+            $end_date = $visit['planned_date_to'];
+        } elseif (!empty($visit['planned_date_from'])) {
+            $end_date = $visit['planned_date_from'];
+        } elseif (!empty($visit['started_at'])) {
+            $end_date = date('Y-m-d', strtotime($visit['started_at']));
+        } else {
+            $end_date = $today;
+        }
+        
+        // Add computed fields for dialog UI
+        $visit['effective_end_date'] = $end_date;
+        $visit['is_last_day'] = ($end_date === $today);
+        $visit['is_past_end_date'] = ($end_date < $today);
+        $visit['is_multi_day'] = (!empty($visit['planned_date_from']) && 
+                                   !empty($visit['planned_date_to']) && 
+                                   $visit['planned_date_from'] !== $visit['planned_date_to']);
+        
+        return $visit;
+    }
+
+    /**
+     * Update PIN expiration based on planned_date_to
+     * 
+     * Called when visit dates are changed via admin interface.
+     * Recalculates PIN expiration to be planned_date_to + 24 hours.
+     * 
+     * @since 3.5.0
+     * @param int $visit_id Visit ID
+     * @return bool True on success, false on failure
+     */
+    public function update_pin_expiration($visit_id) {
+        global $wpdb;
+        
+        $visit_id = intval($visit_id);
+        if (!$visit_id) {
+            return false;
+        }
+        
+        // Get visit data
+        $visit = $wpdb->get_row($wpdb->prepare(
+            "SELECT planned_date_to, planned_date_from, pin_code 
+             FROM {$this->table} WHERE id = %d",
+            $visit_id
+        ), ARRAY_A);
+        
+        // No visit or no PIN - nothing to update
+        if (!$visit || empty($visit['pin_code'])) {
+            return false;
+        }
+        
+        // Calculate new expiration: end_date + 24 hours
+        // Priority: planned_date_to > planned_date_from > today
+        if (!empty($visit['planned_date_to'])) {
+            $end_date = $visit['planned_date_to'];
+        } elseif (!empty($visit['planned_date_from'])) {
+            $end_date = $visit['planned_date_from'];
+        } else {
+            $end_date = current_time('Y-m-d');
+        }
+        
+        $new_expiration = date('Y-m-d H:i:s', strtotime($end_date . ' 23:59:59 +24 hours'));
+        
+        // Update PIN expiration
+        $result = $wpdb->update(
+            $this->table,
+            ['pin_expires_at' => $new_expiration],
+            ['id' => $visit_id],
+            ['%s'],
+            ['%d']
+        );
+        
+        if ($result !== false) {
+            error_log("[SAW Visits] Updated PIN expiration for visit #{$visit_id}: {$end_date} -> {$new_expiration}");
+            $this->invalidate_cache();
+            return true;
+        }
+        
+        error_log("[SAW Visits] Failed to update PIN expiration for visit #{$visit_id}: " . $wpdb->last_error);
+        return false;
     }
 }
