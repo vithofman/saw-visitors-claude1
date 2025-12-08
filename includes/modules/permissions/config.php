@@ -8,14 +8,32 @@
  * @package     SAW_Visitors
  * @subpackage  Modules/Permissions
  * @since       4.10.0
- * @author      SAW Visitors Dev Team
- * @version     1.0.0
+ * @version     2.0.0 - FIXED: Added translation support
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+// ============================================
+// TRANSLATIONS SETUP
+// ============================================
+$lang = 'cs';
+if (class_exists('SAW_Component_Language_Switcher')) {
+    $lang = SAW_Component_Language_Switcher::get_user_language();
+}
+
+$t = function_exists('saw_get_translations') 
+    ? saw_get_translations($lang, 'admin', 'permissions') 
+    : array();
+
+$tr = function($key, $fallback = null) use ($t) {
+    return $t[$key] ?? $fallback ?? $key;
+};
+
+// ============================================
+// CONFIGURATION
+// ============================================
 return array(
     // ================================================
     // BASIC MODULE INFO
@@ -23,8 +41,8 @@ return array(
     
     'entity' => 'permissions',
     'table' => 'saw_permissions',
-    'singular' => 'Oprávnění',
-    'plural' => 'Správa oprávnění',
+    'singular' => $tr('singular', 'Oprávnění'),
+    'plural' => $tr('plural', 'Správa oprávnění'),
     'route' => 'admin/permissions',
     'icon' => '🔐',
     
@@ -52,6 +70,27 @@ return array(
     ),
     
     // ================================================
+    // ROLE OPTIONS (for dropdowns)
+    // ================================================
+    'role_options' => array(
+        'admin' => $tr('role_admin', 'Admin'),
+        'super_manager' => $tr('role_super_manager', 'Super Manager'),
+        'manager' => $tr('role_manager', 'Manager'),
+        'terminal' => $tr('role_terminal', 'Terminál'),
+    ),
+    
+    // ================================================
+    // SCOPE OPTIONS (for dropdowns)
+    // ================================================
+    'scope_options' => array(
+        'all' => $tr('scope_all', 'Všechna data'),
+        'customer' => $tr('scope_customer', 'Jen můj zákazník'),
+        'branch' => $tr('scope_branch', 'Jen má pobočka'),
+        'department' => $tr('scope_department', 'Jen má oddělení'),
+        'own' => $tr('scope_own', 'Jen já'),
+    ),
+    
+    // ================================================
     // FIELD DEFINITIONS
     // ================================================
     
@@ -60,49 +99,36 @@ return array(
         // Role
         'role' => array(
             'type' => 'select',
-            'label' => 'Role',
+            'label' => $tr('field_role', 'Role'),
             'required' => true,
-            'options' => array(
-                'admin' => 'Admin',
-                'super_manager' => 'Super Manager',
-                'manager' => 'Manager',
-                'terminal' => 'Terminál',
-            ),
         ),
         
         // Module
         'module' => array(
             'type' => 'text',
-            'label' => 'Modul',
+            'label' => $tr('field_module', 'Modul'),
             'required' => true,
         ),
         
         // Action
         'action' => array(
             'type' => 'text',
-            'label' => 'Akce',
+            'label' => $tr('field_action', 'Akce'),
             'required' => true,
         ),
         
         // Allowed
         'allowed' => array(
             'type' => 'checkbox',
-            'label' => 'Povoleno',
+            'label' => $tr('field_allowed', 'Povoleno'),
             'default' => 1,
         ),
         
         // Scope (data visibility)
         'scope' => array(
             'type' => 'select',
-            'label' => 'Rozsah dat',
+            'label' => $tr('field_scope', 'Rozsah dat'),
             'required' => true,
-            'options' => array(
-                'all' => 'Všechna data',
-                'customer' => 'Jen můj zákazník',
-                'branch' => 'Jen má pobočka',
-                'department' => 'Jen má oddělení',
-                'own' => 'Jen já',
-            ),
         ),
     ),
     

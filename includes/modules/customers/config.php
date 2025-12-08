@@ -5,23 +5,8 @@
  * Module configuration for the Customers module.
  * Defines entity structure, fields, capabilities, list display, and caching.
  *
- * Configuration Structure:
- * - Entity: Basic module identification (name, table, labels, route)
- * - Capabilities: WordPress capability checks for each action
- * - Fields: Complete field definitions with types, labels, validation
- * - List Config: Filters and pagination (columns auto-generated from fields)
- * - Lookup Tables: Auto-loaded reference data with caching
- * - Cache: Caching strategy and TTL settings
- *
- * Field Types Supported:
- * - text: Single-line text input
- * - email: Email input with validation
- * - textarea: Multi-line text input
- * - select: Dropdown selection
- * - file: File upload (logo)
- *
  * @package SAW_Visitors
- * @version 12.0.0 - Config-driven Lookups Added (FÁZE 1)
+ * @version 2.1.0 - FIXED: UTF-8 encoding
  * @since   4.6.1
  */
 
@@ -29,14 +14,33 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// ============================================
+// TRANSLATIONS SETUP
+// ============================================
+$lang = 'cs';
+if (class_exists('SAW_Component_Language_Switcher')) {
+    $lang = SAW_Component_Language_Switcher::get_user_language();
+}
+
+$t = function_exists('saw_get_translations') 
+    ? saw_get_translations($lang, 'admin', 'customers') 
+    : array();
+
+$tr = function($key, $fallback = null) use ($t) {
+    return $t[$key] ?? $fallback ?? $key;
+};
+
+// ============================================
+// CONFIGURATION
+// ============================================
 return array(
     // ============================================
     // ENTITY DEFINITION
     // ============================================
     'entity' => 'customers',
     'table' => 'saw_customers',
-    'singular' => 'Zákazník',
-    'plural' => 'Zákazníci',
+    'singular' => $tr('singular', 'Zákazník'),
+    'plural' => $tr('plural', 'Zákazníci'),
     'route' => 'customers',
     'icon' => '🏢',
     'edit_url' => 'customers/{id}/edit',
@@ -54,6 +58,25 @@ return array(
     ),
     
     // ============================================
+    // STATUS OPTIONS (for dropdowns)
+    // ============================================
+    'status_options' => array(
+        'potential' => $tr('status_potential', 'Potenciální'),
+        'active' => $tr('status_active', 'Aktivní'),
+        'inactive' => $tr('status_inactive', 'Neaktivní'),
+    ),
+    
+    // ============================================
+    // LANGUAGE OPTIONS (for dropdowns)
+    // ============================================
+    'language_options' => array(
+        'cs' => $tr('lang_cs', '🇨🇿 Čeština'),
+        'en' => $tr('lang_en', '🇬🇧 English'),
+        'de' => $tr('lang_de', '🇩🇪 Deutsch'),
+        'sk' => $tr('lang_sk', '🇸🇰 Slovenčina'),
+    ),
+    
+    // ============================================
     // FIELD DEFINITIONS
     // Complete field structure with validation and sanitization
     // ============================================
@@ -61,19 +84,19 @@ return array(
         // Basic Information
         'name' => array(
             'type' => 'text',
-            'label' => 'Název',
+            'label' => $tr('field_name', 'Název'),
             'required' => true,
             'sanitize' => 'sanitize_text_field',
         ),
         'ico' => array(
             'type' => 'text',
-            'label' => 'IČO',
+            'label' => $tr('field_ico', 'IČO'),
             'required' => false,
             'sanitize' => 'sanitize_text_field',
         ),
         'dic' => array(
             'type' => 'text',
-            'label' => 'DIČ',
+            'label' => $tr('field_dic', 'DIČ'),
             'required' => false,
             'sanitize' => 'sanitize_text_field',
         ),
@@ -81,27 +104,27 @@ return array(
         // Branding
         'logo_url' => array(
             'type' => 'file',
-            'label' => 'Logo',
+            'label' => $tr('field_logo', 'Logo'),
             'required' => false,
         ),
         
         // Account Status
         'status' => array(
             'type' => 'select',
-            'label' => 'Status',
+            'label' => $tr('field_status', 'Status'),
             'required' => true,
             'default' => 'potential',
             'sanitize' => 'sanitize_text_field',
         ),
         'account_type_id' => array(
             'type' => 'select',
-            'label' => 'Typ účtu',
+            'label' => $tr('field_account_type', 'Typ účtu'),
             'required' => false,
             'sanitize' => 'absint',
         ),
         'subscription_type' => array(
             'type' => 'select',
-            'label' => 'Typ předplatného',
+            'label' => $tr('field_subscription_type', 'Typ předplatného'),
             'required' => false,
             'default' => 'free',
             'sanitize' => 'sanitize_text_field',
@@ -111,19 +134,19 @@ return array(
         // Contact Information
         'contact_email' => array(
             'type' => 'email',
-            'label' => 'Kontaktní email',
+            'label' => $tr('field_contact_email', 'Kontaktní email'),
             'required' => false,
             'sanitize' => 'sanitize_email',
         ),
         'contact_person' => array(
             'type' => 'text',
-            'label' => 'Kontaktní osoba',
+            'label' => $tr('field_contact_person', 'Kontaktní osoba'),
             'required' => false,
             'sanitize' => 'sanitize_text_field',
         ),
         'contact_phone' => array(
             'type' => 'text',
-            'label' => 'Telefon',
+            'label' => $tr('field_contact_phone', 'Telefon'),
             'required' => false,
             'sanitize' => 'sanitize_text_field',
         ),
@@ -131,25 +154,25 @@ return array(
         // Physical Address
         'address_street' => array(
             'type' => 'text',
-            'label' => 'Ulice',
+            'label' => $tr('field_address_street', 'Ulice'),
             'required' => false,
             'sanitize' => 'sanitize_text_field',
         ),
         'address_number' => array(
             'type' => 'text',
-            'label' => 'Číslo popisné',
+            'label' => $tr('field_address_number', 'Číslo popisné'),
             'required' => false,
             'sanitize' => 'sanitize_text_field',
         ),
         'address_city' => array(
             'type' => 'text',
-            'label' => 'Město',
+            'label' => $tr('field_address_city', 'Město'),
             'required' => false,
             'sanitize' => 'sanitize_text_field',
         ),
         'address_zip' => array(
             'type' => 'text',
-            'label' => 'PSČ',
+            'label' => $tr('field_address_zip', 'PSČ'),
             'required' => false,
             'sanitize' => 'sanitize_text_field',
         ),
@@ -157,25 +180,25 @@ return array(
         // Billing Address
         'billing_address_street' => array(
             'type' => 'text',
-            'label' => 'Fakturační ulice',
+            'label' => $tr('field_billing_street', 'Fakturační ulice'),
             'required' => false,
             'sanitize' => 'sanitize_text_field',
         ),
         'billing_address_number' => array(
             'type' => 'text',
-            'label' => 'Fakturační číslo',
+            'label' => $tr('field_billing_number', 'Fakturační číslo'),
             'required' => false,
             'sanitize' => 'sanitize_text_field',
         ),
         'billing_address_city' => array(
             'type' => 'text',
-            'label' => 'Fakturační město',
+            'label' => $tr('field_billing_city', 'Fakturační město'),
             'required' => false,
             'sanitize' => 'sanitize_text_field',
         ),
         'billing_address_zip' => array(
             'type' => 'text',
-            'label' => 'Fakturační PSČ',
+            'label' => $tr('field_billing_zip', 'Fakturační PSČ'),
             'required' => false,
             'sanitize' => 'sanitize_text_field',
         ),
@@ -183,7 +206,7 @@ return array(
         // Settings
         'admin_language_default' => array(
             'type' => 'select',
-            'label' => 'Výchozí jazyk',
+            'label' => $tr('field_default_language', 'Výchozí jazyk'),
             'required' => false,
             'default' => 'cs',
             'sanitize' => 'sanitize_text_field',
@@ -192,7 +215,7 @@ return array(
         // Additional Information
         'notes' => array(
             'type' => 'textarea',
-            'label' => 'Poznámky',
+            'label' => $tr('field_notes', 'Poznámky'),
             'required' => false,
             'sanitize' => 'sanitize_textarea_field',
         ),
@@ -200,7 +223,7 @@ return array(
         // Timestamps (hidden from forms)
         'created_at' => array(
             'type' => 'date',
-            'label' => 'Vytvořeno',
+            'label' => $tr('field_created_at', 'Vytvořeno'),
             'required' => false,
             'hidden' => false,
         ),
@@ -212,15 +235,48 @@ return array(
     // Only module-specific filters and settings here
     // ============================================
     'list_config' => array(
-        // Columns automatically generated from 'fields'
-        // To override, uncomment and specify:
-        // 'columns' => array('logo_url', 'name', 'ico', 'status', 'created_at'),
-        
         'filters' => array(
             'status' => true,
+            'account_type_id' => true,
         ),
         'per_page' => 20,
         'enable_detail_modal' => true,
+    ),
+    
+    // ============================================
+    // TABS CONFIGURATION
+    // Tabs by account_type_id - dynamically loaded from DB
+    // ============================================
+    'tabs' => array(
+        'enabled' => true,
+        'tab_param' => 'account_type_id',
+        'default_tab' => 'all',
+        'dynamic' => true,
+        'dynamic_source' => array(
+            'table' => 'saw_account_types',
+            'id_field' => 'id',
+            'label_field' => 'display_name',
+            'color_field' => 'color',
+            'order' => 'sort_order ASC, display_name ASC',
+            'where' => 'is_active = 1',
+        ),
+        'tabs' => array(
+            'all' => array(
+                'label' => $tr('tab_all', 'Všichni'),
+                'filter_value' => null,
+                'icon' => '📋',
+            ),
+        ),
+    ),
+    
+    // ============================================
+    // INFINITE SCROLL CONFIGURATION
+    // ============================================
+    'infinite_scroll' => array(
+        'enabled' => true,
+        'initial_load' => 100,
+        'per_page' => 50,
+        'threshold' => 0.6,
     ),
     
     // ============================================

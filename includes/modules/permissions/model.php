@@ -8,12 +8,18 @@
  * @package     SAW_Visitors
  * @subpackage  Modules/Permissions
  * @since       4.10.0
- * @author      SAW Visitors Dev Team
- * @version     1.0.0
+ * @version     2.0.0 - FIXED: Added require_once for base class, translation support
  */
 
 if (!defined('ABSPATH')) {
     exit;
+}
+
+// ============================================
+// REQUIRED BASE CLASS
+// ============================================
+if (!class_exists('SAW_Base_Model')) {
+    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/base/class-base-model.php';
 }
 
 /**
@@ -24,6 +30,12 @@ if (!defined('ABSPATH')) {
  * @since 4.10.0
  */
 class SAW_Module_Permissions_Model extends SAW_Base_Model {
+    
+    /**
+     * Translation function
+     * @var callable
+     */
+    private $tr;
     
     /**
      * Constructor - Initialize model with config
@@ -39,6 +51,22 @@ class SAW_Module_Permissions_Model extends SAW_Base_Model {
         $this->table = $wpdb->prefix . $config['table'];
         $this->config = $config;
         $this->cache_ttl = $config['cache']['ttl'] ?? 3600;
+        
+        // ============================================
+        // TRANSLATIONS SETUP
+        // ============================================
+        $lang = 'cs';
+        if (class_exists('SAW_Component_Language_Switcher')) {
+            $lang = SAW_Component_Language_Switcher::get_user_language();
+        }
+        
+        $t = function_exists('saw_get_translations') 
+            ? saw_get_translations($lang, 'admin', 'permissions') 
+            : array();
+        
+        $this->tr = function($key, $fallback = null) use ($t) {
+            return $t[$key] ?? $fallback ?? $key;
+        };
     }
     
     /**
@@ -184,27 +212,28 @@ class SAW_Module_Permissions_Model extends SAW_Base_Model {
      */
     public function validate($data, $id = 0) {
         $errors = array();
+        $tr = $this->tr;
         
         // Role validation
         if (empty($data['role'])) {
-            $errors['role'] = 'Role je povinná';
+            $errors['role'] = $tr('validation_role_required', 'Role je povinná');
         }
         
         // Module validation
         if (empty($data['module'])) {
-            $errors['module'] = 'Modul je povinný';
+            $errors['module'] = $tr('validation_module_required', 'Modul je povinný');
         }
         
         // Action validation
         if (empty($data['action'])) {
-            $errors['action'] = 'Akce je povinná';
+            $errors['action'] = $tr('validation_action_required', 'Akce je povinná');
         }
         
         // Scope validation
         if (empty($data['scope'])) {
-            $errors['scope'] = 'Rozsah dat je povinný';
+            $errors['scope'] = $tr('validation_scope_required', 'Rozsah dat je povinný');
         }
         
-        return empty($errors) ? true : new WP_Error('validation_error', 'Validace selhala', $errors);
+        return empty($errors) ? true : new WP_Error('validation_error', $tr('validation_failed', 'Validace selhala'), $errors);
     }
 }

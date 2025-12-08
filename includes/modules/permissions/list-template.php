@@ -12,24 +12,69 @@
  * @var array $actions Available action types (list, view, create, edit, delete)
  * @var array $permissions Current permissions for selected role
  * @var string $ajax_nonce AJAX security nonce
+ * @var array $translations Translation strings from controller
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Permissions
  * @since       4.10.0
- * @author      SAW Visitors Dev Team
- * @version     1.0.1
+ * @version     2.0.0 - ADDED: Translation support
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
+
+// ============================================
+// TRANSLATIONS SETUP (fallback if not passed)
+// ============================================
+if (!isset($translations) || empty($translations)) {
+    $lang = 'cs';
+    if (class_exists('SAW_Component_Language_Switcher')) {
+        $lang = SAW_Component_Language_Switcher::get_user_language();
+    }
+    
+    $t = function_exists('saw_get_translations') 
+        ? saw_get_translations($lang, 'admin', 'permissions') 
+        : array();
+    
+    $tr = function($key, $fallback = null) use ($t) {
+        return $t[$key] ?? $fallback ?? $key;
+    };
+    
+    $translations = array(
+        'page_title' => $tr('page_title', 'Správa oprávnění'),
+        'label_select_role' => $tr('label_select_role', 'Vyberte roli:'),
+        'btn_allow_all' => $tr('btn_allow_all', 'Vše povolit'),
+        'btn_deny_all' => $tr('btn_deny_all', 'Vše zakázat'),
+        'btn_reset' => $tr('btn_reset', 'Reset na výchozí'),
+        'info_auto_save' => $tr('info_auto_save', 'Změny se ukládají automaticky po kliknutí na checkbox.'),
+        'col_module' => $tr('col_module', 'Modul'),
+        'col_list' => $tr('col_list', 'Zobrazit'),
+        'col_view' => $tr('col_view', 'Detail'),
+        'col_create' => $tr('col_create', 'Vytvořit'),
+        'col_edit' => $tr('col_edit', 'Upravit'),
+        'col_delete' => $tr('col_delete', 'Smazat'),
+        'col_scope' => $tr('col_scope', 'Rozsah dat'),
+        'scope_all' => $tr('scope_all', 'Všechno'),
+        'scope_customer' => $tr('scope_customer', 'Zákazník'),
+        'scope_branch' => $tr('scope_branch', 'Pobočka'),
+        'scope_department' => $tr('scope_department', 'Oddělení'),
+        'scope_own' => $tr('scope_own', 'Jen já'),
+        'msg_saved' => $tr('msg_saved', 'Uloženo'),
+    );
+}
+
+// Helper function for translations
+$_t = function($key) use ($translations) {
+    return $translations[$key] ?? $key;
+};
 ?>
 
 <!-- Page Header -->
 <div class="saw-page-header">
     <div class="saw-page-header-content">
         <h1 class="saw-page-title">
-            🔐 Správa oprávnění
+            🔐 <?php echo esc_html($_t('page_title')); ?>
         </h1>
     </div>
 </div>
@@ -44,7 +89,7 @@ if (!defined('ABSPATH')) {
         
         <!-- Role Selector -->
         <div class="saw-role-selector">
-            <label for="role-select">Vyberte roli:</label>
+            <label for="role-select"><?php echo esc_html($_t('label_select_role')); ?></label>
             <select id="role-select" class="saw-select">
                 <?php foreach ($roles as $role_key => $role_name): ?>
                     <option value="<?php echo esc_attr($role_key); ?>" <?php selected($selected_role, $role_key); ?>>
@@ -58,15 +103,15 @@ if (!defined('ABSPATH')) {
         <div class="saw-quick-actions">
             <button type="button" class="saw-btn saw-btn-secondary" id="btn-allow-all">
                 <span class="dashicons dashicons-unlock"></span>
-                Vše povolit
+                <?php echo esc_html($_t('btn_allow_all')); ?>
             </button>
             <button type="button" class="saw-btn saw-btn-secondary" id="btn-deny-all">
                 <span class="dashicons dashicons-lock"></span>
-                Vše zakázat
+                <?php echo esc_html($_t('btn_deny_all')); ?>
             </button>
             <button type="button" class="saw-btn saw-btn-secondary" id="btn-reset">
                 <span class="dashicons dashicons-image-rotate"></span>
-                Reset na výchozí
+                <?php echo esc_html($_t('btn_reset')); ?>
             </button>
         </div>
     </div>
@@ -77,7 +122,7 @@ if (!defined('ABSPATH')) {
     <div class="saw-permissions-info">
         <p class="saw-info-text">
             <span class="dashicons dashicons-info"></span>
-            Změny se ukládají automaticky po kliknutí na checkbox.
+            <?php echo esc_html($_t('info_auto_save')); ?>
         </p>
     </div>
     
@@ -88,13 +133,13 @@ if (!defined('ABSPATH')) {
         <table class="saw-permissions-table">
             <thead>
                 <tr>
-                    <th class="col-module">Modul</th>
-                    <th class="col-action">👁️ Zobrazit</th>
-                    <th class="col-action">📄 Detail</th>
-                    <th class="col-action">➕ Vytvořit</th>
-                    <th class="col-action">✏️ Upravit</th>
-                    <th class="col-action">🗑️ Smazat</th>
-                    <th class="col-scope">📊 Rozsah dat</th>
+                    <th class="col-module"><?php echo esc_html($_t('col_module')); ?></th>
+                    <th class="col-action">👁️ <?php echo esc_html($_t('col_list')); ?></th>
+                    <th class="col-action">📄 <?php echo esc_html($_t('col_view')); ?></th>
+                    <th class="col-action">➕ <?php echo esc_html($_t('col_create')); ?></th>
+                    <th class="col-action">✏️ <?php echo esc_html($_t('col_edit')); ?></th>
+                    <th class="col-action">🗑️ <?php echo esc_html($_t('col_delete')); ?></th>
+                    <th class="col-scope">📊 <?php echo esc_html($_t('col_scope')); ?></th>
                 </tr>
             </thead>
             <tbody id="permissions-tbody">
@@ -133,11 +178,11 @@ if (!defined('ABSPATH')) {
                             ?>
                             <select class="scope-select" 
                                     data-module="<?php echo esc_attr($module_slug); ?>">
-                                <option value="all" <?php selected($module_scope, 'all'); ?>>🌐 Všechno</option>
-                                <option value="customer" <?php selected($module_scope, 'customer'); ?>>🏢 Zákazník</option>
-                                <option value="branch" <?php selected($module_scope, 'branch'); ?>>🏪 Pobočka</option>
-                                <option value="department" <?php selected($module_scope, 'department'); ?>>🏭 Oddělení</option>
-                                <option value="own" <?php selected($module_scope, 'own'); ?>>👤 Jen já</option>
+                                <option value="all" <?php selected($module_scope, 'all'); ?>>🌐 <?php echo esc_html($_t('scope_all')); ?></option>
+                                <option value="customer" <?php selected($module_scope, 'customer'); ?>>🏢 <?php echo esc_html($_t('scope_customer')); ?></option>
+                                <option value="branch" <?php selected($module_scope, 'branch'); ?>>🏪 <?php echo esc_html($_t('scope_branch')); ?></option>
+                                <option value="department" <?php selected($module_scope, 'department'); ?>>🏭 <?php echo esc_html($_t('scope_department')); ?></option>
+                                <option value="own" <?php selected($module_scope, 'own'); ?>>👤 <?php echo esc_html($_t('scope_own')); ?></option>
                             </select>
                         </td>
                     </tr>
@@ -153,7 +198,7 @@ if (!defined('ABSPATH')) {
 <!-- ================================================ -->
 <div id="save-indicator" class="saw-save-indicator" style="display: none;">
     <span class="dashicons dashicons-saved"></span>
-    <span class="save-text">Uloženo</span>
+    <span class="save-text"><?php echo esc_html($_t('msg_saved')); ?></span>
 </div>
 
 <!-- ================================================ -->
@@ -164,6 +209,7 @@ if (!defined('ABSPATH')) {
 var sawPermissionsData = {
     nonce: '<?php echo esc_js($ajax_nonce); ?>',
     ajaxUrl: '<?php echo esc_js(admin_url('admin-ajax.php')); ?>',
-    homeUrl: '<?php echo esc_js(home_url('/admin/permissions/')); ?>'
+    homeUrl: '<?php echo esc_js(home_url('/admin/permissions/')); ?>',
+    translations: <?php echo json_encode($translations); ?>
 };
 </script>

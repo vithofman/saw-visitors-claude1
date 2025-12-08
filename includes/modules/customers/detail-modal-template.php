@@ -1,345 +1,381 @@
 <?php
 /**
- * Customers Detail Template - COMPLETE WITH ALL DB FIELDS
- * 
- * Displays ALL customer information from database.
- * Shows all address fields, contact info, business data.
- * 
+ * Customers Detail Sidebar Template
+ *
+ * Matches branches/departments industrial style.
+ * Header (with status + account type badges) is rendered by detail-sidebar.php
+ * via get_detail_header_meta() in controller.
+ *
+ * NO ID DISPLAYED - as per requirement.
+ *
  * @package     SAW_Visitors
- * @subpackage  Modules/Customers/Templates
- * @since       1.0.0
- * @version     12.0.0 - ALL DB FIELDS ADDED
+ * @subpackage  Modules/Customers
+ * @version     2.1.0 - NO ID, header meta in blue header
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-// Validate data
+// ============================================
+// TRANSLATIONS
+// ============================================
+$lang = 'cs';
+if (class_exists('SAW_Component_Language_Switcher')) {
+    $lang = SAW_Component_Language_Switcher::get_user_language();
+}
+
+$t = function_exists('saw_get_translations') 
+    ? saw_get_translations($lang, 'admin', 'customers') 
+    : array();
+
+$tr = function($key, $fallback = null) use ($t) {
+    return $t[$key] ?? $fallback ?? $key;
+};
+
+// ============================================
+// VALIDATION
+// ============================================
 if (empty($item)) {
-    echo '<div class="saw-alert saw-alert-danger">';
-    echo '<strong>' . esc_html__('Chyba:', 'saw-visitors') . '</strong> ';
-    echo esc_html__('Zákazník nebyl nalezen nebo data nejsou dostupná.', 'saw-visitors');
-    echo '</div>';
+    echo '<div class="saw-alert saw-alert-danger">' . esc_html($tr('error_not_found', 'Zákazník nebyl nalezen')) . '</div>';
     return;
 }
+
+// ============================================
+// LOAD RELATED DATA
+// ============================================
+global $wpdb;
+
+$branches_count = 0;
+$users_count = 0;
+$branches = array();
+
+if (!empty($item['id'])) {
+    $customer_id = intval($item['id']);
+    
+    // Count branches
+    $branches_count = (int) $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM {$wpdb->prefix}saw_branches WHERE customer_id = %d",
+        $customer_id
+    ));
+    
+    // Count users
+    $users_count = (int) $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM {$wpdb->prefix}saw_users WHERE customer_id = %d",
+        $customer_id
+    ));
+    
+    // Get first 5 branches
+    $branches = $wpdb->get_results($wpdb->prepare(
+        "SELECT id, name, code, is_headquarters, is_active 
+         FROM {$wpdb->prefix}saw_branches 
+         WHERE customer_id = %d 
+         ORDER BY is_headquarters DESC, name ASC
+         LIMIT 5",
+        $customer_id
+    ), ARRAY_A) ?: array();
+}
+
+// Subscription labels
+$subscription_labels = array(
+    'monthly' => $tr('subscription_monthly', 'Měsíční'),
+    'yearly' => $tr('subscription_yearly', 'Roční'),
+    'trial' => $tr('subscription_trial', 'Zkušební'),
+);
+
+// Language labels
+$language_labels = array(
+    'cs' => '🇨🇿 Čeština',
+    'en' => '🇬🇧 English',
+    'de' => '🇩🇪 Deutsch',
+    'sk' => '🇸🇰 Slovenčina',
+);
+
+// Check sections
+$has_address = !empty($item['address_street']) || !empty($item['address_city']) || !empty($item['address_zip']);
+$has_billing = !empty($item['billing_address_street']) || !empty($item['billing_address_city']) || !empty($item['billing_address_zip']);
+$has_contact = !empty($item['contact_person']) || !empty($item['contact_email']) || !empty($item['contact_phone']) || !empty($item['website']);
 ?>
 
-<!-- HEADER WITH LOGO -->
-<div class="saw-detail-header">
-    <?php if (!empty($item['logo_url'])): ?>
-        <img src="<?php echo esc_url($item['logo_url']); ?>" 
-             alt="<?php echo esc_attr($item['name']); ?>" 
-             class="saw-detail-logo">
-    <?php else: ?>
-        <div class="saw-detail-logo-placeholder">
-            <span class="dashicons dashicons-building"></span>
-        </div>
-    <?php endif; ?>
-    
-    <div class="saw-detail-header-content">
-        <h2 class="saw-detail-header-title">
-            <?php echo esc_html($item['name']); ?>
-        </h2>
-        
-        <div class="saw-detail-header-badges">
-            <?php if (!empty($item['id'])): ?>
-                <span class="saw-badge saw-badge-light">
-                    ID: <?php echo esc_html($item['id']); ?>
-                </span>
-            <?php endif; ?>
-            
-            <?php if (!empty($item['ico'])): ?>
-                <span class="saw-badge saw-badge-light">
-                    IČO: <?php echo esc_html($item['ico']); ?>
-                </span>
-            <?php endif; ?>
-            
-            <?php if (isset($item['status'])): ?>
-                <?php
-                $status_map = array(
-                    'potential' => 'warning',
-                    'active' => 'success',
-                    'inactive' => 'secondary',
-                );
-                $badge_type = $status_map[$item['status']] ?? 'secondary';
-                ?>
-                <span class="saw-badge saw-badge-<?php echo esc_attr($badge_type); ?>">
-                    <?php echo esc_html($item['status_label'] ?? 'Neznámý'); ?>
-                </span>
-            <?php endif; ?>
-        </div>
-    </div>
-</div>
+<!-- Header with name, logo, status badge, account type badge is rendered by detail-sidebar.php -->
 
-<!-- DETAIL SECTIONS -->
-<div class="saw-detail-sections">
-    
-    <!-- BUSINESS INFO -->
-    <?php if (!empty($item['account_type_display']) || !empty($item['ico']) || !empty($item['dic']) || !empty($item['acquisition_source'])): ?>
-    <div class="saw-detail-section">
-        <h3 class="saw-detail-section-title">
-            <span class="saw-detail-section-icon">💼</span>
-            <?php echo esc_html__('Obchodní informace', 'saw-visitors'); ?>
-        </h3>
-        <dl class="saw-detail-list">
-            <?php if (!empty($item['account_type_display']) && $item['account_type_display'] !== 'Nezadáno'): ?>
-                <div>
-                    <dt><?php echo esc_html__('Typ účtu:', 'saw-visitors'); ?></dt>
-                    <dd>
-                        <span class="saw-badge saw-badge-info">
-                            <?php echo esc_html($item['account_type_display']); ?>
-                        </span>
-                    </dd>
+<div class="saw-detail-wrapper">
+    <div class="saw-detail-stack">
+        
+        <!-- STATISTICS -->
+        <div class="saw-industrial-section">
+            <div class="saw-section-head">
+                <h4 class="saw-section-title">📊 <?php echo esc_html($tr('section_statistics', 'Statistiky')); ?></h4>
+            </div>
+            <div class="saw-section-body">
+                <div class="saw-info-row">
+                    <span class="saw-info-label"><?php echo esc_html($tr('stat_branches', 'Poboček')); ?></span>
+                    <span class="saw-info-val"><strong><?php echo $branches_count; ?></strong></span>
                 </div>
-            <?php endif; ?>
-            
-            <?php if (!empty($item['ico'])): ?>
-                <div>
-                    <dt><?php echo esc_html__('IČO:', 'saw-visitors'); ?></dt>
-                    <dd><code><?php echo esc_html($item['ico']); ?></code></dd>
+                <div class="saw-info-row">
+                    <span class="saw-info-label"><?php echo esc_html($tr('stat_users', 'Uživatelů')); ?></span>
+                    <span class="saw-info-val"><strong><?php echo $users_count; ?></strong></span>
                 </div>
-            <?php endif; ?>
-            
-            <?php if (!empty($item['dic'])): ?>
-                <div>
-                    <dt><?php echo esc_html__('DIČ:', 'saw-visitors'); ?></dt>
-                    <dd><code><?php echo esc_html($item['dic']); ?></code></dd>
-                </div>
-            <?php endif; ?>
-            
-            <?php if (!empty($item['acquisition_source'])): ?>
-                <div>
-                    <dt><?php echo esc_html__('Zdroj akvizice:', 'saw-visitors'); ?></dt>
-                    <dd><?php echo esc_html($item['acquisition_source']); ?></dd>
-                </div>
-            <?php endif; ?>
-        </dl>
-    </div>
-    <?php endif; ?>
-    
-    <!-- COMPANY ADDRESS -->
-    <?php 
-    $has_address = !empty($item['address_street']) || !empty($item['address_city']) || !empty($item['address_zip']);
-    ?>
-    <?php if ($has_address): ?>
-    <div class="saw-detail-section">
-        <h3 class="saw-detail-section-title">
-            <span class="saw-detail-section-icon">🏢</span>
-            <?php echo esc_html__('Sídlo společnosti', 'saw-visitors'); ?>
-        </h3>
-        <div class="saw-detail-section-content">
-            <?php if (!empty($item['address_street']) || !empty($item['address_number'])): ?>
-                <div><?php echo esc_html(trim(($item['address_street'] ?? '') . ' ' . ($item['address_number'] ?? ''))); ?></div>
-            <?php endif; ?>
-            <?php if (!empty($item['address_city']) || !empty($item['address_zip'])): ?>
-                <div><?php echo esc_html(trim(($item['address_zip'] ?? '') . ' ' . ($item['address_city'] ?? ''))); ?></div>
-            <?php endif; ?>
-            <?php if (!empty($item['address_country'])): ?>
-                <div><?php echo esc_html($item['address_country']); ?></div>
-            <?php endif; ?>
+            </div>
         </div>
-    </div>
-    <?php endif; ?>
-    
-    <!-- BILLING ADDRESS -->
-    <?php 
-    $has_billing = !empty($item['billing_address_street']) || !empty($item['billing_address_city']) || !empty($item['billing_address_zip']);
-    ?>
-    <?php if ($has_billing): ?>
-    <div class="saw-detail-section">
-        <h3 class="saw-detail-section-title">
-            <span class="saw-detail-section-icon">📄</span>
-            <?php echo esc_html__('Fakturační adresa', 'saw-visitors'); ?>
-        </h3>
-        <div class="saw-detail-section-content">
-            <?php if (!empty($item['billing_address_street']) || !empty($item['billing_address_number'])): ?>
-                <div><?php echo esc_html(trim(($item['billing_address_street'] ?? '') . ' ' . ($item['billing_address_number'] ?? ''))); ?></div>
-            <?php endif; ?>
-            <?php if (!empty($item['billing_address_city']) || !empty($item['billing_address_zip'])): ?>
-                <div><?php echo esc_html(trim(($item['billing_address_zip'] ?? '') . ' ' . ($item['billing_address_city'] ?? ''))); ?></div>
-            <?php endif; ?>
-            <?php if (!empty($item['billing_address_country'])): ?>
-                <div><?php echo esc_html($item['billing_address_country']); ?></div>
-            <?php endif; ?>
-        </div>
-    </div>
-    <?php endif; ?>
-    
-    <!-- CONTACT INFORMATION -->
-    <?php 
-    $has_contact = !empty($item['contact_person']) || !empty($item['contact_email']) || !empty($item['contact_phone']) || !empty($item['website']);
-    ?>
-    <?php if ($has_contact): ?>
-    <div class="saw-detail-section">
-        <h3 class="saw-detail-section-title">
-            <span class="saw-detail-section-icon">📞</span>
-            <?php echo esc_html__('Kontaktní údaje', 'saw-visitors'); ?>
-        </h3>
-        <dl class="saw-detail-list">
-            <?php if (!empty($item['contact_person'])): ?>
-                <div>
-                    <dt><?php echo esc_html__('Kontaktní osoba:', 'saw-visitors'); ?></dt>
-                    <dd>
-                        <?php echo esc_html($item['contact_person']); ?>
-                        <?php if (!empty($item['contact_position'])): ?>
-                            <span class="saw-text-muted"> - <?php echo esc_html($item['contact_position']); ?></span>
-                        <?php endif; ?>
-                    </dd>
+        
+        <!-- BUSINESS INFO (IČO, DIČ only - Status & Account Type are in header) -->
+        <?php if (!empty($item['ico']) || !empty($item['dic'])): ?>
+        <div class="saw-industrial-section">
+            <div class="saw-section-head">
+                <h4 class="saw-section-title">💼 <?php echo esc_html($tr('section_business', 'Obchodní údaje')); ?></h4>
+            </div>
+            <div class="saw-section-body">
+                <?php if (!empty($item['ico'])): ?>
+                <div class="saw-info-row">
+                    <span class="saw-info-label"><?php echo esc_html($tr('field_ico', 'IČO')); ?></span>
+                    <span class="saw-info-val"><code><?php echo esc_html($item['ico']); ?></code></span>
                 </div>
-            <?php endif; ?>
-            
-            <?php if (!empty($item['contact_email'])): ?>
-                <div>
-                    <dt><?php echo esc_html__('Email:', 'saw-visitors'); ?></dt>
-                    <dd>
+                <?php endif; ?>
+                
+                <?php if (!empty($item['dic'])): ?>
+                <div class="saw-info-row">
+                    <span class="saw-info-label"><?php echo esc_html($tr('field_dic', 'DIČ')); ?></span>
+                    <span class="saw-info-val"><code><?php echo esc_html($item['dic']); ?></code></span>
+                </div>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+        
+        <!-- COMPANY ADDRESS -->
+        <?php if ($has_address): ?>
+        <div class="saw-industrial-section">
+            <div class="saw-section-head">
+                <h4 class="saw-section-title">🏢 <?php echo esc_html($tr('section_address', 'Sídlo společnosti')); ?></h4>
+            </div>
+            <div class="saw-section-body">
+                <div class="saw-address-block">
+                    <?php if (!empty($item['address_street']) || !empty($item['address_number'])): ?>
+                        <div><?php echo esc_html(trim(($item['address_street'] ?? '') . ' ' . ($item['address_number'] ?? ''))); ?></div>
+                    <?php endif; ?>
+                    <?php if (!empty($item['address_city']) || !empty($item['address_zip'])): ?>
+                        <div><?php echo esc_html(trim(($item['address_zip'] ?? '') . ' ' . ($item['address_city'] ?? ''))); ?></div>
+                    <?php endif; ?>
+                    <?php if (!empty($item['address_country'])): ?>
+                        <div style="color: #666;"><?php echo esc_html($item['address_country']); ?></div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+        
+        <!-- BILLING ADDRESS -->
+        <?php if ($has_billing): ?>
+        <div class="saw-industrial-section">
+            <div class="saw-section-head">
+                <h4 class="saw-section-title">📄 <?php echo esc_html($tr('section_billing', 'Fakturační adresa')); ?></h4>
+            </div>
+            <div class="saw-section-body">
+                <div class="saw-address-block">
+                    <?php if (!empty($item['billing_address_street']) || !empty($item['billing_address_number'])): ?>
+                        <div><?php echo esc_html(trim(($item['billing_address_street'] ?? '') . ' ' . ($item['billing_address_number'] ?? ''))); ?></div>
+                    <?php endif; ?>
+                    <?php if (!empty($item['billing_address_city']) || !empty($item['billing_address_zip'])): ?>
+                        <div><?php echo esc_html(trim(($item['billing_address_zip'] ?? '') . ' ' . ($item['billing_address_city'] ?? ''))); ?></div>
+                    <?php endif; ?>
+                    <?php if (!empty($item['billing_address_country'])): ?>
+                        <div style="color: #666;"><?php echo esc_html($item['billing_address_country']); ?></div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+        
+        <!-- CONTACT INFO -->
+        <?php if ($has_contact): ?>
+        <div class="saw-industrial-section">
+            <div class="saw-section-head">
+                <h4 class="saw-section-title">📞 <?php echo esc_html($tr('section_contact', 'Kontaktní údaje')); ?></h4>
+            </div>
+            <div class="saw-section-body">
+                <?php if (!empty($item['contact_person'])): ?>
+                <div class="saw-info-row">
+                    <span class="saw-info-label"><?php echo esc_html($tr('label_contact_person', 'Osoba')); ?></span>
+                    <span class="saw-info-val"><?php echo esc_html($item['contact_person']); ?></span>
+                </div>
+                <?php endif; ?>
+                
+                <?php if (!empty($item['contact_email'])): ?>
+                <div class="saw-info-row">
+                    <span class="saw-info-label"><?php echo esc_html($tr('label_email', 'Email')); ?></span>
+                    <span class="saw-info-val">
                         <a href="mailto:<?php echo esc_attr($item['contact_email']); ?>">
                             <?php echo esc_html($item['contact_email']); ?>
                         </a>
-                    </dd>
+                    </span>
                 </div>
-            <?php endif; ?>
-            
-            <?php if (!empty($item['contact_phone'])): ?>
-                <div>
-                    <dt><?php echo esc_html__('Telefon:', 'saw-visitors'); ?></dt>
-                    <dd>
+                <?php endif; ?>
+                
+                <?php if (!empty($item['contact_phone'])): ?>
+                <div class="saw-info-row">
+                    <span class="saw-info-label"><?php echo esc_html($tr('label_phone', 'Telefon')); ?></span>
+                    <span class="saw-info-val">
                         <a href="tel:<?php echo esc_attr($item['contact_phone']); ?>">
                             <?php echo esc_html($item['contact_phone']); ?>
                         </a>
-                    </dd>
+                    </span>
                 </div>
-            <?php endif; ?>
-            
-            <?php if (!empty($item['website'])): ?>
-                <div>
-                    <dt><?php echo esc_html__('Web:', 'saw-visitors'); ?></dt>
-                    <dd>
+                <?php endif; ?>
+                
+                <?php if (!empty($item['website'])): ?>
+                <div class="saw-info-row">
+                    <span class="saw-info-label"><?php echo esc_html($tr('label_website', 'Web')); ?></span>
+                    <span class="saw-info-val">
                         <a href="<?php echo esc_url($item['website']); ?>" target="_blank" rel="noopener">
-                            <?php echo esc_html($item['website']); ?> 
-                            <span class="dashicons dashicons-external"></span>
+                            <?php echo esc_html($item['website']); ?> ↗
                         </a>
-                    </dd>
+                    </span>
                 </div>
-            <?php endif; ?>
-        </dl>
-    </div>
-    <?php endif; ?>
-    
-    <!-- SUBSCRIPTION & PAYMENTS -->
-    <?php if (!empty($item['subscription_type']) || !empty($item['last_payment_date'])): ?>
-    <div class="saw-detail-section">
-        <h3 class="saw-detail-section-title">
-            <span class="saw-detail-section-icon">💳</span>
-            <?php echo esc_html__('Předplatné a platby', 'saw-visitors'); ?>
-        </h3>
-        <dl class="saw-detail-list">
-            <?php if (!empty($item['subscription_type'])): ?>
-                <div>
-                    <dt><?php echo esc_html__('Typ předplatného:', 'saw-visitors'); ?></dt>
-                    <dd>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+        
+        <!-- SUBSCRIPTION -->
+        <?php if (!empty($item['subscription_type']) || !empty($item['last_payment_date'])): ?>
+        <div class="saw-industrial-section">
+            <div class="saw-section-head">
+                <h4 class="saw-section-title">💳 <?php echo esc_html($tr('section_subscription', 'Předplatné')); ?></h4>
+            </div>
+            <div class="saw-section-body">
+                <?php if (!empty($item['subscription_type'])): ?>
+                <div class="saw-info-row">
+                    <span class="saw-info-label"><?php echo esc_html($tr('label_subscription_type', 'Typ')); ?></span>
+                    <span class="saw-info-val">
                         <?php
-                        $sub_names = array(
-                            'monthly' => __('Měsíční', 'saw-visitors'),
-                            'yearly' => __('Roční', 'saw-visitors'),
-                            'trial' => __('Zkušební', 'saw-visitors'),
-                        );
-                        $sub_badge = array(
-                            'monthly' => 'info',
-                            'yearly' => 'success',
-                            'trial' => 'warning',
-                        );
-                        $badge_type = $sub_badge[$item['subscription_type']] ?? 'secondary';
+                        $sub_class = array('monthly' => 'info', 'yearly' => 'success', 'trial' => 'warning');
                         ?>
-                        <span class="saw-badge saw-badge-<?php echo esc_attr($badge_type); ?>">
-                            <?php echo esc_html($sub_names[$item['subscription_type']] ?? $item['subscription_type']); ?>
+                        <span class="saw-badge saw-badge-<?php echo esc_attr($sub_class[$item['subscription_type']] ?? 'secondary'); ?>">
+                            <?php echo esc_html($subscription_labels[$item['subscription_type']] ?? $item['subscription_type']); ?>
                         </span>
-                    </dd>
+                    </span>
                 </div>
-            <?php endif; ?>
-            
-            <?php if (!empty($item['last_payment_date']) && $item['last_payment_date'] !== '0000-00-00'): ?>
-                <div>
-                    <dt><?php echo esc_html__('Poslední platba:', 'saw-visitors'); ?></dt>
-                    <dd>
-                        <?php echo esc_html(date_i18n('d.m.Y', strtotime($item['last_payment_date']))); ?>
-                    </dd>
+                <?php endif; ?>
+                
+                <?php if (!empty($item['last_payment_date']) && $item['last_payment_date'] !== '0000-00-00'): ?>
+                <div class="saw-info-row">
+                    <span class="saw-info-label"><?php echo esc_html($tr('label_last_payment', 'Poslední platba')); ?></span>
+                    <span class="saw-info-val"><?php echo esc_html(date_i18n('d.m.Y', strtotime($item['last_payment_date']))); ?></span>
                 </div>
-            <?php endif; ?>
-        </dl>
-    </div>
-    <?php endif; ?>
-    
-    <!-- BRANDING & SETTINGS -->
-    <?php if (!empty($item['admin_language_default']) || !empty($item['primary_color'])): ?>
-    <div class="saw-detail-section">
-        <h3 class="saw-detail-section-title">
-            <span class="saw-detail-section-icon">🎨</span>
-            <?php echo esc_html__('Údaje o společnosti', 'saw-visitors'); ?>
-        </h3>
-        <dl class="saw-detail-list">
-            <?php if (!empty($item['admin_language_default'])): ?>
-                <div>
-                    <dt><?php echo esc_html__('Výchozí jazyk:', 'saw-visitors'); ?></dt>
-                    <dd>
-                        <?php
-                        $langs = array(
-                            'cs' => '🇨🇿 Čeština',
-                            'en' => '🇬🇧 English',
-                            'de' => '🇩🇪 Deutsch',
-                            'sk' => '🇸🇰 Slovenčina',
-                        );
-                        echo $langs[$item['admin_language_default']] ?? esc_html(strtoupper($item['admin_language_default']));
-                        ?>
-                    </dd>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+        
+        <!-- SETTINGS -->
+        <?php if (!empty($item['admin_language_default']) || !empty($item['primary_color'])): ?>
+        <div class="saw-industrial-section">
+            <div class="saw-section-head">
+                <h4 class="saw-section-title">⚙️ <?php echo esc_html($tr('section_settings', 'Nastavení')); ?></h4>
+            </div>
+            <div class="saw-section-body">
+                <?php if (!empty($item['admin_language_default'])): ?>
+                <div class="saw-info-row">
+                    <span class="saw-info-label"><?php echo esc_html($tr('label_default_language', 'Jazyk')); ?></span>
+                    <span class="saw-info-val"><?php echo $language_labels[$item['admin_language_default']] ?? esc_html(strtoupper($item['admin_language_default'])); ?></span>
                 </div>
-            <?php endif; ?>
-            
-            <?php if (!empty($item['primary_color'])): ?>
-                <div>
-                    <dt><?php echo esc_html__('Primární barva:', 'saw-visitors'); ?></dt>
-                    <dd>
-                        <span class="saw-color-preview">
-                            <span class="saw-color-swatch" style="background: <?php echo esc_attr($item['primary_color']); ?>;"></span>
+                <?php endif; ?>
+                
+                <?php if (!empty($item['primary_color'])): ?>
+                <div class="saw-info-row">
+                    <span class="saw-info-label"><?php echo esc_html($tr('label_primary_color', 'Barva')); ?></span>
+                    <span class="saw-info-val">
+                        <span style="display: inline-flex; align-items: center; gap: 8px;">
+                            <span style="width: 20px; height: 20px; border-radius: 4px; background: <?php echo esc_attr($item['primary_color']); ?>; border: 1px solid rgba(0,0,0,0.1);"></span>
                             <code><?php echo esc_html($item['primary_color']); ?></code>
                         </span>
-                    </dd>
+                    </span>
                 </div>
-            <?php endif; ?>
-        </dl>
-    </div>
-    <?php endif; ?>
-    
-    <!-- NOTES -->
-    <?php if (!empty($item['notes'])): ?>
-    <div class="saw-detail-section">
-        <h3 class="saw-detail-section-title">
-            <span class="saw-detail-section-icon">📝</span>
-            <?php echo esc_html__('Poznámky', 'saw-visitors'); ?>
-        </h3>
-        <div class="saw-detail-section-content saw-detail-section-content-preformatted">
-            <?php echo nl2br(esc_html($item['notes'])); ?>
+                <?php endif; ?>
+            </div>
         </div>
-    </div>
-    <?php endif; ?>
-    
-    <!-- METADATA -->
-    <div class="saw-detail-section saw-detail-section-metadata">
-        <dl class="saw-detail-list">
-            <?php if (!empty($item['created_at_formatted'])): ?>
-                <div>
-                    <dt><?php echo esc_html__('Vytvořeno:', 'saw-visitors'); ?></dt>
-                    <dd><?php echo esc_html($item['created_at_formatted']); ?></dd>
+        <?php endif; ?>
+        
+        <!-- NOTES -->
+        <?php if (!empty($item['notes'])): ?>
+        <div class="saw-industrial-section">
+            <div class="saw-section-head">
+                <h4 class="saw-section-title">📝 <?php echo esc_html($tr('section_notes', 'Poznámky')); ?></h4>
+            </div>
+            <div class="saw-section-body">
+                <p style="margin: 0; line-height: 1.6; color: #666; font-style: italic;">
+                    <?php echo nl2br(esc_html($item['notes'])); ?>
+                </p>
+            </div>
+        </div>
+        <?php endif; ?>
+        
+        <!-- BRANCHES -->
+        <?php if (!empty($branches)): ?>
+        <div class="saw-industrial-section">
+            <div class="saw-section-head">
+                <h4 class="saw-section-title">🏢 <?php echo esc_html($tr('section_branches', 'Pobočky')); ?> <span class="saw-visit-badge-count"><?php echo $branches_count; ?></span></h4>
+            </div>
+            <div class="saw-section-body" style="padding: 0;">
+                <?php foreach ($branches as $branch): ?>
+                <a href="<?php echo esc_url(home_url('/admin/branches/' . intval($branch['id']) . '/')); ?>" 
+                   class="saw-info-row" 
+                   style="display: flex; padding: 12px 20px; text-decoration: none; border-bottom: 1px solid #f0f0f0;">
+                    <span class="saw-info-label" style="flex-shrink: 0;">
+                        <?php echo !empty($branch['is_headquarters']) ? '🏛️' : '🏢'; ?>
+                    </span>
+                    <span class="saw-info-val" style="flex: 1;">
+                        <?php echo esc_html($branch['name']); ?>
+                        <?php if (!empty($branch['code'])): ?>
+                            <span style="color: #888; font-size: 12px;">[<?php echo esc_html($branch['code']); ?>]</span>
+                        <?php endif; ?>
+                        <?php if (empty($branch['is_active'])): ?>
+                            <span class="saw-badge saw-badge-secondary" style="margin-left: 8px; font-size: 10px;"><?php echo esc_html($tr('status_inactive', 'Neaktivní')); ?></span>
+                        <?php endif; ?>
+                    </span>
+                </a>
+                <?php endforeach; ?>
+                
+                <?php if ($branches_count > 5): ?>
+                <a href="<?php echo esc_url(home_url('/admin/branches/?customer_id=' . intval($item['id']))); ?>" 
+                   style="display: block; padding: 12px 20px; text-align: center; color: #0077B5; font-weight: 600; text-decoration: none;">
+                    → <?php echo esc_html($tr('show_all', 'Zobrazit všechny')); ?> (<?php echo $branches_count; ?>)
+                </a>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+        
+        <!-- METADATA -->
+        <div class="saw-industrial-section">
+            <div class="saw-section-head">
+                <h4 class="saw-section-title">🕐 <?php echo esc_html($tr('section_metadata', 'Metadata')); ?></h4>
+            </div>
+            <div class="saw-section-body">
+                <?php if (!empty($item['created_at_formatted'])): ?>
+                <div class="saw-info-row">
+                    <span class="saw-info-label"><?php echo esc_html($tr('meta_created', 'Vytvořeno')); ?></span>
+                    <span class="saw-info-val"><?php echo esc_html($item['created_at_formatted']); ?></span>
                 </div>
-            <?php endif; ?>
-            
-            <?php if (!empty($item['updated_at_formatted'])): ?>
-                <div>
-                    <dt><?php echo esc_html__('Aktualizováno:', 'saw-visitors'); ?></dt>
-                    <dd><?php echo esc_html($item['updated_at_formatted']); ?></dd>
+                <?php endif; ?>
+                
+                <?php if (!empty($item['updated_at_formatted'])): ?>
+                <div class="saw-info-row">
+                    <span class="saw-info-label"><?php echo esc_html($tr('meta_updated', 'Změněno')); ?></span>
+                    <span class="saw-info-val"><?php echo esc_html($item['updated_at_formatted']); ?></span>
                 </div>
-            <?php endif; ?>
-        </dl>
+                <?php endif; ?>
+            </div>
+        </div>
+        
     </div>
-    
 </div>
+
+<style>
+/* Address block styling */
+.saw-address-block {
+    line-height: 1.7;
+    font-size: 14px;
+}
+</style>
