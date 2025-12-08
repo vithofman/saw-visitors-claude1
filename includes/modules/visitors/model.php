@@ -170,11 +170,15 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
         }
         
         $sql = "SELECT vis.*, 
-                       v.customer_id,
-                       v.company_id,
-                       v.branch_id,
-                       c.name as company_name,
-                       b.name as branch_name
+               (SELECT MIN(dl.checked_in_at) 
+                FROM {$wpdb->prefix}saw_visit_daily_logs dl 
+                WHERE dl.visitor_id = vis.id 
+                AND dl.checked_in_at IS NOT NULL) as first_checkin_at,
+                    v.customer_id,
+                    v.company_id,
+                    v.branch_id,
+                    c.name as company_name,
+                    b.name as branch_name
                 FROM {$this->table} vis
                 INNER JOIN {$wpdb->prefix}saw_visits v ON vis.visit_id = v.id
                 LEFT JOIN {$wpdb->prefix}saw_companies c ON v.company_id = c.id

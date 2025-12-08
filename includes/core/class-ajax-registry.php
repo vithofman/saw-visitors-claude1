@@ -198,6 +198,11 @@ class SAW_AJAX_Registry {
         add_action('wp_ajax_saw_extend_pin', function() {
             $this->dispatch('visits', 'ajax_extend_pin');
         });
+
+        // 🚨 EMERGENCY FALLBACK: Status change action
+        add_action('wp_ajax_saw_change_visit_status', function() {
+            $this->dispatch('visits', 'ajax_change_visit_status');
+        });
     }
     
     /**
