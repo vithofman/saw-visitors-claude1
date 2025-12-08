@@ -1,21 +1,64 @@
 <?php
 /**
  * Shared Training Step - Map
- * Works for both Terminal and Invitation flows
+ * Works for Terminal, Invitation and Visitor Info flows
  * 
  * @package SAW_Visitors
- * @version 3.0.0
+ * @version 3.5.0
+ * 
+ * ZMĚNA v 3.5.0:
+ * - Přidána podpora pro visitor_info kontext (Info Portal)
+ * - Context detection pro 3 různé flow typy
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-// Detect flow type
-$is_invitation = isset($is_invitation) ? $is_invitation : false;
+// ===== CONTEXT DETECTION (v3.5.0) =====
+// Determine which flow we're in: terminal, invitation, or visitor_info
+$context = 'terminal'; // default
+if (isset($is_invitation) && $is_invitation === true) {
+    $context = 'invitation';
+}
+if (isset($is_visitor_info) && $is_visitor_info === true) {
+    $context = 'visitor_info';
+}
+
+// Context-specific form settings
+$context_settings = array(
+    'terminal' => array(
+        'nonce_name' => 'saw_terminal_step',
+        'nonce_field' => 'terminal_nonce',
+        'action_name' => 'terminal_action',
+        'complete_action' => 'complete_training_map',
+    ),
+    'invitation' => array(
+        'nonce_name' => 'saw_invitation_step',
+        'nonce_field' => 'invitation_nonce',
+        'action_name' => 'invitation_action',
+        'complete_action' => 'complete_training',
+    ),
+    'visitor_info' => array(
+        'nonce_name' => 'saw_visitor_info_step',
+        'nonce_field' => 'visitor_info_nonce',
+        'action_name' => 'visitor_info_action',
+        'complete_action' => 'complete_training_map',
+    ),
+);
+
+$ctx = $context_settings[$context];
+$nonce_name = $ctx['nonce_name'];
+$nonce_field = $ctx['nonce_field'];
+$action_name = $ctx['action_name'];
+$complete_action = $ctx['complete_action'];
+// ===== END CONTEXT DETECTION =====
+
+// Detect flow type (legacy support)
+$is_invitation = ($context === 'invitation');
 
 // Get data from appropriate flow
-if ($is_invitation) {
+if ($context === 'invitation') {
     // Invitation flow
     $session = SAW_Session_Manager::instance();
     $flow = $session->get('invitation_flow');
@@ -65,6 +108,12 @@ if ($is_invitation) {
             }
         }
     }
+} elseif ($context === 'visitor_info') {
+    // Visitor Info Portal flow - data passed from controller
+    $flow = isset($flow) ? $flow : array();
+    $lang = isset($flow['language']) ? $flow['language'] : 'cs';
+    $visitor_id = isset($flow['visitor_id']) ? $flow['visitor_id'] : null;
+    $pdf_path = isset($pdf_path) ? $pdf_path : '';
 } else {
     // Terminal flow
     $flow = isset($flow) ? $flow : [];
@@ -73,15 +122,11 @@ if ($is_invitation) {
     $pdf_path = isset($pdf_path) ? $pdf_path : '';
 }
 
-error_log("[SHARED MAP.PHP] Is Invitation: " . ($is_invitation ? 'yes' : 'no') . ", Language: {$lang}, Visitor ID: {$visitor_id}");
-error_log("[SHARED MAP.PHP] PDF path: " . ($pdf_path ? $pdf_path : 'NOT SET'));
-
 // Build PDF URL
 $has_pdf = !empty($pdf_path);
 $pdf_url = '';
 if ($has_pdf) {
     $pdf_url = content_url() . '/uploads' . $pdf_path;
-    error_log("[SHARED MAP.PHP] Full PDF URL: {$pdf_url}");
 }
 
 // Check if completed
@@ -107,6 +152,8 @@ $translations = array(
         'prev' => 'Předchozí',
         'next' => 'Další',
         'no_pdf' => 'Mapa není k dispozici',
+        'skip_info' => 'Toto školení je volitelné. Můžete ho přeskočit a projít si později.',
+        'skip_button' => 'Přeskočit školení',
     ),
     'en' => array(
         'confirm' => 'I confirm map review',
@@ -116,6 +163,8 @@ $translations = array(
         'prev' => 'Previous',
         'next' => 'Next',
         'no_pdf' => 'Map not available',
+        'skip_info' => 'This training is optional. You can skip it and complete it later.',
+        'skip_button' => 'Skip training',
     ),
     'sk' => array(
         'confirm' => 'Potvrdzujem oboznámenie s mapou',
@@ -125,6 +174,8 @@ $translations = array(
         'prev' => 'Predchádzajúce',
         'next' => 'Ďalšie',
         'no_pdf' => 'Mapa nie je k dispozícii',
+        'skip_info' => 'Toto školenie je voliteľné. Môžete ho preskočiť a prejsť si neskôr.',
+        'skip_button' => 'Preskočiť školenie',
     ),
     'uk' => array(
         'confirm' => 'Підтверджую ознайомлення з картою',
@@ -134,6 +185,8 @@ $translations = array(
         'prev' => 'Попередній',
         'next' => 'Наступний',
         'no_pdf' => 'Карта недоступна',
+        'skip_info' => 'Це навчання є необов\'язковим. Ви можете пропустити його і пройти пізніше.',
+        'skip_button' => 'Пропустити навчання',
     ),
 );
 
@@ -190,13 +243,7 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
     
     <!-- Floating Actions -->
     <form method="POST" id="map-form" class="saw-panel-confirm">
-        <?php 
-        $nonce_name = $is_invitation ? 'saw_invitation_step' : 'saw_terminal_step';
-        $nonce_field = $is_invitation ? 'invitation_nonce' : 'terminal_nonce';
-        $action_name = $is_invitation ? 'invitation_action' : 'terminal_action';
-        $complete_action = $is_invitation ? 'complete_training' : 'complete_training_map';
-        wp_nonce_field($nonce_name, $nonce_field); 
-        ?>
+        <?php wp_nonce_field($nonce_name, $nonce_field); ?>
         <input type="hidden" name="<?php echo esc_attr($action_name); ?>" value="<?php echo esc_attr($complete_action); ?>">
         
         <?php if (!$completed): ?>
@@ -222,17 +269,17 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
     <?php endif; ?>
 </div>
 
-<?php if ($is_invitation): ?>
-<!-- Skip button for invitation mode -->
+<?php if ($context === 'invitation' || $context === 'visitor_info'): ?>
+<!-- Skip button for invitation/visitor_info mode -->
 <div class="saw-panel-skip">
     <p class="saw-panel-skip-info">
-        💡 Toto školení je volitelné. Můžete ho přeskočit a projít si později.
+        💡 <?php echo esc_html($t['skip_info']); ?>
     </p>
     <form method="POST" style="display: inline-block;">
         <?php wp_nonce_field($nonce_name, $nonce_field); ?>
         <input type="hidden" name="<?php echo esc_attr($action_name); ?>" value="skip_training">
         <button type="submit" class="saw-panel-skip-btn">
-            ⏭️ Přeskočit školení
+            ⏭️ <?php echo esc_html($t['skip_button']); ?>
         </button>
     </form>
 </div>
@@ -241,7 +288,7 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
 
 <?php if ($has_pdf): ?>
     <?php 
-// ✅ Načti PDF viewer script
+// Načti PDF viewer script
 $pdf_viewer_path = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/assets/js/terminal/pdf-viewer.js';
 $pdf_viewer_url = SAW_VISITORS_PLUGIN_URL . 'includes/frontend/terminal/assets/js/terminal/pdf-viewer.js';
 
@@ -249,14 +296,10 @@ if (file_exists($pdf_viewer_path)):
 ?>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="<?php echo esc_url($pdf_viewer_url); ?>?ver=<?php echo time(); ?>"></script>
-<?php else: ?>
-<!-- PDF viewer script not found at: <?php echo esc_html($pdf_viewer_path); ?> -->
 <?php endif; ?>
 <script>
 (function() {
     'use strict';
-    
-    console.log('[SAW Map] Minimal PDF viewer initializing...');
     
     function initWhenReady() {
         if (typeof SAWPDFViewer === 'undefined') {
@@ -264,29 +307,25 @@ if (file_exists($pdf_viewer_path)):
             return;
         }
         
-        console.log('[SAW Map] Starting viewer...');
-        
-        const viewer = new SAWPDFViewer({
+        var viewer = new SAWPDFViewer({
             pdfUrl: '<?php echo esc_js($pdf_url); ?>',
             canvasId: 'pdf-canvas',
             debug: false,
             
             onComplete: function(data) {
-                console.log('[SAW Map] Completed!');
-                
                 // Hide hint and progress bar when completed
-                const hint = document.getElementById('pdf-hint-message');
-                const progressBar = document.getElementById('pdf-progress-bar');
+                var hint = document.getElementById('pdf-hint-message');
+                var progressBar = document.getElementById('pdf-progress-bar');
                 if (hint) hint.style.display = 'none';
-                    if (progressBar && data.totalPages > 1) {
+                if (progressBar && data.totalPages > 1) {
                     setTimeout(function() {
                         progressBar.style.display = 'none';
                     }, 400);
                 }
                 
                 // Enable checkbox
-                const checkbox = document.getElementById('map-confirmed');
-                const wrapper = document.getElementById('checkbox-wrapper');
+                var checkbox = document.getElementById('map-confirmed');
+                var wrapper = document.getElementById('checkbox-wrapper');
                 if (checkbox) {
                     checkbox.disabled = false;
                     if (wrapper) wrapper.classList.add('checked');
@@ -296,42 +335,42 @@ if (file_exists($pdf_viewer_path)):
             onPageChange: function(data) {
                 // Hide loading on first page
                 if (data.currentPage === 1) {
-                    const loading = document.getElementById('pdf-loading');
+                    var loading = document.getElementById('pdf-loading');
                     if (loading) loading.style.display = 'none';
                     
-                    const canvas = document.getElementById('pdf-canvas');
-                    const indicator = document.getElementById('pdf-page-indicator');
+                    var canvas = document.getElementById('pdf-canvas');
+                    var indicator = document.getElementById('pdf-page-indicator');
                     
                     if (canvas) canvas.style.display = 'block';
                     if (indicator) indicator.style.display = 'block';
                     
                     // Show hint and progress bar only if multiple pages (> 1)
                     if (data.totalPages > 1) {
-                        const hint = document.getElementById('pdf-hint-message');
-                        const progressBar = document.getElementById('pdf-progress-bar');
+                        var hint = document.getElementById('pdf-hint-message');
+                        var progressBar = document.getElementById('pdf-progress-bar');
                         if (hint) hint.style.display = 'flex';
                         if (progressBar) progressBar.style.display = 'block';
                     }
                 }
 
                 // Show navigation always (if it exists)
-                const navigation = document.getElementById('pdf-navigation');
+                var navigation = document.getElementById('pdf-navigation');
                 if (navigation) navigation.style.display = 'flex';
 
                 
                 // Update progress bar
-                const progressFill = document.getElementById('pdf-progress-fill');
+                var progressFill = document.getElementById('pdf-progress-fill');
                 if (progressFill && data.totalPages > 1) {
-                    const progress = (data.viewedPages / data.totalPages) * 100;
+                    var progress = (data.viewedPages / data.totalPages) * 100;
                     progressFill.style.width = progress + '%';
                 }
             }
         });
         
         // Checkbox listener
-        const checkbox = document.getElementById('map-confirmed');
-        const continueBtn = document.getElementById('continue-btn');
-        const wrapper = document.getElementById('checkbox-wrapper');
+        var checkbox = document.getElementById('map-confirmed');
+        var continueBtn = document.getElementById('continue-btn');
+        var wrapper = document.getElementById('checkbox-wrapper');
         
         if (checkbox && continueBtn) {
             checkbox.addEventListener('change', function() {
@@ -355,8 +394,3 @@ if (file_exists($pdf_viewer_path)):
 })();
 </script>
 <?php endif; ?>
-
-
-<?php
-error_log("[SHARED MAP.PHP] Template finished");
-?>

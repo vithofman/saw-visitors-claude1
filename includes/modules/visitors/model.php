@@ -4,9 +4,12 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visitors
- * @version     3.2.0 - Fixed daily_checkout to support null log_date for multi-day visits
+ * @version     3.3.0 - Added Info Portal token methods
  * 
  * Changelog:
+ * - 3.3.0 (2025-12-08): Added Info Portal methods: generate_info_portal_token(), 
+ *                        get_visitor_by_info_token(), is_info_portal_token_valid(),
+ *                        mark_info_portal_email_sent(), should_send_info_portal_email()
  * - 3.2.0 (2025-12-08): Fixed daily_checkout() to find any active log when log_date is null
  * - 3.1.0 (2025-12-08): Added count_checked_in_visitors(), will_be_last_checkout()
  *                        Modified check_and_complete_visit() to not auto-complete
@@ -565,6 +568,220 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
         $remaining = $current_count - $checkout_count;
         
         return $remaining <= 0;
+    }
+    
+    // ============================================
+    // INFO PORTAL METHODS (v3.3.0)
+    // ============================================
+    
+    /**
+     * Generate unique info portal token for visitor
+     * 
+     * Creates a 64-character alphanumeric token for accessing the info portal.
+     * If token already exists, returns existing one.
+     * 
+     * @since 3.3.0
+     * @param int $visitor_id Visitor ID
+     * @return string|WP_Error Token string or WP_Error on failure
+     */
+    public function generate_info_portal_token($visitor_id) {
+        global $wpdb;
+        
+        $visitor_id = intval($visitor_id);
+        if (!$visitor_id) {
+            return new WP_Error('invalid_visitor_id', 'Neplatné ID návštěvníka');
+        }
+        
+        $visitor = $this->get_by_id($visitor_id);
+        if (!$visitor) {
+            return new WP_Error('visitor_not_found', 'Návštěvník nenalezen');
+        }
+        
+        // Return existing token if already generated
+        if (!empty($visitor['info_portal_token'])) {
+            return $visitor['info_portal_token'];
+        }
+        
+        // Generate unique 64-character token
+        $token = '';
+        $max_attempts = 10;
+        $attempt = 0;
+        
+        do {
+            $token = wp_generate_password(64, false, false);
+            $exists = $wpdb->get_var($wpdb->prepare(
+                "SELECT id FROM {$this->table} WHERE info_portal_token = %s",
+                $token
+            ));
+            $attempt++;
+        } while ($exists && $attempt < $max_attempts);
+        
+        if ($exists) {
+            return new WP_Error('token_generation_failed', 'Nepodařilo se vygenerovat unikátní token');
+        }
+        
+        // Save token
+        $result = $wpdb->update(
+            $this->table,
+            array(
+                'info_portal_token' => $token,
+                'info_portal_token_created_at' => current_time('mysql'),
+            ),
+            array('id' => $visitor_id),
+            array('%s', '%s'),
+            array('%d')
+        );
+        
+        if ($result === false) {
+            return new WP_Error('token_save_failed', 'Nepodařilo se uložit token');
+        }
+        
+        $this->invalidate_cache();
+        
+        return $token;
+    }
+    
+    /**
+     * Get visitor by info portal token with all related data
+     * 
+     * @since 3.3.0
+     * @param string $token 64-character token
+     * @return array|null Visitor data with visit/company info or null
+     */
+    public function get_visitor_by_info_token($token) {
+        global $wpdb;
+        
+        // Validate token format
+        if (empty($token) || strlen($token) !== 64) {
+            return null;
+        }
+        
+        $token = preg_replace('/[^a-zA-Z0-9]/', '', $token);
+        if (strlen($token) !== 64) {
+            return null;
+        }
+        
+        return $wpdb->get_row($wpdb->prepare(
+            "SELECT 
+                v.*,
+                vis.status as visit_status,
+                vis.visit_type,
+                vis.planned_date_from,
+                vis.planned_date_to,
+                vis.completed_at as visit_completed_at,
+                c.name as company_name,
+                b.name as branch_name,
+                cust.name as customer_name
+             FROM {$this->table} v
+             INNER JOIN {$wpdb->prefix}saw_visits vis ON v.visit_id = vis.id
+             LEFT JOIN {$wpdb->prefix}saw_companies c ON vis.company_id = c.id
+             INNER JOIN {$wpdb->prefix}saw_branches b ON v.branch_id = b.id
+             INNER JOIN {$wpdb->prefix}saw_customers cust ON v.customer_id = cust.id
+             WHERE v.info_portal_token = %s",
+            $token
+        ), ARRAY_A);
+    }
+    
+    /**
+     * Check if info portal token is still valid
+     * 
+     * Token validity rules:
+     * - Active visits (draft/pending/confirmed/in_progress): always valid
+     * - Cancelled visits: never valid
+     * - Completed visits: valid for grace_hours after completion
+     * 
+     * @since 3.3.0
+     * @param array $visitor Visitor data from get_visitor_by_info_token()
+     * @param int $grace_hours Hours after visit completion when token remains valid (default 48)
+     * @return bool True if token is valid
+     */
+    public function is_info_portal_token_valid($visitor, $grace_hours = 48) {
+        if (empty($visitor)) {
+            return false;
+        }
+        
+        $visit_status = $visitor['visit_status'] ?? '';
+        
+        // Active visits - always valid
+        if (in_array($visit_status, array('draft', 'pending', 'confirmed', 'in_progress'), true)) {
+            return true;
+        }
+        
+        // Cancelled - never valid
+        if ($visit_status === 'cancelled') {
+            return false;
+        }
+        
+        // Completed - check grace period
+        if ($visit_status === 'completed') {
+            if (empty($visitor['visit_completed_at'])) {
+                return false;
+            }
+            
+            $grace_end = strtotime($visitor['visit_completed_at']) + ($grace_hours * 3600);
+            return time() <= $grace_end;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Mark that info portal email was sent to visitor
+     * 
+     * @since 3.3.0
+     * @param int $visitor_id Visitor ID
+     * @return bool True on success, false on failure
+     */
+    public function mark_info_portal_email_sent($visitor_id) {
+        global $wpdb;
+        
+        $result = $wpdb->update(
+            $this->table,
+            array('info_portal_email_sent_at' => current_time('mysql')),
+            array('id' => intval($visitor_id)),
+            array('%s'),
+            array('%d')
+        );
+        
+        if ($result !== false) {
+            $this->invalidate_cache();
+        }
+        
+        return $result !== false;
+    }
+    
+    /**
+     * Check if info portal email should be sent to visitor
+     * 
+     * Email should be sent if:
+     * - Visitor has valid email address
+     * - Email has not been sent yet (info_portal_email_sent_at is NULL)
+     * 
+     * @since 3.3.0
+     * @param int $visitor_id Visitor ID
+     * @return bool True if email should be sent
+     */
+    public function should_send_info_portal_email($visitor_id) {
+        global $wpdb;
+        
+        $visitor = $wpdb->get_row($wpdb->prepare(
+            "SELECT email, info_portal_email_sent_at 
+             FROM {$this->table} 
+             WHERE id = %d",
+            intval($visitor_id)
+        ), ARRAY_A);
+        
+        if (!$visitor) {
+            return false;
+        }
+        
+        // Must have valid email
+        if (empty($visitor['email']) || !is_email($visitor['email'])) {
+            return false;
+        }
+        
+        // Must not be sent yet
+        return empty($visitor['info_portal_email_sent_at']);
     }
     
     // ============================================

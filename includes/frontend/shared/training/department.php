@@ -1,10 +1,14 @@
 <?php
 /**
  * Shared Training Step - Department Information
- * Works for both Terminal and Invitation flows
+ * Works for Terminal, Invitation and Visitor Info flows
  * 
  * @package SAW_Visitors
- * @version 3.4.0
+ * @version 3.5.0
+ * 
+ * ZMĚNA v 3.5.0:
+ * - Přidána podpora pro visitor_info kontext (Info Portal)
+ * - Context detection pro 3 různé flow typy
  * 
  * ZMĚNA v 3.4.0:
  * - Invitation flow nyní filtruje departments podle navštěvovaných hostů
@@ -15,13 +19,52 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Detect flow type
-$is_invitation = isset($is_invitation) ? $is_invitation : false;
+// ===== CONTEXT DETECTION (v3.5.0) =====
+// Determine which flow we're in: terminal, invitation, or visitor_info
+$context = 'terminal'; // default
+if (isset($is_invitation) && $is_invitation === true) {
+    $context = 'invitation';
+}
+if (isset($is_visitor_info) && $is_visitor_info === true) {
+    $context = 'visitor_info';
+}
+
+// Context-specific form settings
+$context_settings = array(
+    'terminal' => array(
+        'nonce_name' => 'saw_terminal_step',
+        'nonce_field' => 'terminal_nonce',
+        'action_name' => 'terminal_action',
+        'complete_action' => 'complete_training_department',
+    ),
+    'invitation' => array(
+        'nonce_name' => 'saw_invitation_step',
+        'nonce_field' => 'invitation_nonce',
+        'action_name' => 'invitation_action',
+        'complete_action' => 'complete_training',
+    ),
+    'visitor_info' => array(
+        'nonce_name' => 'saw_visitor_info_step',
+        'nonce_field' => 'visitor_info_nonce',
+        'action_name' => 'visitor_info_action',
+        'complete_action' => 'complete_training_department',
+    ),
+);
+
+$ctx = $context_settings[$context];
+$nonce_name = $ctx['nonce_name'];
+$nonce_field = $ctx['nonce_field'];
+$action_name = $ctx['action_name'];
+$complete_action = $ctx['complete_action'];
+// ===== END CONTEXT DETECTION =====
+
+// Detect flow type (legacy support)
+$is_invitation = ($context === 'invitation');
 
 // Get data from appropriate flow
-if ($is_invitation) {
+if ($context === 'invitation') {
     // Invitation flow
-    $session = SAW_Session_Manager::instance();  // ✅ OPRAVENO
+    $session = SAW_Session_Manager::instance();
     $flow = $session->get('invitation_flow');
     $lang = $flow['language'] ?? 'cs';
     
@@ -45,7 +88,7 @@ if ($is_invitation) {
         }
     }
     
-    // ✅ NOVÉ: Načíst departments z databáze - FILTROVANÉ PODLE HOSTŮ
+    // Načíst departments z databáze - FILTROVANÉ PODLE HOSTŮ
     $departments = [];
     if ($visit) {
         // Najdi language_id
@@ -55,9 +98,6 @@ if ($is_invitation) {
             $visit->customer_id,
             $lang
         ));
-        
-        error_log("[SHARED DEPARTMENT.PHP] Looking for language_id, customer: {$visit->customer_id}, lang: {$lang}");
-        error_log("[SHARED DEPARTMENT.PHP] Found language_id: " . ($language_id ? $language_id : 'NOT FOUND'));
         
         if ($language_id) {
             // Najdi training_content
@@ -69,18 +109,12 @@ if ($is_invitation) {
                 $language_id
             ));
             
-            error_log("[SHARED DEPARTMENT.PHP] Found content_id: " . ($content ? $content->id : 'NOT FOUND'));
-            
             if ($content) {
-                error_log("[DEPT] Content ID: " . $content->id);
-                
-                // ✅ NOVÉ: Získej department IDs filtrované podle hostů (stejně jako Terminal)
+                // Získej department IDs filtrované podle hostů (stejně jako Terminal)
                 $host_ids = $wpdb->get_col($wpdb->prepare(
                     "SELECT user_id FROM {$wpdb->prefix}saw_visit_hosts WHERE visit_id = %d",
                     $visit->id
                 ));
-                
-                error_log("[SHARED DEPARTMENT.PHP Invitation] Host IDs for visit #{$visit->id}: " . implode(', ', $host_ids));
                 
                 $department_ids = [];
                 
@@ -92,8 +126,6 @@ if ($is_invitation) {
                             $host_id
                         ));
                         
-                        error_log("[SHARED DEPARTMENT.PHP Invitation] Host #{$host_id} departments: " . implode(', ', $host_dept_ids));
-                        
                         // Pokud host nemá přiřazená oddělení (admin/super_manager) → všechna oddělení pobočky
                         if (empty($host_dept_ids)) {
                             $all_dept_ids = $wpdb->get_col($wpdb->prepare(
@@ -103,17 +135,15 @@ if ($is_invitation) {
                                 $visit->branch_id
                             ));
                             $department_ids = array_merge($department_ids, $all_dept_ids);
-                            error_log("[SHARED DEPARTMENT.PHP Invitation] Host #{$host_id} is admin - using ALL branch departments: " . implode(', ', $all_dept_ids));
                         } else {
                             $department_ids = array_merge($department_ids, $host_dept_ids);
                         }
                     }
                     
                     $department_ids = array_unique($department_ids);
-                    error_log("[SHARED DEPARTMENT.PHP Invitation] Final filtered department IDs: " . implode(', ', $department_ids));
                 }
                 
-                // ✅ Načti content JEN pro filtrovaná oddělení
+                // Načti content JEN pro filtrovaná oddělení
                 if (!empty($department_ids)) {
                     $placeholders = implode(',', array_fill(0, count($department_ids), '%d'));
                     $query_params = array_merge([$content->id], $department_ids);
@@ -138,18 +168,10 @@ if ($is_invitation) {
                     ), ARRAY_A);
                 } else {
                     // Žádní hosts = žádná oddělení
-                    error_log("[SHARED DEPARTMENT.PHP Invitation] No hosts found - showing no departments");
                     $dept_rows = [];
                 }
                 
-                error_log("[DEPT] SQL: " . $wpdb->last_query);
-                error_log("[DEPT] Error: " . $wpdb->last_error);
-                error_log("[DEPT] Rows found: " . count($dept_rows));
-                error_log("[DEPT] Raw result: " . json_encode($dept_rows));
-                
                 foreach ($dept_rows as $dept) {
-                    error_log("[SHARED DEPARTMENT.PHP] Processing dept: " . ($dept['department_name'] ?? 'NO NAME') . ", text_content: " . (!empty($dept['text_content']) ? 'YES' : 'NO'));
-                    
                     // Načti dokumenty pro toto oddělení
                     $docs = $wpdb->get_results($wpdb->prepare(
                         "SELECT * FROM {$wpdb->prefix}saw_training_documents 
@@ -171,11 +193,15 @@ if ($is_invitation) {
                         'documents' => $docs
                     ];
                 }
-                
-                error_log("[SHARED DEPARTMENT.PHP Invitation] Loaded " . count($departments) . " departments with content (filtered by hosts)");
             }
         }
     }
+} elseif ($context === 'visitor_info') {
+    // Visitor Info Portal flow - data passed from controller
+    $flow = isset($flow) ? $flow : array();
+    $lang = isset($flow['language']) ? $flow['language'] : 'cs';
+    $visitor_id = isset($flow['visitor_id']) ? $flow['visitor_id'] : null;
+    $departments = isset($departments) ? $departments : array();
 } else {
     // Terminal flow
     $flow = isset($flow) ? $flow : [];
@@ -185,9 +211,6 @@ if ($is_invitation) {
 }
 
 $has_departments = !empty($departments);
-
-error_log("[SHARED DEPARTMENT.PHP] Is Invitation: " . ($is_invitation ? 'yes' : 'no') . ", Language: {$lang}, Visitor ID: " . ($visitor_id ?? 'NULL'));
-error_log("[SHARED DEPARTMENT.PHP] Final departments count: " . count($departments));
 
 // Check if completed
 $completed = false;
@@ -213,6 +236,9 @@ $translations = array(
         'no_departments' => 'Žádná oddělení k dispozici.',
         'download' => 'Stáhnout',
         'no_documents' => 'Žádné dokumenty',
+        'no_text_content' => 'Žádný textový obsah',
+        'skip_info' => 'Toto školení je volitelné. Můžete ho přeskočit a projít si později.',
+        'skip_button' => 'Přeskočit školení',
     ),
     'en' => array(
         'title' => 'Department Information',
@@ -223,6 +249,9 @@ $translations = array(
         'no_departments' => 'No departments available.',
         'download' => 'Download',
         'no_documents' => 'No documents',
+        'no_text_content' => 'No text content',
+        'skip_info' => 'This training is optional. You can skip it and complete it later.',
+        'skip_button' => 'Skip training',
     ),
     'sk' => array(
         'title' => 'Informácie o oddeleniach',
@@ -233,6 +262,9 @@ $translations = array(
         'no_departments' => 'Žiadne oddelenia k dispozícii.',
         'download' => 'Stiahnuť',
         'no_documents' => 'Žiadne dokumenty',
+        'no_text_content' => 'Žiadny textový obsah',
+        'skip_info' => 'Toto školenie je voliteľné. Môžete ho preskočiť a prejsť si neskôr.',
+        'skip_button' => 'Preskočiť školenie',
     ),
     'uk' => array(
         'title' => 'Інформація про відділи',
@@ -243,12 +275,14 @@ $translations = array(
         'no_departments' => 'Немає доступних відділів.',
         'download' => 'Завантажити',
         'no_documents' => 'Немає документів',
+        'no_text_content' => 'Немає текстового вмісту',
+        'skip_info' => 'Це навчання є необов\'язковим. Ви можете пропустити його і пройти пізніше.',
+        'skip_button' => 'Пропустити навчання',
     ),
 );
 
 $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
 ?>
-<!-- Žádný <style> blok! CSS je v pages.css -->
 
 <div class="saw-page-aurora saw-step-department saw-page-scrollable">
     <div class="saw-page-content saw-page-content-scroll">
@@ -305,7 +339,7 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
                                     <?php if (!empty($dept['text_content'])): ?>
                                         <?php echo wp_kses_post($dept['text_content']); ?>
                                     <?php else: ?>
-                                        <p>Žádný textový obsah</p>
+                                        <p><?php echo esc_html($t['no_text_content']); ?></p>
                                     <?php endif; ?>
                                 </div>
                                 
@@ -360,22 +394,17 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
         </div>
     </div>
     
-    <?php if ($is_invitation): ?>
-    <!-- Skip button for invitation mode -->
+    <?php if ($context === 'invitation' || $context === 'visitor_info'): ?>
+    <!-- Skip button for invitation/visitor_info mode -->
     <div class="saw-panel-skip">
         <p class="saw-panel-skip-info">
-            💡 Toto školení je volitelné. Můžete ho přeskočit a projít si později.
+            💡 <?php echo esc_html($t['skip_info']); ?>
         </p>
         <form method="POST" style="display: inline-block;">
-            <?php 
-            $nonce_name = $is_invitation ? 'saw_invitation_step' : 'saw_terminal_step';
-            $nonce_field = $is_invitation ? 'invitation_nonce' : 'terminal_nonce';
-            $action_name = $is_invitation ? 'invitation_action' : 'terminal_action';
-            wp_nonce_field($nonce_name, $nonce_field); 
-            ?>
+            <?php wp_nonce_field($nonce_name, $nonce_field); ?>
             <input type="hidden" name="<?php echo esc_attr($action_name); ?>" value="skip_training">
             <button type="submit" class="saw-panel-skip-btn">
-                ⏭️ Přeskočit školení
+                ⏭️ <?php echo esc_html($t['skip_button']); ?>
             </button>
         </form>
     </div>
@@ -383,13 +412,7 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
     
     <!-- UNIFIED Floating Panel -->
     <form method="POST" id="department-form" class="saw-panel-confirm">
-        <?php 
-        $nonce_name = $is_invitation ? 'saw_invitation_step' : 'saw_terminal_step';
-        $nonce_field = $is_invitation ? 'invitation_nonce' : 'terminal_nonce';
-        $action_name = $is_invitation ? 'invitation_action' : 'terminal_action';
-        $complete_action = $is_invitation ? 'complete_training' : 'complete_training_department';
-        wp_nonce_field($nonce_name, $nonce_field); 
-        ?>
+        <?php wp_nonce_field($nonce_name, $nonce_field); ?>
         <input type="hidden" name="<?php echo esc_attr($action_name); ?>" value="<?php echo esc_attr($complete_action); ?>">
 
         <?php if (!$completed): ?>
@@ -417,17 +440,17 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
     'use strict';
 
     // Accordion functionality
-    document.querySelectorAll('.saw-accordion-header').forEach(header => {
+    document.querySelectorAll('.saw-accordion-header').forEach(function(header) {
         header.addEventListener('click', function() {
-            const item = this.closest('.saw-accordion-item');
+            var item = this.closest('.saw-accordion-item');
             item.classList.toggle('expanded');
         });
     });
 
     // Checkbox listener
-    const checkbox = document.getElementById('department-confirmed');
-    const continueBtn = document.getElementById('continue-btn');
-    const wrapper = document.getElementById('checkbox-wrapper');
+    var checkbox = document.getElementById('department-confirmed');
+    var continueBtn = document.getElementById('continue-btn');
+    var wrapper = document.getElementById('checkbox-wrapper');
 
     if (checkbox && continueBtn) {
         checkbox.addEventListener('change', function() {
@@ -443,8 +466,3 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
     }
 })();
 </script>
-
-
-<?php
-error_log("[DEPARTMENT.PHP] Unified design with departments accordion loaded (v3.4.0 - filtered by hosts)");
-?>

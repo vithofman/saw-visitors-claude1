@@ -8,6 +8,7 @@
  * @package    SAW_Visitors
  * @subpackage Core
  * @since      5.0.0
+ * @version    5.1.0 - Added Visitor Info Portal Router
  */
 
 if (!defined('ABSPATH')) {
@@ -52,15 +53,13 @@ class SAW_Bootstrap {
         try {
             self::load_core_files();
         } catch (Throwable $e) {
-            error_log('SAW Bootstrap CRITICAL: Failed to load core files: ' . $e->getMessage());
-            return; // Can't continue without core files
+            return;
         }
         
         // Register services (continue even if some fail)
         try {
             self::register_services();
         } catch (Throwable $e) {
-            error_log('SAW Bootstrap: Error registering services: ' . $e->getMessage());
             // Continue - router might still work
         }
         
@@ -68,7 +67,6 @@ class SAW_Bootstrap {
         try {
             self::init_services();
         } catch (Throwable $e) {
-            error_log('SAW Bootstrap: Error initializing services: ' . $e->getMessage());
             // Continue - router hooks must be registered
         }
         
@@ -76,9 +74,7 @@ class SAW_Bootstrap {
         try {
             self::register_hooks();
         } catch (Throwable $e) {
-            error_log('SAW Bootstrap CRITICAL: Failed to register hooks: ' . $e->getMessage());
-            error_log('SAW Bootstrap: Hook registration error trace: ' . $e->getTraceAsString());
-            // Plugin won't work without hooks, but at least log the error
+            // Plugin won't work without hooks
         }
     }
     
@@ -95,14 +91,14 @@ class SAW_Bootstrap {
             // Logger (must be first)
             'includes/core/class-saw-logger.php',
             
-            // ✅ Cache Manager (PŘED Base Model!)
+            // Cache Manager (PŘED Base Model!)
             'includes/core/class-saw-cache.php',
             
             // CRITICAL: middleware.php must load BEFORE base classes
             // because base classes use saw_verify_ajax_unified() which depends on saw_verify_ajax_nonce()
             'includes/core/middleware.php',
 
-            // ✅ PŘIDAT: Translations system
+            // Translations system
             'includes/core/class-saw-translations.php',
             'includes/core/translations-helpers.php',
             
@@ -111,7 +107,7 @@ class SAW_Bootstrap {
             'includes/core/class-ajax-registry.php',
             'includes/core/class-hook-registry.php',
             
-            // Base classes (AFTER Cache and Middleware - používají SAW_Cache a middleware functions)
+            // Base classes (AFTER Cache and Middleware)
             'includes/base/trait-ajax-handlers.php',
             'includes/base/class-base-model.php',
             'includes/base/class-base-controller.php',
@@ -123,7 +119,6 @@ class SAW_Bootstrap {
             'includes/core/class-saw-component-manager.php',
             
             // CRITICAL: helpers.php must load AFTER middleware.php
-            // because it depends on saw_verify_ajax_nonce() from middleware.php
             'includes/core/helpers.php',
             
             // Session Manager (must load early - used by terminal and other components)
@@ -134,6 +129,9 @@ class SAW_Bootstrap {
 
             // Invitation Router (must load early for rewrite rules)
             'includes/frontend/invitation/invitation-router.php',
+            
+            // Visitor Info Portal Router (must load early for rewrite rules) - v3.3.0
+            'includes/frontend/visitor-info/visitor-info-router.php',
         ];
         
         foreach ($files as $file) {
@@ -147,12 +145,17 @@ class SAW_Bootstrap {
         if (class_exists('SAW_Invitation_Router') && !isset($GLOBALS['saw_invitation_router'])) {
             $GLOBALS['saw_invitation_router'] = new SAW_Invitation_Router();
         }
+        
+        // Initialize Visitor Info Router early (v3.3.0)
+        if (class_exists('SAW_Visitor_Info_Router') && !isset($GLOBALS['saw_visitor_info_router'])) {
+            $GLOBALS['saw_visitor_info_router'] = new SAW_Visitor_Info_Router();
+        }
 
-// ✅ Load invitation controller for AJAX registry
-$invitation_controller_file = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/invitation/invitation-controller.php';
-if (file_exists($invitation_controller_file)) {
-    require_once $invitation_controller_file;
-}
+        // Load invitation controller for AJAX registry
+        $invitation_controller_file = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/invitation/invitation-controller.php';
+        if (file_exists($invitation_controller_file)) {
+            require_once $invitation_controller_file;
+        }
         
         self::load_optional_files();
     }
@@ -201,7 +204,7 @@ if (file_exists($invitation_controller_file)) {
                 return new SAW_Router();
             });
         } catch (Throwable $e) {
-            error_log('SAW Bootstrap: Failed to register router: ' . $e->getMessage());
+            // Silent fail
         }
         
         // Module Loader
@@ -211,9 +214,9 @@ if (file_exists($invitation_controller_file)) {
                     SAW_Module_Loader::discover();
                 }
                 return SAW_Module_Loader::class;
-            }, false); // Not singleton, return class name
+            }, false);
         } catch (Throwable $e) {
-            error_log('SAW Bootstrap: Failed to register module loader: ' . $e->getMessage());
+            // Silent fail
         }
         
         // Component Manager
@@ -225,7 +228,7 @@ if (file_exists($invitation_controller_file)) {
                 return null;
             });
         } catch (Throwable $e) {
-            error_log('SAW Bootstrap: Failed to register component manager: ' . $e->getMessage());
+            // Silent fail
         }
         
         // AJAX Registry
@@ -234,7 +237,7 @@ if (file_exists($invitation_controller_file)) {
                 return new SAW_AJAX_Registry();
             });
         } catch (Throwable $e) {
-            error_log('SAW Bootstrap: Failed to register AJAX registry: ' . $e->getMessage());
+            // Silent fail
         }
         
         // Session Manager (optional)
@@ -247,7 +250,7 @@ if (file_exists($invitation_controller_file)) {
                     return null;
                 });
             } catch (Throwable $e) {
-                error_log('SAW Bootstrap: Failed to register session manager: ' . $e->getMessage());
+                // Silent fail
             }
         }
         
@@ -261,7 +264,7 @@ if (file_exists($invitation_controller_file)) {
                     return null;
                 });
             } catch (Throwable $e) {
-                error_log('SAW Bootstrap: Failed to register context: ' . $e->getMessage());
+                // Silent fail
             }
         }
     }
@@ -281,7 +284,7 @@ if (file_exists($invitation_controller_file)) {
                 SAW_Service_Container::get('module_loader');
             }
         } catch (Throwable $e) {
-            error_log('SAW Bootstrap: Failed to init module loader: ' . $e->getMessage());
+            // Silent fail
         }
         
         // Initialize Component Manager
@@ -293,34 +296,20 @@ if (file_exists($invitation_controller_file)) {
                 }
             }
         } catch (Throwable $e) {
-            error_log('SAW Bootstrap: Failed to init component manager: ' . $e->getMessage());
+            // Silent fail
         }
         
-        // ✅ CRITICAL: Initialize AJAX Registry IMMEDIATELY during plugins_loaded hook
+        // Initialize AJAX Registry during plugins_loaded hook
         // AJAX handlers MUST be registered BEFORE WordPress processes AJAX requests (admin_init)
-        // This happens during plugins_loaded, which is BEFORE init and admin_init
         try {
             if (SAW_Service_Container::has('ajax_registry')) {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('[SAW Bootstrap] Initializing AJAX Registry during plugins_loaded hook...');
-                }
-                
                 $ajax_registry = SAW_Service_Container::get('ajax_registry');
                 if ($ajax_registry && method_exists($ajax_registry, 'init')) {
                     $ajax_registry->init();
-                    
-                    if (defined('WP_DEBUG') && WP_DEBUG) {
-                        error_log('[SAW Bootstrap] ✅ AJAX Registry initialized successfully during plugins_loaded');
-                    }
-                } else {
-                    error_log('[SAW Bootstrap] ❌ AJAX Registry object invalid or missing init() method');
                 }
-            } else {
-                error_log('[SAW Bootstrap] ❌ AJAX Registry not found in Service Container');
             }
         } catch (Throwable $e) {
-            error_log('SAW Bootstrap: ❌ Failed to init AJAX registry: ' . $e->getMessage());
-            error_log('SAW Bootstrap: Error trace: ' . $e->getTraceAsString());
+            // Silent fail
         }
         
         // Initialize Session Manager (optional)
@@ -329,7 +318,7 @@ if (file_exists($invitation_controller_file)) {
                 SAW_Service_Container::get('session');
             }
         } catch (Throwable $e) {
-            error_log('SAW Bootstrap: Failed to init session manager: ' . $e->getMessage());
+            // Silent fail
         }
         
         // Initialize Context (optional)
@@ -338,7 +327,7 @@ if (file_exists($invitation_controller_file)) {
                 SAW_Service_Container::get('context');
             }
         } catch (Throwable $e) {
-            error_log('SAW Bootstrap: Failed to init context: ' . $e->getMessage());
+            // Silent fail
         }
     }
     
@@ -359,30 +348,23 @@ if (file_exists($invitation_controller_file)) {
                 if (file_exists($router_file)) {
                     require_once $router_file;
                 } else {
-                    error_log('SAW Bootstrap CRITICAL: Router file not found: ' . $router_file);
                     return;
                 }
             }
             
             if (!class_exists('SAW_Router')) {
-                error_log('SAW Bootstrap CRITICAL: Router class not found after loading file');
                 return;
             }
             
             if (!SAW_Service_Container::has('router')) {
-                // Try to create router directly if not in container
                 $router = new SAW_Router();
             } else {
                 $router = SAW_Service_Container::get('router');
             }
             
             if (!$router || !method_exists($router, 'register_routes')) {
-                error_log('SAW Bootstrap CRITICAL: Router invalid or missing register_routes method');
                 return;
             }
-            
-            // AJAX Registry is initialized in init_services() during plugins_loaded hook
-            // This ensures handlers are registered BEFORE WordPress processes AJAX requests (admin_init)
             
             // Router hooks (CRITICAL for plugin to work)
             add_action('init', [$router, 'register_routes'], 10);
@@ -393,19 +375,14 @@ if (file_exists($invitation_controller_file)) {
                 // Flush rewrite rules if needed (only once per version)
                 $flushed_version = get_option('saw_rewrite_rules_flushed');
                 if ($flushed_version !== SAW_VISITORS_VERSION) {
-                    flush_rewrite_rules(false); // false = don't hard flush, just update
+                    flush_rewrite_rules(false);
                     update_option('saw_rewrite_rules_flushed', SAW_VISITORS_VERSION);
-                    error_log('SAW Bootstrap: Rewrite rules flushed for version ' . SAW_VISITORS_VERSION);
                 }
             }, 20);
             add_filter('query_vars', [$router, 'register_query_vars']);
             add_action('template_redirect', [$router, 'dispatch'], 1);
             
-            // Debug: Log that router is registered
-            error_log('SAW Bootstrap: Router hooks registered successfully');
         } catch (Throwable $e) {
-            error_log('SAW Bootstrap CRITICAL: Failed to register router hooks: ' . $e->getMessage());
-            error_log('SAW Bootstrap: Router error trace: ' . $e->getTraceAsString());
             // Don't return - continue with other hooks
         }
         
@@ -432,7 +409,6 @@ if (file_exists($invitation_controller_file)) {
      */
     public static function enqueue_assets() {
         if (!class_exists('SAW_Asset_Loader')) {
-            error_log('SAW Bootstrap: SAW_Asset_Loader class not found');
             return;
         }
         
@@ -441,7 +417,6 @@ if (file_exists($invitation_controller_file)) {
             SAW_Asset_Loader::enqueue_global();
             
             // Enqueue module-specific assets
-            // CRITICAL: Try multiple methods to get active module
             $active_module = null;
             
             // Method 1: From router service
@@ -450,10 +425,9 @@ if (file_exists($invitation_controller_file)) {
                     $router = SAW_Service_Container::get('router');
                     if ($router && method_exists($router, 'get_active_module')) {
                         $active_module = $router->get_active_module();
-                        error_log('SAW Bootstrap: Active module from router: ' . ($active_module ?: 'null'));
                     }
                 } catch (Exception $e) {
-                    error_log('SAW Bootstrap: Error getting router: ' . $e->getMessage());
+                    // Silent fail
                 }
             }
             
@@ -465,7 +439,6 @@ if (file_exists($invitation_controller_file)) {
                     $segments = explode('/', $clean_path);
                     if (!empty($segments[0]) && !is_numeric($segments[0])) {
                         $active_module = $segments[0];
-                        error_log('SAW Bootstrap: Active module from query var: ' . $active_module);
                     }
                 }
             }
@@ -474,9 +447,6 @@ if (file_exists($invitation_controller_file)) {
                 SAW_Asset_Loader::enqueue_module($active_module);
             }
         } catch (Exception $e) {
-            // Log error if logger is available
-            error_log('SAW Bootstrap: Failed to enqueue assets: ' . $e->getMessage());
-            error_log('SAW Bootstrap: Asset enqueue error trace: ' . $e->getTraceAsString());
             if (function_exists('saw_log_error')) {
                 saw_log_error('Failed to enqueue assets: ' . $e->getMessage());
             }
@@ -606,4 +576,3 @@ if (file_exists($invitation_controller_file)) {
         }
     }
 }
-

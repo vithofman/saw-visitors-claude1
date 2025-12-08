@@ -1,0 +1,796 @@
+/**
+ * Visitor Info Portal Styles
+ * 
+ * @package SAW_Visitors
+ * @since 3.3.0
+ */
+
+/* ==========================================
+   CSS VARIABLES
+   ========================================== */
+
+:root {
+    --saw-info-primary: #667eea;
+    --saw-info-primary-dark: #5a67d8;
+    --saw-info-secondary: #764ba2;
+    --saw-info-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --saw-info-success: #22c55e;
+    --saw-info-warning: #f59e0b;
+    --saw-info-danger: #ef4444;
+    --saw-info-text: #1e293b;
+    --saw-info-text-muted: #64748b;
+    --saw-info-bg: #f1f5f9;
+    --saw-info-card-bg: #ffffff;
+    --saw-info-border: #e2e8f0;
+    --saw-info-radius: 16px;
+    --saw-info-radius-sm: 12px;
+    --saw-info-radius-lg: 24px;
+    --saw-info-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    --saw-info-shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.12);
+}
+
+/* ==========================================
+   BASE STYLES
+   ========================================== */
+
+.saw-visitor-info-page {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--saw-info-text);
+    background: var(--saw-info-bg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.saw-visitor-info-page * {
+    box-sizing: border-box;
+}
+
+.saw-visitor-info-page a {
+    color: var(--saw-info-primary);
+    text-decoration: none;
+}
+
+.saw-visitor-info-page a:hover {
+    color: var(--saw-info-primary-dark);
+}
+
+/* ==========================================
+   LANGUAGE SELECT PAGE
+   ========================================== */
+
+.saw-language-select {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--saw-info-gradient);
+    padding: 1rem;
+}
+
+.saw-language-container {
+    width: 100%;
+    max-width: 420px;
+}
+
+.saw-language-card {
+    background: var(--saw-info-card-bg);
+    border-radius: var(--saw-info-radius-lg);
+    padding: 2.5rem 2rem;
+    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.35);
+    text-align: center;
+    animation: sawFadeInUp 0.5s ease-out;
+}
+
+@keyframes sawFadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.saw-language-header {
+    margin-bottom: 2rem;
+}
+
+.saw-language-logo {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1rem;
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--saw-info-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.saw-language-logo img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.saw-language-logo-placeholder {
+    font-size: 2.5rem;
+}
+
+.saw-company-name {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--saw-info-text);
+    margin: 0 0 0.25rem;
+    line-height: 1.3;
+}
+
+.saw-branch-name {
+    font-size: 1rem;
+    color: var(--saw-info-text-muted);
+    margin: 0;
+}
+
+.saw-language-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--saw-info-text-muted);
+    margin: 0 0 1.5rem;
+}
+
+.saw-language-form {
+    margin: 0;
+}
+
+.saw-language-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.saw-language-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 1.25rem 2rem;
+    background: var(--saw-info-bg);
+    border: 2px solid var(--saw-info-border);
+    border-radius: var(--saw-info-radius);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    font-size: 1.125rem;
+    width: 100%;
+}
+
+.saw-language-btn:hover {
+    background: #eef2ff;
+    border-color: #c7d2fe;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.saw-language-btn:active {
+    transform: translateY(0);
+}
+
+.saw-language-flag {
+    font-size: 2rem;
+    line-height: 1;
+}
+
+.saw-language-name {
+    font-weight: 600;
+    color: var(--saw-info-text);
+}
+
+/* ==========================================
+   SUMMARY VIEW PAGE
+   ========================================== */
+
+.saw-summary-view {
+    background: var(--saw-info-bg);
+}
+
+.saw-info-container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: var(--saw-info-card-bg);
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+
+/* Header */
+.saw-info-header {
+    background: var(--saw-info-gradient);
+    color: white;
+    padding: 1.5rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.saw-info-header-content {
+    margin-bottom: 1rem;
+}
+
+.saw-info-company {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0 0 0.25rem;
+    line-height: 1.3;
+}
+
+.saw-info-subtitle {
+    font-size: 0.875rem;
+    opacity: 0.9;
+    margin: 0;
+}
+
+.saw-info-visitor-card {
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: var(--saw-info-radius-sm);
+    backdrop-filter: blur(10px);
+}
+
+.saw-visitor-name {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.saw-visitor-icon,
+.saw-validity-icon {
+    font-size: 1.125rem;
+}
+
+.saw-visitor-validity {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    opacity: 0.9;
+}
+
+.saw-training-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding: 0.5rem 1rem;
+    background: rgba(34, 197, 94, 0.25);
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.saw-badge-completed {
+    background: rgba(34, 197, 94, 0.25);
+}
+
+.saw-badge-pending {
+    background: rgba(245, 158, 11, 0.25);
+}
+
+/* Language Switcher */
+.saw-language-switcher {
+    margin-top: 1rem;
+}
+
+.saw-language-switcher select {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    color: white;
+    font-size: 1rem;
+    font-family: inherit;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='white' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    padding-right: 2.5rem;
+}
+
+.saw-language-switcher select:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.saw-language-switcher select option {
+    background: var(--saw-info-text);
+    color: white;
+}
+
+/* Content Area */
+.saw-info-content {
+    padding: 1rem;
+}
+
+.saw-info-section {
+    margin-bottom: 1.25rem;
+    border-radius: var(--saw-info-radius);
+    overflow: hidden;
+    box-shadow: var(--saw-info-shadow);
+    background: var(--saw-info-card-bg);
+    border: 1px solid var(--saw-info-border);
+}
+
+.saw-section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 1rem 1.25rem;
+    font-size: 1rem;
+    font-weight: 600;
+    background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
+    border-bottom: 1px solid var(--saw-info-border);
+    color: var(--saw-info-text);
+}
+
+.saw-section-icon {
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+.saw-section-body {
+    padding: 1.25rem;
+}
+
+/* Video Section */
+.saw-video-wrapper-summary {
+    position: relative;
+    padding-bottom: 56.25%;
+    height: 0;
+    border-radius: var(--saw-info-radius-sm);
+    overflow: hidden;
+    background: #0f172a;
+}
+
+.saw-video-wrapper-summary iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* PDF Link */
+.saw-pdf-container {
+    text-align: center;
+}
+
+.saw-pdf-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 2rem;
+    background: var(--saw-info-gradient);
+    color: white !important;
+    text-decoration: none;
+    border-radius: var(--saw-info-radius-sm);
+    font-weight: 600;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.saw-pdf-link:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+    color: white !important;
+}
+
+.saw-pdf-icon {
+    font-size: 1.25rem;
+}
+
+/* Text Content */
+.saw-text-content {
+    font-size: 0.9375rem;
+    line-height: 1.7;
+    color: #374151;
+}
+
+.saw-text-content p {
+    margin: 0 0 1rem;
+}
+
+.saw-text-content p:last-child {
+    margin-bottom: 0;
+}
+
+.saw-text-content ul,
+.saw-text-content ol {
+    margin: 0 0 1rem;
+    padding-left: 1.5rem;
+}
+
+.saw-text-content li {
+    margin-bottom: 0.5rem;
+}
+
+/* Accordion */
+.saw-accordion {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.saw-accordion-item {
+    border: 1px solid var(--saw-info-border);
+    border-radius: var(--saw-info-radius-sm);
+    overflow: hidden;
+}
+
+.saw-accordion-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 1rem;
+    background: #f8fafc;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    text-align: left;
+    font-family: inherit;
+    color: var(--saw-info-text);
+    transition: background 0.2s;
+}
+
+.saw-accordion-header:hover {
+    background: #f1f5f9;
+}
+
+.saw-accordion-icon {
+    font-size: 0.75rem;
+    transition: transform 0.2s;
+    color: var(--saw-info-text-muted);
+}
+
+.saw-accordion-item.open .saw-accordion-icon {
+    transform: rotate(180deg);
+}
+
+.saw-accordion-content {
+    display: none;
+    padding: 1rem;
+    border-top: 1px solid var(--saw-info-border);
+    background: var(--saw-info-card-bg);
+}
+
+.saw-accordion-item.open .saw-accordion-content {
+    display: block;
+}
+
+/* OOPP Grid */
+.saw-oopp-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.saw-oopp-card {
+    border: 1px solid var(--saw-info-border);
+    border-radius: var(--saw-info-radius-sm);
+    overflow: hidden;
+    background: var(--saw-info-card-bg);
+    transition: box-shadow 0.2s;
+}
+
+.saw-oopp-card:hover {
+    box-shadow: var(--saw-info-shadow);
+}
+
+.saw-oopp-image {
+    aspect-ratio: 1;
+    background: var(--saw-info-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.saw-oopp-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.saw-oopp-image-placeholder {
+    font-size: 3rem;
+    color: var(--saw-info-text-muted);
+}
+
+.saw-oopp-info {
+    padding: 0.75rem;
+}
+
+.saw-oopp-info h3 {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--saw-info-text);
+}
+
+.saw-oopp-info p {
+    margin: 0.25rem 0 0;
+    font-size: 0.75rem;
+    color: var(--saw-info-text-muted);
+}
+
+/* Documents List */
+.saw-documents-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.saw-document-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: #f8fafc;
+    border: 1px solid var(--saw-info-border);
+    border-radius: 8px;
+    color: var(--saw-info-primary) !important;
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.saw-document-link:hover {
+    background: #eef2ff;
+    border-color: #c7d2fe;
+}
+
+.saw-document-icon {
+    font-size: 1.25rem;
+}
+
+/* No Content */
+.saw-no-content {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--saw-info-text-muted);
+}
+
+.saw-no-content-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+/* ==========================================
+   TRAINING FLOW (used with shared templates)
+   ========================================== */
+
+.saw-visitor-info-training {
+    margin: 0;
+    padding: 0;
+    background: var(--saw-info-bg);
+}
+
+.saw-info-training-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: var(--saw-info-gradient);
+    color: white;
+    padding: 1rem;
+    z-index: 1000;
+    text-align: center;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.saw-info-progress {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.saw-info-step-indicator {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.saw-info-training-content {
+    padding-top: 60px;
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+
+/* Back button for training flow */
+.saw-info-back-btn {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.saw-info-back-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* ==========================================
+   ERROR PAGES
+   ========================================== */
+
+.saw-visitor-info-error {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--saw-info-gradient);
+}
+
+.saw-error-container {
+    padding: 1rem;
+    width: 100%;
+    max-width: 420px;
+}
+
+.saw-error-card {
+    background: var(--saw-info-card-bg);
+    border-radius: var(--saw-info-radius-lg);
+    padding: 3rem 2rem;
+    text-align: center;
+    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.35);
+    animation: sawFadeInUp 0.5s ease-out;
+}
+
+.saw-error-icon {
+    font-size: 4rem;
+    display: block;
+    margin-bottom: 1rem;
+    line-height: 1;
+}
+
+.saw-error-card h1 {
+    font-size: 1.5rem;
+    color: var(--saw-info-text);
+    margin: 0 0 0.5rem;
+}
+
+.saw-error-card p {
+    color: var(--saw-info-text-muted);
+    margin: 0;
+    font-size: 1rem;
+}
+
+/* ==========================================
+   RESPONSIVE DESIGN
+   ========================================== */
+
+@media (min-width: 480px) {
+    .saw-language-buttons {
+        flex-direction: row;
+    }
+    
+    .saw-language-btn {
+        flex: 1;
+    }
+}
+
+@media (min-width: 640px) {
+    .saw-info-header {
+        padding: 2rem;
+    }
+    
+    .saw-info-company {
+        font-size: 1.5rem;
+    }
+    
+    .saw-info-content {
+        padding: 1.5rem;
+    }
+    
+    .saw-oopp-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .saw-language-card {
+        padding: 3rem 2.5rem;
+    }
+}
+
+@media (min-width: 800px) {
+    .saw-summary-view {
+        padding: 2rem;
+    }
+    
+    .saw-info-container {
+        border-radius: var(--saw-info-radius-lg);
+        overflow: hidden;
+        box-shadow: var(--saw-info-shadow-lg);
+        min-height: auto;
+    }
+    
+    .saw-info-header {
+        position: relative;
+        border-radius: 0;
+    }
+    
+    .saw-oopp-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+    
+    .saw-info-content {
+        padding: 2rem;
+    }
+}
+
+/* ==========================================
+   PRINT STYLES
+   ========================================== */
+
+@media print {
+    .saw-visitor-info-page {
+        background: white;
+    }
+    
+    .saw-info-header {
+        position: relative;
+        background: #333;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    
+    .saw-language-switcher {
+        display: none;
+    }
+    
+    .saw-info-section {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+    
+    .saw-accordion-item.open .saw-accordion-content {
+        display: block !important;
+    }
+}
+
+/* ==========================================
+   DARK MODE SUPPORT (optional)
+   ========================================== */
+
+@media (prefers-color-scheme: dark) {
+    .saw-visitor-info-page.saw-dark-mode {
+        --saw-info-text: #f1f5f9;
+        --saw-info-text-muted: #94a3b8;
+        --saw-info-bg: #0f172a;
+        --saw-info-card-bg: #1e293b;
+        --saw-info-border: #334155;
+    }
+}

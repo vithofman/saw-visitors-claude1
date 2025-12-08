@@ -1,20 +1,63 @@
 <?php
 /**
  * Shared Training Step - Risks
- * Works for both Terminal and Invitation flows
+ * Works for Terminal, Invitation and Visitor Info flows
  * 
  * UNIFIED DESIGN matching department.php
  * 
  * @package SAW_Visitors
- * @version 3.4.1
+ * @version 3.5.0
+ * 
+ * ZMĚNA v 3.5.0:
+ * - Přidána podpora pro visitor_info kontext (Info Portal)
+ * - Context detection pro 3 různé flow typy
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-// Detective flow type and setup data
-$is_invitation = isset($is_invitation) ? $is_invitation : false;
+// ===== CONTEXT DETECTION (v3.5.0) =====
+// Determine which flow we're in: terminal, invitation, or visitor_info
+$context = 'terminal'; // default
+if (isset($is_invitation) && $is_invitation === true) {
+    $context = 'invitation';
+}
+if (isset($is_visitor_info) && $is_visitor_info === true) {
+    $context = 'visitor_info';
+}
+
+// Context-specific form settings
+$context_settings = array(
+    'terminal' => array(
+        'nonce_name' => 'saw_terminal_step',
+        'nonce_field' => 'terminal_nonce',
+        'action_name' => 'terminal_action',
+        'complete_action' => 'complete_training_risks',
+    ),
+    'invitation' => array(
+        'nonce_name' => 'saw_invitation_step',
+        'nonce_field' => 'invitation_nonce',
+        'action_name' => 'invitation_action',
+        'complete_action' => 'complete_training',
+    ),
+    'visitor_info' => array(
+        'nonce_name' => 'saw_visitor_info_step',
+        'nonce_field' => 'visitor_info_nonce',
+        'action_name' => 'visitor_info_action',
+        'complete_action' => 'complete_training_risks',
+    ),
+);
+
+$ctx = $context_settings[$context];
+$nonce_name = $ctx['nonce_name'];
+$nonce_field = $ctx['nonce_field'];
+$action_name = $ctx['action_name'];
+$complete_action = $ctx['complete_action'];
+// ===== END CONTEXT DETECTION =====
+
+// Detect flow type (legacy support)
+$is_invitation = ($context === 'invitation');
 
 // Initialize variables
 $risks_text = '';
@@ -23,7 +66,7 @@ $visitor_id = null;
 $lang = 'cs';
 
 // Get data based on flow
-if ($is_invitation) {
+if ($context === 'invitation') {
     // Invitation flow logic
     $session = SAW_Session_Manager::instance();
     $flow = $session->get('invitation_flow');
@@ -75,6 +118,13 @@ if ($is_invitation) {
             }
         }
     }
+} elseif ($context === 'visitor_info') {
+    // Visitor Info Portal flow - data passed from controller
+    $flow = isset($flow) ? $flow : array();
+    $lang = isset($flow['language']) ? $flow['language'] : 'cs';
+    $visitor_id = isset($flow['visitor_id']) ? $flow['visitor_id'] : null;
+    $risks_text = isset($risks_text) ? $risks_text : '';
+    $documents = isset($documents) ? $documents : array();
 } else {
     // Terminal flow logic
     $flow = isset($flow) ? $flow : [];
@@ -111,6 +161,8 @@ $translations = array(
         'no_content' => 'Obsah není k dispozici.',
         'download' => 'Stáhnout',
         'no_documents' => 'Žádné dokumenty',
+        'skip_info' => 'Toto školení je volitelné. Můžete ho přeskočit a projít si později.',
+        'skip_button' => 'Přeskočit školení',
     ),
     'en' => array(
         'title' => 'Risk Information',
@@ -121,6 +173,8 @@ $translations = array(
         'no_content' => 'Content not available.',
         'download' => 'Download',
         'no_documents' => 'No documents',
+        'skip_info' => 'This training is optional. You can skip it and complete it later.',
+        'skip_button' => 'Skip training',
     ),
     'sk' => array(
         'title' => 'Informácie o rizikách',
@@ -131,6 +185,8 @@ $translations = array(
         'no_content' => 'Obsah nie je k dispozícii.',
         'download' => 'Stiahnuť',
         'no_documents' => 'Žiadne dokumenty',
+        'skip_info' => 'Toto školenie je voliteľné. Môžete ho preskočiť a prejsť si neskôr.',
+        'skip_button' => 'Preskočiť školenie',
     ),
     'uk' => array(
         'title' => 'Інформація про ризики',
@@ -141,6 +197,8 @@ $translations = array(
         'no_content' => 'Вміст недоступний.',
         'download' => 'Завантажити',
         'no_documents' => 'Немає документів',
+        'skip_info' => 'Це навчання є необов\'язковим. Ви можете пропустити його і пройти пізніше.',
+        'skip_button' => 'Пропустити навчання',
     ),
 );
 
@@ -149,7 +207,7 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
 
 <div class="saw-page-aurora saw-step-risks saw-page-scrollable">
     <div class="saw-page-content saw-page-content-scroll">
-        <div class="saw-page-container"> <!-- max-width: 900px -->
+        <div class="saw-page-container">
             
             <!-- Header -->
             <header class="saw-page-header saw-page-header-left">
@@ -232,22 +290,17 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
         </div>
     </div>
     
-    <!-- Skip button (invitation only) -->
-    <?php if ($is_invitation): ?>
+    <!-- Skip button (invitation/visitor_info only) -->
+    <?php if ($context === 'invitation' || $context === 'visitor_info'): ?>
     <div class="saw-panel-skip">
         <p class="saw-panel-skip-info">
-            💡 Toto školení je volitelné. Můžete ho přeskočit a projít si později.
+            💡 <?php echo esc_html($t['skip_info']); ?>
         </p>
         <form method="POST" style="display: inline-block;">
-            <?php 
-            $nonce_name = 'saw_invitation_step';
-            $nonce_field = 'invitation_nonce';
-            $action_name = 'invitation_action';
-            wp_nonce_field($nonce_name, $nonce_field); 
-            ?>
+            <?php wp_nonce_field($nonce_name, $nonce_field); ?>
             <input type="hidden" name="<?php echo esc_attr($action_name); ?>" value="skip_training">
             <button type="submit" class="saw-panel-skip-btn">
-                ⏭️ Přeskočit školení
+                ⏭️ <?php echo esc_html($t['skip_button']); ?>
             </button>
         </form>
     </div>
@@ -255,13 +308,7 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
     
     <!-- Floating Confirm Panel -->
     <form method="POST" id="risks-form" class="saw-panel-confirm">
-        <?php 
-        $nonce_name = $is_invitation ? 'saw_invitation_step' : 'saw_terminal_step';
-        $nonce_field = $is_invitation ? 'invitation_nonce' : 'terminal_nonce';
-        $action_name = $is_invitation ? 'invitation_action' : 'terminal_action';
-        $complete_action = $is_invitation ? 'complete_training' : 'complete_training_risks';
-        wp_nonce_field($nonce_name, $nonce_field); 
-        ?>
+        <?php wp_nonce_field($nonce_name, $nonce_field); ?>
         <input type="hidden" name="<?php echo esc_attr($action_name); ?>" value="<?php echo esc_attr($complete_action); ?>">
         
         <?php if (!$completed): ?>
@@ -287,9 +334,9 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
 <script>
 (function() {
     'use strict';
-    const checkbox = document.getElementById('risks-confirmed');
-    const continueBtn = document.getElementById('continue-btn');
-    const wrapper = document.getElementById('checkbox-wrapper');
+    var checkbox = document.getElementById('risks-confirmed');
+    var continueBtn = document.getElementById('continue-btn');
+    var wrapper = document.getElementById('checkbox-wrapper');
 
     if (checkbox && continueBtn) {
         checkbox.addEventListener('change', function() {

@@ -34,6 +34,11 @@ function saw_get_schema_visitors($table_name, $prefix, $charset_collate) {
 		first_checkin_at DATETIME NULL COMMENT 'První check-in první den',
 		last_checkout_at DATETIME NULL COMMENT 'Poslední check-out poslední den',
 		
+		-- ===== INFO PORTAL (v3.3.0) =====
+		info_portal_token VARCHAR(64) NULL COMMENT 'Unikátní token pro přístup k info portálu',
+		info_portal_token_created_at DATETIME NULL COMMENT 'Kdy byl token vytvořen',
+		info_portal_email_sent_at DATETIME NULL COMMENT 'Kdy byl email s odkazem odeslán',
+		
 		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
 		PRIMARY KEY (id),
@@ -44,6 +49,7 @@ function saw_get_schema_visitors($table_name, $prefix, $charset_collate) {
 		KEY idx_participation (participation_status),
 		KEY idx_name (last_name, first_name),
 		KEY idx_current_status (current_status),
-		KEY idx_training_status (training_status)
+		KEY idx_training_status (training_status),
+		UNIQUE KEY idx_info_portal_token (info_portal_token)
 	) {$charset_collate};";
 }

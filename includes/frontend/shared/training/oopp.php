@@ -3,70 +3,146 @@
  * Training OOPP Step - Shared Template
  * 
  * Displays OOPP (Personal Protective Equipment) cards.
- * Used by both Invitation and Terminal flows.
- * 
- * ⚠️ VYUŽÍVÁ EXISTUJÍCÍ CSS TŘÍDY - žádné vlastní styly!
+ * Works for Terminal, Invitation and Visitor Info flows.
  * 
  * @package     SAW_Visitors
  * @subpackage  Frontend/Shared/Training
- * @version     1.0.0
+ * @version     3.5.0
+ * 
+ * ZMĚNA v 3.5.0:
+ * - Přidána podpora pro visitor_info kontext (Info Portal)
+ * - Context detection pro 3 různé flow typy
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-// Get data from controller
-$oopp_items = $oopp_items ?? [];
-
-$is_invitation = $is_invitation ?? false;
-$token = $token ?? '';
-
-// Get language from session
-$lang = 'cs';
-if (!class_exists('SAW_Session_Manager')) {
-    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-session-manager.php';
+// ===== CONTEXT DETECTION (v3.5.0) =====
+// Determine which flow we're in: terminal, invitation, or visitor_info
+$context = 'terminal'; // default
+if (isset($is_invitation) && $is_invitation === true) {
+    $context = 'invitation';
 }
-$session = SAW_Session_Manager::instance();
-$flow_key = $is_invitation ? 'invitation_flow' : 'terminal_flow';
-$flow = $session->get($flow_key);
-$lang = $flow['language'] ?? 'cs';
+if (isset($is_visitor_info) && $is_visitor_info === true) {
+    $context = 'visitor_info';
+}
+
+// Context-specific form settings
+$context_settings = array(
+    'terminal' => array(
+        'nonce_name' => 'saw_terminal_step',
+        'nonce_field' => 'terminal_nonce',
+        'action_name' => 'terminal_action',
+        'complete_action' => 'complete_training_oopp',
+    ),
+    'invitation' => array(
+        'nonce_name' => 'saw_invitation_step',
+        'nonce_field' => 'invitation_nonce',
+        'action_name' => 'invitation_action',
+        'complete_action' => 'complete_training',
+    ),
+    'visitor_info' => array(
+        'nonce_name' => 'saw_visitor_info_step',
+        'nonce_field' => 'visitor_info_nonce',
+        'action_name' => 'visitor_info_action',
+        'complete_action' => 'complete_training_oopp',
+    ),
+);
+
+$ctx = $context_settings[$context];
+$nonce_name = $ctx['nonce_name'];
+$nonce_field = $ctx['nonce_field'];
+$action_name = $ctx['action_name'];
+$complete_action = $ctx['complete_action'];
+// ===== END CONTEXT DETECTION =====
+
+// Get data from controller
+$oopp_items = isset($oopp_items) ? $oopp_items : array();
+$token = isset($token) ? $token : '';
+
+// Detect flow type (legacy support)
+$is_invitation = ($context === 'invitation');
+
+// Get language from session or flow
+$lang = 'cs';
+if ($context === 'visitor_info') {
+    // Visitor Info Portal flow - data passed from controller
+    $flow = isset($flow) ? $flow : array();
+    $lang = isset($flow['language']) ? $flow['language'] : 'cs';
+} else {
+    // Terminal or Invitation flow
+    if (!class_exists('SAW_Session_Manager')) {
+        require_once SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-session-manager.php';
+    }
+    $session = SAW_Session_Manager::instance();
+    $flow_key = $is_invitation ? 'invitation_flow' : 'terminal_flow';
+    $flow = $session->get($flow_key);
+    $lang = $flow['language'] ?? 'cs';
+}
 
 // Translations
-$t = [
-    'cs' => [
+$t = array(
+    'cs' => array(
         'title' => 'Osobní ochranné pracovní prostředky',
         'subtitle' => 'Následující OOPP jsou vyžadovány pro vaši návštěvu',
         'group' => 'Skupina',
         'risks' => 'Chrání proti',
         'usage' => 'Pokyny pro použití',
+        'protective_properties' => 'Ochranné vlastnosti',
         'no_oopp' => 'Pro tuto návštěvu nejsou vyžadovány žádné OOPP',
         'confirm' => 'Beru na vědomí požadavky na OOPP',
         'continue' => 'Pokračovat',
-    ],
-    'en' => [
+        'skip_info' => 'Toto školení je volitelné. Můžete ho přeskočit a projít si později.',
+        'skip_button' => 'Přeskočit školení',
+    ),
+    'en' => array(
         'title' => 'Personal Protective Equipment',
         'subtitle' => 'The following PPE is required for your visit',
         'group' => 'Category',
         'risks' => 'Protects against',
         'usage' => 'Usage instructions',
+        'protective_properties' => 'Protective properties',
         'no_oopp' => 'No PPE is required for this visit',
         'confirm' => 'I acknowledge the PPE requirements',
         'continue' => 'Continue',
-    ],
-];
+        'skip_info' => 'This training is optional. You can skip it and complete it later.',
+        'skip_button' => 'Skip training',
+    ),
+    'sk' => array(
+        'title' => 'Osobné ochranné pracovné prostriedky',
+        'subtitle' => 'Nasledujúce OOPP sú vyžadované pre vašu návštevu',
+        'group' => 'Skupina',
+        'risks' => 'Chráni proti',
+        'usage' => 'Pokyny na použitie',
+        'protective_properties' => 'Ochranné vlastnosti',
+        'no_oopp' => 'Pre túto návštevu nie sú vyžadované žiadne OOPP',
+        'confirm' => 'Beriem na vedomie požiadavky na OOPP',
+        'continue' => 'Pokračovať',
+        'skip_info' => 'Toto školenie je voliteľné. Môžete ho preskočiť a prejsť si neskôr.',
+        'skip_button' => 'Preskočiť školenie',
+    ),
+    'uk' => array(
+        'title' => 'Засоби індивідуального захисту',
+        'subtitle' => 'Для вашого візиту потрібні наступні ЗІЗ',
+        'group' => 'Категорія',
+        'risks' => 'Захищає від',
+        'usage' => 'Інструкції з використання',
+        'protective_properties' => 'Захисні властивості',
+        'no_oopp' => 'Для цього візиту ЗІЗ не потрібні',
+        'confirm' => 'Я підтверджую вимоги до ЗІЗ',
+        'continue' => 'Продовжити',
+        'skip_info' => 'Це навчання є необов\'язковим. Ви можете пропустити його і пройти пізніше.',
+        'skip_button' => 'Пропустити навчання',
+    ),
+);
 
-$texts = $t[$lang] ?? $t['cs'];
-
-// Form action URL
-$form_action = $is_invitation 
-    ? home_url('/visitor-invitation/' . $token . '/') 
-    : home_url('/terminal/');
+$texts = isset($t[$lang]) ? $t[$lang] : $t['cs'];
 ?>
 
 <div class="saw-page-aurora saw-step-oopp saw-page-scrollable">
     <div class="saw-page-content saw-page-content-scroll">
-        <div class="saw-page-container"> <!-- Fixed width (900px) -->
+        <div class="saw-page-container">
             
             <div class="saw-page-header saw-page-header-left">
                 <div class="saw-header-icon">🦺</div>
@@ -117,7 +193,7 @@ $form_action = $is_invitation
                         </button>
                         
                         <div class="saw-accordion-content">
-                            <!-- NEW GRID LAYOUT: Image Left (280px), Content Right (1fr) -->
+                            <!-- GRID LAYOUT: Image Left (280px), Content Right (1fr) -->
                             <div class="saw-accordion-body saw-oopp-grid">
                                 
                                 <!-- LEFT COLUMN: Image -->
@@ -166,7 +242,7 @@ $form_action = $is_invitation
                                     <?php if (!empty($item['protective_properties'])): ?>
                                         <div style="background: rgba(16, 185, 129, 0.1); border-left: 4px solid #10b981; padding: 1rem; border-radius: 0 8px 8px 0;">
                                             <strong style="color: #10b981; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 0.5rem;">
-                                                🛡️ <?php echo $lang === 'en' ? 'Protective properties' : 'Ochranné vlastnosti'; ?>
+                                                🛡️ <?php echo esc_html($texts['protective_properties']); ?>
                                             </strong>
                                             <div style="color: #a7f3d0;">
                                                 <?php echo nl2br(esc_html($item['protective_properties'])); ?>
@@ -186,22 +262,17 @@ $form_action = $is_invitation
         </div>
     </div>
     
-    <?php if ($is_invitation): ?>
-    <!-- Skip button for invitation mode -->
+    <?php if ($context === 'invitation' || $context === 'visitor_info'): ?>
+    <!-- Skip button for invitation/visitor_info mode -->
     <div class="saw-panel-skip">
         <p class="saw-panel-skip-info">
-            💡 Toto školení je volitelné. Můžete ho přeskočit a projít si později.
+            💡 <?php echo esc_html($texts['skip_info']); ?>
         </p>
         <form method="POST" style="display: inline-block;">
-            <?php 
-            $nonce_name = $is_invitation ? 'saw_invitation_step' : 'saw_terminal_step';
-            $nonce_field = $is_invitation ? 'invitation_nonce' : 'terminal_nonce';
-            $action_name = $is_invitation ? 'invitation_action' : 'terminal_action';
-            wp_nonce_field($nonce_name, $nonce_field); 
-            ?>
+            <?php wp_nonce_field($nonce_name, $nonce_field); ?>
             <input type="hidden" name="<?php echo esc_attr($action_name); ?>" value="skip_training">
             <button type="submit" class="saw-panel-skip-btn">
-                ⏭️ Přeskočit školení
+                ⏭️ <?php echo esc_html($texts['skip_button']); ?>
             </button>
         </form>
     </div>
@@ -209,13 +280,7 @@ $form_action = $is_invitation
     
     <!-- UNIFIED Floating Panel -->
     <form method="POST" id="oopp-form" class="saw-panel-confirm">
-        <?php 
-        $nonce_name = $is_invitation ? 'saw_invitation_step' : 'saw_terminal_step';
-        $nonce_field = $is_invitation ? 'invitation_nonce' : 'terminal_nonce';
-        $action_name = $is_invitation ? 'invitation_action' : 'terminal_action';
-        $complete_action = $is_invitation ? 'complete_training' : 'complete_training_oopp';
-        wp_nonce_field($nonce_name, $nonce_field); 
-        ?>
+        <?php wp_nonce_field($nonce_name, $nonce_field); ?>
         <input type="hidden" name="<?php echo esc_attr($action_name); ?>" value="<?php echo esc_attr($complete_action); ?>">
 
         <label class="saw-panel-checkbox" id="checkbox-wrapper">
@@ -241,17 +306,17 @@ $form_action = $is_invitation
     'use strict';
 
     // Accordion functionality
-    document.querySelectorAll('.saw-accordion-header').forEach(header => {
+    document.querySelectorAll('.saw-accordion-header').forEach(function(header) {
         header.addEventListener('click', function() {
-            const item = this.closest('.saw-accordion-item');
+            var item = this.closest('.saw-accordion-item');
             item.classList.toggle('expanded');
         });
     });
 
     // Checkbox listener
-    const checkbox = document.getElementById('oopp-confirmed');
-    const continueBtn = document.getElementById('continue-btn');
-    const wrapper = document.getElementById('checkbox-wrapper');
+    var checkbox = document.getElementById('oopp-confirmed');
+    var continueBtn = document.getElementById('continue-btn');
+    var wrapper = document.getElementById('checkbox-wrapper');
 
     if (checkbox && continueBtn) {
         checkbox.addEventListener('change', function() {
@@ -267,7 +332,3 @@ $form_action = $is_invitation
     }
 })();
 </script>
-
-<?php
-error_log("[OOPP.PHP] Shared template loaded (v1.0.0)");
-?>

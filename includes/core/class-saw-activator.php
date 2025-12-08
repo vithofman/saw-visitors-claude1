@@ -8,6 +8,7 @@
  * @package    SAW_Visitors
  * @subpackage Core
  * @since      1.0.0
+ * @version    1.1.0 - Added Visitor Info Portal rewrite rules
  */
 
 if (!defined('ABSPATH')) {
@@ -205,27 +206,25 @@ class SAW_Activator {
      * Sets up custom URL routing for the plugin.
      *
      * @since 1.0.0
+     * @since 1.1.0 Added Visitor Info Portal router
      */
     private static function register_and_flush_rewrite_rules() {
+        // Main SAW Router
         $router_file = SAW_VISITORS_PLUGIN_DIR . 'includes/core/class-saw-router.php';
         
-        if (!file_exists($router_file)) {
-            return;
+        if (file_exists($router_file)) {
+            require_once $router_file;
+            
+            if (class_exists('SAW_Router')) {
+                $router = new SAW_Router();
+                
+                if (method_exists($router, 'register_routes')) {
+                    $router->register_routes();
+                }
+            }
         }
         
-        require_once $router_file;
-        
-        if (!class_exists('SAW_Router')) {
-            return;
-        }
-        
-        $router = new SAW_Router();
-        
-        if (method_exists($router, 'register_routes')) {
-            $router->register_routes();
-        }
-        
-        // Register invitation router rewrite rules
+        // Invitation Router
         $invitation_router_file = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/invitation/invitation-router.php';
         if (file_exists($invitation_router_file)) {
             require_once $invitation_router_file;
@@ -234,6 +233,19 @@ class SAW_Activator {
                 $invitation_router = new SAW_Invitation_Router();
                 if (method_exists($invitation_router, 'register_routes')) {
                     $invitation_router->register_routes();
+                }
+            }
+        }
+        
+        // Visitor Info Portal Router (v3.3.0)
+        $visitor_info_router_file = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/visitor-info/visitor-info-router.php';
+        if (file_exists($visitor_info_router_file)) {
+            require_once $visitor_info_router_file;
+            
+            if (class_exists('SAW_Visitor_Info_Router')) {
+                $visitor_info_router = new SAW_Visitor_Info_Router();
+                if (method_exists($visitor_info_router, 'register_routes')) {
+                    $visitor_info_router->register_routes();
                 }
             }
         }
@@ -247,6 +259,7 @@ class SAW_Activator {
             }
         }
 
+        // Flush all rewrite rules
         flush_rewrite_rules(false);
     }
 }
