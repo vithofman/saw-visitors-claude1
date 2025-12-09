@@ -4,24 +4,20 @@
  * Works for Terminal, Invitation and Visitor Info flows
  * 
  * @package SAW_Visitors
- * @version 3.5.0
+ * @version 3.9.9
  * 
- * ZMĚNA v 3.5.0:
- * - Přidána podpora pro visitor_info kontext (Info Portal)
- * - Context detection pro 3 různé flow typy
- * 
- * ZMĚNA v 3.4.0:
- * - Invitation flow nyní filtruje departments podle navštěvovaných hostů
- * - Stejná logika jako v Terminal (saw_visit_hosts → saw_user_departments)
+ * ZMĚNA v 3.9.9:
+ * - REMOVED: Skip training sekce úplně odstraněna
+ * - FIX: Dokumenty používají správné CSS třídy (saw-doc-card, saw-doc-badge) jako terminal/additional
+ * - FIX: Přidán fallback pro invitation context když visit nemá hosts
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-// ===== CONTEXT DETECTION (v3.5.0) =====
-// Determine which flow we're in: terminal, invitation, or visitor_info
-$context = 'terminal'; // default
+// ===== CONTEXT DETECTION =====
+$context = 'terminal';
 if (isset($is_invitation) && $is_invitation === true) {
     $context = 'invitation';
 }
@@ -29,7 +25,6 @@ if (isset($is_visitor_info) && $is_visitor_info === true) {
     $context = 'visitor_info';
 }
 
-// Context-specific form settings
 $context_settings = array(
     'terminal' => array(
         'nonce_name' => 'saw_terminal_step',
@@ -56,19 +51,13 @@ $nonce_name = $ctx['nonce_name'];
 $nonce_field = $ctx['nonce_field'];
 $action_name = $ctx['action_name'];
 $complete_action = $ctx['complete_action'];
-// ===== END CONTEXT DETECTION =====
-
-// Detect flow type (legacy support)
-$is_invitation = ($context === 'invitation');
 
 // Get data from appropriate flow
 if ($context === 'invitation') {
-    // Invitation flow
     $session = SAW_Session_Manager::instance();
     $flow = $session->get('invitation_flow');
     $lang = $flow['language'] ?? 'cs';
     
-    // Get visitor ID from invitation flow
     global $wpdb;
     $visit = $wpdb->get_row($wpdb->prepare(
         "SELECT * FROM {$wpdb->prefix}saw_visits WHERE id = %d",
@@ -88,10 +77,9 @@ if ($context === 'invitation') {
         }
     }
     
-    // Načíst departments z databáze - FILTROVANÉ PODLE HOSTŮ
+    // Load departments from DB - FILTERED BY HOSTS
     $departments = [];
     if ($visit) {
-        // Najdi language_id
         $language_id = $wpdb->get_var($wpdb->prepare(
             "SELECT id FROM {$wpdb->prefix}saw_training_languages 
              WHERE customer_id = %d AND language_code = %s",
@@ -100,7 +88,6 @@ if ($context === 'invitation') {
         ));
         
         if ($language_id) {
-            // Najdi training_content
             $content = $wpdb->get_row($wpdb->prepare(
                 "SELECT id FROM {$wpdb->prefix}saw_training_content 
                  WHERE customer_id = %d AND branch_id = %d AND language_id = %d",
@@ -110,7 +97,7 @@ if ($context === 'invitation') {
             ));
             
             if ($content) {
-                // Získej department IDs filtrované podle hostů (stejně jako Terminal)
+                // Get department IDs filtered by hosts
                 $host_ids = $wpdb->get_col($wpdb->prepare(
                     "SELECT user_id FROM {$wpdb->prefix}saw_visit_hosts WHERE visit_id = %d",
                     $visit->id
@@ -120,14 +107,13 @@ if ($context === 'invitation') {
                 
                 if (!empty($host_ids)) {
                     foreach ($host_ids as $host_id) {
-                        // Získej departments přiřazené tomuto hostovi
                         $host_dept_ids = $wpdb->get_col($wpdb->prepare(
                             "SELECT department_id FROM {$wpdb->prefix}saw_user_departments WHERE user_id = %d",
                             $host_id
                         ));
                         
-                        // Pokud host nemá přiřazená oddělení (admin/super_manager) → všechna oddělení pobočky
                         if (empty($host_dept_ids)) {
+                            // Admin/super_manager - all departments
                             $all_dept_ids = $wpdb->get_col($wpdb->prepare(
                                 "SELECT id FROM {$wpdb->prefix}saw_departments 
                                  WHERE customer_id = %d AND branch_id = %d AND is_active = 1",
@@ -139,19 +125,25 @@ if ($context === 'invitation') {
                             $department_ids = array_merge($department_ids, $host_dept_ids);
                         }
                     }
-                    
                     $department_ids = array_unique($department_ids);
+                } else {
+                    // FIX v3.9.9: FALLBACK when no hosts - load all active departments
+                    $department_ids = $wpdb->get_col($wpdb->prepare(
+                        "SELECT id FROM {$wpdb->prefix}saw_departments 
+                         WHERE customer_id = %d AND branch_id = %d AND is_active = 1",
+                        $visit->customer_id,
+                        $visit->branch_id
+                    ));
                 }
                 
-                // Načti content JEN pro filtrovaná oddělení
+                // Load content only for filtered departments
+                $dept_rows = [];
                 if (!empty($department_ids)) {
                     $placeholders = implode(',', array_fill(0, count($department_ids), '%d'));
                     $query_params = array_merge([$content->id], $department_ids);
                     
                     $dept_rows = $wpdb->get_results($wpdb->prepare(
-                        "SELECT tdc.*, d.name as department_name, d.description as department_description,
-                                (SELECT COUNT(*) FROM {$wpdb->prefix}saw_training_documents td 
-                                 WHERE td.document_type = 'department' AND td.reference_id = tdc.id) as docs_count
+                        "SELECT tdc.*, d.name as department_name, d.description as department_description
                          FROM {$wpdb->prefix}saw_training_department_content tdc
                          LEFT JOIN {$wpdb->prefix}saw_departments d ON tdc.department_id = d.id
                          WHERE tdc.training_content_id = %d 
@@ -166,13 +158,9 @@ if ($context === 'invitation') {
                          ORDER BY tdc.id ASC",
                         ...$query_params
                     ), ARRAY_A);
-                } else {
-                    // Žádní hosts = žádná oddělení
-                    $dept_rows = [];
                 }
                 
                 foreach ($dept_rows as $dept) {
-                    // Načti dokumenty pro toto oddělení
                     $docs = $wpdb->get_results($wpdb->prepare(
                         "SELECT * FROM {$wpdb->prefix}saw_training_documents 
                          WHERE document_type = 'department' AND reference_id = %d 
@@ -180,7 +168,6 @@ if ($context === 'invitation') {
                         $dept['id']
                     ), ARRAY_A);
                     
-                    // Použij text_content z training_department_content, nebo fallback na description z departments
                     $text = $dept['text_content'];
                     if (empty($text)) {
                         $text = $dept['department_description'] ?? '';
@@ -197,13 +184,11 @@ if ($context === 'invitation') {
         }
     }
 } elseif ($context === 'visitor_info') {
-    // Visitor Info Portal flow - data passed from controller
     $flow = isset($flow) ? $flow : array();
     $lang = isset($flow['language']) ? $flow['language'] : 'cs';
     $visitor_id = isset($flow['visitor_id']) ? $flow['visitor_id'] : null;
     $departments = isset($departments) ? $departments : array();
 } else {
-    // Terminal flow
     $flow = isset($flow) ? $flow : [];
     $lang = isset($flow['language']) ? $flow['language'] : 'cs';
     $visitor_id = isset($flow['visitor_ids'][0]) ? $flow['visitor_ids'][0] : null;
@@ -225,7 +210,6 @@ if ($visitor_id) {
     }
 }
 
-// Translations
 $translations = array(
     'cs' => array(
         'title' => 'Informace o odděleních',
@@ -237,8 +221,6 @@ $translations = array(
         'download' => 'Stáhnout',
         'no_documents' => 'Žádné dokumenty',
         'no_text_content' => 'Žádný textový obsah',
-        'skip_info' => 'Toto školení je volitelné. Můžete ho přeskočit a projít si později.',
-        'skip_button' => 'Přeskočit školení',
     ),
     'en' => array(
         'title' => 'Department Information',
@@ -250,8 +232,6 @@ $translations = array(
         'download' => 'Download',
         'no_documents' => 'No documents',
         'no_text_content' => 'No text content',
-        'skip_info' => 'This training is optional. You can skip it and complete it later.',
-        'skip_button' => 'Skip training',
     ),
     'sk' => array(
         'title' => 'Informácie o oddeleniach',
@@ -263,8 +243,6 @@ $translations = array(
         'download' => 'Stiahnuť',
         'no_documents' => 'Žiadne dokumenty',
         'no_text_content' => 'Žiadny textový obsah',
-        'skip_info' => 'Toto školenie je voliteľné. Môžete ho preskočiť a prejsť si neskôr.',
-        'skip_button' => 'Preskočiť školenie',
     ),
     'uk' => array(
         'title' => 'Інформація про відділи',
@@ -276,8 +254,6 @@ $translations = array(
         'download' => 'Завантажити',
         'no_documents' => 'Немає документів',
         'no_text_content' => 'Немає текстового вмісту',
-        'skip_info' => 'Це навчання є необов\'язковим. Ви можете пропустити його і пройти пізніше.',
-        'skip_button' => 'Пропустити навчання',
     ),
 );
 
@@ -354,33 +330,26 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
                                     <div class="saw-docs-list">
                                         <?php foreach ($dept['documents'] as $doc): ?>
                                         <?php
-                                        $file_url = content_url() . '/uploads' . $doc['file_path'];
+                                        $file_url = content_url() . '/uploads' . (strpos($doc['file_path'], '/') === 0 ? '' : '/') . $doc['file_path'];
                                         $filename = $doc['file_name'];
                                         $file_ext = strtoupper(pathinfo($filename, PATHINFO_EXTENSION));
-                                        $file_size = isset($doc['file_size']) ? size_format($doc['file_size']) : '';
                                         ?>
-                                        <a href="<?php echo esc_url($file_url); ?>"
+                                        <a href="<?php echo esc_url($file_url); ?>" 
+                                           target="_blank" 
                                            class="saw-doc-card"
-                                           download="<?php echo esc_attr($filename); ?>">
+                                           download>
                                             <div class="saw-doc-icon">📄</div>
                                             <div class="saw-doc-info">
-                                                <div class="saw-doc-name">
-                                                    <?php echo esc_html($filename); ?>
-                                                </div>
+                                                <div class="saw-doc-name"><?php echo esc_html($filename); ?></div>
                                                 <div class="saw-doc-meta">
-                                                    <?php if ($file_ext): ?>
                                                     <span class="saw-doc-badge"><?php echo esc_html($file_ext); ?></span>
-                                                    <?php endif; ?>
-                                                    <?php if ($file_size): ?>
-                                                    <span class="saw-doc-size"><?php echo esc_html($file_size); ?></span>
-                                                    <?php endif; ?>
                                                 </div>
                                             </div>
                                         </a>
                                         <?php endforeach; ?>
                                     </div>
                                     <?php else: ?>
-                                    <p><?php echo esc_html($t['no_documents']); ?></p>
+                                    <p class="saw-docs-empty"><?php echo esc_html($t['no_documents']); ?></p>
                                     <?php endif; ?>
                                 </div>
                                 
@@ -390,27 +359,11 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
-
+            
         </div>
     </div>
     
-    <?php if ($context === 'invitation' || $context === 'visitor_info'): ?>
-    <!-- Skip button for invitation/visitor_info mode -->
-    <div class="saw-panel-skip">
-        <p class="saw-panel-skip-info">
-            💡 <?php echo esc_html($t['skip_info']); ?>
-        </p>
-        <form method="POST" style="display: inline-block;">
-            <?php wp_nonce_field($nonce_name, $nonce_field); ?>
-            <input type="hidden" name="<?php echo esc_attr($action_name); ?>" value="skip_training">
-            <button type="submit" class="saw-panel-skip-btn">
-                ⏭️ <?php echo esc_html($t['skip_button']); ?>
-            </button>
-        </form>
-    </div>
-    <?php endif; ?>
-    
-    <!-- UNIFIED Floating Panel -->
+    <!-- Floating Panel -->
     <form method="POST" id="department-form" class="saw-panel-confirm">
         <?php wp_nonce_field($nonce_name, $nonce_field); ?>
         <input type="hidden" name="<?php echo esc_attr($action_name); ?>" value="<?php echo esc_attr($complete_action); ?>">
@@ -439,7 +392,6 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
 (function() {
     'use strict';
 
-    // Accordion functionality
     document.querySelectorAll('.saw-accordion-header').forEach(function(header) {
         header.addEventListener('click', function() {
             var item = this.closest('.saw-accordion-item');
@@ -447,7 +399,6 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
         });
     });
 
-    // Checkbox listener
     var checkbox = document.getElementById('department-confirmed');
     var continueBtn = document.getElementById('continue-btn');
     var wrapper = document.getElementById('checkbox-wrapper');
@@ -456,11 +407,7 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
         checkbox.addEventListener('change', function() {
             continueBtn.disabled = !this.checked;
             if (wrapper) {
-                if (this.checked) {
-                    wrapper.classList.add('checked');
-                } else {
-                    wrapper.classList.remove('checked');
-                }
+                wrapper.classList.toggle('checked', this.checked);
             }
         });
     }

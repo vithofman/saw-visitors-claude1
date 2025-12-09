@@ -764,10 +764,11 @@ class SAW_Visitor_Info_Controller {
     <?php wp_head(); ?>
 </head>
 <body class="saw-visitor-info-training saw-page-aurora">
-    <div style="position:fixed;top:0;left:0;right:0;background:rgba(15,23,42,0.95);backdrop-filter:blur(20px);padding:1rem;z-index:1000;text-align:center;border-bottom:1px solid rgba(148,163,184,0.15);">
-        <span style="color:#f9fafb;font-weight:600;"><?php echo $step_number; ?> / <?php echo $total_steps; ?></span>
+    <!-- Floating step badge (transparent header) -->
+    <div style="position:fixed;top:1rem;left:50%;transform:translateX(-50%);z-index:1000;pointer-events:none;">
+        <span style="display:inline-block;background:rgba(0,0,0,0.4);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:rgba(255,255,255,0.9);font-weight:600;font-size:0.875rem;padding:0.5rem 1rem;border-radius:20px;border:1px solid rgba(255,255,255,0.1);"><?php echo $step_number; ?> / <?php echo $total_steps; ?></span>
     </div>
-    <div style="padding-top:60px;">
+    <div>
         <?php include $template_path; ?>
     </div>
     <?php wp_footer(); ?>

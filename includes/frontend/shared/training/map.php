@@ -4,20 +4,18 @@
  * Works for Terminal, Invitation and Visitor Info flows
  * 
  * @package SAW_Visitors
- * @version 3.5.1
+ * @version 3.9.9
  * 
- * ZMĚNY:
- * - v3.5.0: Podpora pro visitor_info kontext (Info Portal)
- * - v3.5.1: Oprava PDF URL konstrukce pro různé formáty (attachment ID, URL, cesta)
+ * ZMĚNA v 3.9.9:
+ * - REMOVED: Skip training sekce úplně odstraněna
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-// ===== CONTEXT DETECTION (v3.5.0) =====
-// Determine which flow we're in: terminal, invitation, or visitor_info
-$context = 'terminal'; // default
+// ===== CONTEXT DETECTION =====
+$context = 'terminal';
 if (isset($is_invitation) && $is_invitation === true) {
     $context = 'invitation';
 }
@@ -25,7 +23,6 @@ if (isset($is_visitor_info) && $is_visitor_info === true) {
     $context = 'visitor_info';
 }
 
-// Context-specific form settings
 $context_settings = array(
     'terminal' => array(
         'nonce_name' => 'saw_terminal_step',
@@ -52,19 +49,13 @@ $nonce_name = $ctx['nonce_name'];
 $nonce_field = $ctx['nonce_field'];
 $action_name = $ctx['action_name'];
 $complete_action = $ctx['complete_action'];
-// ===== END CONTEXT DETECTION =====
-
-// Detect flow type (legacy support)
-$is_invitation = ($context === 'invitation');
 
 // Get data from appropriate flow
 if ($context === 'invitation') {
-    // Invitation flow
     $session = SAW_Session_Manager::instance();
     $flow = $session->get('invitation_flow');
     $lang = $flow['language'] ?? 'cs';
     
-    // Get visitor ID from invitation flow
     global $wpdb;
     $visit = $wpdb->get_row($wpdb->prepare(
         "SELECT * FROM {$wpdb->prefix}saw_visits WHERE id = %d",
@@ -84,7 +75,7 @@ if ($context === 'invitation') {
         }
     }
     
-    // Get PDF path from training content
+    // Load PDF path from DB
     $pdf_path = '';
     if ($visit) {
         $language_id = $wpdb->get_var($wpdb->prepare(
@@ -103,47 +94,47 @@ if ($context === 'invitation') {
                 $language_id
             ));
             
-            if ($content && !empty($content->pdf_map_path)) {
-                $pdf_path = $content->pdf_map_path;
+            if ($content) {
+                $pdf_path = $content->pdf_map_path ?? '';
             }
         }
     }
 } elseif ($context === 'visitor_info') {
-    // Visitor Info Portal flow - data passed from controller
     $flow = isset($flow) ? $flow : array();
     $lang = isset($flow['language']) ? $flow['language'] : 'cs';
     $visitor_id = isset($flow['visitor_id']) ? $flow['visitor_id'] : null;
     $pdf_path = isset($pdf_path) ? $pdf_path : '';
 } else {
-    // Terminal flow
     $flow = isset($flow) ? $flow : [];
     $lang = isset($flow['language']) ? $flow['language'] : 'cs';
     $visitor_id = isset($flow['visitor_ids'][0]) ? $flow['visitor_ids'][0] : null;
     $pdf_path = isset($pdf_path) ? $pdf_path : '';
 }
 
-// Build PDF URL - handle various formats
 $has_pdf = !empty($pdf_path);
 $pdf_url = '';
+
 if ($has_pdf) {
-    // If it's a numeric ID, it's an attachment
-    if (is_numeric($pdf_path)) {
-        $pdf_url = wp_get_attachment_url((int) $pdf_path);
-    }
-    // If it starts with http, it's already a full URL
-    elseif (strpos($pdf_path, 'http') === 0) {
+    // If it's a full URL already
+    if (strpos($pdf_path, 'http') === 0) {
         $pdf_url = $pdf_path;
     }
-    // If it starts with /, it's a relative path from uploads
-    elseif (strpos($pdf_path, '/') === 0) {
-        $pdf_url = content_url() . '/uploads' . $pdf_path;
+    // If it's an attachment ID
+    elseif (is_numeric($pdf_path)) {
+        $pdf_url = wp_get_attachment_url($pdf_path);
+        if (!$pdf_url) {
+            $has_pdf = false;
+        }
+    }
+    // If it starts with /uploads or similar
+    elseif (strpos($pdf_path, '/uploads') !== false) {
+        $pdf_url = content_url() . $pdf_path;
     }
     // Otherwise assume it's a path without leading slash
     else {
         $pdf_url = content_url() . '/uploads/' . ltrim($pdf_path, '/');
     }
     
-    // Verify URL is valid
     if (empty($pdf_url)) {
         $has_pdf = false;
     }
@@ -162,7 +153,6 @@ if ($visitor_id) {
     }
 }
 
-// Translations
 $translations = array(
     'cs' => array(
         'confirm' => 'Potvrzuji seznámení s mapou',
@@ -172,8 +162,6 @@ $translations = array(
         'prev' => 'Předchozí',
         'next' => 'Další',
         'no_pdf' => 'Mapa není k dispozici',
-        'skip_info' => 'Toto školení je volitelné. Můžete ho přeskočit a projít si později.',
-        'skip_button' => 'Přeskočit školení',
     ),
     'en' => array(
         'confirm' => 'I confirm map review',
@@ -183,8 +171,6 @@ $translations = array(
         'prev' => 'Previous',
         'next' => 'Next',
         'no_pdf' => 'Map not available',
-        'skip_info' => 'This training is optional. You can skip it and complete it later.',
-        'skip_button' => 'Skip training',
     ),
     'sk' => array(
         'confirm' => 'Potvrdzujem oboznámenie s mapou',
@@ -194,8 +180,6 @@ $translations = array(
         'prev' => 'Predchádzajúce',
         'next' => 'Ďalšie',
         'no_pdf' => 'Mapa nie je k dispozícii',
-        'skip_info' => 'Toto školenie je voliteľné. Môžete ho preskočiť a prejsť si neskôr.',
-        'skip_button' => 'Preskočiť školenie',
     ),
     'uk' => array(
         'confirm' => 'Підтверджую ознайомлення з картою',
@@ -205,8 +189,6 @@ $translations = array(
         'prev' => 'Попередній',
         'next' => 'Наступний',
         'no_pdf' => 'Карта недоступна',
-        'skip_info' => 'Це навчання є необов\'язковим. Ви можете пропустити його і пройти пізніше.',
-        'skip_button' => 'Пропустити навчання',
     ),
 );
 
@@ -261,7 +243,7 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
         <div id="pdf-progress-fill" class="saw-video-progress-fill" style="width: 0%;"></div>
     </div>
     
-    <!-- Floating Actions -->
+    <!-- Floating Actions - NO skip button -->
     <form method="POST" id="map-form" class="saw-panel-confirm">
         <?php wp_nonce_field($nonce_name, $nonce_field); ?>
         <input type="hidden" name="<?php echo esc_attr($action_name); ?>" value="<?php echo esc_attr($complete_action); ?>">
@@ -289,26 +271,10 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
     <?php endif; ?>
 </div>
 
-<?php if ($context === 'invitation' || $context === 'visitor_info'): ?>
-<!-- Skip button for invitation/visitor_info mode -->
-<div class="saw-panel-skip">
-    <p class="saw-panel-skip-info">
-        💡 <?php echo esc_html($t['skip_info']); ?>
-    </p>
-    <form method="POST" style="display: inline-block;">
-        <?php wp_nonce_field($nonce_name, $nonce_field); ?>
-        <input type="hidden" name="<?php echo esc_attr($action_name); ?>" value="skip_training">
-        <button type="submit" class="saw-panel-skip-btn">
-            ⏭️ <?php echo esc_html($t['skip_button']); ?>
-        </button>
-    </form>
-</div>
-<?php endif; ?>
-
+<!-- NO skip button - removed in v3.9.9 -->
 
 <?php if ($has_pdf): ?>
-    <?php 
-// Načti PDF viewer script
+<?php 
 $pdf_viewer_path = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/assets/js/terminal/pdf-viewer.js';
 $pdf_viewer_url = SAW_VISITORS_PLUGIN_URL . 'includes/frontend/terminal/assets/js/terminal/pdf-viewer.js';
 
@@ -333,7 +299,6 @@ if (file_exists($pdf_viewer_path)):
             debug: false,
             
             onComplete: function(data) {
-                // Hide hint and progress bar when completed
                 var hint = document.getElementById('pdf-hint-message');
                 var progressBar = document.getElementById('pdf-progress-bar');
                 if (hint) hint.style.display = 'none';
@@ -343,17 +308,17 @@ if (file_exists($pdf_viewer_path)):
                     }, 400);
                 }
                 
-                // Enable checkbox
                 var checkbox = document.getElementById('map-confirmed');
                 var wrapper = document.getElementById('checkbox-wrapper');
                 if (checkbox) {
                     checkbox.disabled = false;
-                    if (wrapper) wrapper.classList.add('checked');
+                }
+                if (wrapper) {
+                    wrapper.classList.add('checked');
                 }
             },
             
             onPageChange: function(data) {
-                // Hide loading on first page
                 if (data.currentPage === 1) {
                     var loading = document.getElementById('pdf-loading');
                     if (loading) loading.style.display = 'none';
@@ -362,32 +327,49 @@ if (file_exists($pdf_viewer_path)):
                     var indicator = document.getElementById('pdf-page-indicator');
                     
                     if (canvas) canvas.style.display = 'block';
-                    if (indicator) indicator.style.display = 'block';
+                    if (indicator) indicator.style.display = 'flex';
                     
-                    // Show hint and progress bar only if multiple pages (> 1)
-                    if (data.totalPages > 1) {
-                        var hint = document.getElementById('pdf-hint-message');
-                        var progressBar = document.getElementById('pdf-progress-bar');
-                        if (hint) hint.style.display = 'flex';
-                        if (progressBar) progressBar.style.display = 'block';
-                    }
+                    var hint = document.getElementById('pdf-hint-message');
+                    var progressBar = document.getElementById('pdf-progress-bar');
+                    var navigation = document.getElementById('pdf-navigation');
+                    
+                    if (hint && data.totalPages > 1) hint.style.display = 'flex';
+                    if (progressBar && data.totalPages > 1) progressBar.style.display = 'block';
+                    if (navigation && data.totalPages > 1) navigation.style.display = 'flex';
                 }
-
-                // Show navigation always (if it exists)
-                var navigation = document.getElementById('pdf-navigation');
-                if (navigation) navigation.style.display = 'flex';
-
                 
-                // Update progress bar
-                var progressFill = document.getElementById('pdf-progress-fill');
-                if (progressFill && data.totalPages > 1) {
-                    var progress = (data.viewedPages / data.totalPages) * 100;
-                    progressFill.style.width = progress + '%';
+                var indicator = document.getElementById('pdf-page-indicator');
+                if (indicator) {
+                    indicator.textContent = data.currentPage + ' / ' + data.totalPages;
                 }
+                
+                var progressFill = document.getElementById('pdf-progress-fill');
+                if (progressFill && data.totalPages > 0) {
+                    var percent = (data.viewedPages / data.totalPages) * 100;
+                    progressFill.style.width = percent + '%';
+                }
+                
+                var prevBtn = document.getElementById('pdf-prev');
+                var nextBtn = document.getElementById('pdf-next');
+                if (prevBtn) prevBtn.disabled = (data.currentPage <= 1);
+                if (nextBtn) nextBtn.disabled = (data.currentPage >= data.totalPages);
             }
         });
         
-        // Checkbox listener
+        var prevBtn = document.getElementById('pdf-prev');
+        var nextBtn = document.getElementById('pdf-next');
+        
+        if (prevBtn) {
+            prevBtn.addEventListener('click', function() {
+                viewer.previousPage();
+            });
+        }
+        if (nextBtn) {
+            nextBtn.addEventListener('click', function() {
+                viewer.nextPage();
+            });
+        }
+        
         var checkbox = document.getElementById('map-confirmed');
         var continueBtn = document.getElementById('continue-btn');
         var wrapper = document.getElementById('checkbox-wrapper');
@@ -396,11 +378,7 @@ if (file_exists($pdf_viewer_path)):
             checkbox.addEventListener('change', function() {
                 continueBtn.disabled = !this.checked;
                 if (wrapper) {
-                    if (this.checked) {
-                        wrapper.classList.add('checked');
-                    } else {
-                        wrapper.classList.remove('checked');
-                    }
+                    wrapper.classList.toggle('checked', this.checked);
                 }
             });
         }

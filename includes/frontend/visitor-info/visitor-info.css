@@ -467,6 +467,50 @@ body.saw-visitor-info-page {
 }
 
 /* ============================================
+   TRAINING FLOW HEADER (transparent)
+   Progress indicator - step X / Y
+   ============================================ */
+
+.saw-info-training-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 1rem;
+    z-index: 1000;
+    text-align: center;
+    /* TRANSPARENT - no background, no shadow */
+    background: transparent;
+    pointer-events: none;
+}
+
+.saw-info-progress {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    pointer-events: auto;
+}
+
+.saw-info-step-indicator {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.7);
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.saw-info-training-content {
+    /* No padding-top needed since header is transparent */
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+
+/* ============================================
    FULLSCREEN MODE (video, map training steps)
    ============================================ */
 
