@@ -44,6 +44,17 @@ $person_count_label = function($count) use ($tr) {
     }
 };
 
+// Permission check for risks editing
+$can_edit_risks = false;
+if (current_user_can('manage_options')) {
+    $can_edit_risks = true;
+} elseif (function_exists('saw_get_current_role')) {
+    $user_role = saw_get_current_role();
+    $can_edit_risks = in_array($user_role, ['super_admin', 'admin', 'super_manager', 'manager']);
+} elseif (current_user_can('edit_posts')) {
+    $can_edit_risks = true;
+}
+
 if (empty($item)) {
     echo '<div class="saw-alert saw-alert-danger">' . esc_html($tr('error_not_found', 'Návštěva nebyla nalezena')) . '</div>';
     return;
@@ -509,26 +520,37 @@ $documents = array_filter($materials, fn($m) => $m['material_type'] === 'documen
 <!-- ============================================ -->
 <!-- RISKS INFORMATION CARD                       -->
 <!-- ============================================ -->
-<?php if (!empty($materials) || !empty($item['invitation_token'])): ?>
+<?php if (!empty($materials) || !empty($item['invitation_token']) || $can_edit_risks): ?>
 <div class="saw-industrial-section saw-risks-section">
     <div class="saw-section-head">
         <h4 class="saw-section-title saw-section-title-accent">⚠️ <?php echo esc_html($tr('section_risks', 'Informace o rizicích')); ?></h4>
-        <?php if (!empty($materials)): ?>
-        <span class="saw-risks-badge saw-risks-badge-uploaded">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="20 6 9 17 4 12"/>
-            </svg>
-            <?php echo esc_html($tr('risks_uploaded', 'Nahráno')); ?>
-        </span>
-        <?php else: ?>
-        <span class="saw-risks-badge saw-risks-badge-waiting">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/>
-                <path d="M12 6v6l4 2"/>
-            </svg>
-            <?php echo esc_html($tr('risks_waiting', 'Čeká na nahrání')); ?>
-        </span>
-        <?php endif; ?>
+        <div class="saw-section-head-actions">
+            <?php if (!empty($materials)): ?>
+            <span class="saw-risks-badge saw-risks-badge-uploaded">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                <?php echo esc_html($tr('risks_uploaded', 'Nahráno')); ?>
+            </span>
+            <?php else: ?>
+            <span class="saw-risks-badge saw-risks-badge-waiting">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 6v6l4 2"/>
+                </svg>
+                <?php echo esc_html($tr('risks_waiting', 'Čeká na nahrání')); ?>
+            </span>
+            <?php endif; ?>
+            <?php if ($can_edit_risks && !empty($item['id'])): ?>
+            <a href="<?php echo esc_url(admin_url('admin.php?page=saw-visits&action=edit-risks&visit_id=' . $item['id'])); ?>" class="saw-risks-edit-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+                <?php echo esc_html($tr('btn_edit', 'Upravit')); ?>
+            </a>
+            <?php endif; ?>
+        </div>
     </div>
     <div class="saw-section-body">
         <?php if (empty($materials)): ?>
@@ -540,6 +562,15 @@ $documents = array_filter($materials, fn($m) => $m['material_type'] === 'documen
                     <line x1="9" y1="15" x2="15" y2="15"/>
                 </svg>
                 <span><?php echo esc_html($tr('risks_empty', 'Pozvaný zatím nenahrál žádné materiály o rizicích')); ?></span>
+                <?php if ($can_edit_risks && !empty($item['id'])): ?>
+                <a href="<?php echo esc_url(admin_url('admin.php?page=saw-visits&action=edit-risks&visit_id=' . $item['id'])); ?>" class="saw-risks-add-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    <?php echo esc_html($tr('btn_add_risks', 'Zadat informace o rizicích')); ?>
+                </a>
+                <?php endif; ?>
             </div>
         <?php else: ?>
             
@@ -1663,6 +1694,56 @@ $documents = array_filter($materials, fn($m) => $m['material_type'] === 'documen
     background: #ef4444;
     border-color: #ef4444;
     color: white;
+}
+
+/* Risks section head actions */
+.saw-section-head-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.saw-risks-edit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 6px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.saw-risks-edit-btn:hover {
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+.saw-risks-add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 10px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.saw-risks-add-btn:hover {
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
 }
 
 /* ============================================

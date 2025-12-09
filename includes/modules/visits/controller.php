@@ -4,7 +4,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visits
- * @version     3.4.0
+ * @version     5.1.0
  */
 
 if (!defined('ABSPATH')) exit;
@@ -28,10 +28,42 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
     }
     
     public function index() {
+        // Handle special actions
+        $action = isset($_GET['action']) ? sanitize_key($_GET['action']) : '';
+        
+        if ($action === 'edit-risks') {
+            $this->handle_edit_risks();
+            return;
+        }
+        
         if (function_exists('saw_can') && !saw_can('list', $this->entity)) {
             wp_die('Nemáte oprávnění.', 403);
         }
         $this->render_list_view();
+    }
+    
+    /**
+     * Handle risks editing action
+     * 
+     * @since 5.1.0
+     */
+    private function handle_edit_risks() {
+        $visit_id = isset($_GET['visit_id']) ? intval($_GET['visit_id']) : 0;
+        
+        if (!$visit_id) {
+            wp_die('Neplatná návštěva.', 'Chyba', ['response' => 400]);
+        }
+        
+        $risks_controller_file = __DIR__ . '/risks/risks-controller.php';
+        
+        if (!file_exists($risks_controller_file)) {
+            wp_die('Risks controller not found.', 'Error', ['response' => 500]);
+        }
+        
+        require_once $risks_controller_file;
+        
+        $controller = new SAW_Visit_Risks_Controller($visit_id);
+        $controller->init();
     }
     
     public function enqueue_assets() {
@@ -479,116 +511,91 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
      * @since 3.4.0
      */
     public function ajax_change_visit_status() {
-    // Verify nonce
-    saw_verify_ajax_unified();
-    
-    $visit_id = intval($_POST['visit_id'] ?? 0);
-    $new_status = sanitize_text_field($_POST['new_status'] ?? '');
-    
-    // Validate inputs
-    if (!$visit_id) {
-        wp_send_json_error(['message' => 'Neplatné ID návštěvy']);
+        saw_verify_ajax_unified();
+        
+        $visit_id = intval($_POST['visit_id'] ?? 0);
+        $new_status = sanitize_text_field($_POST['new_status'] ?? '');
+        
+        if (!$visit_id) {
+            wp_send_json_error(['message' => 'Neplatné ID návštěvy']);
+        }
+        
+        if (!$this->can('edit')) {
+            wp_send_json_error(['message' => 'Nemáte oprávnění měnit stav návštěvy']);
+        }
+        
+        $valid_statuses = ['draft', 'pending', 'confirmed', 'in_progress', 'completed', 'cancelled'];
+        if (!in_array($new_status, $valid_statuses)) {
+            wp_send_json_error(['message' => 'Neplatný stav: ' . $new_status]);
+        }
+        
+        global $wpdb;
+        $table = $wpdb->prefix . 'saw_visits';
+        
+        $visit = $wpdb->get_row($wpdb->prepare(
+            "SELECT id, status, started_at, completed_at FROM {$table} WHERE id = %d",
+            $visit_id
+        ), ARRAY_A);
+        
+        if (!$visit) {
+            wp_send_json_error(['message' => 'Návštěva nenalezena']);
+        }
+        
+        if ($visit['status'] === $new_status) {
+            wp_send_json_error(['message' => 'Návštěva již má tento stav']);
+        }
+        
+        $update_data = ['status' => $new_status];
+        $update_format = ['%s'];
+        
+        $now = current_time('mysql');
+        
+        if ($new_status === 'in_progress' && empty($visit['started_at'])) {
+            $update_data['started_at'] = $now;
+            $update_format[] = '%s';
+        }
+        
+        if ($new_status === 'completed') {
+            $update_data['completed_at'] = $now;
+            $update_format[] = '%s';
+        }
+        
+        if ($visit['status'] === 'completed' && $new_status !== 'completed') {
+            $update_data['completed_at'] = null;
+            $update_format[] = null;
+        }
+        
+        $result = $wpdb->update(
+            $table,
+            $update_data,
+            ['id' => $visit_id],
+            $update_format,
+            ['%d']
+        );
+        
+        if ($result === false) {
+            wp_send_json_error(['message' => 'Chyba databáze: ' . $wpdb->last_error]);
+        }
+        
+        if (class_exists('SAW_Cache')) {
+            SAW_Cache::flush('visits');
+        }
+        
+        $status_labels = [
+            'draft' => 'Koncept',
+            'pending' => 'Čeká',
+            'confirmed' => 'Potvrzeno',
+            'in_progress' => 'Probíhá',
+            'completed' => 'Dokončeno',
+            'cancelled' => 'Zrušeno',
+        ];
+        
+        wp_send_json_success([
+            'message' => 'Stav byl úspěšně změněn',
+            'new_status' => $new_status,
+            'new_status_label' => $status_labels[$new_status] ?? $new_status,
+        ]);
     }
-    
-    // Check permissions
-    if (!$this->can('edit')) {
-        wp_send_json_error(['message' => 'Nemáte oprávnění měnit stav návštěvy']);
-    }
-    
-    // Validate status
-    $valid_statuses = ['draft', 'pending', 'confirmed', 'in_progress', 'completed', 'cancelled'];
-    if (!in_array($new_status, $valid_statuses)) {
-        wp_send_json_error(['message' => 'Neplatný stav: ' . $new_status]);
-    }
-    
-    global $wpdb;
-    $table = $wpdb->prefix . 'saw_visits';
-    
-    // Get current visit
-    $visit = $wpdb->get_row($wpdb->prepare(
-        "SELECT id, status, started_at, completed_at FROM {$table} WHERE id = %d",
-        $visit_id
-    ), ARRAY_A);
-    
-    if (!$visit) {
-        wp_send_json_error(['message' => 'Návštěva nenalezena']);
-    }
-    
-    // Check if status is already set
-    if ($visit['status'] === $new_status) {
-        wp_send_json_error(['message' => 'Návštěva již má tento stav']);
-    }
-    
-    // Prepare update data
-    $update_data = ['status' => $new_status];
-    $update_format = ['%s'];
-    
-    // Handle timestamps based on status change
-    $now = current_time('mysql');
-    
-    // If changing TO in_progress and started_at is empty, set it
-    if ($new_status === 'in_progress' && empty($visit['started_at'])) {
-        $update_data['started_at'] = $now;
-        $update_format[] = '%s';
-    }
-    
-    // If changing TO completed, set completed_at
-    if ($new_status === 'completed') {
-        $update_data['completed_at'] = $now;
-        $update_format[] = '%s';
-    }
-    
-    // If changing FROM completed to something else, clear completed_at
-    if ($visit['status'] === 'completed' && $new_status !== 'completed') {
-        $update_data['completed_at'] = null;
-        $update_format[] = null; // NULL format
-    }
-    
-    // Perform update
-    $result = $wpdb->update(
-        $table,
-        $update_data,
-        ['id' => $visit_id],
-        $update_format,
-        ['%d']
-    );
-    
-    if ($result === false) {
-        wp_send_json_error(['message' => 'Chyba databáze: ' . $wpdb->last_error]);
-    }
-    
-    // Clear cache
-    if (class_exists('SAW_Cache')) {
-        SAW_Cache::flush('visits');
-    }
-    
-    // Log change
-    if (class_exists('SAW_Logger')) {
-        SAW_Logger::info(sprintf(
-            'Visit #%d status changed from "%s" to "%s" by user #%d',
-            $visit_id,
-            $visit['status'],
-            $new_status,
-            get_current_user_id()
-        ));
-    }
-    
-    // Status labels for response
-    $status_labels = [
-        'draft' => 'Koncept',
-        'pending' => 'Čeká',
-        'confirmed' => 'Potvrzeno',
-        'in_progress' => 'Probíhá',
-        'completed' => 'Dokončeno',
-        'cancelled' => 'Zrušeno',
-    ];
-    
-    wp_send_json_success([
-        'message' => 'Stav byl úspěšně změněn',
-        'new_status' => $new_status,
-        'new_status_label' => $status_labels[$new_status] ?? $new_status,
-    ]);
-}
     
     /**
      * AJAX: Extend PIN expiry
@@ -611,7 +618,6 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         
         global $wpdb;
         
-        // If hours=999, use exact_expiry instead of calculation
         if ($hours === 999 && !empty($_POST['exact_expiry'])) {
             $new_expiry_input = sanitize_text_field($_POST['exact_expiry']);
             
@@ -626,10 +632,6 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
                 }
             } catch (Exception $e) {
                 wp_send_json_error(['message' => 'Neplatný formát data']);
-            }
-            
-            if (class_exists('SAW_Logger')) {
-                SAW_Logger::info("PIN exact expiry for visit #{$visit_id}: {$new_expiry}");
             }
         } else {
             if ($hours < 1 || $hours > 720) {
@@ -646,10 +648,6 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
             } else {
                 $new_expiry = date('Y-m-d H:i:s', strtotime("+{$hours} hours"));
             }
-            
-            if (class_exists('SAW_Logger')) {
-                SAW_Logger::info("PIN extended for visit #{$visit_id} to {$new_expiry} (+{$hours}h)");
-            }
         }
         
         $result = $wpdb->update(
@@ -664,13 +662,15 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
             wp_send_json_error(['message' => 'Chyba databáze']);
         }
         
-        SAW_Cache::flush('visits');
+        if (class_exists('SAW_Cache')) {
+            SAW_Cache::flush('visits');
+        }
         
         wp_send_json_success([
             'new_expiry' => date('d.m.Y H:i', strtotime($new_expiry)),
             'new_expiry_raw' => $new_expiry,
             'hours' => $hours === 999 ? 'exact' : $hours,
-            'message' => "PIN úspěšně nastaven"
+            'message' => 'PIN úspěšně nastaven'
         ]);
     }
 
@@ -734,15 +734,6 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
             }
         }
         
-        if (class_exists('SAW_Logger')) {
-            SAW_Logger::info(sprintf(
-                'PIN generated for visit #%d: %s (expires: %s)',
-                $visit_id,
-                $pin_code,
-                $updated_visit['pin_expires_at'] ?? 'no expiry'
-            ));
-        }
-        
         wp_send_json_success([
             'pin_code' => $pin_code,
             'pin_expires_at' => $expiry_formatted,
@@ -779,7 +770,6 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
             wp_send_json_error(['message' => 'Email pro pozvánku není vyplněn']);
         }
         
-        // Ensure PIN exists (generate if not)
         if (empty($visit['pin_code'])) {
             $pin = $this->model->generate_pin($visit_id);
             if (!$pin) {
@@ -788,10 +778,8 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
             $visit = $this->model->get_by_id($visit_id);
         }
         
-        // Generate token
         $token = $this->model->ensure_unique_token($visit['customer_id']);
         
-        // Dynamic expiration based on planned_date_to
         if (!empty($visit['planned_date_to'])) {
             $expires = date('Y-m-d H:i:s', strtotime($visit['planned_date_to'] . ' +1 day'));
         } else {
@@ -815,17 +803,14 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
             wp_send_json_error(['message' => 'Chyba při ukládání tokenu']);
         }
         
-        // Get branch name for email
         $branch_name = $wpdb->get_var($wpdb->prepare(
             "SELECT name FROM {$wpdb->prefix}saw_branches WHERE id = %d",
             $visit['branch_id']
         ));
         
-        // Format dates
         $date_from = !empty($visit['planned_date_from']) ? date('d.m.Y', strtotime($visit['planned_date_from'])) : 'N/A';
         $date_to = !empty($visit['planned_date_to']) ? date('d.m.Y', strtotime($visit['planned_date_to'])) : 'N/A';
         
-        // Send email
         $link = home_url('/visitor-invitation/' . $token . '/');
         
         $subject = 'Pozvánka k návštěvě - ' . get_bloginfo('name');
@@ -858,10 +843,6 @@ S pozdravem,
         
         if (!$sent) {
             wp_send_json_error(['message' => 'Chyba při odesílání emailu']);
-        }
-        
-        if (class_exists('SAW_Logger')) {
-            SAW_Logger::info("Invitation sent: visit #{$visit_id}, email: {$visit['invitation_email']}");
         }
         
         wp_send_json_success([
@@ -897,7 +878,6 @@ S pozdravem,
         
         global $wpdb;
         
-        // Verify branch belongs to customer
         $branch_exists = $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$wpdb->prefix}saw_branches 
              WHERE id = %d AND customer_id = %d AND is_active = 1",

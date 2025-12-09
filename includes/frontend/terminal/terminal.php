@@ -1289,399 +1289,456 @@ class SAW_Terminal_Controller {
      * @updated 3.2.0 - Added Info Portal email integration
      * @return void
      */
-    private function handle_unified_registration() {
-        global $wpdb;
+    /**
+ * Handle unified registration submission
+ *
+ * @since 3.0.0
+ * @updated 3.2.0 - Added Info Portal email integration
+ * @updated 5.1.1 - Fixed visit status update to in_progress with fallback mechanism
+ * @return void
+ */
+private function handle_unified_registration() {
+    global $wpdb;
 
-        $flow = $this->session->get('terminal_flow');
-        $is_planned = ($flow['type'] ?? '') === 'planned';
-        $visit_id = $flow['visit_id'] ?? null;
-        
-        // ===================================
-        // 1. VALIDACE FORMULÁŘE
-        // ===================================
-        
-        $errors = [];
-        
-        $existing_visitor_ids = $_POST['existing_visitor_ids'] ?? [];
-        $new_visitors = $_POST['new_visitors'] ?? [];
+    $flow = $this->session->get('terminal_flow');
+    $is_planned = ($flow['type'] ?? '') === 'planned';
+    $visit_id = $flow['visit_id'] ?? null;
+    
+    // ===================================
+    // 1. VALIDACE FORMULÁŘE
+    // ===================================
+    
+    $errors = [];
+    
+    $existing_visitor_ids = $_POST['existing_visitor_ids'] ?? [];
+    $new_visitors = $_POST['new_visitors'] ?? [];
 
-        if (empty($existing_visitor_ids) && empty($new_visitors)) {
-            $errors[] = __('Musíte vybrat nebo zadat alespoň jednoho návštěvníka', 'saw-visitors');
-        }
-        
-        if (!empty($new_visitors) && is_array($new_visitors)) {
-            foreach ($new_visitors as $idx => $visitor) {
-                $is_empty = empty($visitor['first_name']) && empty($visitor['last_name']) && empty($visitor['position']) && empty($visitor['email']) && empty($visitor['phone']);
-                
-                if ($is_empty) {
-                    continue;
-                }
-                
-                if (empty($visitor['first_name'])) {
-                    $errors[] = sprintf(__('Jméno je povinné pro návštěvníka %d', 'saw-visitors'), $idx + 1);
-                }
-                if (empty($visitor['last_name'])) {
-                    $errors[] = sprintf(__('Příjmení je povinné pro návštěvníka %d', 'saw-visitors'), $idx + 1);
-                }
-                if (!empty($visitor['email']) && !is_email($visitor['email'])) {
-                    $errors[] = sprintf(__('Neplatný email pro návštěvníka %d', 'saw-visitors'), $idx + 1);
-                }
-            }
-        }
-
-        if (!$is_planned) {
-            $is_individual = isset($_POST['is_individual']) && $_POST['is_individual'] == '1';
+    if (empty($existing_visitor_ids) && empty($new_visitors)) {
+        $errors[] = __('Musíte vybrat nebo zadat alespoň jednoho návštěvníka', 'saw-visitors');
+    }
+    
+    if (!empty($new_visitors) && is_array($new_visitors)) {
+        foreach ($new_visitors as $idx => $visitor) {
+            $is_empty = empty($visitor['first_name']) && empty($visitor['last_name']) && empty($visitor['position']) && empty($visitor['email']) && empty($visitor['phone']);
             
-            if (!$is_individual && empty($_POST['company_name'])) {
-                $errors[] = __('Název firmy je povinný', 'saw-visitors');
+            if ($is_empty) {
+                continue;
             }
             
-            if (empty($_POST['host_ids']) || !is_array($_POST['host_ids'])) {
-                $errors[] = __('Musíte vybrat alespoň jednoho hostitele', 'saw-visitors');
+            if (empty($visitor['first_name'])) {
+                $errors[] = sprintf(__('Jméno je povinné pro návštěvníka %d', 'saw-visitors'), $idx + 1);
+            }
+            if (empty($visitor['last_name'])) {
+                $errors[] = sprintf(__('Příjmení je povinné pro návštěvníka %d', 'saw-visitors'), $idx + 1);
+            }
+            if (!empty($visitor['email']) && !is_email($visitor['email'])) {
+                $errors[] = sprintf(__('Neplatný email pro návštěvníka %d', 'saw-visitors'), $idx + 1);
             }
         }
+    }
+
+    if (!$is_planned) {
+        $is_individual = isset($_POST['is_individual']) && $_POST['is_individual'] == '1';
         
-        if (!empty($errors)) {
-            $this->set_error(implode('<br>', $errors));
+        if (!$is_individual && empty($_POST['company_name'])) {
+            $errors[] = __('Název firmy je povinný', 'saw-visitors');
+        }
+        
+        if (empty($_POST['host_ids']) || !is_array($_POST['host_ids'])) {
+            $errors[] = __('Musíte vybrat alespoň jednoho hostitele', 'saw-visitors');
+        }
+    }
+    
+    if (!empty($errors)) {
+        $this->set_error(implode('<br>', $errors));
+        $this->render_registration_form();
+        return;
+    }
+    
+    // ===================================
+    // 2. VYTVOŘENÍ/POUŽITÍ VISIT
+    // ===================================
+    
+    if ($is_planned) {
+        if (!$visit_id) {
+            $this->set_error(__('Chyba: Návštěva nebyla nalezena', 'saw-visitors'));
             $this->render_registration_form();
             return;
         }
         
-        // ===================================
-        // 2. VYTVOŘENÍ/POUŽITÍ VISIT
-        // ===================================
+        // ✅ OPRAVA v5.1.1: Kontrola aktuálního stavu a logování
+        $current_visit = $wpdb->get_row($wpdb->prepare(
+            "SELECT status, started_at FROM {$wpdb->prefix}saw_visits WHERE id = %d",
+            $visit_id
+        ), ARRAY_A);
         
-        if ($is_planned) {
-            if (!$visit_id) {
-                $this->set_error(__('Chyba: Návštěva nebyla nalezena', 'saw-visitors'));
-                $this->render_registration_form();
-                return;
-            }
-            
-            $wpdb->update(
-                $wpdb->prefix . 'saw_visits',
-                [
-                    'status' => 'in_progress',
-                    'started_at' => current_time('mysql'),
-                ],
-                ['id' => $visit_id],
-                ['%s', '%s'],
-                ['%d']
-            );
-            
+        $update_data = [
+            'status' => 'in_progress',
+        ];
+        
+        // Nastav started_at pouze pokud ještě není nastaveno
+        if (empty($current_visit['started_at'])) {
+            $update_data['started_at'] = current_time('mysql');
+        }
+        
+        $update_result = $wpdb->update(
+            $wpdb->prefix . 'saw_visits',
+            $update_data,
+            ['id' => $visit_id],
+            empty($current_visit['started_at']) ? ['%s', '%s'] : ['%s'],
+            ['%d']
+        );
+        
+        // Logování pro debugging
+        if ($update_result === false) {
+            error_log("[SAW Terminal] CRITICAL: Failed to update visit #{$visit_id} to in_progress. DB Error: " . $wpdb->last_error);
+        } elseif ($update_result === 0) {
+            error_log("[SAW Terminal] INFO: Visit #{$visit_id} update affected 0 rows (was: {$current_visit['status']}, target: in_progress)");
         } else {
-            // WALK-IN: Vytvoř novou visit
-            
-            $company_id = null;
-            $is_individual = isset($_POST['is_individual']) && $_POST['is_individual'] == '1';
-            
-            if (!$is_individual) {
-                require_once SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/model.php';
-                $visits_config = require SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/config.php';
-                $visits_model = new SAW_Module_Visits_Model($visits_config);
+            error_log("[SAW Terminal] SUCCESS: Visit #{$visit_id} status changed from '{$current_visit['status']}' to 'in_progress'");
+        }
+        
+    } else {
+        // WALK-IN: Vytvoř novou visit
+        
+        $company_id = null;
+        $is_individual = isset($_POST['is_individual']) && $_POST['is_individual'] == '1';
+        
+        if (!$is_individual) {
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/model.php';
+            $visits_config = require SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/config.php';
+            $visits_model = new SAW_Module_Visits_Model($visits_config);
 
-                $company_name = sanitize_text_field($_POST['company_name']);
-                $company_id = $visits_model->find_or_create_company($this->branch_id, $company_name, $this->customer_id);
-                
-                if (is_wp_error($company_id)) {
-                    $this->set_error(__('Chyba při vytváření firmy: ', 'saw-visitors') . $company_id->get_error_message());
-                    $this->render_registration_form();
-                    return;
-                }
-            }
+            $company_name = sanitize_text_field($_POST['company_name']);
+            $company_id = $visits_model->find_or_create_company($this->branch_id, $company_name, $this->customer_id);
             
-            $today = current_time('Y-m-d');
-            
-            $visit_data = [
-                'customer_id' => $this->customer_id,
-                'branch_id' => $this->branch_id,
-                'company_id' => $company_id,
-                'visit_type' => 'walk_in',
-                'status' => 'in_progress',
-                'planned_date_from' => $today,
-                'planned_date_to' => $today,
-                'started_at' => current_time('mysql'),
-                'purpose' => null,
-                'created_at' => current_time('mysql'),
-            ];
-            
-            $result = $wpdb->insert(
-                $wpdb->prefix . 'saw_visits',
-                $visit_data,
-                ['%d', '%d', $company_id ? '%d' : '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s']
-            );
-            
-            if (!$result) {
-                $this->set_error(__('Chyba při vytváření návštěvy', 'saw-visitors'));
+            if (is_wp_error($company_id)) {
+                $this->set_error(__('Chyba při vytváření firmy: ', 'saw-visitors') . $company_id->get_error_message());
                 $this->render_registration_form();
                 return;
             }
-            
-            $visit_id = $wpdb->insert_id;
-            
-            // Save hosts
-            $host_ids = array_map('intval', $_POST['host_ids']);
-            foreach ($host_ids as $host_id) {
-                $wpdb->insert(
-                    $wpdb->prefix . 'saw_visit_hosts',
-                    [
-                        'visit_id' => $visit_id,
-                        'user_id' => $host_id,
-                        'created_at' => current_time('mysql'),
-                    ],
-                    ['%d', '%d', '%s']
-                );
-            }
         }
         
-        // ===================================
-        // 3. ZPRACOVÁNÍ NÁVŠTĚVNÍKŮ
-        // ===================================
+        $today = current_time('Y-m-d');
         
-        $language = $flow['language'] ?? 'cs';
-        $has_training_content = false;
-        $language_id = $wpdb->get_var($wpdb->prepare(
-            "SELECT id FROM {$wpdb->prefix}saw_training_languages 
-             WHERE customer_id = %d AND language_code = %s",
-            $this->customer_id, $language
-        ));
-        if ($language_id) {
-            $content = $wpdb->get_row($wpdb->prepare(
-                "SELECT id, video_url, pdf_map_path, risks_text, additional_text 
-                 FROM {$wpdb->prefix}saw_training_content 
-                 WHERE customer_id = %d AND branch_id = %d AND language_id = %d",
-                $this->customer_id, $this->branch_id, $language_id
-            ), ARRAY_A);
-            
-            if ($content) {
-                $has_training_content = (
-                    !empty($content['video_url']) ||
-                    !empty($content['pdf_map_path']) ||
-                    !empty($content['risks_text']) ||
-                    !empty($content['additional_text'])
-                );
-                
-                if (!$has_training_content) {
-                    $dept_count = $wpdb->get_var($wpdb->prepare(
-                        "SELECT COUNT(*) FROM {$wpdb->prefix}saw_training_department_content
-                         WHERE training_content_id = %d 
-                           AND (text_content IS NOT NULL AND text_content != '')",
-                        $content['id']
-                    ));
-                    $has_training_content = ($dept_count > 0);
-                }
-            }
+        $visit_data = [
+            'customer_id' => $this->customer_id,
+            'branch_id' => $this->branch_id,
+            'company_id' => $company_id,
+            'visit_type' => 'walk_in',
+            'status' => 'in_progress',
+            'planned_date_from' => $today,
+            'planned_date_to' => $today,
+            'started_at' => current_time('mysql'),
+            'purpose' => null,
+            'created_at' => current_time('mysql'),
+        ];
+        
+        $result = $wpdb->insert(
+            $wpdb->prefix . 'saw_visits',
+            $visit_data,
+            ['%d', '%d', $company_id ? '%d' : '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s']
+        );
+        
+        if (!$result) {
+            $this->set_error(__('Chyba při vytváření návštěvy', 'saw-visitors'));
+            $this->render_registration_form();
+            return;
         }
         
-        $visitor_ids = [];
-        $any_needs_training = false;
+        $visit_id = $wpdb->insert_id;
         
-        // ===================================
-        // 3a. EXISTING VISITORS
-        // ===================================
-        if (!empty($existing_visitor_ids) && is_array($existing_visitor_ids)) {
-            foreach ($existing_visitor_ids as $visitor_id) {
-                $visitor_id = intval($visitor_id);
-                
-                $has_completed_training = !empty($wpdb->get_var($wpdb->prepare(
-                    "SELECT training_completed_at FROM {$wpdb->prefix}saw_visitors 
-                     WHERE id = %d AND training_completed_at IS NOT NULL",
-                    $visitor_id
-                )));
-                
-                $training_skip = isset($_POST['existing_training_skip'][$visitor_id]) ? 1 : 0;
-                
-                $training_status = 'pending';
-                if ($training_skip) {
-                    $training_status = 'skipped';
-                } elseif ($has_completed_training) {
-                    $training_status = 'completed';
-                } elseif (!$has_training_content) {
-                    $training_status = 'not_available';
-                } else {
-                    $training_status = 'in_progress';
-                    $any_needs_training = true;
-                }
-                
-                if (!$training_skip && !$has_completed_training && $has_training_content) {
-                    $update_data = [
-                        'participation_status' => 'confirmed',
-                        'current_status' => 'present',
-                        'training_status' => $training_status,
-                        'training_skipped' => 0,
-                        'training_started_at' => current_time('mysql'),
-                        'training_step_video' => 0,
-                        'training_step_map' => 0,
-                        'training_step_risks' => 0,
-                        'training_step_additional' => 0,
-                        'training_step_department' => 0,
-                    ];
-                    
-                    $wpdb->update(
-                        $wpdb->prefix . 'saw_visitors',
-                        $update_data,
-                        ['id' => $visitor_id],
-                        ['%s', '%s', '%s', '%d', '%s', '%d', '%d', '%d', '%d', '%d'],
-                        ['%d']
-                    );
-                } else {
-                    $update_data = [
-                        'participation_status' => 'confirmed',
-                        'current_status' => 'present',
-                        'training_status' => $training_status,
-                        'training_skipped' => $training_skip,
-                    ];
-                    
-                    $wpdb->update(
-                        $wpdb->prefix . 'saw_visitors',
-                        $update_data,
-                        ['id' => $visitor_id],
-                        ['%s', '%s', '%s', '%d'],
-                        ['%d']
-                    );
-                }
-                
-                $visitor_ids[] = $visitor_id;
-                
-                $wpdb->insert(
-                    $wpdb->prefix . 'saw_visit_daily_logs',
-                    [
-                        'customer_id' => $this->customer_id,
-                        'branch_id' => $this->branch_id,
-                        'visit_id' => $visit_id,
-                        'visitor_id' => $visitor_id,
-                        'log_date' => current_time('Y-m-d'),
-                        'checked_in_at' => current_time('mysql'),
-                        'created_at' => current_time('mysql'),
-                    ],
-                    ['%d', '%d', '%d', '%d', '%s', '%s', '%s']
-                );
-            }
-        }
-        
-        // ===================================
-        // 3b. NEW VISITORS
-        // ===================================
-        if (!empty($new_visitors) && is_array($new_visitors)) {
-            foreach ($new_visitors as $idx => $visitor_data) {
-                if (empty($visitor_data['first_name']) && empty($visitor_data['last_name'])) {
-                    continue;
-                }
-                
-                $training_skipped = isset($visitor_data['training_skipped']) && $visitor_data['training_skipped'] == '1' ? 1 : 0;
-                
-                $training_status = 'pending';
-                if ($training_skipped) {
-                    $training_status = 'skipped';
-                } elseif (!$has_training_content) {
-                    $training_status = 'not_available';
-                } else {
-                    $training_status = 'in_progress';
-                    $any_needs_training = true;
-                }
-                
-                $visitor_insert = [
-                    'customer_id' => $this->customer_id,
-                    'branch_id' => $this->branch_id,
+        // Save hosts
+        $host_ids = array_map('intval', $_POST['host_ids']);
+        foreach ($host_ids as $host_id) {
+            $wpdb->insert(
+                $wpdb->prefix . 'saw_visit_hosts',
+                [
                     'visit_id' => $visit_id,
-                    'first_name' => sanitize_text_field($visitor_data['first_name']),
-                    'last_name' => sanitize_text_field($visitor_data['last_name']),
-                    'position' => !empty($visitor_data['position']) ? sanitize_text_field($visitor_data['position']) : null,
-                    'email' => !empty($visitor_data['email']) ? sanitize_email($visitor_data['email']) : null,
-                    'phone' => !empty($visitor_data['phone']) ? sanitize_text_field($visitor_data['phone']) : null,
+                    'user_id' => $host_id,
+                    'created_at' => current_time('mysql'),
+                ],
+                ['%d', '%d', '%s']
+            );
+        }
+    }
+    
+    // ===================================
+    // 3. ZPRACOVÁNÍ NÁVŠTĚVNÍKŮ
+    // ===================================
+    
+    $language = $flow['language'] ?? 'cs';
+    $has_training_content = false;
+    $language_id = $wpdb->get_var($wpdb->prepare(
+        "SELECT id FROM {$wpdb->prefix}saw_training_languages 
+         WHERE customer_id = %d AND language_code = %s",
+        $this->customer_id, $language
+    ));
+    if ($language_id) {
+        $content = $wpdb->get_row($wpdb->prepare(
+            "SELECT id, video_url, pdf_map_path, risks_text, additional_text 
+             FROM {$wpdb->prefix}saw_training_content 
+             WHERE customer_id = %d AND branch_id = %d AND language_id = %d",
+            $this->customer_id, $this->branch_id, $language_id
+        ), ARRAY_A);
+        
+        if ($content) {
+            $has_training_content = (
+                !empty($content['video_url']) ||
+                !empty($content['pdf_map_path']) ||
+                !empty($content['risks_text']) ||
+                !empty($content['additional_text'])
+            );
+            
+            if (!$has_training_content) {
+                $dept_count = $wpdb->get_var($wpdb->prepare(
+                    "SELECT COUNT(*) FROM {$wpdb->prefix}saw_training_department_content
+                     WHERE training_content_id = %d 
+                       AND (text_content IS NOT NULL AND text_content != '')",
+                    $content['id']
+                ));
+                $has_training_content = ($dept_count > 0);
+            }
+        }
+    }
+    
+    $visitor_ids = [];
+    $any_needs_training = false;
+    
+    // ===================================
+    // 3a. EXISTING VISITORS
+    // ===================================
+    if (!empty($existing_visitor_ids) && is_array($existing_visitor_ids)) {
+        foreach ($existing_visitor_ids as $visitor_id) {
+            $visitor_id = intval($visitor_id);
+            
+            $has_completed_training = !empty($wpdb->get_var($wpdb->prepare(
+                "SELECT training_completed_at FROM {$wpdb->prefix}saw_visitors 
+                 WHERE id = %d AND training_completed_at IS NOT NULL",
+                $visitor_id
+            )));
+            
+            $training_skip = isset($_POST['existing_training_skip'][$visitor_id]) ? 1 : 0;
+            
+            $training_status = 'pending';
+            if ($training_skip) {
+                $training_status = 'skipped';
+            } elseif ($has_completed_training) {
+                $training_status = 'completed';
+            } elseif (!$has_training_content) {
+                $training_status = 'not_available';
+            } else {
+                $training_status = 'in_progress';
+                $any_needs_training = true;
+            }
+            
+            if (!$training_skip && !$has_completed_training && $has_training_content) {
+                $update_data = [
                     'participation_status' => 'confirmed',
                     'current_status' => 'present',
                     'training_status' => $training_status,
-                    'training_skipped' => $training_skipped,
-                    'training_required' => (!$training_skipped && $has_training_content) ? 1 : 0,
-                    'training_started_at' => (!$training_skipped && $has_training_content) ? current_time('mysql') : null,
-                    'created_at' => current_time('mysql'),
+                    'training_skipped' => 0,
+                    'training_started_at' => current_time('mysql'),
+                    'training_step_video' => 0,
+                    'training_step_map' => 0,
+                    'training_step_risks' => 0,
+                    'training_step_additional' => 0,
+                    'training_step_department' => 0,
                 ];
                 
-                $wpdb->insert(
+                $wpdb->update(
                     $wpdb->prefix . 'saw_visitors',
-                    $visitor_insert,
-                    ['%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s']
+                    $update_data,
+                    ['id' => $visitor_id],
+                    ['%s', '%s', '%s', '%d', '%s', '%d', '%d', '%d', '%d', '%d'],
+                    ['%d']
                 );
-                
-                $visitor_id = $wpdb->insert_id;
-                $visitor_ids[] = $visitor_id;
-                
-                $wpdb->insert(
-                    $wpdb->prefix . 'saw_visit_daily_logs',
-                    [
-                        'customer_id' => $this->customer_id,
-                        'branch_id' => $this->branch_id,
-                        'visit_id' => $visit_id,
-                        'visitor_id' => $visitor_id,
-                        'log_date' => current_time('Y-m-d'),
-                        'checked_in_at' => current_time('mysql'),
-                        'created_at' => current_time('mysql'),
-                    ],
-                    ['%d', '%d', '%d', '%d', '%s', '%s', '%s']
-                );
-            }
-        }
-        
-        if (empty($visitor_ids)) {
-            $this->set_error(__('Chyba: Nepodařilo se vytvořit žádné návštěvníky', 'saw-visitors'));
-            $this->render_registration_form();
-            return;
-        }
-        
-        // ===================================
-        // 4. INFO PORTAL: Send emails (v3.2.0)
-        // ===================================
-        $email_service_file = SAW_VISITORS_PLUGIN_DIR . 'includes/services/class-saw-visitor-info-email.php';
-        if (file_exists($email_service_file)) {
-            require_once $email_service_file;
-            
-            if (class_exists('SAW_Visitor_Info_Email')) {
-                // Validate language
-                if (!in_array($language, ['cs', 'en', 'sk', 'uk', 'de', 'pl', 'hu', 'ro'])) {
-                    $language = 'cs';
-                }
-                
-                // Send emails to all checked-in visitors
-                foreach ($visitor_ids as $vid) {
-                    SAW_Visitor_Info_Email::send($vid, $language);
-                }
-            }
-        }
-        // ===================================
-        // END INFO PORTAL
-        // ===================================
-        
-        // ===================================
-        // 5. ULOŽENÍ DO SESSION
-        // ===================================
-        
-        $flow['visit_id'] = $visit_id;
-        $flow['visitor_id'] = $visitor_ids[0];
-        $flow['visitor_ids'] = $visitor_ids;
-        $flow['training_required'] = $any_needs_training;
-        
-        $this->session->set('terminal_flow', $flow);
-        
-        // ===================================
-        // 6. REDIRECT
-        // ===================================
-        
-        if (!$any_needs_training) {
-            wp_redirect(home_url('/terminal/success/'));
-        } else {
-            $training_steps = $this->get_training_steps($visit_id, $flow['language']);
-            
-            if (!empty($training_steps) && isset($training_steps[0])) {
-                $first_step_url = $training_steps[0]['url'];
-                wp_redirect(home_url('/terminal/' . $first_step_url . '/'));
             } else {
-                wp_redirect(home_url('/terminal/success/'));
+                $update_data = [
+                    'participation_status' => 'confirmed',
+                    'current_status' => 'present',
+                    'training_status' => $training_status,
+                    'training_skipped' => $training_skip,
+                ];
+                
+                $wpdb->update(
+                    $wpdb->prefix . 'saw_visitors',
+                    $update_data,
+                    ['id' => $visitor_id],
+                    ['%s', '%s', '%s', '%d'],
+                    ['%d']
+                );
+            }
+            
+            $visitor_ids[] = $visitor_id;
+            
+            $wpdb->insert(
+                $wpdb->prefix . 'saw_visit_daily_logs',
+                [
+                    'customer_id' => $this->customer_id,
+                    'branch_id' => $this->branch_id,
+                    'visit_id' => $visit_id,
+                    'visitor_id' => $visitor_id,
+                    'log_date' => current_time('Y-m-d'),
+                    'checked_in_at' => current_time('mysql'),
+                    'created_at' => current_time('mysql'),
+                ],
+                ['%d', '%d', '%d', '%d', '%s', '%s', '%s']
+            );
+        }
+    }
+    
+    // ===================================
+    // 3b. NEW VISITORS
+    // ===================================
+    if (!empty($new_visitors) && is_array($new_visitors)) {
+        foreach ($new_visitors as $idx => $visitor_data) {
+            if (empty($visitor_data['first_name']) && empty($visitor_data['last_name'])) {
+                continue;
+            }
+            
+            $training_skipped = isset($visitor_data['training_skipped']) && $visitor_data['training_skipped'] == '1' ? 1 : 0;
+            
+            $training_status = 'pending';
+            if ($training_skipped) {
+                $training_status = 'skipped';
+            } elseif (!$has_training_content) {
+                $training_status = 'not_available';
+            } else {
+                $training_status = 'in_progress';
+                $any_needs_training = true;
+            }
+            
+            $visitor_insert = [
+                'customer_id' => $this->customer_id,
+                'branch_id' => $this->branch_id,
+                'visit_id' => $visit_id,
+                'first_name' => sanitize_text_field($visitor_data['first_name']),
+                'last_name' => sanitize_text_field($visitor_data['last_name']),
+                'position' => !empty($visitor_data['position']) ? sanitize_text_field($visitor_data['position']) : null,
+                'email' => !empty($visitor_data['email']) ? sanitize_email($visitor_data['email']) : null,
+                'phone' => !empty($visitor_data['phone']) ? sanitize_text_field($visitor_data['phone']) : null,
+                'participation_status' => 'confirmed',
+                'current_status' => 'present',
+                'training_status' => $training_status,
+                'training_skipped' => $training_skipped,
+                'training_required' => (!$training_skipped && $has_training_content) ? 1 : 0,
+                'training_started_at' => (!$training_skipped && $has_training_content) ? current_time('mysql') : null,
+                'created_at' => current_time('mysql'),
+            ];
+            
+            $wpdb->insert(
+                $wpdb->prefix . 'saw_visitors',
+                $visitor_insert,
+                ['%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s']
+            );
+            
+            $visitor_id = $wpdb->insert_id;
+            $visitor_ids[] = $visitor_id;
+            
+            $wpdb->insert(
+                $wpdb->prefix . 'saw_visit_daily_logs',
+                [
+                    'customer_id' => $this->customer_id,
+                    'branch_id' => $this->branch_id,
+                    'visit_id' => $visit_id,
+                    'visitor_id' => $visitor_id,
+                    'log_date' => current_time('Y-m-d'),
+                    'checked_in_at' => current_time('mysql'),
+                    'created_at' => current_time('mysql'),
+                ],
+                ['%d', '%d', '%d', '%d', '%s', '%s', '%s']
+            );
+        }
+    }
+    
+    if (empty($visitor_ids)) {
+        $this->set_error(__('Chyba: Nepodařilo se vytvořit žádné návštěvníky', 'saw-visitors'));
+        $this->render_registration_form();
+        return;
+    }
+    
+    // ===================================
+    // 3c. ✅ OPRAVA v5.1.1: ZÁLOŽNÍ MECHANISMUS PRO STATUS
+    // ===================================
+    // Pokud byly vytvořeny daily_logs, ale status stále není in_progress,
+    // oprav to zde jako fallback
+    $final_status = $wpdb->get_var($wpdb->prepare(
+        "SELECT status FROM {$wpdb->prefix}saw_visits WHERE id = %d",
+        $visit_id
+    ));
+    
+    if (in_array($final_status, ['draft', 'pending', 'confirmed'])) {
+        $fallback_result = $wpdb->update(
+            $wpdb->prefix . 'saw_visits',
+            [
+                'status' => 'in_progress',
+                'started_at' => current_time('mysql'),
+            ],
+            ['id' => $visit_id],
+            ['%s', '%s'],
+            ['%d']
+        );
+        
+        error_log("[SAW Terminal] FALLBACK: Force-updated visit #{$visit_id} to 'in_progress' (was: '{$final_status}', result: " . ($fallback_result !== false ? 'success' : 'failed') . ")");
+    }
+    // ===================================
+    // END FALLBACK
+    // ===================================
+    
+    // ===================================
+    // 4. INFO PORTAL: Send emails (v3.2.0)
+    // ===================================
+    $email_service_file = SAW_VISITORS_PLUGIN_DIR . 'includes/services/class-saw-visitor-info-email.php';
+    if (file_exists($email_service_file)) {
+        require_once $email_service_file;
+        
+        if (class_exists('SAW_Visitor_Info_Email')) {
+            // Validate language
+            if (!in_array($language, ['cs', 'en', 'sk', 'uk', 'de', 'pl', 'hu', 'ro'])) {
+                $language = 'cs';
+            }
+            
+            // Send emails to all checked-in visitors
+            foreach ($visitor_ids as $vid) {
+                SAW_Visitor_Info_Email::send($vid, $language);
             }
         }
-        
-        exit;
     }
+    // ===================================
+    // END INFO PORTAL
+    // ===================================
+    
+    // ===================================
+    // 5. ULOŽENÍ DO SESSION
+    // ===================================
+    
+    $flow['visit_id'] = $visit_id;
+    $flow['visitor_id'] = $visitor_ids[0];
+    $flow['visitor_ids'] = $visitor_ids;
+    $flow['training_required'] = $any_needs_training;
+    
+    $this->session->set('terminal_flow', $flow);
+    
+    // ===================================
+    // 6. REDIRECT
+    // ===================================
+    
+    if (!$any_needs_training) {
+        wp_redirect(home_url('/terminal/success/'));
+    } else {
+        $training_steps = $this->get_training_steps($visit_id, $flow['language']);
+        
+        if (!empty($training_steps) && isset($training_steps[0])) {
+            $first_step_url = $training_steps[0]['url'];
+            wp_redirect(home_url('/terminal/' . $first_step_url . '/'));
+        } else {
+            wp_redirect(home_url('/terminal/success/'));
+        }
+    }
+    
+    exit;
+}
 
     /**
      * Handle checkout PIN verification
