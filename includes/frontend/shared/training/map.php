@@ -4,11 +4,11 @@
  * Works for Terminal, Invitation and Visitor Info flows
  * 
  * @package SAW_Visitors
- * @version 3.5.0
+ * @version 3.5.1
  * 
- * ZMĚNA v 3.5.0:
- * - Přidána podpora pro visitor_info kontext (Info Portal)
- * - Context detection pro 3 různé flow typy
+ * ZMĚNY:
+ * - v3.5.0: Podpora pro visitor_info kontext (Info Portal)
+ * - v3.5.1: Oprava PDF URL konstrukce pro různé formáty (attachment ID, URL, cesta)
  */
 
 if (!defined('ABSPATH')) {
@@ -122,11 +122,31 @@ if ($context === 'invitation') {
     $pdf_path = isset($pdf_path) ? $pdf_path : '';
 }
 
-// Build PDF URL
+// Build PDF URL - handle various formats
 $has_pdf = !empty($pdf_path);
 $pdf_url = '';
 if ($has_pdf) {
-    $pdf_url = content_url() . '/uploads' . $pdf_path;
+    // If it's a numeric ID, it's an attachment
+    if (is_numeric($pdf_path)) {
+        $pdf_url = wp_get_attachment_url((int) $pdf_path);
+    }
+    // If it starts with http, it's already a full URL
+    elseif (strpos($pdf_path, 'http') === 0) {
+        $pdf_url = $pdf_path;
+    }
+    // If it starts with /, it's a relative path from uploads
+    elseif (strpos($pdf_path, '/') === 0) {
+        $pdf_url = content_url() . '/uploads' . $pdf_path;
+    }
+    // Otherwise assume it's a path without leading slash
+    else {
+        $pdf_url = content_url() . '/uploads/' . ltrim($pdf_path, '/');
+    }
+    
+    // Verify URL is valid
+    if (empty($pdf_url)) {
+        $has_pdf = false;
+    }
 }
 
 // Check if completed

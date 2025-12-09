@@ -7,7 +7,7 @@
  *
  * @package SAW_Visitors
  * @since   4.6.2
- * @version 5.1.0 - ADDED: Multi-language support via SAW_Translations
+ * @version 5.2.0 - ADDED: Terminal menu item
  */
 
 if (!defined('ABSPATH')) {
@@ -94,13 +94,7 @@ class SAW_App_Sidebar {
         $this->active_menu = $active_menu;
         $this->current_branch = $current_branch ?: $this->load_current_branch();
         $this->saw_role = $this->get_current_saw_role();
-        
-        // Load user's UI language
         $this->lang = $this->get_user_ui_language();
-        
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log(sprintf('[Sidebar] Role: %s, Active menu: %s, Language: %s', $this->saw_role ?? 'NULL', $active_menu, $this->lang));
-        }
     }
     
     /**
@@ -182,6 +176,12 @@ class SAW_App_Sidebar {
      * @return bool True if user has access
      */
     private function can_access_module($module_slug) {
+        // Terminal is accessible to admin roles only (not permission-based)
+        if ($module_slug === 'terminal') {
+            $admin_roles = array('super_admin', 'admin', 'super_manager', 'manager');
+            return in_array($this->saw_role, $admin_roles, true);
+        }
+        
         // Load permissions class if needed
         if (!class_exists('SAW_Permissions')) {
             $permissions_file = SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-permissions.php';
@@ -192,9 +192,6 @@ class SAW_App_Sidebar {
         
         // Fallback if permissions not available
         if (!class_exists('SAW_Permissions')) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[Sidebar] SAW_Permissions class not found');
-            }
             return true;
         }
         
@@ -204,18 +201,7 @@ class SAW_App_Sidebar {
         }
         
         // Check permission
-        $has_access = SAW_Permissions::check($this->saw_role, $module_slug, 'list');
-        
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log(sprintf(
-                '[Sidebar] Permission check - Role: %s, Module: %s, Access: %s',
-                $this->saw_role,
-                $module_slug,
-                $has_access ? 'YES' : 'NO'
-            ));
-        }
-        
-        return $has_access;
+        return SAW_Permissions::check($this->saw_role, $module_slug, 'list');
     }
     
     /**
@@ -292,8 +278,12 @@ class SAW_App_Sidebar {
             return saw_t($key, $this->lang, 'admin', 'sidebar');
         }
         
-        // Fallback to key if translations not available
-        return $key;
+        // Fallback translations
+        $fallback = array(
+            'terminal' => $this->lang === 'en' ? 'Terminal' : 'Terminál',
+        );
+        
+        return $fallback[$key] ?? $key;
     }
     
     /**
@@ -350,6 +340,7 @@ class SAW_App_Sidebar {
                                         href="<?php echo esc_url($item['url']); ?>" 
                                         class="saw-nav-item <?php echo ($this->active_menu === $item['id']) ? 'active' : ''; ?>"
                                         data-menu="<?php echo esc_attr($item['id']); ?>"
+                                        <?php if (!empty($item['target'])): ?>target="<?php echo esc_attr($item['target']); ?>"<?php endif; ?>
                                     >
                                         <span class="saw-nav-icon"><?php echo $item['icon']; ?></span>
                                         <span class="saw-nav-label"><?php echo esc_html($item['label']); ?></span>
@@ -363,6 +354,7 @@ class SAW_App_Sidebar {
                                 href="<?php echo esc_url($item['url']); ?>" 
                                 class="saw-nav-item <?php echo ($this->active_menu === $item['id']) ? 'active' : ''; ?>"
                                 data-menu="<?php echo esc_attr($item['id']); ?>"
+                                <?php if (!empty($item['target'])): ?>target="<?php echo esc_attr($item['target']); ?>"<?php endif; ?>
                             >
                                 <span class="saw-nav-icon"><?php echo $item['icon']; ?></span>
                                 <span class="saw-nav-label"><?php echo esc_html($item['label']); ?></span>
@@ -401,7 +393,7 @@ class SAW_App_Sidebar {
      * All labels are translated using SAW_Translations.
      *
      * @since 4.6.1
-     * @version 5.1.0 - ADDED: Multi-language support
+     * @version 5.2.0 - ADDED: Terminal menu item
      * @return array Menu structure
      */
     private function get_menu_items() {
@@ -416,6 +408,12 @@ class SAW_App_Sidebar {
                         'label' => $this->t('dashboard'), 
                         'url' => '/admin/dashboard', 
                         'icon' => '📊'
+                    ),
+                    array(
+                        'id' => 'terminal', 
+                        'label' => 'Terminal', 
+                        'url' => '/terminal/', 
+                        'icon' => '🖥️'
                     ),
                 ),
             ),

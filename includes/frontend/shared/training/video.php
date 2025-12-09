@@ -4,21 +4,30 @@
  * Works for Terminal, Invitation and Visitor Info flows
  * 
  * @package SAW_Visitors
- * @version 3.5.0
+ * @version 3.9.4
  * 
- * ZMĚNA v 3.5.0:
- * - Přidána podpora pro visitor_info kontext (Info Portal)
- * - Context detection pro 3 různé flow typy
- * - Odstraněny debug logy
+ * ZMĚNA v 3.9.4:
+ * - OPRAVA: Hint přesunut DOVNITŘ formu (saw-panel-confirm) - to je ten fixní panel vpravo dole
+ * 
+ * ZMĚNA v 3.9.3:
+ * - Hint přesunut do controls wrapper (nestačilo - wrapper není fixní panel)
+ * 
+ * ZMĚNA v 3.9.2:
+ * - OPRAVA: HTML struktura - skip button byl UVNITŘ video-wrapper
+ * 
+ * ZMĚNA v 3.9.1:
+ * - OPRAVA: Podmíněná inicializace $video_url
+ * 
+ * ZMĚNA v 3.9.0:
+ * - OPRAVA: Skip button POUZE pro invitation
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-// ===== CONTEXT DETECTION (v3.5.0) =====
-// Determine which flow we're in: terminal, invitation, or visitor_info
-$context = 'terminal'; // default
+// ===== CONTEXT DETECTION =====
+$context = 'terminal';
 if (isset($is_invitation) && $is_invitation === true) {
     $context = 'invitation';
 }
@@ -54,24 +63,24 @@ $nonce_field = $ctx['nonce_field'];
 $action_name = $ctx['action_name'];
 $complete_action = $ctx['complete_action'];
 $skip_action = 'skip_training';
-// ===== END CONTEXT DETECTION =====
 
-// Detect flow type (legacy support)
-$is_invitation = ($context === 'invitation');
-
-// Initialize variables
-$video_url = '';
-$visitor_id = null;
-$lang = 'cs';
+// Initialize variables - BUT preserve if already set by controller (visitor_info context)
+if (!isset($video_url)) {
+    $video_url = '';
+}
+if (!isset($visitor_id)) {
+    $visitor_id = null;
+}
+if (!isset($lang)) {
+    $lang = 'cs';
+}
 
 // Get data based on flow
 if ($context === 'invitation') {
-    // Invitation flow
     $session = SAW_Session_Manager::instance();
     $flow = $session->get('invitation_flow');
     $lang = $flow['language'] ?? 'cs';
     
-    // Get visitor ID from invitation flow
     global $wpdb;
     $visit = $wpdb->get_row($wpdb->prepare(
         "SELECT * FROM {$wpdb->prefix}saw_visits WHERE id = %d",
@@ -89,8 +98,10 @@ if ($context === 'invitation') {
         if ($visitor) {
             $visitor_id = $visitor->id;
         }
-        
-        // Get video URL from training content
+    }
+    
+    $video_url = '';
+    if ($visit) {
         $language_id = $wpdb->get_var($wpdb->prepare(
             "SELECT id FROM {$wpdb->prefix}saw_training_languages 
              WHERE customer_id = %d AND language_code = %s",
@@ -109,9 +120,9 @@ if ($context === 'invitation') {
             
             if ($content && !empty($content->video_url)) {
                 $video_url = $content->video_url;
-                // Convert YouTube/Vimeo URLs to embed format
+                
                 if (strpos($video_url, 'youtube.com') !== false || strpos($video_url, 'youtu.be') !== false) {
-                    preg_match('/(?:v=|youtu\.be\/)([^&]+)/', $video_url, $matches);
+                    preg_match('/(?:v=|youtu\.be\/)([^&\?]+)/', $video_url, $matches);
                     if (!empty($matches[1])) {
                         $video_url = 'https://www.youtube.com/embed/' . $matches[1];
                     }
@@ -125,23 +136,26 @@ if ($context === 'invitation') {
         }
     }
 } elseif ($context === 'visitor_info') {
-    // Visitor Info Portal flow - data passed from controller
+    // For visitor_info, variables are set by controller BEFORE include
+    // Just ensure flow array exists for any template needs
     $flow = isset($flow) ? $flow : array();
-    $lang = isset($flow['language']) ? $flow['language'] : 'cs';
-    $visitor_id = isset($flow['visitor_id']) ? $flow['visitor_id'] : null;
-    $video_url = isset($video_url) ? $video_url : '';
+    // $video_url is already set by controller - don't overwrite!
+    // $lang and $visitor_id are also set by controller
+    if (!isset($lang) || empty($lang)) {
+        $lang = isset($flow['language']) ? $flow['language'] : 'cs';
+    }
+    if (!isset($visitor_id)) {
+        $visitor_id = isset($flow['visitor_id']) ? $flow['visitor_id'] : null;
+    }
 } else {
-    // Terminal flow
     $flow = isset($flow) ? $flow : [];
     $lang = isset($flow['language']) ? $flow['language'] : 'cs';
     $visitor_id = isset($flow['visitor_ids'][0]) ? $flow['visitor_ids'][0] : null;
     $video_url = isset($video_url) ? $video_url : '';
 }
 
-// Check if video exists
 $has_video = !empty($video_url);
 
-// Check if completed
 $completed = false;
 if ($visitor_id) {
     global $wpdb;
@@ -154,7 +168,6 @@ if ($visitor_id) {
     }
 }
 
-// Translations
 $translations = array(
     'cs' => array(
         'confirm' => 'Potvrzuji zhlédnutí videa',
@@ -199,10 +212,9 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
 
 <div class="saw-page-aurora saw-step-video">
     <div class="saw-page-content saw-page-content-scroll">
-        <div class="saw-video-wrapper">
     
-    <?php if ($context === 'invitation' || $context === 'visitor_info'): ?>
-    <!-- Skip button for invitation/visitor_info mode -->
+    <?php // v3.9.0 FIX: Skip button ONLY for invitation, NOT for visitor_info ?>
+    <?php if ($context === 'invitation'): ?>
     <div class="saw-panel-skip">
         <p class="saw-panel-skip-info">
             💡 <?php echo esc_html($t['skip_info']); ?>
@@ -217,6 +229,8 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
     </div>
     <?php endif; ?>
     
+    <div class="saw-video-wrapper">
+    
     <?php if (!$has_video): ?>
     
     <div class="saw-empty-state">
@@ -230,28 +244,24 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
         <div id="video-player"></div>
     </div>
     
-    <!-- Progress Indicator - Top Right -->
     <div id="progress-indicator" class="saw-video-progress-indicator" style="display: none;">
         0%
     </div>
     
-    <!-- Hint Message - ABOVE everything -->
-    <div id="video-hint-message" class="saw-video-hint" style="display: none;">
-        <span>▶️</span>
-        <span><?php echo esc_html($t['hint']); ?></span>
-    </div>
-    
-    <!-- Controls Wrapper (Bottom Right) -->
     <div class="saw-video-controls-wrapper">
-        <!-- Progress Bar -->
         <div id="video-progress-bar" class="saw-video-progress-bar" style="display: none;">
             <div id="video-progress-fill" class="saw-video-progress-fill" style="width: 0%;"></div>
         </div>
         
-        <!-- Floating Actions -->
         <form method="POST" id="video-form" class="saw-panel-confirm">
             <?php wp_nonce_field($nonce_name, $nonce_field); ?>
             <input type="hidden" name="<?php echo esc_attr($action_name); ?>" value="<?php echo esc_attr($complete_action); ?>">
+            
+            <!-- v3.9.4: Hint přesunut DOVNITŘ formu, před checkbox -->
+            <div id="video-hint-message" style="display: none; font-size: 0.8rem; padding: 0.4rem 0.8rem; margin-bottom: 0.75rem; background: rgba(59, 130, 246, 0.2); border-radius: 6px; text-align: center; color: #93c5fd;">
+                <span style="margin-right: 0.25rem;">▶️</span>
+                <span><?php echo esc_html($t['hint']); ?></span>
+            </div>
             
             <?php if (!$completed): ?>
             <label class="saw-panel-checkbox" id="checkbox-wrapper">
@@ -275,96 +285,220 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
     </div>
     
     <?php endif; ?>
+    
+        </div>
     </div>
-</div>
 </div>
 
 <?php if ($has_video): ?>
-
-<?php 
-// Load video player script
-$video_player_path = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/terminal/assets/js/terminal/video-player.js';
-$video_player_url = SAW_VISITORS_PLUGIN_URL . 'includes/frontend/terminal/assets/js/terminal/video-player.js';
-
-if (file_exists($video_player_path)):
-?>
-<script src="<?php echo esc_url($video_player_url); ?>?ver=<?php echo esc_attr(SAW_VISITORS_VERSION); ?>"></script>
-<?php endif; ?>
-
+<script src="https://www.youtube.com/iframe_api"></script>
 <script>
 (function() {
     'use strict';
     
-    function initWhenReady() {
-        if (typeof SAWVideoPlayer === 'undefined') {
-            setTimeout(initWhenReady, 100);
-            return;
+    var videoUrl = '<?php echo esc_js($video_url); ?>';
+    var player = null;
+    var progressInterval = null;
+    var maxProgress = 0;
+    var videoCompleted = <?php echo $completed ? 'true' : 'false'; ?>;
+    var isVimeo = videoUrl.indexOf('vimeo.com') !== -1;
+    var isYouTube = videoUrl.indexOf('youtube.com') !== -1;
+    
+    function initPlayer() {
+        var container = document.getElementById('video-player');
+        if (!container) return;
+        
+        if (isYouTube) {
+            initYouTubePlayer();
+        } else if (isVimeo) {
+            initVimeoPlayer();
+        } else {
+            initGenericPlayer();
         }
+    }
+    
+    function initYouTubePlayer() {
+        var videoId = extractYouTubeId(videoUrl);
+        if (!videoId) return;
         
-        var indicator = document.getElementById('progress-indicator');
-        var hint = document.getElementById('video-hint-message');
-        var progressBar = document.getElementById('video-progress-bar');
-        
-        if (indicator) indicator.style.display = 'block';
-        if (hint) hint.style.display = 'flex';
-        if (progressBar) progressBar.style.display = 'block';
-        
-        var player = new SAWVideoPlayer({
-            videoUrl: '<?php echo esc_js($video_url); ?>',
-            containerId: 'video-player',
-            completionThreshold: 90,
-            debug: false,
-            
-            onProgress: function(percent) {
-                if (indicator) {
-                    indicator.textContent = percent + '%';
-                }
-                
-                var progressFill = document.getElementById('video-progress-fill');
-                if (progressFill) {
-                    progressFill.style.width = percent + '%';
-                }
+        if (typeof YT !== 'undefined' && YT.Player) {
+            createYouTubePlayer(videoId);
+        } else {
+            window.onYouTubeIframeAPIReady = function() {
+                createYouTubePlayer(videoId);
+            };
+        }
+    }
+    
+    function createYouTubePlayer(videoId) {
+        player = new YT.Player('video-player', {
+            videoId: videoId,
+            width: '100%',
+            height: '100%',
+            playerVars: {
+                'playsinline': 1,
+                'rel': 0,
+                'modestbranding': 1
             },
-            
-            onComplete: function(data) {
-                if (hint) hint.style.display = 'none';
-                if (progressBar) {
-                    setTimeout(function() {
-                        progressBar.style.display = 'none';
-                    }, 400);
-                }
-                
-                var checkbox = document.getElementById('video-confirmed');
-                var wrapper = document.getElementById('checkbox-wrapper');
-                if (checkbox) {
-                    checkbox.disabled = false;
-                    if (wrapper) wrapper.classList.add('checked');
-                }
+            events: {
+                'onReady': onPlayerReady,
+                'onStateChange': onPlayerStateChange
             }
         });
+    }
+    
+    function extractYouTubeId(url) {
+        var match = url.match(/(?:embed\/|v=|youtu\.be\/)([^&\?]+)/);
+        return match ? match[1] : null;
+    }
+    
+    function onPlayerReady(event) {
+        showHint();
+        if (!videoCompleted) {
+            startProgressTracking();
+        }
+    }
+    
+    function onPlayerStateChange(event) {
+        if (event.data === YT.PlayerState.PLAYING) {
+            hideHint();
+            showProgressBar();
+        }
+    }
+    
+    function initVimeoPlayer() {
+        var container = document.getElementById('video-player');
+        container.innerHTML = '<iframe id="vimeo-iframe" src="' + videoUrl + '?api=1" width="100%" height="100%" frameborder="0" allow="autoplay; fullscreen" allowfullscreen></iframe>';
         
-        var checkbox = document.getElementById('video-confirmed');
-        var continueBtn = document.getElementById('continue-btn');
-        var wrapper = document.getElementById('checkbox-wrapper');
+        var script = document.createElement('script');
+        script.src = 'https://player.vimeo.com/api/player.js';
+        script.onload = function() {
+            var iframe = document.getElementById('vimeo-iframe');
+            player = new Vimeo.Player(iframe);
+            
+            player.on('play', function() {
+                hideHint();
+                showProgressBar();
+            });
+            
+            showHint();
+            if (!videoCompleted) {
+                startVimeoProgressTracking();
+            }
+        };
+        document.head.appendChild(script);
+    }
+    
+    function initGenericPlayer() {
+        var container = document.getElementById('video-player');
+        container.innerHTML = '<iframe src="' + videoUrl + '" width="100%" height="100%" frameborder="0" allowfullscreen></iframe>';
+        showHint();
         
-        if (checkbox && continueBtn) {
-            checkbox.addEventListener('change', function() {
-                continueBtn.disabled = !this.checked;
-                if (wrapper) {
-                    if (this.checked) {
-                        wrapper.classList.add('checked');
-                    } else {
-                        wrapper.classList.remove('checked');
+        setTimeout(function() {
+            enableCheckbox();
+        }, 5000);
+    }
+    
+    function startProgressTracking() {
+        progressInterval = setInterval(function() {
+            if (player && player.getCurrentTime && player.getDuration) {
+                var current = player.getCurrentTime();
+                var duration = player.getDuration();
+                
+                if (duration > 0) {
+                    var progress = (current / duration) * 100;
+                    if (progress > maxProgress) {
+                        maxProgress = progress;
+                    }
+                    updateProgressUI(maxProgress);
+                    
+                    if (maxProgress >= 90) {
+                        enableCheckbox();
+                        clearInterval(progressInterval);
                     }
                 }
+            }
+        }, 1000);
+    }
+    
+    function startVimeoProgressTracking() {
+        progressInterval = setInterval(function() {
+            if (player) {
+                Promise.all([player.getCurrentTime(), player.getDuration()]).then(function(values) {
+                    var current = values[0];
+                    var duration = values[1];
+                    
+                    if (duration > 0) {
+                        var progress = (current / duration) * 100;
+                        if (progress > maxProgress) {
+                            maxProgress = progress;
+                        }
+                        updateProgressUI(maxProgress);
+                        
+                        if (maxProgress >= 90) {
+                            enableCheckbox();
+                            clearInterval(progressInterval);
+                        }
+                    }
+                });
+            }
+        }, 1000);
+    }
+    
+    function updateProgressUI(progress) {
+        var indicator = document.getElementById('progress-indicator');
+        var fill = document.getElementById('video-progress-fill');
+        
+        if (indicator) {
+            indicator.textContent = Math.round(progress) + '%';
+        }
+        if (fill) {
+            fill.style.width = progress + '%';
+        }
+    }
+    
+    function showHint() {
+        var hint = document.getElementById('video-hint-message');
+        if (hint) hint.style.display = 'flex';
+    }
+    
+    function hideHint() {
+        var hint = document.getElementById('video-hint-message');
+        if (hint) hint.style.display = 'none';
+    }
+    
+    function showProgressBar() {
+        var bar = document.getElementById('video-progress-bar');
+        var indicator = document.getElementById('progress-indicator');
+        if (bar) bar.style.display = 'block';
+        if (indicator) indicator.style.display = 'flex';
+    }
+    
+    function enableCheckbox() {
+        var checkbox = document.getElementById('video-confirmed');
+        var wrapper = document.getElementById('checkbox-wrapper');
+        var btn = document.getElementById('continue-btn');
+        
+        if (checkbox) {
+            checkbox.disabled = false;
+            checkbox.addEventListener('change', function() {
+                if (btn) btn.disabled = !this.checked;
             });
+        }
+        if (wrapper) {
+            wrapper.style.opacity = '1';
         }
     }
     
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initWhenReady);
+        document.addEventListener('DOMContentLoaded', initPlayer);
     } else {
-        initWhenReady();
+        initPlayer();
+    }
+    
+    if (videoCompleted) {
+        var btn = document.getElementById('continue-btn');
+        if (btn) btn.disabled = false;
     }
 })();
 </script>

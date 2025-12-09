@@ -1,15 +1,13 @@
 <?php
 /**
- * SAW PWA - Progressive Web App Support
+ * SAW PWA (Progressive Web App) Support
  *
- * Handles PWA functionality:
- * - Service Worker rewrite rules
- * - Manifest serving
- * - Cache versioning
+ * Enables PWA functionality for terminal - installable app, offline support, etc.
  *
  * @package    SAW_Visitors
  * @subpackage PWA
  * @since      1.0.0
+ * @version    1.1.0 - Updated theme color for better contrast
  */
 
 if (!defined('ABSPATH')) {
@@ -19,7 +17,7 @@ if (!defined('ABSPATH')) {
 /**
  * SAW PWA Class
  *
- * @since 1.0.0
+ * Handles PWA manifest, service worker, and meta tags.
  */
 class SAW_PWA {
     
@@ -31,14 +29,14 @@ class SAW_PWA {
     private static $instance = null;
     
     /**
-     * PWA assets directory URL
+     * PWA assets URL
      *
      * @var string
      */
     private $pwa_url;
     
     /**
-     * PWA assets directory path
+     * PWA assets path
      *
      * @var string
      */
@@ -149,7 +147,7 @@ class SAW_PWA {
         header('Cache-Control: no-cache, no-store, must-revalidate');
         header('X-Content-Type-Options: nosniff');
         
-        // Přidej version comment pro cache busting (pouze verze pluginu, ne timestamp)
+        // Přidej version comment pro cache busting
         echo "// Version: " . SAW_VISITORS_VERSION . "\n\n";
         
         readfile($sw_file);
@@ -210,10 +208,14 @@ class SAW_PWA {
     /**
      * Get theme color
      *
+     * Darker purple that matches terminal gradient and works well with light text.
+     * Original was #667eea which had poor contrast with dark text.
+     *
+     * @since 1.1.0 Changed from #667eea to #312e81 for better contrast
      * @return string
      */
     public function get_theme_color() {
-        return '#667eea';
+        return '#312e81';
     }
     
     /**
@@ -222,7 +224,6 @@ class SAW_PWA {
      * @return bool
      */
     public function is_enabled() {
-        // Můžeš přidat podmínku pro zapnutí/vypnutí PWA
         return true;
     }
     
