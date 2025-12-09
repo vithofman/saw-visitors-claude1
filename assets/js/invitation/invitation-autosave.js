@@ -5,7 +5,7 @@
  * Works for all invitation steps (risks, visitors)
  * 
  * @package SAW_Visitors
- * @version 2.0.0
+ * @version 3.9.10 - Removed toast notifications and fixed beforeunload
  */
 
 (function($) {
@@ -14,6 +14,7 @@
     let autosaveTimer;
     let isDirty = false;
     let isSaving = false;
+    let formIsSubmitting = false;
     
     // Check if sawInvitation is available
     if (typeof sawInvitation === 'undefined') {
@@ -33,11 +34,8 @@
     
     /**
      * Get risks text from editor
-     * 
-     * @return {string} Risks text content
      */
     function getRisksText() {
-        // Try TinyMCE first
         if (typeof tinymce !== 'undefined') {
             const editor = tinymce.get('risks_text');
             if (editor) {
@@ -45,7 +43,6 @@
             }
         }
         
-        // Fallback to textarea
         const textarea = $('#risks_text');
         if (textarea.length) {
             return textarea.val();
@@ -56,17 +53,10 @@
     
     /**
      * Get visitors data from form
-     * 
-     * Collects data from:
-     * - Existing visitors (checkboxes)
-     * - New visitors (form inputs)
-     * 
-     * @return {array} Array of visitor objects
      */
     function getVisitorsData() {
         const visitors = [];
         
-        // Get existing visitors (checkboxes)
         $('input[name^="visitor_"]:checked, input[name^="existing_visitor_ids"]:checked').each(function() {
             const visitorId = $(this).val();
             const $row = $(this).closest('tr, .visitor-row, [data-visitor-id]');
@@ -78,13 +68,11 @@
             });
         });
         
-        // Also check for hidden inputs with existing_visitor_ids array
         const existingIds = $('input[name="existing_visitor_ids[]"]:checked').map(function() {
             return parseInt($(this).val(), 10);
         }).get();
         
         existingIds.forEach(function(id) {
-            // Check if already added
             const exists = visitors.some(function(v) {
                 return v.id === id;
             });
@@ -100,7 +88,6 @@
             }
         });
         
-        // Get new visitors (form inputs)
         $('.new-visitor-row, [data-visitor="new"]').each(function() {
             const $row = $(this);
             const firstName = $row.find('input[name*="first_name"], input[name*="[first_name]"]').val();
@@ -120,80 +107,28 @@
             }
         });
         
-        // Also check for new_visitors array inputs
-        $('input[name^="new_visitors["]').each(function() {
-            const name = $(this).attr('name');
-            const match = name.match(/new_visitors\[(\d+)\]\[(\w+)\]/);
-            
-            if (match) {
-                const index = parseInt(match[1], 10);
-                const field = match[2];
-                const value = $(this).val();
-                
-                // Find or create visitor object
-                let visitor = visitors.find(function(v) {
-                    return v.id === null && v._index === index;
-                });
-                
-                if (!visitor) {
-                    visitor = {
-                        id: null,
-                        _index: index,
-                        training_skip: 0
-                    };
-                    visitors.push(visitor);
-                }
-                
-                if (field === 'first_name') {
-                    visitor.first_name = value;
-                } else if (field === 'last_name') {
-                    visitor.last_name = value;
-                } else if (field === 'position') {
-                    visitor.position = value;
-                } else if (field === 'email') {
-                    visitor.email = value;
-                } else if (field === 'phone') {
-                    visitor.phone = value;
-                } else if (field === 'training_skip') {
-                    visitor.training_skip = $(this).is(':checked') ? 1 : 0;
-                }
-            }
-        });
-        
-        // Clean up temporary _index property
-        visitors.forEach(function(v) {
-            delete v._index;
-        });
-        
-        // Filter out incomplete new visitors
         return visitors.filter(function(v) {
             if (v.id !== null) {
-                return true; // Existing visitor
+                return true;
             }
-            // New visitor must have at least first_name and last_name
             return v.first_name && v.last_name;
         });
     }
     
     /**
-     * Detect current invitation step from URL or sawInvitation
-     * 
-     * @return {string} Current step name
+     * Detect current invitation step
      */
     function detectCurrentStep() {
-        // Try from sawInvitation first
         if (currentStep) {
             return currentStep;
         }
         
-        // Try from URL query string
         const urlParams = new URLSearchParams(window.location.search);
         const step = urlParams.get('step');
         if (step) {
             return step;
         }
         
-        // Try to detect from page content
         if ($('#risks_text').length > 0 || $('.saw-risks-step').length > 0) {
             return 'risks';
         }
@@ -206,11 +141,7 @@
     }
     
     /**
-     * Perform autosave
-     * 
-     * Detects current step and saves appropriate data:
-     * - risks step: saves risks_text
-     * - visitors step: saves visitors array
+     * Perform autosave (silent, no notifications)
      */
     function doAutosave() {
         if (!isDirty || isSaving) {
@@ -221,12 +152,10 @@
         const step = detectCurrentStep();
         const autosaveData = {};
         
-        // Save TinyMCE content if available
         if (typeof tinymce !== 'undefined') {
             tinymce.triggerSave();
         }
         
-        // Collect data based on current step
         if (step === 'risks') {
             const risksText = getRisksText();
             if (risksText) {
@@ -238,20 +167,15 @@
                 autosaveData.visitors = visitors;
             }
         } else {
-            // Unknown step or no data - skip autosave
-            console.log('[Invitation Autosave] Unknown step or no data to save:', step);
             isSaving = false;
             return;
         }
         
-        // Don't save if no data collected
         if (Object.keys(autosaveData).length === 0) {
-            console.log('[Invitation Autosave] No data to save');
             isSaving = false;
             return;
         }
         
-        // Prepare request body
         const bodyParams = new URLSearchParams({
             action: 'saw_invitation_autosave',
             nonce: nonce,
@@ -259,7 +183,6 @@
             data: JSON.stringify(autosaveData)
         });
         
-        // Use fetch() API for modern approach
         fetch(ajaxurl, {
             method: 'POST',
             headers: {
@@ -276,15 +199,11 @@
         .then(data => {
             if (data.success) {
                 isDirty = false;
-                const time = new Date().toLocaleTimeString();
-                showSaveIndicator('✓ Uloženo ' + time);
-                console.log('[Invitation Autosave] ✅ Saved successfully for step:', step);
-            } else {
-                console.error('[Invitation Autosave] ❌ Server error:', data.data || data);
+                // No toast notification - silent save
             }
         })
         .catch(error => {
-            console.error('[Invitation Autosave] ❌ AJAX error:', error);
+            console.error('[Invitation Autosave] AJAX error:', error);
         })
         .finally(() => {
             isSaving = false;
@@ -292,42 +211,19 @@
     }
     
     /**
-     * Show save indicator
-     */
-    function showSaveIndicator(message) {
-        let indicator = $('#autosave-indicator');
-        
-        if (indicator.length === 0) {
-            indicator = $('<div id="autosave-indicator"></div>');
-            $('body').append(indicator);
-        }
-        
-        indicator.text(message).fadeIn(200);
-        
-        setTimeout(function() {
-            indicator.fadeOut(200);
-        }, 2000);
-    }
-    
-    /**
      * Initialize autosave
      */
     function initAutosave() {
         const step = detectCurrentStep();
-        console.log('[Invitation Autosave] Initializing for step:', step, 'token:', token);
         
-        // Setup listeners based on current step
         if (step === 'risks') {
-            // Mark as dirty on risks text changes
             $(document).on('change keyup', '#risks_text, .wp-editor-area', function() {
                 isDirty = true;
                 clearTimeout(autosaveTimer);
-                autosaveTimer = setTimeout(doAutosave, 30000); // 30s
+                autosaveTimer = setTimeout(doAutosave, 30000);
             });
             
-            // Also listen to TinyMCE changes
             if (typeof tinymce !== 'undefined') {
-                // If editor already exists
                 const editor = tinymce.get('risks_text');
                 if (editor) {
                     editor.on('keyup change', function() {
@@ -337,7 +233,6 @@
                     });
                 }
                 
-                // Listen for new editors
                 tinymce.on('AddEditor', function(e) {
                     if (e.editor.id === 'risks_text') {
                         e.editor.on('keyup change', function() {
@@ -349,7 +244,6 @@
                 });
             }
         } else if (step === 'visitors') {
-            // Mark as dirty on visitor form changes
             $(document).on('change keyup', 
                 'input[name^="visitor_"], ' +
                 'input[name^="existing_visitor_ids"], ' +
@@ -360,26 +254,41 @@
                 function() {
                     isDirty = true;
                     clearTimeout(autosaveTimer);
-                    autosaveTimer = setTimeout(doAutosave, 30000); // 30s
+                    autosaveTimer = setTimeout(doAutosave, 30000);
                 }
             );
         }
         
-        // Manual save before leaving
+        // Disable beforeunload when form is submitted
+        $('form').on('submit', function() {
+            formIsSubmitting = true;
+            isDirty = false;
+        });
+        
+        // Also handle button clicks that submit forms
+        $('button[type="submit"], input[type="submit"]').on('click', function() {
+            formIsSubmitting = true;
+            isDirty = false;
+        });
+        
+        // Handle navigation links in sidebar
+        $('.saw-sidebar a, .saw-progress-step a, .saw-nav-link').on('click', function() {
+            formIsSubmitting = true;
+            isDirty = false;
+        });
+        
+        // beforeunload - only warn if truly dirty AND not submitting
         window.addEventListener('beforeunload', function(e) {
-            if (isDirty && !isSaving) {
+            if (isDirty && !isSaving && !formIsSubmitting) {
                 e.preventDefault();
                 e.returnValue = 'Máte neuložené změny. Opravdu chcete opustit stránku?';
                 return e.returnValue;
             }
         });
-        
-        console.log('[Invitation Autosave] ✅ Initialized for step:', step);
     }
     
     // Initialize when DOM is ready
     $(document).ready(function() {
-        // Wait for TinyMCE to be ready
         if (typeof tinymce !== 'undefined') {
             tinymce.on('Ready', function() {
                 setTimeout(initAutosave, 500);
@@ -389,26 +298,6 @@
         }
     });
     
-    // Add styles for indicator
-    $('<style>')
-        .prop('type', 'text/css')
-        .html(`
-            #autosave-indicator {
-                position: fixed;
-                bottom: 20px;
-                right: 20px;
-                background: #10b981;
-                color: white;
-                padding: 0.75rem 1.5rem;
-                border-radius: 8px;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-                z-index: 10000;
-                font-size: 0.875rem;
-                font-weight: 600;
-                display: none;
-            }
-        `)
-        .appendTo('head');
+    // No CSS for indicator - removed toast notifications
     
 })(jQuery);
-

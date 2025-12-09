@@ -526,3 +526,20 @@ html {
         page-break-after: avoid;
     }
 }
+
+/* ============================================
+   HIDE TOAST NOTIFICATIONS
+   Added in v3.9.10 - Remove annoying toast popups
+   ============================================ */
+
+.saw-toast,
+.saw-toast-container,
+#autosave-indicator,
+.saw-save-indicator,
+.saw-success-notification {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+

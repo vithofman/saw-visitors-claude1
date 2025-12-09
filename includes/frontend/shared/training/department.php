@@ -9,6 +9,7 @@
  * ZMĚNA v 3.9.9:
  * - REMOVED: Skip training sekce úplně odstraněna
  * - FIX: Dokumenty používají správné CSS třídy (saw-doc-card, saw-doc-badge) jako terminal/additional
+ * - NEW: Free mode pro invitation - checkbox volitelný, button aktivní
  * - FIX: Přidán fallback pro invitation context když visit nemá hosts
  */
 
@@ -51,6 +52,9 @@ $nonce_name = $ctx['nonce_name'];
 $nonce_field = $ctx['nonce_field'];
 $action_name = $ctx['action_name'];
 $complete_action = $ctx['complete_action'];
+
+// FREE MODE for invitation - no confirmation required
+$free_mode = ($context === 'invitation');
 
 // Get data from appropriate flow
 if ($context === 'invitation') {
@@ -374,7 +378,7 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
                    name="department_confirmed"
                    id="department-confirmed"
                    value="1"
-                   required>
+                   <?php if (!$free_mode): ?>required<?php endif; ?>>
             <span><?php echo esc_html($t['confirm']); ?></span>
         </label>
         <?php endif; ?>
@@ -382,7 +386,7 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
         <button type="submit"
                 class="saw-panel-btn"
                 id="continue-btn"
-                <?php echo !$completed ? 'disabled' : ''; ?>>
+                <?php echo (!$completed && !$free_mode) ? 'disabled' : ''; ?>>
             <?php echo esc_html($t['continue']); ?> →
         </button>
     </form>

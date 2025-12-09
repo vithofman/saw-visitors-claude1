@@ -5,7 +5,7 @@
  * Handles the complete invitation flow for visitor registration.
  * 
  * @package SAW_Visitors
- * @version 1.5.0 - Added Info Portal email integration, production-ready
+ * @version 3.9.9 - Added certificates support, visitor editing and deletion
  */
 
 if (!defined('ABSPATH')) exit;
@@ -44,8 +44,6 @@ class SAW_Invitation_Controller {
     /**
      * Register AJAX handlers for invitation media library
      * 
-     * Called from plugin initialization, not from instance constructor.
-     * 
      * @since 5.4.4
      */
     public static function register_ajax_handlers() {
@@ -70,11 +68,9 @@ class SAW_Invitation_Controller {
         
         $flow = $this->session->get('invitation_flow');
         
-        // If session doesn't exist or token changed, reload from database
         if (empty($flow) || ($flow['token'] ?? '') !== $this->token) {
             $this->reload_visit_from_token();
             
-            // Initialize session with history
             $flow = [
                 'token' => $this->token,
                 'visit_id' => $this->visit_id,
@@ -90,7 +86,6 @@ class SAW_Invitation_Controller {
             
             $this->session->set('invitation_flow', $flow);
         } else {
-            // Session exists, load from it
             $this->visit_id = $flow['visit_id'] ?? null;
             $this->customer_id = $flow['customer_id'] ?? null;
             $this->branch_id = $flow['branch_id'] ?? null;
@@ -160,18 +155,14 @@ class SAW_Invitation_Controller {
     
     /**
      * Get current step from session or URL
-     * 
-     * @return string Current step name
      */
     private function get_current_step() {
         $flow = $this->session->get('invitation_flow', []);
         
-        // 1. If no language selected, always go to language
         if (empty($flow['language'])) {
             return 'language';
         }
         
-        // 2. If ?step= in URL, use it (takes precedence)
         $step = $_GET['step'] ?? '';
         if (!empty($step)) {
             $steps_requiring_language = ['risks', 'visitors', 'training-video', 'training-map', 'training-risks', 'training-department', 'training-oopp', 'training-additional', 'success'];
@@ -181,7 +172,6 @@ class SAW_Invitation_Controller {
             return $step;
         }
         
-        // 3. Load from session
         return $flow['step'] ?? 'language';
     }
     
@@ -248,10 +238,23 @@ class SAW_Invitation_Controller {
             'autosaveNonce' => wp_create_nonce('saw_invitation_autosave'),
             'currentStep' => $this->current_step,
         ]);
+
+// Hide toast notifications visually (v3.9.11)
+        wp_add_inline_style('saw-terminal-base', '
+            .saw-toast,
+            .saw-toast-container,
+            #autosave-indicator,
+            .saw-save-indicator,
+            .saw-success-notification {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+            }
+        ');
     }
     
     /**
-     * Main render method - routes to appropriate step
+     * Main render method
      */
     public function render() {
         $flow = $this->session->get('invitation_flow', []);
@@ -262,7 +265,6 @@ class SAW_Invitation_Controller {
             exit;
         }
         
-        // Initialize richtext editor BEFORE render_header() for risks step
         if ($this->current_step === 'risks') {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/richtext-editor/richtext-editor.php';
             saw_richtext_editor_init();
@@ -353,8 +355,6 @@ class SAW_Invitation_Controller {
     
     /**
      * Handle back navigation
-     * 
-     * @since 2.0.0
      */
     private function handle_go_back() {
         if (!isset($_POST['invitation_nonce']) || 
@@ -370,7 +370,6 @@ class SAW_Invitation_Controller {
             exit;
         }
         
-        // Remove last step from history
         array_pop($history);
         $previous_step = end($history);
         
@@ -384,9 +383,6 @@ class SAW_Invitation_Controller {
     
     /**
      * Check if user can navigate back
-     * 
-     * @since 2.0.0
-     * @return bool
      */
     private function can_go_back() {
         $flow = $this->session->get('invitation_flow');
@@ -456,7 +452,6 @@ class SAW_Invitation_Controller {
         $risks_text = wp_kses_post($_POST['risks_text'] ?? '');
         $delete_files = $_POST['delete_files'] ?? [];
         
-        // Save or update text content
         if (!empty($risks_text)) {
             $existing_text_id = $wpdb->get_var($wpdb->prepare(
                 "SELECT id FROM {$wpdb->prefix}saw_visit_invitation_materials 
@@ -491,7 +486,6 @@ class SAW_Invitation_Controller {
             }
         }
         
-        // Delete marked files
         if (!empty($delete_files)) {
             foreach ($delete_files as $file_id) {
                 $file = $wpdb->get_row($wpdb->prepare(
@@ -513,7 +507,6 @@ class SAW_Invitation_Controller {
             }
         }
         
-        // Handle new file uploads
         if (!empty($_FILES['risks_documents']['name'][0])) {
             require_once ABSPATH . 'wp-admin/includes/file.php';
             require_once ABSPATH . 'wp-admin/includes/image.php';
@@ -552,7 +545,6 @@ class SAW_Invitation_Controller {
             }
         }
         
-        // Invalidate cache
         if (class_exists('SAW_Cache')) {
             SAW_Cache::delete('invitation_visit_' . $this->visit_id, 'invitations');
             SAW_Cache::flush('invitations');
@@ -577,6 +569,14 @@ class SAW_Invitation_Controller {
     
     /**
      * Handle save visitors
+     * 
+     * Supports:
+     * - Creating new visitors with certificates
+     * - Updating existing visitors (name, position, email, phone, training_skip)
+     * - Adding/updating/deleting certificates for existing visitors
+     * - Deleting visitors (only if not checked-in)
+     * 
+     * @since 3.9.9 Added certificates and visitor editing/deletion
      */
     private function handle_save_visitors() {
         if (!isset($_POST['invitation_nonce']) || 
@@ -586,53 +586,130 @@ class SAW_Invitation_Controller {
         
         global $wpdb;
         
-        $existing_visitor_ids = $_POST['existing_visitor_ids'] ?? [];
+        // Get POST data
+        $deleted_visitor_ids = isset($_POST['deleted_visitor_ids']) ? array_map('intval', (array) $_POST['deleted_visitor_ids']) : [];
+        $existing_visitors = $_POST['existing_visitors'] ?? [];
         $new_visitors = $_POST['new_visitors'] ?? [];
-        $training_skip = $_POST['training_skip'] ?? [];
         
-        // Validate - must have at least one visitor
-        if (empty($existing_visitor_ids) && empty($new_visitors)) {
-            $flow = $this->session->get('invitation_flow');
-            $flow['error'] = 'Please add at least one visitor';
-            $this->session->set('invitation_flow', $flow);
-            
-            wp_redirect(home_url('/visitor-invitation/' . $this->token . '/?step=visitors'));
-            exit;
-        }
-        
-        $visitor_ids = [];
-        
-        // Process existing visitors
-        if (!empty($existing_visitor_ids)) {
-            foreach ($existing_visitor_ids as $id) {
-                $id = intval($id);
-                if ($id > 0) {
-                    $visitor_ids[] = $id;
-                    
-                    $training_skipped = isset($training_skip[$id]) && $training_skip[$id] === '1';
-                    
-                    $wpdb->update(
-                        $wpdb->prefix . 'saw_visitors',
-                        [
-                            'training_skipped' => $training_skipped ? 1 : 0,
-                            'training_status' => $training_skipped ? 'skipped' : 'pending',
-                        ],
-                        ['id' => $id],
-                        ['%d', '%s'],
-                        ['%d']
-                    );
-                }
-            }
-        }
-        
-        // Add new visitors
-        if (!empty($new_visitors) && is_array($new_visitors)) {
-            foreach ($new_visitors as $visitor) {
-                if (empty($visitor['first_name']) || empty($visitor['last_name'])) {
+        // ===== 1. DELETE VISITORS =====
+        // Only delete if visitor is not checked-in (no daily_log with checked_in_at)
+        if (!empty($deleted_visitor_ids)) {
+            foreach ($deleted_visitor_ids as $visitor_id) {
+                if ($visitor_id <= 0) continue;
+                
+                // Verify visitor belongs to this visit
+                $visitor = $wpdb->get_row($wpdb->prepare(
+                    "SELECT v.id, v.visit_id 
+                     FROM {$wpdb->prefix}saw_visitors v
+                     WHERE v.id = %d AND v.visit_id = %d",
+                    $visitor_id,
+                    $this->visit_id
+                ));
+                
+                if (!$visitor) continue;
+                
+                // Check if visitor has any check-in record
+                $has_checkin = $wpdb->get_var($wpdb->prepare(
+                    "SELECT COUNT(*) FROM {$wpdb->prefix}saw_visit_daily_logs 
+                     WHERE visitor_id = %d AND checked_in_at IS NOT NULL",
+                    $visitor_id
+                ));
+                
+                if ($has_checkin > 0) {
+                    // Cannot delete - visitor already checked in
                     continue;
                 }
                 
-                $training_skipped = isset($visitor['training_skip']) && $visitor['training_skip'] === '1';
+                // Delete certificates first (foreign key)
+                $wpdb->delete(
+                    $wpdb->prefix . 'saw_visitor_certificates',
+                    ['visitor_id' => $visitor_id],
+                    ['%d']
+                );
+                
+                // Delete visitor
+                $wpdb->delete(
+                    $wpdb->prefix . 'saw_visitors',
+                    ['id' => $visitor_id, 'visit_id' => $this->visit_id],
+                    ['%d', '%d']
+                );
+            }
+        }
+        
+        // ===== 2. UPDATE EXISTING VISITORS =====
+        $visitor_ids = [];
+        
+        if (!empty($existing_visitors) && is_array($existing_visitors)) {
+            foreach ($existing_visitors as $visitor_id => $visitor_data) {
+                $visitor_id = intval($visitor_id);
+                if ($visitor_id <= 0) continue;
+                
+                // Verify visitor belongs to this visit
+                $existing = $wpdb->get_row($wpdb->prepare(
+                    "SELECT id FROM {$wpdb->prefix}saw_visitors 
+                     WHERE id = %d AND visit_id = %d",
+                    $visitor_id,
+                    $this->visit_id
+                ));
+                
+                if (!$existing) continue;
+                
+                // Check if visitor is selected (checkbox checked)
+                $is_selected = isset($visitor_data['selected']) && $visitor_data['selected'] === '1';
+                
+                if (!$is_selected) {
+                    // Visitor unchecked - set to planned (not confirmed)
+                    $wpdb->update(
+                        $wpdb->prefix . 'saw_visitors',
+                        ['participation_status' => 'planned'],
+                        ['id' => $visitor_id],
+                        ['%s'],
+                        ['%d']
+                    );
+                    continue;
+                }
+                
+                // Visitor is selected - update data
+                $visitor_ids[] = $visitor_id;
+                
+                $training_skipped = isset($visitor_data['training_skip']) && $visitor_data['training_skip'] === '1';
+                
+                // Update visitor data
+                $update_data = [
+                    'first_name' => sanitize_text_field($visitor_data['first_name'] ?? ''),
+                    'last_name' => sanitize_text_field($visitor_data['last_name'] ?? ''),
+                    'position' => sanitize_text_field($visitor_data['position'] ?? ''),
+                    'email' => sanitize_email($visitor_data['email'] ?? ''),
+                    'phone' => sanitize_text_field($visitor_data['phone'] ?? ''),
+                    'participation_status' => 'confirmed',
+                    'training_skipped' => $training_skipped ? 1 : 0,
+                    'training_status' => $training_skipped ? 'skipped' : 'pending',
+                ];
+                
+                // Only update if we have valid name
+                if (!empty($update_data['first_name']) && !empty($update_data['last_name'])) {
+                    $wpdb->update(
+                        $wpdb->prefix . 'saw_visitors',
+                        $update_data,
+                        ['id' => $visitor_id],
+                        ['%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s'],
+                        ['%d']
+                    );
+                }
+                
+                // Handle certificates for existing visitor
+                $this->save_visitor_certificates($visitor_id, $visitor_data['certificates'] ?? []);
+            }
+        }
+        
+        // ===== 3. ADD NEW VISITORS =====
+        if (!empty($new_visitors) && is_array($new_visitors)) {
+            foreach ($new_visitors as $visitor_data) {
+                if (empty($visitor_data['first_name']) || empty($visitor_data['last_name'])) {
+                    continue;
+                }
+                
+                $training_skipped = isset($visitor_data['training_skip']) && $visitor_data['training_skip'] === '1';
                 
                 $wpdb->insert(
                     $wpdb->prefix . 'saw_visitors',
@@ -640,11 +717,11 @@ class SAW_Invitation_Controller {
                         'visit_id' => $this->visit_id,
                         'customer_id' => $this->customer_id,
                         'branch_id' => $this->branch_id,
-                        'first_name' => sanitize_text_field($visitor['first_name']),
-                        'last_name' => sanitize_text_field($visitor['last_name']),
-                        'position' => sanitize_text_field($visitor['position'] ?? ''),
-                        'email' => sanitize_email($visitor['email'] ?? ''),
-                        'phone' => sanitize_text_field($visitor['phone'] ?? ''),
+                        'first_name' => sanitize_text_field($visitor_data['first_name']),
+                        'last_name' => sanitize_text_field($visitor_data['last_name']),
+                        'position' => sanitize_text_field($visitor_data['position'] ?? ''),
+                        'email' => sanitize_email($visitor_data['email'] ?? ''),
+                        'phone' => sanitize_text_field($visitor_data['phone'] ?? ''),
                         'participation_status' => 'confirmed',
                         'current_status' => 'confirmed',
                         'training_skipped' => $training_skipped ? 1 : 0,
@@ -653,8 +730,31 @@ class SAW_Invitation_Controller {
                 );
                 
                 if ($wpdb->insert_id) {
-                    $visitor_ids[] = $wpdb->insert_id;
+                    $new_visitor_id = $wpdb->insert_id;
+                    $visitor_ids[] = $new_visitor_id;
+                    
+                    // Save certificates for new visitor
+                    $this->save_visitor_certificates($new_visitor_id, $visitor_data['certificates'] ?? []);
                 }
+            }
+        }
+        
+        // ===== 4. VALIDATE - must have at least one visitor =====
+        if (empty($visitor_ids)) {
+            // Check if there are any confirmed visitors
+            $confirmed_count = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$wpdb->prefix}saw_visitors 
+                 WHERE visit_id = %d AND participation_status = 'confirmed'",
+                $this->visit_id
+            ));
+            
+            if ($confirmed_count == 0) {
+                $flow = $this->session->get('invitation_flow');
+                $flow['error'] = 'Please add at least one visitor';
+                $this->session->set('invitation_flow', $flow);
+                
+                wp_redirect(home_url('/visitor-invitation/' . $this->token . '/?step=visitors'));
+                exit;
             }
         }
         
@@ -684,13 +784,14 @@ class SAW_Invitation_Controller {
         $needs_training = false;
         
         if ($has_training) {
-            foreach ($visitor_ids as $id) {
-                $visitor = $wpdb->get_row($wpdb->prepare(
-                    "SELECT training_skipped FROM {$wpdb->prefix}saw_visitors WHERE id = %d",
-                    $id
-                ));
-                
-                if ($visitor && !$visitor->training_skipped) {
+            $confirmed_visitors = $wpdb->get_results($wpdb->prepare(
+                "SELECT id, training_skipped FROM {$wpdb->prefix}saw_visitors 
+                 WHERE visit_id = %d AND participation_status = 'confirmed'",
+                $this->visit_id
+            ));
+            
+            foreach ($confirmed_visitors as $v) {
+                if (!$v->training_skipped) {
                     $needs_training = true;
                     break;
                 }
@@ -727,10 +828,106 @@ class SAW_Invitation_Controller {
     }
     
     /**
-     * Get available training steps based on actual content
+     * Save certificates for a visitor
      * 
-     * @since 2.1.0
-     * @return array
+     * @since 3.9.9
+     * @param int $visitor_id Visitor ID
+     * @param array $certificates Array of certificate data
+     */
+    private function save_visitor_certificates($visitor_id, $certificates) {
+        global $wpdb;
+        
+        if (empty($certificates) || !is_array($certificates)) {
+            // Delete all existing certificates if none provided
+            $wpdb->delete(
+                $wpdb->prefix . 'saw_visitor_certificates',
+                ['visitor_id' => $visitor_id],
+                ['%d']
+            );
+            return;
+        }
+        
+        // Get existing certificate IDs
+        $existing_ids = $wpdb->get_col($wpdb->prepare(
+            "SELECT id FROM {$wpdb->prefix}saw_visitor_certificates WHERE visitor_id = %d",
+            $visitor_id
+        ));
+        
+        $processed_ids = [];
+        
+        foreach ($certificates as $cert) {
+            // Skip empty certificates
+            if (empty($cert['name'])) {
+                continue;
+            }
+            
+            $cert_id = isset($cert['id']) ? intval($cert['id']) : 0;
+            
+            $cert_data = [
+                'visitor_id' => $visitor_id,
+                'customer_id' => $this->customer_id,
+                'branch_id' => $this->branch_id,
+                'certificate_name' => sanitize_text_field($cert['name']),
+                'certificate_number' => !empty($cert['number']) ? sanitize_text_field($cert['number']) : null,
+                'valid_until' => !empty($cert['valid_until']) ? sanitize_text_field($cert['valid_until']) : null,
+            ];
+            
+            if ($cert_id > 0 && in_array($cert_id, $existing_ids)) {
+                // Update existing certificate
+                $wpdb->update(
+                    $wpdb->prefix . 'saw_visitor_certificates',
+                    $cert_data,
+                    ['id' => $cert_id],
+                    ['%d', '%d', '%d', '%s', '%s', '%s'],
+                    ['%d']
+                );
+                $processed_ids[] = $cert_id;
+            } else {
+                // Insert new certificate
+                $cert_data['created_at'] = current_time('mysql');
+                $wpdb->insert(
+                    $wpdb->prefix . 'saw_visitor_certificates',
+                    $cert_data
+                );
+                if ($wpdb->insert_id) {
+                    $processed_ids[] = $wpdb->insert_id;
+                }
+            }
+        }
+        
+        // Delete certificates that were not in the submitted data
+        $to_delete = array_diff($existing_ids, $processed_ids);
+        if (!empty($to_delete)) {
+            $placeholders = implode(',', array_fill(0, count($to_delete), '%d'));
+            $wpdb->query($wpdb->prepare(
+                "DELETE FROM {$wpdb->prefix}saw_visitor_certificates 
+                 WHERE id IN ($placeholders) AND visitor_id = %d",
+                array_merge($to_delete, [$visitor_id])
+            ));
+        }
+    }
+    
+    /**
+     * Check if visitor can be deleted
+     * 
+     * @since 3.9.9
+     * @param int $visitor_id Visitor ID
+     * @return bool True if can be deleted
+     */
+    private function can_delete_visitor($visitor_id) {
+        global $wpdb;
+        
+        $has_checkin = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}saw_visit_daily_logs 
+             WHERE visitor_id = %d AND checked_in_at IS NOT NULL",
+            $visitor_id
+        ));
+        
+        return $has_checkin == 0;
+    }
+    
+    /**
+     * Get available training steps based on actual content
      */
     private function get_available_training_steps() {
         global $wpdb;
@@ -744,7 +941,6 @@ class SAW_Invitation_Controller {
         $flow = $session->get('invitation_flow');
         $lang = $flow['language'] ?? 'cs';
         
-        // Get language_id for selected language
         $language_id = $wpdb->get_var($wpdb->prepare(
             "SELECT id FROM {$wpdb->prefix}saw_training_languages 
              WHERE customer_id = %d AND language_code = %s",
@@ -756,7 +952,6 @@ class SAW_Invitation_Controller {
             return $steps;
         }
         
-        // Load training content for selected language
         $content = $wpdb->get_row($wpdb->prepare(
             "SELECT * FROM {$wpdb->prefix}saw_training_content 
              WHERE customer_id = %d AND branch_id = %d AND language_id = %d",
@@ -773,29 +968,17 @@ class SAW_Invitation_Controller {
         
         // Video
         if (!empty($content['video_url'])) {
-            $steps[] = [
-                'type' => 'video',
-                'step' => 'training-video',
-                'has_content' => true
-            ];
+            $steps[] = ['type' => 'video', 'step' => 'training-video', 'has_content' => true];
         }
         
         // Map
         if (!empty($content['pdf_map_path'])) {
-            $steps[] = [
-                'type' => 'map', 
-                'step' => 'training-map',
-                'has_content' => true
-            ];
+            $steps[] = ['type' => 'map', 'step' => 'training-map', 'has_content' => true];
         }
         
         // Risks
         if (!empty($content['risks_text'])) {
-            $steps[] = [
-                'type' => 'risks',
-                'step' => 'training-risks', 
-                'has_content' => true
-            ];
+            $steps[] = ['type' => 'risks', 'step' => 'training-risks', 'has_content' => true];
         }
         
         // Department
@@ -814,22 +997,14 @@ class SAW_Invitation_Controller {
         ));
         
         if ($dept_count > 0 || $dept_docs > 0) {
-            $steps[] = [
-                'type' => 'department',
-                'step' => 'training-department',
-                'has_content' => true
-            ];
+            $steps[] = ['type' => 'department', 'step' => 'training-department', 'has_content' => true];
         }
         
         // OOPP
         if (class_exists('SAW_OOPP_Public')) {
             $has_oopp = SAW_OOPP_Public::has_oopp($this->customer_id, $this->branch_id, $this->visit_id);
             if ($has_oopp) {
-                $steps[] = [
-                    'type' => 'oopp',
-                    'step' => 'training-oopp',
-                    'has_content' => true
-                ];
+                $steps[] = ['type' => 'oopp', 'step' => 'training-oopp', 'has_content' => true];
             }
         }
         
@@ -842,74 +1017,14 @@ class SAW_Invitation_Controller {
         ));
         
         if ($has_additional_text || $additional_docs > 0) {
-            $steps[] = [
-                'type' => 'additional',
-                'step' => 'training-additional',
-                'has_content' => true
-            ];
+            $steps[] = ['type' => 'additional', 'step' => 'training-additional', 'has_content' => true];
         }
         
         return $steps;
     }
     
     /**
-     * Get best available language for training content
-     * 
-     * @since 2.0.0
-     * @param string $preferred_lang
-     * @return string
-     */
-    private function get_best_available_language($preferred_lang) {
-        global $wpdb;
-        
-        if (!$this->customer_id || !$this->branch_id) {
-            return 'cs';
-        }
-        
-        // Try preferred language
-        $content = $wpdb->get_row($wpdb->prepare(
-            "SELECT tc.id 
-             FROM {$wpdb->prefix}saw_training_content tc
-             INNER JOIN {$wpdb->prefix}saw_training_languages tl ON tc.language_id = tl.id
-             WHERE tc.customer_id = %d 
-             AND tc.branch_id = %d 
-             AND tl.language_code = %s
-             LIMIT 1",
-            $this->customer_id,
-            $this->branch_id,
-            $preferred_lang
-        ));
-        
-        if ($content) {
-            return $preferred_lang;
-        }
-        
-        // Fallback to English
-        if ($preferred_lang !== 'en') {
-            $content = $wpdb->get_row($wpdb->prepare(
-                "SELECT tc.id 
-                 FROM {$wpdb->prefix}saw_training_content tc
-                 INNER JOIN {$wpdb->prefix}saw_training_languages tl ON tc.language_id = tl.id
-                 WHERE tc.customer_id = %d 
-                 AND tc.branch_id = %d 
-                 AND tl.language_code = 'en'
-                 LIMIT 1",
-                $this->customer_id,
-                $this->branch_id
-            ));
-            
-            if ($content) {
-                return 'en';
-            }
-        }
-        
-        return 'cs';
-    }
-    
-    /**
      * Check if any training content exists
-     * 
-     * @return bool
      */
     private function has_training_content() {
         $available_steps = $this->get_available_training_steps();
@@ -949,9 +1064,6 @@ class SAW_Invitation_Controller {
     
     /**
      * Render template with data
-     * 
-     * @param string $template Template path
-     * @param array $data Data to extract
      */
     private function render_template($template, $data = []) {
         extract($data);
@@ -1007,12 +1119,31 @@ class SAW_Invitation_Controller {
         $flow = $this->session->get('invitation_flow');
         $lang = $flow['language'] ?? 'cs';
         
+        // Get visitors with their certificates
         $existing_visitors = $wpdb->get_results($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_visitors 
-             WHERE visit_id = %d 
-             ORDER BY created_at ASC",
+            "SELECT v.*, 
+                    (SELECT COUNT(*) FROM {$wpdb->prefix}saw_visit_daily_logs dl 
+                     WHERE dl.visitor_id = v.id AND dl.checked_in_at IS NOT NULL) as has_checkin
+             FROM {$wpdb->prefix}saw_visitors v
+             WHERE v.visit_id = %d 
+             ORDER BY v.created_at ASC",
             $this->visit_id
         ), ARRAY_A);
+        
+        // Load certificates for each visitor
+        foreach ($existing_visitors as &$visitor) {
+            $visitor['certificates'] = $wpdb->get_results($wpdb->prepare(
+                "SELECT * FROM {$wpdb->prefix}saw_visitor_certificates 
+                 WHERE visitor_id = %d 
+                 ORDER BY created_at ASC",
+                $visitor['id']
+            ), ARRAY_A);
+            
+            // Can delete if no check-in
+            $visitor['can_delete'] = ($visitor['has_checkin'] == 0);
+            $visitor['can_edit'] = ($visitor['has_checkin'] == 0);
+        }
+        unset($visitor);
         
         $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/invitation/steps/3-visitors-register.php';
         if (file_exists($template)) {
@@ -1122,8 +1253,6 @@ class SAW_Invitation_Controller {
     
     /**
      * Render training OOPP step
-     * 
-     * @since 3.0.0
      */
     private function render_training_oopp() {
         $available_steps = $this->get_available_training_steps();
@@ -1185,8 +1314,6 @@ class SAW_Invitation_Controller {
     
     /**
      * Skip to next available training step or summary
-     * 
-     * @param string $current_step Current step being skipped
      */
     private function skip_to_next_available_step($current_step) {
         $flow = $this->session->get('invitation_flow');
@@ -1385,16 +1512,10 @@ class SAW_Invitation_Controller {
     
     /**
      * Render PIN success page and send Info Portal emails
-     * 
-     * This is the final step of the invitation flow. Updates visit status
-     * to confirmed and sends Info Portal emails to all visitors.
-     * 
-     * @since 1.5.0 Added Info Portal email integration
      */
     private function render_pin_success() {
         global $wpdb;
         
-        // Update status to confirmed when invitation is completed
         $wpdb->update(
             $wpdb->prefix . 'saw_visits',
             [
@@ -1406,7 +1527,7 @@ class SAW_Invitation_Controller {
             ['%d']
         );
         
-        // ===== INFO PORTAL: Send emails to visitors (v3.3.0) =====
+        // Send Info Portal emails
         $email_service_file = SAW_VISITORS_PLUGIN_DIR . 'includes/services/class-saw-visitor-info-email.php';
         if (file_exists($email_service_file)) {
             require_once $email_service_file;
@@ -1415,16 +1536,13 @@ class SAW_Invitation_Controller {
                 $flow = $this->session->get('invitation_flow');
                 $language = $flow['language'] ?? 'cs';
                 
-                // Validate language
                 if (!in_array($language, ['cs', 'en', 'sk', 'uk', 'de', 'pl', 'hu', 'ro'])) {
                     $language = 'cs';
                 }
                 
-                // Send emails to all visitors in this visit
                 SAW_Visitor_Info_Email::send_to_visit($this->visit_id, $language);
             }
         }
-        // ===== END INFO PORTAL =====
         
         $visit = $wpdb->get_row($wpdb->prepare(
             "SELECT * FROM {$wpdb->prefix}saw_visits WHERE id = %d",
@@ -1444,8 +1562,6 @@ class SAW_Invitation_Controller {
     
     /**
      * Set error message in session
-     * 
-     * @param string $message Error message
      */
     private function set_error($message) {
         $flow = $this->session->get('invitation_flow');
@@ -1455,8 +1571,6 @@ class SAW_Invitation_Controller {
     
     /**
      * Handle WordPress media library AJAX query
-     * 
-     * @since 5.4.4
      */
     public static function handle_media_query() {
         $context = self::verify_invitation_ajax_context();
@@ -1497,8 +1611,6 @@ class SAW_Invitation_Controller {
     
     /**
      * Handle WordPress media library AJAX upload
-     * 
-     * @since 5.4.4
      */
     public static function handle_media_upload() {
         $context = self::verify_invitation_ajax_context();
@@ -1543,9 +1655,6 @@ class SAW_Invitation_Controller {
     
     /**
      * Verify invitation AJAX context
-     * 
-     * @since 5.4.4
-     * @return array|false
      */
     private static function verify_invitation_ajax_context() {
         if (!class_exists('SAW_Session_Manager')) {

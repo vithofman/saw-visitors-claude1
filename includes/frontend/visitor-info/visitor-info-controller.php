@@ -674,6 +674,19 @@ class SAW_Visitor_Info_Controller {
         wp_enqueue_script('saw-touch-gestures', $js_base_url . 'touch-gestures.js', array(), $css_version, true);
         wp_enqueue_script('saw-pdf-viewer', $js_base_url . 'pdf-viewer.js', array('saw-touch-gestures'), $css_version, true);
         wp_enqueue_script('saw-video-player', $js_base_url . 'video-player.js', array(), $css_version, true);
+
+// Hide toast notifications visually (v3.9.11)
+        wp_add_inline_style('saw-terminal-base', '
+            .saw-toast,
+            .saw-toast-container,
+            #autosave-indicator,
+            .saw-save-indicator,
+            .saw-success-notification {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+            }
+        ');
     }
     
     private function render_language_select() {

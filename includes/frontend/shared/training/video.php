@@ -8,6 +8,7 @@
  * 
  * ZMĚNA v 3.9.9:
  * - REMOVED: Skip training sekce úplně odstraněna
+ * - NEW: Free mode pro invitation - checkbox volitelný, video threshold 0
  */
 
 if (!defined('ABSPATH')) {
@@ -49,6 +50,9 @@ $nonce_name = $ctx['nonce_name'];
 $nonce_field = $ctx['nonce_field'];
 $action_name = $ctx['action_name'];
 $complete_action = $ctx['complete_action'];
+
+// FREE MODE for invitation - no confirmation required, instant access
+$free_mode = ($context === 'invitation');
 
 // Initialize variables - preserve if already set by controller
 if (!isset($video_url)) {
@@ -216,8 +220,8 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
                        name="video_confirmed" 
                        id="video-confirmed"
                        value="1"
-                       required
-                       disabled>
+                       <?php if (!$free_mode): ?>required<?php endif; ?>
+                       <?php if (!$free_mode): ?>disabled<?php endif; ?>>
                 <span><?php echo esc_html($t['confirm']); ?></span>
             </label>
             <?php endif; ?>
@@ -225,7 +229,7 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
             <button type="submit" 
                     class="saw-panel-btn"
                     id="continue-btn"
-                    <?php echo !$completed ? 'disabled' : ''; ?>>
+                    <?php echo (!$completed && !$free_mode) ? 'disabled' : ''; ?>>
                 <?php echo esc_html($t['continue']); ?> →
             </button>
         </form>
@@ -264,7 +268,7 @@ if (file_exists($video_player_path)):
         var player = new SAWVideoPlayer({
             videoUrl: '<?php echo esc_js($video_url); ?>',
             containerId: 'video-player',
-            completionThreshold: 90,
+            completionThreshold: <?php echo $free_mode ? '0' : '90'; ?>,
             debug: false,
             
             onProgress: function(progress) {
@@ -333,6 +337,14 @@ if (file_exists($video_player_path)):
         var btn = document.getElementById('continue-btn');
         if (btn) btn.disabled = false;
     }
+    
+    <?php if ($free_mode): ?>
+    // FREE MODE - enable checkbox and button immediately
+    var freeCheckbox = document.getElementById('video-confirmed');
+    var freeBtn = document.getElementById('continue-btn');
+    if (freeCheckbox) freeCheckbox.disabled = false;
+    if (freeBtn) freeBtn.disabled = false;
+    <?php endif; ?>
 })();
 </script>
 <?php endif; ?>

@@ -8,6 +8,7 @@
  * 
  * ZMĚNA v 3.9.9:
  * - REMOVED: Skip training sekce úplně odstraněna
+ * - NEW: Free mode pro invitation - checkbox volitelný, PDF progress neblokuje
  */
 
 if (!defined('ABSPATH')) {
@@ -49,6 +50,9 @@ $nonce_name = $ctx['nonce_name'];
 $nonce_field = $ctx['nonce_field'];
 $action_name = $ctx['action_name'];
 $complete_action = $ctx['complete_action'];
+
+// FREE MODE for invitation - no confirmation required
+$free_mode = ($context === 'invitation');
 
 // Get data from appropriate flow
 if ($context === 'invitation') {
@@ -254,8 +258,8 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
                    name="map_confirmed" 
                    id="map-confirmed"
                    value="1"
-                   required
-                   disabled>
+                   <?php if (!$free_mode): ?>required<?php endif; ?>
+                   <?php if (!$free_mode): ?>disabled<?php endif; ?>>
             <span><?php echo esc_html($t['confirm']); ?></span>
         </label>
         <?php endif; ?>
@@ -263,7 +267,7 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
         <button type="submit" 
                 class="saw-panel-btn"
                 id="continue-btn"
-                <?php echo !$completed ? 'disabled' : ''; ?>>
+                <?php echo (!$completed && !$free_mode) ? 'disabled' : ''; ?>>
             <?php echo esc_html($t['continue']); ?> →
         </button>
     </form>
@@ -389,6 +393,14 @@ if (file_exists($pdf_viewer_path)):
     } else {
         initWhenReady();
     }
+    
+    <?php if ($free_mode): ?>
+    // FREE MODE - enable checkbox and button immediately
+    var freeCheckbox = document.getElementById('map-confirmed');
+    var freeBtn = document.getElementById('continue-btn');
+    if (freeCheckbox) freeCheckbox.disabled = false;
+    if (freeBtn) freeBtn.disabled = false;
+    <?php endif; ?>
 })();
 </script>
 <?php endif; ?>

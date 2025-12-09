@@ -3,7 +3,7 @@
  * Invitation Step - Visitors Registration
  * 
  * @package SAW_Visitors
- * @version 2.0.0 - Added visitor status display
+ * @version 3.9.10 - Fixed visit status banner logic
  */
 
 if (!defined('ABSPATH')) exit;
@@ -12,18 +12,53 @@ $flow = $this->session->get('invitation_flow');
 $lang = $flow['language'] ?? 'cs';
 $existing_visitors = $existing_visitors ?? [];
 
-// Get visit status for context
+// Get visit status for context - IMPROVED LOGIC
 global $wpdb;
-$visit_status = $wpdb->get_var($wpdb->prepare(
-    "SELECT status FROM {$wpdb->prefix}saw_visits WHERE id = %d",
-    $flow['visit_id'] ?? 0
+
+$visit_id = $flow['visit_id'] ?? 0;
+
+// Check if any visitors are currently present (checked-in)
+$has_present_visitors = $wpdb->get_var($wpdb->prepare(
+    "SELECT COUNT(*) FROM {$wpdb->prefix}saw_visitors 
+     WHERE visit_id = %d AND current_status = 'present'",
+    $visit_id
 ));
+
+// Check if any visitors have checked out today
+$has_checked_out_today = $wpdb->get_var($wpdb->prepare(
+    "SELECT COUNT(*) FROM {$wpdb->prefix}saw_visit_daily_logs 
+     WHERE visit_id = %d AND log_date = CURDATE() AND checked_out_at IS NOT NULL",
+    $visit_id
+));
+
+// Get visit status from table
+$visit_row = $wpdb->get_row($wpdb->prepare(
+    "SELECT status FROM {$wpdb->prefix}saw_visits WHERE id = %d",
+    $visit_id
+), ARRAY_A);
+$visit_status = $visit_row['status'] ?? 'pending';
+
+// Determine effective status for banner:
+// - If any visitor is 'present' -> in_progress
+// - If visit status is 'in_progress' -> in_progress
+// - If visit status is 'confirmed' -> confirmed
+// - Otherwise -> pending (waiting for arrival)
+$effective_status = 'pending';
+
+if ($has_present_visitors > 0 || $visit_status === 'in_progress') {
+    $effective_status = 'in_progress';
+} elseif ($visit_status === 'confirmed') {
+    $effective_status = 'confirmed';
+} elseif ($has_checked_out_today > 0) {
+    // Visitors checked out today but none present = visit was in progress
+    $effective_status = 'in_progress';
+}
 
 $translations = [
     'cs' => [
         'title' => 'Registrace návštěvníků',
-        'subtitle' => 'Označte kdo přijde a přidejte další osoby',
-        'existing' => 'Předregistrovaní návštěvníci',
+        'subtitle' => 'Upravte údaje návštěvníků a přidejte další osoby',
+        'existing' => 'Registrovaní návštěvníci',
         'new' => 'Přidat nové návštěvníky',
         'first_name' => 'Jméno',
         'last_name' => 'Příjmení',
@@ -33,21 +68,19 @@ $translations = [
         'training_skip' => 'Školení absolvoval do 1 roku',
         'add_visitor' => '+ Přidat dalšího návštěvníka',
         'submit' => 'Pokračovat →',
-        // Status labels
         'status_planned' => 'Plánovaný',
         'status_confirmed' => 'Potvrzený',
         'status_present' => 'Přítomen',
         'status_checked_out' => 'Odhlášen',
         'status_no_show' => 'Nedostavil se',
-        // Visit status banner
         'visit_in_progress' => '🟢 Návštěva právě probíhá',
         'visit_pending' => '⏳ Návštěva čeká na příchod',
         'visit_confirmed' => '✅ Návštěva je potvrzena',
     ],
     'en' => [
         'title' => 'Visitor Registration',
-        'subtitle' => 'Check who will come and add more people',
-        'existing' => 'Pre-registered Visitors',
+        'subtitle' => 'Edit visitor details and add more people',
+        'existing' => 'Registered Visitors',
         'new' => 'Add New Visitors',
         'first_name' => 'First Name',
         'last_name' => 'Last Name',
@@ -57,13 +90,11 @@ $translations = [
         'training_skip' => 'Completed training within 1 year',
         'add_visitor' => '+ Add Another Visitor',
         'submit' => 'Continue →',
-        // Status labels
         'status_planned' => 'Planned',
         'status_confirmed' => 'Confirmed',
         'status_present' => 'Present',
         'status_checked_out' => 'Checked Out',
         'status_no_show' => 'No Show',
-        // Visit status banner
         'visit_in_progress' => '🟢 Visit is in progress',
         'visit_pending' => '⏳ Waiting for arrival',
         'visit_confirmed' => '✅ Visit is confirmed',
@@ -72,7 +103,6 @@ $translations = [
 
 $t = $translations[$lang] ?? $translations['cs'];
 
-// Status badge configuration
 $status_config = [
     'planned' => ['label' => $t['status_planned'], 'color' => '#94a3b8', 'bg' => 'rgba(148, 163, 184, 0.2)'],
     'confirmed' => ['label' => $t['status_confirmed'], 'color' => '#fbbf24', 'bg' => 'rgba(251, 191, 36, 0.2)'],
@@ -142,15 +172,15 @@ $status_config = [
     border: 1px solid rgba(148, 163, 184, 0.12);
 }
 
-.saw-visitors-existing,
-.saw-visitors-new {
-    margin-bottom: 2rem;
-}
-
 .saw-visitors-existing h3,
 .saw-visitors-new h3 {
     color: #fff;
     margin-bottom: 1rem;
+    font-size: 1.125rem;
+}
+
+.saw-visitors-existing {
+    margin-bottom: 2rem;
 }
 
 .saw-visitor-card {
@@ -158,23 +188,17 @@ $status_config = [
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
     padding: 1rem;
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
     flex-wrap: wrap;
-    gap: 0.75rem;
 }
 
-/* Status-based card styling */
-.saw-visitor-card[data-status="present"] {
-    background: rgba(16, 185, 129, 0.1);
+.saw-visitor-card.is-checked-in {
     border-color: rgba(16, 185, 129, 0.3);
-}
-
-.saw-visitor-card[data-status="checked_out"] {
-    background: rgba(99, 102, 241, 0.1);
-    border-color: rgba(99, 102, 241, 0.3);
+    background: rgba(16, 185, 129, 0.1);
 }
 
 .saw-visitor-select {
@@ -183,13 +207,17 @@ $status_config = [
     gap: 0.75rem;
     cursor: pointer;
     flex: 1;
-    min-width: 200px;
+}
+
+.saw-visitor-select input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: #667eea;
 }
 
 .saw-visitor-info {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
 }
 
 .saw-visitor-name {
@@ -202,39 +230,34 @@ $status_config = [
     font-size: 0.875rem;
 }
 
-/* Status Badge */
+.saw-visitor-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
 .saw-visitor-status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
     display: inline-flex;
     align-items: center;
-    gap: 0.375rem;
-    padding: 0.375rem 0.75rem;
-    border-radius: 20px;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    white-space: nowrap;
+    gap: 0.5rem;
 }
 
 .saw-visitor-status-badge .status-dot {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
+    background: currentColor;
     border-radius: 50%;
     animation: pulse 2s infinite;
-}
-
-.saw-visitor-status-badge[data-status="present"] .status-dot {
-    background: #10b981;
 }
 
 @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
-}
-
-.saw-visitor-meta {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    flex-wrap: wrap;
 }
 
 .saw-training-skip {
@@ -373,16 +396,16 @@ $status_config = [
     </div>
     
     <?php 
-    // Show visit status banner
-    if ($visit_status === 'in_progress'): ?>
+    // Show visit status banner based on effective status
+    if ($effective_status === 'in_progress'): ?>
         <div class="saw-visit-status-banner in_progress">
             <?= esc_html($t['visit_in_progress']) ?>
         </div>
-    <?php elseif ($visit_status === 'confirmed'): ?>
+    <?php elseif ($effective_status === 'confirmed'): ?>
         <div class="saw-visit-status-banner confirmed">
             <?= esc_html($t['visit_confirmed']) ?>
         </div>
-    <?php elseif ($visit_status === 'pending'): ?>
+    <?php elseif ($effective_status === 'pending'): ?>
         <div class="saw-visit-status-banner pending">
             <?= esc_html($t['visit_pending']) ?>
         </div>
@@ -410,7 +433,6 @@ $status_config = [
                                    value="<?= $visitor['id'] ?>"
                                    <?= $is_checked_in ? 'checked disabled' : 'checked' ?>>
                             <?php if ($is_checked_in): ?>
-                                <!-- Hidden field to ensure checked-in visitors are always included -->
                                 <input type="hidden" name="existing_visitor_ids[]" value="<?= $visitor['id'] ?>">
                             <?php endif; ?>
                             
@@ -427,7 +449,6 @@ $status_config = [
                         </label>
                         
                         <div class="saw-visitor-meta">
-                            <!-- Status Badge -->
                             <span class="saw-visitor-status-badge" 
                                   data-status="<?= esc_attr($current_status) ?>"
                                   style="background: <?= $status_info['bg'] ?>; color: <?= $status_info['color'] ?>; border: 1px solid <?= $status_info['color'] ?>33;">
@@ -454,6 +475,7 @@ $status_config = [
         
         <div class="saw-visitors-new">
             <h3><?= esc_html($t['new']) ?></h3>
+            
             <div id="new-visitors-container"></div>
             
             <button type="button" class="saw-btn-add-visitor" onclick="addNewVisitor()">
@@ -462,20 +484,9 @@ $status_config = [
         </div>
         
         <div class="form-actions">
-            <?php if ($this->can_go_back()): ?>
-            <button type="submit" 
-                    name="invitation_action" 
-                    value="go_back" 
-                    class="btn btn-secondary">
-                <svg style="width:1.25rem;height:1.25rem;margin-right:0.5rem;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M19 12H5M12 19l-7-7 7-7"/>
-                </svg>
-                <?php echo $lang === 'en' ? 'Back' : 'Zpět'; ?>
+            <button type="button" class="btn-secondary" onclick="history.back()">
+                ← <?= $lang === 'en' ? 'Back' : 'Zpět' ?>
             </button>
-            <?php else: ?>
-            <div></div>
-            <?php endif; ?>
-            
             <button type="submit" class="saw-btn-primary saw-btn-submit">
                 <?= esc_html($t['submit']) ?>
             </button>
@@ -491,7 +502,7 @@ function addNewVisitor() {
     const html = `
         <div class="saw-visitor-form" id="visitor-${visitorCount}">
             <div class="saw-visitor-form-header">
-                <h4><?= $lang === 'en' ? 'Visitor' : 'Návštěvník' ?> #${visitorCount}</h4>
+                <h4><?= $lang === 'en' ? 'New Visitor' : 'Nový návštěvník' ?> #${visitorCount}</h4>
                 <button type="button" class="saw-btn-remove" onclick="removeVisitor(${visitorCount})">×</button>
             </div>
             
@@ -499,14 +510,14 @@ function addNewVisitor() {
                 <input type="text" 
                        name="new_visitors[${visitorCount}][first_name]" 
                        placeholder="<?= esc_attr($t['first_name']) ?>" 
-                       required 
-                       class="saw-input">
+                       class="saw-input"
+                       required>
                 
                 <input type="text" 
                        name="new_visitors[${visitorCount}][last_name]" 
                        placeholder="<?= esc_attr($t['last_name']) ?>" 
-                       required 
-                       class="saw-input">
+                       class="saw-input"
+                       required>
                 
                 <input type="text" 
                        name="new_visitors[${visitorCount}][position]" 
@@ -538,13 +549,8 @@ function removeVisitor(id) {
     document.getElementById(`visitor-${id}`).remove();
 }
 
-// Auto-add first visitor form if no existing visitors
+// Form validation
 document.addEventListener('DOMContentLoaded', function() {
-    if (document.querySelectorAll('.saw-visitor-card').length === 0) {
-        addNewVisitor();
-    }
-    
-    // Form validation
     const form = document.querySelector('form[method="POST"]');
     if (form) {
         form.addEventListener('submit', function(e) {

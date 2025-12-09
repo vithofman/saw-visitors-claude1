@@ -4,7 +4,11 @@
  * Works for Terminal, Invitation and Visitor Info flows
  * 
  * @package SAW_Visitors
- * @version 3.9.9
+ * @version 3.9.10
+ * 
+ * ZMĚNA v 3.9.10:
+ * - FIX: Opraveno načítání dat pro Terminal - proměnné předané z controlleru
+ *        se uchovávají před inicializací
  * 
  * ZMĚNA v 3.9.9:
  * - REMOVED: Skip training sekce úplně odstraněna
@@ -13,6 +17,12 @@
 if (!defined('ABSPATH')) {
     exit;
 }
+
+// ===== PRESERVE PASSED VARIABLES =====
+// Controller může předat tyto proměnné - uchováme je PŘED inicializací
+$passed_risks_text = isset($risks_text) ? $risks_text : null;
+$passed_documents = isset($documents) ? $documents : null;
+$passed_flow = isset($flow) ? $flow : null;
 
 // ===== CONTEXT DETECTION =====
 $context = 'terminal';
@@ -58,6 +68,7 @@ $lang = 'cs';
 
 // Get data based on flow
 if ($context === 'invitation') {
+    // Invitation - načte data z databáze
     $session = SAW_Session_Manager::instance();
     $flow = $session->get('invitation_flow');
     $lang = $flow['language'] ?? 'cs';
@@ -107,17 +118,21 @@ if ($context === 'invitation') {
         }
     }
 } elseif ($context === 'visitor_info') {
-    $flow = isset($flow) ? $flow : array();
-    $lang = isset($flow['language']) ? $flow['language'] : 'cs';
-    $visitor_id = isset($flow['visitor_id']) ? $flow['visitor_id'] : null;
-    $risks_text = isset($risks_text) ? $risks_text : '';
-    $documents = isset($documents) ? $documents : array();
+    // Visitor Info - používá předané proměnné
+    $flow = $passed_flow ?? array();
+    $lang = $flow['language'] ?? 'cs';
+    $visitor_id = $flow['visitor_id'] ?? null;
+    $risks_text = $passed_risks_text ?? '';
+    $documents = $passed_documents ?? array();
 } else {
-    $flow = isset($flow) ? $flow : [];
-    $lang = isset($flow['language']) ? $flow['language'] : 'cs';
-    $visitor_id = isset($flow['visitor_ids'][0]) ? $flow['visitor_ids'][0] : null;
-    $risks_text = isset($risks_text) ? $risks_text : '';
-    $documents = isset($documents) ? $documents : array();
+    // Terminal - používá předané proměnné z controlleru
+    $flow = $passed_flow ?? [];
+    $lang = $flow['language'] ?? 'cs';
+    $visitor_id = $flow['visitor_ids'][0] ?? null;
+    
+    // KLÍČOVÁ OPRAVA: použít předané hodnoty z controlleru
+    $risks_text = $passed_risks_text ?? '';
+    $documents = $passed_documents ?? array();
 }
 
 $has_content = !empty($risks_text);
@@ -265,25 +280,25 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
         </div>
     </div>
     
-    <!-- Floating Confirm Panel -->
+    <!-- Floating Panel -->
     <form method="POST" id="risks-form" class="saw-panel-confirm">
         <?php wp_nonce_field($nonce_name, $nonce_field); ?>
         <input type="hidden" name="<?php echo esc_attr($action_name); ?>" value="<?php echo esc_attr($complete_action); ?>">
-        
+
         <?php if (!$completed): ?>
         <label class="saw-panel-checkbox" id="checkbox-wrapper">
-            <input type="checkbox" 
-                   name="risks_confirmed" 
-                   id="risks-confirmed" 
-                   value="1" 
+            <input type="checkbox"
+                   name="risks_confirmed"
+                   id="risks-confirmed"
+                   value="1"
                    required>
             <span><?php echo esc_html($t['confirm']); ?></span>
         </label>
         <?php endif; ?>
-        
-        <button type="submit" 
-                class="saw-panel-btn" 
-                id="continue-btn" 
+
+        <button type="submit"
+                class="saw-panel-btn"
+                id="continue-btn"
                 <?php echo !$completed ? 'disabled' : ''; ?>>
             <?php echo esc_html($t['continue']); ?> →
         </button>
@@ -293,15 +308,20 @@ $t = isset($translations[$lang]) ? $translations[$lang] : $translations['cs'];
 <script>
 (function() {
     'use strict';
-    var checkbox = document.getElementById('risks-confirmed');
-    var continueBtn = document.getElementById('continue-btn');
-    var wrapper = document.getElementById('checkbox-wrapper');
+
+    const checkbox = document.getElementById('risks-confirmed');
+    const continueBtn = document.getElementById('continue-btn');
+    const wrapper = document.getElementById('checkbox-wrapper');
 
     if (checkbox && continueBtn) {
         checkbox.addEventListener('change', function() {
             continueBtn.disabled = !this.checked;
             if (wrapper) {
-                wrapper.classList.toggle('checked', this.checked);
+                if (this.checked) {
+                    wrapper.classList.add('checked');
+                } else {
+                    wrapper.classList.remove('checked');
+                }
             }
         });
     }

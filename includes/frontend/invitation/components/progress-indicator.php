@@ -4,6 +4,11 @@
  * 
  * @package SAW_Visitors
  * @since 3.0.0
+ * @version 3.9.9
+ * 
+ * ZMĚNA v 3.9.9:
+ * - NEW: Free navigation mode - všechny kroky jsou klikatelné bez nutnosti dokončit předchozí
+ * - Uživatel může libovolně přecházet mezi kroky školení
  */
 
 if (!defined('ABSPATH')) exit;
@@ -14,6 +19,10 @@ $current = $current_step;
 $token = $token ?? ($flow['token'] ?? '');
 $lang = $flow['language'] ?? 'cs';
 $title_key = ($lang === 'en') ? 'title_en' : 'title_cs';
+
+// FREE NAVIGATION MODE v3.9.9 - all steps clickable (invitation only)
+// Users can freely navigate between training steps without completing them
+$free_navigation = true;
 
 // Definice kroků
 $all_steps = [
@@ -674,8 +683,15 @@ $progress_percent = $total_steps > 1 ? round(($current_index / ($total_steps - 1
                 $n++;
                 $done = in_array($key, $completed);
                 $now = ($key === $current);
-                $can = ($key === 'language') || in_array($key, $completed) || in_array($key, $history);
-                if ($current === 'language' && empty($flow['language']) && $key !== 'language') $can = false;
+                
+                // FREE NAVIGATION v3.9.9 - all steps clickable except 'success'
+                if ($free_navigation) {
+                    $can = ($key !== 'success');
+                } else {
+                    // Original logic - step must be completed or in history
+                    $can = ($key === 'language') || in_array($key, $completed) || in_array($key, $history);
+                    if ($current === 'language' && empty($flow['language']) && $key !== 'language') $can = false;
+                }
                 
                 $cls = 'pi5-step';
                 if ($now) $cls .= ' is-current';
@@ -736,8 +752,15 @@ $progress_percent = $total_steps > 1 ? round(($current_index / ($total_steps - 1
                     $n++;
                     $done = in_array($key, $completed);
                     $now = ($key === $current);
-                    $can = ($key === 'language') || in_array($key, $completed) || in_array($key, $history);
-                    if ($current === 'language' && empty($flow['language']) && $key !== 'language') $can = false;
+                    
+                    // FREE NAVIGATION v3.9.9 - all steps clickable except 'success'
+                    if ($free_navigation) {
+                        $can = ($key !== 'success');
+                    } else {
+                        // Original logic
+                        $can = ($key === 'language') || in_array($key, $completed) || in_array($key, $history);
+                        if ($current === 'language' && empty($flow['language']) && $key !== 'language') $can = false;
+                    }
                     
                     $cls = 'pi5-sheet-step';
                     if ($now) $cls .= ' is-current';
@@ -831,47 +854,9 @@ $progress_percent = $total_steps > 1 ? round(($current_index / ($total_steps - 1
     // Close on handle tap
     var handle = sheet.querySelector('.pi5-sheet-handle');
     if (handle) {
-        handle.onclick = function(e) {
-            e.stopPropagation();
+        handle.onclick = function() {
             closeSheet();
         };
     }
-    
-    // Swipe down to close
-    var startY = 0;
-    var currentY = 0;
-    
-    sheet.addEventListener('touchstart', function(e) {
-        startY = e.touches[0].clientY;
-    }, { passive: true });
-    
-    sheet.addEventListener('touchmove', function(e) {
-        currentY = e.touches[0].clientY;
-        var diff = currentY - startY;
-        if (diff > 0) {
-            sheet.style.transform = 'translateY(' + diff + 'px)';
-        }
-    }, { passive: true });
-    
-    sheet.addEventListener('touchend', function(e) {
-        var diff = currentY - startY;
-        if (diff > 80) {
-            closeSheet();
-        }
-        sheet.style.transform = '';
-        startY = 0;
-        currentY = 0;
-    });
-    
-    // Escape key
-    document.onkeydown = function(e) {
-        if (e.key === 'Escape') {
-            closeSheet();
-            if (panel.classList.contains('is-open') && window.innerWidth > 768) {
-                panel.classList.remove('is-open');
-                localStorage.setItem('pi5-open', 'false');
-            }
-        }
-    };
 })();
 </script>

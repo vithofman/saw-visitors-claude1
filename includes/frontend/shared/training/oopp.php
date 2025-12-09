@@ -11,6 +11,7 @@
  * 
  * ZMĚNA v 3.9.9:
  * - REMOVED: Skip training sekce úplně odstraněna
+ * - NEW: Free mode pro invitation - checkbox volitelný, button aktivní
  */
 
 if (!defined('ABSPATH')) {
@@ -52,6 +53,9 @@ $nonce_name = $ctx['nonce_name'];
 $nonce_field = $ctx['nonce_field'];
 $action_name = $ctx['action_name'];
 $complete_action = $ctx['complete_action'];
+
+// FREE MODE for invitation - no confirmation required
+$free_mode = ($context === 'invitation');
 
 // Get data from controller
 $oopp_items = isset($oopp_items) ? $oopp_items : array();
@@ -237,14 +241,14 @@ $texts = isset($t[$lang]) ? $t[$lang] : $t['cs'];
                    name="oopp_confirmed"
                    id="oopp-confirmed"
                    value="1"
-                   required>
+                   <?php if (!$free_mode): ?>required<?php endif; ?>>
             <span><?php echo esc_html($texts['confirm']); ?></span>
         </label>
 
         <button type="submit"
                 class="saw-panel-btn"
                 id="continue-btn"
-                disabled>
+                <?php echo $free_mode ? '' : 'disabled'; ?>>
             <?php echo esc_html($texts['continue']); ?> →
         </button>
     </form>
