@@ -4,7 +4,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visits
- * @version     5.1.0
+ * @version     5.1.1 - FIXED: Risks editor routing via custom router
  */
 
 if (!defined('ABSPATH')) exit;
@@ -28,14 +28,17 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
     }
     
     public function index() {
-        // Handle special actions
-        $action = isset($_GET['action']) ? sanitize_key($_GET['action']) : '';
-        
-        if ($action === 'edit-risks') {
-            $this->handle_edit_risks();
+        // ===== EDIT-RISKS DETECTION (v5.1.1) =====
+        // URL: /admin/visits/{id}/edit-risks/
+        // Router parses this as: mode=detail, id={id}, tab=edit-risks
+        $context = $this->get_sidebar_context();
+        if (isset($context['tab']) && $context['tab'] === 'edit-risks' && !empty($context['id'])) {
+            $this->handle_edit_risks(intval($context['id']));
             return;
         }
+        // ===== END EDIT-RISKS DETECTION =====
         
+        // Standard permission check and list view
         if (function_exists('saw_can') && !saw_can('list', $this->entity)) {
             wp_die('Nemáte oprávnění.', 403);
         }
@@ -45,15 +48,39 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
     /**
      * Handle risks editing action
      * 
+     * Loads and initializes the risks controller for editing visitor risk information.
+     * 
      * @since 5.1.0
+     * @since 5.1.1 FIXED: Now accepts visit_id as parameter from router context
+     * @param int|null $visit_id Visit ID (from router context or fallback)
      */
-    private function handle_edit_risks() {
-        $visit_id = isset($_GET['visit_id']) ? intval($_GET['visit_id']) : 0;
+    private function handle_edit_risks($visit_id = null) {
+        // Get visit_id from parameter (primary) or context (fallback)
+        if ($visit_id === null) {
+            $context = $this->get_sidebar_context();
+            $visit_id = !empty($context['id']) ? intval($context['id']) : 0;
+        }
         
         if (!$visit_id) {
             wp_die('Neplatná návštěva.', 'Chyba', ['response' => 400]);
         }
         
+        // Permission check - same roles as defined in detail-modal-template.php
+        $can_edit_risks = false;
+        if (current_user_can('manage_options')) {
+            $can_edit_risks = true;
+        } elseif (function_exists('saw_get_current_role')) {
+            $user_role = saw_get_current_role();
+            $can_edit_risks = in_array($user_role, ['super_admin', 'admin', 'super_manager', 'manager']);
+        } elseif (current_user_can('edit_posts')) {
+            $can_edit_risks = true;
+        }
+        
+        if (!$can_edit_risks) {
+            wp_die('Nemáte oprávnění upravovat informace o rizicích.', 'Přístup zamítnut', ['response' => 403]);
+        }
+        
+        // Load risks controller
         $risks_controller_file = __DIR__ . '/risks/risks-controller.php';
         
         if (!file_exists($risks_controller_file)) {
