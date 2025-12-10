@@ -12,7 +12,7 @@
 .saw-table-tabs-wrapper {
     background: var(--saw-bg-primary);
     margin: 0 !important;
-    padding: 0 !important;
+    padding: 0px 20px 0px 20px !important;
     position: sticky;
     top: 64px; /* Desktop: výška saw-page-header (~64px: 20px padding + 24px font + line-height) */
     z-index: 15 !important; /* Vyšší než table thead - zajistit viditelnost */

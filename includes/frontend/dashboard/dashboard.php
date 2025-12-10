@@ -1,6 +1,12 @@
 <?php
 /**
- * Frontend Dashboard Page v5.5.0
+ * Frontend Dashboard Page v5.6.0
+ * 
+ * Changes in 5.6.0:
+ * - Checkout immediately removes visitor from list (no reload needed)
+ * - 7-day chart counts overnight visitors in all days they were present
+ * - Longest visits show date
+ * - Top visitors show position
  * 
  * Layout:
  * - Header: Welcome + Emergency + Stats
@@ -9,7 +15,7 @@
  * - Row 3: Top visitors | Top companies | Longest visits
  * 
  * @package SAW_Visitors
- * @version 5.5.0
+ * @version 5.6.0
  */
 
 if (!defined('ABSPATH')) {
@@ -18,7 +24,7 @@ if (!defined('ABSPATH')) {
 
 class SAW_Frontend_Dashboard {
     
-    const VERSION = '5.5.0';
+    const VERSION = '5.6.0';
     
     public static function init() {}
     
@@ -190,15 +196,50 @@ class SAW_Frontend_Dashboard {
                 $branch_id
             ), ARRAY_A);
             
-            // 7-DAY CHART
-            $chart_data = $wpdb->get_results($wpdb->prepare(
-                "SELECT dl.log_date, COUNT(DISTINCT dl.visitor_id) as visitors
-                 FROM {$wpdb->prefix}saw_visit_daily_logs dl
-                 INNER JOIN {$wpdb->prefix}saw_visits v ON dl.visit_id = v.id
-                 WHERE v.branch_id = %d AND dl.log_date >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
-                 GROUP BY dl.log_date ORDER BY dl.log_date ASC",
-                $branch_id
-            ), ARRAY_A);
+            // ============================================
+            // 7-DAY CHART - IMPROVED: counts overnight visitors
+            // ============================================
+            // For each day, we count:
+            // 1. Visitors who checked in that day
+            // 2. Visitors who checked in earlier but were still present that day
+            //    (checked_out_at IS NULL OR DATE(checked_out_at) >= that_day)
+            
+            $chart_values = array();
+            $chart_labels = array();
+            
+            for ($i = 6; $i >= 0; $i--) {
+                $date = date('Y-m-d', strtotime("-{$i} days"));
+                $chart_labels[] = date_i18n('D', strtotime($date));
+                
+                // Count visitors present on this specific day
+                // Either: checked in on this day OR checked in earlier and still present
+                $count = (int) $wpdb->get_var($wpdb->prepare(
+                    "SELECT COUNT(DISTINCT dl.visitor_id)
+                     FROM {$wpdb->prefix}saw_visit_daily_logs dl
+                     INNER JOIN {$wpdb->prefix}saw_visits v ON dl.visit_id = v.id
+                     WHERE v.branch_id = %d
+                     AND (
+                         -- Checked in on this day
+                         dl.log_date = %s
+                         OR
+                         -- Checked in before this day and still present on this day
+                         (
+                             dl.log_date < %s
+                             AND dl.checked_in_at IS NOT NULL
+                             AND (
+                                 dl.checked_out_at IS NULL
+                                 OR DATE(dl.checked_out_at) >= %s
+                             )
+                         )
+                     )",
+                    $branch_id,
+                    $date,
+                    $date,
+                    $date
+                ));
+                
+                $chart_values[] = $count;
+            }
             
             // HOURLY CHART
             $hourly_raw = $wpdb->get_results($wpdb->prepare(
@@ -238,9 +279,9 @@ class SAW_Frontend_Dashboard {
                 $branch_id
             ));
             
-            // TOP VISITORS
+            // TOP VISITORS - now includes position
             $top_visitors = $wpdb->get_results($wpdb->prepare(
-                "SELECT vis.id, vis.first_name, vis.last_name, c.name as company_name, v.company_id, COUNT(dl.id) as visit_count
+                "SELECT vis.id, vis.first_name, vis.last_name, vis.position, c.name as company_name, v.company_id, COUNT(dl.id) as visit_count
                  FROM {$wpdb->prefix}saw_visit_daily_logs dl
                  INNER JOIN {$wpdb->prefix}saw_visitors vis ON dl.visitor_id = vis.id
                  INNER JOIN {$wpdb->prefix}saw_visits v ON dl.visit_id = v.id
@@ -261,9 +302,9 @@ class SAW_Frontend_Dashboard {
                 $branch_id
             ), ARRAY_A);
             
-            // LONGEST VISITS (this week)
+            // LONGEST VISITS - now includes date
             $longest_visits = $wpdb->get_results($wpdb->prepare(
-                "SELECT vis.first_name, vis.last_name, c.name as company_name, v.company_id,
+                "SELECT vis.first_name, vis.last_name, vis.position, c.name as company_name, v.company_id,
                         TIMESTAMPDIFF(MINUTE, dl.checked_in_at, dl.checked_out_at) as duration_min,
                         dl.log_date
                  FROM {$wpdb->prefix}saw_visit_daily_logs dl
@@ -276,19 +317,6 @@ class SAW_Frontend_Dashboard {
                  ORDER BY duration_min DESC LIMIT 5",
                 $branch_id
             ), ARRAY_A);
-        }
-        
-        // Fill chart labels
-        $chart_labels = array();
-        $chart_values = array();
-        for ($i = 6; $i >= 0; $i--) {
-            $date = date('Y-m-d', strtotime("-{$i} days"));
-            $chart_labels[] = date_i18n('D', strtotime($date));
-            $found = false;
-            foreach ($chart_data as $row) {
-                if ($row['log_date'] === $date) { $chart_values[] = (int) $row['visitors']; $found = true; break; }
-            }
-            if (!$found) $chart_values[] = 0;
         }
         
         // Training percentages
@@ -342,8 +370,8 @@ class SAW_Frontend_Dashboard {
             <div class="saw-stats">
                 <div class="saw-stat saw-stat-hl">
                     <span class="saw-stat-icon">🔥</span>
-                    <div><b><?php echo $stats['present']; ?></b><small>Aktuálně uvnitř</small></div>
-                    <?php if ($stats['present'] > 0): ?><span class="saw-live">LIVE</span><?php endif; ?>
+                    <div><b id="sawPresentCount"><?php echo $stats['present']; ?></b><small>Aktuálně uvnitř</small></div>
+                    <?php if ($stats['present'] > 0): ?><span class="saw-live" id="sawLiveBadge">LIVE</span><?php endif; ?>
                 </div>
                 <div class="saw-stat">
                     <span class="saw-stat-icon">📅</span>
@@ -373,18 +401,18 @@ class SAW_Frontend_Dashboard {
                 <!-- Present -->
                 <div class="saw-card">
                     <div class="saw-card-h">
-                        <h3>🔥 Aktuálně přítomní <?php if ($stats['present'] > 0): ?><span class="saw-badge"><?php echo $stats['present']; ?></span><?php endif; ?></h3>
+                        <h3>🔥 Aktuálně přítomní <?php if ($stats['present'] > 0): ?><span class="saw-badge" id="sawPresentBadge"><?php echo $stats['present']; ?></span><?php endif; ?></h3>
                         <button onclick="location.reload()" class="saw-refresh" title="Obnovit">↻</button>
                     </div>
-                    <div class="saw-card-b saw-scroll">
+                    <div class="saw-card-b saw-scroll" id="sawPresentList">
                         <?php if (empty($present_visitors)): ?>
-                        <div class="saw-empty">✅<p>Nikdo aktuálně uvnitř</p></div>
+                        <div class="saw-empty" id="sawEmptyPresent">✅<p>Nikdo aktuálně uvnitř</p></div>
                         <?php else: ?>
                         <?php foreach ($present_visitors as $v): 
                             $overnight = $v['log_date'] !== date('Y-m-d');
                             $dur = self::format_duration($v['minutes_inside']);
                         ?>
-                        <div class="saw-person" data-visitor-id="<?php echo $v['visitor_id']; ?>">
+                        <div class="saw-person" data-visitor-id="<?php echo $v['visitor_id']; ?>" id="sawPerson-<?php echo $v['visitor_id']; ?>">
                             <a href="<?php echo home_url('/admin/visitors/' . $v['visitor_id']); ?>" class="saw-person-link">
                                 <span class="saw-avatar"><?php echo mb_strtoupper(mb_substr($v['first_name'], 0, 1) . mb_substr($v['last_name'], 0, 1)); ?></span>
                                 <span class="saw-person-info">
@@ -393,7 +421,7 @@ class SAW_Frontend_Dashboard {
                                 </span>
                             </a>
                             <span class="saw-time <?php echo $overnight ? 'overnight' : ''; ?>"><?php if ($overnight): ?>🌙 <?php endif; ?><?php echo $dur; ?></span>
-                            <button type="button" class="saw-checkout saw-manual-checkout-btn" data-visitor-id="<?php echo $v['visitor_id']; ?>">Check-out</button>
+                            <button type="button" class="saw-checkout saw-checkout-btn" data-visitor-id="<?php echo $v['visitor_id']; ?>">Check-out</button>
                         </div>
                         <?php endforeach; ?>
                         <?php endif; ?>
@@ -438,13 +466,13 @@ class SAW_Frontend_Dashboard {
                         <div class="saw-empty">📝<p>Žádná aktivita</p></div>
                         <?php else: ?>
                         <?php foreach ($recent_activity as $a): 
-                            $out = !empty($a['checked_out_at']);
-                            $t = $out ? $a['checked_out_at'] : $a['checked_in_at'];
+                            $is_out = !empty($a['checked_out_at']);
+                            $time = $is_out ? date_i18n('H:i', strtotime($a['checked_out_at'])) : date_i18n('H:i', strtotime($a['checked_in_at']));
                         ?>
                         <div class="saw-act">
-                            <span class="saw-act-icon <?php echo $out ? 'out' : 'in'; ?>"><?php echo $out ? '↩' : '↪'; ?></span>
-                            <span class="saw-act-text"><strong><?php echo esc_html($a['first_name'] . ' ' . $a['last_name']); ?></strong> <?php echo $out ? 'odešel/a' : 'přišel/a'; ?></span>
-                            <span class="saw-act-time"><?php echo date_i18n('H:i', strtotime($t)); ?><?php if (date('Y-m-d', strtotime($t)) !== date('Y-m-d')): ?> · <?php echo date_i18n('d.m', strtotime($t)); ?><?php endif; ?></span>
+                            <span class="saw-act-icon <?php echo $is_out ? 'out' : 'in'; ?>"><?php echo $is_out ? '←' : '→'; ?></span>
+                            <span class="saw-act-text"><strong><?php echo esc_html($a['first_name'] . ' ' . $a['last_name']); ?></strong> <?php echo $is_out ? 'odešel' : 'přišel'; ?></span>
+                            <span class="saw-act-time"><?php echo $time; ?></span>
                         </div>
                         <?php endforeach; ?>
                         <?php endif; ?>
@@ -452,22 +480,26 @@ class SAW_Frontend_Dashboard {
                 </div>
             </div>
             
-            <!-- ROW 2: Charts -->
+            <!-- ROW 2: Charts + Training -->
             <div class="saw-row3">
                 <div class="saw-card">
                     <div class="saw-card-h"><h3>📊 Návštěvnost (7 dní)</h3></div>
-                    <div class="saw-card-b"><div class="saw-chart"><canvas id="chart-week"></canvas></div></div>
+                    <div class="saw-card-b">
+                        <div class="saw-chart"><canvas id="chart-week"></canvas></div>
+                    </div>
                 </div>
                 <div class="saw-card">
-                    <div class="saw-card-h"><h3>⏰ Denní rozložení</h3><span class="saw-tag">Dnes</span></div>
-                    <div class="saw-card-b"><div class="saw-chart"><canvas id="chart-hour"></canvas></div></div>
+                    <div class="saw-card-h"><h3>⏰ Příchody dnes</h3></div>
+                    <div class="saw-card-b">
+                        <div class="saw-chart"><canvas id="chart-hour"></canvas></div>
+                    </div>
                 </div>
                 <div class="saw-card">
                     <div class="saw-card-h"><h3>🎓 Školení</h3><span class="saw-tag">30 dní</span></div>
                     <div class="saw-card-b">
                         <div class="saw-training">
-                            <div class="saw-ring" style="--c: <?php echo $pct_completed; ?>; --p: <?php echo $pct_pending; ?>;">
-                                <span><?php echo $pct_completed; ?>%</span>
+                            <div class="saw-ring" style="--c:<?php echo $pct_completed; ?>;--p:<?php echo $pct_pending; ?>">
+                                <span><?php echo $training_total; ?></span>
                             </div>
                             <div class="saw-legend">
                                 <div class="saw-leg"><span class="ok"></span>Dokončeno <b><?php echo $training_stats['completed']; ?></b></div>
@@ -489,7 +521,15 @@ class SAW_Frontend_Dashboard {
                         <?php $r = 1; foreach ($top_visitors as $tv): ?>
                         <div class="saw-rank-item">
                             <span class="saw-rank r<?php echo $r; ?>"><?php echo $r; ?></span>
-                            <span class="saw-rank-text"><strong><?php echo esc_html($tv['first_name'] . ' ' . $tv['last_name']); ?></strong><em><?php echo $tv['company_id'] ? esc_html($tv['company_name']) : 'Fyz. osoba'; ?></em></span>
+                            <span class="saw-rank-text">
+                                <strong><?php echo esc_html($tv['first_name'] . ' ' . $tv['last_name']); ?></strong>
+                                <em><?php 
+                                    $parts = array();
+                                    if (!empty($tv['position'])) $parts[] = $tv['position'];
+                                    $parts[] = $tv['company_id'] ? $tv['company_name'] : 'Fyz. osoba';
+                                    echo esc_html(implode(' · ', $parts));
+                                ?></em>
+                            </span>
                             <span class="saw-rank-count"><?php echo $tv['visit_count']; ?>×</span>
                         </div>
                         <?php $r++; endforeach; ?>
@@ -519,7 +559,10 @@ class SAW_Frontend_Dashboard {
                         <?php $r = 1; foreach ($longest_visits as $lv): ?>
                         <div class="saw-rank-item">
                             <span class="saw-rank r<?php echo $r; ?>"><?php echo $r; ?></span>
-                            <span class="saw-rank-text"><strong><?php echo esc_html($lv['first_name'] . ' ' . $lv['last_name']); ?></strong><em><?php echo $lv['company_id'] ? esc_html($lv['company_name']) : 'Fyz. osoba'; ?></em></span>
+                            <span class="saw-rank-text">
+                                <strong><?php echo esc_html($lv['first_name'] . ' ' . $lv['last_name']); ?></strong>
+                                <em><?php echo date_i18n('d.m.', strtotime($lv['log_date'])); ?> · <?php echo $lv['company_id'] ? esc_html($lv['company_name']) : 'Fyz. osoba'; ?></em>
+                            </span>
                             <span class="saw-rank-dur"><?php echo self::format_duration($lv['duration_min']); ?></span>
                         </div>
                         <?php $r++; endforeach; ?>
@@ -552,6 +595,9 @@ class SAW_Frontend_Dashboard {
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
         <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // ============================================
+            // CHARTS
+            // ============================================
             var w = document.getElementById('chart-week');
             if (w) new Chart(w, {type:'bar',data:{labels:<?php echo json_encode($chart_labels); ?>,datasets:[{data:<?php echo json_encode($chart_values); ?>,backgroundColor:'rgba(37,99,235,0.85)',borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1,color:'#9ca3af'},grid:{color:'#f3f4f6'}},x:{ticks:{color:'#6b7280'},grid:{display:false}}}}});
             
@@ -560,6 +606,142 @@ class SAW_Frontend_Dashboard {
                 var hL=[], hV=[];
                 <?php foreach ($hourly_data as $hr => $cnt): ?>hL.push('<?php echo $hr; ?>h'); hV.push(<?php echo $cnt; ?>);<?php endforeach; ?>
                 new Chart(h, {type:'line',data:{labels:hL,datasets:[{data:hV,borderColor:'#10b981',backgroundColor:'rgba(16,185,129,0.1)',borderWidth:2,fill:true,tension:0.4,pointRadius:3,pointBackgroundColor:'#10b981'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1,color:'#9ca3af'},grid:{color:'#f3f4f6'}},x:{ticks:{color:'#9ca3af',maxRotation:0,autoSkip:true,maxTicksLimit:8},grid:{display:false}}}}});
+            }
+            
+            // ============================================
+            // CHECKOUT - Immediate removal from list
+            // ============================================
+            document.querySelectorAll('.saw-checkout-btn').forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    var visitorId = this.getAttribute('data-visitor-id');
+                    var personEl = document.getElementById('sawPerson-' + visitorId);
+                    var btnEl = this;
+                    
+                    if (!visitorId || !personEl) return;
+                    
+                    // Disable button and show loading
+                    btnEl.disabled = true;
+                    btnEl.textContent = 'Odhlašuji...';
+                    personEl.style.opacity = '0.5';
+                    
+                    // Get nonce - try multiple sources
+                    var nonce = '';
+                    if (typeof sawDashboard !== 'undefined' && sawDashboard.nonce) {
+                        nonce = sawDashboard.nonce;
+                    } else if (typeof sawGlobal !== 'undefined' && sawGlobal.nonce) {
+                        nonce = sawGlobal.nonce;
+                    }
+                    
+                    var ajaxurl = '';
+                    if (typeof sawDashboard !== 'undefined' && sawDashboard.ajaxurl) {
+                        ajaxurl = sawDashboard.ajaxurl;
+                    } else if (typeof sawGlobal !== 'undefined' && sawGlobal.ajaxurl) {
+                        ajaxurl = sawGlobal.ajaxurl;
+                    } else {
+                        ajaxurl = '/wp-admin/admin-ajax.php';
+                    }
+                    
+                    fetch(ajaxurl, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: new URLSearchParams({
+                            action: 'saw_manual_checkout',
+                            nonce: nonce,
+                            visitor_id: visitorId
+                        })
+                    })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (data.success) {
+                            // Animate removal
+                            personEl.style.transition = 'all 0.3s ease';
+                            personEl.style.transform = 'translateX(100%)';
+                            personEl.style.opacity = '0';
+                            personEl.style.maxHeight = personEl.offsetHeight + 'px';
+                            
+                            setTimeout(function() {
+                                personEl.style.maxHeight = '0';
+                                personEl.style.padding = '0';
+                                personEl.style.margin = '0';
+                                personEl.style.borderBottom = 'none';
+                            }, 150);
+                            
+                            setTimeout(function() {
+                                personEl.remove();
+                                
+                                // Update counters
+                                updatePresentCount(-1);
+                                
+                                // Check if list is now empty
+                                var list = document.getElementById('sawPresentList');
+                                if (list && list.querySelectorAll('.saw-person').length === 0) {
+                                    list.innerHTML = '<div class="saw-empty" id="sawEmptyPresent">✅<p>Nikdo aktuálně uvnitř</p></div>';
+                                }
+                            }, 350);
+                        } else {
+                            // Error - restore
+                            personEl.style.opacity = '1';
+                            btnEl.disabled = false;
+                            btnEl.textContent = 'Check-out';
+                            alert('Chyba: ' + (data.data && data.data.message ? data.data.message : 'Nepodařilo se odhlásit'));
+                        }
+                    })
+                    .catch(function(err) {
+                        console.error('Checkout error:', err);
+                        personEl.style.opacity = '1';
+                        btnEl.disabled = false;
+                        btnEl.textContent = 'Check-out';
+                        alert('Chyba při odhlašování');
+                    });
+                });
+            });
+            
+            /**
+             * Update present visitors count in multiple places
+             */
+            function updatePresentCount(delta) {
+                // Main stat
+                var countEl = document.getElementById('sawPresentCount');
+                if (countEl) {
+                    var current = parseInt(countEl.textContent) || 0;
+                    var newCount = Math.max(0, current + delta);
+                    countEl.textContent = newCount;
+                    
+                    // Hide LIVE badge if 0
+                    if (newCount === 0) {
+                        var liveBadge = document.getElementById('sawLiveBadge');
+                        if (liveBadge) liveBadge.style.display = 'none';
+                    }
+                }
+                
+                // Card badge
+                var badgeEl = document.getElementById('sawPresentBadge');
+                if (badgeEl) {
+                    var current = parseInt(badgeEl.textContent) || 0;
+                    var newCount = Math.max(0, current + delta);
+                    if (newCount > 0) {
+                        badgeEl.textContent = newCount;
+                    } else {
+                        badgeEl.style.display = 'none';
+                    }
+                }
+                
+                // Emergency button count
+                var emCount = document.querySelector('.saw-em-count');
+                if (emCount) {
+                    var current = parseInt(emCount.textContent) || 0;
+                    var newCount = Math.max(0, current + delta);
+                    if (newCount > 0) {
+                        emCount.textContent = newCount;
+                    } else {
+                        // Hide entire emergency button
+                        var emBtn = document.querySelector('.saw-emergency');
+                        if (emBtn) emBtn.style.display = 'none';
+                    }
+                }
             }
         });
         

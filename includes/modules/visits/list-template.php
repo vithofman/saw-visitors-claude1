@@ -4,14 +4,16 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visits
- * @version     4.2.0
+ * @version     5.0.0 - FIXED: Matched visitors structure exactly
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-// Load translations
+// ============================================
+// TRANSLATIONS SETUP
+// ============================================
 $lang = 'cs';
 if (class_exists('SAW_Component_Language_Switcher')) {
     $lang = SAW_Component_Language_Switcher::get_user_language();
@@ -24,11 +26,26 @@ $tr = function($key, $fallback = null) use ($t) {
     return $t[$key] ?? $fallback ?? $key;
 };
 
+// ============================================
+// COMPONENT LOADING
+// ============================================
 if (!class_exists('SAW_Component_Admin_Table')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/class-saw-component-admin-table.php';
 }
 
-// Load branches for filter
+$ajax_nonce = wp_create_nonce('saw_ajax_nonce');
+
+$items = $list_data['items'] ?? array();
+$total = $list_data['total'] ?? 0;
+$page = $list_data['page'] ?? 1;
+$total_pages = $list_data['total_pages'] ?? 0;
+$search = $list_data['search'] ?? '';
+$orderby = $list_data['orderby'] ?? 'id';
+$order = $list_data['order'] ?? 'DESC';
+
+// ============================================
+// LOAD BRANCHES FOR FILTER
+// ============================================
 global $wpdb;
 $customer_id = SAW_Context::get_customer_id();
 $branches = array();
@@ -45,16 +62,41 @@ if ($customer_id) {
     }
 }
 
-// Base configuration
-$table_config = $config;
-$base_url = home_url('/admin/' . ($config['route'] ?? 'visits'));
+// ============================================
+// TABLE CONFIGURATION
+// ============================================
+$table_config = array(
+    'title' => $tr('title', 'Návštěvy'),
+    'create_url' => home_url('/admin/visits/create'),
+    'edit_url' => home_url('/admin/visits/{id}/edit'),
+    'detail_url' => home_url('/admin/visits/{id}/'),
+    
+    'sidebar_mode' => $sidebar_mode ?? null,
+    'detail_item' => $detail_item ?? null,
+    'form_item' => $form_item ?? null,
+    'detail_tab' => $detail_tab ?? 'overview',
+    'related_data' => $related_data ?? null,
+    
+    'module_config' => isset($config) ? $config : array(),
+    
+    'rows' => $items,
+    'total_items' => $total,
+    'current_page' => $page,
+    'total_pages' => $total_pages,
+    'orderby' => $orderby,
+    'order' => $order,
+    
+    'actions' => array('view', 'edit', 'delete'),
+    'empty_message' => $tr('empty_message', 'Žádné návštěvy nenalezeny'),
+    'add_new' => $tr('add_new', 'Nová návštěva'),
+    
+    'ajax_enabled' => true,
+    'ajax_nonce' => $ajax_nonce,
+);
 
-$table_config['title'] = $tr('title', 'Návštěvy');
-$table_config['create_url'] = $base_url . '/create';
-$table_config['detail_url'] = $base_url . '/{id}/';
-$table_config['edit_url'] = $base_url . '/{id}/edit';
-
-// Search configuration
+// ============================================
+// SEARCH CONFIGURATION
+// ============================================
 $table_config['search'] = array(
     'enabled' => true,
     'placeholder' => $tr('search_placeholder', 'Hledat návštěvy...'),
@@ -62,7 +104,9 @@ $table_config['search'] = array(
     'show_info_banner' => true,
 );
 
-// Filters configuration
+// ============================================
+// FILTERS CONFIGURATION
+// ============================================
 $table_config['filters'] = array(
     'status' => array(
         'type' => 'select',
@@ -88,16 +132,9 @@ $table_config['filters'] = array(
     ),
 );
 
-// Sidebar context
-$table_config['sidebar_mode'] = $sidebar_mode ?? null;
-$table_config['detail_item'] = $detail_item ?? null;
-$table_config['form_item'] = $form_item ?? null;
-$table_config['detail_tab'] = $detail_tab ?? 'overview';
-$table_config['module_config'] = $config;
-$table_config['related_data'] = $related_data ?? null;
-$table_config['branches'] = $branches;
-
-// Translated labels for callbacks
+// ============================================
+// COLUMNS CONFIGURATION
+// ============================================
 $visitor_company_label = $tr('visitor_company', 'Firma');
 $visitor_physical_label = $tr('visitor_physical', 'Fyzická osoba');
 $visitor_physical_short = $tr('visitor_physical_short', 'Fyzická');
@@ -106,7 +143,6 @@ $risks_ok_label = $tr('risks_ok', 'OK');
 $risks_missing_title = $tr('risks_missing_title', 'Chybí informace o rizicích');
 $risks_ok_title = $tr('risks_ok_title', 'Informace o rizicích jsou dostupné');
 
-// Column definitions
 $table_config['columns'] = array(
     'company_person' => array(
         'label' => $tr('col_visitor', 'Návštěvník'),
@@ -223,20 +259,9 @@ $table_config['columns'] = array(
     ),
 );
 
-// Data & pagination
-$table_config['rows'] = $items;
-$table_config['total_items'] = $total;
-$table_config['current_page'] = $page;
-$table_config['total_pages'] = $total_pages;
-$table_config['orderby'] = $orderby;
-$table_config['order'] = $order;
-
-// Actions & messages
-$table_config['actions'] = array('view', 'edit', 'delete');
-$table_config['add_new'] = $tr('add_new', 'Nová návštěva');
-$table_config['empty_message'] = $tr('empty_message', 'Žádné návštěvy nenalezeny');
-
-// Tabs configuration
+// ============================================
+// TABS CONFIGURATION
+// ============================================
 $table_config['tabs'] = $config['tabs'] ?? null;
 
 if (!empty($table_config['tabs']['enabled']) && !empty($table_config['tabs']['tabs'])) {
@@ -250,12 +275,12 @@ if (!empty($table_config['tabs']['enabled']) && !empty($table_config['tabs']['ta
         'cancelled' => $tr('tab_cancelled', 'Zrušená'),
     );
     
-    foreach ($table_config['tabs']['tabs'] as $tab_key => &$tab_config) {
+    foreach ($table_config['tabs']['tabs'] as $tab_key => &$tab_config_item) {
         if (isset($tab_translations[$tab_key])) {
-            $tab_config['label'] = $tab_translations[$tab_key];
+            $tab_config_item['label'] = $tab_translations[$tab_key];
         }
     }
-    unset($tab_config);
+    unset($tab_config_item);
 }
 
 if (!empty($table_config['tabs']['enabled'])) {
@@ -265,7 +290,9 @@ if (!empty($table_config['tabs']['enabled'])) {
     $table_config['tab_counts'] = (isset($tab_counts) && is_array($tab_counts)) ? $tab_counts : array();
 }
 
-// Infinite scroll configuration
+// ============================================
+// INFINITE SCROLL CONFIGURATION
+// ============================================
 $table_config['infinite_scroll'] = array(
     'enabled' => true,
     'initial_load' => 100,
@@ -273,6 +300,8 @@ $table_config['infinite_scroll'] = array(
     'threshold' => 0.6,
 );
 
-// Render
+// ============================================
+// RENDER TABLE
+// ============================================
 $table = new SAW_Component_Admin_Table('visits', $table_config);
 $table->render();

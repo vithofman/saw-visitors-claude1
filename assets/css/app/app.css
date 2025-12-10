@@ -147,7 +147,7 @@ body, html {
     flex: 1 !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
-    padding: 24px !important;
+    padding: 0px !important;
     width: 100% !important;
     box-sizing: border-box !important;
     max-width: 100%;
@@ -766,7 +766,7 @@ body, html {
     z-index: 20; /* nejvyšší - nad tabs i thead */
     flex-shrink: 0 !important;
     margin-bottom: 0 !important;
-    padding: 20px 0px !important; /* Desktop padding */
+    padding: 20px 20px !important; /* Desktop padding */
     background: var(--saw-page-header-bg);
     border-bottom: 1px solid var(--saw-border-color);
 }
