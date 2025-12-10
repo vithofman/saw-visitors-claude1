@@ -2,12 +2,12 @@
 /**
  * SAW Row Renderer
  *
- * Renders info rows in detail sidebar sections.
+ * Renders info rows in detail sidebar sections AND cell values in tables.
  * Uses sawt- CSS prefix.
  *
  * @package     SAW_Visitors
  * @subpackage  Components/SAWTable/Renderers
- * @version     2.0.0 - Updated to sawt- prefix
+ * @version     2.1.0 - FIXED: Added missing render_value() method
  * @since       3.0.0
  */
 
@@ -64,7 +64,157 @@ class SAW_Row_Renderer {
     }
     
     /**
-     * Render a single info row
+     * =========================================================
+     * RENDER VALUE - PUBLIC METHOD FOR TABLE CELLS
+     * =========================================================
+     * 
+     * This is the PUBLIC method called by SAW_Table_Renderer
+     * and SAW_Table to render cell values in tables.
+     * 
+     * @param mixed  $value   The value to render
+     * @param string $type    Column type (text, badge, code, etc.)
+     * @param array  $config  Column configuration
+     * @param array  $item    Full item data (for callbacks)
+     * @return string HTML
+     */
+    public static function render_value($value, $type, $config = [], $item = []) {
+        // Handle custom callback FIRST
+        if (!empty($config['callback']) && is_callable($config['callback'])) {
+            return call_user_func($config['callback'], $value, $item);
+        }
+        
+        // Handle badge type with map
+        if ($type === 'badge' && !empty($config['map'])) {
+            $key = (string) $value;
+            $map = $config['map'][$key] ?? null;
+            
+            if ($map) {
+                $label = $map['label'] ?? $value;
+                $color = $map['color'] ?? 'secondary';
+                $icon = $map['icon'] ?? '';
+                
+                return sprintf(
+                    '<span class="sawt-badge sawt-badge-%s">%s%s</span>',
+                    esc_attr($color),
+                    $icon ? esc_html($icon) . ' ' : '',
+                    esc_html($label)
+                );
+            }
+            
+            return esc_html($value);
+        }
+        
+        // Handle image type
+        if ($type === 'image') {
+            if (empty($value)) {
+                $fallback = $config['fallback'] ?? $config['fallback_icon'] ?? '';
+                if ($fallback) {
+                    return '<span class="sawt-image-fallback">' . esc_html($fallback) . '</span>';
+                }
+                return '';
+            }
+            
+            $size = $config['size'] ?? '32px';
+            $rounded = !empty($config['rounded']) ? 'border-radius:50%;' : 'border-radius:4px;';
+            
+            return sprintf(
+                '<img src="%s" alt="" class="sawt-table-image" style="width:%s;height:%s;object-fit:cover;%s">',
+                esc_url($value),
+                esc_attr($size),
+                esc_attr($size),
+                $rounded
+            );
+        }
+        
+        // Handle code type
+        if ($type === 'code') {
+            if (empty($value)) {
+                return '<span class="sawt-text-muted">—</span>';
+            }
+            return '<code class="sawt-code">' . esc_html($value) . '</code>';
+        }
+        
+        // Handle color type
+        if ($type === 'color' || $type === 'color_badge') {
+            if (empty($value)) {
+                return '<span class="sawt-text-muted">—</span>';
+            }
+            return sprintf(
+                '<div class="sawt-color-swatch" style="background-color:%s;width:24px;height:24px;border-radius:4px;border:2px solid #e5e7eb;" title="%s"></div>',
+                esc_attr($value),
+                esc_attr($value)
+            );
+        }
+        
+        // Handle boolean type
+        if ($type === 'boolean') {
+            $true_label = $config['true_label'] ?? '✓';
+            $false_label = $config['false_label'] ?? '—';
+            $true_color = $config['true_color'] ?? 'success';
+            $false_color = $config['false_color'] ?? 'muted';
+            
+            if ($value) {
+                return '<span class="sawt-badge sawt-badge-' . esc_attr($true_color) . '">' . esc_html($true_label) . '</span>';
+            }
+            return '<span class="sawt-text-' . esc_attr($false_color) . '">' . esc_html($false_label) . '</span>';
+        }
+        
+        // Handle date type
+        if ($type === 'date') {
+            if (empty($value)) return '<span class="sawt-text-muted">—</span>';
+            $format = $config['date_format'] ?? 'j. n. Y';
+            return esc_html(date_i18n($format, strtotime($value)));
+        }
+        
+        // Handle datetime type
+        if ($type === 'datetime') {
+            if (empty($value)) return '<span class="sawt-text-muted">—</span>';
+            $format = $config['datetime_format'] ?? 'j. n. Y H:i';
+            return esc_html(date_i18n($format, strtotime($value)));
+        }
+        
+        // Handle number type
+        if ($type === 'number') {
+            if (!is_numeric($value)) return esc_html($value);
+            $decimals = $config['decimals'] ?? 0;
+            return esc_html(number_format((float)$value, $decimals, ',', ' '));
+        }
+        
+        // Handle currency type
+        if ($type === 'currency') {
+            if (!is_numeric($value)) return esc_html($value);
+            $currency = $config['currency'] ?? 'Kč';
+            $decimals = $config['decimals'] ?? 0;
+            return esc_html(number_format((float)$value, $decimals, ',', ' ') . ' ' . $currency);
+        }
+        
+        // Handle custom type (callback should have been handled above)
+        if ($type === 'custom') {
+            // If we get here without callback, just output value
+            if (empty($value) && $value !== '0') {
+                return '<span class="sawt-text-muted">—</span>';
+            }
+            return esc_html($value);
+        }
+        
+        // Default: text
+        if (empty($value) && $value !== '0') {
+            return '<span class="sawt-text-muted">—</span>';
+        }
+        
+        $output = esc_html($value);
+        
+        if (!empty($config['bold'])) {
+            $output = '<strong>' . $output . '</strong>';
+        }
+        
+        return $output;
+    }
+    
+    /**
+     * =========================================================
+     * RENDER INFO ROW - FOR DETAIL SIDEBAR
+     * =========================================================
      */
     public static function render($row_config, $item) {
         // Check condition
@@ -129,7 +279,8 @@ class SAW_Row_Renderer {
                     self::FORMAT_PHONE, 
                     self::FORMAT_EMAIL, 
                     self::FORMAT_URL,
-                    self::FORMAT_COLOR
+                    self::FORMAT_COLOR,
+                    self::FORMAT_CODE,
                 ];
                 if (in_array($format, $html_formats)) {
                     echo $formatted_value;
@@ -194,7 +345,7 @@ class SAW_Row_Renderer {
     }
     
     /**
-     * Format value based on type
+     * Format value based on type (for detail sidebar)
      */
     private static function format_value($value, $format, $row_config = [], $item = []) {
         switch ($format) {
@@ -248,149 +399,64 @@ class SAW_Row_Renderer {
         }
     }
     
-    /**
-     * Format text value
-     */
+    // =========================================================
+    // PRIVATE FORMAT METHODS
+    // =========================================================
+    
     private static function format_text($value, $row_config = []) {
         $truncate = $row_config['truncate'] ?? 0;
         
         if ($truncate > 0 && strlen($value) > $truncate) {
-            $value = substr($value, 0, $truncate) . '…';
+            $value = substr($value, 0, $truncate) . '...';
         }
         
         return $value;
     }
     
-    /**
-     * Format date value
-     */
     private static function format_date($value, $row_config = []) {
-        if (empty($value)) {
-            return '—';
-        }
-        
+        if (empty($value)) return '—';
         $format = $row_config['date_format'] ?? 'j. n. Y';
-        $timestamp = is_numeric($value) ? $value : strtotime($value);
-        
-        if (!$timestamp) {
-            return $value;
-        }
-        
-        return date_i18n($format, $timestamp);
+        return date_i18n($format, strtotime($value));
     }
     
-    /**
-     * Format datetime value
-     */
     private static function format_datetime($value, $row_config = []) {
-        if (empty($value)) {
-            return '—';
-        }
-        
+        if (empty($value)) return '—';
         $format = $row_config['datetime_format'] ?? 'j. n. Y H:i';
-        $timestamp = is_numeric($value) ? $value : strtotime($value);
-        
-        if (!$timestamp) {
-            return $value;
-        }
-        
-        return date_i18n($format, $timestamp);
+        return date_i18n($format, strtotime($value));
     }
     
-    /**
-     * Format time value
-     */
     private static function format_time($value, $row_config = []) {
-        if (empty($value)) {
-            return '—';
-        }
-        
+        if (empty($value)) return '—';
         $format = $row_config['time_format'] ?? 'H:i';
-        $timestamp = strtotime($value);
-        
-        if (!$timestamp) {
-            return $value;
-        }
-        
-        return date_i18n($format, $timestamp);
+        return date_i18n($format, strtotime($value));
     }
     
-    /**
-     * Format phone value
-     */
     private static function format_phone($value) {
-        if (empty($value)) {
-            return '—';
-        }
-        
-        $clean = preg_replace('/[^0-9+]/', '', $value);
-        
-        return sprintf(
-            '<a href="tel:%s" class="sawt-info-link">%s</a>',
-            esc_attr($clean),
-            esc_html($value)
-        );
+        if (empty($value)) return '—';
+        return sprintf('<a href="tel:%s" class="sawt-link">%s</a>', esc_attr($value), esc_html($value));
     }
     
-    /**
-     * Format email value
-     */
     private static function format_email($value) {
-        if (empty($value)) {
-            return '—';
-        }
-        
-        return sprintf(
-            '<a href="mailto:%s" class="sawt-info-link">%s</a>',
-            esc_attr($value),
-            esc_html($value)
-        );
+        if (empty($value)) return '—';
+        return sprintf('<a href="mailto:%s" class="sawt-link">%s</a>', esc_attr($value), esc_html($value));
     }
     
-    /**
-     * Format URL value
-     */
     private static function format_url($value, $row_config = []) {
-        if (empty($value)) {
-            return '—';
-        }
-        
-        if (!preg_match('/^https?:\/\//', $value)) {
-            $value = 'https://' . $value;
-        }
-        
-        $label = $row_config['url_label'] ?? parse_url($value, PHP_URL_HOST) ?? $value;
-        $target = !empty($row_config['url_new_tab']) ? ' target="_blank" rel="noopener"' : '';
-        
-        return sprintf(
-            '<a href="%s" class="sawt-info-link"%s>%s</a>',
-            esc_url($value),
-            $target,
-            esc_html($label)
-        );
+        if (empty($value)) return '—';
+        $text = $row_config['url_text'] ?? $value;
+        $target = $row_config['url_target'] ?? '_blank';
+        return sprintf('<a href="%s" target="%s" class="sawt-link">%s</a>', esc_url($value), esc_attr($target), esc_html($text));
     }
     
-    /**
-     * Format value as badge
-     */
     private static function format_badge($value, $row_config = []) {
-        if ($value === null || $value === '') {
-            return '<span class="sawt-text-muted">—</span>';
-        }
-        
-        $value = (string) $value;
         $map = $row_config['map'] ?? [];
+        $key = (string) $value;
         
-        if (isset($map[$value])) {
-            $config = $map[$value];
-            $label = $config['label'] ?? $value;
-            
-            if (!empty($config['label_key'])) {
-                $label = self::tr($config['label_key'], $label);
-            }
-            
-            $color = $config['color'] ?? 'secondary';
-            $icon = $config['icon'] ?? '';
+        if (isset($map[$key])) {
+            $badge = $map[$key];
+            $label = $badge['label'] ?? $value;
+            $color = $badge['color'] ?? 'secondary';
+            $icon = $badge['icon'] ?? '';
             
             return sprintf(
                 '<span class="sawt-badge sawt-badge-%s">%s%s</span>',
@@ -400,132 +466,70 @@ class SAW_Row_Renderer {
             );
         }
         
-        return sprintf(
-            '<span class="sawt-badge sawt-badge-secondary">%s</span>',
-            esc_html($value)
-        );
+        return esc_html($value);
     }
     
-    /**
-     * Format boolean value
-     */
     private static function format_boolean($value, $row_config = []) {
         $true_label = $row_config['true_label'] ?? self::tr('yes', 'Ano');
         $false_label = $row_config['false_label'] ?? self::tr('no', 'Ne');
         
-        if (!empty($row_config['true_label_key'])) {
-            $true_label = self::tr($row_config['true_label_key'], $true_label);
-        }
-        if (!empty($row_config['false_label_key'])) {
-            $false_label = self::tr($row_config['false_label_key'], $false_label);
-        }
-        
         return $value ? $true_label : $false_label;
     }
     
-    /**
-     * Format number value
-     */
     private static function format_number($value, $row_config = []) {
-        if (!is_numeric($value)) {
-            return $value;
-        }
+        if (!is_numeric($value)) return $value;
         
         $decimals = $row_config['decimals'] ?? 0;
         $dec_point = $row_config['decimal_point'] ?? ',';
         $thousands = $row_config['thousands_separator'] ?? ' ';
-        $prefix = $row_config['prefix'] ?? '';
-        $suffix = $row_config['suffix'] ?? '';
         
-        $formatted = number_format((float) $value, $decimals, $dec_point, $thousands);
-        
-        return $prefix . $formatted . $suffix;
+        return number_format((float) $value, $decimals, $dec_point, $thousands);
     }
     
-    /**
-     * Format currency value
-     */
     private static function format_currency($value, $row_config = []) {
-        if (!is_numeric($value)) {
-            return $value;
-        }
+        if (!is_numeric($value)) return $value;
         
         $currency = $row_config['currency'] ?? 'Kč';
         $decimals = $row_config['decimals'] ?? 0;
-        $dec_point = $row_config['decimal_point'] ?? ',';
-        $thousands = $row_config['thousands_separator'] ?? ' ';
-        $position = $row_config['currency_position'] ?? 'after';
         
-        $formatted = number_format((float) $value, $decimals, $dec_point, $thousands);
-        
-        if ($position === 'before') {
-            return $currency . ' ' . $formatted;
-        }
-        
-        return $formatted . ' ' . $currency;
+        return number_format((float) $value, $decimals, ',', ' ') . ' ' . $currency;
     }
     
-    /**
-     * Format percent value
-     */
     private static function format_percent($value, $row_config = []) {
-        if (!is_numeric($value)) {
-            return $value;
-        }
+        if (!is_numeric($value)) return $value;
         
         $decimals = $row_config['decimals'] ?? 0;
-        $dec_point = $row_config['decimal_point'] ?? ',';
-        
         $is_decimal = $row_config['is_decimal'] ?? ($value >= 0 && $value <= 1);
+        
         if ($is_decimal) {
             $value = $value * 100;
         }
         
-        $formatted = number_format((float) $value, $decimals, $dec_point, '');
-        
-        return $formatted . ' %';
+        return number_format((float) $value, $decimals, ',', '') . ' %';
     }
     
-    /**
-     * Format value as image
-     */
     private static function format_image($value, $row_config = []) {
-        if (empty($value)) {
-            return '<span class="sawt-text-muted">—</span>';
-        }
+        if (empty($value)) return '<span class="sawt-text-muted">—</span>';
         
         $size = $row_config['image_size'] ?? '40px';
-        $alt = $row_config['alt'] ?? '';
         
         return sprintf(
-            '<img src="%s" alt="%s" class="sawt-info-image" style="max-width: %s; max-height: %s;">',
+            '<img src="%s" alt="" class="sawt-info-image" style="max-width:%s;max-height:%s;">',
             esc_url($value),
-            esc_attr($alt),
             esc_attr($size),
             esc_attr($size)
         );
     }
     
-    /**
-     * Format value as code
-     */
     private static function format_code($value) {
         return '<code class="sawt-code">' . esc_html($value) . '</code>';
     }
     
-    /**
-     * Format color value
-     */
     private static function format_color($value) {
-        if (empty($value)) {
-            return '<span class="sawt-text-muted">—</span>';
-        }
+        if (empty($value)) return '<span class="sawt-text-muted">—</span>';
         
         return sprintf(
-            '<span class="sawt-color-inline">
-                <span class="sawt-color-swatch-sm" style="background-color: %s;"></span>
-                <code class="sawt-code-sm">%s</code>
-            </span>',
+            '<span class="sawt-color-inline"><span class="sawt-color-swatch-sm" style="background-color:%s;"></span><code class="sawt-code-sm">%s</code></span>',
             esc_attr($value),
             esc_html(strtoupper($value))
         );
@@ -557,29 +561,5 @@ class SAW_Row_Renderer {
         } catch (Error $e) {
             return false;
         }
-    }
-    
-    /**
-     * Get available format types
-     */
-    public static function get_formats() {
-        return [
-            self::FORMAT_TEXT,
-            self::FORMAT_DATE,
-            self::FORMAT_DATETIME,
-            self::FORMAT_TIME,
-            self::FORMAT_PHONE,
-            self::FORMAT_EMAIL,
-            self::FORMAT_URL,
-            self::FORMAT_BADGE,
-            self::FORMAT_BOOLEAN,
-            self::FORMAT_NUMBER,
-            self::FORMAT_CURRENCY,
-            self::FORMAT_PERCENT,
-            self::FORMAT_HTML,
-            self::FORMAT_IMAGE,
-            self::FORMAT_CODE,
-            self::FORMAT_COLOR,
-        ];
     }
 }
