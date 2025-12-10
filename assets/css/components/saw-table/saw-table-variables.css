@@ -1,0 +1,489 @@
+/**
+ * SAW Table - Variables & Base
+ *
+ * CSS variables, reset, and utility classes.
+ * Foundation for all SAW Table components.
+ *
+ * @package     SAW_Visitors
+ * @subpackage  Assets/CSS/SAWTable
+ * @version     1.0.0
+ * @since       5.2.0
+ * 
+ * PREFIX: sawt- (SAW Table)
+ */
+
+/* ===========================================
+   1. CSS VARIABLES
+   =========================================== */
+
+:root {
+    /* ----------------------------------------
+       Colors - Primary
+       ---------------------------------------- */
+    --sawt-primary: #2271b1;
+    --sawt-primary-hover: #135e96;
+    --sawt-primary-light: #e7f3ff;
+    --sawt-primary-dark: #1a5a8e;
+    --sawt-primary-rgb: 34, 113, 177;
+    
+    /* ----------------------------------------
+       Colors - Status
+       ---------------------------------------- */
+    --sawt-success: #10b981;
+    --sawt-success-light: #d1fae5;
+    --sawt-success-dark: #065f46;
+    
+    --sawt-warning: #f59e0b;
+    --sawt-warning-light: #fef3c7;
+    --sawt-warning-dark: #92400e;
+    
+    --sawt-danger: #ef4444;
+    --sawt-danger-light: #fee2e2;
+    --sawt-danger-dark: #991b1b;
+    
+    --sawt-info: #3b82f6;
+    --sawt-info-light: #dbeafe;
+    --sawt-info-dark: #1e40af;
+    
+    /* ----------------------------------------
+       Colors - Neutral
+       ---------------------------------------- */
+    --sawt-white: #ffffff;
+    --sawt-black: #000000;
+    
+    --sawt-gray-50: #f8fafc;
+    --sawt-gray-100: #f1f5f9;
+    --sawt-gray-200: #e2e8f0;
+    --sawt-gray-300: #cbd5e1;
+    --sawt-gray-400: #94a3b8;
+    --sawt-gray-500: #64748b;
+    --sawt-gray-600: #475569;
+    --sawt-gray-700: #334155;
+    --sawt-gray-800: #1e293b;
+    --sawt-gray-900: #0f172a;
+    
+    /* ----------------------------------------
+       Spacing
+       ---------------------------------------- */
+    --sawt-space-0: 0;
+    --sawt-space-1: 4px;
+    --sawt-space-2: 8px;
+    --sawt-space-3: 12px;
+    --sawt-space-4: 16px;
+    --sawt-space-5: 20px;
+    --sawt-space-6: 24px;
+    --sawt-space-8: 32px;
+    --sawt-space-10: 40px;
+    --sawt-space-12: 48px;
+    
+    /* ----------------------------------------
+       Typography
+       ---------------------------------------- */
+    --sawt-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --sawt-font-mono: 'SF Mono', Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+    
+    --sawt-font-size-xs: 11px;
+    --sawt-font-size-sm: 12px;
+    --sawt-font-size-base: 14px;
+    --sawt-font-size-lg: 16px;
+    --sawt-font-size-xl: 18px;
+    --sawt-font-size-2xl: 20px;
+    --sawt-font-size-3xl: 24px;
+    
+    --sawt-font-weight-normal: 400;
+    --sawt-font-weight-medium: 500;
+    --sawt-font-weight-semibold: 600;
+    --sawt-font-weight-bold: 700;
+    
+    --sawt-line-height-tight: 1.25;
+    --sawt-line-height-normal: 1.5;
+    --sawt-line-height-relaxed: 1.75;
+    
+    /* ----------------------------------------
+       Borders
+       ---------------------------------------- */
+    --sawt-radius-sm: 4px;
+    --sawt-radius-md: 6px;
+    --sawt-radius-lg: 8px;
+    --sawt-radius-xl: 12px;
+    --sawt-radius-full: 9999px;
+    
+    --sawt-border-color: var(--sawt-gray-200);
+    --sawt-border-color-light: var(--sawt-gray-100);
+    --sawt-border-color-dark: var(--sawt-gray-300);
+    
+    /* ----------------------------------------
+       Shadows
+       ---------------------------------------- */
+    --sawt-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+    --sawt-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+    --sawt-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --sawt-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --sawt-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    --sawt-shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+    
+    /* ----------------------------------------
+       Transitions
+       ---------------------------------------- */
+    --sawt-transition-fast: 0.1s ease;
+    --sawt-transition-normal: 0.2s ease;
+    --sawt-transition-slow: 0.3s ease;
+    
+    /* ----------------------------------------
+       Z-Index Scale
+       ---------------------------------------- */
+    --sawt-z-dropdown: 100;
+    --sawt-z-sticky: 200;
+    --sawt-z-sidebar: 300;
+    --sawt-z-modal: 400;
+    --sawt-z-toast: 500;
+    --sawt-z-tooltip: 600;
+    
+    /* ----------------------------------------
+       Layout Dimensions
+       ---------------------------------------- */
+    --sawt-sidebar-width: 420px;
+    --sawt-sidebar-width-wide: 520px;
+    --sawt-page-header-height: 64px;
+    --sawt-tabs-height: 48px;
+    --sawt-table-header-height: 44px;
+    --sawt-table-row-height: 52px;
+    
+    /* ----------------------------------------
+       Header Gradient (Detail)
+       ---------------------------------------- */
+    --sawt-header-bg: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    --sawt-header-stripe: #f59e0b;
+}
+
+
+/* ===========================================
+   2. BOX SIZING RESET
+   =========================================== */
+
+.sawt-root,
+.sawt-root *,
+.sawt-root *::before,
+.sawt-root *::after,
+[class^="sawt-"],
+[class^="sawt-"] *,
+[class^="sawt-"] *::before,
+[class^="sawt-"] *::after {
+    box-sizing: border-box;
+}
+
+
+/* ===========================================
+   3. BASE TYPOGRAPHY
+   =========================================== */
+
+.sawt-root {
+    font-family: var(--sawt-font-family);
+    font-size: var(--sawt-font-size-base);
+    line-height: var(--sawt-line-height-normal);
+    color: var(--sawt-gray-800);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+
+/* ===========================================
+   4. UTILITY - DISPLAY
+   =========================================== */
+
+.sawt-hidden { display: none !important; }
+.sawt-block { display: block; }
+.sawt-inline-block { display: inline-block; }
+.sawt-flex { display: flex; }
+.sawt-inline-flex { display: inline-flex; }
+.sawt-grid { display: grid; }
+
+
+/* ===========================================
+   5. UTILITY - FLEXBOX
+   =========================================== */
+
+.sawt-flex-col { flex-direction: column; }
+.sawt-flex-row { flex-direction: row; }
+.sawt-flex-wrap { flex-wrap: wrap; }
+.sawt-flex-1 { flex: 1; }
+.sawt-flex-none { flex: none; }
+.sawt-flex-shrink-0 { flex-shrink: 0; }
+
+.sawt-items-start { align-items: flex-start; }
+.sawt-items-center { align-items: center; }
+.sawt-items-end { align-items: flex-end; }
+.sawt-items-stretch { align-items: stretch; }
+
+.sawt-justify-start { justify-content: flex-start; }
+.sawt-justify-center { justify-content: center; }
+.sawt-justify-end { justify-content: flex-end; }
+.sawt-justify-between { justify-content: space-between; }
+
+.sawt-gap-1 { gap: var(--sawt-space-1); }
+.sawt-gap-2 { gap: var(--sawt-space-2); }
+.sawt-gap-3 { gap: var(--sawt-space-3); }
+.sawt-gap-4 { gap: var(--sawt-space-4); }
+.sawt-gap-6 { gap: var(--sawt-space-6); }
+
+
+/* ===========================================
+   6. UTILITY - SIZING
+   =========================================== */
+
+.sawt-w-full { width: 100%; }
+.sawt-w-auto { width: auto; }
+.sawt-min-w-0 { min-width: 0; }
+.sawt-h-full { height: 100%; }
+
+
+/* ===========================================
+   7. UTILITY - TEXT
+   =========================================== */
+
+.sawt-text-left { text-align: left; }
+.sawt-text-center { text-align: center; }
+.sawt-text-right { text-align: right; }
+
+.sawt-text-xs { font-size: var(--sawt-font-size-xs); }
+.sawt-text-sm { font-size: var(--sawt-font-size-sm); }
+.sawt-text-base { font-size: var(--sawt-font-size-base); }
+.sawt-text-lg { font-size: var(--sawt-font-size-lg); }
+.sawt-text-xl { font-size: var(--sawt-font-size-xl); }
+
+.sawt-font-normal { font-weight: var(--sawt-font-weight-normal); }
+.sawt-font-medium { font-weight: var(--sawt-font-weight-medium); }
+.sawt-font-semibold { font-weight: var(--sawt-font-weight-semibold); }
+.sawt-font-bold { font-weight: var(--sawt-font-weight-bold); }
+
+.sawt-text-muted { color: var(--sawt-gray-400); font-style: italic; }
+.sawt-text-secondary { color: var(--sawt-gray-500); }
+.sawt-text-primary { color: var(--sawt-primary); }
+.sawt-text-success { color: var(--sawt-success); }
+.sawt-text-warning { color: var(--sawt-warning); }
+.sawt-text-danger { color: var(--sawt-danger); }
+
+.sawt-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sawt-break-word { word-break: break-word; }
+.sawt-whitespace-nowrap { white-space: nowrap; }
+.sawt-uppercase { text-transform: uppercase; }
+
+
+/* ===========================================
+   8. UTILITY - SPACING
+   =========================================== */
+
+.sawt-m-0 { margin: 0; }
+.sawt-mt-0 { margin-top: 0; }
+.sawt-mt-1 { margin-top: var(--sawt-space-1); }
+.sawt-mt-2 { margin-top: var(--sawt-space-2); }
+.sawt-mt-3 { margin-top: var(--sawt-space-3); }
+.sawt-mt-4 { margin-top: var(--sawt-space-4); }
+.sawt-mt-6 { margin-top: var(--sawt-space-6); }
+
+.sawt-mb-0 { margin-bottom: 0; }
+.sawt-mb-1 { margin-bottom: var(--sawt-space-1); }
+.sawt-mb-2 { margin-bottom: var(--sawt-space-2); }
+.sawt-mb-3 { margin-bottom: var(--sawt-space-3); }
+.sawt-mb-4 { margin-bottom: var(--sawt-space-4); }
+.sawt-mb-6 { margin-bottom: var(--sawt-space-6); }
+
+.sawt-ml-auto { margin-left: auto; }
+.sawt-mr-auto { margin-right: auto; }
+.sawt-mx-auto { margin-left: auto; margin-right: auto; }
+
+.sawt-p-0 { padding: 0; }
+.sawt-p-2 { padding: var(--sawt-space-2); }
+.sawt-p-3 { padding: var(--sawt-space-3); }
+.sawt-p-4 { padding: var(--sawt-space-4); }
+.sawt-p-6 { padding: var(--sawt-space-6); }
+
+.sawt-px-2 { padding-left: var(--sawt-space-2); padding-right: var(--sawt-space-2); }
+.sawt-px-3 { padding-left: var(--sawt-space-3); padding-right: var(--sawt-space-3); }
+.sawt-px-4 { padding-left: var(--sawt-space-4); padding-right: var(--sawt-space-4); }
+
+.sawt-py-2 { padding-top: var(--sawt-space-2); padding-bottom: var(--sawt-space-2); }
+.sawt-py-3 { padding-top: var(--sawt-space-3); padding-bottom: var(--sawt-space-3); }
+.sawt-py-4 { padding-top: var(--sawt-space-4); padding-bottom: var(--sawt-space-4); }
+
+
+/* ===========================================
+   9. UTILITY - MISC
+   =========================================== */
+
+.sawt-cursor-pointer { cursor: pointer; }
+.sawt-cursor-not-allowed { cursor: not-allowed; }
+
+.sawt-overflow-hidden { overflow: hidden; }
+.sawt-overflow-auto { overflow: auto; }
+.sawt-overflow-y-auto { overflow-y: auto; overflow-x: hidden; }
+
+.sawt-relative { position: relative; }
+.sawt-absolute { position: absolute; }
+.sawt-fixed { position: fixed; }
+.sawt-sticky { position: sticky; }
+
+.sawt-rounded-sm { border-radius: var(--sawt-radius-sm); }
+.sawt-rounded-md { border-radius: var(--sawt-radius-md); }
+.sawt-rounded-lg { border-radius: var(--sawt-radius-lg); }
+.sawt-rounded-full { border-radius: var(--sawt-radius-full); }
+
+.sawt-border { border: 1px solid var(--sawt-border-color); }
+.sawt-border-0 { border: none; }
+.sawt-border-t { border-top: 1px solid var(--sawt-border-color); }
+.sawt-border-b { border-bottom: 1px solid var(--sawt-border-color); }
+
+.sawt-bg-white { background-color: var(--sawt-white); }
+.sawt-bg-gray-50 { background-color: var(--sawt-gray-50); }
+.sawt-bg-gray-100 { background-color: var(--sawt-gray-100); }
+
+.sawt-shadow-sm { box-shadow: var(--sawt-shadow-sm); }
+.sawt-shadow-md { box-shadow: var(--sawt-shadow-md); }
+.sawt-shadow-lg { box-shadow: var(--sawt-shadow-lg); }
+.sawt-shadow-xl { box-shadow: var(--sawt-shadow-xl); }
+
+
+/* ===========================================
+   10. ALERT COMPONENT
+   =========================================== */
+
+.sawt-alert {
+    padding: var(--sawt-space-3) var(--sawt-space-4);
+    border-radius: var(--sawt-radius-md);
+    font-size: var(--sawt-font-size-sm);
+    font-weight: var(--sawt-font-weight-medium);
+    border: 1px solid transparent;
+}
+
+.sawt-alert-info {
+    background: var(--sawt-info-light);
+    color: var(--sawt-info-dark);
+    border-color: var(--sawt-info);
+}
+
+.sawt-alert-success {
+    background: var(--sawt-success-light);
+    color: var(--sawt-success-dark);
+    border-color: var(--sawt-success);
+}
+
+.sawt-alert-warning {
+    background: var(--sawt-warning-light);
+    color: var(--sawt-warning-dark);
+    border-color: var(--sawt-warning);
+}
+
+.sawt-alert-danger {
+    background: var(--sawt-danger-light);
+    color: var(--sawt-danger-dark);
+    border-color: var(--sawt-danger);
+}
+
+
+/* ===========================================
+   11. LOADING SPINNER
+   =========================================== */
+
+.sawt-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--sawt-gray-200);
+    border-top-color: var(--sawt-primary);
+    border-radius: 50%;
+    animation: sawt-spin 0.8s linear infinite;
+}
+
+.sawt-spinner-sm {
+    width: 16px;
+    height: 16px;
+}
+
+.sawt-spinner-lg {
+    width: 32px;
+    height: 32px;
+    border-width: 3px;
+}
+
+@keyframes sawt-spin {
+    to { transform: rotate(360deg); }
+}
+
+
+/* ===========================================
+   12. LOADING OVERLAY
+   =========================================== */
+
+.sawt-loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: var(--sawt-z-modal);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--sawt-transition-normal), visibility var(--sawt-transition-normal);
+}
+
+.sawt-loading-overlay.is-active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.sawt-loading-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--sawt-space-3);
+}
+
+.sawt-loading-text {
+    font-size: var(--sawt-font-size-sm);
+    color: var(--sawt-gray-600);
+}
+
+
+/* ===========================================
+   13. SCREEN READER ONLY
+   =========================================== */
+
+.sawt-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+
+/* ===========================================
+   14. FOCUS STYLES
+   =========================================== */
+
+.sawt-focus-ring:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(34, 113, 177, 0.3);
+}
+
+.sawt-focus-ring:focus:not(:focus-visible) {
+    box-shadow: none;
+}
+
+.sawt-focus-ring:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(34, 113, 177, 0.3);
+}

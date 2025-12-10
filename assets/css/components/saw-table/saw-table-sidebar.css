@@ -1,0 +1,557 @@
+/**
+ * SAW Table - Sidebar
+ *
+ * Sidebar wrapper, animations, header, navigation, floating actions.
+ * Shared between detail and form sidebars.
+ *
+ * @package     SAW_Visitors
+ * @subpackage  Assets/CSS/SAWTable
+ * @version     1.0.0
+ * @since       5.2.0
+ * 
+ * REQUIRES: saw-table-variables.css
+ */
+
+/* ===========================================
+   1. SIDEBAR WRAPPER
+   =========================================== */
+
+.sawt-sidebar-wrapper {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: var(--sawt-z-sidebar);
+    pointer-events: none;
+}
+
+.sawt-sidebar-wrapper.is-open {
+    pointer-events: auto;
+}
+
+
+/* ===========================================
+   2. SIDEBAR BACKDROP
+   =========================================== */
+
+.sawt-sidebar-backdrop {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background: rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    transition: opacity var(--sawt-transition-slow);
+}
+
+.sawt-sidebar-wrapper.is-open .sawt-sidebar-backdrop {
+    opacity: 1;
+}
+
+/* Optional: No backdrop variant */
+.sawt-sidebar-wrapper.no-backdrop .sawt-sidebar-backdrop {
+    display: none;
+}
+
+
+/* ===========================================
+   3. SIDEBAR PANEL
+   =========================================== */
+
+.sawt-sidebar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: var(--sawt-sidebar-width);
+    max-width: 100vw;
+    background: var(--sawt-white);
+    border-left: 1px solid var(--sawt-border-color);
+    box-shadow: var(--sawt-shadow-xl);
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform var(--sawt-transition-slow);
+    overflow: hidden;
+}
+
+.sawt-sidebar-wrapper.is-open .sawt-sidebar {
+    transform: translateX(0);
+}
+
+/* Wide variant */
+.sawt-sidebar.is-wide {
+    width: var(--sawt-sidebar-width-wide);
+}
+
+/* Full width on mobile */
+@media (max-width: 480px) {
+    .sawt-sidebar {
+        width: 100vw;
+    }
+}
+
+
+/* ===========================================
+   4. SIDEBAR HEADER
+   =========================================== */
+
+.sawt-sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sawt-space-3);
+    padding: var(--sawt-space-3) var(--sawt-space-4);
+    background: var(--sawt-white);
+    border-bottom: 1px solid var(--sawt-border-color);
+    flex-shrink: 0;
+    min-height: 56px;
+}
+
+.sawt-sidebar-header-left {
+    display: flex;
+    align-items: center;
+    gap: var(--sawt-space-2);
+    min-width: 0;
+    flex: 1;
+}
+
+.sawt-sidebar-icon {
+    flex-shrink: 0;
+    font-size: var(--sawt-font-size-lg);
+}
+
+.sawt-sidebar-title {
+    margin: 0;
+    font-size: var(--sawt-font-size-base);
+    font-weight: var(--sawt-font-weight-semibold);
+    color: var(--sawt-gray-800);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sawt-sidebar-subtitle {
+    margin: 0;
+    font-size: var(--sawt-font-size-xs);
+    color: var(--sawt-gray-500);
+}
+
+.sawt-sidebar-header-right {
+    display: flex;
+    align-items: center;
+    gap: var(--sawt-space-2);
+    flex-shrink: 0;
+}
+
+
+/* ===========================================
+   5. NAVIGATION BUTTONS
+   =========================================== */
+
+.sawt-sidebar-nav {
+    display: flex;
+    gap: var(--sawt-space-1);
+}
+
+.sawt-sidebar-nav-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: var(--sawt-gray-100);
+    border: 1px solid var(--sawt-border-color);
+    border-radius: var(--sawt-radius-md);
+    color: var(--sawt-gray-600);
+    font-size: var(--sawt-font-size-sm);
+    font-weight: var(--sawt-font-weight-bold);
+    cursor: pointer;
+    transition: all var(--sawt-transition-normal);
+}
+
+.sawt-sidebar-nav-btn:hover:not(:disabled) {
+    background: var(--sawt-gray-200);
+    color: var(--sawt-gray-800);
+}
+
+.sawt-sidebar-nav-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.sawt-sidebar-nav-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(34, 113, 177, 0.3);
+}
+
+
+/* ===========================================
+   6. CLOSE BUTTON
+   =========================================== */
+
+.sawt-sidebar-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    margin-left: var(--sawt-space-2);
+    background: var(--sawt-gray-100);
+    border: none;
+    border-radius: var(--sawt-radius-md);
+    color: var(--sawt-gray-500);
+    font-size: 20px;
+    font-weight: 300;
+    line-height: 1;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all var(--sawt-transition-normal);
+}
+
+.sawt-sidebar-close:hover {
+    background: var(--sawt-gray-200);
+    color: var(--sawt-gray-700);
+}
+
+.sawt-sidebar-close:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(34, 113, 177, 0.3);
+}
+
+
+/* ===========================================
+   7. SIDEBAR CONTENT
+   =========================================== */
+
+.sawt-sidebar-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Scrollbar styling */
+.sawt-sidebar-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sawt-sidebar-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sawt-sidebar-content::-webkit-scrollbar-thumb {
+    background: var(--sawt-gray-300);
+    border-radius: 3px;
+}
+
+.sawt-sidebar-content::-webkit-scrollbar-thumb:hover {
+    background: var(--sawt-gray-400);
+}
+
+
+/* ===========================================
+   8. SIDEBAR FOOTER
+   =========================================== */
+
+.sawt-sidebar-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--sawt-space-3);
+    padding: var(--sawt-space-4);
+    background: var(--sawt-gray-50);
+    border-top: 1px solid var(--sawt-border-color);
+    flex-shrink: 0;
+}
+
+.sawt-sidebar-footer-left {
+    flex: 1;
+}
+
+.sawt-sidebar-footer-right {
+    display: flex;
+    gap: var(--sawt-space-2);
+}
+
+
+/* ===========================================
+   9. FLOATING ACTIONS
+   =========================================== */
+
+.sawt-floating-actions {
+    position: absolute;
+    bottom: var(--sawt-space-6);
+    right: var(--sawt-space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sawt-space-2);
+    z-index: 10;
+}
+
+.sawt-floating-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: var(--sawt-radius-full);
+    cursor: pointer;
+    transition: all var(--sawt-transition-normal);
+    box-shadow: var(--sawt-shadow-md);
+    text-decoration: none;
+}
+
+.sawt-floating-btn:focus {
+    outline: none;
+}
+
+/* Edit button */
+.sawt-floating-btn-edit {
+    background: var(--sawt-primary);
+    color: var(--sawt-white);
+}
+
+.sawt-floating-btn-edit:hover {
+    background: var(--sawt-primary-hover);
+    transform: scale(1.05);
+    box-shadow: var(--sawt-shadow-lg);
+}
+
+.sawt-floating-btn-edit:focus {
+    box-shadow: var(--sawt-shadow-md), 0 0 0 3px rgba(34, 113, 177, 0.3);
+}
+
+/* Delete button */
+.sawt-floating-btn-delete {
+    background: var(--sawt-white);
+    color: var(--sawt-danger);
+    border: 1px solid var(--sawt-danger-light);
+}
+
+.sawt-floating-btn-delete:hover {
+    background: var(--sawt-danger-light);
+    transform: scale(1.05);
+}
+
+.sawt-floating-btn-delete:focus {
+    box-shadow: var(--sawt-shadow-md), 0 0 0 3px rgba(239, 68, 68, 0.3);
+}
+
+/* Icon inside floating button */
+.sawt-floating-btn .dashicons {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+}
+
+
+/* ===========================================
+   10. SIDEBAR LOADING STATE
+   =========================================== */
+
+.sawt-sidebar-loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sawt-space-4);
+    background: rgba(255, 255, 255, 0.9);
+    z-index: 20;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--sawt-transition-normal), visibility var(--sawt-transition-normal);
+}
+
+.sawt-sidebar-loading.is-active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.sawt-sidebar-loading-text {
+    font-size: var(--sawt-font-size-sm);
+    color: var(--sawt-gray-600);
+}
+
+
+/* ===========================================
+   11. SIDEBAR TABS (for multi-tab sidebars)
+   =========================================== */
+
+.sawt-sidebar-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--sawt-border-color);
+    background: var(--sawt-white);
+    flex-shrink: 0;
+}
+
+.sawt-sidebar-tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sawt-space-2);
+    padding: var(--sawt-space-3) var(--sawt-space-4);
+    font-size: var(--sawt-font-size-sm);
+    font-weight: var(--sawt-font-weight-medium);
+    color: var(--sawt-gray-500);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: all var(--sawt-transition-normal);
+}
+
+.sawt-sidebar-tab:hover {
+    color: var(--sawt-gray-700);
+    background: var(--sawt-gray-50);
+}
+
+.sawt-sidebar-tab.is-active {
+    color: var(--sawt-primary);
+    border-bottom-color: var(--sawt-primary);
+}
+
+
+/* ===========================================
+   12. KEYBOARD NAVIGATION INDICATOR
+   =========================================== */
+
+.sawt-sidebar[data-keyboard-nav="true"] .sawt-sidebar-nav-btn:focus,
+.sawt-sidebar[data-keyboard-nav="true"] .sawt-sidebar-close:focus {
+    box-shadow: 0 0 0 2px var(--sawt-primary);
+}
+
+
+/* ===========================================
+   13. ANIMATION VARIANTS
+   =========================================== */
+
+/* Slide from right (default) */
+.sawt-sidebar.animate-slide {
+    transform: translateX(100%);
+}
+
+.sawt-sidebar-wrapper.is-open .sawt-sidebar.animate-slide {
+    transform: translateX(0);
+}
+
+/* Fade in */
+.sawt-sidebar.animate-fade {
+    transform: translateX(0);
+    opacity: 0;
+}
+
+.sawt-sidebar-wrapper.is-open .sawt-sidebar.animate-fade {
+    opacity: 1;
+}
+
+/* Scale */
+.sawt-sidebar.animate-scale {
+    transform: translateX(0) scale(0.95);
+    opacity: 0;
+}
+
+.sawt-sidebar-wrapper.is-open .sawt-sidebar.animate-scale {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+}
+
+
+/* ===========================================
+   14. SPLIT VIEW (Table + Sidebar)
+   =========================================== */
+
+.sawt-layout-split {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.sawt-layout-main {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    transition: margin-right var(--sawt-transition-slow);
+}
+
+.sawt-layout-split.has-sidebar .sawt-layout-main {
+    margin-right: var(--sawt-sidebar-width);
+}
+
+.sawt-layout-split .sawt-sidebar-wrapper {
+    position: relative;
+    width: 0;
+    pointer-events: auto;
+}
+
+.sawt-layout-split .sawt-sidebar-backdrop {
+    display: none;
+}
+
+.sawt-layout-split .sawt-sidebar {
+    position: relative;
+    transform: translateX(0);
+    box-shadow: none;
+    border-left: 1px solid var(--sawt-border-color);
+}
+
+
+/* ===========================================
+   15. RESPONSIVE ADJUSTMENTS
+   =========================================== */
+
+@media (max-width: 768px) {
+    .sawt-sidebar {
+        width: 100%;
+        max-width: 100vw;
+    }
+    
+    .sawt-sidebar-header {
+        padding: var(--sawt-space-3);
+    }
+    
+    .sawt-floating-actions {
+        bottom: var(--sawt-space-4);
+        right: var(--sawt-space-4);
+    }
+    
+    .sawt-floating-btn {
+        width: 48px;
+        height: 48px;
+    }
+    
+    /* On mobile, always use overlay mode */
+    .sawt-layout-split.has-sidebar .sawt-layout-main {
+        margin-right: 0;
+    }
+    
+    .sawt-layout-split .sawt-sidebar-backdrop {
+        display: block;
+    }
+    
+    .sawt-layout-split .sawt-sidebar {
+        position: fixed;
+        box-shadow: var(--sawt-shadow-xl);
+    }
+}
+
+
+/* ===========================================
+   16. PRINT STYLES
+   =========================================== */
+
+@media print {
+    .sawt-sidebar-wrapper {
+        display: none;
+    }
+}
