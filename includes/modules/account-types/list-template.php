@@ -2,7 +2,21 @@
 /**
  * Account Types List Template
  * 
- * @version 6.0.0 - FIXED: echo + callbacks injection into config
+ * Uses SAW Table component for rendering.
+ * Called by Base Controller's render_list_view().
+ * 
+ * Variables available from Base Controller:
+ * - $items (array) - List items
+ * - $total (int) - Total count
+ * - $config (array) - Module config
+ * - $entity (string) - Entity name
+ * - $current_tab (string) - Current tab
+ * - $tab_counts (array) - Counts per tab
+ * - $sidebar_mode (string|null) - detail/edit/create
+ * - $detail_item (array|null) - Item for detail sidebar
+ * - $form_item (array|null) - Item for form
+ * 
+ * @version 5.0.0
  */
 
 if (!defined('ABSPATH')) {
@@ -40,7 +54,7 @@ $sidebar_mode = $sidebar_mode ?? null;
 $detail_item = $detail_item ?? null;
 
 // ============================================
-// DEFINE COLUMN CALLBACKS
+// COLUMN CALLBACKS (safe in template context)
 // ============================================
 $column_callbacks = [
     // Color swatch
@@ -77,21 +91,9 @@ $column_callbacks = [
 ];
 
 // ============================================
-// INJECT CALLBACKS INTO CONFIG
-// This is required because SAW Table expects
-// callbacks inside column config with type 'custom'
+// RENDER LIST
 // ============================================
-foreach ($column_callbacks as $key => $callback) {
-    if (isset($config['table']['columns'][$key])) {
-        $config['table']['columns'][$key]['callback'] = $callback;
-        $config['table']['columns'][$key]['type'] = 'custom';
-    }
-}
-
-// ============================================
-// RENDER LIST - MUST USE ECHO!
-// ============================================
-echo saw_table_render_list([
+saw_table_render_list([
     'config' => $config,
     'items' => $items,
     'total' => $total,
@@ -99,4 +101,5 @@ echo saw_table_render_list([
     'tab_counts' => $tab_counts,
     'sidebar_mode' => $sidebar_mode,
     'detail_item' => $detail_item,
+    'column_callbacks' => $column_callbacks,
 ]);

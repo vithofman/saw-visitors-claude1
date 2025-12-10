@@ -2,7 +2,9 @@
 /**
  * Account Types Module Model
  *
- * @version 4.4.0 - FIXED: Uses table_name from config
+ * SAW TABLE COMPLETE IMPLEMENTATION
+ * 
+ * @version 12.0.0 - Added create/update methods
  */
 
 if (!defined('ABSPATH')) {
@@ -14,10 +16,8 @@ class SAW_Module_Account_Types_Model extends SAW_Base_Model
     public function __construct($config) {
         global $wpdb;
         
-        // FIXED: Use table_name (string), not table (array)
         $table_name = $config['table_name'] ?? $config['table'] ?? 'saw_account_types';
         
-        // If table_name is array (wrong config), use default
         if (is_array($table_name)) {
             $table_name = 'saw_account_types';
         }
@@ -29,9 +29,6 @@ class SAW_Module_Account_Types_Model extends SAW_Base_Model
     
     /**
      * Get all items
-     * 
-     * @param array $filters
-     * @return array ['items' => [...], 'total' => int]
      */
     public function get_all($filters = []) {
         global $wpdb;
@@ -39,13 +36,11 @@ class SAW_Module_Account_Types_Model extends SAW_Base_Model
         $where = ['1=1'];
         $params = [];
         
-        // Filter by is_active
         if (isset($filters['is_active'])) {
             $where[] = 'is_active = %d';
             $params[] = intval($filters['is_active']);
         }
         
-        // Search
         if (!empty($filters['search'])) {
             $search = '%' . $wpdb->esc_like($filters['search']) . '%';
             $where[] = '(name LIKE %s OR display_name LIKE %s OR description LIKE %s)';
@@ -56,7 +51,6 @@ class SAW_Module_Account_Types_Model extends SAW_Base_Model
         
         $where_sql = implode(' AND ', $where);
         
-        // Order
         $orderby = $filters['orderby'] ?? 'sort_order';
         $allowed_orderby = ['id', 'name', 'display_name', 'price', 'sort_order', 'created_at', 'is_active'];
         if (!in_array($orderby, $allowed_orderby)) {
@@ -68,7 +62,6 @@ class SAW_Module_Account_Types_Model extends SAW_Base_Model
             $order = 'ASC';
         }
         
-        // Build query
         $sql = "SELECT * FROM {$this->table} WHERE {$where_sql} ORDER BY {$orderby} {$order}";
         
         if (!empty($params)) {
@@ -77,7 +70,6 @@ class SAW_Module_Account_Types_Model extends SAW_Base_Model
         
         $items = $wpdb->get_results($sql, ARRAY_A) ?: [];
         
-        // Format items
         foreach ($items as &$item) {
             $item = $this->format_item($item);
         }
@@ -90,9 +82,6 @@ class SAW_Module_Account_Types_Model extends SAW_Base_Model
     
     /**
      * Count items
-     * 
-     * @param array $filters
-     * @return int
      */
     public function count($filters = []) {
         global $wpdb;
@@ -130,28 +119,86 @@ class SAW_Module_Account_Types_Model extends SAW_Base_Model
     }
     
     /**
-     * Format item
+     * Create new item
      */
-    protected function format_item($item) {
-        if (!$item) return $item;
+    public function create($data) {
+        global $wpdb;
         
-        // Format price
-        $price = floatval($item['price'] ?? 0);
-        if ($price > 0) {
-            $item['price_formatted'] = number_format($price, 0, ',', ' ') . ' Kč/měsíc';
-        } else {
-            $item['price_formatted'] = 'Zdarma';
+        // Validate
+        $validation = $this->validate($data);
+        if ($validation !== true) {
+            return new WP_Error('validation_failed', 'Opravte chyby ve formuláři', $validation);
         }
         
-        // Format dates
-        if (!empty($item['created_at'])) {
-            $item['created_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['created_at']));
-        }
-        if (!empty($item['updated_at'])) {
-            $item['updated_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['updated_at']));
+        // Prepare data
+        $insert_data = [
+            'name' => sanitize_text_field($data['name']),
+            'display_name' => sanitize_text_field($data['display_name'] ?? $data['name']),
+            'description' => sanitize_textarea_field($data['description'] ?? ''),
+            'color' => sanitize_hex_color($data['color'] ?? '#3b82f6'),
+            'price' => floatval($data['price'] ?? 0),
+            'sort_order' => intval($data['sort_order'] ?? 0),
+            'is_active' => intval($data['is_active'] ?? 1),
+            'created_at' => current_time('mysql'),
+            'updated_at' => current_time('mysql'),
+        ];
+        
+        $result = $wpdb->insert(
+            $this->table,
+            $insert_data,
+            ['%s', '%s', '%s', '%s', '%f', '%d', '%d', '%s', '%s']
+        );
+        
+        if ($result === false) {
+            return new WP_Error('insert_failed', 'Nepodařilo se vytvořit záznam: ' . $wpdb->last_error);
         }
         
-        return $item;
+        return $wpdb->insert_id;
+    }
+    
+    /**
+     * Update existing item
+     */
+    public function update($id, $data) {
+        global $wpdb;
+        
+        // Check exists
+        $existing = $this->get_by_id($id);
+        if (!$existing) {
+            return new WP_Error('not_found', 'Záznam nenalezen');
+        }
+        
+        // Validate
+        $validation = $this->validate($data, $id);
+        if ($validation !== true) {
+            return new WP_Error('validation_failed', 'Opravte chyby ve formuláři', $validation);
+        }
+        
+        // Prepare data
+        $update_data = [
+            'name' => sanitize_text_field($data['name']),
+            'display_name' => sanitize_text_field($data['display_name'] ?? $data['name']),
+            'description' => sanitize_textarea_field($data['description'] ?? ''),
+            'color' => sanitize_hex_color($data['color'] ?? '#3b82f6'),
+            'price' => floatval($data['price'] ?? 0),
+            'sort_order' => intval($data['sort_order'] ?? 0),
+            'is_active' => intval($data['is_active'] ?? 1),
+            'updated_at' => current_time('mysql'),
+        ];
+        
+        $result = $wpdb->update(
+            $this->table,
+            $update_data,
+            ['id' => $id],
+            ['%s', '%s', '%s', '%s', '%f', '%d', '%d', '%s'],
+            ['%d']
+        );
+        
+        if ($result === false) {
+            return new WP_Error('update_failed', 'Nepodařilo se aktualizovat záznam: ' . $wpdb->last_error);
+        }
+        
+        return true;
     }
     
     /**
@@ -174,17 +221,36 @@ class SAW_Module_Account_Types_Model extends SAW_Base_Model
     }
     
     /**
+     * Format item
+     */
+    protected function format_item($item) {
+        if (!$item) return $item;
+        
+        $price = floatval($item['price'] ?? 0);
+        if ($price > 0) {
+            $item['price_formatted'] = number_format($price, 0, ',', ' ') . ' Kč/měsíc';
+        } else {
+            $item['price_formatted'] = 'Zdarma';
+        }
+        
+        if (!empty($item['created_at'])) {
+            $item['created_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['created_at']));
+        }
+        if (!empty($item['updated_at'])) {
+            $item['updated_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['updated_at']));
+        }
+        
+        return $item;
+    }
+    
+    /**
      * Validate data
      */
     public function validate($data, $id = null) {
         $errors = [];
         
         if (empty($data['name'])) {
-            $errors['name'] = 'Název je povinný';
-        }
-        
-        if (empty($data['display_name'])) {
-            $errors['display_name'] = 'Zobrazovaný název je povinný';
+            $errors['name'] = 'Systémový název je povinný';
         }
         
         return empty($errors) ? true : $errors;
