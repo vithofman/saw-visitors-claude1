@@ -1,224 +1,194 @@
 <?php
 /**
  * Account Types Module Configuration
- *
- * CLEAN config - NO CLOSURES/CALLBACKS here!
- * Callbacks are defined in list-template.php
- *
- * @package     SAW_Visitors
- * @subpackage  Modules/AccountTypes
- * @version     4.2.0 - FIXED: No closures in config
+ * 
+ * FIXED: table_name for DB, table for columns config
+ * 
+ * @version 4.4.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-return [
-    // =========================================
-    // BASIC SETTINGS
-    // =========================================
-    
+return array(
+    // Basic settings
     'entity' => 'account_types',
-    'table' => 'saw_account_types',
+    'table_name' => 'saw_account_types',  // ← OPRAVENO: table_name pro DB
     'singular' => 'Typ účtu',
     'plural' => 'Typy účtů',
     'route' => 'account-types',
     'icon' => '🏷️',
     'path' => __DIR__ . '/',
     
-    // =========================================
-    // MULTI-TENANT (global - no filtering)
-    // =========================================
-    
+    // Multi-tenant (global - no filtering)
     'has_customer_isolation' => false,
     'has_branch_isolation' => false,
     'filter_by_customer' => false,
     'filter_by_branch' => false,
     
-    // =========================================
-    // PERMISSIONS
-    // =========================================
+    // Permissions
+    'permissions' => array(
+        'list' => array('super_admin'),
+        'view' => array('super_admin'),
+        'create' => array('super_admin'),
+        'edit' => array('super_admin'),
+        'delete' => array('super_admin'),
+    ),
     
-    'permissions' => [
-        'list' => ['super_admin'],
-        'view' => ['super_admin'],
-        'create' => ['super_admin'],
-        'edit' => ['super_admin'],
-        'delete' => ['super_admin'],
-    ],
-    
-    'capabilities' => [
+    'capabilities' => array(
         'list' => 'manage_options',
         'view' => 'manage_options',
         'create' => 'manage_options',
         'edit' => 'manage_options',
         'delete' => 'manage_options',
-    ],
+    ),
     
-    // =========================================
-    // LIST CONFIG
-    // =========================================
-    
-    'list_config' => [
+    // List config
+    'list_config' => array(
         'per_page' => 50,
-        'searchable' => ['name', 'display_name', 'description'],
+        'searchable' => array('name', 'display_name', 'description'),
         'default_orderby' => 'sort_order',
         'default_order' => 'ASC',
-    ],
+    ),
     
-    // =========================================
-    // TABS
-    // =========================================
-    
-    'tabs' => [
+    // Tabs
+    'tabs' => array(
         'enabled' => true,
         'tab_param' => 'tab',
         'default_tab' => 'all',
-        'tabs' => [
-            'all' => [
+        'tabs' => array(
+            'all' => array(
                 'label' => 'Všechny',
                 'filter_value' => null,
                 'icon' => '📋',
-            ],
-            'active' => [
+            ),
+            'active' => array(
                 'label' => 'Aktivní',
                 'filter_value' => 1,
                 'filter_field' => 'is_active',
                 'icon' => '✓',
-            ],
-            'inactive' => [
+            ),
+            'inactive' => array(
                 'label' => 'Neaktivní',
                 'filter_value' => 0,
                 'filter_field' => 'is_active',
                 'icon' => '✕',
-            ],
-        ],
-    ],
+            ),
+        ),
+    ),
     
-    // =========================================
-    // TABLE COLUMNS (NO CALLBACKS - just structure)
-    // =========================================
-    
-    'table' => [
-        'columns' => [
-            'color' => [
-                'label' => '',
-                'type' => 'custom',
+    // Table columns config - NO CALLBACKS HERE
+    'table' => array(
+        'columns' => array(
+            'color' => array(
+                'label' => 'Barva',
+                'type' => 'color',
                 'sortable' => false,
                 'width' => '50px',
-            ],
-            'display_name' => [
-                'label' => 'Zobrazovaný název',
+            ),
+            'display_name' => array(
+                'label' => 'Název',
                 'type' => 'text',
                 'sortable' => true,
                 'bold' => true,
-            ],
-            'name' => [
+            ),
+            'name' => array(
                 'label' => 'Systémový název',
                 'type' => 'code',
                 'sortable' => true,
-            ],
-            'price' => [
+            ),
+            'price' => array(
                 'label' => 'Cena',
-                'type' => 'custom',
+                'type' => 'currency',
                 'sortable' => true,
                 'align' => 'right',
-            ],
-            'customers_count' => [
+            ),
+            'customers_count' => array(
                 'label' => 'Zákazníků',
-                'type' => 'custom',
+                'type' => 'number',
                 'sortable' => false,
                 'align' => 'center',
-            ],
-            'is_active' => [
+            ),
+            'is_active' => array(
                 'label' => 'Status',
                 'type' => 'badge',
-                'map' => [
-                    '1' => ['label' => 'Aktivní', 'color' => 'success'],
-                    '0' => ['label' => 'Neaktivní', 'color' => 'secondary'],
-                ],
-            ],
-        ],
-    ],
+                'map' => array(
+                    '1' => array('label' => 'Aktivní', 'color' => 'success'),
+                    '0' => array('label' => 'Neaktivní', 'color' => 'secondary'),
+                ),
+            ),
+        ),
+    ),
     
-    // =========================================
-    // ACTIONS
-    // =========================================
+    // Actions
+    'actions' => array('view', 'edit', 'delete'),
     
-    'actions' => ['view', 'edit', 'delete'],
-    
-    // =========================================
-    // DETAIL SIDEBAR
-    // =========================================
-    
-    'detail' => [
+    // Detail sidebar
+    'detail' => array(
         'title_field' => 'display_name',
         
-        'header_badges' => [
-            [
+        'header_badges' => array(
+            array(
                 'type' => 'status',
                 'field' => 'is_active',
-                'map' => [
-                    '1' => ['label' => 'Aktivní', 'icon' => '✓', 'color' => 'success'],
-                    '0' => ['label' => 'Neaktivní', 'icon' => '✕', 'color' => 'secondary'],
-                ],
-            ],
-        ],
+                'map' => array(
+                    '1' => array('label' => 'Aktivní', 'icon' => '✓', 'color' => 'success'),
+                    '0' => array('label' => 'Neaktivní', 'icon' => '✕', 'color' => 'secondary'),
+                ),
+            ),
+        ),
         
-        'sections' => [
-            'basic' => [
+        'sections' => array(
+            'basic' => array(
                 'title' => 'Základní informace',
                 'icon' => '📋',
                 'type' => 'info_rows',
-                'rows' => [
-                    ['field' => 'name', 'label' => 'Systémový název', 'format' => 'code'],
-                    ['field' => 'display_name', 'label' => 'Zobrazovaný název', 'bold' => true],
-                    ['field' => 'description', 'label' => 'Popis'],
-                ],
-            ],
-            'pricing' => [
+                'rows' => array(
+                    array('field' => 'name', 'label' => 'Systémový název', 'format' => 'code'),
+                    array('field' => 'display_name', 'label' => 'Zobrazovaný název', 'bold' => true),
+                    array('field' => 'description', 'label' => 'Popis'),
+                ),
+            ),
+            'pricing' => array(
                 'title' => 'Ceník',
                 'icon' => '💰',
                 'type' => 'info_rows',
-                'rows' => [
-                    ['field' => 'price_formatted', 'label' => 'Měsíční cena', 'bold' => true],
-                ],
-            ],
-            'statistics' => [
+                'rows' => array(
+                    array('field' => 'price_formatted', 'label' => 'Měsíční cena', 'bold' => true),
+                ),
+            ),
+            'statistics' => array(
                 'title' => 'Statistiky',
                 'icon' => '📊',
                 'type' => 'info_rows',
-                'rows' => [
-                    ['field' => 'customers_count', 'label' => 'Počet zákazníků', 'bold' => true],
-                ],
-            ],
-            'metadata' => [
+                'rows' => array(
+                    array('field' => 'customers_count', 'label' => 'Počet zákazníků', 'bold' => true),
+                ),
+            ),
+            'metadata' => array(
                 'type' => 'metadata',
-            ],
-        ],
+            ),
+        ),
         
-        'actions' => [
-            'edit' => [
+        'actions' => array(
+            'edit' => array(
                 'label' => 'Upravit',
                 'icon' => 'edit',
                 'type' => 'primary',
-            ],
-            'delete' => [
+            ),
+            'delete' => array(
                 'label' => 'Smazat',
                 'icon' => 'trash',
                 'type' => 'danger',
                 'confirm' => 'Opravdu chcete smazat tento typ účtu?',
-            ],
-        ],
-    ],
+            ),
+        ),
+    ),
     
-    // =========================================
-    // CACHE
-    // =========================================
-    
-    'cache' => [
+    // Cache
+    'cache' => array(
         'enabled' => true,
         'ttl' => 300,
-    ],
-];
+    ),
+);

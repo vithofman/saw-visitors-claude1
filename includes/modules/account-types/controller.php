@@ -2,9 +2,7 @@
 /**
  * Account Types Module Controller
  *
- * @package     SAW_Visitors
- * @subpackage  Modules/AccountTypes
- * @version     4.2.0 - FIXED: Correct data format handling
+ * @version     6.1.0 - FIXED: render_list_view($options = []) signature
  */
 
 if (!defined('ABSPATH')) {
@@ -13,8 +11,6 @@ if (!defined('ABSPATH')) {
 
 class SAW_Module_Account_Types_Controller extends SAW_Base_Controller 
 {
-    use SAW_AJAX_Handlers;
-    
     public function __construct() {
         $module_path = SAW_VISITORS_PLUGIN_DIR . 'includes/modules/account-types/';
         
@@ -33,7 +29,7 @@ class SAW_Module_Account_Types_Controller extends SAW_Base_Controller
     }
     
     /**
-     * Index - render list
+     * Index - render list page
      */
     public function index() {
         $this->render_list_view();
@@ -41,12 +37,27 @@ class SAW_Module_Account_Types_Controller extends SAW_Base_Controller
     
     /**
      * Render list view
+     * 
+     * FIXED: Must have $options = [] parameter to match parent!
+     * 
+     * @param array $options Optional overrides
      */
-    protected function render_list_view() {
-        // Tab
+    protected function render_list_view($options = []) {
+        // 1. Verify access
+        if (method_exists($this, 'verify_module_access')) {
+            $this->verify_module_access();
+        }
+        
+        // 2. Enqueue assets
+        $this->enqueue_assets();
+        
+        // 3. Start output buffering
+        ob_start();
+        
+        // 4. Get current tab
         $current_tab = $this->get_current_tab();
         
-        // Query args
+        // 5. Build query args
         $args = [];
         if ($current_tab === 'active') {
             $args['is_active'] = 1;
@@ -63,129 +74,104 @@ class SAW_Module_Account_Types_Controller extends SAW_Base_Controller
         $args['orderby'] = sanitize_key($_GET['orderby'] ?? 'sort_order');
         $args['order'] = strtoupper(sanitize_key($_GET['order'] ?? 'ASC'));
         
-        // Get data from model
+        // 6. Get data from model
         $result = $this->model->get_all($args);
+        $items = isset($result['items']) ? $result['items'] : (is_array($result) ? $result : []);
         
-        // Extract items - handle both formats
-        if (isset($result['items'])) {
-            $items = $result['items'];
-        } else {
-            $items = is_array($result) ? $result : [];
-        }
-        
-        // Enrich items
+        // 7. Enrich items with customers count
         foreach ($items as &$item) {
             $item['customers_count'] = $this->count_customers($item['id']);
         }
         unset($item);
         
-        // Tab counts
+        // 8. Tab counts
         $tab_counts = [
             'all' => $this->model->count(),
             'active' => $this->model->count(['is_active' => 1]),
             'inactive' => $this->model->count(['is_active' => 0]),
         ];
         
-        $total = $tab_counts[$current_tab] ?? count($items);
+        $total = count($items);
         
-        // Sidebar
-        $sidebar_mode = $this->get_sidebar_mode();
+        // 9. Sidebar context
+        $sidebar_mode = null;
         $detail_item = null;
-        $form_item = null;
-        $related_data = [];
         
-        if ($sidebar_mode === 'detail') {
-            $detail_id = $this->get_detail_id();
-            if ($detail_id) {
-                $detail_item = $this->model->get_by_id($detail_id);
+        if (method_exists($this, 'get_sidebar_context')) {
+            $context = $this->get_sidebar_context();
+            $sidebar_mode = $context['mode'] ?? null;
+            
+            if ($sidebar_mode === 'detail' && !empty($context['id'])) {
+                $detail_item = $this->model->get_by_id($context['id']);
                 if ($detail_item) {
-                    $detail_item['customers_count'] = $this->count_customers($detail_id);
-                    $related_data = $this->load_related_data($detail_id);
+                    $detail_item = $this->format_detail_data($detail_item);
                 }
-            }
-        } elseif ($sidebar_mode === 'form') {
-            $edit_id = $this->get_edit_id();
-            if ($edit_id) {
-                $form_item = $this->model->get_by_id($edit_id);
             }
         }
         
-        // Pass to template
+        // 10. Prepare variables for template
         $config = $this->config;
+        $entity = $this->entity;
         
+        // 11. Render wrapper and flash messages
+        echo '<div class="saw-module-wrapper" data-entity="' . esc_attr($this->entity) . '">';
+        if (method_exists($this, 'render_flash_messages')) {
+            $this->render_flash_messages();
+        }
+        
+        // 12. Include template
         include $this->config['path'] . 'list-template.php';
-    }
-    
-    /**
-     * Count customers
-     */
-    protected function count_customers($id) {
-        global $wpdb;
-        return (int) $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}saw_customers WHERE account_type_id = %d",
-            $id
-        ));
-    }
-    
-    /**
-     * Load related data
-     */
-    protected function load_related_data($id) {
-        global $wpdb;
-        return [
-            'customers' => $wpdb->get_results($wpdb->prepare(
-                "SELECT id, name, status FROM {$wpdb->prefix}saw_customers WHERE account_type_id = %d ORDER BY name LIMIT 10",
-                $id
-            ), ARRAY_A) ?: [],
-        ];
+        
+        // 13. Close wrapper
+        echo '</div>';
+        
+        // 14. Get content
+        $content = ob_get_clean();
+        
+        // 15. Wrap in layout
+        $this->render_with_layout($content, $this->config['plural']);
     }
     
     /**
      * Get current tab
      */
     protected function get_current_tab() {
-        $tab = sanitize_key($_GET['tab'] ?? 'all');
-        return in_array($tab, ['all', 'active', 'inactive']) ? $tab : 'all';
+        $tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'all';
+        $valid_tabs = ['all', 'active', 'inactive'];
+        return in_array($tab, $valid_tabs) ? $tab : 'all';
     }
     
     /**
-     * Get sidebar mode
+     * Get display name for detail header
      */
-    protected function get_sidebar_mode() {
-        $path = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
-        if (preg_match('/\/create\/?$/', $path)) return 'form';
-        if (preg_match('/\/\d+\/edit\/?$/', $path)) return 'form';
-        if (preg_match('/\/(\d+)\/?$/', $path)) return 'detail';
-        return null;
+    public function get_display_name($item) {
+        return $item['display_name'] ?? $item['name'] ?? 'Typ účtu';
     }
     
     /**
-     * Get detail ID
+     * Format detail data
      */
-    protected function get_detail_id() {
-        $path = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
-        if (preg_match('/\/(\d+)\/?$/', $path, $m)) return intval($m[1]);
-        return null;
+    protected function format_detail_data($item) {
+        $item['customers_count'] = $this->count_customers($item['id']);
+        return $item;
     }
     
     /**
-     * Get edit ID
+     * Count customers using this account type
      */
-    protected function get_edit_id() {
-        $path = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
-        if (preg_match('/\/(\d+)\/edit\/?$/', $path, $m)) return intval($m[1]);
-        return null;
+    protected function count_customers($account_type_id) {
+        global $wpdb;
+        return (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}saw_customers WHERE account_type_id = %d",
+            $account_type_id
+        ));
     }
     
     /**
      * AJAX: Get detail
      */
     public function ajax_get_detail() {
-        check_ajax_referer('saw_ajax_nonce', 'nonce');
-        
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => 'Nedostatečná oprávnění']);
-        }
+        check_ajax_referer('saw_admin_nonce', 'nonce');
         
         $id = intval($_POST['id'] ?? 0);
         if (!$id) {
@@ -194,42 +180,37 @@ class SAW_Module_Account_Types_Controller extends SAW_Base_Controller
         
         $item = $this->model->get_by_id($id);
         if (!$item) {
-            wp_send_json_error(['message' => 'Záznam nenalezen']);
+            wp_send_json_error(['message' => 'Nenalezeno']);
         }
         
-        $item['customers_count'] = $this->count_customers($id);
-        $related_data = $this->load_related_data($id);
+        $item = $this->format_detail_data($item);
         
-        // Load SAW Table
-        $autoload = SAW_VISITORS_PLUGIN_DIR . 'includes/components/saw-table/autoload.php';
-        if (file_exists($autoload)) {
-            require_once $autoload;
-        }
+        wp_send_json_success(['item' => $item]);
+    }
+    
+    /**
+     * AJAX: Search
+     */
+    public function ajax_search() {
+        check_ajax_referer('saw_admin_nonce', 'nonce');
         
-        $html = '';
-        if (class_exists('SAW_Detail_Renderer')) {
-            $html = SAW_Detail_Renderer::render($this->config, $item, $related_data, 'account_types');
-        }
+        $search = sanitize_text_field($_POST['search'] ?? '');
+        $items = $this->model->get_all(['search' => $search]);
         
-        wp_send_json_success(['html' => $html, 'item' => $item]);
+        wp_send_json_success(['items' => $items['items'] ?? $items]);
     }
     
     /**
      * AJAX: Delete
      */
     public function ajax_delete() {
-        check_ajax_referer('saw_ajax_nonce', 'nonce');
-        
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => 'Nedostatečná oprávnění']);
-        }
+        check_ajax_referer('saw_admin_nonce', 'nonce');
         
         $id = intval($_POST['id'] ?? 0);
         if (!$id) {
             wp_send_json_error(['message' => 'Chybí ID']);
         }
         
-        // Check usage
         $count = $this->count_customers($id);
         if ($count > 0) {
             wp_send_json_error(['message' => "Nelze smazat - používá {$count} zákazníků"]);

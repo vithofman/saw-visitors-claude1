@@ -2,22 +2,13 @@
 /**
  * SAW Table Component - Autoloader
  * 
- * Loads all SAW Table classes and provides helper functions.
- * All classes use sawt- CSS prefix.
- * 
- * @package     SAW_Visitors
- * @subpackage  Components/SAWTable
- * @version     2.0.0 - Updated to sawt- prefix
- * @since       3.0.0
+ * @version     2.1.0 - FIXED: saw_table_render_list signature
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-/**
- * SAW Table Component Directory
- */
 define('SAW_TABLE_DIR', dirname(__FILE__) . '/');
 define('SAW_TABLE_RENDERERS_DIR', SAW_TABLE_DIR . 'renderers/');
 define('SAW_TABLE_TEMPLATES_DIR', SAW_TABLE_DIR . 'templates/');
@@ -26,7 +17,6 @@ define('SAW_TABLE_TEMPLATES_DIR', SAW_TABLE_DIR . 'templates/');
  * Load all SAW Table classes
  */
 function saw_table_load_classes() {
-    // Core renderers (order matters for dependencies)
     $classes = [
         'class-badge-renderer.php',
         'class-row-renderer.php',
@@ -43,7 +33,6 @@ function saw_table_load_classes() {
         }
     }
     
-    // Support classes (if exist)
     $support_classes = [
         'class-saw-table-config.php',
         'class-saw-table-permissions.php',
@@ -58,30 +47,48 @@ function saw_table_load_classes() {
     }
 }
 
-// Auto-load classes
 saw_table_load_classes();
-
-/**
- * ============================================
- * HELPER FUNCTIONS
- * ============================================
- */
 
 /**
  * Render complete list page
  * 
- * @param array $config Module configuration
- * @param array $items  Data items
- * @param array $vars   Additional template variables
+ * FIXED: Accepts single array OR three separate arguments
+ * 
+ * Usage 1 (new - single array):
+ *   saw_table_render_list([
+ *       'config' => $config,
+ *       'items' => $items,
+ *       'total' => $total,
+ *       ...
+ *   ]);
+ * 
+ * Usage 2 (old - three arguments):
+ *   saw_table_render_list($config, $items, $vars);
+ * 
+ * @param array $config_or_options Config array OR options array with all params
+ * @param array $items             Items (only if using 3-arg format)
+ * @param array $vars              Extra variables (only if using 3-arg format)
  * @return string HTML
  */
-function saw_table_render_list($config, $items, $vars = []) {
-    // Extract variables
-    extract($vars);
+function saw_table_render_list($config_or_options, $items = [], $vars = []) {
+    // Detect which format is being used
+    if (is_array($config_or_options) && isset($config_or_options['config'])) {
+        // NEW FORMAT: Single array with all options
+        $options = $config_or_options;
+        $config = $options['config'] ?? [];
+        $items = $options['items'] ?? [];
+        
+        // Everything else goes to vars
+        unset($options['config'], $options['items']);
+        $vars = $options;
+    } else {
+        // OLD FORMAT: Three separate arguments
+        $config = $config_or_options;
+        // $items and $vars already set from function params
+    }
     
-    // Make config and items available
-    $config = $config;
-    $items = $items;
+    // Extract variables for template
+    extract($vars);
     
     // Setup translation helper if not provided
     if (!isset($tr)) {
@@ -108,12 +115,6 @@ function saw_table_render_list($config, $items, $vars = []) {
 
 /**
  * Render detail sidebar
- * 
- * @param array  $config       Module configuration
- * @param array  $item         Item data
- * @param array  $related_data Related data
- * @param string $entity       Entity name
- * @return string HTML
  */
 function saw_table_render_detail($config, $item, $related_data = [], $entity = '') {
     if (class_exists('SAW_Detail_Renderer')) {
@@ -124,18 +125,12 @@ function saw_table_render_detail($config, $item, $related_data = [], $entity = '
 
 /**
  * Render form sidebar
- * 
- * @param array       $config Module configuration
- * @param array|null  $item   Item data (null for create)
- * @param string      $entity Entity name
- * @return string HTML
  */
 function saw_table_render_form($config, $item = null, $entity = '') {
     if (class_exists('SAW_Form_Renderer')) {
         return SAW_Form_Renderer::render($config, $item, $entity);
     }
     
-    // Fallback to template
     $tr = function($key, $fallback = null) {
         return $fallback ?? $key;
     };
@@ -147,10 +142,6 @@ function saw_table_render_form($config, $item = null, $entity = '') {
 
 /**
  * Render table rows only (for AJAX infinite scroll)
- * 
- * @param array $config Module configuration
- * @param array $items  Data items
- * @return string HTML
  */
 function saw_table_render_rows($config, $items) {
     if (class_exists('SAW_Table_Renderer')) {
@@ -168,11 +159,8 @@ function saw_table_render_rows($config, $items) {
 
 /**
  * Enqueue SAW Table assets
- * 
- * Should be called via Asset Loader, but can be used directly.
  */
 function saw_table_enqueue_assets() {
-    // CSS files (in order)
     $css_files = [
         'saw-table-variables' => 'saw-table-variables.css',
         'saw-table-list' => 'saw-table-list.css',
@@ -193,7 +181,6 @@ function saw_table_enqueue_assets() {
         );
     }
     
-    // JS file
     wp_enqueue_script(
         'sawt-table',
         SAW_VISITORS_PLUGIN_URL . 'includes/components/saw-table/assets/js/saw-table.js',
@@ -202,7 +189,6 @@ function saw_table_enqueue_assets() {
         true
     );
     
-    // Localize script
     wp_localize_script('sawt-table', 'sawtGlobal', [
         'ajaxurl' => admin_url('admin-ajax.php'),
         'nonce' => wp_create_nonce('saw_ajax_nonce'),
@@ -218,8 +204,6 @@ function saw_table_enqueue_assets() {
 
 /**
  * Check if SAW Table component is properly loaded
- * 
- * @return bool
  */
 function saw_table_is_loaded() {
     return class_exists('SAW_Table_Renderer') 
@@ -230,17 +214,13 @@ function saw_table_is_loaded() {
 
 /**
  * Get SAW Table component version
- * 
- * @return string
  */
 function saw_table_get_version() {
-    return '2.0.0';
+    return '2.1.0';
 }
 
 /**
  * Initialize translators for all renderers
- * 
- * @param callable $translator Translation function
  */
 function saw_table_set_translator($translator) {
     if (class_exists('SAW_Badge_Renderer')) {
@@ -265,8 +245,6 @@ function saw_table_set_translator($translator) {
 
 /**
  * Debug: List all loaded SAW Table classes
- * 
- * @return array
  */
 function saw_table_debug_classes() {
     return [

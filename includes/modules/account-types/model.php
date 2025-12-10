@@ -2,9 +2,7 @@
 /**
  * Account Types Module Model
  *
- * @package     SAW_Visitors
- * @subpackage  Modules/AccountTypes
- * @version     4.2.0 - FIXED: Correct return formats
+ * @version 4.4.0 - FIXED: Uses table_name from config
  */
 
 if (!defined('ABSPATH')) {
@@ -15,7 +13,16 @@ class SAW_Module_Account_Types_Model extends SAW_Base_Model
 {
     public function __construct($config) {
         global $wpdb;
-        $this->table = $wpdb->prefix . $config['table'];
+        
+        // FIXED: Use table_name (string), not table (array)
+        $table_name = $config['table_name'] ?? $config['table'] ?? 'saw_account_types';
+        
+        // If table_name is array (wrong config), use default
+        if (is_array($table_name)) {
+            $table_name = 'saw_account_types';
+        }
+        
+        $this->table = $wpdb->prefix . $table_name;
         $this->config = $config;
         $this->cache_ttl = $config['cache']['ttl'] ?? 300;
     }
@@ -82,15 +89,10 @@ class SAW_Module_Account_Types_Model extends SAW_Base_Model
     }
     
     /**
-     * Get by ID
-     */
-    public function get_by_id($id, $bypass_cache = false) {
-        $item = parent::get_by_id($id, $bypass_cache);
-        return $item ? $this->format_item($item) : null;
-    }
-    
-    /**
-     * Count records
+     * Count items
+     * 
+     * @param array $filters
+     * @return int
      */
     public function count($filters = []) {
         global $wpdb;
@@ -107,58 +109,84 @@ class SAW_Module_Account_Types_Model extends SAW_Base_Model
         $sql = "SELECT COUNT(*) FROM {$this->table} WHERE {$where_sql}";
         
         if (!empty($params)) {
-            return (int) $wpdb->get_var($wpdb->prepare($sql, $params));
+            $sql = $wpdb->prepare($sql, $params);
         }
         
         return (int) $wpdb->get_var($sql);
     }
     
     /**
+     * Get by ID
+     */
+    public function get_by_id($id, $bypass_cache = false) {
+        global $wpdb;
+        
+        $item = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$this->table} WHERE id = %d",
+            $id
+        ), ARRAY_A);
+        
+        return $item ? $this->format_item($item) : null;
+    }
+    
+    /**
      * Format item
      */
     protected function format_item($item) {
-        if (!is_array($item)) return $item;
+        if (!$item) return $item;
         
-        // Price formatted
+        // Format price
         $price = floatval($item['price'] ?? 0);
-        $item['price_formatted'] = $price > 0 
-            ? number_format($price, 0, ',', ' ') . ' Kč' 
-            : 'Zdarma';
-        
-        // Features count
-        $feature_fields = ['has_api_access', 'has_custom_branding', 'has_advanced_reports', 'has_sso', 'has_priority_support'];
-        $item['features_count'] = 0;
-        foreach ($feature_fields as $f) {
-            if (!empty($item[$f])) $item['features_count']++;
+        if ($price > 0) {
+            $item['price_formatted'] = number_format($price, 0, ',', ' ') . ' Kč/měsíc';
+        } else {
+            $item['price_formatted'] = 'Zdarma';
         }
         
-        // Dates
+        // Format dates
         if (!empty($item['created_at'])) {
-            $item['created_at_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['created_at']));
+            $item['created_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['created_at']));
         }
         if (!empty($item['updated_at'])) {
-            $item['updated_at_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['updated_at']));
+            $item['updated_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['updated_at']));
         }
         
         return $item;
     }
     
     /**
-     * Validate
+     * Delete item
      */
-    public function validate($data, $id = 0) {
+    public function delete($id) {
+        global $wpdb;
+        
+        $result = $wpdb->delete(
+            $this->table,
+            ['id' => $id],
+            ['%d']
+        );
+        
+        if ($result === false) {
+            return new WP_Error('delete_failed', 'Nepodařilo se smazat záznam');
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Validate data
+     */
+    public function validate($data, $id = null) {
         $errors = [];
         
         if (empty($data['name'])) {
-            $errors['name'] = 'Systémový název je povinný';
-        } elseif (!preg_match('/^[a-z0-9_-]+$/', $data['name'])) {
-            $errors['name'] = 'Pouze malá písmena, čísla, pomlčky a podtržítka';
+            $errors['name'] = 'Název je povinný';
         }
         
         if (empty($data['display_name'])) {
             $errors['display_name'] = 'Zobrazovaný název je povinný';
         }
         
-        return empty($errors) ? true : new WP_Error('validation_error', 'Validace selhala', $errors);
+        return empty($errors) ? true : $errors;
     }
 }

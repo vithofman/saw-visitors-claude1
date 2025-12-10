@@ -1,13 +1,8 @@
 <?php
 /**
- * Account Types - List Template
- *
- * Uses SAW Table component.
- * CALLBACKS ARE DEFINED HERE, not in config.php!
- *
- * @package     SAW_Visitors
- * @subpackage  Modules/AccountTypes
- * @version     4.2.0 - FIXED: Callbacks in template
+ * Account Types List Template
+ * 
+ * @version 6.0.0 - FIXED: echo + callbacks injection into config
  */
 
 if (!defined('ABSPATH')) {
@@ -15,91 +10,93 @@ if (!defined('ABSPATH')) {
 }
 
 // ============================================
-// LOAD SAW TABLE
+// LOAD SAW TABLE COMPONENT
 // ============================================
+$autoload_path = SAW_VISITORS_PLUGIN_DIR . 'includes/components/saw-table/autoload.php';
+if (file_exists($autoload_path)) {
+    require_once $autoload_path;
+}
 
-$autoload = SAW_VISITORS_PLUGIN_DIR . 'includes/components/saw-table/autoload.php';
-if (!file_exists($autoload)) {
-    echo '<div class="notice notice-error"><p>SAW Table component not found!</p></div>';
+// ============================================
+// CHECK IF SAW TABLE IS AVAILABLE
+// ============================================
+if (!function_exists('saw_table_render_list')) {
+    echo '<div class="notice notice-error"><p>SAW Table component not loaded.</p></div>';
     return;
 }
-require_once $autoload;
 
 // ============================================
-// VARIABLES (from controller)
+// PREPARE VARIABLES
 // ============================================
-
 $items = $items ?? [];
 $total = $total ?? count($items);
 $current_tab = $current_tab ?? 'all';
-$tab_counts = $tab_counts ?? [];
-$detail_item = $detail_item ?? null;
-$form_item = $form_item ?? null;
+$tab_counts = $tab_counts ?? [
+    'all' => $total,
+    'active' => 0,
+    'inactive' => 0,
+];
 $sidebar_mode = $sidebar_mode ?? null;
-$related_data = $related_data ?? [];
+$detail_item = $detail_item ?? null;
 
 // ============================================
-// DEFINE CALLBACKS (safe - in template)
+// DEFINE COLUMN CALLBACKS
 // ============================================
-
-// Color swatch
-if (isset($config['table']['columns']['color'])) {
-    $config['table']['columns']['color']['callback'] = function($value, $item) {
+$column_callbacks = [
+    // Color swatch
+    'color' => function($value, $item) {
         if (empty($value)) {
-            return '<span class="sawt-text-muted">—</span>';
+            return '<span class="sawt-color-swatch" style="background: #ccc;"></span>';
         }
         return sprintf(
-            '<div class="sawt-color-swatch" style="background-color:%s;width:24px;height:24px;border-radius:4px;border:2px solid #e5e7eb;"></div>',
+            '<span class="sawt-color-swatch" style="background: %s;"></span>',
             esc_attr($value)
         );
-    };
-}
-
-// Price
-if (isset($config['table']['columns']['price'])) {
-    $config['table']['columns']['price']['callback'] = function($value, $item) {
-        $price = intval($value ?? 0);
-        if ($price === 0) {
+    },
+    
+    // Price with badge
+    'price' => function($value, $item) {
+        $price = floatval($value);
+        if ($price <= 0) {
             return '<span class="sawt-badge sawt-badge-success">Zdarma</span>';
         }
-        return '<strong>' . number_format($price, 0, ',', ' ') . ' Kč</strong>';
-    };
-}
-
-// Customers count
-if (isset($config['table']['columns']['customers_count'])) {
-    $config['table']['columns']['customers_count']['callback'] = function($value, $item) {
-        $count = intval($value ?? 0);
+        return number_format($price, 0, ',', ' ') . ' Kč';
+    },
+    
+    // Customers count badge
+    'customers_count' => function($value, $item) {
+        $count = intval($value);
         if ($count === 0) {
-            return '<span class="sawt-text-muted">0</span>';
+            return '—';
         }
-        return '<span class="sawt-badge sawt-badge-info">' . $count . '</span>';
-    };
+        return sprintf(
+            '<span class="sawt-badge sawt-badge-info">%d</span>',
+            $count
+        );
+    },
+];
+
+// ============================================
+// INJECT CALLBACKS INTO CONFIG
+// This is required because SAW Table expects
+// callbacks inside column config with type 'custom'
+// ============================================
+foreach ($column_callbacks as $key => $callback) {
+    if (isset($config['table']['columns'][$key])) {
+        $config['table']['columns'][$key]['callback'] = $callback;
+        $config['table']['columns'][$key]['type'] = 'custom';
+    }
 }
 
 // ============================================
-// RENDER
+// RENDER LIST - MUST USE ECHO!
 // ============================================
-
-$tr = function($key, $fallback = null) {
-    return $fallback ?? $key;
-};
-
-if (function_exists('saw_table_render_list')) {
-    echo saw_table_render_list($config, $items, [
-        'total' => $total,
-        'current_tab' => $current_tab,
-        'tab_counts' => $tab_counts,
-        'detail_item' => $detail_item,
-        'form_item' => $form_item,
-        'sidebar_mode' => $sidebar_mode,
-        'related_data' => $related_data,
-        'tr' => $tr,
-    ]);
-} else {
-    // Fallback
-    echo '<div class="wrap"><h1>' . esc_html($config['plural'] ?? 'Typy účtů') . '</h1>';
-    echo '<p>SAW Table render function not available.</p>';
-    echo '<pre>' . print_r(array_keys(get_defined_functions()['user']), true) . '</pre>';
-    echo '</div>';
-}
+echo saw_table_render_list([
+    'config' => $config,
+    'items' => $items,
+    'total' => $total,
+    'current_tab' => $current_tab,
+    'tab_counts' => $tab_counts,
+    'sidebar_mode' => $sidebar_mode,
+    'detail_item' => $detail_item,
+]);
