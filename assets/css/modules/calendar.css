@@ -38,7 +38,7 @@
     min-height: calc(100vh - 200px);
 }
 
-/* Header */
+/* Header - unified design with title, filters and button */
 .saw-calendar-header {
     display: flex;
     justify-content: space-between;
@@ -46,12 +46,17 @@
     margin-bottom: 20px;
     flex-wrap: wrap;
     gap: 16px;
+    background: var(--saw-cal-bg);
+    border: 1px solid var(--saw-cal-border);
+    border-radius: var(--saw-cal-radius);
+    padding: 16px 20px;
 }
 
 .saw-calendar-header__left {
     display: flex;
     align-items: center;
     gap: 12px;
+    flex: 0 0 auto;
 }
 
 .saw-calendar-title {
@@ -68,44 +73,24 @@
     font-size: 28px;
 }
 
-.saw-calendar-create-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.saw-calendar-create-btn .dashicons {
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
-}
-
-/* ============================================
-   FILTERS
-   ============================================ */
-.saw-calendar-filters {
-    background: var(--saw-cal-bg);
-    border: 1px solid var(--saw-cal-border);
-    border-radius: var(--saw-cal-radius);
-    padding: 16px;
-    margin-bottom: 20px;
-}
-
-.saw-calendar-filters__row {
+.saw-calendar-header__right {
     display: flex;
+    align-items: center;
     gap: 16px;
     flex-wrap: wrap;
-    align-items: flex-end;
+    flex: 1 1 auto;
+    justify-content: flex-end;
 }
 
-.saw-calendar-filter {
+/* Inline filters in header */
+.saw-calendar-filter--inline {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    min-width: 160px;
+    min-width: 140px;
 }
 
-.saw-calendar-filter__label {
+.saw-calendar-filter--inline .saw-calendar-filter__label {
     font-size: 12px;
     font-weight: 500;
     color: var(--saw-cal-text-muted);
@@ -113,7 +98,7 @@
     letter-spacing: 0.5px;
 }
 
-.saw-calendar-filter__select {
+.saw-calendar-filter--inline .saw-calendar-filter__select {
     padding: 8px 12px;
     border: 1px solid var(--saw-cal-border);
     border-radius: 6px;
@@ -124,18 +109,76 @@
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.saw-calendar-filter__select:hover {
+.saw-calendar-filter--inline .saw-calendar-filter__select:hover {
     border-color: var(--saw-cal-primary);
 }
 
-.saw-calendar-filter__select:focus {
+.saw-calendar-filter--inline .saw-calendar-filter__select:focus {
     outline: none;
     border-color: var(--saw-cal-primary);
     box-shadow: 0 0 0 3px rgba(34, 113, 177, 0.1);
 }
 
-.saw-calendar-filter--view {
-    margin-left: auto;
+.saw-calendar-create-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.saw-calendar-create-btn .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+.saw-calendar-create-btn__text {
+    display: inline;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .saw-calendar-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    
+    .saw-calendar-header__left {
+        width: 100%;
+    }
+    
+    .saw-calendar-header__right {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    
+    .saw-calendar-filter--inline {
+        width: 100%;
+        min-width: auto;
+    }
+    
+    .saw-calendar-create-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .saw-calendar-title {
+        font-size: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .saw-calendar-title {
+        font-size: 18px;
+    }
+    
+    .saw-calendar-create-btn__text {
+        display: none; /* Hide text on very small screens, show only icon */
+    }
 }
 
 /* ============================================

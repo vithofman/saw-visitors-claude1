@@ -29,7 +29,7 @@ if ($branch_id) {
 
 <div class="saw-calendar-page">
     
-    <!-- Header -->
+    <!-- Header with title, filters and button in one row -->
     <div class="saw-calendar-header">
         <div class="saw-calendar-header__left">
             <h1 class="saw-calendar-title">
@@ -38,19 +38,8 @@ if ($branch_id) {
             </h1>
         </div>
         <div class="saw-calendar-header__right">
-            <a href="<?php echo esc_url(home_url('/admin/visits/create')); ?>" class="saw-btn saw-btn-primary saw-calendar-create-btn">
-                <span class="dashicons dashicons-plus-alt2"></span>
-                Nová návštěva
-            </a>
-        </div>
-    </div>
-    
-    <!-- Filters -->
-    <div class="saw-calendar-filters">
-        <div class="saw-calendar-filters__row">
-            
             <!-- Status filter -->
-            <div class="saw-calendar-filter">
+            <div class="saw-calendar-filter saw-calendar-filter--inline">
                 <label class="saw-calendar-filter__label">Stav</label>
                 <select id="saw-filter-status" class="saw-calendar-filter__select">
                     <option value="">Všechny stavy</option>
@@ -64,7 +53,7 @@ if ($branch_id) {
             </div>
             
             <!-- Type filter -->
-            <div class="saw-calendar-filter">
+            <div class="saw-calendar-filter saw-calendar-filter--inline">
                 <label class="saw-calendar-filter__label">Typ návštěvy</label>
                 <select id="saw-filter-type" class="saw-calendar-filter__select">
                     <option value="">Všechny typy</option>
@@ -73,17 +62,11 @@ if ($branch_id) {
                 </select>
             </div>
             
-            <!-- View switcher -->
-            <div class="saw-calendar-filter saw-calendar-filter--view">
-                <label class="saw-calendar-filter__label">Zobrazení</label>
-                <select id="saw-filter-view" class="saw-calendar-filter__select">
-                    <option value="dayGridMonth">Měsíc</option>
-                    <option value="timeGridWeek">Týden</option>
-                    <option value="timeGridDay">Den</option>
-                    <option value="listWeek">Seznam</option>
-                </select>
-            </div>
-            
+            <!-- Create button -->
+            <a href="<?php echo esc_url(home_url('/admin/visits/create')); ?>" class="saw-btn saw-btn-primary saw-calendar-create-btn">
+                <span class="dashicons dashicons-plus-alt2"></span>
+                <span class="saw-calendar-create-btn__text">Nová návštěva</span>
+            </a>
         </div>
     </div>
     

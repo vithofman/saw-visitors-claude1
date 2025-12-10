@@ -65,9 +65,15 @@ class SAW_Module_Calendar_Controller extends SAW_Base_Controller {
      * Register AJAX handlers
      */
     private function register_ajax_handlers() {
+        // Register directly - this ensures handlers are always registered
         add_action('wp_ajax_saw_calendar_events', [$this, 'ajax_get_events']);
         add_action('wp_ajax_saw_calendar_event_details', [$this, 'ajax_get_event_details']);
         add_action('wp_ajax_saw_calendar_update_event', [$this, 'ajax_update_event']);
+        
+        // Debug logging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('SAW Calendar: AJAX handlers registered');
+        }
     }
     
     /**
@@ -207,14 +213,26 @@ class SAW_Module_Calendar_Controller extends SAW_Base_Controller {
      * AJAX: Get calendar events
      */
     public function ajax_get_events() {
+        // Debug logging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('SAW Calendar: ajax_get_events() called');
+            error_log('SAW Calendar: GET params: ' . print_r($_GET, true));
+        }
+        
         // Verify nonce
         if (!check_ajax_referer('saw_calendar_nonce', 'nonce', false)) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('SAW Calendar: Nonce verification failed');
+            }
             wp_send_json_error(['message' => 'Neplatný požadavek'], 403);
             return;
         }
         
         // Check permissions
         if (!is_user_logged_in()) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('SAW Calendar: User not logged in');
+            }
             wp_send_json_error(['message' => 'Přístup zamítnut'], 403);
             return;
         }
@@ -295,7 +313,7 @@ class SAW_Module_Calendar_Controller extends SAW_Base_Controller {
                        v.planned_date_to,
                        v.status, 
                        v.visit_type, 
-                       v.person_count, 
+                       (SELECT COUNT(*) FROM {$wpdb->prefix}saw_visitors WHERE visit_id = v.id) as visitor_count,
                        v.purpose,
                        c.name as company_name,
                        b.name as branch_name,
@@ -335,10 +353,29 @@ class SAW_Module_Calendar_Controller extends SAW_Base_Controller {
             return;
         }
         
+        // Debug logging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('SAW Calendar: Found ' . count($visits) . ' visits');
+            if (count($visits) > 0) {
+                error_log('SAW Calendar: First visit: ' . print_r($visits[0], true));
+            }
+        }
+        
         // Transform to FullCalendar format
         $events = [];
         foreach ($visits as $visit) {
-            $events[] = $this->format_event($visit);
+            $event = $this->format_event($visit);
+            $events[] = $event;
+            
+            // Debug first event
+            if (defined('WP_DEBUG') && WP_DEBUG && count($events) === 1) {
+                error_log('SAW Calendar: First event: ' . print_r($event, true));
+            }
+        }
+        
+        // Debug final events count
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('SAW Calendar: Returning ' . count($events) . ' events');
         }
         
         // Return as plain array (not wrapped in success/data)
@@ -376,7 +413,7 @@ class SAW_Module_Calendar_Controller extends SAW_Base_Controller {
         if (!empty($visit['company_name'])) {
             $title_parts[] = $visit['company_name'];
         }
-        $count = intval($visit['person_count'] ?? 1);
+        $count = intval($visit['visitor_count'] ?? 0);
         if ($count > 1) {
             $title_parts[] = "({$count})";
         }
