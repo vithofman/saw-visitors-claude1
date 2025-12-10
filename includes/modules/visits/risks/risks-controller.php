@@ -9,6 +9,7 @@
  * @package     SAW_Visitors
  * @subpackage  Modules/Visits/Risks
  * @since       5.1.0
+ * @version     5.1.5
  */
 
 if (!defined('ABSPATH')) {
@@ -237,10 +238,13 @@ class SAW_Visit_Risks_Controller {
             $upload_dir = wp_upload_dir();
             
             foreach ($delete_files as $file_id) {
+                $file_id = intval($file_id);
+                if (!$file_id) continue;
+                
                 $file = $wpdb->get_row($wpdb->prepare(
                     "SELECT * FROM {$wpdb->prefix}saw_visit_invitation_materials 
                      WHERE id = %d AND visit_id = %d AND material_type = 'document'",
-                    intval($file_id),
+                    $file_id,
                     $this->visit_id
                 ));
                 
@@ -253,7 +257,7 @@ class SAW_Visit_Risks_Controller {
                 
                 $wpdb->delete(
                     $wpdb->prefix . 'saw_visit_invitation_materials',
-                    ['id' => intval($file_id), 'visit_id' => $this->visit_id]
+                    ['id' => $file_id, 'visit_id' => $this->visit_id]
                 );
             }
         }
@@ -273,6 +277,8 @@ class SAW_Visit_Risks_Controller {
                 'application/pdf',
                 'application/msword',
                 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 'image/jpeg',
                 'image/png',
                 'image/gif'
@@ -288,6 +294,11 @@ class SAW_Visit_Risks_Controller {
                     'error' => $_FILES['risks_documents']['error'][$key],
                     'size' => $_FILES['risks_documents']['size'][$key],
                 ];
+                
+                // Skip if error
+                if ($file['error'] !== UPLOAD_ERR_OK) {
+                    continue;
+                }
                 
                 // Validate file type
                 if (!in_array($file['type'], $allowed_types)) {
@@ -353,7 +364,7 @@ class SAW_Visit_Risks_Controller {
         }
         
         // Default: visits list with detail modal
-        return home_url('/admin/visits/' . $this->visit_id);
+        return home_url('/admin/visits/' . $this->visit_id . '/');
     }
     
     /**
@@ -364,10 +375,10 @@ class SAW_Visit_Risks_Controller {
      * @return string
      */
     public static function get_edit_url($visit_id, $return_url = null) {
-        $url = admin_url('admin.php?page=saw-visits&action=edit-risks&visit_id=' . intval($visit_id));
+        $url = home_url('/admin/visits/' . intval($visit_id) . '/edit-risks/');
         
         if ($return_url) {
-            $url .= '&return_url=' . urlencode($return_url);
+            $url .= '?return_url=' . urlencode($return_url);
         }
         
         return $url;
@@ -460,7 +471,7 @@ class SAW_Visit_Risks_Controller {
         wp_enqueue_editor();
         wp_enqueue_media();
         
-        // Richtext editor component
+        // Richtext editor component (optional)
         $richtext_file = SAW_VISITORS_PLUGIN_DIR . 'includes/components/richtext-editor/richtext-editor.php';
         if (file_exists($richtext_file)) {
             require_once $richtext_file;
