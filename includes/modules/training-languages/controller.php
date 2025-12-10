@@ -95,6 +95,59 @@ class SAW_Module_Training_Languages_Controller extends SAW_Base_Controller
     }
     
     /**
+     * Get tab counts for list view
+     * 
+     * @return array Tab counts ['all' => int, 'with_branches' => int, 'without_branches' => int]
+     */
+    protected function get_tab_counts() {
+        global $wpdb;
+        
+        $customer_id = SAW_Context::get_customer_id();
+        if (!$customer_id) {
+            return array('all' => 0, 'with_branches' => 0, 'without_branches' => 0);
+        }
+        
+        $table = $wpdb->prefix . 'saw_training_languages';
+        $branches_table = $wpdb->prefix . 'saw_training_language_branches';
+        
+        $counts = array();
+        
+        // All
+        $counts['all'] = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$table} WHERE customer_id = %d",
+            $customer_id
+        ));
+        
+        // With branches (branches_count > 0) - use subquery
+        $counts['with_branches'] = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM (
+                SELECT l.id
+                FROM {$table} l
+                LEFT JOIN {$branches_table} lb ON l.id = lb.language_id
+                WHERE l.customer_id = %d
+                GROUP BY l.id
+                HAVING COUNT(CASE WHEN lb.is_active = 1 THEN 1 END) > 0
+            ) AS subquery",
+            $customer_id
+        ));
+        
+        // Without branches (branches_count = 0) - use subquery
+        $counts['without_branches'] = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM (
+                SELECT l.id
+                FROM {$table} l
+                LEFT JOIN {$branches_table} lb ON l.id = lb.language_id
+                WHERE l.customer_id = %d
+                GROUP BY l.id
+                HAVING COUNT(CASE WHEN lb.is_active = 1 THEN 1 END) = 0
+            ) AS subquery",
+            $customer_id
+        ));
+        
+        return $counts;
+    }
+    
+    /**
      * Get header meta for detail sidebar (blue header)
      * 
      * Shows: flag emoji, language code, branches count

@@ -1083,7 +1083,11 @@ body, html {
 .saw-module-departments,
 .saw-module-users,
 .saw-module-invitations,
-.saw-module-visitors {
+.saw-module-visitors,
+.saw-module-visits,
+.saw-module-training-languages,
+.saw-module-oopp,
+.saw-module-companies {
     height: 100% !important;
     display: flex !important;
     flex-direction: column !important;
@@ -1132,7 +1136,7 @@ body, html {
     overflow-x: auto !important; /* OPRAVENO: Povolit horizontální scrollování na mobilu */
     min-height: 0 !important;
     -webkit-overflow-scrolling: touch;
-    padding-bottom: 0;
+    padding-bottom: 60px !important; /* OPRAVENO: Footer overlap fix - výška footeru + rezerva */
     position: relative;
     isolation: isolate;
 }

@@ -6,12 +6,17 @@
 /* ✅ FIX: Ensure table wrapper doesn't overflow */
 .saw-module-visits {
     max-width: 100%;
-    overflow: visible !important;
+    /* overflow: visible odstraněn pro sticky support */
 }
 
 .saw-admin-table-wrapper {
     max-width: 100%;
-    overflow: visible !important;
+    /* overflow: visible odstraněn pro sticky support */
+}
+
+/* Pokud je potřeba visible pro specifické elementy (např. dropdown menu) */
+.saw-module-visits .saw-filters-dropdown-menu {
+    overflow: visible !important; /* Pouze pro dropdown */
 }
 
 /* Schedule Container */

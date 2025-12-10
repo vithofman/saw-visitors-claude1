@@ -7,7 +7,7 @@
  *
  * @package SAW_Visitors
  * @since   4.6.2
- * @version 5.2.0 - ADDED: Terminal menu item
+ * @version 5.3.0 - ADDED: Calendar menu item
  */
 
 if (!defined('ABSPATH')) {
@@ -182,6 +182,11 @@ class SAW_App_Sidebar {
             return in_array($this->saw_role, $admin_roles, true);
         }
         
+        // Calendar uses visits permissions (if user can see visits, can see calendar)
+        if ($module_slug === 'calendar') {
+            $module_slug = 'visits';
+        }
+        
         // Load permissions class if needed
         if (!class_exists('SAW_Permissions')) {
             $permissions_file = SAW_VISITORS_PLUGIN_DIR . 'includes/auth/class-saw-permissions.php';
@@ -270,6 +275,7 @@ class SAW_App_Sidebar {
      * Helper method to get translation with fallback.
      *
      * @since 5.1.0
+     * @since 5.3.0 - ADDED: calendar translation
      * @param string $key Translation key
      * @return string Translated text or key as fallback
      */
@@ -281,6 +287,7 @@ class SAW_App_Sidebar {
         // Fallback translations
         $fallback = array(
             'terminal' => $this->lang === 'en' ? 'Terminal' : 'Terminál',
+            'calendar' => $this->lang === 'en' ? 'Calendar' : 'Kalendář',
         );
         
         return $fallback[$key] ?? $key;
@@ -393,7 +400,7 @@ class SAW_App_Sidebar {
      * All labels are translated using SAW_Translations.
      *
      * @since 4.6.1
-     * @version 5.2.0 - ADDED: Terminal menu item
+     * @version 5.3.0 - ADDED: Calendar menu item
      * @return array Menu structure
      */
     private function get_menu_items() {
@@ -408,6 +415,12 @@ class SAW_App_Sidebar {
                         'label' => $this->t('dashboard'), 
                         'url' => '/admin/dashboard', 
                         'icon' => '📊'
+                    ),
+                    array(
+                        'id' => 'calendar', 
+                        'label' => 'Kalendář', 
+                        'url' => '/admin/calendar', 
+                        'icon' => '📅'
                     ),
                     array(
                         'id' => 'terminal', 

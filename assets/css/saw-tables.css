@@ -42,6 +42,27 @@
     margin-bottom: 20px;
     gap: 20px;
     flex-wrap: wrap;
+    position: sticky;
+    top: 64px; /* Desktop: výška saw-page-header (~64px) */
+    z-index: 15; /* Vyšší než table thead (10), pod page header (20) */
+    background: var(--saw-bg-primary);
+    padding: 12px 20px;
+    margin-top: 0;
+    margin-bottom: 0;
+    border-bottom: 1px solid var(--saw-border-color);
+}
+
+/* Mobile adjustments for sticky controls */
+@media (max-width: 768px) {
+    .saw-table-controls {
+        top: 52px !important; /* Tablet/Mobile: výška saw-page-header */
+    }
+}
+
+@media (max-width: 480px) {
+    .saw-table-controls {
+        top: 50px !important; /* Small Mobile: výška saw-page-header */
+    }
 }
 
 .saw-search-form {

@@ -2,21 +2,9 @@
 /**
  * Account Types List Template
  * 
- * Uses SAW Table component for rendering.
- * Called by Base Controller's render_list_view().
- * 
- * Variables available from Base Controller:
- * - $items (array) - List items
- * - $total (int) - Total count
- * - $config (array) - Module config
- * - $entity (string) - Entity name
- * - $current_tab (string) - Current tab
- * - $tab_counts (array) - Counts per tab
- * - $sidebar_mode (string|null) - detail/edit/create
- * - $detail_item (array|null) - Item for detail sidebar
- * - $form_item (array|null) - Item for form
- * 
- * @version 5.0.0
+ * @package     SAW_Visitors
+ * @subpackage  Modules/AccountTypes
+ * @version     3.2.0 - FIXED: type = 'custom' (not 'callback'!)
  */
 
 if (!defined('ABSPATH')) {
@@ -24,82 +12,188 @@ if (!defined('ABSPATH')) {
 }
 
 // ============================================
-// LOAD SAW TABLE COMPONENT
+// LOAD ADMIN TABLE COMPONENT
 // ============================================
-$autoload_path = SAW_VISITORS_PLUGIN_DIR . 'includes/components/saw-table/autoload.php';
-if (file_exists($autoload_path)) {
-    require_once $autoload_path;
+if (!class_exists('SAW_Component_Admin_Table')) {
+    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/class-saw-component-admin-table.php';
 }
 
 // ============================================
-// CHECK IF SAW TABLE IS AVAILABLE
+// BUILD TABLE CONFIG
 // ============================================
-if (!function_exists('saw_table_render_list')) {
-    echo '<div class="notice notice-error"><p>SAW Table component not loaded.</p></div>';
-    return;
+$table_config = $config;
+$base_url = home_url('/admin/' . ($config['route'] ?? 'account-types'));
+
+$table_config['title'] = $config['plural'] ?? 'Typy účtů';
+$table_config['create_url'] = $base_url . '/create';
+$table_config['detail_url'] = $base_url . '/{id}/';
+$table_config['edit_url'] = $base_url . '/{id}/edit';
+
+// ============================================
+// COLUMNS - MUST USE type: 'custom' (not 'callback'!)
+// ============================================
+$table_config['columns'] = array(
+    'color' => array(
+        'label' => 'Barva',
+        'type' => 'custom',  // ← MUSÍ BÝT 'custom', NE 'callback'!
+        'width' => '80px',
+        'align' => 'center',
+        'callback' => function($value) {
+            if (empty($value)) {
+                return '<span class="saw-text-muted">—</span>';
+            }
+            return '<div style="width: 36px; height: 36px; border-radius: 8px; background-color: ' . esc_attr($value) . '; border: 2px solid #e5e7eb; margin: 0 auto;"></div>';
+        }
+    ),
+    'display_name' => array(
+        'label' => 'Název',
+        'type' => 'text',
+        'sortable' => true,
+        'class' => 'saw-table-cell-bold',
+    ),
+    'name' => array(
+        'label' => 'Interní název',
+        'type' => 'custom',  // ← MUSÍ BÝT 'custom'!
+        'callback' => function($value) {
+            return '<span class="saw-badge saw-badge-secondary" style="font-family: monospace; text-transform: uppercase;">' . esc_html($value) . '</span>';
+        }
+    ),
+    'price' => array(
+        'label' => 'Cena',
+        'type' => 'custom',  // ← MUSÍ BÝT 'custom'!
+        'align' => 'right',
+        'width' => '120px',
+        'sortable' => true,
+        'callback' => function($value) {
+            $price = floatval($value ?? 0);
+            if ($price > 0) {
+                return '<strong>' . number_format($price, 0, ',', ' ') . ' Kč</strong>';
+            }
+            return '<span class="saw-text-muted">Zdarma</span>';
+        }
+    ),
+    'features' => array(
+        'label' => 'Funkce',
+        'type' => 'custom',  // ← MUSÍ BÝT 'custom'!
+        'align' => 'center',
+        'width' => '100px',
+        'callback' => function($value) {
+            $features = !empty($value) ? json_decode($value, true) : array();
+            $count = is_array($features) ? count($features) : 0;
+            if ($count > 0) {
+                return '<span class="saw-badge saw-badge-info">' . $count . '</span>';
+            }
+            return '<span class="saw-text-muted">—</span>';
+        }
+    ),
+    'sort_order' => array(
+        'label' => 'Pořadí',
+        'type' => 'text',
+        'sortable' => true,
+        'align' => 'center',
+        'width' => '80px',
+    ),
+    'is_active' => array(
+        'label' => 'Status',
+        'type' => 'custom',  // ← MUSÍ BÝT 'custom'!
+        'width' => '100px',
+        'align' => 'center',
+        'callback' => function($value) {
+            if (!empty($value)) {
+                return '<span class="saw-badge saw-badge-success">Aktivní</span>';
+            }
+            return '<span class="saw-badge saw-badge-secondary">Neaktivní</span>';
+        }
+    ),
+    'created_at' => array(
+        'label' => 'Vytvořeno',
+        'type' => 'date',
+        'sortable' => true,
+        'width' => '120px',
+        'format' => 'd.m.Y',
+    ),
+);
+
+// ============================================
+// DATA
+// ============================================
+$table_config['rows'] = $items ?? array();
+$table_config['total_items'] = $total ?? 0;
+$table_config['current_page'] = $page ?? 1;
+$table_config['total_pages'] = $total_pages ?? 1;
+$table_config['search_value'] = $search ?? '';
+$table_config['orderby'] = $orderby ?? 'sort_order';
+$table_config['order'] = $order ?? 'ASC';
+
+// ============================================
+// SEARCH
+// ============================================
+$table_config['search'] = array(
+    'enabled' => true,
+    'placeholder' => 'Hledat typ účtu...',
+    'fields' => array('name', 'display_name'),
+    'show_info_banner' => true,
+);
+
+// ============================================
+// FILTERS CONFIGURATION
+// ============================================
+$table_config['filters'] = array(
+    'price_type' => array(
+        'label' => 'Cena',
+        'type' => 'select',
+        'options' => array(
+            '' => 'Všechny',
+            'free' => 'Zdarma',
+            'paid' => 'Placené',
+        ),
+    ),
+);
+
+// ============================================
+// SIDEBAR CONTEXT
+// ============================================
+$table_config['sidebar_mode'] = $sidebar_mode ?? null;
+$table_config['detail_item'] = $detail_item ?? null;
+$table_config['form_item'] = $form_item ?? null;
+$table_config['detail_tab'] = $detail_tab ?? 'overview';
+$table_config['module_config'] = $config;
+
+// ============================================
+// ACTIONS
+// ============================================
+$table_config['actions'] = array('view', 'edit', 'delete');
+$table_config['add_new'] = 'Nový typ účtu';
+$table_config['empty_message'] = 'Žádné typy účtů nenalezeny';
+
+// ============================================
+// TABS - Pass from config
+// ============================================
+$table_config['tabs'] = $config['tabs'] ?? null;
+
+// ============================================
+// INFINITE SCROLL
+// ============================================
+$table_config['infinite_scroll'] = array(
+    'enabled' => true,
+    'initial_load' => 100,
+    'per_page' => 50,
+    'threshold' => 0.6,
+);
+
+// ============================================
+// CURRENT TAB & TAB COUNTS
+// ============================================
+if (!empty($table_config['tabs']['enabled'])) {
+    $table_config['current_tab'] = (isset($current_tab) && $current_tab !== null && $current_tab !== '') 
+        ? (string)$current_tab 
+        : ($table_config['tabs']['default_tab'] ?? 'all');
+    $table_config['tab_counts'] = (isset($tab_counts) && is_array($tab_counts)) ? $tab_counts : array();
 }
 
 // ============================================
-// PREPARE VARIABLES
+// RENDER
 // ============================================
-$items = $items ?? [];
-$total = $total ?? count($items);
-$current_tab = $current_tab ?? 'all';
-$tab_counts = $tab_counts ?? [
-    'all' => $total,
-    'active' => 0,
-    'inactive' => 0,
-];
-$sidebar_mode = $sidebar_mode ?? null;
-$detail_item = $detail_item ?? null;
-
-// ============================================
-// COLUMN CALLBACKS (safe in template context)
-// ============================================
-$column_callbacks = [
-    // Color swatch
-    'color' => function($value, $item) {
-        if (empty($value)) {
-            return '<span class="sawt-color-swatch" style="background: #ccc;"></span>';
-        }
-        return sprintf(
-            '<span class="sawt-color-swatch" style="background: %s;"></span>',
-            esc_attr($value)
-        );
-    },
-    
-    // Price with badge
-    'price' => function($value, $item) {
-        $price = floatval($value);
-        if ($price <= 0) {
-            return '<span class="sawt-badge sawt-badge-success">Zdarma</span>';
-        }
-        return number_format($price, 0, ',', ' ') . ' Kč';
-    },
-    
-    // Customers count badge
-    'customers_count' => function($value, $item) {
-        $count = intval($value);
-        if ($count === 0) {
-            return '—';
-        }
-        return sprintf(
-            '<span class="sawt-badge sawt-badge-info">%d</span>',
-            $count
-        );
-    },
-];
-
-// ============================================
-// RENDER LIST
-// ============================================
-saw_table_render_list([
-    'config' => $config,
-    'items' => $items,
-    'total' => $total,
-    'current_tab' => $current_tab,
-    'tab_counts' => $tab_counts,
-    'sidebar_mode' => $sidebar_mode,
-    'detail_item' => $detail_item,
-    'column_callbacks' => $column_callbacks,
-]);
+$entity = $config['entity'] ?? 'account_types';
+$table = new SAW_Component_Admin_Table($entity, $table_config);
+$table->render();

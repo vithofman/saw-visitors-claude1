@@ -756,8 +756,9 @@
     border-bottom: 1px solid var(--saw-border-color);
     margin: 0;
     padding: 0;
-    position: relative; /* OPRAVENO: Zajistit stacking context */
-    z-index: 10; /* OPRAVENO: Sjednocený z-index - pod tabs wrapper (15) a dropdown menu (10004) */
+    position: sticky; /* OPRAVENO: Sticky header pro scrollování */
+    top: 0; /* Relativně k .saw-table-scroll-area */
+    z-index: 10; /* Pod tabs wrapper (15) a page header (20) */
 }
 
 .saw-admin-table thead tr {

@@ -57,6 +57,35 @@ return [
         'searchable' => ['language_name', 'language_code'],
     ],
     
+    // ============================================
+    // TABS CONFIGURATION
+    // ============================================
+    'tabs' => [
+        'enabled' => true,
+        'tab_param' => 'has_branches',  // Virtuální parametr - zpracovává se v modelu
+        'default_tab' => 'all',
+        'tabs' => [
+            'all' => [
+                'label' => 'Všechny',
+                'filter_value' => null,
+                'icon' => '📋',
+                'count_query' => true,
+            ],
+            'with_branches' => [
+                'label' => 'S pobočkami',
+                'filter_value' => 'yes',  // branches_count > 0
+                'icon' => '✓',
+                'count_query' => true,
+            ],
+            'without_branches' => [
+                'label' => 'Bez poboček',
+                'filter_value' => 'no',  // branches_count = 0
+                'icon' => '✕',
+                'count_query' => true,
+            ],
+        ],
+    ],
+    
     'cache' => [
         'enabled' => true,
         'ttl' => 3600,

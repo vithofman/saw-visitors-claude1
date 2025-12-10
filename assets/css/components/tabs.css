@@ -229,7 +229,7 @@
     .saw-table-tabs-wrapper {
         padding: 0 12px;
         top: 52px !important; /* Tablet/Mobile: výška saw-page-header (12px top + 18px font + ~4px line-height + 8px bottom = ~42px) + bezpečnostní odsazení */
-        z-index: 15 !important; /* Vyšší než table thead - zajistit viditelnost nad tabulkou */
+        z-index: 15 !important; /* Pod page header (20), nad table thead (10) */
     }
     
     .saw-table-tabs-container {
@@ -288,8 +288,8 @@
 @media (max-width: 480px) {
     .saw-table-tabs-wrapper {
         padding: 0 8px;
-        top: 50px !important; /* Small Mobile: výška saw-page-header (10px top + 16px font + ~4px line-height + 6px bottom = ~36px) + bezpečnostní odsazení */
-        z-index: 15 !important; /* Vyšší než table thead - zajistit viditelnost nad tabulkou */
+        top: 52px !important; /* Small Mobile: výška saw-page-header (10px top + 16px font + ~4px line-height + 6px bottom = ~36px) + bezpečnostní odsazení */
+        z-index: 15 !important; /* Pod page header (20), nad table thead (10) */
     }
     
     .saw-table-tab {

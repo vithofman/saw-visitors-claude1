@@ -1517,6 +1517,92 @@
     }
 }
 
+/* ============================================
+   SELECT-CREATE SEARCHABLE
+   ============================================ */
+
+.saw-select-create-wrapper {
+    position: relative;
+}
+
+.saw-select-search-input {
+    width: 100%;
+    padding: var(--saw-space-sm) var(--saw-space-md);
+    border: var(--saw-border-width) solid var(--saw-border-color);
+    border-radius: var(--saw-border-radius-sm);
+    font-size: var(--saw-font-size-sm);
+    background: var(--saw-textarea-bg);
+    color: var(--saw-text-primary);
+    transition: border-color var(--saw-transition-fast);
+}
+
+.saw-select-search-input:focus {
+    outline: none;
+    border-color: var(--saw-primary);
+    box-shadow: 0 0 0 1px var(--saw-primary);
+}
+
+.saw-select-search-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--saw-textarea-bg);
+    border: var(--saw-border-width) solid var(--saw-border-color);
+    border-radius: var(--saw-border-radius-sm);
+    box-shadow: var(--saw-shadow-lg);
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+}
+
+.saw-select-search-dropdown::-webkit-scrollbar {
+    width: 8px;
+}
+
+.saw-select-search-dropdown::-webkit-scrollbar-track {
+    background: var(--saw-gray-50);
+}
+
+.saw-select-search-dropdown::-webkit-scrollbar-thumb {
+    background: var(--saw-gray-300);
+    border-radius: var(--saw-border-radius-sm);
+}
+
+.saw-select-search-dropdown::-webkit-scrollbar-thumb:hover {
+    background: var(--saw-gray-400);
+}
+
+.saw-select-search-item {
+    padding: 10px var(--saw-space-md);
+    cursor: pointer;
+    transition: background var(--saw-transition-fast);
+    border-bottom: var(--saw-border-width) solid var(--saw-gray-50);
+}
+
+.saw-select-search-item:last-child {
+    border-bottom: none;
+}
+
+.saw-select-search-item:hover,
+.saw-select-search-item.highlighted {
+    background: var(--saw-gray-50);
+}
+
+.saw-select-search-item.selected {
+    background: var(--saw-primary-light);
+    color: var(--saw-primary);
+    font-weight: 500;
+}
+
+.saw-select-search-no-results {
+    padding: var(--saw-space-md);
+    text-align: center;
+    color: var(--saw-gray-500);
+    font-size: var(--saw-font-size-xs);
+}
+
 @media (prefers-color-scheme: dark) {
     .saw-inline-create-btn {
         background: #2a2a2a;

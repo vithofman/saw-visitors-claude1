@@ -70,6 +70,16 @@ class SAW_Module_Training_Languages_Model extends SAW_Base_Model
         }
         
         $sql .= " GROUP BY l.id";
+        
+        // Filter by branches (for both tabs and filters)
+        // tabs use has_branches as tab_param, filters also use has_branches
+        if (isset($filters['has_branches']) && $filters['has_branches'] !== '' && $filters['has_branches'] !== null) {
+            if ($filters['has_branches'] === 'yes') {
+                $sql .= " HAVING branches_count > 0";
+            } elseif ($filters['has_branches'] === 'no') {
+                $sql .= " HAVING branches_count = 0";
+            }
+        }
         $orderby = $filters['orderby'] ?? 'language_name';
         $order = strtoupper($filters['order'] ?? 'ASC') === 'DESC' ? 'DESC' : 'ASC';
         $allowed = ['language_name', 'language_code', 'created_at', 'branches_count'];

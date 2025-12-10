@@ -1,10 +1,10 @@
 <?php
 /**
  * Account Types Module Model
- *
- * SAW TABLE COMPLETE IMPLEMENTATION
  * 
- * @version 12.0.0 - Added create/update methods
+ * @package     SAW_Visitors
+ * @subpackage  Modules/AccountTypes
+ * @version     3.2.0
  */
 
 if (!defined('ABSPATH')) {
@@ -16,243 +16,152 @@ class SAW_Module_Account_Types_Model extends SAW_Base_Model
     public function __construct($config) {
         global $wpdb;
         
-        $table_name = $config['table_name'] ?? $config['table'] ?? 'saw_account_types';
-        
-        if (is_array($table_name)) {
-            $table_name = 'saw_account_types';
-        }
-        
-        $this->table = $wpdb->prefix . $table_name;
+        $this->table = $wpdb->prefix . $config['table'];
         $this->config = $config;
         $this->cache_ttl = $config['cache']['ttl'] ?? 300;
     }
     
     /**
-     * Get all items
+     * Validate data
      */
-    public function get_all($filters = []) {
-        global $wpdb;
+    public function validate($data, $id = 0) {
+        $errors = array();
         
-        $where = ['1=1'];
-        $params = [];
-        
-        if (isset($filters['is_active'])) {
-            $where[] = 'is_active = %d';
-            $params[] = intval($filters['is_active']);
+        if (empty($data['name'])) {
+            $errors['name'] = 'Interní název je povinný';
         }
         
-        if (!empty($filters['search'])) {
-            $search = '%' . $wpdb->esc_like($filters['search']) . '%';
-            $where[] = '(name LIKE %s OR display_name LIKE %s OR description LIKE %s)';
-            $params[] = $search;
-            $params[] = $search;
-            $params[] = $search;
+        if (empty($data['display_name'])) {
+            $errors['display_name'] = 'Zobrazovaný název je povinný';
         }
         
-        $where_sql = implode(' AND ', $where);
-        
-        $orderby = $filters['orderby'] ?? 'sort_order';
-        $allowed_orderby = ['id', 'name', 'display_name', 'price', 'sort_order', 'created_at', 'is_active'];
-        if (!in_array($orderby, $allowed_orderby)) {
-            $orderby = 'sort_order';
+        // Check name format (slug)
+        if (!empty($data['name']) && !preg_match('/^[a-z0-9\-_]+$/', $data['name'])) {
+            $errors['name'] = 'Interní název může obsahovat pouze malá písmena, číslice, pomlčky a podtržítka';
         }
         
-        $order = strtoupper($filters['order'] ?? 'ASC');
-        if (!in_array($order, ['ASC', 'DESC'])) {
-            $order = 'ASC';
+        // Check unique name
+        if (!empty($data['name']) && $this->name_exists($data['name'], $id)) {
+            $errors['name'] = 'Typ účtu s tímto názvem již existuje';
         }
         
-        $sql = "SELECT * FROM {$this->table} WHERE {$where_sql} ORDER BY {$orderby} {$order}";
-        
-        if (!empty($params)) {
-            $sql = $wpdb->prepare($sql, $params);
+        if (empty($errors)) {
+            return true;
         }
         
-        $items = $wpdb->get_results($sql, ARRAY_A) ?: [];
-        
-        foreach ($items as &$item) {
-            $item = $this->format_item($item);
-        }
-        
-        return [
-            'items' => $items,
-            'total' => count($items),
-        ];
+        return new WP_Error('validation_error', 'Validace selhala', $errors);
     }
     
     /**
-     * Count items
+     * Check if name exists
      */
-    public function count($filters = []) {
+    private function name_exists($name, $exclude_id = 0) {
         global $wpdb;
         
-        $where = ['1=1'];
-        $params = [];
-        
-        if (isset($filters['is_active'])) {
-            $where[] = 'is_active = %d';
-            $params[] = intval($filters['is_active']);
-        }
-        
-        $where_sql = implode(' AND ', $where);
-        $sql = "SELECT COUNT(*) FROM {$this->table} WHERE {$where_sql}";
-        
-        if (!empty($params)) {
-            $sql = $wpdb->prepare($sql, $params);
-        }
-        
-        return (int) $wpdb->get_var($sql);
+        return (bool) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM %i WHERE name = %s AND id != %d",
+            $this->table,
+            $name,
+            $exclude_id
+        ));
     }
     
     /**
-     * Get by ID
+     * Get by ID with formatting
      */
     public function get_by_id($id, $bypass_cache = false) {
-        global $wpdb;
+        $item = parent::get_by_id($id, $bypass_cache);
         
-        $item = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$this->table} WHERE id = %d",
-            $id
-        ), ARRAY_A);
-        
-        return $item ? $this->format_item($item) : null;
-    }
-    
-    /**
-     * Create new item
-     */
-    public function create($data) {
-        global $wpdb;
-        
-        // Validate
-        $validation = $this->validate($data);
-        if ($validation !== true) {
-            return new WP_Error('validation_failed', 'Opravte chyby ve formuláři', $validation);
+        if (!$item) {
+            return null;
         }
         
-        // Prepare data
-        $insert_data = [
-            'name' => sanitize_text_field($data['name']),
-            'display_name' => sanitize_text_field($data['display_name'] ?? $data['name']),
-            'description' => sanitize_textarea_field($data['description'] ?? ''),
-            'color' => sanitize_hex_color($data['color'] ?? '#3b82f6'),
-            'price' => floatval($data['price'] ?? 0),
-            'sort_order' => intval($data['sort_order'] ?? 0),
-            'is_active' => intval($data['is_active'] ?? 1),
-            'created_at' => current_time('mysql'),
-            'updated_at' => current_time('mysql'),
-        ];
-        
-        $result = $wpdb->insert(
-            $this->table,
-            $insert_data,
-            ['%s', '%s', '%s', '%s', '%f', '%d', '%d', '%s', '%s']
-        );
-        
-        if ($result === false) {
-            return new WP_Error('insert_failed', 'Nepodařilo se vytvořit záznam: ' . $wpdb->last_error);
-        }
-        
-        return $wpdb->insert_id;
-    }
-    
-    /**
-     * Update existing item
-     */
-    public function update($id, $data) {
-        global $wpdb;
-        
-        // Check exists
-        $existing = $this->get_by_id($id);
-        if (!$existing) {
-            return new WP_Error('not_found', 'Záznam nenalezen');
-        }
-        
-        // Validate
-        $validation = $this->validate($data, $id);
-        if ($validation !== true) {
-            return new WP_Error('validation_failed', 'Opravte chyby ve formuláři', $validation);
-        }
-        
-        // Prepare data
-        $update_data = [
-            'name' => sanitize_text_field($data['name']),
-            'display_name' => sanitize_text_field($data['display_name'] ?? $data['name']),
-            'description' => sanitize_textarea_field($data['description'] ?? ''),
-            'color' => sanitize_hex_color($data['color'] ?? '#3b82f6'),
-            'price' => floatval($data['price'] ?? 0),
-            'sort_order' => intval($data['sort_order'] ?? 0),
-            'is_active' => intval($data['is_active'] ?? 1),
-            'updated_at' => current_time('mysql'),
-        ];
-        
-        $result = $wpdb->update(
-            $this->table,
-            $update_data,
-            ['id' => $id],
-            ['%s', '%s', '%s', '%s', '%f', '%d', '%d', '%s'],
-            ['%d']
-        );
-        
-        if ($result === false) {
-            return new WP_Error('update_failed', 'Nepodařilo se aktualizovat záznam: ' . $wpdb->last_error);
-        }
-        
-        return true;
-    }
-    
-    /**
-     * Delete item
-     */
-    public function delete($id) {
-        global $wpdb;
-        
-        $result = $wpdb->delete(
-            $this->table,
-            ['id' => $id],
-            ['%d']
-        );
-        
-        if ($result === false) {
-            return new WP_Error('delete_failed', 'Nepodařilo se smazat záznam');
-        }
-        
-        return true;
-    }
-    
-    /**
-     * Format item
-     */
-    protected function format_item($item) {
-        if (!$item) return $item;
-        
-        $price = floatval($item['price'] ?? 0);
-        if ($price > 0) {
-            $item['price_formatted'] = number_format($price, 0, ',', ' ') . ' Kč/měsíc';
+        // Features
+        if (!empty($item['features'])) {
+            $features = json_decode($item['features'], true);
+            $item['features_array'] = is_array($features) ? $features : array();
         } else {
-            $item['price_formatted'] = 'Zdarma';
+            $item['features_array'] = array();
         }
         
+        // Price
+        $price = floatval($item['price'] ?? 0);
+        $item['price_formatted'] = $price > 0 
+            ? number_format($price, 0, ',', ' ') . ' Kč' 
+            : 'Zdarma';
+        
+        // Dates
         if (!empty($item['created_at'])) {
-            $item['created_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['created_at']));
+            $item['created_at_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['created_at']));
         }
         if (!empty($item['updated_at'])) {
-            $item['updated_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['updated_at']));
+            $item['updated_at_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['updated_at']));
         }
         
         return $item;
     }
     
     /**
-     * Validate data
+     * Get all with default sorting and custom filters
      */
-    public function validate($data, $id = null) {
-        $errors = [];
-        
-        if (empty($data['name'])) {
-            $errors['name'] = 'Systémový název je povinný';
+    public function get_all($filters = array()) {
+        if (!isset($filters['orderby'])) {
+            $filters['orderby'] = 'sort_order';
+            $filters['order'] = 'ASC';
         }
         
-        return empty($errors) ? true : $errors;
+        // Get base result from parent
+        $result = parent::get_all($filters);
+        
+        // Apply custom price_type filter after getting results
+        if (isset($filters['price_type']) && $filters['price_type'] !== '' && !empty($result['items'])) {
+            $filtered_items = array();
+            foreach ($result['items'] as $item) {
+                $price = floatval($item['price'] ?? 0);
+                $is_free = $price <= 0;
+                
+                if ($filters['price_type'] === 'free' && $is_free) {
+                    $filtered_items[] = $item;
+                } elseif ($filters['price_type'] === 'paid' && !$is_free) {
+                    $filtered_items[] = $item;
+                }
+            }
+            
+            $result['items'] = $filtered_items;
+            $result['total'] = count($filtered_items);
+        }
+        
+        return $result;
+    }
+    
+    /**
+     * Create with features processing
+     */
+    public function create($data) {
+        $data = $this->process_features($data);
+        return parent::create($data);
+    }
+    
+    /**
+     * Update with features processing
+     */
+    public function update($id, $data) {
+        $data = $this->process_features($data);
+        return parent::update($id, $data);
+    }
+    
+    /**
+     * Process features array to JSON
+     */
+    private function process_features($data) {
+        if (isset($data['features']) && is_array($data['features'])) {
+            $features = array_filter($data['features'], function($f) {
+                return !empty(trim($f));
+            });
+            $data['features'] = !empty($features) 
+                ? json_encode(array_values($features), JSON_UNESCAPED_UNICODE) 
+                : null;
+        }
+        return $data;
     }
 }

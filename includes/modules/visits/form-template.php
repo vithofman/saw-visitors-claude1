@@ -228,7 +228,30 @@ $form_action = $is_edit
                             }
                             
                             if (empty($schedules)) {
-                                $schedules = array(array('date' => '', 'time_from' => '', 'time_to' => '', 'notes' => ''));
+                                // Prefill date and time from URL parameters (when clicking on calendar)
+                                $prefill_date = isset($_GET['date']) ? sanitize_text_field($_GET['date']) : '';
+                                // Extract date part if datetime format (YYYY-MM-DDTHH:mm:ss)
+                                if (strpos($prefill_date, 'T') !== false) {
+                                    $prefill_date = explode('T', $prefill_date)[0];
+                                }
+                                
+                                // Prefill time if provided
+                                $prefill_time_from = isset($_GET['time']) ? sanitize_text_field($_GET['time']) : '';
+                                // If time is in HH:mm format, use it; otherwise try to extract from date parameter
+                                if (empty($prefill_time_from) && isset($_GET['date']) && strpos($_GET['date'], 'T') !== false) {
+                                    $datetime_parts = explode('T', $_GET['date']);
+                                    if (isset($datetime_parts[1])) {
+                                        $time_part = explode(':', $datetime_parts[1])[0] . ':' . explode(':', $datetime_parts[1])[1];
+                                        $prefill_time_from = $time_part;
+                                    }
+                                }
+                                
+                                $schedules = array(array(
+                                    'date' => $prefill_date, 
+                                    'time_from' => $prefill_time_from, 
+                                    'time_to' => '', 
+                                    'notes' => ''
+                                ));
                             }
                             
                             foreach ($schedules as $index => $schedule): ?>

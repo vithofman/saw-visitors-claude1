@@ -55,6 +55,10 @@ class SAW_Component_Select_Create {
         if (!wp_script_is('saw-app', 'enqueued')) {
             wp_enqueue_script('saw-app');
         }
+        // Enqueue select-create JavaScript for searchable functionality
+        if (!wp_script_is('saw-select-create', 'enqueued')) {
+            wp_enqueue_script('saw-select-create');
+        }
     }
     
     private function resolve_prefill_values($prefill) {

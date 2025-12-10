@@ -127,6 +127,21 @@ $table_config['search'] = array(
 );
 
 // ============================================
+// FILTERS CONFIGURATION
+// ============================================
+$table_config['filters'] = array(
+    'has_branches' => array(
+        'label' => $tr('filter_branches', 'Aktivní pobočky'),
+        'type' => 'select',
+        'options' => array(
+            '' => $tr('filter_all', 'Všechny'),
+            'yes' => $tr('filter_with_branches', 'S aktivními pobočkami'),
+            'no' => $tr('filter_without_branches', 'Bez aktivních poboček'),
+        ),
+    ),
+);
+
+// ============================================
 // SIDEBAR CONTEXT
 // ============================================
 $table_config['sidebar_mode'] = $sidebar_mode ?? null;
@@ -141,6 +156,21 @@ $table_config['module_config'] = $config;
 $table_config['actions'] = array('view', 'edit', 'delete');
 $table_config['add_new'] = $tr('btn_add_new', 'Nový jazyk');
 $table_config['empty_message'] = $tr('empty_message', 'Žádné jazyky nenalezeny');
+
+// ============================================
+// TABS - Pass from config
+// ============================================
+$table_config['tabs'] = $config['tabs'] ?? null;
+
+// ============================================
+// CURRENT TAB & TAB COUNTS
+// ============================================
+if (!empty($table_config['tabs']['enabled'])) {
+    $table_config['current_tab'] = (isset($current_tab) && $current_tab !== null && $current_tab !== '') 
+        ? (string)$current_tab 
+        : ($table_config['tabs']['default_tab'] ?? 'all');
+    $table_config['tab_counts'] = (isset($tab_counts) && is_array($tab_counts)) ? $tab_counts : array();
+}
 
 // ============================================
 // RENDER
