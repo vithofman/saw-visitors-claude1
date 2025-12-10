@@ -235,21 +235,40 @@ $form_action = $is_edit
                                     $prefill_date = explode('T', $prefill_date)[0];
                                 }
                                 
-                                // Prefill time if provided
-                                $prefill_time_from = isset($_GET['time']) ? sanitize_text_field($_GET['time']) : '';
-                                // If time is in HH:mm format, use it; otherwise try to extract from date parameter
-                                if (empty($prefill_time_from) && isset($_GET['date']) && strpos($_GET['date'], 'T') !== false) {
+                                $prefill_time_from = '';
+                                $prefill_time_to = '';
+                                
+                                // Get time from URL parameter
+                                if (isset($_GET['time'])) {
+                                    $prefill_time_from = sanitize_text_field($_GET['time']);
+                                    // Calculate time_to as +1 hour
+                                    if (!empty($prefill_time_from)) {
+                                        $time_parts = explode(':', $prefill_time_from);
+                                        $hours = intval($time_parts[0]);
+                                        $minutes = isset($time_parts[1]) ? intval($time_parts[1]) : 0;
+                                        $next_hour = ($hours + 1) % 24;
+                                        $prefill_time_to = sprintf('%02d:%02d', $next_hour, $minutes);
+                                    }
+                                } elseif (isset($_GET['date']) && strpos($_GET['date'], 'T') !== false) {
+                                    // Extract from datetime format
                                     $datetime_parts = explode('T', $_GET['date']);
                                     if (isset($datetime_parts[1])) {
-                                        $time_part = explode(':', $datetime_parts[1])[0] . ':' . explode(':', $datetime_parts[1])[1];
-                                        $prefill_time_from = $time_part;
+                                        $time_part = $datetime_parts[1];
+                                        $time_only = explode(':', $time_part)[0] . ':' . explode(':', $time_part)[1];
+                                        $prefill_time_from = $time_only;
+                                        // Calculate +1 hour
+                                        $time_parts = explode(':', $prefill_time_from);
+                                        $hours = intval($time_parts[0]);
+                                        $minutes = intval($time_parts[1]);
+                                        $next_hour = ($hours + 1) % 24;
+                                        $prefill_time_to = sprintf('%02d:%02d', $next_hour, $minutes);
                                     }
                                 }
                                 
                                 $schedules = array(array(
                                     'date' => $prefill_date, 
                                     'time_from' => $prefill_time_from, 
-                                    'time_to' => '', 
+                                    'time_to' => $prefill_time_to, 
                                     'notes' => ''
                                 ));
                             }

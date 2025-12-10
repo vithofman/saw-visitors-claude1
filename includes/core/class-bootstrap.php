@@ -8,7 +8,7 @@
  * @package    SAW_Visitors
  * @subpackage Core
  * @since      5.0.0
- * @version    5.2.0 - Added SAW Table component
+ * @version    5.1.0 - Added Visitor Info Portal Router
  */
 
 if (!defined('ABSPATH')) {
@@ -130,7 +130,7 @@ class SAW_Bootstrap {
             // Invitation Router (must load early for rewrite rules)
             'includes/frontend/invitation/invitation-router.php',
             
-            // Visitor Info Portal Router (must load early for rewrite rules)
+            // Visitor Info Portal Router (must load early for rewrite rules) - v3.3.0
             'includes/frontend/visitor-info/visitor-info-router.php',
         ];
         
@@ -146,7 +146,7 @@ class SAW_Bootstrap {
             $GLOBALS['saw_invitation_router'] = new SAW_Invitation_Router();
         }
         
-        // Initialize Visitor Info Router early
+        // Initialize Visitor Info Router early (v3.3.0)
         if (class_exists('SAW_Visitor_Info_Router') && !isset($GLOBALS['saw_visitor_info_router'])) {
             $GLOBALS['saw_visitor_info_router'] = new SAW_Visitor_Info_Router();
         }
@@ -157,31 +157,7 @@ class SAW_Bootstrap {
             require_once $invitation_controller_file;
         }
         
-        // Load SAW Table component (v5.2.0)
-        self::load_saw_table_component();
-        
         self::load_optional_files();
-    }
-    
-    /**
-     * Load SAW Table component
-     *
-     * Loads the new modular SAW Table system for admin tables.
-     *
-     * @since 5.2.0
-     * @return void
-     */
-    private static function load_saw_table_component() {
-        $autoload_path = SAW_VISITORS_PLUGIN_DIR . 'includes/components/saw-table/autoload.php';
-        
-        if (file_exists($autoload_path)) {
-            require_once $autoload_path;
-            
-            // Initialize SAW Table system
-            if (function_exists('saw_table_init')) {
-                saw_table_init();
-            }
-        }
     }
     
     /**
@@ -537,20 +513,6 @@ class SAW_Bootstrap {
                 }
                 ?>
             </ul>
-            
-            <?php if (function_exists('saw_table_is_enabled')): ?>
-            <h2><?php _e('SAW Table Component', 'saw-visitors'); ?></h2>
-            <p>
-                <strong><?php _e('Status:', 'saw-visitors'); ?></strong>
-                <?php echo saw_table_is_enabled() ? __('Enabled', 'saw-visitors') : __('Disabled (legacy mode)', 'saw-visitors'); ?>
-            </p>
-            <?php if (function_exists('saw_table_version')): ?>
-            <p>
-                <strong><?php _e('Version:', 'saw-visitors'); ?></strong>
-                <?php echo esc_html(saw_table_version()); ?>
-            </p>
-            <?php endif; ?>
-            <?php endif; ?>
         </div>
         <?php
     }

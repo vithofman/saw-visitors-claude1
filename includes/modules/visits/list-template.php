@@ -2,14 +2,9 @@
 /**
  * Visits List Template
  * 
- * OPRAVENO 2025-12-10: Správná struktura $table_config jako visitors modul
- * - Extrakce dat z $list_data
- * - Čisté $table_config = array() místo $table_config = $config
- * - ajax_nonce a ajax_enabled
- * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visits
- * @version     4.3.0 - FIXED: Proper table_config structure for sticky header/tabs
+ * @version     5.0.0 - FIXED: Matched visitors structure exactly
  */
 
 if (!defined('ABSPATH')) {
@@ -38,14 +33,8 @@ if (!class_exists('SAW_Component_Admin_Table')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/class-saw-component-admin-table.php';
 }
 
-// ============================================
-// AJAX NONCE (CRITICAL FOR PROPER RENDERING)
-// ============================================
 $ajax_nonce = wp_create_nonce('saw_ajax_nonce');
 
-// ============================================
-// DATA EXTRACTION FROM $list_data (CRITICAL!)
-// ============================================
 $items = $list_data['items'] ?? array();
 $total = $list_data['total'] ?? 0;
 $page = $list_data['page'] ?? 1;
@@ -53,8 +42,6 @@ $total_pages = $list_data['total_pages'] ?? 0;
 $search = $list_data['search'] ?? '';
 $orderby = $list_data['orderby'] ?? 'id';
 $order = $list_data['order'] ?? 'DESC';
-$current_tab = $list_data['current_tab'] ?? 'all';
-$tab_counts = $list_data['tab_counts'] ?? array();
 
 // ============================================
 // LOAD BRANCHES FOR FILTER
@@ -76,47 +63,35 @@ if ($customer_id) {
 }
 
 // ============================================
-// TABLE CONFIGURATION (CLEAN ARRAY - NOT $config!)
+// TABLE CONFIGURATION
 // ============================================
-$base_url = home_url('/admin/' . ($config['route'] ?? 'visits'));
-
 $table_config = array(
-    // Basic info
     'title' => $tr('title', 'Návštěvy'),
-    'create_url' => $base_url . '/create',
-    'detail_url' => $base_url . '/{id}/',
-    'edit_url' => $base_url . '/{id}/edit',
+    'create_url' => home_url('/admin/visits/create'),
+    'edit_url' => home_url('/admin/visits/{id}/edit'),
+    'detail_url' => home_url('/admin/visits/{id}/'),
     
-    // Sidebar context
     'sidebar_mode' => $sidebar_mode ?? null,
     'detail_item' => $detail_item ?? null,
     'form_item' => $form_item ?? null,
     'detail_tab' => $detail_tab ?? 'overview',
     'related_data' => $related_data ?? null,
     
-    // CRITICAL: Pass config as module_config, NOT as base!
     'module_config' => isset($config) ? $config : array(),
     
-    // Data from $list_data
     'rows' => $items,
     'total_items' => $total,
     'current_page' => $page,
     'total_pages' => $total_pages,
-    'search_value' => $search,
     'orderby' => $orderby,
     'order' => $order,
     
-    // Actions
     'actions' => array('view', 'edit', 'delete'),
-    'add_new' => $tr('add_new', 'Nová návštěva'),
     'empty_message' => $tr('empty_message', 'Žádné návštěvy nenalezeny'),
+    'add_new' => $tr('add_new', 'Nová návštěva'),
     
-    // AJAX settings (CRITICAL FOR INFINITE SCROLL)
     'ajax_enabled' => true,
     'ajax_nonce' => $ajax_nonce,
-    
-    // Extra data for callbacks
-    'branches' => $branches,
 );
 
 // ============================================
@@ -158,7 +133,7 @@ $table_config['filters'] = array(
 );
 
 // ============================================
-// TRANSLATED LABELS FOR CALLBACKS
+// COLUMNS CONFIGURATION
 // ============================================
 $visitor_company_label = $tr('visitor_company', 'Firma');
 $visitor_physical_label = $tr('visitor_physical', 'Fyzická osoba');
@@ -168,9 +143,6 @@ $risks_ok_label = $tr('risks_ok', 'OK');
 $risks_missing_title = $tr('risks_missing_title', 'Chybí informace o rizicích');
 $risks_ok_title = $tr('risks_ok_title', 'Informace o rizicích jsou dostupné');
 
-// ============================================
-// COLUMN DEFINITIONS
-// ============================================
 $table_config['columns'] = array(
     'company_person' => array(
         'label' => $tr('col_visitor', 'Návštěvník'),
@@ -279,13 +251,11 @@ $table_config['columns'] = array(
     ),
     
     'created_at' => array(
-        'label' => $tr('col_created', 'Vytvořeno'),
-        'type' => 'callback',
+        'label' => $tr('col_created_at', 'Vytvořeno'),
+        'type' => 'date',
         'sortable' => true,
-        'width' => '120px',
-        'callback' => function($value) {
-            echo !empty($value) ? date('d.m.Y', strtotime($value)) : '—';
-        },
+        'width' => '110px',
+        'format' => 'd.m.Y',
     ),
 );
 
@@ -313,9 +283,6 @@ if (!empty($table_config['tabs']['enabled']) && !empty($table_config['tabs']['ta
     unset($tab_config_item);
 }
 
-// ============================================
-// CURRENT TAB & TAB COUNTS (FROM $list_data!)
-// ============================================
 if (!empty($table_config['tabs']['enabled'])) {
     $table_config['current_tab'] = (isset($current_tab) && $current_tab !== null && $current_tab !== '') 
         ? (string)$current_tab 

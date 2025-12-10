@@ -1525,21 +1525,42 @@
     position: relative;
 }
 
+.saw-select-create-wrapper .saw-select-search-input {
+    /* Zajistit, že má stejnou výšku jako select */
+    min-height: 38px; /* Standardní výška selectu */
+    height: auto;
+}
+
 .saw-select-search-input {
     width: 100%;
-    padding: var(--saw-space-sm) var(--saw-space-md);
-    border: var(--saw-border-width) solid var(--saw-border-color);
-    border-radius: var(--saw-border-radius-sm);
-    font-size: var(--saw-font-size-sm);
-    background: var(--saw-textarea-bg);
-    color: var(--saw-text-primary);
-    transition: border-color var(--saw-transition-fast);
+    padding: 12px 14px; /* Stejné jako .saw-input */
+    border: 2px solid #e5e7eb; /* Stejné jako .saw-input */
+    border-radius: 8px; /* Stejné jako .saw-input */
+    font-size: 15px; /* Stejné jako .saw-input */
+    line-height: 1.5; /* Stejné jako .saw-input */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; /* Stejné jako .saw-input */
+    font-weight: 400; /* Stejné jako .saw-input */
+    color: var(--saw-text-primary); /* Stejné jako .saw-input */
+    background: var(--saw-form-section-bg); /* Stejné jako .saw-input */
+    transition: all 0.2s ease; /* Stejné jako .saw-input */
+    box-sizing: border-box; /* Stejné jako .saw-input */
+    /* Odstranit jakékoli odlišnosti */
+    box-shadow: none;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    min-height: auto;
+    height: auto;
+}
+
+.saw-select-search-input:hover {
+    border-color: #d1d5db; /* Stejné jako .saw-input:hover */
 }
 
 .saw-select-search-input:focus {
     outline: none;
-    border-color: var(--saw-primary);
-    box-shadow: 0 0 0 1px var(--saw-primary);
+    border-color: var(--saw-primary); /* Stejné jako .saw-input:focus */
+    box-shadow: 0 0 0 1px var(--saw-primary); /* Stejné jako .saw-input:focus */
 }
 
 .saw-select-search-dropdown {
