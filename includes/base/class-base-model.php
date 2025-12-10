@@ -8,7 +8,7 @@
  *
  * @package    SAW_Visitors
  * @subpackage Base
- * @version    9.0.0 - IMPROVED: Cache bypass option + better invalidation
+ * @version    10.0.0 - SAW Table migration: backwards-compatible config normalization
  * @since      1.0.0
  */
 
@@ -59,11 +59,136 @@ abstract class SAW_Base_Model
     protected $allowed_orderby = ['id', 'name', 'created_at', 'updated_at'];
     
     /**
+     * Normalized list config cache
+     *
+     * @since 10.0.0
+     * @var array|null
+     */
+    private $normalized_list_config = null;
+    
+    // =========================================================================
+    // CONFIG NORMALIZATION (SAW Table Migration Support)
+    // =========================================================================
+    
+    /**
+     * Get normalized list configuration
+     *
+     * Supports both old format (list_config) and new SAW Table format (list).
+     * This enables gradual migration to the new config format without breaking
+     * existing modules.
+     *
+     * Old format (pre-SAW Table):
+     *   'list_config' => ['searchable' => [...], 'per_page' => 50, ...]
+     *
+     * New format (SAW Table):
+     *   'list' => ['searchable' => [...], 'per_page' => 50, ...]
+     *
+     * @since 10.0.0
+     * @return array Normalized list configuration
+     */
+    protected function get_list_config() {
+        // Return cached version if available
+        if ($this->normalized_list_config !== null) {
+            return $this->normalized_list_config;
+        }
+        
+        // Priority: list_config (old) > list (new) > defaults
+        if (!empty($this->config['list_config']) && is_array($this->config['list_config'])) {
+            // Old format exists - use it directly
+            $this->normalized_list_config = $this->config['list_config'];
+        } elseif (!empty($this->config['list']) && is_array($this->config['list'])) {
+            // New format - normalize to old structure
+            $this->normalized_list_config = array(
+                'per_page'           => $this->config['list']['per_page'] ?? 50,
+                'searchable'         => $this->config['list']['searchable'] ?? array('name'),
+                'sortable'           => $this->config['list']['sortable'] ?? array('name', 'created_at'),
+                'default_orderby'    => $this->config['list']['default_orderby'] ?? 'id',
+                'default_order'      => $this->config['list']['default_order'] ?? 'DESC',
+                'filters'            => $this->config['list']['filters'] ?? array(),
+                'enable_detail_modal'=> $this->config['list']['enable_detail_modal'] ?? true,
+            );
+        } else {
+            // No list config - use defaults
+            $this->normalized_list_config = array(
+                'per_page'           => 50,
+                'searchable'         => array('name'),
+                'sortable'           => array('name', 'created_at'),
+                'default_orderby'    => 'id',
+                'default_order'      => 'DESC',
+                'filters'            => array(),
+                'enable_detail_modal'=> true,
+            );
+        }
+        
+        return $this->normalized_list_config;
+    }
+    
+    /**
+     * Get searchable fields
+     *
+     * @since 10.0.0
+     * @return array List of searchable field names
+     */
+    protected function get_searchable_fields() {
+        $list_config = $this->get_list_config();
+        return $list_config['searchable'] ?? array('name');
+    }
+    
+    /**
+     * Get filter configuration
+     *
+     * @since 10.0.0
+     * @return array Filter configuration
+     */
+    protected function get_filter_config() {
+        $list_config = $this->get_list_config();
+        return $list_config['filters'] ?? array();
+    }
+    
+    /**
+     * Get default order by column
+     *
+     * @since 10.0.0
+     * @return string Default order by column
+     */
+    protected function get_default_orderby() {
+        $list_config = $this->get_list_config();
+        return $list_config['default_orderby'] ?? 'id';
+    }
+    
+    /**
+     * Get default order direction
+     *
+     * @since 10.0.0
+     * @return string Default order direction (ASC or DESC)
+     */
+    protected function get_default_order() {
+        $list_config = $this->get_list_config();
+        return $list_config['default_order'] ?? 'DESC';
+    }
+    
+    /**
+     * Get per page setting
+     *
+     * @since 10.0.0
+     * @return int Number of items per page
+     */
+    protected function get_per_page() {
+        $list_config = $this->get_list_config();
+        return intval($list_config['per_page'] ?? 50);
+    }
+    
+    // =========================================================================
+    // CRUD OPERATIONS
+    // =========================================================================
+    
+    /**
      * Get all records with filters
      *
      * Returns paginated list with scope filtering applied.
      *
      * @since 1.0.0
+     * @since 10.0.0 Uses normalized list config for backwards compatibility
      * @param array $filters Query filters
      * @return array ['items' => array, 'total' => int]
      */
@@ -80,14 +205,16 @@ abstract class SAW_Base_Model
         $sql = $wpdb->prepare("SELECT * FROM %i WHERE 1=1", $this->table);
         $params = [];
         
+        // Apply data scope (customer/branch filtering)
         list($scope_where, $scope_params) = $this->apply_data_scope();
         if (!empty($scope_where)) {
             $sql .= $scope_where;
             $params = array_merge($params, $scope_params);
         }
         
+        // Search filtering
         if (!empty($filters['search'])) {
-            $search_fields = $this->config['list_config']['searchable'] ?? ['name'];
+            $search_fields = $this->get_searchable_fields();
             $search_conditions = [];
             
             foreach ($search_fields as $field) {
@@ -115,8 +242,8 @@ abstract class SAW_Base_Model
         }
         
         // Apply filters from list_config
-        // CRITICAL: Skip tab_param if tabs are enabled (it's handled separately below)
-        foreach ($this->config['list_config']['filters'] ?? [] as $filter_key => $enabled) {
+        $filter_config = $this->get_filter_config();
+        foreach ($filter_config as $filter_key => $enabled) {
             // Skip tab_param filter as it's handled by tabs system
             if ($filter_key === $tab_param_to_skip) {
                 continue;
@@ -131,12 +258,10 @@ abstract class SAW_Base_Model
         }
         
         // Apply TAB filter (if tabs are enabled)
-        // This is separate from list_config filters to ensure proper handling
         if (!empty($this->config['tabs']['enabled'])) {
             $tab_param = $this->config['tabs']['tab_param'] ?? 'tab';
             
             // Only apply filter if value is set, not empty, AND not null
-            // This ensures "Všechny" tab (filter_value = null) shows all records
             if (isset($filters[$tab_param]) && 
                 $filters[$tab_param] !== '' && 
                 $filters[$tab_param] !== null && 
@@ -146,31 +271,35 @@ abstract class SAW_Base_Model
             }
         }
         
+        // Prepare SQL with parameters
         if (!empty($params)) {
             $sql = $wpdb->prepare($sql, ...$params);
         }
         
-        $orderby = $filters['orderby'] ?? 'id';
-        $order = strtoupper($filters['order'] ?? 'DESC');
+        // Ordering
+        $orderby = $filters['orderby'] ?? $this->get_default_orderby();
+        $order = strtoupper($filters['order'] ?? $this->get_default_order());
         
         if ($this->is_valid_orderby($orderby) && in_array($order, ['ASC', 'DESC'], true)) {
             $sql .= " ORDER BY `{$orderby}` {$order}";
         }
         
+        // Get total count
         $total_sql = "SELECT COUNT(*) FROM ({$sql}) as count_table";
         $total = $wpdb->get_var($total_sql);
         
-        $limit = intval($filters['per_page'] ?? 20);
-        $offset = ($filters['page'] ?? 1) - 1;
-        $offset = $offset * $limit;
+        // Pagination
+        $limit = intval($filters['per_page'] ?? $this->get_per_page());
+        $offset = (max(1, intval($filters['page'] ?? 1)) - 1) * $limit;
         
         $sql .= " LIMIT {$limit} OFFSET {$offset}";
         
+        // Execute query
         $results = $wpdb->get_results($sql, ARRAY_A);
         
         $data = [
             'items' => $results,
-            'total' => $total
+            'total' => intval($total)
         ];
         
         $this->set_cache($cache_key, $data);
@@ -219,18 +348,8 @@ abstract class SAW_Base_Model
     /**
      * Create new record
      *
-     * ✅ IMPROVED: No cache writing - lets get_by_id() handle it
-     *
      * @since 1.0.0
-     * @since 9.0.0 Removed cache writing
-     * @param array $data Record data
-     * @return int|WP_Error Insert ID or error
-     */
-    /**
-     * Create new record
-     *
-     * ✅ ENHANCED: Auto-invalidates cache after successful insert
-     *
+     * @since 9.0.0 Auto-invalidates cache after successful insert
      * @param array $data Record data
      * @return int|WP_Error Inserted ID or error
      */
@@ -264,7 +383,7 @@ abstract class SAW_Base_Model
         
         $inserted_id = $wpdb->insert_id;
         
-        // ✅ Auto-invalidate cache after successful insert
+        // Auto-invalidate cache after successful insert
         $this->invalidate_cache();
         
         return $inserted_id;
@@ -273,8 +392,8 @@ abstract class SAW_Base_Model
     /**
      * Update existing record
      *
-     * ✅ ENHANCED: Auto-invalidates cache after successful update
-     *
+     * @since 1.0.0
+     * @since 9.0.0 Auto-invalidates cache after successful update
      * @param int   $id   Record ID
      * @param array $data Updated data
      * @return bool|WP_Error True on success or error
@@ -314,7 +433,7 @@ abstract class SAW_Base_Model
             );
         }
         
-        // ✅ Auto-invalidate cache after successful update
+        // Auto-invalidate cache after successful update
         $this->invalidate_cache();
         
         return true;
@@ -323,8 +442,8 @@ abstract class SAW_Base_Model
     /**
      * Delete record
      *
-     * ✅ ENHANCED: Auto-invalidates cache after successful delete
-     *
+     * @since 1.0.0
+     * @since 9.0.0 Auto-invalidates cache after successful delete
      * @param int $id Record ID
      * @return bool|WP_Error True on success or error
      */
@@ -351,11 +470,15 @@ abstract class SAW_Base_Model
             );
         }
         
-        // ✅ Auto-invalidate cache after successful delete
+        // Auto-invalidate cache after successful delete
         $this->invalidate_cache();
         
         return true;
     }
+    
+    // =========================================================================
+    // DATA SCOPE FILTERING
+    // =========================================================================
     
     /**
      * Apply data scope filtering
@@ -370,7 +493,9 @@ abstract class SAW_Base_Model
         global $wpdb;
         
         $user_id = get_current_user_id();
-        if (!$user_id) return ['', []];
+        if (!$user_id) {
+            return ['', []];
+        }
         
         $role = $this->get_current_user_role();
         $is_branches_table = (strpos($this->table, '_branches') !== false);
@@ -428,10 +553,14 @@ abstract class SAW_Base_Model
             return [$sql_where, $params];
         }
 
-        if (!class_exists('SAW_Permissions')) return ['', []];
+        if (!class_exists('SAW_Permissions')) {
+            return ['', []];
+        }
         
         $permission = SAW_Permissions::get_permission($role, $this->config['entity'], 'list');
-        if (!$permission) return [' AND 1=0', []];
+        if (!$permission) {
+            return [' AND 1=0', []];
+        }
 
         switch ($permission['scope']) {
             case 'branch':
@@ -488,20 +617,19 @@ abstract class SAW_Base_Model
     }
     
     // =========================================================================
-    // CACHE VERSIONING - FIXED FOR OBJECT CACHE
+    // CACHE MANAGEMENT
     // =========================================================================
+    
     /**
      * Get cache key with scope (customer/branch context)
      *
-     * ✅ OPTIMIZED: Uses static cache PER REQUEST + SAW_Context
-     * ✅ FIXED: No DB query - SAW_Context has its own static cache
-     *
+     * @since 7.0.0
+     * @since 9.0.0 Optimized with static cache
      * @param string $type       Cache type (list, item, etc.)
      * @param mixed  $identifier Additional identifier
      * @return string Cache key
      */
     protected function get_cache_key_with_scope($type, $identifier = '') {
-        // ✅ STATIC CACHE: Prevents repeated SAW_Context calls within same request
         static $context_loaded = false;
         static $customer_id = 0;
         static $branch_id = 0;
@@ -509,7 +637,6 @@ abstract class SAW_Base_Model
         
         if (!$context_loaded) {
             if (is_user_logged_in() && class_exists('SAW_Context')) {
-                // SAW_Context has its own static cache internally
                 $customer_id = SAW_Context::get_customer_id() ?? 0;
                 $branch_id = SAW_Context::get_branch_id() ?? 0;
                 $role = SAW_Context::get_role() ?? 'guest';
@@ -541,78 +668,12 @@ abstract class SAW_Base_Model
         
         return $key . '_v' . $v;
     }
-
-    // --- HELPERS ---
-    protected function table_has_column($column_name) {
-        static $column_cache = [];
-        $key = $this->table . '_' . $column_name;
-        if (isset($column_cache[$key])) {
-            return $column_cache[$key];
-        }
-        global $wpdb;
-        $columns = $wpdb->get_col($wpdb->prepare("SHOW COLUMNS FROM %i LIKE %s", $this->table, $column_name));
-        return $column_cache[$key] = !empty($columns);
-    }
-
-    protected function is_valid_column($column_name) {
-        return preg_match('/^[a-zA-Z0-9_]+$/', $column_name);
-    }
     
-    protected function is_valid_orderby($orderby) {
-        return in_array($orderby, $this->allowed_orderby, true) || $this->is_valid_column($orderby);
-    }
-    
-    protected function get_current_user_role() {
-        if (current_user_can('manage_options')) {
-            return 'super_admin';
-        }
-        if (class_exists('SAW_Context')) {
-            return SAW_Context::get_role();
-        }
-        return null;
-    }
-
-    protected function get_current_department_ids() {
-        global $wpdb;
-        if (!class_exists('SAW_Context')) {
-            return [];
-        }
-        $saw_user_id = SAW_Context::get_saw_user_id();
-        if (!$saw_user_id) {
-            return [];
-        }
-        $department_ids = $wpdb->get_col($wpdb->prepare(
-            "SELECT department_id FROM %i WHERE user_id = %d",
-            $wpdb->prefix . 'saw_user_departments',
-            $saw_user_id
-        ));
-        return array_map('intval', $department_ids);
-    }
-
-    // Abstract & Protected methods for compatibility
-    abstract public function validate($data, $id = 0);
-    
-    protected function get_cache_key($type, $identifier = '') {
-        return $this->get_cache_key_with_scope($type, $identifier);
-    }
-    
-    protected function get_accessible_branch_ids() {
-        return [];
-    }
-    
-    protected function get_current_customer_id() {
-        return SAW_Context::get_customer_id();
-    }
-    
-    protected function get_current_branch_id() {
-        return SAW_Context::get_branch_id();
-    }
-
     /**
      * Get value from cache
      *
-     * ✅ REFACTORED: Uses SAW_Cache instead of duplicate logic
-     *
+     * @since 1.0.0
+     * @since 9.0.0 Uses SAW_Cache
      * @param string $key Cache key
      * @return mixed Cached value or false
      */
@@ -627,8 +688,8 @@ abstract class SAW_Base_Model
     /**
      * Set value in cache
      *
-     * ✅ REFACTORED: Uses SAW_Cache instead of duplicate logic
-     *
+     * @since 1.0.0
+     * @since 9.0.0 Uses SAW_Cache
      * @param string $key  Cache key
      * @param mixed  $data Data to cache
      * @return bool True on success
@@ -645,15 +706,8 @@ abstract class SAW_Base_Model
     /**
      * Invalidate all cache for this entity
      *
-     * ✅ REFACTORED: Uses SAW_Cache flush
-     *
-     * @return void
-     */
-    /**
-     * Invalidate all cache for this entity
-     *
-     * ✅ REFACTORED: Uses SAW_Cache flush
-     *
+     * @since 1.0.0
+     * @since 9.0.0 Uses SAW_Cache flush
      * @return void
      */
     protected function invalidate_cache() {
@@ -666,69 +720,190 @@ abstract class SAW_Base_Model
     }
     
     /**
+     * Get cache key (alias for get_cache_key_with_scope)
+     *
+     * @since 1.0.0
+     * @param string $type       Cache type
+     * @param mixed  $identifier Additional identifier
+     * @return string Cache key
+     */
+    protected function get_cache_key($type, $identifier = '') {
+        return $this->get_cache_key_with_scope($type, $identifier);
+    }
+    
+    // =========================================================================
+    // HELPER METHODS
+    // =========================================================================
+    
+    /**
+     * Check if table has specific column
+     *
+     * @since 1.0.0
+     * @param string $column_name Column name to check
+     * @return bool True if column exists
+     */
+    protected function table_has_column($column_name) {
+        static $column_cache = [];
+        $key = $this->table . '_' . $column_name;
+        
+        if (isset($column_cache[$key])) {
+            return $column_cache[$key];
+        }
+        
+        global $wpdb;
+        $columns = $wpdb->get_col($wpdb->prepare(
+            "SHOW COLUMNS FROM %i LIKE %s", 
+            $this->table, 
+            $column_name
+        ));
+        
+        return $column_cache[$key] = !empty($columns);
+    }
+
+    /**
+     * Check if column name is valid (SQL injection prevention)
+     *
+     * @since 1.0.0
+     * @param string $column_name Column name to validate
+     * @return bool True if valid
+     */
+    protected function is_valid_column($column_name) {
+        return preg_match('/^[a-zA-Z0-9_]+$/', $column_name);
+    }
+    
+    /**
+     * Check if orderby column is valid
+     *
+     * @since 5.4.0
+     * @param string $orderby Column name
+     * @return bool True if valid
+     */
+    protected function is_valid_orderby($orderby) {
+        return in_array($orderby, $this->allowed_orderby, true) || $this->is_valid_column($orderby);
+    }
+    
+    /**
+     * Get current user's SAW role
+     *
+     * @since 1.0.0
+     * @return string|null User role or null
+     */
+    protected function get_current_user_role() {
+        if (current_user_can('manage_options')) {
+            return 'super_admin';
+        }
+        if (class_exists('SAW_Context')) {
+            return SAW_Context::get_role();
+        }
+        return null;
+    }
+
+    /**
+     * Get current user's department IDs
+     *
+     * @since 7.0.0
+     * @return array Array of department IDs
+     */
+    protected function get_current_department_ids() {
+        global $wpdb;
+        
+        if (!class_exists('SAW_Context')) {
+            return [];
+        }
+        
+        $saw_user_id = SAW_Context::get_saw_user_id();
+        if (!$saw_user_id) {
+            return [];
+        }
+        
+        $department_ids = $wpdb->get_col($wpdb->prepare(
+            "SELECT department_id FROM %i WHERE user_id = %d",
+            $wpdb->prefix . 'saw_user_departments',
+            $saw_user_id
+        ));
+        
+        return array_map('intval', $department_ids);
+    }
+    
+    /**
+     * Get current customer ID from context
+     *
+     * @since 1.0.0
+     * @return int|null Customer ID or null
+     */
+    protected function get_current_customer_id() {
+        return class_exists('SAW_Context') ? SAW_Context::get_customer_id() : null;
+    }
+    
+    /**
+     * Get current branch ID from context
+     *
+     * @since 1.0.0
+     * @return int|null Branch ID or null
+     */
+    protected function get_current_branch_id() {
+        return class_exists('SAW_Context') ? SAW_Context::get_branch_id() : null;
+    }
+    
+    /**
+     * Get accessible branch IDs for current user
+     *
+     * @since 7.0.0
+     * @return array Array of branch IDs
+     */
+    protected function get_accessible_branch_ids() {
+        return [];
+    }
+    
+    // =========================================================================
+    // VIRTUAL COLUMNS
+    // =========================================================================
+    
+    /**
      * Apply virtual columns to items
      * 
-     * Virtual columns jsou dynamicky počítané hodnoty které nejsou uložené v databázi.
-     * Konfigurace je v config.php modulu pod klíčem 'virtual_columns'.
+     * Virtual columns are dynamically computed values not stored in database.
+     * Configuration is in module's config.php under 'virtual_columns' key.
      * 
-     * Podporované typy:
-     * - 'computed': Jednoduchá funkce bez DB access
-     * - 'complex': Funkce s DB access (použij opatrně - N+1 problém)
-     * - 'batch_computed': Optimalizovaný batch processing s jediným query
-     * - 'concat': Spojí více polí dohromady
-     * - 'date_diff': Vypočítá rozdíl mezi daty
+     * Supported types:
+     * - 'computed': Simple function without DB access
+     * - 'complex': Function with DB access (use sparingly - N+1 problem)
+     * - 'batch_computed': Optimized batch processing with single query
+     * - 'concat': Concatenate multiple fields
+     * - 'date_diff': Calculate difference between dates
      * 
      * @since 8.0.0
-     * @param array $items Array položek z databáze
-     * @return array Položky s aplikovanými virtual columns
+     * @param array $items Array of items from database
+     * @return array Items with applied virtual columns
      */
     protected function apply_virtual_columns($items) {
         if (empty($items) || empty($this->config['virtual_columns'])) {
             return $items;
         }
         
-        // ✅ Validace vstupních dat
         if (!is_array($items)) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[Base Model] apply_virtual_columns: Items is not an array');
-            }
             return $items;
         }
         
         global $wpdb;
         
-        // ✅ Debugging info
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log(sprintf(
-                '[Base Model] Applying virtual columns to %d items. Columns: %s',
-                count($items),
-                implode(', ', array_keys($this->config['virtual_columns']))
-            ));
-        }
-        
-        // =====================================
-        // PRVNÍ PRŮCHOD: Batch computed columns
-        // =====================================
+        // First pass: Batch computed columns
         $batch_results = array();
         foreach ($this->config['virtual_columns'] as $column_name => $column_config) {
             if (($column_config['type'] ?? '') === 'batch_computed') {
                 $item_ids = array_column($items, 'id');
                 
-                // ✅ Ověř že máme nějaké IDs
                 if (empty($item_ids)) {
                     continue;
                 }
                 
                 if (!empty($column_config['batch_query']) && is_callable($column_config['batch_query'])) {
                     try {
-                        // Zavolej batch query callback
                         $batch_data = call_user_func($column_config['batch_query'], $item_ids, $wpdb);
                         
-                        // Indexuj podle visitor_id pro rychlé vyhledávání
                         $indexed = array();
                         if (is_array($batch_data)) {
                             foreach ($batch_data as $row) {
-                                // Podporuj různé názvy ID sloupce
                                 $key = $row['visitor_id'] ?? $row['id'] ?? null;
                                 if ($key) {
                                     $indexed[$key] = $row;
@@ -738,20 +913,14 @@ abstract class SAW_Base_Model
                         
                         $batch_results[$column_name] = $indexed;
                     } catch (Exception $e) {
-                        if (defined('WP_DEBUG') && WP_DEBUG) {
-                            error_log('[Base Model] Batch query error for ' . $column_name . ': ' . $e->getMessage());
-                        }
                         $batch_results[$column_name] = array();
                     }
                 }
             }
         }
         
-        // =====================================
-        // DRUHÝ PRŮCHOD: Aplikuj všechny virtual columns
-        // =====================================
+        // Second pass: Apply all virtual columns
         foreach ($items as &$item) {
-            // ✅ Zkontroluj že item má ID
             if (empty($item['id'])) {
                 continue;
             }
@@ -762,15 +931,12 @@ abstract class SAW_Base_Model
                 try {
                     switch ($type) {
                         case 'computed':
-                            // Jednoduchá computed column - bez DB access
                             if (!empty($column_config['compute']) && is_callable($column_config['compute'])) {
                                 $item[$column_name] = call_user_func($column_config['compute'], $item);
                             }
                             break;
                         
                         case 'complex':
-                            // Komplexní computed column - s DB access
-                            // ⚠️ POZOR: N+1 problém! Používej jen když nezbytné!
                             if (!empty($column_config['compute']) && is_callable($column_config['compute'])) {
                                 if (!empty($column_config['requires_db'])) {
                                     $item[$column_name] = call_user_func($column_config['compute'], $item, $wpdb);
@@ -781,7 +947,6 @@ abstract class SAW_Base_Model
                             break;
                         
                         case 'batch_computed':
-                            // Batch computed - použij předem načtené výsledky
                             if (!empty($column_config['apply']) && is_callable($column_config['apply'])) {
                                 $batch_data = $batch_results[$column_name] ?? array();
                                 $item[$column_name] = call_user_func($column_config['apply'], $item, $batch_data);
@@ -789,7 +954,6 @@ abstract class SAW_Base_Model
                             break;
                         
                         case 'concat':
-                            // Spojí více polí dohromady
                             $values = array();
                             foreach (($column_config['fields'] ?? array()) as $field) {
                                 if (!empty($item[$field])) {
@@ -801,7 +965,6 @@ abstract class SAW_Base_Model
                             break;
                         
                         case 'date_diff':
-                            // Vypočítá rozdíl mezi daty
                             $from = $item[$column_config['from']] ?? null;
                             $to_value = $column_config['to'] ?? 'NOW()';
                             
@@ -826,30 +989,36 @@ abstract class SAW_Base_Model
                                         $item[$column_name] = floor($diff / 3600);
                                         break;
                                     default:
-                                        $item[$column_name] = $diff; // sekundy
+                                        $item[$column_name] = $diff;
                                 }
                             } else {
                                 $item[$column_name] = null;
                             }
                             break;
-                        
-                        default:
-                            // Neznámý typ - ignoruj
-                            if (defined('WP_DEBUG') && WP_DEBUG) {
-                                error_log('[Base Model] Unknown virtual column type: ' . $type);
-                            }
                     }
                 } catch (Exception $e) {
-                    // Loguj error ale pokračuj dál
-                    if (defined('WP_DEBUG') && WP_DEBUG) {
-                        error_log('[Base Model] Error applying virtual column ' . $column_name . ': ' . $e->getMessage());
-                    }
                     $item[$column_name] = null;
                 }
             }
         }
-        unset($item); // Break reference
+        unset($item);
         
         return $items;
     }
+    
+    // =========================================================================
+    // ABSTRACT METHODS
+    // =========================================================================
+    
+    /**
+     * Validate data before save
+     *
+     * Must be implemented by child classes.
+     *
+     * @since 1.0.0
+     * @param array $data Data to validate
+     * @param int   $id   Record ID (0 for new records)
+     * @return bool|WP_Error True if valid, WP_Error otherwise
+     */
+    abstract public function validate($data, $id = 0);
 }

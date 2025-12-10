@@ -1,32 +1,27 @@
 <?php
 /**
  * SAW Table - Main Orchestration Class
- *
- * Central class that coordinates all SAW Table components.
- * Handles config loading, permissions, translations, and rendering delegation.
- *
+ * 
+ * Renders table pages with list view, detail sidebar, and form sidebar.
+ * Configuration-driven - no module-specific templates needed.
+ * 
  * @package     SAW_Visitors
  * @subpackage  Components/SAWTable
  * @version     1.0.0
- * @since       3.0.0
+ * @since       5.3.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-/**
- * SAW Table Main Class
- *
- * @since 3.0.0
- */
+// Load dependencies
+require_once __DIR__ . '/class-saw-table-config.php';
+require_once __DIR__ . '/renderers/class-badge-renderer.php';
+require_once __DIR__ . '/renderers/class-section-renderer.php';
+require_once __DIR__ . '/renderers/class-row-renderer.php';
+
 class SAW_Table {
-    
-    /**
-     * Module entity name
-     * @var string
-     */
-    protected $entity;
     
     /**
      * Module configuration
@@ -35,382 +30,488 @@ class SAW_Table {
     protected $config;
     
     /**
-     * Translations helper
-     * @var SAW_Table_Translations
+     * Table data (items, pagination, etc.)
+     * @var array
      */
-    protected $translations;
+    protected $data;
     
     /**
-     * Permissions helper
-     * @var SAW_Table_Permissions
+     * Sidebar context (mode, items)
+     * @var array
      */
-    protected $permissions;
+    protected $sidebar;
     
     /**
-     * Context helper
-     * @var SAW_Table_Context
+     * Entity name
+     * @var string
      */
-    protected $context;
+    protected $entity;
     
     /**
-     * Feature flag for new table system
+     * Base URL for routes
+     * @var string
      */
-    const FEATURE_FLAG = 'SAW_USE_NEW_TABLE';
+    protected $base_url;
     
     /**
      * Constructor
-     *
-     * @param string $entity Module entity name
-     * @param array  $config Module configuration
+     * 
+     * @param array $config Module configuration
+     * @param array $data Table data
+     * @param array $sidebar Sidebar context
      */
-    public function __construct($entity, $config = []) {
-        $this->entity = sanitize_key($entity);
-        
-        // Load dependencies
-        $this->load_dependencies();
-        
-        // Initialize helpers
-        $this->init_helpers();
-        
-        // Parse and validate config
-        $this->config = $this->parse_config($config);
-        
-        // Set translator for renderers
-        $this->setup_renderers();
+    public function __construct($config, $data = array(), $sidebar = array()) {
+        $this->config = SAW_Table_Config::normalize($config);
+        $this->data = $data;
+        $this->sidebar = $sidebar;
+        $this->entity = $config['entity'] ?? '';
+        $this->base_url = home_url('/admin/' . ($config['route'] ?? $this->entity));
     }
     
     /**
-     * Load required dependencies
-     *
-     * @since 1.0.0
+     * Render the complete table page
      */
-    protected function load_dependencies() {
-        $base_path = dirname(__FILE__) . '/';
-        
-        // Core classes
-        $files = [
-            'class-saw-table-config.php',
-            'class-saw-table-permissions.php',
-            'class-saw-table-translations.php',
-            'class-saw-table-context.php',
-        ];
-        
-        foreach ($files as $file) {
-            $path = $base_path . $file;
-            if (file_exists($path)) {
-                require_once $path;
-            }
-        }
-        
-        // Renderers
-        $renderers = [
-            'class-badge-renderer.php',
-            'class-row-renderer.php',
-            'class-section-renderer.php',
-            'class-detail-renderer.php',
-        ];
-        
-        foreach ($renderers as $renderer) {
-            $path = $base_path . 'renderers/' . $renderer;
-            if (file_exists($path)) {
-                require_once $path;
-            }
-        }
+    public function render() {
+        $this->render_layout();
     }
     
     /**
-     * Initialize helper classes
-     *
-     * @since 1.0.0
+     * Render page layout
      */
-    protected function init_helpers() {
-        // Initialize translations
-        if (class_exists('SAW_Table_Translations')) {
-            $this->translations = new SAW_Table_Translations('admin', $this->entity);
-        }
-        
-        // Initialize permissions
-        if (class_exists('SAW_Table_Permissions')) {
-            SAW_Table_Permissions::init();
-            $this->permissions = new SAW_Table_Permissions();
-        }
-        
-        // Initialize context
-        if (class_exists('SAW_Table_Context')) {
-            $this->context = new SAW_Table_Context();
-        }
+    protected function render_layout() {
+        ?>
+        <div class="sawt-page" data-entity="<?php echo esc_attr($this->entity); ?>">
+            <?php $this->render_page_header(); ?>
+            <?php $this->render_tabs(); ?>
+            
+            <div class="sawt-page-body <?php echo $this->has_sidebar() ? 'has-sidebar' : ''; ?>">
+                <div class="sawt-table-container">
+                    <?php $this->render_table(); ?>
+                </div>
+                
+                <?php if ($this->has_sidebar()): ?>
+                    <?php $this->render_sidebar(); ?>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php
     }
     
     /**
-     * Setup renderers with translator
-     *
-     * @since 1.0.0
+     * Render page header
      */
-    protected function setup_renderers() {
-        if (!$this->translations) {
+    protected function render_page_header() {
+        $title = $this->config['plural'] ?? 'Položky';
+        $icon = $this->config['icon'] ?? '';
+        $total = $this->data['total'] ?? 0;
+        $create_label = 'Nový ' . ($this->config['singular'] ?? 'záznam');
+        ?>
+        <div class="sawt-page-header">
+            <div class="sawt-page-header-left">
+                <?php if ($icon): ?>
+                    <span class="sawt-page-header-icon"><?php echo esc_html($icon); ?></span>
+                <?php endif; ?>
+                <h1 class="sawt-page-title"><?php echo esc_html($title); ?></h1>
+                <span class="sawt-page-count"><?php echo number_format($total); ?></span>
+            </div>
+            <div class="sawt-page-header-right">
+                <?php $this->render_search(); ?>
+                <a href="<?php echo esc_url($this->base_url . '/create'); ?>" class="sawt-btn sawt-btn-primary">
+                    + <?php echo esc_html($create_label); ?>
+                </a>
+            </div>
+        </div>
+        <?php
+    }
+    
+    /**
+     * Render search box
+     */
+    protected function render_search() {
+        $search = $this->data['search'] ?? '';
+        $placeholder = $this->config['list']['search_placeholder'] ?? 'Hledat...';
+        ?>
+        <div class="sawt-search">
+            <span class="sawt-search-icon">🔍</span>
+            <input 
+                type="text" 
+                class="sawt-search-input" 
+                placeholder="<?php echo esc_attr($placeholder); ?>"
+                value="<?php echo esc_attr($search); ?>"
+                data-action="search"
+            >
+        </div>
+        <?php
+    }
+    
+    /**
+     * Render tabs
+     */
+    protected function render_tabs() {
+        $tabs_config = $this->config['tabs'] ?? array();
+        
+        if (empty($tabs_config['enabled'])) {
             return;
         }
         
-        $translator = $this->translations->createTranslator();
+        $tabs = $tabs_config['tabs'] ?? array();
+        $current_tab = $this->data['current_tab'] ?? ($tabs_config['default_tab'] ?? 'all');
+        $tab_counts = $this->data['tab_counts'] ?? array();
+        ?>
+        <div class="sawt-tabs">
+            <?php foreach ($tabs as $key => $tab): ?>
+                <?php
+                $is_active = ($key === $current_tab);
+                $count = $tab_counts[$key] ?? 0;
+                $url = add_query_arg('tab', $key, $this->base_url . '/');
+                ?>
+                <a href="<?php echo esc_url($url); ?>" 
+                   class="sawt-tab <?php echo $is_active ? 'is-active' : ''; ?>"
+                   data-tab="<?php echo esc_attr($key); ?>">
+                    <?php if (!empty($tab['icon'])): ?>
+                        <span class="sawt-tab-icon"><?php echo esc_html($tab['icon']); ?></span>
+                    <?php endif; ?>
+                    <span class="sawt-tab-label"><?php echo esc_html($tab['label']); ?></span>
+                    <span class="sawt-tab-count"><?php echo number_format($count); ?></span>
+                </a>
+            <?php endforeach; ?>
+        </div>
+        <?php
+    }
+    
+    /**
+     * Render table
+     */
+    protected function render_table() {
+        $items = $this->data['items'] ?? array();
+        $columns = $this->config['columns'] ?? array();
         
-        if (class_exists('SAW_Badge_Renderer')) {
-            SAW_Badge_Renderer::set_translator($translator);
+        if (empty($items)) {
+            $this->render_empty_state();
+            return;
         }
+        ?>
+        <table class="sawt-table">
+            <thead class="sawt-table-head">
+                <tr>
+                    <?php foreach ($columns as $key => $col): ?>
+                        <?php $this->render_table_header_cell($key, $col); ?>
+                    <?php endforeach; ?>
+                </tr>
+            </thead>
+            <tbody class="sawt-table-body">
+                <?php foreach ($items as $item): ?>
+                    <?php $this->render_table_row($item, $columns); ?>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
         
-        if (class_exists('SAW_Row_Renderer')) {
-            SAW_Row_Renderer::set_translator($translator);
-        }
+        <?php $this->render_infinite_scroll_loader(); ?>
+        <?php
+    }
+    
+    /**
+     * Render table header cell
+     */
+    protected function render_table_header_cell($key, $col) {
+        $label = $col['label'] ?? '';
+        $sortable = !empty($col['sortable']);
+        $width = $col['width'] ?? '';
+        $align = $col['align'] ?? 'left';
         
-        if (class_exists('SAW_Section_Renderer')) {
-            SAW_Section_Renderer::set_translator($translator);
-        }
-    }
-    
-    /**
-     * Parse and validate configuration
-     *
-     * @param array $config Raw configuration
-     * @return array Parsed configuration
-     */
-    protected function parse_config($config) {
-        if (class_exists('SAW_Table_Config')) {
-            return SAW_Table_Config::parse($config, $this->entity);
-        }
+        $width_class = $width ? "sawt-col-{$width}" : '';
+        $align_class = $align !== 'left' ? "sawt-text-{$align}" : '';
         
-        // Fallback: return as-is
-        return $config;
-    }
-    
-    /**
-     * Check if new table system is enabled
-     *
-     * @return bool
-     */
-    public static function is_enabled() {
-        return defined(self::FEATURE_FLAG) && constant(self::FEATURE_FLAG) === true;
-    }
-    
-    /**
-     * Get entity name
-     *
-     * @return string
-     */
-    public function get_entity() {
-        return $this->entity;
-    }
-    
-    /**
-     * Get configuration
-     *
-     * @return array
-     */
-    public function get_config() {
-        return $this->config;
-    }
-    
-    /**
-     * Get translations helper
-     *
-     * @return SAW_Table_Translations|null
-     */
-    public function get_translations() {
-        return $this->translations;
-    }
-    
-    /**
-     * Get translation value
-     *
-     * @param string $key     Translation key
-     * @param string $fallback Fallback value
-     * @return string
-     */
-    public function tr($key, $fallback = null) {
-        if ($this->translations) {
-            return $this->translations->get($key, $fallback);
-        }
-        return $fallback ?? $key;
-    }
-    
-    /**
-     * Check permission
-     *
-     * @param string $action Action name (view, edit, delete, create)
-     * @return bool
-     */
-    public function can($action) {
-        if (class_exists('SAW_Table_Permissions')) {
-            return SAW_Table_Permissions::can($this->entity, $action);
-        }
+        $classes = array_filter(array('sawt-th', $width_class, $align_class));
         
-        // Fallback: use saw_can if available
-        if (function_exists('saw_can')) {
-            return saw_can($action, $this->entity);
-        }
+        $current_orderby = $this->data['orderby'] ?? '';
+        $current_order = $this->data['order'] ?? 'ASC';
+        $is_sorted = ($current_orderby === $key);
+        ?>
+        <th class="<?php echo esc_attr(implode(' ', $classes)); ?>">
+            <?php if ($sortable): ?>
+                <a href="#" class="sawt-sortable <?php echo $is_sorted ? 'is-sorted' : ''; ?>" 
+                   data-sort="<?php echo esc_attr($key); ?>"
+                   data-order="<?php echo $is_sorted && $current_order === 'ASC' ? 'DESC' : 'ASC'; ?>">
+                    <?php echo esc_html($label); ?>
+                    <?php if ($is_sorted): ?>
+                        <span class="sawt-sort-icon"><?php echo $current_order === 'ASC' ? '↑' : '↓'; ?></span>
+                    <?php endif; ?>
+                </a>
+            <?php else: ?>
+                <?php echo esc_html($label); ?>
+            <?php endif; ?>
+        </th>
+        <?php
+    }
+    
+    /**
+     * Render table row
+     */
+    protected function render_table_row($item, $columns) {
+        $id = $item['id'] ?? 0;
+        $detail_url = str_replace('{id}', $id, $this->base_url . '/{id}/');
+        $is_active = $this->is_active_row($id);
+        ?>
+        <tr class="sawt-tr <?php echo $is_active ? 'is-active' : ''; ?>" 
+            data-id="<?php echo esc_attr($id); ?>"
+            data-url="<?php echo esc_url($detail_url); ?>">
+            <?php foreach ($columns as $key => $col): ?>
+                <?php $this->render_table_cell($item, $key, $col); ?>
+            <?php endforeach; ?>
+        </tr>
+        <?php
+    }
+    
+    /**
+     * Render table cell
+     */
+    protected function render_table_cell($item, $key, $col) {
+        $type = $col['type'] ?? 'text';
+        $value = $item[$key] ?? '';
+        $align = $col['align'] ?? 'left';
+        $bold = !empty($col['bold']);
         
-        return true;
-    }
-    
-    /**
-     * Apply context filtering to query args
-     *
-     * @param array $args Query arguments
-     * @return array Modified arguments
-     */
-    public function apply_context($args) {
-        if ($this->context) {
-            return $this->context->applyFilter($args, $this->config);
-        }
+        $align_class = $align !== 'left' ? "sawt-text-{$align}" : '';
+        $bold_class = $bold ? 'sawt-text-bold' : '';
         
-        return $args;
+        $classes = array_filter(array('sawt-td', $align_class, $bold_class));
+        ?>
+        <td class="<?php echo esc_attr(implode(' ', $classes)); ?>">
+            <?php echo SAW_Row_Renderer::render_value($value, $type, $col, $item); ?>
+        </td>
+        <?php
     }
     
     /**
-     * Get context-aware cache key
-     *
-     * @param string $base_key Base cache key
-     * @return string
+     * Render empty state
      */
-    public function get_cache_key($base_key) {
-        if ($this->context) {
-            return $this->context->getCacheKey($base_key, $this->config);
-        }
+    protected function render_empty_state() {
+        $icon = $this->config['list']['empty_icon'] ?? $this->config['icon'] ?? '📋';
+        $message = $this->config['list']['empty_message'] ?? 'Žádné záznamy nenalezeny';
+        $create_label = 'Vytvořit ' . ($this->config['singular'] ?? 'záznam');
+        ?>
+        <div class="sawt-empty">
+            <div class="sawt-empty-icon"><?php echo esc_html($icon); ?></div>
+            <div class="sawt-empty-title"><?php echo esc_html($message); ?></div>
+            <a href="<?php echo esc_url($this->base_url . '/create'); ?>" class="sawt-btn sawt-btn-primary">
+                + <?php echo esc_html($create_label); ?>
+            </a>
+        </div>
+        <?php
+    }
+    
+    /**
+     * Render infinite scroll loader
+     */
+    protected function render_infinite_scroll_loader() {
+        $config = $this->config['infinite_scroll'] ?? array();
         
-        return $base_key;
+        if (empty($config['enabled'])) {
+            return;
+        }
+        ?>
+        <div class="sawt-infinite-loader" style="display: none;">
+            <div class="sawt-spinner"></div>
+            <span>Načítám další...</span>
+        </div>
+        <?php
     }
     
     /**
-     * Check if detail should be rendered from config
-     *
-     * @return bool
+     * Check if sidebar should be shown
      */
-    public function has_detail_config() {
-        return !empty($this->config['detail']['sections']);
+    protected function has_sidebar() {
+        return !empty($this->sidebar['mode']);
     }
     
     /**
-     * Check if form should be rendered from config
-     *
-     * @return bool
+     * Render sidebar
      */
-    public function has_form_config() {
-        return !empty($this->config['form']['fields']);
+    protected function render_sidebar() {
+        $mode = $this->sidebar['mode'] ?? '';
+        
+        if ($mode === 'detail') {
+            $this->render_detail_sidebar();
+        } elseif ($mode === 'form') {
+            $this->render_form_sidebar();
+        }
     }
     
     /**
      * Render detail sidebar
-     *
-     * @param array $item        Item data
-     * @param array $related_data Related data
-     * @return string HTML
      */
-    public function render_detail($item, $related_data = []) {
-        // Check if new system is enabled and config exists
-        if (self::is_enabled() && $this->has_detail_config()) {
-            if (class_exists('SAW_Detail_Renderer')) {
-                return SAW_Detail_Renderer::render(
-                    $this->config,
-                    $item,
-                    $related_data,
-                    $this->entity
-                );
-            }
+    protected function render_detail_sidebar() {
+        $item = $this->sidebar['detail_item'] ?? null;
+        
+        if (empty($item)) {
+            return;
         }
         
-        // Fallback: use old template
-        return $this->render_legacy_detail($item, $related_data);
+        $detail_config = $this->config['detail'] ?? array();
+        $title = $item['display_name'] ?? $item['name'] ?? 'Detail';
+        ?>
+        <div class="sawt-sidebar-wrapper is-open">
+            <div class="sawt-sidebar-backdrop" data-action="close-sidebar"></div>
+            <div class="sawt-sidebar">
+                <!-- Header with navigation -->
+                <div class="sawt-sidebar-header">
+                    <div class="sawt-sidebar-header-left">
+                        <button type="button" class="sawt-sidebar-nav-btn" data-action="prev" title="Předchozí">
+                            ←
+                        </button>
+                        <button type="button" class="sawt-sidebar-nav-btn" data-action="next" title="Další">
+                            →
+                        </button>
+                    </div>
+                    <div class="sawt-sidebar-header-right">
+                        <button type="button" class="sawt-sidebar-close" data-action="close-sidebar">
+                            ✕
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Content -->
+                <div class="sawt-sidebar-content">
+                    <?php $this->render_detail_header($item, $detail_config); ?>
+                    <?php $this->render_detail_sections($item, $detail_config); ?>
+                </div>
+                
+                <!-- Floating actions -->
+                <?php $this->render_floating_actions($item, $detail_config); ?>
+            </div>
+        </div>
+        <?php
     }
     
     /**
-     * Render legacy detail template
-     *
-     * @param array $item        Item data
-     * @param array $related_data Related data
-     * @return string HTML
+     * Render detail header (blue gradient)
      */
-    protected function render_legacy_detail($item, $related_data = []) {
-        $module_slug = str_replace('_', '-', $this->entity);
-        $template_path = SAW_VISITORS_PLUGIN_DIR . "includes/modules/{$module_slug}/detail-modal-template.php";
-        
-        if (!file_exists($template_path)) {
-            return '<div class="saw-alert saw-alert-warning">' . 
-                   esc_html__('Detail template not found', 'saw-visitors') . 
-                   '</div>';
-        }
-        
-        // Make variables available to template
-        $entity = $this->entity;
-        $config = $this->config;
-        
-        ob_start();
-        include $template_path;
-        return ob_get_clean();
+    protected function render_detail_header($item, $config) {
+        $title = $item['display_name'] ?? $item['name'] ?? 'Detail';
+        $badges = $config['header_badges'] ?? array();
+        ?>
+        <div class="sawt-detail-header">
+            <div class="sawt-detail-header-inner">
+                <h3 class="sawt-detail-header-title"><?php echo esc_html($title); ?></h3>
+                
+                <?php if (!empty($badges)): ?>
+                <div class="sawt-detail-header-meta">
+                    <?php echo SAW_Badge_Renderer::render_badges($badges, $item); ?>
+                </div>
+                <?php endif; ?>
+            </div>
+            <div class="sawt-detail-header-stripe"></div>
+        </div>
+        <?php
     }
     
     /**
-     * Render header badges
-     *
-     * @param array $item Item data
-     * @return string HTML
+     * Render detail sections
      */
-    public function render_header_badges($item) {
-        if (!class_exists('SAW_Badge_Renderer')) {
-            return '';
+    protected function render_detail_sections($item, $config) {
+        $sections = $config['sections'] ?? array();
+        
+        if (empty($sections)) {
+            return;
         }
-        
-        $badges = $this->config['detail']['header_badges'] ?? [];
-        
-        if (empty($badges)) {
-            return '';
-        }
-        
-        return SAW_Badge_Renderer::render_badges($badges, $item);
+        ?>
+        <div class="sawt-detail-wrapper">
+            <div class="sawt-detail-stack">
+                <?php foreach ($sections as $key => $section): ?>
+                    <?php echo SAW_Section_Renderer::render($section, $item, array(), $this->entity); ?>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php
     }
     
     /**
-     * Render detail section
-     *
-     * @param array  $section_config Section configuration
-     * @param array  $item           Item data
-     * @param array  $related_data   Related data
-     * @return string HTML
+     * Render floating action buttons
      */
-    public function render_section($section_config, $item, $related_data = []) {
-        if (!class_exists('SAW_Section_Renderer')) {
-            return '';
+    protected function render_floating_actions($item, $config) {
+        $actions = $config['actions'] ?? array();
+        
+        if (empty($actions)) {
+            return;
         }
         
-        return SAW_Section_Renderer::render(
-            $section_config,
-            $item,
-            $related_data,
-            $this->entity
-        );
+        $id = $item['id'] ?? 0;
+        ?>
+        <div class="sawt-floating-actions">
+            <?php if (!empty($actions['edit'])): ?>
+                <a href="<?php echo esc_url($this->base_url . '/' . $id . '/edit'); ?>" 
+                   class="sawt-floating-btn sawt-floating-btn-edit"
+                   title="<?php echo esc_attr($actions['edit']['label'] ?? 'Upravit'); ?>">
+                    ✏️
+                </a>
+            <?php endif; ?>
+            
+            <?php if (!empty($actions['delete'])): ?>
+                <button type="button" 
+                        class="sawt-floating-btn sawt-floating-btn-delete"
+                        data-action="delete"
+                        data-id="<?php echo esc_attr($id); ?>"
+                        data-confirm="<?php echo esc_attr($actions['delete']['confirm'] ?? 'Opravdu smazat?'); ?>"
+                        title="<?php echo esc_attr($actions['delete']['label'] ?? 'Smazat'); ?>">
+                    🗑️
+                </button>
+            <?php endif; ?>
+        </div>
+        <?php
     }
     
     /**
-     * Filter action buttons based on permissions
-     *
-     * @param array $buttons Button configurations
-     * @return array Filtered buttons
+     * Render form sidebar
      */
-    public function filter_action_buttons($buttons) {
-        if (class_exists('SAW_Table_Permissions')) {
-            return SAW_Table_Permissions::filterActionButtons($buttons, $this->entity);
-        }
-        
-        return $buttons;
+    protected function render_form_sidebar() {
+        $item = $this->sidebar['form_item'] ?? null;
+        $is_edit = !empty($item);
+        $title = $is_edit 
+            ? 'Upravit ' . ($this->config['singular'] ?? 'záznam')
+            : 'Nový ' . ($this->config['singular'] ?? 'záznam');
+        ?>
+        <div class="sawt-sidebar-wrapper is-open">
+            <div class="sawt-sidebar-backdrop" data-action="close-sidebar"></div>
+            <div class="sawt-sidebar sawt-sidebar-form">
+                <div class="sawt-sidebar-header">
+                    <div class="sawt-sidebar-header-left">
+                        <h2 class="sawt-sidebar-title"><?php echo esc_html($title); ?></h2>
+                    </div>
+                    <div class="sawt-sidebar-header-right">
+                        <button type="button" class="sawt-sidebar-close" data-action="close-sidebar">
+                            ✕
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="sawt-sidebar-content">
+                    <?php
+                    // Include form template
+                    $form_template = $this->config['path'] . 'form-template.php';
+                    if (file_exists($form_template)) {
+                        $GLOBALS['saw_sidebar_form'] = true;
+                        $config = $this->config;
+                        include $form_template;
+                        unset($GLOBALS['saw_sidebar_form']);
+                    }
+                    ?>
+                </div>
+            </div>
+        </div>
+        <?php
     }
     
     /**
-     * Get allowed actions for current user
-     *
-     * @return array
+     * Check if row is active (selected)
      */
-    public function get_allowed_actions() {
-        if (class_exists('SAW_Table_Permissions')) {
-            return SAW_Table_Permissions::getAllowedActions($this->entity);
+    protected function is_active_row($id) {
+        if (!empty($this->sidebar['detail_item']['id'])) {
+            return $this->sidebar['detail_item']['id'] == $id;
         }
-        
-        return ['list', 'view', 'create', 'edit', 'delete'];
+        if (!empty($this->sidebar['form_item']['id'])) {
+            return $this->sidebar['form_item']['id'] == $id;
+        }
+        return false;
     }
 }

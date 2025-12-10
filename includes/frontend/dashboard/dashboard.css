@@ -5,7 +5,7 @@
 
 .saw-dash {
     padding: 20px 20px 40px;
-    max-width: 1500px;
+    max-width: 100%;
     margin: 0 auto;
 }
 .saw-dash * { box-sizing: border-box; }

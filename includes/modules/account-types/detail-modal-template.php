@@ -2,9 +2,12 @@
 /**
  * Account Types Detail Sidebar Template
  * 
+ * FALLBACK: This template is used until SAW Table is fully implemented.
+ * Once SAW Table detail rendering is complete, this file can be deleted.
+ * 
  * @package     SAW_Visitors
  * @subpackage  Modules/AccountTypes
- * @version     3.2.0 - Uses global CSS classes (saw-industrial-section)
+ * @version     4.0.0 - SAW Table integration (fallback)
  */
 
 if (!defined('ABSPATH')) {

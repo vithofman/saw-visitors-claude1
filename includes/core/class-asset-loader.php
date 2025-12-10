@@ -405,97 +405,114 @@ class SAW_Asset_Loader {
      * @return void
      */
     private static function enqueue_component_scripts() {
-        $component_scripts = [
-            'saw-navigation-components' => [
-                'path' => 'assets/js/components/navigation-components.js',
-                'deps' => ['jquery', 'saw-app'],
-                'localize_multiple' => [
-                    'sawCustomerSwitcher' => [
-                        'ajaxurl' => admin_url('admin-ajax.php'),
-                        'nonce' => wp_create_nonce('saw_customer_switcher'),
-                    ],
-                    'sawBranchSwitcher' => [
-                        'ajaxurl' => admin_url('admin-ajax.php'),
-                        'nonce' => wp_create_nonce('saw_branch_switcher'),
-                    ],
-                    'sawLanguageSwitcher' => [
-                        'ajaxurl' => admin_url('admin-ajax.php'),
-                        'nonce' => wp_create_nonce('saw_language_switcher'),
-                    ]
-                ]
-            ],
-            'saw-forms' => [
-                'path' => 'assets/js/components/forms.js',
-                'deps' => ['jquery', 'saw-app'],
-            ],
-            'saw-file-upload-modern' => [
-                'path' => 'assets/js/components/file-upload-modern.js',
-                'deps' => ['jquery'],
-                'localize' => 'sawFileUpload',
-                'localize_data' => [
+    $component_scripts = [
+        'saw-navigation-components' => [
+            'path' => 'assets/js/components/navigation-components.js',
+            'deps' => ['jquery', 'saw-app'],
+            'localize_multiple' => [
+                'sawCustomerSwitcher' => [
                     'ajaxurl' => admin_url('admin-ajax.php'),
-                    'nonce' => wp_create_nonce('saw_upload_file'),
-                    'strings' => [
-                        'uploading' => 'Nahrávání...',
-                        'success' => 'Soubor byl úspěšně nahrán',
-                        'error' => 'Chyba při nahrávání',
-                        'file_too_large' => 'Soubor je příliš velký',
-                        'invalid_type' => 'Nepodporovaný formát souboru',
-                        'select_files' => 'Vybrat soubory',
-                        'drag_drop' => 'Přetáhněte soubory nebo',
-                    ]
+                    'nonce' => wp_create_nonce('saw_customer_switcher'),
+                ],
+                'sawBranchSwitcher' => [
+                    'ajaxurl' => admin_url('admin-ajax.php'),
+                    'nonce' => wp_create_nonce('saw_branch_switcher'),
+                ],
+                'sawLanguageSwitcher' => [
+                    'ajaxurl' => admin_url('admin-ajax.php'),
+                    'nonce' => wp_create_nonce('saw_language_switcher'),
                 ]
-            ],
-            'saw-ui' => [
-                'path' => 'assets/js/components/ui.js',
-                'deps' => ['jquery', 'saw-app'],
-            ],
-            'saw-admin-table-component' => [
-                'path' => 'assets/js/components/admin-table.js',
-                'deps' => ['jquery', 'saw-app'],
-            ],
-            'saw-tabs-navigation' => [
-                'path' => 'assets/js/components/tabs-navigation.js',
-                'deps' => ['jquery', 'saw-app', 'saw-admin-table-component'],
-            ],
-        ];
+            ]
+        ],
+        'saw-forms' => [
+            'path' => 'assets/js/components/forms.js',
+            'deps' => ['jquery', 'saw-app'],
+        ],
+        'saw-file-upload-modern' => [
+            'path' => 'assets/js/components/file-upload-modern.js',
+            'deps' => ['jquery'],
+            'localize' => 'sawFileUpload',
+            'localize_data' => [
+                'ajaxurl' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('saw_upload_file'),
+                'strings' => [
+                    'uploading' => 'Nahrávání...',
+                    'success' => 'Soubor byl úspěšně nahrán',
+                    'error' => 'Chyba při nahrávání',
+                    'file_too_large' => 'Soubor je příliš velký',
+                    'invalid_type' => 'Nepodporovaný formát souboru',
+                    'select_files' => 'Vybrat soubory',
+                    'drag_drop' => 'Přetáhněte soubory nebo',
+                ]
+            ]
+        ],
+        'saw-ui' => [
+            'path' => 'assets/js/components/ui.js',
+            'deps' => ['jquery', 'saw-app'],
+        ],
+        'saw-admin-table-component' => [
+            'path' => 'assets/js/components/admin-table.js',
+            'deps' => ['jquery', 'saw-app'],
+        ],
+        'saw-tabs-navigation' => [
+            'path' => 'assets/js/components/tabs-navigation.js',
+            'deps' => ['jquery', 'saw-app', 'saw-admin-table-component'],
+        ],
+        // NEW: SAW Table Component JavaScript (v5.4.0)
+        'saw-table' => [
+            'path' => 'includes/components/saw-table/assets/js/saw-table.js',
+            'deps' => ['jquery', 'saw-app'],
+            'localize' => 'sawTableGlobal',
+            'localize_data' => [
+                'ajaxurl' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('saw_ajax_nonce'),
+                'i18n' => [
+                    'loading' => 'Načítání...',
+                    'error' => 'Došlo k chybě',
+                    'confirmDelete' => 'Opravdu chcete smazat tento záznam?',
+                    'deleted' => 'Záznam byl smazán',
+                    'saved' => 'Záznam byl uložen',
+                ]
+            ]
+        ],
+    ];
+    
+    foreach ($component_scripts as $handle => $config) {
+        $script_path = SAW_VISITORS_PLUGIN_DIR . $config['path'];
         
-        foreach ($component_scripts as $handle => $config) {
-            $script_path = SAW_VISITORS_PLUGIN_DIR . $config['path'];
-            
-            if (!file_exists($script_path)) {
-                continue;
-            }
-            
-            wp_enqueue_script(
+        if (!file_exists($script_path)) {
+            continue;
+        }
+        
+        wp_enqueue_script(
+            $handle,
+            SAW_VISITORS_PLUGIN_URL . $config['path'],
+            $config['deps'],
+            SAW_VISITORS_VERSION,
+            true
+        );
+        
+        // Localize script if needed
+        if (isset($config['localize']) && isset($config['localize_data'])) {
+            wp_localize_script(
                 $handle,
-                SAW_VISITORS_PLUGIN_URL . $config['path'],
-                $config['deps'],
-                SAW_VISITORS_VERSION,
-                true
+                $config['localize'],
+                $config['localize_data']
             );
-            
-            // Localize script if needed
-            if (isset($config['localize']) && isset($config['localize_data'])) {
+        }
+        
+        // Multiple localizations
+        if (isset($config['localize_multiple']) && is_array($config['localize_multiple'])) {
+            foreach ($config['localize_multiple'] as $localize_name => $localize_data) {
                 wp_localize_script(
                     $handle,
-                    $config['localize'],
-                    $config['localize_data']
+                    $localize_name,
+                    $localize_data
                 );
-            }
-            
-            // Multiple localizations
-            if (isset($config['localize_multiple']) && is_array($config['localize_multiple'])) {
-                foreach ($config['localize_multiple'] as $localize_name => $localize_data) {
-                    wp_localize_script(
-                        $handle,
-                        $localize_name,
-                        $localize_data
-                    );
-                }
             }
         }
     }
+}
     
     /**
      * Enqueue WordPress editor assets (for content module only)

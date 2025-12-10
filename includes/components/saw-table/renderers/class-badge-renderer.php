@@ -3,11 +3,11 @@
  * SAW Badge Renderer
  *
  * Renders header badges based on configuration.
- * Supports translations, permissions, and multiple badge types.
+ * Uses sawt- CSS prefix.
  *
  * @package     SAW_Visitors
  * @subpackage  Components/SAWTable/Renderers
- * @version     1.0.0
+ * @version     2.0.0 - Updated to sawt- prefix
  * @since       3.0.0
  */
 
@@ -17,22 +17,21 @@ if (!defined('ABSPATH')) {
 
 /**
  * SAW Badge Renderer Class
- *
- * @since 3.0.0
  */
 class SAW_Badge_Renderer {
     
     /**
      * Badge types
      */
-    const TYPE_STATUS = 'status';       // Value → color + icon + label
-    const TYPE_ICON_TEXT = 'icon_text'; // Icon + field value
-    const TYPE_CODE = 'code';           // Monospace code
-    const TYPE_PLAIN = 'plain';         // Just value
-    const TYPE_COUNT = 'count';         // Number + suffix
-    const TYPE_ROLE = 'role';           // User role (special colors)
-    const TYPE_FLAG = 'flag';           // Large emoji
-    const TYPE_IMAGE = 'image';         // Logo/image thumbnail
+    const TYPE_STATUS = 'status';
+    const TYPE_ICON_TEXT = 'icon_text';
+    const TYPE_CODE = 'code';
+    const TYPE_PLAIN = 'plain';
+    const TYPE_COUNT = 'count';
+    const TYPE_ROLE = 'role';
+    const TYPE_FLAG = 'flag';
+    const TYPE_IMAGE = 'image';
+    const TYPE_COLOR = 'color';
     
     /**
      * Translation function
@@ -42,8 +41,6 @@ class SAW_Badge_Renderer {
     
     /**
      * Set translator function
-     *
-     * @param callable $translator Translation function
      */
     public static function set_translator($translator) {
         self::$translator = $translator;
@@ -51,10 +48,6 @@ class SAW_Badge_Renderer {
     
     /**
      * Translate key
-     *
-     * @param string      $key      Translation key
-     * @param string|null $fallback Fallback value
-     * @return string
      */
     private static function tr($key, $fallback = null) {
         if (self::$translator && is_callable(self::$translator)) {
@@ -65,10 +58,6 @@ class SAW_Badge_Renderer {
     
     /**
      * Render badge based on config
-     *
-     * @param array $config Badge configuration
-     * @param array $item   Item data
-     * @return string HTML
      */
     public static function render($config, $item) {
         $type = $config['type'] ?? self::TYPE_PLAIN;
@@ -88,6 +77,8 @@ class SAW_Badge_Renderer {
                 return self::render_flag($config, $item);
             case self::TYPE_IMAGE:
                 return self::render_image($config, $item);
+            case self::TYPE_COLOR:
+                return self::render_color($config, $item);
             default:
                 return self::render_plain($config, $item);
         }
@@ -95,10 +86,6 @@ class SAW_Badge_Renderer {
     
     /**
      * Render multiple badges
-     *
-     * @param array $badges Array of badge configs
-     * @param array $item   Item data
-     * @return string HTML
      */
     public static function render_badges($badges, $item) {
         $html = [];
@@ -111,7 +98,7 @@ class SAW_Badge_Renderer {
                 }
             }
             
-            // Check permission for badge visibility
+            // Check permission
             if (!empty($badge['permission'])) {
                 if (!self::check_permission($badge['permission'])) {
                     continue;
@@ -128,24 +115,17 @@ class SAW_Badge_Renderer {
     }
     
     /**
-     * Render status badge with translation support
-     *
-     * @param array $config Badge configuration
-     * @param array $item   Item data
-     * @return string HTML
+     * Render status badge
      */
     private static function render_status($config, $item) {
         $field = $config['field'] ?? '';
         $value = $item[$field] ?? '';
         
-        // Allow empty string but not null
         if ($value === null || ($value === '' && !isset($config['map']['']))) {
             return '';
         }
         
-        // Convert to string for map lookup
         $value = (string) $value;
-        
         $map = $config['map'] ?? [];
         $mapping = $map[$value] ?? null;
         
@@ -154,8 +134,6 @@ class SAW_Badge_Renderer {
         }
         
         $icon = $mapping['icon'] ?? '';
-        
-        // Support translation keys in label
         $label = $mapping['label'] ?? $value;
         if (!empty($mapping['label_key'])) {
             $label = self::tr($mapping['label_key'], $label);
@@ -164,7 +142,7 @@ class SAW_Badge_Renderer {
         $color = $mapping['color'] ?? 'secondary';
         
         return sprintf(
-            '<span class="saw-badge-transparent saw-badge-%s">%s%s</span>',
+            '<span class="sawt-badge-transparent sawt-badge-%s">%s%s</span>',
             esc_attr($color),
             $icon ? esc_html($icon) . ' ' : '',
             esc_html($label)
@@ -173,10 +151,6 @@ class SAW_Badge_Renderer {
     
     /**
      * Render icon + text badge
-     *
-     * @param array $config Badge configuration
-     * @param array $item   Item data
-     * @return string HTML
      */
     private static function render_icon_text($config, $item) {
         $field = $config['field'] ?? '';
@@ -188,15 +162,14 @@ class SAW_Badge_Renderer {
         
         $icon = $config['icon'] ?? '';
         $prefix = $config['prefix'] ?? '';
-        $suffix = $config['suffix'] ?? '';
+        $suffix = $config['suffix_text'] ?? '';
         $color = $config['color'] ?? '';
         
-        // Support translation key for label
         if (!empty($config['label_key'])) {
             $value = self::tr($config['label_key'], $value);
         }
         
-        $class = $color ? "saw-badge-transparent saw-badge-{$color}" : 'saw-badge-transparent';
+        $class = $color ? "sawt-badge-transparent sawt-badge-{$color}" : 'sawt-badge-transparent';
         
         return sprintf(
             '<span class="%s">%s%s%s%s</span>',
@@ -210,10 +183,6 @@ class SAW_Badge_Renderer {
     
     /**
      * Render code badge (monospace)
-     *
-     * @param array $config Badge configuration
-     * @param array $item   Item data
-     * @return string HTML
      */
     private static function render_code($config, $item) {
         $field = $config['field'] ?? '';
@@ -226,18 +195,14 @@ class SAW_Badge_Renderer {
         $prefix = $config['prefix'] ?? '';
         
         return sprintf(
-            '<span class="saw-badge-transparent saw-badge-code">%s%s</span>',
+            '<span class="sawt-badge-transparent sawt-badge-code">%s%s</span>',
             esc_html($prefix),
             esc_html($value)
         );
     }
     
     /**
-     * Render plain badge (just value)
-     *
-     * @param array $config Badge configuration
-     * @param array $item   Item data
-     * @return string HTML
+     * Render plain badge
      */
     private static function render_plain($config, $item) {
         $field = $config['field'] ?? '';
@@ -248,7 +213,7 @@ class SAW_Badge_Renderer {
         }
         
         $color = $config['color'] ?? '';
-        $class = $color ? "saw-badge-transparent saw-badge-{$color}" : 'saw-badge-transparent';
+        $class = $color ? "sawt-badge-transparent sawt-badge-{$color}" : 'sawt-badge-transparent';
         
         return sprintf(
             '<span class="%s">%s</span>',
@@ -259,17 +224,13 @@ class SAW_Badge_Renderer {
     
     /**
      * Render count badge with Czech pluralization
-     *
-     * @param array $config Badge configuration
-     * @param array $item   Item data
-     * @return string HTML
      */
     private static function render_count($config, $item) {
         $field = $config['field'] ?? '';
         $count = intval($item[$field] ?? 0);
         $icon = $config['icon'] ?? '';
         
-        // Czech pluralization with translation support
+        // Czech pluralization
         $suffix = $config['suffix'] ?? [];
         if ($count === 1) {
             $word = $suffix['singular'] ?? '';
@@ -289,7 +250,7 @@ class SAW_Badge_Renderer {
         }
         
         $color = $config['color'] ?? '';
-        $class = $color ? "saw-badge-transparent saw-badge-{$color}" : 'saw-badge-transparent';
+        $class = $color ? "sawt-badge-transparent sawt-badge-{$color}" : 'sawt-badge-transparent';
         
         return sprintf(
             '<span class="%s">%s%d %s</span>',
@@ -301,11 +262,7 @@ class SAW_Badge_Renderer {
     }
     
     /**
-     * Render role badge (users module)
-     *
-     * @param array $config Badge configuration
-     * @param array $item   Item data
-     * @return string HTML
+     * Render role badge
      */
     private static function render_role($config, $item) {
         $field = $config['field'] ?? 'role';
@@ -315,7 +272,6 @@ class SAW_Badge_Renderer {
             return '';
         }
         
-        // Default labels with translation support
         $labels = $config['labels'] ?? [
             'super_admin' => self::tr('role_super_admin', 'Super Admin'),
             'admin' => self::tr('role_admin', 'Admin'),
@@ -327,7 +283,7 @@ class SAW_Badge_Renderer {
         $label = $labels[$role] ?? $role;
         
         return sprintf(
-            '<span class="saw-role-badge saw-role-%s">%s</span>',
+            '<span class="sawt-role-badge sawt-role-%s">%s</span>',
             esc_attr($role),
             esc_html($label)
         );
@@ -335,10 +291,6 @@ class SAW_Badge_Renderer {
     
     /**
      * Render flag badge (large emoji)
-     *
-     * @param array $config Badge configuration
-     * @param array $item   Item data
-     * @return string HTML
      */
     private static function render_flag($config, $item) {
         $field = $config['field'] ?? '';
@@ -349,28 +301,23 @@ class SAW_Badge_Renderer {
         }
         
         return sprintf(
-            '<span class="saw-badge-flag">%s</span>',
+            '<span class="sawt-badge-flag">%s</span>',
             esc_html($value)
         );
     }
     
     /**
-     * Render image badge (logo/thumbnail)
-     *
-     * @param array $config Badge configuration
-     * @param array $item   Item data
-     * @return string HTML
+     * Render image badge
      */
     private static function render_image($config, $item) {
         $field = $config['field'] ?? '';
         $value = $item[$field] ?? '';
         
         if (empty($value)) {
-            // Fallback icon if no image
             $fallback = $config['fallback_icon'] ?? '';
             if ($fallback) {
                 return sprintf(
-                    '<span class="saw-header-image-fallback">%s</span>',
+                    '<span class="sawt-header-image-fallback">%s</span>',
                     esc_html($fallback)
                 );
             }
@@ -382,7 +329,7 @@ class SAW_Badge_Renderer {
         $alt = $config['alt'] ?? '';
         
         return sprintf(
-            '<img src="%s" alt="%s" class="saw-header-image" style="width: %s; height: %s; object-fit: cover; %s">',
+            '<img src="%s" alt="%s" class="sawt-header-image" style="width: %s; height: %s; object-fit: cover; %s">',
             esc_url($value),
             esc_attr($alt),
             esc_attr($size),
@@ -392,14 +339,37 @@ class SAW_Badge_Renderer {
     }
     
     /**
+     * Render color badge with swatch
+     */
+    private static function render_color($config, $item) {
+        $field = $config['field'] ?? '';
+        $value = $item[$field] ?? '';
+        
+        if (empty($value)) {
+            return '';
+        }
+        
+        $show_value = !empty($config['show_value']);
+        
+        $html = '<span class="sawt-badge-transparent sawt-badge-color">';
+        $html .= sprintf(
+            '<span class="sawt-badge-color-dot" style="background-color: %s;"></span>',
+            esc_attr($value)
+        );
+        if ($show_value) {
+            $html .= ' ' . esc_html($value);
+        }
+        $html .= '</span>';
+        
+        return $html;
+    }
+    
+    /**
      * Check permission
-     *
-     * @param string $permission Permission string (e.g., "view:users")
-     * @return bool
      */
     private static function check_permission($permission) {
         if (!class_exists('SAW_Table_Permissions')) {
-            return true; // Fallback: allow if permissions not available
+            return true;
         }
         
         $parts = explode(':', $permission);
@@ -411,40 +381,24 @@ class SAW_Badge_Renderer {
     
     /**
      * Evaluate condition
-     *
-     * Safely evaluates a condition string against item data.
-     *
-     * @param string $condition Condition string
-     * @param array  $item      Item data
-     * @return bool
      */
     private static function evaluate_condition($condition, $item) {
-        // Replace $item references with actual values
         $condition = preg_replace_callback(
             '/\$item\[([\'"])(.+?)\1\]/',
             function($matches) use ($item) {
                 $field = $matches[2];
                 $value = $item[$field] ?? null;
                 
-                if (is_null($value)) {
-                    return 'null';
-                }
-                if (is_bool($value)) {
-                    return $value ? 'true' : 'false';
-                }
-                if (is_string($value)) {
-                    return "'" . addslashes($value) . "'";
-                }
-                if (is_array($value)) {
-                    return 'array()';
-                }
+                if (is_null($value)) return 'null';
+                if (is_bool($value)) return $value ? 'true' : 'false';
+                if (is_string($value)) return "'" . addslashes($value) . "'";
+                if (is_array($value)) return 'array()';
                 return $value;
             },
             $condition
         );
         
         try {
-            // phpcs:ignore WordPress.PHP.RestrictedPHPFunctions.eval_eval
             return eval("return {$condition};");
         } catch (Exception $e) {
             return false;
@@ -455,8 +409,6 @@ class SAW_Badge_Renderer {
     
     /**
      * Get available badge types
-     *
-     * @return array
      */
     public static function get_types() {
         return [
@@ -468,59 +420,7 @@ class SAW_Badge_Renderer {
             self::TYPE_ROLE,
             self::TYPE_FLAG,
             self::TYPE_IMAGE,
+            self::TYPE_COLOR,
         ];
-    }
-    
-    /**
-     * Get badge type info
-     *
-     * @param string $type Badge type
-     * @return array Type information
-     */
-    public static function get_type_info($type) {
-        $info = [
-            self::TYPE_STATUS => [
-                'label' => 'Status Badge',
-                'description' => 'Colored badge based on value mapping',
-                'required' => ['field', 'map'],
-            ],
-            self::TYPE_ICON_TEXT => [
-                'label' => 'Icon + Text',
-                'description' => 'Icon followed by field value',
-                'required' => ['field'],
-            ],
-            self::TYPE_CODE => [
-                'label' => 'Code',
-                'description' => 'Monospace code display',
-                'required' => ['field'],
-            ],
-            self::TYPE_PLAIN => [
-                'label' => 'Plain Text',
-                'description' => 'Simple text value',
-                'required' => ['field'],
-            ],
-            self::TYPE_COUNT => [
-                'label' => 'Count',
-                'description' => 'Number with pluralized suffix',
-                'required' => ['field', 'suffix'],
-            ],
-            self::TYPE_ROLE => [
-                'label' => 'Role Badge',
-                'description' => 'User role with special styling',
-                'required' => ['field'],
-            ],
-            self::TYPE_FLAG => [
-                'label' => 'Flag/Emoji',
-                'description' => 'Large emoji display',
-                'required' => ['field'],
-            ],
-            self::TYPE_IMAGE => [
-                'label' => 'Image',
-                'description' => 'Logo or thumbnail image',
-                'required' => ['field'],
-            ],
-        ];
-        
-        return $info[$type] ?? [];
     }
 }
