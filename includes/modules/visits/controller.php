@@ -338,6 +338,11 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         if (method_exists($this->model, 'update_pin_expiration')) {
             $this->model->update_pin_expiration($visit_id);
         }
+        
+        // ========================================
+        // SAVE VISITORS FROM JSON
+        // ========================================
+        $this->save_visitors_from_json($visit_id);
     }
 
     /**
@@ -1041,5 +1046,178 @@ S pozdravem,
                 'format' => 'd.m.Y',
             ),
         );
+    }
+    
+    /**
+     * Save visitors from JSON data
+     * 
+     * Processes visitors_json POST data and performs INSERT/UPDATE/DELETE operations.
+     * 
+     * @since 7.1.0
+     * @param int $visit_id Visit ID
+     * @return void
+     */
+    private function save_visitors_from_json($visit_id) {
+        global $wpdb;
+        
+        if (!$visit_id || !isset($_POST['visitors_json'])) {
+            return;
+        }
+        
+        $visitors_json = stripslashes($_POST['visitors_json']);
+        $visitors = json_decode($visitors_json, true);
+        
+        if (!is_array($visitors)) {
+            return;
+        }
+        
+        // Získat customer_id a branch_id z návštěvy
+        $visit = $wpdb->get_row($wpdb->prepare(
+            "SELECT customer_id, branch_id FROM {$wpdb->prefix}saw_visits WHERE id = %d",
+            $visit_id
+        ), ARRAY_A);
+        
+        if (!$visit || empty($visit['customer_id']) || empty($visit['branch_id'])) {
+            return;
+        }
+        
+        $customer_id = intval($visit['customer_id']);
+        $branch_id = intval($visit['branch_id']);
+        $visitors_table = $wpdb->prefix . 'saw_visitors';
+        
+        foreach ($visitors as $visitor) {
+            $status = sanitize_text_field($visitor['_status'] ?? '');
+            $db_id = !empty($visitor['_dbId']) ? intval($visitor['_dbId']) : null;
+            
+            // Bezpečnostní kontrola: ověřit že _dbId patří k této návštěvě
+            if ($db_id) {
+                $belongs = $wpdb->get_var($wpdb->prepare(
+                    "SELECT COUNT(*) FROM {$visitors_table} WHERE id = %d AND visit_id = %d",
+                    $db_id,
+                    $visit_id
+                ));
+                
+                if (!$belongs) {
+                    continue; // Pokus o manipulaci s cizím záznamem
+                }
+            }
+            
+            switch ($status) {
+                case 'new':
+                    $this->insert_visitor($visit_id, $customer_id, $branch_id, $visitor);
+                    break;
+                    
+                case 'modified':
+                    if ($db_id) {
+                        $this->update_visitor($db_id, $visitor);
+                    }
+                    break;
+                    
+                case 'deleted':
+                    if ($db_id) {
+                        $wpdb->delete($visitors_table, ['id' => $db_id], ['%d']);
+                    }
+                    break;
+                    
+                case 'existing':
+                    // Beze změny - nic nedělat
+                    break;
+            }
+        }
+    }
+    
+    /**
+     * Insert new visitor
+     * 
+     * @since 7.1.0
+     * @param int $visit_id Visit ID
+     * @param int $customer_id Customer ID
+     * @param int $branch_id Branch ID
+     * @param array $data Visitor data
+     * @return int|false Inserted ID or false
+     */
+    private function insert_visitor($visit_id, $customer_id, $branch_id, $data) {
+        global $wpdb;
+        
+        // Sanitizace
+        $sanitized = $this->sanitize_visitor_data($data);
+        
+        // Validace povinných polí
+        if (empty($sanitized['first_name']) || empty($sanitized['last_name'])) {
+            return false;
+        }
+        
+        $result = $wpdb->insert(
+            $wpdb->prefix . 'saw_visitors',
+            [
+                'visit_id' => $visit_id,
+                'customer_id' => $customer_id,
+                'branch_id' => $branch_id,
+                'first_name' => $sanitized['first_name'],
+                'last_name' => $sanitized['last_name'],
+                'email' => $sanitized['email'],
+                'phone' => $sanitized['phone'],
+                'position' => $sanitized['position'],
+                'created_at' => current_time('mysql'),
+                'updated_at' => current_time('mysql'),
+            ],
+            ['%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s']
+        );
+        
+        return $result ? $wpdb->insert_id : false;
+    }
+    
+    /**
+     * Update existing visitor
+     * 
+     * @since 7.1.0
+     * @param int $visitor_id Visitor ID
+     * @param array $data Visitor data
+     * @return bool Success
+     */
+    private function update_visitor($visitor_id, $data) {
+        global $wpdb;
+        
+        // Sanitizace
+        $sanitized = $this->sanitize_visitor_data($data);
+        
+        // Validace povinných polí
+        if (empty($sanitized['first_name']) || empty($sanitized['last_name'])) {
+            return false;
+        }
+        
+        $result = $wpdb->update(
+            $wpdb->prefix . 'saw_visitors',
+            [
+                'first_name' => $sanitized['first_name'],
+                'last_name' => $sanitized['last_name'],
+                'email' => $sanitized['email'],
+                'phone' => $sanitized['phone'],
+                'position' => $sanitized['position'],
+                'updated_at' => current_time('mysql'),
+            ],
+            ['id' => $visitor_id],
+            ['%s', '%s', '%s', '%s', '%s', '%s'],
+            ['%d']
+        );
+        
+        return $result !== false;
+    }
+    
+    /**
+     * Sanitize visitor data
+     * 
+     * @since 7.1.0
+     * @param array $data Raw data
+     * @return array Sanitized data
+     */
+    private function sanitize_visitor_data($data) {
+        return [
+            'first_name' => sanitize_text_field($data['first_name'] ?? ''),
+            'last_name' => sanitize_text_field($data['last_name'] ?? ''),
+            'email' => sanitize_email($data['email'] ?? ''),
+            'phone' => sanitize_text_field($data['phone'] ?? ''),
+            'position' => sanitize_text_field($data['position'] ?? ''),
+        ];
     }
 }

@@ -84,6 +84,20 @@ if ($is_edit && !empty($item['id'])) {
     ));
 }
 
+// === VISITORS DATA FOR EDIT MODE ===
+$existing_visitors = array();
+$visitors_mode = 'create';
+if ($is_edit && !empty($item['id'])) {
+    $visitors_mode = 'edit';
+    $existing_visitors = $wpdb->get_results($wpdb->prepare(
+        "SELECT id, first_name, last_name, email, phone, position
+         FROM {$wpdb->prefix}saw_visitors 
+         WHERE visit_id = %d 
+         ORDER BY id ASC",
+        intval($item['id'])
+    ), ARRAY_A);
+}
+
 $form_action = $is_edit 
     ? home_url('/admin/visits/' . $item['id'] . '/edit')
     : home_url('/admin/visits/create');
@@ -115,6 +129,8 @@ $form_action = $is_edit
         <?php endif; ?>
         
         <input type="hidden" name="customer_id" value="<?php echo esc_attr($customer_id); ?>">
+        
+        <div id="visit-main-form">
         
         <details class="saw-form-section" open>
             <summary>
@@ -342,6 +358,41 @@ $form_action = $is_edit
                     </div>
                 </div>
                 
+                <!-- ================================================
+                     VISITORS SECTION
+                     ================================================ -->
+                <div class="saw-form-section saw-visitors-section">
+                    <div class="saw-section-header">
+                        <h4>👥 <?php echo esc_html($tr('section_visitors', 'Návštěvníci')); ?></h4>
+                        <button type="button" class="saw-btn saw-btn-sm saw-btn-secondary" id="btn-add-visitor">
+                            + <?php echo esc_html($tr('btn_add_visitor', 'Přidat')); ?>
+                        </button>
+                    </div>
+                    
+                    <!-- Seznam návštěvníků (renderuje JS) -->
+                    <div id="visitors-list-container">
+                        <!-- Prázdný stav -->
+                        <div id="visitors-empty-state" class="saw-empty-state">
+                            <span class="saw-empty-icon">👥</span>
+                            <p><?php echo esc_html($tr('visitors_empty', 'Zatím nebyli přidáni žádní návštěvníci.')); ?></p>
+                            <p class="saw-text-muted"><?php echo esc_html($tr('visitors_empty_hint', 'Klikněte na "Přidat" pro přidání návštěvníka.')); ?></p>
+                        </div>
+                        
+                        <!-- Seznam karet (plní JS) -->
+                        <div id="visitors-list"></div>
+                        
+                        <!-- Počítadlo -->
+                        <div id="visitors-counter" class="saw-visitors-counter" style="display: none;">
+                            <?php echo esc_html($tr('visitors_total', 'Celkem:')); ?> 
+                            <strong><span id="visitors-count">0</span></strong> 
+                            <span id="visitors-count-label"><?php echo esc_html($tr('visitors_label', 'návštěvníků')); ?></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Hidden input pro JSON data -->
+                    <input type="hidden" name="visitors_json" id="visitors-json-input" value="[]">
+                </div>
+                
                 <!-- Invitation Email -->
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
@@ -399,6 +450,85 @@ $form_action = $is_edit
             <?php endif; ?>
         </div>
         
+        </div>
+        <!-- ================================================
+             NESTED VISITOR FORM (skrytý, zobrazí se při přidání/editaci)
+             ================================================ -->
+        <div id="visitor-nested-form" class="saw-nested-form" style="display: none;">
+            <div class="saw-nested-form-header">
+                <button type="button" class="saw-btn-back" id="btn-visitor-back">
+                    ← <?php echo esc_html($tr('btn_back', 'Zpět')); ?>
+                </button>
+                <h4 id="visitor-form-title">👤 <?php echo esc_html($tr('title_add_visitor', 'Přidat návštěvníka')); ?></h4>
+            </div>
+            
+            <div class="saw-nested-form-body">
+                <!-- Jméno -->
+                <div class="saw-form-row">
+                    <label for="visitor-first-name" class="saw-label">
+                        <?php echo esc_html($tr('field_first_name', 'Jméno')); ?> <span class="required">*</span>
+                    </label>
+                    <input type="text" 
+                           id="visitor-first-name" 
+                           class="saw-input" 
+                           maxlength="100">
+                </div>
+                
+                <!-- Příjmení -->
+                <div class="saw-form-row">
+                    <label for="visitor-last-name" class="saw-label">
+                        <?php echo esc_html($tr('field_last_name', 'Příjmení')); ?> <span class="required">*</span>
+                    </label>
+                    <input type="text" 
+                           id="visitor-last-name" 
+                           class="saw-input" 
+                           maxlength="100">
+                </div>
+                
+                <!-- Email -->
+                <div class="saw-form-row">
+                    <label for="visitor-email" class="saw-label">
+                        <?php echo esc_html($tr('field_email', 'Email')); ?>
+                    </label>
+                    <input type="email" 
+                           id="visitor-email" 
+                           class="saw-input" 
+                           maxlength="255">
+                </div>
+                
+                <!-- Telefon -->
+                <div class="saw-form-row">
+                    <label for="visitor-phone" class="saw-label">
+                        <?php echo esc_html($tr('field_phone', 'Telefon')); ?>
+                    </label>
+                    <input type="tel" 
+                           id="visitor-phone" 
+                           class="saw-input" 
+                           maxlength="50">
+                </div>
+                
+                <!-- Pozice -->
+                <div class="saw-form-row">
+                    <label for="visitor-position" class="saw-label">
+                        <?php echo esc_html($tr('field_position', 'Pozice / Funkce')); ?>
+                    </label>
+                    <input type="text" 
+                           id="visitor-position" 
+                           class="saw-input" 
+                           maxlength="100">
+                </div>
+            </div>
+            
+            <div class="saw-nested-form-footer">
+                <button type="button" class="saw-btn saw-btn-secondary" id="btn-visitor-cancel">
+                    <?php echo esc_html($tr('btn_cancel', 'Zrušit')); ?>
+                </button>
+                <button type="button" class="saw-btn saw-btn-primary" id="btn-visitor-save">
+                    ✓ <?php echo esc_html($tr('btn_save_visitor', 'Uložit návštěvníka')); ?>
+                </button>
+            </div>
+        </div>
+        
     </form>
 </div>
 
@@ -440,4 +570,25 @@ jQuery(document).ready(function($) {
         }
     });
 });
+</script>
+
+<script>
+// Data pro VisitorsManager
+window.sawVisitorsData = window.sawVisitorsData || {};
+window.sawVisitorsData.mode = '<?php echo esc_js($visitors_mode); ?>';
+window.sawVisitorsData.visitId = <?php echo !empty($item['id']) ? intval($item['id']) : 'null'; ?>;
+window.sawVisitorsData.existingVisitors = <?php echo json_encode($existing_visitors); ?>;
+window.sawVisitorsData.translations = {
+    title_add: '<?php echo esc_js($tr('title_add_visitor', 'Přidat návštěvníka')); ?>',
+    title_edit: '<?php echo esc_js($tr('title_edit_visitor', 'Upravit návštěvníka')); ?>',
+    btn_add: '<?php echo esc_js($tr('btn_add_visitor', 'Přidat návštěvníka')); ?>',
+    btn_save: '<?php echo esc_js($tr('btn_save_visitor', 'Uložit návštěvníka')); ?>',
+    confirm_delete: '<?php echo esc_js($tr('confirm_delete_visitor', 'Opravdu chcete odebrat tohoto návštěvníka?')); ?>',
+    error_required: '<?php echo esc_js($tr('error_required_fields', 'Vyplňte povinná pole (jméno a příjmení).')); ?>',
+    error_email: '<?php echo esc_js($tr('error_invalid_email', 'Zadejte platný email.')); ?>',
+    error_duplicate: '<?php echo esc_js($tr('error_duplicate_email', 'Návštěvník s tímto emailem již je v seznamu.')); ?>',
+    person_singular: '<?php echo esc_js($tr('person_singular', 'návštěvník')); ?>',
+    person_few: '<?php echo esc_js($tr('person_few', 'návštěvníci')); ?>',
+    person_many: '<?php echo esc_js($tr('person_many', 'návštěvníků')); ?>',
+};
 </script>

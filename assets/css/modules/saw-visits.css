@@ -435,3 +435,299 @@
         padding: 12px 14px;
     }
 }
+
+/* ================================================
+   VISITORS SECTION IN VISIT FORM
+   ================================================ */
+
+/* Section header */
+.saw-visitors-section .saw-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+@media (min-width: 768px) {
+    .saw-visitors-section .saw-section-header {
+        padding: 20px;
+        padding-bottom: 12px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .saw-visitors-section .saw-section-header {
+        padding: 28px;
+        padding-bottom: 12px;
+    }
+}
+
+.saw-visitors-section .saw-section-header h4 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+/* Empty state */
+.saw-visitors-section .saw-empty-state {
+    text-align: center;
+    padding: 32px 20px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 2px dashed #e2e8f0;
+}
+
+.saw-visitors-section .saw-empty-icon {
+    font-size: 32px;
+    display: block;
+    margin-bottom: 12px;
+    opacity: 0.5;
+}
+
+.saw-visitors-section .saw-empty-state p {
+    margin: 0 0 4px 0;
+    color: #64748b;
+}
+
+.saw-visitors-section .saw-empty-state .saw-text-muted {
+    font-size: 13px;
+    color: #94a3b8;
+}
+
+/* Visitors list */
+#visitors-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Visitor card */
+.saw-visitor-card {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    transition: all 0.15s ease;
+}
+
+.saw-visitor-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+.saw-visitor-card.is-new {
+    border-left: 3px solid #10b981;
+}
+
+.saw-visitor-card.is-modified {
+    border-left: 3px solid #f59e0b;
+}
+
+.saw-visitor-card-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.saw-visitor-card-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 4px;
+}
+
+.saw-visitor-card-name .saw-badge-new {
+    font-size: 10px;
+    padding: 2px 6px;
+    background: #d1fae5;
+    color: #065f46;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.saw-visitor-card-details {
+    font-size: 13px;
+    color: #64748b;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+}
+
+.saw-visitor-card-details span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.saw-visitor-card-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+    margin-left: 12px;
+}
+
+.saw-visitor-card-actions button {
+    padding: 6px 8px;
+    background: transparent;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    transition: all 0.15s ease;
+}
+
+.saw-visitor-card-actions button:hover {
+    background: #f1f5f9;
+}
+
+.saw-visitor-card-actions .btn-delete:hover {
+    background: #fee2e2;
+    border-color: #fecaca;
+    color: #dc2626;
+}
+
+/* Counter */
+.saw-visitors-counter {
+    margin-top: 12px;
+    padding: 8px 12px;
+    background: #f1f5f9;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #475569;
+}
+
+/* ================================================
+   NESTED VISITOR FORM
+   ================================================ */
+
+.saw-nested-form {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #ffffff;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+}
+
+.saw-nested-form-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.saw-nested-form-header h4 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.saw-btn-back {
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #64748b;
+    transition: all 0.15s ease;
+}
+
+.saw-btn-back:hover {
+    background: #f1f5f9;
+    color: #1e293b;
+}
+
+.saw-nested-form-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.saw-nested-form-body .saw-form-row {
+    margin-bottom: 16px;
+}
+
+.saw-nested-form-body .saw-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+}
+
+.saw-nested-form-body .saw-label .required {
+    color: #dc2626;
+}
+
+.saw-nested-form-body .saw-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.15s ease;
+}
+
+.saw-nested-form-body .saw-input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.saw-nested-form-body textarea.saw-input {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.saw-nested-form-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 20px;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+/* Error state */
+.saw-nested-form-body .saw-input.has-error {
+    border-color: #dc2626;
+}
+
+.saw-nested-form-body .saw-field-error {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #dc2626;
+}
+
+/* ================================================
+   RESPONSIVE
+   ================================================ */
+
+@media (max-width: 480px) {
+    .saw-visitor-card {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .saw-visitor-card-actions {
+        margin-left: 0;
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
