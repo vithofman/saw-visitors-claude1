@@ -118,9 +118,9 @@ class SAW_Installer {
      * Get tables order based on dependencies
      *
      * Tables are ordered to respect foreign key dependencies.
-     * Total: 29 tables
+     * Total: 30 tables
      *
-     * @since 4.6.1
+     * @since 4.6.2
      * @return array Table names (without 'saw_' prefix)
      */
     private static function get_tables_order() {
@@ -167,6 +167,9 @@ class SAW_Installer {
             'visit_daily_logs',
             'visitor_certificates',
             'visit_invitation_materials',
+
+	    // Notifications (1) ← PŘIDAT
+	    'notifications',
             
             // System Logs (2)
             'audit_log',
@@ -290,6 +293,13 @@ class SAW_Installer {
             array('table' => 'visit_invitation_materials', 'constraint' => 'fk_invitation_materials_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'visit_invitation_materials', 'constraint' => 'fk_invitation_materials_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
+	    // notifications
+	    array('table' => 'notifications', 'constraint' => 'fk_notif_user', 'column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+	    array('table' => 'notifications', 'constraint' => 'fk_notif_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+	    array('table' => 'notifications', 'constraint' => 'fk_notif_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
+	    array('table' => 'notifications', 'constraint' => 'fk_notif_visit', 'column' => 'visit_id', 'ref_table' => 'visits', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+	    array('table' => 'notifications', 'constraint' => 'fk_notif_visitor', 'column' => 'visitor_id', 'ref_table' => 'visitors', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+
             // audit_log
             array('table' => 'audit_log', 'constraint' => 'fk_audit_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'audit_log', 'constraint' => 'fk_audit_user', 'column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
