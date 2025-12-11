@@ -6,7 +6,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  JS/Components
- * @version     1.0.0
+ * @version     1.0.1 - FIXED: Remove name attribute from original select to prevent duplicate POST values
  * @since       1.0.0
  */
 
@@ -78,6 +78,12 @@
                 $searchInput.val(selectedOption.text);
                 $hiddenInput.val(selectedOption.value);
             }
+            
+            // CRITICAL FIX: Remove name attribute from original select
+            // This prevents duplicate POST values when form is submitted.
+            // Without this fix, both the hidden input AND the original select
+            // send the same field name, and PHP takes the last one (empty select).
+            $select.removeAttr('name');
             
             // Hide original select
             $select.hide();
@@ -212,4 +218,3 @@
     });
     
 })(jQuery);
-

@@ -170,11 +170,20 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
     }
     
     protected function before_save($data) {
-        if (empty($data['customer_id']) && class_exists('SAW_Context')) {
-            $data['customer_id'] = SAW_Context::get_customer_id();
-        }
-        return $data;
+    // Handle company_id based on has_company radio selection
+    // If user selected "Physical person" (has_company = 0), explicitly set company_id to NULL
+    // This allows changing existing visit from company to physical person
+    if (isset($_POST['has_company']) && $_POST['has_company'] === '0') {
+        $data['company_id'] = null;
     }
+    
+    // Set customer_id from context if not provided
+    if (empty($data['customer_id']) && class_exists('SAW_Context')) {
+        $data['customer_id'] = SAW_Context::get_customer_id();
+    }
+    
+    return $data;
+}
     
     /**
      * Save visit schedules and hosts after main visit is saved
