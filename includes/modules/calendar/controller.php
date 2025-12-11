@@ -7,7 +7,7 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Modules/Calendar
- * @version     1.3.0 - FIXED: AJAX handlers registration, removed branch filter
+ * @version     1.4.0 - FIXED: Removed department_id reference (column doesn't exist in saw_visits)
  * @since       1.0.0
  */
 
@@ -211,6 +211,9 @@ class SAW_Module_Calendar_Controller extends SAW_Base_Controller {
     
     /**
      * AJAX: Get calendar events
+     * 
+     * @since 1.0.0
+     * @version 1.4.0 - FIXED: Removed department JOIN (department_id doesn't exist in saw_visits)
      */
     public function ajax_get_events() {
         // Debug logging
@@ -253,6 +256,9 @@ class SAW_Module_Calendar_Controller extends SAW_Base_Controller {
         
         // If no customer, return empty
         if (!$customer_id) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('SAW Calendar: No customer_id in context, returning empty');
+            }
             wp_send_json([]);
             return;
         }
@@ -304,6 +310,7 @@ class SAW_Module_Calendar_Controller extends SAW_Base_Controller {
         
         // Execute query - use LEFT JOIN with visit_schedules to get all schedule days
         // Also include visits without schedules (using planned_date_from/planned_date_to)
+        // NOTE: Removed department JOIN - department_id doesn't exist in saw_visits table
         $sql = "SELECT v.id, 
                        COALESCE(vs.date, v.planned_date_from) as visit_date,
                        vs.date as schedule_date,
@@ -316,13 +323,11 @@ class SAW_Module_Calendar_Controller extends SAW_Base_Controller {
                        (SELECT COUNT(*) FROM {$wpdb->prefix}saw_visitors WHERE visit_id = v.id) as visitor_count,
                        v.purpose,
                        c.name as company_name,
-                       b.name as branch_name,
-                       d.name as department_name
+                       b.name as branch_name
                 FROM {$wpdb->prefix}saw_visits v
                 LEFT JOIN {$wpdb->prefix}saw_visit_schedules vs ON v.id = vs.visit_id
                 LEFT JOIN {$wpdb->prefix}saw_companies c ON v.company_id = c.id
                 LEFT JOIN {$wpdb->prefix}saw_branches b ON v.branch_id = b.id
-                LEFT JOIN {$wpdb->prefix}saw_departments d ON v.department_id = d.id
                 WHERE {$where_sql}
                 ORDER BY COALESCE(vs.date, v.planned_date_from) ASC, vs.time_from ASC";
         
@@ -445,7 +450,7 @@ class SAW_Module_Calendar_Controller extends SAW_Base_Controller {
                 'type' => $visit['visit_type'] ?? 'planned',
                 'company' => $visit['company_name'] ?? '',
                 'branch' => $visit['branch_name'] ?? '',
-                'department' => $visit['department_name'] ?? '',
+                'department' => '', // Not available - department_id doesn't exist in saw_visits
                 'personCount' => $count,
                 'purpose' => $visit['purpose'] ?? '',
                 'detailUrl' => home_url('/admin/visits/' . $visit['id'] . '/'),
@@ -456,6 +461,9 @@ class SAW_Module_Calendar_Controller extends SAW_Base_Controller {
     
     /**
      * AJAX: Get event details for popup
+     * 
+     * @since 1.0.0
+     * @version 1.4.0 - FIXED: Removed department JOIN (department_id doesn't exist in saw_visits)
      */
     public function ajax_get_event_details() {
         if (!check_ajax_referer('saw_calendar_nonce', 'nonce', false)) {
@@ -472,15 +480,14 @@ class SAW_Module_Calendar_Controller extends SAW_Base_Controller {
         
         global $wpdb;
         
+        // NOTE: Removed department JOIN - department_id doesn't exist in saw_visits table
         $visit = $wpdb->get_row($wpdb->prepare(
             "SELECT v.*, 
                     c.name as company_name,
-                    b.name as branch_name,
-                    d.name as department_name
+                    b.name as branch_name
              FROM {$wpdb->prefix}saw_visits v
              LEFT JOIN {$wpdb->prefix}saw_companies c ON v.company_id = c.id
              LEFT JOIN {$wpdb->prefix}saw_branches b ON v.branch_id = b.id
-             LEFT JOIN {$wpdb->prefix}saw_departments d ON v.department_id = d.id
              WHERE v.id = %d",
             $visit_id
         ), ARRAY_A);
@@ -490,12 +497,14 @@ class SAW_Module_Calendar_Controller extends SAW_Base_Controller {
             return;
         }
         
+        // Add empty department_name for backwards compatibility
+        $visit['department_name'] = '';
+        
         // Load visitors
         $visitors = $wpdb->get_results($wpdb->prepare(
             "SELECT vr.first_name, vr.last_name, vr.email, vr.company_name as visitor_company
              FROM {$wpdb->prefix}saw_visitors vr
-             INNER JOIN {$wpdb->prefix}saw_visit_visitors vv ON vr.id = vv.visitor_id
-             WHERE vv.visit_id = %d",
+             WHERE vr.visit_id = %d",
             $visit_id
         ), ARRAY_A);
         
@@ -550,21 +559,55 @@ class SAW_Module_Calendar_Controller extends SAW_Base_Controller {
         
         // Parse dates
         $start_date = date('Y-m-d', strtotime($new_start));
+        $start_time = date('H:i:s', strtotime($new_start));
         
+        // Check if visit has schedules
+        $has_schedules = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}saw_visit_schedules WHERE visit_id = %d",
+            $visit_id
+        ));
+        
+        if ($has_schedules > 0) {
+            // Update the first schedule entry
+            $wpdb->query($wpdb->prepare(
+                "UPDATE {$wpdb->prefix}saw_visit_schedules 
+                 SET date = %s, time_from = %s
+                 WHERE visit_id = %d
+                 ORDER BY date ASC, sort_order ASC
+                 LIMIT 1",
+                $start_date,
+                $start_time,
+                $visit_id
+            ));
+            
+            // If end time provided, update time_to
+            if (!empty($new_end)) {
+                $end_time = date('H:i:s', strtotime($new_end));
+                $wpdb->query($wpdb->prepare(
+                    "UPDATE {$wpdb->prefix}saw_visit_schedules 
+                     SET time_to = %s
+                     WHERE visit_id = %d
+                     ORDER BY date ASC, sort_order ASC
+                     LIMIT 1",
+                    $end_time,
+                    $visit_id
+                ));
+            }
+        }
+        
+        // Always update planned_date_from in main table
         $update_data = [
-            'visit_date' => $start_date,
-            'scheduled_arrival' => date('Y-m-d H:i:s', strtotime($new_start)),
+            'planned_date_from' => $start_date,
         ];
-        $update_format = ['%s', '%s'];
+        $update_format = ['%s'];
         
         if (!empty($new_end)) {
-            $update_data['scheduled_departure'] = date('Y-m-d H:i:s', strtotime($new_end));
-            $update_format[] = '%s';
-            
-            // Calculate duration
-            $duration = (strtotime($new_end) - strtotime($new_start)) / 60;
-            $update_data['expected_duration'] = max(15, intval($duration));
-            $update_format[] = '%d';
+            $end_date = date('Y-m-d', strtotime($new_end));
+            // Only update planned_date_to if it's the same day or later
+            if ($end_date >= $start_date) {
+                $update_data['planned_date_to'] = $end_date;
+                $update_format[] = '%s';
+            }
         }
         
         $result = $wpdb->update(

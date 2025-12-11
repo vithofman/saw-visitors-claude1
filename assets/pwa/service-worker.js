@@ -4,17 +4,18 @@
  * Cache strategie:
  * - Static assets (CSS, JS, fonts): Cache First
  * - HTML pages: Network First
- * - API/AJAX: Network Only
+ * - API/AJAX: Network Only (NIKDY necachovat)
  * - Images: Cache First with fallback
  * 
- * @version 1.0.0
+ * @version 1.1.0
+ * @fix AJAX requesty nyní procházejí bez cache
  */
 
 // ============================================
 // KONFIGURACE
 // ============================================
 
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const CACHE_STATIC = `saw-static-${CACHE_VERSION}`;
 const CACHE_PAGES = `saw-pages-${CACHE_VERSION}`;
 const CACHE_IMAGES = `saw-images-${CACHE_VERSION}`;
@@ -35,10 +36,12 @@ const NEVER_CACHE_PATTERNS = [
     /admin-ajax\.php/,
     /\?wc-ajax=/,
     /\/wp-login\.php/,
-    /\/xmlrpc\.php/
+    /\/xmlrpc\.php/,
+    /\?.*action=/,
+    /\?.*nonce=/
 ];
 
-// URL patterns pro SAW aplikaci (Network First)
+// URL patterns pro SAW aplikaci (Network First - pouze HTML)
 const APP_PATTERNS = [
     /\/terminal\//,
     /\/admin\//,
@@ -54,7 +57,7 @@ const APP_PATTERNS = [
 // ============================================
 
 self.addEventListener('install', (event) => {
-    console.log('[SW] Installing Service Worker...');
+    console.log('[SW] Installing Service Worker v' + CACHE_VERSION);
     
     event.waitUntil(
         caches.open(CACHE_STATIC)
@@ -64,7 +67,6 @@ self.addEventListener('install', (event) => {
             })
             .then(() => {
                 console.log('[SW] Precache complete');
-                // Aktivuj ihned bez čekání na zavření starých tabs
                 return self.skipWaiting();
             })
             .catch((error) => {
@@ -78,7 +80,7 @@ self.addEventListener('install', (event) => {
 // ============================================
 
 self.addEventListener('activate', (event) => {
-    console.log('[SW] Activating Service Worker...');
+    console.log('[SW] Activating Service Worker v' + CACHE_VERSION);
     
     event.waitUntil(
         caches.keys()
@@ -86,7 +88,6 @@ self.addEventListener('activate', (event) => {
                 return Promise.all(
                     cacheNames
                         .filter((cacheName) => {
-                            // Smaž staré cache verze
                             return cacheName.startsWith('saw-') && 
                                    !cacheName.endsWith(CACHE_VERSION);
                         })
@@ -98,47 +99,50 @@ self.addEventListener('activate', (event) => {
             })
             .then(() => {
                 console.log('[SW] Claiming clients...');
-                // Převezmi kontrolu nad všemi otevřenými tabs
                 return self.clients.claim();
             })
     );
 });
 
 // ============================================
-// FETCH EVENT
+// FETCH EVENT - FIXED VERSION
 // ============================================
 
 self.addEventListener('fetch', (event) => {
     const request = event.request;
     const url = new URL(request.url);
     
-    // Ignoruj non-GET requesty
+    // 1. Ignoruj non-GET requesty
     if (request.method !== 'GET') {
         return;
     }
     
-    // Ignoruj cross-origin requesty
+    // 2. Ignoruj cross-origin requesty
     if (url.origin !== location.origin) {
         return;
     }
     
-    // Nikdy necachuj WordPress admin a API
-    if (shouldNeverCache(url.pathname)) {
+    // 3. CRITICAL FIX: Nikdy nezachytávej AJAX/XHR requesty
+    if (isAjaxRequest(request)) {
+        console.log('[SW] Skipping AJAX request:', url.pathname);
         return;
     }
     
-    // Rozhodnutí o strategii
+    // 4. Nikdy necachuj WordPress admin a API
+    if (shouldNeverCache(url.pathname + url.search)) {
+        return;
+    }
+    
+    // 5. Rozhodnutí o strategii podle typu obsahu
     if (isStaticAsset(url.pathname)) {
-        // Cache First pro static assets
         event.respondWith(cacheFirst(request, CACHE_STATIC));
     } else if (isImage(url.pathname)) {
-        // Cache First pro obrázky
         event.respondWith(cacheFirst(request, CACHE_IMAGES));
-    } else if (isAppPage(url.pathname)) {
-        // Network First pro app stránky
+    } else if (isAppPage(url.pathname) && isHtmlRequest(request)) {
+        // CRITICAL: Pouze pro HTML page load, ne AJAX
         event.respondWith(networkFirst(request, CACHE_PAGES));
     }
-    // Ostatní requesty jdou normálně přes síť
+    // Ostatní requesty procházejí normálně bez zásahu SW
 });
 
 // ============================================
@@ -147,7 +151,6 @@ self.addEventListener('fetch', (event) => {
 
 /**
  * Cache First strategie
- * Vrátí cache pokud existuje, jinak fetch a ulož
  */
 async function cacheFirst(request, cacheName) {
     const cachedResponse = await caches.match(request);
@@ -159,7 +162,6 @@ async function cacheFirst(request, cacheName) {
     try {
         const networkResponse = await fetch(request);
         
-        // Ulož do cache pouze úspěšné odpovědi
         if (networkResponse.ok) {
             const cache = await caches.open(cacheName);
             cache.put(request, networkResponse.clone());
@@ -168,20 +170,17 @@ async function cacheFirst(request, cacheName) {
         return networkResponse;
     } catch (error) {
         console.error('[SW] Cache First fetch failed:', error);
-        // Pro obrázky vrať placeholder nebo nic
         return new Response('', { status: 404 });
     }
 }
 
 /**
  * Network First strategie
- * Zkusí síť, při selhání vrátí cache nebo offline stránku
  */
 async function networkFirst(request, cacheName) {
     try {
         const networkResponse = await fetch(request);
         
-        // Ulož úspěšnou odpověď do cache
         if (networkResponse.ok) {
             const cache = await caches.open(cacheName);
             cache.put(request, networkResponse.clone());
@@ -197,8 +196,7 @@ async function networkFirst(request, cacheName) {
             return cachedResponse;
         }
         
-        // Vrať offline stránku pro HTML requesty
-        if (request.headers.get('Accept')?.includes('text/html')) {
+        if (isHtmlRequest(request)) {
             return caches.match('/wp-content/plugins/saw-visitors/assets/pwa/offline.html');
         }
         
@@ -210,8 +208,40 @@ async function networkFirst(request, cacheName) {
 // HELPER FUNCTIONS
 // ============================================
 
-function shouldNeverCache(pathname) {
-    return NEVER_CACHE_PATTERNS.some(pattern => pattern.test(pathname));
+/**
+ * Detekce AJAX/XHR requestů
+ * CRITICAL: Tyto requesty NIKDY necachovat
+ */
+function isAjaxRequest(request) {
+    // Check X-Requested-With header (jQuery AJAX)
+    if (request.headers.get('X-Requested-With') === 'XMLHttpRequest') {
+        return true;
+    }
+    
+    // Check Accept header for JSON
+    const accept = request.headers.get('Accept') || '';
+    if (accept.includes('application/json') && !accept.includes('text/html')) {
+        return true;
+    }
+    
+    // Check for fetch API with JSON
+    if (request.headers.get('Content-Type')?.includes('application/json')) {
+        return true;
+    }
+    
+    return false;
+}
+
+/**
+ * Detekce HTML page requestů
+ */
+function isHtmlRequest(request) {
+    const accept = request.headers.get('Accept') || '';
+    return accept.includes('text/html');
+}
+
+function shouldNeverCache(fullPath) {
+    return NEVER_CACHE_PATTERNS.some(pattern => pattern.test(fullPath));
 }
 
 function isStaticAsset(pathname) {
@@ -248,4 +278,4 @@ self.addEventListener('message', (event) => {
     }
 });
 
-console.log('[SW] Service Worker loaded');
+console.log('[SW] Service Worker v' + CACHE_VERSION + ' loaded');
