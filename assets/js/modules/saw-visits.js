@@ -6,7 +6,14 @@
  * @package     SAW_Visitors
  * @subpackage  Modules/Visits
  * @since       1.0.0
- * @version     3.3.0 - FIXED: Company field toggle now properly clears hidden input for searchable select
+ * @version     3.5.0 - FIXED: jQuery .data() cache bug - visitors not loading on AJAX navigation
+ * 
+ * CHANGELOG v3.5.0:
+ * - Fixed: Visitors not displaying when navigating from detail to edit via AJAX
+ * - Root cause: jQuery .data() caches values, returns stale data after DOM updates
+ * - Solution: Replace .data() with .attr() + JSON.parse() in SAWVisitorsManager
+ * - Added: Support for window.sawVisitorsFormData (inline script data injection)
+ * - Added: Event handler for saw:init-visitors-manager custom event
  */
 
 (function ($) {
@@ -610,7 +617,20 @@
         // ========================================
         // INICIALIZACE
         // ========================================
+        /**
+         * Initialize VisitorsManager
+         * 
+         * v3.5.0 FIX: jQuery .data() cache bug
+         * - Priority 1: Use window.sawVisitorsFormData (injected by inline script)
+         * - Priority 2: Use .attr() instead of .data() to read form attributes
+         * 
+         * WHY: jQuery .data() caches values on first access. When navigating
+         * from CREATE to EDIT form via AJAX, .data() returns cached empty array
+         * instead of fresh data from DOM. Using .attr() always reads from DOM.
+         */
         init: function() {
+            console.log('[SAWVisitorsManager] init() called - v3.5.0');
+            
             // VŽDY resetovat state před načtením nových dat (důležité při AJAX načtení)
             this.state = {
                 visitors: [],
@@ -622,31 +642,77 @@
             
             // Kontrola existence kontejneru
             if (!$('#visitors-list-container').length) {
+                console.log('[SAWVisitorsManager] Container not found, skipping init');
                 return;
             }
             
-            // Načtení dat z data atributu form elementu (spolehlivější než script tag při AJAX)
             const $form = $('.saw-visit-form');
             let visitorsData = [];
             let translations = {};
             
-            if ($form.length) {
-                const mode = $form.data('visitors-mode') || 'create';
-                const visitId = $form.data('visit-id') || null;
-                const visitorsDataAttr = $form.data('visitors-data');
-                const translationsAttr = $form.data('visitors-translations');
+            // ================================================
+            // ⭐ PRIORITA 1: Data z window objektu (inline script)
+            // Toto obchází jQuery .data() cache problém úplně
+            // ================================================
+            if (window.sawVisitorsFormData && typeof window.sawVisitorsFormData === 'object') {
+                console.log('[SAWVisitorsManager] Using data from window.sawVisitorsFormData (preferred)');
+                
+                this.state.mode = window.sawVisitorsFormData.mode || 'create';
+                this.state.visitId = window.sawVisitorsFormData.visitId || null;
+                visitorsData = window.sawVisitorsFormData.existingVisitors || [];
+                translations = window.sawVisitorsFormData.translations || {};
+                
+                console.log('[SAWVisitorsManager] Loaded from window object:', {
+                    mode: this.state.mode,
+                    visitId: this.state.visitId,
+                    visitorsCount: visitorsData.length
+                });
+                
+                // Vyčistit po použití (prevence opakovaného použití starých dat)
+                delete window.sawVisitorsFormData;
+            } 
+            // ================================================
+            // ⭐ PRIORITA 2: Fallback na data atributy
+            // KRITICKÉ: Použít .attr() místo .data()
+            // .data() cachuje hodnoty a vrací staré data při AJAX navigaci!
+            // ================================================
+            else if ($form.length) {
+                console.log('[SAWVisitorsManager] Using data from form attributes (with .attr() fix)');
+                
+                // ✅ OPRAVA v3.5.0: .attr() místo .data() - vždy čte aktuální hodnotu z DOM
+                const mode = $form.attr('data-visitors-mode') || 'create';
+                const visitIdRaw = $form.attr('data-visit-id');
+                const visitId = visitIdRaw ? parseInt(visitIdRaw) : null;
+                
+                const visitorsDataRaw = $form.attr('data-visitors-data');
+                const translationsRaw = $form.attr('data-visitors-translations');
                 
                 this.state.mode = mode;
-                this.state.visitId = visitId ? parseInt(visitId) : null;
+                this.state.visitId = visitId;
                 
-                // Načtení návštěvníků z data atributu
-                if (visitorsDataAttr && Array.isArray(visitorsDataAttr)) {
-                    visitorsData = visitorsDataAttr;
+                // Bezpečné parsování JSON (.attr() vrací string, .data() auto-parsuje)
+                if (visitorsDataRaw) {
+                    try {
+                        const parsed = JSON.parse(visitorsDataRaw);
+                        if (Array.isArray(parsed)) {
+                            visitorsData = parsed;
+                        }
+                    } catch (e) {
+                        console.error('[SAWVisitorsManager] Failed to parse visitors data:', e);
+                        visitorsData = [];
+                    }
                 }
                 
-                // Načtení překladů z data atributu
-                if (translationsAttr && typeof translationsAttr === 'object') {
-                    translations = translationsAttr;
+                if (translationsRaw) {
+                    try {
+                        const parsedTranslations = JSON.parse(translationsRaw);
+                        if (typeof parsedTranslations === 'object') {
+                            translations = parsedTranslations;
+                        }
+                    } catch (e) {
+                        console.error('[SAWVisitorsManager] Failed to parse translations:', e);
+                        translations = {};
+                    }
                 }
                 
                 console.log('[SAWVisitorsManager] Loaded from data attributes:', {
@@ -1096,7 +1162,19 @@
         },
     };
     
-    // Funkce pro čekání na data (podobně jako waitForSawVisits)
+    // ========================================
+    // WAIT FOR VISITORS DATA
+    // ========================================
+    /**
+     * Wait for visitors data to be available
+     * 
+     * v3.5.0 FIX: Uses .attr() instead of .data() to check form attributes
+     * because .data() caches values and returns stale data after AJAX updates.
+     * 
+     * @param {Function} callback - Function to call when ready
+     * @param {number} maxAttempts - Maximum polling attempts
+     * @param {number} initialDelay - Initial delay before first check
+     */
     function waitForVisitorsData(callback, maxAttempts = 20, initialDelay = 0) {
         let attempts = 0;
         const baseDelay = 50;
@@ -1107,22 +1185,27 @@
             // Kontrola existence kontejneru
             const containerExists = $('#visitors-list-container').length > 0;
             
-            // Kontrola existence form elementu s data atributy (prioritní)
+            // ✅ OPRAVA v3.5.0: Použít .attr() místo .data()
+            // .data() cachuje hodnoty a vrací staré data při AJAX navigaci
             const $form = $('.saw-visit-form');
-            const formDataExists = $form.length > 0 && $form.data('visitors-mode') !== undefined;
+            const formDataExists = $form.length > 0 && $form.attr('data-visitors-mode') !== undefined;
             
             // Pro EDIT režim: ověřit, že visit ID odpovídá (pokud je v URL nebo sidebaru)
             let visitIdMatches = true;
             if (formDataExists) {
-                const formVisitId = $form.data('visit-id');
+                // ✅ OPRAVA: .attr() místo .data()
+                const formVisitIdRaw = $form.attr('data-visit-id');
+                const formVisitId = formVisitIdRaw ? parseInt(formVisitIdRaw) : null;
                 
-                // Zkontrolovat, jestli URL obsahuje visit ID
-                const urlMatch = window.location.pathname.match(/\/(\d+)\/?$/);
+                // Zkontrolovat URL pro očekávané visit ID
+                const urlMatch = window.location.pathname.match(/\/visits\/(\d+)\//);
                 const urlVisitId = urlMatch ? parseInt(urlMatch[1]) : null;
                 
-                // Zkontrolovat, jestli sidebar obsahuje visit ID
+                // Zkontrolovat sidebar
                 const $sidebar = $('.saw-sidebar[data-current-id]');
-                const sidebarVisitId = $sidebar.length ? parseInt($sidebar.data('current-id')) : null;
+                // ✅ OPRAVA: .attr() místo .data()
+                const sidebarVisitIdRaw = $sidebar.length ? $sidebar.attr('data-current-id') : null;
+                const sidebarVisitId = sidebarVisitIdRaw ? parseInt(sidebarVisitIdRaw) : null;
                 
                 // Očekávané visit ID (priorita: sidebar > URL)
                 const expectedVisitId = sidebarVisitId || urlVisitId;
@@ -1170,20 +1253,41 @@
         }
     }
     
-    // Inicializace VisitorsManager
+    // ========================================
+    // INITIALIZATION TRIGGERS
+    // ========================================
+    
+    // Inicializace VisitorsManager na document ready
     $(document).ready(function() {
         waitForVisitorsData(function() {
             SAWVisitorsManager.init();
         });
     });
     
-    // Re-inicializace při AJAX načtení
+    // Re-inicializace při AJAX načtení (obecné eventy)
     $(document).on('saw:page-loaded saw:content-loaded', function() {
         console.log('[SAWVisitorsManager] AJAX page loaded event received');
-        // Data atributy jsou dostupné okamžitě po vložení HTML, takže stačí menší delay
+        // Data atributy jsou dostupné okamžitě po vložení HTML
         waitForVisitorsData(function() {
             SAWVisitorsManager.init();
-        }, 20, 100); // 20 pokusů, počáteční delay 100ms (data atributy jsou rychlejší)
+        }, 20, 100); // 20 pokusů, počáteční delay 100ms
     });
-
+    
+    // ⭐ NEW v3.5.0: Přímá inicializace z inline scriptu
+    // Toto umožňuje form-template.php přímo triggerovat inicializaci
+    // s daty předanými přes window.sawVisitorsFormData
+    $(document).on('saw:init-visitors-manager', function() {
+        console.log('[SAWVisitorsManager] saw:init-visitors-manager event received');
+        
+        // Malý delay pro jistotu, že DOM je kompletně připraven
+        setTimeout(function() {
+            SAWVisitorsManager.init();
+        }, 10);
+    });
+    // ========================================
+    // EXPORT TO GLOBAL SCOPE
+    // ========================================
+    // Umožňuje přímou inicializaci z inline scriptů
+    window.SAWVisitorsManager = SAWVisitorsManager;
+    
 })(jQuery);

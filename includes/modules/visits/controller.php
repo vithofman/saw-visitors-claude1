@@ -24,7 +24,7 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         require_once $module_path . 'model.php';
         $this->model = new SAW_Module_Visits_Model($this->config);
         
-        add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'), 999);
+        add_action('wp_enqueue_scripts', array($this, 'enqueue_assets'), 999);
     }
     
     public function index() {

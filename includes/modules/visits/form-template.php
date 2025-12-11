@@ -1,10 +1,25 @@
 <?php
+
+error_log("[VISITS FORM DEBUG] item defined: " . (isset($item) ? 'YES' : 'NO'));
+error_log("[VISITS FORM DEBUG] form_item defined: " . (isset($form_item) ? 'YES' : 'NO'));
+if (isset($item)) {
+    error_log("[VISITS FORM DEBUG] item['id']: " . ($item['id'] ?? 'NOT SET'));
+}
+if (isset($form_item)) {
+    error_log("[VISITS FORM DEBUG] form_item['id']: " . ($form_item['id'] ?? 'NOT SET'));
+}
+
+// DEBUG 2 - kontrola $is_edit a existing_visitors query
+error_log("[VISITS FORM DEBUG 2] is_edit defined: " . (isset($is_edit) ? 'YES' : 'NO'));
+error_log("[VISITS FORM DEBUG 2] is_edit value: " . ($is_edit ? 'TRUE' : 'FALSE'));
+error_log("[VISITS FORM DEBUG 2] Condition check: is_edit=" . ($is_edit ? '1' : '0') . ", item[id]=" . (!empty($item['id']) ? $item['id'] : 'EMPTY'));
+
 /**
  * Visits Form Template
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visits
- * @version     3.2.0 - Multi-language support
+ * @version     3.3.0 - FIXED: Added inline init script for reliable AJAX loading
  */
 
 if (!defined('ABSPATH')) exit;
@@ -98,6 +113,26 @@ if ($is_edit && !empty($item['id'])) {
     ), ARRAY_A);
 }
 
+// DEBUG 3 - výsledek SQL dotazu
+error_log("[VISITS FORM DEBUG 3] visitors_mode: " . $visitors_mode);
+error_log("[VISITS FORM DEBUG 3] existing_visitors count: " . count($existing_visitors));
+error_log("[VISITS FORM DEBUG 3] existing_visitors data: " . json_encode($existing_visitors));
+
+// Připravit překlady pro JS
+$visitors_translations = array(
+    'title_add' => $tr('title_add_visitor', 'Přidat návštěvníka'),
+    'title_edit' => $tr('title_edit_visitor', 'Upravit návštěvníka'),
+    'btn_add' => $tr('btn_add_visitor', 'Přidat návštěvníka'),
+    'btn_save' => $tr('btn_save_visitor', 'Uložit návštěvníka'),
+    'confirm_delete' => $tr('confirm_delete_visitor', 'Opravdu chcete odebrat tohoto návštěvníka?'),
+    'error_required' => $tr('error_required_fields', 'Vyplňte povinná pole (jméno a příjmení).'),
+    'error_email' => $tr('error_invalid_email', 'Zadejte platný email.'),
+    'error_duplicate' => $tr('error_duplicate_email', 'Návštěvník s tímto emailem již je v seznamu.'),
+    'person_singular' => $tr('person_singular', 'návštěvník'),
+    'person_few' => $tr('person_few', 'návštěvníci'),
+    'person_many' => $tr('person_many', 'návštěvníků'),
+);
+
 $form_action = $is_edit 
     ? home_url('/admin/visits/' . $item['id'] . '/edit')
     : home_url('/admin/visits/create');
@@ -123,19 +158,7 @@ $form_action = $is_edit
           data-visitors-mode="<?php echo esc_attr($visitors_mode); ?>"
           data-visit-id="<?php echo !empty($item['id']) ? intval($item['id']) : ''; ?>"
           data-visitors-data="<?php echo esc_attr(json_encode($existing_visitors)); ?>"
-          data-visitors-translations="<?php echo esc_attr(json_encode([
-              'title_add' => $tr('title_add_visitor', 'Přidat návštěvníka'),
-              'title_edit' => $tr('title_edit_visitor', 'Upravit návštěvníka'),
-              'btn_add' => $tr('btn_add_visitor', 'Přidat návštěvníka'),
-              'btn_save' => $tr('btn_save_visitor', 'Uložit návštěvníka'),
-              'confirm_delete' => $tr('confirm_delete_visitor', 'Opravdu chcete odebrat tohoto návštěvníka?'),
-              'error_required' => $tr('error_required_fields', 'Vyplňte povinná pole (jméno a příjmení).'),
-              'error_email' => $tr('error_invalid_email', 'Zadejte platný email.'),
-              'error_duplicate' => $tr('error_duplicate_email', 'Návštěvník s tímto emailem již je v seznamu.'),
-              'person_singular' => $tr('person_singular', 'návštěvník'),
-              'person_few' => $tr('person_few', 'návštěvníci'),
-              'person_many' => $tr('person_many', 'návštěvníků'),
-          ])); ?>">
+          data-visitors-translations="<?php echo esc_attr(json_encode($visitors_translations)); ?>">
         <?php 
         $nonce_action = $is_edit ? 'saw_edit_visits' : 'saw_create_visits';
         wp_nonce_field($nonce_action, '_wpnonce', false);
@@ -549,15 +572,17 @@ $form_action = $is_edit
     </form>
 </div>
 
+<!-- ================================================
+     INLINE SCRIPTS - MUSÍ BÝT NA KONCI!
+     Spustí se IHNED po vložení do DOM (důležité pro AJAX)
+     ================================================ -->
 <script>
 jQuery(document).ready(function($) {
     // ✅ Automaticky vypočítat planned_date_from a planned_date_to z schedule_dates[]
-    // a přidat je jako hidden inputy před odesláním formuláře
     $('.saw-visit-form').on('submit', function(e) {
         var $form = $(this);
         var dates = [];
         
-        // Získat všechny hodnoty z schedule_dates[]
         $form.find('input[name="schedule_dates[]"]').each(function() {
             var date = $(this).val().trim();
             if (date) {
@@ -565,26 +590,70 @@ jQuery(document).ready(function($) {
             }
         });
         
-        // Pokud máme data, vypočítat min a max
         if (dates.length > 0) {
             dates.sort();
             var planned_date_from = dates[0];
             var planned_date_to = dates[dates.length - 1];
             
-            // Odstranit existující hidden inputy (pokud existují)
             $form.find('input[name="planned_date_from"]').remove();
             $form.find('input[name="planned_date_to"]').remove();
             
-            // Přidat nové hidden inputy
             $form.append('<input type="hidden" name="planned_date_from" value="' + planned_date_from + '">');
             $form.append('<input type="hidden" name="planned_date_to" value="' + planned_date_to + '">');
-            
-            console.log('[Visits Form] Calculated planned dates:', {
-                from: planned_date_from,
-                to: planned_date_to,
-                all_dates: dates
-            });
         }
     });
 });
+</script>
+
+<!-- ================================================
+     KRITICKÉ: Inline script pro inicializaci při AJAX/navigaci
+     Tento script se spustí IHNED po vložení HTML do DOM
+     ================================================ -->
+<script>
+(function($) {
+    console.log('[Visits Form] Inline init script executed at:', new Date().toISOString());
+    
+    // Prepare data for SAWVisitorsManager
+    window.sawVisitorsFormData = {
+        mode: '<?php echo esc_js($visitors_mode); ?>',
+        visitId: <?php echo $is_edit ? intval($item['id']) : 'null'; ?>,
+        existingVisitors: <?php echo json_encode($existing_visitors); ?>,
+        translations: <?php echo json_encode($visitor_translations); ?>
+    };
+    
+    console.log('[Visits Form] Data prepared:', {
+        mode: window.sawVisitorsFormData.mode,
+        visitId: window.sawVisitorsFormData.visitId,
+        visitorsCount: window.sawVisitorsFormData.existingVisitors.length
+    });
+    
+    // ⭐ FIX v3.6.0: Polling approach - wait for SAWVisitorsManager to be available
+    // This handles timing issues when inline script runs before saw-visits.js
+    function tryInitVisitorsManager(attempts) {
+        attempts = attempts || 0;
+        
+        console.log('[Visits Form] Attempt', attempts + 1, '- checking for SAWVisitorsManager...');
+        
+        if (typeof window.SAWVisitorsManager !== 'undefined') {
+            console.log('[Visits Form] ✅ SAWVisitorsManager found! Calling init()');
+            window.SAWVisitorsManager.init();
+            return;
+        }
+        
+        if (attempts < 50) { // Max 5 seconds (50 * 100ms)
+            setTimeout(function() {
+                tryInitVisitorsManager(attempts + 1);
+            }, 100);
+        } else {
+            console.error('[Visits Form] ❌ SAWVisitorsManager not available after 5 seconds');
+        }
+    }
+    
+    // Start polling immediately
+    tryInitVisitorsManager(0);
+    
+    // Also trigger events for other components that might need them
+    $(document).trigger('saw:page-loaded');
+    
+})(jQuery);
 </script>
