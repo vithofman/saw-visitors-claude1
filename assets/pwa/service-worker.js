@@ -3,22 +3,27 @@
  * 
  * Cache strategie:
  * - Static assets (CSS, JS, fonts): Cache First
- * - HTML pages: Network First
+ * - HTML pages: Network First WITH TIMEOUT
  * - API/AJAX: Network Only (NIKDY necachovat)
  * - Images: Cache First with fallback
  * 
- * @version 1.1.0
- * @fix AJAX requesty nyní procházejí bez cache
+ * @version 2.0.0
+ * @fix Přidán timeout pro network requesty
+ * @fix Lepší handling session expiration
+ * @fix Validace response před cachováním
  */
 
 // ============================================
 // KONFIGURACE
 // ============================================
 
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const CACHE_STATIC = `saw-static-${CACHE_VERSION}`;
 const CACHE_PAGES = `saw-pages-${CACHE_VERSION}`;
 const CACHE_IMAGES = `saw-images-${CACHE_VERSION}`;
+
+// CRITICAL: Timeout pro network requesty (v ms)
+const NETWORK_TIMEOUT = 8000;
 
 // Soubory k precache při instalaci
 const PRECACHE_ASSETS = [
@@ -38,7 +43,9 @@ const NEVER_CACHE_PATTERNS = [
     /\/wp-login\.php/,
     /\/xmlrpc\.php/,
     /\?.*action=/,
-    /\?.*nonce=/
+    /\?.*nonce=/,
+    /\?.*logout/,
+    /\?.*login/
 ];
 
 // URL patterns pro SAW aplikaci (Network First - pouze HTML)
@@ -105,7 +112,7 @@ self.addEventListener('activate', (event) => {
 });
 
 // ============================================
-// FETCH EVENT - FIXED VERSION
+// FETCH EVENT - WITH TIMEOUT
 // ============================================
 
 self.addEventListener('fetch', (event) => {
@@ -122,7 +129,7 @@ self.addEventListener('fetch', (event) => {
         return;
     }
     
-    // 3. CRITICAL FIX: Nikdy nezachytávej AJAX/XHR requesty
+    // 3. CRITICAL: Nikdy nezachytávej AJAX/XHR requesty
     if (isAjaxRequest(request)) {
         console.log('[SW] Skipping AJAX request:', url.pathname);
         return;
@@ -139,8 +146,8 @@ self.addEventListener('fetch', (event) => {
     } else if (isImage(url.pathname)) {
         event.respondWith(cacheFirst(request, CACHE_IMAGES));
     } else if (isAppPage(url.pathname) && isHtmlRequest(request)) {
-        // CRITICAL: Pouze pro HTML page load, ne AJAX
-        event.respondWith(networkFirst(request, CACHE_PAGES));
+        // CRITICAL: Network First S TIMEOUTEM pro HTML stránky
+        event.respondWith(networkFirstWithTimeout(request, CACHE_PAGES, NETWORK_TIMEOUT));
     }
     // Ostatní requesty procházejí normálně bez zásahu SW
 });
@@ -175,25 +182,45 @@ async function cacheFirst(request, cacheName) {
 }
 
 /**
- * Network First strategie
+ * Network First WITH TIMEOUT strategie
+ * CRITICAL FIX: Timeout zabraňuje nekonečnému čekání
  */
-async function networkFirst(request, cacheName) {
+async function networkFirstWithTimeout(request, cacheName, timeout) {
+    // Timeout promise
+    const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Network timeout')), timeout);
+    });
+    
     try {
-        const networkResponse = await fetch(request);
+        // Race mezi network a timeout
+        const networkResponse = await Promise.race([
+            fetch(request),
+            timeoutPromise
+        ]);
         
-        if (networkResponse.ok) {
+        // CRITICAL: Pouze cachuj validní HTML response
+        if (networkResponse.ok && isValidHtmlResponse(networkResponse)) {
             const cache = await caches.open(cacheName);
             cache.put(request, networkResponse.clone());
         }
         
         return networkResponse;
+        
     } catch (error) {
-        console.log('[SW] Network failed, trying cache:', request.url);
+        console.log('[SW] Network failed/timeout, trying cache:', request.url);
         
         const cachedResponse = await caches.match(request);
         
         if (cachedResponse) {
-            return cachedResponse;
+            // Přidej header pro detekci cached response
+            const headers = new Headers(cachedResponse.headers);
+            headers.set('X-SW-Cache', 'true');
+            
+            return new Response(cachedResponse.body, {
+                status: cachedResponse.status,
+                statusText: cachedResponse.statusText,
+                headers: headers
+            });
         }
         
         if (isHtmlRequest(request)) {
@@ -202,6 +229,23 @@ async function networkFirst(request, cacheName) {
         
         return new Response('Offline', { status: 503 });
     }
+}
+
+/**
+ * Kontrola zda je response validní HTML pro cachování
+ */
+function isValidHtmlResponse(response) {
+    const contentType = response.headers.get('Content-Type') || '';
+    
+    if (!contentType.includes('text/html')) {
+        return false;
+    }
+    
+    if (response.redirected || response.status !== 200) {
+        return false;
+    }
+    
+    return true;
 }
 
 // ============================================
@@ -275,6 +319,12 @@ self.addEventListener('message', (event) => {
                 );
             })
         );
+    }
+    
+    if (event.data === 'refreshClients') {
+        self.clients.matchAll().then((clients) => {
+            clients.forEach((client) => client.postMessage('refresh'));
+        });
     }
 });
 

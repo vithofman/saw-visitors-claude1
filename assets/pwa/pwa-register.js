@@ -3,24 +3,40 @@
  * 
  * Registruje service worker a zpracovává aktualizace.
  * 
- * @version 1.0.0
+ * @version 2.0.0
+ * @fix Přidána detekce návratu z pozadí
+ * @fix Auto-refresh při stale stránce
+ * @fix Lepší error recovery
  */
 
 (function() {
     'use strict';
     
-    // Konfigurace
-    const SW_PATH = '/sw.js'; // Bude servírován přes PHP rewrite
+    // ============================================
+    // KONFIGURACE
+    // ============================================
+    
+    const SW_PATH = '/sw.js';
     const SW_SCOPE = '/';
+    
+    // Po kolika minutách neaktivity považovat stránku za "stale"
+    const STALE_THRESHOLD_MINUTES = 30;
+    
+    // Tracking proměnné
+    let lastActivityTime = Date.now();
+    let isPageVisible = true;
+    let deferredPrompt = null;
     
     // ============================================
     // SERVICE WORKER REGISTRATION
     // ============================================
     
     if ('serviceWorker' in navigator) {
-        // Počkej na load stránky
         window.addEventListener('load', () => {
             registerServiceWorker();
+            setupVisibilityDetection();
+            setupActivityTracking();
+            setupMessageListener();
         });
     } else {
         console.log('[PWA] Service Worker není podporován v tomto prohlížeči');
@@ -68,14 +84,191 @@
     }
     
     // ============================================
-    // UPDATE NOTIFICATION
+    // VISIBILITY DETECTION - CRITICAL FIX
     // ============================================
     
     /**
-     * Zobrazí notifikaci o dostupné aktualizaci
+     * Detekce kdy uživatel opustí a vrátí se na stránku
      */
+    function setupVisibilityDetection() {
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                onPageBecameVisible();
+            } else {
+                onPageBecameHidden();
+            }
+        });
+        
+        // Fallback pro starší prohlížeče
+        window.addEventListener('focus', onPageBecameVisible);
+        window.addEventListener('blur', onPageBecameHidden);
+        
+        // iOS Safari - bfcache handling
+        window.addEventListener('pageshow', (event) => {
+            if (event.persisted) {
+                console.log('[PWA] Page restored from bfcache');
+                onPageBecameVisible();
+            }
+        });
+    }
+    
+    function onPageBecameVisible() {
+        if (isPageVisible) return;
+        
+        isPageVisible = true;
+        const hiddenDuration = Date.now() - lastActivityTime;
+        const hiddenMinutes = Math.round(hiddenDuration / 1000 / 60);
+        
+        console.log(`[PWA] Page became visible after ${hiddenMinutes} minutes`);
+        
+        if (hiddenMinutes >= STALE_THRESHOLD_MINUTES) {
+            console.log('[PWA] Page is stale, checking health...');
+            checkPageHealth();
+        } else if (hiddenMinutes >= 5) {
+            checkConnectivity();
+        }
+        
+        lastActivityTime = Date.now();
+    }
+    
+    function onPageBecameHidden() {
+        isPageVisible = false;
+        lastActivityTime = Date.now();
+    }
+    
+    // ============================================
+    // PAGE HEALTH CHECK
+    // ============================================
+    
+    async function checkPageHealth() {
+        try {
+            // 1. Zkontroluj zda DOM není prázdný
+            const mainContent = document.querySelector('main, #app, .saw-container, [data-saw-module]');
+            if (!mainContent || mainContent.innerHTML.trim() === '') {
+                console.log('[PWA] Main content is empty, refreshing...');
+                hardRefresh();
+                return;
+            }
+            
+            // 2. Zkontroluj error stav
+            const errorIndicators = document.querySelectorAll('.fatal-error, .js-error, [data-error="true"]');
+            if (errorIndicators.length > 0) {
+                console.log('[PWA] Error state detected, refreshing...');
+                hardRefresh();
+                return;
+            }
+            
+            // 3. Zkontroluj connectivity
+            const isOnline = await checkServerConnectivity();
+            if (!isOnline) {
+                showOfflineNotification();
+                return;
+            }
+            
+            // 4. Zkontroluj session
+            const hasAuthElements = document.querySelector('[data-requires-auth], form[data-autosave]');
+            if (hasAuthElements) {
+                const sessionValid = await checkSession();
+                if (!sessionValid) {
+                    showSessionExpiredNotification();
+                    return;
+                }
+            }
+            
+            console.log('[PWA] Page health check passed');
+            
+        } catch (error) {
+            console.error('[PWA] Health check failed:', error);
+            hardRefresh();
+        }
+    }
+    
+    async function checkServerConnectivity() {
+        try {
+            const response = await fetch('/wp-admin/admin-ajax.php?action=saw_heartbeat', {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                cache: 'no-store'
+            });
+            return response.ok;
+        } catch {
+            return navigator.onLine;
+        }
+    }
+    
+    async function checkSession() {
+        try {
+            const response = await fetch('/wp-admin/admin-ajax.php?action=saw_check_session', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                cache: 'no-store',
+                credentials: 'same-origin'
+            });
+            
+            if (!response.ok) return false;
+            
+            const data = await response.json();
+            return data.success && data.data?.logged_in;
+        } catch {
+            return true; // Pokud selže, předpokládej OK
+        }
+    }
+    
+    function checkConnectivity() {
+        if (!navigator.onLine) {
+            showOfflineNotification();
+        }
+    }
+    
+    // ============================================
+    // ACTIVITY TRACKING
+    // ============================================
+    
+    function setupActivityTracking() {
+        const events = ['mousedown', 'keydown', 'touchstart', 'scroll'];
+        events.forEach(event => {
+            document.addEventListener(event, () => {
+                lastActivityTime = Date.now();
+            }, { passive: true });
+        });
+    }
+    
+    // ============================================
+    // MESSAGE LISTENER
+    // ============================================
+    
+    function setupMessageListener() {
+        navigator.serviceWorker.addEventListener('message', (event) => {
+            if (event.data === 'refresh') {
+                hardRefresh();
+            }
+        });
+    }
+    
+    // ============================================
+    // REFRESH FUNCTIONS
+    // ============================================
+    
+    function hardRefresh() {
+        console.log('[PWA] Performing hard refresh');
+        
+        if (navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage('clearCache');
+        }
+        
+        setTimeout(() => {
+            window.location.reload(true);
+        }, 100);
+    }
+    
+    // ============================================
+    // UPDATE NOTIFICATION
+    // ============================================
+    
     function showUpdateNotification(worker) {
-        // Vytvoř notifikační banner
         const banner = document.createElement('div');
         banner.id = 'saw-pwa-update-banner';
         banner.innerHTML = `
@@ -87,10 +280,77 @@
             </div>
         `;
         
-        // Přidej styly
+        addNotificationStyles();
+        document.body.appendChild(banner);
+        
+        document.getElementById('saw-pwa-update-btn').addEventListener('click', () => {
+            worker.postMessage('skipWaiting');
+            window.location.reload();
+        });
+        
+        document.getElementById('saw-pwa-update-close').addEventListener('click', () => {
+            banner.remove();
+        });
+    }
+    
+    function showOfflineNotification() {
+        if (document.getElementById('saw-pwa-offline-banner')) return;
+        
+        const banner = document.createElement('div');
+        banner.id = 'saw-pwa-offline-banner';
+        banner.innerHTML = `
+            <div class="saw-pwa-update-content">
+                <span class="saw-pwa-update-icon">📡</span>
+                <span class="saw-pwa-update-text">Jste offline</span>
+                <button class="saw-pwa-update-btn" id="saw-pwa-retry-btn">Zkusit znovu</button>
+                <button class="saw-pwa-update-close" id="saw-pwa-offline-close">×</button>
+            </div>
+        `;
+        
+        addNotificationStyles();
+        document.body.appendChild(banner);
+        
+        document.getElementById('saw-pwa-retry-btn').addEventListener('click', () => {
+            banner.remove();
+            checkPageHealth();
+        });
+        
+        document.getElementById('saw-pwa-offline-close').addEventListener('click', () => {
+            banner.remove();
+        });
+        
+        window.addEventListener('online', () => banner.remove(), { once: true });
+    }
+    
+    function showSessionExpiredNotification() {
+        const banner = document.createElement('div');
+        banner.id = 'saw-pwa-session-banner';
+        banner.innerHTML = `
+            <div class="saw-pwa-update-content">
+                <span class="saw-pwa-update-icon">🔐</span>
+                <span class="saw-pwa-update-text">Vaše přihlášení vypršelo</span>
+                <button class="saw-pwa-update-btn" id="saw-pwa-login-btn">Přihlásit se</button>
+            </div>
+        `;
+        
+        addNotificationStyles();
+        document.body.appendChild(banner);
+        
+        document.getElementById('saw-pwa-login-btn').addEventListener('click', () => {
+            const currentUrl = encodeURIComponent(window.location.href);
+            window.location.href = '/login/?redirect=' + currentUrl;
+        });
+    }
+    
+    function addNotificationStyles() {
+        if (document.getElementById('saw-pwa-styles')) return;
+        
         const style = document.createElement('style');
+        style.id = 'saw-pwa-styles';
         style.textContent = `
-            #saw-pwa-update-banner {
+            #saw-pwa-update-banner,
+            #saw-pwa-offline-banner,
+            #saw-pwa-session-banner {
                 position: fixed;
                 bottom: 20px;
                 left: 50%;
@@ -157,7 +417,9 @@
             }
             
             @media (max-width: 500px) {
-                #saw-pwa-update-banner {
+                #saw-pwa-update-banner,
+                #saw-pwa-offline-banner,
+                #saw-pwa-session-banner {
                     left: 10px;
                     right: 10px;
                     transform: none;
@@ -167,52 +429,30 @@
                 .saw-pwa-update-text {
                     display: none;
                 }
+                
+                @keyframes slideUp {
+                    from { transform: translateY(100px); opacity: 0; }
+                    to { transform: translateY(0); opacity: 1; }
+                }
             }
         `;
-        
         document.head.appendChild(style);
-        document.body.appendChild(banner);
-        
-        // Event handlers
-        document.getElementById('saw-pwa-update-btn').addEventListener('click', () => {
-            // Aktivuj nového workera
-            worker.postMessage('skipWaiting');
-            // Reload stránku
-            window.location.reload();
-        });
-        
-        document.getElementById('saw-pwa-update-close').addEventListener('click', () => {
-            banner.remove();
-        });
     }
     
     // ============================================
-    // INSTALL PROMPT
+    // INSTALL PROMPT (PŮVODNÍ FUNKCIONALITA)
     // ============================================
     
-    let deferredPrompt = null;
-    
     window.addEventListener('beforeinstallprompt', (e) => {
-        // Zabraň automatickému zobrazení
         e.preventDefault();
-        // Ulož event pro pozdější použití
         deferredPrompt = e;
-        
         console.log('[PWA] Install prompt uložen');
-        
-        // Můžeš zobrazit vlastní tlačítko "Instalovat"
         showInstallButton();
     });
     
-    /**
-     * Zobrazí tlačítko pro instalaci (volitelné)
-     */
     function showInstallButton() {
-        // Tuto funkci můžeš rozšířit pro zobrazení install tlačítka v UI
-        // Například přidat tlačítko do menu nebo sidebar
-        
-        // Pro teď jen loguj
         console.log('[PWA] Aplikace je připravena k instalaci');
+        // Můžeš rozšířit pro zobrazení install tlačítka v UI
     }
     
     /**
@@ -225,22 +465,16 @@
             return false;
         }
         
-        // Zobraz prompt
         deferredPrompt.prompt();
-        
-        // Počkej na odpověď
         const { outcome } = await deferredPrompt.userChoice;
-        
         console.log('[PWA] Install prompt outcome:', outcome);
-        
-        // Vyčisti
         deferredPrompt = null;
         
         return outcome === 'accepted';
     };
     
     // ============================================
-    // INSTALLED DETECTION
+    // INSTALLED DETECTION (PŮVODNÍ FUNKCIONALITA)
     // ============================================
     
     window.addEventListener('appinstalled', () => {
@@ -253,5 +487,28 @@
         console.log('[PWA] Běží jako nainstalovaná aplikace');
         document.body.classList.add('saw-pwa-standalone');
     }
+    
+    // ============================================
+    // GLOBAL API (PRO DEBUGGING)
+    // ============================================
+    
+    window.SAW_PWA = {
+        refresh: hardRefresh,
+        checkHealth: checkPageHealth,
+        clearCache: () => {
+            if (navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage('clearCache');
+            }
+        },
+        install: window.sawPwaInstall,
+        getStatus: () => ({
+            isPageVisible,
+            lastActivity: new Date(lastActivityTime).toISOString(),
+            minutesSinceActivity: Math.round((Date.now() - lastActivityTime) / 1000 / 60),
+            online: navigator.onLine,
+            canInstall: !!deferredPrompt,
+            isStandalone: window.matchMedia('(display-mode: standalone)').matches
+        })
+    };
     
 })();

@@ -415,6 +415,10 @@ class SAW_Asset_Loader {
                 'path' => 'assets/js/components/admin-table.js',
                 'deps' => ['jquery', 'saw-app'],
             ],
+            'saw-admin-table-sidebar' => [
+                'path' => 'assets/js/components/admin-table-sidebar.js',
+                'deps' => ['jquery', 'saw-app', 'saw-admin-table-component'],
+            ],
             'saw-tabs-navigation' => [
                 'path' => 'assets/js/components/tabs-navigation.js',
                 'deps' => ['jquery', 'saw-app', 'saw-admin-table-component'],

@@ -7,7 +7,7 @@
  * @package    SAW_Visitors
  * @subpackage PWA
  * @since      1.0.0
- * @version    1.1.0 - Updated theme color for better contrast
+ * @version    2.0.0 - Added AJAX handlers for health check
  */
 
 if (!defined('ABSPATH')) {
@@ -75,6 +75,12 @@ class SAW_PWA {
         
         // Přidej Service-Worker-Allowed header
         add_filter('wp_headers', [$this, 'add_sw_headers']);
+        
+        // AJAX handlers pro PWA health check
+        add_action('wp_ajax_saw_heartbeat', [$this, 'handle_heartbeat']);
+        add_action('wp_ajax_nopriv_saw_heartbeat', [$this, 'handle_heartbeat']);
+        add_action('wp_ajax_saw_check_session', [$this, 'handle_check_session']);
+        add_action('wp_ajax_nopriv_saw_check_session', [$this, 'handle_check_session']);
     }
     
     /**
@@ -185,6 +191,77 @@ class SAW_PWA {
         }
         return $headers;
     }
+    
+    // ============================================
+    // AJAX HANDLERS PRO PWA HEALTH CHECK
+    // ============================================
+    
+    /**
+     * Heartbeat handler - kontroluje zda server odpovídá
+     * 
+     * Voláno z pwa-register.js pro kontrolu connectivity
+     * po návratu uživatele z pozadí.
+     *
+     * @since 2.0.0
+     */
+    public function handle_heartbeat() {
+        wp_send_json_success([
+            'alive' => true,
+            'time'  => current_time('mysql')
+        ]);
+    }
+    
+    /**
+     * Session check handler - kontroluje zda je uživatel přihlášen
+     * 
+     * Voláno z pwa-register.js po návratu z pozadí pro detekci
+     * expirované session. Pokud session vypršela, frontend
+     * zobrazí notifikaci a přesměruje na login.
+     *
+     * @since 2.0.0
+     */
+    public function handle_check_session() {
+        $logged_in = false;
+        $session_type = 'none';
+        
+        // 1. Zkontroluj SAW session (primární metoda)
+        if (class_exists('SAW_Session')) {
+            $session = SAW_Session::get_instance();
+            if ($session && $session->is_logged_in()) {
+                $logged_in = true;
+                $session_type = 'saw';
+            }
+        }
+        
+        // 2. Zkontroluj WordPress session (fallback)
+        if (!$logged_in && is_user_logged_in()) {
+            $logged_in = true;
+            $session_type = 'wordpress';
+        }
+        
+        // 3. Zkontroluj custom PHP session (fallback)
+        if (!$logged_in) {
+            // Zajisti že session je nastartovaná
+            if (session_status() === PHP_SESSION_NONE) {
+                @session_start();
+            }
+            
+            if (isset($_SESSION['saw_user_id']) && !empty($_SESSION['saw_user_id'])) {
+                $logged_in = true;
+                $session_type = 'php_session';
+            }
+        }
+        
+        wp_send_json_success([
+            'logged_in'    => $logged_in,
+            'session_type' => $session_type,
+            'time'         => current_time('mysql')
+        ]);
+    }
+    
+    // ============================================
+    // GETTERS
+    // ============================================
     
     /**
      * Get manifest URL
