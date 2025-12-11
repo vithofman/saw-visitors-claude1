@@ -584,6 +584,7 @@ class SAW_Asset_Loader {
             $visits_css_files = [
                 'saw-visits-detail' => 'assets/css/modules/visits/visits-detail.css',
                 'saw-visits-form' => 'assets/css/modules/visits/visits-form.css',
+                'saw-visitors-section' => 'assets/css/modules/visits/visitors-section.css',
             ];
             
             foreach ($visits_css_files as $handle => $path) {
@@ -914,6 +915,7 @@ class SAW_Asset_Loader {
             $visits_css_files = [
                 'saw-visits-detail' => 'assets/css/modules/visits/visits-detail.css',
                 'saw-visits-form' => 'assets/css/modules/visits/visits-form.css',
+                'saw-visitors-section' => 'assets/css/modules/visits/visitors-section.css',
             ];
             
             foreach ($visits_css_files as $handle => $path) {

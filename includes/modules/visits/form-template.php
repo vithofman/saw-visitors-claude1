@@ -401,30 +401,54 @@ $form_action = $is_edit
                 <!-- ================================================
                      VISITORS SECTION
                      ================================================ -->
-                <div class="saw-form-section saw-visitors-section">
+                <!-- Visitors Section - Modern Design -->
+                <div class="saw-visitors-section">
                     <div class="saw-section-header">
-                        <h4>👥 <?php echo esc_html($tr('section_visitors', 'Návštěvníci')); ?></h4>
-                        <button type="button" class="saw-btn saw-btn-sm saw-btn-secondary" id="btn-add-visitor">
-                            + <?php echo esc_html($tr('btn_add_visitor', 'Přidat')); ?>
+                        <h4>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="9" cy="7" r="4"></circle>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                            </svg>
+                            <?php echo esc_html($tr('section_visitors', 'Návštěvníci')); ?>
+                        </h4>
+                        <button type="button" id="btn-add-visitor">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            <?php echo esc_html($tr('btn_add_visitor', 'Přidat návštěvníka')); ?>
                         </button>
                     </div>
                     
                     <!-- Seznam návštěvníků (renderuje JS) -->
                     <div id="visitors-list-container">
-                        <!-- Prázdný stav -->
-                        <div id="visitors-empty-state" class="saw-empty-state">
-                            <span class="saw-empty-icon">👥</span>
-                            <p><?php echo esc_html($tr('visitors_empty', 'Zatím nebyli přidáni žádní návštěvníci.')); ?></p>
-                            <p class="saw-text-muted"><?php echo esc_html($tr('visitors_empty_hint', 'Klikněte na "Přidat" pro přidání návštěvníka.')); ?></p>
+                        <!-- Empty State - Modern -->
+                        <div id="visitors-empty-state">
+                            <div class="saw-empty-icon">
+                                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                </svg>
+                            </div>
+                            <p><?php echo esc_html($tr('visitors_empty', 'Zatím nebyli přidáni žádní návštěvníci')); ?></p>
+                            <p class="saw-text-muted"><?php echo esc_html($tr('visitors_empty_hint', 'Klikněte na tlačítko "Přidat návštěvníka" výše')); ?></p>
                         </div>
                         
                         <!-- Seznam karet (plní JS) -->
                         <div id="visitors-list"></div>
                         
-                        <!-- Počítadlo -->
-                        <div id="visitors-counter" class="saw-visitors-counter" style="display: none;">
-                            <?php echo esc_html($tr('visitors_total', 'Celkem:')); ?> 
-                            <strong><span id="visitors-count">0</span></strong> 
+                        <!-- Counter - Modern -->
+                        <div id="visitors-counter" style="display: none;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="9" cy="7" r="4"></circle>
+                            </svg>
+                            <?php echo esc_html($tr('visitors_total', 'Celkem:')); ?>
+                            <strong><span id="visitors-count">0</span></strong>
                             <span id="visitors-count-label"><?php echo esc_html($tr('visitors_label', 'návštěvníků')); ?></span>
                         </div>
                     </div>
@@ -497,32 +521,49 @@ $form_action = $is_edit
         <div id="visitor-nested-form" class="saw-nested-form" style="display: none;">
             <div class="saw-nested-form-header">
                 <button type="button" class="saw-btn-back" id="btn-visitor-back">
-                    ← <?php echo esc_html($tr('btn_back', 'Zpět')); ?>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="19" y1="12" x2="5" y2="12"></line>
+                        <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg>
+                    <?php echo esc_html($tr('btn_back', 'Zpět')); ?>
                 </button>
-                <h4 id="visitor-form-title">👤 <?php echo esc_html($tr('title_add_visitor', 'Přidat návštěvníka')); ?></h4>
+                <h4 id="visitor-form-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    <?php echo esc_html($tr('title_add_visitor', 'Přidat návštěvníka')); ?>
+                </h4>
             </div>
             
             <div class="saw-nested-form-body">
-                <!-- Jméno -->
-                <div class="saw-form-row">
-                    <label for="visitor-first-name" class="saw-label">
-                        <?php echo esc_html($tr('field_first_name', 'Jméno')); ?> <span class="required">*</span>
-                    </label>
-                    <input type="text" 
-                           id="visitor-first-name" 
-                           class="saw-input" 
-                           maxlength="100">
-                </div>
-                
-                <!-- Příjmení -->
-                <div class="saw-form-row">
-                    <label for="visitor-last-name" class="saw-label">
-                        <?php echo esc_html($tr('field_last_name', 'Příjmení')); ?> <span class="required">*</span>
-                    </label>
-                    <input type="text" 
-                           id="visitor-last-name" 
-                           class="saw-input" 
-                           maxlength="100">
+                <!-- Jméno a Příjmení - 2 sloupce -->
+                <div class="saw-form-row-group">
+                    <div class="saw-form-row">
+                        <label for="visitor-first-name" class="saw-label">
+                            <?php echo esc_html($tr('field_first_name', 'Jméno')); ?>
+                            <span class="required">*</span>
+                        </label>
+                        <input type="text" 
+                               id="visitor-first-name" 
+                               class="saw-input" 
+                               placeholder="<?php echo esc_attr($tr('placeholder_first_name', 'Zadejte jméno')); ?>"
+                               maxlength="100"
+                               autocomplete="off">
+                    </div>
+                    
+                    <div class="saw-form-row">
+                        <label for="visitor-last-name" class="saw-label">
+                            <?php echo esc_html($tr('field_last_name', 'Příjmení')); ?>
+                            <span class="required">*</span>
+                        </label>
+                        <input type="text" 
+                               id="visitor-last-name" 
+                               class="saw-input" 
+                               placeholder="<?php echo esc_attr($tr('placeholder_last_name', 'Zadejte příjmení')); ?>"
+                               maxlength="100"
+                               autocomplete="off">
+                    </div>
                 </div>
                 
                 <!-- Email -->
@@ -564,7 +605,10 @@ $form_action = $is_edit
                     <?php echo esc_html($tr('btn_cancel', 'Zrušit')); ?>
                 </button>
                 <button type="button" class="saw-btn saw-btn-primary" id="btn-visitor-save">
-                    ✓ <?php echo esc_html($tr('btn_save_visitor', 'Uložit návštěvníka')); ?>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    <?php echo esc_html($tr('btn_save_visitor', 'Uložit návštěvníka')); ?>
                 </button>
             </div>
         </div>
