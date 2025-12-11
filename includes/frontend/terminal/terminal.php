@@ -1461,6 +1461,25 @@ private function handle_unified_registration() {
                 ['%d', '%d', '%s']
             );
         }
+        
+        // ========================================
+        // NOTIFICATION TRIGGER: walkin_host
+        // Notifikace hostiteli o walk-in návštěvníkovi
+        // ========================================
+        foreach ($host_ids as $host_id) {
+            if ($host_id > 0) {
+                // Získej základní visitor data pro notifikaci (pokud je dostupné)
+                $visitor_data = [];
+                if (!empty($_POST['first_name']) && !empty($_POST['last_name'])) {
+                    $visitor_data = [
+                        'first_name' => sanitize_text_field($_POST['first_name']),
+                        'last_name' => sanitize_text_field($_POST['last_name']),
+                    ];
+                }
+                
+                do_action('saw_walkin_host_notification', $visit_id, $host_id, $visitor_data);
+            }
+        }
     }
     
     // ===================================
@@ -2067,16 +2086,32 @@ private function handle_unified_registration() {
         if (!empty($visitor_ids)) {
             global $wpdb;
             foreach ($visitor_ids as $vid) {
+                $vid = intval($vid);
+                
                 $wpdb->update(
                     $wpdb->prefix . 'saw_visitors',
                     [
                         'training_completed_at' => current_time('mysql'),
                         'training_status' => 'completed',
                     ],
-                    ['id' => intval($vid)],
+                    ['id' => $vid],
                     ['%s', '%s'],
                     ['%d']
                 );
+                
+                // ========================================
+                // NOTIFICATION TRIGGER: training_completed
+                // Notifikace o dokončení školení návštěvníkem
+                // ========================================
+                $visitor = $wpdb->get_row($wpdb->prepare(
+                    "SELECT visit_id FROM {$wpdb->prefix}saw_visitors WHERE id = %d",
+                    $vid
+                ), ARRAY_A);
+                
+                if ($visitor && !empty($visitor['visit_id'])) {
+                    // Parametry: $visitor_id, $training_id (null), $visit_id
+                    do_action('saw_training_completed', $vid, null, intval($visitor['visit_id']));
+                }
             }
         }
         

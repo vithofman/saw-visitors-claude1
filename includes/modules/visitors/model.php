@@ -364,6 +364,12 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
         // Invalidate cache
         $this->invalidate_cache();
         
+        // ========================================
+        // NOTIFICATION TRIGGER: visit_checkin
+        // Notifikace hostitelům o příchodu návštěvníka
+        // ========================================
+        do_action('saw_visitor_checked_in', $visitor_id, $visit_id);
+        
         return true;
     }
     
@@ -463,6 +469,12 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
         
         // Invalidate cache
         $this->invalidate_cache();
+        
+        // ========================================
+        // NOTIFICATION TRIGGER: visit_checkout
+        // Notifikace hostitelům o odchodu návštěvníka
+        // ========================================
+        do_action('saw_visitor_checked_out', $visitor_id, $visit_id);
         
         return true;
     }

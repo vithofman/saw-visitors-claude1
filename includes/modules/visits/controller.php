@@ -285,6 +285,17 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         
         // Update main table if we have dates
         if (!empty($planned_date_from) || !empty($planned_date_to)) {
+            // ========================================
+            // PŘED UPDATE - získej staré datum pro porovnání
+            // ========================================
+            $old_visit = $wpdb->get_row($wpdb->prepare(
+                "SELECT planned_date_from, planned_date_to FROM {$wpdb->prefix}saw_visits WHERE id = %d",
+                $visit_id
+            ), ARRAY_A);
+            
+            $old_date_from = $old_visit['planned_date_from'] ?? null;
+            $old_date_to = $old_visit['planned_date_to'] ?? null;
+            
             $update_data = array();
             $update_format = array();
             
@@ -306,21 +317,50 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
                     $update_format,
                     array('%d')
                 );
+                
+                // ========================================
+                // NOTIFICATION TRIGGER: visit_rescheduled
+                // Detekce změny data návštěvy
+                // ========================================
+                $date_changed = false;
+                $old_date = null;
+                $new_date = null;
+                
+                if ($old_date_from !== $planned_date_from) {
+                    $date_changed = true;
+                    $old_date = $old_date_from;
+                    $new_date = $planned_date_from;
+                } elseif ($old_date_to !== $planned_date_to) {
+                    $date_changed = true;
+                    $old_date = $old_date_to;
+                    $new_date = $planned_date_to;
+                }
+                
+                if ($date_changed && $old_date && $new_date && $old_date !== $new_date) {
+                    do_action('saw_visit_rescheduled', $visit_id, $old_date, $new_date);
+                }
             }
         }
         
         // Save visit hosts
         $hosts_table = $wpdb->prefix . 'saw_visit_hosts';
         
+        // Získej stávající hostitele PŘED smazáním (pro porovnání)
+        $existing_hosts_before = $wpdb->get_col($wpdb->prepare(
+            "SELECT user_id FROM {$hosts_table} WHERE visit_id = %d",
+            $visit_id
+        ));
+        $existing_hosts_before = array_map('intval', $existing_hosts_before);
+        
         // Delete existing hosts
         $wpdb->delete($hosts_table, array('visit_id' => $visit_id), array('%d'));
         
         // Insert new hosts
         $hosts = isset($_POST['hosts']) && is_array($_POST['hosts']) ? $_POST['hosts'] : array();
+        $hosts = array_map('intval', $hosts);
         
         if (!empty($hosts)) {
             foreach ($hosts as $user_id) {
-                $user_id = intval($user_id);
                 if ($user_id > 0) {
                     $wpdb->insert(
                         $hosts_table,
@@ -331,6 +371,17 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
                         array('%d', '%d')
                     );
                 }
+            }
+        }
+        
+        // ========================================
+        // NOTIFICATION TRIGGER: visit_assigned
+        // Notifikace hostitelům o přiřazení k návštěvě
+        // ========================================
+        $new_hosts = array_diff($hosts, $existing_hosts_before);
+        foreach ($new_hosts as $host_user_id) {
+            if ($host_user_id > 0) {
+                do_action('saw_visit_host_assigned', $visit_id, $host_user_id);
             }
         }
         
@@ -620,6 +671,14 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         
         if (class_exists('SAW_Cache')) {
             SAW_Cache::flush('visits');
+        }
+        
+        // ========================================
+        // NOTIFICATION TRIGGER: visit_cancelled
+        // Notifikace o zrušení návštěvy
+        // ========================================
+        if ($new_status === 'cancelled' && $visit['status'] !== 'cancelled') {
+            do_action('saw_visit_cancelled', $visit_id, '');
         }
         
         $status_labels = [

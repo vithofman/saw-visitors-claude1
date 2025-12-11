@@ -768,6 +768,12 @@ class SAW_Invitation_Controller {
             ['id' => $this->visit_id]
         );
         
+        // ========================================
+        // NOTIFICATION TRIGGER: invitation_confirmed
+        // Notifikace organizátorovi o potvrzení účasti
+        // ========================================
+        do_action('saw_invitation_confirmed', $this->visit_id, null, $this->visit_id);
+        
         // Session tracking
         $flow = $this->session->get('invitation_flow');
         
@@ -1526,6 +1532,19 @@ class SAW_Invitation_Controller {
             ['%s', '%s'],
             ['%d']
         );
+        
+        // ========================================
+        // NOTIFICATION TRIGGER: invitation_confirmed
+        // Notifikace organizátorovi o potvrzení účasti (finální potvrzení)
+        // ========================================
+        $visitor_ids = $wpdb->get_col($wpdb->prepare(
+            "SELECT id FROM {$wpdb->prefix}saw_visitors WHERE visit_id = %d",
+            $this->visit_id
+        ));
+        
+        foreach ($visitor_ids as $visitor_id) {
+            do_action('saw_invitation_confirmed', $this->visit_id, intval($visitor_id), $this->visit_id);
+        }
         
         // Send Info Portal emails
         $email_service_file = SAW_VISITORS_PLUGIN_DIR . 'includes/services/class-saw-visitor-info-email.php';

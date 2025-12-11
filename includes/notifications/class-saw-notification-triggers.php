@@ -76,8 +76,14 @@ class SAW_Notification_Triggers {
         // Visit confirmed (invitation completed)
         add_action('saw_visit_confirmed', [$this, 'on_visit_confirmed'], 10, 2);
         
+        // Invitation confirmed (alias for backward compatibility)
+        add_action('saw_invitation_confirmed', [$this, 'on_invitation_confirmed'], 10, 3);
+        
         // Training completed
-        add_action('saw_training_completed', [$this, 'on_training_completed'], 10, 2);
+        add_action('saw_training_completed', [$this, 'on_training_completed'], 10, 3);
+        
+        // Walk-in host notification
+        add_action('saw_walkin_host_notification', [$this, 'on_walkin_host'], 10, 3);
         
         // Schedule daily reminder cron
         add_action('saw_daily_visit_reminders', [$this, 'send_daily_reminders']);
@@ -457,17 +463,15 @@ class SAW_Notification_Triggers {
      *
      * Called when a visit is cancelled.
      *
-     * @param int   $visit_id Visit ID
-     * @param array $visit    Visit data
+     * @param int    $visit_id Visit ID
+     * @param string $reason   Cancellation reason (optional)
      */
-    public function on_visit_cancelled($visit_id, $visit = []) {
+    public function on_visit_cancelled($visit_id, $reason = '') {
         if (!class_exists('SAW_Notifications')) {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/notifications/class-saw-notifications.php';
         }
         
-        if (empty($visit)) {
-            $visit = $this->get_visit_data($visit_id);
-        }
+        $visit = $this->get_visit_data($visit_id);
         
         if (!$visit) {
             return;
@@ -500,6 +504,7 @@ class SAW_Notification_Triggers {
                 'meta' => [
                     'company_name' => $visit['company_name'] ?? null,
                     'planned_date' => $visit['planned_date_from'],
+                    'reason' => $reason,
                 ],
             ]);
         }
@@ -560,27 +565,84 @@ class SAW_Notification_Triggers {
     }
     
     /**
-     * Handle training completed
+     * Handle invitation confirmed
      *
-     * Called when a visitor completes training.
+     * Called when a visitor confirms their invitation.
      *
-     * @param int   $visitor_id Visitor ID
-     * @param array $visitor    Visitor data
+     * @param int $invitation_id Invitation/Visit ID
+     * @param int $visitor_id     Visitor ID (can be null)
+     * @param int $visit_id       Visit ID
      */
-    public function on_training_completed($visitor_id, $visitor = []) {
+    public function on_invitation_confirmed($invitation_id, $visitor_id, $visit_id) {
         if (!class_exists('SAW_Notifications')) {
             require_once SAW_VISITORS_PLUGIN_DIR . 'includes/notifications/class-saw-notifications.php';
         }
         
-        if (empty($visitor)) {
-            $visitor = $this->get_visitor_data($visitor_id);
+        $visit = $this->get_visit_data($visit_id);
+        
+        if (!$visit) {
+            return;
         }
+        
+        // Notify the creator
+        $creator = $this->get_visit_creator($visit_id);
+        
+        if (!$creator) {
+            return;
+        }
+        
+        $visitor_display = $this->format_visitor_display(
+            $visit['company_name'] ?? null,
+            $visit['first_visitor_name'] ?? '',
+            $visit['visitor_count'] ?? 1
+        );
+        
+        SAW_Notifications::create([
+            'user_id' => $creator['id'],
+            'customer_id' => $visit['customer_id'],
+            'branch_id' => $visit['branch_id'],
+            'type' => 'invitation_confirmed',
+            'priority' => 'low',
+            'title' => __('Pozvánka potvrzena', 'saw-visitors'),
+            'message' => sprintf(
+                __('%s potvrdil/a účast na návštěvě', 'saw-visitors'),
+                $visitor_display
+            ),
+            'visit_id' => $visit_id,
+            'visitor_id' => $visitor_id,
+            'action_url' => SAW_Notifications::build_action_url('visit_detail', $visit_id),
+            'meta' => [
+                'company_name' => $visit['company_name'] ?? null,
+                'visitor_count' => $visit['visitor_count'] ?? 1,
+            ],
+        ]);
+    }
+    
+    /**
+     * Handle training completed
+     *
+     * Called when a visitor completes training.
+     *
+     * @param int      $visitor_id  Visitor ID
+     * @param int|null $training_id Training ID (can be null)
+     * @param int      $visit_id    Visit ID
+     */
+    public function on_training_completed($visitor_id, $training_id, $visit_id) {
+        if (!class_exists('SAW_Notifications')) {
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/notifications/class-saw-notifications.php';
+        }
+        
+        $visitor = $this->get_visitor_data($visitor_id);
         
         if (!$visitor) {
             return;
         }
         
-        $hosts = $this->get_visit_hosts($visitor['visit_id']);
+        $hosts = $this->get_visit_hosts($visit_id);
+        
+        if (empty($hosts)) {
+            return;
+        }
         
         $visitor_name = trim($visitor['first_name'] . ' ' . $visitor['last_name']);
         
@@ -596,14 +658,75 @@ class SAW_Notification_Triggers {
                     __('%s dokončil/a vstupní školení', 'saw-visitors'),
                     $visitor_name
                 ),
-                'visit_id' => $visitor['visit_id'],
+                'visit_id' => $visit_id,
                 'visitor_id' => $visitor_id,
-                'action_url' => SAW_Notifications::build_action_url('visit_detail', $visitor['visit_id']),
+                'action_url' => SAW_Notifications::build_action_url('visit_detail', $visit_id),
                 'meta' => [
                     'visitor_name' => $visitor_name,
+                    'training_id' => $training_id,
                 ],
             ]);
         }
+    }
+    
+    /**
+     * Handle walk-in host notification
+     *
+     * Called when a walk-in visitor selects a host.
+     *
+     * @param int   $visit_id     Visit ID
+     * @param int   $host_user_id Host user ID
+     * @param array $visitor_data Visitor data (name, etc.)
+     */
+    public function on_walkin_host($visit_id, $host_user_id, $visitor_data = []) {
+        if (!class_exists('SAW_Notifications')) {
+            require_once SAW_VISITORS_PLUGIN_DIR . 'includes/notifications/class-saw-notifications.php';
+        }
+        
+        $visit = $this->get_visit_data($visit_id);
+        
+        if (!$visit) {
+            return;
+        }
+        
+        // Check for duplicate within 1 hour
+        if (SAW_Notifications::exists($host_user_id, 'walkin_host', $visit_id, 1)) {
+            return;
+        }
+        
+        // Format visitor name
+        $visitor_name = 'Návštěvník';
+        if (!empty($visitor_data['first_name']) && !empty($visitor_data['last_name'])) {
+            $visitor_name = trim($visitor_data['first_name'] . ' ' . $visitor_data['last_name']);
+        } elseif (!empty($visit['first_visitor_name'])) {
+            $visitor_name = $visit['first_visitor_name'];
+        }
+        
+        $company_display = $visit['company_name'] 
+            ? sprintf('%s (%s)', $visitor_name, $visit['company_name'])
+            : $visitor_name;
+        
+        SAW_Notifications::create([
+            'user_id' => $host_user_id,
+            'customer_id' => $visit['customer_id'],
+            'branch_id' => $visit['branch_id'],
+            'type' => 'walkin_host',
+            'priority' => 'high',
+            'title' => __('Nečekaný návštěvník', 'saw-visitors'),
+            'message' => sprintf(
+                __('%s právě přišel/a bez předchozí registrace a čeká na vás', 'saw-visitors'),
+                $company_display
+            ),
+            'visit_id' => $visit_id,
+            'action_url' => SAW_Notifications::build_action_url('visit_detail', $visit_id),
+            'meta' => [
+                'visitor_name' => $visitor_name,
+                'company_name' => $visit['company_name'] ?? null,
+                'walk_in' => true,
+            ],
+            // High priority notifications expire after 2 hours
+            'expires_at' => date('Y-m-d H:i:s', strtotime('+2 hours')),
+        ]);
     }
     
     // ================================================================
