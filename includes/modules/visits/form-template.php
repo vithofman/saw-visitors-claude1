@@ -118,7 +118,24 @@ $form_action = $is_edit
 <?php endif; ?>
 
 <div class="saw-form-container saw-module-visits">
-    <form method="POST" action="<?php echo esc_url($form_action); ?>" class="saw-visit-form">
+    <form method="POST" action="<?php echo esc_url($form_action); ?>" 
+          class="saw-visit-form"
+          data-visitors-mode="<?php echo esc_attr($visitors_mode); ?>"
+          data-visit-id="<?php echo !empty($item['id']) ? intval($item['id']) : ''; ?>"
+          data-visitors-data="<?php echo esc_attr(json_encode($existing_visitors)); ?>"
+          data-visitors-translations="<?php echo esc_attr(json_encode([
+              'title_add' => $tr('title_add_visitor', 'Přidat návštěvníka'),
+              'title_edit' => $tr('title_edit_visitor', 'Upravit návštěvníka'),
+              'btn_add' => $tr('btn_add_visitor', 'Přidat návštěvníka'),
+              'btn_save' => $tr('btn_save_visitor', 'Uložit návštěvníka'),
+              'confirm_delete' => $tr('confirm_delete_visitor', 'Opravdu chcete odebrat tohoto návštěvníka?'),
+              'error_required' => $tr('error_required_fields', 'Vyplňte povinná pole (jméno a příjmení).'),
+              'error_email' => $tr('error_invalid_email', 'Zadejte platný email.'),
+              'error_duplicate' => $tr('error_duplicate_email', 'Návštěvník s tímto emailem již je v seznamu.'),
+              'person_singular' => $tr('person_singular', 'návštěvník'),
+              'person_few' => $tr('person_few', 'návštěvníci'),
+              'person_many' => $tr('person_many', 'návštěvníků'),
+          ])); ?>">
         <?php 
         $nonce_action = $is_edit ? 'saw_edit_visits' : 'saw_create_visits';
         wp_nonce_field($nonce_action, '_wpnonce', false);
@@ -570,25 +587,4 @@ jQuery(document).ready(function($) {
         }
     });
 });
-</script>
-
-<script>
-// Data pro VisitorsManager
-window.sawVisitorsData = window.sawVisitorsData || {};
-window.sawVisitorsData.mode = '<?php echo esc_js($visitors_mode); ?>';
-window.sawVisitorsData.visitId = <?php echo !empty($item['id']) ? intval($item['id']) : 'null'; ?>;
-window.sawVisitorsData.existingVisitors = <?php echo json_encode($existing_visitors); ?>;
-window.sawVisitorsData.translations = {
-    title_add: '<?php echo esc_js($tr('title_add_visitor', 'Přidat návštěvníka')); ?>',
-    title_edit: '<?php echo esc_js($tr('title_edit_visitor', 'Upravit návštěvníka')); ?>',
-    btn_add: '<?php echo esc_js($tr('btn_add_visitor', 'Přidat návštěvníka')); ?>',
-    btn_save: '<?php echo esc_js($tr('btn_save_visitor', 'Uložit návštěvníka')); ?>',
-    confirm_delete: '<?php echo esc_js($tr('confirm_delete_visitor', 'Opravdu chcete odebrat tohoto návštěvníka?')); ?>',
-    error_required: '<?php echo esc_js($tr('error_required_fields', 'Vyplňte povinná pole (jméno a příjmení).')); ?>',
-    error_email: '<?php echo esc_js($tr('error_invalid_email', 'Zadejte platný email.')); ?>',
-    error_duplicate: '<?php echo esc_js($tr('error_duplicate_email', 'Návštěvník s tímto emailem již je v seznamu.')); ?>',
-    person_singular: '<?php echo esc_js($tr('person_singular', 'návštěvník')); ?>',
-    person_few: '<?php echo esc_js($tr('person_few', 'návštěvníci')); ?>',
-    person_many: '<?php echo esc_js($tr('person_many', 'návštěvníků')); ?>',
-};
 </script>

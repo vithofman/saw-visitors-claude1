@@ -611,40 +611,76 @@
         // INICIALIZACE
         // ========================================
         init: function() {
+            // VŽDY resetovat state před načtením nových dat (důležité při AJAX načtení)
+            this.state = {
+                visitors: [],
+                originalVisitors: [],
+                mode: 'create',
+                visitId: null,
+                editingIndex: null,
+            };
+            
             // Kontrola existence kontejneru
             if (!$('#visitors-list-container').length) {
                 return;
             }
             
-            // Načtení dat z PHP
-            if (typeof window.sawVisitorsData !== 'undefined' && window.sawVisitorsData !== null) {
-                this.state.mode = window.sawVisitorsData.mode || 'create';
-                this.state.visitId = window.sawVisitorsData.visitId || null;
+            // Načtení dat z data atributu form elementu (spolehlivější než script tag při AJAX)
+            const $form = $('.saw-visit-form');
+            let visitorsData = [];
+            let translations = {};
+            
+            if ($form.length) {
+                const mode = $form.data('visitors-mode') || 'create';
+                const visitId = $form.data('visit-id') || null;
+                const visitorsDataAttr = $form.data('visitors-data');
+                const translationsAttr = $form.data('visitors-translations');
                 
-                // Načtení existujících návštěvníků (EDIT mode)
-                if (Array.isArray(window.sawVisitorsData.existingVisitors)) {
-                    console.log('[SAWVisitorsManager] Loading existing visitors:', window.sawVisitorsData.existingVisitors.length);
-                    
-                    this.state.visitors = window.sawVisitorsData.existingVisitors.map(v => ({
-                        _tempId: 'existing_' + v.id,
-                        _dbId: parseInt(v.id),
-                        _status: 'existing',
-                        first_name: v.first_name || '',
-                        last_name: v.last_name || '',
-                        email: v.email || '',
-                        phone: v.phone || '',
-                        position: v.position || '',
-                    }));
-                    
-                    // Uložení originálu pro detekci změn
-                    this.state.originalVisitors = JSON.parse(JSON.stringify(this.state.visitors));
-                    
-                    console.log('[SAWVisitorsManager] Loaded', this.state.visitors.length, 'visitors into state');
-                } else {
-                    console.log('[SAWVisitorsManager] No existing visitors array found');
+                this.state.mode = mode;
+                this.state.visitId = visitId ? parseInt(visitId) : null;
+                
+                // Načtení návštěvníků z data atributu
+                if (visitorsDataAttr && Array.isArray(visitorsDataAttr)) {
+                    visitorsData = visitorsDataAttr;
                 }
+                
+                // Načtení překladů z data atributu
+                if (translationsAttr && typeof translationsAttr === 'object') {
+                    translations = translationsAttr;
+                }
+                
+                console.log('[SAWVisitorsManager] Loaded from data attributes:', {
+                    mode: mode,
+                    visitId: this.state.visitId,
+                    visitorsCount: visitorsData.length
+                });
+            }
+            
+            // Uložení překladů do window pro kompatibilitu s ostatním kódem
+            window.sawVisitorsData = window.sawVisitorsData || {};
+            window.sawVisitorsData.translations = translations;
+            
+            // Načtení existujících návštěvníků (EDIT mode)
+            if (Array.isArray(visitorsData) && visitorsData.length > 0) {
+                console.log('[SAWVisitorsManager] Loading existing visitors:', visitorsData.length);
+                
+                this.state.visitors = visitorsData.map(v => ({
+                    _tempId: 'existing_' + v.id,
+                    _dbId: parseInt(v.id),
+                    _status: 'existing',
+                    first_name: v.first_name || '',
+                    last_name: v.last_name || '',
+                    email: v.email || '',
+                    phone: v.phone || '',
+                    position: v.position || '',
+                }));
+                
+                // Uložení originálu pro detekci změn
+                this.state.originalVisitors = JSON.parse(JSON.stringify(this.state.visitors));
+                
+                console.log('[SAWVisitorsManager] Loaded', this.state.visitors.length, 'visitors into state');
             } else {
-                console.log('[SAWVisitorsManager] window.sawVisitorsData not available yet');
+                console.log('[SAWVisitorsManager] No existing visitors found');
             }
             
             // Bind events
@@ -1071,19 +1107,49 @@
             // Kontrola existence kontejneru
             const containerExists = $('#visitors-list-container').length > 0;
             
-            // Kontrola existence dat - musí být objekt, ne undefined/null
-            const dataExists = typeof window.sawVisitorsData !== 'undefined' && 
-                              window.sawVisitorsData !== null &&
-                              typeof window.sawVisitorsData === 'object';
+            // Kontrola existence form elementu s data atributy (prioritní)
+            const $form = $('.saw-visit-form');
+            const formDataExists = $form.length > 0 && $form.data('visitors-mode') !== undefined;
+            
+            // Pro EDIT režim: ověřit, že visit ID odpovídá (pokud je v URL nebo sidebaru)
+            let visitIdMatches = true;
+            if (formDataExists) {
+                const formVisitId = $form.data('visit-id');
+                
+                // Zkontrolovat, jestli URL obsahuje visit ID
+                const urlMatch = window.location.pathname.match(/\/(\d+)\/?$/);
+                const urlVisitId = urlMatch ? parseInt(urlMatch[1]) : null;
+                
+                // Zkontrolovat, jestli sidebar obsahuje visit ID
+                const $sidebar = $('.saw-sidebar[data-current-id]');
+                const sidebarVisitId = $sidebar.length ? parseInt($sidebar.data('current-id')) : null;
+                
+                // Očekávané visit ID (priorita: sidebar > URL)
+                const expectedVisitId = sidebarVisitId || urlVisitId;
+                
+                // Pokud máme očekávané ID a form ID, musí se shodovat
+                if (expectedVisitId && formVisitId && formVisitId !== expectedVisitId) {
+                    visitIdMatches = false;
+                    console.log('[SAWVisitorsManager] Visit ID mismatch:', {
+                        formVisitId: formVisitId,
+                        expectedVisitId: expectedVisitId,
+                        sidebarVisitId: sidebarVisitId,
+                        urlVisitId: urlVisitId
+                    });
+                }
+            }
+            
+            const dataExists = formDataExists && visitIdMatches;
             
             console.log('[SAWVisitorsManager] Check attempt', attempts, '/', maxAttempts, {
                 containerExists: containerExists,
-                dataExists: dataExists,
-                sawVisitorsData: typeof window.sawVisitorsData
+                formDataExists: formDataExists,
+                visitIdMatches: visitIdMatches,
+                dataExists: dataExists
             });
             
             if (containerExists && dataExists) {
-                console.log('[SAWVisitorsManager] Data found, initializing');
+                console.log('[SAWVisitorsManager] Data ready, initializing');
                 callback();
             } else if (attempts < maxAttempts) {
                 const delay = attempts === 1 && initialDelay > 0 
@@ -1091,8 +1157,8 @@
                     : baseDelay * Math.pow(2, Math.min(attempts - 1, 5));
                 setTimeout(check, delay);
             } else {
-                // Inicializace i bez dat (pro CREATE režim)
-                console.log('[SAWVisitorsManager] Timeout waiting for data, initializing anyway');
+                // Inicializace i bez dat (pro CREATE režim nebo pokud data nejsou kritická)
+                console.warn('[SAWVisitorsManager] Timeout waiting for data, initializing anyway');
                 callback();
             }
         }
@@ -1114,10 +1180,10 @@
     // Re-inicializace při AJAX načtení
     $(document).on('saw:page-loaded saw:content-loaded', function() {
         console.log('[SAWVisitorsManager] AJAX page loaded event received');
-        // Větší delay a více pokusů pro AJAX načtení - script tag se může vykonat později
+        // Data atributy jsou dostupné okamžitě po vložení HTML, takže stačí menší delay
         waitForVisitorsData(function() {
             SAWVisitorsManager.init();
-        }, 30, 300); // 30 pokusů, počáteční delay 300ms
+        }, 20, 100); // 20 pokusů, počáteční delay 100ms (data atributy jsou rychlejší)
     });
 
 })(jQuery);
