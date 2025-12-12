@@ -161,15 +161,18 @@ class SAW_Installer {
             
             // Visitor Training System (6)
             'visits',
-	    'visit_schedules',
+	        'visit_schedules',
             'visitors',
             'visit_hosts',
             'visit_daily_logs',
             'visitor_certificates',
             'visit_invitation_materials',
 
-	    // Notifications (1) ← PŘIDAT
-	    'notifications',
+	        // Notifications
+	        'notifications',
+            
+            // Email logs
+            'email_logs',
             
             // System Logs (2)
             'audit_log',
@@ -293,12 +296,18 @@ class SAW_Installer {
             array('table' => 'visit_invitation_materials', 'constraint' => 'fk_invitation_materials_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'visit_invitation_materials', 'constraint' => 'fk_invitation_materials_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
-	    // notifications
-	    array('table' => 'notifications', 'constraint' => 'fk_notif_user', 'column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-	    array('table' => 'notifications', 'constraint' => 'fk_notif_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-	    array('table' => 'notifications', 'constraint' => 'fk_notif_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
-	    array('table' => 'notifications', 'constraint' => 'fk_notif_visit', 'column' => 'visit_id', 'ref_table' => 'visits', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
-	    array('table' => 'notifications', 'constraint' => 'fk_notif_visitor', 'column' => 'visitor_id', 'ref_table' => 'visitors', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+	        // notifications
+	        array('table' => 'notifications', 'constraint' => 'fk_notif_user', 'column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+	        array('table' => 'notifications', 'constraint' => 'fk_notif_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+	        array('table' => 'notifications', 'constraint' => 'fk_notif_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
+	        array('table' => 'notifications', 'constraint' => 'fk_notif_visit', 'column' => 'visit_id', 'ref_table' => 'visits', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+	        array('table' => 'notifications', 'constraint' => 'fk_notif_visitor', 'column' => 'visitor_id', 'ref_table' => 'visitors', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+
+            // email_logs
+            array('table' => 'email_logs', 'constraint' => 'fk_email_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'email_logs', 'constraint' => 'fk_email_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
+            array('table' => 'email_logs', 'constraint' => 'fk_email_visit', 'column' => 'visit_id', 'ref_table' => 'visits', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
+            array('table' => 'email_logs', 'constraint' => 'fk_email_visitor', 'column' => 'visitor_id', 'ref_table' => 'visitors', 'ref_column' => 'id', 'on_delete' => 'SET NULL'),
 
             // audit_log
             array('table' => 'audit_log', 'constraint' => 'fk_audit_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),

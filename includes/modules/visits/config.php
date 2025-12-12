@@ -204,6 +204,7 @@ return array(
         'saw_extend_pin' => 'ajax_extend_pin',
         'saw_generate_pin' => 'ajax_generate_pin',
         'saw_change_visit_status' => 'ajax_change_visit_status',
+        'saw_send_risks_request' => 'ajax_send_risks_request',
     ),
     
     // ============================================

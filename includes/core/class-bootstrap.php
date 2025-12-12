@@ -132,6 +132,9 @@ class SAW_Bootstrap {
             
             // Visitor Info Portal Router (must load early for rewrite rules) - v3.3.0
             'includes/frontend/visitor-info/visitor-info-router.php',
+
+            // Email System (auto-initializes on plugins_loaded with priority 20)
+            'includes/email/loader.php',
         ];
         
         foreach ($files as $file) {

@@ -667,6 +667,16 @@ $has_invitation_email = !empty($item['invitation_email']);
     </div>
 </div>
 
+<?php 
+// ============================================
+// EMAIL HISTORY SECTION
+// ============================================
+$email_history_file = __DIR__ . '/partials/email-history.php';
+if (file_exists($email_history_file)) {
+    include $email_history_file;
+}
+?>
+
 <!-- ============================================ -->
 <!-- STYLES                                       -->
 <!-- ============================================ -->
