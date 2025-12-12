@@ -1,6 +1,12 @@
 /**
  * SAW App JavaScript - HOTFIX EDITION
  * 
+ * HOTFIX v5.4.4:
+ * - OPRAVENO: Duplikace event listenerů při návratu z bfcache
+ * - Přidána kontrola duplikátů v initLinkInterceptor()
+ * - Přidán handling pro pageshow event s persisted flagem
+ * - Použity named functions pro možnost cleanup
+ * 
  * HOTFIX v5.4.3:
  * - ODSTRANĚN: cleanupWordPressEditorAssets() - způsoboval víc problémů než užitku
  * - Ušetřilo: ~50KB assets, ale stálo to hodiny debuggingu
@@ -12,7 +18,7 @@
  * - Opraveno: Dvakrát confirm dialog
  * 
  * @package SAW_Visitors
- * @version 5.4.3 - HOTFIX: Removed WordPress editor cleanup
+ * @version 5.4.4 - HOTFIX: Fixed duplicate event listeners on bfcache restore
  */
 
 (function($) {
@@ -208,6 +214,7 @@
      * Intercepts all internal links and uses view transition instead of normal navigation.
      * 
      * @since 6.0.0
+     * @fix 5.4.4 - Prevent duplicate listeners on bfcache restore
      */
     function initLinkInterceptor() {
         // Only initialize if viewTransition is available
@@ -216,7 +223,19 @@
             return;
         }
 
-        document.addEventListener('click', function(e) {
+        // CRITICAL FIX: Check if already initialized to prevent duplicates
+        // This happens when page is restored from bfcache - DOMContentLoaded doesn't fire
+        // but pageshow does, and code might try to re-initialize
+        if (document._sawLinkInterceptorInitialized) {
+            console.log('[App] Link interceptor already initialized, skipping');
+            return;
+        }
+        
+        // Mark as initialized
+        document._sawLinkInterceptorInitialized = true;
+
+        // Use named function so we can remove it if needed
+        function linkClickHandler(e) {
             // Find closest link element
             const link = e.target.closest('a[href]');
             
@@ -282,7 +301,12 @@
             
             // Use view transition for navigation
             window.viewTransition.navigateTo(href);
-        }, false); // Use bubble phase (not capture)
+        }
+
+        document.addEventListener('click', linkClickHandler, false);
+        
+        // Store handler reference for potential cleanup
+        document._sawLinkClickHandler = linkClickHandler;
     }
 
     // ========================================
@@ -349,13 +373,56 @@
         document.body.classList.add('loaded');
         
         if (sawGlobal.debug) {
-            console.log('🚀 SAW App initialized v5.4.3', {
+            console.log('🚀 SAW App initialized v5.4.4', {
                 sawGlobal: typeof sawGlobal !== 'undefined',
                 jQuery: !!$,
                 modalSystem: typeof SAWModal !== 'undefined',
                 viewTransition: typeof window.viewTransition !== 'undefined',
                 stateManager: typeof window.stateManager !== 'undefined'
             });
+        }
+    });
+    
+    // ========================================
+    // BFCACHE RESTORE HANDLING
+    // ========================================
+    
+    /**
+     * Handle page restore from bfcache (back/forward cache)
+     * 
+     * When page is restored from bfcache:
+     * - DOMContentLoaded doesn't fire again
+     * - But pageshow event fires with persisted=true
+     * - Event listeners should persist, but we need to ensure they're not duplicated
+     * 
+     * @since 5.4.4
+     */
+    window.addEventListener('pageshow', function(event) {
+        if (event.persisted) {
+            console.log('[App] Page restored from bfcache');
+            
+            // Ensure body has loaded class
+            if (!document.body.classList.contains('loaded')) {
+                document.body.classList.add('loaded');
+            }
+            
+            // Re-check critical components without re-initializing listeners
+            // Most event listeners should persist through bfcache
+            // Only re-initialize if absolutely necessary
+            
+            // Check if viewTransition is still available
+            if (typeof window.viewTransition === 'undefined' && document._sawLinkInterceptorInitialized) {
+                // View transition was lost, mark as not initialized
+                // This allows re-initialization if viewTransition becomes available again
+                document._sawLinkInterceptorInitialized = false;
+                console.log('[App] View transition lost, marked for re-initialization');
+            }
+            
+            // If viewTransition is available but interceptor wasn't initialized, initialize it
+            if (typeof window.viewTransition !== 'undefined' && !document._sawLinkInterceptorInitialized) {
+                console.log('[App] View transition available, initializing link interceptor');
+                initLinkInterceptor();
+            }
         }
     });
     

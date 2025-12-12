@@ -8,7 +8,7 @@
  * @package    SAW_Visitors
  * @subpackage PWA
  * @since      1.0.0
- * @version    2.0.0 - Added mobile recovery script
+ * @version    2.1.0 - Added AJAX recovery script for mobile
  */
 
 if (!defined('ABSPATH')) {
@@ -58,8 +58,8 @@ $theme_color = $saw_pwa->get_theme_color();
 <!-- PWA Registration Script -->
 <script src="<?php echo esc_url($pwa_url . 'pwa-register.js'); ?>?v=<?php echo SAW_VISITORS_VERSION; ?>" defer></script>
 
-<!-- Mobile Recovery Script (fixes frozen pages on mobile devices) -->
-<script src="<?php echo esc_url($pwa_url . 'mobile-recovery.js'); ?>?v=<?php echo SAW_VISITORS_VERSION; ?>" defer></script>
+<!-- AJAX Recovery Script (fixes expired nonce/session on mobile) -->
+<script src="<?php echo esc_url($pwa_url . 'ajax-recovery.js'); ?>?v=<?php echo SAW_VISITORS_VERSION; ?>" defer></script>
 
 <?php
 // Apple Splash Screens (volitelné - pro lepší iOS experience)

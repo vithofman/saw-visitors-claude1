@@ -4,10 +4,18 @@
  * Detekuje "zombie" stav stránky na mobilech a automaticky refreshuje.
  * Přidej do layoutu před </body> nebo do hlavního JS souboru.
  * 
- * @version 1.0.0
+ * @version 1.1.0
+ * @fix 1.1.0 - Přidána ochrana proti duplikaci event listenerů při bfcache restore
  */
 (function() {
     'use strict';
+    
+    // CRITICAL FIX: Prevent duplicate initialization if script is re-evaluated
+    if (window._sawMobileRecoveryInitialized) {
+        console.log('[Mobile Recovery] Already initialized, skipping');
+        return;
+    }
+    window._sawMobileRecoveryInitialized = true;
     
     // Pouze pro mobilní zařízení
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -21,8 +29,8 @@
     // Kratší threshold pro mobily (5 minut místo 30)
     const MOBILE_STALE_THRESHOLD = 5 * 60 * 1000; // 5 minut
     
-    // Detekce visibility change
-    document.addEventListener('visibilitychange', function() {
+    // Use named functions so we can remove them if needed
+    function visibilityChangeHandler() {
         if (document.visibilityState === 'hidden') {
             pageHiddenTime = Date.now();
             console.log('[Mobile Recovery] Page hidden');
@@ -38,16 +46,27 @@
             lastVisibleTime = Date.now();
             pageHiddenTime = null;
         }
-    });
+    }
     
-    // iOS Safari: pageshow event pro bfcache
-    window.addEventListener('pageshow', function(event) {
+    function pageshowHandler(event) {
         if (event.persisted) {
             console.log('[Mobile Recovery] Restored from bfcache');
             // Stránka byla obnovena z bfcache - zkontroluj stav
             setTimeout(checkAndRecover, 100);
         }
-    });
+    }
+    
+    // Detekce visibility change
+    document.addEventListener('visibilitychange', visibilityChangeHandler);
+    
+    // iOS Safari: pageshow event pro bfcache
+    window.addEventListener('pageshow', pageshowHandler);
+    
+    // Store handlers for potential cleanup
+    window._sawMobileRecoveryHandlers = {
+        visibilitychange: visibilityChangeHandler,
+        pageshow: pageshowHandler
+    };
     
     // Hlavní recovery funkce
     function checkAndRecover() {

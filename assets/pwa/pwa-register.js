@@ -3,7 +3,8 @@
  * 
  * Registruje service worker a zpracovává aktualizace.
  * 
- * @version 2.0.0
+ * @version 2.1.0
+ * @fix 2.1.0 - Přidána ochrana proti duplikaci event listenerů při bfcache restore
  * @fix Přidána detekce návratu z pozadí
  * @fix Auto-refresh při stale stránce
  * @fix Lepší error recovery
@@ -41,6 +42,33 @@
     } else {
         console.log('[PWA] Service Worker není podporován v tomto prohlížeči');
     }
+    
+    // CRITICAL FIX: Handle bfcache restore - ensure setup functions aren't called again
+    // When page is restored from bfcache, 'load' event doesn't fire again,
+    // but if script is re-evaluated, we need to prevent duplicate listeners
+    window.addEventListener('pageshow', (event) => {
+        if (event.persisted) {
+            console.log('[PWA] Page restored from bfcache - checking initialization state');
+            // Event listeners should persist through bfcache, but if script
+            // was re-evaluated, flags will be reset - check and re-initialize if needed
+            if (!window._sawPwaInitialized) {
+                console.log('[PWA] Script re-evaluated, re-initializing...');
+                if ('serviceWorker' in navigator) {
+                    // Only re-initialize if not already done
+                    if (!window._sawPwaVisibilityInitialized) {
+                        setupVisibilityDetection();
+                    }
+                    if (!window._sawPwaActivityInitialized) {
+                        setupActivityTracking();
+                    }
+                    if (!window._sawPwaMessageInitialized) {
+                        setupMessageListener();
+                    }
+                }
+                window._sawPwaInitialized = true;
+            }
+        }
+    });
     
     /**
      * Registrace Service Workeru
@@ -89,27 +117,48 @@
     
     /**
      * Detekce kdy uživatel opustí a vrátí se na stránku
+     * 
+     * @fix 2.1.0 - Přidána ochrana proti duplikaci listenerů
      */
     function setupVisibilityDetection() {
-        document.addEventListener('visibilitychange', () => {
+        // CRITICAL FIX: Check if already initialized to prevent duplicates
+        if (window._sawPwaVisibilityInitialized) {
+            console.log('[PWA] Visibility detection already initialized, skipping');
+            return;
+        }
+        
+        window._sawPwaVisibilityInitialized = true;
+        
+        // Use named functions so we can remove them if needed
+        function visibilityChangeHandler() {
             if (document.visibilityState === 'visible') {
                 onPageBecameVisible();
             } else {
                 onPageBecameHidden();
             }
-        });
+        }
+        
+        function pageshowHandler(event) {
+            if (event.persisted) {
+                console.log('[PWA] Page restored from bfcache');
+                onPageBecameVisible();
+            }
+        }
+        
+        document.addEventListener('visibilitychange', visibilityChangeHandler);
         
         // Fallback pro starší prohlížeče
         window.addEventListener('focus', onPageBecameVisible);
         window.addEventListener('blur', onPageBecameHidden);
         
         // iOS Safari - bfcache handling
-        window.addEventListener('pageshow', (event) => {
-            if (event.persisted) {
-                console.log('[PWA] Page restored from bfcache');
-                onPageBecameVisible();
-            }
-        });
+        window.addEventListener('pageshow', pageshowHandler);
+        
+        // Store handlers for potential cleanup
+        window._sawPwaVisibilityHandlers = {
+            visibilitychange: visibilityChangeHandler,
+            pageshow: pageshowHandler
+        };
     }
     
     function onPageBecameVisible() {
@@ -227,25 +276,68 @@
     // ACTIVITY TRACKING
     // ============================================
     
+    /**
+     * Setup activity tracking for user interactions
+     * 
+     * @fix 2.1.0 - Přidána ochrana proti duplikaci listenerů
+     */
     function setupActivityTracking() {
+        // CRITICAL FIX: Check if already initialized to prevent duplicates
+        if (window._sawPwaActivityInitialized) {
+            console.log('[PWA] Activity tracking already initialized, skipping');
+            return;
+        }
+        
+        window._sawPwaActivityInitialized = true;
+        
+        // Use named function so we can remove it if needed
+        function activityHandler() {
+            lastActivityTime = Date.now();
+        }
+        
         const events = ['mousedown', 'keydown', 'touchstart', 'scroll'];
         events.forEach(event => {
-            document.addEventListener(event, () => {
-                lastActivityTime = Date.now();
-            }, { passive: true });
+            document.addEventListener(event, activityHandler, { passive: true });
         });
+        
+        // Store handler for potential cleanup
+        window._sawPwaActivityHandler = activityHandler;
     }
     
     // ============================================
     // MESSAGE LISTENER
     // ============================================
     
+    /**
+     * Setup message listener for service worker communication
+     * 
+     * @fix 2.1.0 - Přidána ochrana proti duplikaci listenerů
+     */
     function setupMessageListener() {
-        navigator.serviceWorker.addEventListener('message', (event) => {
+        // CRITICAL FIX: Check if already initialized to prevent duplicates
+        if (window._sawPwaMessageInitialized) {
+            console.log('[PWA] Message listener already initialized, skipping');
+            return;
+        }
+        
+        // Check if service worker is available
+        if (!navigator.serviceWorker) {
+            return;
+        }
+        
+        window._sawPwaMessageInitialized = true;
+        
+        // Use named function so we can remove it if needed
+        function messageHandler(event) {
             if (event.data === 'refresh') {
                 hardRefresh();
             }
-        });
+        }
+        
+        navigator.serviceWorker.addEventListener('message', messageHandler);
+        
+        // Store handler for potential cleanup
+        window._sawPwaMessageHandler = messageHandler;
     }
     
     // ============================================
