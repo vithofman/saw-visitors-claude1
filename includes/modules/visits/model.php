@@ -395,12 +395,35 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
      */
     public function calculate_expiry($end_date = null, $fallback_hours = 720) {
         if (!empty($end_date)) {
-            // End of the end_date + 24 hours buffer
-            return date('Y-m-d H:i:s', strtotime($end_date . ' 23:59:59 +24 hours'));
+            // Parse end_date as DATE in Prague timezone
+            // Then set to end of day (23:59:59) and add 24 hours
+            try {
+                $tz_prague = new DateTimeZone('Europe/Prague');
+                
+                // Parse the date (assumes it's already in Y-m-d format)
+                $end_dt = new DateTime($end_date . ' 23:59:59', $tz_prague);
+                
+                // Add 24 hours buffer
+                $end_dt->modify('+24 hours');
+                
+                return $end_dt->format('Y-m-d H:i:s');
+            } catch (Exception $e) {
+                // Fallback to old method if DateTime fails
+                error_log("[SAW Visits] DateTime error in calculate_expiry: " . $e->getMessage());
+                return date('Y-m-d H:i:s', strtotime($end_date . ' 23:59:59 +24 hours'));
+            }
         }
         
         // Fallback: 30 days from now
-        return date('Y-m-d H:i:s', strtotime("+{$fallback_hours} hours"));
+        try {
+            $tz_prague = new DateTimeZone('Europe/Prague');
+            $now = new DateTime('now', $tz_prague);
+            $now->modify("+{$fallback_hours} hours");
+            return $now->format('Y-m-d H:i:s');
+        } catch (Exception $e) {
+            error_log("[SAW Visits] DateTime error in calculate_expiry fallback: " . $e->getMessage());
+            return date('Y-m-d H:i:s', strtotime("+{$fallback_hours} hours"));
+        }
     }
 
     /**

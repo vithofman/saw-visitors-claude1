@@ -191,24 +191,23 @@ class SAW_AJAX_Registry {
         
         // 🚨 EMERGENCY FALLBACK: Explicitly register PIN actions
         // This bypasses potential cache issues in Module Loader
-        // 🚨 EMERGENCY FALLBACK: Explicitly register PIN actions
-add_action('wp_ajax_saw_generate_pin', function() {
-    $this->dispatch('visits', 'ajax_generate_pin');
-});
+        add_action('wp_ajax_saw_generate_pin', function() {
+            $this->dispatch('visits', 'ajax_generate_pin');
+        });
 
-add_action('wp_ajax_saw_extend_pin', function() {
-    $this->dispatch('visits', 'ajax_extend_pin');
-});
+        add_action('wp_ajax_saw_extend_pin', function() {
+            $this->dispatch('visits', 'ajax_extend_pin');
+        });
 
-// 🚨 EMERGENCY FALLBACK: Token extension action
-add_action('wp_ajax_saw_extend_token', function() {
-    $this->dispatch('visits', 'ajax_extend_token');
-});
+        // 🚨 EMERGENCY FALLBACK: Token extension - použij dispatch() pro správnou inicializaci
+        add_action('wp_ajax_saw_extend_token', function() {
+            $this->dispatch('visits', 'ajax_extend_token');
+        });
 
-// 🚨 EMERGENCY FALLBACK: Status change action
-add_action('wp_ajax_saw_change_visit_status', function() {
-    $this->dispatch('visits', 'ajax_change_visit_status');
-});
+        // 🚨 EMERGENCY FALLBACK: Status change action
+        add_action('wp_ajax_saw_change_visit_status', function() {
+            $this->dispatch('visits', 'ajax_change_visit_status');
+        });
     }
     
     /**

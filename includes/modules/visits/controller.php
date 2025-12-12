@@ -170,20 +170,57 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
     }
     
     protected function before_save($data) {
-    // Handle company_id based on has_company radio selection
-    // If user selected "Physical person" (has_company = 0), explicitly set company_id to NULL
-    // This allows changing existing visit from company to physical person
-    if (isset($_POST['has_company']) && $_POST['has_company'] === '0') {
-        $data['company_id'] = null;
+        // Handle company_id based on has_company radio selection
+        // Priority: 
+        // 1. If user explicitly selected "Physical person" (has_company = 0), set company_id to null
+        // 2. Otherwise, use company_id from form if provided
+        
+        $has_company = isset($_POST['has_company']) ? $_POST['has_company'] : null;
+        
+        // Get company_id from data array or POST (select-create component may send it in POST)
+        // Check both $data and $_POST to catch company_id from select-create component
+        $company_id = null;
+        if (isset($data['company_id'])) {
+            $company_id = $data['company_id'];
+        } elseif (isset($_POST['company_id'])) {
+            $company_id = $_POST['company_id'];
+        }
+        
+        // Normalize: empty string, '0', or 0 becomes null
+        if (empty($company_id) || $company_id === '0' || $company_id === 0) {
+            $company_id = null;
+        } else {
+            $company_id = intval($company_id);
+            // If intval returns 0, it was invalid, set to null
+            if ($company_id === 0) {
+                $company_id = null;
+            }
+        }
+        
+        // Apply logic
+        if ($has_company === '0') {
+            // User explicitly selected "Physical person" - force company_id to null
+            $data['company_id'] = null;
+        } elseif (!empty($company_id)) {
+            // company_id is provided and valid - use it (even if has_company is not explicitly set)
+            $data['company_id'] = $company_id;
+        } else {
+            // No valid company_id
+            if (empty($data['id'])) {
+                // New visit: default to null
+                $data['company_id'] = null;
+            }
+            // For updates: if company_id is not in data, don't change existing value
+            // (don't set it here, let it be preserved from existing record)
+        }
+        
+        // Set customer_id from context if not provided
+        if (empty($data['customer_id']) && class_exists('SAW_Context')) {
+            $data['customer_id'] = SAW_Context::get_customer_id();
+        }
+        
+        return $data;
     }
-    
-    // Set customer_id from context if not provided
-    if (empty($data['customer_id']) && class_exists('SAW_Context')) {
-        $data['customer_id'] = SAW_Context::get_customer_id();
-    }
-    
-    return $data;
-}
     
     /**
      * Save visit schedules and hosts after main visit is saved
@@ -702,171 +739,171 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
  * 
  * Allows extending PIN validity by hours or to exact datetime.
  * 
- * @since 4.8.0
- * @updated 3.6.0 - Cleaner exact_expiry handling
- */
-public function ajax_extend_pin() {
-    saw_verify_ajax_unified();
-    
-    if (!$this->can('edit')) {
-        wp_send_json_error(['message' => 'Nemáte oprávnění']);
-    }
-    
-    $visit_id = intval($_POST['visit_id'] ?? 0);
-    $hours = intval($_POST['hours'] ?? 0);
-    $exact_expiry = sanitize_text_field($_POST['exact_expiry'] ?? '');
-    
-    if (!$visit_id) {
-        wp_send_json_error(['message' => 'Neplatné ID návštěvy']);
-    }
-    
-    global $wpdb;
-    
-    $visit = $wpdb->get_row($wpdb->prepare(
-        "SELECT pin_code, pin_expires_at FROM {$wpdb->prefix}saw_visits WHERE id = %d",
-        $visit_id
-    ), ARRAY_A);
-    
-    if (!$visit || empty($visit['pin_code'])) {
-        wp_send_json_error(['message' => 'Návštěva nemá PIN kód']);
-    }
-    
-    // Calculate new expiry
-    if (!empty($exact_expiry)) {
-        // Exact datetime provided
-        try {
-            $tz_prague = new DateTimeZone('Europe/Prague');
-            $dt = new DateTime($exact_expiry, $tz_prague);
-            $new_expiry = $dt->format('Y-m-d H:i:s');
-            
-            $now = new DateTime('now', $tz_prague);
-            if ($dt <= $now) {
-                wp_send_json_error(['message' => 'Datum musí být v budoucnosti']);
-            }
-        } catch (Exception $e) {
-            wp_send_json_error(['message' => 'Neplatný formát data']);
-        }
-    } elseif ($hours > 0) {
-        // Validate hours range
-        if ($hours > 720) {
-            wp_send_json_error(['message' => 'Maximální prodloužení je 720 hodin (30 dní)']);
+     * @since 4.8.0
+     * @updated 3.6.0 - Cleaner exact_expiry handling
+     */
+    public function ajax_extend_pin() {
+        saw_verify_ajax_unified();
+        
+        if (!$this->can('edit')) {
+            wp_send_json_error(['message' => 'Nemáte oprávnění']);
         }
         
-        // Relative extension - extend from current expiry if still valid
-        $current = $visit['pin_expires_at'];
-        $base = ($current && strtotime($current) > time()) ? $current : current_time('mysql');
-        $new_expiry = date('Y-m-d H:i:s', strtotime($base . " +{$hours} hours"));
-    } else {
-        wp_send_json_error(['message' => 'Chybí parametr hours nebo exact_expiry']);
+        $visit_id = intval($_POST['visit_id'] ?? 0);
+        $hours = intval($_POST['hours'] ?? 0);
+        $exact_expiry = sanitize_text_field($_POST['exact_expiry'] ?? '');
+        
+        if (!$visit_id) {
+            wp_send_json_error(['message' => 'Neplatné ID návštěvy']);
+        }
+        
+        global $wpdb;
+        
+        $visit = $wpdb->get_row($wpdb->prepare(
+            "SELECT pin_code, pin_expires_at FROM {$wpdb->prefix}saw_visits WHERE id = %d",
+            $visit_id
+        ), ARRAY_A);
+        
+        if (!$visit || empty($visit['pin_code'])) {
+            wp_send_json_error(['message' => 'Návštěva nemá PIN kód']);
+        }
+        
+        // Calculate new expiry
+        if (!empty($exact_expiry)) {
+            // Exact datetime provided
+            try {
+                $tz_prague = new DateTimeZone('Europe/Prague');
+                $dt = new DateTime($exact_expiry, $tz_prague);
+                $new_expiry = $dt->format('Y-m-d H:i:s');
+                
+                $now = new DateTime('now', $tz_prague);
+                if ($dt <= $now) {
+                    wp_send_json_error(['message' => 'Datum musí být v budoucnosti']);
+                }
+            } catch (Exception $e) {
+                wp_send_json_error(['message' => 'Neplatný formát data']);
+            }
+        } elseif ($hours > 0) {
+            // Validate hours range
+            if ($hours > 720) {
+                wp_send_json_error(['message' => 'Maximální prodloužení je 720 hodin (30 dní)']);
+            }
+            
+            // Relative extension - extend from current expiry if still valid
+            $current = $visit['pin_expires_at'];
+            $base = ($current && strtotime($current) > time()) ? $current : current_time('mysql');
+            $new_expiry = date('Y-m-d H:i:s', strtotime($base . " +{$hours} hours"));
+        } else {
+            wp_send_json_error(['message' => 'Chybí parametr hours nebo exact_expiry']);
+        }
+        
+        $result = $wpdb->update(
+            $wpdb->prefix . 'saw_visits',
+            ['pin_expires_at' => $new_expiry],
+            ['id' => $visit_id],
+            ['%s'],
+            ['%d']
+        );
+        
+        if ($result === false) {
+            wp_send_json_error(['message' => 'Chyba databáze: ' . $wpdb->last_error]);
+        }
+        
+        // Clear cache
+        if (class_exists('SAW_Cache')) {
+            SAW_Cache::flush('visits');
+        }
+        
+        wp_send_json_success([
+            'new_expiry' => date_i18n('d.m.Y H:i', strtotime($new_expiry)),
+            'new_expiry_raw' => $new_expiry,
+            'is_valid' => strtotime($new_expiry) > time(),
+            'message' => 'Platnost PIN prodloužena'
+        ]);
     }
-    
-    $result = $wpdb->update(
-        $wpdb->prefix . 'saw_visits',
-        ['pin_expires_at' => $new_expiry],
-        ['id' => $visit_id],
-        ['%s'],
-        ['%d']
-    );
-    
-    if ($result === false) {
-        wp_send_json_error(['message' => 'Chyba databáze: ' . $wpdb->last_error]);
-    }
-    
-    // Clear cache
-    if (class_exists('SAW_Cache')) {
-        SAW_Cache::flush('visits');
-    }
-    
-    wp_send_json_success([
-        'new_expiry' => date_i18n('d.m.Y H:i', strtotime($new_expiry)),
-        'new_expiry_raw' => $new_expiry,
-        'is_valid' => strtotime($new_expiry) > time(),
-        'message' => 'Platnost PIN prodloužena'
-    ]);
-}
 
     /**
- * AJAX: Extend invitation token expiration
- * 
- * Allows extending token validity by hours or to exact datetime.
- * 
- * @since 3.6.0
- */
-public function ajax_extend_token() {
-    saw_verify_ajax_unified();
-    
-    if (!$this->can('edit')) {
-        wp_send_json_error(['message' => 'Nemáte oprávnění']);
-    }
-    
-    $visit_id = intval($_POST['visit_id'] ?? 0);
-    $hours = intval($_POST['hours'] ?? 0);
-    $exact_expiry = sanitize_text_field($_POST['exact_expiry'] ?? '');
-    
-    if (!$visit_id) {
-        wp_send_json_error(['message' => 'Neplatné ID návštěvy']);
-    }
-    
-    global $wpdb;
-    
-    $visit = $wpdb->get_row($wpdb->prepare(
-        "SELECT invitation_token, invitation_token_expires_at 
-         FROM {$wpdb->prefix}saw_visits WHERE id = %d",
-        $visit_id
-    ), ARRAY_A);
-    
-    if (!$visit || empty($visit['invitation_token'])) {
-        wp_send_json_error(['message' => 'Návštěva nemá registrační odkaz']);
-    }
-    
-    // Calculate new expiry
-    if (!empty($exact_expiry)) {
-        // Exact datetime provided
-        try {
-            $tz_prague = new DateTimeZone('Europe/Prague');
-            $dt = new DateTime($exact_expiry, $tz_prague);
-            $new_expiry = $dt->format('Y-m-d H:i:s');
-            
-            $now = new DateTime('now', $tz_prague);
-            if ($dt <= $now) {
-                wp_send_json_error(['message' => 'Datum musí být v budoucnosti']);
-            }
-        } catch (Exception $e) {
-            wp_send_json_error(['message' => 'Neplatný formát data']);
+     * AJAX: Extend invitation token expiration
+     * 
+     * Allows extending token validity by hours or to exact datetime.
+     * 
+     * @since 3.6.0
+     */
+    public function ajax_extend_token() {
+        saw_verify_ajax_unified();
+        
+        if (!$this->can('edit')) {
+            wp_send_json_error(['message' => 'Nemáte oprávnění']);
         }
-    } elseif ($hours > 0) {
-        // Relative extension
-        $current = $visit['invitation_token_expires_at'];
-        // Extend from current expiry if still valid, otherwise from now
-        $base = ($current && strtotime($current) > time()) ? $current : current_time('mysql');
-        $new_expiry = date('Y-m-d H:i:s', strtotime($base . " +{$hours} hours"));
-    } else {
-        wp_send_json_error(['message' => 'Chybí parametr hours nebo exact_expiry']);
-    }
-    
-    $result = $wpdb->update(
-        $wpdb->prefix . 'saw_visits',
-        ['invitation_token_expires_at' => $new_expiry],
-        ['id' => $visit_id],
-        ['%s'],
-        ['%d']
-    );
-    
-    if ($result === false) {
-        wp_send_json_error(['message' => 'Chyba databáze: ' . $wpdb->last_error]);
-    }
-    
-    // Clear cache
-    if (class_exists('SAW_Cache')) {
-        SAW_Cache::flush('visits');
-    }
-    
-    wp_send_json_success([
-        'new_expiry' => date_i18n('d.m.Y H:i', strtotime($new_expiry)),
-        'new_expiry_raw' => $new_expiry,
-        'is_valid' => strtotime($new_expiry) > time(),
-        'message' => 'Platnost odkazu prodloužena'
-    ]);
+        
+        $visit_id = intval($_POST['visit_id'] ?? 0);
+        $hours = intval($_POST['hours'] ?? 0);
+        $exact_expiry = sanitize_text_field($_POST['exact_expiry'] ?? '');
+        
+        if (!$visit_id) {
+            wp_send_json_error(['message' => 'Neplatné ID návštěvy']);
+        }
+        
+        global $wpdb;
+        
+        $visit = $wpdb->get_row($wpdb->prepare(
+            "SELECT invitation_token, invitation_token_expires_at 
+             FROM {$wpdb->prefix}saw_visits WHERE id = %d",
+            $visit_id
+        ), ARRAY_A);
+        
+        if (!$visit || empty($visit['invitation_token'])) {
+            wp_send_json_error(['message' => 'Návštěva nemá registrační odkaz']);
+        }
+        
+        // Calculate new expiry
+        if (!empty($exact_expiry)) {
+            // Exact datetime provided
+            try {
+                $tz_prague = new DateTimeZone('Europe/Prague');
+                $dt = new DateTime($exact_expiry, $tz_prague);
+                $new_expiry = $dt->format('Y-m-d H:i:s');
+                
+                $now = new DateTime('now', $tz_prague);
+                if ($dt <= $now) {
+                    wp_send_json_error(['message' => 'Datum musí být v budoucnosti']);
+                }
+            } catch (Exception $e) {
+                wp_send_json_error(['message' => 'Neplatný formát data']);
+            }
+        } elseif ($hours > 0) {
+            // Relative extension
+            $current = $visit['invitation_token_expires_at'];
+            // Extend from current expiry if still valid, otherwise from now
+            $base = ($current && strtotime($current) > time()) ? $current : current_time('mysql');
+            $new_expiry = date('Y-m-d H:i:s', strtotime($base . " +{$hours} hours"));
+        } else {
+            wp_send_json_error(['message' => 'Chybí parametr hours nebo exact_expiry']);
+        }
+        
+        $result = $wpdb->update(
+            $wpdb->prefix . 'saw_visits',
+            ['invitation_token_expires_at' => $new_expiry],
+            ['id' => $visit_id],
+            ['%s'],
+            ['%d']
+        );
+        
+        if ($result === false) {
+            wp_send_json_error(['message' => 'Chyba databáze: ' . $wpdb->last_error]);
+        }
+        
+        // Clear cache
+        if (class_exists('SAW_Cache')) {
+            SAW_Cache::flush('visits');
+        }
+        
+        wp_send_json_success([
+            'new_expiry' => date_i18n('d.m.Y H:i', strtotime($new_expiry)),
+            'new_expiry_raw' => $new_expiry,
+            'is_valid' => strtotime($new_expiry) > time(),
+            'message' => 'Platnost odkazu prodloužena'
+        ]);
     }
 
     /**
