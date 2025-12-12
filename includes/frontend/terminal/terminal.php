@@ -1706,6 +1706,40 @@ private function handle_unified_registration() {
     // ===================================
     
     // ===================================
+    // 3d. ✅ OPRAVA v5.2.0: VYTVOŘENÍ SCHEDULE ZÁZNAMU
+    // ===================================
+    // Pokud návštěva nemá žádný schedule záznam, vytvoř ho s aktuálním datem a časem
+    // Toto zajistí správné zobrazení v kalendáři
+    $existing_schedule_count = $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM {$wpdb->prefix}saw_visit_schedules WHERE visit_id = %d",
+        $visit_id
+    ));
+    
+    if ($existing_schedule_count == 0) {
+        $schedule_result = $wpdb->insert(
+            $wpdb->prefix . 'saw_visit_schedules',
+            [
+                'visit_id' => $visit_id,
+                'customer_id' => $this->customer_id,
+                'branch_id' => $this->branch_id,
+                'date' => current_time('Y-m-d'),
+                'time_from' => current_time('H:i:s'),
+                'time_to' => null,
+                'sort_order' => 0,
+                'created_at' => current_time('mysql'),
+            ],
+            ['%d', '%d', '%d', '%s', '%s', '%s', '%d', '%s']
+        );
+        
+        if ($schedule_result) {
+            error_log("[SAW Terminal] Created schedule record for visit #{$visit_id} with check-in time " . current_time('H:i:s'));
+        }
+    }
+    // ===================================
+    // END SCHEDULE CREATION
+    // ===================================
+    
+    // ===================================
     // 4. INFO PORTAL: Send emails (v3.2.0)
     // ===================================
     $email_service_file = SAW_VISITORS_PLUGIN_DIR . 'includes/services/class-saw-visitor-info-email.php';

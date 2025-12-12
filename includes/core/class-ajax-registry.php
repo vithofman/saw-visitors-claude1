@@ -308,7 +308,19 @@ class SAW_AJAX_Registry {
                 error_log(sprintf('[AJAX Registry] Instantiating controller: %s', $controller_class));
             }
             
-            $controller = new $controller_class();
+            // Use singleton pattern if available, otherwise create new instance
+            // This ensures handlers registered in constructor are available
+            if (method_exists($controller_class, 'instance')) {
+                $controller = call_user_func([$controller_class, 'instance']);
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log(sprintf('[AJAX Registry] Using singleton instance for: %s', $controller_class));
+                }
+            } else {
+                $controller = new $controller_class();
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log(sprintf('[AJAX Registry] Created new instance for: %s', $controller_class));
+                }
+            }
             
             if (!method_exists($controller, $method)) {
                 if (defined('WP_DEBUG') && WP_DEBUG) {

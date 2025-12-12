@@ -1527,7 +1527,7 @@
 }
 
 .saw-sidebar-content::-webkit-scrollbar {
-    width: 8px;
+    width: 0px;
 }
 
 .saw-sidebar-content::-webkit-scrollbar-track {
@@ -1536,7 +1536,7 @@
 
 .saw-sidebar-content::-webkit-scrollbar-thumb {
     background: #cbd5e1;
-    border-radius: 4px;
+    border-radius: 0px;
 }
 
 .saw-sidebar-content::-webkit-scrollbar-thumb:hover {
@@ -2097,7 +2097,7 @@
     .saw-sidebar[data-mode="form"] .saw-sidebar-content,
     .saw-sidebar[data-mode="edit"] .saw-sidebar-content,
     .saw-sidebar[data-mode="create"] .saw-sidebar-content {
-        padding: 12px; /* Mobile: minimální padding */
+        padding: 0px; /* Mobile: minimální padding */
     }
 
     .saw-sidebar-footer {
@@ -2113,7 +2113,7 @@
     }
     
     .saw-detail-content-wrapper {
-        padding: 12px; /* Mobile: minimální padding */
+        padding: 0px; /* Mobile: minimální padding */
     }
 
     .saw-floating-action-btn {
@@ -2255,7 +2255,7 @@
     
     /* Detail sidebars keep minimal padding */
     .saw-sidebar-wrapper .saw-sidebar:not([data-mode="form"]):not([data-mode="edit"]):not([data-mode="create"]) .saw-sidebar-content {
-        padding: 8px !important;
+        padding: 0px !important;
     }
     
     /* Nested sidebars also get reduced padding */
@@ -2312,7 +2312,7 @@
     .saw-sidebar-wrapper .saw-sidebar[data-mode="edit"] .saw-form-actions,
     .saw-sidebar-wrapper .saw-sidebar[data-mode="form"] .saw-form-actions {
         padding: 16px 0 0 0 !important;
-        margin: 16px 0 0 0 !important;
+        margin: 16px 0 60px 0 !important;
     }
     
     /* Remove form container padding */

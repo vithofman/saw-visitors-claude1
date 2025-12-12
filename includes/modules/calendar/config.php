@@ -4,7 +4,7 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Modules/Calendar
- * @version     1.2.0 - ADDED: custom_ajax_actions for AJAX registration
+ * @version     1.3.0 - ADDED: Mobile AJAX handlers (saw_calendar_days_with_events, saw_calendar_day_events)
  * @since       1.0.0
  */
 
@@ -37,9 +37,14 @@ return [
     // CUSTOM AJAX ACTIONS
     // =========================================
     'custom_ajax_actions' => [
+        // Desktop (FullCalendar)
         'saw_calendar_events' => 'ajax_get_events',
         'saw_calendar_event_details' => 'ajax_get_event_details',
         'saw_calendar_update_event' => 'ajax_update_event',
+        
+        // Mobile (Mini Calendar + Agenda)
+        'saw_calendar_days_with_events' => 'ajax_get_days_with_events',
+        'saw_calendar_day_events' => 'ajax_get_day_events',
     ],
     
     // =========================================
@@ -52,117 +57,47 @@ return [
         'slot_max_time' => '22:00:00',
         'slot_duration' => '00:30:00',
         
-        // Barvy podle stavu
+        // Barvy podle statusu
         'status_colors' => [
-            'draft' => [
-                'background' => '#94a3b8',
-                'border' => '#64748b',
-                'text' => '#ffffff',
-            ],
-            'pending' => [
-                'background' => '#f59e0b',
-                'border' => '#d97706',
-                'text' => '#ffffff',
-            ],
-            'confirmed' => [
-                'background' => '#3b82f6',
-                'border' => '#2563eb',
-                'text' => '#ffffff',
-            ],
-            'in_progress' => [
-                'background' => '#f97316',
-                'border' => '#ea580c',
-                'text' => '#ffffff',
-            ],
-            'completed' => [
-                'background' => '#6b7280',
-                'border' => '#4b5563',
-                'text' => '#ffffff',
-            ],
-            'cancelled' => [
-                'background' => '#ef4444',
-                'border' => '#dc2626',
-                'text' => '#ffffff',
-            ],
+            'draft'       => ['background' => '#94a3b8', 'border' => '#64748b', 'text' => '#ffffff'],
+            'pending'     => ['background' => '#f59e0b', 'border' => '#d97706', 'text' => '#ffffff'],
+            'confirmed'   => ['background' => '#3b82f6', 'border' => '#2563eb', 'text' => '#ffffff'],
+            'in_progress' => ['background' => '#f97316', 'border' => '#ea580c', 'text' => '#ffffff'],
+            'completed'   => ['background' => '#6b7280', 'border' => '#4b5563', 'text' => '#ffffff'],
+            'cancelled'   => ['background' => '#ef4444', 'border' => '#dc2626', 'text' => '#ffffff'],
         ],
         
-        // Barvy podle typu návštěvy
+        // Barvy podle typu
         'type_colors' => [
-            'planned' => [
-                'background' => '#3b82f6',
-                'border' => '#2563eb',
-            ],
-            'walk_in' => [
-                'background' => '#f59e0b',
-                'border' => '#d97706',
-            ],
+            'planned' => '#3b82f6',
+            'walk_in' => '#10b981',
         ],
     ],
     
     // =========================================
-    // PŘEKLADY
-    // =========================================
-    'translations' => [
-        // Stavy
-        'status_draft' => 'Koncept',
-        'status_pending' => 'Čekající',
-        'status_confirmed' => 'Potvrzená',
-        'status_in_progress' => 'Probíhá',
-        'status_completed' => 'Dokončená',
-        'status_cancelled' => 'Zrušená',
-        
-        // Typy
-        'type_planned' => 'Plánovaná',
-        'type_walk_in' => 'Neplánovaná',
-        
-        // UI
-        'loading' => 'Načítání...',
-        'error_loading' => 'Chyba při načítání událostí',
-        'event_moved' => 'Návštěva byla přesunuta',
-        'no_events' => 'Žádné události',
-        
-        // Filtry
-        'filter_all_statuses' => 'Všechny stavy',
-        'filter_all_types' => 'Všechny typy',
-        
-        // Akce
-        'new_visit' => 'Nová návštěva',
-        'view_detail' => 'Detail',
-        'edit' => 'Upravit',
-    ],
-    
-    // =========================================
-    // FILTRY (bez pobočky - ta je z context)
+    // FILTRY
     // =========================================
     'filters' => [
         'status' => [
+            'label' => 'Status',
             'type' => 'select',
-            'label' => 'Stav',
             'options' => [
-                '' => 'Všechny stavy',
-                'draft' => 'Koncept',
+                '' => 'Všechny',
                 'pending' => 'Čekající',
-                'confirmed' => 'Potvrzená',
-                'in_progress' => 'Probíhá',
-                'completed' => 'Dokončená',
-                'cancelled' => 'Zrušená',
+                'confirmed' => 'Potvrzené',
+                'in_progress' => 'Probíhající',
+                'completed' => 'Dokončené',
+                'cancelled' => 'Zrušené',
             ],
         ],
-        'visit_type' => [
+        'type' => [
+            'label' => 'Typ',
             'type' => 'select',
-            'label' => 'Typ návštěvy',
             'options' => [
-                '' => 'Všechny typy',
-                'planned' => 'Plánovaná',
-                'walk_in' => 'Neplánovaná',
+                '' => 'Všechny',
+                'planned' => 'Plánované',
+                'walk_in' => 'Neplánované',
             ],
         ],
-    ],
-    
-    // =========================================
-    // CACHE
-    // =========================================
-    'cache' => [
-        'enabled' => false, // Calendar data should be real-time
     ],
 ];

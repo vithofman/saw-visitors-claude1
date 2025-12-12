@@ -4,7 +4,11 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visitors
- * @version     4.0.0 - Multi-language support for singular/plural
+ * @version     4.1.0 - FIXED: Added custom_ajax_actions for checkout/checkin
+ * 
+ * CHANGELOG:
+ * 4.1.0 - Added custom_ajax_actions to register AJAX handlers through AJAX Registry
+ * 4.0.0 - Multi-language support for singular/plural
  */
 
 if (!defined('ABSPATH')) {
@@ -45,6 +49,18 @@ return array(
         'create' => 'manage_options',
         'edit' => 'manage_options',
         'delete' => 'manage_options',
+    ),
+    
+    // ============================================
+    // CUSTOM AJAX ACTIONS
+    // ✅ ADDED v4.1.0 - Required for AJAX Registry to register these handlers
+    // Without this, saw_checkout/saw_checkin would only be registered when
+    // visiting /admin/visitors page, NOT during AJAX requests!
+    // ============================================
+    'custom_ajax_actions' => array(
+        'saw_checkout' => 'ajax_checkout',
+        'saw_checkin' => 'ajax_checkin',
+        'saw_add_adhoc_visitor' => 'ajax_add_adhoc_visitor',
     ),
     
     'fields' => array(
@@ -88,141 +104,128 @@ return array(
         ),
         'email' => array(
             'type' => 'email',
-            'label' => $tr('form_email', 'Email'),
+            'label' => $tr('form_email', 'E-mail'),
             'required' => false,
             'sanitize' => 'sanitize_email',
         ),
         'phone' => array(
-            'type' => 'text',
+            'type' => 'tel',
             'label' => $tr('form_phone', 'Telefon'),
             'required' => false,
+            'sanitize' => 'sanitize_text_field',
+        ),
+        'training_status' => array(
+            'type' => 'select',
+            'label' => $tr('form_training_status', 'Stav školení'),
+            'required' => false,
+            'options' => array(
+                'not_started' => $tr('training_not_started', 'Nespuštěno'),
+                'in_progress' => $tr('training_in_progress', 'Probíhá'),
+                'completed' => $tr('training_completed', 'Dokončeno'),
+                'skipped' => $tr('training_skipped', 'Přeskočeno'),
+            ),
             'sanitize' => 'sanitize_text_field',
         ),
         'participation_status' => array(
             'type' => 'select',
             'label' => $tr('form_participation_status', 'Stav účasti'),
-            'required' => true,
-            'sanitize' => 'sanitize_text_field',
-            'default' => 'planned',
-            'options' => array(
-                'planned' => $tr('status_planned_short', 'Plánovaný'),
-                'confirmed' => $tr('status_confirmed_short', 'Potvrzený'),
-                'no_show' => $tr('status_no_show_short', 'Nedostavil se'),
-            ),
-        ),
-        'training_skipped' => array(
-            'type' => 'checkbox',
-            'label' => $tr('form_training_skipped', 'Školení absolvováno do 1 roku'),
             'required' => false,
-            'sanitize' => 'absint',
-            'default' => 0,
-        ),
-        'current_status' => array(
-            'type' => 'select',
-            'label' => $tr('col_current_status', 'Aktuální stav'),
-            'required' => false,
-            'hidden' => true,
-            'sanitize' => 'sanitize_text_field',
-            'default' => 'planned',
             'options' => array(
-                'planned' => $tr('status_planned_short', 'Plánovaný'),
-                'confirmed' => $tr('status_confirmed_short', 'Potvrzený'),
-                'present' => $tr('status_present_short', 'Přítomen'),
-                'checked_out' => $tr('status_checked_out_short', 'Odhlášen'),
-                'no_show' => $tr('status_no_show_short', 'Nedostavil se'),
+                'planned' => $tr('participation_planned', 'Plánovaný'),
+                'confirmed' => $tr('participation_confirmed', 'Potvrzený'),
+                'no_show' => $tr('participation_no_show', 'Nedostavil se'),
             ),
-        ),
-        'training_status' => array(
-            'type' => 'select',
-            'label' => $tr('col_training', 'Stav školení'),
-            'required' => false,
-            'hidden' => true,
             'sanitize' => 'sanitize_text_field',
-            'default' => 'pending',
-            'options' => array(
-                'pending' => $tr('training_pending', 'Čeká na check-in'),
-                'not_available' => $tr('training_not_available', 'Nebylo k dispozici'),
-                'skipped' => $tr('training_skipped_short', 'Přeskočeno (1 rok)'),
-                'in_progress' => $tr('training_in_progress_short', 'Probíhá'),
-                'completed' => $tr('training_completed_short', 'Dokončeno'),
-            ),
         ),
     ),
     
-    'list_config' => array(
-        'columns' => array(
-            'id',
-            'first_name',
-            'last_name',
-            'visit_id',
-            'current_status',
-            'training_status',
-            'first_checkin_at',
-            'last_checkout_at'
-        ),
-        'searchable' => array('first_name', 'last_name', 'email'),
-        'sortable' => array(
-            'id', 
-            'first_name', 
-            'last_name', 
-            'created_at',
-            'current_status',
-            'training_status',
-        ),
-        'filters' => array(
-            'training_status' => true,
-        ),
-        'per_page' => 20,
-        'enable_detail_modal' => true,
-    ),
-    
+    // ============================================
+    // TABS CONFIGURATION
+    // For filtering by current_status (computed, not in DB)
+    // ============================================
     'tabs' => array(
         'enabled' => true,
         'tab_param' => 'current_status',
+        'default_tab' => 'all',
         'tabs' => array(
             'all' => array(
                 'label' => $tr('tab_all', 'Všichni'),
-                'icon' => '📋',
                 'filter_value' => null,
                 'count_query' => true,
             ),
             'present' => array(
-                'label' => $tr('tab_present', 'Přítomní'),
-                'icon' => '✅',
+                'label' => $tr('tab_present', '✅ Přítomní'),
                 'filter_value' => 'present',
                 'count_query' => true,
             ),
             'checked_out' => array(
-                'label' => $tr('tab_checked_out', 'Odhlášení'),
-                'icon' => '🚪',
+                'label' => $tr('tab_checked_out', '🚪 Odhlášení'),
                 'filter_value' => 'checked_out',
                 'count_query' => true,
             ),
-            'confirmed' => array(
-                'label' => $tr('tab_confirmed', 'Potvrzení'),
-                'icon' => '⏳',
-                'filter_value' => 'confirmed',
-                'count_query' => true,
-            ),
             'planned' => array(
-                'label' => $tr('tab_planned', 'Plánovaní'),
-                'icon' => '📅',
+                'label' => $tr('tab_planned', '📅 Plánovaní'),
                 'filter_value' => 'planned',
                 'count_query' => true,
             ),
-            'no_show' => array(
-                'label' => $tr('tab_no_show', 'Nedostavili se'),
-                'icon' => '❌',
-                'filter_value' => 'no_show',
-                'count_query' => true,
-            ),
         ),
-        'default_tab' => 'all',
     ),
     
+    // ============================================
+    // INFINITE SCROLL CONFIGURATION
+    // ============================================
+    'infinite_scroll' => array(
+        'enabled' => true,
+        'per_page' => 50,
+        'initial_load' => 100,
+        'threshold' => 200,
+    ),
+    
+    // ============================================
+    // LIST CONFIGURATION
+    // ============================================
+    'list_config' => array(
+        'per_page' => 20,
+        'default_orderby' => 'vis.id',
+        'default_order' => 'DESC',
+        'searchable_fields' => array('first_name', 'last_name', 'email', 'phone', 'position'),
+        'filters' => array(
+            'visit_id' => true,
+            'training_status' => true,
+            'participation_status' => true,
+            'current_status' => true,
+        ),
+    ),
+    
+    // ============================================
+    // DETAIL SIDEBAR CONFIGURATION
+    // ============================================
+    'detail_sidebar' => array(
+        'enabled' => true,
+        'width' => '500px',
+        'default_tab' => 'overview',
+        'tabs' => array(
+            'overview' => array(
+                'label' => $tr('detail_tab_overview', 'Přehled'),
+                'icon' => '📋',
+            ),
+            'activity' => array(
+                'label' => $tr('detail_tab_activity', 'Aktivita'),
+                'icon' => '📊',
+            ),
+        ),
+    ),
+    
+    // ============================================
+    // CACHE CONFIGURATION
+    // ============================================
     'cache' => array(
         'enabled' => true,
         'ttl' => 300,
-        'invalidate_on' => array('save', 'delete'),
     ),
+    
+    // ============================================
+    // ACTIONS (for list rows)
+    // ============================================
+    'actions' => array('view', 'edit', 'delete'),
 );

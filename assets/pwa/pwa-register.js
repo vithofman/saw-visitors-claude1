@@ -4,11 +4,17 @@
  * Registruje service worker a zpracovává aktualizace.
  * 
  * @package SAW_Visitors
- * @version 3.1.0
+ * @version 5.0.0
  * 
  * CHANGELOG:
- * - 3.1.0: Added auto-reload after 5min background (self-healing for stale nonce/session)
+ * - 5.0.0: NUCLEAR OPTION - Service Worker DISABLED on mobile/PWA to prevent freeze
+ * - 4.0.0: Aggressive mobile reload after 30s background
  * - 3.0.0: Simplified - removed redundant health checks
+ * 
+ * WHY DISABLE SW ON MOBILE:
+ * Android aggressively freezes WebView when PWA goes to background.
+ * After resume, cached content from SW may cause "white screen of death".
+ * Disabling SW ensures always fresh content = no zombie state possible.
  */
 
 (function() {
@@ -19,24 +25,38 @@
     var deferredPrompt = null;
     
     // ============================================
+    // PLATFORM DETECTION
+    // ============================================
+    
+    var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    var isPWA = window.matchMedia('(display-mode: standalone)').matches;
+    var isMobileOrPWA = isMobile || isPWA;
+    
+    // ============================================
     // SERVICE WORKER REGISTRATION
     // ============================================
     
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
-            registerServiceWorker();
+            if (isMobileOrPWA) {
+                // NUCLEAR OPTION: Unregister any existing SW on mobile/PWA
+                // This prevents cached content from causing zombie state
+                unregisterServiceWorker();
+            } else {
+                // Desktop: Register SW normally
+                registerServiceWorker();
+            }
         });
     }
     
     /**
-     * Registrace Service Workeru
+     * Register Service Worker (Desktop only)
      */
     function registerServiceWorker() {
         navigator.serviceWorker.register(SW_PATH, {
             scope: SW_SCOPE
         }).then(function(registration) {
             
-            // Sleduj aktualizace
             registration.addEventListener('updatefound', function() {
                 var newWorker = registration.installing;
                 
@@ -49,16 +69,14 @@
                 }
             });
             
-            // Kontroluj aktualizace každou hodinu
             setInterval(function() {
                 registration.update();
             }, 60 * 60 * 1000);
             
-        }).catch(function(error) {
+        }).catch(function() {
             // SW registration failed - silently ignore
         });
         
-        // Listen for SW messages
         if (navigator.serviceWorker) {
             navigator.serviceWorker.addEventListener('message', function(event) {
                 if (event.data === 'refresh') {
@@ -68,12 +86,33 @@
         }
     }
     
+    /**
+     * Unregister Service Worker (Mobile/PWA)
+     * 
+     * Removes any existing service worker to prevent cached content issues.
+     */
+    function unregisterServiceWorker() {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            registrations.forEach(function(registration) {
+                registration.unregister();
+            });
+        });
+        
+        // Also clear all caches
+        if ('caches' in window) {
+            caches.keys().then(function(names) {
+                names.forEach(function(name) {
+                    caches.delete(name);
+                });
+            });
+        }
+    }
+    
     // ============================================
-    // UPDATE NOTIFICATION
+    // UPDATE NOTIFICATION (Desktop only)
     // ============================================
     
     function showUpdateNotification(worker) {
-        // Zkontroluj zda už není zobrazena
         if (document.getElementById('saw-pwa-update-banner')) {
             return;
         }
@@ -187,9 +226,6 @@
         deferredPrompt = e;
     });
     
-    /**
-     * Spustí install prompt
-     */
     window.sawPwaInstall = function() {
         if (!deferredPrompt) {
             return Promise.resolve(false);
@@ -211,48 +247,46 @@
         deferredPrompt = null;
     });
     
-    // Detekce standalone módu
-    if (window.matchMedia('(display-mode: standalone)').matches) {
+    if (isPWA) {
         document.body.classList.add('saw-pwa-standalone');
     }
     
     // ============================================
-    // RESUME HANDLING & SELF-HEALING
+    // AGGRESSIVE MOBILE RESUME HANDLER
     // ============================================
     
     /**
-     * Auto-reload after long background suspension
+     * On mobile/PWA: Reload after ANY background period > 30 seconds
      * 
-     * When Android/iOS puts PWA to background, it freezes the WebView.
-     * After resume, nonce and session tokens may be stale/expired.
-     * Instead of waiting for AJAX errors, proactively reload after
-     * long suspension to ensure fresh tokens.
-     * 
-     * @since 3.1.0
+     * Even without SW, the WebView state may be corrupted after resume.
+     * Aggressive reload ensures always fresh, working page.
      */
-    var lastVisibleTime = Date.now();
-    var REFRESH_THRESHOLD = 5 * 60 * 1000; // 5 minutes
+    
+    var hiddenTimestamp = null;
+    var MOBILE_THRESHOLD = 30 * 1000;      // 30 seconds
+    var DESKTOP_THRESHOLD = 10 * 60 * 1000; // 10 minutes (desktop more stable)
     
     document.addEventListener('visibilitychange', function() {
-        if (document.visibilityState === 'visible') {
-            var now = Date.now();
-            var timeDiff = now - lastVisibleTime;
+        if (document.visibilityState === 'hidden') {
+            hiddenTimestamp = Date.now();
+        } 
+        else if (document.visibilityState === 'visible' && hiddenTimestamp !== null) {
+            var hiddenDuration = Date.now() - hiddenTimestamp;
+            var threshold = isMobileOrPWA ? MOBILE_THRESHOLD : DESKTOP_THRESHOLD;
             
-            // If app was in background longer than threshold
-            if (timeDiff > REFRESH_THRESHOLD) {
-                // Only reload if online (otherwise user would see error)
-                if (navigator.onLine) {
-                    // Soft reload to refresh nonce and sessions
-                    // This prevents errors on first click after resume
-                    window.location.reload();
-                }
+            if (hiddenDuration > threshold && navigator.onLine) {
+                window.location.reload();
             }
             
-            // Update last visible time (for next check)
-            lastVisibleTime = now;
-        } else {
-            // App going to background - save current time
-            lastVisibleTime = Date.now();
+            hiddenTimestamp = null;
+        }
+    });
+    
+    // Handle bfcache restore
+    window.addEventListener('pageshow', function(event) {
+        if (event.persisted && isMobileOrPWA && navigator.onLine) {
+            // bfcache on mobile is problematic - always reload
+            window.location.reload();
         }
     });
     
@@ -263,15 +297,28 @@
     window.SAW_PWA = {
         install: window.sawPwaInstall,
         clearCache: function() {
-            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-                navigator.serviceWorker.controller.postMessage('clearCache');
+            if ('caches' in window) {
+                caches.keys().then(function(names) {
+                    names.forEach(function(name) {
+                        caches.delete(name);
+                    });
+                });
             }
         },
         canInstall: function() {
             return !!deferredPrompt;
         },
         isStandalone: function() {
-            return window.matchMedia('(display-mode: standalone)').matches;
+            return isPWA;
+        },
+        isMobile: function() {
+            return isMobile;
+        },
+        isServiceWorkerEnabled: function() {
+            return !isMobileOrPWA; // SW only on desktop
+        },
+        forceReload: function() {
+            window.location.reload();
         }
     };
     

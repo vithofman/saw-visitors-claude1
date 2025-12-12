@@ -7,7 +7,7 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Modules/Calendar
- * @version     2.0.0 - Added mobile view support
+ * @version     2.1.0 - FIXED: Hosts query now uses saw_users instead of wp_users
  * @since       1.0.0
  */
 
@@ -63,20 +63,19 @@ class SAW_Module_Calendar_Controller extends SAW_Base_Controller {
     
     /**
      * Register AJAX handlers
+     * 
+     * NOTE: Handlers are registered via AJAX Registry from config.php
+     * This method is kept for backward compatibility but should not register handlers
+     * to avoid conflicts with AJAX Registry's dispatch() mechanism.
      */
     private function register_ajax_handlers() {
-        // Register directly - this ensures handlers are always registered
-        add_action('wp_ajax_saw_calendar_events', [$this, 'ajax_get_events']);
-        add_action('wp_ajax_saw_calendar_event_details', [$this, 'ajax_get_event_details']);
-        add_action('wp_ajax_saw_calendar_update_event', [$this, 'ajax_update_event']);
-        
-        // NEW: Mobile-specific handlers
-        add_action('wp_ajax_saw_calendar_days_with_events', [$this, 'ajax_get_days_with_events']);
-        add_action('wp_ajax_saw_calendar_day_events', [$this, 'ajax_get_day_events']);
+        // REMOVED: Direct registration causes conflicts with AJAX Registry
+        // AJAX Registry registers handlers from config.php during plugins_loaded hook
+        // Those handlers call dispatch() which loads this controller and calls the methods
         
         // Debug logging
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('SAW Calendar: AJAX handlers registered');
+            error_log('SAW Calendar: Controller initialized (handlers registered via AJAX Registry)');
         }
     }
     
@@ -543,24 +542,41 @@ class SAW_Module_Calendar_Controller extends SAW_Base_Controller {
      * AJAX: Get event details for popup
      * 
      * @since 1.0.0
-     * @version 1.4.0 - FIXED: Removed department JOIN (department_id doesn't exist in saw_visits)
+     * @version 2.1.0 - FIXED: Uses saw_users instead of wp_users for hosts query
      */
     public function ajax_get_event_details() {
+        // Check if user is logged in
+        if (!is_user_logged_in()) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('SAW Calendar: ajax_get_event_details - User not logged in');
+            }
+            wp_send_json_error(['message' => 'Přístup zamítnut - nejste přihlášeni'], 403);
+            return;
+        }
+        
+        // Verify nonce
         if (!check_ajax_referer('saw_calendar_nonce', 'nonce', false)) {
-            wp_send_json_error(['message' => 'Neplatný požadavek'], 403);
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('SAW Calendar: ajax_get_event_details - Nonce verification failed');
+                error_log('SAW Calendar: Received nonce: ' . ($_GET['nonce'] ?? 'missing'));
+            }
+            wp_send_json_error(['message' => 'Neplatný požadavek - zkuste obnovit stránku'], 403);
             return;
         }
         
         $visit_id = intval($_GET['id'] ?? 0);
         
         if (!$visit_id) {
-            wp_send_json_error(['message' => 'Neplatné ID'], 400);
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('SAW Calendar: ajax_get_event_details - Invalid visit ID');
+            }
+            wp_send_json_error(['message' => 'Neplatné ID návštěvy'], 400);
             return;
         }
         
         global $wpdb;
         
-        // NOTE: Removed department JOIN - department_id doesn't exist in saw_visits table
+        // Load visit with company and branch
         $visit = $wpdb->get_row($wpdb->prepare(
             "SELECT v.*, 
                     c.name as company_name,
@@ -572,8 +588,47 @@ class SAW_Module_Calendar_Controller extends SAW_Base_Controller {
             $visit_id
         ), ARRAY_A);
         
+        // Check for SQL errors
+        if ($wpdb->last_error) {
+            error_log('SAW Calendar: SQL Error loading visit: ' . $wpdb->last_error);
+            wp_send_json_error(['message' => 'Chyba databáze při načítání návštěvy'], 500);
+            return;
+        }
+        
         if (!$visit) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('SAW Calendar: ajax_get_event_details - Visit not found, ID: ' . $visit_id);
+            }
             wp_send_json_error(['message' => 'Návštěva nenalezena'], 404);
+            return;
+        }
+        
+        // Check permissions
+        if (function_exists('saw_can') && !saw_can('view', 'visits')) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('SAW Calendar: ajax_get_event_details - User does not have view permission');
+            }
+            wp_send_json_error(['message' => 'Nemáte oprávnění k zobrazení této návštěvy'], 403);
+            return;
+        }
+        
+        // Check context - ensure visit belongs to current customer/branch context
+        $customer_id = SAW_Context::get_customer_id();
+        $branch_id = SAW_Context::get_branch_id();
+        
+        if ($customer_id && intval($visit['customer_id']) !== intval($customer_id)) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('SAW Calendar: ajax_get_event_details - Visit customer_id mismatch');
+            }
+            wp_send_json_error(['message' => 'Návštěva nepatří do aktuálního kontextu'], 403);
+            return;
+        }
+        
+        if ($branch_id && intval($visit['branch_id']) !== intval($branch_id)) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('SAW Calendar: ajax_get_event_details - Visit branch_id mismatch');
+            }
+            wp_send_json_error(['message' => 'Návštěva nepatří do aktuální pobočky'], 403);
             return;
         }
         
@@ -581,26 +636,50 @@ class SAW_Module_Calendar_Controller extends SAW_Base_Controller {
         $visit['department_name'] = '';
         
         // Load visitors
+        // NOTE: Removed company_name - column doesn't exist in saw_visitors table
         $visitors = $wpdb->get_results($wpdb->prepare(
-            "SELECT vr.first_name, vr.last_name, vr.email, vr.company_name as visitor_company
+            "SELECT vr.first_name, vr.last_name, vr.email
              FROM {$wpdb->prefix}saw_visitors vr
              WHERE vr.visit_id = %d",
             $visit_id
         ), ARRAY_A);
         
-        // Load hosts
+        // Check for SQL errors
+        if ($wpdb->last_error) {
+            error_log('SAW Calendar: SQL Error loading visitors: ' . $wpdb->last_error);
+            // Continue without visitors - not critical
+            $visitors = [];
+        }
+        
+        // ✅ FIXED: Load hosts from saw_users (NOT wp_users!)
+        // saw_visit_hosts.user_id references saw_users.id, not wp_users.ID
         $hosts = $wpdb->get_results($wpdb->prepare(
-            "SELECT u.display_name, u.user_email
-             FROM {$wpdb->users} u
-             INNER JOIN {$wpdb->prefix}saw_visit_hosts vh ON u.ID = vh.user_id
-             WHERE vh.visit_id = %d",
+            "SELECT 
+                CONCAT(u.first_name, ' ', u.last_name) as display_name,
+                u.email as user_email
+             FROM {$wpdb->prefix}saw_users u
+             INNER JOIN {$wpdb->prefix}saw_visit_hosts vh ON u.id = vh.user_id
+             WHERE vh.visit_id = %d
+               AND u.is_active = 1",
             $visit_id
         ), ARRAY_A);
+        
+        // Check for SQL errors
+        if ($wpdb->last_error) {
+            error_log('SAW Calendar: SQL Error loading hosts: ' . $wpdb->last_error);
+            // Continue without hosts - not critical
+            $hosts = [];
+        }
         
         // Get calendar links
         $calendar_links = [];
         if (class_exists('SAW_Calendar_Links')) {
-            $calendar_links = SAW_Calendar_Links::for_visit($visit_id);
+            try {
+                $calendar_links = SAW_Calendar_Links::for_visit($visit_id);
+            } catch (Exception $e) {
+                error_log('SAW Calendar: Error getting calendar links: ' . $e->getMessage());
+                // Continue without calendar links - not critical
+            }
         }
         
         wp_send_json_success([
@@ -768,6 +847,13 @@ class SAW_Module_Calendar_Controller extends SAW_Base_Controller {
         $prepared_sql = $wpdb->prepare($sql, ...$where_params);
         $results = $wpdb->get_col($prepared_sql);
         
+        // Check for SQL errors
+        if ($wpdb->last_error) {
+            error_log('SAW Calendar: SQL Error in ajax_get_days_with_events: ' . $wpdb->last_error);
+            wp_send_json_error(['message' => 'Chyba databáze'], 500);
+            return;
+        }
+        
         wp_send_json_success($results ?: []);
     }
     
@@ -846,6 +932,13 @@ class SAW_Module_Calendar_Controller extends SAW_Base_Controller {
         $prepared_sql = $wpdb->prepare($sql, ...$where_params);
         $events = $wpdb->get_results($prepared_sql, ARRAY_A);
         
+        // Check for SQL errors
+        if ($wpdb->last_error) {
+            error_log('SAW Calendar: SQL Error in ajax_get_day_events: ' . $wpdb->last_error);
+            wp_send_json_error(['message' => 'Chyba databáze'], 500);
+            return;
+        }
+        
         // Format events
         $formatted_events = [];
         foreach ($events as $event) {
@@ -871,6 +964,7 @@ class SAW_Module_Calendar_Controller extends SAW_Base_Controller {
     }
 }
 
-// Initialize singleton to register AJAX handlers
-// This runs on every request including AJAX
-SAW_Module_Calendar_Controller::instance();
+// Don't auto-initialize singleton - let AJAX Registry handle it via dispatch()
+// This prevents double registration of handlers and timing issues
+// When AJAX Registry's dispatch() is called, it will load this file and create instance
+// SAW_Module_Calendar_Controller::instance();

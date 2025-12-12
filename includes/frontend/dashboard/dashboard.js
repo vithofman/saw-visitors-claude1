@@ -1,76 +1,25 @@
 /**
  * SAW Frontend Dashboard JS
+ * 
+ * @version 5.6.2
+ * 
+ * CHANGELOG:
+ * 5.6.2 - REMOVED checkout handler - now handled by inline script in dashboard.php
+ *         to prevent duplicate AJAX requests
+ * 5.6.1 - Added proper log_date format
  */
 
 jQuery(document).ready(function($) {
     
-    /**
-     * Manual checkout handler
-     */
-    $(document).on('click', '.saw-checkout-btn', function(e) {
-        e.preventDefault();
-        
-        const $btn = $(this);
-        const $card = $btn.closest('.saw-visitor-card');
-        const visitorId = $btn.data('visitor-id');
-        
-        console.log('Checkout button clicked, visitor ID:', visitorId); // ✅ DEBUG
-        
-        // Confirm action
-        if (!confirm('Opravdu chcete odhlásit tohoto návštěvníka?')) {
-            return;
-        }
-        
-        // Prompt for reason
-        const reason = prompt('Důvod ručního odhlášení (volitelné):') || 'Ruční odhlášení';
-        
-        // Disable button
-        $btn.prop('disabled', true).html('<span class="dashicons dashicons-update spin"></span> Odhlašuji...');
-        
-        console.log('Sending AJAX request...'); // ✅ DEBUG
-        
-        // AJAX checkout
-        $.ajax({
-            url: sawDashboard.ajaxurl,
-            type: 'POST',
-            data: {
-                action: 'saw_checkout',
-                nonce: sawDashboard.nonce,
-                visitor_id: visitorId,
-                log_date: new Date().toISOString().split('T')[0], // ✅ OPRAVENO - JS formát
-                manual: 1,
-                reason: reason
-            },
-            success: function(response) {
-                console.log('AJAX response:', response); // ✅ DEBUG
-                
-                if (response.success) {
-                    // Remove card with animation
-                    $card.fadeOut(300, function() {
-                        $(this).remove();
-                        
-                        // Check if list is empty
-                        if ($('.saw-visitor-card').length === 0) {
-                            location.reload();
-                        } else {
-                            // Update count
-                            updateVisitorCount();
-                        }
-                    });
-                    
-                    showNotice('success', 'Návštěvník úspěšně odhlášen');
-                } else {
-                    $btn.prop('disabled', false).html('<span class="dashicons dashicons-exit"></span> Check-out');
-                    showNotice('error', response.data?.message || 'Chyba při odhlašování');
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('AJAX error:', xhr, status, error); // ✅ DEBUG
-                $btn.prop('disabled', false).html('<span class="dashicons dashicons-exit"></span> Check-out');
-                showNotice('error', 'Chyba připojení');
-            }
-        });
-    });
+    // ============================================
+    // CHECKOUT HANDLER - REMOVED in v5.6.2
+    // ============================================
+    // The checkout functionality is now handled by inline script in dashboard.php
+    // Having both handlers caused duplicate AJAX requests where the second one
+    // failed because the visitor was already checked out by the first request.
+    // 
+    // DO NOT ADD CHECKOUT HANDLER HERE!
+    // ============================================
     
     /**
      * Update visitor count badge
@@ -117,6 +66,9 @@ jQuery(document).ready(function($) {
             });
         }, 3000);
     }
+    
+    // Make showNotice available globally for inline script
+    window.sawShowNotice = showNotice;
     
     /**
      * Auto-refresh every 60 seconds - ONLY on dashboard page

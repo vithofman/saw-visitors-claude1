@@ -811,51 +811,58 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
      * AJAX: Check-out visitor
      */
     public function ajax_checkout() {
-        saw_verify_ajax_unified();
-        
-        if (!current_user_can('edit_posts')) {
-            wp_send_json_error(array('message' => 'Nemáte oprávnění'));
-            return;
-        }
-        
-        $visitor_id = isset($_POST['visitor_id']) ? intval($_POST['visitor_id']) : 0;
-        $log_date = isset($_POST['log_date']) ? sanitize_text_field($_POST['log_date']) : current_time('Y-m-d');
-        $manual = isset($_POST['manual']) ? (bool) $_POST['manual'] : false;
-        $reason = isset($_POST['reason']) ? sanitize_textarea_field($_POST['reason']) : null;
-        
-        if (!$visitor_id) {
-            wp_send_json_error(array('message' => 'Neplatný návštěvník'));
-            return;
-        }
-        
-        global $wpdb;
-        $visitor_exists = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}saw_visitors WHERE id = %d",
-            $visitor_id
-        ));
-        
-        if (!$visitor_exists) {
-            wp_send_json_error(array('message' => 'Návštěvník nenalezen'));
-            return;
-        }
-        
-        $admin_id = null;
-        if ($manual) {
-            $admin_id = get_current_user_id();
-        }
-        
-        $result = $this->model->daily_checkout($visitor_id, $log_date, $manual, $admin_id, $reason);
-        
-        if (is_wp_error($result)) {
-            wp_send_json_error(array('message' => $result->get_error_message()));
-            return;
-        }
-        
-        wp_send_json_success(array(
-            'message' => 'Check-out úspěšný',
-            'checked_out_at' => current_time('Y-m-d H:i:s'),
-        ));
+    saw_verify_ajax_unified();
+    
+    if (!current_user_can('edit_posts')) {
+        wp_send_json_error(array('message' => 'Nemáte oprávnění'));
+        return;
     }
+    
+    $visitor_id = isset($_POST['visitor_id']) ? intval($_POST['visitor_id']) : 0;
+    $manual = isset($_POST['manual']) ? (bool) $_POST['manual'] : false;
+    $reason = isset($_POST['reason']) ? sanitize_textarea_field($_POST['reason']) : null;
+    
+    // ✅ FIXED v5.6.1: For manual checkout, use NULL to find ANY active log
+    // This supports overnight visitors whose log_date is from previous day
+    if ($manual) {
+        $log_date = null;
+    } else {
+        $log_date = isset($_POST['log_date']) ? sanitize_text_field($_POST['log_date']) : current_time('Y-m-d');
+    }
+    
+    if (!$visitor_id) {
+        wp_send_json_error(array('message' => 'Neplatný návštěvník'));
+        return;
+    }
+    
+    global $wpdb;
+    $visitor_exists = $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM {$wpdb->prefix}saw_visitors WHERE id = %d",
+        $visitor_id
+    ));
+    
+    if (!$visitor_exists) {
+        wp_send_json_error(array('message' => 'Návštěvník nenalezen'));
+        return;
+    }
+    
+    $admin_id = null;
+    if ($manual) {
+        $admin_id = get_current_user_id();
+    }
+    
+    $result = $this->model->daily_checkout($visitor_id, $log_date, $manual, $admin_id, $reason);
+    
+    if (is_wp_error($result)) {
+        wp_send_json_error(array('message' => $result->get_error_message()));
+        return;
+    }
+    
+    wp_send_json_success(array(
+        'message' => 'Check-out úspěšný',
+        'checked_out_at' => current_time('Y-m-d H:i:s'),
+    ));
+}
     
     /**
      * AJAX: Add ad-hoc visitor

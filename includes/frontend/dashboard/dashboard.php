@@ -1,6 +1,11 @@
 <?php
 /**
- * Frontend Dashboard Page v5.6.0
+ * Frontend Dashboard Page v5.6.1
+ * 
+ * Changes in 5.6.1:
+ * - FIXED: Checkout button now calls correct AJAX action (saw_checkout)
+ * - FIXED: Added confirm dialog before checkout
+ * - FIXED: Added prompt for checkout reason
  * 
  * Changes in 5.6.0:
  * - Checkout immediately removes visitor from list (no reload needed)
@@ -15,7 +20,7 @@
  * - Row 3: Top visitors | Top companies | Longest visits
  * 
  * @package SAW_Visitors
- * @version 5.6.0
+ * @version 5.6.1
  */
 
 if (!defined('ABSPATH')) {
@@ -24,7 +29,7 @@ if (!defined('ABSPATH')) {
 
 class SAW_Frontend_Dashboard {
     
-    const VERSION = '5.6.0';
+    const VERSION = '5.6.1';
     
     public static function init() {}
     
@@ -610,6 +615,7 @@ class SAW_Frontend_Dashboard {
             
             // ============================================
             // CHECKOUT - Immediate removal from list
+            // ✅ FIXED v5.6.1: Correct AJAX action + confirm + prompt dialogs
             // ============================================
             document.querySelectorAll('.saw-checkout-btn').forEach(function(btn) {
                 btn.addEventListener('click', function(e) {
@@ -621,6 +627,19 @@ class SAW_Frontend_Dashboard {
                     var btnEl = this;
                     
                     if (!visitorId || !personEl) return;
+                    
+                    // ✅ FIXED: Confirm dialog
+                    if (!confirm('Opravdu chcete odhlásit tohoto návštěvníka?')) {
+                        return;
+                    }
+                    
+                    // ✅ FIXED: Prompt for reason
+                    var reason = prompt('Důvod ručního odhlášení (volitelné):');
+                    if (reason === null) {
+                        // User clicked Cancel
+                        return;
+                    }
+                    reason = reason || 'Ruční odhlášení';
                     
                     // Disable button and show loading
                     btnEl.disabled = true;
@@ -644,13 +663,17 @@ class SAW_Frontend_Dashboard {
                         ajaxurl = '/wp-admin/admin-ajax.php';
                     }
                     
+                    // ✅ FIXED: Correct AJAX action and parameters
                     fetch(ajaxurl, {
                         method: 'POST',
                         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
                         body: new URLSearchParams({
-                            action: 'saw_manual_checkout',
+                            action: 'saw_checkout',
                             nonce: nonce,
-                            visitor_id: visitorId
+                            visitor_id: visitorId,
+                            log_date: new Date().toISOString().split('T')[0],
+                            manual: '1',
+                            reason: reason
                         })
                     })
                     .then(function(r) { return r.json(); })

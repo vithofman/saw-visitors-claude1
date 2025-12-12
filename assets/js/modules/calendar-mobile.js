@@ -6,68 +6,121 @@
  *
  * @package     SAW_Visitors
  * @subpackage  JS/Modules
- * @version     1.1.0 - Fixed: Added robust error handling
+ * @version     1.2.0 - FIXED: Removed dangerous empty nonce fallback, better error handling
  * @since       3.1.0
  */
 
 (function($) {
     'use strict';
     
-    // Wait for config to be available (with timeout)
+    // ==========================================
+    // CONFIGURATION - NO FALLBACK!
+    // ==========================================
+    
+    /**
+     * Get configuration - MUST exist, no fallback with empty nonce
+     * @returns {object|null}
+     */
+    function getConfig() {
+        if (typeof window.sawCalendarMobile !== 'undefined' && window.sawCalendarMobile.nonce) {
+            return window.sawCalendarMobile;
+        }
+        return null;
+    }
+    
+    /**
+     * Check if configuration is valid
+     * @returns {boolean}
+     */
+    function isConfigValid() {
+        var cfg = window.sawCalendarMobile;
+        return cfg && cfg.ajaxurl && cfg.nonce;
+    }
+    
+    // ==========================================
+    // INITIALIZATION
+    // ==========================================
+    
     var configCheckAttempts = 0;
-    var maxAttempts = 10;
+    var maxAttempts = 20; // Increased to 2 seconds (20 * 100ms)
     
     function waitForConfig() {
         configCheckAttempts++;
         
-        if (typeof window.sawCalendarMobile !== 'undefined') {
+        if (isConfigValid()) {
+            console.log('SAW Calendar Mobile: Configuration found, initializing...');
             initMobileCalendar();
         } else if (configCheckAttempts < maxAttempts) {
             setTimeout(waitForConfig, 100);
         } else {
-            console.warn('SAW Calendar Mobile: Configuration not found after ' + maxAttempts + ' attempts');
+            console.error('SAW Calendar Mobile: Configuration not found after ' + maxAttempts + ' attempts');
+            console.error('SAW Calendar Mobile: window.sawCalendarMobile =', window.sawCalendarMobile);
+            showGlobalError('Konfigurace kalendáře se nepodařila načíst. Zkuste obnovit stránku (F5).');
         }
+    }
+    
+    /**
+     * Show global error message
+     */
+    function showGlobalError(message) {
+        var $agenda = $('#saw-agenda-list');
+        if ($agenda.length) {
+            $agenda.html(
+                '<div class="saw-agenda__empty">' +
+                '<div class="saw-agenda__empty-icon">⚠️</div>' +
+                '<p class="saw-agenda__empty-text">' + escapeHtml(message) + '</p>' +
+                '<button onclick="location.reload()" class="saw-agenda__empty-btn">Obnovit stránku</button>' +
+                '</div>'
+            );
+        }
+    }
+    
+    /**
+     * Escape HTML helper
+     */
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
     }
     
     function initMobileCalendar() {
         try {
-            console.log('SAW Calendar Mobile: Initializing...');
+            console.log('SAW Calendar Mobile: Initializing components...');
             
             // Initialize components with error handling
             if (document.getElementById('saw-mini-calendar')) {
                 MiniCalendar.init();
+                console.log('SAW Calendar Mobile: MiniCalendar initialized');
             }
             
             if (document.getElementById('saw-agenda')) {
                 AgendaList.init();
+                console.log('SAW Calendar Mobile: AgendaList initialized');
             }
             
             if (document.getElementById('saw-bottom-sheet')) {
                 BottomSheet.init();
+                console.log('SAW Calendar Mobile: BottomSheet initialized');
             }
             
-            console.log('SAW Calendar Mobile: Initialized');
+            console.log('SAW Calendar Mobile: All components initialized successfully');
         } catch (e) {
             console.error('SAW Calendar Mobile: Initialization error', e);
+            showGlobalError('Chyba při inicializaci: ' + e.message);
         }
-    }
-    
-    // Safe config access
-    function getConfig() {
-        return window.sawCalendarMobile || {
-            ajaxurl: '/wp-admin/admin-ajax.php',
-            nonce: '',
-            homeUrl: '',
-            createUrl: '/admin/visits/create',
-            detailUrl: '/admin/visits/{id}/',
-            editUrl: '/admin/visits/{id}/edit'
-        };
     }
     
     /**
      * Initialize when DOM is ready
      */
     $(document).ready(function() {
+        console.log('SAW Calendar Mobile: DOM ready, waiting for config...');
+        console.log('SAW Calendar Mobile: Initial sawCalendarMobile =', window.sawCalendarMobile);
         waitForConfig();
     });
     
@@ -222,13 +275,19 @@
         loadDaysWithEvents: function() {
             var self = this;
             var cfg = getConfig();
+            
+            if (!cfg) {
+                console.warn('SAW Calendar Mobile: Cannot load days - no config');
+                return;
+            }
+            
             var startDate = this.currentYear + '-' + String(this.currentMonth).padStart(2, '0') + '-01';
             var endDate = this.currentYear + '-' + String(this.currentMonth).padStart(2, '0') + '-31';
             
-            if (!cfg.nonce) {
-                console.warn('SAW Calendar Mobile: No nonce available');
-                return;
-            }
+            console.log('SAW Calendar Mobile: Loading days with events', {
+                startDate: startDate,
+                endDate: endDate
+            });
             
             $.ajax({
                 url: cfg.ajaxurl,
@@ -240,13 +299,19 @@
                     end: endDate
                 },
                 success: function(response) {
+                    console.log('SAW Calendar Mobile: Days with events response', response);
                     if (response.success && response.data) {
                         self.daysWithEvents = response.data;
                         self.renderDots();
                     }
                 },
                 error: function(xhr, status, error) {
-                    console.error('Failed to load days with events:', error);
+                    console.error('SAW Calendar Mobile: Failed to load days with events', {
+                        status: xhr.status,
+                        statusText: xhr.statusText,
+                        error: error,
+                        response: xhr.responseText
+                    });
                 }
             });
         },
@@ -326,14 +391,17 @@
         loadEvents: function(dateStr) {
             var self = this;
             var cfg = getConfig();
+            
             this.currentDate = dateStr;
             this.showLoading();
             
-            if (!cfg.nonce) {
+            if (!cfg) {
                 this.hideLoading();
-                this.showError('Konfigurace není dostupná');
+                this.showError('Konfigurace není dostupná. Zkuste obnovit stránku.');
                 return;
             }
+            
+            console.log('SAW Calendar Mobile: Loading events for date', dateStr);
             
             $.ajax({
                 url: cfg.ajaxurl,
@@ -345,20 +413,59 @@
                 },
                 success: function(response) {
                     self.hideLoading();
+                    console.log('SAW Calendar Mobile: Day events response', response);
                     
                     if (response.success) {
                         self.renderEvents(response.data.events || []);
                         self.updateHeader(dateStr, response.data.events ? response.data.events.length : 0);
                     } else {
-                        self.showError(response.data && response.data.message ? response.data.message : 'Chyba při načítání');
+                        var msg = response.data && response.data.message ? response.data.message : 'Chyba při načítání';
+                        console.error('SAW Calendar Mobile: Server error', msg);
+                        self.showError(msg);
                     }
                 },
                 error: function(xhr, status, error) {
                     self.hideLoading();
-                    self.showError('Chyba připojení');
-                    console.error('Failed to load events:', error);
+                    console.error('SAW Calendar Mobile: AJAX error loading events', {
+                        status: xhr.status,
+                        statusText: xhr.statusText,
+                        response: xhr.responseText,
+                        error: error
+                    });
+                    
+                    var errorMsg = self.parseErrorMessage(xhr, 'Chyba při načítání událostí');
+                    self.showError(errorMsg);
                 }
             });
+        },
+        
+        /**
+         * Parse error message from XHR response
+         */
+        parseErrorMessage: function(xhr, defaultMsg) {
+            try {
+                if (xhr.responseText) {
+                    var response = JSON.parse(xhr.responseText);
+                    if (response && response.data && response.data.message) {
+                        return response.data.message;
+                    }
+                }
+            } catch (e) {
+                // Not JSON
+            }
+            
+            // Status-based messages
+            if (xhr.status === 403) {
+                return 'Přístup zamítnut (403) - zkuste obnovit stránku';
+            } else if (xhr.status === 404) {
+                return 'Endpoint nenalezen (404)';
+            } else if (xhr.status === 500) {
+                return 'Chyba serveru (500)';
+            } else if (xhr.status === 0) {
+                return 'Nelze se připojit k serveru';
+            }
+            
+            return defaultMsg;
         },
         
         /**
@@ -399,11 +506,11 @@
             const personCount = parseInt(event.person_count || event.visitor_count || 1);
             const personWord = personCount === 1 ? 'osoba' : (personCount >= 2 && personCount <= 4 ? 'osoby' : 'osob');
             
-            let html = '<article class="saw-event-card" data-event-id="' + event.id + '" data-status="' + this.escapeHtml(status) + '">';
+            let html = '<article class="saw-event-card" data-event-id="' + event.id + '" data-status="' + escapeHtml(status) + '">';
             html += '<div class="saw-event-card__indicator" style="background-color: ' + color + '"></div>';
             html += '<div class="saw-event-card__content">';
-            html += '<div class="saw-event-card__time">' + this.escapeHtml(timeFrom) + ' - ' + this.escapeHtml(timeTo) + '</div>';
-            html += '<h3 class="saw-event-card__title">' + this.escapeHtml(event.company_name || 'Návštěva #' + event.id) + '</h3>';
+            html += '<div class="saw-event-card__time">' + escapeHtml(timeFrom) + ' - ' + escapeHtml(timeTo) + '</div>';
+            html += '<h3 class="saw-event-card__title">' + escapeHtml(event.company_name || 'Návštěva #' + event.id) + '</h3>';
             html += '<div class="saw-event-card__meta">';
             html += '<span class="saw-event-card__meta-item">';
             html += '<svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>';
@@ -413,7 +520,7 @@
             if (event.branch_name) {
                 html += '<span class="saw-event-card__meta-item">';
                 html += '<svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>';
-                html += this.escapeHtml(event.branch_name);
+                html += escapeHtml(event.branch_name);
                 html += '</span>';
             }
             
@@ -430,7 +537,7 @@
          */
         getEmptyStateHTML: function() {
             var cfg = getConfig();
-            var createUrl = (cfg.createUrl || '/admin/visits/create') + '?date=' + this.currentDate;
+            var createUrl = cfg ? (cfg.createUrl || '/admin/visits/create') + '?date=' + this.currentDate : '#';
             
             return '<div class="saw-agenda__empty">' +
                    '<div class="saw-agenda__empty-icon">📭</div>' +
@@ -492,23 +599,11 @@
             $(this.listEl).html(
                 '<div class="saw-agenda__empty">' +
                 '<div class="saw-agenda__empty-icon">⚠️</div>' +
-                '<p class="saw-agenda__empty-text">' + this.escapeHtml(message) + '</p>' +
+                '<p class="saw-agenda__empty-text">' + escapeHtml(message) + '</p>' +
+                '<button onclick="location.reload()" class="saw-agenda__empty-btn">Obnovit stránku</button>' +
                 '</div>'
             ).show();
             $(this.loadingEl).hide();
-        },
-        
-        /**
-         * Escape HTML
-         */
-        escapeHtml: function(str) {
-            if (!str) return '';
-            return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
         },
         
         /**
@@ -615,6 +710,13 @@
          * Open bottom sheet with event detail
          */
         openEventDetail: function(eventId) {
+            var cfg = getConfig();
+            
+            if (!cfg) {
+                alert('Konfigurace není dostupná. Zkuste obnovit stránku.');
+                return;
+            }
+            
             this.open();
             this.loadEventDetail(eventId);
         },
@@ -657,10 +759,11 @@
             var self = this;
             var cfg = getConfig();
             
-            if (!cfg.nonce) {
-                self.renderError('Konfigurace není dostupná');
-                return;
-            }
+            console.log('SAW Calendar Mobile: Loading event detail', {
+                eventId: eventId,
+                ajaxurl: cfg.ajaxurl,
+                hasNonce: !!cfg.nonce
+            });
             
             $.ajax({
                 url: cfg.ajaxurl,
@@ -671,17 +774,61 @@
                     id: eventId
                 },
                 success: function(response) {
+                    console.log('SAW Calendar Mobile: Event detail response', response);
                     if (response.success) {
                         self.renderEventDetail(response.data);
                     } else {
-                        self.renderError(response.data && response.data.message ? response.data.message : 'Chyba při načítání');
+                        var errorMsg = response.data && response.data.message ? response.data.message : 'Chyba při načítání';
+                        console.error('SAW Calendar Mobile: Server error', errorMsg);
+                        self.renderError(errorMsg);
                     }
                 },
                 error: function(xhr, status, error) {
-                    console.error('Failed to load event detail:', error);
-                    self.renderError('Chyba připojení');
+                    console.error('SAW Calendar Mobile: AJAX error loading detail', {
+                        status: xhr.status,
+                        statusText: xhr.statusText,
+                        responseText: xhr.responseText,
+                        error: error
+                    });
+                    
+                    var errorMsg = self.parseErrorMessage(xhr);
+                    self.renderError(errorMsg);
                 }
             });
+        },
+        
+        /**
+         * Parse error message from XHR
+         */
+        parseErrorMessage: function(xhr) {
+            // Try to parse JSON error response
+            try {
+                if (xhr.responseText) {
+                    var response = JSON.parse(xhr.responseText);
+                    if (response && response.data && response.data.message) {
+                        return response.data.message;
+                    } else if (response && response.message) {
+                        return response.message;
+                    }
+                }
+            } catch (e) {
+                // Response is not JSON
+            }
+            
+            // Status-based messages
+            if (xhr.status === 403) {
+                return 'Přístup zamítnut (403) - session možná vypršela, zkuste obnovit stránku';
+            } else if (xhr.status === 404) {
+                return 'Endpoint nenalezen (404)';
+            } else if (xhr.status === 500) {
+                return 'Chyba serveru (500)';
+            } else if (xhr.status === 0) {
+                return 'Nelze se připojit k serveru - zkontrolujte připojení';
+            } else if (xhr.status === 400) {
+                return 'Neplatný požadavek (400)';
+            }
+            
+            return 'Chyba připojení (HTTP ' + xhr.status + ')';
         },
         
         /**
@@ -690,7 +837,7 @@
         renderEventDetail: function(data) {
             const visit = data.visit;
             const visitors = data.visitors || [];
-            const calendarLinks = data.calendar_links || {};
+            const calendarLinks = data.calendarLinks || data.calendar_links || {};
             
             const statusLabels = {
                 'draft': 'Koncept',
@@ -732,14 +879,14 @@
             
             // Build HTML
             let html = '<div class="saw-sheet-event">';
-            html += '<span class="saw-sheet-event__status saw-sheet-event__status--' + this.escapeHtml(status) + '">' + this.escapeHtml(statusLabel) + '</span>';
-            html += '<h2 class="saw-sheet-event__title">' + this.escapeHtml(visit.company_name || 'Návštěva #' + visit.id) + '</h2>';
+            html += '<span class="saw-sheet-event__status saw-sheet-event__status--' + escapeHtml(status) + '">' + escapeHtml(statusLabel) + '</span>';
+            html += '<h2 class="saw-sheet-event__title">' + escapeHtml(visit.company_name || 'Návštěva #' + visit.id) + '</h2>';
             
             // Meta info
             html += '<div class="saw-sheet-event__meta">';
-            html += '<div class="saw-sheet-event__meta-row"><span class="saw-sheet-event__meta-icon">📅</span><div><span class="saw-sheet-event__meta-text">' + this.escapeHtml(formattedDate) + '</span><span class="saw-sheet-event__meta-label">Datum návštěvy</span></div></div>';
-            html += '<div class="saw-sheet-event__meta-row"><span class="saw-sheet-event__meta-icon">🕐</span><div><span class="saw-sheet-event__meta-text">' + this.escapeHtml(timeStr) + '</span><span class="saw-sheet-event__meta-label">Čas</span></div></div>';
-            html += '<div class="saw-sheet-event__meta-row"><span class="saw-sheet-event__meta-icon">📍</span><div><span class="saw-sheet-event__meta-text">' + this.escapeHtml(locationStr) + '</span><span class="saw-sheet-event__meta-label">Místo</span></div></div>';
+            html += '<div class="saw-sheet-event__meta-row"><span class="saw-sheet-event__meta-icon">📅</span><div><span class="saw-sheet-event__meta-text">' + escapeHtml(formattedDate) + '</span><span class="saw-sheet-event__meta-label">Datum návštěvy</span></div></div>';
+            html += '<div class="saw-sheet-event__meta-row"><span class="saw-sheet-event__meta-icon">🕐</span><div><span class="saw-sheet-event__meta-text">' + escapeHtml(timeStr) + '</span><span class="saw-sheet-event__meta-label">Čas</span></div></div>';
+            html += '<div class="saw-sheet-event__meta-row"><span class="saw-sheet-event__meta-icon">📍</span><div><span class="saw-sheet-event__meta-text">' + escapeHtml(locationStr) + '</span><span class="saw-sheet-event__meta-label">Místo</span></div></div>';
             html += '<div class="saw-sheet-event__meta-row"><span class="saw-sheet-event__meta-icon">👥</span><div><span class="saw-sheet-event__meta-text">' + personCount + ' ' + personWord + '</span><span class="saw-sheet-event__meta-label">Počet návštěvníků</span></div></div>';
             html += '</div>';
             
@@ -747,7 +894,7 @@
             if (visit.purpose) {
                 html += '<div class="saw-sheet-event__purpose">';
                 html += '<div class="saw-sheet-event__purpose-label">Účel návštěvy</div>';
-                html += '<p class="saw-sheet-event__purpose-text">' + this.escapeHtml(visit.purpose) + '</p>';
+                html += '<p class="saw-sheet-event__purpose-text">' + escapeHtml(visit.purpose) + '</p>';
                 html += '</div>';
             }
             
@@ -795,24 +942,12 @@
          */
         renderError: function(message) {
             $(this.content).html(
-                '<div class="saw-bottom-sheet__loading">' +
-                '<span style="font-size: 32px;">⚠️</span>' +
-                '<span>' + this.escapeHtml(message) + '</span>' +
+                '<div class="saw-bottom-sheet__error">' +
+                '<span style="font-size: 32px; display: block; margin-bottom: 12px;">⚠️</span>' +
+                '<span style="display: block; margin-bottom: 16px;">' + escapeHtml(message) + '</span>' +
+                '<button onclick="location.reload()" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">Obnovit stránku</button>' +
                 '</div>'
             );
-        },
-        
-        /**
-         * Escape HTML
-         */
-        escapeHtml: function(str) {
-            if (!str) return '';
-            return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
         }
     };
     
@@ -820,7 +955,9 @@
     window.SAWCalendarMobile = {
         MiniCalendar: MiniCalendar,
         AgendaList: AgendaList,
-        BottomSheet: BottomSheet
+        BottomSheet: BottomSheet,
+        getConfig: getConfig,
+        isConfigValid: isConfigValid
     };
     
 })(jQuery);

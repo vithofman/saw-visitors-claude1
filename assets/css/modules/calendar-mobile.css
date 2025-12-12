@@ -201,11 +201,10 @@
 .saw-mini-calendar__days {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 4px;
+    gap: 2px;
 }
 
 .saw-mini-calendar__day {
-    aspect-ratio: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -217,8 +216,11 @@
     position: relative;
     transition: all 0.15s;
     -webkit-tap-highlight-color: transparent;
-    min-height: 40px;
+    height: 40px;
+    width: 100%;
     padding: 0;
+    margin: 0;
+    box-sizing: border-box;
 }
 
 .saw-mini-calendar__day:not(.saw-mini-calendar__day--empty):hover {

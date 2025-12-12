@@ -105,7 +105,7 @@
 
 /* Ensure .saw-detail-content-wrapper has consistent padding - override tables.css */
 .saw-detail-content-wrapper {
-    padding: 12px !important; /* Mobile-first: minimální padding */
+    padding: 0px !important; /* Mobile-first: minimální padding */
     font-family: 'Roboto', sans-serif !important;
     color: #1a1a1a !important;
     margin: 0 !important;
