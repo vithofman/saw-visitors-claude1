@@ -84,8 +84,9 @@ class SAW_Asset_Loader {
      * @var array
      */
     const APP_STYLES = [
-        'saw-app' => 'app/app.css',
-        'saw-transitions' => 'app/transitions.css',
+    'saw-app' => 'app/app.css',
+    'saw-transitions' => 'app/transitions.css',
+    'saw-bottom-nav' => 'app/bottom-nav.css',
     ];
     
     /**

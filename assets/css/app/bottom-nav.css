@@ -1,0 +1,477 @@
+/**
+ * SAW Bottom Navigation Styles
+ *
+ * Mobile-first bottom navigation bar.
+ * Replaces desktop footer on tablet and mobile devices.
+ *
+ * @package    SAW_Visitors
+ * @subpackage Assets/CSS
+ * @since      5.4.0
+ * @version    1.0.2
+ *
+ * CHANGELOG v1.0.2:
+ * - Fixed: Light theme as default (explicit colors, no CSS variables)
+ * - Fixed: FAB button positioning with comprehensive selectors
+ * - Fixed: FAB z-index above bottom nav
+ */
+
+/* ============================================
+   CSS CUSTOM PROPERTIES
+   ============================================ */
+
+:root {
+    --saw-bottom-nav-height: 64px;
+    --saw-bottom-nav-height-mobile: 58px;
+}
+
+/* ============================================
+   BASE - HIDDEN ON DESKTOP
+   ============================================ */
+
+.saw-bottom-nav {
+    display: none; /* Hidden by default on desktop */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 64px;
+    
+    /* ✅ LIGHT THEME - explicit colors */
+    background: #ffffff;
+    border-top: 1px solid #e5e7eb;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08);
+    
+    z-index: 1000;
+    
+    /* iOS safe area support */
+    padding-bottom: env(safe-area-inset-bottom, 0);
+    
+    /* Prevent content selection */
+    -webkit-user-select: none;
+    user-select: none;
+    
+    /* GPU acceleration */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+}
+
+/* ============================================
+   INNER CONTAINER
+   ============================================ */
+
+.saw-bottom-nav-inner {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-around;
+    height: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 0 8px;
+}
+
+/* ============================================
+   NAVIGATION ITEMS
+   ============================================ */
+
+.saw-bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    min-width: 0;
+    padding: 8px 4px;
+    text-decoration: none;
+    
+    /* ✅ LIGHT THEME */
+    color: #6b7280;
+    background: transparent;
+    
+    transition: all 0.2s ease;
+    position: relative;
+    border-radius: 8px;
+    margin: 6px 2px;
+    min-height: 44px;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Hover state (non-touch devices) */
+@media (hover: hover) and (pointer: fine) {
+    .saw-bottom-nav-item:hover {
+        color: #2563eb;
+        background: rgba(37, 99, 235, 0.05);
+    }
+}
+
+/* Active/current page state */
+.saw-bottom-nav-item.active {
+    color: #2563eb;
+}
+
+/* Active indicator - top bar */
+.saw-bottom-nav-item.active::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 32px;
+    height: 3px;
+    background: #2563eb;
+    border-radius: 0 0 3px 3px;
+    animation: saw-bottom-nav-indicator-appear 0.3s ease-out;
+}
+
+@keyframes saw-bottom-nav-indicator-appear {
+    from {
+        transform: translateX(-50%) scaleX(0);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(-50%) scaleX(1);
+        opacity: 1;
+    }
+}
+
+/* ============================================
+   ICON
+   ============================================ */
+
+.saw-bottom-nav-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin-bottom: 2px;
+    transition: transform 0.2s ease;
+    position: relative;
+}
+
+.saw-bottom-nav-icon svg {
+    width: 22px;
+    height: 22px;
+    stroke-width: 1.75;
+    transition: stroke-width 0.2s ease;
+}
+
+.saw-bottom-nav-item.active .saw-bottom-nav-icon {
+    transform: scale(1.05);
+}
+
+.saw-bottom-nav-item.active .saw-bottom-nav-icon svg {
+    stroke-width: 2;
+}
+
+/* ============================================
+   LABEL
+   ============================================ */
+
+.saw-bottom-nav-label {
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.2;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    transition: font-weight 0.2s ease;
+}
+
+.saw-bottom-nav-item.active .saw-bottom-nav-label {
+    font-weight: 600;
+}
+
+/* ============================================
+   NOTIFICATION BADGE (for future use)
+   ============================================ */
+
+.saw-bottom-nav-item[data-badge]::after {
+    content: attr(data-badge);
+    position: absolute;
+    top: 4px;
+    right: 50%;
+    transform: translateX(calc(50% + 10px));
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    background: #ef4444;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 18px;
+    text-align: center;
+    border-radius: 9px;
+    border: 2px solid #ffffff;
+}
+
+.saw-bottom-nav-item[data-badge=""]::after,
+.saw-bottom-nav-item[data-badge="0"]::after {
+    display: none;
+}
+
+/* ============================================
+   RESPONSIVE - TABLET (show bottom nav)
+   ============================================ */
+
+@media (max-width: 1024px) {
+    /* Show bottom navigation */
+    .saw-bottom-nav {
+        display: block;
+    }
+    
+    /* Hide desktop footer */
+    .saw-app-footer {
+        display: none !important;
+    }
+    
+    /* Adjust main navigation sidebar */
+    .saw-app-sidebar {
+        bottom: calc(64px + env(safe-area-inset-bottom, 0)) !important;
+    }
+    
+    /* Adjust main content padding */
+    .saw-app-main {
+        padding-bottom: calc(64px + env(safe-area-inset-bottom, 0)) !important;
+    }
+    
+    /* Adjust sidebar wrappers */
+    .saw-sidebar-wrapper,
+    .saw-sidebar-wrapper[data-is-nested="1"] {
+        bottom: calc(64px + env(safe-area-inset-bottom, 0)) !important;
+    }
+    
+    /* ============================================
+       ✅ FAB BUTTON FIX - ALL SELECTORS
+       ============================================ */
+    
+    /* Primary FAB selectors from tables.css and forms.css */
+    .saw-floating-btn,
+    .saw-floating-button,
+    .saw-floating-action-btn,
+    a.saw-floating-btn,
+    a.saw-floating-button,
+    button.saw-floating-btn,
+    button.saw-floating-button {
+        bottom: calc(64px + 20px + env(safe-area-inset-bottom, 0)) !important;
+        z-index: 1001 !important;
+    }
+    
+    /* Floating actions container (detail sidebar) */
+    .saw-sidebar-floating-actions {
+        bottom: calc(64px + 20px + env(safe-area-inset-bottom, 0)) !important;
+        z-index: 1001 !important;
+    }
+    
+    /* Individual action buttons in floating container */
+    .saw-sidebar-floating-actions .saw-floating-action-btn {
+        bottom: auto !important; /* Reset, parent handles positioning */
+    }
+}
+
+/* ============================================
+   RESPONSIVE - MOBILE
+   ============================================ */
+
+@media (max-width: 768px) {
+    .saw-bottom-nav {
+        height: 58px;
+    }
+    
+    .saw-bottom-nav-item {
+        padding: 6px 2px;
+        margin: 4px 1px;
+    }
+    
+    .saw-bottom-nav-icon {
+        width: 24px;
+        height: 24px;
+    }
+    
+    .saw-bottom-nav-icon svg {
+        width: 20px;
+        height: 20px;
+    }
+    
+    .saw-bottom-nav-label {
+        font-size: 10px;
+    }
+    
+    /* Adjust sidebars for mobile nav height */
+    .saw-app-sidebar,
+    .saw-sidebar-wrapper,
+    .saw-sidebar-wrapper[data-is-nested="1"] {
+        bottom: calc(58px + env(safe-area-inset-bottom, 0)) !important;
+    }
+    
+    /* Adjust main content */
+    .saw-app-main {
+        padding-bottom: calc(58px + env(safe-area-inset-bottom, 0)) !important;
+    }
+    
+    /* ✅ FAB on mobile - adjusted for 58px nav */
+    .saw-floating-btn,
+    .saw-floating-button,
+    .saw-floating-action-btn,
+    a.saw-floating-btn,
+    a.saw-floating-button,
+    button.saw-floating-btn,
+    button.saw-floating-button,
+    .saw-sidebar-floating-actions {
+        bottom: calc(58px + 16px + env(safe-area-inset-bottom, 0)) !important;
+    }
+}
+
+/* ============================================
+   RESPONSIVE - SMALL MOBILE
+   ============================================ */
+
+@media (max-width: 360px) {
+    .saw-bottom-nav-inner {
+        padding: 0 4px;
+    }
+    
+    .saw-bottom-nav-item {
+        margin: 4px 0;
+        border-radius: 6px;
+    }
+    
+    .saw-bottom-nav-label {
+        font-size: 9px;
+    }
+}
+
+/* ============================================
+   LANDSCAPE ORIENTATION
+   ============================================ */
+
+@media (max-width: 1024px) and (orientation: landscape) and (max-height: 500px) {
+    .saw-bottom-nav {
+        height: 50px;
+    }
+    
+    .saw-bottom-nav-item {
+        flex-direction: row;
+        gap: 6px;
+        padding: 4px 8px;
+    }
+    
+    .saw-bottom-nav-icon {
+        margin-bottom: 0;
+    }
+    
+    .saw-bottom-nav-label {
+        font-size: 12px;
+    }
+}
+
+/* ============================================
+   DARK MODE SUPPORT (opt-in only)
+   ============================================ */
+
+body[data-theme="dark"] .saw-bottom-nav {
+    background: #1f2937;
+    border-top-color: #374151;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+}
+
+body[data-theme="dark"] .saw-bottom-nav-item {
+    color: #9ca3af;
+}
+
+body[data-theme="dark"] .saw-bottom-nav-item.active {
+    color: #3b82f6;
+}
+
+body[data-theme="dark"] .saw-bottom-nav-item:hover {
+    color: #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
+}
+
+body[data-theme="dark"] .saw-bottom-nav-item.active::before {
+    background: #3b82f6;
+}
+
+/* ============================================
+   TOUCH FEEDBACK
+   ============================================ */
+
+@media (hover: none) and (pointer: coarse) {
+    .saw-bottom-nav-item:active {
+        transform: scale(0.95);
+        background: rgba(37, 99, 235, 0.1);
+        transition: transform 0.1s ease;
+    }
+}
+
+/* ============================================
+   ACCESSIBILITY
+   ============================================ */
+
+.saw-bottom-nav-item:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px #2563eb inset;
+}
+
+.saw-bottom-nav-item:focus:not(:focus-visible) {
+    box-shadow: none;
+}
+
+@media (forced-colors: active) {
+    .saw-bottom-nav {
+        border-top: 2px solid CanvasText;
+    }
+    
+    .saw-bottom-nav-item.active {
+        background: Highlight;
+        color: HighlightText;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .saw-bottom-nav,
+    .saw-bottom-nav-item,
+    .saw-bottom-nav-icon,
+    .saw-bottom-nav-item::before {
+        transition: none;
+        animation: none;
+    }
+}
+
+/* ============================================
+   PRINT STYLES
+   ============================================ */
+
+@media print {
+    .saw-bottom-nav {
+        display: none !important;
+    }
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+.saw-bottom-nav-hidden .saw-bottom-nav,
+.saw-fullscreen .saw-bottom-nav {
+    display: none !important;
+}
+
+.saw-bottom-nav-hidden .saw-app-main,
+.saw-fullscreen .saw-app-main {
+    padding-bottom: 0 !important;
+}
+
+.saw-bottom-nav-hidden .saw-sidebar-wrapper,
+.saw-fullscreen .saw-sidebar-wrapper {
+    bottom: 0 !important;
+}
+
+.saw-bottom-nav-hidden .saw-floating-btn,
+.saw-bottom-nav-hidden .saw-floating-button,
+.saw-fullscreen .saw-floating-btn,
+.saw-fullscreen .saw-floating-button {
+    bottom: 20px !important;
+}

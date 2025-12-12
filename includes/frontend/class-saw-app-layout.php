@@ -1,10 +1,15 @@
 <?php
 /**
- * SAW App Layout - AJAX FIXED v2.3.0
+ * SAW App Layout - AJAX FIXED v2.4.0
  *
  * Main layout manager for the application.
  * Handles complete page rendering with header, sidebar, footer, and content.
  * Supports AJAX requests for SPA-like navigation.
+ *
+ * FEATURE v2.4.0:
+ * - ✅ Added bottom navigation for mobile/tablet devices
+ * - ✅ Bottom nav replaces footer on screens ≤1024px
+ * - ✅ 4 main navigation items: Dashboard, Visits, Visitors, Calendar
  *
  * CRITICAL FIX v2.3.0:
  * - ✅ Fixed missing logo_url in customer data on dashboard
@@ -20,13 +25,16 @@
  * - ✅ Fixed layout - eliminuje celostránkový scroll
  *
  * @package SAW_Visitors
- * @version 2.3.0 - FIXED CUSTOMER DATA
+ * @version 2.4.0 - ADDED BOTTOM NAVIGATION
  * @since   4.6.1
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
+
+// Load bottom navigation component
+require_once SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/class-saw-app-bottom-nav.php';
 
 /**
  * SAW App Layout Class
@@ -71,6 +79,14 @@ class SAW_App_Layout {
     private $active_menu;
     
     /**
+     * Current UI language
+     *
+     * @since 5.4.0
+     * @var string
+     */
+    private $lang;
+    
+    /**
      * Constructor
      *
      * Initializes layout manager.
@@ -79,6 +95,30 @@ class SAW_App_Layout {
      */
     public function __construct() {
         // No session needed - using SAW_Context for state management
+        $this->lang = $this->get_user_language();
+    }
+    
+    /**
+     * Get user's UI language
+     *
+     * Retrieves language preference from various sources.
+     *
+     * @since 5.4.0
+     * @return string Language code (cs, en, etc.)
+     */
+    private function get_user_language() {
+        // Try SAW language function
+        if (function_exists('saw_get_user_language')) {
+            return saw_get_user_language();
+        }
+        
+        // Try cookie
+        if (isset($_COOKIE['saw_ui_lang'])) {
+            return sanitize_text_field($_COOKIE['saw_ui_lang']);
+        }
+        
+        // Default to Czech
+        return 'cs';
     }
     
     /**
@@ -291,6 +331,9 @@ class SAW_App_Layout {
      * ✅ FIXED v2.2.0: Removed hardcoded saw-app-navigation.js script tag
      * Script is now properly enqueued via SAW_Asset_Loader with correct dependencies
      *
+     * ✅ ADDED v2.4.0: Bottom navigation for mobile/tablet devices
+     * Renders after footer, visible only on screens ≤1024px via CSS
+     *
      * @since 4.6.1
      * @param string $content Page content HTML
      * @return void
@@ -329,6 +372,11 @@ class SAW_App_Layout {
             </div>
             
             <?php $this->render_footer(); ?>
+            
+            <?php 
+            // ✅ NEW v2.4.0: Bottom navigation for mobile/tablet
+            $this->render_bottom_nav(); 
+            ?>
             
             <?php
             // ✅ FIXED v2.2.0: saw-app-navigation.js is now properly enqueued
@@ -384,6 +432,7 @@ class SAW_App_Layout {
      * Render footer component
      *
      * Loads and renders the footer component.
+     * Note: Footer is hidden on mobile/tablet via CSS, replaced by bottom nav.
      *
      * @since 4.6.1
      * @return void
@@ -392,6 +441,34 @@ class SAW_App_Layout {
         if (class_exists('SAW_App_Footer')) {
             $footer = new SAW_App_Footer();
             $footer->render();
+        }
+    }
+    
+    /**
+     * Render bottom navigation component
+     *
+     * Loads and renders the bottom navigation for mobile/tablet devices.
+     * Only visible on screens ≤1024px (controlled via CSS).
+     * Replaces footer on smaller screens for app-like navigation.
+     *
+     * @since 5.4.0
+     * @return void
+     */
+    private function render_bottom_nav() {
+        if (class_exists('SAW_App_Bottom_Nav')) {
+            // Get user role for permission checks
+            $saw_role = $this->current_user['role'] ?? 'user';
+            
+            $bottom_nav = new SAW_App_Bottom_Nav(
+                $this->active_menu,
+                $this->lang,
+                $saw_role
+            );
+            
+            // Check if should render (can be filtered)
+            if ($bottom_nav->should_render()) {
+                $bottom_nav->render();
+            }
         }
     }
 }
