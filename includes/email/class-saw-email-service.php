@@ -224,46 +224,63 @@ class SAW_Email_Service {
 	}
 	
 	public function send_invitation($visit_id) {
-		global $wpdb;
-		
-		$visit = $wpdb->get_row($wpdb->prepare(
-			"SELECT 
-				v.*, 
-				b.name as branch_name,
-				cust.name as customer_name
-			 FROM {$wpdb->prefix}saw_visits v
-			 INNER JOIN {$wpdb->prefix}saw_branches b ON v.branch_id = b.id
-			 INNER JOIN {$wpdb->prefix}saw_customers cust ON v.customer_id = cust.id
-			 WHERE v.id = %d",
-			$visit_id
-		), ARRAY_A);
-		
-		if (!$visit || empty($visit['invitation_email'])) {
-			return new WP_Error('visit_not_found', 'Visit not found or has no invitation email');
-		}
-		
-		if (empty($visit['invitation_token'])) {
-			$visit['invitation_token'] = $this->generate_invitation_token($visit_id);
-		}
-		
-		$invitation_url = home_url('/visitor-invitation/' . $visit['invitation_token'] . '/');
-		
-		return $this->send('invitation', array(
-			'customer_id'     => $visit['customer_id'],
-			'branch_id'       => $visit['branch_id'],
-			'recipient_email' => $visit['invitation_email'],
-			'recipient_name'  => '',
-			'visit_id'        => $visit_id,
-			'placeholders'    => array(
-				'customer_name'  => $visit['customer_name'],
-				'branch_name'    => $visit['branch_name'],
-				'date_from'      => $visit['planned_date_from'],
-				'date_to'        => $visit['planned_date_to'],
-				'pin_code'       => $visit['pin_code'] ?? '',
-				'invitation_url' => $invitation_url,
-			),
-		));
-	}
+    global $wpdb;
+    
+    $visit = $wpdb->get_row($wpdb->prepare(
+        "SELECT 
+            v.*, 
+            b.name as branch_name,
+            cust.name as customer_name
+         FROM {$wpdb->prefix}saw_visits v
+         INNER JOIN {$wpdb->prefix}saw_branches b ON v.branch_id = b.id
+         INNER JOIN {$wpdb->prefix}saw_customers cust ON v.customer_id = cust.id
+         WHERE v.id = %d",
+        $visit_id
+    ), ARRAY_A);
+    
+    if (!$visit || empty($visit['invitation_email'])) {
+        return new WP_Error('visit_not_found', 'Visit not found or has no invitation email');
+    }
+    
+    // Token už by měl existovat z controlleru
+    $token = $visit['invitation_token'];
+    if (empty($token)) {
+        $token = hash('sha256', wp_generate_password(64, true, true) . $visit_id . time());
+        $wpdb->update(
+            $wpdb->prefix . 'saw_visits',
+            array('invitation_token' => $token),
+            array('id' => $visit_id)
+        );
+    }
+    
+    $invitation_url = home_url('/visitor-invitation/' . $token . '/');
+    
+    // Formátovat datum
+    $date_formatted = '';
+    if (!empty($visit['planned_date_from'])) {
+        $date_formatted = date_i18n('d.m.Y', strtotime($visit['planned_date_from']));
+        if (!empty($visit['planned_date_to']) && $visit['planned_date_from'] !== $visit['planned_date_to']) {
+            $date_formatted .= ' - ' . date_i18n('d.m.Y', strtotime($visit['planned_date_to']));
+        }
+    }
+    
+    return $this->send('invitation', array(
+        'customer_id'     => $visit['customer_id'],
+        'branch_id'       => $visit['branch_id'],
+        'recipient_email' => $visit['invitation_email'],
+        'recipient_name'  => '',
+        'visit_id'        => $visit_id,
+        'placeholders'    => array(
+            'customer_name'   => $visit['customer_name'],
+            'branch_name'     => $visit['branch_name'],
+            'date_from'       => $visit['planned_date_from'] ?? '',
+            'date_to'         => $visit['planned_date_to'] ?? '',
+            'date_formatted'  => $date_formatted,
+            'pin_code'        => $visit['pin_code'] ?? '',
+            'invitation_url'  => $invitation_url,
+        ),
+    ));
+}
 	
 	public function send_pin_reminder($visit_id) {
 		global $wpdb;

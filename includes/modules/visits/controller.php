@@ -848,109 +848,97 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
      * @since 1.0.0
      */
     public function ajax_send_invitation() {
-        saw_verify_ajax_unified();
-        
-        if (!$this->can('edit')) {
-            wp_send_json_error(['message' => 'Nemáte oprávnění']);
-        }
-        
-        $visit_id = intval($_POST['visit_id'] ?? 0);
-        
-        if (!$visit_id) {
-            wp_send_json_error(['message' => 'Neplatné ID návštěvy']);
-        }
-        
-        $visit = $this->model->get_by_id($visit_id);
-        
-        if (!$visit) {
-            wp_send_json_error(['message' => 'Návštěva nenalezena']);
-        }
-        
-        if (empty($visit['invitation_email'])) {
-            wp_send_json_error(['message' => 'Email pro pozvánku není vyplněn']);
-        }
-        
-        if (empty($visit['pin_code'])) {
-            $pin = $this->model->generate_pin($visit_id);
-            if (!$pin) {
-                wp_send_json_error(['message' => 'Nepodařilo se vygenerovat PIN']);
-            }
-            $visit = $this->model->get_by_id($visit_id);
-        }
-        
-        $token = $this->model->ensure_unique_token($visit['customer_id']);
-        
-        if (!empty($visit['planned_date_to'])) {
-            $expires = date('Y-m-d H:i:s', strtotime($visit['planned_date_to'] . ' +1 day'));
-        } else {
-            $expires = date('Y-m-d H:i:s', strtotime('+30 days'));
-        }
-        
-        global $wpdb;
-        $result = $wpdb->update(
-            $wpdb->prefix . 'saw_visits',
-            [
-                'invitation_token' => $token,
-                'invitation_token_expires_at' => $expires,
-                'invitation_sent_at' => current_time('mysql'),
-            ],
-            ['id' => $visit_id],
-            ['%s', '%s', '%s'],
-            ['%d']
-        );
-        
-        if ($result === false) {
-            wp_send_json_error(['message' => 'Chyba při ukládání tokenu']);
-        }
-        
-        $branch_name = $wpdb->get_var($wpdb->prepare(
-            "SELECT name FROM {$wpdb->prefix}saw_branches WHERE id = %d",
-            $visit['branch_id']
-        ));
-        
-        $date_from = !empty($visit['planned_date_from']) ? date('d.m.Y', strtotime($visit['planned_date_from'])) : 'N/A';
-        $date_to = !empty($visit['planned_date_to']) ? date('d.m.Y', strtotime($visit['planned_date_to'])) : 'N/A';
-        
-        $link = home_url('/visitor-invitation/' . $token . '/');
-        
-        $subject = 'Pozvánka k návštěvě - ' . get_bloginfo('name');
-        
-        $message = "
-Dobrý den,
-
-Byl/a jste pozván/a k návštěvě na pobočce {$branch_name}.
-
-Termín: {$date_from} - {$date_to}
-
-🔢 VÁŠ PIN KÓD PRO CHECK-IN: {$visit['pin_code']}
-
-Prosím vyplňte informace o návštěvě na tomto odkazu:
-
-{$link}
-
-Odkaz je platný 30 dní.
-
-Po vyplnění vám PIN připomeneme emailem.
-
-DŮLEŽITÉ: Tento PIN kód si poznamenejte, budete ho potřebovat 
-při příchodu na recepci.
-
-S pozdravem,
-
-" . get_bloginfo('name');
-        
-        $sent = wp_mail($visit['invitation_email'], $subject, $message);
-        
-        if (!$sent) {
-            wp_send_json_error(['message' => 'Chyba při odesílání emailu']);
-        }
-        
-        wp_send_json_success([
-            'message' => 'Pozvánka byla úspěšně odeslána',
-            'link' => $link,
-            'sent_at' => current_time('d.m.Y H:i')
-        ]);
+    saw_verify_ajax_unified();
+    
+    if (!$this->can('edit')) {
+        wp_send_json_error(['message' => 'Nemáte oprávnění']);
     }
+    
+    $visit_id = intval($_POST['visit_id'] ?? 0);
+    
+    if (!$visit_id) {
+        wp_send_json_error(['message' => 'Neplatné ID návštěvy']);
+    }
+    
+    $visit = $this->model->get_by_id($visit_id);
+    
+    if (!$visit) {
+        wp_send_json_error(['message' => 'Návštěva nenalezena']);
+    }
+    
+    if (empty($visit['invitation_email'])) {
+        wp_send_json_error(['message' => 'Email pro pozvánku není vyplněn']);
+    }
+    
+    // Vygenerovat PIN pokud neexistuje
+    if (empty($visit['pin_code'])) {
+        $pin = $this->model->generate_pin($visit_id);
+        if (!$pin) {
+            wp_send_json_error(['message' => 'Nepodařilo se vygenerovat PIN']);
+        }
+        $visit = $this->model->get_by_id($visit_id);
+    }
+    
+    // Vygenerovat token
+    $token = $this->model->ensure_unique_token($visit['customer_id']);
+    
+    if (!empty($visit['planned_date_to'])) {
+        $expires = date('Y-m-d H:i:s', strtotime($visit['planned_date_to'] . ' +1 day'));
+    } else {
+        $expires = date('Y-m-d H:i:s', strtotime('+30 days'));
+    }
+    
+    global $wpdb;
+    $result = $wpdb->update(
+        $wpdb->prefix . 'saw_visits',
+        [
+            'invitation_token' => $token,
+            'invitation_token_expires_at' => $expires,
+        ],
+        ['id' => $visit_id],
+        ['%s', '%s'],
+        ['%d']
+    );
+    
+    if ($result === false) {
+        wp_send_json_error(['message' => 'Chyba při ukládání tokenu']);
+    }
+    
+    // ========================================
+    // NOVÝ EMAIL SERVICE
+    // ========================================
+    if (!function_exists('saw_email')) {
+        wp_send_json_error(['message' => 'Email služba není dostupná']);
+    }
+    
+    $email_service = saw_email();
+    
+    if (!$email_service) {
+        wp_send_json_error(['message' => 'Email služba se nepodařila inicializovat']);
+    }
+    
+    $email_result = $email_service->send_invitation($visit_id);
+    
+    if (is_wp_error($email_result)) {
+        wp_send_json_error(['message' => 'Chyba při odesílání: ' . $email_result->get_error_message()]);
+    }
+    
+    // Aktualizovat invitation_sent_at
+    $wpdb->update(
+        $wpdb->prefix . 'saw_visits',
+        ['invitation_sent_at' => current_time('mysql')],
+        ['id' => $visit_id]
+    );
+    
+    $link = home_url('/visitor-invitation/' . $token . '/');
+    
+    wp_send_json_success([
+        'message' => 'Pozvánka byla úspěšně odeslána',
+        'email' => $visit['invitation_email'],
+        'link' => $link,
+        'sent_at' => current_time('d.m.Y H:i')
+    ]);
+}
     
     /**
      * AJAX: Get hosts by branch

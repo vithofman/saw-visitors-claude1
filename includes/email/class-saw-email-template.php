@@ -33,37 +33,52 @@ class SAW_Email_Template {
 	}
 	
 	public function render_dual($type, $data, $customer) {
-		$cs_translations = $this->get_translations($type, 'cs');
-		$en_translations = $this->get_translations($type, 'en');
-		
-		if (empty($cs_translations)) {
-			return new WP_Error('no_cs_translations', "No Czech translations for: {$type}");
-		}
-		
-		if (empty($en_translations)) {
-			return $this->render_single($type, 'cs', $data, $customer);
-		}
-		
-		$placeholders = $data['placeholders'] ?? array();
-		
-		$cs_content = $this->build_content($type, $cs_translations, $placeholders);
-		$en_content = $this->build_content($type, $en_translations, $placeholders);
-		
-		$body_html = $this->wrap_dual_html($cs_content, $en_content, $customer);
-		
-		$subject = $cs_content['subject'];
-		if ($cs_content['subject'] !== $en_content['subject']) {
-			$subject .= ' / ' . $en_content['subject'];
-		}
-		
-		$body_text = $this->build_dual_text($cs_content, $en_content);
-		
-		return array(
-			'subject'   => $subject,
-			'body_html' => $body_html,
-			'body_text' => $body_text,
-		);
-	}
+    // Get translations for both languages
+    $cs_translations = $this->get_translations($type, 'cs');
+    $en_translations = $this->get_translations($type, 'en');
+    
+    if (empty($cs_translations)) {
+        return new WP_Error('no_cs_translations', "No Czech translations for: {$type}");
+    }
+    
+    if (empty($en_translations)) {
+        return $this->render_single($type, 'cs', $data, $customer);
+    }
+    
+    $placeholders = $data['placeholders'] ?? array();
+    
+    // Build content for both languages
+    $cs_content = $this->build_content($type, $cs_translations, $placeholders);
+    $en_content = $this->build_content($type, $en_translations, $placeholders);
+    
+    // Combine into dual-language HTML
+    $body_html = $this->wrap_dual_html($cs_content, $en_content, $customer);
+    
+    // Subject - NOVÝ FORMÁT: "Firma - Česky / English"
+    $cs_subject_text = $cs_content['subject'];
+    $en_subject_text = $en_content['subject'];
+    
+    // Odstranit název firmy z jednotlivých subjects (pokud tam je)
+    $customer_name = $customer['name'] ?? '';
+    $cs_subject_clean = trim(str_replace(array($customer_name . ' - ', ' - ' . $customer_name, $customer_name), '', $cs_subject_text));
+    $en_subject_clean = trim(str_replace(array($customer_name . ' - ', ' - ' . $customer_name, $customer_name), '', $en_subject_text));
+    
+    // Pokud jsou subjects stejné (bez firmy), použij jen jeden
+    if ($cs_subject_clean === $en_subject_clean) {
+        $subject = $customer_name . ' - ' . $cs_subject_clean;
+    } else {
+        $subject = $customer_name . ' - ' . $cs_subject_clean . ' / ' . $en_subject_clean;
+    }
+    
+    // Plain text version
+    $body_text = $this->build_dual_text($cs_content, $en_content);
+    
+    return array(
+        'subject'   => $subject,
+        'body_html' => $body_html,
+        'body_text' => $body_text,
+    );
+}
 	
 	private function get_translations($type, $language) {
 		$cache_key = "{$type}_{$language}";
