@@ -4,7 +4,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visits
- * @version     4.5.1
+ * @version     4.5.3 - Fixed mobile overflow and fullscreen functionality
  */
 
 if (!defined('ABSPATH')) exit;
@@ -558,7 +558,7 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/>
                     </svg>
-                    <?php echo esc_html($tr('btn_request_risks', 'Vyzvat k rizikům')); ?>
+                    <span class="saw-btn-text"><?php echo esc_html($tr('btn_request_risks', 'Vyzvat k rizikům')); ?></span>
                 </button>
                 <?php endif; ?>
                 <?php if ($can_edit_risks && !empty($item['id'])): ?>
@@ -567,7 +567,7 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                     </svg>
-                    <?php echo esc_html($tr('btn_edit', 'Upravit')); ?>
+                    <span class="saw-btn-text"><?php echo esc_html($tr('btn_edit', 'Upravit')); ?></span>
                 </a>
                 <?php endif; ?>
             </div>
@@ -627,7 +627,7 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
                 
                 <?php if (!empty($texts)): ?>
                     <?php foreach ($texts as $text): ?>
-                    <div class="saw-risks-text-item">
+                    <div class="saw-risks-text-item" id="risks-text-item-<?php echo $text['id']; ?>">
                         <div class="saw-risks-text-header">
                             <div class="saw-risks-text-icon">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -641,7 +641,7 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
                                 <span class="saw-risks-text-title"><?php echo esc_html($tr('risks_text_info', 'Textové informace')); ?></span>
                                 <span class="saw-risks-text-date"><?php echo esc_html(date('d.m.Y H:i', strtotime($text['uploaded_at']))); ?></span>
                             </div>
-                            <button class="saw-risks-fullscreen-btn" onclick="openRisksFullscreen(<?php echo $text['id']; ?>)" title="<?php echo esc_attr($tr('risks_fullscreen', 'Zobrazit na celou obrazovku')); ?>">
+                            <button type="button" class="saw-risks-fullscreen-btn" onclick="openRisksFullscreen(<?php echo $text['id']; ?>)" title="<?php echo esc_attr($tr('risks_fullscreen', 'Zobrazit na celou obrazovku')); ?>">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <polyline points="15 3 21 3 21 9"/>
                                     <polyline points="9 21 3 21 3 15"/>
@@ -650,7 +650,7 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
                                 </svg>
                             </button>
                         </div>
-                        <div class="saw-risks-text-content">
+                        <div class="saw-risks-text-content" id="risks-text-content-<?php echo $text['id']; ?>">
                             <?php echo wp_kses_post($text['text_content']); ?>
                         </div>
                     </div>
@@ -694,7 +694,7 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
                                 <?php endif; ?>
                             </div>
                             <div class="saw-risks-document-info">
-                                <span class="saw-risks-document-name"><?php echo esc_html($doc['file_name']); ?></span>
+                                <span class="saw-risks-document-name" title="<?php echo esc_attr($doc['file_name']); ?>"><?php echo esc_html($doc['file_name']); ?></span>
                                 <span class="saw-risks-document-meta">
                                     <span class="saw-risks-document-ext"><?php echo $file_ext; ?></span>
                                     <span><?php echo size_format($doc['file_size']); ?></span>
@@ -724,12 +724,49 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
     </div>
 </div>
 
-
+<!-- ============================================ -->
+<!-- FULLSCREEN MODAL FOR RISKS TEXT              -->
+<!-- ============================================ -->
+<div id="saw-risks-fullscreen-modal" class="saw-risks-fullscreen-modal" style="display: none;">
+    <div class="saw-risks-fullscreen-overlay" onclick="closeRisksFullscreen()"></div>
+    <div class="saw-risks-fullscreen-container">
+        <div class="saw-risks-fullscreen-header">
+            <div class="saw-risks-fullscreen-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                <span><?php echo esc_html($tr('risks_text_info', 'Textové informace o rizicích')); ?></span>
+            </div>
+            <button type="button" class="saw-risks-fullscreen-close" onclick="closeRisksFullscreen()" title="<?php echo esc_attr($tr('btn_close', 'Zavřít')); ?>">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        </div>
+        <div class="saw-risks-fullscreen-body" id="saw-risks-fullscreen-content">
+            <!-- Content will be inserted here by JavaScript -->
+        </div>
+    </div>
+</div>
 
 <!-- ============================================ -->
 <!-- STYLES                                       -->
 <!-- ============================================ -->
 <style>
+/* ============================================
+   GLOBAL OVERFLOW FIX
+   ============================================ */
+.saw-industrial-section,
+.saw-section-body,
+.saw-info-grid,
+.saw-detail-cards-stack {
+    max-width: 100%;
+    overflow: hidden;
+}
+
 /* ============================================
    STATUS BUTTONS
    ============================================ */
@@ -866,6 +903,7 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
     align-items: baseline;
     gap: 8px;
     flex: 1;
+    min-width: 0;
 }
 
 .saw-timeline-label {
@@ -874,6 +912,7 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
     text-transform: uppercase;
     color: #64748b;
     min-width: 70px;
+    flex-shrink: 0;
 }
 
 .saw-timeline-value {
@@ -951,6 +990,8 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
     justify-content: space-between;
     align-items: center;
     margin-bottom: 8px;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
 .saw-schedule-day-date {
@@ -1002,6 +1043,7 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
     font-size: 14px;
     color: #854d0e;
     margin-top: 8px;
+    word-break: break-word;
 }
 
 .saw-schedule-day-notes .dashicons {
@@ -1025,6 +1067,7 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
     margin: 16px 0;
     width: 100%;
     max-width: 100%;
+    overflow: hidden;
 }
 
 .saw-info-grid .saw-detail-cards-stack {
@@ -1040,6 +1083,8 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
 .saw-risks-card {
     width: 100%;
     box-sizing: border-box;
+    max-width: 100%;
+    overflow: hidden;
 }
 
 /* Visitor Card */
@@ -1065,6 +1110,7 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
     gap: 14px;
     flex: 1;
     min-width: 0;
+    overflow: hidden;
 }
 
 .saw-visitor-icon {
@@ -1091,6 +1137,7 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
     flex-direction: column;
     gap: 4px;
     min-width: 0;
+    overflow: hidden;
 }
 
 .saw-visitor-card-label {
@@ -1132,6 +1179,7 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
     line-height: 1.3;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .saw-visitor-card-right {
@@ -1193,6 +1241,7 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
     gap: 14px;
     flex: 1;
     min-width: 0;
+    overflow: hidden;
 }
 
 .saw-invitation-icon {
@@ -1212,6 +1261,7 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
     flex-direction: column;
     gap: 4px;
     min-width: 0;
+    overflow: hidden;
 }
 
 .saw-invitation-card-label {
@@ -1260,6 +1310,7 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
     color: #059669;
     text-decoration: none;
     word-break: break-all;
+    overflow-wrap: break-word;
 }
 
 .saw-invitation-card-email:hover {
@@ -1354,6 +1405,7 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
 .saw-purpose-content {
     flex: 1;
     min-width: 0;
+    overflow: hidden;
 }
 
 .saw-purpose-label {
@@ -1369,6 +1421,8 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
     font-size: 14px;
     color: #334155;
     line-height: 1.5;
+    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 /* Notes Card */
@@ -1401,6 +1455,7 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
 .saw-notes-content {
     flex: 1;
     min-width: 0;
+    overflow: hidden;
 }
 
 .saw-notes-label {
@@ -1416,6 +1471,8 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
     font-size: 14px;
     color: #334155;
     line-height: 1.5;
+    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 /* Hosts Card */
@@ -1455,6 +1512,8 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
     display: flex;
     flex-direction: column;
     gap: 2px;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .saw-hosts-label {
@@ -1511,21 +1570,28 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
     flex-direction: column;
     gap: 2px;
     min-width: 0;
+    overflow: hidden;
 }
 
 .saw-host-name {
     font-size: 14px;
     font-weight: 600;
     color: #1e293b;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .saw-host-role {
     font-size: 12px;
     color: #64748b;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* ============================================
-   RISKS CARD (RED BORDER)
+   RISKS CARD (RED BORDER) - MOBILE OPTIMIZED
    ============================================ */
 .saw-risks-card {
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
@@ -1541,7 +1607,8 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
 
 .saw-risks-card-header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
     gap: 12px;
     padding: 16px;
     border-bottom: 1px solid #f1f5f9;
@@ -1563,7 +1630,8 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
     display: flex;
     flex-direction: column;
     gap: 4px;
-    flex: 1;
+    flex: 1 1 150px;
+    min-width: 0;
 }
 
 .saw-risks-label {
@@ -1595,6 +1663,45 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
     color: #d97706;
 }
 
+/* Risks Header Actions - RESPONSIVE */
+.saw-risks-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-left: auto;
+}
+
+.saw-risks-request-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    white-space: nowrap;
+}
+
+.saw-risks-request-btn:hover {
+    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(217, 119, 6, 0.3);
+}
+
+.saw-risks-request-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
 .saw-risks-edit-btn {
     display: inline-flex;
     align-items: center;
@@ -1602,12 +1709,13 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
     padding: 8px 14px;
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
     color: white;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     border-radius: 8px;
     text-decoration: none;
     transition: all 0.2s ease;
     flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .saw-risks-edit-btn:hover {
@@ -1619,6 +1727,7 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
 
 .saw-risks-card-body {
     padding: 16px;
+    overflow: hidden;
 }
 
 .saw-risks-empty {
@@ -1680,6 +1789,7 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
     padding: 10px 14px;
     background: #fee2e2;
     border-bottom: 1px solid #fecaca;
+    flex-wrap: wrap;
 }
 
 .saw-risks-text-icon {
@@ -1699,12 +1809,17 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
     flex-direction: column;
     gap: 2px;
     flex: 1;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .saw-risks-text-title {
     font-size: 12px;
     font-weight: 600;
     color: #991b1b;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .saw-risks-text-date {
@@ -1740,11 +1855,14 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
     line-height: 1.6;
     max-height: 150px;
     overflow-y: auto;
+    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 /* Risks Documents */
 .saw-risks-documents-section {
     margin-top: 12px;
+    overflow: hidden;
 }
 
 .saw-risks-documents-header {
@@ -1775,6 +1893,7 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
     border-radius: 8px;
     text-decoration: none;
     transition: all 0.2s ease;
+    overflow: hidden;
 }
 
 .saw-risks-document-item:hover {
@@ -1801,6 +1920,7 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
     gap: 2px;
     flex: 1;
     min-width: 0;
+    overflow: hidden;
 }
 
 .saw-risks-document-name {
@@ -1810,6 +1930,7 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    max-width: 100%;
 }
 
 .saw-risks-document-meta {
@@ -1827,6 +1948,7 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
     border-radius: 4px;
     font-size: 9px;
     font-weight: 700;
+    flex-shrink: 0;
 }
 
 .saw-risks-document-download {
@@ -1847,43 +1969,6 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
     background: #dc2626;
     border-color: #dc2626;
     color: white;
-}
-
-/* Risks Header Actions */
-.saw-risks-header-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-left: auto;
-}
-
-.saw-risks-request-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 14px;
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-    color: white;
-    font-size: 12px;
-    font-weight: 600;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-family: inherit;
-}
-
-.saw-risks-request-btn:hover {
-    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(217, 119, 6, 0.3);
-}
-
-.saw-risks-request-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
 }
 
 /* Risks Email History */
@@ -1919,6 +2004,7 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
     background: white;
     border-radius: 6px;
     border: 1px solid #fde68a;
+    overflow: hidden;
 }
 
 .saw-risks-email-status {
@@ -1946,6 +2032,8 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
     flex-direction: column;
     gap: 2px;
     min-width: 0;
+    flex: 1;
+    overflow: hidden;
 }
 
 .saw-risks-email-date {
@@ -1963,7 +2051,118 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
 }
 
 /* ============================================
-   RESPONSIVE
+   FULLSCREEN MODAL FOR RISKS TEXT
+   ============================================ */
+.saw-risks-fullscreen-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.saw-risks-fullscreen-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    cursor: pointer;
+}
+
+.saw-risks-fullscreen-container {
+    position: relative;
+    background: white;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 800px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+    animation: sawModalSlideIn 0.3s ease;
+}
+
+@keyframes sawModalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.saw-risks-fullscreen-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+}
+
+.saw-risks-fullscreen-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.saw-risks-fullscreen-close {
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.saw-risks-fullscreen-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+}
+
+.saw-risks-fullscreen-body {
+    flex: 1;
+    padding: 24px;
+    overflow-y: auto;
+    font-size: 15px;
+    line-height: 1.7;
+    color: #334155;
+}
+
+.saw-risks-fullscreen-body p {
+    margin-bottom: 16px;
+}
+
+.saw-risks-fullscreen-body ul,
+.saw-risks-fullscreen-body ol {
+    margin-bottom: 16px;
+    padding-left: 24px;
+}
+
+.saw-risks-fullscreen-body li {
+    margin-bottom: 8px;
+}
+
+/* ============================================
+   RESPONSIVE - TABLET (max-width: 600px)
    ============================================ */
 @media (max-width: 600px) {
     .saw-visitor-card-inner,
@@ -1987,22 +2186,200 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
         margin-bottom: 0;
     }
     
+    /* Risks card header - wrap to column */
     .saw-risks-card-header {
         flex-wrap: wrap;
-        gap: 12px;
+        gap: 10px;
     }
     
+    /* Actions go full width */
+    .saw-risks-header-actions {
+        flex-basis: 100%;
+        margin-left: 0;
+        margin-top: 4px;
+        justify-content: flex-start;
+    }
+    
+    /* Buttons take equal space */
+    .saw-risks-request-btn,
+    .saw-risks-edit-btn {
+        flex: 1;
+        justify-content: center;
+        text-align: center;
+    }
+    
+    .saw-risks-text-header {
+        flex-wrap: wrap;
+    }
+    
+    .saw-risks-fullscreen-btn {
+        margin-left: auto;
+    }
+    
+    /* Documents - ensure no overflow */
+    .saw-risks-document-item {
+        flex-wrap: nowrap;
+    }
+    
+    .saw-risks-document-info {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .saw-risks-document-download {
+        flex-shrink: 0;
+    }
+    
+    /* Fullscreen modal mobile */
+    .saw-risks-fullscreen-modal {
+        padding: 10px;
+    }
+    
+    .saw-risks-fullscreen-container {
+        max-height: 95vh;
+        border-radius: 12px;
+    }
+    
+    .saw-risks-fullscreen-header {
+        padding: 14px 16px;
+    }
+    
+    .saw-risks-fullscreen-title {
+        font-size: 14px;
+    }
+    
+    .saw-risks-fullscreen-body {
+        padding: 16px;
+        font-size: 14px;
+    }
+}
+
+/* ============================================
+   RESPONSIVE - MOBILE (max-width: 480px)
+   ============================================ */
+@media (max-width: 480px) {
+    /* Risks card header - full stack */
+    .saw-risks-card-header {
+        padding: 14px;
+        gap: 10px;
+    }
+    
+    /* Icon stays top-left, title wraps */
+    .saw-risks-card-title {
+        flex: 1 1 calc(100% - 60px);
+    }
+    
+    /* Actions full width row */
+    .saw-risks-header-actions {
+        flex-basis: 100%;
+        margin-left: 0;
+        gap: 8px;
+    }
+    
+    /* Buttons stack or equal width */
+    .saw-risks-request-btn,
+    .saw-risks-edit-btn {
+        flex: 1 1 auto;
+        min-width: 0;
+        padding: 10px 12px;
+        font-size: 11px;
+        justify-content: center;
+    }
+    
+    /* Hide button text on very small screens, show only icon */
+    .saw-risks-request-btn .saw-btn-text,
+    .saw-risks-edit-btn .saw-btn-text {
+        display: inline;
+    }
+    
+    /* Documents more compact */
+    .saw-risks-document-item {
+        padding: 8px 10px;
+        gap: 8px;
+    }
+    
+    .saw-risks-document-icon {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .saw-risks-document-name {
+        font-size: 12px;
+    }
+    
+    .saw-risks-document-download {
+        width: 28px;
+        height: 28px;
+    }
+    
+    /* Email history compact */
+    .saw-risks-email-item {
+        padding: 6px 8px;
+        gap: 8px;
+    }
+    
+    .saw-risks-email-status {
+        width: 20px;
+        height: 20px;
+    }
+    
+    .saw-risks-email-date {
+        font-size: 11px;
+    }
+    
+    .saw-risks-email-to {
+        font-size: 10px;
+    }
+    
+    /* Text items */
+    .saw-risks-text-header {
+        padding: 8px 12px;
+        gap: 8px;
+    }
+    
+    .saw-risks-text-icon {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .saw-risks-text-title {
+        font-size: 11px;
+    }
+    
+    .saw-risks-fullscreen-btn {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .saw-risks-text-content {
+        padding: 12px;
+        font-size: 12px;
+    }
+}
+
+/* ============================================
+   RESPONSIVE - VERY SMALL (max-width: 360px)
+   ============================================ */
+@media (max-width: 360px) {
+    /* Stack buttons vertically */
+    .saw-risks-header-actions {
+        flex-direction: column;
+        gap: 6px;
+    }
+    
+    .saw-risks-request-btn,
     .saw-risks-edit-btn {
         width: 100%;
         justify-content: center;
     }
     
-    .saw-risks-document-item {
-        flex-wrap: wrap;
+    /* Even more compact documents */
+    .saw-risks-document-icon {
+        display: none;
     }
     
-    .saw-risks-document-download {
-        margin-left: auto;
+    .saw-risks-document-info {
+        flex: 1;
     }
 }
 </style>
@@ -2226,8 +2603,58 @@ function sendInvitation(visitId) {
     });
 }
 
+/**
+ * Open risks text in fullscreen modal
+ * @param {number} materialId - ID of the material
+ */
 function openRisksFullscreen(materialId) {
-    alert('Fullscreen zobrazení pro material #' + materialId);
+    var contentElement = document.getElementById('risks-text-content-' + materialId);
+    var modal = document.getElementById('saw-risks-fullscreen-modal');
+    var modalContent = document.getElementById('saw-risks-fullscreen-content');
+    
+    if (!contentElement || !modal || !modalContent) {
+        console.error('Fullscreen modal elements not found');
+        return;
+    }
+    
+    // Copy content to modal
+    modalContent.innerHTML = contentElement.innerHTML;
+    
+    // Show modal
+    modal.style.display = 'flex';
+    
+    // Prevent body scroll
+    document.body.style.overflow = 'hidden';
+    
+    // Close on Escape key
+    document.addEventListener('keydown', handleEscapeKey);
+}
+
+/**
+ * Close risks fullscreen modal
+ */
+function closeRisksFullscreen() {
+    var modal = document.getElementById('saw-risks-fullscreen-modal');
+    
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    
+    // Restore body scroll
+    document.body.style.overflow = '';
+    
+    // Remove escape key listener
+    document.removeEventListener('keydown', handleEscapeKey);
+}
+
+/**
+ * Handle Escape key press to close modal
+ * @param {KeyboardEvent} e 
+ */
+function handleEscapeKey(e) {
+    if (e.key === 'Escape' || e.keyCode === 27) {
+        closeRisksFullscreen();
+    }
 }
 
 function sendRisksRequest(visitId) {
