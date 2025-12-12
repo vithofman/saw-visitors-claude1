@@ -511,31 +511,56 @@ $has_invitation_email = !empty($item['invitation_email']);
     <?php endif; ?>
 
     <!-- RISKS CARD (RED BORDER) -->
-    <?php if (!empty($materials) || !empty($item['invitation_token']) || $can_edit_risks): ?>
-    <div class="saw-risks-card">
-        <div class="saw-risks-card-inner">
-            <div class="saw-risks-card-header">
-                <div class="saw-risks-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                        <line x1="12" y1="9" x2="12" y2="13"/>
-                        <line x1="12" y1="17" x2="12.01" y2="17"/>
+<?php 
+// Load email history for this visit
+$email_logs = array();
+if (!empty($item['id']) && class_exists('SAW_Email_Logger')) {
+    $email_logger = new SAW_Email_Logger();
+    $email_logs = $email_logger->get_by_visit($item['id']);
+}
+$risks_emails = array_filter($email_logs, fn($e) => $e['email_type'] === 'risks_request');
+
+// Can send risks request?
+$can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_token']);
+?>
+<?php if (!empty($materials) || !empty($item['invitation_token']) || $can_edit_risks || $can_send_risks): ?>
+<div class="saw-risks-card">
+    <div class="saw-risks-card-inner">
+        <div class="saw-risks-card-header">
+            <div class="saw-risks-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+            </div>
+            <div class="saw-risks-card-title">
+                <span class="saw-risks-label"><?php echo esc_html($tr('section_risks', 'Informace o rizicích')); ?></span>
+                <?php if (!empty($materials)): ?>
+                <span class="saw-risks-status saw-risks-status-uploaded">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                    <?php echo esc_html($tr('risks_uploaded', 'Nahráno')); ?>
+                </span>
+                <?php else: ?>
+                <span class="saw-risks-status saw-risks-status-waiting">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                    <?php echo esc_html($tr('risks_waiting', 'Čeká na nahrání')); ?>
+                </span>
+                <?php endif; ?>
+            </div>
+            <div class="saw-risks-header-actions">
+                <?php if ($can_send_risks): ?>
+                <button type="button" 
+                        class="saw-risks-request-btn" 
+                        id="send-risks-btn-<?php echo $item['id']; ?>"
+                        onclick="sendRisksRequest(<?php echo $item['id']; ?>)"
+                        title="<?php echo esc_attr($tr('send_risks_request', 'Vyzvat k doplnění rizik')); ?>">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/>
                     </svg>
-                </div>
-                <div class="saw-risks-card-title">
-                    <span class="saw-risks-label"><?php echo esc_html($tr('section_risks', 'Informace o rizicích')); ?></span>
-                    <?php if (!empty($materials)): ?>
-                    <span class="saw-risks-status saw-risks-status-uploaded">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-                        <?php echo esc_html($tr('risks_uploaded', 'Nahráno')); ?>
-                    </span>
-                    <?php else: ?>
-                    <span class="saw-risks-status saw-risks-status-waiting">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                        <?php echo esc_html($tr('risks_waiting', 'Čeká na nahrání')); ?>
-                    </span>
-                    <?php endif; ?>
-                </div>
+                    <?php echo esc_html($tr('btn_request_risks', 'Vyzvat k rizikům')); ?>
+                </button>
+                <?php endif; ?>
                 <?php if ($can_edit_risks && !empty($item['id'])): ?>
                 <a href="<?php echo esc_url(home_url('/admin/visits/' . $item['id'] . '/edit-risks/')); ?>" class="saw-risks-edit-btn">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -546,136 +571,160 @@ $has_invitation_email = !empty($item['invitation_email']);
                 </a>
                 <?php endif; ?>
             </div>
-            <div class="saw-risks-card-body">
-                <?php if (empty($materials)): ?>
-                    <div class="saw-risks-empty">
-                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                            <polyline points="14 2 14 8 20 8"/>
-                            <line x1="12" y1="18" x2="12" y2="12"/>
-                            <line x1="9" y1="15" x2="15" y2="15"/>
-                        </svg>
-                        <span><?php echo esc_html($tr('risks_empty', 'Zatím nebyly nahrány žádné materiály o rizicích')); ?></span>
-                        <?php if ($can_edit_risks && !empty($item['id'])): ?>
-                        <a href="<?php echo esc_url(home_url('/admin/visits/' . $item['id'] . '/edit-risks/')); ?>" class="saw-risks-add-btn">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="12" y1="5" x2="12" y2="19"/>
-                                <line x1="5" y1="12" x2="19" y2="12"/>
-                            </svg>
-                            <?php echo esc_html($tr('btn_add_risks', 'Zadat informace o rizicích')); ?>
-                        </a>
+        </div>
+        
+        <!-- Email History (if any) -->
+        <?php if (!empty($risks_emails)): ?>
+        <div class="saw-risks-email-history">
+            <div class="saw-risks-email-header">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="4" width="20" height="16" rx="2"/>
+                    <path d="M22 7l-10 7L2 7"/>
+                </svg>
+                <span><?php echo esc_html($tr('email_history_risks', 'Odeslané výzvy')); ?></span>
+            </div>
+            <div class="saw-risks-email-list">
+                <?php foreach ($risks_emails as $email): ?>
+                <div class="saw-risks-email-item">
+                    <div class="saw-risks-email-status <?php echo $email['status'] === 'sent' ? 'saw-email-sent' : 'saw-email-failed'; ?>">
+                        <?php if ($email['status'] === 'sent'): ?>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                        <?php else: ?>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
                         <?php endif; ?>
                     </div>
-                <?php else: ?>
-                    
-                    <?php if (!empty($texts)): ?>
-                        <?php foreach ($texts as $text): ?>
-                        <div class="saw-risks-text-item">
-                            <div class="saw-risks-text-header">
-                                <div class="saw-risks-text-icon">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                                        <polyline points="14 2 14 8 20 8"/>
-                                        <line x1="16" y1="13" x2="8" y2="13"/>
-                                        <line x1="16" y1="17" x2="8" y2="17"/>
-                                    </svg>
-                                </div>
-                                <div class="saw-risks-text-meta">
-                                    <span class="saw-risks-text-title"><?php echo esc_html($tr('risks_text_info', 'Textové informace')); ?></span>
-                                    <span class="saw-risks-text-date"><?php echo esc_html(date('d.m.Y H:i', strtotime($text['uploaded_at']))); ?></span>
-                                </div>
-                                <button class="saw-risks-fullscreen-btn" onclick="openRisksFullscreen(<?php echo $text['id']; ?>)" title="<?php echo esc_attr($tr('risks_fullscreen', 'Zobrazit na celou obrazovku')); ?>">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <polyline points="15 3 21 3 21 9"/>
-                                        <polyline points="9 21 3 21 3 15"/>
-                                        <line x1="21" y1="3" x2="14" y2="10"/>
-                                        <line x1="3" y1="21" x2="10" y2="14"/>
-                                    </svg>
-                                </button>
-                            </div>
-                            <div class="saw-risks-text-content">
-                                <?php echo wp_kses_post($text['text_content']); ?>
-                            </div>
-                        </div>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                    
-                    <?php if (!empty($documents)): ?>
-                    <div class="saw-risks-documents-section">
-                        <div class="saw-risks-documents-header">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-                            </svg>
-                            <span><?php echo esc_html($tr('risks_documents', 'Dokumenty')); ?> (<?php echo count($documents); ?>)</span>
-                        </div>
-                        <div class="saw-risks-documents-list">
-                            <?php 
-                            $upload_dir = wp_upload_dir();
-                            foreach ($documents as $doc): 
-                                $file_url = $upload_dir['baseurl'] . $doc['file_path'];
-                                $file_ext = strtoupper(pathinfo($doc['file_name'], PATHINFO_EXTENSION));
-                            ?>
-                            <a href="<?php echo esc_url($file_url); ?>" target="_blank" class="saw-risks-document-item">
-                                <div class="saw-risks-document-icon">
-                                    <?php if (in_array($file_ext, ['PDF'])): ?>
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                                        <polyline points="14 2 14 8 20 8"/>
-                                        <path d="M9 15h6"/>
-                                    </svg>
-                                    <?php elseif (in_array($file_ext, ['JPG', 'JPEG', 'PNG', 'GIF', 'WEBP'])): ?>
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                                        <circle cx="8.5" cy="8.5" r="1.5"/>
-                                        <polyline points="21 15 16 10 5 21"/>
-                                    </svg>
-                                    <?php else: ?>
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                                        <polyline points="14 2 14 8 20 8"/>
-                                    </svg>
-                                    <?php endif; ?>
-                                </div>
-                                <div class="saw-risks-document-info">
-                                    <span class="saw-risks-document-name"><?php echo esc_html($doc['file_name']); ?></span>
-                                    <span class="saw-risks-document-meta">
-                                        <span class="saw-risks-document-ext"><?php echo $file_ext; ?></span>
-                                        <span><?php echo size_format($doc['file_size']); ?></span>
-                                    </span>
-                                </div>
-                                <div class="saw-risks-document-download">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                                        <polyline points="7 10 12 15 17 10"/>
-                                        <line x1="12" y1="15" x2="12" y2="3"/>
-                                    </svg>
-                                </div>
-                            </a>
-                            <?php endforeach; ?>
-                        </div>
+                    <div class="saw-risks-email-info">
+                        <span class="saw-risks-email-date"><?php echo esc_html(date_i18n('d.m.Y H:i', strtotime($email['created_at']))); ?></span>
+                        <span class="saw-risks-email-to"><?php echo esc_html($email['recipient_email']); ?></span>
                     </div>
-                    <?php endif; ?>
-                    
-                <?php endif; ?>
+                </div>
+                <?php endforeach; ?>
             </div>
         </div>
+        <?php endif; ?>
+        
+        <div class="saw-risks-card-body">
+            <?php if (empty($materials)): ?>
+                <div class="saw-risks-empty">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="12" y1="18" x2="12" y2="12"/>
+                        <line x1="9" y1="15" x2="15" y2="15"/>
+                    </svg>
+                    <span><?php echo esc_html($tr('risks_empty', 'Zatím nebyly nahrány žádné materiály o rizicích')); ?></span>
+                    <?php if ($can_edit_risks && !empty($item['id'])): ?>
+                    <a href="<?php echo esc_url(home_url('/admin/visits/' . $item['id'] . '/edit-risks/')); ?>" class="saw-risks-add-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"/>
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
+                        <?php echo esc_html($tr('btn_add_risks', 'Zadat informace o rizicích')); ?>
+                    </a>
+                    <?php endif; ?>
+                </div>
+            <?php else: ?>
+                
+                <?php if (!empty($texts)): ?>
+                    <?php foreach ($texts as $text): ?>
+                    <div class="saw-risks-text-item">
+                        <div class="saw-risks-text-header">
+                            <div class="saw-risks-text-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14 2 14 8 20 8"/>
+                                    <line x1="16" y1="13" x2="8" y2="13"/>
+                                    <line x1="16" y1="17" x2="8" y2="17"/>
+                                </svg>
+                            </div>
+                            <div class="saw-risks-text-meta">
+                                <span class="saw-risks-text-title"><?php echo esc_html($tr('risks_text_info', 'Textové informace')); ?></span>
+                                <span class="saw-risks-text-date"><?php echo esc_html(date('d.m.Y H:i', strtotime($text['uploaded_at']))); ?></span>
+                            </div>
+                            <button class="saw-risks-fullscreen-btn" onclick="openRisksFullscreen(<?php echo $text['id']; ?>)" title="<?php echo esc_attr($tr('risks_fullscreen', 'Zobrazit na celou obrazovku')); ?>">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="15 3 21 3 21 9"/>
+                                    <polyline points="9 21 3 21 3 15"/>
+                                    <line x1="21" y1="3" x2="14" y2="10"/>
+                                    <line x1="3" y1="21" x2="10" y2="14"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="saw-risks-text-content">
+                            <?php echo wp_kses_post($text['text_content']); ?>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+                
+                <?php if (!empty($documents)): ?>
+                <div class="saw-risks-documents-section">
+                    <div class="saw-risks-documents-header">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                        </svg>
+                        <span><?php echo esc_html($tr('risks_documents', 'Dokumenty')); ?> (<?php echo count($documents); ?>)</span>
+                    </div>
+                    <div class="saw-risks-documents-list">
+                        <?php 
+                        $upload_dir = wp_upload_dir();
+                        foreach ($documents as $doc): 
+                            $file_url = $upload_dir['baseurl'] . $doc['file_path'];
+                            $file_ext = strtoupper(pathinfo($doc['file_name'], PATHINFO_EXTENSION));
+                        ?>
+                        <a href="<?php echo esc_url($file_url); ?>" target="_blank" class="saw-risks-document-item">
+                            <div class="saw-risks-document-icon">
+                                <?php if (in_array($file_ext, ['PDF'])): ?>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14 2 14 8 20 8"/>
+                                    <path d="M9 15h6"/>
+                                </svg>
+                                <?php elseif (in_array($file_ext, ['JPG', 'JPEG', 'PNG', 'GIF', 'WEBP'])): ?>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                                    <polyline points="21 15 16 10 5 21"/>
+                                </svg>
+                                <?php else: ?>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14 2 14 8 20 8"/>
+                                </svg>
+                                <?php endif; ?>
+                            </div>
+                            <div class="saw-risks-document-info">
+                                <span class="saw-risks-document-name"><?php echo esc_html($doc['file_name']); ?></span>
+                                <span class="saw-risks-document-meta">
+                                    <span class="saw-risks-document-ext"><?php echo $file_ext; ?></span>
+                                    <span><?php echo size_format($doc['file_size']); ?></span>
+                                </span>
+                            </div>
+                            <div class="saw-risks-document-download">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="7 10 12 15 17 10"/>
+                                    <line x1="12" y1="15" x2="12" y2="3"/>
+                                </svg>
+                            </div>
+                        </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+                
+            <?php endif; ?>
+        </div>
     </div>
-    <?php endif; ?>
+</div>
+<?php endif; ?>
 
 </div>
         
     </div>
 </div>
 
-<?php 
-// ============================================
-// EMAIL HISTORY SECTION
-// ============================================
-$email_history_file = __DIR__ . '/partials/email-history.php';
-if (file_exists($email_history_file)) {
-    include $email_history_file;
-}
-?>
+
 
 <!-- ============================================ -->
 <!-- STYLES                                       -->
@@ -1800,6 +1849,119 @@ if (file_exists($email_history_file)) {
     color: white;
 }
 
+/* Risks Header Actions */
+.saw-risks-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.saw-risks-request-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.saw-risks-request-btn:hover {
+    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(217, 119, 6, 0.3);
+}
+
+.saw-risks-request-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Risks Email History */
+.saw-risks-email-history {
+    background: #fef9e7;
+    border-bottom: 1px solid #fecaca;
+    padding: 12px 16px;
+}
+
+.saw-risks-email-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #92400e;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+}
+
+.saw-risks-email-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.saw-risks-email-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #fde68a;
+}
+
+.saw-risks-email-status {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.saw-email-sent {
+    background: #d1fae5;
+    color: #059669;
+}
+
+.saw-email-failed {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.saw-risks-email-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.saw-risks-email-date {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.saw-risks-email-to {
+    font-size: 11px;
+    color: #64748b;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* ============================================
    RESPONSIVE
    ============================================ */
@@ -2066,6 +2228,38 @@ function sendInvitation(visitId) {
 
 function openRisksFullscreen(materialId) {
     alert('Fullscreen zobrazení pro material #' + materialId);
+}
+
+function sendRisksRequest(visitId) {
+    var btn = document.getElementById('send-risks-btn-' + visitId);
+    if (!btn) return;
+    
+    if (!confirm('<?php echo esc_js($tr('confirm_send_risks', 'Odeslat email s výzvou k doplnění pracovních rizik?')); ?>')) {
+        return;
+    }
+    
+    var originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> <?php echo esc_js($tr('sending', 'Odesílám...')); ?>';
+    
+    jQuery.post(sawGlobal.ajaxurl, {
+        action: 'saw_send_risks_request',
+        visit_id: visitId,
+        nonce: sawGlobal.nonce
+    }, function(response) {
+        if (response.success) {
+            alert('✅ <?php echo esc_js($tr('alert_risks_sent', 'Email byl odeslán na')); ?>: ' + (response.data?.email || ''));
+            location.reload();
+        } else {
+            alert('<?php echo esc_js($tr('alert_error', 'Chyba')); ?>: ' + (response.data?.message || 'Nepodařilo se odeslat email'));
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }).fail(function(xhr, status, error) {
+        alert('<?php echo esc_js($tr('alert_error', 'Chyba')); ?> komunikace se serverem\n\n' + error);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    });
 }
 
 if (!document.getElementById('saw-spinner-style')) {

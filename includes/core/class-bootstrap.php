@@ -132,9 +132,7 @@ class SAW_Bootstrap {
             
             // Visitor Info Portal Router (must load early for rewrite rules) - v3.3.0
             'includes/frontend/visitor-info/visitor-info-router.php',
-
-            // Email System (auto-initializes on plugins_loaded with priority 20)
-            'includes/email/loader.php',
+            
         ];
         
         foreach ($files as $file) {
@@ -172,17 +170,19 @@ class SAW_Bootstrap {
      * @return void
      */
     private static function load_optional_files() {
-        $optional = [
-            'includes/core/class-saw-context.php',
-            'includes/core/class-saw-session.php',
-            'includes/core/class-saw-user-branches.php',
-            'includes/core/class-saw-error-handler.php',
-            'includes/core/class-saw-audit.php',
-            'includes/auth/class-saw-auth.php',
-            'includes/auth/class-saw-password.php',
-            // AJAX handlers (must load after middleware.php for saw_verify_ajax_unified)
-            'includes/frontend/invitation/ajax-handlers.php',
-        ];
+    $optional = [
+        'includes/core/class-saw-context.php',
+        'includes/core/class-saw-session.php',
+        'includes/core/class-saw-user-branches.php',
+        'includes/core/class-saw-error-handler.php',
+        'includes/core/class-saw-audit.php',
+        'includes/auth/class-saw-auth.php',
+        'includes/auth/class-saw-password.php',
+        // AJAX handlers (must load after middleware.php for saw_verify_ajax_unified)
+        'includes/frontend/invitation/ajax-handlers.php',
+        // Email System
+        'includes/email/loader.php',
+    ];
         
         foreach ($optional as $file) {
             $path = SAW_VISITORS_PLUGIN_DIR . $file;

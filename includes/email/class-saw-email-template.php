@@ -95,29 +95,37 @@ class SAW_Email_Template {
 	}
 	
 	private function build_content($type, $translations, $placeholders) {
-		$processed = array();
-		foreach ($translations as $key => $text) {
-			$processed[$key] = $this->replace_placeholders($text, $placeholders);
-		}
-		
-		if (!empty($placeholders['date_from'])) {
-			$processed['date_formatted'] = date_i18n('d.m.Y', strtotime($placeholders['date_from']));
-			
-			if (!empty($placeholders['date_to'])) {
-				$to_date = date_i18n('d.m.Y', strtotime($placeholders['date_to']));
-				if ($processed['date_formatted'] !== $to_date) {
-					$processed['date_formatted'] .= ' - ' . $to_date;
-				}
-			}
-		}
-		
-		return array(
-			'subject'  => $processed['subject'] ?? '',
-			'greeting' => $processed['greeting'] ?? '',
-			'body'     => $this->build_body($type, $processed),
-			'footer'   => $processed['footer'] ?? '',
-		);
-	}
+    // Replace placeholders in all translations
+    $processed = array();
+    foreach ($translations as $key => $text) {
+        $processed[$key] = $this->replace_placeholders($text, $placeholders);
+    }
+    
+    // PŘIDAT: Raw placeholders pro template (URL, atd.)
+    foreach ($placeholders as $key => $value) {
+        if (!isset($processed[$key])) {
+            $processed[$key] = $value;
+        }
+    }
+    
+    // Format dates if present
+    if (!empty($placeholders['date_from'])) {
+        $processed['date_formatted'] = date_i18n('d.m.Y', strtotime($placeholders['date_from']));
+    }
+    if (!empty($placeholders['date_to'])) {
+        $to_date = date_i18n('d.m.Y', strtotime($placeholders['date_to']));
+        if (isset($processed['date_formatted']) && $processed['date_formatted'] !== $to_date) {
+            $processed['date_formatted'] .= ' - ' . $to_date;
+        }
+    }
+    
+    return array(
+        'subject' => $processed['subject'] ?? '',
+        'greeting' => $processed['greeting'] ?? '',
+        'body' => $this->build_body($type, $processed),
+        'footer' => $processed['footer'] ?? '',
+    );
+}
 	
 	private function build_body($type, $processed) {
 		$template_file = $this->templates_dir . $type . '.php';

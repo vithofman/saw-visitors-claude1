@@ -50,9 +50,6 @@ class SAW_Email_Service {
 	}
 	
 	private function __construct() {
-		require_once __DIR__ . '/class-saw-email-template.php';
-		require_once __DIR__ . '/class-saw-email-logger.php';
-		
 		$this->template = new SAW_Email_Template();
 		$this->logger = new SAW_Email_Logger();
 	}
@@ -466,49 +463,54 @@ class SAW_Email_Service {
 	}
 	
 	public function send_risks_request($visit_id) {
-		global $wpdb;
-		
-		$visit = $wpdb->get_row($wpdb->prepare(
-			"SELECT 
-				v.id, v.customer_id, v.branch_id, 
-				v.invitation_email, v.invitation_token,
-				b.name as branch_name,
-				cust.name as customer_name
-			 FROM {$wpdb->prefix}saw_visits v
-			 INNER JOIN {$wpdb->prefix}saw_branches b ON v.branch_id = b.id
-			 INNER JOIN {$wpdb->prefix}saw_customers cust ON v.customer_id = cust.id
-			 WHERE v.id = %d",
-			$visit_id
-		), ARRAY_A);
-		
-		if (!$visit) {
-			return new WP_Error('visit_not_found', 'Návštěva nenalezena');
-		}
-		
-		if (empty($visit['invitation_email'])) {
-			return new WP_Error('no_email', 'Návštěva nemá vyplněný email pro pozvánku');
-		}
-		
-		if (empty($visit['invitation_token'])) {
-			$visit['invitation_token'] = $this->generate_invitation_token($visit_id);
-		}
-		
-		$risks_url = home_url('/visitor-invitation/' . $visit['invitation_token'] . '/?step=risks');
-		
-		return $this->send('risks_request', array(
-			'customer_id'     => $visit['customer_id'],
-			'branch_id'       => $visit['branch_id'],
-			'recipient_email' => $visit['invitation_email'],
-			'recipient_name'  => '',
-			'recipient_type'  => 'contact',
-			'visit_id'        => $visit_id,
-			'placeholders'    => array(
-				'customer_name' => $visit['customer_name'],
-				'branch_name'   => $visit['branch_name'],
-				'risks_url'     => $risks_url,
-			),
-		));
-	}
+    global $wpdb;
+    
+    $visit = $wpdb->get_row($wpdb->prepare(
+        "SELECT 
+            v.id, v.customer_id, v.branch_id, v.invitation_email, v.invitation_token,
+            b.name as branch_name,
+            cust.name as customer_name
+         FROM {$wpdb->prefix}saw_visits v
+         INNER JOIN {$wpdb->prefix}saw_branches b ON v.branch_id = b.id
+         INNER JOIN {$wpdb->prefix}saw_customers cust ON v.customer_id = cust.id
+         WHERE v.id = %d",
+        $visit_id
+    ), ARRAY_A);
+    
+    if (!$visit || empty($visit['invitation_email'])) {
+        return new WP_Error('visit_not_found', 'Visit not found or has no email');
+    }
+    
+    // Použít existující token, nebo vygenerovat nový (správný formát)
+    $token = $visit['invitation_token'];
+    
+    if (empty($token)) {
+        // Vygenerovat SHA256 token - stejný formát jako invitation systém
+        $token = hash('sha256', wp_generate_password(64, true, true) . $visit_id . time());
+        
+        // Uložit do DB
+        $wpdb->update(
+            $wpdb->prefix . 'saw_visits',
+            array('invitation_token' => $token),
+            array('id' => $visit_id)
+        );
+    }
+    
+    $risks_url = home_url('/visitor-invitation/' . $token . '/');
+    
+    return $this->send('risks_request', array(
+        'customer_id'     => $visit['customer_id'],
+        'branch_id'       => $visit['branch_id'],
+        'recipient_email' => $visit['invitation_email'],
+        'recipient_name'  => '',
+        'visit_id'        => $visit_id,
+        'placeholders'    => array(
+            'customer_name' => $visit['customer_name'],
+            'branch_name'   => $visit['branch_name'],
+            'risks_url'     => $risks_url,
+        ),
+    ));
+}
 	
 	private function generate_invitation_token($visit_id) {
 		global $wpdb;
@@ -527,8 +529,4 @@ class SAW_Email_Service {
 		
 		return $token;
 	}
-}
-
-function saw_email() {
-	return SAW_Email_Service::instance();
 }

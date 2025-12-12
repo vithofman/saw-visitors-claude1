@@ -14,6 +14,7 @@ if (!defined('ABSPATH')) exit;
 		a { color: <?php echo esc_attr($primary_color); ?>; }
 		@media only screen and (max-width: 600px) {
 			.container { width: 100% !important; padding: 10px !important; }
+			.column { display: block !important; width: 100% !important; }
 		}
 	</style>
 </head>
@@ -23,7 +24,7 @@ if (!defined('ABSPATH')) exit;
 		<tr>
 			<td align="center" style="padding: 40px 10px;">
 				
-				<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" class="container" style="max-width: 600px; width: 100%;">
+				<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="700" class="container" style="max-width: 700px; width: 100%;">
 					
 					<!-- Header -->
 					<tr>
@@ -40,74 +41,82 @@ if (!defined('ABSPATH')) exit;
 						</td>
 					</tr>
 					
-					<!-- Content -->
+					<!-- Content - Two Columns -->
 					<tr>
 						<td>
 							<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
 								<tr>
-									<td style="padding: 30px;">
+									<td style="padding: 20px;">
 										
-										<!-- CZECH -->
-										<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border: 1px solid #e5e7eb; border-radius: 4px; margin-bottom: 20px;">
+										<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
 											<tr>
-												<td style="background-color: #f3f4f6; padding: 10px 20px; font-size: 14px; font-weight: bold; color: #4b5563; border-radius: 4px 4px 0 0;">
-													🇨🇿 ČESKY
+												<!-- CZECH COLUMN -->
+												<td class="column" width="48%" valign="top" style="padding: 10px;">
+													<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border: 1px solid #e5e7eb; border-radius: 6px;">
+														<tr>
+															<td style="background-color: #1e40af; padding: 10px 15px; border-radius: 6px 6px 0 0;">
+																<span style="font-size: 14px; font-weight: bold; color: #ffffff;">🇨🇿 ČESKY</span>
+															</td>
+														</tr>
+														<tr>
+															<td style="padding: 20px; font-size: 14px; line-height: 1.5; color: #374151;">
+																<?php if (!empty($cs_content['greeting'])): ?>
+																<p style="margin: 0 0 12px 0; color: #1f2937;">
+																	<?php echo esc_html($cs_content['greeting']); ?>
+																</p>
+																<?php endif; ?>
+																
+																<div>
+																	<?php echo $cs_content['body']; ?>
+																</div>
+																
+																<?php if (!empty($cs_content['footer'])): ?>
+																<p style="margin: 15px 0 0 0; color: #1f2937;">
+																	<?php echo nl2br(esc_html($cs_content['footer'])); ?>
+																</p>
+																<?php endif; ?>
+															</td>
+														</tr>
+													</table>
 												</td>
-											</tr>
-											<tr>
-												<td style="padding: 25px;">
-													<?php if (!empty($cs_content['greeting'])): ?>
-													<p style="margin: 0 0 15px 0; font-size: 16px; color: #1f2937;">
-														<?php echo esc_html($cs_content['greeting']); ?>
-													</p>
-													<?php endif; ?>
-													
-													<div style="font-size: 16px; line-height: 1.6; color: #374151;">
-														<?php echo $cs_content['body']; ?>
-													</div>
-													
-													<?php if (!empty($cs_content['footer'])): ?>
-													<p style="margin: 20px 0 0 0; font-size: 16px; color: #1f2937;">
-														<?php echo nl2br(esc_html($cs_content['footer'])); ?>
-													</p>
-													<?php endif; ?>
-												</td>
-											</tr>
-										</table>
-										
-										<!-- Divider -->
-										<hr style="border: 0; border-top: 2px dashed #d1d5db; margin: 30px 0;">
-										
-										<!-- ENGLISH -->
-										<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border: 1px solid #e5e7eb; border-radius: 4px;">
-											<tr>
-												<td style="background-color: #f3f4f6; padding: 10px 20px; font-size: 14px; font-weight: bold; color: #4b5563; border-radius: 4px 4px 0 0;">
-													🇬🇧 ENGLISH
-												</td>
-											</tr>
-											<tr>
-												<td style="padding: 25px;">
-													<?php if (!empty($en_content['greeting'])): ?>
-													<p style="margin: 0 0 15px 0; font-size: 16px; color: #1f2937;">
-														<?php echo esc_html($en_content['greeting']); ?>
-													</p>
-													<?php endif; ?>
-													
-													<div style="font-size: 16px; line-height: 1.6; color: #374151;">
-														<?php echo $en_content['body']; ?>
-													</div>
-													
-													<?php if (!empty($en_content['footer'])): ?>
-													<p style="margin: 20px 0 0 0; font-size: 16px; color: #1f2937;">
-														<?php echo nl2br(esc_html($en_content['footer'])); ?>
-													</p>
-													<?php endif; ?>
+												
+												<!-- Spacer -->
+												<td width="4%">&nbsp;</td>
+												
+												<!-- ENGLISH COLUMN -->
+												<td class="column" width="48%" valign="top" style="padding: 10px;">
+													<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border: 1px solid #e5e7eb; border-radius: 6px;">
+														<tr>
+															<td style="background-color: #dc2626; padding: 10px 15px; border-radius: 6px 6px 0 0;">
+																<span style="font-size: 14px; font-weight: bold; color: #ffffff;">🇬🇧 ENGLISH</span>
+															</td>
+														</tr>
+														<tr>
+															<td style="padding: 20px; font-size: 14px; line-height: 1.5; color: #374151;">
+																<?php if (!empty($en_content['greeting'])): ?>
+																<p style="margin: 0 0 12px 0; color: #1f2937;">
+																	<?php echo esc_html($en_content['greeting']); ?>
+																</p>
+																<?php endif; ?>
+																
+																<div>
+																	<?php echo $en_content['body']; ?>
+																</div>
+																
+																<?php if (!empty($en_content['footer'])): ?>
+																<p style="margin: 15px 0 0 0; color: #1f2937;">
+																	<?php echo nl2br(esc_html($en_content['footer'])); ?>
+																</p>
+																<?php endif; ?>
+															</td>
+														</tr>
+													</table>
 												</td>
 											</tr>
 										</table>
 										
 										<!-- Company -->
-										<p style="margin: 20px 0 0 0; font-size: 16px; font-weight: bold; color: #1f2937; text-align: center;">
+										<p style="margin: 20px 0 0 0; font-size: 14px; font-weight: bold; color: #1f2937; text-align: center;">
 											<?php echo esc_html($customer['name']); ?>
 										</p>
 										
@@ -119,8 +128,8 @@ if (!defined('ABSPATH')) exit;
 					
 					<!-- Footer -->
 					<tr>
-						<td align="center" style="padding: 30px 20px;">
-							<p style="margin: 0; font-size: 13px; color: #6b7280;">
+						<td align="center" style="padding: 20px;">
+							<p style="margin: 0; font-size: 12px; color: #6b7280;">
 								<?php echo esc_html($customer['name']); ?>
 								<?php if (!empty($customer['contact_email'])): ?>
 								| <a href="mailto:<?php echo esc_attr($customer['contact_email']); ?>" style="color: #6b7280;">

@@ -1281,23 +1281,32 @@ S pozdravem,
     }
     
     /**
-     * AJAX: Send risks request email
-     * 
-     * Odesílá email s výzvou k doplnění rizik na invitation_email z visits.
-     * 
-     * @since 5.2.0
-     */
-    public function ajax_send_risks_request() {
+ * AJAX: Send risks request email
+ * 
+ * @since 5.2.0
+ */
+public function ajax_send_risks_request() {
+    // Error handler pro zachycení PHP chyb
+    set_error_handler(function($errno, $errstr, $errfile, $errline) {
+        wp_send_json_error(array(
+            'message' => 'PHP Error: ' . $errstr,
+            'file' => basename($errfile),
+            'line' => $errline
+        ));
+        exit;
+    });
+    
+    try {
         check_ajax_referer('saw_ajax_nonce', 'nonce');
         
         if (!current_user_can('edit_posts')) {
-            wp_send_json_error(['message' => 'Nemáte oprávnění']);
+            wp_send_json_error(array('message' => 'Nemáte oprávnění'));
         }
         
         $visit_id = intval($_POST['visit_id'] ?? 0);
         
         if (!$visit_id) {
-            wp_send_json_error(['message' => 'Neplatné ID návštěvy']);
+            wp_send_json_error(array('message' => 'Neplatné ID návštěvy'));
         }
         
         // Ověřit že návštěva existuje a má invitation_email
@@ -1310,27 +1319,48 @@ S pozdravem,
         ), ARRAY_A);
         
         if (!$visit) {
-            wp_send_json_error(['message' => 'Návštěva nenalezena']);
+            wp_send_json_error(array('message' => 'Návštěva nenalezena'));
         }
         
         if (empty($visit['invitation_email'])) {
-            wp_send_json_error(['message' => 'Návštěva nemá vyplněný email pro pozvánku']);
+            wp_send_json_error(array('message' => 'Návštěva nemá vyplněný email pro pozvánku'));
+        }
+        
+        // Kontrola email služby
+        if (!function_exists('saw_email')) {
+            wp_send_json_error(array('message' => 'Funkce saw_email() neexistuje'));
+        }
+        
+        $email_service = saw_email();
+        
+        if ($email_service === null) {
+            wp_send_json_error(array('message' => 'saw_email() vrátilo null'));
+        }
+        
+        if (!method_exists($email_service, 'send_risks_request')) {
+            wp_send_json_error(array('message' => 'Metoda send_risks_request neexistuje'));
         }
         
         // Odeslat email
-        if (!function_exists('saw_email')) {
-            wp_send_json_error(['message' => 'Email služba není dostupná. Zkontrolujte, zda je načten loader.php.']);
-        }
-        
-        $result = saw_email()->send_risks_request($visit_id);
+        $result = $email_service->send_risks_request($visit_id);
         
         if (is_wp_error($result)) {
-            wp_send_json_error(['message' => $result->get_error_message()]);
+            wp_send_json_error(array('message' => 'WP_Error: ' . $result->get_error_message()));
         }
         
-        wp_send_json_success([
+        wp_send_json_success(array(
             'message' => 'Email byl odeslán',
             'email' => $visit['invitation_email']
-        ]);
+        ));
+        
+    } catch (Throwable $e) {
+        wp_send_json_error(array(
+            'message' => 'Exception: ' . $e->getMessage(),
+            'file' => basename($e->getFile()),
+            'line' => $e->getLine()
+        ));
     }
+    
+    restore_error_handler();
+}
 }
