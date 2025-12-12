@@ -1047,9 +1047,17 @@ class SAW_Terminal_Controller {
      * @return void
      */
     private function handle_pin_verification() {
-        global $wpdb;
-        
-        $pin = sanitize_text_field($_POST['pin'] ?? '');
+    global $wpdb;
+    
+    // Rate limit check
+    $rate_check = $this->check_pin_rate_limit();
+    if (is_wp_error($rate_check)) {
+        $this->set_error($rate_check->get_error_message());
+        $this->render_pin_entry();
+        return;
+    }
+    
+    $pin = sanitize_text_field($_POST['pin'] ?? '');
         
         if (empty($pin) || strlen($pin) !== 6) {
             $this->set_error(__('Neplatný PIN kód', 'saw-visitors'));
@@ -1070,10 +1078,14 @@ class SAW_Terminal_Controller {
         ), ARRAY_A);
         
         if (!$visit) {
-            $this->set_error(__('PIN kód je neplatný nebo již vypršel', 'saw-visitors'));
-            $this->render_pin_entry();
-            return;
-        }
+    $this->record_failed_pin_attempt();
+    $this->set_error(__('PIN kód je neplatný nebo již vypršel', 'saw-visitors'));
+    $this->render_pin_entry();
+    return;
+}
+
+// Success - clear attempts
+$this->clear_pin_attempts();
         
         if ($visit['status'] === 'completed') {
             $wpdb->update(
@@ -1088,14 +1100,24 @@ class SAW_Terminal_Controller {
             );
         }
         
-        $new_expiry = date('Y-m-d H:i:s', strtotime('+24 hours'));
-        $wpdb->update(
-            $wpdb->prefix . 'saw_visits',
-            ['pin_expires_at' => $new_expiry],
-            ['id' => $visit['id']],
-            ['%s'],
-            ['%d']
-        );
+        // Smart extend - prodluž pouze pokud NOW+24h > současná expirace
+$current_expiry_timestamp = !empty($visit['pin_expires_at']) 
+    ? strtotime($visit['pin_expires_at']) 
+    : 0;
+$extended_timestamp = strtotime('+24 hours');
+
+if ($extended_timestamp > $current_expiry_timestamp) {
+    $new_expiry = date('Y-m-d H:i:s', $extended_timestamp);
+    $wpdb->update(
+        $wpdb->prefix . 'saw_visits',
+        ['pin_expires_at' => $new_expiry],
+        ['id' => $visit['id']],
+        ['%s'],
+        ['%d']
+    );
+    error_log("[Terminal] PIN expiry extended from " . 
+              ($visit['pin_expires_at'] ?? 'NULL') . " to {$new_expiry} for visit #{$visit['id']}");
+}
         
         $visitors = $wpdb->get_results($wpdb->prepare(
             "SELECT 
@@ -1742,22 +1764,39 @@ private function handle_unified_registration() {
     // ===================================
     // 4. INFO PORTAL: Send emails (v3.2.0)
     // ===================================
-    $email_service_file = SAW_VISITORS_PLUGIN_DIR . 'includes/services/class-saw-visitor-info-email.php';
-    if (file_exists($email_service_file)) {
-        require_once $email_service_file;
+    if (function_exists('saw_email')) {
+    foreach ($visitor_ids as $vid) {
+        $vid = intval($vid);
         
-        if (class_exists('SAW_Visitor_Info_Email')) {
-            // Validate language
-            if (!in_array($language, ['cs', 'en', 'sk', 'uk', 'de', 'pl', 'hu', 'ro'])) {
-                $language = 'cs';
-            }
-            
-            // Send emails to all checked-in visitors
-            foreach ($visitor_ids as $vid) {
-                SAW_Visitor_Info_Email::send($vid, $language);
-            }
+        // Získat nebo vygenerovat info_portal_token
+        $token = $wpdb->get_var($wpdb->prepare(
+            "SELECT info_portal_token FROM {$wpdb->prefix}saw_visitors WHERE id = %d",
+            $vid
+        ));
+        
+        // Pokud token neexistuje, vygenerovat
+        if (empty($token)) {
+            $token = wp_generate_password(32, false);
+            $wpdb->update(
+                $wpdb->prefix . 'saw_visitors',
+                ['info_portal_token' => $token],
+                ['id' => $vid],
+                ['%s'],
+                ['%d']
+            );
+        }
+        
+        // Odeslat Info Portal email (pokud má visitor email)
+        $visitor_email = $wpdb->get_var($wpdb->prepare(
+            "SELECT email FROM {$wpdb->prefix}saw_visitors WHERE id = %d",
+            $vid
+        ));
+        
+        if (!empty($visitor_email) && is_email($visitor_email)) {
+            saw_email()->send_info_portal($vid, $token);
         }
     }
+}
     // ===================================
     // END INFO PORTAL
     // ===================================
@@ -1811,13 +1850,18 @@ private function handle_unified_registration() {
         }
         
         $visit = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}saw_visits 
-             WHERE pin_code = %s 
-             AND customer_id = %d 
-             AND status IN ('pending', 'confirmed', 'in_progress')",
-            $pin,
-            $this->customer_id
-        ), ARRAY_A);
+    "SELECT * FROM {$wpdb->prefix}saw_visits 
+     WHERE pin_code = %s 
+       AND customer_id = %d 
+       AND branch_id = %d
+       AND visit_type = 'planned'
+       AND status != 'cancelled'
+       AND (pin_expires_at IS NULL OR pin_expires_at >= NOW())
+     LIMIT 1",
+    $pin,
+    $this->customer_id,
+    $this->branch_id
+), ARRAY_A);
         
         if (!$visit) {
             $this->set_error(__('PIN kód nenalezen nebo návštěva již ukončena', 'saw-visitors'));
@@ -2469,4 +2513,97 @@ private function handle_unified_registration() {
         wp_redirect(home_url('/terminal/success/'));
         exit;
     }
+
+    /**
+ * Check PIN attempt rate limiting
+ * 
+ * @since 3.6.0
+ * @return true|WP_Error
+ */
+private function check_pin_rate_limit() {
+    $ip = $this->get_client_ip();
+    $cache_key = 'saw_pin_attempts_' . $this->customer_id . '_' . md5($ip);
+    
+    $attempts = get_transient($cache_key);
+    
+    if ($attempts === false) {
+        return true;
+    }
+    
+    $max_attempts = 5;
+    
+    if (intval($attempts) >= $max_attempts) {
+        $remaining = $this->get_transient_ttl($cache_key);
+        $minutes = max(1, ceil($remaining / 60));
+        
+        return new WP_Error(
+            'rate_limited',
+            sprintf('Příliš mnoho neúspěšných pokusů. Zkuste to za %d minut.', $minutes)
+        );
+    }
+    
+    return true;
+}
+
+/**
+ * Record failed PIN attempt
+ * 
+ * @since 3.6.0
+ */
+private function record_failed_pin_attempt() {
+    $ip = $this->get_client_ip();
+    $cache_key = 'saw_pin_attempts_' . $this->customer_id . '_' . md5($ip);
+    
+    $attempts = get_transient($cache_key);
+    $attempts = ($attempts === false) ? 1 : intval($attempts) + 1;
+    
+    set_transient($cache_key, $attempts, 15 * MINUTE_IN_SECONDS);
+}
+
+/**
+ * Clear PIN attempts on success
+ * 
+ * @since 3.6.0
+ */
+private function clear_pin_attempts() {
+    $ip = $this->get_client_ip();
+    $cache_key = 'saw_pin_attempts_' . $this->customer_id . '_' . md5($ip);
+    delete_transient($cache_key);
+}
+
+/**
+ * Get client IP address
+ * 
+ * @since 3.6.0
+ * @return string
+ */
+private function get_client_ip() {
+    $headers = ['HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR', 'HTTP_X_REAL_IP', 'REMOTE_ADDR'];
+    
+    foreach ($headers as $header) {
+        if (!empty($_SERVER[$header])) {
+            $ip = $_SERVER[$header];
+            if (strpos($ip, ',') !== false) {
+                $ip = trim(explode(',', $ip)[0]);
+            }
+            if (filter_var($ip, FILTER_VALIDATE_IP)) {
+                return $ip;
+            }
+        }
+    }
+    
+    return '0.0.0.0';
+}
+
+/**
+ * Get transient TTL
+ * 
+ * @since 3.6.0
+ * @param string $key
+ * @return int
+ */
+private function get_transient_ttl($key) {
+    $timeout = get_option('_transient_timeout_' . $key);
+    return $timeout ? max(0, intval($timeout) - time()) : 0;
+}
 }

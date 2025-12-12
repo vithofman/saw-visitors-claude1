@@ -191,18 +191,24 @@ class SAW_AJAX_Registry {
         
         // 🚨 EMERGENCY FALLBACK: Explicitly register PIN actions
         // This bypasses potential cache issues in Module Loader
-        add_action('wp_ajax_saw_generate_pin', function() {
-            $this->dispatch('visits', 'ajax_generate_pin');
-        });
-        
-        add_action('wp_ajax_saw_extend_pin', function() {
-            $this->dispatch('visits', 'ajax_extend_pin');
-        });
+        // 🚨 EMERGENCY FALLBACK: Explicitly register PIN actions
+add_action('wp_ajax_saw_generate_pin', function() {
+    $this->dispatch('visits', 'ajax_generate_pin');
+});
 
-        // 🚨 EMERGENCY FALLBACK: Status change action
-        add_action('wp_ajax_saw_change_visit_status', function() {
-            $this->dispatch('visits', 'ajax_change_visit_status');
-        });
+add_action('wp_ajax_saw_extend_pin', function() {
+    $this->dispatch('visits', 'ajax_extend_pin');
+});
+
+// 🚨 EMERGENCY FALLBACK: Token extension action
+add_action('wp_ajax_saw_extend_token', function() {
+    $this->dispatch('visits', 'ajax_extend_token');
+});
+
+// 🚨 EMERGENCY FALLBACK: Status change action
+add_action('wp_ajax_saw_change_visit_status', function() {
+    $this->dispatch('visits', 'ajax_change_visit_status');
+});
     }
     
     /**
@@ -322,6 +328,13 @@ class SAW_AJAX_Registry {
                 }
             }
             
+// Debug - vypsat všechny metody controlleru
+if (defined('WP_DEBUG') && WP_DEBUG) {
+    $methods = get_class_methods($controller);
+    error_log('[AJAX Registry] Available methods in ' . $controller_class . ': ' . implode(', ', $methods));
+}
+
+
             if (!method_exists($controller, $method)) {
                 if (defined('WP_DEBUG') && WP_DEBUG) {
                     error_log(sprintf('[AJAX Registry] ERROR: Method %s not found in controller %s', $method, $controller_class));

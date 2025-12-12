@@ -4,9 +4,15 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visits
- * @version     3.5.0 - Added Checkout Confirmation System v2 methods
+ * @version     3.6.0 - PIN/Token System Revision
  * 
  * Changelog:
+ * - 3.6.0 (2025-12-12): PIN/Token System Revision
+ *                        - Added calculate_expiry() and get_effective_end_date() helper methods
+ *                        - Added sync_expiration_dates() for automatic PIN+Token sync
+ *                        - Modified update() to auto-sync expirations on date change
+ *                        - Modified generate_pin() to scope uniqueness to customer_id
+ *                        - Unified expiry calculation across all methods
  * - 3.5.0 (2025-12-08): Added check_and_complete_visit(), complete_visit(), 
  *                        reopen_visit(), get_visit_info_for_checkout(), 
  *                        update_pin_expiration() for Checkout Confirmation System v2
@@ -311,9 +317,229 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
     }
 
     /**
+     * Update visit with automatic expiry synchronization
+     * 
+     * When visit dates change, PIN and Token expiration are automatically
+     * recalculated to match the new end date.
+     * 
+     * @since 3.6.0 - Added auto-sync for token and PIN expiry
+     * @param int $id Visit ID
+     * @param array $data Update data
+     * @return int|WP_Error Updated ID or error
+     */
+    public function update($id, $data) {
+        global $wpdb;
+        
+        $id = intval($id);
+        if (!$id) {
+            return new WP_Error('invalid_id', 'Neplatné ID návštěvy');
+        }
+        
+        // Get old data for comparison BEFORE update
+        $old_visit = $this->get_by_id($id);
+        
+        if (!$old_visit) {
+            return new WP_Error('not_found', 'Návštěva nenalezena');
+        }
+        
+        // Store old dates for comparison
+        $old_date_to = $old_visit['planned_date_to'] ?? null;
+        $old_date_from = $old_visit['planned_date_from'] ?? null;
+        
+        // Perform standard update via parent class
+        $result = parent::update($id, $data);
+        
+        if (is_wp_error($result)) {
+            return $result;
+        }
+        
+        // Check if dates changed
+        $new_date_to = $data['planned_date_to'] ?? $old_date_to;
+        $new_date_from = $data['planned_date_from'] ?? $old_date_from;
+        
+        $date_to_changed = ($new_date_to !== $old_date_to);
+        $date_from_changed = ($new_date_from !== $old_date_from);
+        
+        // If any date changed, synchronize expirations
+        if ($date_to_changed || $date_from_changed) {
+            $this->sync_expiration_dates($id);
+            
+            error_log(sprintf(
+                "[SAW Visits] Dates changed for visit #%d: date_to %s→%s, date_from %s→%s - expirations synced",
+                $id,
+                $old_date_to ?? 'NULL',
+                $new_date_to ?? 'NULL',
+                $old_date_from ?? 'NULL',
+                $new_date_from ?? 'NULL'
+            ));
+        }
+        
+        return $result;
+    }
+
+    // ============================================
+    // EXPIRATION HELPER METHODS
+    // Added: 2025-12-12 (v3.6.0)
+    // ============================================
+
+    /**
+     * Calculate standard expiry datetime from visit end date
+     * 
+     * Standard rule: end_date 23:59:59 + 24 hours
+     * This ensures the visitor can still check-in the day after the planned end.
+     * 
+     * @since 3.6.0
+     * @param string|null $end_date End date in Y-m-d format
+     * @param int $fallback_hours Hours to add if no end_date (default 720 = 30 days)
+     * @return string Datetime in Y-m-d H:i:s format
+     */
+    public function calculate_expiry($end_date = null, $fallback_hours = 720) {
+        if (!empty($end_date)) {
+            // End of the end_date + 24 hours buffer
+            return date('Y-m-d H:i:s', strtotime($end_date . ' 23:59:59 +24 hours'));
+        }
+        
+        // Fallback: 30 days from now
+        return date('Y-m-d H:i:s', strtotime("+{$fallback_hours} hours"));
+    }
+
+    /**
+     * Get effective end date for a visit
+     * 
+     * Determines the actual end date using priority:
+     * 1. planned_date_to (explicit end date)
+     * 2. Last date from visit_schedules table
+     * 3. planned_date_from (single-day visit)
+     * 4. Today (fallback)
+     * 
+     * @since 3.6.0
+     * @param int $visit_id Visit ID
+     * @return string Date in Y-m-d format
+     */
+    public function get_effective_end_date($visit_id) {
+        global $wpdb;
+        
+        $visit_id = intval($visit_id);
+        if (!$visit_id) {
+            return current_time('Y-m-d');
+        }
+        
+        // Get visit dates
+        $visit = $wpdb->get_row($wpdb->prepare(
+            "SELECT planned_date_to, planned_date_from FROM {$this->table} WHERE id = %d",
+            $visit_id
+        ), ARRAY_A);
+        
+        if (!$visit) {
+            return current_time('Y-m-d');
+        }
+        
+        // Priority 1: Explicit end date
+        if (!empty($visit['planned_date_to'])) {
+            return $visit['planned_date_to'];
+        }
+        
+        // Priority 2: Last schedule date
+        $last_schedule = $wpdb->get_var($wpdb->prepare(
+            "SELECT MAX(date) FROM {$wpdb->prefix}saw_visit_schedules WHERE visit_id = %d",
+            $visit_id
+        ));
+        
+        if ($last_schedule) {
+            return $last_schedule;
+        }
+        
+        // Priority 3: Start date (single-day visit)
+        if (!empty($visit['planned_date_from'])) {
+            return $visit['planned_date_from'];
+        }
+        
+        // Fallback: Today
+        return current_time('Y-m-d');
+    }
+
+    /**
+     * Synchronize token and PIN expiration with visit dates
+     * 
+     * Called automatically when visit dates change.
+     * Recalculates both PIN and Token expiration based on the effective end date.
+     * 
+     * @since 3.6.0
+     * @param int $visit_id Visit ID
+     * @return bool Success
+     */
+    public function sync_expiration_dates($visit_id) {
+        global $wpdb;
+        
+        $visit_id = intval($visit_id);
+        if (!$visit_id) {
+            return false;
+        }
+        
+        $visit = $this->get_by_id($visit_id);
+        if (!$visit) {
+            return false;
+        }
+        
+        // Calculate new expiry from effective end date
+        $end_date = $this->get_effective_end_date($visit_id);
+        $new_expiry = $this->calculate_expiry($end_date);
+        
+        $update_data = [];
+        $update_formats = [];
+        $updated_fields = [];
+        
+        // Update PIN expiry if PIN exists
+        if (!empty($visit['pin_code'])) {
+            $update_data['pin_expires_at'] = $new_expiry;
+            $update_formats[] = '%s';
+            $updated_fields[] = 'PIN';
+        }
+        
+        // Update Token expiry if Token exists
+        if (!empty($visit['invitation_token'])) {
+            $update_data['invitation_token_expires_at'] = $new_expiry;
+            $update_formats[] = '%s';
+            $updated_fields[] = 'Token';
+        }
+        
+        // Nothing to update
+        if (empty($update_data)) {
+            error_log("[SAW Visits] sync_expiration_dates: visit #{$visit_id} has no PIN or Token to sync");
+            return true;
+        }
+        
+        // Perform update
+        $result = $wpdb->update(
+            $this->table,
+            $update_data,
+            ['id' => $visit_id],
+            $update_formats,
+            ['%d']
+        );
+        
+        if ($result !== false) {
+            error_log(sprintf(
+                "[SAW Visits] Synced %s expiration for visit #%d: end_date=%s → expiry=%s",
+                implode('+', $updated_fields),
+                $visit_id,
+                $end_date,
+                $new_expiry
+            ));
+            
+            $this->invalidate_cache();
+            return true;
+        }
+        
+        error_log("[SAW Visits] Failed to sync expiration for visit #{$visit_id}: " . $wpdb->last_error);
+        return false;
+    }
+
+    /**
      * Generate unique 6-digit PIN for visit
      * 
      * @since 5.1.0
+     * @updated 3.6.0 - PIN uniqueness scoped to customer_id, uses unified expiry calculation
      * @updated 3.5.0 - Added planned_date_to priority for expiration calculation
      * @param int $visit_id Visit ID
      * @return string|false Generated PIN or false on failure
@@ -326,73 +552,67 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
             return false;
         }
         
-        // 1. Generate unique 6-digit PIN
+        // Get customer_id for uniqueness scope
+        $customer_id = $wpdb->get_var($wpdb->prepare(
+            "SELECT customer_id FROM {$this->table} WHERE id = %d",
+            $visit_id
+        ));
+        
+        if (!$customer_id) {
+            error_log("[Visits Model] Cannot generate PIN: visit #{$visit_id} not found");
+            return false;
+        }
+        
+        // Generate unique PIN within customer scope
         $pin = '';
         $max_attempts = 10;
         $attempt = 0;
         
         do {
             $pin = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            
+            // Check uniqueness only within same customer (v3.6.0 change)
             $exists = $wpdb->get_var($wpdb->prepare(
-                "SELECT id FROM {$this->table} WHERE pin_code = %s AND id != %d",
+                "SELECT id FROM {$this->table} 
+                 WHERE pin_code = %s 
+                   AND customer_id = %d 
+                   AND id != %d",
                 $pin,
+                $customer_id,
                 $visit_id
             ));
             $attempt++;
         } while ($exists && $attempt < $max_attempts);
         
         if ($exists) {
-            error_log("[Visits Model] Failed to generate unique PIN after {$max_attempts} attempts");
+            error_log("[Visits Model] Failed to generate unique PIN after {$max_attempts} attempts for customer #{$customer_id}");
             return false;
         }
         
-        // 2. Calculate expiry based on planned_date_to (preferred) or schedule
-        // Priority: planned_date_to > last_schedule_date > planned_date_from > now+24h
-        $visit_dates = $wpdb->get_row($wpdb->prepare(
-            "SELECT planned_date_to, planned_date_from FROM {$this->table} WHERE id = %d",
-            $visit_id
-        ), ARRAY_A);
+        // Calculate expiry using unified method (v3.6.0)
+        $end_date = $this->get_effective_end_date($visit_id);
+        $pin_expires_at = $this->calculate_expiry($end_date);
         
-        $last_schedule_date = $wpdb->get_var($wpdb->prepare(
-            "SELECT MAX(date) FROM {$wpdb->prefix}saw_visit_schedules WHERE visit_id = %d",
-            $visit_id
-        ));
+        error_log("[Visits Model] PIN expiry calculated: end_date={$end_date} -> expires={$pin_expires_at}");
         
-        if (!empty($visit_dates['planned_date_to'])) {
-            // Preferred: Use planned_date_to
-            $end_date = $visit_dates['planned_date_to'];
-            $pin_expires_at = date('Y-m-d H:i:s', strtotime($end_date . ' 23:59:59 +24 hours'));
-            error_log("[Visits Model] PIN expiry from planned_date_to: {$end_date} -> {$pin_expires_at}");
-        } elseif ($last_schedule_date) {
-            // Fallback 1: Use last schedule date
-            $pin_expires_at = date('Y-m-d H:i:s', strtotime($last_schedule_date . ' 23:59:59 +24 hours'));
-            error_log("[Visits Model] PIN expiry from schedule: {$last_schedule_date} -> {$pin_expires_at}");
-        } elseif (!empty($visit_dates['planned_date_from'])) {
-            // Fallback 2: Use planned_date_from (single-day visit)
-            $end_date = $visit_dates['planned_date_from'];
-            $pin_expires_at = date('Y-m-d H:i:s', strtotime($end_date . ' 23:59:59 +24 hours'));
-            error_log("[Visits Model] PIN expiry from planned_date_from: {$end_date} -> {$pin_expires_at}");
-        } else {
-            // Fallback 3: Default 24h from now
-            $pin_expires_at = date('Y-m-d H:i:s', strtotime('+24 hours'));
-            error_log("[Visits Model] PIN expiry default: +24h -> {$pin_expires_at}");
-        }
-        
-        // 3. Update visit
+        // Update visit
         $result = $wpdb->update(
             $this->table,
-            array(
+            [
                 'pin_code' => $pin,
                 'pin_expires_at' => $pin_expires_at
-            ),
-            array('id' => $visit_id),
-            array('%s', '%s'),
-            array('%d')
+            ],
+            ['id' => $visit_id],
+            ['%s', '%s'],
+            ['%d']
         );
         
         if ($result === false) {
+            error_log("[Visits Model] Failed to save PIN for visit #{$visit_id}: " . $wpdb->last_error);
             return false;
         }
+        
+        error_log("[Visits Model] PIN generated for visit #{$visit_id}: {$pin}, expires: {$pin_expires_at}");
         
         // Invalidate cache
         $this->invalidate_cache();
@@ -745,6 +965,7 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
      * Recalculates PIN expiration to be planned_date_to + 24 hours.
      * 
      * @since 3.5.0
+     * @deprecated 3.6.0 Use sync_expiration_dates() instead
      * @param int $visit_id Visit ID
      * @return bool True on success, false on failure
      */
@@ -768,17 +989,9 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
             return false;
         }
         
-        // Calculate new expiration: end_date + 24 hours
-        // Priority: planned_date_to > planned_date_from > today
-        if (!empty($visit['planned_date_to'])) {
-            $end_date = $visit['planned_date_to'];
-        } elseif (!empty($visit['planned_date_from'])) {
-            $end_date = $visit['planned_date_from'];
-        } else {
-            $end_date = current_time('Y-m-d');
-        }
-        
-        $new_expiration = date('Y-m-d H:i:s', strtotime($end_date . ' 23:59:59 +24 hours'));
+        // Use unified helper methods (v3.6.0)
+        $end_date = $this->get_effective_end_date($visit_id);
+        $new_expiration = $this->calculate_expiry($end_date);
         
         // Update PIN expiration
         $result = $wpdb->update(
