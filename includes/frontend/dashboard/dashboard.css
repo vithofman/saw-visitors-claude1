@@ -1,6 +1,13 @@
 /**
- * Dashboard v5.5.0
- * Clean 3-column layout
+ * Dashboard v5.8.0
+ * Mobile-first redesign with better UX
+ * 
+ * CHANGES in 5.8.0:
+ * - Mobile header: 2-column layout (text left, button right), larger fonts
+ * - Stats: larger text for readability
+ * - Present visitors: 3-column grid (info | time | action), no avatar on mobile
+ * - Emergency button: larger text
+ * - Overall better touch targets and readability
  */
 
 .saw-dash {
@@ -10,7 +17,9 @@
 }
 .saw-dash * { box-sizing: border-box; }
 
-/* HEADER */
+/* ============================================
+   HEADER
+   ============================================ */
 .saw-head {
     display: flex;
     gap: 16px;
@@ -29,6 +38,11 @@
     border-radius: 14px;
     color: #fff;
     box-shadow: 0 6px 24px rgba(37, 99, 235, 0.25);
+}
+
+.saw-welcome-text {
+    flex: 1;
+    min-width: 0;
 }
 
 .saw-welcome h1 {
@@ -56,6 +70,8 @@
     text-decoration: none;
     transition: all 0.2s;
     box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .saw-btn-new:hover {
@@ -64,7 +80,13 @@
     transform: translateY(-2px);
 }
 
-/* EMERGENCY - compact, no icon */
+.saw-btn-new-text {
+    display: inline;
+}
+
+/* ============================================
+   EMERGENCY
+   ============================================ */
 .saw-emergency {
     display: flex;
     align-items: center;
@@ -108,7 +130,9 @@
     letter-spacing: 0.5px;
 }
 
-/* ALERT */
+/* ============================================
+   ALERT
+   ============================================ */
 .saw-alert {
     padding: 12px 16px;
     background: #fef3c7;
@@ -118,7 +142,9 @@
     margin-bottom: 20px;
 }
 
-/* STATS */
+/* ============================================
+   STATS
+   ============================================ */
 .saw-stats {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
@@ -157,13 +183,15 @@
     justify-content: center;
     background: #f3f4f6;
     border-radius: 8px;
+    flex-shrink: 0;
 }
 
 .saw-stat-hl .saw-stat-icon {
     background: linear-gradient(135deg, #fbbf24, #f59e0b);
 }
 
-.saw-stat div { flex: 1; }
+.saw-stat-content { flex: 1; min-width: 0; }
+.saw-stat div:not(.saw-stat-icon) { flex: 1; }
 .saw-stat b { display: block; font-size: 1.4rem; font-weight: 800; color: #111; line-height: 1; }
 .saw-stat small { font-size: 0.7rem; color: #6b7280; }
 
@@ -182,7 +210,9 @@
 
 @keyframes live { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
 
-/* 3-COLUMN ROW */
+/* ============================================
+   3-COLUMN ROW
+   ============================================ */
 .saw-row3 {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -190,7 +220,9 @@
     margin-bottom: 16px;
 }
 
-/* CARDS */
+/* ============================================
+   CARDS
+   ============================================ */
 .saw-card {
     background: #fff;
     border: 1px solid #e5e7eb;
@@ -280,7 +312,9 @@
     overflow-y: auto;
 }
 
-/* EMPTY */
+/* ============================================
+   EMPTY STATES
+   ============================================ */
 .saw-empty {
     display: flex;
     flex-direction: column;
@@ -300,7 +334,9 @@
     font-size: 0.8rem;
 }
 
-/* PERSON LIST */
+/* ============================================
+   PERSON LIST (Present visitors) - DESKTOP
+   ============================================ */
 .saw-person {
     display: flex;
     align-items: center;
@@ -377,7 +413,14 @@
     color: #92400e;
 }
 
+/* ============================================
+   CHECKOUT BUTTON
+   ============================================ */
 .saw-checkout {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     padding: 6px 12px;
     background: linear-gradient(135deg, #ef4444, #dc2626);
     color: #fff;
@@ -388,6 +431,7 @@
     cursor: pointer;
     transition: all 0.2s;
     flex-shrink: 0;
+    min-height: 32px;
 }
 
 .saw-checkout:hover {
@@ -395,9 +439,25 @@
     transform: translateY(-1px);
 }
 
+.saw-checkout:active {
+    transform: translateY(0);
+}
+
+.saw-checkout svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.saw-checkout-text {
+    display: inline;
+}
+
 .saw-person.saw-loading { opacity: 0.5; pointer-events: none; }
 
-/* ITEM LIST */
+/* ============================================
+   ITEM LIST
+   ============================================ */
 .saw-item {
     display: flex;
     align-items: center;
@@ -431,7 +491,9 @@
 .saw-pill.pending { background: #fef3c7; color: #92400e; }
 .saw-pill.today { box-shadow: 0 0 0 2px #f59e0b; }
 
-/* ACTIVITY */
+/* ============================================
+   ACTIVITY
+   ============================================ */
 .saw-act {
     display: flex;
     align-items: center;
@@ -461,13 +523,17 @@
 
 .saw-act-time { font-size: 0.7rem; color: #9ca3af; }
 
-/* CHARTS */
+/* ============================================
+   CHARTS
+   ============================================ */
 .saw-chart {
     height: 160px;
     position: relative;
 }
 
-/* TRAINING - FIXED COLORS */
+/* ============================================
+   TRAINING
+   ============================================ */
 .saw-training {
     display: flex;
     align-items: center;
@@ -480,7 +546,6 @@
     width: 90px;
     height: 90px;
     border-radius: 50%;
-    /* 3 colors: green (completed), orange (pending), gray (skipped) */
     background: conic-gradient(
         #10b981 0% calc(var(--c) * 1%),
         #f59e0b calc(var(--c) * 1%) calc((var(--c) + var(--p)) * 1%),
@@ -534,7 +599,9 @@
 .saw-leg span.wait { background: #f59e0b; }
 .saw-leg span.skip { background: #d1d5db; }
 
-/* RANK LIST */
+/* ============================================
+   RANK LIST
+   ============================================ */
 .saw-rank-item {
     display: flex;
     align-items: center;
@@ -586,34 +653,436 @@
     border-radius: 4px;
 }
 
-/* RESPONSIVE */
+/* ============================================
+   RESPONSIVE - TABLET (max 1200px)
+   ============================================ */
 @media (max-width: 1200px) {
     .saw-stats { grid-template-columns: repeat(3, 1fr); }
     .saw-row3 { grid-template-columns: 1fr 1fr; }
     .saw-row3 .saw-card:last-child { grid-column: span 2; }
 }
 
+/* ============================================
+   RESPONSIVE - SMALL TABLET (max 900px)
+   ============================================ */
 @media (max-width: 900px) {
     .saw-head { flex-direction: column; }
     .saw-welcome { flex-direction: column; text-align: center; }
+    .saw-welcome-text { text-align: center; }
     .saw-emergency { justify-content: center; }
     .saw-row3 { grid-template-columns: 1fr; }
     .saw-row3 .saw-card:last-child { grid-column: auto; }
 }
 
+/* ============================================
+   RESPONSIVE - MOBILE (max 640px)
+   ============================================ */
 @media (max-width: 640px) {
-    .saw-dash { padding: 16px 16px 32px; }
-    .saw-stats { grid-template-columns: repeat(2, 1fr); }
-    .saw-welcome h1 { font-size: 1.15rem; }
-    .saw-person { flex-wrap: wrap; }
-    .saw-person-link { flex: 1 1 100%; margin-bottom: 6px; }
-    .saw-checkout { width: 100%; text-align: center; }
+    .saw-dash { 
+        padding: 12px 12px 24px; 
+    }
+    
+    /* ============================================
+       HEADER - 2 column layout, text LEFT, button RIGHT
+       ============================================ */
+    .saw-welcome {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        text-align: left;
+        padding: 16px;
+        gap: 12px;
+        border-radius: 12px;
+    }
+    
+    .saw-welcome-text {
+        flex: 1;
+        min-width: 0;
+        text-align: left;
+    }
+    
+    .saw-welcome h1 { 
+        font-size: 1.2rem;
+        margin-bottom: 3px;
+    }
+    
+    .saw-welcome p { 
+        font-size: 0.85rem;
+    }
+    
+    /* Button - icon only on mobile */
+    .saw-btn-new {
+        padding: 12px;
+        border-radius: 10px;
+        min-width: 48px;
+        min-height: 48px;
+    }
+    
+    .saw-btn-new svg {
+        width: 22px;
+        height: 22px;
+    }
+    
+    .saw-btn-new-text {
+        display: none;
+    }
+    
+    /* ============================================
+       EMERGENCY - LARGER text
+       ============================================ */
+    .saw-emergency {
+        padding: 14px 16px;
+        gap: 10px;
+    }
+    
+    .saw-em-count {
+        width: 44px;
+        height: 44px;
+        font-size: 1.3rem;
+    }
+    
+    .saw-em-text {
+        font-size: 0.95rem;
+        letter-spacing: 0.3px;
+    }
+    
+    .saw-emergency svg {
+        width: 22px;
+        height: 22px;
+    }
+    
+    /* ============================================
+       STATS - 3 columns, LARGER text for readability
+       ============================================ */
+    .saw-stats { 
+        grid-template-columns: repeat(3, 1fr); 
+        gap: 8px;
+    }
+    
+    .saw-stat {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 12px 6px;
+        gap: 6px;
+        border-radius: 10px;
+    }
+    
+    .saw-stat-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 1.1rem;
+        border-radius: 8px;
+    }
+    
+    /* LARGER numbers */
+    .saw-stat b { 
+        font-size: 1.4rem;
+    }
+    
+    /* LARGER labels */
+    .saw-stat small { 
+        font-size: 0.7rem;
+        line-height: 1.3;
+        color: #374151;
+    }
+    
+    .saw-live {
+        top: 4px;
+        right: 4px;
+        padding: 2px 5px;
+        font-size: 0.5rem;
+    }
+    
+    /* ============================================
+       CARDS
+       ============================================ */
+    .saw-card {
+        border-radius: 12px;
+    }
+    
+    .saw-card-h {
+        padding: 12px 14px;
+    }
+    
+    .saw-card-h h3 {
+        font-size: 0.9rem;
+    }
+    
+    .saw-card-b {
+        padding: 0;
+    }
+    
+    /* ============================================
+       PERSON LIST - Mobile 3-column grid layout
+       NO avatar, clean structure:
+       [Name/Position/Company] [Time] [Checkout]
+       ============================================ */
+    .saw-person {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        align-items: center;
+        gap: 12px;
+        padding: 14px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .saw-person:last-child {
+        border-bottom: none;
+    }
+    
+    .saw-person:active {
+        background: #f3f4f6;
+    }
+    
+    /* HIDE avatar on mobile - not needed */
+    .saw-person .saw-avatar {
+        display: none;
+    }
+    
+    .saw-person-link {
+        display: block;
+        min-width: 0;
+    }
+    
+    .saw-person-info {
+        display: block;
+    }
+    
+    /* Larger, more readable text */
+    .saw-person-info strong {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #111;
+        margin-bottom: 3px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: block;
+    }
+    
+    .saw-person-info em {
+        font-size: 0.8rem;
+        color: #6b7280;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: block;
+    }
+    
+    /* Time badge */
+    .saw-time {
+        padding: 6px 10px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        border-radius: 6px;
+        white-space: nowrap;
+    }
+    
+    /* Checkout button - icon only, good touch target */
+    .saw-checkout {
+        width: 46px;
+        height: 46px;
+        padding: 0;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .saw-checkout svg {
+        width: 22px;
+        height: 22px;
+    }
+    
+    .saw-checkout-text {
+        display: none;
+    }
+    
+    /* ============================================
+       OTHER MOBILE ADJUSTMENTS
+       ============================================ */
+    
+    /* Activity - larger text */
+    .saw-act {
+        padding: 12px 14px;
+        gap: 10px;
+    }
+    
+    .saw-act-text {
+        font-size: 0.85rem;
+    }
+    
+    .saw-act-time {
+        font-size: 0.8rem;
+    }
+    
+    /* Items (planned visits) - larger */
+    .saw-item {
+        padding: 14px;
+    }
+    
+    .saw-item-text strong {
+        font-size: 0.9rem;
+    }
+    
+    .saw-item-text em {
+        font-size: 0.8rem;
+    }
+    
+    /* Training */
+    .saw-training {
+        padding: 14px;
+        gap: 16px;
+    }
+    
+    .saw-ring {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .saw-ring::before {
+        width: 52px;
+        height: 52px;
+    }
+    
+    .saw-ring span {
+        font-size: 1rem;
+    }
+    
+    .saw-leg {
+        font-size: 0.85rem;
+    }
+    
+    /* Charts */
+    .saw-chart {
+        height: 140px;
+        padding: 0 14px;
+    }
+    
+    /* Empty states */
+    .saw-empty {
+        padding: 30px 14px;
+        font-size: 1.8rem;
+    }
+    
+    .saw-empty p {
+        font-size: 0.9rem;
+    }
+    
+    /* Rank items - larger */
+    .saw-rank-item {
+        padding: 14px;
+        gap: 10px;
+    }
+    
+    .saw-rank {
+        width: 28px;
+        height: 28px;
+        font-size: 0.8rem;
+    }
+    
+    .saw-rank-text strong {
+        font-size: 0.9rem;
+    }
+    
+    .saw-rank-text em {
+        font-size: 0.75rem;
+    }
+    
+    .saw-rank-count {
+        font-size: 0.9rem;
+    }
+    
+    .saw-rank-dur {
+        padding: 5px 10px;
+        font-size: 0.75rem;
+    }
+    
+    /* Scroll container */
+    .saw-scroll {
+        max-height: 300px;
+    }
 }
 
-@media (max-width: 480px) {
-    .saw-stats { grid-template-columns: 1fr; }
+/* ============================================
+   RESPONSIVE - SMALL MOBILE (max 400px)
+   ============================================ */
+@media (max-width: 400px) {
+    .saw-dash {
+        padding: 10px 10px 20px;
+    }
+    
+    /* Header */
+    .saw-welcome {
+        padding: 14px 12px;
+    }
+    
+    .saw-welcome h1 {
+        font-size: 1.1rem;
+    }
+    
+    .saw-welcome p {
+        font-size: 0.8rem;
+    }
+    
+    /* Stats - 2 columns for very small screens */
+    .saw-stats { 
+        grid-template-columns: repeat(2, 1fr); 
+        gap: 6px;
+    }
+    
+    .saw-stat {
+        padding: 10px 6px;
+    }
+    
+    .saw-stat-icon {
+        width: 28px;
+        height: 28px;
+        font-size: 0.95rem;
+    }
+    
+    .saw-stat b { 
+        font-size: 1.25rem; 
+    }
+    
+    .saw-stat small { 
+        font-size: 0.65rem;
+    }
+    
+    /* Person list */
+    .saw-person {
+        padding: 12px;
+        gap: 10px;
+    }
+    
+    .saw-person-info strong {
+        font-size: 0.9rem;
+    }
+    
+    .saw-person-info em {
+        font-size: 0.75rem;
+    }
+    
+    .saw-time {
+        padding: 5px 8px;
+        font-size: 0.75rem;
+    }
+    
+    .saw-checkout {
+        width: 42px;
+        height: 42px;
+    }
+    
+    .saw-checkout svg {
+        width: 20px;
+        height: 20px;
+    }
 }
 
+/* ============================================
+   PRINT
+   ============================================ */
 @media print {
     .saw-dash { display: none !important; }
 }

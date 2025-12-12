@@ -5,11 +5,26 @@
  * or fallback overlay (older browsers).
  * 
  * @package SAW_Visitors
- * @version 2.0.0 - SIMPLIFIED: No snapshot, just dark overlay
+ * @version 3.0.0 - CRITICAL FIX: Disable startViewTransition on Mobile/PWA
+ * 
+ * CHANGELOG:
+ * - 3.0.0: Mobile/PWA uses direct navigation (no startViewTransition) to prevent freeze
+ * - 2.0.0: Simplified - no snapshot, just dark overlay
  */
 
 (function($) {
     'use strict';
+
+    /**
+     * Detect if running on mobile device or PWA standalone mode
+     * 
+     * @return {boolean}
+     */
+    function isMobileOrPWA() {
+        var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        var isPWA = window.matchMedia('(display-mode: standalone)').matches;
+        return isMobile || isPWA;
+    }
 
     /**
      * SAW View Transition Class
@@ -18,7 +33,10 @@
      */
     class SAWViewTransition {
         constructor() {
-            this.supportsViewTransition = 'startViewTransition' in document;
+            // CRITICAL: On mobile/PWA, disable View Transition API completely
+            // Pixel devices freeze when startViewTransition is called after resume from background
+            this.isMobileOrPWA = isMobileOrPWA();
+            this.supportsViewTransition = !this.isMobileOrPWA && ('startViewTransition' in document);
             this.overlay = null;
             this.loadingSpinner = null;
         }
@@ -40,7 +58,15 @@
             // Save current state before navigation
             this.saveCurrentState();
 
-            // Use View Transition API if supported, otherwise fallback
+            // CRITICAL FIX v3.0.0:
+            // On Mobile/PWA - use direct navigation WITHOUT any View Transition API
+            // This prevents the "white screen freeze" on Pixel devices after resume
+            if (this.isMobileOrPWA) {
+                window.location.href = url;
+                return;
+            }
+
+            // Desktop: Use View Transition API if supported, otherwise fallback
             if (this.supportsViewTransition) {
                 this.navigateWithViewTransition(url);
             } else {
@@ -49,7 +75,7 @@
         }
 
         /**
-         * Navigate with View Transition API (modern browsers)
+         * Navigate with View Transition API (Desktop only)
          * 
          * @param {string} url - URL to navigate to
          * @return {void}
@@ -57,7 +83,6 @@
         navigateWithViewTransition(url) {
             try {
                 document.startViewTransition(() => {
-                    // Browser automatically creates screenshot and handles transition
                     window.location.href = url;
                 });
             } catch (e) {
@@ -67,16 +92,13 @@
         }
 
         /**
-         * Navigate with simple dark overlay (NO SNAPSHOT)
+         * Navigate with simple dark overlay (Desktop fallback)
          * 
          * @param {string} url - URL to navigate to
          * @return {void}
          */
         navigateWithSimpleOverlay(url) {
-            // 🔥 RADIKÁLNÍ ZMĚNA: Žádný snapshot, jen tmavý overlay
             this.showSimpleOverlay();
-            
-            // Show loading spinner
             this.showLoadingSpinner();
 
             // Set timeout for error handling (10 seconds)
@@ -99,15 +121,12 @@
          * @return {void}
          */
         showSimpleOverlay() {
-            // Remove existing overlay if any
             if (this.overlay) {
                 this.overlay.remove();
             }
 
-            // 🔥 Detekovat dark mode
             const isDark = document.body.getAttribute('data-theme') === 'dark';
             
-            // Create simple overlay
             const overlay = document.createElement('div');
             overlay.id = 'saw-transition-overlay';
             overlay.style.cssText = `
@@ -132,12 +151,10 @@
          * @return {void}
          */
         showLoadingSpinner() {
-            // Remove existing spinner if any
             if (this.loadingSpinner) {
                 this.loadingSpinner.remove();
             }
 
-            // 🔥 Detekovat dark mode
             const isDark = document.body.getAttribute('data-theme') === 'dark';
             const borderColor = isDark ? 'rgba(156, 163, 175, 0.3)' : '#e5e7eb';
             const borderTopColor = isDark ? '#60a5fa' : '#3b82f6';
@@ -187,7 +204,6 @@
                 return;
             }
 
-            // 🔥 Detekovat dark mode
             const isDark = document.body.getAttribute('data-theme') === 'dark';
             const bgColor = isDark ? '#22253a' : '#ffffff';
             const borderColor = isDark ? 'rgba(156, 163, 175, 0.15)' : '#e5e7eb';
@@ -254,7 +270,6 @@
                     const $scrollArea = $('.saw-table-scroll-area');
                     const scrollTop = $scrollArea.length ? $scrollArea.scrollTop() : 0;
                     
-                    // Find active row
                     const $activeRow = $table.find('tbody tr.saw-row-active');
                     const activeRowId = $activeRow.length ? $activeRow.data('id') : null;
 

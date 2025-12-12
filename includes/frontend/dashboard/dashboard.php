@@ -1,26 +1,16 @@
 <?php
 /**
- * Frontend Dashboard Page v5.6.1
+ * Frontend Dashboard Page v5.8.0
  * 
- * Changes in 5.6.1:
- * - FIXED: Checkout button now calls correct AJAX action (saw_checkout)
- * - FIXED: Added confirm dialog before checkout
- * - FIXED: Added prompt for checkout reason
- * 
- * Changes in 5.6.0:
- * - Checkout immediately removes visitor from list (no reload needed)
- * - 7-day chart counts overnight visitors in all days they were present
- * - Longest visits show date
- * - Top visitors show position
- * 
- * Layout:
- * - Header: Welcome + Emergency + Stats
- * - Row 1: Present | Planned | Activity
- * - Row 2: Chart 7d | Chart hourly | Training
- * - Row 3: Top visitors | Top companies | Longest visits
+ * Changes in 5.8.0:
+ * - IMPROVED: Mobile header - 2 column layout (text left, button right)
+ * - IMPROVED: Larger text throughout for better readability
+ * - IMPROVED: Present visitors - 3 column grid, no avatar on mobile
+ * - IMPROVED: Stats cards - larger numbers and labels
+ * - IMPROVED: Emergency button - larger text
  * 
  * @package SAW_Visitors
- * @version 5.6.1
+ * @version 5.8.0
  */
 
 if (!defined('ABSPATH')) {
@@ -29,7 +19,7 @@ if (!defined('ABSPATH')) {
 
 class SAW_Frontend_Dashboard {
     
-    const VERSION = '5.6.1';
+    const VERSION = '5.8.0';
     
     public static function init() {}
     
@@ -171,7 +161,7 @@ class SAW_Frontend_Dashboard {
                 $branch_id
             ), ARRAY_A);
             
-            // PLANNED VISITS - only pending and confirmed (NOT in_progress!)
+            // PLANNED VISITS
             $planned_visits = $wpdb->get_results($wpdb->prepare(
                 "SELECT 
                     v.id, v.status, v.company_id, v.planned_date_from, v.planned_date_to,
@@ -201,14 +191,7 @@ class SAW_Frontend_Dashboard {
                 $branch_id
             ), ARRAY_A);
             
-            // ============================================
-            // 7-DAY CHART - IMPROVED: counts overnight visitors
-            // ============================================
-            // For each day, we count:
-            // 1. Visitors who checked in that day
-            // 2. Visitors who checked in earlier but were still present that day
-            //    (checked_out_at IS NULL OR DATE(checked_out_at) >= that_day)
-            
+            // 7-DAY CHART
             $chart_values = array();
             $chart_labels = array();
             
@@ -216,18 +199,14 @@ class SAW_Frontend_Dashboard {
                 $date = date('Y-m-d', strtotime("-{$i} days"));
                 $chart_labels[] = date_i18n('D', strtotime($date));
                 
-                // Count visitors present on this specific day
-                // Either: checked in on this day OR checked in earlier and still present
                 $count = (int) $wpdb->get_var($wpdb->prepare(
                     "SELECT COUNT(DISTINCT dl.visitor_id)
                      FROM {$wpdb->prefix}saw_visit_daily_logs dl
                      INNER JOIN {$wpdb->prefix}saw_visits v ON dl.visit_id = v.id
                      WHERE v.branch_id = %d
                      AND (
-                         -- Checked in on this day
                          dl.log_date = %s
                          OR
-                         -- Checked in before this day and still present on this day
                          (
                              dl.log_date < %s
                              AND dl.checked_in_at IS NOT NULL
@@ -284,7 +263,7 @@ class SAW_Frontend_Dashboard {
                 $branch_id
             ));
             
-            // TOP VISITORS - now includes position
+            // TOP VISITORS
             $top_visitors = $wpdb->get_results($wpdb->prepare(
                 "SELECT vis.id, vis.first_name, vis.last_name, vis.position, c.name as company_name, v.company_id, COUNT(dl.id) as visit_count
                  FROM {$wpdb->prefix}saw_visit_daily_logs dl
@@ -307,7 +286,7 @@ class SAW_Frontend_Dashboard {
                 $branch_id
             ), ARRAY_A);
             
-            // LONGEST VISITS - now includes date
+            // LONGEST VISITS
             $longest_visits = $wpdb->get_results($wpdb->prepare(
                 "SELECT vis.first_name, vis.last_name, vis.position, c.name as company_name, v.company_id,
                         TIMESTAMPDIFF(MINUTE, dl.checked_in_at, dl.checked_out_at) as duration_min,
@@ -343,7 +322,8 @@ class SAW_Frontend_Dashboard {
             <!-- HEADER -->
             <div class="saw-head">
                 <div class="saw-welcome">
-                    <div>
+                    <!-- Text wrapper for proper mobile layout -->
+                    <div class="saw-welcome-text">
                         <h1><?php 
                             $hour = (int) current_time('G');
                             if ($hour >= 5 && $hour < 12) echo 'Dobré ráno';
@@ -352,9 +332,9 @@ class SAW_Frontend_Dashboard {
                         ?>, <?php echo esc_html($current_user->display_name); ?>! 👋</h1>
                         <p><?php echo date_i18n('l, d. F Y'); ?><?php if ($customer_data['name'] !== 'Žádný zákazník'): ?> · <?php echo esc_html($customer_data['name']); ?><?php endif; ?></p>
                     </div>
-                    <a href="<?php echo home_url('/admin/visits/create'); ?>" class="saw-btn-new">
+                    <a href="<?php echo home_url('/admin/visits/create'); ?>" class="saw-btn-new" title="Nová návštěva">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                        Nová návštěva
+                        <span class="saw-btn-new-text">Nová návštěva</span>
                     </a>
                 </div>
                 
@@ -426,7 +406,14 @@ class SAW_Frontend_Dashboard {
                                 </span>
                             </a>
                             <span class="saw-time <?php echo $overnight ? 'overnight' : ''; ?>"><?php if ($overnight): ?>🌙 <?php endif; ?><?php echo $dur; ?></span>
-                            <button type="button" class="saw-checkout saw-checkout-btn" data-visitor-id="<?php echo $v['visitor_id']; ?>">Check-out</button>
+                            <button type="button" class="saw-checkout saw-checkout-btn" data-visitor-id="<?php echo $v['visitor_id']; ?>" title="Check-out">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                                    <polyline points="16 17 21 12 16 7"></polyline>
+                                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                                </svg>
+                                <span class="saw-checkout-text">Check-out</span>
+                            </button>
                         </div>
                         <?php endforeach; ?>
                         <?php endif; ?>
@@ -600,9 +587,7 @@ class SAW_Frontend_Dashboard {
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
         <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // ============================================
             // CHARTS
-            // ============================================
             var w = document.getElementById('chart-week');
             if (w) new Chart(w, {type:'bar',data:{labels:<?php echo json_encode($chart_labels); ?>,datasets:[{data:<?php echo json_encode($chart_values); ?>,backgroundColor:'rgba(37,99,235,0.85)',borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1,color:'#9ca3af'},grid:{color:'#f3f4f6'}},x:{ticks:{color:'#6b7280'},grid:{display:false}}}}});
             
@@ -613,10 +598,7 @@ class SAW_Frontend_Dashboard {
                 new Chart(h, {type:'line',data:{labels:hL,datasets:[{data:hV,borderColor:'#10b981',backgroundColor:'rgba(16,185,129,0.1)',borderWidth:2,fill:true,tension:0.4,pointRadius:3,pointBackgroundColor:'#10b981'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1,color:'#9ca3af'},grid:{color:'#f3f4f6'}},x:{ticks:{color:'#9ca3af',maxRotation:0,autoSkip:true,maxTicksLimit:8},grid:{display:false}}}}});
             }
             
-            // ============================================
-            // CHECKOUT - Immediate removal from list
-            // ✅ FIXED v5.6.1: Correct AJAX action + confirm + prompt dialogs
-            // ============================================
+            // CHECKOUT
             document.querySelectorAll('.saw-checkout-btn').forEach(function(btn) {
                 btn.addEventListener('click', function(e) {
                     e.preventDefault();
@@ -628,25 +610,18 @@ class SAW_Frontend_Dashboard {
                     
                     if (!visitorId || !personEl) return;
                     
-                    // ✅ FIXED: Confirm dialog
                     if (!confirm('Opravdu chcete odhlásit tohoto návštěvníka?')) {
                         return;
                     }
                     
-                    // ✅ FIXED: Prompt for reason
                     var reason = prompt('Důvod ručního odhlášení (volitelné):');
-                    if (reason === null) {
-                        // User clicked Cancel
-                        return;
-                    }
+                    if (reason === null) return;
                     reason = reason || 'Ruční odhlášení';
                     
-                    // Disable button and show loading
                     btnEl.disabled = true;
-                    btnEl.textContent = 'Odhlašuji...';
+                    btnEl.style.opacity = '0.6';
                     personEl.style.opacity = '0.5';
                     
-                    // Get nonce - try multiple sources
                     var nonce = '';
                     if (typeof sawDashboard !== 'undefined' && sawDashboard.nonce) {
                         nonce = sawDashboard.nonce;
@@ -663,7 +638,6 @@ class SAW_Frontend_Dashboard {
                         ajaxurl = '/wp-admin/admin-ajax.php';
                     }
                     
-                    // ✅ FIXED: Correct AJAX action and parameters
                     fetch(ajaxurl, {
                         method: 'POST',
                         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
@@ -679,7 +653,6 @@ class SAW_Frontend_Dashboard {
                     .then(function(r) { return r.json(); })
                     .then(function(data) {
                         if (data.success) {
-                            // Animate removal
                             personEl.style.transition = 'all 0.3s ease';
                             personEl.style.transform = 'translateX(100%)';
                             personEl.style.opacity = '0';
@@ -694,21 +667,17 @@ class SAW_Frontend_Dashboard {
                             
                             setTimeout(function() {
                                 personEl.remove();
-                                
-                                // Update counters
                                 updatePresentCount(-1);
                                 
-                                // Check if list is now empty
                                 var list = document.getElementById('sawPresentList');
                                 if (list && list.querySelectorAll('.saw-person').length === 0) {
                                     list.innerHTML = '<div class="saw-empty" id="sawEmptyPresent">✅<p>Nikdo aktuálně uvnitř</p></div>';
                                 }
                             }, 350);
                         } else {
-                            // Error - restore
                             personEl.style.opacity = '1';
                             btnEl.disabled = false;
-                            btnEl.textContent = 'Check-out';
+                            btnEl.style.opacity = '1';
                             alert('Chyba: ' + (data.data && data.data.message ? data.data.message : 'Nepodařilo se odhlásit'));
                         }
                     })
@@ -716,31 +685,25 @@ class SAW_Frontend_Dashboard {
                         console.error('Checkout error:', err);
                         personEl.style.opacity = '1';
                         btnEl.disabled = false;
-                        btnEl.textContent = 'Check-out';
+                        btnEl.style.opacity = '1';
                         alert('Chyba při odhlašování');
                     });
                 });
             });
             
-            /**
-             * Update present visitors count in multiple places
-             */
             function updatePresentCount(delta) {
-                // Main stat
                 var countEl = document.getElementById('sawPresentCount');
                 if (countEl) {
                     var current = parseInt(countEl.textContent) || 0;
                     var newCount = Math.max(0, current + delta);
                     countEl.textContent = newCount;
                     
-                    // Hide LIVE badge if 0
                     if (newCount === 0) {
                         var liveBadge = document.getElementById('sawLiveBadge');
                         if (liveBadge) liveBadge.style.display = 'none';
                     }
                 }
                 
-                // Card badge
                 var badgeEl = document.getElementById('sawPresentBadge');
                 if (badgeEl) {
                     var current = parseInt(badgeEl.textContent) || 0;
@@ -752,7 +715,6 @@ class SAW_Frontend_Dashboard {
                     }
                 }
                 
-                // Emergency button count
                 var emCount = document.querySelector('.saw-em-count');
                 if (emCount) {
                     var current = parseInt(emCount.textContent) || 0;
@@ -760,7 +722,6 @@ class SAW_Frontend_Dashboard {
                     if (newCount > 0) {
                         emCount.textContent = newCount;
                     } else {
-                        // Hide entire emergency button
                         var emBtn = document.querySelector('.saw-emergency');
                         if (emBtn) emBtn.style.display = 'none';
                     }

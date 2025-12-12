@@ -1,25 +1,24 @@
 <?php
 /**
- * SAW PWA - Head Tags Include
+ * SAW PWA - Head Tags
  *
- * Přidej tento soubor do <head> sekce všech layout souborů:
- * <?php include SAW_VISITORS_PLUGIN_DIR . 'includes/pwa/pwa-head-tags.php'; ?>
- *
- * @package    SAW_Visitors
- * @subpackage PWA
- * @since      1.0.0
- * @version    2.2.0 - Added debug script for white screen diagnosis
+ * @version 4.0.0 - INLINE SCRIPT FIX
+ * 
+ * Na mobilech používáme INLINE script (ne externí soubor)
+ * který se spustí OKAMŽITĚ při parsování HTML.
  */
+
 if (!defined('ABSPATH')) {
     exit;
 }
-// Získej PWA instanci pokud existuje
+
 $saw_pwa = class_exists('SAW_PWA') ? SAW_PWA::instance() : null;
 $pwa_enabled = $saw_pwa && $saw_pwa->is_enabled();
+
 if (!$pwa_enabled) {
     return;
 }
-// URLs
+
 $manifest_url = $saw_pwa->get_manifest_url();
 $pwa_url = $saw_pwa->get_pwa_url();
 $theme_color = $saw_pwa->get_theme_color();
@@ -31,47 +30,76 @@ $theme_color = $saw_pwa->get_theme_color();
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SAW Visitors">
 <meta name="application-name" content="SAW Visitors">
-<meta name="msapplication-TileColor" content="<?php echo esc_attr($theme_color); ?>">
-<meta name="msapplication-config" content="none">
+
 <!-- PWA Manifest -->
 <link rel="manifest" href="<?php echo esc_url($manifest_url); ?>">
-<!-- Apple Touch Icons -->
+
+<!-- Icons -->
 <link rel="apple-touch-icon" href="<?php echo esc_url($pwa_url . 'icons/icon-192x192.png'); ?>">
-<link rel="apple-touch-icon" sizes="144x144" href="<?php echo esc_url($pwa_url . 'icons/icon-144x144.png'); ?>">
-<link rel="apple-touch-icon" sizes="180x180" href="<?php echo esc_url($pwa_url . 'icons/icon-192x192.png'); ?>">
-<link rel="apple-touch-icon" sizes="167x167" href="<?php echo esc_url($pwa_url . 'icons/icon-192x192.png'); ?>">
-<!-- Microsoft Tiles -->
-<meta name="msapplication-TileImage" content="<?php echo esc_url($pwa_url . 'icons/icon-144x144.png'); ?>">
-<!-- Favicon fallback -->
 <link rel="icon" type="image/png" sizes="32x32" href="<?php echo esc_url($pwa_url . 'icons/icon-96x96.png'); ?>">
-<link rel="icon" type="image/png" sizes="16x16" href="<?php echo esc_url($pwa_url . 'icons/icon-72x72.png'); ?>">
-<!-- PWA Registration Script -->
-<script src="<?php echo esc_url($pwa_url . 'pwa-register.js'); ?>?v=<?php echo SAW_VISITORS_VERSION; ?>" defer></script>
-<!-- AJAX Recovery Script (fixes expired nonce/session on mobile) -->
-<script src="<?php echo esc_url($pwa_url . 'ajax-recovery.js'); ?>?v=<?php echo SAW_VISITORS_VERSION; ?>" defer></script>
-<!-- TEMPORARY DEBUG - REMOVE AFTER FINDING ISSUE -->
-<script src="<?php echo esc_url($pwa_url . 'debug-white-screen.js'); ?>?v=<?php echo time(); ?>"></script>
-<?php
-// Apple Splash Screens (volitelné - pro lepší iOS experience)
-// Tyto by bylo potřeba vygenerovat pro různé velikosti obrazovek
-?>
-<!-- iOS Splash Screen Color -->
-<style>
-    /* Prevent iOS zoom on input focus */
-    @supports (-webkit-touch-callout: none) {
-        input, select, textarea {
-            font-size: 16px !important;
+
+<!--
+  CRITICAL: INLINE SCRIPT - spustí se OKAMŽITĚ při parsování HTML
+  Na mobilech: žádný Service Worker, force reload při návratu z pozadí
+-->
+<script>
+(function() {
+    var ua = navigator.userAgent || '';
+    var isMobile = /Android|iPhone|iPad|iPod/i.test(ua);
+    var isPWA = window.matchMedia('(display-mode: standalone)').matches;
+    
+    // ============================================
+    // MOBILE/PWA: Odstranit Service Worker + reload při resume
+    // ============================================
+    if (isMobile || isPWA) {
+        
+        // 1. OKAMŽITĚ odregistrovat Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(regs) {
+                regs.forEach(function(r) { r.unregister(); });
+            });
+            // Vymazat všechny cache
+            if ('caches' in window) {
+                caches.keys().then(function(names) {
+                    names.forEach(function(name) { caches.delete(name); });
+                });
+            }
         }
+        
+        // 2. Reload při JAKÉMKOLIV návratu z pozadí
+        var wasHidden = false;
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'hidden') {
+                wasHidden = true;
+            } else if (wasHidden) {
+                // Okamžitý reload - žádné čekání
+                window.location.reload();
+            }
+        });
+        
+        // 3. Reload při obnovení z bfcache
+        window.addEventListener('pageshow', function(e) {
+            if (e.persisted) {
+                window.location.reload();
+            }
+        });
+        
+        // KONEC - na mobilu nic dalšího
+        return;
     }
     
-    /* PWA Standalone mode adjustments */
-    @media all and (display-mode: standalone) {
-        body {
-            /* Přidej padding pro notch na iPhone X+ */
-            padding-top: env(safe-area-inset-top);
-            padding-bottom: env(safe-area-inset-bottom);
-            padding-left: env(safe-area-inset-left);
-            padding-right: env(safe-area-inset-right);
-        }
+    // ============================================
+    // DESKTOP: Normální Service Worker
+    // ============================================
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                .then(function(reg) {
+                    // Check for updates every hour
+                    setInterval(function() { reg.update(); }, 3600000);
+                })
+                .catch(function() {});
+        });
     }
-</style>
+})();
+</script>
