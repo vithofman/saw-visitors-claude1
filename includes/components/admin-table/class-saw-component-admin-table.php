@@ -1009,33 +1009,38 @@ class SAW_Component_Admin_Table {
     
     
     /**
-     * Output JS configuration for infinite scroll and tabs
-     * 
-     * @since 7.1.0
-     */
-    private function output_js_config() {
-        // OPRAVENO 2025-01-22: Ověřit že threshold je správně nastaven
-        if (!empty($this->config['infinite_scroll']['threshold'])) {
-            $threshold = floatval($this->config['infinite_scroll']['threshold']);
-            // Ensure threshold is 0.6 (60%) not 0.7 (70%)
-            if ($threshold !== 0.6) {
-                $this->config['infinite_scroll']['threshold'] = 0.6;
+ * Output JS configuration for infinite scroll and tabs
+ * 
+ * @since 7.1.0
+ */
+private function output_js_config() {
+    // Filter out non-serializable values (callbacks) from columns
+    $safe_columns = array();
+    foreach ($this->config['columns'] as $key => $column) {
+        $safe_column = array();
+        foreach ($column as $prop => $value) {
+            // Skip callback functions - they can't be serialized to JSON
+            if ($prop === 'callback' || is_callable($value)) {
+                continue;
             }
+            $safe_column[$prop] = $value;
         }
-        
-        $config = array(
-            'entity' => $this->entity,
-            'columns' => $this->config['columns'],
-            'actions' => $this->config['actions'],
-            'detail_url' => $this->config['detail_url'],
-            'edit_url' => $this->config['edit_url'],
-            'infinite_scroll' => $this->config['infinite_scroll'],
-            'tabs' => $this->config['tabs'] ?? null,
-            'current_tab' => $this->config['current_tab'] ?? null,
-        );
-        
-        echo '<script>';
-        echo 'window.sawInfiniteScrollConfig = ' . wp_json_encode($config) . ';';
-        echo '</script>';
+        $safe_columns[$key] = $safe_column;
     }
+    
+    $config = array(
+        'entity' => $this->entity,
+        'columns' => $safe_columns,  // ← Použít safe_columns místo config['columns']
+        'actions' => $this->config['actions'],
+        'detail_url' => $this->config['detail_url'],
+        'edit_url' => $this->config['edit_url'],
+        'infinite_scroll' => $this->config['infinite_scroll'],
+        'tabs' => $this->config['tabs'] ?? null,
+        'current_tab' => $this->config['current_tab'] ?? null,
+    );
+    
+    echo '<script>';
+    echo 'window.sawInfiniteScrollConfig = ' . wp_json_encode($config) . ';';
+    echo '</script>';
+}
 }

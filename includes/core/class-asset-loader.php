@@ -635,7 +635,8 @@ class SAW_Asset_Loader {
                 $is_nested = '1';
             }
             
-            wp_localize_script('saw-module-' . $slug, 'saw' . ucfirst($slug), [
+            $js_var_name = 'saw' . str_replace(' ', '', ucwords(str_replace('-', ' ', $slug)));
+            wp_localize_script('saw-module-' . $slug, $js_var_name, [
                 'ajaxurl'  => admin_url('admin-ajax.php'),
                 'entity'   => esc_js($slug),
                 'isEdit'   => isset($_GET['id']) || (isset($_GET['saw_path']) && strpos($_GET['saw_path'], 'edit') !== false),

@@ -1,0 +1,865 @@
+/**
+ * SAW Calendar Mobile Styles
+ *
+ * Mobile-optimized calendar view.
+ * Only loaded on mobile devices (< 768px).
+ *
+ * @package     SAW_Visitors
+ * @subpackage  CSS/Modules
+ * @version     1.0.0
+ * @since       3.1.0
+ */
+
+/* ============================================
+   CSS VARIABLES
+   ============================================ */
+:root {
+    --saw-mobile-primary: #2271b1;
+    --saw-mobile-primary-hover: #135e96;
+    --saw-mobile-bg: #f8fafc;
+    --saw-mobile-card-bg: #ffffff;
+    --saw-mobile-border: #e2e8f0;
+    --saw-mobile-text: #1e293b;
+    --saw-mobile-text-muted: #64748b;
+    --saw-mobile-radius: 12px;
+    --saw-mobile-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* ============================================
+   PAGE LAYOUT
+   ============================================ */
+.saw-calendar-mobile-view {
+    background: var(--saw-mobile-bg);
+    min-height: 100vh;
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+}
+
+.saw-calendar-mobile-content {
+    padding: 16px;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+/* ============================================
+   MOBILE HEADER
+   ============================================ */
+.saw-mobile-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: #ffffff;
+    border-bottom: 1px solid var(--saw-mobile-border);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.saw-mobile-header__left {
+    display: flex;
+    align-items: center;
+}
+
+.saw-mobile-header__title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--saw-mobile-text);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.saw-mobile-header__icon {
+    font-size: 22px;
+}
+
+.saw-mobile-header__right {
+    display: flex;
+    align-items: center;
+}
+
+.saw-mobile-header__btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: var(--saw-mobile-primary);
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.saw-mobile-header__btn:hover {
+    background: var(--saw-mobile-primary-hover);
+    color: #ffffff;
+}
+
+.saw-mobile-header__btn:active {
+    transform: scale(0.98);
+}
+
+.saw-mobile-header__btn svg {
+    flex-shrink: 0;
+}
+
+/* Very small screens - hide button text */
+@media (max-width: 360px) {
+    .saw-mobile-header__btn-text {
+        display: none;
+    }
+    
+    .saw-mobile-header__btn {
+        padding: 8px;
+    }
+}
+
+/* Safe area for notched devices */
+@supports (padding-top: env(safe-area-inset-top)) {
+    .saw-mobile-header {
+        padding-top: calc(12px + env(safe-area-inset-top));
+    }
+}
+
+/* ============================================
+   MINI CALENDAR
+   ============================================ */
+.saw-mini-calendar {
+    background: #ffffff;
+    border-radius: var(--saw-mobile-radius);
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: var(--saw-mobile-shadow);
+}
+
+/* Header with navigation */
+.saw-mini-calendar__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.saw-mini-calendar__month-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--saw-mobile-text);
+}
+
+.saw-mini-calendar__nav {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: var(--saw-mobile-text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.saw-mini-calendar__nav:hover {
+    background: #f1f5f9;
+    color: var(--saw-mobile-text);
+}
+
+.saw-mini-calendar__nav:active {
+    background: #e2e8f0;
+    transform: scale(0.95);
+}
+
+/* Weekday headers */
+.saw-mini-calendar__weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.saw-mini-calendar__weekday {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    padding: 4px 0;
+}
+
+.saw-mini-calendar__weekday--weekend {
+    color: #cbd5e1;
+}
+
+/* Days grid */
+.saw-mini-calendar__days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+
+.saw-mini-calendar__day {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    min-height: 40px;
+    padding: 0;
+}
+
+.saw-mini-calendar__day:not(.saw-mini-calendar__day--empty):hover {
+    background: #f1f5f9;
+}
+
+.saw-mini-calendar__day:not(.saw-mini-calendar__day--empty):active {
+    background: #e2e8f0;
+    transform: scale(0.95);
+}
+
+.saw-mini-calendar__day--empty {
+    cursor: default;
+}
+
+.saw-mini-calendar__day-number {
+    font-size: 14px;
+    font-weight: 500;
+    color: #334155;
+    line-height: 1;
+}
+
+.saw-mini-calendar__day--weekend .saw-mini-calendar__day-number {
+    color: #94a3b8;
+}
+
+/* Today */
+.saw-mini-calendar__day--today {
+    background: #eff6ff;
+}
+
+.saw-mini-calendar__day--today .saw-mini-calendar__day-number {
+    color: #2563eb;
+    font-weight: 700;
+}
+
+/* Selected */
+.saw-mini-calendar__day--selected {
+    background: var(--saw-mobile-primary) !important;
+}
+
+.saw-mini-calendar__day--selected .saw-mini-calendar__day-number {
+    color: #ffffff !important;
+    font-weight: 600;
+}
+
+.saw-mini-calendar__day--selected .saw-mini-calendar__day-dot {
+    background: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* Event dot indicator - hidden by default, shown via JS */
+.saw-mini-calendar__day-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--saw-mobile-primary);
+    margin-top: 2px;
+    display: none;
+}
+
+.saw-mini-calendar__day--has-events .saw-mini-calendar__day-dot {
+    display: block;
+}
+
+/* Footer */
+.saw-mini-calendar__footer {
+    display: flex;
+    justify-content: center;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--saw-mobile-border);
+}
+
+.saw-mini-calendar__today-btn {
+    background: transparent;
+    border: 1px solid var(--saw-mobile-border);
+    border-radius: 6px;
+    padding: 6px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--saw-mobile-primary);
+    cursor: pointer;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.saw-mini-calendar__today-btn:hover {
+    background: #f8fafc;
+    border-color: var(--saw-mobile-primary);
+}
+
+.saw-mini-calendar__today-btn:active {
+    background: #eff6ff;
+    transform: scale(0.98);
+}
+
+/* ============================================
+   AGENDA LIST
+   ============================================ */
+.saw-agenda {
+    background: #ffffff;
+    border-radius: var(--saw-mobile-radius);
+    overflow: hidden;
+    box-shadow: var(--saw-mobile-shadow);
+}
+
+/* Header */
+.saw-agenda__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    background: #f8fafc;
+    border-bottom: 1px solid var(--saw-mobile-border);
+}
+
+.saw-agenda__date {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.saw-agenda__date-icon {
+    font-size: 18px;
+}
+
+.saw-agenda__date-text {
+    font-size: 15px;
+    color: var(--saw-mobile-text);
+}
+
+.saw-agenda__date-text strong {
+    color: var(--saw-mobile-primary);
+}
+
+.saw-agenda__count {
+    font-size: 13px;
+    color: var(--saw-mobile-text-muted);
+    background: #e2e8f0;
+    padding: 4px 10px;
+    border-radius: 12px;
+}
+
+/* List */
+.saw-agenda__list {
+    padding: 8px;
+}
+
+/* Event Card */
+.saw-event-card {
+    display: flex;
+    align-items: stretch;
+    background: #ffffff;
+    border: 1px solid var(--saw-mobile-border);
+    border-radius: 10px;
+    margin-bottom: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.saw-event-card:last-child {
+    margin-bottom: 0;
+}
+
+.saw-event-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.saw-event-card:active {
+    transform: scale(0.99);
+    background: #f8fafc;
+}
+
+/* Status indicator */
+.saw-event-card__indicator {
+    width: 4px;
+    flex-shrink: 0;
+}
+
+/* Content */
+.saw-event-card__content {
+    flex: 1;
+    padding: 12px 8px 12px 12px;
+    min-width: 0;
+}
+
+.saw-event-card__time {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--saw-mobile-text-muted);
+    margin-bottom: 4px;
+}
+
+.saw-event-card__title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--saw-mobile-text);
+    margin: 0 0 6px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.saw-event-card__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.saw-event-card__meta-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    color: var(--saw-mobile-text-muted);
+}
+
+.saw-event-card__meta-item svg {
+    flex-shrink: 0;
+    opacity: 0.7;
+}
+
+/* Arrow */
+.saw-event-card__arrow {
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    color: #cbd5e1;
+}
+
+/* Cancelled events */
+.saw-event-card[data-status="cancelled"] {
+    opacity: 0.6;
+}
+
+.saw-event-card[data-status="cancelled"] .saw-event-card__title {
+    text-decoration: line-through;
+}
+
+/* Empty State */
+.saw-agenda__empty {
+    padding: 48px 24px;
+    text-align: center;
+}
+
+.saw-agenda__empty-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+    opacity: 0.5;
+}
+
+.saw-agenda__empty-text {
+    font-size: 15px;
+    color: var(--saw-mobile-text-muted);
+    margin: 0 0 16px 0;
+}
+
+.saw-agenda__empty-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px;
+    background: var(--saw-mobile-primary);
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.saw-agenda__empty-btn:hover {
+    background: var(--saw-mobile-primary-hover);
+    color: #ffffff;
+}
+
+/* Loading State */
+.saw-agenda__loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    gap: 12px;
+    color: var(--saw-mobile-text-muted);
+    font-size: 14px;
+}
+
+.saw-agenda__loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #e2e8f0;
+    border-top-color: var(--saw-mobile-primary);
+    border-radius: 50%;
+    animation: saw-mobile-spin 0.8s linear infinite;
+}
+
+@keyframes saw-mobile-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ============================================
+   BOTTOM SHEET
+   ============================================ */
+
+/* Backdrop */
+.saw-bottom-sheet-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    z-index: 9998;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+}
+
+.saw-bottom-sheet-backdrop.is-visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Sheet container */
+.saw-bottom-sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-height: 85vh;
+    background: #ffffff;
+    border-radius: 16px 16px 0 0;
+    z-index: 9999;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.saw-bottom-sheet.is-open {
+    transform: translateY(0);
+}
+
+/* Drag handle */
+.saw-bottom-sheet__handle {
+    display: flex;
+    justify-content: center;
+    padding: 12px 16px 8px;
+    cursor: grab;
+    flex-shrink: 0;
+}
+
+.saw-bottom-sheet__handle:active {
+    cursor: grabbing;
+}
+
+.saw-bottom-sheet__handle-bar {
+    width: 36px;
+    height: 4px;
+    background: #cbd5e1;
+    border-radius: 2px;
+}
+
+/* Content */
+.saw-bottom-sheet__content {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 20px 20px;
+    overscroll-behavior: contain;
+}
+
+/* Loading state */
+.saw-bottom-sheet__loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    gap: 12px;
+    color: var(--saw-mobile-text-muted);
+    font-size: 14px;
+}
+
+.saw-bottom-sheet__loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #e2e8f0;
+    border-top-color: var(--saw-mobile-primary);
+    border-radius: 50%;
+    animation: saw-mobile-spin 0.8s linear infinite;
+}
+
+/* ============================================
+   BOTTOM SHEET CONTENT - EVENT DETAIL
+   ============================================ */
+.saw-sheet-event {
+    padding-top: 8px;
+}
+
+/* Status badge */
+.saw-sheet-event__status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+}
+
+.saw-sheet-event__status--draft {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.saw-sheet-event__status--pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.saw-sheet-event__status--confirmed {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.saw-sheet-event__status--in_progress {
+    background: #ffedd5;
+    color: #c2410c;
+}
+
+.saw-sheet-event__status--completed {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.saw-sheet-event__status--cancelled {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/* Title */
+.saw-sheet-event__title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--saw-mobile-text);
+    margin: 0 0 16px 0;
+    line-height: 1.3;
+}
+
+/* Meta info rows */
+.saw-sheet-event__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.saw-sheet-event__meta-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.saw-sheet-event__meta-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+    width: 24px;
+    text-align: center;
+}
+
+.saw-sheet-event__meta-text {
+    font-size: 15px;
+    color: #334155;
+    line-height: 1.4;
+}
+
+.saw-sheet-event__meta-label {
+    font-size: 12px;
+    color: #94a3b8;
+    display: block;
+    margin-top: 2px;
+}
+
+/* Purpose section */
+.saw-sheet-event__purpose {
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 20px;
+}
+
+.saw-sheet-event__purpose-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--saw-mobile-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.saw-sheet-event__purpose-text {
+    font-size: 14px;
+    color: #334155;
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* Divider */
+.saw-sheet-event__divider {
+    height: 1px;
+    background: var(--saw-mobile-border);
+    margin: 20px 0;
+}
+
+/* Action buttons */
+.saw-sheet-event__actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.saw-sheet-event__action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 20px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.saw-sheet-event__action-btn--primary {
+    background: var(--saw-mobile-primary);
+    color: #ffffff;
+}
+
+.saw-sheet-event__action-btn--primary:hover {
+    background: var(--saw-mobile-primary-hover);
+    color: #ffffff;
+}
+
+.saw-sheet-event__action-btn--secondary {
+    background: #f1f5f9;
+    color: #334155;
+    border: 1px solid var(--saw-mobile-border);
+}
+
+.saw-sheet-event__action-btn--secondary:hover {
+    background: #e2e8f0;
+    color: var(--saw-mobile-text);
+}
+
+/* Export section */
+.saw-sheet-event__export {
+    padding-top: 4px;
+}
+
+.saw-sheet-event__export-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--saw-mobile-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+}
+
+.saw-sheet-event__export-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.saw-sheet-event__export-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: #f1f5f9;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #334155;
+    text-decoration: none;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.saw-sheet-event__export-link:hover {
+    background: #e2e8f0;
+}
+
+.saw-sheet-event__export-link--google {
+    background: #e8f0fe;
+    color: #1a73e8;
+}
+
+.saw-sheet-event__export-link--google:hover {
+    background: #d2e3fc;
+}
+
+.saw-sheet-event__export-link--outlook {
+    background: #e3f2fd;
+    color: #0078d4;
+}
+
+.saw-sheet-event__export-link--outlook:hover {
+    background: #bbdefb;
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+.saw-mobile-hidden {
+    display: none !important;
+}
+
+.saw-mobile-visible {
+    display: block !important;
+}
+
+/* ============================================
+   SAFE AREA SUPPORT (for notched devices)
+   ============================================ */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+    .saw-bottom-sheet__content {
+        padding-bottom: calc(20px + env(safe-area-inset-bottom));
+    }
+}

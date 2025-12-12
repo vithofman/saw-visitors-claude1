@@ -7,7 +7,7 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Modules/Calendar
- * @version     1.4.0 - FIXED: Removed department_id reference (column doesn't exist in saw_visits)
+ * @version     2.0.0 - Added mobile view support
  * @since       1.0.0
  */
 
@@ -70,10 +70,33 @@ class SAW_Module_Calendar_Controller extends SAW_Base_Controller {
         add_action('wp_ajax_saw_calendar_event_details', [$this, 'ajax_get_event_details']);
         add_action('wp_ajax_saw_calendar_update_event', [$this, 'ajax_update_event']);
         
+        // NEW: Mobile-specific handlers
+        add_action('wp_ajax_saw_calendar_days_with_events', [$this, 'ajax_get_days_with_events']);
+        add_action('wp_ajax_saw_calendar_day_events', [$this, 'ajax_get_day_events']);
+        
         // Debug logging
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log('SAW Calendar: AJAX handlers registered');
         }
+    }
+    
+    /**
+     * Detect if current request is from mobile device
+     * 
+     * @since 2.0.0
+     * @return bool
+     */
+    private function is_mobile_view() {
+        // Check for explicit override via query param (for testing)
+        if (isset($_GET['view']) && $_GET['view'] === 'mobile') {
+            return true;
+        }
+        if (isset($_GET['view']) && $_GET['view'] === 'desktop') {
+            return false;
+        }
+        
+        // Use WordPress mobile detection
+        return wp_is_mobile();
     }
     
     /**
@@ -93,40 +116,48 @@ class SAW_Module_Calendar_Controller extends SAW_Base_Controller {
      * Enqueue calendar assets
      */
     protected function enqueue_assets() {
-        // FullCalendar from CDN
-        wp_enqueue_script(
-            'fullcalendar',
-            'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.17/index.global.min.js',
-            [],
-            '6.1.17',
-            true
-        );
+        $is_mobile = $this->is_mobile_view();
         
-        // Czech locale for FullCalendar
-        wp_enqueue_script(
-            'fullcalendar-cs',
-            'https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.17/locales/cs.global.min.js',
-            ['fullcalendar'],
-            '6.1.17',
-            true
-        );
-        
-        // Our calendar JS
-        $js_path = SAW_VISITORS_PLUGIN_DIR . 'assets/js/modules/calendar.js';
-        if (file_exists($js_path)) {
+        if ($is_mobile) {
+            // Mobile-only assets
+            $this->enqueue_mobile_assets();
+        } else {
+            // Desktop assets - ORIGINAL CODE (unchanged)
+            // FullCalendar from CDN
             wp_enqueue_script(
-                'saw-calendar',
-                SAW_VISITORS_PLUGIN_URL . 'assets/js/modules/calendar.js',
-                ['fullcalendar', 'fullcalendar-cs', 'jquery'],
-                filemtime($js_path),
+                'fullcalendar',
+                'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.17/index.global.min.js',
+                [],
+                '6.1.17',
                 true
             );
             
-            // Localize script
-            wp_localize_script('saw-calendar', 'sawCalendar', $this->get_js_config());
+            // Czech locale for FullCalendar
+            wp_enqueue_script(
+                'fullcalendar-cs',
+                'https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.17/locales/cs.global.min.js',
+                ['fullcalendar'],
+                '6.1.17',
+                true
+            );
+            
+            // Our calendar JS
+            $js_path = SAW_VISITORS_PLUGIN_DIR . 'assets/js/modules/calendar.js';
+            if (file_exists($js_path)) {
+                wp_enqueue_script(
+                    'saw-calendar',
+                    SAW_VISITORS_PLUGIN_URL . 'assets/js/modules/calendar.js',
+                    ['fullcalendar', 'fullcalendar-cs', 'jquery'],
+                    filemtime($js_path),
+                    true
+                );
+                
+                // Localize script
+                wp_localize_script('saw-calendar', 'sawCalendar', $this->get_js_config());
+            }
         }
         
-        // Our calendar CSS
+        // Our calendar CSS - ALWAYS load (original behavior)
         $css_path = SAW_VISITORS_PLUGIN_DIR . 'assets/css/modules/calendar.css';
         if (file_exists($css_path)) {
             wp_enqueue_style(
@@ -135,6 +166,38 @@ class SAW_Module_Calendar_Controller extends SAW_Base_Controller {
                 [],
                 filemtime($css_path)
             );
+        }
+    }
+    
+    /**
+     * Enqueue mobile-specific assets
+     * 
+     * @since 2.0.0
+     */
+    private function enqueue_mobile_assets() {
+        // Mobile CSS
+        $css_path = SAW_VISITORS_PLUGIN_DIR . 'assets/css/modules/calendar-mobile.css';
+        if (file_exists($css_path)) {
+            wp_enqueue_style(
+                'saw-calendar-mobile',
+                SAW_VISITORS_PLUGIN_URL . 'assets/css/modules/calendar-mobile.css',
+                [],
+                filemtime($css_path)
+            );
+        }
+        
+        // Mobile JS
+        $js_path = SAW_VISITORS_PLUGIN_DIR . 'assets/js/modules/calendar-mobile.js';
+        if (file_exists($js_path)) {
+            wp_enqueue_script(
+                'saw-calendar-mobile',
+                SAW_VISITORS_PLUGIN_URL . 'assets/js/modules/calendar-mobile.js',
+                ['jquery'],
+                filemtime($js_path),
+                true
+            );
+            
+            wp_localize_script('saw-calendar-mobile', 'sawCalendarMobile', $this->get_mobile_js_config());
         }
     }
     
@@ -180,6 +243,23 @@ class SAW_Module_Calendar_Controller extends SAW_Base_Controller {
             // Current context - branch from switcher
             'branchId' => SAW_Context::get_branch_id(),
             'customerId' => SAW_Context::get_customer_id(),
+        ];
+    }
+    
+    /**
+     * Get JavaScript configuration for mobile
+     *
+     * @since 2.0.0
+     * @return array
+     */
+    private function get_mobile_js_config() {
+        return [
+            'ajaxurl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('saw_calendar_nonce'),
+            'homeUrl' => home_url(),
+            'createUrl' => home_url('/admin/visits/create'),
+            'detailUrl' => home_url('/admin/visits/{id}/'),
+            'editUrl' => home_url('/admin/visits/{id}/edit'),
         ];
     }
     
@@ -624,6 +704,170 @@ class SAW_Module_Calendar_Controller extends SAW_Base_Controller {
         }
         
         wp_send_json_success(['message' => 'Návštěva byla přesunuta']);
+    }
+    
+    /**
+     * AJAX: Get days that have events (for mini calendar dots)
+     * 
+     * Returns array of date strings (Y-m-d) that have at least one event.
+     * 
+     * @since 2.0.0
+     */
+    public function ajax_get_days_with_events() {
+        if (!check_ajax_referer('saw_calendar_nonce', 'nonce', false)) {
+            wp_send_json_error(['message' => 'Neplatný požadavek'], 403);
+            return;
+        }
+        
+        $start = sanitize_text_field($_GET['start'] ?? '');
+        $end = sanitize_text_field($_GET['end'] ?? '');
+        
+        if (empty($start) || empty($end)) {
+            wp_send_json_error(['message' => 'Chybí parametry start/end'], 400);
+            return;
+        }
+        
+        // Context
+        $customer_id = SAW_Context::get_customer_id();
+        $branch_id = SAW_Context::get_branch_id();
+        
+        if (!$customer_id) {
+            wp_send_json_success([]);
+            return;
+        }
+        
+        global $wpdb;
+        
+        $start_date = date('Y-m-d', strtotime($start));
+        $end_date = date('Y-m-d', strtotime($end));
+        
+        // Build query
+        $where_parts = ["v.customer_id = %d"];
+        $where_params = [$customer_id];
+        
+        if ($branch_id > 0) {
+            $where_parts[] = "v.branch_id = %d";
+            $where_params[] = $branch_id;
+        }
+        
+        // Date range
+        $where_parts[] = "(vs.date BETWEEN %s AND %s OR (vs.date IS NULL AND v.planned_date_from BETWEEN %s AND %s))";
+        $where_params = array_merge($where_params, [$start_date, $end_date, $start_date, $end_date]);
+        
+        // Exclude cancelled
+        $where_parts[] = "v.status != 'cancelled'";
+        
+        $where_sql = implode(' AND ', $where_parts);
+        
+        $sql = "SELECT DISTINCT DATE(COALESCE(vs.date, v.planned_date_from)) as event_date
+                FROM {$wpdb->prefix}saw_visits v
+                LEFT JOIN {$wpdb->prefix}saw_visit_schedules vs ON v.id = vs.visit_id
+                WHERE {$where_sql}
+                ORDER BY event_date ASC";
+        
+        $prepared_sql = $wpdb->prepare($sql, ...$where_params);
+        $results = $wpdb->get_col($prepared_sql);
+        
+        wp_send_json_success($results ?: []);
+    }
+    
+    /**
+     * AJAX: Get events for specific day (for agenda view)
+     * 
+     * Returns array of events for the specified date.
+     * 
+     * @since 2.0.0
+     */
+    public function ajax_get_day_events() {
+        if (!check_ajax_referer('saw_calendar_nonce', 'nonce', false)) {
+            wp_send_json_error(['message' => 'Neplatný požadavek'], 403);
+            return;
+        }
+        
+        $date = sanitize_text_field($_GET['date'] ?? '');
+        
+        if (empty($date)) {
+            wp_send_json_error(['message' => 'Chybí parametr date'], 400);
+            return;
+        }
+        
+        // Validate date format
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            wp_send_json_error(['message' => 'Neplatný formát data'], 400);
+            return;
+        }
+        
+        // Context
+        $customer_id = SAW_Context::get_customer_id();
+        $branch_id = SAW_Context::get_branch_id();
+        
+        if (!$customer_id) {
+            wp_send_json_success(['date' => $date, 'events' => [], 'count' => 0]);
+            return;
+        }
+        
+        global $wpdb;
+        
+        // Build query
+        $where_parts = ["v.customer_id = %d"];
+        $where_params = [$customer_id];
+        
+        if ($branch_id > 0) {
+            $where_parts[] = "v.branch_id = %d";
+            $where_params[] = $branch_id;
+        }
+        
+        // Date filter
+        $where_parts[] = "(vs.date = %s OR (vs.date IS NULL AND DATE(v.planned_date_from) = %s))";
+        $where_params[] = $date;
+        $where_params[] = $date;
+        
+        $where_sql = implode(' AND ', $where_parts);
+        
+        $sql = "SELECT 
+                    v.id,
+                    v.status,
+                    v.visit_type,
+                    v.purpose,
+                    v.planned_date_from,
+                    c.name as company_name,
+                    b.name as branch_name,
+                    vs.date as schedule_date,
+                    vs.time_from,
+                    vs.time_to,
+                    (SELECT COUNT(*) FROM {$wpdb->prefix}saw_visitors WHERE visit_id = v.id) as visitor_count
+                FROM {$wpdb->prefix}saw_visits v
+                LEFT JOIN {$wpdb->prefix}saw_companies c ON v.company_id = c.id
+                LEFT JOIN {$wpdb->prefix}saw_branches b ON v.branch_id = b.id
+                LEFT JOIN {$wpdb->prefix}saw_visit_schedules vs ON v.id = vs.visit_id
+                WHERE {$where_sql}
+                ORDER BY COALESCE(vs.time_from, '09:00:00') ASC";
+        
+        $prepared_sql = $wpdb->prepare($sql, ...$where_params);
+        $events = $wpdb->get_results($prepared_sql, ARRAY_A);
+        
+        // Format events
+        $formatted_events = [];
+        foreach ($events as $event) {
+            $formatted_events[] = [
+                'id' => $event['id'],
+                'status' => $event['status'] ?? 'pending',
+                'visit_type' => $event['visit_type'] ?? 'planned',
+                'company_name' => $event['company_name'] ?? '',
+                'branch_name' => $event['branch_name'] ?? '',
+                'purpose' => $event['purpose'] ?? '',
+                'time_from' => $event['time_from'] ?? null,
+                'time_to' => $event['time_to'] ?? null,
+                'visitor_count' => intval($event['visitor_count'] ?? 0),
+                'visit_date' => $event['schedule_date'] ?? $event['planned_date_from'] ?? $date,
+            ];
+        }
+        
+        wp_send_json_success([
+            'date' => $date,
+            'events' => $formatted_events,
+            'count' => count($formatted_events),
+        ]);
     }
 }
 
