@@ -1,109 +1,115 @@
 /**
  * SAW Select-Create Component
  * 
- * Adds searchable functionality to select dropdowns.
- * Converts standard select to searchable input with dropdown.
- * 
  * @package     SAW_Visitors
  * @subpackage  JS/Components
- * @version     1.0.1 - FIXED: Remove name attribute from original select to prevent duplicate POST values
+ * @version     1.3.0 - ALWAYS removes required from select
  * @since       1.0.0
  */
 
 (function($) {
     'use strict';
     
-    /**
-     * Initialize searchable selects
-     */
     function initSearchableSelects() {
         $('.saw-select-create-select').each(function() {
             const $select = $(this);
             
-            // Skip if already initialized
             if ($select.data('searchable-initialized')) {
+                // Even if initialized, ensure required is removed
+                $select.prop('required', false).removeAttr('required');
                 return;
             }
             
-            // Skip if has only 1-2 options (no need for search)
             const optionCount = $select.find('option').length;
             if (optionCount <= 2) {
+                // Still remove required for small selects
+                $select.prop('required', false).removeAttr('required');
                 return;
             }
             
             const $wrapper = $select.closest('.saw-select-create-wrapper');
             const fieldId = $select.attr('id');
-            const fieldName = $select.attr('name');
+            const fieldName = $select.data('field-name') || $select.attr('name') || fieldId.replace('saw-select-', '');
             const placeholder = $select.find('option[value=""]').text() || 'Hledat...';
-            const isRequired = $select.prop('required');
             
-            // Get all options
+            console.log('[SelectCreate] Initializing:', fieldName, '| fieldId:', fieldId);
+            
+            // ============================================
+            // CRITICAL: Remove name and required from select
+            // ============================================
+            $select.removeAttr('name');
+            $select.prop('required', false).removeAttr('required');
+            
+            // Find or create hidden input
+            let $hiddenInput = $('#' + fieldId + '-hidden');
+            
+            if (!$hiddenInput.length) {
+                $hiddenInput = $wrapper.find('input[type="hidden"][name="' + fieldName + '"]');
+            }
+            
+            if (!$hiddenInput.length) {
+                console.log('[SelectCreate] Creating hidden input for:', fieldName);
+                $hiddenInput = $('<input>', {
+                    type: 'hidden',
+                    name: fieldName,
+                    id: fieldId + '-hidden',
+                    value: $select.val() || ''
+                });
+                $select.before($hiddenInput);
+            }
+            
+            console.log('[SelectCreate] Hidden input:', $hiddenInput.attr('id'), '| Current value:', $hiddenInput.val());
+            
             const options = [];
             $select.find('option').each(function() {
-                const $option = $(this);
                 options.push({
-                    value: $option.attr('value'),
-                    text: $option.text(),
-                    selected: $option.prop('selected')
+                    value: $(this).attr('value'),
+                    text: $(this).text(),
+                    selected: $(this).prop('selected')
                 });
             });
             
-            // Create search input
             const $searchInput = $('<input>', {
                 type: 'text',
                 class: 'saw-input saw-select-search-input',
                 id: fieldId + '-search',
                 placeholder: placeholder,
-                autocomplete: 'off',
-                required: isRequired
+                autocomplete: 'off'
             });
             
-            // Create dropdown container
             const $dropdown = $('<div>', {
                 class: 'saw-select-search-dropdown',
                 id: fieldId + '-dropdown'
             });
             
-            // Create hidden input to store selected value
-            const $hiddenInput = $('<input>', {
-                type: 'hidden',
-                name: fieldName,
-                id: fieldId + '-hidden',
-                value: $select.val() || ''
-            });
-            
             // Set initial value
-            const selectedOption = options.find(opt => opt.selected && opt.value !== '');
-            if (selectedOption) {
-                $searchInput.val(selectedOption.text);
-                $hiddenInput.val(selectedOption.value);
+            const currentValue = $hiddenInput.val();
+            if (currentValue) {
+                const opt = options.find(o => o.value == currentValue);
+                if (opt) {
+                    $searchInput.val(opt.text);
+                    console.log('[SelectCreate] Initial value set from hidden:', currentValue, '->', opt.text);
+                }
+            } else {
+                const opt = options.find(o => o.selected && o.value !== '');
+                if (opt) {
+                    $searchInput.val(opt.text);
+                    $hiddenInput.val(opt.value);
+                    console.log('[SelectCreate] Initial value set from selected option:', opt.value);
+                }
             }
             
-            // CRITICAL FIX: Remove name attribute from original select
-            // This prevents duplicate POST values when form is submitted.
-            // Without this fix, both the hidden input AND the original select
-            // send the same field name, and PHP takes the last one (empty select).
-            $select.removeAttr('name');
-            
-            // Hide original select
             $select.hide();
-            
-            // Insert elements
             $select.before($searchInput);
-            $select.before($hiddenInput);
             $wrapper.append($dropdown);
             
-            // Build dropdown items
-            function buildDropdown(filterText = '') {
+            function buildDropdown(filterText) {
                 $dropdown.empty();
+                const currentVal = $hiddenInput.val();
                 
                 const filtered = options.filter(opt => {
-                    if (opt.value === '') {
-                        return true; // Always show empty option
-                    }
-                    if (!filterText) {
-                        return true;
-                    }
+                    if (opt.value === '') return true;
+                    if (!filterText) return true;
                     return opt.text.toLowerCase().includes(filterText.toLowerCase());
                 });
                 
@@ -117,20 +123,25 @@
                 
                 filtered.forEach(opt => {
                     const $item = $('<div>', {
-                        class: 'saw-select-search-item' + (opt.selected ? ' selected' : ''),
+                        class: 'saw-select-search-item' + (opt.value == currentVal ? ' selected' : ''),
                         'data-value': opt.value,
                         text: opt.text || placeholder
                     });
                     
                     $item.on('click', function() {
-                        $searchInput.val(opt.text);
-                        $hiddenInput.val(opt.value);
-                        $dropdown.hide();
+                        console.log('[SelectCreate] Item clicked:', opt.text, '| Value:', opt.value);
                         
-                        // Trigger change event
+                        // Set search input text
+                        $searchInput.val(opt.value ? opt.text : '');
+                        
+                        // SET HIDDEN INPUT VALUE - THIS IS CRITICAL
+                        $hiddenInput.val(opt.value);
+                        
+                        console.log('[SelectCreate] Hidden input after click:', $hiddenInput.attr('id'), '=', $hiddenInput.val());
+                        
+                        $dropdown.hide();
                         $hiddenInput.trigger('change');
                         
-                        // Update visual state
                         $dropdown.find('.saw-select-search-item').removeClass('selected');
                         $item.addClass('selected');
                     });
@@ -139,82 +150,63 @@
                 });
             }
             
-            // Show/hide dropdown
             $searchInput.on('focus', function() {
                 buildDropdown($(this).val());
                 $dropdown.show();
             });
             
             $searchInput.on('input', function() {
-                const filterText = $(this).val();
-                buildDropdown(filterText);
+                buildDropdown($(this).val());
                 $dropdown.show();
                 
-                // Clear hidden input if search doesn't match any option
-                const matchingOption = options.find(opt => opt.text.toLowerCase() === filterText.toLowerCase());
-                if (!matchingOption) {
+                const match = options.find(o => o.text.toLowerCase() === $(this).val().toLowerCase());
+                if (!match) {
                     $hiddenInput.val('');
                 }
             });
             
-            // Hide dropdown on outside click
             $(document).on('click', function(e) {
                 if (!$(e.target).closest($wrapper).length) {
                     $dropdown.hide();
                 }
             });
             
-            // Handle keyboard navigation
             $searchInput.on('keydown', function(e) {
+                const $items = $dropdown.find('.saw-select-search-item:visible');
+                const $current = $dropdown.find('.saw-select-search-item.highlighted');
+                
                 if (e.key === 'ArrowDown') {
                     e.preventDefault();
-                    const $items = $dropdown.find('.saw-select-search-item:visible');
-                    const $current = $dropdown.find('.saw-select-search-item.highlighted');
                     if ($current.length) {
-                        const index = $items.index($current);
                         $current.removeClass('highlighted');
-                        if (index < $items.length - 1) {
-                            $items.eq(index + 1).addClass('highlighted');
-                        }
-                    } else if ($items.length > 0) {
+                        $items.eq(Math.min($items.index($current) + 1, $items.length - 1)).addClass('highlighted');
+                    } else {
                         $items.first().addClass('highlighted');
                     }
                 } else if (e.key === 'ArrowUp') {
                     e.preventDefault();
-                    const $items = $dropdown.find('.saw-select-search-item:visible');
-                    const $current = $dropdown.find('.saw-select-search-item.highlighted');
                     if ($current.length) {
-                        const index = $items.index($current);
                         $current.removeClass('highlighted');
-                        if (index > 0) {
-                            $items.eq(index - 1).addClass('highlighted');
-                        }
+                        $items.eq(Math.max($items.index($current) - 1, 0)).addClass('highlighted');
                     }
                 } else if (e.key === 'Enter') {
                     e.preventDefault();
-                    const $highlighted = $dropdown.find('.saw-select-search-item.highlighted');
-                    if ($highlighted.length) {
-                        $highlighted.trigger('click');
-                    }
+                    $dropdown.find('.saw-select-search-item.highlighted').trigger('click');
                 } else if (e.key === 'Escape') {
                     $dropdown.hide();
                     $searchInput.blur();
                 }
             });
             
-            // Mark as initialized
             $select.data('searchable-initialized', true);
+            
+            console.log('[SelectCreate] ✅ Initialized:', fieldName);
         });
     }
     
-    // Initialize on document ready
-    $(document).ready(function() {
-        initSearchableSelects();
-    });
-    
-    // Re-initialize after AJAX loads (for dynamic content)
-    $(document).on('saw:content-loaded', function() {
-        initSearchableSelects();
+    $(document).ready(initSearchableSelects);
+    $(document).on('saw:page-loaded saw:sidebar-loaded saw:content-loaded', function() {
+        setTimeout(initSearchableSelects, 50);
     });
     
 })(jQuery);

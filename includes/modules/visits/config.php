@@ -4,7 +4,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visits
- * @version     4.3.0 - Added extend_token AJAX action
+ * @version     4.2.0 - TRANSLATIONS SUPPORT
  */
 
 if (!defined('ABSPATH')) {
@@ -202,7 +202,6 @@ return array(
         'saw_create_walkin' => 'ajax_create_walkin',
         'saw_send_invitation' => 'ajax_send_invitation',
         'saw_extend_pin' => 'ajax_extend_pin',
-        'saw_extend_token' => 'ajax_extend_token',  // ← NOVÉ: Prodloužení platnosti tokenu
         'saw_generate_pin' => 'ajax_generate_pin',
         'saw_change_visit_status' => 'ajax_change_visit_status',
         'saw_send_risks_request' => 'ajax_send_risks_request',
@@ -213,12 +212,13 @@ return array(
     // Dynamically computed values not stored in database
     // ============================================
     'virtual_columns' => array(
-        'has_risks' => array(
-            'type' => 'computed',
-            'callback' => function($item) {
-                error_log("[VIRTUAL COLUMN TEST] Visit ID: " . ($item['id'] ?? 'NULL') . " - Returning: yes");
-                return 'yes';
-            },
-        ),
+    'has_risks' => array(
+        'type' => 'computed',  // ← Změnil jsem na 'computed' (bez $wpdb)
+        'callback' => function($item) {
+            // ⚠️ TEST: Vždy vrať 'yes' abychom zjistili jestli se callback volá
+            error_log("[VIRTUAL COLUMN TEST] Visit ID: " . ($item['id'] ?? 'NULL') . " - Returning: yes");
+            return 'yes';
+        },
     ),
+),
 );

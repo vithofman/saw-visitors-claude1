@@ -170,57 +170,75 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
     }
     
     protected function before_save($data) {
-        // Handle company_id based on has_company radio selection
-        // Priority: 
-        // 1. If user explicitly selected "Physical person" (has_company = 0), set company_id to null
-        // 2. Otherwise, use company_id from form if provided
-        
-        $has_company = isset($_POST['has_company']) ? $_POST['has_company'] : null;
-        
-        // Get company_id from data array or POST (select-create component may send it in POST)
-        // Check both $data and $_POST to catch company_id from select-create component
-        $company_id = null;
-        if (isset($data['company_id'])) {
-            $company_id = $data['company_id'];
-        } elseif (isset($_POST['company_id'])) {
-            $company_id = $_POST['company_id'];
-        }
-        
-        // Normalize: empty string, '0', or 0 becomes null
-        if (empty($company_id) || $company_id === '0' || $company_id === 0) {
-            $company_id = null;
-        } else {
-            $company_id = intval($company_id);
-            // If intval returns 0, it was invalid, set to null
-            if ($company_id === 0) {
-                $company_id = null;
-            }
-        }
-        
-        // Apply logic
-        if ($has_company === '0') {
-            // User explicitly selected "Physical person" - force company_id to null
-            $data['company_id'] = null;
-        } elseif (!empty($company_id)) {
-            // company_id is provided and valid - use it (even if has_company is not explicitly set)
-            $data['company_id'] = $company_id;
-        } else {
-            // No valid company_id
-            if (empty($data['id'])) {
-                // New visit: default to null
-                $data['company_id'] = null;
-            }
-            // For updates: if company_id is not in data, don't change existing value
-            // (don't set it here, let it be preserved from existing record)
-        }
-        
-        // Set customer_id from context if not provided
-        if (empty($data['customer_id']) && class_exists('SAW_Context')) {
-            $data['customer_id'] = SAW_Context::get_customer_id();
-        }
-        
-        return $data;
+    // ============ DEBUG (can be removed later) ============
+    error_log('========== VISITS BEFORE_SAVE DEBUG ==========');
+    error_log('$_POST[has_company]: ' . var_export($_POST['has_company'] ?? 'NOT SET', true));
+    error_log('$_POST[company_id]: ' . var_export($_POST['company_id'] ?? 'NOT SET', true));
+    error_log('$data[company_id]: ' . var_export($data['company_id'] ?? 'NOT SET', true));
+    // ======================================================
+    
+    // ========================================
+    // HANDLE company_id - FIXED LOGIC v2.0
+    // ========================================
+    
+    $has_company = isset($_POST['has_company']) ? $_POST['has_company'] : null;
+    
+    // STEP 1: Get company_id from ALL possible sources
+    // Priority: $_POST > $data (because searchable select uses hidden input)
+    $company_id_from_post = isset($_POST['company_id']) ? $_POST['company_id'] : null;
+    $company_id_from_data = isset($data['company_id']) ? $data['company_id'] : null;
+    
+    // Use POST value first (searchable select), then data array
+    $company_id = $company_id_from_post;
+    if ($company_id === null || $company_id === '') {
+        $company_id = $company_id_from_data;
     }
+    
+    error_log('After source check - company_id: ' . var_export($company_id, true));
+    
+    // STEP 2: Normalize to int or null
+    if ($company_id === '' || $company_id === '0' || $company_id === 0 || $company_id === null) {
+        $company_id = null;
+    } else {
+        $company_id = intval($company_id);
+        if ($company_id === 0) {
+            $company_id = null;
+        }
+    }
+    
+    error_log('After normalize - company_id: ' . var_export($company_id, true));
+    
+    // STEP 3: Apply business logic based on has_company radio
+    if ($has_company === '0') {
+        // Physical person - ALWAYS null
+        $data['company_id'] = null;
+        error_log('Physical person selected - setting company_id to NULL');
+    } elseif ($has_company === '1') {
+        // Legal person - use the company_id (can be null if not selected)
+        $data['company_id'] = $company_id;
+        error_log('Legal person selected - setting company_id to: ' . var_export($company_id, true));
+    } else {
+        // has_company not set (shouldn't happen, but handle it)
+        if (!empty($company_id)) {
+            $data['company_id'] = $company_id;
+        } elseif (empty($data['id'])) {
+            // New record without explicit selection - default to null
+            $data['company_id'] = null;
+        }
+        // For updates without has_company: keep existing value (don't touch $data['company_id'])
+        error_log('has_company not set - company_id: ' . var_export($data['company_id'] ?? 'UNCHANGED', true));
+    }
+    
+    error_log('FINAL $data[company_id]: ' . var_export($data['company_id'] ?? 'NOT SET', true));
+    error_log('==============================================');
+    
+    // Set customer_id from context if not provided
+    if (empty($data['customer_id']) && class_exists('SAW_Context')) {
+        $data['customer_id'] = SAW_Context::get_customer_id();
+    }
+    
+    return $data;
+}
     
     /**
      * Save visit schedules and hosts after main visit is saved

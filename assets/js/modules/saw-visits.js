@@ -6,7 +6,12 @@
  * @package     SAW_Visitors
  * @subpackage  Modules/Visits
  * @since       1.0.0
- * @version     3.5.0 - FIXED: jQuery .data() cache bug - visitors not loading on AJAX navigation
+ * @version     3.6.0 - FIXED: company_id selectors for searchable select component
+ * 
+ * CHANGELOG v3.6.0:
+ * - Fixed: company_id hidden input selector (was #company_id-hidden, now uses [name="company_id"])
+ * - Fixed: company_id search input selector (was #company_id-search, now #saw-select-company_id-search)
+ * - The select-create component uses 'saw-select-' prefix for generated elements
  * 
  * CHANGELOG v3.5.0:
  * - Fixed: Visitors not displaying when navigating from detail to edit via AJAX
@@ -19,61 +24,137 @@
 (function ($) {
     'use strict';
 
-    $(document).ready(function () {
-
-        // ================================================
-        // COMPANY FIELD TOGGLE (FIXED for searchable select)
-        // ================================================
+    // ================================================
+    // COMPANY FIELD TOGGLE (FIXED for searchable select)
+    // ================================================
+    function initCompanyToggle() {
+        // DŮLEŽITÉ: Vždy hledat aktuální elementy v DOM (pro AJAX loaded content)
         const $companyRow = $('.field-company-row');
-        const $companySelect = $('#company_id');
-
+        
+        // Pokud elementy neexistují, ukončit
+        if (!$companyRow.length) {
+            return;
+        }
+        
+        /**
+         * Get company field elements
+         * Select-create component uses 'saw-select-' prefix for generated elements
+         * Hidden input has name="company_id" which is reliable selector
+         */
+        function getCompanyElements() {
+            return {
+                // Hidden input - use name attribute (reliable, set by select-create)
+                $hidden: $('input[type="hidden"][name="company_id"]'),
+                // Search input - has saw-select- prefix
+                $search: $('#saw-select-company_id-search'),
+                // Original select (hidden after select-create init)
+                $select: $('#saw-select-company_id'),
+                // Dropdown
+                $dropdown: $('#saw-select-company_id-dropdown')
+            };
+        }
+        
         function toggleCompanyField() {
             const hasCompany = $('input[name="has_company"]:checked').val();
+            const elements = getCompanyElements();
 
             if (hasCompany === '1') {
                 // Show company field
                 $companyRow.slideDown();
                 
                 // Set required on the search input (visible element after select-create init)
-                const $searchInput = $('#company_id-search');
-                if ($searchInput.length) {
-                    $searchInput.prop('required', true);
+                if (elements.$search.length) {
+                    elements.$search.prop('required', true);
                 } else {
                     // Fallback for non-searchable select
-                    $companySelect.prop('required', true);
+                    elements.$select.prop('required', true);
                 }
             } else {
                 // Hide company field
                 $companyRow.slideUp();
                 
                 // Remove required
-                const $searchInput = $('#company_id-search');
-                if ($searchInput.length) {
-                    $searchInput.prop('required', false);
+                if (elements.$search.length) {
+                    elements.$search.prop('required', false);
                 } else {
-                    $companySelect.prop('required', false);
+                    elements.$select.prop('required', false);
                 }
                 
                 // Clear ALL related inputs:
-                // 1. Original select (for non-searchable fallback)
-                $companySelect.val('');
+                // 1. Hidden input (stores actual value for searchable select)
+                if (elements.$hidden.length) {
+                    elements.$hidden.val('');
+                }
                 
-                // 2. Hidden input (stores actual value for searchable select)
-                $('#company_id-hidden').val('');
+                // 2. Original select (for non-searchable fallback)
+                if (elements.$select.length) {
+                    elements.$select.val('');
+                }
                 
                 // 3. Search input text (visible search field)
-                $('#company_id-search').val('');
+                if (elements.$search.length) {
+                    elements.$search.val('');
+                }
                 
                 // 4. Reset dropdown selection visual state
-                $('.saw-select-search-item').removeClass('selected');
+                if (elements.$dropdown.length) {
+                    elements.$dropdown.find('.saw-select-search-item').removeClass('selected');
+                }
             }
         }
-
+        
+        // Unbind first to prevent duplicate handlers
+        $('input[name="has_company"]').off('change.companyToggle');
+        
         // Toggle on radio change
-        $('input[name="has_company"]').on('change', toggleCompanyField);
-
+        $('input[name="has_company"]').on('change.companyToggle', toggleCompanyField);
+        
         // Initial state
         toggleCompanyField();
+    }
+    
+    // Ensure company_id is properly included in form submission
+    function ensureCompanyIdOnSubmit() {
+        $('.saw-visit-form').off('submit.ensureCompanyId').on('submit.ensureCompanyId', function(e) {
+            const hasCompany = $('input[name="has_company"]:checked').val();
+            
+            if (hasCompany === '1') {
+                // Legal person - ensure company_id is set
+                // Use name selector - reliable regardless of ID prefix
+                const $hiddenInput = $('input[type="hidden"][name="company_id"]');
+                const $searchInput = $('#saw-select-company_id-search');
+                
+                if ($hiddenInput.length) {
+                    const companyId = $hiddenInput.val();
+                    
+                    // If hidden input is empty but search input has text, try to find the value
+                    if (!companyId && $searchInput.length && $searchInput.val()) {
+                        console.warn('[VISITS] Company search has text but hidden input is empty - this may cause validation issues');
+                    }
+                    
+                    console.log('[VISITS] Form submit - has_company:', hasCompany, 'company_id:', companyId);
+                } else {
+                    // This might happen if select-create component didn't initialize
+                    // Check if original select has value
+                    const $originalSelect = $('#saw-select-company_id');
+                    if ($originalSelect.length && $originalSelect.val()) {
+                        console.log('[VISITS] Form submit - using original select value:', $originalSelect.val());
+                    } else {
+                        console.warn('[VISITS] Legal person selected but no company_id input found');
+                    }
+                }
+            } else {
+                console.log('[VISITS] Form submit - Physical person selected');
+            }
+        });
+    }
+
+    $(document).ready(function () {
+        // Initialize company toggle
+        initCompanyToggle();
+        
+        // Ensure company_id on form submit
+        ensureCompanyIdOnSubmit();
 
         // ================================================
         // EMAIL VALIDATION
@@ -583,7 +664,13 @@
     });
 
     // Re-initialize when new content is loaded via AJAX (e.g., sidebar form)
-    $(document).on('saw:page-loaded', function () {
+    $(document).on('saw:page-loaded saw:sidebar-loaded', function () {
+        // Re-initialize company toggle
+        setTimeout(initCompanyToggle, 50);
+        
+        // Re-ensure company_id on form submit
+        setTimeout(ensureCompanyIdOnSubmit, 50);
+        
         // Wait a bit for wp_localize_script to update window.sawVisits
         setTimeout(function() {
             waitForSawVisits(initHostsManager, 10); // Fewer attempts for re-init
@@ -629,7 +716,7 @@
          * instead of fresh data from DOM. Using .attr() always reads from DOM.
          */
         init: function() {
-            console.log('[SAWVisitorsManager] init() called - v3.5.0');
+            console.log('[SAWVisitorsManager] init() called - v3.6.0');
             
             // VŽDY resetovat state před načtením nových dat (důležité při AJAX načtení)
             this.state = {
