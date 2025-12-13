@@ -698,6 +698,24 @@ function setActiveRowFromSidebar() {
             }
         }
         
+        // Cleanup IntersectionObserver if exists
+        if (scrollArea && scrollArea._sawInfiniteScrollObserver) {
+            scrollArea._sawInfiniteScrollObserver.disconnect();
+            scrollArea._sawInfiniteScrollObserver = null;
+            if (DEBUG) {
+                console.log('🧹 Cleaned up previous IntersectionObserver');
+            }
+        }
+        
+        // Cleanup sentinel if exists
+        if (scrollArea && scrollArea._sawInfiniteScrollSentinel) {
+            scrollArea._sawInfiniteScrollSentinel.remove();
+            scrollArea._sawInfiniteScrollSentinel = null;
+            if (DEBUG) {
+                console.log('🧹 Cleaned up previous sentinel element');
+            }
+        }
+        
         const tbody = document.querySelector('.saw-admin-table tbody');
         
         if (!scrollArea || !tbody) {
@@ -721,6 +739,31 @@ function setActiveRowFromSidebar() {
         const perPage = config.infinite_scroll.per_page || 50;
         const threshold = config.infinite_scroll.threshold || 0.6; // OPRAVENO 2025-01-22: Sníženo z 70% na 60% pro dřívější loading
         const entity = config.entity;
+        
+        // KRITICKÉ: Nastavit šířku prvního sloupce HNED při inicializaci pro translations
+        // Použijeme table-layout: auto, ale s pevnou šířkou prvního sloupce
+        if (entity === 'translations') {
+            const table = tbody.closest('.saw-admin-table');
+            if (table) {
+                // Nastavit šířku tabulky
+                table.style.setProperty('width', '100%', 'important');
+                table.style.setProperty('min-width', '100%', 'important');
+                table.style.setProperty('max-width', '100%', 'important');
+                
+                // Nastavit šířku na všechny existující řádky HNED
+                const firstColWidth = '300px';
+                const existingFirstTds = table.querySelectorAll('tbody td:first-child, thead th:first-child');
+                existingFirstTds.forEach(td => {
+                    td.style.setProperty('width', firstColWidth, 'important');
+                    td.style.setProperty('min-width', firstColWidth, 'important');
+                    td.style.setProperty('max-width', firstColWidth, 'important');
+                    td.style.setProperty('white-space', 'nowrap', 'important');
+                    td.style.setProperty('overflow', 'hidden', 'important');
+                    td.style.setProperty('text-overflow', 'ellipsis', 'important');
+                    td.style.setProperty('box-sizing', 'border-box', 'important');
+                });
+            }
+        }
         
         // Cache loaded pages to prevent re-loading when scrolling back up
         const loadedPages = new Set();
@@ -994,6 +1037,11 @@ console.log('🚀 SENDING AJAX REQUEST:', {
                     loadingEl.remove();
                 }
                 
+                // ✅ NOVÉ: Přesuň sentinel na konec po přidání nových řádků
+                if (scrollArea._moveSentinelToEnd) {
+                    scrollArea._moveSentinelToEnd();
+                }
+                
                 if (data.success && data.data) {
                     const { html, has_more, loaded, page } = data.data;
                     
@@ -1065,6 +1113,24 @@ console.log('🚀 SENDING AJAX REQUEST:', {
                             console.log('✅ Adding', rowsToAdd.length, 'new rows (batch append)');
                         }
                         
+                        // KRITICKÉ: Nastavit šířku prvního sloupce PŘED přidáním do DOM
+                        // Toto je nutné, protože AJAX HTML nemusí mít inline styly
+                        if (entity === 'translations') {
+                            const firstColWidth = '300px';
+                            rowsToAdd.forEach(row => {
+                                const firstTd = row.querySelector('td:first-child');
+                                if (firstTd) {
+                                    firstTd.style.width = firstColWidth;
+                                    firstTd.style.minWidth = firstColWidth;
+                                    firstTd.style.maxWidth = firstColWidth;
+                                    firstTd.style.whiteSpace = 'nowrap';
+                                    firstTd.style.overflow = 'hidden';
+                                    firstTd.style.textOverflow = 'ellipsis';
+                                    firstTd.style.boxSizing = 'border-box';
+                                }
+                            });
+                        }
+                        
                         // Append to fragment (NO reflow)
                         rowsToAdd.forEach(row => {
                             fragment.appendChild(row);
@@ -1072,6 +1138,11 @@ console.log('🚀 SENDING AJAX REQUEST:', {
                         
                         // KRITICKÉ: Jen JEDEN reflow!
                         tbody.appendChild(fragment);
+                        
+                        // Ensure table-layout: fixed after adding new rows
+                        if (entity === 'translations' && window.fixTranslationKeyColumnWidth) {
+                            setTimeout(window.fixTranslationKeyColumnWidth, 0);
+                        }
                         
                         // ╔═══════════════════════════════════════════════════════════╗
                         // ║ NOVÁ LOGIKA: CHECK FOR PENDING ACTIVE ROW                ║
@@ -1622,6 +1693,104 @@ console.log('🚀 SENDING AJAX REQUEST:', {
             sessionStorage.removeItem(`saw-page-${entity}`);
         }
         
+        // ============================================
+        // MOBILE/TABLET FALLBACK: IntersectionObserver
+        // ============================================
+        // IntersectionObserver funguje i když scroll eventy nefungují
+        // (např. když na mobilu scrolluje window místo scrollArea)
+        // Toto je ADDITIVNÍ - nerozbije stávající desktop funkcionalitu
+        
+        function initIntersectionObserverFallback() {
+            // Zkontroluj podporu (iOS 12.2+, Android 5+, všechny moderní browsery)
+            if (!('IntersectionObserver' in window)) {
+                if (DEBUG) {
+                    console.log('⚠️ IntersectionObserver not supported - skipping fallback');
+                }
+                return;
+            }
+            
+            // Odstraň předchozí sentinel pokud existuje (cleanup při AJAX navigation)
+            const existingSentinel = tbody.querySelector('.saw-infinite-scroll-sentinel');
+            if (existingSentinel) {
+                existingSentinel.remove();
+            }
+            
+            // Odstraň předchozí observer pokud existuje
+            if (scrollArea._sawInfiniteScrollObserver) {
+                scrollArea._sawInfiniteScrollObserver.disconnect();
+                scrollArea._sawInfiniteScrollObserver = null;
+            }
+            
+            // Vytvoř sentinel element - neviditelný řádek na konci tabulky
+            const sentinel = document.createElement('tr');
+            sentinel.className = 'saw-infinite-scroll-sentinel';
+            sentinel.setAttribute('aria-hidden', 'true');
+            sentinel.innerHTML = '<td colspan="100" class="saw-sentinel-cell"></td>';
+            tbody.appendChild(sentinel);
+            
+            // Vytvoř IntersectionObserver
+            // DŮLEŽITÉ: root: null = sleduje vůči VIEWPORT (celé obrazovce)
+            // Tím pádem funguje i když scrolluje window místo scrollArea
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        if (DEBUG) {
+                            console.log('👁️ IntersectionObserver: Sentinel is visible', {
+                                hasMore: hasMore,
+                                isLoading: isLoading,
+                                intersectionRatio: entry.intersectionRatio
+                            });
+                        }
+                        
+                        // Načti další stránku pokud je co načítat a neprobíhá načítání
+                        if (hasMore && !isLoading) {
+                            if (DEBUG) {
+                                console.log('👁️ IntersectionObserver: Triggering loadNextPage()');
+                            }
+                            loadNextPage();
+                        }
+                    }
+                });
+            }, {
+                root: null,           // null = viewport (funguje i při window scroll)
+                rootMargin: '400px',  // Načti 400px PŘED tím, než uživatel dorazí na konec
+                threshold: 0          // Spustí se jakmile je vidět 1px sentinelu
+            });
+            
+            // Spusť pozorování
+            observer.observe(sentinel);
+            
+            // Ulož referenci pro cleanup
+            scrollArea._sawInfiniteScrollObserver = observer;
+            scrollArea._sawInfiniteScrollSentinel = sentinel;
+            
+            if (DEBUG) {
+                console.log('✅ IntersectionObserver fallback initialized', {
+                    sentinel: sentinel,
+                    rootMargin: '400px',
+                    threshold: 0
+                });
+            }
+        }
+        
+        // Funkce pro PŘESUN sentinelu na konec tabulky po načtení nových řádků
+        // Musí se volat po každém úspěšném načtení
+        function moveSentinelToEnd() {
+            const sentinel = tbody.querySelector('.saw-infinite-scroll-sentinel');
+            if (sentinel && tbody.lastElementChild !== sentinel) {
+                tbody.appendChild(sentinel);
+                if (DEBUG) {
+                    console.log('📍 Sentinel moved to end of tbody');
+                }
+            }
+        }
+        
+        // Ulož funkci globálně pro volání z loadNextPage
+        scrollArea._moveSentinelToEnd = moveSentinelToEnd;
+        
+        // Inicializuj IntersectionObserver fallback
+        initIntersectionObserverFallback();
+        
         console.log('✅ Infinite scroll initialized for', entity, '- Enhanced cache mode');
     }
     
@@ -1663,6 +1832,29 @@ console.log('🚀 SENDING AJAX REQUEST:', {
         });
     }
 
+    /**
+     * Ensure table-layout: fixed for translations table
+     * Width is handled by inline styles from column config
+     */
+    window.fixTranslationKeyColumnWidth = function() {
+        const table = document.querySelector('#saw-translations-table-wrapper .saw-admin-table');
+        if (table) {
+            // Ensure width 100% so other columns can expand
+            table.style.setProperty('width', '100%', 'important');
+            table.style.setProperty('min-width', '100%', 'important');
+            table.style.setProperty('max-width', '100%', 'important');
+            
+            // Ensure first column width is fixed
+            const firstColWidth = '300px';
+            const firstTds = table.querySelectorAll('tbody td:first-child, thead th:first-child');
+            firstTds.forEach(td => {
+                td.style.setProperty('width', firstColWidth, 'important');
+                td.style.setProperty('min-width', firstColWidth, 'important');
+                td.style.setProperty('max-width', firstColWidth, 'important');
+            });
+        }
+    };
+    
     $(document).ready(function () {
         initAdminTable();
         
@@ -1689,6 +1881,55 @@ console.log('🚀 SENDING AJAX REQUEST:', {
                 const entity = $(this).data('entity');
                 const currentId = $(this).data('current-id');
                 console.log('  - Sidebar:', { entity, currentId, mode: $(this).data('mode') });
+            });
+        }
+        
+        // Fix width immediately
+        if (window.fixTranslationKeyColumnWidth) {
+            window.fixTranslationKeyColumnWidth();
+        }
+        
+        // Fix width after infinite scroll loads new rows using MutationObserver
+        const translationsTbody = document.querySelector('#saw-translations-table-wrapper tbody');
+        if (translationsTbody) {
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.addedNodes.length > 0) {
+                        setTimeout(function() {
+                            if (window.fixTranslationKeyColumnWidth) {
+                                window.fixTranslationKeyColumnWidth();
+                            }
+                        }, 0);
+                    }
+                });
+            });
+            observer.observe(translationsTbody, {
+                childList: true,
+                subtree: false
+            });
+        }
+        
+        // Watch for table style changes and re-apply width if needed
+        const translationsTable = document.querySelector('#saw-translations-table-wrapper .saw-admin-table');
+        if (translationsTable) {
+            const tableObserver = new MutationObserver(function(mutations) {
+                let needsFix = false;
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                        const table = mutation.target;
+                        const currentWidth = table.style.width;
+                        if (currentWidth !== '100%' && currentWidth !== '') {
+                            needsFix = true;
+                        }
+                    }
+                });
+                if (needsFix && window.fixTranslationKeyColumnWidth) {
+                    setTimeout(window.fixTranslationKeyColumnWidth, 0);
+                }
+            });
+            tableObserver.observe(translationsTable, {
+                attributes: true,
+                attributeFilter: ['style']
             });
         }
         

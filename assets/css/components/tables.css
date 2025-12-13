@@ -809,6 +809,37 @@
     z-index: 50;
 }
 
+/* ============================================
+   INFINITE SCROLL SENTINEL (IntersectionObserver)
+   Neviditelný element pro detekci konce tabulky
+   ============================================ */
+.saw-infinite-scroll-sentinel {
+    /* Neviditelný ale přítomný v DOM */
+    visibility: hidden;
+    height: 0;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    font-size: 0;
+    line-height: 0;
+}
+.saw-infinite-scroll-sentinel .saw-sentinel-cell {
+    height: 1px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    background: transparent !important;
+}
+/* Debug mode - zobrazí sentinel jako červenou čáru */
+.saw-debug-mode .saw-infinite-scroll-sentinel {
+    visibility: visible;
+    height: 2px;
+}
+.saw-debug-mode .saw-infinite-scroll-sentinel .saw-sentinel-cell {
+    height: 2px !important;
+    background: red !important;
+}
+
 /* END OF RESULTS INDICATOR */
 .saw-infinite-end {
     padding: 24px;
@@ -944,6 +975,15 @@
     border-collapse: separate;
     border-spacing: 0;
     min-width: 1000px; /* OPRAVENO: Minimální šířka tabulky pro horizontální scrollování na mobilu */
+}
+
+/* Translations table - use auto layout but fix first column width */
+#saw-translations-table-wrapper table.saw-admin-table,
+#saw-translations-table-wrapper .saw-admin-table {
+    table-layout: auto !important;
+    width: 100% !important;
+    min-width: 100% !important; /* Override default min-width: 1000px */
+    max-width: 100% !important;
 }
 
 /* Nested table removed - not used */
@@ -2596,4 +2636,25 @@
         padding: 0 !important;
         margin: 0 !important;
     }
+}
+
+/* ============================================
+   TRANSLATIONS TABLE - FIXED KEY COLUMN WIDTH
+   ============================================ */
+/* Use min-width instead of width to prevent expansion but allow proper table layout */
+#saw-translations-table-wrapper .saw-admin-table thead th:first-child,
+#saw-translations-table-wrapper .saw-admin-table tbody td:first-child {
+    width: 300px !important;
+    min-width: 300px !important;
+    max-width: 300px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    box-sizing: border-box !important;
+}
+
+/* Ensure table wrapper and table stay at 100% width */
+#saw-translations-table-wrapper {
+    width: 100% !important;
+    max-width: 100% !important;
 }

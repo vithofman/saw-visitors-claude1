@@ -179,6 +179,7 @@ if (isset($controller) && method_exists($controller, 'get_table_columns')) {
             'type' => 'text',
             'class' => 'saw-table-cell-bold',
             'sortable' => true,
+            'width' => '300px', // Fixed width to prevent layout shift
         ),
         'language_code' => array(
             'label' => $tr('col_language', 'Jazyk'),
