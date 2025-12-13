@@ -161,8 +161,16 @@ abstract class SAW_Base_Model
         $total = $wpdb->get_var($total_sql);
         
         $limit = intval($filters['per_page'] ?? 20);
-        $offset = ($filters['page'] ?? 1) - 1;
-        $offset = $offset * $limit;
+        // ⭐ KRITICKÁ OPRAVA: Pokud je v filters vlastní offset, použijeme ho
+        // To umožňuje infinite scroll používat kumulativní offset místo page-based
+        if (isset($filters['offset']) && $filters['offset'] >= 0) {
+            // Vlastní offset (pro infinite scroll)
+            $offset = intval($filters['offset']);
+        } else {
+            // Standardní page-based offset
+            $offset = ($filters['page'] ?? 1) - 1;
+            $offset = $offset * $limit;
+        }
         
         $sql .= " LIMIT {$limit} OFFSET {$offset}";
         

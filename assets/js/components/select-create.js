@@ -78,7 +78,7 @@
                 class: 'saw-input saw-select-search-input',
                 id: fieldId + '-search',
                 placeholder: placeholder,
-                autocomplete: 'off'
+                autocomplete: 'new-password' // Prevent browser from recognizing as company field
             });
             
             // ============================================

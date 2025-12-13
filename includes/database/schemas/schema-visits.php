@@ -25,6 +25,7 @@ function saw_get_schema_visits($table_name, $prefix, $charset_collate) {
 		risks_text LONGTEXT NULL,
 		risks_document_path VARCHAR(500) NULL,
 		risks_document_name VARCHAR(255) NULL,
+		risks_status ENUM('pending', 'completed', 'missing') DEFAULT 'pending' COMMENT 'pending = čeká se na rizika (před dnem návštěvy), completed = rizika nahraná, missing = rizika chybí (v den návštěvy nebo později)',
 		purpose TEXT NULL,
 		notes TEXT NULL,
 		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

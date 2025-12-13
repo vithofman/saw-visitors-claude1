@@ -90,6 +90,15 @@ class SAW_Component_Admin_Table {
             ? $config['tab_counts']
             : null;
         
+        // ⭐ KRITICKÁ OPRAVA: Preserve infinite_scroll from module_config BEFORE wp_parse_args
+        // wp_parse_args does shallow merge, so nested arrays need explicit handling
+        $preserved_infinite_scroll = null;
+        if (isset($config['module_config']['infinite_scroll']) && is_array($config['module_config']['infinite_scroll'])) {
+            $preserved_infinite_scroll = $config['module_config']['infinite_scroll'];
+        } elseif (isset($config['infinite_scroll']) && is_array($config['infinite_scroll'])) {
+            $preserved_infinite_scroll = $config['infinite_scroll'];
+        }
+        
         $defaults = array(
             'columns' => array(),
             'rows' => array(),
@@ -181,6 +190,12 @@ class SAW_Component_Admin_Table {
             $parsed['tab_counts'] = $preserved_tab_counts;
         } elseif (!isset($parsed['tab_counts']) || !is_array($parsed['tab_counts'])) {
             $parsed['tab_counts'] = array();
+        }
+        
+        // ⭐ KRITICKÁ OPRAVA: Restore preserved infinite_scroll if it exists
+        // wp_parse_args does shallow merge, so nested arrays need explicit handling
+        if ($preserved_infinite_scroll !== null) {
+            $parsed['infinite_scroll'] = $preserved_infinite_scroll;
         }
         
         // Legacy support: convert old format to new format
@@ -1037,6 +1052,7 @@ private function output_js_config() {
         'infinite_scroll' => $this->config['infinite_scroll'],
         'tabs' => $this->config['tabs'] ?? null,
         'current_tab' => $this->config['current_tab'] ?? null,
+        'total_items' => $this->config['total_items'] ?? 0, // ⭐ NOVÉ: Přidat total_items pro správnou inicializaci hasMore
     );
     
     echo '<script>';

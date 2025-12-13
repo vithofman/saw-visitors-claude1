@@ -711,14 +711,26 @@ function setActiveRowFromSidebar() {
         
         // Count existing rows to determine starting page
         const existingRows = tbody.querySelectorAll('tr.saw-table-row').length;
+        const totalItems = config.total_items || 0; // ⭐ NOVÉ: Získat total_items z configu
+        
+        // ⭐ KRITICKÁ OPRAVA: Inicializovat hasMore na základě total_items
+        if (totalItems > 0) {
+            hasMore = existingRows < totalItems;
+        } else {
+            // Fallback: pokud není total_items, použít defaultní logiku
+            hasMore = true;
+        }
         
         if (DEBUG) {
             console.log('Initial rows:', existingRows);
+            console.log('Total items:', totalItems);
+            console.log('Has more:', hasMore);
             console.log('Initial load:', initialLoad);
             console.log('Per page:', perPage);
             console.log('Threshold:', threshold * 100 + '%');
         }
         
+        // ⭐ FIX: Správně určit currentPage i když je existingRows < initialLoad
         if (existingRows >= initialLoad) {
             // Already have initial load, use per_page for next loads
             currentPage = Math.ceil(existingRows / perPage);
@@ -726,17 +738,42 @@ function setActiveRowFromSidebar() {
             for (let i = 1; i <= currentPage; i++) {
                 loadedPages.add(i);
             }
-        } else {
-            // First load, use initial_load
-            currentPage = 1;
-            if (existingRows > 0) {
-                loadedPages.add(1);
+        } else if (existingRows > 0) {
+            // First load with fewer rows than initialLoad
+            // Calculate which page we're on based on perPage (not initialLoad)
+            currentPage = Math.ceil(existingRows / perPage);
+            // Mark pages as loaded up to current page
+            for (let i = 1; i <= currentPage; i++) {
+                loadedPages.add(i);
             }
+        } else {
+            // No rows yet, start at page 1
+            currentPage = 1;
         }
         
         if (DEBUG) {
             console.log('Loaded pages:', Array.from(loadedPages));
             console.groupEnd();
+        }
+        
+        // ⭐ KRITICKÁ OPRAVA: Automaticky načíst další stránku, pokud není scrollovatelné
+        // a existují další záznamy k načtení
+        if (existingRows > 0 && existingRows < initialLoad && hasMore) {
+            // Zkontroluj, zda je scrollArea scrollovatelné
+            const isScrollable = scrollArea.scrollHeight > scrollArea.clientHeight;
+            
+            if (!isScrollable) {
+                // ScrollArea není scrollovatelné, ale existují další záznamy
+                // Automaticky načíst další stránku
+                if (DEBUG) {
+                    console.log('🔄 Auto-loading next page - scroll area not scrollable');
+                    console.log('Scroll height:', scrollArea.scrollHeight, 'Client height:', scrollArea.clientHeight);
+                }
+                // Malé zpoždění, aby se DOM stihl vykreslit
+                setTimeout(() => {
+                    loadNextPage();
+                }, 100);
+            }
         }
         
         // Track loaded row IDs to prevent duplicates
@@ -830,11 +867,15 @@ function setActiveRowFromSidebar() {
                 : (typeof sawAjaxNonce !== 'undefined' ? sawAjaxNonce : '');
             
             // Build request data
+            // ⭐ NOVÉ: Pošli skutečný počet již načtených záznamů pro offset-based pagination
+            const loadedCount = tbody.querySelectorAll('tr.saw-table-row[data-id]').length;
+            
             const requestData = new URLSearchParams({
                 action: 'saw_get_items_infinite_' + entity.replace(/_/g, '-'),
                 nonce: nonce,
                 page: nextPage,
                 per_page: nextPage === 1 ? initialLoad : perPage, // OPRAVENO 2025-01-22: Použij initial_load pro první stránku
+                loaded_count: loadedCount, // NOVÉ: Počet skutečně načtených záznamů pro offset-based pagination
                 search: filters.search || '',
                 orderby: filters.orderby || 'id',
                 order: filters.order || 'DESC',

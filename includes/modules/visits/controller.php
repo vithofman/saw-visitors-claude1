@@ -203,10 +203,26 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         // Priority: POST > data (because hidden input may not go through prepare_form_data)
         $company_id = null;
         
-        // Check $_POST first (hidden input from select-create)
-        if (isset($_POST['company_id'])) {
+        // ⭐ FIX v3.8.0: Check for 'visit_company_selection' first (neutral field name to prevent autocomplete)
+        // Then fallback to 'company_id' for backward compatibility
+        if (isset($_POST['visit_company_selection'])) {
+            $raw_value = $_POST['visit_company_selection'];
+            error_log('Found in $_POST[visit_company_selection]: ' . var_export($raw_value, true));
+            
+            // Normalize: empty string, "0", 0 -> null, otherwise int
+            if ($raw_value === '' || $raw_value === '0' || $raw_value === 0) {
+                $company_id = null;
+            } else {
+                $company_id = absint($raw_value);
+                if ($company_id === 0) {
+                    $company_id = null;
+                }
+            }
+        }
+        // Fallback to old 'company_id' for backward compatibility
+        elseif (isset($_POST['company_id'])) {
             $raw_value = $_POST['company_id'];
-            error_log('Found in $_POST: ' . var_export($raw_value, true));
+            error_log('Found in $_POST[company_id]: ' . var_export($raw_value, true));
             
             // Normalize: empty string, "0", 0 -> null, otherwise int
             if ($raw_value === '' || $raw_value === '0' || $raw_value === 0) {
@@ -329,6 +345,14 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
                 $time_to = isset($schedule_times_to[$index]) ? sanitize_text_field(trim($schedule_times_to[$index])) : '';
                 $notes = isset($schedule_notes[$index]) ? sanitize_textarea_field(trim($schedule_notes[$index])) : '';
                 
+                // ⭐ FIX: Convert empty time strings to NULL (prevents 00:00:00 in database)
+                if (empty($time_from) || $time_from === '' || $time_from === '0:00' || $time_from === '00:00') {
+                    $time_from = null;
+                }
+                if (empty($time_to) || $time_to === '' || $time_to === '0:00' || $time_to === '00:00') {
+                    $time_to = null;
+                }
+                
                 $wpdb->insert(
                     $schedule_table,
                     array(
@@ -341,7 +365,7 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
                         'notes' => $notes,
                         'sort_order' => intval($index)
                     ),
-                    array('%d', '%d', '%d', '%s', '%s', '%s', '%s', '%d')
+                    array('%d', '%d', '%d', '%s', $time_from === null ? null : '%s', $time_to === null ? null : '%s', '%s', '%d')
                 );
             }
         }
@@ -423,6 +447,9 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
                     $date_changed = true;
                     $old_date = $old_date_from;
                     $new_date = $planned_date_from;
+                    
+                    // ⭐ Recalculate risks_status when visit date changes
+                    $this->model->update_risks_status($visit_id);
                 } elseif ($old_date_to !== $planned_date_to) {
                     $date_changed = true;
                     $old_date = $old_date_to;
@@ -1206,8 +1233,9 @@ public function ajax_send_invitation() {
             'company_person' => array(
                 'label' => 'Návštěvník',
                 'type' => 'custom',
-                'sortable' => false,
+                'sortable' => true,
                 'class' => 'saw-table-cell-bold',
+                'width' => '280px', // ⭐ Zúžený sloupec
                 'callback' => function($value, $item) {
                     if (!empty($item['company_id'])) {
                         echo '<div style="display: flex; align-items: center; gap: 8px;">';
@@ -1226,14 +1254,11 @@ public function ajax_send_invitation() {
                     }
                 },
             ),
-            'branch_name' => array(
-                'label' => 'Pobočka',
-                'type' => 'text',
-                'sortable' => false,
-            ),
+            // ⭐ Sloupec pobočky odstraněn - zobrazují se jen data zvolené pobočky z branch switcher
             'visit_type' => array(
                 'label' => 'Typ',
                 'type' => 'badge',
+                'sortable' => true,
                 'width' => '120px',
                 'map' => array(
                     'planned' => 'info',
@@ -1258,6 +1283,23 @@ public function ajax_send_invitation() {
                     }
                 },
             ),
+            'risks_status' => array(
+                'label' => 'Rizika',
+                'type' => 'badge',
+                'sortable' => true,
+                'width' => '120px',
+                'align' => 'center',
+                'map' => array(
+                    'pending' => 'secondary',
+                    'completed' => 'success',
+                    'missing' => 'danger',
+                ),
+                'labels' => array(
+                    'pending' => 'Čeká se',
+                    'completed' => 'OK',
+                    'missing' => 'Chybí',
+                ),
+            ),
             'status' => array(
                 'label' => 'Stav',
                 'type' => 'badge',
@@ -1280,11 +1322,11 @@ public function ajax_send_invitation() {
                     'cancelled' => 'Zrušená',
                 ),
             ),
-            'created_at' => array(
-                'label' => 'Vytvořeno',
+            'planned_date_from' => array(
+                'label' => 'Datum návštěvy (od)',
                 'type' => 'date',
                 'sortable' => true,
-                'width' => '120px',
+                'width' => '140px',
                 'format' => 'd.m.Y',
             ),
         );

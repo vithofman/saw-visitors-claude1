@@ -184,7 +184,12 @@ class SAW_Module_Permissions_Model extends SAW_Base_Model {
         // ================================================
         $limit = intval($args['per_page'] ?? 50);
         $page = intval($args['page'] ?? 1);
-        $offset = ($page - 1) * $limit;
+        // ⭐ KRITICKÁ OPRAVA: Podpora vlastního offsetu pro infinite scroll
+        if (isset($args['offset']) && $args['offset'] >= 0) {
+            $offset = intval($args['offset']);
+        } else {
+            $offset = ($page - 1) * $limit;
+        }
         
         // Add LIMIT and OFFSET (safe, already validated as integers)
         $query .= " LIMIT {$limit} OFFSET {$offset}";

@@ -682,17 +682,22 @@ class SAW_Module_Visitors_Controller extends SAW_Base_Controller
         $data['total'] = $total_items;
         
         // Get columns config
-        $columns_json = isset($_POST['columns']) ? $_POST['columns'] : '';
+        // ⭐ FIX: Always prioritize get_table_columns() if it exists, because it contains callbacks
+        // JSON columns don't have callbacks (can't be serialized), so we need the full config
         $columns = array();
-        if (!empty($columns_json)) {
-            $decoded = json_decode(stripslashes($columns_json), true);
-            if (is_array($decoded)) {
-                $columns = $decoded;
-            }
-        }
         
-        if (empty($columns) && method_exists($this, 'get_table_columns')) {
+        if (method_exists($this, 'get_table_columns')) {
+            // Priority: use get_table_columns() - it contains callbacks and full config
             $columns = $this->get_table_columns();
+        } else {
+            // Fallback: use columns from JSON (without callbacks)
+            $columns_json = isset($_POST['columns']) ? $_POST['columns'] : '';
+            if (!empty($columns_json)) {
+                $decoded = json_decode(stripslashes($columns_json), true);
+                if (is_array($decoded)) {
+                    $columns = $decoded;
+                }
+            }
         }
         
         if (!is_array($columns)) {

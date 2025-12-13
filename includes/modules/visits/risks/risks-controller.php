@@ -335,7 +335,49 @@ class SAW_Visit_Risks_Controller {
         }
         
         // ========================================
-        // 4. Clear cache and redirect
+        // 4. Update risks_status in visits table
+        // ========================================
+        // Check if we have any risks (text or documents)
+        $has_risks_text = !empty(trim($risks_text));
+        $has_risks_docs = !empty($_FILES['risks_documents']['name'][0]);
+        $has_existing_text = !empty($existing_text_id);
+        
+        // Check for existing documents
+        $existing_docs_count = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}saw_visit_invitation_materials 
+             WHERE visit_id = %d AND material_type = 'document'",
+            $this->visit_id
+        ));
+        $has_existing_docs = ($existing_docs_count > 0);
+        
+        // Also check risks_text and risks_document_path in visits table
+        $visit_has_risks = $wpdb->get_var($wpdb->prepare(
+            "SELECT (risks_text IS NOT NULL AND risks_text != '') OR 
+                    (risks_document_path IS NOT NULL AND risks_document_path != '')
+             FROM {$wpdb->prefix}saw_visits WHERE id = %d",
+            $this->visit_id
+        ));
+        
+        // Determine if risks are present
+        $has_risks = $has_risks_text || $has_risks_docs || $has_existing_text || 
+                     $has_existing_docs || $visit_has_risks;
+        
+        // Update risks_status
+        if ($has_risks) {
+            $wpdb->update(
+                $wpdb->prefix . 'saw_visits',
+                ['risks_status' => 'completed'],
+                ['id' => $this->visit_id],
+                ['%s'],
+                ['%d']
+            );
+        } else {
+            // Recalculate status based on visit date
+            $this->recalculate_risks_status();
+        }
+        
+        // ========================================
+        // 5. Clear cache and redirect
         // ========================================
         if (class_exists('SAW_Cache')) {
             SAW_Cache::delete('visit_' . $this->visit_id, 'visits');
@@ -350,6 +392,41 @@ class SAW_Visit_Risks_Controller {
         
         wp_redirect($redirect_url);
         exit;
+    }
+    
+    /**
+     * Recalculate risks_status based on visit date and current risks
+     * 
+     * @since 5.1.6
+     * @return void
+     */
+    private function recalculate_risks_status() {
+        global $wpdb;
+        
+        $visit = $this->visit;
+        $visit_date = $visit['planned_date_from'] ?? null;
+        $today = current_time('Y-m-d');
+        
+        if (!$visit_date) {
+            $status = 'pending';
+        } else {
+            $visit_date_obj = new DateTime($visit_date);
+            $today_obj = new DateTime($today);
+            
+            if ($visit_date_obj > $today_obj) {
+                $status = 'pending'; // Before visit date
+            } else {
+                $status = 'missing'; // On or after visit date, but no risks
+            }
+        }
+        
+        $wpdb->update(
+            $wpdb->prefix . 'saw_visits',
+            ['risks_status' => $status],
+            ['id' => $this->visit_id],
+            ['%s'],
+            ['%d']
+        );
     }
     
     /**

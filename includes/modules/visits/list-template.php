@@ -108,17 +108,14 @@ $table_config['search'] = array(
 // FILTERS CONFIGURATION
 // ============================================
 $table_config['filters'] = array(
-    'status' => array(
+    'risks_status' => array(
         'type' => 'select',
-        'label' => $tr('filter_status', 'Stav'),
+        'label' => $tr('filter_risks_status', 'Rizika'),
         'options' => array(
-            '' => $tr('filter_all_statuses', 'Všechny stavy'),
-            'draft' => $tr('status_draft', 'Koncept'),
-            'pending' => $tr('status_pending', 'Čekající'),
-            'confirmed' => $tr('status_confirmed', 'Potvrzená'),
-            'in_progress' => $tr('status_in_progress', 'Probíhající'),
-            'completed' => $tr('status_completed', 'Dokončená'),
-            'cancelled' => $tr('status_cancelled', 'Zrušená'),
+            '' => $tr('filter_all_risks', 'Všechna rizika'),
+            'pending' => $tr('risks_pending', 'Čeká se'),
+            'completed' => $tr('risks_ok', 'OK'),
+            'missing' => $tr('risks_missing', 'Chybí'),
         ),
     ),
     'visit_type' => array(
@@ -147,8 +144,9 @@ $table_config['columns'] = array(
     'company_person' => array(
         'label' => $tr('col_visitor', 'Návštěvník'),
         'type' => 'custom',
-        'sortable' => false,
+        'sortable' => true,
         'class' => 'saw-table-cell-bold',
+        'width' => '280px', // ⭐ Zúžený sloupec
         'callback' => function($value, $item) use ($visitor_company_label, $visitor_physical_label, $visitor_physical_short) {
             if (!empty($item['company_id'])) {
                 $company_name = esc_html($item['company_name'] ?? 'Firma #' . $item['company_id']);
@@ -169,17 +167,12 @@ $table_config['columns'] = array(
         },
     ),
     
-    'branch_name' => array(
-        'label' => $tr('col_branch', 'Pobočka'),
-        'type' => 'text',
-        'sortable' => false,
-        'width' => '150px',
-    ),
+    // ⭐ Sloupec pobočky odstraněn - zobrazují se jen data zvolené pobočky z branch switcher
     
     'visit_type' => array(
         'label' => $tr('col_type', 'Typ'),
         'type' => 'badge',
-        'sortable' => false,
+        'sortable' => true,
         'width' => '110px',
         'map' => array(
             'planned' => 'info',
@@ -207,24 +200,22 @@ $table_config['columns'] = array(
         },
     ),
     
-    'has_risks' => array(
+    'risks_status' => array(
         'label' => $tr('col_risks', 'Rizika'),
-        'type' => 'custom',
-        'sortable' => false,
-        'width' => '100px',
+        'type' => 'badge',
+        'sortable' => true,
+        'width' => '120px',
         'align' => 'center',
-        'callback' => function($value, $item) use ($risks_missing_label, $risks_ok_label, $risks_missing_title, $risks_ok_title) {
-            $has_risks = $item['has_risks'] ?? 'no';
-            $status = $item['status'] ?? '';
-            
-            if ($status === 'confirmed' && $has_risks === 'no') {
-                echo '<span class="saw-badge saw-badge-danger" style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px;" title="' . esc_attr($risks_missing_title) . '">⚠️ ' . esc_html($risks_missing_label) . '</span>';
-            } elseif ($has_risks === 'yes') {
-                echo '<span class="saw-badge saw-badge-success" style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px;" title="' . esc_attr($risks_ok_title) . '">✅ ' . esc_html($risks_ok_label) . '</span>';
-            } else {
-                echo '<span style="color: #999;">—</span>';
-            }
-        },
+        'map' => array(
+            'pending' => 'secondary',
+            'completed' => 'success',
+            'missing' => 'danger',
+        ),
+        'labels' => array(
+            'pending' => $tr('risks_pending', 'Čeká se'),
+            'completed' => $tr('risks_ok', 'OK'),
+            'missing' => $tr('risks_missing', 'Chybí'),
+        ),
     ),
     
     'status' => array(
@@ -250,11 +241,11 @@ $table_config['columns'] = array(
         ),
     ),
     
-    'created_at' => array(
-        'label' => $tr('col_created_at', 'Vytvořeno'),
+    'planned_date_from' => array(
+        'label' => $tr('col_planned_date_from', 'Datum návštěvy (od)'),
         'type' => 'date',
         'sortable' => true,
-        'width' => '110px',
+        'width' => '140px',
         'format' => 'd.m.Y',
     ),
 );
@@ -293,12 +284,8 @@ if (!empty($table_config['tabs']['enabled'])) {
 // ============================================
 // INFINITE SCROLL CONFIGURATION
 // ============================================
-$table_config['infinite_scroll'] = array(
-    'enabled' => true,
-    'initial_load' => 100,
-    'per_page' => 50,
-    'threshold' => 0.6,
-);
+// ⭐ ODSTRANĚNO: Konfigurace je nyní v config.php, není potřeba duplikovat
+// Konfigurace se automaticky převezme z $config do $table_config přes module_config
 
 // ============================================
 // RENDER TABLE

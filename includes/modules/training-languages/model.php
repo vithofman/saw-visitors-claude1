@@ -89,7 +89,12 @@ class SAW_Module_Training_Languages_Model extends SAW_Base_Model
         
         $page = isset($filters['page']) ? max(1, intval($filters['page'])) : 1;
         $per_page = isset($filters['per_page']) ? intval($filters['per_page']) : 20;
-        $offset = ($page - 1) * $per_page;
+        // ⭐ KRITICKÁ OPRAVA: Podpora vlastního offsetu pro infinite scroll
+        if (isset($filters['offset']) && $filters['offset'] >= 0) {
+            $offset = intval($filters['offset']);
+        } else {
+            $offset = ($page - 1) * $per_page;
+        }
         
         $total = count($wpdb->get_results($wpdb->prepare($sql, ...$params)));
         

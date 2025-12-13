@@ -73,7 +73,12 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
         
         $page = isset($filters['page']) ? intval($filters['page']) : 1;
         $per_page = isset($filters['per_page']) ? intval($filters['per_page']) : 20;
-        $offset = ($page - 1) * $per_page;
+        // ⭐ KRITICKÁ OPRAVA: Podpora vlastního offsetu pro infinite scroll
+        if (isset($filters['offset']) && $filters['offset'] >= 0) {
+            $offset = intval($filters['offset']);
+        } else {
+            $offset = ($page - 1) * $per_page;
+        }
         
         $where = array("v.customer_id = %d");
         $where_values = array($customer_id);
@@ -84,9 +89,10 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
             $where_values[] = $branch_id;
         }
         
-        if (!empty($filters['status'])) {
-            $where[] = "v.status = %s";
-            $where_values[] = $filters['status'];
+        if (!empty($filters['risks_status'])) {
+            // Use COALESCE to handle NULL values (treat NULL as 'pending')
+            $where[] = "COALESCE(v.risks_status, 'pending') = %s";
+            $where_values[] = $filters['risks_status'];
         }
         
         if (!empty($filters['visit_type'])) {
@@ -121,6 +127,23 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
         $orderby = isset($filters['orderby']) ? $filters['orderby'] : 'id';
         $order = isset($filters['order']) && strtoupper($filters['order']) === 'ASC' ? 'ASC' : 'DESC';
         
+        // Mapování virtuálních sloupců na skutečné databázové sloupce nebo aliasy
+        $orderby_map = array(
+            'company_person' => 'COALESCE(c.name, (SELECT CONCAT(first_name, \' \', last_name) FROM ' . $wpdb->prefix . 'saw_visitors WHERE visit_id = v.id ORDER BY id ASC LIMIT 1))',
+            'risks_status' => 'risks_status', // alias z SELECT
+            'visit_type' => 'v.visit_type',
+            'status' => 'v.status',
+            'planned_date_from' => 'v.planned_date_from',
+        );
+        
+        // Použít mapování pokud existuje, jinak použít přímo orderby s prefixem v.
+        if (isset($orderby_map[$orderby])) {
+            $orderby_column = $orderby_map[$orderby];
+        } else {
+            $orderby_column = 'v.' . $orderby;
+        }
+        
+        // Build count query - must match the same WHERE conditions as main query
         $count_sql = "SELECT COUNT(DISTINCT v.id) FROM {$wpdb->prefix}saw_visits v
                       LEFT JOIN {$wpdb->prefix}saw_companies c ON v.company_id = c.id
                       LEFT JOIN {$wpdb->prefix}saw_visitors vis ON v.id = vis.visit_id
@@ -131,13 +154,14 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
         $sql = "SELECT v.*, 
                        c.name as company_name,
                        b.name as branch_name,
+                       COALESCE(v.risks_status, 'pending') as risks_status,
                        (SELECT COUNT(*) FROM {$wpdb->prefix}saw_visitors WHERE visit_id = v.id) as visitor_count,
                        (SELECT CONCAT(first_name, ' ', last_name) FROM {$wpdb->prefix}saw_visitors WHERE visit_id = v.id ORDER BY id ASC LIMIT 1) as first_visitor_name
                 FROM {$wpdb->prefix}saw_visits v
                 LEFT JOIN {$wpdb->prefix}saw_companies c ON v.company_id = c.id
                 LEFT JOIN {$wpdb->prefix}saw_branches b ON v.branch_id = b.id
                 WHERE {$where_sql}
-                ORDER BY v.{$orderby} {$order}
+                ORDER BY {$orderby_column} {$order}
                 LIMIT %d OFFSET %d";
         
         $where_values[] = $per_page;
@@ -153,10 +177,200 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
         
         $items = $this->apply_virtual_columns($items);
         
+        // ⭐ FIX: Automatická aktualizace risks_status pro záznamy, které potřebují změnu
+        $this->auto_update_risks_status($items);
+        
         return array(
             'items' => $items,
             'total' => intval($total),
         );
+    }
+    
+    /**
+     * Calculate risks status for a visit
+     * 
+     * Determines risks_status based on:
+     * - Whether risks are uploaded (risks_text, risks_document_path, or invitation_materials)
+     * - Visit date relative to today
+     * 
+     * @since 3.8.0
+     * @param array $visit Visit data array
+     * @return string 'pending', 'completed', or 'missing'
+     */
+    public function calculate_risks_status($visit) {
+        global $wpdb;
+        
+        $visit_id = intval($visit['id'] ?? 0);
+        if (!$visit_id) {
+            return 'pending';
+        }
+        
+        // Check if risks are uploaded
+        $has_risks = false;
+        
+        // Check risks_text and risks_document_path in visits table
+        if (!empty($visit['risks_text']) || !empty($visit['risks_document_path'])) {
+            $has_risks = true;
+        } else {
+            // Check invitation_materials table
+            $has_materials = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$wpdb->prefix}saw_visit_invitation_materials 
+                 WHERE visit_id = %d AND material_type = 'text'",
+                $visit_id
+            ));
+            $has_risks = ($has_materials > 0);
+        }
+        
+        // If risks are uploaded, status is always 'completed'
+        if ($has_risks) {
+            return 'completed';
+        }
+        
+        // If no risks, determine based on visit date
+        $visit_date = $visit['planned_date_from'] ?? null;
+        if (!$visit_date) {
+            return 'pending'; // No date = waiting
+        }
+        
+        $today = current_time('Y-m-d');
+        $visit_date_obj = new DateTime($visit_date);
+        $today_obj = new DateTime($today);
+        
+        if ($visit_date_obj > $today_obj) {
+            return 'pending'; // Before visit date = waiting
+        } else {
+            return 'missing'; // On or after visit date, but no risks = missing
+        }
+    }
+    
+    /**
+     * Update risks status for a visit
+     * 
+     * @since 3.8.0
+     * @param int $visit_id Visit ID
+     * @return bool|WP_Error True on success
+     */
+    public function update_risks_status($visit_id) {
+        global $wpdb;
+        
+        $visit = $this->get_by_id($visit_id);
+        if (!$visit) {
+            return new WP_Error('visit_not_found', 'Visit not found');
+        }
+        
+        $status = $this->calculate_risks_status($visit);
+        
+        $result = $wpdb->update(
+            $this->table,
+            array('risks_status' => $status),
+            array('id' => $visit_id),
+            array('%s'),
+            array('%d')
+        );
+        
+        return $result !== false;
+    }
+    
+    /**
+     * Auto-update risks_status for items that need it
+     * 
+     * Checks each item and updates risks_status if needed based on current date.
+     * Only updates records that actually need a change (pending -> missing for past visits).
+     * 
+     * @since 3.8.0
+     * @param array $items Array of visit items (by reference)
+     * @return void
+     */
+    private function auto_update_risks_status(&$items) {
+        if (empty($items)) {
+            return;
+        }
+        
+        global $wpdb;
+        $today = current_time('Y-m-d');
+        $today_obj = new DateTime($today);
+        $needs_update = array();
+        
+        // Identify items that need status update
+        foreach ($items as &$item) {
+            $current_status = $item['risks_status'] ?? 'pending';
+            $visit_date = $item['planned_date_from'] ?? null;
+            
+            // Skip if already completed or missing
+            if ($current_status === 'completed') {
+                continue;
+            }
+            
+            // Check if visit date has passed
+            if ($visit_date) {
+                $visit_date_obj = new DateTime($visit_date);
+                
+                // If visit date <= today and status is pending, should be missing (if no risks)
+                if ($visit_date_obj <= $today_obj && $current_status === 'pending') {
+                    // Double-check if risks exist
+                    $has_risks = !empty($item['risks_text']) || !empty($item['risks_document_path']);
+                    
+                    if (!$has_risks) {
+                        // Check invitation_materials
+                        $has_materials = $wpdb->get_var($wpdb->prepare(
+                            "SELECT COUNT(*) FROM {$wpdb->prefix}saw_visit_invitation_materials 
+                             WHERE visit_id = %d AND material_type = 'text'",
+                            intval($item['id'])
+                        ));
+                        
+                        if (!$has_materials) {
+                            // Needs update: pending -> missing
+                            $needs_update[intval($item['id'])] = 'missing';
+                            $item['risks_status'] = 'missing'; // Update in-memory too
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Batch update if needed
+        if (!empty($needs_update)) {
+            $this->update_risks_status_batch($needs_update);
+        }
+    }
+    
+    /**
+     * Batch update risks_status for multiple visits
+     * 
+     * @since 3.8.0
+     * @param array $updates Array of [visit_id => new_status]
+     * @return void
+     */
+    private function update_risks_status_batch($updates) {
+        if (empty($updates)) {
+            return;
+        }
+        
+        global $wpdb;
+        
+        // Group by status for efficient batch update
+        $by_status = array();
+        foreach ($updates as $visit_id => $status) {
+            if (!isset($by_status[$status])) {
+                $by_status[$status] = array();
+            }
+            $by_status[$status][] = intval($visit_id);
+        }
+        
+        // Update each status group
+        foreach ($by_status as $status => $visit_ids) {
+            if (empty($visit_ids)) {
+                continue;
+            }
+            
+            $placeholders = implode(',', array_fill(0, count($visit_ids), '%d'));
+            $wpdb->query($wpdb->prepare(
+                "UPDATE {$this->table} 
+                 SET risks_status = %s 
+                 WHERE id IN ({$placeholders})",
+                array_merge(array($status), $visit_ids)
+            ));
+        }
     }
     
     /**

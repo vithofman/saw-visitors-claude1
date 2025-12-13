@@ -25,77 +25,95 @@
     'use strict';
 
     // ================================================
-    // COMPANY FIELD TOGGLE (FIXED for searchable select)
+    // COMPANY FIELD TOGGLE (FIXED v3.7.0)
     // ================================================
-    function initCompanyToggle() {
-    const $companyRow = $('.field-company-row');
-    if (!$companyRow.length) return;
     
-    // Wait for select-create to initialize
-    setTimeout(function() {
-        $('input[name="has_company"]').off('change.companyToggle');
-        $('input[name="has_company"]').on('change.companyToggle', toggleCompanyField);
-        toggleCompanyField();
-    }, 200);
-}
+    /**
+     * Get all company field elements (select-create component)
+     * ⭐ FIX v3.8.0: Field name changed to 'visit_company_selection' to prevent browser autocomplete
+     */
+    function getCompanyElements() {
+        return {
+            $hidden: $('input[type="hidden"][name="visit_company_selection"].saw-select-create-value'),
+            $select: $('#saw-select-visit_company_selection'),
+            $search: $('#saw-select-visit_company_selection-search'),
+            $dropdown: $('#saw-select-visit_company_selection-dropdown')
+        };
+    }
+    
+    /**
+     * Toggle company field visibility based on has_company radio
+     */
+    function toggleCompanyField() {
+        const hasCompany = $('input[name="has_company"]:checked').val();
+        const $companyRow = $('.field-company-row');
         
-        function toggleCompanyField() {
-            const hasCompany = $('input[name="has_company"]:checked').val();
-            const elements = getCompanyElements();
+        if (!$companyRow.length) return;
+        
+        const elements = getCompanyElements();
 
-            if (hasCompany === '1') {
-                // Show company field
-                $companyRow.slideDown();
-                
-                // Set required on the search input (visible element after select-create init)
-                if (elements.$search.length) {
-                    elements.$search.prop('required', true);
-                } else {
-                    // Fallback for non-searchable select
-                    elements.$select.prop('required', true);
-                }
-            } else {
-                // Hide company field
-                $companyRow.slideUp();
-                
-                // Remove required
-                if (elements.$search.length) {
-                    elements.$search.prop('required', false);
-                } else {
-                    elements.$select.prop('required', false);
-                }
-                
-                // Clear ALL related inputs:
-                // 1. Hidden input (stores actual value for searchable select)
-                if (elements.$hidden.length) {
-                    elements.$hidden.val('');
-                }
-                
-                // 2. Original select (for non-searchable fallback)
-                if (elements.$select.length) {
-                    elements.$select.val('');
-                }
-                
-                // 3. Search input text (visible search field)
-                if (elements.$search.length) {
-                    elements.$search.val('');
-                }
-                
-                // 4. Reset dropdown selection visual state
-                if (elements.$dropdown.length) {
-                    elements.$dropdown.find('.saw-select-search-item').removeClass('selected');
-                }
+        if (hasCompany === '1') {
+            // Show company field - Legal person
+            $companyRow.slideDown(200);
+            
+            // Set required on the search input (visible element after select-create init)
+            if (elements.$search.length) {
+                elements.$search.prop('required', true);
+            } else if (elements.$select.length) {
+                elements.$select.prop('required', true);
+            }
+        } else {
+            // Hide company field - Physical person
+            $companyRow.slideUp(200);
+            
+            // Remove required
+            if (elements.$search.length) {
+                elements.$search.prop('required', false);
+            } else if (elements.$select.length) {
+                elements.$select.prop('required', false);
+            }
+            
+            // Clear ALL related inputs:
+            // 1. Hidden input (stores actual value for searchable select)
+            if (elements.$hidden.length) {
+                elements.$hidden.val('');
+            }
+            
+            // 2. Original select (for non-searchable fallback)
+            if (elements.$select.length) {
+                elements.$select.val('');
+            }
+            
+            // 3. Search input text (visible search field)
+            if (elements.$search.length) {
+                elements.$search.val('');
+            }
+            
+            // 4. Reset dropdown selection visual state
+            if (elements.$dropdown.length) {
+                elements.$dropdown.find('.saw-select-search-item').removeClass('selected');
             }
         }
+    }
+    
+    /**
+     * Initialize company field toggle
+     */
+    function initCompanyToggle() {
+        const $companyRow = $('.field-company-row');
+        if (!$companyRow.length) return;
         
-        // Unbind first to prevent duplicate handlers
-        $('input[name="has_company"]').off('change.companyToggle');
-        
-        // Toggle on radio change
-        $('input[name="has_company"]').on('change.companyToggle', toggleCompanyField);
-        
-        // Initial state
-        toggleCompanyField();
+        // Wait for select-create to initialize
+        setTimeout(function() {
+            // Remove old handlers
+            $('input[name="has_company"]').off('change.companyToggle');
+            
+            // Bind new handler
+            $('input[name="has_company"]').on('change.companyToggle', toggleCompanyField);
+            
+            // Set initial state
+            toggleCompanyField();
+        }, 200);
     }
     
     // Ensure company_id is properly included in form submission
@@ -105,9 +123,9 @@
             
             if (hasCompany === '1') {
                 // Legal person - ensure company_id is set
-                // Use name selector - reliable regardless of ID prefix
-                const $hiddenInput = $('input[type="hidden"][name="company_id"]');
-                const $searchInput = $('#saw-select-company_id-search');
+                // ⭐ FIX v3.8.0: Use new field name 'visit_company_selection'
+                const $hiddenInput = $('input[type="hidden"][name="visit_company_selection"].saw-select-create-value');
+                const $searchInput = $('#saw-select-visit_company_selection-search');
                 
                 if ($hiddenInput.length) {
                     const companyId = $hiddenInput.val();
@@ -121,7 +139,7 @@
                 } else {
                     // This might happen if select-create component didn't initialize
                     // Check if original select has value
-                    const $originalSelect = $('#saw-select-company_id');
+                    const $originalSelect = $('#saw-select-visit_company_selection');
                     if ($originalSelect.length && $originalSelect.val()) {
                         console.log('[VISITS] Form submit - using original select value:', $originalSelect.val());
                     } else {
@@ -134,12 +152,90 @@
         });
     }
 
+    // ================================================
+    // PREVENT AUTOCOMPLETE FROM OVERWRITING COMPANY
+    // ================================================
+    function preventAutocompleteCompanyOverwrite() {
+        const $emailInput = $('#invitation_email');
+        // ⭐ FIX v3.8.0: Use new field name 'visit_company_selection' to prevent browser autocomplete
+        const $companyHidden = $('input[type="hidden"][name="visit_company_selection"].saw-select-create-value');
+        const $companySearch = $('#saw-select-visit_company_selection-search');
+        
+        if (!$emailInput.length || !$companyHidden.length) return;
+        
+        // Store original company value when user manually selects it
+        let userSelectedCompany = null;
+        let companyValueBeforeEmailChange = null;
+        
+        // Mark company as user-selected when manually changed
+        $companyHidden.on('change', function() {
+            const currentVal = $(this).val();
+            if (currentVal && currentVal !== '') {
+                userSelectedCompany = currentVal;
+                console.log('[VISITS] Company manually selected:', currentVal);
+            }
+        });
+        
+        // Also track when user selects from dropdown
+        $(document).on('click', '#saw-select-visit_company_selection-dropdown .saw-select-search-item', function() {
+            setTimeout(function() {
+                const currentVal = $companyHidden.val();
+                if (currentVal && currentVal !== '') {
+                    userSelectedCompany = currentVal;
+                    console.log('[VISITS] Company selected from dropdown:', currentVal);
+                }
+            }, 100);
+        });
+        
+        // Before email input changes, save current company value
+        $emailInput.on('focus', function() {
+            companyValueBeforeEmailChange = $companyHidden.val();
+        });
+        
+        // After email input changes, check if company was overwritten by autocomplete
+        $emailInput.on('input change', function() {
+            const currentCompanyVal = $companyHidden.val();
+            
+            // If company was manually selected by user, don't let autocomplete override it
+            if (userSelectedCompany && currentCompanyVal !== userSelectedCompany) {
+                console.warn('[VISITS] Autocomplete tried to overwrite company, restoring user selection');
+                $companyHidden.val(userSelectedCompany);
+                
+                // Also restore search input if it exists
+                if ($companySearch.length) {
+                    const selectedOption = $('#saw-select-visit_company_selection option[value="' + userSelectedCompany + '"]');
+                    if (selectedOption.length) {
+                        $companySearch.val(selectedOption.text());
+                    }
+                }
+            }
+            // If company was set before email change and now is different, restore it
+            else if (companyValueBeforeEmailChange && 
+                     companyValueBeforeEmailChange !== '' && 
+                     currentCompanyVal !== companyValueBeforeEmailChange &&
+                     !userSelectedCompany) {
+                console.warn('[VISITS] Autocomplete changed company, restoring previous value');
+                $companyHidden.val(companyValueBeforeEmailChange);
+                
+                if ($companySearch.length) {
+                    const selectedOption = $('#saw-select-visit_company_selection option[value="' + companyValueBeforeEmailChange + '"]');
+                    if (selectedOption.length) {
+                        $companySearch.val(selectedOption.text());
+                    }
+                }
+            }
+        });
+    }
+    
     $(document).ready(function () {
         // Initialize company toggle
         initCompanyToggle();
         
         // Ensure company_id on form submit
         ensureCompanyIdOnSubmit();
+        
+        // Prevent autocomplete from overwriting company
+        preventAutocompleteCompanyOverwrite();
 
         // ================================================
         // EMAIL VALIDATION
@@ -405,10 +501,12 @@
     };
 
     // ========================================
-    // HOSTS MANAGER
+    // HOSTS MANAGER - FIXED: Používá pobočku z kontextu/hidden inputu
     // ========================================
     function initHostsManager() {
-        const branchSelect = $('#branch_id');
+        // ⭐ FIX: Použít hidden input místo disabled selectu
+        const branchHiddenInput = $('#branch_id_hidden');
+        const branchSelect = $('#branch_id'); // Disabled select pro zobrazení
         const hostList = $('#hosts-list');
         const hostControls = $('.saw-host-controls');
         const searchInput = $('#host-search');
@@ -418,7 +516,7 @@
         const counterDiv = $('#host-counter');
 
         // Skip if hosts section doesn't exist (not on visits form)
-        if (!branchSelect.length || !hostList.length) {
+        if (!hostList.length) {
             return;
         }
 
@@ -441,7 +539,7 @@
         const ajaxNonce = (typeof window.sawGlobal !== 'undefined' && window.sawGlobal.nonce) 
             ? window.sawGlobal.nonce 
             : '';
-        
+
         // Validate nonce is available
         if (!ajaxNonce) {
             hostList.html('<p class="saw-text-muted" style="padding: 20px; margin: 0; text-align: center; color: #d63638;">❌ Chyba: Nelze ověřit požadavek. Zkuste obnovit stránku.</p>');
@@ -449,35 +547,82 @@
         }
 
         // Remove existing handlers to prevent duplicates
-        branchSelect.off('change.hosts-manager');
         searchInput.off('input.hosts-manager');
         selectAllCb.off('change.hosts-manager');
 
-        // Bind event handlers with namespace
-        branchSelect.on('change.hosts-manager', loadHosts);
+        // Bind event handlers with namespace (branch select je disabled, takže change event není potřeba)
         searchInput.on('input.hosts-manager', filterHosts);
         selectAllCb.on('change.hosts-manager', toggleAll);
 
-        // Load hosts if branch is already selected
-        const currentBranchId = branchSelect.val();
+        /**
+         * ⭐ FIX v3.7.0: Získat pobočku z více zdrojů (priorita: hidden input > disabled select)
+         */
+        function getBranchId() {
+            // 1. Zkusit hidden input (nejspolehlivější)
+            if (branchHiddenInput.length) {
+                const val = branchHiddenInput.val();
+                if (val && val !== '' && val !== '0') {
+                    const branchId = parseInt(val);
+                    if (!isNaN(branchId) && branchId > 0) {
+                        console.log('[Hosts Manager] Branch ID from hidden input:', branchId);
+                        return branchId;
+                    }
+                }
+            }
+            
+            // 2. Zkusit disabled select (pro zobrazení)
+            if (branchSelect.length) {
+                const val = branchSelect.val();
+                if (val && val !== '' && val !== '0') {
+                    const branchId = parseInt(val);
+                    if (!isNaN(branchId) && branchId > 0) {
+                        console.log('[Hosts Manager] Branch ID from select:', branchId);
+                        // Aktualizovat hidden input pro příští použití
+                        if (branchHiddenInput.length) {
+                            branchHiddenInput.val(branchId);
+                        }
+                        return branchId;
+                    }
+                }
+            }
+            
+            console.warn('[Hosts Manager] No branch ID found');
+            return null;
+        }
+
+        // Load hosts if branch is available
+        const currentBranchId = getBranchId();
         
         if (currentBranchId) {
+            console.log('[Hosts Manager] Initializing with branch ID:', currentBranchId);
             // Small delay to ensure DOM is fully ready
             setTimeout(function() {
                 loadHosts();
-            }, 100);
+            }, 150);
+        } else {
+            console.warn('[Hosts Manager] No branch ID available on init');
+            // Pokud není pobočka, zobrazit informativní zprávu
+            hostList.html('<p class="saw-text-muted" style="padding: 20px; margin: 0; text-align: center;">⚠️ Pobočka není nastavena. Zkontrolujte branchswitcher.</p>');
+            hostControls.hide();
         }
 
         function loadHosts() {
-            const branchId = branchSelect.val();
+            const branchId = getBranchId();
 
             if (!branchId) {
-                hostList.html('<p class="saw-text-muted" style="padding: 20px; margin: 0; text-align: center;">Nejprve vyberte pobočku výše</p>');
+                console.warn('[Hosts Manager] loadHosts() called but no branch ID');
+                hostList.html('<p class="saw-text-muted" style="padding: 20px; margin: 0; text-align: center;">⚠️ Pobočka není nastavena. Zkontrolujte branchswitcher.</p>');
                 hostControls.hide();
                 return;
             }
 
+            console.log('[Hosts Manager] Loading hosts for branch ID:', branchId);
             hostList.html('<p class="saw-text-muted" style="padding: 20px; margin: 0; text-align: center;"><span class="dashicons dashicons-update-alt" style="animation: rotation 1s infinite linear;"></span> Načítám uživatele...</p>');
+
+            // ⭐ FIX: Aktualizovat hidden input, pokud ještě není nastaven
+            if (branchHiddenInput.length && !branchHiddenInput.val()) {
+                branchHiddenInput.val(branchId);
+            }
 
             $.ajax({
                 url: ajaxUrl,
@@ -655,6 +800,9 @@
         
         // Re-ensure company_id on form submit
         setTimeout(ensureCompanyIdOnSubmit, 50);
+        
+        // Re-initialize autocomplete protection
+        setTimeout(preventAutocompleteCompanyOverwrite, 100);
         
         // Wait a bit for wp_localize_script to update window.sawVisits
         setTimeout(function() {

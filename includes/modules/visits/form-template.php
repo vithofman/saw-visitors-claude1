@@ -77,17 +77,39 @@ if (empty($companies) && $customer_id) {
     }
 }
 
+// ⭐ FIX: Pobočka je vždy z kontextu (branchswitcher), není editovatelná
+// V edit mode použijeme hodnotu z item, jinak vždy z kontextu
 $selected_branch_id = null;
 if ($is_edit && !empty($item['branch_id'])) {
     $selected_branch_id = $item['branch_id'];
-} elseif (!$is_edit && $context_branch_id) {
+} else {
+    // CREATE mode nebo pokud není v item - vždy použít kontext
     $selected_branch_id = $context_branch_id;
 }
 
+// Pokud stále není pobočka, zkusit načíst z branchswitcher
+if (!$selected_branch_id && class_exists('SAW_Context')) {
+    $selected_branch_id = SAW_Context::get_branch_id();
+}
+
 // Determine if visit has company (legal person) or is physical person
-$has_company = 1; // Default: legal person
-if ($is_edit && isset($item['company_id'])) {
-    $has_company = !empty($item['company_id']) ? 1 : 0;
+$has_company = 1; // Default: legal person (for new visits)
+if ($is_edit) {
+    // In edit mode, check if company_id exists and is not NULL
+    if (array_key_exists('company_id', $item)) {
+        // Key exists - check if it's NULL or empty
+        $has_company = (!empty($item['company_id']) && $item['company_id'] !== null) ? 1 : 0;
+    } else {
+        // Key doesn't exist in $item - query database to be sure
+        if (!empty($item['id'])) {
+            global $wpdb;
+            $company_id = $wpdb->get_var($wpdb->prepare(
+                "SELECT company_id FROM {$wpdb->prefix}saw_visits WHERE id = %d",
+                intval($item['id'])
+            ));
+            $has_company = (!empty($company_id) && $company_id !== null) ? 1 : 0;
+        }
+    }
 }
 
 $existing_host_ids = array();
@@ -138,6 +160,33 @@ $form_action = $is_edit
     : home_url('/admin/visits/create');
 ?>
 
+<style>
+/* Visitor Type Toggle Styles */
+.saw-radio-toggle input:checked + .saw-radio-toggle-content {
+    border-color: #0073aa !important;
+    background: #f0f6fc !important;
+    box-shadow: 0 0 0 3px rgba(0, 115, 170, 0.1) !important;
+}
+
+.saw-radio-toggle:hover .saw-radio-toggle-content {
+    border-color: #0073aa !important;
+}
+
+.saw-radio-toggle input:checked + .saw-radio-toggle-content > div:first-child {
+    color: #0073aa !important;
+}
+
+/* Rotation animation for loading spinner */
+@keyframes rotation {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+</style>
+
 <?php if (!$in_sidebar): ?>
 <div class="saw-page-header">
     <div class="saw-page-header-content">
@@ -179,11 +228,14 @@ $form_action = $is_edit
             </summary>
             <div class="saw-form-section-content">
                 
-                <!-- Branch -->
+                <!-- Branch - FIXED: Neměnná z branchswitcher, pole je disabled -->
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
                         <label for="branch_id" class="saw-label saw-required"><?php echo $tr('form_branch', 'Pobočka'); ?></label>
-                        <select name="branch_id" id="branch_id" class="saw-input" required>
+                        <!-- Hidden input pro odeslání hodnoty -->
+                        <input type="hidden" name="branch_id" id="branch_id_hidden" value="<?php echo $selected_branch_id ? esc_attr($selected_branch_id) : ''; ?>">
+                        <!-- Select je disabled, pouze pro zobrazení -->
+                        <select id="branch_id" class="saw-input" disabled style="background-color: #f0f0f1; cursor: not-allowed;" aria-label="<?php echo esc_attr($tr('form_branch', 'Pobočka')); ?>">
                             <option value="">-- <?php echo $tr('form_select_branch', 'Vyberte pobočku'); ?> --</option>
                             <?php foreach ($branches as $branch_id => $branch_name): ?>
                                 <option value="<?php echo esc_attr($branch_id); ?>" <?php selected($selected_branch_id, $branch_id); ?>>
@@ -191,29 +243,45 @@ $form_action = $is_edit
                                 </option>
                             <?php endforeach; ?>
                         </select>
+                        <?php if ($selected_branch_id): ?>
+                            <p class="saw-field-hint" style="margin-top: 4px; font-size: 13px; color: #646970; display: flex; align-items: center; gap: 6px;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                </svg>
+                                <?php echo esc_html($tr('form_branch_locked', 'Pobočka je určena z branchswitcher a nelze ji změnit')); ?>
+                            </p>
+                        <?php endif; ?>
                     </div>
                 </div>
                 
-                <!-- ⭐ NEW: Physical vs Legal Person Radio -->
+                <!-- ⭐ NEW: Physical vs Legal Person Radio - Styled Toggle -->
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-12">
                         <label class="saw-label saw-required"><?php echo $tr('form_visitor_type', 'Typ návštěvníka'); ?></label>
-                        <div class="saw-radio-group" style="display: flex; gap: 24px; margin-top: 8px;">
-                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <div class="saw-visitor-type-toggle" style="display: flex; gap: 16px; margin-top: 12px; flex-wrap: wrap;">
+                            <label class="saw-radio-toggle" style="flex: 1; min-width: 200px; position: relative; cursor: pointer;">
                                 <input type="radio" 
                                        name="has_company" 
                                        value="1" 
                                        <?php checked($has_company, 1); ?>
-                                       style="margin: 0;">
-                                <span style="font-weight: 500;"><?php echo $tr('form_legal_person', 'Právnická osoba (firma, instituce)'); ?></span>
+                                       style="position: absolute; opacity: 0; pointer-events: none;">
+                                <div class="saw-radio-toggle-content" style="padding: 16px; border: 2px solid #dcdcde; border-radius: 8px; transition: all 0.2s; background: #fff;">
+                                    <div style="font-weight: 600; margin-bottom: 4px; color: #1d2327; font-size: 15px;"><?php echo $tr('form_legal_person', 'Právnická osoba'); ?></div>
+                                    <div style="font-size: 13px; color: #646970;">Firma, instituce</div>
+                                </div>
                             </label>
-                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <label class="saw-radio-toggle" style="flex: 1; min-width: 200px; position: relative; cursor: pointer;">
                                 <input type="radio" 
                                        name="has_company" 
                                        value="0" 
                                        <?php checked($has_company, 0); ?>
-                                       style="margin: 0;">
-                                <span style="font-weight: 500;"><?php echo $tr('form_physical_person', 'Fyzická osoba'); ?></span>
+                                       style="position: absolute; opacity: 0; pointer-events: none;">
+                                <div class="saw-radio-toggle-content" style="padding: 16px; border: 2px solid #dcdcde; border-radius: 8px; transition: all 0.2s; background: #fff;">
+                                    <div style="font-weight: 600; margin-bottom: 4px; color: #1d2327; font-size: 15px;"><?php echo $tr('form_physical_person', 'Fyzická osoba'); ?></div>
+                                    <div style="font-size: 13px; color: #646970;">Soukromá osoba</div>
+                                </div>
                             </label>
                         </div>
                     </div>
@@ -223,7 +291,9 @@ $form_action = $is_edit
                 <div class="saw-form-row field-company-row" style="<?php echo $has_company ? '' : 'display: none;'; ?>">
                     <div class="saw-form-group saw-col-12">
                         <?php
-                        $company_select = new SAW_Component_Select_Create('company_id', array(
+                        // ⭐ FIX: Use neutral field name to prevent browser autocomplete from recognizing it as "company"
+                        // Backend will remap 'visit_company_selection' back to 'company_id'
+                        $company_select = new SAW_Component_Select_Create('visit_company_selection', array(
                             'label' => $tr('form_company', 'Firma'),
                             'options' => $companies,
                             'selected' => $item['company_id'] ?? '',
@@ -458,7 +528,7 @@ $form_action = $is_edit
                 </div>
                 
                 <!-- Invitation Email -->
-                <div class="saw-form-row">
+                <div class="saw-form-row" style="margin-top: 24px;">
                     <div class="saw-form-group saw-col-12">
                         <label for="invitation_email" class="saw-label"><?php echo $tr('form_invitation_email', 'Email pro pozvánku'); ?></label>
                         <input type="email" name="invitation_email" id="invitation_email" class="saw-input" value="<?php echo esc_attr($item['invitation_email'] ?? ''); ?>" placeholder="email@example.com">
@@ -492,9 +562,16 @@ $form_action = $is_edit
                         </div>
                         
                         <div id="hosts-list" style="border: 2px solid #dcdcde; border-radius: 6px; max-height: 320px; overflow-y: auto; background: #fff;">
-                            <p class="saw-text-muted" style="padding: 20px; margin: 0; text-align: center;">
-                                <?php echo $tr('form_select_branch_first', 'Nejprve vyberte pobočku výše'); ?>
-                            </p>
+                            <?php if ($selected_branch_id): ?>
+                                <p class="saw-text-muted" style="padding: 20px; margin: 0; text-align: center;">
+                                    <span class="dashicons dashicons-update-alt" style="animation: rotation 1s infinite linear; display: inline-block;"></span> 
+                                    Načítám uživatele...
+                                </p>
+                            <?php else: ?>
+                                <p class="saw-text-muted" style="padding: 20px; margin: 0; text-align: center;">
+                                    <?php echo $tr('form_select_branch_first', 'Nejprve vyberte pobočku výše'); ?>
+                                </p>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -626,17 +703,18 @@ jQuery(document).ready(function($) {
         var $form = $(this);
         
         // FIX: Get company_id from selected dropdown item
+        // ⭐ FIX v3.8.0: Use new field name 'visit_company_selection'
         var hasCompany = $form.find('input[name="has_company"]:checked').val();
         
         if (hasCompany === '1') {
             // Get value from selected item in dropdown
-            var $selected = $('#saw-select-company_id-dropdown .saw-select-search-item.selected');
+            var $selected = $('#saw-select-visit_company_selection-dropdown .saw-select-search-item.selected');
             if ($selected.length) {
                 var val = $selected.attr('data-value');
-                $('#saw-select-company_id-hidden').val(val);
+                $('input[type="hidden"][name="visit_company_selection"]').val(val);
             }
         } else {
-            $('#saw-select-company_id-hidden').val('');
+            $('input[type="hidden"][name="visit_company_selection"]').val('');
         }
         
         // Fix dates

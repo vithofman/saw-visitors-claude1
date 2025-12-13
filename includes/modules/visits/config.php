@@ -133,11 +133,19 @@ return array(
         'searchable' => array(),
         'sortable' => array('id', 'first_schedule_date', 'started_at'),
         'filters' => array(
-            'status' => true, // Enable status filter
+            'risks_status' => true, // Enable risks_status filter
             'visit_type' => true, // Enable visit_type filter
         ),
         'per_page' => 20,
         'enable_detail_modal' => true,
+    ),
+    
+    // ⭐ NOVÉ: Infinite scroll configuration
+    'infinite_scroll' => array(
+        'enabled' => true,
+        'initial_load' => 50,
+        'per_page' => 50,
+        'threshold' => 0.6,
     ),
     
     // TABS configuration - for horizontal tabs navigation

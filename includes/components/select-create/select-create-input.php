@@ -44,13 +44,16 @@ $selected = (string) $selected;
                id="<?php echo esc_attr($field_id); ?>-value"
                value="<?php echo esc_attr($selected); ?>"
                class="saw-select-create-value"
-               data-original-value="<?php echo esc_attr($selected); ?>">
+               data-original-value="<?php echo esc_attr($selected); ?>"
+               autocomplete="new-password"
+               data-field-mapping="<?php echo esc_attr($field_name === 'visit_company_selection' ? 'company_id' : ''); ?>">
         
         <!-- Original select - NO name attribute -->
         <select id="<?php echo esc_attr($field_id); ?>" 
                 class="saw-input saw-select-create-select"
                 data-field-name="<?php echo esc_attr($field_name); ?>"
-                data-placeholder="<?php echo esc_attr($placeholder); ?>">
+                data-placeholder="<?php echo esc_attr($placeholder); ?>"
+                autocomplete="new-password">
             <option value=""><?php echo esc_html($placeholder); ?></option>
             <?php foreach ($options as $value => $label_text): ?>
                 <option value="<?php echo esc_attr($value); ?>" 

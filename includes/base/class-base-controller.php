@@ -1732,14 +1732,40 @@ protected function can($action) {
         // Ensure per_page is reasonable
         $per_page = max(1, min(100, $per_page));
         
-        // Build filters from POST data
-        $filters = array(
-            'page' => $page,
-            'per_page' => $per_page,
-            'search' => isset($_POST['search']) ? sanitize_text_field($_POST['search']) : '',
-            'orderby' => isset($_POST['orderby']) ? sanitize_text_field($_POST['orderby']) : 'id',
-            'order' => isset($_POST['order']) ? strtoupper(sanitize_text_field($_POST['order'])) : 'DESC',
-        );
+        // ⭐ KRITICKÁ OPRAVA: Pro infinite scroll použij offset místo page-based offsetu
+        // Pokud je infinite scroll enabled a máme loaded_count, použijeme ho jako offset
+        if ($infinite_scroll_enabled && $page > 1 && isset($_POST['loaded_count'])) {
+            $loaded_count = intval($_POST['loaded_count']);
+            if ($loaded_count > 0) {
+                // Použijeme vlastní offset místo page-based offsetu
+                $filters = array(
+                    'offset' => $loaded_count,
+                    'page' => 1, // Reset page na 1, protože použijeme vlastní offset
+                    'per_page' => $per_page,
+                    'search' => isset($_POST['search']) ? sanitize_text_field($_POST['search']) : '',
+                    'orderby' => isset($_POST['orderby']) ? sanitize_text_field($_POST['orderby']) : 'id',
+                    'order' => isset($_POST['order']) ? strtoupper(sanitize_text_field($_POST['order'])) : 'DESC',
+                );
+            } else {
+                // Fallback na standardní page-based pagination
+                $filters = array(
+                    'page' => $page,
+                    'per_page' => $per_page,
+                    'search' => isset($_POST['search']) ? sanitize_text_field($_POST['search']) : '',
+                    'orderby' => isset($_POST['orderby']) ? sanitize_text_field($_POST['orderby']) : 'id',
+                    'order' => isset($_POST['order']) ? strtoupper(sanitize_text_field($_POST['order'])) : 'DESC',
+                );
+            }
+        } else {
+            // Standardní page-based pagination
+            $filters = array(
+                'page' => $page,
+                'per_page' => $per_page,
+                'search' => isset($_POST['search']) ? sanitize_text_field($_POST['search']) : '',
+                'orderby' => isset($_POST['orderby']) ? sanitize_text_field($_POST['orderby']) : 'id',
+                'order' => isset($_POST['order']) ? strtoupper(sanitize_text_field($_POST['order'])) : 'DESC',
+            );
+        }
         
         // NOVÉ: Add TAB filter - POST contains filter_value directly from JS
         if (!empty($this->config['tabs']['enabled'])) {
@@ -1774,9 +1800,15 @@ protected function can($action) {
         $data = $this->model->get_all($filters);
         
         // Get columns from POST (JSON) or use get_table_columns method
+        // ⭐ FIX: Always prioritize get_table_columns() if it exists, because it contains callbacks
+        // JSON columns don't have callbacks (can't be serialized), so we need the full config
         $columns = array();
-        if (isset($_POST['columns']) && !empty($_POST['columns'])) {
-            // Columns passed from JS as JSON string
+        
+        if (method_exists($this, 'get_table_columns')) {
+            // Priority: use get_table_columns() - it contains callbacks and full config
+            $columns = $this->get_table_columns();
+        } elseif (isset($_POST['columns']) && !empty($_POST['columns'])) {
+            // Fallback: use columns from JSON (without callbacks)
             $columns_json = wp_unslash($_POST['columns']);
             if (is_string($columns_json)) {
                 $columns = json_decode($columns_json, true);
@@ -1786,11 +1818,6 @@ protected function can($action) {
             } elseif (is_array($columns_json)) {
                 $columns = $columns_json;
             }
-        }
-        
-        // Fallback: use get_table_columns method
-        if (empty($columns) && method_exists($this, 'get_table_columns')) {
-            $columns = $this->get_table_columns();
         }
         
         // Last resort: generate from fields
@@ -1860,7 +1887,36 @@ protected function can($action) {
             $rows_html = ob_get_clean();
         }
         
-        $has_more = ($page * $per_page) < $data['total'];
+        // ⭐ FIX: Správná logika pro has_more - počítá skutečně načtené záznamy
+        // has_more = true pokud načteno méně než total
+        // KRITICKÁ OPRAVA: Pro infinite scroll musíme správně počítat skutečně načtené záznamy
+        $infinite_scroll_enabled = !empty($this->config['infinite_scroll']['enabled']);
+        $items_loaded = count($data['items']);
+        
+        if ($page === 1) {
+            // Pro první stránku: skutečně načtené = items_loaded
+            $loaded_count = $items_loaded;
+            
+            // KRITICKÁ OPRAVA: has_more závisí pouze na tom, zda loaded_count < total
+            // NESMÍME automaticky nastavit has_more = false jen proto, že items_loaded < initial_load
+            // Pokud je načteno 26 záznamů z 56, pak has_more musí být true, ne false!
+            $has_more = $loaded_count < $data['total'];
+        } else {
+            // Pro další stránky: použijeme offset z filters (pokud je infinite scroll)
+            if ($infinite_scroll_enabled && isset($filters['offset'])) {
+                // Offset je skutečný počet již načtených záznamů
+                $loaded_count = $filters['offset'] + $items_loaded;
+            } else {
+                // Standardní page-based výpočet
+                $loaded_count = ($page - 1) * $per_page + $items_loaded;
+            }
+            
+            // KRITICKÁ OPRAVA: has_more závisí pouze na tom, zda loaded_count < total
+            // NESMÍME automaticky nastavit has_more = false jen proto, že items_loaded < per_page
+            // Pokud se načte 30 záznamů z 56 (offset=26), pak loaded_count = 56, has_more = false ✓
+            // Pokud se načte 50 záznamů z 56 (offset=26), pak loaded_count = 76, ale total=56, takže has_more = false ✓
+            $has_more = $loaded_count < $data['total'];
+        }
         
         wp_send_json_success(array(
             'html' => $rows_html,

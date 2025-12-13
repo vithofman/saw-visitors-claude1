@@ -106,6 +106,9 @@ class SAW_Installer {
         // Phase 3: Insert default data
         self::insert_default_data();
         
+        // Phase 4: Add missing columns to existing tables (migrations)
+        self::add_missing_columns();
+        
         update_option('saw_db_version', '4.6.1');
         
         $duration = round(microtime(true) - $start_time, 2);
@@ -518,6 +521,59 @@ class SAW_Installer {
         ));
         
         return $result === $full_table_name;
+    }
+    
+    /**
+     * Add missing columns to existing tables
+     * 
+     * Handles database migrations by adding new columns to existing tables.
+     * 
+     * @since 4.6.2
+     * @return void
+     */
+    private static function add_missing_columns() {
+        global $wpdb;
+        $prefix = $wpdb->prefix . 'saw_';
+        
+        // Add risks_status column to visits table if it doesn't exist
+        if (self::table_exists('visits')) {
+            $visits_table = $prefix . 'visits';
+            $column_exists = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+                 WHERE TABLE_SCHEMA = %s 
+                 AND TABLE_NAME = %s 
+                 AND COLUMN_NAME = 'risks_status'",
+                DB_NAME,
+                $visits_table
+            ));
+            
+            if (!$column_exists) {
+                $wpdb->query("ALTER TABLE {$visits_table} 
+                    ADD COLUMN risks_status ENUM('pending', 'completed', 'missing') DEFAULT 'pending' 
+                    COMMENT 'pending = čeká se na rizika (před dnem návštěvy), completed = rizika nahraná, missing = rizika chybí (v den návštěvy nebo později)'
+                    AFTER risks_document_name");
+                
+                error_log("[SAW Installer] Added risks_status column to visits table");
+                
+                // Update existing records based on current state
+                // ⭐ FIX: Použít WordPress current_time místo CURDATE() pro správné časové pásmo
+                $today = current_time('Y-m-d');
+                $wpdb->query($wpdb->prepare("UPDATE {$visits_table} v
+                    LEFT JOIN {$wpdb->prefix}saw_visit_invitation_materials m 
+                        ON v.id = m.visit_id AND m.material_type = 'text'
+                    SET v.risks_status = CASE
+                        WHEN (v.risks_text IS NOT NULL AND v.risks_text != '') 
+                             OR (v.risks_document_path IS NOT NULL AND v.risks_document_path != '')
+                             OR m.id IS NOT NULL
+                        THEN 'completed'
+                        WHEN v.planned_date_from IS NULL OR v.planned_date_from > %s
+                        THEN 'pending'
+                        ELSE 'missing'
+                    END", $today));
+                
+                error_log("[SAW Installer] Updated risks_status for existing visits");
+            }
+        }
     }
     
     /**
