@@ -731,52 +731,61 @@ class SAW_Component_Admin_Table {
     }
     
     private function render_table() {
+        // Má alespoň jeden sloupec width?
+        $has_widths = false;
+        foreach ($this->config['columns'] as $column) {
+            if (is_array($column) && !empty($column['width'])) {
+                $has_widths = true;
+                break;
+            }
+        }
         ?>
-        <table class="saw-admin-table">
+        <table class="saw-admin-table" 
+               data-entity="<?php echo esc_attr($this->entity); ?>"
+               <?php if ($has_widths): ?>style="table-layout: fixed; width: 100%;"<?php endif; ?>>
+            <?php if ($has_widths): ?>
+            <colgroup>
+                <?php foreach ($this->config['columns'] as $column): ?>
+                <col<?php if (is_array($column) && !empty($column['width'])): ?> style="width: <?php echo esc_attr($column['width']); ?>;"<?php endif; ?>>
+                <?php endforeach; ?>
+            </colgroup>
+            <?php endif; ?>
             <thead>
                 <tr>
                     <?php foreach ($this->config['columns'] as $key => $column): ?>
-                        <?php
-                        $label = is_array($column) ? ($column['label'] ?? ucfirst($key)) : $column;
-                        $sortable = is_array($column) && isset($column['sortable']) ? $column['sortable'] : false;
-                        $width = is_array($column) && isset($column['width']) ? $column['width'] : '';
-                        $align = is_array($column) && isset($column['align']) ? $column['align'] : 'left';
-                        ?>
-                        <th style="<?php echo $width ? 'width: ' . esc_attr($width) . ';' : ''; ?> text-align: <?php echo esc_attr($align); ?>;">
-                            <?php if ($sortable): ?>
-                                <a href="<?php echo esc_url($this->get_sort_url($key, $this->config['orderby'], $this->config['order'])); ?>" class="saw-sortable">
-                                    <?php echo esc_html($label); ?>
-                                    <?php echo $this->get_sort_icon($key, $this->config['orderby'], $this->config['order']); ?>
-                                </a>
-                            <?php else: ?>
-                                <?php echo esc_html($label); ?>
-                            <?php endif; ?>
-                        </th>
+                    <?php
+                    $label = is_array($column) ? ($column['label'] ?? ucfirst($key)) : $column;
+                    $sortable = is_array($column) && !empty($column['sortable']);
+                    $align = is_array($column) ? ($column['align'] ?? 'left') : 'left';
+                    ?>
+                    <th style="text-align: <?php echo esc_attr($align); ?>;">
+                        <?php if ($sortable): ?>
+                        <a href="<?php echo esc_url($this->get_sort_url($key, $this->config['orderby'], $this->config['order'])); ?>" class="saw-sortable">
+                            <?php echo esc_html($label); ?>
+                            <?php echo $this->get_sort_icon($key, $this->config['orderby'], $this->config['order']); ?>
+                        </a>
+                        <?php else: ?>
+                        <?php echo esc_html($label); ?>
+                        <?php endif; ?>
+                    </th>
                     <?php endforeach; ?>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($this->config['rows'] as $row): ?>
-                    <?php
-                    $detail_url = !empty($this->config['detail_url']) 
-                        ? str_replace('{id}', intval($row['id'] ?? 0), $this->config['detail_url'])
-                        : '';
-                    
-                    $row_class = 'saw-table-row';
-                    if (!empty($detail_url)) {
-                        $row_class .= ' saw-clickable-row';
-                    }
-                    ?>
-                    <tr class="<?php echo esc_attr($row_class); ?>" 
-                        data-id="<?php echo esc_attr($row['id'] ?? ''); ?>"
-                        <?php if (!empty($detail_url)): ?>
-                            data-detail-url="<?php echo esc_url($detail_url); ?>"
-                        <?php endif; ?>>
-                        
-                        <?php foreach ($this->config['columns'] as $key => $column): ?>
-                            <?php $this->render_table_cell($row, $key, $column); ?>
-                        <?php endforeach; ?>
-                    </tr>
+                <?php
+                $detail_url = !empty($this->config['detail_url']) 
+                    ? str_replace('{id}', intval($row['id'] ?? 0), $this->config['detail_url'])
+                    : '';
+                $row_class = 'saw-table-row' . (!empty($detail_url) ? ' saw-clickable-row' : '');
+                ?>
+                <tr class="<?php echo esc_attr($row_class); ?>" 
+                    data-id="<?php echo esc_attr($row['id'] ?? ''); ?>"
+                    <?php if ($detail_url): ?>data-detail-url="<?php echo esc_url($detail_url); ?>"<?php endif; ?>>
+                    <?php foreach ($this->config['columns'] as $key => $column): ?>
+                    <?php $this->render_table_cell($row, $key, $column); ?>
+                    <?php endforeach; ?>
+                </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
@@ -786,11 +795,17 @@ class SAW_Component_Admin_Table {
     private function render_table_cell($row, $key, $column) {
         $value = $row[$key] ?? '';
         $type = is_array($column) ? ($column['type'] ?? 'text') : 'text';
-        $align = is_array($column) && isset($column['align']) ? $column['align'] : 'left';
-        $class = is_array($column) && isset($column['class']) ? $column['class'] : '';
+        $align = is_array($column) ? ($column['align'] ?? 'left') : 'left';
+        $class = is_array($column) ? ($column['class'] ?? '') : '';
+        $has_width = is_array($column) && !empty($column['width']);
         
-        $td_class = $class ? ' class="' . esc_attr($class) . '"' : '';
-        echo '<td' . $td_class . ' style="text-align: ' . esc_attr($align) . ';">';
+        // Styl: zarovnání + pokud má width, přidat overflow
+        $style = "text-align: {$align};";
+        if ($has_width) {
+            $style .= " overflow: hidden; text-overflow: ellipsis; white-space: nowrap;";
+        }
+        
+        echo '<td' . ($class ? ' class="' . esc_attr($class) . '"' : '') . ' style="' . esc_attr($style) . '">';
         
         switch ($type) {
             case 'image':
@@ -798,38 +813,33 @@ class SAW_Component_Admin_Table {
                     echo '<img src="' . esc_url($value) . '" alt="" class="saw-table-image">';
                 }
                 break;
-                
             case 'badge':
                 if ($value !== '' && $value !== null) {
                     $badge_class = 'saw-badge';
                     if (is_array($column) && isset($column['map'][$value])) {
                         $badge_class .= ' saw-badge-' . $column['map'][$value];
                     }
-                    $label = isset($column['labels'][$value]) 
-                        ? $column['labels'][$value] 
-                        : $value;
+                    $label = isset($column['labels'][$value]) ? $column['labels'][$value] : $value;
                     echo '<span class="' . esc_attr($badge_class) . '">' . esc_html($label) . '</span>';
                 }
                 break;
-                
             case 'date':
-                if (!empty($value) && $value !== '0000-00-00' && $value !== '0000-00-00 00:00:00') {
-                    $format = is_array($column) && isset($column['format']) ? $column['format'] : 'd.m.Y';
+                if (!empty($value) && $value !== '0000-00-00') {
+                    $format = is_array($column) ? ($column['format'] ?? 'd.m.Y') : 'd.m.Y';
                     echo esc_html(date_i18n($format, strtotime($value)));
                 }
                 break;
-                
             case 'boolean':
-                echo $value ? '<span class="dashicons dashicons-yes-alt" style="color: #10b981;"></span>' 
-                            : '<span class="dashicons dashicons-dismiss" style="color: #ef4444;"></span>';
+                echo $value 
+                    ? '<span class="dashicons dashicons-yes-alt" style="color: #10b981;"></span>' 
+                    : '<span class="dashicons dashicons-dismiss" style="color: #ef4444;"></span>';
                 break;
-                
             case 'email':
                 if (!empty($value)) {
                     echo '<a href="mailto:' . esc_attr($value) . '">' . esc_html($value) . '</a>';
                 }
                 break;
-                
+            case 'callback':
             case 'custom':
                 if (is_array($column) && isset($column['callback']) && is_callable($column['callback'])) {
                     echo $column['callback']($value, $row);
@@ -837,14 +847,11 @@ class SAW_Component_Admin_Table {
                     echo esc_html($value);
                 }
                 break;
-            
             case 'html_raw':
                 echo $value;
                 break;
-                
             default:
                 echo esc_html($value);
-                break;
         }
         
         echo '</td>';
@@ -1038,16 +1045,18 @@ class SAW_Component_Admin_Table {
     }
     
     /**
-     * Render table cell - public helper for templates
-     * 
-     * @since 7.0.0
-     * @param array $row Row data
-     * @param string $key Column key
-     * @param array|string $column Column config
-     */
-    public function render_table_cell_for_template($row, $key, $column) {
-        $this->render_table_cell($row, $key, $column);
-    }
+ * Render table cell - public helper for templates
+ * 
+ * @since 7.0.0
+ * @param array $row Row data
+ * @param string $key Column key
+ * @param array|string $column Column config
+ * @param bool $is_translations_first_col Whether this is first column in translations table
+ * @param string $first_col_width Width for first column
+ */
+public function render_table_cell_for_template($row, $key, $column) {
+    $this->render_table_cell($row, $key, $column);
+}
     
     
     /**

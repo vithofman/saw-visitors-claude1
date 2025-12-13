@@ -170,77 +170,79 @@ $table_config['filters'] = array(
 // ============================================
 // COLUMNS CONFIGURATION
 // ============================================
-if (isset($controller) && method_exists($controller, 'get_table_columns')) {
-    $table_config['columns'] = $controller->get_table_columns();
-} else {
     $table_config['columns'] = array(
-        'translation_key' => array(
-            'label' => $tr('col_translation_key', 'Klíč'),
-            'type' => 'text',
-            'class' => 'saw-table-cell-bold',
-            'sortable' => true,
-            'width' => '300px', // Fixed width to prevent layout shift
+    'translation_key' => array(
+        'label' => $tr('col_translation_key', 'Klíč'),
+        'type' => 'text',
+        'class' => 'saw-table-cell-bold',
+        'sortable' => true,
+        'width' => '18%',
+    ),
+    'language_code' => array(
+        'label' => $tr('col_language', 'Jazyk'),
+        'type' => 'badge',
+        'sortable' => true,
+        'width' => '6%',
+        'map' => array(
+            'cs' => 'info',
+            'en' => 'secondary',
+            'de' => 'warning',
+            'sk' => 'success',
         ),
-        'language_code' => array(
-            'label' => $tr('col_language', 'Jazyk'),
-            'type' => 'badge',
-            'sortable' => true,
-            'map' => array(
-                'cs' => 'info',
-                'en' => 'secondary',
-                'de' => 'warning',
-                'sk' => 'success',
-            ),
-            'labels' => array(
-                'cs' => '🇨🇿 CS',
-                'en' => '🇬🇧 EN',
-                'de' => '🇩🇪 DE',
-                'sk' => '🇸🇰 SK',
-            ),
+        'labels' => array(
+            'cs' => '🇨🇿 CS',
+            'en' => '🇬🇧 EN',
+            'de' => '🇩🇪 DE',
+            'sk' => '🇸🇰 SK',
         ),
-        'context' => array(
-            'label' => $tr('col_context', 'Kontext'),
-            'type' => 'badge',
-            'sortable' => true,
-            'map' => array(
-                'terminal' => 'primary',
-                'invitation' => 'info',
-                'admin' => 'warning',
-                'common' => 'secondary',
-            ),
-            'labels' => array(
-                'terminal' => '🖥️ Terminal',
-                'invitation' => '📧 Pozvánka',
-                'admin' => '⚙️ Admin',
-                'common' => '🌐 Společné',
-            ),
+    ),
+    'context' => array(
+        'label' => $tr('col_context', 'Kontext'),
+        'type' => 'badge',
+        'sortable' => true,
+        'width' => '9%',
+        'map' => array(
+            'terminal' => 'primary',
+            'invitation' => 'info',
+            'admin' => 'warning',
+            'common' => 'secondary',
         ),
-        'section' => array(
-            'label' => $tr('col_section', 'Sekce'),
-            'type' => 'text',
-            'sortable' => true,
+        'labels' => array(
+            'terminal' => '🖥️ Terminal',
+            'invitation' => '📧 Pozvánka',
+            'admin' => '⚙️ Admin',
+            'common' => '🌐 Společné',
         ),
-        'translation_text' => array(
-            'label' => $tr('col_translation_text', 'Text'),
-            'type' => 'text',
-            'class' => 'saw-table-cell-truncate',
-            'maxlength' => 100,
-        ),
-        'description' => array(
-            'label' => $tr('col_description', 'Popis'),
-            'type' => 'text',
-            'class' => 'saw-table-cell-truncate',
-            'maxlength' => 50,
-        ),
-        'created_at' => array(
-            'label' => $tr('col_created_at', 'Vytvořeno'),
-            'type' => 'callback',
-            'callback' => function($value) {
-                return !empty($value) ? date('d.m.Y H:i', strtotime($value)) : '—';
-            },
-        ),
-    );
-}
+    ),
+    'section' => array(
+        'label' => $tr('col_section', 'Sekce'),
+        'type' => 'text',
+        'sortable' => true,
+        'width' => '9%',
+    ),
+    'translation_text' => array(
+        'label' => $tr('col_translation_text', 'Text'),
+        'type' => 'text',
+        'class' => 'saw-table-cell-truncate',
+        'maxlength' => 100,
+        'width' => '32%',  // PŘIDAT WIDTH
+    ),
+    'description' => array(
+        'label' => $tr('col_description', 'Popis'),
+        'type' => 'text',
+        'class' => 'saw-table-cell-truncate',
+        'maxlength' => 50,
+        'width' => '14%',
+    ),
+    'created_at' => array(
+        'label' => $tr('col_created_at', 'Vytvořeno'),
+        'type' => 'callback',
+        'width' => '12%',
+        'callback' => function($value) {
+            return !empty($value) ? date('d.m.Y H:i', strtotime($value)) : '—';
+        },
+    ),
+);
 
 // ============================================
 // TABS CONFIGURATION

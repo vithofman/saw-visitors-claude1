@@ -4,7 +4,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visits
- * @version     5.0.0 - FIXED: Matched visitors structure exactly
+ * @version     2.0.0 - Refactored: Fixed column widths, infinite scroll
  */
 
 if (!defined('ABSPATH')) {
@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
 }
 
 // ============================================
-// TRANSLATIONS SETUP
+// TRANSLATIONS
 // ============================================
 $lang = 'cs';
 if (class_exists('SAW_Component_Language_Switcher')) {
@@ -33,15 +33,16 @@ if (!class_exists('SAW_Component_Admin_Table')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/class-saw-component-admin-table.php';
 }
 
-$ajax_nonce = wp_create_nonce('saw_ajax_nonce');
-
-$items = $list_data['items'] ?? array();
-$total = $list_data['total'] ?? 0;
-$page = $list_data['page'] ?? 1;
-$total_pages = $list_data['total_pages'] ?? 0;
-$search = $list_data['search'] ?? '';
-$orderby = $list_data['orderby'] ?? 'id';
-$order = $list_data['order'] ?? 'DESC';
+// ============================================
+// DATA FROM CONTROLLER
+// ============================================
+$items = $items ?? array();
+$total = $total ?? 0;
+$page = $page ?? 1;
+$total_pages = $total_pages ?? 0;
+$search = $search ?? '';
+$orderby = $orderby ?? 'id';
+$order = $order ?? 'DESC';
 
 // ============================================
 // LOAD BRANCHES FOR FILTER
@@ -89,9 +90,6 @@ $table_config = array(
     'actions' => array('view', 'edit', 'delete'),
     'empty_message' => $tr('empty_message', 'Žádné návštěvy nenalezeny'),
     'add_new' => $tr('add_new', 'Nová návštěva'),
-    
-    'ajax_enabled' => true,
-    'ajax_nonce' => $ajax_nonce,
 );
 
 // ============================================
@@ -130,7 +128,7 @@ $table_config['filters'] = array(
 );
 
 // ============================================
-// COLUMNS CONFIGURATION
+// COLUMNS CONFIGURATION - ŠÍŘKY V PROCENTECH
 // ============================================
 $visitor_company_label = $tr('visitor_company', 'Firma');
 $visitor_physical_label = $tr('visitor_physical', 'Fyzická osoba');
@@ -146,7 +144,7 @@ $table_config['columns'] = array(
         'type' => 'custom',
         'sortable' => true,
         'class' => 'saw-table-cell-bold',
-        'width' => '280px', // ⭐ Zúžený sloupec
+        'width' => '40%',  // Hlavní obsahový sloupec
         'callback' => function($value, $item) use ($visitor_company_label, $visitor_physical_label, $visitor_physical_short) {
             if (!empty($item['company_id'])) {
                 $company_name = esc_html($item['company_name'] ?? 'Firma #' . $item['company_id']);
@@ -167,13 +165,11 @@ $table_config['columns'] = array(
         },
     ),
     
-    // ⭐ Sloupec pobočky odstraněn - zobrazují se jen data zvolené pobočky z branch switcher
-    
     'visit_type' => array(
         'label' => $tr('col_type', 'Typ'),
         'type' => 'badge',
         'sortable' => true,
-        'width' => '110px',
+        'width' => '10%',  // Badge je malý
         'map' => array(
             'planned' => 'info',
             'walk_in' => 'warning',
@@ -187,7 +183,7 @@ $table_config['columns'] = array(
     'visitor_count' => array(
         'label' => $tr('col_count', 'Počet'),
         'type' => 'custom',
-        'width' => '90px',
+        'width' => '8%',   // Malý sloupec
         'align' => 'center',
         'sortable' => false,
         'callback' => function($value, $item) {
@@ -204,7 +200,7 @@ $table_config['columns'] = array(
         'label' => $tr('col_risks', 'Rizika'),
         'type' => 'badge',
         'sortable' => true,
-        'width' => '120px',
+        'width' => '12%',  // Badge střední
         'align' => 'center',
         'map' => array(
             'pending' => 'secondary',
@@ -222,7 +218,7 @@ $table_config['columns'] = array(
         'label' => $tr('col_status', 'Stav'),
         'type' => 'badge',
         'sortable' => true,
-        'width' => '130px',
+        'width' => '15%',  // Badge větší
         'map' => array(
             'draft' => 'secondary',
             'pending' => 'warning',
@@ -245,10 +241,11 @@ $table_config['columns'] = array(
         'label' => $tr('col_planned_date_from', 'Datum návštěvy (od)'),
         'type' => 'date',
         'sortable' => true,
-        'width' => '140px',
+        'width' => '15%',  // Date sloupec
         'format' => 'd.m.Y',
     ),
 );
+// Součet: 40 + 10 + 8 + 12 + 15 + 15 = 100%
 
 // ============================================
 // TABS CONFIGURATION
@@ -284,8 +281,12 @@ if (!empty($table_config['tabs']['enabled'])) {
 // ============================================
 // INFINITE SCROLL CONFIGURATION
 // ============================================
-// ⭐ ODSTRANĚNO: Konfigurace je nyní v config.php, není potřeba duplikovat
-// Konfigurace se automaticky převezme z $config do $table_config přes module_config
+$table_config['infinite_scroll'] = array(
+    'enabled' => true,
+    'initial_load' => 50,
+    'per_page' => 50,
+    'threshold' => 0.6,
+);
 
 // ============================================
 // RENDER TABLE

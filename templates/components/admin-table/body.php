@@ -29,29 +29,6 @@ $enable_detail_modal = $config['enable_detail_modal'] ?? false;
 
 <div class="saw-table-responsive" id="saw-<?php echo esc_attr($entity); ?>-table-wrapper">
     <table class="saw-table saw-table-sortable">
-        <?php if ($entity === 'translations'): ?>
-        <colgroup>
-            <?php 
-            $first_col_width = null;
-            foreach ($columns as $column_key => $column_config) {
-                if (!empty($column_config['width'])) {
-                    $first_col_width = $column_config['width'];
-                    break;
-                }
-            }
-            if ($first_col_width): ?>
-            <col style="width: <?php echo esc_attr($first_col_width); ?>; min-width: <?php echo esc_attr($first_col_width); ?>; max-width: <?php echo esc_attr($first_col_width); ?>;">
-            <?php else: ?>
-            <col>
-            <?php endif; ?>
-            <?php 
-            // Ostatní sloupce - nechat prohlížeči rozdělit zbývající prostor
-            $other_cols_count = count($columns) - 1 + (empty($actions) ? 0 : 1);
-            for ($i = 0; $i < $other_cols_count; $i++): ?>
-            <col style="width: auto;">
-            <?php endfor; ?>
-        </colgroup>
-        <?php endif; ?>
         <thead>
             <tr>
                 <?php foreach ($columns as $column_key => $column_config): ?>
@@ -66,9 +43,11 @@ $enable_detail_modal = $config['enable_detail_modal'] ?? false;
                     if ($align === 'center') {
                         $class .= ' saw-text-center';
                     }
-                    // Build inline style for width if specified
+                    // DEPRECATED: Inline width styles removed for translations table
+                    // Width is now controlled by CSS variable --saw-translations-key-width
+                    // Only apply inline width for non-translations tables
                     $th_style = '';
-                    if (!empty($column_config['width'])) {
+                    if ($entity !== 'translations' && !empty($column_config['width'])) {
                         $width = esc_attr($column_config['width']);
                         $th_style = 'width: ' . $width . '; min-width: ' . $width . '; max-width: ' . $width . ';';
                     }
@@ -153,9 +132,11 @@ $enable_detail_modal = $config['enable_detail_modal'] ?? false;
                             if (!empty($column_config['class'])) {
                                 $cell_class .= ' ' . esc_attr($column_config['class']);
                             }
-                            // Build inline style for width if specified (same as th)
+                            // DEPRECATED: Inline width styles removed for translations table
+                            // Width is now controlled by CSS variable --saw-translations-key-width
+                            // Only apply inline width for non-translations tables
                             $td_style = '';
-                            if (!empty($column_config['width'])) {
+                            if ($entity !== 'translations' && !empty($column_config['width'])) {
                                 $width = esc_attr($column_config['width']);
                                 $td_style = 'width: ' . $width . '; min-width: ' . $width . '; max-width: ' . $width . ';';
                             }

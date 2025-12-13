@@ -1,10 +1,10 @@
 <?php
 /**
  * Departments List Template
- *
+ * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Departments
- * @version     7.0.0 - REFACTORED: Translations, tabs, infinite scroll
+ * @version     2.0.0 - Refactored: Fixed column widths, infinite scroll
  */
 
 if (!defined('ABSPATH')) {
@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
 }
 
 // ============================================
-// LOAD TRANSLATIONS
+// TRANSLATIONS
 // ============================================
 $lang = 'cs';
 if (class_exists('SAW_Component_Language_Switcher')) {
@@ -27,26 +27,25 @@ $tr = function($key, $fallback = null) use ($t) {
 };
 
 // ============================================
-// ENSURE COMPONENTS ARE LOADED
+// COMPONENT LOADING
 // ============================================
 if (!class_exists('SAW_Component_Admin_Table')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/class-saw-component-admin-table.php';
 }
 
 // ============================================
-// PREPARE CONFIG FOR ADMIN TABLE
+// DATA FROM CONTROLLER
 // ============================================
-$entity = $config['entity'] ?? 'departments';
-$table_config = $config;
-$base_url = home_url('/admin/' . ($config['route'] ?? 'departments'));
-
-$table_config['title'] = $tr('title', 'Oddělení');
-$table_config['create_url'] = $base_url . '/create';
-$table_config['detail_url'] = $base_url . '/{id}/';
-$table_config['edit_url'] = $base_url . '/{id}/edit';
+$items = $items ?? array();
+$total = $total ?? 0;
+$page = $page ?? 1;
+$total_pages = $total_pages ?? 0;
+$search = $search ?? '';
+$orderby = $orderby ?? 'name';
+$order = $order ?? 'ASC';
 
 // ============================================
-// LOAD BRANCHES FOR FORM
+// LOAD BRANCHES FOR FORM (if needed)
 // ============================================
 global $wpdb;
 $customer_id = SAW_Context::get_customer_id();
@@ -62,51 +61,34 @@ if ($customer_id) {
 }
 
 // ============================================
-// COLUMN DEFINITIONS
+// TABLE CONFIGURATION
 // ============================================
-$table_config['columns'] = array(
-    'department_number' => array(
-        'label' => $tr('col_department_number', 'Číslo oddělení'),
-        'type' => 'custom',
-        'width' => '150px',
-        'sortable' => true,
-        'callback' => function($value) {
-            if (empty($value)) return '<span class="saw-text-muted">—</span>';
-            return sprintf('<span class="saw-code-badge">%s</span>', esc_html($value));
-        }
-    ),
-    'name' => array(
-        'label' => $tr('col_name', 'Název oddělení'),
-        'type' => 'text',
-        'sortable' => true,
-        'class' => 'saw-table-cell-bold',
-    ),
-    'is_active' => array(
-        'label' => $tr('col_status', 'Status'),
-        'type' => 'custom',
-        'width' => '100px',
-        'align' => 'center',
-        'callback' => function($value) use ($tr) {
-            if (empty($value)) {
-                return '<span class="saw-badge saw-badge-secondary">' 
-                    . esc_html($tr('status_inactive', 'Neaktivní')) . '</span>';
-            }
-            return '<span class="saw-badge saw-badge-success">' 
-                . esc_html($tr('status_active', 'Aktivní')) . '</span>';
-        }
-    ),
+$table_config = array(
+    'title' => $tr('title', 'Oddělení'),
+    'create_url' => home_url('/admin/departments/create'),
+    'edit_url' => home_url('/admin/departments/{id}/edit'),
+    'detail_url' => home_url('/admin/departments/{id}/'),
+    
+    'sidebar_mode' => $sidebar_mode ?? null,
+    'detail_item' => $detail_item ?? null,
+    'form_item' => $form_item ?? null,
+    'detail_tab' => $detail_tab ?? 'overview',
+    'related_data' => $related_data ?? null,
+    
+    'module_config' => isset($config) ? $config : array(),
+    'branches' => $branches,
+    
+    'rows' => $items,
+    'total_items' => $total,
+    'current_page' => $page,
+    'total_pages' => $total_pages,
+    'orderby' => $orderby,
+    'order' => $order,
+    
+    'actions' => array('view', 'edit', 'delete'),
+    'empty_message' => $tr('empty_message', 'Žádná oddělení nenalezena'),
+    'add_new' => $tr('add_new', 'Nové oddělení'),
 );
-
-// ============================================
-// DATA
-// ============================================
-$table_config['rows'] = $items ?? array();
-$table_config['total_items'] = $total ?? 0;
-$table_config['current_page'] = $page ?? 1;
-$table_config['total_pages'] = $total_pages ?? 1;
-$table_config['search_value'] = $search ?? '';
-$table_config['orderby'] = $orderby ?? 'name';
-$table_config['order'] = $order ?? 'ASC';
 
 // ============================================
 // SEARCH CONFIGURATION
@@ -119,42 +101,71 @@ $table_config['search'] = array(
 );
 
 // ============================================
-// SIDEBAR CONTEXT
+// COLUMNS CONFIGURATION - ŠÍŘKY V PROCENTECH
 // ============================================
-$table_config['sidebar_mode'] = $sidebar_mode ?? null;
-$table_config['detail_item'] = $detail_item ?? null;
-$table_config['form_item'] = $form_item ?? null;
-$table_config['detail_tab'] = $detail_tab ?? 'overview';
-$table_config['module_config'] = $config;
-$table_config['related_data'] = $related_data ?? null;
-$table_config['branches'] = $branches;
+$table_config['columns'] = array(
+    'department_number' => array(
+        'label' => $tr('col_department_number', 'Číslo oddělení'),
+        'type' => 'custom',
+        'width' => '20%',  // Malý sloupec pro kód
+        'sortable' => true,
+        'callback' => function($value) {
+            if (empty($value)) return '<span class="saw-text-muted">—</span>';
+            return sprintf('<span class="saw-code-badge">%s</span>', esc_html($value));
+        }
+    ),
+    'name' => array(
+        'label' => $tr('col_name', 'Název oddělení'),
+        'type' => 'text',
+        'sortable' => true,
+        'class' => 'saw-table-cell-bold',
+        'width' => '65%',  // Hlavní identifikátor
+    ),
+    'is_active' => array(
+        'label' => $tr('col_status', 'Status'),
+        'type' => 'badge',
+        'sortable' => true,
+        'width' => '15%',  // Badge
+        'align' => 'center',
+        'map' => array(
+            '1' => 'success',
+            '0' => 'secondary',
+        ),
+        'labels' => array(
+            '1' => $tr('status_active', 'Aktivní'),
+            '0' => $tr('status_inactive', 'Neaktivní'),
+        ),
+    ),
+);
+// Součet: 20 + 65 + 15 = 100%
 
 // ============================================
-// ACTIONS
-// ============================================
-$table_config['actions'] = array('view', 'edit', 'delete');
-$table_config['add_new'] = $tr('add_new', 'Nové oddělení');
-$table_config['empty_message'] = $tr('empty_message', 'Žádná oddělení nenalezena');
-
-// ============================================
-// TABS - Override labels from translations
+// TABS CONFIGURATION
 // ============================================
 $table_config['tabs'] = $config['tabs'] ?? null;
 
-if (!empty($table_config['tabs']['tabs'])) {
-    if (isset($table_config['tabs']['tabs']['all'])) {
-        $table_config['tabs']['tabs']['all']['label'] = $tr('tab_all', 'Všechna');
+if (!empty($table_config['tabs']['enabled'])) {
+    // Přepsat labels z configu překlady
+    if (!empty($table_config['tabs']['tabs'])) {
+        if (isset($table_config['tabs']['tabs']['all'])) {
+            $table_config['tabs']['tabs']['all']['label'] = $tr('tab_all', 'Všechna');
+        }
+        if (isset($table_config['tabs']['tabs']['active'])) {
+            $table_config['tabs']['tabs']['active']['label'] = $tr('tab_active', 'Aktivní');
+        }
+        if (isset($table_config['tabs']['tabs']['inactive'])) {
+            $table_config['tabs']['tabs']['inactive']['label'] = $tr('tab_inactive', 'Neaktivní');
+        }
     }
-    if (isset($table_config['tabs']['tabs']['active'])) {
-        $table_config['tabs']['tabs']['active']['label'] = $tr('tab_active', 'Aktivní');
-    }
-    if (isset($table_config['tabs']['tabs']['inactive'])) {
-        $table_config['tabs']['tabs']['inactive']['label'] = $tr('tab_inactive', 'Neaktivní');
-    }
+    
+    $table_config['current_tab'] = (isset($current_tab) && $current_tab !== null && $current_tab !== '') 
+        ? (string)$current_tab 
+        : ($table_config['tabs']['default_tab'] ?? 'all');
+    $table_config['tab_counts'] = (isset($tab_counts) && is_array($tab_counts)) ? $tab_counts : array();
 }
 
 // ============================================
-// INFINITE SCROLL
+// INFINITE SCROLL CONFIGURATION
 // ============================================
 $table_config['infinite_scroll'] = array(
     'enabled' => true,
@@ -163,16 +174,8 @@ $table_config['infinite_scroll'] = array(
     'threshold' => 0.6,
 );
 
-// Current tab
-if (!empty($table_config['tabs']['enabled'])) {
-    $table_config['current_tab'] = (isset($current_tab) && $current_tab !== null && $current_tab !== '') 
-        ? (string)$current_tab 
-        : ($table_config['tabs']['default_tab'] ?? 'all');
-    $table_config['tab_counts'] = (isset($tab_counts) && is_array($tab_counts)) ? $tab_counts : array();
-}
-
 // ============================================
-// RENDER
+// RENDER TABLE
 // ============================================
-$table = new SAW_Component_Admin_Table($entity, $table_config);
+$table = new SAW_Component_Admin_Table('departments', $table_config);
 $table->render();

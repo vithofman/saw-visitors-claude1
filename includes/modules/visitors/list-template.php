@@ -4,7 +4,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visitors
- * @version     4.0.0 - Multi-language support
+ * @version     2.0.0 - Refactored: Fixed column widths, infinite scroll
  */
 
 if (!defined('ABSPATH')) {
@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
 }
 
 // ============================================
-// TRANSLATIONS SETUP
+// TRANSLATIONS
 // ============================================
 $lang = 'cs';
 if (class_exists('SAW_Component_Language_Switcher')) {
@@ -33,15 +33,16 @@ if (!class_exists('SAW_Component_Admin_Table')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/class-saw-component-admin-table.php';
 }
 
-$ajax_nonce = wp_create_nonce('saw_ajax_nonce');
-
-$items = $list_data['items'] ?? array();
-$total = $list_data['total'] ?? 0;
-$page = $list_data['page'] ?? 1;
-$total_pages = $list_data['total_pages'] ?? 0;
-$search = $list_data['search'] ?? '';
-$orderby = $list_data['orderby'] ?? 'vis.id';
-$order = $list_data['order'] ?? 'DESC';
+// ============================================
+// DATA FROM CONTROLLER
+// ============================================
+$items = $items ?? array();
+$total = $total ?? 0;
+$page = $page ?? 1;
+$total_pages = $total_pages ?? 0;
+$search = $search ?? '';
+$orderby = $orderby ?? 'vis.id';
+$order = $order ?? 'DESC';
 
 // ============================================
 // TABLE CONFIGURATION
@@ -70,9 +71,6 @@ $table_config = array(
     'actions' => array('view', 'edit', 'delete'),
     'empty_message' => $tr('empty_message', 'Žádní návštěvníci nenalezeni'),
     'add_new' => $tr('add_new', 'Nový návštěvník'),
-    
-    'ajax_enabled' => true,
-    'ajax_nonce' => $ajax_nonce,
 );
 
 // ============================================
@@ -103,7 +101,7 @@ $table_config['filters'] = array(
 );
 
 // ============================================
-// COLUMNS CONFIGURATION
+// COLUMNS CONFIGURATION - ŠÍŘKY V PROCENTECH
 // ============================================
 $table_config['columns'] = array(
     'first_name' => array(
@@ -111,25 +109,31 @@ $table_config['columns'] = array(
         'type' => 'text',
         'class' => 'saw-table-cell-bold',
         'sortable' => true,
+        'width' => '12%',
     ),
     'last_name' => array(
         'label' => $tr('col_last_name', 'Příjmení'),
         'type' => 'text',
         'class' => 'saw-table-cell-bold',
         'sortable' => true,
+        'width' => '12%',
     ),
     'company_name' => array(
         'label' => $tr('col_company', 'Firma'),
         'type' => 'text',
+        'class' => 'saw-table-cell-truncate',
+        'width' => '20%',  // Střední obsahový sloupec
     ),
     'branch_name' => array(
         'label' => $tr('col_branch', 'Pobočka'),
         'type' => 'text',
+        'width' => '14%',
     ),
     'current_status' => array(
         'label' => $tr('col_current_status', 'Aktuální stav'),
         'type' => 'badge',
         'sortable' => false,
+        'width' => '12%',  // Badge
         'map' => array(
             'present' => 'success',
             'checked_out' => 'secondary',
@@ -148,6 +152,7 @@ $table_config['columns'] = array(
     'first_checkin_at' => array(
         'label' => $tr('col_first_checkin', 'První check-in'),
         'type' => 'callback',
+        'width' => '10%',  // Date sloupec
         'callback' => function($value) {
             return !empty($value) ? date('d.m.Y H:i', strtotime($value)) : '—';
         },
@@ -155,6 +160,7 @@ $table_config['columns'] = array(
     'last_checkout_at' => array(
         'label' => $tr('col_last_checkout', 'Poslední check-out'),
         'type' => 'callback',
+        'width' => '10%',  // Date sloupec
         'callback' => function($value) {
             return !empty($value) ? date('d.m.Y H:i', strtotime($value)) : '—';
         },
@@ -162,6 +168,7 @@ $table_config['columns'] = array(
     'training_status' => array(
         'label' => $tr('col_training', 'Školení'),
         'type' => 'badge',
+        'width' => '10%',  // Badge
         'map' => array(
             'completed' => 'success',
             'in_progress' => 'info',
@@ -176,6 +183,7 @@ $table_config['columns'] = array(
         ),
     ),
 );
+// Součet: 12 + 12 + 20 + 14 + 12 + 10 + 10 + 10 = 100%
 
 // ============================================
 // TABS CONFIGURATION

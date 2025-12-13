@@ -1,9 +1,10 @@
 <?php
 /**
- * OOPP Module - List Template
+ * OOPP List Template
  * 
- * @package SAW_Visitors
- * @version 2.0.0 - ADDED: Translation support
+ * @package     SAW_Visitors
+ * @subpackage  Modules/OOPP
+ * @version     2.0.0 - Refactored: Fixed column widths, infinite scroll
  */
 
 if (!defined('ABSPATH')) {
@@ -11,21 +12,41 @@ if (!defined('ABSPATH')) {
 }
 
 // ============================================
-// TRANSLATIONS SETUP
+// TRANSLATIONS
 // ============================================
 $lang = 'cs';
 if (class_exists('SAW_Component_Language_Switcher')) {
     $lang = SAW_Component_Language_Switcher::get_user_language();
 }
-
 $t = function_exists('saw_get_translations') 
     ? saw_get_translations($lang, 'admin', 'oopp') 
-    : array();
+    : [];
 
 $tr = function($key, $fallback = null) use ($t) {
     return $t[$key] ?? $fallback ?? $key;
 };
 
+// ============================================
+// COMPONENT LOADING
+// ============================================
+if (!class_exists('SAW_Component_Admin_Table')) {
+    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/class-saw-component-admin-table.php';
+}
+
+// ============================================
+// DATA FROM CONTROLLER
+// ============================================
+$items = $items ?? array();
+$total = $total ?? 0;
+$page = $page ?? 1;
+$total_pages = $total_pages ?? 0;
+$search = $search ?? '';
+$orderby = $orderby ?? 'name';
+$order = $order ?? 'ASC';
+
+// ============================================
+// LOAD DATA FOR FILTERS
+// ============================================
 global $wpdb;
 $customer_id = class_exists('SAW_Context') ? SAW_Context::get_customer_id() : 0;
 
@@ -77,17 +98,68 @@ if ($customer_id) {
     }
 }
 
-// Prepare config for AdminTable
-$table_config = $config;
-$base_url = home_url('/admin/' . ($config['route'] ?? 'oopp'));
-
-$table_config['title'] = $config['plural'] ?? $tr('plural', 'Osobní ochranné pracovní prostředky');
-$table_config['create_url'] = $base_url . '/create';
-$table_config['detail_url'] = $base_url . '/{id}/';
-$table_config['edit_url'] = $base_url . '/{id}/edit';
+// ============================================
+// TABLE CONFIGURATION
+// ============================================
+$table_config = array(
+    'title' => $config['plural'] ?? $tr('plural', 'Osobní ochranné pracovní prostředky'),
+    'create_url' => home_url('/admin/oopp/create'),
+    'edit_url' => home_url('/admin/oopp/{id}/edit'),
+    'detail_url' => home_url('/admin/oopp/{id}/'),
+    
+    'sidebar_mode' => $sidebar_mode ?? null,
+    'detail_item' => $detail_item ?? null,
+    'form_item' => $form_item ?? null,
+    'detail_tab' => $detail_tab ?? 'overview',
+    'related_data' => $related_data ?? null,
+    
+    'module_config' => isset($config) ? $config : array(),
+    
+    'rows' => $items,
+    'total_items' => $total,
+    'current_page' => $page,
+    'total_pages' => $total_pages,
+    'orderby' => $orderby,
+    'order' => $order,
+    
+    'actions' => array('view', 'edit', 'delete'),
+    'empty_message' => $tr('empty_message', 'Žádné OOPP nenalezeny'),
+    'add_new' => $tr('btn_add_new', 'Nový OOPP'),
+);
 
 // ============================================
-// COLUMN DEFINITIONS - INLINE STYLES
+// SEARCH CONFIGURATION
+// ============================================
+$table_config['search'] = array(
+    'enabled' => true,
+    'placeholder' => $tr('search_placeholder', 'Hledat OOPP...'),
+    'fields' => array('name', 'standards', 'risk_description'),
+    'show_info_banner' => true,
+);
+
+// ============================================
+// FILTERS CONFIGURATION
+// ============================================
+$table_config['filters'] = array(
+    'group_id' => array(
+        'label' => $tr('filter_group', 'Skupina'),
+        'type' => 'select',
+        'options' => $oopp_groups_options,
+    ),
+    'branch_id' => array(
+        'label' => $tr('filter_branch', 'Pobočka'),
+        'type' => 'select',
+        'options' => $branches_options,
+    ),
+    'department_id' => array(
+        'label' => $tr('filter_department', 'Oddělení'),
+        'type' => 'select',
+        'options' => $departments_options,
+    ),
+);
+
+// ============================================
+// COLUMNS CONFIGURATION - ŠÍŘKY V PROCENTECH
 // ============================================
 
 // Store translations for use in callbacks
@@ -107,15 +179,10 @@ $list_translations = array(
 );
 
 $table_config['columns'] = array(
-    
-    // ============================================
-    // OBRÁZEK - 80x80px, sloupec 120px široký
-    // ============================================
     'image' => array(
         'label' => '',
         'type' => 'custom',
-        'width' => '120px',
-        'min_width' => '120px',
+        'width' => '10%',  // Obrázek
         'sortable' => false,
         'callback' => function($value, $item) {
             if (!empty($item['image_path'])) {
@@ -134,13 +201,10 @@ $table_config['columns'] = array(
         },
     ),
     
-    // ============================================
-    // SKUPINA OOPP - Čitelné, tmavé písmo
-    // ============================================
     'group_display' => array(
         'label' => $list_translations['col_group'],
         'type' => 'custom',
-        'width' => '300px',
+        'width' => '25%',  // Skupina střední
         'sortable' => true,
         'sort_column' => 'group_id',
         'callback' => function($value, $item) {
@@ -178,13 +242,11 @@ $table_config['columns'] = array(
         },
     ),
     
-    // ============================================
-    // NÁZEV - Tmavé, tučné písmo
-    // ============================================
     'name' => array(
         'label' => $list_translations['col_name'],
         'type' => 'custom',
         'sortable' => true,
+        'width' => '30%',  // Hlavní identifikátor
         'callback' => function($value, $item) {
             ?>
             <span style="
@@ -197,13 +259,10 @@ $table_config['columns'] = array(
         },
     ),
     
-    // ============================================
-    // NORMY - Chip styl, čitelné
-    // ============================================
     'standards' => array(
         'label' => $list_translations['col_standards'],
         'type' => 'custom',
-        'width' => '160px',
+        'width' => '13%',  // Normy střední
         'callback' => function($value, $item) {
             if (!empty($item['standards'])) {
                 $short = mb_substr($item['standards'], 0, 20);
@@ -235,13 +294,10 @@ $table_config['columns'] = array(
         },
     ),
     
-    // ============================================
-    // PLATNOST - Badges s ikonami
-    // ============================================
     'scope' => array(
         'label' => $list_translations['col_scope'],
         'type' => 'custom',
-        'width' => '180px',
+        'width' => '15%',  // Platnost střední
         'callback' => function($value, $item) use ($list_translations) {
             $branch_count = intval($item['branch_count'] ?? 0);
             $dept_count = intval($item['department_count'] ?? 0);
@@ -315,113 +371,29 @@ $table_config['columns'] = array(
         },
     ),
     
-    // ============================================
-    // STAV - Badge
-    // ============================================
     'is_active' => array(
         'label' => $list_translations['col_status'],
-        'type' => 'custom',
-        'width' => '110px',
+        'type' => 'badge',
+        'sortable' => true,
+        'width' => '7%',   // Badge malý
         'align' => 'center',
-        'callback' => function($value) use ($list_translations) {
-            if (!empty($value)) {
-                ?>
-                <span style="
-                    display: inline-flex;
-                    align-items: center;
-                    justify-content: center;
-                    padding: 6px 14px;
-                    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-                    color: #ffffff;
-                    font-size: 12px;
-                    font-weight: 700;
-                    border-radius: 20px;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                    box-shadow: 0 2px 6px rgba(22, 163, 74, 0.4);
-                "><?php echo esc_html($list_translations['status_active']); ?></span>
-                <?php
-            } else {
-                ?>
-                <span style="
-                    display: inline-flex;
-                    align-items: center;
-                    justify-content: center;
-                    padding: 6px 14px;
-                    background: #e2e8f0;
-                    color: #64748b;
-                    font-size: 12px;
-                    font-weight: 700;
-                    border-radius: 20px;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                "><?php echo esc_html($list_translations['status_inactive']); ?></span>
-                <?php
-            }
-        },
+        'map' => array(
+            '1' => 'success',
+            '0' => 'secondary',
+        ),
+        'labels' => array(
+            '1' => $list_translations['status_active'],
+            '0' => $list_translations['status_inactive'],
+        ),
     ),
 );
+// Součet: 10 + 25 + 30 + 13 + 15 + 7 = 100%
 
-// Data
-$table_config['rows'] = $items;
-$table_config['total_items'] = $total;
-$table_config['current_page'] = $page;
-$table_config['total_pages'] = $total_pages;
-$table_config['search_value'] = $search ?? '';
-$table_config['orderby'] = $orderby;
-$table_config['order'] = $order;
-
-// Search configuration
-$table_config['search'] = array(
-    'enabled' => true,
-    'placeholder' => $tr('search_placeholder', 'Hledat OOPP...'),
-    'fields' => array('name', 'standards', 'risk_description'),
-    'show_info_banner' => true,
-);
-
-// Filters configuration
-$table_config['filters'] = array(
-    'group_id' => array(
-        'type' => 'select',
-        'label' => $tr('filter_group', 'Skupina'),
-        'options' => $oopp_groups_options,
-    ),
-    'branch_id' => array(
-        'type' => 'select',
-        'label' => $tr('filter_branch', 'Pobočka'),
-        'options' => $branches_options,
-    ),
-    'department_id' => array(
-        'type' => 'select',
-        'label' => $tr('filter_department', 'Oddělení'),
-        'options' => $departments_options,
-    ),
-);
-
-// Sidebar context
-$table_config['sidebar_mode'] = $sidebar_mode ?? null;
-$table_config['detail_item'] = $detail_item ?? null;
-$table_config['form_item'] = $form_item ?? null;
-$table_config['detail_tab'] = $detail_tab ?? 'overview';
-$table_config['module_config'] = $config;
-$table_config['related_data'] = $related_data ?? null;
-
-// Actions
-$table_config['actions'] = array('view', 'edit', 'delete');
-$table_config['add_new'] = $tr('btn_add_new', 'Nový OOPP');
-
-// TABS configuration - loaded from config.php
+// ============================================
+// TABS CONFIGURATION
+// ============================================
 $table_config['tabs'] = $config['tabs'] ?? null;
 
-// Infinite scroll
-$table_config['infinite_scroll'] = array(
-    'enabled' => true,
-    'initial_load' => 100,
-    'per_page' => 50,
-    'threshold' => 0.6,
-);
-
-// Pass tab data from get_list_data() result
 if (!empty($table_config['tabs']['enabled'])) {
     $table_config['current_tab'] = (isset($current_tab) && $current_tab !== null && $current_tab !== '') 
         ? (string)$current_tab 
@@ -429,34 +401,18 @@ if (!empty($table_config['tabs']['enabled'])) {
     $table_config['tab_counts'] = (isset($tab_counts) && is_array($tab_counts)) ? $tab_counts : array();
 }
 
-// Ensure Admin Table class is loaded
-if (!class_exists('SAW_Component_Admin_Table')) {
-    require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/class-saw-component-admin-table.php';
-}
+// ============================================
+// INFINITE SCROLL CONFIGURATION
+// ============================================
+$table_config['infinite_scroll'] = array(
+    'enabled' => true,
+    'initial_load' => 100,
+    'per_page' => 50,
+    'threshold' => 0.6,
+);
 
-// Render
-$entity = $config['entity'] ?? 'oopp';
-$table = new SAW_Component_Admin_Table($entity, $table_config);
+// ============================================
+// RENDER TABLE
+// ============================================
+$table = new SAW_Component_Admin_Table('oopp', $table_config);
 $table->render();
-?>
-
-<!-- OOPP Table Styles - Force column widths -->
-<style>
-/* Vynutit šířku sloupce s obrázkem */
-.saw-admin-table th:first-child,
-.saw-admin-table td:first-child,
-.saw-table th:first-child,
-.saw-table td:first-child,
-table th:first-child,
-table td:first-child {
-    min-width: 120px !important;
-    width: 120px !important;
-}
-
-/* OOPP specifické styly pro modul */
-.saw-module-oopp .saw-admin-table th:first-child,
-.saw-module-oopp .saw-admin-table td:first-child {
-    min-width: 120px !important;
-    width: 120px !important;
-}
-</style>

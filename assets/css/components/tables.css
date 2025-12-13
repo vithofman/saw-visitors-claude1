@@ -977,14 +977,6 @@
     min-width: 1000px; /* OPRAVENO: Minimální šířka tabulky pro horizontální scrollování na mobilu */
 }
 
-/* Translations table - use auto layout but fix first column width */
-#saw-translations-table-wrapper table.saw-admin-table,
-#saw-translations-table-wrapper .saw-admin-table {
-    table-layout: auto !important;
-    width: 100% !important;
-    min-width: 100% !important; /* Override default min-width: 1000px */
-    max-width: 100% !important;
-}
 
 /* Nested table removed - not used */
 
@@ -2638,23 +2630,3 @@
     }
 }
 
-/* ============================================
-   TRANSLATIONS TABLE - FIXED KEY COLUMN WIDTH
-   ============================================ */
-/* Use min-width instead of width to prevent expansion but allow proper table layout */
-#saw-translations-table-wrapper .saw-admin-table thead th:first-child,
-#saw-translations-table-wrapper .saw-admin-table tbody td:first-child {
-    width: 300px !important;
-    min-width: 300px !important;
-    max-width: 300px !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    box-sizing: border-box !important;
-}
-
-/* Ensure table wrapper and table stay at 100% width */
-#saw-translations-table-wrapper {
-    width: 100% !important;
-    max-width: 100% !important;
-}

@@ -740,31 +740,6 @@ function setActiveRowFromSidebar() {
         const threshold = config.infinite_scroll.threshold || 0.6; // OPRAVENO 2025-01-22: Sníženo z 70% na 60% pro dřívější loading
         const entity = config.entity;
         
-        // KRITICKÉ: Nastavit šířku prvního sloupce HNED při inicializaci pro translations
-        // Použijeme table-layout: auto, ale s pevnou šířkou prvního sloupce
-        if (entity === 'translations') {
-            const table = tbody.closest('.saw-admin-table');
-            if (table) {
-                // Nastavit šířku tabulky
-                table.style.setProperty('width', '100%', 'important');
-                table.style.setProperty('min-width', '100%', 'important');
-                table.style.setProperty('max-width', '100%', 'important');
-                
-                // Nastavit šířku na všechny existující řádky HNED
-                const firstColWidth = '300px';
-                const existingFirstTds = table.querySelectorAll('tbody td:first-child, thead th:first-child');
-                existingFirstTds.forEach(td => {
-                    td.style.setProperty('width', firstColWidth, 'important');
-                    td.style.setProperty('min-width', firstColWidth, 'important');
-                    td.style.setProperty('max-width', firstColWidth, 'important');
-                    td.style.setProperty('white-space', 'nowrap', 'important');
-                    td.style.setProperty('overflow', 'hidden', 'important');
-                    td.style.setProperty('text-overflow', 'ellipsis', 'important');
-                    td.style.setProperty('box-sizing', 'border-box', 'important');
-                });
-            }
-        }
-        
         // Cache loaded pages to prevent re-loading when scrolling back up
         const loadedPages = new Set();
         const loadedRowsCache = new Map(); // page -> array of row IDs
@@ -1138,11 +1113,6 @@ console.log('🚀 SENDING AJAX REQUEST:', {
                         
                         // KRITICKÉ: Jen JEDEN reflow!
                         tbody.appendChild(fragment);
-                        
-                        // Ensure table-layout: fixed after adding new rows
-                        if (entity === 'translations' && window.fixTranslationKeyColumnWidth) {
-                            setTimeout(window.fixTranslationKeyColumnWidth, 0);
-                        }
                         
                         // ╔═══════════════════════════════════════════════════════════╗
                         // ║ NOVÁ LOGIKA: CHECK FOR PENDING ACTIVE ROW                ║
@@ -1832,28 +1802,6 @@ console.log('🚀 SENDING AJAX REQUEST:', {
         });
     }
 
-    /**
-     * Ensure table-layout: fixed for translations table
-     * Width is handled by inline styles from column config
-     */
-    window.fixTranslationKeyColumnWidth = function() {
-        const table = document.querySelector('#saw-translations-table-wrapper .saw-admin-table');
-        if (table) {
-            // Ensure width 100% so other columns can expand
-            table.style.setProperty('width', '100%', 'important');
-            table.style.setProperty('min-width', '100%', 'important');
-            table.style.setProperty('max-width', '100%', 'important');
-            
-            // Ensure first column width is fixed
-            const firstColWidth = '300px';
-            const firstTds = table.querySelectorAll('tbody td:first-child, thead th:first-child');
-            firstTds.forEach(td => {
-                td.style.setProperty('width', firstColWidth, 'important');
-                td.style.setProperty('min-width', firstColWidth, 'important');
-                td.style.setProperty('max-width', firstColWidth, 'important');
-            });
-        }
-    };
     
     $(document).ready(function () {
         initAdminTable();
@@ -1881,55 +1829,6 @@ console.log('🚀 SENDING AJAX REQUEST:', {
                 const entity = $(this).data('entity');
                 const currentId = $(this).data('current-id');
                 console.log('  - Sidebar:', { entity, currentId, mode: $(this).data('mode') });
-            });
-        }
-        
-        // Fix width immediately
-        if (window.fixTranslationKeyColumnWidth) {
-            window.fixTranslationKeyColumnWidth();
-        }
-        
-        // Fix width after infinite scroll loads new rows using MutationObserver
-        const translationsTbody = document.querySelector('#saw-translations-table-wrapper tbody');
-        if (translationsTbody) {
-            const observer = new MutationObserver(function(mutations) {
-                mutations.forEach(function(mutation) {
-                    if (mutation.addedNodes.length > 0) {
-                        setTimeout(function() {
-                            if (window.fixTranslationKeyColumnWidth) {
-                                window.fixTranslationKeyColumnWidth();
-                            }
-                        }, 0);
-                    }
-                });
-            });
-            observer.observe(translationsTbody, {
-                childList: true,
-                subtree: false
-            });
-        }
-        
-        // Watch for table style changes and re-apply width if needed
-        const translationsTable = document.querySelector('#saw-translations-table-wrapper .saw-admin-table');
-        if (translationsTable) {
-            const tableObserver = new MutationObserver(function(mutations) {
-                let needsFix = false;
-                mutations.forEach(function(mutation) {
-                    if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
-                        const table = mutation.target;
-                        const currentWidth = table.style.width;
-                        if (currentWidth !== '100%' && currentWidth !== '') {
-                            needsFix = true;
-                        }
-                    }
-                });
-                if (needsFix && window.fixTranslationKeyColumnWidth) {
-                    setTimeout(window.fixTranslationKeyColumnWidth, 0);
-                }
-            });
-            tableObserver.observe(translationsTable, {
-                attributes: true,
-                attributeFilter: ['style']
             });
         }
         

@@ -2,18 +2,9 @@
 /**
  * Customers List Template
  * 
- * Modern list view with:
- * - Tabs by account type (dynamically loaded)
- * - Status filter
- * - Infinite scroll
- * - Translation system
- * 
- * Pattern: Matches users/companies/oopp modules
- *
  * @package     SAW_Visitors
- * @subpackage  Modules/Customers/Templates
- * @since       1.0.0
- * @version     3.0.0 - REFACTOR: Tabs, infinite scroll, filters, translations
+ * @subpackage  Modules/Customers
+ * @version     2.0.0 - Refactored: Fixed column widths, infinite scroll
  */
 
 if (!defined('ABSPATH')) {
@@ -21,73 +12,37 @@ if (!defined('ABSPATH')) {
 }
 
 // ============================================
-// TRANSLATION SETUP
+// TRANSLATIONS
 // ============================================
 $lang = 'cs';
 if (class_exists('SAW_Component_Language_Switcher')) {
     $lang = SAW_Component_Language_Switcher::get_user_language();
 }
-
 $t = function_exists('saw_get_translations') 
     ? saw_get_translations($lang, 'admin', 'customers') 
-    : array();
+    : [];
 
 $tr = function($key, $fallback = null) use ($t) {
     return $t[$key] ?? $fallback ?? $key;
 };
 
 // ============================================
-// LOAD ADMIN TABLE COMPONENT
+// COMPONENT LOADING
 // ============================================
 if (!class_exists('SAW_Component_Admin_Table')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/class-saw-component-admin-table.php';
 }
 
 // ============================================
-// ENTITY & CONFIG
+// DATA FROM CONTROLLER
 // ============================================
-$entity = $config['entity'] ?? 'customers';
-
-// ============================================
-// BUILD TABLE CONFIG
-// ============================================
-$table_config = array();
-
-// ============================================
-// TITLE & URLS
-// ============================================
-$table_config['title'] = $tr('page_title', 'Zákazníci');
-$table_config['create_url'] = home_url('/admin/customers/create');
-$table_config['edit_url'] = home_url('/admin/customers/{id}/edit');
-$table_config['detail_url'] = home_url('/admin/customers/{id}/');
-
-// ============================================
-// SEARCH CONFIGURATION
-// ============================================
-$table_config['search'] = array(
-    'enabled' => true,
-    'placeholder' => $tr('search_placeholder', 'Hledat zákazníka...'),
-    'fields' => array('name', 'ico', 'dic', 'contact_person', 'contact_email'),
-    'show_info_banner' => true,
-);
-
-// ============================================
-// FILTERS CONFIGURATION
-// ============================================
-$status_options = array(
-    '' => $tr('filter_all_statuses', 'Všechny statusy'),
-    'active' => $tr('status_active', 'Aktivní'),
-    'inactive' => $tr('status_inactive', 'Neaktivní'),
-    'potential' => $tr('status_potential', 'Potenciální'),
-);
-
-$table_config['filters'] = array(
-    'status' => array(
-        'type' => 'select',
-        'label' => $tr('filter_status', 'Status'),
-        'options' => $status_options,
-    ),
-);
+$items = $items ?? array();
+$total = $total ?? 0;
+$page = $page ?? 1;
+$total_pages = $total_pages ?? 0;
+$search = $search ?? '';
+$orderby = $orderby ?? 'name';
+$order = $order ?? 'ASC';
 
 // ============================================
 // LOAD ACCOUNT TYPES FOR COLUMNS
@@ -126,13 +81,74 @@ if (!empty($items)) {
 }
 
 // ============================================
-// COLUMNS CONFIGURATION (NO CLOSURE!)
+// TABLE CONFIGURATION
+// ============================================
+$table_config = array(
+    'title' => $tr('page_title', 'Zákazníci'),
+    'create_url' => home_url('/admin/customers/create'),
+    'edit_url' => home_url('/admin/customers/{id}/edit'),
+    'detail_url' => home_url('/admin/customers/{id}/'),
+    
+    'sidebar_mode' => $sidebar_mode ?? null,
+    'detail_item' => $detail_item ?? null,
+    'form_item' => $form_item ?? null,
+    'detail_tab' => $detail_tab ?? 'overview',
+    'related_data' => $related_data ?? null,
+    
+    'module_config' => isset($config) ? $config : array(),
+    
+    'rows' => $items,
+    'total_items' => $total,
+    'current_page' => $page,
+    'total_pages' => $total_pages,
+    'orderby' => $orderby,
+    'order' => $order,
+    
+    'actions' => array('view', 'edit', 'delete'),
+    'empty_message' => $tr('empty_message', 'Žádní zákazníci nenalezeni'),
+    'add_new' => $tr('btn_add_new', 'Nový zákazník'),
+    
+    'enable_modal' => empty($sidebar_mode),
+    'modal_id' => 'customer-detail',
+    'modal_ajax_action' => 'saw_get_customers_detail',
+);
+
+// ============================================
+// SEARCH CONFIGURATION
+// ============================================
+$table_config['search'] = array(
+    'enabled' => true,
+    'placeholder' => $tr('search_placeholder', 'Hledat zákazníka...'),
+    'fields' => array('name', 'ico', 'dic', 'contact_person', 'contact_email'),
+    'show_info_banner' => true,
+);
+
+// ============================================
+// FILTERS CONFIGURATION
+// ============================================
+$status_options = array(
+    '' => $tr('filter_all_statuses', 'Všechny statusy'),
+    'active' => $tr('status_active', 'Aktivní'),
+    'inactive' => $tr('status_inactive', 'Neaktivní'),
+    'potential' => $tr('status_potential', 'Potenciální'),
+);
+
+$table_config['filters'] = array(
+    'status' => array(
+        'label' => $tr('filter_status', 'Status'),
+        'type' => 'select',
+        'options' => $status_options,
+    ),
+);
+
+// ============================================
+// COLUMNS CONFIGURATION - ŠÍŘKY V PROCENTECH
 // ============================================
 $table_config['columns'] = array(
     'logo_url' => array(
         'label' => $tr('col_logo', 'Logo'),
         'type' => 'image',
-        'width' => '60px',
+        'width' => '8%',   // Logo malý
         'align' => 'center',
     ),
     'name' => array(
@@ -140,16 +156,17 @@ $table_config['columns'] = array(
         'type' => 'text',
         'sortable' => true,
         'class' => 'saw-table-cell-bold',
+        'width' => '30%',  // Hlavní identifikátor
     ),
     'ico' => array(
         'label' => $tr('col_ico', 'IČO'),
         'type' => 'text',
-        'width' => '120px',
+        'width' => '12%',
     ),
     'status' => array(
         'label' => $tr('col_status', 'Status'),
         'type' => 'badge',
-        'width' => '120px',
+        'width' => '12%',  // Badge střední
         'map' => array(
             'active' => 'success',
             'inactive' => 'secondary',
@@ -164,7 +181,7 @@ $table_config['columns'] = array(
     'account_type_display' => array(
         'label' => $tr('col_account_type', 'Typ účtu'),
         'type' => 'badge_colored',
-        'width' => '150px',
+        'width' => '20%',  // Badge barevný
         'color_field' => 'account_type_color',
         'empty_text' => '—',
     ),
@@ -172,43 +189,16 @@ $table_config['columns'] = array(
         'label' => $tr('col_created', 'Vytvořeno'),
         'type' => 'date',
         'sortable' => true,
-        'width' => '120px',
+        'width' => '18%',  // Date sloupec
+        'format' => 'd.m.Y',
     ),
 );
-
-// ============================================
-// DATA
-// ============================================
-$table_config['rows'] = isset($items) ? $items : array();
-$table_config['total_items'] = isset($total) ? $total : 0;
-$table_config['current_page'] = isset($page) ? $page : 1;
-$table_config['total_pages'] = isset($total_pages) ? $total_pages : 1;
-$table_config['search_value'] = isset($search) ? $search : '';
-$table_config['orderby'] = isset($orderby) ? $orderby : 'name';
-$table_config['order'] = isset($order) ? $order : 'ASC';
-
-// ============================================
-// SIDEBAR CONTEXT
-// ============================================
-$table_config['sidebar_mode'] = isset($sidebar_mode) ? $sidebar_mode : null;
-$table_config['detail_item'] = isset($detail_item) ? $detail_item : null;
-$table_config['form_item'] = isset($form_item) ? $form_item : null;
-$table_config['detail_tab'] = isset($detail_tab) ? $detail_tab : 'overview';
-$table_config['module_config'] = $config;
-$table_config['related_data'] = isset($related_data) ? $related_data : null;
-
-// ============================================
-// ACTIONS
-// ============================================
-$table_config['actions'] = array('view', 'edit', 'delete');
-$table_config['add_new'] = $tr('btn_add_new', 'Nový zákazník');
-$table_config['empty_message'] = $tr('empty_message', 'Žádní zákazníci nenalezeni');
+// Součet: 8 + 30 + 12 + 12 + 20 + 18 = 100%
 
 // ============================================
 // TABS CONFIGURATION
-// Load from config, override labels with translations
 // ============================================
-$table_config['tabs'] = isset($config['tabs']) ? $config['tabs'] : null;
+$table_config['tabs'] = $config['tabs'] ?? null;
 
 // Override tab labels with translations
 if (!empty($table_config['tabs']['tabs'])) {
@@ -218,9 +208,7 @@ if (!empty($table_config['tabs']['tabs'])) {
     }
 }
 
-// ============================================
 // DYNAMIC TABS - Load account types from DB
-// ============================================
 if (!empty($table_config['tabs']['dynamic']) && !empty($account_types_raw)) {
     foreach ($account_types_raw as $type) {
         $tab_key = 'type_' . $type['id'];
@@ -232,12 +220,9 @@ if (!empty($table_config['tabs']['dynamic']) && !empty($account_types_raw)) {
     }
 }
 
-// ============================================
 // GENERATE TAB COUNTS (for dynamic tabs)
 // Base controller doesn't know about dynamic tabs,
 // so we generate counts here in template.
-// ============================================
-// Note: $wpdb is already available from above, but be explicit
 $generated_tab_counts = array();
 
 // Count for "all" tab
@@ -271,8 +256,15 @@ foreach ($account_types_raw as $type) {
 // Use generated counts instead of controller counts
 $tab_counts = $generated_tab_counts;
 
+if (!empty($table_config['tabs']['enabled'])) {
+    $table_config['current_tab'] = (isset($current_tab) && $current_tab !== null && $current_tab !== '') 
+        ? (string)$current_tab 
+        : ($table_config['tabs']['default_tab'] ?? 'all');
+    $table_config['tab_counts'] = (isset($tab_counts) && is_array($tab_counts)) ? $tab_counts : array();
+}
+
 // ============================================
-// INFINITE SCROLL
+// INFINITE SCROLL CONFIGURATION
 // ============================================
 $table_config['infinite_scroll'] = array(
     'enabled' => true,
@@ -282,24 +274,7 @@ $table_config['infinite_scroll'] = array(
 );
 
 // ============================================
-// CURRENT TAB & TAB COUNTS
+// RENDER TABLE
 // ============================================
-if (!empty($table_config['tabs']['enabled'])) {
-    $table_config['current_tab'] = (isset($current_tab) && $current_tab !== null && $current_tab !== '') 
-        ? (string)$current_tab 
-        : (isset($table_config['tabs']['default_tab']) ? $table_config['tabs']['default_tab'] : 'all');
-    $table_config['tab_counts'] = (isset($tab_counts) && is_array($tab_counts)) ? $tab_counts : array();
-}
-
-// ============================================
-// MODAL SETTINGS (backward compatible)
-// ============================================
-$table_config['enable_modal'] = empty($sidebar_mode);
-$table_config['modal_id'] = 'customer-detail';
-$table_config['modal_ajax_action'] = 'saw_get_customers_detail';
-
-// ============================================
-// RENDER
-// ============================================
-$table = new SAW_Component_Admin_Table($entity, $table_config);
+$table = new SAW_Component_Admin_Table('customers', $table_config);
 $table->render();

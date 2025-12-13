@@ -1,10 +1,10 @@
 <?php
 /**
  * Users List Template
- *
+ * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Users
- * @version     6.3.0 - FIXED: Filters as config object (like visits)
+ * @version     2.0.0 - Refactored: Fixed column widths, infinite scroll
  */
 
 if (!defined('ABSPATH')) {
@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
 }
 
 // ============================================
-// LOAD TRANSLATIONS
+// TRANSLATIONS
 // ============================================
 $lang = 'cs';
 if (class_exists('SAW_Component_Language_Switcher')) {
@@ -20,33 +20,32 @@ if (class_exists('SAW_Component_Language_Switcher')) {
 }
 $t = function_exists('saw_get_translations') 
     ? saw_get_translations($lang, 'admin', 'users') 
-    : array();
+    : [];
 
 $tr = function($key, $fallback = null) use ($t) {
-    return isset($t[$key]) ? $t[$key] : ($fallback !== null ? $fallback : $key);
+    return $t[$key] ?? $fallback ?? $key;
 };
 
 // ============================================
-// ENSURE COMPONENTS ARE LOADED
+// COMPONENT LOADING
 // ============================================
 if (!class_exists('SAW_Component_Admin_Table')) {
     require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/admin-table/class-saw-component-admin-table.php';
 }
 
 // ============================================
-// PREPARE CONFIG FOR ADMIN TABLE
+// DATA FROM CONTROLLER
 // ============================================
-$entity = isset($config['entity']) ? $config['entity'] : 'users';
-$table_config = $config;
-$base_url = home_url('/admin/' . (isset($config['route']) ? $config['route'] : 'users'));
-
-$table_config['title'] = $tr('entity_title', 'Uživatelé');
-$table_config['create_url'] = $base_url . '/create';
-$table_config['detail_url'] = $base_url . '/{id}/';
-$table_config['edit_url'] = $base_url . '/{id}/edit';
+$items = $items ?? array();
+$total = $total ?? 0;
+$page = $page ?? 1;
+$total_pages = $total_pages ?? 0;
+$search = $search ?? '';
+$orderby = $orderby ?? 'last_name';
+$order = $order ?? 'ASC';
 
 // ============================================
-// CONTEXT
+// CONTEXT & LOAD DATA FOR FILTERS
 // ============================================
 global $wpdb;
 $customer_id = SAW_Context::get_customer_id();
@@ -111,6 +110,35 @@ if ($dept_branch_id) {
 }
 
 // ============================================
+// TABLE CONFIGURATION
+// ============================================
+$table_config = array(
+    'title' => $tr('entity_title', 'Uživatelé'),
+    'create_url' => home_url('/admin/users/create'),
+    'edit_url' => home_url('/admin/users/{id}/edit'),
+    'detail_url' => home_url('/admin/users/{id}/'),
+    
+    'sidebar_mode' => $sidebar_mode ?? null,
+    'detail_item' => $detail_item ?? null,
+    'form_item' => $form_item ?? null,
+    'detail_tab' => $detail_tab ?? 'overview',
+    'related_data' => $related_data ?? null,
+    
+    'module_config' => isset($config) ? $config : array(),
+    
+    'rows' => $items,
+    'total_items' => $total,
+    'current_page' => $page,
+    'total_pages' => $total_pages,
+    'orderby' => $orderby,
+    'order' => $order,
+    
+    'actions' => array('view', 'edit', 'delete'),
+    'empty_message' => $tr('empty_message', 'Žádní uživatelé nenalezeni'),
+    'add_new' => $tr('action_add_new', 'Nový uživatel'),
+);
+
+// ============================================
 // SEARCH CONFIGURATION
 // ============================================
 $table_config['search'] = array(
@@ -121,22 +149,22 @@ $table_config['search'] = array(
 );
 
 // ============================================
-// FILTERS CONFIGURATION (like visits module)
+// FILTERS CONFIGURATION
 // ============================================
 $table_config['filters'] = array(
     'branch_id' => array(
-        'type' => 'select',
         'label' => $tr('col_branch', 'Pobočka'),
+        'type' => 'select',
         'options' => $branch_options,
     ),
     'department_id' => array(
-        'type' => 'select',
         'label' => $tr('col_departments', 'Oddělení'),
+        'type' => 'select',
         'options' => $department_options,
     ),
     'is_active' => array(
-        'type' => 'select',
         'label' => $tr('col_status', 'Status'),
+        'type' => 'select',
         'options' => array(
             '' => $tr('filter_all_statuses', 'Všechny statusy'),
             '1' => $tr('status_active', 'Aktivní'),
@@ -146,7 +174,7 @@ $table_config['filters'] = array(
 );
 
 // ============================================
-// COLUMN DEFINITIONS
+// COLUMNS CONFIGURATION - ŠÍŘKY V PROCENTECH
 // ============================================
 $table_config['columns'] = array(
     'name' => array(
@@ -155,6 +183,7 @@ $table_config['columns'] = array(
         'sortable' => true,
         'sort_field' => 'last_name',
         'class' => 'saw-table-cell-bold',
+        'width' => '22%',  // Hlavní identifikátor
         'callback' => function($value, $item) {
             $html = '<span class="saw-user-icon">👤</span>';
             $html .= '<strong>' . esc_html(trim($item['first_name'] . ' ' . $item['last_name'])) . '</strong>';
@@ -164,7 +193,7 @@ $table_config['columns'] = array(
     'position' => array(
         'label' => $tr('col_position', 'Funkce'),
         'type' => 'custom',
-        'width' => '180px',
+        'width' => '14%',
         'callback' => function($value, $item) {
             if (!empty($item['position'])) {
                 return esc_html($item['position']);
@@ -175,6 +204,7 @@ $table_config['columns'] = array(
     'email' => array(
         'label' => $tr('col_email', 'Email'),
         'type' => 'custom',
+        'width' => '16%',
         'callback' => function($value, $item) {
             if (!empty($item['wp_user_id'])) {
                 $wp_user = get_userdata($item['wp_user_id']);
@@ -188,7 +218,7 @@ $table_config['columns'] = array(
     'role' => array(
         'label' => $tr('col_role', 'Role'),
         'type' => 'custom',
-        'width' => '140px',
+        'width' => '12%',  // Badge-like
         'callback' => function($value) use ($tr) {
             $role_labels = array(
                 'super_admin' => $tr('role_super_admin', 'Super Admin'),
@@ -204,7 +234,7 @@ $table_config['columns'] = array(
     'branch' => array(
         'label' => $tr('col_branch', 'Pobočka'),
         'type' => 'custom',
-        'width' => '150px',
+        'width' => '12%',
         'callback' => function($value, $item) {
             global $wpdb;
             if (!empty($item['branch_id'])) {
@@ -227,7 +257,7 @@ $table_config['columns'] = array(
     'departments' => array(
         'label' => $tr('col_departments', 'Oddělení'),
         'type' => 'custom',
-        'width' => '100px',
+        'width' => '8%',   // Badge malý
         'align' => 'center',
         'callback' => function($value, $item) {
             global $wpdb;
@@ -244,20 +274,23 @@ $table_config['columns'] = array(
     ),
     'is_active' => array(
         'label' => $tr('col_status', 'Status'),
-        'type' => 'custom',
-        'width' => '100px',
+        'type' => 'badge',
+        'sortable' => true,
+        'width' => '8%',   // Badge malý
         'align' => 'center',
-        'callback' => function($value) use ($tr) {
-            if (!empty($value)) {
-                return '<span class="saw-badge saw-badge-success">' . esc_html($tr('status_active', 'Aktivní')) . '</span>';
-            }
-            return '<span class="saw-badge saw-badge-secondary">' . esc_html($tr('status_inactive', 'Neaktivní')) . '</span>';
-        }
+        'map' => array(
+            '1' => 'success',
+            '0' => 'secondary',
+        ),
+        'labels' => array(
+            '1' => $tr('status_active', 'Aktivní'),
+            '0' => $tr('status_inactive', 'Neaktivní'),
+        ),
     ),
     'last_login' => array(
         'label' => $tr('col_last_login', 'Poslední přihlášení'),
         'type' => 'custom',
-        'width' => '140px',
+        'width' => '8%',   // Date/custom
         'sortable' => true,
         'callback' => function($value) use ($tr) {
             if (!empty($value)) {
@@ -283,66 +316,47 @@ $table_config['columns'] = array(
         }
     ),
 );
+// Součet: 22 + 14 + 16 + 12 + 12 + 8 + 8 + 8 = 100%
 
 // Hide role column if on specific role tab
-$current_tab_value = isset($current_tab) ? $current_tab : 'all';
+$current_tab_value = $current_tab ?? 'all';
 if ($current_tab_value !== 'all' && $current_tab_value !== '') {
     unset($table_config['columns']['role']);
 }
 
 // ============================================
-// DATA
+// TABS CONFIGURATION
 // ============================================
-$table_config['rows'] = isset($items) ? $items : array();
-$table_config['total_items'] = isset($total) ? $total : 0;
-$table_config['current_page'] = isset($page) ? $page : 1;
-$table_config['total_pages'] = isset($total_pages) ? $total_pages : 1;
-$table_config['search_value'] = isset($search) ? $search : '';
-$table_config['orderby'] = isset($orderby) ? $orderby : 'last_name';
-$table_config['order'] = isset($order) ? $order : 'ASC';
+$table_config['tabs'] = $config['tabs'] ?? null;
 
-// ============================================
-// SIDEBAR CONTEXT
-// ============================================
-$table_config['sidebar_mode'] = isset($sidebar_mode) ? $sidebar_mode : null;
-$table_config['detail_item'] = isset($detail_item) ? $detail_item : null;
-$table_config['form_item'] = isset($form_item) ? $form_item : null;
-$table_config['detail_tab'] = isset($detail_tab) ? $detail_tab : 'overview';
-$table_config['module_config'] = $config;
-$table_config['related_data'] = isset($related_data) ? $related_data : null;
-
-// ============================================
-// ACTIONS
-// ============================================
-$table_config['actions'] = array('view', 'edit', 'delete');
-$table_config['add_new'] = $tr('action_add_new', 'Nový uživatel');
-$table_config['empty_message'] = $tr('empty_message', 'Žádní uživatelé nenalezeni');
-
-// ============================================
-// TABS
-// ============================================
-$table_config['tabs'] = isset($config['tabs']) ? $config['tabs'] : null;
-
-if (!empty($table_config['tabs']['tabs'])) {
-    if (isset($table_config['tabs']['tabs']['all'])) {
-        $table_config['tabs']['tabs']['all']['label'] = $tr('tab_all', 'Všichni');
+if (!empty($table_config['tabs']['enabled'])) {
+    // Přepsat labels z configu překlady
+    if (!empty($table_config['tabs']['tabs'])) {
+        if (isset($table_config['tabs']['tabs']['all'])) {
+            $table_config['tabs']['tabs']['all']['label'] = $tr('tab_all', 'Všichni');
+        }
+        if (isset($table_config['tabs']['tabs']['admin'])) {
+            $table_config['tabs']['tabs']['admin']['label'] = $tr('tab_admin', 'Admini');
+        }
+        if (isset($table_config['tabs']['tabs']['super_manager'])) {
+            $table_config['tabs']['tabs']['super_manager']['label'] = $tr('tab_super_manager', 'Super Manageři');
+        }
+        if (isset($table_config['tabs']['tabs']['manager'])) {
+            $table_config['tabs']['tabs']['manager']['label'] = $tr('tab_manager', 'Manageři');
+        }
+        if (isset($table_config['tabs']['tabs']['terminal'])) {
+            $table_config['tabs']['tabs']['terminal']['label'] = $tr('tab_terminal', 'Terminály');
+        }
     }
-    if (isset($table_config['tabs']['tabs']['admin'])) {
-        $table_config['tabs']['tabs']['admin']['label'] = $tr('tab_admin', 'Admini');
-    }
-    if (isset($table_config['tabs']['tabs']['super_manager'])) {
-        $table_config['tabs']['tabs']['super_manager']['label'] = $tr('tab_super_manager', 'Super Manageři');
-    }
-    if (isset($table_config['tabs']['tabs']['manager'])) {
-        $table_config['tabs']['tabs']['manager']['label'] = $tr('tab_manager', 'Manageři');
-    }
-    if (isset($table_config['tabs']['tabs']['terminal'])) {
-        $table_config['tabs']['tabs']['terminal']['label'] = $tr('tab_terminal', 'Terminály');
-    }
+    
+    $table_config['current_tab'] = (isset($current_tab) && $current_tab !== null && $current_tab !== '') 
+        ? (string)$current_tab 
+        : ($table_config['tabs']['default_tab'] ?? 'all');
+    $table_config['tab_counts'] = (isset($tab_counts) && is_array($tab_counts)) ? $tab_counts : array();
 }
 
 // ============================================
-// INFINITE SCROLL
+// INFINITE SCROLL CONFIGURATION
 // ============================================
 $table_config['infinite_scroll'] = array(
     'enabled' => true,
@@ -352,17 +366,7 @@ $table_config['infinite_scroll'] = array(
 );
 
 // ============================================
-// CURRENT TAB & TAB COUNTS
+// RENDER TABLE
 // ============================================
-if (!empty($table_config['tabs']['enabled'])) {
-    $table_config['current_tab'] = (isset($current_tab) && $current_tab !== null && $current_tab !== '') 
-        ? (string)$current_tab 
-        : (isset($table_config['tabs']['default_tab']) ? $table_config['tabs']['default_tab'] : 'all');
-    $table_config['tab_counts'] = (isset($tab_counts) && is_array($tab_counts)) ? $tab_counts : array();
-}
-
-// ============================================
-// RENDER
-// ============================================
-$table = new SAW_Component_Admin_Table($entity, $table_config);
+$table = new SAW_Component_Admin_Table('users', $table_config);
 $table->render();
