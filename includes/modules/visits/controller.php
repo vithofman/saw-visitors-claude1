@@ -170,75 +170,113 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
     }
     
     protected function before_save($data) {
-    // ============ DEBUG (can be removed later) ============
-    error_log('========== VISITS BEFORE_SAVE DEBUG ==========');
+    // ============================================
+    // DEBUG LOGGING (keep for troubleshooting)
+    // ============================================
+    error_log('========== VISITS BEFORE_SAVE v2.0 ==========');
+    error_log('Mode: ' . (empty($data['id']) ? 'CREATE' : 'EDIT (ID: ' . $data['id'] . ')'));
     error_log('$_POST[has_company]: ' . var_export($_POST['has_company'] ?? 'NOT SET', true));
     error_log('$_POST[company_id]: ' . var_export($_POST['company_id'] ?? 'NOT SET', true));
     error_log('$data[company_id]: ' . var_export($data['company_id'] ?? 'NOT SET', true));
-    // ======================================================
     
-    // ========================================
-    // HANDLE company_id - FIXED LOGIC v2.0
-    // ========================================
-    
+    // ============================================
+    // STEP 1: Get has_company radio value
+    // ============================================
     $has_company = isset($_POST['has_company']) ? $_POST['has_company'] : null;
     
-    // STEP 1: Get company_id from ALL possible sources
-    // Priority: $_POST > $data (because searchable select uses hidden input)
-    $company_id_from_post = isset($_POST['company_id']) ? $_POST['company_id'] : null;
-    $company_id_from_data = isset($data['company_id']) ? $data['company_id'] : null;
+    // ============================================
+    // STEP 2: Handle company_id based on person type
+    // ============================================
     
-    // Use POST value first (searchable select), then data array
-    $company_id = $company_id_from_post;
-    if ($company_id === null || $company_id === '') {
-        $company_id = $company_id_from_data;
-    }
-    
-    error_log('After source check - company_id: ' . var_export($company_id, true));
-    
-    // STEP 2: Normalize to int or null
-    if ($company_id === '' || $company_id === '0' || $company_id === 0 || $company_id === null) {
-        $company_id = null;
-    } else {
-        $company_id = intval($company_id);
-        if ($company_id === 0) {
-            $company_id = null;
-        }
-    }
-    
-    error_log('After normalize - company_id: ' . var_export($company_id, true));
-    
-    // STEP 3: Apply business logic based on has_company radio
     if ($has_company === '0') {
-        // Physical person - ALWAYS null
+        // ============================================
+        // PHYSICAL PERSON - company_id MUST be NULL
+        // ============================================
         $data['company_id'] = null;
-        error_log('Physical person selected - setting company_id to NULL');
+        error_log('RESULT: Physical person - company_id = NULL');
+        
     } elseif ($has_company === '1') {
-        // Legal person - use the company_id (can be null if not selected)
-        $data['company_id'] = $company_id;
-        error_log('Legal person selected - setting company_id to: ' . var_export($company_id, true));
-    } else {
-        // has_company not set (shouldn't happen, but handle it)
-        if (!empty($company_id)) {
-            $data['company_id'] = $company_id;
-        } elseif (empty($data['id'])) {
-            // New record without explicit selection - default to null
-            $data['company_id'] = null;
+        // ============================================
+        // LEGAL PERSON - get company_id from POST or data
+        // ============================================
+        
+        // Priority: POST > data (because hidden input may not go through prepare_form_data)
+        $company_id = null;
+        
+        // Check $_POST first (hidden input from select-create)
+        if (isset($_POST['company_id'])) {
+            $raw_value = $_POST['company_id'];
+            error_log('Found in $_POST: ' . var_export($raw_value, true));
+            
+            // Normalize: empty string, "0", 0 -> null, otherwise int
+            if ($raw_value === '' || $raw_value === '0' || $raw_value === 0) {
+                $company_id = null;
+            } else {
+                $company_id = absint($raw_value);
+                if ($company_id === 0) {
+                    $company_id = null;
+                }
+            }
         }
-        // For updates without has_company: keep existing value (don't touch $data['company_id'])
-        error_log('has_company not set - company_id: ' . var_export($data['company_id'] ?? 'UNCHANGED', true));
+        
+        // Fallback to $data if POST was empty
+        if ($company_id === null && isset($data['company_id'])) {
+            $raw_value = $data['company_id'];
+            error_log('Fallback to $data: ' . var_export($raw_value, true));
+            
+            if ($raw_value === '' || $raw_value === '0' || $raw_value === 0 || $raw_value === null) {
+                $company_id = null;
+            } else {
+                $company_id = absint($raw_value);
+                if ($company_id === 0) {
+                    $company_id = null;
+                }
+            }
+        }
+        
+        $data['company_id'] = $company_id;
+        error_log('RESULT: Legal person - company_id = ' . var_export($company_id, true));
+        
+    } else {
+        // ============================================
+        // has_company NOT SET - shouldn't happen, but handle it
+        // ============================================
+        error_log('WARNING: has_company not set in POST');
+        
+        // For new records, default to null
+        if (empty($data['id'])) {
+            $data['company_id'] = null;
+            error_log('RESULT: New record, no has_company - company_id = NULL');
+        } else {
+            // For existing records, keep existing value
+            // (Don't modify $data['company_id'] - let it pass through)
+            error_log('RESULT: Edit mode, no has_company - keeping existing value');
+        }
     }
     
-    error_log('FINAL $data[company_id]: ' . var_export($data['company_id'] ?? 'NOT SET', true));
-    error_log('==============================================');
-    
-    // Set customer_id from context if not provided
-    if (empty($data['customer_id']) && class_exists('SAW_Context')) {
-        $data['customer_id'] = SAW_Context::get_customer_id();
+    // ============================================
+    // STEP 3: Ensure customer_id is set
+    // ============================================
+    if (empty($data['customer_id'])) {
+        if (class_exists('SAW_Context')) {
+            $data['customer_id'] = SAW_Context::get_customer_id();
+        }
+        
+        if (empty($data['customer_id'])) {
+            return new WP_Error('missing_customer', 'Customer ID is required');
+        }
     }
+    
+    // ============================================
+    // STEP 4: Log final state
+    // ============================================
+    error_log('FINAL $data[company_id]: ' . var_export($data['company_id'], true));
+    error_log('FINAL $data[customer_id]: ' . var_export($data['customer_id'] ?? 'NOT SET', true));
+    error_log('========== END BEFORE_SAVE ==========');
     
     return $data;
 }
+
     
     /**
      * Save visit schedules and hosts after main visit is saved

@@ -28,31 +28,16 @@
     // COMPANY FIELD TOGGLE (FIXED for searchable select)
     // ================================================
     function initCompanyToggle() {
-        // DŮLEŽITÉ: Vždy hledat aktuální elementy v DOM (pro AJAX loaded content)
-        const $companyRow = $('.field-company-row');
-        
-        // Pokud elementy neexistují, ukončit
-        if (!$companyRow.length) {
-            return;
-        }
-        
-        /**
-         * Get company field elements
-         * Select-create component uses 'saw-select-' prefix for generated elements
-         * Hidden input has name="company_id" which is reliable selector
-         */
-        function getCompanyElements() {
-            return {
-                // Hidden input - use name attribute (reliable, set by select-create)
-                $hidden: $('input[type="hidden"][name="company_id"]'),
-                // Search input - has saw-select- prefix
-                $search: $('#saw-select-company_id-search'),
-                // Original select (hidden after select-create init)
-                $select: $('#saw-select-company_id'),
-                // Dropdown
-                $dropdown: $('#saw-select-company_id-dropdown')
-            };
-        }
+    const $companyRow = $('.field-company-row');
+    if (!$companyRow.length) return;
+    
+    // Wait for select-create to initialize
+    setTimeout(function() {
+        $('input[name="has_company"]').off('change.companyToggle');
+        $('input[name="has_company"]').on('change.companyToggle', toggleCompanyField);
+        toggleCompanyField();
+    }, 200);
+}
         
         function toggleCompanyField() {
             const hasCompany = $('input[name="has_company"]:checked').val();

@@ -622,28 +622,36 @@ $form_action = $is_edit
      ================================================ -->
 <script>
 jQuery(document).ready(function($) {
-    // ✅ Automaticky vypočítat planned_date_from a planned_date_to z schedule_dates[]
     $('.saw-visit-form').on('submit', function(e) {
         var $form = $(this);
-        var dates = [];
         
+        // FIX: Get company_id from selected dropdown item
+        var hasCompany = $form.find('input[name="has_company"]:checked').val();
+        
+        if (hasCompany === '1') {
+            // Get value from selected item in dropdown
+            var $selected = $('#saw-select-company_id-dropdown .saw-select-search-item.selected');
+            if ($selected.length) {
+                var val = $selected.attr('data-value');
+                $('#saw-select-company_id-hidden').val(val);
+            }
+        } else {
+            $('#saw-select-company_id-hidden').val('');
+        }
+        
+        // Fix dates
+        var dates = [];
         $form.find('input[name="schedule_dates[]"]').each(function() {
             var date = $(this).val().trim();
-            if (date) {
-                dates.push(date);
-            }
+            if (date) dates.push(date);
         });
         
         if (dates.length > 0) {
             dates.sort();
-            var planned_date_from = dates[0];
-            var planned_date_to = dates[dates.length - 1];
-            
             $form.find('input[name="planned_date_from"]').remove();
             $form.find('input[name="planned_date_to"]').remove();
-            
-            $form.append('<input type="hidden" name="planned_date_from" value="' + planned_date_from + '">');
-            $form.append('<input type="hidden" name="planned_date_to" value="' + planned_date_to + '">');
+            $form.append('<input type="hidden" name="planned_date_from" value="' + dates[0] + '">');
+            $form.append('<input type="hidden" name="planned_date_to" value="' + dates[dates.length - 1] + '">');
         }
     });
 });
