@@ -1734,7 +1734,8 @@ protected function can($action) {
         
         // ⭐ KRITICKÁ OPRAVA: Pro infinite scroll použij offset místo page-based offsetu
         // Pokud je infinite scroll enabled a máme loaded_count, použijeme ho jako offset
-        if ($infinite_scroll_enabled && $page > 1 && isset($_POST['loaded_count'])) {
+        // OPRAVENO: Použij loaded_count i když je page=1, pokud už máme načtené záznamy
+        if ($infinite_scroll_enabled && isset($_POST['loaded_count'])) {
             $loaded_count = intval($_POST['loaded_count']);
             if ($loaded_count > 0) {
                 // Použijeme vlastní offset místo page-based offsetu
@@ -1747,7 +1748,7 @@ protected function can($action) {
                     'order' => isset($_POST['order']) ? strtoupper(sanitize_text_field($_POST['order'])) : 'DESC',
                 );
             } else {
-                // Fallback na standardní page-based pagination
+                // Fallback na standardní page-based pagination (první načtení)
                 $filters = array(
                     'page' => $page,
                     'per_page' => $per_page,
@@ -1893,30 +1894,20 @@ protected function can($action) {
         $infinite_scroll_enabled = !empty($this->config['infinite_scroll']['enabled']);
         $items_loaded = count($data['items']);
         
-        if ($page === 1) {
+        // OPRAVENO: Použij offset z filters, pokud je nastaven (infinite scroll s loaded_count)
+        if ($infinite_scroll_enabled && isset($filters['offset'])) {
+            // Offset je skutečný počet již načtených záznamů před tímto načtením
+            $loaded_count = $filters['offset'] + $items_loaded;
+        } elseif ($page === 1) {
             // Pro první stránku: skutečně načtené = items_loaded
             $loaded_count = $items_loaded;
-            
-            // KRITICKÁ OPRAVA: has_more závisí pouze na tom, zda loaded_count < total
-            // NESMÍME automaticky nastavit has_more = false jen proto, že items_loaded < initial_load
-            // Pokud je načteno 26 záznamů z 56, pak has_more musí být true, ne false!
-            $has_more = $loaded_count < $data['total'];
         } else {
-            // Pro další stránky: použijeme offset z filters (pokud je infinite scroll)
-            if ($infinite_scroll_enabled && isset($filters['offset'])) {
-                // Offset je skutečný počet již načtených záznamů
-                $loaded_count = $filters['offset'] + $items_loaded;
-            } else {
-                // Standardní page-based výpočet
-                $loaded_count = ($page - 1) * $per_page + $items_loaded;
-            }
-            
-            // KRITICKÁ OPRAVA: has_more závisí pouze na tom, zda loaded_count < total
-            // NESMÍME automaticky nastavit has_more = false jen proto, že items_loaded < per_page
-            // Pokud se načte 30 záznamů z 56 (offset=26), pak loaded_count = 56, has_more = false ✓
-            // Pokud se načte 50 záznamů z 56 (offset=26), pak loaded_count = 76, ale total=56, takže has_more = false ✓
-            $has_more = $loaded_count < $data['total'];
+            // Standardní page-based výpočet
+            $loaded_count = ($page - 1) * $per_page + $items_loaded;
         }
+        
+        // KRITICKÁ OPRAVA: has_more závisí pouze na tom, zda loaded_count < total
+        $has_more = $loaded_count < $data['total'];
         
         wp_send_json_success(array(
             'html' => $rows_html,
@@ -2083,6 +2074,8 @@ protected function can($action) {
             array(
                 'config' => $this->config,
                 'entity' => $this->entity,
+                'controller' => $this,
+                'model' => $this->model,
                 'detail_item' => $detail_item,
                 'form_item' => $form_item,
                 'sidebar_mode' => $sidebar_mode,

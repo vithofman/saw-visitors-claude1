@@ -730,22 +730,27 @@ function setActiveRowFromSidebar() {
             console.log('Threshold:', threshold * 100 + '%');
         }
         
-        // ⭐ FIX: Správně určit currentPage i když je existingRows < initialLoad
+        // ⭐ FIX: Správně určit currentPage pro infinite scroll
+        // Pro infinite scroll: page 1 = initialLoad, další stránky = perPage
         if (existingRows >= initialLoad) {
-            // Already have initial load, use per_page for next loads
-            currentPage = Math.ceil(existingRows / perPage);
-            // Mark pages as loaded
-            for (let i = 1; i <= currentPage; i++) {
-                loadedPages.add(i);
+            // Máme initialLoad záznamů, takže jsme načtli stránku 1
+            currentPage = 1;
+            // Mark page 1 as loaded
+            loadedPages.add(1);
+            // Pokud máme více než initialLoad, znamená to, že už jsme načtli další stránky
+            if (existingRows > initialLoad) {
+                // Počítáme další stránky: (existingRows - initialLoad) / perPage
+                const additionalPages = Math.ceil((existingRows - initialLoad) / perPage);
+                currentPage = 1 + additionalPages;
+                // Mark all pages as loaded
+                for (let i = 1; i <= currentPage; i++) {
+                    loadedPages.add(i);
+                }
             }
         } else if (existingRows > 0) {
-            // First load with fewer rows than initialLoad
-            // Calculate which page we're on based on perPage (not initialLoad)
-            currentPage = Math.ceil(existingRows / perPage);
-            // Mark pages as loaded up to current page
-            for (let i = 1; i <= currentPage; i++) {
-                loadedPages.add(i);
-            }
+            // Máme méně než initialLoad, takže jsme na stránce 1, ale načteno méně záznamů
+            currentPage = 1;
+            loadedPages.add(1);
         } else {
             // No rows yet, start at page 1
             currentPage = 1;
@@ -799,6 +804,9 @@ function setActiveRowFromSidebar() {
             }
             
             const nextPage = currentPage + 1;
+            
+            // Store nextPage in a variable accessible in the callback
+            const pageToLoad = nextPage;
             
             if (DEBUG) {
                 console.log('🔍 Checking next page:', {
@@ -941,22 +949,14 @@ console.log('🚀 SENDING AJAX REQUEST:', {
                     
                     hasMore = has_more;
                     
-                    // ✅ CRITICAL: Update currentPage to the page that was actually loaded
-                    // Use the page number from response, not currentPage
-                    const loadedPage = page || currentPage;
-                    if (loadedPage !== currentPage) {
-                        if (DEBUG) {
-                            console.log('🔄 Updating currentPage:', currentPage, '→', loadedPage);
-                        }
-                        currentPage = loadedPage;
-                    }
-                    
                     if (html && loaded > 0) {
                         // ✅ Mark page as loaded ONLY after successful load
-                        // Use loadedPage to ensure we mark the correct page
-                        loadedPages.add(loadedPage);
+                        // Use pageToLoad (which is nextPage) to ensure we mark the correct page
+                        loadedPages.add(pageToLoad);
+                        // Update currentPage to the page we just loaded
+                        currentPage = pageToLoad;
                         if (DEBUG) {
-                            console.log('✅ Page', loadedPage, 'loaded successfully,', loaded, 'rows');
+                            console.log('✅ Page', pageToLoad, 'loaded successfully,', loaded, 'rows');
                             console.log('📊 State after load:', {
                                 currentPage: currentPage,
                                 loadedPages: Array.from(loadedPages),
@@ -990,9 +990,9 @@ console.log('🚀 SENDING AJAX REQUEST:', {
                             isLoading = false;
                             isAppending = false; // PŘIDÁNO 2025-01-22: Unlock i při prázdném výsledku
                             // ✅ CRITICAL: Still update currentPage even if no rows added
-                            if (loadedPage !== currentPage) {
-                                currentPage = loadedPage;
-                                loadedPages.add(loadedPage);
+                            if (pageToLoad !== currentPage) {
+                                currentPage = pageToLoad;
+                                loadedPages.add(pageToLoad);
                             }
                             return;
                         }

@@ -200,6 +200,11 @@ class SAW_App_Sidebar {
             return true;
         }
         
+        // Translations module - only super admins
+        if ($module_slug === 'translations') {
+            return $this->saw_role === 'super_admin';
+        }
+        
         // Super admins have access to everything
         if ($this->saw_role === 'super_admin') {
             return true;
@@ -541,6 +546,12 @@ class SAW_App_Sidebar {
                         'label' => $this->t('settings'), 
                         'url' => '/admin/settings', 
                         'icon' => '⚙️'
+                    ),
+                    array(
+                        'id' => 'translations', 
+                        'label' => 'Překlady', 
+                        'url' => '/admin/translations', 
+                        'icon' => '🌐'
                     ),
                     array(
                         'id' => 'about', 
