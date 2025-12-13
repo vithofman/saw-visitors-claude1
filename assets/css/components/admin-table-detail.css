@@ -78,6 +78,25 @@
     padding: 0 !important;
 }
 
+/* Cards stack - for card-based layouts (visits, translations) */
+.saw-detail-cards-stack {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding: 0 !important;
+    font-family: 'Roboto', sans-serif !important;
+    color: #1a1a1a !important;
+}
+
+/* Ensure cards stack inside content wrapper has proper spacing */
+.saw-detail-content-wrapper > .saw-detail-wrapper > .saw-detail-cards-stack {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding: 0 !important;
+}
+
 /* Detail wrapper - ensure consistent styling */
 .saw-detail-wrapper {
     font-family: 'Roboto', sans-serif !important;

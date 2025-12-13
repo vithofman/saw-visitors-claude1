@@ -659,6 +659,18 @@ function setActiveRowFromSidebar() {
         
         const scrollArea = document.querySelector('.saw-table-scroll-area');
         
+        if (DEBUG) {
+            console.log('🔍 Looking for scrollArea:', scrollArea ? '✅ Found' : '❌ Not found');
+            if (scrollArea) {
+                console.log('📏 ScrollArea dimensions:', {
+                    scrollHeight: scrollArea.scrollHeight,
+                    clientHeight: scrollArea.clientHeight,
+                    scrollTop: scrollArea.scrollTop,
+                    isScrollable: scrollArea.scrollHeight > scrollArea.clientHeight
+                });
+            }
+        }
+        
         // Cleanup previous initialization if exists
         if (scrollArea && scrollArea._sawInfiniteScrollHandler) {
             scrollArea.removeEventListener('scroll', scrollArea._sawInfiniteScrollHandler);
@@ -668,9 +680,33 @@ function setActiveRowFromSidebar() {
             }
         }
         
+        // Cleanup wheel handler if exists
+        if (scrollArea && scrollArea._sawInfiniteScrollWheelHandler) {
+            scrollArea.removeEventListener('wheel', scrollArea._sawInfiniteScrollWheelHandler);
+            scrollArea._sawInfiniteScrollWheelHandler = null;
+            if (DEBUG) {
+                console.log('🧹 Cleaned up previous wheel listener');
+            }
+        }
+        
+        // Cleanup window wheel handler if exists
+        if (scrollArea && scrollArea._sawInfiniteScrollWindowWheelHandler) {
+            window.removeEventListener('wheel', scrollArea._sawInfiniteScrollWindowWheelHandler);
+            scrollArea._sawInfiniteScrollWindowWheelHandler = null;
+            if (DEBUG) {
+                console.log('🧹 Cleaned up previous window wheel listener');
+            }
+        }
+        
         const tbody = document.querySelector('.saw-admin-table tbody');
         
         if (!scrollArea || !tbody) {
+            if (DEBUG) {
+                console.error('❌ Missing elements:', {
+                    scrollArea: !scrollArea,
+                    tbody: !tbody
+                });
+            }
             return;
         }
         
@@ -716,9 +752,15 @@ function setActiveRowFromSidebar() {
         // ⭐ KRITICKÁ OPRAVA: Inicializovat hasMore na základě total_items
         if (totalItems > 0) {
             hasMore = existingRows < totalItems;
+            if (DEBUG) {
+                console.log('📊 Initial hasMore:', hasMore, 'existingRows:', existingRows, 'totalItems:', totalItems);
+            }
         } else {
             // Fallback: pokud není total_items, použít defaultní logiku
             hasMore = true;
+            if (DEBUG) {
+                console.log('📊 Initial hasMore: true (no totalItems)');
+            }
         }
         
         if (DEBUG) {
@@ -827,7 +869,15 @@ function setActiveRowFromSidebar() {
             
             // Check if rows from this page are already in DOM
             const currentRowCount = tbody.querySelectorAll('tr.saw-table-row[data-id]').length;
-            const expectedRowsForNextPage = nextPage * perPage;
+            
+            // ✅ OPRAVA: Správný výpočet pro infinite scroll
+            // Page 1 = initialLoad (100), Page 2 = initialLoad + perPage (150), Page 3 = initialLoad + 2*perPage (200)
+            let expectedRowsForNextPage;
+            if (nextPage === 1) {
+                expectedRowsForNextPage = initialLoad;
+            } else {
+                expectedRowsForNextPage = initialLoad + (nextPage - 1) * perPage;
+            }
             
             if (currentRowCount >= expectedRowsForNextPage - 10) { // -10 for tolerance
                 console.log('✅ Rows already in DOM, marking page as loaded');
@@ -950,6 +1000,9 @@ console.log('🚀 SENDING AJAX REQUEST:', {
                     hasMore = has_more;
                     
                     if (html && loaded > 0) {
+                        // ✅ OPRAVA: Reset isLoading dříve, aby se mohla načíst další stránka
+                        isLoading = false;
+                        
                         // ✅ Mark page as loaded ONLY after successful load
                         // Use pageToLoad (which is nextPage) to ensure we mark the correct page
                         loadedPages.add(pageToLoad);
@@ -1072,6 +1125,27 @@ console.log('🚀 SENDING AJAX REQUEST:', {
                                     console.log('🔓 Scroll unlocked');
                                 }
                                 
+                                // ✅ OPRAVA: Zavolat auto-load callback, pokud existuje (jen během auto-loading procesu)
+                                if (scrollArea._autoLoadCheckNeeded) {
+                                    scrollArea._autoLoadCheckNeeded = false; // Vymazat flag
+                                    setTimeout(() => {
+                                        autoLoadActive = false; // Uvolnit flag
+                                        // Zkontrolovat znovu jen pokud stále není scrollovatelné a nepřekročili jsme max
+                                        const stillNotScrollable = scrollArea.scrollHeight <= scrollArea.clientHeight;
+                                        const currentAttempts = scrollArea._autoLoadAttempts || 0;
+                                        if (stillNotScrollable && currentAttempts < maxAutoLoadAttempts) {
+                                            checkAndAutoLoad();
+                                        } else if (DEBUG) {
+                                            console.log('✅ Auto-loading stopped:', {
+                                                reason: stillNotScrollable ? 'max attempts reached' : 'scroll area is now scrollable',
+                                                isScrollable: !stillNotScrollable,
+                                                attempts: currentAttempts
+                                            });
+                                        }
+                                        scrollArea._autoLoadAttempts = undefined; // Vymazat
+                                    }, 800);
+                                }
+                                
                                 // ╔═══════════════════════════════════════════════════════════╗
                                 // ║ EXISTUJÍCÍ LOGIKA: CHECK FOR SCROLL RESTORE              ║
                                 // ║ (Tato část už existuje, nechat beze změny)               ║
@@ -1167,8 +1241,22 @@ console.log('🚀 SENDING AJAX REQUEST:', {
         let lastScrollTime = Date.now();
         
         function handleScroll() {
+            // ✅ DEBUG: Ověřit, že se handler spouští (vždy první 5x, pak jen občas)
+            if (DEBUG) {
+                if (!handleScroll._callCount) {
+                    handleScroll._callCount = 0;
+                }
+                handleScroll._callCount++;
+                if (handleScroll._callCount <= 5 || Math.random() < 0.1) {
+                    console.log('🔄 Scroll event triggered (call #' + handleScroll._callCount + ')');
+                }
+            }
+            
             // Skip if programmatic scroll (restoration)
             if (scrollArea._isProgrammaticScroll) {
+                if (DEBUG && handleScroll._callCount <= 5) {
+                    console.log('⏸️ Scroll skipped - programmatic scroll');
+                }
                 return;
             }
             
@@ -1202,6 +1290,9 @@ console.log('🚀 SENDING AJAX REQUEST:', {
             }
             
             if (isLoading || !hasMore) {
+                if (DEBUG && !hasMore) {
+                    console.log('⏸️ Load skipped - hasMore:', hasMore, 'isLoading:', isLoading);
+                }
                 return;
             }
             
@@ -1241,8 +1332,199 @@ console.log('🚀 SENDING AJAX REQUEST:', {
             }
             scrollTimeout = setTimeout(handleScroll, 16); // OPRAVENO 2025-01-22: ~60fps pro plynulejší scroll (16ms = 1 frame)
         };
+        
+        // ✅ DEBUG: Ověřit registraci scroll listeneru
+        if (DEBUG) {
+            console.log('📌 Registering scroll listener on:', scrollArea);
+            console.log('📌 ScrollArea dimensions:', {
+                scrollHeight: scrollArea.scrollHeight,
+                clientHeight: scrollArea.clientHeight,
+                scrollTop: scrollArea.scrollTop,
+                isScrollable: scrollArea.scrollHeight > scrollArea.clientHeight
+            });
+        }
+        
         scrollArea.addEventListener('scroll', scrollHandler, { passive: true });
         scrollArea._sawInfiniteScrollHandler = scrollHandler; // Store reference for cleanup
+        
+        // ✅ KRITICKÁ OPRAVA: Fallback pro případ, kdy scrollArea není scrollovatelné
+        // Pokud scrollArea není scrollovatelné, scroll event se nespouští, takže musíme použít wheel event
+        let lastWheelTime = 0;
+        let wheelEventCount = 0;
+        const wheelHandler = (e) => {
+            if (DEBUG) {
+                console.log('🔄 Wheel event detected:', {
+                    deltaY: e.deltaY,
+                    target: e.target,
+                    currentTarget: e.currentTarget
+                });
+            }
+            
+            // Throttle wheel events
+            const now = Date.now();
+            if (now - lastWheelTime < 200) {
+                if (DEBUG) {
+                    console.log('⏸️ Wheel event throttled');
+                }
+                return;
+            }
+            lastWheelTime = now;
+            
+            // Zkontrolovat, zda scrollArea není scrollovatelné
+            const isScrollable = scrollArea.scrollHeight > scrollArea.clientHeight;
+            
+            if (DEBUG) {
+                console.log('🔍 Wheel handler check:', {
+                    isScrollable: isScrollable,
+                    hasMore: hasMore,
+                    isLoading: isLoading,
+                    deltaY: e.deltaY,
+                    wheelEventCount: wheelEventCount
+                });
+            }
+            
+            // Pokud není scrollovatelné a uživatel scrolluje dolů, načíst další stránku
+            if (!isScrollable && hasMore && !isLoading && e.deltaY > 0) {
+                wheelEventCount++;
+                if (DEBUG) {
+                    console.log('📊 Wheel event count:', wheelEventCount);
+                }
+                // Po 3 wheel eventech (uživatel scrolluje dolů), načíst další stránku
+                if (wheelEventCount >= 3) {
+                    wheelEventCount = 0; // Reset counter
+                    if (DEBUG) {
+                        console.log('🔄 Wheel event fallback - loading next page (scrollArea not scrollable)');
+                    }
+                    loadNextPage();
+                }
+            } else if (isScrollable) {
+                // Pokud je scrollovatelné, reset counter
+                wheelEventCount = 0;
+            }
+        };
+        
+        // Přidat wheel handler na scrollArea
+        scrollArea.addEventListener('wheel', wheelHandler, { passive: true });
+        scrollArea._sawInfiniteScrollWheelHandler = wheelHandler; // Store reference for cleanup
+        
+        // ✅ PŘIDÁNO: Přidat wheel handler i na window jako fallback
+        // Wheel event se může spouštět na window, pokud scrollArea není scrollovatelné
+        const windowWheelHandler = (e) => {
+            // Zkontrolovat, zda je kurzor nad scrollArea
+            const rect = scrollArea.getBoundingClientRect();
+            const isOverScrollArea = (
+                e.clientX >= rect.left &&
+                e.clientX <= rect.right &&
+                e.clientY >= rect.top &&
+                e.clientY <= rect.bottom
+            );
+            
+            if (!isOverScrollArea) {
+                return; // Ignorovat, pokud není nad scrollArea
+            }
+            
+            // Zavolat původní wheel handler
+            wheelHandler(e);
+        };
+        
+        window.addEventListener('wheel', windowWheelHandler, { passive: true });
+        scrollArea._sawInfiniteScrollWindowWheelHandler = windowWheelHandler; // Store reference for cleanup
+        
+        if (DEBUG) {
+            console.log('✅ Wheel listener registered on scrollArea');
+            console.log('✅ Wheel listener registered on window (fallback)');
+        }
+        
+        // ✅ SCROLL TO TOP BUTTON
+        const scrollToTopBtn = document.querySelector('.saw-scroll-to-top');
+        if (scrollToTopBtn) {
+            const showScrollThreshold = 300; // Show button after scrolling 300px
+            
+            const updateScrollToTopButton = () => {
+                const scrollTop = scrollArea.scrollTop;
+                if (scrollTop > showScrollThreshold) {
+                    scrollToTopBtn.classList.add('visible');
+                } else {
+                    scrollToTopBtn.classList.remove('visible');
+                }
+            };
+            
+            // Update on scroll
+            scrollArea.addEventListener('scroll', updateScrollToTopButton, { passive: true });
+            
+            // Click handler
+            scrollToTopBtn.addEventListener('click', () => {
+                scrollArea.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            });
+            
+            // Initial check
+            updateScrollToTopButton();
+        }
+        
+        // ✅ KRITICKÁ OPRAVA: Pokud scrollArea není scrollovatelné, automaticky načíst několik stránek
+        // Toto je důležité, protože pokud máme jen 100 řádků a scrollArea je přesně tak velké,
+        // že se vejde celý obsah, není scrollovatelné, takže scroll event se nespustí
+        // Ale načteme jen tolik, aby bylo scrollovatelné (max 2 stránky), pak se zastaví a čeká na scroll
+        let autoLoadAttempts = 0;
+        const maxAutoLoadAttempts = 2; // Max 2 pokusy na auto-loading (načte max 2 stránky navíc = 200 řádků celkem)
+        let autoLoadActive = false; // Flag, aby se auto-loading nespouštěl opakovaně
+        
+        const checkAndAutoLoad = () => {
+            // Pokud už probíhá auto-loading, nezačínat nový
+            if (autoLoadActive) {
+                return;
+            }
+            
+            const isScrollable = scrollArea.scrollHeight > scrollArea.clientHeight;
+            const currentRowCount = tbody.querySelectorAll('tr.saw-table-row[data-id]').length;
+            
+            if (DEBUG) {
+                console.log('🔍 Checking if auto-load needed:', {
+                    isScrollable: isScrollable,
+                    currentRowCount: currentRowCount,
+                    hasMore: hasMore,
+                    isLoading: isLoading,
+                    autoLoadAttempts: autoLoadAttempts,
+                    maxAttempts: maxAutoLoadAttempts
+                });
+            }
+            
+            // ✅ OPRAVA: Auto-loading jen pokud:
+            // 1. Není scrollovatelné
+            // 2. Máme více záznamů
+            // 3. Není právě loading
+            // 4. Nepřekročili jsme max počet pokusů
+            // 5. Máme méně než totalItems
+            if (!isScrollable && hasMore && !isLoading && currentRowCount < totalItems && autoLoadAttempts < maxAutoLoadAttempts) {
+                autoLoadActive = true;
+                autoLoadAttempts++;
+                if (DEBUG) {
+                    console.log('🚀 Auto-loading next page - scroll area not scrollable yet (attempt ' + autoLoadAttempts + '/' + maxAutoLoadAttempts + ')');
+                    console.log('📊 Current state:', {
+                        rows: currentRowCount,
+                        total: totalItems,
+                        hasMore: hasMore
+                    });
+                }
+                // Načíst další stránku
+                // ✅ OPRAVA: Zaregistrovat flag, že probíhá auto-loading, aby se callback zavolal po načtení
+                scrollArea._autoLoadCheckNeeded = true;
+                scrollArea._autoLoadAttempts = autoLoadAttempts;
+                
+                loadNextPage();
+                
+                // ✅ OPRAVA: Callback se zavolá po načtení v requestAnimationFrame (viz níže)
+                // Toto zajistí, že se checkAndAutoLoad nespustí po každém načtení, ale jen během auto-loading procesu
+            } else if (DEBUG && !isScrollable && autoLoadAttempts >= maxAutoLoadAttempts) {
+                console.log('⏸️ Auto-loading stopped - max attempts reached. Scroll area should be scrollable now.');
+            }
+        };
+        
+        // Zkontrolovat po malém zpoždění (až se DOM vykreslí) - jen jednou při inicializaci
+        setTimeout(checkAndAutoLoad, 500);
         
         // Save scroll position on page unload
         window.addEventListener('beforeunload', function() {

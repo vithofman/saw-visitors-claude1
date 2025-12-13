@@ -118,33 +118,44 @@ return array(
         'enabled' => true,
         'tab_param' => 'context',
         'default_tab' => 'all',
-        'tabs' => array(
-            'all' => array(
-                'label' => $tr('tab_all', 'Všechny'),
-                'filter_value' => null,
-                'count_query' => true,
+            'tabs' => array(
+                'all' => array(
+                    'label' => $tr('tab_all', 'Všechny'),
+                    'icon' => '🌐',
+                    'filter_value' => null,
+                    'count_query' => true,
+                ),
+                'terminal' => array(
+                    'label' => $tr('tab_terminal', 'Terminal'),
+                    'icon' => '🖥️',
+                    'filter_value' => 'terminal',
+                    'count_query' => true,
+                ),
+                'invitation' => array(
+                    'label' => $tr('tab_invitation', 'Pozvánka'),
+                    'icon' => '📧',
+                    'filter_value' => 'invitation',
+                    'count_query' => true,
+                ),
+                'admin' => array(
+                    'label' => $tr('tab_admin', 'Admin'),
+                    'icon' => '⚙️',
+                    'filter_value' => 'admin',
+                    'count_query' => true,
+                ),
+                'common' => array(
+                    'label' => $tr('tab_common', 'Společné'),
+                    'icon' => '🌐',
+                    'filter_value' => 'common',
+                    'count_query' => true,
+                ),
+                'email' => array(
+                    'label' => $tr('tab_email', 'Email'),
+                    'icon' => '📧',
+                    'filter_value' => 'email',
+                    'count_query' => true,
+                ),
             ),
-            'terminal' => array(
-                'label' => $tr('tab_terminal', 'Terminal'),
-                'filter_value' => 'terminal',
-                'count_query' => true,
-            ),
-            'invitation' => array(
-                'label' => $tr('tab_invitation', 'Pozvánka'),
-                'filter_value' => 'invitation',
-                'count_query' => true,
-            ),
-            'admin' => array(
-                'label' => $tr('tab_admin', 'Admin'),
-                'filter_value' => 'admin',
-                'count_query' => true,
-            ),
-            'common' => array(
-                'label' => $tr('tab_common', 'Společné'),
-                'filter_value' => 'common',
-                'count_query' => true,
-            ),
-        ),
     ),
     
     // ============================================
@@ -154,7 +165,7 @@ return array(
         'enabled' => true,
         'per_page' => 50,
         'initial_load' => 100,
-        'threshold' => 200,
+        'threshold' => 0.6, // 60% scroll pro spuštění načítání (hodnota 0-1, ne pixely)
     ),
     
     // ============================================

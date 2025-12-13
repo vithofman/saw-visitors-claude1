@@ -4,7 +4,7 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Translations
- * @version     2.0.0 - Redesigned with modern card layout
+ * @version     3.0.0 - Added inline styles like visits module
  */
 
 if (!defined('ABSPATH')) {
@@ -68,8 +68,320 @@ $lang_labels = array(
 $current_context = $context_config[$item['context']] ?? array('label' => $item['context'], 'badge' => 'saw-badge-secondary');
 ?>
 
+<style>
+/* ============================================
+   GLOBAL OVERFLOW FIX
+   ============================================ */
+.saw-industrial-section,
+.saw-section-body,
+.saw-info-grid,
+.saw-detail-cards-stack {
+    max-width: 100%;
+    overflow: hidden;
+}
+
+/* ============================================
+   DETAIL CARDS STACK
+   ============================================ */
+.saw-detail-cards-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 16px 0;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    font-family: 'Roboto', sans-serif !important;
+    color: #1a1a1a !important;
+}
+
+/* Translation Key Card */
+.saw-translation-key-card {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    border-radius: 14px;
+    padding: 2px;
+    margin-bottom: 0;
+    width: 100%;
+    box-sizing: border-box;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.saw-translation-key-card-inner {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+}
+
+.saw-translation-key-icon {
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6366f1;
+    flex-shrink: 0;
+}
+
+.saw-translation-key-icon svg {
+    width: 24px;
+    height: 24px;
+}
+
+.saw-translation-key-content {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.saw-translation-key-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.saw-translation-key-value {
+    font-size: 14px;
+    color: #1e293b;
+    line-height: 1.5;
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+
+.saw-translation-key-value code {
+    background: #f1f5f9;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    color: #6366f1;
+    font-weight: 600;
+}
+
+/* Translation Text Card */
+.saw-translation-text-card {
+    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+    border-radius: 14px;
+    padding: 2px;
+    margin-bottom: 0;
+    width: 100%;
+    box-sizing: border-box;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.saw-translation-text-card-inner {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+}
+
+.saw-translation-text-icon {
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #0ea5e9;
+    flex-shrink: 0;
+}
+
+.saw-translation-text-icon svg {
+    width: 24px;
+    height: 24px;
+}
+
+.saw-translation-text-content {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.saw-translation-text-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.saw-translation-text-value {
+    font-size: 15px;
+    color: #1e293b;
+    line-height: 1.6;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+}
+
+/* Description Card */
+.saw-description-card {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    border-radius: 14px;
+    padding: 2px;
+    margin-bottom: 0;
+    width: 100%;
+    box-sizing: border-box;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.saw-description-card-inner {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+}
+
+.saw-description-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #8b5cf6;
+    flex-shrink: 0;
+}
+
+.saw-description-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.saw-description-content {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.saw-description-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.saw-description-text {
+    font-size: 14px;
+    color: #1e293b;
+    line-height: 1.6;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+}
+
+/* Placeholders Card */
+.saw-placeholders-card {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    border-radius: 14px;
+    padding: 2px;
+    margin-bottom: 0;
+    width: 100%;
+    box-sizing: border-box;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.saw-placeholders-card-inner {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+}
+
+.saw-placeholders-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #f59e0b;
+    flex-shrink: 0;
+}
+
+.saw-placeholders-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.saw-placeholders-content {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.saw-placeholders-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.saw-placeholders-value {
+    font-size: 14px;
+    color: #1e293b;
+    line-height: 1.5;
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+
+.saw-placeholders-value code {
+    background: #fef3c7;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    color: #d97706;
+    font-weight: 600;
+}
+
+/* Mobile adjustments */
+@media (max-width: 480px) {
+    .saw-translation-key-card-inner,
+    .saw-translation-text-card-inner,
+    .saw-description-card-inner,
+    .saw-placeholders-card-inner {
+        flex-direction: column;
+    }
+    
+    .saw-translation-key-icon,
+    .saw-translation-text-icon,
+    .saw-description-icon,
+    .saw-placeholders-icon {
+        width: 36px;
+        height: 36px;
+    }
+}
+</style>
+
 <div class="saw-detail-wrapper">
-    <div class="saw-detail-stack">
+    <div class="saw-detail-cards-stack">
         
         <!-- TRANSLATION KEY CARD -->
         <div class="saw-translation-key-card">
@@ -210,6 +522,5 @@ $current_context = $context_config[$item['context']] ?? array('label' => $item['
                 </div>
             </div>
         </div>
-
     </div>
 </div>

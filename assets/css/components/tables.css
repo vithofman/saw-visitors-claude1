@@ -1509,6 +1509,78 @@
 }
 
 /* ============================================
+   SCROLL TO TOP BUTTON
+   ============================================ */
+
+.saw-scroll-to-top {
+    position: fixed;
+    bottom: 100px; /* Above floating button */
+    right: 32px;
+    width: 56px;
+    height: 56px;
+    display: none; /* Hidden by default */
+    align-items: center;
+    justify-content: center;
+    background: #3b82f6;
+    border: none;
+    border-radius: 50%;
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 999;
+    opacity: 0;
+    transform: translateY(20px);
+}
+
+.saw-scroll-to-top.visible {
+    display: flex;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.saw-scroll-to-top svg {
+    width: 24px;
+    height: 24px;
+    color: #ffffff;
+}
+
+.saw-scroll-to-top:hover {
+    background: #2563eb;
+    transform: translateY(-4px);
+    box-shadow: 0 6px 24px rgba(59, 130, 246, 0.5);
+}
+
+.saw-scroll-to-top:active {
+    transform: translateY(-2px);
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+    .saw-scroll-to-top {
+        bottom: 80px;
+        right: 20px;
+        width: 48px;
+        height: 48px;
+    }
+    
+    .saw-scroll-to-top svg {
+        width: 20px;
+        height: 20px;
+    }
+}
+
+/* Adjust position when floating button is present */
+.saw-floating-button ~ .saw-scroll-to-top {
+    bottom: 180px; /* Above floating button */
+}
+
+@media (max-width: 768px) {
+    .saw-floating-button ~ .saw-scroll-to-top {
+        bottom: 140px;
+    }
+}
+
+/* ============================================
    UTILITY CLASSES
    ============================================ */
 
@@ -1638,6 +1710,7 @@
     align-items: center;
     gap: 8px;
     flex-shrink: 0;
+    margin-right: 8px;
 }
 
 .saw-sidebar-wrapper .saw-sidebar-nav-btn {

@@ -236,6 +236,7 @@ class SAW_Component_Admin_Table {
     <?php
     $this->render_modal();
     $this->render_floating_button();
+    $this->render_scroll_to_top();
     ?>
 </div>
             <?php
@@ -262,6 +263,7 @@ class SAW_Component_Admin_Table {
             <?php $this->render_pagination(); ?>
             
             <?php $this->render_floating_button(); ?>
+            <?php $this->render_scroll_to_top(); ?>
         </div>
         
         <?php if ($has_sidebar): ?>
@@ -917,6 +919,19 @@ class SAW_Component_Admin_Table {
            title="<?php echo esc_attr($this->config['add_new']); ?>">
             <span class="dashicons dashicons-plus"></span>
         </a>
+        <?php
+    }
+    
+    private function render_scroll_to_top() {
+        ?>
+        <button type="button" 
+                class="saw-scroll-to-top" 
+                title="Zpět nahoru"
+                aria-label="Zpět nahoru">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 15l-6-6-6 6"/>
+            </svg>
+        </button>
         <?php
     }
     
