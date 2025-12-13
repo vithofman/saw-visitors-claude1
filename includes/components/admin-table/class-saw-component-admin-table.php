@@ -450,8 +450,34 @@ class SAW_Component_Admin_Table {
         $placeholder = $search_config['placeholder'] ?? $this->config['search_placeholder'] ?? 'Hledat...';
         $show_info_banner = $search_config['show_info_banner'] ?? true;
         
+        // ⭐ NOVÉ: Pokud je aktivní search, zobrazit badge místo formu
+        if (!empty($search_value) && $show_info_banner) {
+            ?>
+            <div class="saw-search-active-badge-inline" id="saw-search-badge-<?php echo esc_attr($this->entity); ?>">
+                <span class="saw-search-active-text">
+                    <span class="dashicons dashicons-search"></span>
+                    <span class="saw-search-term"><?php echo esc_html($search_value); ?></span>
+                </span>
+                <a href="<?php echo esc_url($this->build_url($base_url, array_diff_key($current_params, array('s' => '', 'paged' => '')))); ?>" 
+                   class="saw-search-clear-badge" 
+                   title="Zrušit vyhledávání">
+                    <span class="dashicons dashicons-no-alt"></span>
+                </a>
+                <button type="button" 
+                        class="saw-search-edit" 
+                        onclick="document.getElementById('saw-search-badge-<?php echo esc_attr($this->entity); ?>').style.display='none'; document.getElementById('saw-search-form-<?php echo esc_attr($this->entity); ?>').style.display='flex'; document.getElementById('saw-search-input-<?php echo esc_attr($this->entity); ?>').focus();"
+                        title="Upravit vyhledávání">
+                    <span class="dashicons dashicons-edit"></span>
+                </button>
+            </div>
+            <?php
+        }
         ?>
-        <form method="GET" action="<?php echo esc_url($base_url); ?>" class="saw-search-form">
+        <form method="GET" 
+              action="<?php echo esc_url($base_url); ?>" 
+              class="saw-search-form" 
+              id="saw-search-form-<?php echo esc_attr($this->entity); ?>"
+              style="<?php echo !empty($search_value) && $show_info_banner ? 'display: none;' : ''; ?>">
             <?php
             // Preserve filters and other params
             foreach ($current_params as $key => $value) {
@@ -463,6 +489,7 @@ class SAW_Component_Admin_Table {
             
             <input type="text" 
                    name="s" 
+                   id="saw-search-input-<?php echo esc_attr($this->entity); ?>"
                    value="<?php echo esc_attr($search_value); ?>" 
                    placeholder="<?php echo esc_attr($placeholder); ?>"
                    class="saw-search-input">
@@ -470,22 +497,7 @@ class SAW_Component_Admin_Table {
             <button type="submit" class="saw-search-button" title="Hledat">
                 <span class="dashicons dashicons-search"></span>
             </button>
-            
-            <?php if (!empty($search_value)): ?>
-                <a href="<?php echo esc_url($this->build_url($base_url, array_diff_key($current_params, array('s' => '', 'paged' => '')))); ?>" 
-                   class="saw-search-clear" 
-                   title="Zrušit vyhledávání">
-                    <span class="dashicons dashicons-no-alt"></span>
-                </a>
-            <?php endif; ?>
         </form>
-        
-        <?php if (!empty($search_value) && $show_info_banner): ?>
-            <div class="saw-search-info">
-                Hledáte: <strong><?php echo esc_html($search_value); ?></strong>
-                <a href="<?php echo esc_url($this->build_url($base_url, array_diff_key($current_params, array('s' => '', 'paged' => '')))); ?>">Zrušit</a>
-            </div>
-        <?php endif; ?>
         <?php
     }
     

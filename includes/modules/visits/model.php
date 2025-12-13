@@ -89,6 +89,12 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
             $where_values[] = $branch_id;
         }
         
+        // ⭐ NOVÉ: Přidat podporu pro status filtr (pro tabs)
+        if (!empty($filters['status'])) {
+            $where[] = "v.status = %s";
+            $where_values[] = $filters['status'];
+        }
+        
         if (!empty($filters['risks_status'])) {
             // Use COALESCE to handle NULL values (treat NULL as 'pending')
             $where[] = "COALESCE(v.risks_status, 'pending') = %s";
@@ -113,7 +119,22 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
             
             // Always search in text fields
             $search_term = '%' . $wpdb->esc_like($search) . '%';
-            $search_conditions[] = "(c.name LIKE %s OR vis.first_name LIKE %s OR vis.last_name LIKE %s)";
+            
+            // Search in company name
+            $search_conditions[] = "c.name LIKE %s";
+            $search_params[] = $search_term;
+            
+            // Search in visitor names from visitors table (via JOIN)
+            $search_conditions[] = "vis.first_name LIKE %s";
+            $search_conditions[] = "vis.last_name LIKE %s";
+            $search_conditions[] = "CONCAT(vis.first_name, ' ', vis.last_name) LIKE %s";
+            $search_params[] = $search_term;
+            $search_params[] = $search_term;
+            $search_params[] = $search_term;
+            
+            // Search in first_visitor_name subquery (for physical persons without company_id)
+            // Use EXISTS for better performance - matches any visitor name for this visit
+            $search_conditions[] = "EXISTS (SELECT 1 FROM {$wpdb->prefix}saw_visitors WHERE visit_id = v.id AND (first_name LIKE %s OR last_name LIKE %s OR CONCAT(first_name, ' ', last_name) LIKE %s))";
             $search_params[] = $search_term;
             $search_params[] = $search_term;
             $search_params[] = $search_term;
@@ -160,7 +181,9 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
                 FROM {$wpdb->prefix}saw_visits v
                 LEFT JOIN {$wpdb->prefix}saw_companies c ON v.company_id = c.id
                 LEFT JOIN {$wpdb->prefix}saw_branches b ON v.branch_id = b.id
+                LEFT JOIN {$wpdb->prefix}saw_visitors vis ON v.id = vis.visit_id
                 WHERE {$where_sql}
+                GROUP BY v.id
                 ORDER BY {$orderby_column} {$order}
                 LIMIT %d OFFSET %d";
         

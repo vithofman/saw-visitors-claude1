@@ -25,12 +25,44 @@
     min-width: 200px;
 }
 
+/* Mobile: search takes full width */
+@media (max-width: 768px) {
+    .saw-table-search {
+        max-width: 100%;
+        min-width: 100%;
+        width: 100%;
+    }
+}
+
 .saw-search-form {
     display: flex;
     gap: 8px;
     align-items: center;
     margin: 0;
     position: relative;
+}
+
+/* Mobile: stack search elements */
+@media (max-width: 768px) {
+    .saw-search-form {
+        flex-wrap: wrap;
+    }
+    
+    .saw-search-input {
+        flex: 1 1 100%;
+        min-width: 0;
+    }
+    
+    .saw-search-active-badge-inline {
+        width: 100%;
+        max-width: 100%;
+        min-width: 100%;
+    }
+    
+    .saw-search-active-badge-inline .saw-search-term {
+        max-width: none;
+        flex: 1;
+    }
 }
 
 .saw-search-form input[type="search"],
@@ -115,6 +147,175 @@
     color: #ef4444;
 }
 
+/* Search Active Badge Inline - nahrazuje search form */
+.saw-search-active-badge-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: var(--saw-primary-light, #eff6ff);
+    border: 1px solid var(--saw-primary, #2563eb);
+    border-radius: 20px;
+    font-size: 13px;
+    line-height: 1.4;
+    height: 34px; /* Stejná výška jako search input */
+    box-sizing: border-box;
+    flex: 1;
+    min-width: 200px;
+    max-width: 360px;
+}
+
+.saw-search-active-badge-inline .saw-search-active-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--saw-primary, #2563eb);
+    flex: 1;
+    min-width: 0;
+}
+
+.saw-search-active-badge-inline .saw-search-term {
+    font-weight: 600;
+    color: var(--saw-primary, #2563eb);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.saw-search-edit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin-left: 4px;
+    background: transparent;
+    border: none;
+    border-radius: 50%;
+    color: var(--saw-primary, #2563eb);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.saw-search-edit:hover {
+    background: rgba(37, 99, 235, 0.1);
+    transform: scale(1.1);
+}
+
+.saw-search-edit .dashicons {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+}
+
+/* Legacy search badge (deprecated, kept for backward compatibility) */
+.saw-search-active-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 6px 12px;
+    background: var(--saw-primary-light, #eff6ff);
+    border: 1px solid var(--saw-primary, #2563eb);
+    border-radius: 20px;
+    font-size: 13px;
+    line-height: 1.4;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.saw-search-active-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--saw-primary, #2563eb);
+}
+
+.saw-search-active-text .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    color: var(--saw-primary, #2563eb);
+}
+
+.saw-search-term {
+    font-weight: 600;
+    color: var(--saw-primary, #2563eb);
+}
+
+.saw-search-clear-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin-left: 4px;
+    background: transparent;
+    border: none;
+    border-radius: 50%;
+    color: var(--saw-primary, #2563eb);
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    padding: 0;
+}
+
+.saw-search-clear-badge:hover {
+    background: rgba(37, 99, 235, 0.1);
+    transform: scale(1.1);
+}
+
+.saw-search-clear-badge .dashicons {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+    color: var(--saw-primary, #2563eb);
+}
+
+/* Mobile optimization for search */
+@media (max-width: 768px) {
+    .saw-search-form {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    
+    .saw-search-input {
+        min-width: 100%;
+        order: 1;
+    }
+    
+    .saw-search-button {
+        order: 2;
+    }
+    
+    .saw-search-clear {
+        order: 3;
+    }
+    
+    .saw-search-active-badge {
+        margin-top: 6px;
+        padding: 5px 10px;
+        font-size: 12px;
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .saw-search-active-text {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .saw-search-term {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+/* Legacy search-info styles (deprecated, kept for backward compatibility) */
 .saw-search-info {
     margin-top: 8px;
     font-size: 13px;
