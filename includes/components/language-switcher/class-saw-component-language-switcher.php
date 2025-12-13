@@ -169,9 +169,10 @@ class SAW_Component_Language_Switcher {
         
         global $wpdb;
         
+        // Oprava: %i není podporováno v $wpdb->prepare(), použijeme string concatenation pro table name
+        $table_name = $wpdb->prefix . 'saw_users';
         $language = $wpdb->get_var($wpdb->prepare(
-            "SELECT language FROM %i WHERE wp_user_id = %d AND is_active = 1",
-            $wpdb->prefix . 'saw_users',
+            "SELECT language FROM {$table_name} WHERE wp_user_id = %d AND is_active = 1",
             get_current_user_id()
         ));
         

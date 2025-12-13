@@ -436,7 +436,9 @@ class SAW_App_Header {
         }
         
         if (class_exists('SAW_Component_Language_Switcher')) {
-            $switcher = new SAW_Component_Language_Switcher();
+            // Získat aktuální jazyk uživatele z databáze
+            $current_lang = SAW_Component_Language_Switcher::get_user_language();
+            $switcher = new SAW_Component_Language_Switcher($current_lang);
             $switcher->render();
         }
     }
