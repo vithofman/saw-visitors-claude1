@@ -723,8 +723,6 @@ $show_risks_section = !empty($materials) || !empty($item['invitation_token']) ||
     </div>
 </div>
 <?php endif; ?>
-
-</div>
         
     </div>
 </div>

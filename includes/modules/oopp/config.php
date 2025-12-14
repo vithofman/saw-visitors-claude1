@@ -156,35 +156,12 @@ return array(
             'placeholder' => $tr('placeholder_usage', 'Jak správně používat tento prostředek...'),
             'rows' => 4,
         ),
-        'maintenance_instructions' => array(
-            'type' => 'textarea',
-            'label' => $tr('field_maintenance', 'Pokyny pro údržbu'),
-            'required' => false,
-            'sanitize' => 'sanitize_textarea_field',
-            'placeholder' => $tr('placeholder_maintenance', 'Jak správně udržovat a čistit prostředek...'),
-            'rows' => 3,
-        ),
-        'storage_instructions' => array(
-            'type' => 'textarea',
-            'label' => $tr('field_storage', 'Pokyny pro skladování'),
-            'required' => false,
-            'sanitize' => 'sanitize_textarea_field',
-            'placeholder' => $tr('placeholder_storage', 'Jak správně skladovat prostředek...'),
-            'rows' => 3,
-        ),
         'is_active' => array(
             'type' => 'checkbox',
             'label' => $tr('field_active', 'Aktivní'),
             'required' => false,
             'sanitize' => 'absint',
             'default' => 1,
-        ),
-        'display_order' => array(
-            'type' => 'number',
-            'label' => $tr('field_order', 'Pořadí zobrazení'),
-            'required' => false,
-            'sanitize' => 'absint',
-            'default' => 0,
         ),
     ),
     
@@ -207,7 +184,7 @@ return array(
     // LIST CONFIGURATION
     // ============================================
     'list_config' => array(
-        'default_orderby' => 'display_order',
+        'default_orderby' => 'id',
         'default_order' => 'ASC',
         'per_page' => 25,
         'searchable' => array('name', 'standards'),

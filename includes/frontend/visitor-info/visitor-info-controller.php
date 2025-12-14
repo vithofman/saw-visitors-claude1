@@ -563,7 +563,8 @@ class SAW_Visitor_Info_Controller {
             return SAW_OOPP_Public::get_for_visitor(
                 $this->customer_id,
                 $this->branch_id,
-                $this->visit_id
+                $this->visit_id,
+                $this->language
             );
         }
         

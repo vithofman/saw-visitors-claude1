@@ -523,4 +523,9 @@ $current_context = $context_config[$item['context']] ?? array('label' => $item['
             </div>
         </div>
     </div>
+    
+    <?php
+    // Include audit history component
+    require SAW_VISITORS_PLUGIN_DIR . 'includes/components/detail-audit-history.php';
+    ?>
 </div>

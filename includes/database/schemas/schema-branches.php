@@ -25,6 +25,8 @@ function saw_get_schema_branches($table_name, $prefix, $charset_collate) {
 		sort_order INT NOT NULL DEFAULT 0,
 		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
+		created_by VARCHAR(255) NULL COMMENT 'Email uživatele, který vytvořil záznam',
+		updated_by VARCHAR(255) NULL COMMENT 'Email uživatele, který naposledy aktualizoval záznam',
 		PRIMARY KEY (id),
 		UNIQUE KEY idx_customer_code (customer_id, code),
 		KEY idx_customer (customer_id),

@@ -156,9 +156,10 @@ class SAW_Installer {
             'training_department_content',
             'training_documents',
             
-            // OOPP System (4)
+            // OOPP System (5)
             'oopp_groups',
             'oopp',
+            'oopp_translations',
             'oopp_branches',
             'oopp_departments',
             
@@ -573,6 +574,189 @@ class SAW_Installer {
                 
                 error_log("[SAW Installer] Updated risks_status for existing visits");
             }
+        }
+        
+        // Add audit fields (created_by, updated_by) to relevant tables
+        self::add_audit_fields_to_tables();
+        
+        // Add branch_id to audit_log table
+        self::add_branch_id_to_audit_log();
+    }
+    
+    /**
+     * Add audit fields (created_by, updated_by) to all relevant tables
+     * 
+     * @since 1.0.0
+     * @return void
+     */
+    private static function add_audit_fields_to_tables() {
+        global $wpdb;
+        $prefix = $wpdb->prefix . 'saw_';
+        
+        // List of tables that should have audit fields
+        $tables = array(
+            'oopp',
+            'branches',
+            'departments',
+            'visitors',
+            'visits',
+            'companies',
+            'contact_persons',
+            'training_documents',
+            'training_content',
+            'training_document_types',
+            'training_languages',
+            'visit_hosts',
+            'oopp_groups',
+        );
+        
+        foreach ($tables as $table_name) {
+            $full_table = $prefix . $table_name;
+            
+            // Skip if table doesn't exist
+            if (!self::table_exists($table_name)) {
+                continue;
+            }
+            
+            // Check if created_by exists
+            $created_by_exists = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+                 WHERE TABLE_SCHEMA = %s 
+                 AND TABLE_NAME = %s 
+                 AND COLUMN_NAME = 'created_by'",
+                DB_NAME,
+                $full_table
+            ));
+            
+            // For visits table, check for created_by_email instead (since created_by already exists as BIGINT)
+            if ($table_name === 'visits') {
+                $created_by_exists = $wpdb->get_var($wpdb->prepare(
+                    "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+                     WHERE TABLE_SCHEMA = %s 
+                     AND TABLE_NAME = %s 
+                     AND COLUMN_NAME = 'created_by_email'",
+                    DB_NAME,
+                    $full_table
+                ));
+                
+                if (!$created_by_exists) {
+                    $wpdb->query("ALTER TABLE {$full_table} 
+                        ADD COLUMN created_by_email VARCHAR(255) NULL 
+                        COMMENT 'Email uživatele, který vytvořil záznam'
+                        AFTER created_by");
+                    error_log("[SAW Installer] Added created_by_email column to {$table_name} table");
+                }
+            } else {
+                if (!$created_by_exists) {
+                    // Determine position - after updated_at if it exists, otherwise after created_at
+                    $after_column = 'created_at';
+                    $updated_at_exists = $wpdb->get_var($wpdb->prepare(
+                        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+                         WHERE TABLE_SCHEMA = %s 
+                         AND TABLE_NAME = %s 
+                         AND COLUMN_NAME = 'updated_at'",
+                        DB_NAME,
+                        $full_table
+                    ));
+                    
+                    if ($updated_at_exists) {
+                        $after_column = 'updated_at';
+                    }
+                    
+                    $wpdb->query("ALTER TABLE {$full_table} 
+                        ADD COLUMN created_by VARCHAR(255) NULL 
+                        COMMENT 'Email uživatele, který vytvořil záznam'
+                        AFTER {$after_column}");
+                    error_log("[SAW Installer] Added created_by column to {$table_name} table");
+                }
+            }
+            
+            // Check if updated_by exists
+            $updated_by_exists = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+                 WHERE TABLE_SCHEMA = %s 
+                 AND TABLE_NAME = %s 
+                 AND COLUMN_NAME = 'updated_by'",
+                DB_NAME,
+                $full_table
+            ));
+            
+            if (!$updated_by_exists) {
+                // Position after created_by or created_by_email
+                $after_column = ($table_name === 'visits') ? 'created_by_email' : 'created_by';
+                $after_column_exists = $wpdb->get_var($wpdb->prepare(
+                    "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+                     WHERE TABLE_SCHEMA = %s 
+                     AND TABLE_NAME = %s 
+                     AND COLUMN_NAME = %s",
+                    DB_NAME,
+                    $full_table,
+                    $after_column
+                ));
+                
+                // Fallback to updated_at if created_by doesn't exist
+                if (!$after_column_exists) {
+                    $updated_at_exists = $wpdb->get_var($wpdb->prepare(
+                        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+                         WHERE TABLE_SCHEMA = %s 
+                         AND TABLE_NAME = %s 
+                         AND COLUMN_NAME = 'updated_at'",
+                        DB_NAME,
+                        $full_table
+                    ));
+                    $after_column = $updated_at_exists ? 'updated_at' : 'created_at';
+                }
+                
+                $wpdb->query("ALTER TABLE {$full_table} 
+                    ADD COLUMN updated_by VARCHAR(255) NULL 
+                    COMMENT 'Email uživatele, který naposledy aktualizoval záznam'
+                    AFTER {$after_column}");
+                error_log("[SAW Installer] Added updated_by column to {$table_name} table");
+            }
+        }
+    }
+    
+    /**
+     * Add branch_id column to audit_log table
+     * 
+     * @since 1.0.0
+     * @return void
+     */
+    private static function add_branch_id_to_audit_log() {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'saw_audit_log';
+        
+        // Check if branch_id column exists
+        $column_exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+             WHERE TABLE_SCHEMA = %s 
+             AND TABLE_NAME = %s 
+             AND COLUMN_NAME = 'branch_id'",
+            DB_NAME,
+            $table_name
+        ));
+        
+        if (!$column_exists) {
+            $wpdb->query("ALTER TABLE {$table_name} 
+                ADD COLUMN branch_id BIGINT(20) UNSIGNED DEFAULT NULL
+                AFTER customer_id");
+            error_log("[SAW Installer] Added branch_id column to audit_log table");
+        }
+        
+        // Check if index exists
+        $index_exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS 
+             WHERE TABLE_SCHEMA = %s 
+             AND TABLE_NAME = %s 
+             AND INDEX_NAME = 'idx_branch'",
+            DB_NAME,
+            $table_name
+        ));
+        
+        if (!$index_exists) {
+            $wpdb->query("ALTER TABLE {$table_name} 
+                ADD INDEX idx_branch (branch_id)");
+            error_log("[SAW Installer] Added idx_branch index to audit_log table");
         }
     }
     

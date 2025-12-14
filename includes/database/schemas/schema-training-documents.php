@@ -18,6 +18,8 @@ function saw_get_schema_training_documents($table_name, $prefix, $charset_collat
         file_size BIGINT(20) UNSIGNED DEFAULT NULL,
         mime_type VARCHAR(100) DEFAULT NULL,
         uploaded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        created_by VARCHAR(255) NULL COMMENT 'Email uživatele, který vytvořil záznam',
+        updated_by VARCHAR(255) NULL COMMENT 'Email uživatele, který naposledy aktualizoval záznam',
         PRIMARY KEY (id),
         KEY idx_customer_branch (customer_id, branch_id),
         KEY idx_customer (customer_id),

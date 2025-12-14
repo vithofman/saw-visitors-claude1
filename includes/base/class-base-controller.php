@@ -1410,7 +1410,12 @@ protected function can($action) {
         }
         
         if ($mode === 'detail') {
-            $related_data = $this->load_related_data($id);
+            // Skip loading related_data for companies - they have custom implementation in detail template
+            if ($this->entity !== 'companies') {
+                $related_data = $this->load_related_data($id);
+            } else {
+                $related_data = null;
+            }
         }
         
         $captured_junk = ob_get_clean();

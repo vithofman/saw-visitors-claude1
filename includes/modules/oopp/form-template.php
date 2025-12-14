@@ -39,6 +39,10 @@ $item = $item ?? array();
 // Get current customer context
 $customer_id = class_exists('SAW_Context') ? SAW_Context::get_customer_id() : 0;
 
+// Get languages and translations for form
+$languages = $config['form_languages'] ?? array();
+$translations = $item['translations'] ?? array();
+
 // Get OOPP groups
 global $wpdb;
 $oopp_groups = array();
@@ -190,24 +194,6 @@ $js_translations = array(
                             <?php endforeach; ?>
                         </select>
                         <p class="saw-help-text"><?php echo esc_html($tr('form_group_help', 'Vyberte skupinu, do které OOPP patří')); ?></p>
-                    </div>
-                </div>
-                
-                <!-- Název -->
-                <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-12">
-                        <label for="name" class="saw-label saw-required">
-                            <?php echo esc_html($tr('field_name', 'Název')); ?>
-                        </label>
-                        <input 
-                            type="text" 
-                            name="name" 
-                            id="name" 
-                            class="saw-input" 
-                            value="<?php echo esc_attr($item['name'] ?? ''); ?>"
-                            placeholder="<?php echo esc_attr($tr('placeholder_name', 'např. Ochranné brýle proti UV záření')); ?>"
-                            required
-                        >
                     </div>
                 </div>
                 
@@ -406,126 +392,150 @@ $js_translations = array(
         </details>
         
         <!-- ================================================ -->
-        <!-- TECHNICKÉ INFORMACE -->
+        <!-- PŘEKLADY -->
         <!-- ================================================ -->
-        <details class="saw-form-section">
+        <?php if (!empty($languages)): ?>
+        <details class="saw-form-section" open>
             <summary>
-                <span class="dashicons dashicons-admin-settings"></span>
-                <strong><?php echo esc_html($tr('section_technical', 'Technické informace')); ?></strong>
+                <span class="dashicons dashicons-translation"></span>
+                <strong><?php echo esc_html($tr('section_translations', 'Překlady')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
                 
-                <!-- Normy -->
-                <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-12">
-                        <label for="standards" class="saw-label">
-                            <?php echo esc_html($tr('field_standards', 'Související předpisy / normy')); ?>
-                        </label>
-                        <textarea 
-                            name="standards" 
-                            id="standards" 
-                            class="saw-input saw-textarea" 
-                            rows="3"
-                            placeholder="<?php echo esc_attr($tr('placeholder_standards', 'např. ČSN EN 166, EN 172...')); ?>"
-                        ><?php echo esc_textarea($item['standards'] ?? ''); ?></textarea>
+                <!-- Jazykové záložky -->
+                <div class="saw-language-tabs-wrapper">
+                    <button type="button" class="saw-language-tab-nav saw-language-tab-nav-prev" aria-label="Předchozí jazyky">
+                        <span class="dashicons dashicons-arrow-left-alt2"></span>
+                    </button>
+                    <div class="saw-language-tabs">
+                        <?php foreach ($languages as $index => $language): ?>
+                            <button 
+                                type="button" 
+                                class="saw-language-tab <?php echo $index === 0 ? 'active' : ''; ?>" 
+                                data-tab="lang-<?php echo esc_attr($language['code']); ?>"
+                            >
+                                <?php echo !empty($language['flag']) ? esc_html($language['flag']) : '🌐'; ?> 
+                                <?php echo esc_html($language['name']); ?>
+                            </button>
+                        <?php endforeach; ?>
                     </div>
+                    <button type="button" class="saw-language-tab-nav saw-language-tab-nav-next" aria-label="Další jazyky">
+                        <span class="dashicons dashicons-arrow-right-alt2"></span>
+                    </button>
                 </div>
                 
-                <!-- Rizika -->
-                <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-12">
-                        <label for="risk_description" class="saw-label">
-                            <?php echo esc_html($tr('field_risks', 'Popis rizik, proti kterým OOPP chrání')); ?>
-                        </label>
-                        <textarea 
-                            name="risk_description" 
-                            id="risk_description" 
-                            class="saw-input saw-textarea" 
-                            rows="4"
-                            placeholder="<?php echo esc_attr($tr('placeholder_risks', 'Popište rizika, před kterými tento prostředek chrání...')); ?>"
-                        ><?php echo esc_textarea($item['risk_description'] ?? ''); ?></textarea>
-                    </div>
-                </div>
-                
-                <!-- Ochranné vlastnosti -->
-                <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-12">
-                        <label for="protective_properties" class="saw-label">
-                            <?php echo esc_html($tr('field_properties', 'Ochranné vlastnosti')); ?>
-                        </label>
-                        <textarea 
-                            name="protective_properties" 
-                            id="protective_properties" 
-                            class="saw-input saw-textarea" 
-                            rows="4"
-                            placeholder="<?php echo esc_attr($tr('placeholder_properties', 'Popište ochranné vlastnosti prostředku...')); ?>"
-                        ><?php echo esc_textarea($item['protective_properties'] ?? ''); ?></textarea>
-                    </div>
+                <!-- Obsah záložek -->
+                <div class="saw-language-contents">
+                    <?php foreach ($languages as $index => $language): 
+                        $lang_code = $language['code'];
+                        $lang_trans = $translations[$lang_code] ?? array();
+                    ?>
+                        <div 
+                            class="saw-language-content" 
+                            data-tab-content="lang-<?php echo esc_attr($lang_code); ?>"
+                            style="<?php echo $index === 0 ? '' : 'display: none;'; ?>"
+                        >
+                            
+                            <!-- Název -->
+                            <div class="saw-form-row">
+                                <div class="saw-form-group saw-col-12">
+                                    <label for="translation_name_<?php echo esc_attr($lang_code); ?>" class="saw-label <?php echo $index === 0 ? 'saw-required' : ''; ?>">
+                                        <?php echo esc_html($tr('field_name', 'Název')); ?>
+                                        <?php if ($index === 0): ?>
+                                            <span class="saw-required-marker">*</span>
+                                        <?php endif; ?>
+                                    </label>
+                                    <input 
+                                        type="text" 
+                                        name="translations[<?php echo esc_attr($lang_code); ?>][name]" 
+                                        id="translation_name_<?php echo esc_attr($lang_code); ?>" 
+                                        class="saw-input" 
+                                        value="<?php echo esc_attr($lang_trans['name'] ?? ''); ?>"
+                                        placeholder="<?php echo esc_attr($tr('placeholder_name', 'např. Ochranné brýle proti UV záření')); ?>"
+                                        <?php echo $index === 0 ? 'required' : ''; ?>
+                                    >
+                                </div>
+                            </div>
+                            
+                            <!-- Normy -->
+                            <div class="saw-form-row">
+                                <div class="saw-form-group saw-col-12">
+                                    <label for="translation_standards_<?php echo esc_attr($lang_code); ?>" class="saw-label">
+                                        <?php echo esc_html($tr('field_standards', 'Související předpisy / normy')); ?>
+                                    </label>
+                                    <textarea 
+                                        name="translations[<?php echo esc_attr($lang_code); ?>][standards]" 
+                                        id="translation_standards_<?php echo esc_attr($lang_code); ?>" 
+                                        class="saw-input saw-textarea" 
+                                        rows="3"
+                                        placeholder="<?php echo esc_attr($tr('placeholder_standards', 'např. ČSN EN 166, EN 172...')); ?>"
+                                    ><?php echo esc_textarea($lang_trans['standards'] ?? ''); ?></textarea>
+                                </div>
+                            </div>
+                            
+                            <!-- Rizika -->
+                            <div class="saw-form-row">
+                                <div class="saw-form-group saw-col-12">
+                                    <label for="translation_risk_description_<?php echo esc_attr($lang_code); ?>" class="saw-label">
+                                        <?php echo esc_html($tr('field_risks', 'Popis rizik, proti kterým OOPP chrání')); ?>
+                                    </label>
+                                    <textarea 
+                                        name="translations[<?php echo esc_attr($lang_code); ?>][risk_description]" 
+                                        id="translation_risk_description_<?php echo esc_attr($lang_code); ?>" 
+                                        class="saw-input saw-textarea" 
+                                        rows="4"
+                                        placeholder="<?php echo esc_attr($tr('placeholder_risks', 'Popište rizika, před kterými tento prostředek chrání...')); ?>"
+                                    ><?php echo esc_textarea($lang_trans['risk_description'] ?? ''); ?></textarea>
+                                </div>
+                            </div>
+                            
+                            <!-- Ochranné vlastnosti -->
+                            <div class="saw-form-row">
+                                <div class="saw-form-group saw-col-12">
+                                    <label for="translation_protective_properties_<?php echo esc_attr($lang_code); ?>" class="saw-label">
+                                        <?php echo esc_html($tr('field_properties', 'Ochranné vlastnosti')); ?>
+                                    </label>
+                                    <textarea 
+                                        name="translations[<?php echo esc_attr($lang_code); ?>][protective_properties]" 
+                                        id="translation_protective_properties_<?php echo esc_attr($lang_code); ?>" 
+                                        class="saw-input saw-textarea" 
+                                        rows="4"
+                                        placeholder="<?php echo esc_attr($tr('placeholder_properties', 'Popište ochranné vlastnosti prostředku...')); ?>"
+                                    ><?php echo esc_textarea($lang_trans['protective_properties'] ?? ''); ?></textarea>
+                                </div>
+                            </div>
+                            
+                            <!-- Pokyny pro použití -->
+                            <div class="saw-form-row">
+                                <div class="saw-form-group saw-col-12">
+                                    <label for="translation_usage_instructions_<?php echo esc_attr($lang_code); ?>" class="saw-label">
+                                        <?php echo esc_html($tr('field_usage', 'Pokyny pro použití')); ?>
+                                    </label>
+                                    <textarea 
+                                        name="translations[<?php echo esc_attr($lang_code); ?>][usage_instructions]" 
+                                        id="translation_usage_instructions_<?php echo esc_attr($lang_code); ?>" 
+                                        class="saw-input saw-textarea" 
+                                        rows="4"
+                                        placeholder="<?php echo esc_attr($tr('placeholder_usage', 'Jak správně používat tento prostředek...')); ?>"
+                                    ><?php echo esc_textarea($lang_trans['usage_instructions'] ?? ''); ?></textarea>
+                                </div>
+                            </div>
+                            
+                        </div>
+                    <?php endforeach; ?>
                 </div>
                 
             </div>
         </details>
-        
-        <!-- ================================================ -->
-        <!-- POKYNY -->
-        <!-- ================================================ -->
-        <details class="saw-form-section">
-            <summary>
-                <span class="dashicons dashicons-info"></span>
-                <strong><?php echo esc_html($tr('section_instructions', 'Pokyny')); ?></strong>
-            </summary>
-            <div class="saw-form-section-content">
-                
-                <!-- Použití -->
-                <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-12">
-                        <label for="usage_instructions" class="saw-label">
-                            <?php echo esc_html($tr('field_usage', 'Pokyny pro použití')); ?>
-                        </label>
-                        <textarea 
-                            name="usage_instructions" 
-                            id="usage_instructions" 
-                            class="saw-input saw-textarea" 
-                            rows="4"
-                            placeholder="<?php echo esc_attr($tr('placeholder_usage', 'Jak správně používat tento prostředek...')); ?>"
-                        ><?php echo esc_textarea($item['usage_instructions'] ?? ''); ?></textarea>
-                    </div>
+        <?php else: ?>
+            <div class="saw-form-section">
+                <div class="saw-form-section-content">
+                    <p class="saw-help-text" style="color: #d63638;">
+                        <?php echo esc_html($tr('error_no_languages', 'Pro vytváření překladů musíte nejprve přidat jazyky v modulu Training Languages.')); ?>
+                    </p>
                 </div>
-                
-                <!-- Údržba -->
-                <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-12">
-                        <label for="maintenance_instructions" class="saw-label">
-                            <?php echo esc_html($tr('field_maintenance', 'Pokyny pro údržbu')); ?>
-                        </label>
-                        <textarea 
-                            name="maintenance_instructions" 
-                            id="maintenance_instructions" 
-                            class="saw-input saw-textarea" 
-                            rows="3"
-                            placeholder="<?php echo esc_attr($tr('placeholder_maintenance', 'Jak správně udržovat a čistit prostředek...')); ?>"
-                        ><?php echo esc_textarea($item['maintenance_instructions'] ?? ''); ?></textarea>
-                    </div>
-                </div>
-                
-                <!-- Skladování -->
-                <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-12">
-                        <label for="storage_instructions" class="saw-label">
-                            <?php echo esc_html($tr('field_storage', 'Pokyny pro skladování')); ?>
-                        </label>
-                        <textarea 
-                            name="storage_instructions" 
-                            id="storage_instructions" 
-                            class="saw-input saw-textarea" 
-                            rows="3"
-                            placeholder="<?php echo esc_attr($tr('placeholder_storage', 'Jak správně skladovat prostředek...')); ?>"
-                        ><?php echo esc_textarea($item['storage_instructions'] ?? ''); ?></textarea>
-                    </div>
-                </div>
-                
             </div>
-        </details>
+        <?php endif; ?>
         
         <!-- ================================================ -->
         <!-- NASTAVENÍ -->
@@ -550,24 +560,6 @@ $js_translations = array(
                             <span><?php echo esc_html($tr('field_active', 'Aktivní')); ?></span>
                         </label>
                         <p class="saw-help-text"><?php echo esc_html($tr('form_active_help', 'Neaktivní OOPP se nezobrazí v seznamu pro výběr')); ?></p>
-                    </div>
-                </div>
-                
-                <!-- Pořadí zobrazení -->
-                <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-6">
-                        <label for="display_order" class="saw-label">
-                            <?php echo esc_html($tr('field_order', 'Pořadí zobrazení')); ?>
-                        </label>
-                        <input 
-                            type="number" 
-                            name="display_order" 
-                            id="display_order" 
-                            class="saw-input" 
-                            value="<?php echo esc_attr($item['display_order'] ?? 0); ?>"
-                            min="0"
-                        >
-                        <p class="saw-help-text"><?php echo esc_html($tr('form_order_help', 'Nižší číslo = výše v seznamu')); ?></p>
                     </div>
                 </div>
                 
@@ -1004,6 +996,109 @@ $js_translations = array(
 }
 
 /* ============================================
+   LANGUAGE TABS STYLES
+   ============================================ */
+
+.saw-language-tabs-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+
+.saw-language-tabs {
+    display: flex;
+    gap: 8px;
+    border-bottom: 2px solid #e0e0e0;
+    padding-bottom: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-behavior: smooth;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+    flex: 1;
+    min-width: 0;
+}
+
+.saw-language-tabs::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+}
+
+.saw-language-tab-nav {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: #f6f7f7;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.saw-language-tab-nav:hover:not(:disabled) {
+    background: #0073aa;
+    border-color: #0073aa;
+    color: white;
+}
+
+.saw-language-tab-nav:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.saw-language-tab-nav .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+.saw-language-tab {
+    padding: 12px 20px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: #50575e;
+    transition: all 0.2s ease;
+    margin-bottom: -2px;
+}
+
+.saw-language-tab:hover {
+    color: #0073aa;
+    background: #f6f7f7;
+}
+
+.saw-language-tab.active {
+    color: #0073aa;
+    border-bottom-color: #0073aa;
+    background: #f6f7f7;
+}
+
+.saw-language-contents {
+    position: relative;
+}
+
+.saw-language-content {
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* ============================================
    RESPONSIVE
    ============================================ */
 
@@ -1331,6 +1426,86 @@ jQuery(document).ready(function($) {
     
     // Initial filter and counter update
     filterDepartmentsByBranch();
+    
+    // ========================================
+    // LANGUAGE TABS
+    // ========================================
+    
+    var $tabsContainer = $('.saw-language-tabs');
+    var $tabs = $('.saw-language-tab');
+    var $prevBtn = $('.saw-language-tab-nav-prev');
+    var $nextBtn = $('.saw-language-tab-nav-next');
+    
+    function updateNavButtons() {
+        var scrollLeft = $tabsContainer.scrollLeft();
+        var scrollWidth = $tabsContainer[0].scrollWidth;
+        var clientWidth = $tabsContainer[0].clientWidth;
+        
+        $prevBtn.prop('disabled', scrollLeft === 0);
+        $nextBtn.prop('disabled', scrollLeft >= scrollWidth - clientWidth - 1);
+    }
+    
+    // Update buttons on scroll
+    $tabsContainer.on('scroll', updateNavButtons);
+    
+    // Update buttons on resize
+    $(window).on('resize', updateNavButtons);
+    
+    // Initial update
+    updateNavButtons();
+    
+    // Navigation buttons
+    $prevBtn.on('click', function() {
+        if (!$(this).prop('disabled')) {
+            $tabsContainer.animate({
+                scrollLeft: $tabsContainer.scrollLeft() - 200
+            }, 300);
+        }
+    });
+    
+    $nextBtn.on('click', function() {
+        if (!$(this).prop('disabled')) {
+            $tabsContainer.animate({
+                scrollLeft: $tabsContainer.scrollLeft() + 200
+            }, 300);
+        }
+    });
+    
+    // Tab click handler
+    $tabs.on('click', function() {
+        var $tab = $(this);
+        var targetTab = $tab.data('tab');
+        
+        // Remove active class from all tabs
+        $tabs.removeClass('active');
+        
+        // Add active class to clicked tab
+        $tab.addClass('active');
+        
+        // Hide all content
+        $('.saw-language-content').hide();
+        
+        // Show target content
+        $('.saw-language-content[data-tab-content="' + targetTab + '"]').show();
+        
+        // Scroll clicked tab into view
+        var tabOffset = $tab.position().left + $tabsContainer.scrollLeft();
+        var tabWidth = $tab.outerWidth();
+        var containerWidth = $tabsContainer.outerWidth();
+        var scrollLeft = $tabsContainer.scrollLeft();
+        
+        if (tabOffset < scrollLeft) {
+            // Tab is to the left, scroll to show it
+            $tabsContainer.animate({
+                scrollLeft: tabOffset - 20
+            }, 300);
+        } else if (tabOffset + tabWidth > scrollLeft + containerWidth) {
+            // Tab is to the right, scroll to show it
+            $tabsContainer.animate({
+                scrollLeft: tabOffset - containerWidth + tabWidth + 20
+            }, 300);
+        }
+    });
     
 });
 </script>

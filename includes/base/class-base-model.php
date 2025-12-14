@@ -259,6 +259,16 @@ abstract class SAW_Base_Model
             $data['updated_at'] = current_time('mysql');
         }
         
+        // Auto-set created_by if column exists and not already set
+        // Special handling for visits table which uses created_by_email
+        $created_by_field = (strpos($this->table, 'visits') !== false) ? 'created_by_email' : 'created_by';
+        if ($this->table_has_column($created_by_field) && !isset($data[$created_by_field])) {
+            $current_user = wp_get_current_user();
+            if ($current_user && $current_user->ID) {
+                $data[$created_by_field] = $current_user->user_email;
+            }
+        }
+        
         // Insert
         $result = $wpdb->insert($this->table, $data);
         
@@ -274,6 +284,9 @@ abstract class SAW_Base_Model
         
         // ✅ Auto-invalidate cache after successful insert
         $this->invalidate_cache();
+        
+        // Log audit change (create)
+        $this->log_audit_change('created', $inserted_id, null, $data);
         
         return $inserted_id;
     }
@@ -302,9 +315,20 @@ abstract class SAW_Base_Model
             return $validation;
         }
         
+        // Load old values before update for audit logging
+        $old_values = $this->get_by_id($id, true);
+        
         // Update timestamp
         if ($this->table_has_column('updated_at')) {
             $data['updated_at'] = current_time('mysql');
+        }
+        
+        // Auto-set updated_by if column exists
+        if ($this->table_has_column('updated_by') && !isset($data['updated_by'])) {
+            $current_user = wp_get_current_user();
+            if ($current_user && $current_user->ID) {
+                $data['updated_by'] = $current_user->user_email;
+            }
         }
         
         // Update
@@ -324,6 +348,9 @@ abstract class SAW_Base_Model
         
         // ✅ Auto-invalidate cache after successful update
         $this->invalidate_cache();
+        
+        // Log audit change (update)
+        $this->log_audit_change('updated', $id, $old_values, $data);
         
         return true;
     }
@@ -614,6 +641,210 @@ abstract class SAW_Base_Model
     
     protected function get_current_branch_id() {
         return SAW_Context::get_branch_id();
+    }
+
+    /**
+     * Get entity type from table name or config
+     *
+     * @since 1.0.0
+     * @return string|null Entity type or null if cannot be determined
+     */
+    protected function get_entity_type() {
+        // Try config first
+        if (!empty($this->config['entity'])) {
+            return $this->config['entity'];
+        }
+        
+        // Extract from table name: wp_saw_oopp -> oopp
+        $table = $this->table;
+        global $wpdb;
+        $prefix = $wpdb->prefix . 'saw_';
+        
+        if (strpos($table, $prefix) === 0) {
+            return substr($table, strlen($prefix));
+        }
+        
+        return null;
+    }
+
+    /**
+     * Get customer_id from record
+     *
+     * @since 1.0.0
+     * @param int|array $record Record ID or record array
+     * @return int|null Customer ID
+     */
+    protected function get_customer_id_from_record($record) {
+        // If record is ID, fetch from DB
+        if (is_numeric($record)) {
+            $record_data = $this->get_by_id($record, true);
+            if (!$record_data) {
+                return null;
+            }
+            $record = $record_data;
+        }
+        
+        // Check if record has customer_id
+        if (isset($record['customer_id']) && !empty($record['customer_id'])) {
+            return intval($record['customer_id']);
+        }
+        
+        // Fallback to context
+        return $this->get_current_customer_id();
+    }
+
+    /**
+     * Get branch_id from record
+     *
+     * @since 1.0.0
+     * @param int|array $record Record ID or record array
+     * @return int|null Branch ID or null
+     */
+    protected function get_branch_id_from_record($record) {
+        // If record is ID, fetch from DB
+        if (is_numeric($record)) {
+            $record_data = $this->get_by_id($record, true);
+            if (!$record_data) {
+                return null;
+            }
+            $record = $record_data;
+        }
+        
+        // Check if record has branch_id
+        if (isset($record['branch_id']) && !empty($record['branch_id'])) {
+            return intval($record['branch_id']);
+        }
+        
+        // Fallback to context branch_id (user's current branch)
+        return $this->get_current_branch_id();
+    }
+
+    /**
+     * Calculate diff between old and new values
+     *
+     * @since 1.0.0
+     * @param array|null $old_values Old values (null for create)
+     * @param array      $new_values New values
+     * @return array Array of changed fields with 'old' and 'new' values
+     */
+    private function calculate_diff($old_values, $new_values) {
+        $diff = [];
+        $ignore_fields = ['updated_at', 'updated_by', 'id'];
+        
+        // For create action (old_values is null), include all fields
+        $is_create = ($old_values === null);
+        
+        foreach ($new_values as $key => $new_value) {
+            if (in_array($key, $ignore_fields)) {
+                continue;
+            }
+            
+            $old_value = $old_values[$key] ?? null;
+            
+            // For create, include all fields (old is always null)
+            // For update, only include changed fields
+            if ($is_create) {
+                $diff[$key] = [
+                    'old' => null,
+                    'new' => $new_value
+                ];
+            } else {
+                // Normalize values for comparison
+                $old_normalized = $this->normalize_value($old_value);
+                $new_normalized = $this->normalize_value($new_value);
+                
+                if ($old_normalized !== $new_normalized) {
+                    $diff[$key] = [
+                        'old' => $old_value,
+                        'new' => $new_value
+                    ];
+                }
+            }
+        }
+        
+        return $diff;
+    }
+
+    /**
+     * Normalize value for comparison
+     *
+     * @since 1.0.0
+     * @param mixed $value Value to normalize
+     * @return mixed Normalized value
+     */
+    private function normalize_value($value) {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        
+        if (is_numeric($value)) {
+            return (string) $value;
+        }
+        
+        if (is_bool($value)) {
+            return $value ? '1' : '0';
+        }
+        
+        return trim((string) $value);
+    }
+
+    /**
+     * Log audit change
+     *
+     * @since 1.0.0
+     * @param string      $action     Action type: 'created' or 'updated'
+     * @param int         $id         Record ID
+     * @param array|null  $old_values Old values (null for create)
+     * @param array       $new_values New values
+     * @return int|false Log entry ID or false on failure
+     */
+    protected function log_audit_change($action, $id, $old_values, $new_values) {
+        if (!class_exists('SAW_Audit')) {
+            return false;
+        }
+
+        $entity_type = $this->get_entity_type();
+        if (!$entity_type) {
+            return false;
+        }
+
+        // Calculate diff
+        $changed_fields = $this->calculate_diff($old_values, $new_values);
+
+        // Get customer_id
+        $customer_id = null;
+        if (!empty($new_values['customer_id'])) {
+            $customer_id = intval($new_values['customer_id']);
+        } elseif ($old_values && !empty($old_values['customer_id'])) {
+            $customer_id = intval($old_values['customer_id']);
+        } else {
+            $customer_id = $this->get_current_customer_id();
+        }
+
+        // Get branch_id
+        $branch_id = null;
+        if (!empty($new_values['branch_id'])) {
+            $branch_id = intval($new_values['branch_id']);
+        } elseif ($old_values && !empty($old_values['branch_id'])) {
+            $branch_id = intval($old_values['branch_id']);
+        } else {
+            // Fallback to context only if entity doesn't have branch_id
+            if ($this->table_has_column('branch_id')) {
+                // Entity has branch_id column but value is NULL/empty - use context
+                $branch_id = $this->get_current_branch_id();
+            }
+        }
+
+        return SAW_Audit::log_change([
+            'entity_type' => $entity_type,
+            'entity_id' => $id,
+            'action' => $action,
+            'old_values' => $old_values,
+            'new_values' => $new_values,
+            'changed_fields' => $changed_fields,
+            'customer_id' => $customer_id,
+            'branch_id' => $branch_id,
+        ]);
     }
 
     /**

@@ -1275,12 +1275,16 @@ class SAW_Invitation_Controller {
             return;
         }
         
+        $flow = $this->session->get('invitation_flow');
+        $language = $flow['language'] ?? 'cs';
+        
         $oopp_items = [];
         if (class_exists('SAW_OOPP_Public')) {
             $oopp_items = SAW_OOPP_Public::get_for_visitor(
                 $this->customer_id, 
                 $this->branch_id, 
-                $this->visit_id
+                $this->visit_id,
+                $language
             );
         }
         

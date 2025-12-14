@@ -88,7 +88,48 @@ class SAW_Module_OOPP_Controller extends SAW_Base_Controller
         if (function_exists('saw_can') && !saw_can('list', $this->entity)) {
             wp_die($tr('error_no_permission', 'Nemáte oprávnění.'), 403);
         }
+        
+        // Přidej jazyky a translations do config pro formulář
+        $customer_id = class_exists('SAW_Context') ? SAW_Context::get_customer_id() : 0;
+        if ($customer_id) {
+            $this->config['form_languages'] = $this->model->get_customer_languages($customer_id);
+        } else {
+            $this->config['form_languages'] = array();
+        }
+        
         $this->render_list_view();
+    }
+    
+    /**
+     * Override handle_edit_mode pro přidání translations
+     */
+    protected function handle_edit_mode($sidebar_context) {
+        $item = parent::handle_edit_mode($sidebar_context);
+        
+        if ($item && !empty($item['id'])) {
+            // Načti překlady
+            $item['translations'] = $this->model->get_translations($item['id']);
+        } else {
+            $item['translations'] = array();
+        }
+        
+        return $item;
+    }
+    
+    /**
+     * Override handle_create_mode pro přidání prázdných translations
+     */
+    protected function handle_create_mode() {
+        $result = parent::handle_create_mode();
+        
+        if ($result === null) {
+            return null;
+        }
+        
+        // Přidej prázdné translations
+        $result['translations'] = array();
+        
+        return $result;
     }
     
     /**
@@ -123,23 +164,12 @@ class SAW_Module_OOPP_Controller extends SAW_Base_Controller
             $data['customer_id'] = intval($post['customer_id']);
         }
         
-        // Základní pole
-        $text_fields = array('name', 'standards', 'risk_description', 'protective_properties', 
-                            'usage_instructions', 'maintenance_instructions', 'storage_instructions');
-        foreach ($text_fields as $field) {
-            if (isset($post[$field])) {
-                $data[$field] = sanitize_textarea_field($post[$field]);
-            }
-        }
+        // Textová pole už NEJSOU v hlavních datech - jsou v translations
+        // Ponecháme pouze základní pole bez textových
         
         // Skupina
         if (isset($post['group_id'])) {
             $data['group_id'] = intval($post['group_id']);
-        }
-        
-        // Pořadí
-        if (isset($post['display_order'])) {
-            $data['display_order'] = intval($post['display_order']);
         }
         
         // Aktivní
@@ -157,11 +187,13 @@ class SAW_Module_OOPP_Controller extends SAW_Base_Controller
             $data['department_ids'] = array_map('intval', $post['department_ids']);
         }
         
+        // Translations se zpracují v after_save
+        
         return $data;
     }
     
     /**
-     * Before save - nastav customer_id
+     * Before save - nastav customer_id a validuj translations
      */
     protected function before_save($data) {
         if (empty($data['customer_id'])) {
@@ -169,11 +201,22 @@ class SAW_Module_OOPP_Controller extends SAW_Base_Controller
                 $data['customer_id'] = SAW_Context::get_customer_id();
             }
         }
+        
+        // Validace translations: první jazyk musí mít name
+        if (isset($_POST['translations']) && is_array($_POST['translations']) && !empty($_POST['translations'])) {
+            $translations = $_POST['translations'];
+            $first_lang = array_key_first($translations);
+            if ($first_lang && empty(trim($translations[$first_lang]['name'] ?? ''))) {
+                $tr = $this->tr;
+                return new WP_Error('validation_error', $tr('validation_name_required', 'Název v prvním jazyce je povinný'));
+            }
+        }
+        
         return $data;
     }
     
     /**
-     * After save - zpracuj file upload
+     * After save - zpracuj file upload a překlady
      * 
      * FIXED: Používáme $this->table_name místo $this->model->table (protected property)
      */
@@ -231,6 +274,11 @@ class SAW_Module_OOPP_Controller extends SAW_Base_Controller
                 array('%s'),
                 array('%d')
             );
+        }
+        
+        // Handle translations
+        if (isset($_POST['translations']) && is_array($_POST['translations'])) {
+            $this->model->save_all_translations($id, $_POST['translations']);
         }
     }
     
@@ -294,15 +342,66 @@ class SAW_Module_OOPP_Controller extends SAW_Base_Controller
             $item['image_url'] = $upload_dir['baseurl'] . '/' . ltrim($item['image_path'], '/');
         }
         
-        // Formatted dates
+        // Format audit fields and dates (audit history support)
         if (!empty($item['created_at'])) {
             $item['created_at_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['created_at']));
+            $item['created_at_relative'] = human_time_diff(strtotime($item['created_at']), current_time('timestamp')) . ' ' . __('před', 'saw-visitors');
         }
         
         if (!empty($item['updated_at'])) {
             $item['updated_at_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['updated_at']));
+            $item['updated_at_relative'] = human_time_diff(strtotime($item['updated_at']), current_time('timestamp')) . ' ' . __('před', 'saw-visitors');
         }
         
+        // Set flag for audit info availability
+        $item['has_audit_info'] = !empty($item['created_by']) || !empty($item['updated_by']) || 
+                                  !empty($item['created_at']) || !empty($item['updated_at']);
+        
+        // Load change history for this OOPP
+        if (!empty($item['id']) && class_exists('SAW_Audit')) {
+            try {
+                $entity_type = $this->config['entity'] ?? 'oopp';
+                $change_history = SAW_Audit::get_entity_history($entity_type, $item['id']);
+                if (!empty($change_history)) {
+                    $item['change_history'] = $change_history;
+                    $item['has_audit_info'] = true;
+                }
+            } catch (Exception $e) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('[SAW Audit] Failed to load change history for oopp: ' . $e->getMessage());
+                }
+            }
+        }
+        
+        // Add languages for detail view
+        $customer_id = class_exists('SAW_Context') ? SAW_Context::get_customer_id() : ($item['customer_id'] ?? 0);
+        if ($customer_id) {
+            $item['detail_languages'] = $this->model->get_customer_languages($customer_id);
+        } else {
+            $item['detail_languages'] = array();
+        }
+        
+        // Get display name for header (use current language or first available translation)
+        $translations = $item['translations'] ?? array();
+        $lang = 'cs'; // Default language
+        if (class_exists('SAW_Component_Language_Switcher')) {
+            $lang = SAW_Component_Language_Switcher::get_user_language();
+        }
+        // Try current language first, then default language, then first available
+        if (!empty($translations[$lang]['name'])) {
+            $item['header_display_name'] = $translations[$lang]['name'];
+        } elseif (!empty($translations['cs']['name'])) {
+            $item['header_display_name'] = $translations['cs']['name'];
+        } elseif (!empty($translations) && is_array($translations)) {
+            $first_translation = reset($translations);
+            $item['header_display_name'] = $first_translation['name'] ?? '';
+        }
+        
+        // Set empty header_meta to prevent ID badge
+        if (empty($item['header_meta'])) {
+            $item['header_meta'] = '';
+        }
+
         return $item;
     }
     

@@ -768,6 +768,7 @@ class SAW_Terminal_Controller {
     private function render_training_oopp() {
         $flow = $this->session->get('terminal_flow');
         $visit_id = $flow['visit_id'] ?? null;
+        $language = $flow['language'] ?? 'cs';
         
         if (!$visit_id) {
             $this->move_to_next_training_step();
@@ -779,7 +780,8 @@ class SAW_Terminal_Controller {
             $oopp_items = SAW_OOPP_Public::get_for_visitor(
                 $this->customer_id, 
                 $this->branch_id, 
-                $visit_id
+                $visit_id,
+                $language
             );
         }
         

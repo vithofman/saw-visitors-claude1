@@ -49,14 +49,15 @@ class SAW_Module_OOPP_Model extends SAW_Base_Model
     
     /**
      * Validace dat
+     * 
+     * Poznámka: Název se validuje z translations (první jazyk musí mít name)
      */
     public function validate($data, $id = 0) {
         $errors = array();
         $tr = $this->tr;
         
-        if (empty($data['name'])) {
-            $errors['name'] = $tr('validation_name_required', 'Název je povinný');
-        }
+        // Validace name se provádí v controlleru z translations[first_lang][name]
+        // Není potřeba kontrolovat data['name'], protože už není v hlavních datech
         
         if (empty($data['group_id'])) {
             $errors['group_id'] = $tr('validation_group_required', 'Skupina OOPP je povinná');
@@ -139,6 +140,8 @@ class SAW_Module_OOPP_Model extends SAW_Base_Model
      * Smazání OOPP (vazby se smažou automaticky přes FK CASCADE)
      */
     public function delete($id) {
+        // Smaž překlady před smazáním OOPP
+        $this->delete_translations($id);
         return parent::delete($id);
     }
     
@@ -281,7 +284,7 @@ class SAW_Module_OOPP_Model extends SAW_Base_Model
                     WHERE ob.oopp_id = o.id
                 )
             )
-            ORDER BY g.display_order, o.display_order, o.name
+            ORDER BY g.display_order, o.id
         ";
         
         $results = $wpdb->get_results($wpdb->prepare(
@@ -340,6 +343,9 @@ class SAW_Module_OOPP_Model extends SAW_Base_Model
             // Přidej vazby
             $item['branch_ids'] = $this->get_branch_ids($id);
             $item['department_ids'] = $this->get_department_ids($id);
+            
+            // Přidej překlady
+            $item['translations'] = $this->get_translations($id);
             
             // Přidej group info
             global $wpdb;
@@ -401,5 +407,192 @@ class SAW_Module_OOPP_Model extends SAW_Base_Model
         }
         
         return $result;
+    }
+    
+    /**
+     * Získání všech překladů pro OOPP
+     * 
+     * @param int $oopp_id ID OOPP
+     * @return array Asociativní pole ['cs' => [...], 'en' => [...]]
+     */
+    public function get_translations($oopp_id) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'saw_oopp_translations';
+        
+        $translations = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$table} WHERE oopp_id = %d ORDER BY language_code ASC",
+            $oopp_id
+        ), ARRAY_A);
+        
+        $result = array();
+        foreach ($translations as $trans) {
+            $lang_code = $trans['language_code'];
+            $result[$lang_code] = array(
+                'name' => $trans['name'],
+                'standards' => $trans['standards'],
+                'risk_description' => $trans['risk_description'],
+                'protective_properties' => $trans['protective_properties'],
+                'usage_instructions' => $trans['usage_instructions'],
+            );
+        }
+        
+        return $result;
+    }
+    
+    /**
+     * Získání překladu pro konkrétní jazyk
+     * 
+     * @param int $oopp_id ID OOPP
+     * @param string $language_code Jazykový kód (např. 'cs', 'en')
+     * @return array|null Překlad nebo null pokud neexistuje
+     */
+    public function get_translation($oopp_id, $language_code) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'saw_oopp_translations';
+        
+        $translation = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$table} WHERE oopp_id = %d AND language_code = %s",
+            $oopp_id,
+            $language_code
+        ), ARRAY_A);
+        
+        if (!$translation) {
+            return null;
+        }
+        
+        return array(
+            'name' => $translation['name'],
+            'standards' => $translation['standards'],
+            'risk_description' => $translation['risk_description'],
+            'protective_properties' => $translation['protective_properties'],
+            'usage_instructions' => $translation['usage_instructions'],
+        );
+    }
+    
+    /**
+     * Uložení/aktualizace překladu (UPSERT)
+     * 
+     * @param int $oopp_id ID OOPP
+     * @param string $language_code Jazykový kód
+     * @param array $data Data překladu
+     * @return bool|WP_Error True při úspěchu, WP_Error při chybě
+     */
+    public function save_translation($oopp_id, $language_code, $data) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'saw_oopp_translations';
+        
+        // Validace
+        if (empty($language_code)) {
+            return new WP_Error('invalid_language', 'Language code is required');
+        }
+        
+        // Připrav data
+        $translation_data = array(
+            'oopp_id' => intval($oopp_id),
+            'language_code' => sanitize_text_field($language_code),
+            'name' => isset($data['name']) ? sanitize_text_field($data['name']) : '',
+            'standards' => isset($data['standards']) ? sanitize_textarea_field($data['standards']) : null,
+            'risk_description' => isset($data['risk_description']) ? sanitize_textarea_field($data['risk_description']) : null,
+            'protective_properties' => isset($data['protective_properties']) ? sanitize_textarea_field($data['protective_properties']) : null,
+            'usage_instructions' => isset($data['usage_instructions']) ? sanitize_textarea_field($data['usage_instructions']) : null,
+        );
+        
+        // Zkontroluj zda už překlad existuje
+        $existing = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM {$table} WHERE oopp_id = %d AND language_code = %s",
+            $oopp_id,
+            $language_code
+        ));
+        
+        if ($existing) {
+            // Aktualizace
+            $result = $wpdb->update(
+                $table,
+                $translation_data,
+                array('id' => $existing),
+                array('%d', '%s', '%s', '%s', '%s', '%s', '%s'),
+                array('%d')
+            );
+        } else {
+            // Vložení
+            $result = $wpdb->insert(
+                $table,
+                $translation_data,
+                array('%d', '%s', '%s', '%s', '%s', '%s', '%s')
+            );
+        }
+        
+        if ($result === false) {
+            return new WP_Error('db_error', 'Failed to save translation');
+        }
+        
+        // Invaliduj cache
+        $this->invalidate_cache();
+        
+        return true;
+    }
+    
+    /**
+     * Uložení všech překladů najednou
+     * 
+     * @param int $oopp_id ID OOPP
+     * @param array $translations Asociativní pole ['cs' => [...], 'en' => [...]]
+     * @return bool|WP_Error True při úspěchu
+     */
+    public function save_all_translations($oopp_id, $translations) {
+        if (empty($translations) || !is_array($translations)) {
+            return true;
+        }
+        
+        foreach ($translations as $language_code => $data) {
+            $result = $this->save_translation($oopp_id, $language_code, $data);
+            if (is_wp_error($result)) {
+                return $result;
+            }
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Smazání všech překladů pro OOPP
+     * 
+     * @param int $oopp_id ID OOPP
+     * @return bool True při úspěchu
+     */
+    public function delete_translations($oopp_id) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'saw_oopp_translations';
+        
+        $result = $wpdb->delete(
+            $table,
+            array('oopp_id' => $oopp_id),
+            array('%d')
+        );
+        
+        // Invaliduj cache
+        $this->invalidate_cache();
+        
+        return $result !== false;
+    }
+    
+    /**
+     * Získání jazyků zákazníka z training_languages
+     * 
+     * @param int $customer_id ID zákazníka
+     * @return array Pole jazyků ['code' => 'cs', 'name' => 'Čeština', 'flag' => '🇨🇿']
+     */
+    public function get_customer_languages($customer_id) {
+        global $wpdb;
+        
+        $languages = $wpdb->get_results($wpdb->prepare(
+            "SELECT language_code as code, language_name as name, flag_emoji as flag 
+             FROM {$wpdb->prefix}saw_training_languages 
+             WHERE customer_id = %d 
+             ORDER BY language_name ASC",
+            $customer_id
+        ), ARRAY_A);
+        
+        return $languages ?: array();
     }
 }

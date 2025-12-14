@@ -48,7 +48,17 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
     <div class="saw-sidebar-header">
         <div class="saw-sidebar-title">
             <span class="saw-sidebar-icon"><?php echo esc_html($config['icon'] ?? '📋'); ?></span>
-            <h2 class="saw-sidebar-heading"><?php echo esc_html($config['singular'] ?? 'Detail'); ?> #<?php echo intval($item['id']); ?></h2>
+            <?php 
+            // For modules with header_display_name (like OOPP), show just the name
+            // Otherwise show "Module #ID"
+            $header_title = '';
+            if (!empty($item['header_display_name'])) {
+                $header_title = esc_html($item['header_display_name']);
+            } else {
+                $header_title = esc_html($config['singular'] ?? 'Detail') . ' #' . intval($item['id']);
+            }
+            ?>
+            <h2 class="saw-sidebar-heading"><?php echo $header_title; ?></h2>
         </div>
         <div class="saw-sidebar-nav-controls">
             <button type="button" class="saw-sidebar-nav-btn saw-sidebar-prev" title="Předchozí">&lt;</button>
@@ -76,7 +86,10 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
         
         // Get display name using controller method or fallback
         $display_name = '';
-        if ($controller_instance && method_exists($controller_instance, 'get_display_name')) {
+        // Check if module provided header_display_name (e.g., OOPP with translations)
+        if (!empty($item['header_display_name'])) {
+            $display_name = $item['header_display_name'];
+        } elseif ($controller_instance && method_exists($controller_instance, 'get_display_name')) {
             $display_name = $controller_instance->get_display_name($item);
         } else {
             // Fallback to common fields
@@ -90,10 +103,13 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
         }
         
         // Get header meta (badges, additional info) - modules can override via $item['header_meta']
-        $header_meta = $item['header_meta'] ?? '';
-        // Only show ID fallback if header_meta is truly empty (not just whitespace)
-        if (empty(trim($header_meta)) && !empty($item['id'])) {
+        // For OOPP, we don't want to show ID badge, so if header_meta is explicitly set to empty string, respect it
+        $header_meta = $item['header_meta'] ?? null;
+        // Only show ID fallback if header_meta is null (not set) or empty and not explicitly set to empty string
+        if ($header_meta === null && !empty($item['id'])) {
             $header_meta = '<span class="saw-badge-transparent">ID: ' . intval($item['id']) . '</span>';
+        } elseif ($header_meta === '') {
+            $header_meta = ''; // Explicitly empty, don't show ID
         }
         ?>
         
@@ -122,7 +138,15 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
             ?>
         </div>
         
-        <?php if (!empty($related_data) && is_array($related_data)): ?>
+        <?php 
+        // Skip relations section for companies - they have custom implementation in detail template
+        // Also skip if related_data is empty or invalid
+        $skip_relations = ($entity === 'companies');
+        if ($skip_relations) {
+            $related_data = null; // Ensure it's not used
+        }
+        ?>
+        <?php if (!empty($related_data) && is_array($related_data) && !$skip_relations): ?>
         <div class="saw-related-sections">
             <h3 class="saw-related-sections-title">
                 <?php echo esc_html__('Související záznamy', 'saw-visitors'); ?>
@@ -187,6 +211,11 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
             <?php endforeach; ?>
         </div>
         <?php endif; ?>
+        
+        <?php
+        // Include audit history component (after relations section)
+        require SAW_VISITORS_PLUGIN_DIR . 'includes/components/detail-audit-history.php';
+        ?>
     </div>
     
     <?php if ($can_edit || $can_delete): ?>

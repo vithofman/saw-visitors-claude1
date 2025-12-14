@@ -314,12 +314,58 @@ trait SAW_AJAX_Handlers
      * @return array Formatted item data
      */
     protected function format_detail_data($item) {
+        // Handle visits table which uses created_by_email instead of created_by
+        if (isset($item['created_by_email']) && !isset($item['created_by'])) {
+            $item['created_by'] = $item['created_by_email'];
+        }
+        
         if (!empty($item['created_at'])) {
-            $item['created_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['created_at']));
+            $item['created_at_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['created_at']));
+            $item['created_at_relative'] = human_time_diff(strtotime($item['created_at']), current_time('timestamp')) . ' ' . __('před', 'saw-visitors');
         }
         
         if (!empty($item['updated_at'])) {
-            $item['updated_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['updated_at']));
+            $item['updated_at_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['updated_at']));
+            $item['updated_at_relative'] = human_time_diff(strtotime($item['updated_at']), current_time('timestamp')) . ' ' . __('před', 'saw-visitors');
+        }
+        
+        // Set flag for audit info availability
+        $item['has_audit_info'] = !empty($item['created_by']) || !empty($item['updated_by']) || 
+                                  !empty($item['created_at']) || !empty($item['updated_at']);
+        
+        // Load change history if entity type can be determined
+        if (!empty($item['id']) && class_exists('SAW_Audit') && !empty($this->model)) {
+            // Use reflection to call protected method, or use config entity as fallback
+            $entity_type = null;
+            if (method_exists($this->model, 'get_entity_type')) {
+                try {
+                    $reflection = new ReflectionMethod($this->model, 'get_entity_type');
+                    $reflection->setAccessible(true);
+                    $entity_type = $reflection->invoke($this->model);
+                } catch (Exception $e) {
+                    // Fallback to config entity
+                    $entity_type = $this->config['entity'] ?? null;
+                }
+            } else {
+                // Fallback to config entity
+                $entity_type = $this->config['entity'] ?? null;
+            }
+            
+            if ($entity_type) {
+                try {
+                    $change_history = SAW_Audit::get_entity_history($entity_type, $item['id']);
+                    if (!empty($change_history)) {
+                        $item['change_history'] = $change_history;
+                        // If we have change history, mark as having audit info
+                        $item['has_audit_info'] = true;
+                    }
+                } catch (Exception $e) {
+                    // Silently fail if history loading fails
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('[SAW Audit] Failed to load change history: ' . $e->getMessage());
+                    }
+                }
+            }
         }
         
         return $item;

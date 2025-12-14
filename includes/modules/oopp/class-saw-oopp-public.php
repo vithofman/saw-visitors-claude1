@@ -83,9 +83,10 @@ class SAW_OOPP_Public {
      * @param int $customer_id Customer ID
      * @param int $branch_id Branch ID
      * @param int $visit_id Visit ID (to get hosts' departments)
+     * @param string $language_code Language code (default: 'cs')
      * @return array Array of OOPP items with all details
      */
-    public static function get_for_visitor($customer_id, $branch_id, $visit_id) {
+    public static function get_for_visitor($customer_id, $branch_id, $visit_id, $language_code = 'cs') {
         global $wpdb;
         
         $oopp_items = [];
@@ -100,20 +101,27 @@ class SAW_OOPP_Public {
         // =====================================================
         if (!empty($department_ids)) {
             $placeholders = implode(',', array_fill(0, count($department_ids), '%d'));
-            $params = array_merge([$customer_id], $department_ids);
+            $params = array_merge([$customer_id, $language_code], $department_ids);
             
             $oopp_items = $wpdb->get_results($wpdb->prepare("
                 SELECT DISTINCT 
-                    o.*,
+                    o.id, o.customer_id, o.group_id, o.image_path,
+                    o.is_active,
                     g.code as group_code,
-                    g.name as group_name
+                    g.name as group_name,
+                    t.name as name,
+                    t.standards as standards,
+                    t.risk_description as risk_description,
+                    t.protective_properties as protective_properties,
+                    t.usage_instructions as usage_instructions
                 FROM {$wpdb->prefix}saw_oopp o
                 INNER JOIN {$wpdb->prefix}saw_oopp_groups g ON o.group_id = g.id
                 INNER JOIN {$wpdb->prefix}saw_oopp_departments od ON o.id = od.oopp_id
+                LEFT JOIN {$wpdb->prefix}saw_oopp_translations t ON o.id = t.oopp_id AND t.language_code = %s
                 WHERE o.customer_id = %d
                   AND o.is_active = 1
                   AND od.department_id IN ({$placeholders})
-                ORDER BY g.display_order ASC, o.display_order ASC, o.name ASC
+                ORDER BY g.display_order ASC, t.name ASC
             ", ...$params), ARRAY_A);
             
             error_log("[OOPP Public] Found " . count($oopp_items) . " OOPP for departments: " . implode(',', $department_ids));
@@ -125,19 +133,26 @@ class SAW_OOPP_Public {
         if (empty($oopp_items)) {
             $oopp_items = $wpdb->get_results($wpdb->prepare("
                 SELECT DISTINCT 
-                    o.*,
+                    o.id, o.customer_id, o.group_id, o.image_path,
+                    o.is_active,
                     g.code as group_code,
-                    g.name as group_name
+                    g.name as group_name,
+                    t.name as name,
+                    t.standards as standards,
+                    t.risk_description as risk_description,
+                    t.protective_properties as protective_properties,
+                    t.usage_instructions as usage_instructions
                 FROM {$wpdb->prefix}saw_oopp o
                 INNER JOIN {$wpdb->prefix}saw_oopp_groups g ON o.group_id = g.id
                 INNER JOIN {$wpdb->prefix}saw_oopp_branches ob ON o.id = ob.oopp_id
                 LEFT JOIN {$wpdb->prefix}saw_oopp_departments od ON o.id = od.oopp_id
+                LEFT JOIN {$wpdb->prefix}saw_oopp_translations t ON o.id = t.oopp_id AND t.language_code = %s
                 WHERE o.customer_id = %d
                   AND o.is_active = 1
                   AND ob.branch_id = %d
                   AND od.oopp_id IS NULL
-                ORDER BY g.display_order ASC, o.display_order ASC, o.name ASC
-            ", $customer_id, $branch_id), ARRAY_A);
+                ORDER BY g.display_order ASC, t.name ASC
+            ", $language_code, $customer_id, $branch_id), ARRAY_A);
             
             error_log("[OOPP Public] Fallback: Found " . count($oopp_items) . " branch-wide OOPP for branch #{$branch_id}");
         }

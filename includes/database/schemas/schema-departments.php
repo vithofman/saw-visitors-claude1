@@ -18,6 +18,8 @@ function saw_get_schema_departments($table_name, $prefix, $charset_collate) {
         is_active TINYINT(1) NOT NULL DEFAULT 1,
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+        created_by VARCHAR(255) NULL COMMENT 'Email uživatele, který vytvořil záznam',
+        updated_by VARCHAR(255) NULL COMMENT 'Email uživatele, který naposledy aktualizoval záznam',
         PRIMARY KEY (id),
         UNIQUE KEY uk_dept_number (customer_id, branch_id, department_number),
         KEY idx_customer (customer_id),

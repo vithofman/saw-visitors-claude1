@@ -38,11 +38,36 @@ if (empty($item)) {
     return;
 }
 
-// Prepare data
+// Get languages for detail view
+$languages = $item['detail_languages'] ?? array();
+
+// Get translations from item
+$translations = $item['translations'] ?? array();
+$default_lang = !empty($languages) ? $languages[0]['code'] : 'cs';
+
+// Determine current language (first available or default)
+$current_lang = $default_lang;
+if (!empty($translations) && !empty($languages)) {
+    // Use first language that has translation, or default
+    foreach ($languages as $lang) {
+        if (isset($translations[$lang['code']])) {
+            $current_lang = $lang['code'];
+            break;
+        }
+    }
+}
+
+// Get current translation data
+$current_trans = $translations[$current_lang] ?? array();
+
+// Prepare data (use translation if available)
 $has_image = !empty($item['image_url']);
 $is_active = !empty($item['is_active']);
 $group_code = $item['group_code'] ?? '';
 $group_name = $item['group_name'] ?? '';
+
+// Use translated name or fallback
+$display_name = !empty($current_trans['name']) ? $current_trans['name'] : ($item['name'] ?? '');
 
 // Count branches and departments
 $branches_count = !empty($item['branches']) ? count($item['branches']) : 0;
@@ -50,12 +75,45 @@ $departments_count = !empty($item['departments']) ? count($item['departments']) 
 $branches_all = !empty($item['branches_all']);
 $departments_all = !empty($item['departments_all']);
 
-// Check for technical info
-$has_technical = !empty($item['standards']) || !empty($item['risk_description']) || !empty($item['protective_properties']);
-$has_instructions = !empty($item['usage_instructions']) || !empty($item['maintenance_instructions']) || !empty($item['storage_instructions']);
+// Check for technical info (from translations)
+$has_technical = !empty($current_trans['standards']) || !empty($current_trans['risk_description']) || !empty($current_trans['protective_properties']);
+$has_instructions = !empty($current_trans['usage_instructions']);
 ?>
 
-<div class="saw-oopp-detail">
+<div class="saw-oopp-detail" data-oopp-id="<?php echo esc_attr($item['id']); ?>">
+
+    <!-- ================================================
+         LANGUAGE SWITCHER (if multiple languages)
+         ================================================ -->
+    <?php if (!empty($languages) && count($languages) > 1): ?>
+    <div class="saw-oopp-language-switcher-wrapper">
+        <button type="button" class="saw-oopp-lang-nav saw-oopp-lang-nav-prev" aria-label="Předchozí jazyky">
+            <span class="dashicons dashicons-arrow-left-alt2"></span>
+        </button>
+        <div class="saw-oopp-language-switcher">
+            <?php foreach ($languages as $lang): 
+                $lang_code = $lang['code'];
+                $has_translation = isset($translations[$lang_code]);
+            ?>
+                <button 
+                    type="button" 
+                    class="saw-oopp-lang-btn <?php echo $current_lang === $lang_code ? 'active' : ''; ?> <?php echo !$has_translation ? 'no-translation' : ''; ?>" 
+                    data-lang="<?php echo esc_attr($lang_code); ?>"
+                    title="<?php echo $has_translation ? '' : esc_attr($tr('no_translation', 'Chybí překlad')); ?>"
+                >
+                    <?php echo !empty($lang['flag']) ? esc_html($lang['flag']) : '🌐'; ?>
+                    <span class="saw-oopp-lang-name"><?php echo esc_html($lang['name']); ?></span>
+                    <?php if (!$has_translation): ?>
+                        <span class="saw-oopp-lang-missing">⚠️</span>
+                    <?php endif; ?>
+                </button>
+            <?php endforeach; ?>
+        </div>
+        <button type="button" class="saw-oopp-lang-nav saw-oopp-lang-nav-next" aria-label="Další jazyky">
+            <span class="dashicons dashicons-arrow-right-alt2"></span>
+        </button>
+    </div>
+    <?php endif; ?>
 
     <!-- ================================================
          HEADER CARD - Image + Basic Info
@@ -66,7 +124,7 @@ $has_instructions = !empty($item['usage_instructions']) || !empty($item['mainten
             <div class="saw-oopp-image-section">
                 <?php if ($has_image): ?>
                     <img src="<?php echo esc_url($item['image_url']); ?>" 
-                         alt="<?php echo esc_attr($item['name']); ?>" 
+                         alt="<?php echo esc_attr($display_name); ?>" 
                          class="saw-oopp-image">
                 <?php else: ?>
                     <div class="saw-oopp-image-placeholder">
@@ -77,7 +135,7 @@ $has_instructions = !empty($item['usage_instructions']) || !empty($item['mainten
             
             <!-- Info Section -->
             <div class="saw-oopp-header-info">
-                <h2 class="saw-oopp-title"><?php echo esc_html($item['name']); ?></h2>
+                <h2 class="saw-oopp-title" data-translate="name"><?php echo esc_html($display_name); ?></h2>
                 
                 <div class="saw-oopp-badges">
                     <!-- Group Badge -->
@@ -196,8 +254,7 @@ $has_instructions = !empty($item['usage_instructions']) || !empty($item['mainten
     <!-- ================================================
          STANDARDS CARD - Normy a předpisy
          ================================================ -->
-    <?php if (!empty($item['standards'])): ?>
-    <div class="saw-oopp-info-card saw-oopp-card-standards">
+    <div class="saw-oopp-info-card saw-oopp-card-standards" data-translate-section="standards" <?php if (empty($current_trans['standards'])): ?>style="display: none;"<?php endif; ?>>
         <div class="saw-oopp-info-inner">
             <div class="saw-oopp-info-icon">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -210,17 +267,15 @@ $has_instructions = !empty($item['usage_instructions']) || !empty($item['mainten
             </div>
             <div class="saw-oopp-info-content">
                 <div class="saw-oopp-info-label"><?php echo esc_html($tr('label_standards', 'Související předpisy / normy')); ?></div>
-                <div class="saw-oopp-info-text"><?php echo nl2br(esc_html($item['standards'])); ?></div>
+                <div class="saw-oopp-info-text" data-translate="standards"><?php echo nl2br(esc_html($current_trans['standards'] ?? '')); ?></div>
             </div>
         </div>
     </div>
-    <?php endif; ?>
 
     <!-- ================================================
          RISKS CARD - Popis rizik
          ================================================ -->
-    <?php if (!empty($item['risk_description'])): ?>
-    <div class="saw-oopp-info-card saw-oopp-card-risks">
+    <div class="saw-oopp-info-card saw-oopp-card-risks" data-translate-section="risk_description" <?php if (empty($current_trans['risk_description'])): ?>style="display: none;"<?php endif; ?>>
         <div class="saw-oopp-info-inner">
             <div class="saw-oopp-info-icon">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -231,17 +286,15 @@ $has_instructions = !empty($item['usage_instructions']) || !empty($item['mainten
             </div>
             <div class="saw-oopp-info-content">
                 <div class="saw-oopp-info-label"><?php echo esc_html($tr('label_risks', 'Popis rizik, proti kterým OOPP chrání')); ?></div>
-                <div class="saw-oopp-info-text"><?php echo nl2br(esc_html($item['risk_description'])); ?></div>
+                <div class="saw-oopp-info-text" data-translate="risk_description"><?php echo nl2br(esc_html($current_trans['risk_description'] ?? '')); ?></div>
             </div>
         </div>
     </div>
-    <?php endif; ?>
 
     <!-- ================================================
          PROPERTIES CARD - Ochranné vlastnosti
          ================================================ -->
-    <?php if (!empty($item['protective_properties'])): ?>
-    <div class="saw-oopp-info-card saw-oopp-card-properties">
+    <div class="saw-oopp-info-card saw-oopp-card-properties" data-translate-section="protective_properties" <?php if (empty($current_trans['protective_properties'])): ?>style="display: none;"<?php endif; ?>>
         <div class="saw-oopp-info-inner">
             <div class="saw-oopp-info-icon">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -251,17 +304,15 @@ $has_instructions = !empty($item['usage_instructions']) || !empty($item['mainten
             </div>
             <div class="saw-oopp-info-content">
                 <div class="saw-oopp-info-label"><?php echo esc_html($tr('label_properties', 'Ochranné vlastnosti')); ?></div>
-                <div class="saw-oopp-info-text"><?php echo nl2br(esc_html($item['protective_properties'])); ?></div>
+                <div class="saw-oopp-info-text" data-translate="protective_properties"><?php echo nl2br(esc_html($current_trans['protective_properties'] ?? '')); ?></div>
             </div>
         </div>
     </div>
-    <?php endif; ?>
 
     <!-- ================================================
          INSTRUCTIONS SECTION
          ================================================ -->
-    <?php if ($has_instructions): ?>
-    <div class="saw-oopp-instructions-section">
+    <div class="saw-oopp-instructions-section" data-translate-section="usage_instructions" <?php if (empty($current_trans['usage_instructions'])): ?>style="display: none;"<?php endif; ?>>
         <div class="saw-oopp-section-header">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="10"/>
@@ -272,7 +323,6 @@ $has_instructions = !empty($item['usage_instructions']) || !empty($item['mainten
         </div>
         
         <!-- Usage Instructions -->
-        <?php if (!empty($item['usage_instructions'])): ?>
         <div class="saw-oopp-instruction-card saw-oopp-instruction-usage">
             <div class="saw-oopp-instruction-header">
                 <div class="saw-oopp-instruction-icon">
@@ -282,96 +332,134 @@ $has_instructions = !empty($item['usage_instructions']) || !empty($item['mainten
                 </div>
                 <span class="saw-oopp-instruction-title"><?php echo esc_html($tr('label_usage', 'Pokyny pro použití')); ?></span>
             </div>
-            <div class="saw-oopp-instruction-body">
-                <?php echo nl2br(esc_html($item['usage_instructions'])); ?>
+            <div class="saw-oopp-instruction-body" data-translate="usage_instructions">
+                <?php echo nl2br(esc_html($current_trans['usage_instructions'] ?? '')); ?>
             </div>
         </div>
-        <?php endif; ?>
-        
-        <!-- Maintenance Instructions -->
-        <?php if (!empty($item['maintenance_instructions'])): ?>
-        <div class="saw-oopp-instruction-card saw-oopp-instruction-maintenance">
-            <div class="saw-oopp-instruction-header">
-                <div class="saw-oopp-instruction-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="3"/>
-                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                    </svg>
-                </div>
-                <span class="saw-oopp-instruction-title"><?php echo esc_html($tr('label_maintenance', 'Pokyny pro údržbu')); ?></span>
-            </div>
-            <div class="saw-oopp-instruction-body">
-                <?php echo nl2br(esc_html($item['maintenance_instructions'])); ?>
-            </div>
-        </div>
-        <?php endif; ?>
-        
-        <!-- Storage Instructions -->
-        <?php if (!empty($item['storage_instructions'])): ?>
-        <div class="saw-oopp-instruction-card saw-oopp-instruction-storage">
-            <div class="saw-oopp-instruction-header">
-                <div class="saw-oopp-instruction-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-                        <line x1="12" y1="22.08" x2="12" y2="12"/>
-                    </svg>
-                </div>
-                <span class="saw-oopp-instruction-title"><?php echo esc_html($tr('label_storage', 'Pokyny pro skladování')); ?></span>
-            </div>
-            <div class="saw-oopp-instruction-body">
-                <?php echo nl2br(esc_html($item['storage_instructions'])); ?>
-            </div>
-        </div>
-        <?php endif; ?>
     </div>
-    <?php endif; ?>
 
-    <!-- ================================================
-         META INFO CARD - Dates & Order
-         ================================================ -->
-    <div class="saw-oopp-meta-card">
-        <div class="saw-oopp-meta-inner">
-            <?php if (isset($item['display_order'])): ?>
-            <div class="saw-oopp-meta-item">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="8" y1="6" x2="21" y2="6"/>
-                    <line x1="8" y1="12" x2="21" y2="12"/>
-                    <line x1="8" y1="18" x2="21" y2="18"/>
-                    <line x1="3" y1="6" x2="3.01" y2="6"/>
-                    <line x1="3" y1="12" x2="3.01" y2="12"/>
-                    <line x1="3" y1="18" x2="3.01" y2="18"/>
-                </svg>
-                <span class="saw-oopp-meta-label"><?php echo esc_html($tr('meta_order', 'Pořadí:')); ?></span>
-                <span class="saw-oopp-meta-value"><?php echo esc_html($item['display_order']); ?></span>
-            </div>
-            <?php endif; ?>
-            
-            <?php if (!empty($item['created_at_formatted'])): ?>
-            <div class="saw-oopp-meta-item">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <polyline points="12 6 12 12 16 14"/>
-                </svg>
-                <span class="saw-oopp-meta-label"><?php echo esc_html($tr('meta_created', 'Vytvořeno:')); ?></span>
-                <span class="saw-oopp-meta-value"><?php echo esc_html($item['created_at_formatted']); ?></span>
-            </div>
-            <?php endif; ?>
-            
-            <?php if (!empty($item['updated_at_formatted'])): ?>
-            <div class="saw-oopp-meta-item">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                </svg>
-                <span class="saw-oopp-meta-label"><?php echo esc_html($tr('meta_updated', 'Aktualizováno:')); ?></span>
-                <span class="saw-oopp-meta-value"><?php echo esc_html($item['updated_at_formatted']); ?></span>
-            </div>
-            <?php endif; ?>
-        </div>
-    </div>
+    <?php
+    // Include audit history component (includes metadata dates)
+    require SAW_VISITORS_PLUGIN_DIR . 'includes/components/detail-audit-history.php';
+    ?>
 
 </div>
+
+<script>
+jQuery(document).ready(function($) {
+    var $detail = $('.saw-oopp-detail');
+    var ooppId = $detail.data('oopp-id');
+    
+    // Připrav translations data pro JavaScript
+    var translationsData = <?php echo json_encode($translations); ?>;
+    var languages = <?php echo json_encode($languages); ?>;
+    var currentLang = '<?php echo esc_js($current_lang); ?>';
+    
+    // Jazykový přepínač - navigation
+    var $langSwitcher = $('.saw-oopp-language-switcher');
+    var $prevBtn = $('.saw-oopp-lang-nav-prev');
+    var $nextBtn = $('.saw-oopp-lang-nav-next');
+    
+    function updateLangNavButtons() {
+        if ($langSwitcher.length === 0) return;
+        
+        var scrollLeft = $langSwitcher.scrollLeft();
+        var scrollWidth = $langSwitcher[0].scrollWidth;
+        var clientWidth = $langSwitcher[0].clientWidth;
+        
+        $prevBtn.prop('disabled', scrollLeft === 0);
+        $nextBtn.prop('disabled', scrollLeft >= scrollWidth - clientWidth - 1);
+    }
+    
+    if ($langSwitcher.length > 0) {
+        $langSwitcher.on('scroll', updateLangNavButtons);
+        $(window).on('resize', updateLangNavButtons);
+        updateLangNavButtons();
+        
+        // Navigation buttons
+        $prevBtn.on('click', function() {
+            if (!$(this).prop('disabled')) {
+                $langSwitcher.animate({
+                    scrollLeft: $langSwitcher.scrollLeft() - 150
+                }, 300);
+            }
+        });
+        
+        $nextBtn.on('click', function() {
+            if (!$(this).prop('disabled')) {
+                $langSwitcher.animate({
+                    scrollLeft: $langSwitcher.scrollLeft() + 150
+                }, 300);
+            }
+        });
+    }
+    
+    // Přepínání jazyků
+    $(document).on('click', '.saw-oopp-lang-btn', function() {
+        var $btn = $(this);
+        var langCode = $btn.data('lang');
+        
+        if (langCode === currentLang) return;
+        
+        // Zkontroluj zda má překlad
+        if (!translationsData[langCode]) {
+            return; // Nezobrazovat alert, jen nic neudělat
+        }
+        
+        var trans = translationsData[langCode];
+        
+        // Update active button
+        $('.saw-oopp-lang-btn').removeClass('active');
+        $btn.addClass('active');
+        
+        // Update content
+        $('[data-translate="name"]').text(trans.name || '');
+        
+        // Update sections
+        updateTranslateSection('standards', trans.standards);
+        updateTranslateSection('risk_description', trans.risk_description);
+        updateTranslateSection('protective_properties', trans.protective_properties);
+        updateTranslateSection('usage_instructions', trans.usage_instructions);
+        
+        // Scroll clicked button into view (only if switcher exists)
+        if ($langSwitcher.length > 0) {
+            var btnOffset = $btn.position().left + $langSwitcher.scrollLeft();
+            var btnWidth = $btn.outerWidth();
+            var containerWidth = $langSwitcher.outerWidth();
+            var scrollLeft = $langSwitcher.scrollLeft();
+            
+            if (btnOffset < scrollLeft) {
+                $langSwitcher.animate({
+                    scrollLeft: btnOffset - 20
+                }, 300);
+            } else if (btnOffset + btnWidth > scrollLeft + containerWidth) {
+                $langSwitcher.animate({
+                    scrollLeft: btnOffset - containerWidth + btnWidth + 20
+                }, 300);
+            }
+        }
+        
+        currentLang = langCode;
+    });
+    
+    function updateTranslateSection(field, value) {
+        var $section = $('[data-translate-section="' + field + '"]');
+        var $text = $section.find('[data-translate="' + field + '"]');
+        
+        if ($text.length) {
+            if (value && value.trim()) {
+                // Escape HTML a pak převeď newlines na <br>
+                var escaped = $('<div>').text(value).html();
+                $text.html(escaped.replace(/\n/g, '<br>'));
+                $section.show();
+            } else {
+                $text.html('');
+                $section.hide();
+            }
+        }
+    }
+});
+</script>
 
 <style>
 /* ================================================
@@ -384,6 +472,112 @@ $has_instructions = !empty($item['usage_instructions']) || !empty($item['mainten
     flex-direction: column;
     gap: 16px;
     padding: 8px 0;
+}
+
+/* ================================================
+   LANGUAGE SWITCHER
+   ================================================ */
+.saw-oopp-language-switcher-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.saw-oopp-language-switcher {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-behavior: smooth;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+    flex: 1;
+    min-width: 0;
+    padding: 4px 0;
+}
+
+.saw-oopp-language-switcher::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+}
+
+.saw-oopp-lang-nav {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: #f6f7f7;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.saw-oopp-lang-nav:hover:not(:disabled) {
+    background: #0073aa;
+    border-color: #0073aa;
+    color: white;
+}
+
+.saw-oopp-lang-nav:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.saw-oopp-lang-nav .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+.saw-oopp-lang-btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: transparent;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: #50575e;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.saw-oopp-lang-btn:hover {
+    background: #f6f7f7;
+    border-color: #c3c4c7;
+}
+
+.saw-oopp-lang-btn.active {
+    background: #0073aa;
+    border-color: #0073aa;
+    color: white;
+}
+
+.saw-oopp-lang-btn.no-translation {
+    opacity: 0.6;
+    position: relative;
+}
+
+.saw-oopp-lang-btn.no-translation:hover {
+    opacity: 1;
+}
+
+.saw-oopp-lang-name {
+    font-weight: 500;
+}
+
+.saw-oopp-lang-missing {
+    font-size: 12px;
+    margin-left: 2px;
 }
 
 /* ================================================
@@ -815,11 +1009,30 @@ $has_instructions = !empty($item['usage_instructions']) || !empty($item['mainten
 /* ================================================
    RESPONSIVE
    ================================================ */
-@media (max-width: 480px) {
+@media (max-width: 768px) {
+    /* Add margin for whole detail sidebar on mobile */
+    .saw-oopp-detail {
+        padding: 8px 12px;
+    }
+    
+    .saw-oopp-language-switcher-wrapper {
+        margin-bottom: 12px;
+    }
+    
+    .saw-oopp-lang-btn {
+        padding: 7px 12px;
+        font-size: 12px;
+    }
+    
     .saw-oopp-header-inner {
         flex-direction: column;
         align-items: center;
         text-align: center;
+        gap: 16px;
+    }
+    
+    .saw-oopp-header-info {
+        width: 100%;
     }
     
     .saw-oopp-badges {
@@ -836,17 +1049,122 @@ $has_instructions = !empty($item['usage_instructions']) || !empty($item['mainten
         font-size: 48px;
     }
     
+    .saw-oopp-title {
+        font-size: 20px;
+    }
+    
+    .saw-oopp-validity-header {
+        padding: 14px;
+    }
+    
     .saw-oopp-validity-row {
         flex-direction: column;
+        gap: 8px;
+    }
+    
+    .saw-oopp-validity-row-icon {
+        width: 32px;
+        height: 32px;
     }
     
     .saw-oopp-info-inner {
         flex-direction: column;
+        gap: 12px;
+    }
+    
+    .saw-oopp-info-icon {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .saw-oopp-instructions-section {
+        padding: 14px;
+    }
+    
+    .saw-oopp-instruction-card {
+        margin-bottom: 10px;
+    }
+    
+    .saw-oopp-instruction-header {
+        padding: 10px 14px;
+    }
+    
+    .saw-oopp-instruction-body {
+        padding: 14px;
     }
     
     .saw-oopp-meta-inner {
         flex-direction: column;
-        gap: 8px;
+        gap: 10px;
+        padding: 12px;
+    }
+    
+    .saw-oopp-meta-item {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .saw-oopp-language-switcher-wrapper {
+        gap: 6px;
+    }
+    
+    .saw-oopp-lang-nav {
+        width: 24px;
+        height: 24px;
+    }
+    
+    .saw-oopp-lang-nav .dashicons {
+        font-size: 14px;
+        width: 14px;
+        height: 14px;
+    }
+    
+    .saw-oopp-lang-btn {
+        padding: 6px 10px;
+        font-size: 11px;
+    }
+    
+    .saw-oopp-header-inner {
+        padding: 16px;
+    }
+    
+    .saw-oopp-image,
+    .saw-oopp-image-placeholder {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .saw-oopp-image-placeholder span {
+        font-size: 40px;
+    }
+    
+    .saw-oopp-title {
+        font-size: 18px;
+        margin-bottom: 10px;
+    }
+    
+    .saw-oopp-validity-inner,
+    .saw-oopp-info-inner {
+        padding: 12px;
+    }
+    
+    .saw-oopp-validity-header {
+        padding: 12px;
+    }
+    
+    .saw-oopp-validity-icon {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .saw-oopp-info-icon {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .saw-oopp-instructions-section {
+        padding: 12px;
     }
 }
 

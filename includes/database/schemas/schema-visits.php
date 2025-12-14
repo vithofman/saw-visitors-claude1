@@ -31,6 +31,8 @@ function saw_get_schema_visits($table_name, $prefix, $charset_collate) {
 		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
 		created_by BIGINT(20) UNSIGNED NULL,
+		created_by_email VARCHAR(255) NULL COMMENT 'Email uživatele, který vytvořil záznam',
+		updated_by VARCHAR(255) NULL COMMENT 'Email uživatele, který naposledy aktualizoval záznam',
 		PRIMARY KEY (id),
 		UNIQUE KEY uk_token (invitation_token),
 		UNIQUE KEY uk_pin (pin_code, customer_id),

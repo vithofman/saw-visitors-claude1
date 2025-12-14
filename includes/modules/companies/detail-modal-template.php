@@ -278,4 +278,7 @@ $type_labels = array(
         </div>
     </div>
     <?php endif; ?>
+    
+    <?php
+    ?>
 </div>

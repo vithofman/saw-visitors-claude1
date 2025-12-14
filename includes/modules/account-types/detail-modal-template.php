@@ -157,5 +157,10 @@ if (!empty($item['id'])) {
             </div>
         </div>
         
+    <?php
+    // Include audit history component
+    require SAW_VISITORS_PLUGIN_DIR . 'includes/components/detail-audit-history.php';
+    ?>
+        
     </div>
 </div>

@@ -41,6 +41,8 @@ function saw_get_schema_visitors($table_name, $prefix, $charset_collate) {
 		
 		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
+		created_by VARCHAR(255) NULL COMMENT 'Email uživatele, který vytvořil záznam',
+		updated_by VARCHAR(255) NULL COMMENT 'Email uživatele, který naposledy aktualizoval záznam',
 		PRIMARY KEY (id),
 		KEY idx_visit (visit_id),
 		KEY idx_customer (customer_id),

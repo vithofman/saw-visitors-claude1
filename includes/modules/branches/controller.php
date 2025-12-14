@@ -329,11 +329,13 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
 
     protected function format_detail_data($item) {
         if (!empty($item['created_at'])) {
-            $item['created_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['created_at']));
+            $item['created_at_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['created_at']));
+            $item['created_at_relative'] = human_time_diff(strtotime($item['created_at']), current_time('timestamp')) . ' ' . __('před', 'saw-visitors');
         }
 
         if (!empty($item['updated_at'])) {
-            $item['updated_at_formatted'] = date_i18n('d.m.Y H:i', strtotime($item['updated_at']));
+            $item['updated_at_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['updated_at']));
+            $item['updated_at_relative'] = human_time_diff(strtotime($item['updated_at']), current_time('timestamp')) . ' ' . __('před', 'saw-visitors');
         }
 
         if (!empty($item['image_url']) && strpos($item['image_url'], 'http') !== 0) {
@@ -347,6 +349,26 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         $item['is_active_label'] = !empty($item['is_active']) 
             ? $this->tr('status_active', 'Aktivní') 
             : $this->tr('status_inactive', 'Neaktivní');
+
+        // Set flag for audit info availability
+        $item['has_audit_info'] = !empty($item['created_by']) || !empty($item['updated_by']) || 
+                                  !empty($item['created_at']) || !empty($item['updated_at']);
+
+        // Load change history for this branch
+        if (!empty($item['id']) && class_exists('SAW_Audit')) {
+            try {
+                $entity_type = $this->config['entity'] ?? 'branches';
+                $change_history = SAW_Audit::get_entity_history($entity_type, $item['id']);
+                if (!empty($change_history)) {
+                    $item['change_history'] = $change_history;
+                    $item['has_audit_info'] = true;
+                }
+            } catch (Exception $e) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('[SAW Audit] Failed to load change history for branches: ' . $e->getMessage());
+                }
+            }
+        }
 
         return $item;
     }

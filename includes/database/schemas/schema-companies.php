@@ -20,6 +20,8 @@ function saw_get_schema_companies($table_name, $prefix, $charset_collate) {
 		is_archived TINYINT(1) DEFAULT 0,
 		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+		created_by VARCHAR(255) NULL COMMENT 'Email uživatele, který vytvořil záznam',
+		updated_by VARCHAR(255) NULL COMMENT 'Email uživatele, který naposledy aktualizoval záznam',
 		PRIMARY KEY (id),
 		KEY idx_customer (customer_id),
 		KEY idx_branch (branch_id),

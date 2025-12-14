@@ -98,14 +98,37 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
             }
         }
         
+        // Format audit fields and dates (audit history support)
         if (!empty($item['created_at'])) {
             $item['created_at_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['created_at']));
+            $item['created_at_relative'] = human_time_diff(strtotime($item['created_at']), current_time('timestamp')) . ' ' . __('před', 'saw-visitors');
         }
         
         if (!empty($item['updated_at'])) {
             $item['updated_at_formatted'] = date_i18n('j. n. Y H:i', strtotime($item['updated_at']));
+            $item['updated_at_relative'] = human_time_diff(strtotime($item['updated_at']), current_time('timestamp')) . ' ' . __('před', 'saw-visitors');
         }
         
+        // Set flag for audit info availability
+        $item['has_audit_info'] = !empty($item['created_by']) || !empty($item['updated_by']) || 
+                                  !empty($item['created_at']) || !empty($item['updated_at']);
+
+        // Load change history for this company
+        if (!empty($item['id']) && class_exists('SAW_Audit')) {
+            try {
+                $entity_type = $this->config['entity'] ?? 'companies';
+                $change_history = SAW_Audit::get_entity_history($entity_type, $item['id']);
+                if (!empty($change_history)) {
+                    $item['change_history'] = $change_history;
+                    $item['has_audit_info'] = true;
+                }
+            } catch (Exception $e) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('[SAW Audit] Failed to load change history for companies: ' . $e->getMessage());
+                }
+            }
+        }
+
         error_log('[Companies Controller] format_detail_data completed. Item keys: ' . implode(', ', array_keys($item)));
         
         return $item;

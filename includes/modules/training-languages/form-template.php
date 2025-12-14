@@ -64,10 +64,11 @@ $form_action = $is_edit
 <?php endif; ?>
 
 <div class="saw-form-container saw-module-training-languages">
-    <form method="post" action="<?php echo esc_url($form_action); ?>" class="saw-form">
+    <form method="post" action="<?php echo esc_url($form_action); ?>" class="saw-form" data-no-autosave="true">
         <?php wp_nonce_field($nonce_action); ?>
         <?php if ($is_edit): ?>
             <input type="hidden" name="id" value="<?php echo esc_attr($item['id']); ?>">
+            <input type="hidden" name="_ajax_sidebar_submit" value="1">
         <?php endif; ?>
         
         <!-- ============================================
@@ -175,7 +176,7 @@ $form_action = $is_edit
                                 
                                 <div class="saw-branch-controls">
                                     
-                                    <!-- Hidden for unchecked -->
+                                    <!-- Hidden input for unchecked state -->
                                     <input type="hidden" 
                                            name="branches[<?php echo esc_attr($branch_id); ?>][active]" 
                                            value="0"
@@ -238,6 +239,21 @@ $form_action = $is_edit
      FORM STYLES
      ============================================ -->
 <style>
+/* Form container should use parent padding, not its own */
+.saw-sidebar .saw-form-container.saw-module-training-languages {
+    margin: 0;
+    padding: 0;
+}
+
+.saw-sidebar .saw-form-container.saw-module-training-languages .saw-form-section-content {
+    padding: 16px 0;
+}
+
+@media (min-width: 768px) {
+    .saw-sidebar .saw-form-container.saw-module-training-languages .saw-form-section-content {
+        padding: 20px 0;
+    }
+}
 /* Language Preview Card */
 .saw-language-preview {
     background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
@@ -555,6 +571,7 @@ $form_action = $is_edit
         $form.find('.saw-branch-active-checkbox').off('change.active').on('change.active', function() {
             var $row = $(this).closest('.saw-branch-row');
             var isActive = $(this).is(':checked');
+            var $checkbox = $(this);
             
             $row.toggleClass('is-active', isActive);
             
@@ -599,6 +616,73 @@ $form_action = $is_edit
         
         // Initial count
         updateBranchesCount();
+        
+        // Handle sidebar form submission via AJAX
+        $form.off('submit.sidebar').on('submit.sidebar', function(e) {
+            // Only handle if in sidebar and has _ajax_sidebar_submit
+            var $sidebar = $form.closest('.saw-sidebar');
+            if (!$sidebar.length || !$form.find('input[name="_ajax_sidebar_submit"]').length) {
+                return; // Let default submit happen
+            }
+            
+            e.preventDefault();
+            
+            // Remove hidden inputs for checked checkboxes (so checkbox value takes precedence)
+            $form.find('.saw-branch-active-checkbox:checked').each(function() {
+                var branchId = $(this).closest('.saw-branch-row').data('branch-id');
+                $form.find('input[name="branches[' + branchId + '][active]"][type="hidden"]').remove();
+            });
+            
+            var formData = $form.serialize();
+            
+            // Add AJAX nonce for verification
+            if (typeof sawGlobal !== 'undefined' && sawGlobal.nonce) {
+                formData += '&nonce=' + encodeURIComponent(sawGlobal.nonce);
+            }
+            
+            // Use form action URL directly for POST
+            var actionUrl = $form.attr('action');
+            
+            // Show loading
+            var $submitBtn = $form.find('button[type="submit"]');
+            var originalText = $submitBtn.html();
+            $submitBtn.prop('disabled', true).html('<span class="spinner is-active"></span> Ukládám...');
+            
+            $.ajax({
+                url: actionUrl,
+                type: 'POST',
+                data: formData,
+                dataType: 'json',
+                success: function(response) {
+                    if (response && response.success) {
+                        // Reload detail sidebar
+                        var entityId = response.data.id;
+                        
+                        // Trigger detail reload by clicking detail link
+                        var $detailLink = $('.saw-table-row[data-id="' + entityId + '"] .saw-detail-link');
+                        if ($detailLink.length) {
+                            $detailLink.trigger('click');
+                        } else {
+                            // Fallback: reload page
+                            window.location.reload();
+                        }
+                    } else {
+                        // Server returned HTML (redirect) - reload page
+                        window.location.reload();
+                    }
+                },
+                error: function(xhr, status, error) {
+                    // If server returns JSON error
+                    if (xhr.responseJSON) {
+                        alert(xhr.responseJSON.data?.message || 'Chyba při ukládání');
+                        $submitBtn.prop('disabled', false).html(originalText);
+                    } else {
+                        // Server returned HTML (probably redirect) - reload
+                        window.location.reload();
+                    }
+                }
+            });
+        });
     }
     
 })(jQuery);

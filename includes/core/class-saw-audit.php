@@ -61,13 +61,14 @@ class SAW_Audit {
             'action'      => sanitize_text_field($data['action']),
             'user_id'     => isset($data['user_id']) ? absint($data['user_id']) : null,
             'customer_id' => isset($data['customer_id']) ? absint($data['customer_id']) : null,
+            'branch_id'   => isset($data['branch_id']) ? absint($data['branch_id']) : null,
             'ip_address'  => sanitize_text_field($data['ip_address']),
             'user_agent'  => sanitize_text_field($data['user_agent']),
             'details'     => $data['details'] ?? null,
             'created_at'  => current_time('mysql')
         ];
 
-        $format = ['%s', '%d', '%d', '%s', '%s', '%s', '%s'];
+        $format = ['%s', '%d', '%d', '%d', '%s', '%s', '%s', '%s'];
 
         $result = $wpdb->insert(
             $wpdb->prefix . 'saw_audit_log',
@@ -100,6 +101,7 @@ class SAW_Audit {
         $defaults = [
             'user_id'     => null,
             'customer_id' => null,
+            'branch_id'   => null,
             'action'      => null,
             'date_from'   => null,
             'date_to'     => null,
@@ -121,6 +123,11 @@ class SAW_Audit {
         if ($args['customer_id']) {
             $where[] = 'customer_id = %d';
             $where_values[] = absint($args['customer_id']);
+        }
+
+        if ($args['branch_id']) {
+            $where[] = 'branch_id = %d';
+            $where_values[] = absint($args['branch_id']);
         }
 
         if ($args['action']) {
@@ -183,6 +190,11 @@ class SAW_Audit {
         if (!empty($args['customer_id'])) {
             $where[] = 'customer_id = %d';
             $where_values[] = absint($args['customer_id']);
+        }
+
+        if (!empty($args['branch_id'])) {
+            $where[] = 'branch_id = %d';
+            $where_values[] = absint($args['branch_id']);
         }
 
         if (!empty($args['action'])) {
@@ -431,6 +443,174 @@ class SAW_Audit {
         }
 
         return $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    }
+
+    /**
+     * Log entity change with field-level diff
+     *
+     * @since 1.0.0
+     * @param array $data {
+     *     @type string $entity_type    Entity type (required)
+     *     @type int    $entity_id      Entity ID (required)
+     *     @type string $action         Action: 'created' or 'updated' (required)
+     *     @type array  $old_values     Old values (null for create)
+     *     @type array  $new_values     New values
+     *     @type array  $changed_fields Only changed fields for compact storage
+     *     @type int    $customer_id    Customer ID (optional, auto-detected)
+     *     @type int    $branch_id      Branch ID (optional, auto-detected)
+     *     @type int    $user_id        SAW user ID (optional, auto-detected)
+     * }
+     * @return int|false Log entry ID or false on failure
+     */
+    public static function log_change($data) {
+        global $wpdb;
+
+        if (empty($data['entity_type']) || empty($data['entity_id']) || empty($data['action'])) {
+            return false;
+        }
+
+        // Auto-detect customer_id if not provided
+        if (!isset($data['customer_id']) && class_exists('SAW_Context')) {
+            $data['customer_id'] = SAW_Context::get_customer_id();
+        }
+
+        // Auto-detect user_id if not provided
+        if (!isset($data['user_id']) && class_exists('SAW_Context')) {
+            $data['user_id'] = SAW_Context::get_saw_user_id();
+        }
+
+        // Auto-detect branch_id if not provided (fallback to context)
+        if (!isset($data['branch_id']) && class_exists('SAW_Context')) {
+            $data['branch_id'] = SAW_Context::get_branch_id();
+        }
+
+        // Prepare old_values and new_values as JSON
+        $old_values_json = null;
+        if (isset($data['old_values']) && is_array($data['old_values'])) {
+            $old_values_json = wp_json_encode($data['old_values']);
+        }
+
+        $new_values_json = null;
+        if (isset($data['new_values']) && is_array($data['new_values'])) {
+            $new_values_json = wp_json_encode($data['new_values']);
+        }
+
+        // Prepare changed_fields as JSON (store in details for compatibility)
+        $changed_fields_json = null;
+        if (isset($data['changed_fields']) && is_array($data['changed_fields'])) {
+            $changed_fields_json = wp_json_encode($data['changed_fields']);
+        }
+
+        // Prepare details JSON with changed_fields
+        $details_json = null;
+        if ($changed_fields_json) {
+            $details_json = wp_json_encode(['changed_fields' => json_decode($changed_fields_json, true)]);
+        }
+
+        // Auto-detect IP and user agent
+        $ip_address = self::get_client_ip();
+        $user_agent = isset($_SERVER['HTTP_USER_AGENT']) 
+            ? sanitize_text_field(wp_unslash($_SERVER['HTTP_USER_AGENT'])) 
+            : '';
+        $user_agent = substr($user_agent, 0, 500);
+
+        // Insert directly into database with all required fields
+        $insert_data = [
+            'action'       => sanitize_text_field($data['action']),
+            'entity_type'  => sanitize_text_field($data['entity_type']),
+            'entity_id'    => absint($data['entity_id']),
+            'customer_id'  => isset($data['customer_id']) ? absint($data['customer_id']) : null,
+            'branch_id'    => isset($data['branch_id']) ? absint($data['branch_id']) : null,
+            'user_id'      => isset($data['user_id']) ? absint($data['user_id']) : null,
+            'old_values'   => $old_values_json,
+            'new_values'   => $new_values_json,
+            'details'      => $details_json,
+            'ip_address'   => $ip_address,
+            'user_agent'   => $user_agent,
+            'created_at'   => current_time('mysql')
+        ];
+
+        $format = ['%s', '%s', '%d', '%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s'];
+
+        $result = $wpdb->insert(
+            $wpdb->prefix . 'saw_audit_log',
+            $insert_data,
+            $format
+        );
+
+        return $result ? $wpdb->insert_id : false;
+    }
+
+    /**
+     * Get change history for a specific entity
+     *
+     * @since 1.0.0
+     * @param string $entity_type Entity type (e.g. 'oopp', 'visitor')
+     * @param int    $entity_id   Entity ID
+     * @param int    $limit       Maximum number of results (default: 50)
+     * @return array Array of change log entries with decoded JSON data
+     */
+    public static function get_entity_history($entity_type, $entity_id, $limit = 50) {
+        global $wpdb;
+
+        $entity_type = sanitize_text_field($entity_type);
+        $entity_id = absint($entity_id);
+        $limit = absint($limit);
+
+        $logs = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM %i 
+             WHERE entity_type = %s AND entity_id = %d 
+             ORDER BY created_at DESC 
+             LIMIT %d",
+            $wpdb->prefix . 'saw_audit_log',
+            $entity_type,
+            $entity_id,
+            $limit
+        ), ARRAY_A);
+
+        // Decode JSON fields
+        foreach ($logs as &$log) {
+            // Decode old_values directly from column (not from details)
+            if (!empty($log['old_values'])) {
+                $decoded = json_decode($log['old_values'], true);
+                if ($decoded !== null) {
+                    $log['old_values'] = $decoded;
+                }
+            }
+            
+            // Decode new_values directly from column (not from details)
+            if (!empty($log['new_values'])) {
+                $decoded = json_decode($log['new_values'], true);
+                if ($decoded !== null) {
+                    $log['new_values'] = $decoded;
+                }
+            }
+            
+            // Decode changed_fields from details
+            if (!empty($log['details'])) {
+                $details = json_decode($log['details'], true);
+                if (is_array($details) && !empty($details['changed_fields'])) {
+                    $log['changed_fields'] = $details['changed_fields'];
+                }
+            }
+            
+            // Get user email if user_id exists
+            if (!empty($log['user_id'])) {
+                $wp_user_id = $wpdb->get_var($wpdb->prepare(
+                    "SELECT wp_user_id FROM %i WHERE id = %d",
+                    $wpdb->prefix . 'saw_users',
+                    $log['user_id']
+                ));
+                if ($wp_user_id) {
+                    $wp_user = get_user_by('ID', $wp_user_id);
+                    if ($wp_user) {
+                        $log['user_email'] = $wp_user->user_email;
+                    }
+                }
+            }
+        }
+
+        return $logs ?: [];
     }
 
     /**
