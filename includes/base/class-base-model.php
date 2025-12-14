@@ -273,20 +273,46 @@ abstract class SAW_Base_Model
         $result = $wpdb->insert($this->table, $data);
         
         if ($result === false) {
+            $error_msg = $wpdb->last_error ?: 'Unknown database error';
+            if (class_exists('SAW_Logger')) {
+                SAW_Logger::error('[SAW Base Model] Failed to insert into ' . $this->table . ': ' . $error_msg);
+                SAW_Logger::error('[SAW Base Model] Data: ' . print_r($data, true));
+            }
             return new WP_Error(
                 'db_error', 
-                'Failed to create record', 
-                array('db_error' => $wpdb->last_error)
+                'Failed to create record: ' . $error_msg, 
+                array('db_error' => $error_msg)
             );
         }
         
         $inserted_id = $wpdb->insert_id;
         
+        // Verify insert was successful
+        if (empty($inserted_id)) {
+            $error_msg = $wpdb->last_error ?: 'Insert succeeded but no ID returned';
+            if (class_exists('SAW_Logger')) {
+                SAW_Logger::error('[SAW Base Model] Insert returned no ID for ' . $this->table);
+                SAW_Logger::error('[SAW Base Model] DB Error: ' . $error_msg);
+            }
+            return new WP_Error(
+                'db_error',
+                'Failed to create record: No ID returned',
+                array('db_error' => $error_msg)
+            );
+        }
+        
         // ✅ Auto-invalidate cache after successful insert
         $this->invalidate_cache();
         
-        // Log audit change (create)
-        $this->log_audit_change('created', $inserted_id, null, $data);
+        // Log audit change (create) - wrap in try-catch to prevent failures from breaking create
+        try {
+            $this->log_audit_change('created', $inserted_id, null, $data);
+        } catch (Exception $e) {
+            // Log error but don't fail the create
+            if (class_exists('SAW_Logger')) {
+                SAW_Logger::error('[SAW Base Model] Failed to log audit change: ' . $e->getMessage());
+            }
+        }
         
         return $inserted_id;
     }

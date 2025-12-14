@@ -156,6 +156,15 @@ $table_config['filters'] = array(
         'type' => 'select',
         'options' => $departments_options,
     ),
+    'is_global' => array(
+        'label' => $tr('filter_type', 'Typ použití'),
+        'type' => 'select',
+        'options' => array(
+            '' => $tr('filter_all_types', 'Všechny typy'),
+            '1' => $tr('filter_global', '🌐 Globální'),
+            '0' => $tr('filter_action', '🎯 Pro akce'),
+        ),
+    ),
 );
 
 // ============================================
@@ -169,6 +178,7 @@ $list_translations = array(
     'col_standards' => $tr('col_standards', 'Normy'),
     'col_scope' => $tr('col_scope', 'Platnost'),
     'col_status' => $tr('col_status', 'Stav'),
+    'col_type' => $tr('col_type', 'Typ'),
     'branch_singular' => $tr('list_branch_singular', 'pobočka'),
     'branch_plural' => $tr('list_branch_plural', 'poboček'),
     'all_branches' => $tr('all_branches', 'Všechny pobočky'),
@@ -204,7 +214,7 @@ $table_config['columns'] = array(
     'group_display' => array(
         'label' => $list_translations['col_group'],
         'type' => 'custom',
-        'width' => '25%',  // Skupina střední
+        'width' => '20%',  // Skupina střední
         'sortable' => true,
         'sort_column' => 'group_id',
         'callback' => function($value, $item) {
@@ -262,7 +272,7 @@ $table_config['columns'] = array(
     'standards' => array(
         'label' => $list_translations['col_standards'],
         'type' => 'custom',
-        'width' => '13%',  // Normy střední
+        'width' => '10%',  // Normy střední
         'callback' => function($value, $item) {
             if (!empty($item['standards'])) {
                 $short = mb_substr($item['standards'], 0, 20);
@@ -297,7 +307,7 @@ $table_config['columns'] = array(
     'scope' => array(
         'label' => $list_translations['col_scope'],
         'type' => 'custom',
-        'width' => '15%',  // Platnost střední
+        'width' => '12%',  // Platnost střední
         'callback' => function($value, $item) use ($list_translations) {
             $branch_count = intval($item['branch_count'] ?? 0);
             $dept_count = intval($item['department_count'] ?? 0);
@@ -371,6 +381,28 @@ $table_config['columns'] = array(
         },
     ),
     
+    'is_global' => array(
+        'label' => $list_translations['col_type'],
+        'type' => 'custom',
+        'sortable' => true,
+        'width' => '10%',
+        'align' => 'center',
+        'callback' => function($value, $item) use ($list_translations, $tr) {
+            if (!isset($item['is_global'])) {
+                $item['is_global'] = 1; // Default to global
+            }
+            if ($item['is_global']) {
+                echo '<span class="saw-badge saw-badge-info" title="' . 
+                     esc_attr($tr('badge_global_title', 'Zobrazuje se všem návštěvníkům')) . '">
+                     🌐 ' . esc_html($tr('badge_global', 'Globální')) . '</span>';
+            } else {
+                echo '<span class="saw-badge saw-badge-warning" title="' . 
+                     esc_attr($tr('badge_action_title', 'Přiřazuje se k návštěvám')) . '">
+                     🎯 ' . esc_html($tr('badge_action', 'Pro akce')) . '</span>';
+            }
+        },
+    ),
+    
     'is_active' => array(
         'label' => $list_translations['col_status'],
         'type' => 'badge',
@@ -387,7 +419,7 @@ $table_config['columns'] = array(
         ),
     ),
 );
-// Součet: 10 + 25 + 30 + 13 + 15 + 7 = 100%
+// Součet: 10 + 20 + 25 + 10 + 12 + 10 + 7 = 94% (zbytek pro flex)
 
 // ============================================
 // TABS CONFIGURATION

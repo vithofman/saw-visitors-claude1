@@ -120,6 +120,7 @@ class SAW_OOPP_Public {
                 LEFT JOIN {$wpdb->prefix}saw_oopp_translations t ON o.id = t.oopp_id AND t.language_code = %s
                 WHERE o.customer_id = %d
                   AND o.is_active = 1
+                  AND o.is_global = 1
                   AND od.department_id IN ({$placeholders})
                 ORDER BY g.display_order ASC, t.name ASC
             ", ...$params), ARRAY_A);
@@ -149,6 +150,7 @@ class SAW_OOPP_Public {
                 LEFT JOIN {$wpdb->prefix}saw_oopp_translations t ON o.id = t.oopp_id AND t.language_code = %s
                 WHERE o.customer_id = %d
                   AND o.is_active = 1
+                  AND o.is_global = 1
                   AND ob.branch_id = %d
                   AND od.oopp_id IS NULL
                 ORDER BY g.display_order ASC, t.name ASC
@@ -185,6 +187,66 @@ class SAW_OOPP_Public {
     public static function has_oopp($customer_id, $branch_id, $visit_id) {
         $items = self::get_for_visitor($customer_id, $branch_id, $visit_id);
         return !empty($items);
+    }
+    
+    /**
+     * Get ACTION-SPECIFIC OOPP for a visit
+     * 
+     * Returns OOPP assigned to specific visit via saw_visit_action_oopp
+     * 
+     * @param int $visit_id Visit ID
+     * @param string $language_code Language code
+     * @return array Action-specific OOPP items
+     */
+    public static function get_action_oopp_for_visit($visit_id, $language_code = 'cs') {
+        global $wpdb;
+        
+        $oopp_items = $wpdb->get_results($wpdb->prepare("
+            SELECT 
+                o.id, o.customer_id, o.group_id, o.image_path,
+                g.code as group_code,
+                g.name as group_name,
+                t.name as name,
+                t.standards, t.risk_description, 
+                t.protective_properties, t.usage_instructions,
+                vao.is_required,
+                vao.note as action_note
+            FROM {$wpdb->prefix}saw_visit_action_oopp vao
+            INNER JOIN {$wpdb->prefix}saw_oopp o ON vao.oopp_id = o.id
+            INNER JOIN {$wpdb->prefix}saw_oopp_groups g ON o.group_id = g.id
+            LEFT JOIN {$wpdb->prefix}saw_oopp_translations t ON o.id = t.oopp_id AND t.language_code = %s
+            WHERE vao.visit_id = %d
+              AND o.is_active = 1
+            ORDER BY vao.sort_order ASC, g.display_order ASC, t.name ASC
+        ", $language_code, $visit_id), ARRAY_A);
+        
+        // Process results - add image URLs
+        $upload_dir = wp_upload_dir();
+        foreach ($oopp_items as &$item) {
+            if (!empty($item['image_path'])) {
+                $item['image_url'] = $upload_dir['baseurl'] . '/' . ltrim($item['image_path'], '/');
+            } else {
+                $item['image_url'] = '';
+            }
+            $item['group_display'] = $item['group_code'] . '. ' . $item['group_name'];
+        }
+        
+        return $oopp_items;
+    }
+    
+    /**
+     * Check if visit has action-specific OOPP
+     * 
+     * @param int $visit_id Visit ID
+     * @return bool
+     */
+    public static function has_action_oopp($visit_id) {
+        global $wpdb;
+        
+        return (bool) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}saw_visit_action_oopp WHERE visit_id = %d",
+            $visit_id
+        ));
     }
 }
 

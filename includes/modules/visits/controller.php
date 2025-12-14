@@ -97,6 +97,18 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         wp_enqueue_style('dashicons');
         SAW_Asset_Loader::enqueue_module('visits');
         
+        // Enqueue action info JS
+        $action_info_js = SAW_VISITORS_PLUGIN_DIR . 'assets/js/modules/saw-visits-action-info.js';
+        if (file_exists($action_info_js)) {
+            wp_enqueue_script(
+                'saw-visits-action-info',
+                SAW_VISITORS_PLUGIN_URL . 'assets/js/modules/saw-visits-action-info.js',
+                array('jquery', 'saw-module-visits'),
+                filemtime($action_info_js),
+                true
+            );
+        }
+        
         $visit_id = $this->detect_visit_id();
         
         $existing_hosts = array();
@@ -514,6 +526,164 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         // SAVE VISITORS FROM JSON
         // ========================================
         $this->save_visitors_from_json($visit_id);
+        
+        // ========================================
+        // SAVE ACTION-SPECIFIC INFORMATION
+        // ========================================
+        $this->save_action_info($visit_id, $customer_id, $branch_id);
+    }
+    
+    /**
+     * Save action-specific information
+     * 
+     * @param int $visit_id Visit ID
+     * @param int $customer_id Customer ID
+     * @param int $branch_id Branch ID
+     */
+    protected function save_action_info($visit_id, $customer_id, $branch_id) {
+        global $wpdb;
+        
+        $has_action_info = !empty($_POST['has_action_info']);
+        
+        if (!$has_action_info) {
+            // Delete all action info for this visit
+            $wpdb->delete($wpdb->prefix . 'saw_visit_action_info', array('visit_id' => $visit_id), array('%d'));
+            $wpdb->delete($wpdb->prefix . 'saw_visit_action_documents', array('visit_id' => $visit_id), array('%d'));
+            $wpdb->delete($wpdb->prefix . 'saw_visit_action_oopp', array('visit_id' => $visit_id), array('%d'));
+            return;
+        }
+        
+        $user_email = wp_get_current_user()->user_email;
+        
+        // ============================================
+        // 1. Save/update action info text
+        // ============================================
+        $content_text = isset($_POST['action_content_text']) 
+            ? wp_kses_post($_POST['action_content_text']) 
+            : '';
+        
+        $existing = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM {$wpdb->prefix}saw_visit_action_info WHERE visit_id = %d",
+            $visit_id
+        ));
+        
+        if ($existing) {
+            $wpdb->update(
+                $wpdb->prefix . 'saw_visit_action_info',
+                array(
+                    'content_text' => $content_text,
+                    'updated_by' => $user_email,
+                ),
+                array('visit_id' => $visit_id),
+                array('%s', '%s'),
+                array('%d')
+            );
+        } else {
+            $wpdb->insert(
+                $wpdb->prefix . 'saw_visit_action_info',
+                array(
+                    'visit_id' => $visit_id,
+                    'customer_id' => $customer_id,
+                    'branch_id' => $branch_id,
+                    'content_text' => $content_text,
+                    'created_by' => $user_email,
+                ),
+                array('%d', '%d', '%d', '%s', '%s')
+            );
+        }
+        
+        // ============================================
+        // 2. Handle documents
+        // ============================================
+        // Keep existing documents that are still in the form
+        $keep_doc_ids = isset($_POST['action_document_ids']) 
+            ? array_map('intval', $_POST['action_document_ids']) 
+            : array();
+        
+        if (!empty($keep_doc_ids)) {
+            $placeholders = implode(',', array_fill(0, count($keep_doc_ids), '%d'));
+            $wpdb->query($wpdb->prepare(
+                "DELETE FROM {$wpdb->prefix}saw_visit_action_documents 
+                 WHERE visit_id = %d AND id NOT IN ({$placeholders})",
+                array_merge(array($visit_id), $keep_doc_ids)
+            ));
+        } else {
+            $wpdb->delete($wpdb->prefix . 'saw_visit_action_documents', array('visit_id' => $visit_id), array('%d'));
+        }
+        
+        // Upload new documents
+        if (!empty($_FILES['action_documents']['name'][0])) {
+            $this->upload_action_documents($visit_id, $customer_id);
+        }
+        
+        // ============================================
+        // 3. Handle OOPP
+        // ============================================
+        $wpdb->delete($wpdb->prefix . 'saw_visit_action_oopp', array('visit_id' => $visit_id), array('%d'));
+        
+        $oopp_ids = isset($_POST['action_oopp_ids']) 
+            ? array_map('intval', $_POST['action_oopp_ids']) 
+            : array();
+        
+        foreach ($oopp_ids as $sort => $oopp_id) {
+            $is_required = isset($_POST['action_oopp_required'][$oopp_id]) ? 1 : 0;
+            
+            $wpdb->insert(
+                $wpdb->prefix . 'saw_visit_action_oopp',
+                array(
+                    'visit_id' => $visit_id,
+                    'oopp_id' => $oopp_id,
+                    'is_required' => $is_required,
+                    'sort_order' => $sort,
+                    'created_by' => $user_email,
+                ),
+                array('%d', '%d', '%d', '%d', '%s')
+            );
+        }
+    }
+    
+    /**
+     * Upload action documents
+     */
+    private function upload_action_documents($visit_id, $customer_id) {
+        global $wpdb;
+        
+        $upload_dir = wp_upload_dir();
+        $target_dir = $upload_dir['basedir'] . '/saw-visitors/action-docs/' . $visit_id . '/';
+        
+        if (!file_exists($target_dir)) {
+            wp_mkdir_p($target_dir);
+        }
+        
+        $files = $_FILES['action_documents'];
+        $count = count($files['name']);
+        
+        for ($i = 0; $i < $count; $i++) {
+            if ($files['error'][$i] !== UPLOAD_ERR_OK) {
+                continue;
+            }
+            
+            $file_name = sanitize_file_name($files['name'][$i]);
+            $file_path = $target_dir . $file_name;
+            
+            if (move_uploaded_file($files['tmp_name'][$i], $file_path)) {
+                $relative_path = 'saw-visitors/action-docs/' . $visit_id . '/' . $file_name;
+                
+                $wpdb->insert(
+                    $wpdb->prefix . 'saw_visit_action_documents',
+                    array(
+                        'visit_id' => $visit_id,
+                        'customer_id' => $customer_id,
+                        'file_path' => $relative_path,
+                        'file_name' => $files['name'][$i],
+                        'file_size' => $files['size'][$i],
+                        'mime_type' => $files['type'][$i],
+                        'uploaded_by' => wp_get_current_user()->user_email,
+                    ),
+                    array('%d', '%d', '%s', '%s', '%d', '%s', '%s')
+                );
+            }
+        }
     }
 
     /**
@@ -563,6 +733,14 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         }
         
         $item = array_merge($item, $enriched);
+        
+        // Load action info if exists
+        if (method_exists($this->model, 'get_action_info')) {
+            $action_info = $this->model->get_action_info($item['id']);
+            if ($action_info) {
+                $item['action_info'] = $action_info;
+            }
+        }
         
         // Load hosts (separate query due to many-to-many)
         $hosts_query = $wpdb->prepare(

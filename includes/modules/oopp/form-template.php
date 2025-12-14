@@ -402,6 +402,23 @@ $js_translations = array(
             </summary>
             <div class="saw-form-section-content">
                 
+                <?php
+                // Najít index aktivního jazyka podle UX language switcheru
+                $active_lang_index = 0;
+                $user_lang = 'cs';
+                if (class_exists('SAW_Component_Language_Switcher')) {
+                    $user_lang = SAW_Component_Language_Switcher::get_user_language();
+                }
+                
+                // Najít index jazyka v seznamu
+                foreach ($languages as $idx => $language) {
+                    if ($language['code'] === $user_lang) {
+                        $active_lang_index = $idx;
+                        break;
+                    }
+                }
+                ?>
+                
                 <!-- Jazykové záložky -->
                 <div class="saw-language-tabs-wrapper">
                     <button type="button" class="saw-language-tab-nav saw-language-tab-nav-prev" aria-label="Předchozí jazyky">
@@ -411,7 +428,7 @@ $js_translations = array(
                         <?php foreach ($languages as $index => $language): ?>
                             <button 
                                 type="button" 
-                                class="saw-language-tab <?php echo $index === 0 ? 'active' : ''; ?>" 
+                                class="saw-language-tab <?php echo $index === $active_lang_index ? 'active' : ''; ?>" 
                                 data-tab="lang-<?php echo esc_attr($language['code']); ?>"
                             >
                                 <?php echo !empty($language['flag']) ? esc_html($language['flag']) : '🌐'; ?> 
@@ -433,15 +450,15 @@ $js_translations = array(
                         <div 
                             class="saw-language-content" 
                             data-tab-content="lang-<?php echo esc_attr($lang_code); ?>"
-                            style="<?php echo $index === 0 ? '' : 'display: none;'; ?>"
+                            style="<?php echo $index === $active_lang_index ? '' : 'display: none;'; ?>"
                         >
                             
                             <!-- Název -->
                             <div class="saw-form-row">
                                 <div class="saw-form-group saw-col-12">
-                                    <label for="translation_name_<?php echo esc_attr($lang_code); ?>" class="saw-label <?php echo $index === 0 ? 'saw-required' : ''; ?>">
+                                    <label for="translation_name_<?php echo esc_attr($lang_code); ?>" class="saw-label <?php echo $index === $active_lang_index ? 'saw-required' : ''; ?>">
                                         <?php echo esc_html($tr('field_name', 'Název')); ?>
-                                        <?php if ($index === 0): ?>
+                                        <?php if ($index === $active_lang_index): ?>
                                             <span class="saw-required-marker">*</span>
                                         <?php endif; ?>
                                     </label>
@@ -452,7 +469,7 @@ $js_translations = array(
                                         class="saw-input" 
                                         value="<?php echo esc_attr($lang_trans['name'] ?? ''); ?>"
                                         placeholder="<?php echo esc_attr($tr('placeholder_name', 'např. Ochranné brýle proti UV záření')); ?>"
-                                        <?php echo $index === 0 ? 'required' : ''; ?>
+                                        <?php echo $index === $active_lang_index ? 'required' : ''; ?>
                                     >
                                 </div>
                             </div>
@@ -546,6 +563,54 @@ $js_translations = array(
                 <strong><?php echo esc_html($tr('section_settings', 'Nastavení')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
+                
+                <!-- Typ použití -->
+                <div class="saw-form-row">
+                    <div class="saw-form-group saw-col-12">
+                        <label class="saw-label saw-required">
+                            <?php echo esc_html($tr('field_is_global', 'Typ použití')); ?>
+                        </label>
+                        
+                        <div class="saw-radio-cards">
+                            <label class="saw-radio-card <?php echo ($item['is_global'] ?? 1) == 1 ? 'selected' : ''; ?>">
+                                <input type="radio" 
+                                       name="is_global" 
+                                       value="1" 
+                                       <?php checked($item['is_global'] ?? 1, 1); ?>
+                                       required>
+                                <div class="saw-radio-card-content">
+                                    <span class="saw-radio-card-icon">🌐</span>
+                                    <span class="saw-radio-card-title">
+                                        <?php echo esc_html($tr('is_global_yes_title', 'Globální')); ?>
+                                    </span>
+                                    <span class="saw-radio-card-desc">
+                                        <?php echo esc_html($tr('is_global_yes_desc', 'Zobrazuje se automaticky všem návštěvníkům dle nastavení poboček a oddělení.')); ?>
+                                    </span>
+                                </div>
+                            </label>
+                            
+                            <label class="saw-radio-card <?php echo ($item['is_global'] ?? 1) == 0 ? 'selected' : ''; ?>">
+                                <input type="radio" 
+                                       name="is_global" 
+                                       value="0" 
+                                       <?php checked($item['is_global'] ?? 1, 0); ?>>
+                                <div class="saw-radio-card-content">
+                                    <span class="saw-radio-card-icon">🎯</span>
+                                    <span class="saw-radio-card-title">
+                                        <?php echo esc_html($tr('is_global_no_title', 'Pouze pro konkrétní akce')); ?>
+                                    </span>
+                                    <span class="saw-radio-card-desc">
+                                        <?php echo esc_html($tr('is_global_no_desc', 'Nezobrazuje se automaticky. Přiřadí se ručně při plánování návštěvy.')); ?>
+                                    </span>
+                                </div>
+                            </label>
+                        </div>
+                        
+                        <p class="saw-help-text">
+                            <?php echo esc_html($tr('is_global_help', 'Globální OOPP se zobrazují automaticky. OOPP pro akce se zobrazí pouze když jsou přiřazeny ke konkrétní návštěvě.')); ?>
+                        </p>
+                    </div>
+                </div>
                 
                 <!-- Aktivní -->
                 <div class="saw-form-row">
@@ -1482,11 +1547,25 @@ jQuery(document).ready(function($) {
         // Add active class to clicked tab
         $tab.addClass('active');
         
-        // Hide all content
-        $('.saw-language-content').hide();
+        // Hide all content and remove required from all inputs
+        $('.saw-language-content').each(function() {
+            $(this).hide();
+            $(this).find('input[type="text"], textarea').removeAttr('required');
+            $(this).find('label').removeClass('saw-required');
+            $(this).find('.saw-required-marker').remove();
+        });
         
-        // Show target content
-        $('.saw-language-content[data-tab-content="' + targetTab + '"]').show();
+        // Show target content and add required to first input
+        var $targetContent = $('.saw-language-content[data-tab-content="' + targetTab + '"]');
+        $targetContent.show();
+        var $firstInput = $targetContent.find('input[name*="[name]"]').first();
+        if ($firstInput.length) {
+            $firstInput.attr('required', 'required');
+            $firstInput.closest('.saw-form-group').find('label').addClass('saw-required');
+            if (!$firstInput.closest('.saw-form-group').find('.saw-required-marker').length) {
+                $firstInput.closest('.saw-form-group').find('label').append('<span class="saw-required-marker">*</span>');
+            }
+        }
         
         // Scroll clicked tab into view
         var tabOffset = $tab.position().left + $tabsContainer.scrollLeft();
@@ -1505,6 +1584,21 @@ jQuery(document).ready(function($) {
                 scrollLeft: tabOffset - containerWidth + tabWidth + 20
             }, 300);
         }
+    });
+    
+    // ========================================
+    // RADIO CARDS - is_global
+    // ========================================
+    
+    $('.saw-radio-card input[type="radio"]').on('change', function() {
+        var $card = $(this).closest('.saw-radio-card');
+        $('.saw-radio-card').removeClass('selected');
+        $card.addClass('selected');
+    });
+    
+    // Initialize selected state
+    $('.saw-radio-card input[type="radio"]:checked').each(function() {
+        $(this).closest('.saw-radio-card').addClass('selected');
     });
     
 });

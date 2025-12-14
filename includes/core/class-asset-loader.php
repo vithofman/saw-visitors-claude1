@@ -57,6 +57,7 @@ class SAW_Asset_Loader {
         // Core UI components
         'saw-base-components'     => 'components/base-components.css',
         'saw-forms'               => 'components/forms.css',
+        'saw-radio-cards'         => 'components/radio-cards.css',
         'saw-tables'              => 'components/tables.css',
         'saw-tabs'                => 'components/tabs.css',
         'saw-feedback'            => 'components/feedback.css',
@@ -147,6 +148,8 @@ class SAW_Asset_Loader {
                 $deps = ['saw-variables', 'saw-base-components', 'saw-tables'];
             } elseif ($handle === 'saw-tabs') {
                 $deps = ['saw-variables', 'saw-base-components', 'saw-tables'];
+            } elseif ($handle === 'saw-radio-cards') {
+                $deps = ['saw-variables', 'saw-base-components', 'saw-forms'];
             } else {
                 $deps = ['saw-variables', 'saw-base-components'];
             }

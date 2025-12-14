@@ -163,6 +163,18 @@ return array(
             'sanitize' => 'absint',
             'default' => 1,
         ),
+        'is_global' => array(
+            'type' => 'radio',
+            'label' => $tr('field_is_global', 'Typ použití'),
+            'required' => true,
+            'default' => 1,
+            'sanitize' => 'absint',
+            'options' => array(
+                1 => $tr('is_global_yes', '🌐 Globální - zobrazuje se všem návštěvníkům'),
+                0 => $tr('is_global_no', '🎯 Pro konkrétní akce - přiřazuje se k návštěvám'),
+            ),
+            'help' => $tr('is_global_help', 'Globální OOPP se zobrazují automaticky. OOPP pro akce se zobrazí pouze když jsou přiřazeny ke konkrétní návštěvě.'),
+        ),
     ),
     
     // ============================================

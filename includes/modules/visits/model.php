@@ -1271,4 +1271,59 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
         error_log("[SAW Visits] Failed to update PIN expiration for visit #{$visit_id}: " . $wpdb->last_error);
         return false;
     }
+    
+    /**
+     * Get action info for a visit
+     * 
+     * @param int $visit_id Visit ID
+     * @return array|null Action info data
+     */
+    public function get_action_info($visit_id) {
+        global $wpdb;
+        
+        $info = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}saw_visit_action_info WHERE visit_id = %d",
+            $visit_id
+        ), ARRAY_A);
+        
+        if (!$info) {
+            return null;
+        }
+        
+        // Get documents
+        $info['documents'] = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}saw_visit_action_documents 
+             WHERE visit_id = %d ORDER BY sort_order ASC",
+            $visit_id
+        ), ARRAY_A);
+        
+        // Get OOPP
+        $info['oopp'] = $wpdb->get_results($wpdb->prepare(
+            "SELECT vao.*, t.name as oopp_name, g.name as group_name
+             FROM {$wpdb->prefix}saw_visit_action_oopp vao
+             LEFT JOIN {$wpdb->prefix}saw_oopp o ON vao.oopp_id = o.id
+             LEFT JOIN {$wpdb->prefix}saw_oopp_translations t ON o.id = t.oopp_id AND t.language_code = 'cs'
+             LEFT JOIN {$wpdb->prefix}saw_oopp_groups g ON o.group_id = g.id
+             WHERE vao.visit_id = %d 
+             ORDER BY vao.sort_order ASC",
+            $visit_id
+        ), ARRAY_A);
+        
+        return $info;
+    }
+    
+    /**
+     * Check if visit has action-specific info
+     * 
+     * @param int $visit_id Visit ID
+     * @return bool
+     */
+    public function has_action_info($visit_id) {
+        global $wpdb;
+        
+        return (bool) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}saw_visit_action_info WHERE visit_id = %d",
+            $visit_id
+        ));
+    }
 }

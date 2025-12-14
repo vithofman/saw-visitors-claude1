@@ -167,9 +167,15 @@ class SAW_Module_OOPP_Controller extends SAW_Base_Controller
         // Textová pole už NEJSOU v hlavních datech - jsou v translations
         // Ponecháme pouze základní pole bez textových
         
-        // Skupina
-        if (isset($post['group_id'])) {
+        // Skupina (povinné pole)
+        if (isset($post['group_id']) && !empty($post['group_id'])) {
             $data['group_id'] = intval($post['group_id']);
+        } else {
+            // group_id je povinné - pokud chybí, necháme validaci to zachytit
+            // ale přidáme debug log
+            if (class_exists('SAW_Logger')) {
+                SAW_Logger::debug('[SAW OOPP Controller] group_id missing in POST data');
+            }
         }
         
         // Aktivní
@@ -187,6 +193,14 @@ class SAW_Module_OOPP_Controller extends SAW_Base_Controller
             $data['department_ids'] = array_map('intval', $post['department_ids']);
         }
         
+        // Typ použití (is_global)
+        if (isset($post['is_global'])) {
+            $data['is_global'] = intval($post['is_global']) === 1 ? 1 : 0;
+        } else {
+            // Default: globální
+            $data['is_global'] = 1;
+        }
+        
         // Translations se zpracují v after_save
         
         return $data;
@@ -202,13 +216,34 @@ class SAW_Module_OOPP_Controller extends SAW_Base_Controller
             }
         }
         
-        // Validace translations: první jazyk musí mít name
+        // ✅ OPRAVA: Validace translations - kontroluj aktivní jazyk nebo alespoň jeden s name
         if (isset($_POST['translations']) && is_array($_POST['translations']) && !empty($_POST['translations'])) {
             $translations = $_POST['translations'];
-            $first_lang = array_key_first($translations);
-            if ($first_lang && empty(trim($translations[$first_lang]['name'] ?? ''))) {
+            
+            // Zjisti aktivní jazyk z formuláře (ten s required atributem)
+            $active_lang = null;
+            $user_lang = 'cs';
+            if (class_exists('SAW_Component_Language_Switcher')) {
+                $user_lang = SAW_Component_Language_Switcher::get_user_language();
+            }
+            
+            // Zkus najít aktivní jazyk (podle UX switcheru nebo prvního s name)
+            if (!empty($translations[$user_lang]['name']) && !empty(trim($translations[$user_lang]['name']))) {
+                $active_lang = $user_lang;
+            } else {
+                // Najdi první jazyk s vyplněným name
+                foreach ($translations as $lang_code => $trans_data) {
+                    if (!empty($trans_data['name']) && !empty(trim($trans_data['name']))) {
+                        $active_lang = $lang_code;
+                        break;
+                    }
+                }
+            }
+            
+            // Pokud není žádný jazyk s name, vrať chybu
+            if (!$active_lang) {
                 $tr = $this->tr;
-                return new WP_Error('validation_error', $tr('validation_name_required', 'Název v prvním jazyce je povinný'));
+                return new WP_Error('validation_error', $tr('validation_name_required', 'Název musí být vyplněn alespoň v jednom jazyce'));
             }
         }
         
@@ -278,7 +313,13 @@ class SAW_Module_OOPP_Controller extends SAW_Base_Controller
         
         // Handle translations
         if (isset($_POST['translations']) && is_array($_POST['translations'])) {
-            $this->model->save_all_translations($id, $_POST['translations']);
+            $translation_result = $this->model->save_all_translations($id, $_POST['translations']);
+            if (is_wp_error($translation_result)) {
+                // Log error but don't fail the save - translations can be added later
+                error_log('[SAW OOPP] Failed to save translations for OOPP #' . $id . ': ' . $translation_result->get_error_message());
+                // If this is a create operation, we might want to delete the created record
+                // But since edit works, we'll just log the error for now
+            }
         }
     }
     

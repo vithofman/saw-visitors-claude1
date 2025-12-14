@@ -59,6 +59,10 @@ $free_mode = ($context === 'invitation');
 
 // Get data from controller
 $oopp_items = isset($oopp_items) ? $oopp_items : array();
+$action_oopp = isset($action_oopp) ? $action_oopp : array();
+$action_name = isset($action_name) ? $action_name : '';
+$has_global = isset($has_global) ? $has_global : !empty($oopp_items);
+$has_action = isset($has_action) ? $has_action : !empty($action_oopp);
 $token = isset($token) ? $token : '';
 
 // Detect flow type (legacy support)
@@ -134,7 +138,7 @@ $texts = isset($t[$lang]) ? $t[$lang] : $t['cs'];
                 </div>
             </div>
 
-            <?php if (empty($oopp_items)): ?>
+            <?php if (!$has_global && !$has_action): ?>
                 <div class="saw-card-content">
                     <div class="saw-card-body">
                         <div class="saw-empty-state">
@@ -144,8 +148,28 @@ $texts = isset($t[$lang]) ? $t[$lang] : $t['cs'];
                     </div>
                 </div>
             <?php else: ?>
-                <div class="saw-accordion">
-                    <?php foreach ($oopp_items as $index => $item): ?>
+                
+                <?php if ($has_global): ?>
+                <!-- ================================================
+                     GLOBÁLNÍ OOPP SEKCE
+                     ================================================ -->
+                <div class="saw-oopp-section saw-oopp-section-global" style="margin-bottom: 32px;">
+                    <div class="saw-oopp-section-header" style="padding: 20px; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-left: 4px solid #2563eb; border-radius: 12px; margin-bottom: 16px;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span class="saw-oopp-section-icon" style="font-size: 32px;">🌐</span>
+                            <div>
+                                <h2 class="saw-oopp-section-title" style="margin: 0; font-size: 20px; font-weight: 600; color: #1e293b;">
+                                    <?php echo esc_html($texts['global_title'] ?? 'Obecné OOPP'); ?>
+                                </h2>
+                                <p class="saw-oopp-section-desc" style="margin: 4px 0 0 0; font-size: 14px; color: #64748b;">
+                                    <?php echo esc_html($texts['global_desc'] ?? 'Povinné pro všechny návštěvníky'); ?>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="saw-accordion">
+                        <?php foreach ($oopp_items as $index => $item): ?>
                     <?php 
                     $oopp_id = 'oopp-' . $index;
                     ?>
@@ -225,7 +249,137 @@ $texts = isset($t[$lang]) ? $t[$lang] : $t['cs'];
                         </div>
                     </div>
                     <?php endforeach; ?>
+                    </div>
                 </div>
+                <?php endif; ?>
+                
+                <?php if ($has_action): ?>
+                <!-- ================================================
+                     AKCE-SPECIFICKÉ OOPP SEKCE
+                     ================================================ -->
+                <div class="saw-oopp-section saw-oopp-section-action" style="margin-bottom: 32px;">
+                    <div class="saw-oopp-section-header saw-oopp-section-header-action" style="padding: 20px; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border-left: 4px solid #d97706; border-radius: 12px; margin-bottom: 16px;">
+                        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                            <span class="saw-oopp-section-icon" style="font-size: 32px;">🎯</span>
+                            <div style="flex: 1;">
+                                <h2 class="saw-oopp-section-title" style="margin: 0; font-size: 20px; font-weight: 600; color: #1e293b; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                    <?php echo esc_html($texts['action_title'] ?? 'OOPP pro akci'); ?>
+                                    <?php if (!empty($action_name)): ?>
+                                        <span class="saw-action-name-badge" style="display: inline-block; background: #d97706; color: white; padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: 500;">
+                                            "<?php echo esc_html($action_name); ?>"
+                                        </span>
+                                    <?php endif; ?>
+                                </h2>
+                                <p class="saw-oopp-section-desc" style="margin: 4px 0 0 0; font-size: 14px; color: #64748b;">
+                                    <?php echo esc_html($texts['action_desc'] ?? 'Specifické pro tuto akci'); ?>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="saw-accordion">
+                        <?php foreach ($action_oopp as $index => $item): ?>
+                        <?php 
+                        $oopp_id = 'action-oopp-' . $index;
+                        ?>
+                        
+                        <div class="saw-accordion-item <?php echo $index === 0 ? 'expanded' : ''; ?>" data-oopp="<?php echo $oopp_id; ?>">
+                            <button type="button" class="saw-accordion-header">
+                                <div class="saw-accordion-title-wrapper">
+                                    <?php if (!empty($item['image_url'])): ?>
+                                        <img src="<?php echo esc_url($item['image_url']); ?>" 
+                                             alt="<?php echo esc_attr($item['name']); ?>"
+                                             style="width: 48px; height: 48px; object-fit: cover; border-radius: 8px; margin-right: 12px; flex-shrink: 0;">
+                                    <?php else: ?>
+                                        <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 12px; flex-shrink: 0;">
+                                            <span style="font-size: 24px;">🦺</span>
+                                        </div>
+                                    <?php endif; ?>
+                                    
+                                    <svg class="saw-accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 2rem; height: 2rem;">
+                                        <polyline points="9 18 15 12 9 6"></polyline>
+                                    </svg>
+                                    <h3 class="saw-accordion-title"><?php echo esc_html($item['name']); ?></h3>
+                                </div>
+                                
+                                <div class="saw-accordion-badge">
+                                    <span><?php echo esc_html($item['group_code']); ?>.<?php echo esc_html($item['group_name']); ?></span>
+                                    <?php if (!empty($item['is_required'])): ?>
+                                        <span style="margin-left: 8px; padding: 2px 8px; background: #dc2626; color: white; border-radius: 12px; font-size: 11px; font-weight: 600;">Povinné</span>
+                                    <?php endif; ?>
+                                </div>
+                            </button>
+                            
+                            <div class="saw-accordion-content">
+                                <div class="saw-accordion-body saw-oopp-grid">
+                                    
+                                    <!-- LEFT COLUMN: Image -->
+                                    <div class="saw-oopp-image-wrapper">
+                                        <?php if (!empty($item['image_url'])): ?>
+                                            <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);">
+                                                <img src="<?php echo esc_url($item['image_url']); ?>" 
+                                                     alt="<?php echo esc_attr($item['name']); ?>"
+                                                     style="width: 100%; height: auto; border-radius: 12px; display: block;">
+                                            </div>
+                                        <?php else: ?>
+                                            <div style="aspect-ratio: 1; background: rgba(255,255,255,0.05); border-radius: 16px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.1);">
+                                                <span style="font-size: 4rem;">🦺</span>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                    
+                                    <!-- RIGHT COLUMN: Details -->
+                                    <div class="saw-text-content" style="padding-top: 0 !important;">
+                                        
+                                        <!-- Risk description -->
+                                        <?php if (!empty($item['risk_description'])): ?>
+                                            <div class="saw-info-block">
+                                                <h4 class="saw-info-title"><?php echo esc_html($texts['risk_description']); ?></h4>
+                                                <p class="saw-info-text"><?php echo nl2br(esc_html($item['risk_description'])); ?></p>
+                                            </div>
+                                        <?php endif; ?>
+                                        
+                                        <!-- Protective properties -->
+                                        <?php if (!empty($item['protective_properties'])): ?>
+                                            <div class="saw-info-block">
+                                                <h4 class="saw-info-title"><?php echo esc_html($texts['protective_properties']); ?></h4>
+                                                <p class="saw-info-text"><?php echo nl2br(esc_html($item['protective_properties'])); ?></p>
+                                            </div>
+                                        <?php endif; ?>
+                                        
+                                        <!-- Usage instructions -->
+                                        <?php if (!empty($item['usage_instructions'])): ?>
+                                            <div class="saw-info-block">
+                                                <h4 class="saw-info-title"><?php echo esc_html($texts['usage_instructions'] ?? 'Pokyny pro použití'); ?></h4>
+                                                <p class="saw-info-text"><?php echo nl2br(esc_html($item['usage_instructions'])); ?></p>
+                                            </div>
+                                        <?php endif; ?>
+                                        
+                                        <!-- Standards -->
+                                        <?php if (!empty($item['standards'])): ?>
+                                            <div class="saw-info-block">
+                                                <h4 class="saw-info-title"><?php echo esc_html($texts['standards'] ?? 'Normy'); ?></h4>
+                                                <p class="saw-info-text"><?php echo nl2br(esc_html($item['standards'])); ?></p>
+                                            </div>
+                                        <?php endif; ?>
+                                        
+                                        <!-- Action note -->
+                                        <?php if (!empty($item['action_note'])): ?>
+                                            <div class="saw-info-block" style="background: rgba(217, 119, 6, 0.1); border-left: 3px solid #d97706; padding: 12px; border-radius: 8px; margin-top: 16px;">
+                                                <h4 class="saw-info-title" style="color: #d97706;">💡 Poznámka k této akci</h4>
+                                                <p class="saw-info-text"><?php echo nl2br(esc_html($item['action_note'])); ?></p>
+                                            </div>
+                                        <?php endif; ?>
+                                        
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+                
             <?php endif; ?>
 
         </div>

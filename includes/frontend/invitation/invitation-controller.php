@@ -165,7 +165,7 @@ class SAW_Invitation_Controller {
         
         $step = $_GET['step'] ?? '';
         if (!empty($step)) {
-            $steps_requiring_language = ['risks', 'visitors', 'training-video', 'training-map', 'training-risks', 'training-department', 'training-oopp', 'training-additional', 'success'];
+            $steps_requiring_language = ['risks', 'visitors', 'training-video', 'training-map', 'training-risks', 'training-department', 'training-action-info', 'training-oopp', 'training-additional', 'success'];
             if (in_array($step, $steps_requiring_language) && empty($flow['language'])) {
                 return 'language';
             }
@@ -298,6 +298,9 @@ class SAW_Invitation_Controller {
                 break;
             case 'training-department':
                 $this->render_training_department();
+                break;
+            case 'training-action-info':
+                $this->render_training_action_info();
                 break;
             case 'training-oopp':
                 $this->render_training_oopp();
@@ -1006,10 +1009,27 @@ class SAW_Invitation_Controller {
             $steps[] = ['type' => 'department', 'step' => 'training-department', 'has_content' => true];
         }
         
-        // OOPP
+        // ============================================
+        // ACTION-SPECIFIC INFO (NOVÝ KROK)
+        // ============================================
+        $action_info = $wpdb->get_row($wpdb->prepare(
+            "SELECT vai.*, v.action_name 
+             FROM {$wpdb->prefix}saw_visit_action_info vai
+             INNER JOIN {$wpdb->prefix}saw_visits v ON vai.visit_id = v.id
+             WHERE vai.visit_id = %d",
+            $this->visit_id
+        ), ARRAY_A);
+        
+        if ($action_info && !empty($action_info['content_text'])) {
+            $steps[] = ['type' => 'action_info', 'step' => 'training-action-info', 'has_content' => true];
+        }
+        
+        // OOPP (existující, ale rozšířený)
         if (class_exists('SAW_OOPP_Public')) {
-            $has_oopp = SAW_OOPP_Public::has_oopp($this->customer_id, $this->branch_id, $this->visit_id);
-            if ($has_oopp) {
+            $has_global_oopp = SAW_OOPP_Public::has_oopp($this->customer_id, $this->branch_id, $this->visit_id);
+            $has_action_oopp = SAW_OOPP_Public::has_action_oopp($this->visit_id);
+            
+            if ($has_global_oopp || $has_action_oopp) {
                 $steps[] = ['type' => 'oopp', 'step' => 'training-oopp', 'has_content' => true];
             }
         }
@@ -1329,7 +1349,7 @@ class SAW_Invitation_Controller {
         $flow = $this->session->get('invitation_flow');
         $available_steps = $this->get_available_training_steps();
         
-        $step_order = ['training-video', 'training-map', 'training-risks', 'training-department', 'training-oopp', 'training-additional'];
+        $step_order = ['training-video', 'training-map', 'training-risks', 'training-department', 'training-action-info', 'training-oopp', 'training-additional'];
         $current_order_index = array_search($current_step, $step_order);
         
         $next_step = 'summary';
@@ -1404,7 +1424,7 @@ class SAW_Invitation_Controller {
         
         $flow = $this->session->get('invitation_flow');
         
-        $training_steps = ['training-video', 'training-map', 'training-risks', 'training-department', 'training-oopp', 'training-additional'];
+        $training_steps = ['training-video', 'training-map', 'training-risks', 'training-department', 'training-action-info', 'training-oopp', 'training-additional'];
         foreach ($training_steps as $step) {
             if (!in_array($step, $flow['history'] ?? [])) {
                 $flow['history'][] = $step;

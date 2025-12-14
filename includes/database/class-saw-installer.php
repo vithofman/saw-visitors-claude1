@@ -171,6 +171,9 @@ class SAW_Installer {
             'visit_daily_logs',
             'visitor_certificates',
             'visit_invitation_materials',
+            'visit_action_info',
+            'visit_action_documents',
+            'visit_action_oopp',
 
 	        // Notifications
 	        'notifications',
@@ -299,6 +302,19 @@ class SAW_Installer {
             array('table' => 'visit_invitation_materials', 'constraint' => 'fk_invitation_materials_visit', 'column' => 'visit_id', 'ref_table' => 'visits', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'visit_invitation_materials', 'constraint' => 'fk_invitation_materials_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'visit_invitation_materials', 'constraint' => 'fk_invitation_materials_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            
+            // visit_action_info
+            array('table' => 'visit_action_info', 'constraint' => 'fk_action_info_visit', 'column' => 'visit_id', 'ref_table' => 'visits', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'visit_action_info', 'constraint' => 'fk_action_info_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'visit_action_info', 'constraint' => 'fk_action_info_branch', 'column' => 'branch_id', 'ref_table' => 'branches', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            
+            // visit_action_documents
+            array('table' => 'visit_action_documents', 'constraint' => 'fk_action_docs_visit', 'column' => 'visit_id', 'ref_table' => 'visits', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'visit_action_documents', 'constraint' => 'fk_action_docs_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            
+            // visit_action_oopp
+            array('table' => 'visit_action_oopp', 'constraint' => 'fk_action_oopp_visit', 'column' => 'visit_id', 'ref_table' => 'visits', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            array('table' => 'visit_action_oopp', 'constraint' => 'fk_action_oopp_oopp', 'column' => 'oopp_id', 'ref_table' => 'oopp', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
 	        // notifications
 	        array('table' => 'notifications', 'constraint' => 'fk_notif_user', 'column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
@@ -581,6 +597,146 @@ class SAW_Installer {
         
         // Add branch_id to audit_log table
         self::add_branch_id_to_audit_log();
+        
+        // ============================================
+        // VISIT ACTION SYSTEM MIGRATION
+        // ============================================
+        self::add_action_name_to_visits();
+        self::add_is_global_to_oopp();
+        self::create_action_tables();
+    }
+    
+    /**
+     * Add action_name column to visits table
+     * 
+     * @since 1.0.0
+     * @return void
+     */
+    private static function add_action_name_to_visits() {
+        global $wpdb;
+        $prefix = $wpdb->prefix . 'saw_';
+        
+        if (!self::table_exists('visits')) {
+            return;
+        }
+        
+        $visits_table = $prefix . 'visits';
+        $column_exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+             WHERE TABLE_SCHEMA = %s 
+             AND TABLE_NAME = %s 
+             AND COLUMN_NAME = 'action_name'",
+            DB_NAME,
+            $visits_table
+        ));
+        
+        if (!$column_exists) {
+            $wpdb->query("ALTER TABLE {$visits_table} 
+                ADD COLUMN action_name VARCHAR(255) NULL 
+                COMMENT 'Název akce - krátký identifikátor'
+                AFTER company_id");
+            
+            error_log("[SAW Installer] Added action_name column to visits table");
+        }
+    }
+    
+    /**
+     * Add is_global column to oopp table
+     * 
+     * @since 1.0.0
+     * @return void
+     */
+    private static function add_is_global_to_oopp() {
+        global $wpdb;
+        $prefix = $wpdb->prefix . 'saw_';
+        
+        if (!self::table_exists('oopp')) {
+            return;
+        }
+        
+        $oopp_table = $prefix . 'oopp';
+        $column_exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+             WHERE TABLE_SCHEMA = %s 
+             AND TABLE_NAME = %s 
+             AND COLUMN_NAME = 'is_global'",
+            DB_NAME,
+            $oopp_table
+        ));
+        
+        if (!$column_exists) {
+            $wpdb->query("ALTER TABLE {$oopp_table} 
+                ADD COLUMN is_global TINYINT(1) NOT NULL DEFAULT 1 
+                COMMENT '1 = zobrazuje se všem, 0 = pouze při přiřazení k návštěvě'
+                AFTER is_active");
+            
+            // Add index
+            $wpdb->query("CREATE INDEX idx_global ON {$oopp_table} (customer_id, is_global, is_active)");
+            
+            // Set all existing OOPP to global (default)
+            $wpdb->query("UPDATE {$oopp_table} SET is_global = 1 WHERE is_global IS NULL");
+            
+            error_log("[SAW Installer] Added is_global column to oopp table");
+        }
+    }
+    
+    /**
+     * Create new action-related tables
+     * 
+     * @since 1.0.0
+     * @return void
+     */
+    private static function create_action_tables() {
+        global $wpdb;
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        
+        $prefix = $wpdb->prefix . 'saw_';
+        $charset_collate = $wpdb->get_charset_collate();
+        $schemas_dir = dirname(__FILE__) . '/schemas/';
+        
+        $new_tables = [
+            'visit_action_info',
+            'visit_action_documents',
+            'visit_action_oopp',
+        ];
+        
+        foreach ($new_tables as $table_name) {
+            $full_table_name = $prefix . $table_name;
+            
+            // Skip if exists
+            if (self::table_exists($table_name)) {
+                continue;
+            }
+            
+            $schema_file = $schemas_dir . 'schema-' . str_replace('_', '-', $table_name) . '.php';
+            
+            if (!file_exists($schema_file)) {
+                error_log("[SAW Installer] Schema file not found: {$schema_file}");
+                continue;
+            }
+            
+            require_once $schema_file;
+            
+            $function_name = 'saw_get_schema_' . $table_name;
+            
+            if (!function_exists($function_name)) {
+                error_log("[SAW Installer] Function not found: {$function_name}");
+                continue;
+            }
+            
+            $sql = $function_name($full_table_name, $prefix, $charset_collate);
+            
+            // Remove FK constraints for dbDelta (they'll be added in Phase 2)
+            $sql_clean = preg_replace('/,\s*CONSTRAINT\s+\w+\s+FOREIGN\s+KEY[^,]+/i', '', $sql);
+            
+            dbDelta($sql_clean);
+            
+            if (self::table_exists($table_name)) {
+                error_log("[SAW Installer] Created table: {$full_table_name}");
+            } else {
+                error_log("[SAW Installer] ERROR creating table: {$full_table_name}");
+            }
+        }
     }
     
     /**

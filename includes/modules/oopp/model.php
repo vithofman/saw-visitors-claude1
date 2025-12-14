@@ -80,6 +80,8 @@ class SAW_Module_OOPP_Model extends SAW_Base_Model
      * Vytvoření OOPP včetně vazeb
      */
     public function create($data) {
+        global $wpdb;
+        
         // Extrahuj vazby před uložením
         $branch_ids = $data['branch_ids'] ?? array();
         $department_ids = $data['department_ids'] ?? array();
@@ -92,12 +94,33 @@ class SAW_Module_OOPP_Model extends SAW_Base_Model
             }
         }
         
+        // Debug logging
+        SAW_Logger::debug('[SAW OOPP Model] Creating OOPP with data: ' . print_r($data, true));
+        
         // Vytvoř hlavní záznam
         $oopp_id = parent::create($data);
         
         if (is_wp_error($oopp_id)) {
+            SAW_Logger::error('[SAW OOPP Model] Failed to create OOPP: ' . $oopp_id->get_error_message());
+            if (!empty($wpdb->last_error)) {
+                SAW_Logger::error('[SAW OOPP Model] DB Error: ' . $wpdb->last_error);
+            }
             return $oopp_id;
         }
+        
+        // Verify the record was actually created
+        $verify = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM {$this->table} WHERE id = %d",
+            $oopp_id
+        ));
+        
+        if (!$verify) {
+            SAW_Logger::error('[SAW OOPP Model] CRITICAL: OOPP #' . $oopp_id . ' was not found in DB after create!');
+            SAW_Logger::error('[SAW OOPP Model] DB Error: ' . $wpdb->last_error);
+            return new WP_Error('create_failed', 'OOPP was not created in database');
+        }
+        
+        SAW_Logger::debug('[SAW OOPP Model] OOPP #' . $oopp_id . ' created successfully');
         
         // Ulož vazby na pobočky
         $this->save_branch_relations($oopp_id, $branch_ids);
@@ -486,6 +509,17 @@ class SAW_Module_OOPP_Model extends SAW_Base_Model
             return new WP_Error('invalid_language', 'Language code is required');
         }
         
+        // Ověř že OOPP existuje
+        $oopp_exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM {$this->table} WHERE id = %d",
+            $oopp_id
+        ));
+        
+        if (!$oopp_exists) {
+            SAW_Logger::error('[SAW OOPP Model] Cannot save translation: OOPP #' . $oopp_id . ' does not exist');
+            return new WP_Error('oopp_not_found', 'OOPP record does not exist');
+        }
+        
         // Připrav data
         $translation_data = array(
             'oopp_id' => intval($oopp_id),
@@ -523,7 +557,9 @@ class SAW_Module_OOPP_Model extends SAW_Base_Model
         }
         
         if ($result === false) {
-            return new WP_Error('db_error', 'Failed to save translation');
+            $error_msg = $wpdb->last_error ?: 'Unknown database error';
+            SAW_Logger::error('[SAW OOPP Model] Failed to save translation for OOPP #' . $oopp_id . ', lang: ' . $language_code . ', error: ' . $error_msg);
+            return new WP_Error('db_error', 'Failed to save translation: ' . $error_msg);
         }
         
         // Invaliduj cache

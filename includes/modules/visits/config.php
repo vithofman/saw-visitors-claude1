@@ -105,6 +105,14 @@ return array(
             'required' => false,
             'sanitize' => 'sanitize_email',
         ),
+        'action_name' => array(
+            'type' => 'text',
+            'label' => $tr('field_action_name', 'Název akce'),
+            'required' => false,
+            'sanitize' => 'sanitize_text_field',
+            'placeholder' => $tr('placeholder_action_name', 'např. Dláždění parkoviště, Svářečské práce...'),
+            'help' => $tr('help_action_name', 'Krátký identifikátor akce. Zobrazí se návštěvníkům v terminálu.'),
+        ),
         'purpose' => array(
             'type' => 'textarea',
             'label' => 'Účel návštěvy',

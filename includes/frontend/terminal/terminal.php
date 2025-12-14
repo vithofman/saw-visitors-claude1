@@ -323,6 +323,10 @@ class SAW_Terminal_Controller {
                 $this->render_training_department();
                 break;
                 
+            case 'training-action-info':
+                $this->render_training_action_info();
+                break;
+                
             case 'training-oopp':
                 $this->render_training_oopp();
                 break;
@@ -766,6 +770,8 @@ class SAW_Terminal_Controller {
      * @return void
      */
     private function render_training_oopp() {
+        global $wpdb;
+        
         $flow = $this->session->get('terminal_flow');
         $visit_id = $flow['visit_id'] ?? null;
         $language = $flow['language'] ?? 'cs';
@@ -775,9 +781,10 @@ class SAW_Terminal_Controller {
             return;
         }
         
-        $oopp_items = [];
+        // Načíst globální OOPP
+        $global_oopp = [];
         if (class_exists('SAW_OOPP_Public')) {
-            $oopp_items = SAW_OOPP_Public::get_for_visitor(
+            $global_oopp = SAW_OOPP_Public::get_for_visitor(
                 $this->customer_id, 
                 $this->branch_id, 
                 $visit_id,
@@ -785,16 +792,37 @@ class SAW_Terminal_Controller {
             );
         }
         
-        if (empty($oopp_items)) {
+        // Načíst akce-specifické OOPP
+        $action_oopp = [];
+        $action_name = '';
+        if (class_exists('SAW_OOPP_Public') && $visit_id) {
+            $action_oopp = SAW_OOPP_Public::get_action_oopp_for_visit($visit_id, $language);
+            
+            // Získat název akce
+            $action_name = $wpdb->get_var($wpdb->prepare(
+                "SELECT action_name FROM {$wpdb->prefix}saw_visits WHERE id = %d",
+                $visit_id
+            ));
+        }
+        
+        $has_global = !empty($global_oopp);
+        $has_action = !empty($action_oopp);
+        
+        if (!$has_global && !$has_action) {
             $this->move_to_next_training_step();
             return;
         }
         
         $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/shared/training/oopp.php';
         $this->render_template($template, [
-            'oopp_items' => $oopp_items,
+            'oopp_items' => $global_oopp,
+            'action_oopp' => $action_oopp,
+            'action_name' => $action_name,
+            'has_global' => $has_global,
+            'has_action' => $has_action,
             'is_invitation' => false,
             'flow' => $flow,
+            'lang' => $language,
         ]);
     }
     
@@ -937,6 +965,10 @@ class SAW_Terminal_Controller {
                 
             case 'complete_training_department':
                 $this->handle_training_department_complete();
+                break;
+                
+            case 'complete_training_action_info':
+                $this->handle_training_action_info_complete();
                 break;
                 
             case 'complete_training_oopp':
@@ -1286,14 +1318,49 @@ if ($extended_timestamp > $current_expiry_timestamp) {
             }
         }
 
-        // OOPP
+        // ============================================
+        // ACTION-SPECIFIC INFO (NOVÝ KROK)
+        // ============================================
+        $action_info = $wpdb->get_row($wpdb->prepare(
+            "SELECT vai.*, v.action_name 
+             FROM {$wpdb->prefix}saw_visit_action_info vai
+             INNER JOIN {$wpdb->prefix}saw_visits v ON vai.visit_id = v.id
+             WHERE vai.visit_id = %d",
+            $visit_id
+        ), ARRAY_A);
+        
+        if ($action_info && !empty($action_info['content_text'])) {
+            // Get documents
+            $action_docs = $wpdb->get_results($wpdb->prepare(
+                "SELECT * FROM {$wpdb->prefix}saw_visit_action_documents 
+                 WHERE visit_id = %d ORDER BY sort_order",
+                $visit_id
+            ), ARRAY_A);
+            
+            $steps[] = [
+                'type' => 'action_info',
+                'url' => 'training-action-info',
+                'data' => [
+                    'action_name' => $action_info['action_name'],
+                    'content_text' => $action_info['content_text'],
+                    'documents' => $action_docs,
+                ]
+            ];
+        }
+
+        // OOPP (existující, ale rozšířený)
         if (class_exists('SAW_OOPP_Public')) {
-            $has_oopp = SAW_OOPP_Public::has_oopp($this->customer_id, $this->branch_id, $visit_id);
-            if ($has_oopp) {
+            $has_global_oopp = SAW_OOPP_Public::has_oopp($this->customer_id, $this->branch_id, $visit_id);
+            $has_action_oopp = SAW_OOPP_Public::has_action_oopp($visit_id);
+            
+            if ($has_global_oopp || $has_action_oopp) {
                 $steps[] = [
                     'type' => 'oopp',
                     'url' => 'training-oopp',
-                    'data' => []
+                    'data' => [
+                        'has_global' => $has_global_oopp,
+                        'has_action' => $has_action_oopp,
+                    ]
                 ];
             }
         }
@@ -2114,6 +2181,8 @@ private function handle_unified_registration() {
             $current_step_type = 'risks';
         } else if (strpos($path, 'training-department') !== false) {
             $current_step_type = 'department';
+        } elseif (strpos($path, 'training-action-info') !== false) {
+            $current_step_type = 'action_info';
         } elseif (strpos($path, 'training-oopp') !== false) {
             $current_step_type = 'oopp';
         } elseif (strpos($path, 'training-additional') !== false) {
@@ -2305,6 +2374,60 @@ private function handle_unified_registration() {
      * @since 3.0.0
      * @return void
      */
+    /**
+     * Render training action info step
+     *
+     * @since 1.0.0
+     * @return void
+     */
+    private function render_training_action_info() {
+        global $wpdb;
+        
+        $flow = $this->session->get('terminal_flow');
+        $visit_id = $flow['visit_id'] ?? null;
+        $language = $flow['language'] ?? 'cs';
+        
+        if (!$visit_id) {
+            $this->move_to_next_training_step();
+            return;
+        }
+        
+        $training_steps = $this->get_training_steps($visit_id, $language);
+        
+        $action_step = null;
+        foreach ($training_steps as $step) {
+            if ($step['type'] == 'action_info') {
+                $action_step = $step;
+                break;
+            }
+        }
+        
+        if (!$action_step) {
+            $this->move_to_next_training_step();
+            return;
+        }
+        
+        $template = SAW_VISITORS_PLUGIN_DIR . 'includes/frontend/shared/training/action-info.php';
+        $this->render_template($template, [
+            'action_name' => $action_step['data']['action_name'] ?? '',
+            'content_text' => $action_step['data']['content_text'] ?? '',
+            'documents' => $action_step['data']['documents'] ?? [],
+            'is_invitation' => false,
+            'flow' => $flow,
+            'lang' => $language,
+        ]);
+    }
+    
+    /**
+     * Handle training action info completion
+     *
+     * @since 1.0.0
+     * @return void
+     */
+    private function handle_training_action_info_complete() {
+        $this->move_to_next_training_step();
+    }
+    
     private function handle_training_oopp_complete() {
         $this->move_to_next_training_step();
     }

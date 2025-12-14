@@ -314,6 +314,27 @@ $form_action = $is_edit
                     </div>
                 </div>
                 
+                <!-- ================================================
+                     NÁZEV AKCE (volitelný)
+                     ================================================ -->
+                <div class="saw-form-row" style="margin-top: 24px;">
+                    <div class="saw-form-group saw-col-12">
+                        <label for="action_name" class="saw-label">
+                            <?php echo esc_html($tr('field_action_name', 'Název akce')); ?>
+                            <span class="saw-label-optional">(<?php echo esc_html($tr('optional', 'volitelné')); ?>)</span>
+                        </label>
+                        <input type="text" 
+                               name="action_name" 
+                               id="action_name" 
+                               class="saw-input" 
+                               value="<?php echo esc_attr($item['action_name'] ?? ''); ?>" 
+                               placeholder="<?php echo esc_attr($tr('placeholder_action_name', 'např. Dláždění parkoviště, Revize elektro...')); ?>">
+                        <p class="saw-help-text">
+                            <?php echo esc_html($tr('help_action_name', 'Krátký identifikátor akce. Použije se jako nadpis v sekci specifických informací.')); ?>
+                        </p>
+                    </div>
+                </div>
+                
                 <!-- Visit Type & Status -->
                 <div class="saw-form-row">
                     <div class="saw-form-group saw-col-6">
@@ -574,6 +595,222 @@ $form_action = $is_edit
                             <?php endif; ?>
                         </div>
                     </div>
+                </div>
+                
+            </div>
+        </details>
+        
+        <!-- ================================================
+             SPECIFICKÉ INFORMACE PRO AKCI
+             ================================================ -->
+        <details class="saw-form-section saw-form-section-action-info">
+            <summary>
+                <div style="display: flex; align-items: center; gap: 12px; width: 100%;">
+                    <span class="dashicons dashicons-admin-generic"></span>
+                    <strong style="flex: 1;">🎯 <?php echo esc_html($tr('section_action_info', 'Specifické informace pro akci')); ?></strong>
+                    <label class="saw-toggle-switch" style="margin-left: auto; margin-right: 12px;">
+                        <input type="checkbox" 
+                               id="has_action_info" 
+                               name="has_action_info" 
+                               value="1"
+                               <?php checked(!empty($item['action_info'])); ?>>
+                        <span class="saw-toggle-slider"></span>
+                    </label>
+                </div>
+            </summary>
+            <div class="saw-form-section-content">
+                
+                <p class="saw-help-text" style="margin-bottom: 16px; color: #6b7280;">
+                    <?php echo esc_html($tr('help_action_info', 'Pokyny, dokumenty a OOPP, které návštěvníci uvidí NAVÍC k běžnému školení.')); ?>
+                </p>
+                
+                <!-- Collapsible content -->
+                <div id="action-info-content" class="saw-action-info-content" style="<?php echo empty($item['action_info']) ? 'display: none;' : ''; ?>">
+                    
+                    <?php
+                    // Načíst existující action info
+                    $action_info = null;
+                    $action_documents = array();
+                    $action_oopp = array();
+                    
+                    if ($is_edit && !empty($item['id'])) {
+                        // Načíst action info
+                        $action_info = $wpdb->get_row($wpdb->prepare(
+                            "SELECT * FROM {$wpdb->prefix}saw_visit_action_info WHERE visit_id = %d",
+                            $item['id']
+                        ), ARRAY_A);
+                        
+                        // Načíst dokumenty
+                        if ($action_info) {
+                            $action_documents = $wpdb->get_results($wpdb->prepare(
+                                "SELECT * FROM {$wpdb->prefix}saw_visit_action_documents 
+                                 WHERE visit_id = %d ORDER BY sort_order ASC",
+                                $item['id']
+                            ), ARRAY_A);
+                            
+                            // Načíst OOPP
+                            $action_oopp = $wpdb->get_results($wpdb->prepare(
+                                "SELECT vao.*, o.id as oopp_id
+                                 FROM {$wpdb->prefix}saw_visit_action_oopp vao
+                                 INNER JOIN {$wpdb->prefix}saw_oopp o ON vao.oopp_id = o.id
+                                 WHERE vao.visit_id = %d 
+                                 ORDER BY vao.sort_order ASC",
+                                $item['id']
+                            ), ARRAY_A);
+                        }
+                    }
+                    ?>
+                    
+                    <!-- Specifické pokyny (WYSIWYG) -->
+                    <div class="saw-form-row">
+                        <div class="saw-form-group saw-col-12">
+                            <label for="action_content_text" class="saw-label">
+                                <?php echo esc_html($tr('field_action_content', 'Specifické pokyny')); ?>
+                            </label>
+                            <?php
+                            wp_editor(
+                                $action_info['content_text'] ?? '',
+                                'action_content_text',
+                                array(
+                                    'textarea_name' => 'action_content_text',
+                                    'textarea_rows' => 8,
+                                    'media_buttons' => false,
+                                    'teeny' => true,
+                                    'quicktags' => array('buttons' => 'strong,em,ul,ol,li,link'),
+                                )
+                            );
+                            ?>
+                        </div>
+                    </div>
+                    
+                    <!-- Dokumenty k akci -->
+                    <div class="saw-form-row" style="margin-top: 24px;">
+                        <div class="saw-form-group saw-col-12">
+                            <label class="saw-label">
+                                <?php echo esc_html($tr('field_action_documents', 'Dokumenty k akci')); ?>
+                            </label>
+                            
+                            <div class="saw-action-documents-list" id="action-documents-list">
+                                <?php if (!empty($action_documents)): ?>
+                                    <?php foreach ($action_documents as $doc): ?>
+                                        <div class="saw-action-document-item" data-id="<?php echo esc_attr($doc['id']); ?>">
+                                            <span class="saw-doc-icon">📄</span>
+                                            <span class="saw-doc-name"><?php echo esc_html($doc['file_name']); ?></span>
+                                            <span class="saw-doc-size">(<?php echo esc_html(size_format($doc['file_size'])); ?>)</span>
+                                            <button type="button" class="saw-btn-icon saw-remove-action-doc" title="Odebrat">✕</button>
+                                            <input type="hidden" name="action_document_ids[]" value="<?php echo esc_attr($doc['id']); ?>">
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </div>
+                            
+                            <div class="saw-dropzone" id="action-documents-dropzone">
+                                <div class="saw-dropzone-content">
+                                    <span class="saw-dropzone-icon">📎</span>
+                                    <span class="saw-dropzone-text">
+                                        <?php echo esc_html($tr('dropzone_text', 'Přetáhněte soubory nebo klikněte')); ?>
+                                    </span>
+                                </div>
+                                <input type="file" 
+                                       id="action_documents_upload" 
+                                       name="action_documents[]" 
+                                       multiple 
+                                       accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- OOPP pro akci -->
+                    <div class="saw-form-row" style="margin-top: 24px;">
+                        <div class="saw-form-group saw-col-12">
+                            <label class="saw-label">
+                                <?php echo esc_html($tr('field_action_oopp', 'Specifické OOPP pro akci')); ?>
+                            </label>
+                            
+                            <?php
+                            // Načíst OOPP pro akce (is_global = 0)
+                            $action_oopp_options = array();
+                            if ($customer_id) {
+                                $action_oopp_options = $wpdb->get_results($wpdb->prepare(
+                                    "SELECT o.id, t.name, g.name as group_name
+                                     FROM {$wpdb->prefix}saw_oopp o
+                                     LEFT JOIN {$wpdb->prefix}saw_oopp_translations t ON o.id = t.oopp_id AND t.language_code = 'cs'
+                                     LEFT JOIN {$wpdb->prefix}saw_oopp_groups g ON o.group_id = g.id
+                                     WHERE o.customer_id = %d 
+                                       AND o.is_active = 1 
+                                       AND o.is_global = 0
+                                     ORDER BY g.display_order, t.name",
+                                    $customer_id
+                                ), ARRAY_A);
+                            }
+                            
+                            // Vybrané OOPP pro tuto návštěvu
+                            $selected_oopp_ids = array();
+                            if (!empty($action_oopp)) {
+                                $selected_oopp_ids = array_column($action_oopp, 'oopp_id');
+                            }
+                            ?>
+                            
+                            <?php if (empty($action_oopp_options)): ?>
+                                <div class="saw-alert saw-alert-info">
+                                    <p><?php echo esc_html($tr('no_action_oopp', 'Nemáte žádné OOPP pro akce.')); ?></p>
+                                    <a href="<?php echo esc_url(home_url('/admin/oopp/create/')); ?>" class="saw-link">
+                                        <?php echo esc_html($tr('create_action_oopp', '+ Vytvořit OOPP pro akce')); ?>
+                                    </a>
+                                </div>
+                            <?php else: ?>
+                                <div class="saw-oopp-selector">
+                                    <div class="saw-oopp-available">
+                                        <h4><?php echo esc_html($tr('available_oopp', 'Dostupné OOPP pro akce')); ?></h4>
+                                        <div class="saw-oopp-list">
+                                            <?php foreach ($action_oopp_options as $oopp): ?>
+                                                <?php if (!in_array($oopp['id'], $selected_oopp_ids)): ?>
+                                                    <div class="saw-oopp-item" data-id="<?php echo esc_attr($oopp['id']); ?>">
+                                                        <span class="saw-oopp-name"><?php echo esc_html($oopp['name']); ?></span>
+                                                        <span class="saw-oopp-group"><?php echo esc_html($oopp['group_name']); ?></span>
+                                                        <button type="button" class="saw-btn-icon saw-add-oopp" title="Přidat">+</button>
+                                                    </div>
+                                                <?php endif; ?>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="saw-oopp-selected">
+                                        <h4><?php echo esc_html($tr('selected_oopp', 'Vybrané pro tuto akci')); ?></h4>
+                                        <div class="saw-oopp-list" id="selected-action-oopp">
+                                            <?php foreach ($action_oopp_options as $oopp): ?>
+                                                <?php if (in_array($oopp['id'], $selected_oopp_ids)): ?>
+                                                    <?php 
+                                                    $selected_oopp = array_filter($action_oopp, function($a) use ($oopp) {
+                                                        return $a['oopp_id'] == $oopp['id'];
+                                                    });
+                                                    $selected_oopp = reset($selected_oopp);
+                                                    ?>
+                                                    <div class="saw-oopp-item selected" data-id="<?php echo esc_attr($oopp['id']); ?>">
+                                                        <span class="saw-oopp-name"><?php echo esc_html($oopp['name']); ?></span>
+                                                        <label class="saw-checkbox-inline">
+                                                            <input type="checkbox" 
+                                                                   name="action_oopp_required[<?php echo esc_attr($oopp['id']); ?>]" 
+                                                                   value="1" 
+                                                                   <?php checked($selected_oopp['is_required'] ?? 1, 1); ?>>
+                                                            <?php echo esc_html($tr('required', 'Povinné')); ?>
+                                                        </label>
+                                                        <button type="button" class="saw-btn-icon saw-remove-oopp" title="Odebrat">✕</button>
+                                                        <input type="hidden" name="action_oopp_ids[]" value="<?php echo esc_attr($oopp['id']); ?>">
+                                                    </div>
+                                                <?php endif; ?>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+                            
+                            <p class="saw-help-text" style="margin-top: 8px;">
+                                💡 <?php echo esc_html($tr('help_action_oopp', 'Nové OOPP pro akce vytvoříte v modulu OOPP s typem "Pro konkrétní akce".')); ?>
+                            </p>
+                        </div>
+                    </div>
+                    
                 </div>
                 
             </div>

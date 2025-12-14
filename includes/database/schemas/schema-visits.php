@@ -7,6 +7,7 @@ function saw_get_schema_visits($table_name, $prefix, $charset_collate) {
 		customer_id BIGINT(20) UNSIGNED NOT NULL,
 		branch_id BIGINT(20) UNSIGNED NOT NULL,
 		company_id BIGINT(20) UNSIGNED NULL COMMENT 'NULL = fyzická osoba',
+		action_name VARCHAR(255) NULL COMMENT 'Název akce (např. Dláždění parkoviště)',
 		visit_type ENUM('planned', 'walk_in') NOT NULL,
 		status ENUM('draft', 'pending', 'confirmed', 'in_progress', 'completed', 'cancelled') NOT NULL DEFAULT 'pending',
 		planned_date_from DATE DEFAULT NULL,

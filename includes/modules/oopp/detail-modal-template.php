@@ -43,17 +43,28 @@ $languages = $item['detail_languages'] ?? array();
 
 // Get translations from item
 $translations = $item['translations'] ?? array();
-$default_lang = !empty($languages) ? $languages[0]['code'] : 'cs';
 
-// Determine current language (first available or default)
-$current_lang = $default_lang;
-if (!empty($translations) && !empty($languages)) {
-    // Use first language that has translation, or default
-    foreach ($languages as $lang) {
-        if (isset($translations[$lang['code']])) {
-            $current_lang = $lang['code'];
-            break;
+// ✅ OPRAVA: Použij jazyk z UX language switcheru
+$user_lang = 'cs';
+if (class_exists('SAW_Component_Language_Switcher')) {
+    $user_lang = SAW_Component_Language_Switcher::get_user_language();
+}
+
+// Determine current language - prefer user's language, fallback to first available
+$current_lang = $user_lang;
+if (empty($translations[$user_lang]) || empty($translations[$user_lang]['name'])) {
+    // User's language not available, find first with translation
+    if (!empty($languages)) {
+        foreach ($languages as $lang) {
+            if (isset($translations[$lang['code']]) && !empty($translations[$lang['code']]['name'])) {
+                $current_lang = $lang['code'];
+                break;
+            }
         }
+    }
+    // If still no translation, use first language
+    if (empty($translations[$current_lang])) {
+        $current_lang = !empty($languages) ? $languages[0]['code'] : 'cs';
     }
 }
 
@@ -340,7 +351,11 @@ $has_instructions = !empty($current_trans['usage_instructions']);
 
     <?php
     // Include audit history component (includes metadata dates)
-    require SAW_VISITORS_PLUGIN_DIR . 'includes/components/detail-audit-history.php';
+    // ✅ OPRAVA: Zkontroluj, jestli se už nezobrazuje jinde v template
+    if (empty($GLOBALS['saw_audit_history_included'])) {
+        $GLOBALS['saw_audit_history_included'] = true;
+        require SAW_VISITORS_PLUGIN_DIR . 'includes/components/detail-audit-history.php';
+    }
     ?>
 
 </div>
