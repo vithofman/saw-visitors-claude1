@@ -460,12 +460,9 @@ abstract class SAW_Base_Controller
             check_ajax_referer('saw_ajax_nonce', 'nonce');
         }
         
-        // Standard nonce validation for normal form submissions
-        // For AJAX sidebar submit, use check_ajax_referer
-        if (!empty($_POST['_ajax_sidebar_submit'])) {
-            check_ajax_referer('saw_ajax_nonce', 'nonce');
-        } elseif (empty($_POST['_ajax_inline_create'])) {
-            // Only check admin referer if not inline create
+        // Nonce kontrola už proběhla v ajax_create() pro AJAX requests
+        // Pro non-AJAX requests (normální form submission) zkontroluj admin referer
+        if (empty($_POST['_ajax_sidebar_submit']) && empty($_POST['_ajax_inline_create'])) {
             check_admin_referer('saw_create_' . $this->entity);
         }
         
@@ -591,10 +588,9 @@ abstract class SAW_Base_Controller
      * @return void (redirects)
      */
     protected function handle_edit_post($id) {
-        // For AJAX sidebar submit, use check_ajax_referer
-        if (!empty($_POST['_ajax_sidebar_submit'])) {
-            check_ajax_referer('saw_ajax_nonce', 'nonce');
-        } else {
+        // Nonce kontrola už proběhla v ajax_edit() pro AJAX requests
+        // Pro non-AJAX requests (normální form submission) zkontroluj admin referer
+        if (empty($_POST['_ajax_sidebar_submit'])) {
             check_admin_referer('saw_edit_' . $this->entity);
         }
         
@@ -1510,6 +1506,9 @@ protected function can($action) {
      * @return void Outputs JSON
      */
     public function ajax_create() {
+        // Verify AJAX nonce first
+        saw_verify_ajax_unified();
+        
         if (!$this->can('create')) {
             wp_send_json_error(array(
                 'message' => 'Nemáte oprávnění vytvářet záznamy'
@@ -1532,6 +1531,9 @@ protected function can($action) {
      * @return void Outputs JSON
      */
     public function ajax_edit() {
+        // Verify AJAX nonce first
+        saw_verify_ajax_unified();
+        
         $id = intval($_POST['id'] ?? 0);
         
         if (!$id) {

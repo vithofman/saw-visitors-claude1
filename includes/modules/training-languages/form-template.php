@@ -246,12 +246,12 @@ $form_action = $is_edit
 }
 
 .saw-sidebar .saw-form-container.saw-module-training-languages .saw-form-section-content {
-    padding: 16px 0;
+    padding: 16px 20px;
 }
 
 @media (min-width: 768px) {
     .saw-sidebar .saw-form-container.saw-module-training-languages .saw-form-section-content {
-        padding: 20px 0;
+        padding: 20px 24px;
     }
 }
 /* Language Preview Card */
@@ -635,13 +635,20 @@ $form_action = $is_edit
             
             var formData = $form.serialize();
             
-            // Add AJAX nonce for verification
+            // Get entity from sidebar (has underscores, e.g. 'training_languages')
+            var entity = $sidebar.data('entity') || 'training_languages';
+            // Convert underscores to dashes to get slug (AJAX actions use slug with dashes)
+            var slug = entity.replace(/_/g, '-'); // training_languages -> training-languages
+            
+            // Use AJAX endpoint instead of form action URL
+            var ajaxUrl = typeof ajaxurl !== 'undefined' ? ajaxurl : '/wp-admin/admin-ajax.php';
+            var action = 'saw_edit_' + slug; // e.g., 'saw_edit_training-languages'
+            
+            // Add action and nonce to form data
+            formData += '&action=' + encodeURIComponent(action);
             if (typeof sawGlobal !== 'undefined' && sawGlobal.nonce) {
                 formData += '&nonce=' + encodeURIComponent(sawGlobal.nonce);
             }
-            
-            // Use form action URL directly for POST
-            var actionUrl = $form.attr('action');
             
             // Show loading
             var $submitBtn = $form.find('button[type="submit"]');
@@ -649,26 +656,33 @@ $form_action = $is_edit
             $submitBtn.prop('disabled', true).html('<span class="spinner is-active"></span> Ukládám...');
             
             $.ajax({
-                url: actionUrl,
+                url: ajaxUrl,
                 type: 'POST',
                 data: formData,
                 dataType: 'json',
                 success: function(response) {
                     if (response && response.success) {
-                        // Reload detail sidebar
                         var entityId = response.data.id;
                         
-                        // Trigger detail reload by clicking detail link
-                        var $detailLink = $('.saw-table-row[data-id="' + entityId + '"] .saw-detail-link');
-                        if ($detailLink.length) {
-                            $detailLink.trigger('click');
+                        // Get entity from sidebar
+                        var entity = $sidebar.data('entity') || 'training_languages';
+                        // Convert underscores to dashes for URL (route)
+                        var route = entity.replace(/_/g, '-');
+                        
+                        // Build detail URL: /admin/{route}/{id}/
+                        var detailUrl = window.location.origin + '/admin/' + route + '/' + entityId + '/';
+                        
+                        console.log('[Training Languages] Navigating to detail:', detailUrl);
+                        
+                        // Navigate to detail using viewTransition or fallback
+                        if (window.viewTransition && window.viewTransition.navigateTo) {
+                            window.viewTransition.navigateTo(detailUrl);
                         } else {
-                            // Fallback: reload page
-                            window.location.reload();
+                            window.location.href = detailUrl;
                         }
                     } else {
-                        // Server returned HTML (redirect) - reload page
-                        window.location.reload();
+                        alert(response.data?.message || 'Chyba při ukládání');
+                        $submitBtn.prop('disabled', false).html(originalText);
                     }
                 },
                 error: function(xhr, status, error) {
@@ -678,7 +692,8 @@ $form_action = $is_edit
                         $submitBtn.prop('disabled', false).html(originalText);
                     } else {
                         // Server returned HTML (probably redirect) - reload
-                        window.location.reload();
+                        alert('Chyba při ukládání: ' + error);
+                        $submitBtn.prop('disabled', false).html(originalText);
                     }
                 }
             });

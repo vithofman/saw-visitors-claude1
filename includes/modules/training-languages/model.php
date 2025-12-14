@@ -132,11 +132,10 @@ class SAW_Module_Training_Languages_Model extends SAW_Base_Model
     }
     
     /**
-     * ✅ FIXED: Added COMMIT after insert
+     * Create new training language record
+     * Uses parent::create() for automatic audit logging and created_by handling
      */
     public function create($data) {
-        global $wpdb;
-        
         $customer_id = SAW_Context::get_customer_id();
         $data['customer_id'] = $customer_id;
         $branches_data = $data['branches'] ?? [];
@@ -148,38 +147,26 @@ class SAW_Module_Training_Languages_Model extends SAW_Base_Model
             return $validation;
         }
         
-        // Add timestamps
-        $data['created_at'] = current_time('mysql');
-        $data['updated_at'] = current_time('mysql');
+        // Use parent::create() which handles created_by, updated_by, timestamps, cache, and audit logging
+        $id = parent::create($data);
         
-        // Insert language
-        $result = $wpdb->insert($this->table, $data);
-        
-        if ($result === false) {
-            return new WP_Error('db_error', 'Database insert failed: ' . $wpdb->last_error);
+        if (is_wp_error($id)) {
+            return $id;
         }
         
-        $id = $wpdb->insert_id;
-        
-        // 🔥 CRITICAL FIX: Force commit transaction
-        $wpdb->query('COMMIT');
-        
-        // Sync branches
+        // Sync branches AFTER parent::create() (which already logs 'created')
         if (!empty($branches_data)) {
             $this->sync_branches($id, $branches_data);
         }
-        
-        $this->invalidate_cache();
         
         return $id;
     }
     
     /**
-     * ✅ FIXED: Added COMMIT after update
+     * Update existing training language record
+     * Uses parent::update() for automatic audit logging and updated_by handling
      */
     public function update($id, $data) {
-        global $wpdb;
-        
         $branches_data = $data['branches'] ?? null;
         unset($data['branches']);
         
@@ -193,32 +180,19 @@ class SAW_Module_Training_Languages_Model extends SAW_Base_Model
             return $validation;
         }
         
-        $data['updated_at'] = current_time('mysql');
+        // Use parent::update() which handles updated_by, timestamps, cache, and audit logging
+        $result = parent::update($id, $data);
         
-        // Update language
-        $result = $wpdb->update(
-            $this->table,
-            $data,
-            ['id' => $id],
-            null,
-            ['%d']
-        );
-        
-        if ($result === false) {
-            return new WP_Error('db_error', 'Database update failed: ' . $wpdb->last_error);
+        if (is_wp_error($result)) {
+            return $result;
         }
         
-        // 🔥 CRITICAL FIX: Force commit transaction
-        $wpdb->query('COMMIT');
-        
-        // Sync branches
+        // Sync branches AFTER parent::update() (which already logs 'updated')
         if ($branches_data !== null) {
             $this->sync_branches($id, $branches_data);
         }
         
-        $this->invalidate_cache();
-        
-        return true;
+        return $result;
     }
     
     /**
