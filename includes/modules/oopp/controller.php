@@ -260,6 +260,12 @@ class SAW_Module_OOPP_Controller extends SAW_Base_Controller
         
         // Handle image upload
         if (!empty($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+            // Get old image path before update for audit log
+            $old_image_path = $wpdb->get_var($wpdb->prepare(
+                "SELECT image_path FROM {$this->table_name} WHERE id = %d",
+                $id
+            ));
+            
             $upload_result = $this->file_uploader->upload(
                 $_FILES['image'],
                 'oopp'
@@ -278,22 +284,50 @@ class SAW_Module_OOPP_Controller extends SAW_Base_Controller
                     array('%s'),
                     array('%d')
                 );
+                
+                // Log image change to audit history
+                if (class_exists('SAW_Audit')) {
+                    try {
+                        $entity_type = $this->config['entity'] ?? 'oopp';
+                        $old_values = array('image_path' => $old_image_path);
+                        $new_values = array('image_path' => $relative_path);
+                        $changed_fields = array('image_path');
+                        
+                        $customer_id = class_exists('SAW_Context') ? SAW_Context::get_customer_id() : null;
+                        $branch_id = class_exists('SAW_Context') ? SAW_Context::get_branch_id() : null;
+                        
+                        SAW_Audit::log_change(array(
+                            'entity_type' => $entity_type,
+                            'entity_id' => $id,
+                            'action' => 'updated',
+                            'old_values' => $old_values,
+                            'new_values' => $new_values,
+                            'changed_fields' => $changed_fields,
+                            'customer_id' => $customer_id,
+                            'branch_id' => $branch_id,
+                        ));
+                    } catch (Exception $e) {
+                        if (class_exists('SAW_Logger')) {
+                            SAW_Logger::error('[SAW OOPP] Failed to log image change: ' . $e->getMessage());
+                        }
+                    }
+                }
             }
         }
         
         // Handle image removal
         if (isset($_POST['remove_image']) && $_POST['remove_image'] === '1') {
-            // Get current image path for deletion
+            // Get current image path for deletion and audit log
             // FIXED: Používáme $this->table_name
-            $current_path = $wpdb->get_var($wpdb->prepare(
+            $old_image_path = $wpdb->get_var($wpdb->prepare(
                 "SELECT image_path FROM {$this->table_name} WHERE id = %d",
                 $id
             ));
             
             // Remove file if exists
-            if ($current_path) {
+            if ($old_image_path) {
                 $upload_dir = wp_upload_dir();
-                $full_path = $upload_dir['basedir'] . '/' . ltrim($current_path, '/');
+                $full_path = $upload_dir['basedir'] . '/' . ltrim($old_image_path, '/');
                 
                 if (file_exists($full_path)) {
                     unlink($full_path);
@@ -309,16 +343,182 @@ class SAW_Module_OOPP_Controller extends SAW_Base_Controller
                 array('%s'),
                 array('%d')
             );
+            
+            // Log image removal to audit history
+            if (class_exists('SAW_Audit') && $old_image_path) {
+                try {
+                    $entity_type = $this->config['entity'] ?? 'oopp';
+                    $old_values = array('image_path' => $old_image_path);
+                    $new_values = array('image_path' => null);
+                    $changed_fields = array('image_path');
+                    
+                    $customer_id = class_exists('SAW_Context') ? SAW_Context::get_customer_id() : null;
+                    $branch_id = class_exists('SAW_Context') ? SAW_Context::get_branch_id() : null;
+                    
+                    SAW_Audit::log_change(array(
+                        'entity_type' => $entity_type,
+                        'entity_id' => $id,
+                        'action' => 'updated',
+                        'old_values' => $old_values,
+                        'new_values' => $new_values,
+                        'changed_fields' => $changed_fields,
+                        'customer_id' => $customer_id,
+                        'branch_id' => $branch_id,
+                    ));
+                } catch (Exception $e) {
+                    if (class_exists('SAW_Logger')) {
+                        SAW_Logger::error('[SAW OOPP] Failed to log image removal: ' . $e->getMessage());
+                    }
+                }
+            }
+        }
+        
+        // Handle branch and department relations - log changes
+        if (isset($_POST['branch_ids']) || isset($_POST['department_ids'])) {
+            // Get old relations before update
+            $old_branch_ids = $this->model->get_branch_ids($id);
+            $old_department_ids = $this->model->get_department_ids($id);
+            
+            $new_branch_ids = isset($_POST['branch_ids']) && is_array($_POST['branch_ids']) 
+                ? array_map('intval', $_POST['branch_ids']) 
+                : array();
+            $new_department_ids = isset($_POST['department_ids']) && is_array($_POST['department_ids']) 
+                ? array_map('intval', $_POST['department_ids']) 
+                : array();
+            
+            // Check if branch_ids changed
+            sort($old_branch_ids);
+            sort($new_branch_ids);
+            if ($old_branch_ids !== $new_branch_ids) {
+                if (class_exists('SAW_Audit')) {
+                    try {
+                        $entity_type = $this->config['entity'] ?? 'oopp';
+                        $customer_id = class_exists('SAW_Context') ? SAW_Context::get_customer_id() : null;
+                        $branch_id = class_exists('SAW_Context') ? SAW_Context::get_branch_id() : null;
+                        
+                        SAW_Audit::log_change(array(
+                            'entity_type' => $entity_type,
+                            'entity_id' => $id,
+                            'action' => 'updated',
+                            'old_values' => array('branch_ids' => $old_branch_ids),
+                            'new_values' => array('branch_ids' => $new_branch_ids),
+                            'changed_fields' => array('branch_ids' => array(
+                                'old' => implode(', ', $old_branch_ids),
+                                'new' => implode(', ', $new_branch_ids)
+                            )),
+                            'customer_id' => $customer_id,
+                            'branch_id' => $branch_id,
+                        ));
+                    } catch (Exception $e) {
+                        if (class_exists('SAW_Logger')) {
+                            SAW_Logger::error('[SAW OOPP] Failed to log branch_ids change: ' . $e->getMessage());
+                        }
+                    }
+                }
+            }
+            
+            // Check if department_ids changed
+            sort($old_department_ids);
+            sort($new_department_ids);
+            if ($old_department_ids !== $new_department_ids) {
+                if (class_exists('SAW_Audit')) {
+                    try {
+                        $entity_type = $this->config['entity'] ?? 'oopp';
+                        $customer_id = class_exists('SAW_Context') ? SAW_Context::get_customer_id() : null;
+                        $branch_id = class_exists('SAW_Context') ? SAW_Context::get_branch_id() : null;
+                        
+                        SAW_Audit::log_change(array(
+                            'entity_type' => $entity_type,
+                            'entity_id' => $id,
+                            'action' => 'updated',
+                            'old_values' => array('department_ids' => $old_department_ids),
+                            'new_values' => array('department_ids' => $new_department_ids),
+                            'changed_fields' => array('department_ids' => array(
+                                'old' => implode(', ', $old_department_ids),
+                                'new' => implode(', ', $new_department_ids)
+                            )),
+                            'customer_id' => $customer_id,
+                            'branch_id' => $branch_id,
+                        ));
+                    } catch (Exception $e) {
+                        if (class_exists('SAW_Logger')) {
+                            SAW_Logger::error('[SAW OOPP] Failed to log department_ids change: ' . $e->getMessage());
+                        }
+                    }
+                }
+            }
         }
         
         // Handle translations
         if (isset($_POST['translations']) && is_array($_POST['translations'])) {
+            // Get old translations before update for audit log
+            $old_translations = $this->model->get_translations($id);
+            
             $translation_result = $this->model->save_all_translations($id, $_POST['translations']);
             if (is_wp_error($translation_result)) {
                 // Log error but don't fail the save - translations can be added later
-                error_log('[SAW OOPP] Failed to save translations for OOPP #' . $id . ': ' . $translation_result->get_error_message());
-                // If this is a create operation, we might want to delete the created record
-                // But since edit works, we'll just log the error for now
+                if (class_exists('SAW_Logger')) {
+                    SAW_Logger::error('[SAW OOPP] Failed to save translations for OOPP #' . $id . ': ' . $translation_result->get_error_message());
+                }
+            } else {
+                // Log translation changes to audit history
+                if (class_exists('SAW_Audit')) {
+                    try {
+                        // Compare old and new translations to find changes
+                        $new_translations = $_POST['translations'];
+                        $translation_changes = array();
+                        
+                        // Check all languages
+                        $all_languages = array_unique(array_merge(array_keys($old_translations), array_keys($new_translations)));
+                        
+                        foreach ($all_languages as $lang_code) {
+                            $old_trans = $old_translations[$lang_code] ?? array();
+                            $new_trans = $new_translations[$lang_code] ?? array();
+                            
+                            // Check each translation field
+                            $translation_fields = array('name', 'standards', 'risk_description', 'protective_properties', 'usage_instructions');
+                            foreach ($translation_fields as $field) {
+                                $old_value = $old_trans[$field] ?? null;
+                                $new_value = $new_trans[$field] ?? null;
+                                
+                                // Normalize empty strings to null
+                                $old_value = ($old_value === '') ? null : $old_value;
+                                $new_value = ($new_value === '') ? null : $new_value;
+                                
+                                // If values differ, log the change
+                                if ($old_value !== $new_value) {
+                                    $field_key = 'translation_' . $lang_code . '_' . $field;
+                                    $translation_changes[$field_key] = array(
+                                        'old' => $old_value,
+                                        'new' => $new_value
+                                    );
+                                }
+                            }
+                        }
+                        
+                        // Log translation changes if any
+                        if (!empty($translation_changes)) {
+                            $entity_type = $this->config['entity'] ?? 'oopp';
+                            $customer_id = class_exists('SAW_Context') ? SAW_Context::get_customer_id() : null;
+                            $branch_id = class_exists('SAW_Context') ? SAW_Context::get_branch_id() : null;
+                            
+                            SAW_Audit::log_change(array(
+                                'entity_type' => $entity_type,
+                                'entity_id' => $id,
+                                'action' => 'updated',
+                                'old_values' => array(),
+                                'new_values' => array(),
+                                'changed_fields' => $translation_changes,
+                                'customer_id' => $customer_id,
+                                'branch_id' => $branch_id,
+                            ));
+                        }
+                    } catch (Exception $e) {
+                        if (class_exists('SAW_Logger')) {
+                            SAW_Logger::error('[SAW OOPP] Failed to log translation changes: ' . $e->getMessage());
+                        }
+                    }
+                }
             }
         }
     }

@@ -214,7 +214,11 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
         
         <?php
         // Include audit history component (after relations section)
-        require SAW_VISITORS_PLUGIN_DIR . 'includes/components/detail-audit-history.php';
+        // ✅ OPRAVA: Zkontroluj, jestli se už nezobrazuje jinde v template
+        if (empty($GLOBALS['saw_audit_history_included'])) {
+            $GLOBALS['saw_audit_history_included'] = true;
+            require SAW_VISITORS_PLUGIN_DIR . 'includes/components/detail-audit-history.php';
+        }
         ?>
     </div>
     

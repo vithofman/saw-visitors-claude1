@@ -53,6 +53,34 @@ $get_gravatar = function($email) {
 
 // Helper function to format field name to readable label
 $format_field_label = function($field_name) {
+    // Check if it's a translation field (format: translation_{lang}_{field})
+    if (preg_match('/^translation_([a-z]{2})_(.+)$/', $field_name, $matches)) {
+        $lang_code = $matches[1];
+        $field = $matches[2];
+        
+        // Get language name
+        $lang_names = array(
+            'cs' => 'Čeština',
+            'en' => 'Angličtina',
+            'de' => 'Němčina',
+            'sk' => 'Slovenština',
+            'pl' => 'Polština',
+        );
+        $lang_name = $lang_names[$lang_code] ?? strtoupper($lang_code);
+        
+        // Get field label
+        $field_labels = array(
+            'name' => 'Název',
+            'standards' => 'Normy',
+            'risk_description' => 'Popis rizik',
+            'protective_properties' => 'Ochranné vlastnosti',
+            'usage_instructions' => 'Pokyny pro použití',
+        );
+        $field_label = $field_labels[$field] ?? ucfirst(str_replace('_', ' ', $field));
+        
+        return $lang_name . ' - ' . $field_label;
+    }
+    
     $labels = [
         'first_name' => 'Jméno',
         'last_name' => 'Příjmení',
@@ -84,13 +112,16 @@ $format_field_label = function($field_name) {
         'visit_id' => 'Návštěva',
         'group_id' => 'Skupina',
         'image_url' => 'Obrázek',
+        'is_global' => 'Typ použití',
+        'branch_ids' => 'Pobočky',
+        'department_ids' => 'Oddělení',
     ];
     
     return $labels[$field_name] ?? ucfirst(str_replace('_', ' ', $field_name));
 };
 
 // Helper function to format value for display
-$format_value = function($value) {
+$format_value = function($value, $field_name = null) {
     if ($value === null || $value === '') {
         return '<em>(prázdné)</em>';
     }
@@ -104,6 +135,20 @@ $format_value = function($value) {
     }
     
     $str = (string) $value;
+    
+    // Special handling for image_path field - display image instead of URL
+    if ($field_name === 'image_path' && !empty($str)) {
+        $upload_dir = wp_upload_dir();
+        $image_url = $upload_dir['baseurl'] . '/' . ltrim($str, '/');
+        
+        // Check if file exists
+        $image_path = $upload_dir['basedir'] . '/' . ltrim($str, '/');
+        if (file_exists($image_path)) {
+            return '<img src="' . esc_url($image_url) . '" alt="Obrázek" class="saw-audit-image" style="max-width: 150px; max-height: 150px; border-radius: 8px; margin-top: 4px; display: block;">';
+        } else {
+            return '<em>(obrázek nenalezen)</em>';
+        }
+    }
     
     // Format datetime values
     if (preg_match('/^\d{4}-\d{2}-\d{2}(?:\s+\d{2}:\d{2}:\d{2})?$/', $str)) {
@@ -306,15 +351,17 @@ if ($has_change_history) {
                                                         continue;
                                                     }
                                                     ?>
-                                                    <div class="saw-audit-field-change">
+                                                    <div class="saw-audit-field-change <?php echo $field_name === 'image_path' ? 'saw-audit-field-image' : ''; ?>">
                                                         <span class="saw-audit-field-label"><?php echo esc_html($field_label); ?>:</span>
                                                         <span class="saw-audit-field-diff">
                                                             <?php if ($change_action === 'created'): ?>
-                                                                <span class="saw-audit-value-new"><?php echo $format_value($new_value); ?></span>
+                                                                <span class="saw-audit-value-new"><?php echo $format_value($new_value, $field_name); ?></span>
                                                             <?php else: ?>
-                                                                <span class="saw-audit-value-old"><?php echo $format_value($old_value); ?></span>
-                                                                <span class="saw-audit-diff-arrow">→</span>
-                                                                <span class="saw-audit-value-new"><?php echo $format_value($new_value); ?></span>
+                                                                <span class="saw-audit-value-old"><?php echo $format_value($old_value, $field_name); ?></span>
+                                                                <?php if ($field_name !== 'image_path'): ?>
+                                                                    <span class="saw-audit-diff-arrow">→</span>
+                                                                <?php endif; ?>
+                                                                <span class="saw-audit-value-new"><?php echo $format_value($new_value, $field_name); ?></span>
                                                             <?php endif; ?>
                                                         </span>
                                                     </div>
@@ -880,6 +927,28 @@ if (typeof sawToggleAuditHistory === 'undefined') {
     font-weight: 600;
     color: #475569;
     min-width: 100px;
+}
+
+.saw-audit-field-image {
+    flex-direction: column;
+    gap: 8px;
+}
+
+.saw-audit-field-image .saw-audit-field-diff {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.saw-audit-image {
+    max-width: 150px;
+    max-height: 150px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-top: 4px;
+    display: block;
 }
 
 .saw-audit-field-diff {

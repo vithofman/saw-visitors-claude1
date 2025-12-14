@@ -121,6 +121,66 @@ if (!empty($item['id'])) {
 
 $texts = array_filter($materials, fn($m) => $m['material_type'] === 'text');
 $documents = array_filter($materials, fn($m) => $m['material_type'] === 'document');
+
+// Load action info (specifické informace pro akci)
+$action_info = null;
+$action_documents = array();
+$action_oopp = array();
+
+// Create model instance for translations
+$model = null;
+if (class_exists('SAW_Module_Visits_Model')) {
+    $module_path = SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/';
+    $config = require $module_path . 'config.php';
+    $config['path'] = $module_path;
+    require_once $module_path . 'model.php';
+    $model = new SAW_Module_Visits_Model($config);
+}
+
+if (!empty($item['id'])) {
+    $action_info = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM {$wpdb->prefix}saw_visit_action_info WHERE visit_id = %d",
+        $item['id']
+    ), ARRAY_A);
+    
+    if ($action_info) {
+        // Load translations
+        $action_info_translations = array();
+        if ($model && method_exists($model, 'get_action_info_translations')) {
+            $action_info_translations = $model->get_action_info_translations($action_info['id']);
+        }
+        
+        // Use translation for current language
+        $current_trans = $action_info_translations[$lang] ?? 
+                        $action_info_translations['cs'] ?? 
+                        (reset($action_info_translations) ?: array());
+        
+        // Set display values
+        $action_info['name'] = $current_trans['name'] ?? $item['action_name'] ?? '';
+        $action_info['description'] = $current_trans['description'] ?? '';
+        $action_info['content_text'] = $current_trans['content_text'] ?? $action_info['content_text'] ?? '';
+        
+        // Load documents
+        $action_documents = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}saw_visit_action_documents 
+             WHERE visit_id = %d ORDER BY sort_order ASC",
+            $item['id']
+        ), ARRAY_A);
+        
+        // Load OOPP
+        $action_oopp = $wpdb->get_results($wpdb->prepare(
+            "SELECT vao.*, o.id as oopp_id, t.name as oopp_name, g.name as group_name
+             FROM {$wpdb->prefix}saw_visit_action_oopp vao
+             INNER JOIN {$wpdb->prefix}saw_oopp o ON vao.oopp_id = o.id
+             LEFT JOIN {$wpdb->prefix}saw_oopp_translations t ON o.id = t.oopp_id AND t.language_code = %s
+             LEFT JOIN {$wpdb->prefix}saw_oopp_groups g ON o.group_id = g.id
+             WHERE vao.visit_id = %d 
+             ORDER BY vao.sort_order ASC",
+            $lang,
+            $item['id']
+        ), ARRAY_A);
+    }
+}
 ?>
 
 <!-- ============================================ -->
@@ -512,6 +572,7 @@ $has_invitation_email = !empty($item['invitation_email']);
     </div>
     <?php endif; ?>
 
+
     <!-- RISKS CARD (RED BORDER) -->
 <?php 
 // Load email history for this visit
@@ -723,6 +784,113 @@ $show_risks_section = !empty($materials) || !empty($item['invitation_token']) ||
     </div>
 </div>
 <?php endif; ?>
+
+    <!-- ACTION SPECIFIC INFO CARD (after risks section) -->
+    <?php if ($action_info && (!empty($action_info['name']) || !empty($action_info['description']) || !empty($action_info['content_text']) || !empty($action_documents) || !empty($action_oopp))): ?>
+    <div class="saw-action-info-card">
+        <div class="saw-action-info-card-inner">
+            <div class="saw-action-info-card-header">
+                <div class="saw-action-info-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                    </svg>
+                </div>
+                <div class="saw-action-info-card-title">
+                    <span class="saw-action-info-label">
+                        <?php echo esc_html($action_info['name'] ?? $tr('section_action_info', 'Specifické podmínky akce')); ?>
+                    </span>
+                </div>
+            </div>
+            <div class="saw-action-info-card-body">
+                
+                <?php if (!empty($action_info['description'])): ?>
+                <div class="saw-action-description-section">
+                    <p style="margin: 0 0 16px 0; color: #4b5563; line-height: 1.6;">
+                        <?php echo esc_html($action_info['description']); ?>
+                    </p>
+                </div>
+                <?php endif; ?>
+                
+                <?php if (!empty($action_info['content_text'])): ?>
+                <div class="saw-action-content-section">
+                    <div class="saw-action-content-header">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                            <line x1="16" y1="13" x2="8" y2="13"/>
+                            <line x1="16" y1="17" x2="8" y2="17"/>
+                        </svg>
+                        <span><?php echo esc_html($tr('field_action_content', 'Specifické pokyny')); ?></span>
+                        <button type="button" class="saw-action-instructions-fullscreen-btn" onclick="openActionInstructionsFullscreen()" title="<?php echo esc_attr($tr('action_instructions_fullscreen', 'Zobrazit na celou obrazovku')); ?>">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="15 3 21 3 21 9"/>
+                                <polyline points="9 21 3 21 3 15"/>
+                                <line x1="21" y1="3" x2="14" y2="10"/>
+                                <line x1="3" y1="21" x2="10" y2="14"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="saw-action-content-text saw-action-instructions-content" id="action-instructions-content">
+                        <?php echo wp_kses_post(wpautop($action_info['content_text'])); ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+                
+                <?php if (!empty($action_documents)): ?>
+                <div class="saw-action-documents-section">
+                    <div class="saw-action-documents-header">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                        </svg>
+                        <span><?php echo esc_html($tr('field_action_documents', 'Dokumenty k akci')); ?></span>
+                    </div>
+                    <div class="saw-action-documents-list">
+                        <?php foreach ($action_documents as $doc): 
+                            $upload_dir = wp_upload_dir();
+                            $doc_url = $upload_dir['baseurl'] . '/' . ltrim($doc['file_path'], '/');
+                        ?>
+                        <div class="saw-action-document-item">
+                            <span class="saw-doc-icon">📄</span>
+                            <a href="<?php echo esc_url($doc_url); ?>" target="_blank" class="saw-doc-name">
+                                <?php echo esc_html($doc['file_name']); ?>
+                            </a>
+                            <span class="saw-doc-size">(<?php echo esc_html(size_format($doc['file_size'])); ?>)</span>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+                
+                <?php if (!empty($action_oopp)): ?>
+                <div class="saw-action-oopp-section">
+                    <div class="saw-action-oopp-header">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        </svg>
+                        <span><?php echo esc_html($tr('field_action_oopp', 'Specifické OOPP pro akci')); ?></span>
+                    </div>
+                    <div class="saw-action-oopp-list">
+                        <?php foreach ($action_oopp as $oopp): ?>
+                        <div class="saw-action-oopp-item <?php echo !empty($oopp['is_required']) ? 'required' : ''; ?>">
+                            <span class="saw-oopp-name"><?php echo esc_html($oopp['oopp_name'] ?? 'Neznámé OOPP'); ?></span>
+                            <span class="saw-oopp-group"><?php echo esc_html($oopp['group_name'] ?? ''); ?></span>
+                            <?php if (!empty($oopp['is_required'])): ?>
+                            <span class="saw-oopp-badge required"><?php echo esc_html($tr('required', 'Povinné')); ?></span>
+                            <?php endif; ?>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+                
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
         
     </div>
 </div>
@@ -749,8 +917,41 @@ $show_risks_section = !empty($materials) || !empty($item['invitation_token']) ||
                 </svg>
             </button>
         </div>
-        <div class="saw-risks-fullscreen-body" id="saw-risks-fullscreen-content">
-            <!-- Content will be inserted here by JavaScript -->
+        <div class="saw-risks-fullscreen-body">
+            <div class="saw-risks-fullscreen-content" id="saw-risks-fullscreen-content">
+                <!-- Content will be inserted here by JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================
+     ACTION INSTRUCTIONS FULLSCREEN MODAL
+     ============================================ -->
+<div id="saw-action-instructions-fullscreen-modal" class="saw-risks-fullscreen-modal" style="display: none;">
+    <div class="saw-risks-fullscreen-overlay" onclick="closeActionInstructionsFullscreen()"></div>
+    <div class="saw-risks-fullscreen-container">
+        <div class="saw-risks-fullscreen-header">
+            <div class="saw-risks-fullscreen-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                </svg>
+                <span><?php echo esc_html($tr('field_action_content', 'Specifické pokyny')); ?></span>
+            </div>
+            <button type="button" class="saw-risks-fullscreen-close" onclick="closeActionInstructionsFullscreen()" aria-label="<?php echo esc_attr($tr('close', 'Zavřít')); ?>">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        </div>
+        <div class="saw-risks-fullscreen-body">
+            <div class="saw-risks-fullscreen-content" id="saw-action-instructions-fullscreen-content">
+                <!-- Content will be inserted here by JavaScript -->
+            </div>
         </div>
     </div>
 </div>
@@ -1085,6 +1286,7 @@ $show_risks_section = !empty($materials) || !empty($item['invitation_token']) ||
 .saw-purpose-card,
 .saw-notes-card,
 .saw-hosts-card,
+.saw-action-info-card,
 .saw-risks-card {
     width: 100%;
     box-sizing: border-box;
@@ -1605,6 +1807,213 @@ $show_risks_section = !empty($materials) || !empty($item['invitation_token']) ||
 }
 
 /* ============================================
+   ACTION INFO CARD (YELLOW/ORANGE BORDER)
+   ============================================ */
+.saw-action-info-card {
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    border-radius: 14px;
+    padding: 2px;
+}
+
+.saw-action-info-card-inner {
+    background: #ffffff;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.saw-action-info-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.saw-action-info-icon {
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #f59e0b;
+    flex-shrink: 0;
+}
+
+.saw-action-info-card-title {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    overflow: hidden;
+    flex: 1;
+}
+
+.saw-action-info-label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.saw-action-info-card-body {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.saw-action-content-section,
+.saw-action-documents-section,
+.saw-action-oopp-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.saw-action-content-header,
+.saw-action-documents-header,
+.saw-action-oopp-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    color: #374151;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.saw-action-content-header svg,
+.saw-action-documents-header svg,
+.saw-action-oopp-header svg {
+    color: #f59e0b;
+    flex-shrink: 0;
+}
+
+.saw-action-content-text {
+    color: #1f2937;
+    line-height: 1.7;
+    font-size: 14px;
+    padding: 12px;
+    background: #f9fafb;
+    border-radius: 8px;
+    border-left: 3px solid #fbbf24;
+}
+
+.saw-action-content-text p {
+    margin-bottom: 12px;
+}
+
+.saw-action-content-text p:last-child {
+    margin-bottom: 0;
+}
+
+.saw-action-content-text ul,
+.saw-action-content-text ol {
+    margin-bottom: 12px;
+    padding-left: 24px;
+}
+
+.saw-action-documents-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.saw-action-document-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: #f9fafb;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.saw-action-document-item:hover {
+    background: #f3f4f6;
+}
+
+.saw-action-document-item .saw-doc-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.saw-action-document-item .saw-doc-name {
+    flex: 1;
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.saw-action-document-item .saw-doc-name:hover {
+    text-decoration: underline;
+}
+
+.saw-action-document-item .saw-doc-size {
+    color: #6b7280;
+    font-size: 12px;
+}
+
+.saw-action-oopp-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.saw-action-oopp-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.saw-action-oopp-item:hover {
+    border-color: #f59e0b;
+    box-shadow: 0 2px 4px rgba(245, 158, 11, 0.1);
+}
+
+.saw-action-oopp-item.required {
+    background: #fef3c7;
+    border-color: #f59e0b;
+}
+
+.saw-action-oopp-item .saw-oopp-name {
+    flex: 1;
+    font-weight: 500;
+    color: #1f2937;
+    font-size: 14px;
+}
+
+.saw-action-oopp-item .saw-oopp-group {
+    font-size: 12px;
+    color: #6b7280;
+    background: #f3f4f6;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.saw-oopp-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.saw-oopp-badge.required {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+/* ============================================
    RISKS CARD (RED BORDER) - MOBILE OPTIMIZED
    ============================================ */
 .saw-risks-card {
@@ -1867,6 +2276,77 @@ $show_risks_section = !empty($materials) || !empty($item['invitation_token']) ||
     font-size: 13px;
     color: #334155;
     line-height: 1.6;
+    max-height: 150px;
+    overflow-y: auto;
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+
+/* ============================================
+   ACTION INSTRUCTIONS CARD (after risks)
+   ============================================ */
+.saw-action-instructions-card {
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    border-radius: 14px;
+    padding: 2px;
+    margin-bottom: 20px;
+}
+
+.saw-action-instructions-card-inner {
+    background: #ffffff;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.saw-action-instructions-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    background: #fff;
+    border-bottom: 1px solid #e2e8f0;
+    position: relative;
+}
+
+.saw-action-instructions-icon {
+    color: #f59e0b;
+    font-size: 24px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.saw-action-instructions-card-title {
+    flex: 1;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.saw-action-instructions-fullscreen-btn {
+    background: transparent;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.saw-action-instructions-fullscreen-btn:hover {
+    background: #f9fafb;
+    border-color: #f59e0b;
+    color: #f59e0b;
+}
+
+.saw-action-instructions-content {
+    padding: 16px 20px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #4b5563;
     max-height: 150px;
     overflow-y: auto;
     word-break: break-word;
@@ -2641,7 +3121,7 @@ function openRisksFullscreen(materialId) {
     document.body.style.overflow = 'hidden';
     
     // Close on Escape key
-    document.addEventListener('keydown', handleEscapeKey);
+    document.addEventListener('keydown', handleEscapeKeyRisks);
 }
 
 /**
@@ -2658,16 +3138,69 @@ function closeRisksFullscreen() {
     document.body.style.overflow = '';
     
     // Remove escape key listener
-    document.removeEventListener('keydown', handleEscapeKey);
+    document.removeEventListener('keydown', handleEscapeKeyRisks);
 }
 
 /**
- * Handle Escape key press to close modal
+ * Handle Escape key press to close risks modal
  * @param {KeyboardEvent} e 
  */
-function handleEscapeKey(e) {
+function handleEscapeKeyRisks(e) {
     if (e.key === 'Escape' || e.keyCode === 27) {
         closeRisksFullscreen();
+    }
+}
+
+/**
+ * Open action instructions in fullscreen modal
+ */
+function openActionInstructionsFullscreen() {
+    var contentElement = document.getElementById('action-instructions-content');
+    var modal = document.getElementById('saw-action-instructions-fullscreen-modal');
+    var modalContent = document.getElementById('saw-action-instructions-fullscreen-content');
+    
+    if (!contentElement || !modal || !modalContent) {
+        console.error('Action instructions fullscreen modal elements not found');
+        return;
+    }
+    
+    // Copy content to modal
+    modalContent.innerHTML = contentElement.innerHTML;
+    
+    // Show modal
+    modal.style.display = 'flex';
+    
+    // Prevent body scroll
+    document.body.style.overflow = 'hidden';
+    
+    // Close on Escape key
+    document.addEventListener('keydown', handleEscapeKeyActionInstructions);
+}
+
+/**
+ * Close action instructions fullscreen modal
+ */
+function closeActionInstructionsFullscreen() {
+    var modal = document.getElementById('saw-action-instructions-fullscreen-modal');
+    
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    
+    // Restore body scroll
+    document.body.style.overflow = '';
+    
+    // Remove escape key listener
+    document.removeEventListener('keydown', handleEscapeKeyActionInstructions);
+}
+
+/**
+ * Handle Escape key press to close action instructions modal
+ * @param {KeyboardEvent} e 
+ */
+function handleEscapeKeyActionInstructions(e) {
+    if (e.key === 'Escape' || e.keyCode === 27) {
+        closeActionInstructionsFullscreen();
     }
 }
 

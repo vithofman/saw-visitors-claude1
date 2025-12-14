@@ -497,14 +497,15 @@ class SAW_Audit {
 
         // Prepare changed_fields as JSON (store in details for compatibility)
         $changed_fields_json = null;
-        if (isset($data['changed_fields']) && is_array($data['changed_fields'])) {
+        if (isset($data['changed_fields']) && is_array($data['changed_fields']) && !empty($data['changed_fields'])) {
             $changed_fields_json = wp_json_encode($data['changed_fields']);
         }
 
         // Prepare details JSON with changed_fields
         $details_json = null;
         if ($changed_fields_json) {
-            $details_json = wp_json_encode(['changed_fields' => json_decode($changed_fields_json, true)]);
+            // Store changed_fields directly in details
+            $details_json = wp_json_encode(['changed_fields' => $data['changed_fields']]);
         }
 
         // Auto-detect IP and user agent
@@ -589,8 +590,44 @@ class SAW_Audit {
             // Decode changed_fields from details
             if (!empty($log['details'])) {
                 $details = json_decode($log['details'], true);
-                if (is_array($details) && !empty($details['changed_fields'])) {
+                if (is_array($details) && !empty($details['changed_fields']) && is_array($details['changed_fields'])) {
                     $log['changed_fields'] = $details['changed_fields'];
+                } else {
+                    // Fallback: try to reconstruct from old_values and new_values if changed_fields not available
+                    if (!empty($log['old_values']) && is_array($log['old_values']) && 
+                        !empty($log['new_values']) && is_array($log['new_values'])) {
+                        $reconstructed = array();
+                        foreach ($log['new_values'] as $key => $new_val) {
+                            $old_val = $log['old_values'][$key] ?? null;
+                            if ($old_val !== $new_val) {
+                                $reconstructed[$key] = array(
+                                    'old' => $old_val,
+                                    'new' => $new_val
+                                );
+                            }
+                        }
+                        if (!empty($reconstructed)) {
+                            $log['changed_fields'] = $reconstructed;
+                        }
+                    }
+                }
+            } else {
+                // Fallback: try to reconstruct from old_values and new_values if details not available
+                if (!empty($log['old_values']) && is_array($log['old_values']) && 
+                    !empty($log['new_values']) && is_array($log['new_values'])) {
+                    $reconstructed = array();
+                    foreach ($log['new_values'] as $key => $new_val) {
+                        $old_val = $log['old_values'][$key] ?? null;
+                        if ($old_val !== $new_val) {
+                            $reconstructed[$key] = array(
+                                'old' => $old_val,
+                                'new' => $new_val
+                            );
+                        }
+                    }
+                    if (!empty($reconstructed)) {
+                        $log['changed_fields'] = $reconstructed;
+                    }
                 }
             }
             

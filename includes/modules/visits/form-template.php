@@ -49,6 +49,76 @@ $context_branch_id = SAW_Context::get_branch_id();
 $branches = $branches ?? array();
 $companies = $companies ?? array();
 
+// Get languages for translations
+$languages = $config['form_languages'] ?? array();
+
+// Get current user language
+$user_lang = 'cs';
+if (class_exists('SAW_Component_Language_Switcher')) {
+    $user_lang = SAW_Component_Language_Switcher::get_user_language();
+}
+
+// Find active language index
+$active_lang_index = 0;
+foreach ($languages as $idx => $lang) {
+    if ($lang['code'] === $user_lang) {
+        $active_lang_index = $idx;
+        break;
+    }
+}
+
+// Load action info data for edit mode
+$action_info_translations = array();
+$action_documents = array();
+$action_oopp = array();
+$has_action_data = false;
+
+if ($is_edit && !empty($item['id'])) {
+    // Instantiate model
+    $model = null;
+    if (class_exists('SAW_Module_Visits_Model')) {
+        $module_path = SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/';
+        $config_file = $module_path . 'config.php';
+        if (file_exists($config_file)) {
+            $config = require $config_file;
+            $config['path'] = $module_path;
+            require_once $module_path . 'model.php';
+            $model = new SAW_Module_Visits_Model($config);
+        }
+    }
+    
+    // Load action info
+    if ($model && method_exists($model, 'get_action_info')) {
+        $action_info = $model->get_action_info($item['id']);
+        
+        if ($action_info && !empty($action_info['id'])) {
+            // Load translations
+            if (method_exists($model, 'get_action_info_translations')) {
+                $action_info_translations = $model->get_action_info_translations($action_info['id']);
+            }
+            
+            // Load documents
+            $action_documents = $wpdb->get_results($wpdb->prepare(
+                "SELECT * FROM {$wpdb->prefix}saw_visit_action_documents 
+                 WHERE visit_id = %d ORDER BY sort_order ASC",
+                $item['id']
+            ), ARRAY_A);
+            
+            // Load OOPP
+            $action_oopp = $wpdb->get_results($wpdb->prepare(
+                "SELECT * FROM {$wpdb->prefix}saw_visit_action_oopp 
+                 WHERE visit_id = %d ORDER BY sort_order ASC",
+                $item['id']
+            ), ARRAY_A);
+            
+            // Check if there's any data
+            $has_action_data = !empty($action_info_translations) || 
+                              !empty($action_documents) || 
+                              !empty($action_oopp);
+        }
+    }
+}
+
 // Load branches
 if (empty($branches) && $customer_id) {
     $branches_data = $wpdb->get_results($wpdb->prepare(
@@ -311,27 +381,6 @@ $form_action = $is_edit
                         ));
                         $company_select->render();
                         ?>
-                    </div>
-                </div>
-                
-                <!-- ================================================
-                     NÁZEV AKCE (volitelný)
-                     ================================================ -->
-                <div class="saw-form-row" style="margin-top: 24px;">
-                    <div class="saw-form-group saw-col-12">
-                        <label for="action_name" class="saw-label">
-                            <?php echo esc_html($tr('field_action_name', 'Název akce')); ?>
-                            <span class="saw-label-optional">(<?php echo esc_html($tr('optional', 'volitelné')); ?>)</span>
-                        </label>
-                        <input type="text" 
-                               name="action_name" 
-                               id="action_name" 
-                               class="saw-input" 
-                               value="<?php echo esc_attr($item['action_name'] ?? ''); ?>" 
-                               placeholder="<?php echo esc_attr($tr('placeholder_action_name', 'např. Dláždění parkoviště, Revize elektro...')); ?>">
-                        <p class="saw-help-text">
-                            <?php echo esc_html($tr('help_action_name', 'Krátký identifikátor akce. Použije se jako nadpis v sekci specifických informací.')); ?>
-                        </p>
                     </div>
                 </div>
                 
@@ -603,120 +652,172 @@ $form_action = $is_edit
         <!-- ================================================
              SPECIFICKÉ INFORMACE PRO AKCI
              ================================================ -->
-        <details class="saw-form-section saw-form-section-action-info">
+        <details class="saw-form-section saw-form-section-action-info" <?php echo $has_action_data ? 'open' : ''; ?>>
             <summary>
-                <div style="display: flex; align-items: center; gap: 12px; width: 100%;">
-                    <span class="dashicons dashicons-admin-generic"></span>
-                    <strong style="flex: 1;">🎯 <?php echo esc_html($tr('section_action_info', 'Specifické informace pro akci')); ?></strong>
-                    <label class="saw-toggle-switch" style="margin-left: auto; margin-right: 12px;">
-                        <input type="checkbox" 
-                               id="has_action_info" 
-                               name="has_action_info" 
-                               value="1"
-                               <?php checked(!empty($item['action_info'])); ?>>
-                        <span class="saw-toggle-slider"></span>
-                    </label>
-                </div>
+                <span class="dashicons dashicons-warning"></span>
+                <strong><?php echo esc_html($tr('section_action_info', 'Specifické informace pro akci')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
                 
                 <p class="saw-help-text" style="margin-bottom: 16px; color: #6b7280;">
-                    <?php echo esc_html($tr('help_action_info', 'Pokyny, dokumenty a OOPP, které návštěvníci uvidí NAVÍC k běžnému školení.')); ?>
+                    <?php echo esc_html($tr('help_action_info', 'Pokyny, dokumenty a OOPP, které návštěvníci uvidí NAVÍC k běžnému školení a vztahují se výhradně k této návštěvě.')); ?>
                 </p>
                 
-                <!-- Collapsible content -->
-                <div id="action-info-content" class="saw-action-info-content" style="<?php echo empty($item['action_info']) ? 'display: none;' : ''; ?>">
-                    
-                    <?php
-                    // Načíst existující action info
-                    $action_info = null;
-                    $action_documents = array();
-                    $action_oopp = array();
-                    
-                    if ($is_edit && !empty($item['id'])) {
-                        // Načíst action info
-                        $action_info = $wpdb->get_row($wpdb->prepare(
-                            "SELECT * FROM {$wpdb->prefix}saw_visit_action_info WHERE visit_id = %d",
-                            $item['id']
-                        ), ARRAY_A);
-                        
-                        // Načíst dokumenty
-                        if ($action_info) {
-                            $action_documents = $wpdb->get_results($wpdb->prepare(
-                                "SELECT * FROM {$wpdb->prefix}saw_visit_action_documents 
-                                 WHERE visit_id = %d ORDER BY sort_order ASC",
-                                $item['id']
-                            ), ARRAY_A);
-                            
-                            // Načíst OOPP
-                            $action_oopp = $wpdb->get_results($wpdb->prepare(
-                                "SELECT vao.*, o.id as oopp_id
-                                 FROM {$wpdb->prefix}saw_visit_action_oopp vao
-                                 INNER JOIN {$wpdb->prefix}saw_oopp o ON vao.oopp_id = o.id
-                                 WHERE vao.visit_id = %d 
-                                 ORDER BY vao.sort_order ASC",
-                                $item['id']
-                            ), ARRAY_A);
-                        }
-                    }
-                    ?>
-                    
-                    <!-- Specifické pokyny (WYSIWYG) -->
-                    <div class="saw-form-row">
-                        <div class="saw-form-group saw-col-12">
-                            <label for="action_content_text" class="saw-label">
-                                <?php echo esc_html($tr('field_action_content', 'Specifické pokyny')); ?>
-                            </label>
-                            <?php
-                            wp_editor(
-                                $action_info['content_text'] ?? '',
-                                'action_content_text',
-                                array(
-                                    'textarea_name' => 'action_content_text',
-                                    'textarea_rows' => 8,
-                                    'media_buttons' => false,
-                                    'teeny' => true,
-                                    'quicktags' => array('buttons' => 'strong,em,ul,ol,li,link'),
-                                )
-                            );
-                            ?>
-                        </div>
+                <!-- Jazykové záložky -->
+                <?php if (!empty($languages) && count($languages) > 1): ?>
+                <div class="saw-language-tabs-wrapper">
+                    <button type="button" class="saw-language-tab-nav saw-language-tab-nav-prev" aria-label="Předchozí jazyky">
+                        <span class="dashicons dashicons-arrow-left-alt2"></span>
+                    </button>
+                    <div class="saw-language-tabs">
+                        <?php foreach ($languages as $index => $language): ?>
+                            <button 
+                                type="button" 
+                                class="saw-language-tab <?php echo $index === $active_lang_index ? 'active' : ''; ?>" 
+                                data-tab="action-lang-<?php echo esc_attr($language['code']); ?>"
+                            >
+                                <?php echo !empty($language['flag']) ? esc_html($language['flag']) : '🌐'; ?> 
+                                <?php echo esc_html($language['name']); ?>
+                            </button>
+                        <?php endforeach; ?>
                     </div>
+                    <button type="button" class="saw-language-tab-nav saw-language-tab-nav-next" aria-label="Další jazyky">
+                        <span class="dashicons dashicons-arrow-right-alt2"></span>
+                    </button>
+                </div>
+                <?php endif; ?>
+                
+                <!-- Obsah záložek -->
+                <div class="saw-language-contents">
+                    <?php foreach ($languages as $index => $language): 
+                        $lang_code = $language['code'];
+                        $lang_trans = $action_info_translations[$lang_code] ?? array();
+                    ?>
+                        <div 
+                            class="saw-language-content" 
+                            data-tab-content="action-lang-<?php echo esc_attr($lang_code); ?>"
+                            style="<?php echo $index === $active_lang_index ? 'display: block;' : 'display: none;'; ?>"
+                        >
+                            
+                            <!-- Název akce -->
+                            <div class="saw-form-row">
+                                <div class="saw-form-group saw-col-12">
+                                    <label for="action_name_<?php echo esc_attr($lang_code); ?>" class="saw-label <?php echo $index === $active_lang_index ? 'saw-required' : ''; ?>">
+                                        <?php echo esc_html($tr('field_action_name', 'Název akce')); ?>
+                                        <?php if ($index === $active_lang_index): ?>
+                                            <span class="saw-required-marker">*</span>
+                                        <?php endif; ?>
+                                    </label>
+                                    <input type="text" 
+                                           name="action_info_translations[<?php echo esc_attr($lang_code); ?>][name]" 
+                                           id="action_name_<?php echo esc_attr($lang_code); ?>" 
+                                           class="saw-input" 
+                                           value="<?php echo esc_attr($lang_trans['name'] ?? ''); ?>" 
+                                           placeholder="<?php echo esc_attr($tr('placeholder_action_name', 'např. Dláždění parkoviště, Revize elektro...')); ?>"
+                                           <?php echo $index === $active_lang_index ? 'required' : ''; ?>>
+                                    <p class="saw-help-text">
+                                        <?php echo esc_html($tr('help_action_name', 'Krátký identifikátor akce. Použije se jako nadpis v sekci specifických informací.')); ?>
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <!-- Popis akce -->
+                            <div class="saw-form-row" style="margin-top: 16px;">
+                                <div class="saw-form-group saw-col-12">
+                                    <label for="action_description_<?php echo esc_attr($lang_code); ?>" class="saw-label">
+                                        <?php echo esc_html($tr('field_action_description', 'Popis akce')); ?>
+                                    </label>
+                                    <textarea 
+                                        name="action_info_translations[<?php echo esc_attr($lang_code); ?>][description]" 
+                                        id="action_description_<?php echo esc_attr($lang_code); ?>" 
+                                        class="saw-input" 
+                                        rows="3"
+                                        placeholder="<?php echo esc_attr($tr('placeholder_action_description', 'Krátký popis, co se bude na akci dít...')); ?>"><?php echo esc_textarea($lang_trans['description'] ?? ''); ?></textarea>
+                                    <p class="saw-help-text">
+                                        <?php echo esc_html($tr('help_action_description', 'Volitelný popis akce pro lepší orientaci.')); ?>
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <!-- Specifické pokyny (WYSIWYG) -->
+                            <div class="saw-form-row" style="margin-top: 16px;">
+                                <div class="saw-form-group saw-col-12">
+                                    <label for="action_content_text_<?php echo esc_attr($lang_code); ?>" class="saw-label">
+                                        <?php echo esc_html($tr('field_action_content', 'Specifické pokyny')); ?>
+                                    </label>
+                                    <?php
+                                    wp_editor(
+                                        $lang_trans['content_text'] ?? '',
+                                        'action_content_text_' . $lang_code,
+                                        array(
+                                            'textarea_name' => 'action_info_translations[' . $lang_code . '][content_text]',
+                                            'textarea_rows' => 8,
+                                            'media_buttons' => false,
+                                            'teeny' => false,
+                                            'quicktags' => true,
+                                            'tinymce' => array(
+                                                'toolbar1' => 'formatselect,bold,italic,underline,strikethrough,forecolor,backcolor,bullist,numlist,alignleft,aligncenter,alignright,link,unlink',
+                                                'toolbar2' => 'undo,redo,removeformat,code,hr,blockquote,subscript,superscript,charmap,indent,outdent,pastetext,searchreplace,fullscreen',
+                                                'toolbar3' => '',
+                                                'block_formats' => 'Odstavec=p;Nadpis 1=h1;Nadpis 2=h2;Nadpis 3=h3;Nadpis 4=h4;Citace=blockquote',
+                                            ),
+                                        )
+                                    );
+                                    ?>
+                                </div>
+                            </div>
+                            
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+                
+                <!-- Dokumenty k akci (nejsou jazykové) -->
+                <div class="saw-action-info-content" style="margin-top: 24px;">
                     
                     <!-- Dokumenty k akci -->
                     <div class="saw-form-row" style="margin-top: 24px;">
                         <div class="saw-form-group saw-col-12">
                             <label class="saw-label">
+                                <span class="dashicons dashicons-media-document" style="font-size: 18px; vertical-align: middle; margin-right: 6px; color: #f59e0b; display: inline-block; font-family: dashicons !important;"></span>
                                 <?php echo esc_html($tr('field_action_documents', 'Dokumenty k akci')); ?>
                             </label>
                             
-                            <div class="saw-action-documents-list" id="action-documents-list">
-                                <?php if (!empty($action_documents)): ?>
-                                    <?php foreach ($action_documents as $doc): ?>
-                                        <div class="saw-action-document-item" data-id="<?php echo esc_attr($doc['id']); ?>">
-                                            <span class="saw-doc-icon">📄</span>
-                                            <span class="saw-doc-name"><?php echo esc_html($doc['file_name']); ?></span>
-                                            <span class="saw-doc-size">(<?php echo esc_html(size_format($doc['file_size'])); ?>)</span>
-                                            <button type="button" class="saw-btn-icon saw-remove-action-doc" title="Odebrat">✕</button>
-                                            <input type="hidden" name="action_document_ids[]" value="<?php echo esc_attr($doc['id']); ?>">
-                                        </div>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </div>
+                            <?php
+                            // Prepare existing files for component
+                            $existing_action_docs = array();
+                            if (!empty($action_documents)) {
+                                $upload_dir = wp_upload_dir();
+                                foreach ($action_documents as $doc) {
+                                    $doc_url = $upload_dir['baseurl'] . '/' . ltrim($doc['file_path'], '/');
+                                    $existing_action_docs[] = array(
+                                        'id' => $doc['id'], // Database ID - important for tracking
+                                        'url' => $doc_url,
+                                        'path' => $doc['file_path'],
+                                        'name' => $doc['file_name'],
+                                        'size' => $doc['file_size'],
+                                        'type' => $doc['mime_type'] ?? 'application/octet-stream',
+                                        'extension' => strtolower(pathinfo($doc['file_name'], PATHINFO_EXTENSION)),
+                                    );
+                                }
+                            }
                             
-                            <div class="saw-dropzone" id="action-documents-dropzone">
-                                <div class="saw-dropzone-content">
-                                    <span class="saw-dropzone-icon">📎</span>
-                                    <span class="saw-dropzone-text">
-                                        <?php echo esc_html($tr('dropzone_text', 'Přetáhněte soubory nebo klikněte')); ?>
-                                    </span>
-                                </div>
-                                <input type="file" 
-                                       id="action_documents_upload" 
-                                       name="action_documents[]" 
-                                       multiple 
-                                       accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png">
-                            </div>
+                            // Load file upload component
+                            if (!function_exists('saw_file_upload_input')) {
+                                require_once SAW_VISITORS_PLUGIN_DIR . 'includes/components/file-upload/file-upload-input.php';
+                            }
+                            
+                            saw_file_upload_input(array(
+                                'name' => 'action_documents[]',
+                                'id' => 'action-documents-upload',
+                                'multiple' => true,
+                                'accept' => '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.pages,.numbers,.key,.txt,.rtf,.jpg,.jpeg,.png',
+                                'max_size' => 10485760, // 10MB
+                                'max_files' => 0, // No limit
+                                'context' => 'visit_action_documents',
+                                'class' => 'saw-action-documents-upload',
+                                'existing_files' => $existing_action_docs,
+                            ));
+                            ?>
                         </div>
                     </div>
                     
@@ -724,8 +825,12 @@ $form_action = $is_edit
                     <div class="saw-form-row" style="margin-top: 24px;">
                         <div class="saw-form-group saw-col-12">
                             <label class="saw-label">
-                                <?php echo esc_html($tr('field_action_oopp', 'Specifické OOPP pro akci')); ?>
+                                <span class="dashicons dashicons-shield" style="font-size: 18px; vertical-align: middle; margin-right: 6px; color: #f59e0b; display: inline-block; font-family: dashicons !important;"></span>
+                                <?php echo esc_html($tr('field_action_oopp', 'Ochranné pomůcky pro tuto akci')); ?>
                             </label>
+                            <p class="saw-help-text" style="margin-bottom: 16px; color: #6b7280; font-size: 13px;">
+                                <?php echo esc_html($tr('help_action_oopp_intro', 'Vyberte OOPP, které jsou specifické pro tuto akci. Tyto pomůcky se zobrazí návštěvníkům navíc k běžnému školení.')); ?>
+                            </p>
                             
                             <?php
                             // Načíst OOPP pro akce (is_global = 0)
@@ -752,62 +857,85 @@ $form_action = $is_edit
                             ?>
                             
                             <?php if (empty($action_oopp_options)): ?>
-                                <div class="saw-alert saw-alert-info">
-                                    <p><?php echo esc_html($tr('no_action_oopp', 'Nemáte žádné OOPP pro akce.')); ?></p>
-                                    <a href="<?php echo esc_url(home_url('/admin/oopp/create/')); ?>" class="saw-link">
-                                        <?php echo esc_html($tr('create_action_oopp', '+ Vytvořit OOPP pro akce')); ?>
+                                <div class="saw-alert saw-alert-info" style="padding: 16px; background: #eff6ff; border-left: 4px solid #2563eb; border-radius: 6px; margin-bottom: 12px;">
+                                    <p style="margin: 0 0 8px 0; color: #1e40af; font-size: 14px;">
+                                        <strong>💡 Tip:</strong> <?php echo esc_html($tr('no_action_oopp', 'Zatím nemáte vytvořené žádné OOPP pro konkrétní akce.')); ?>
+                                    </p>
+                                    <a href="<?php echo esc_url(home_url('/admin/oopp/create/')); ?>" class="saw-link" style="color: #2563eb; text-decoration: underline; font-weight: 500;">
+                                        <?php echo esc_html($tr('create_action_oopp', 'Vytvořit nové OOPP pro akce')); ?>
                                     </a>
                                 </div>
                             <?php else: ?>
-                                <div class="saw-oopp-selector">
-                                    <div class="saw-oopp-available">
-                                        <h4><?php echo esc_html($tr('available_oopp', 'Dostupné OOPP pro akce')); ?></h4>
-                                        <div class="saw-oopp-list">
+                                <div class="saw-oopp-selector" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 16px;">
+                                    <div class="saw-oopp-available" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px;">
+                                        <h4 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: #374151; display: flex; align-items: center; gap: 8px;">
+                                            <span class="dashicons dashicons-list-view" style="font-size: 16px; color: #6b7280; display: inline-block; font-family: dashicons !important;"></span>
+                                            <?php echo esc_html($tr('available_oopp', 'Dostupné pomůcky')); ?>
+                                        </h4>
+                                        <div class="saw-oopp-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;">
                                             <?php foreach ($action_oopp_options as $oopp): ?>
                                                 <?php if (!in_array($oopp['id'], $selected_oopp_ids)): ?>
-                                                    <div class="saw-oopp-item" data-id="<?php echo esc_attr($oopp['id']); ?>">
-                                                        <span class="saw-oopp-name"><?php echo esc_html($oopp['name']); ?></span>
-                                                        <span class="saw-oopp-group"><?php echo esc_html($oopp['group_name']); ?></span>
-                                                        <button type="button" class="saw-btn-icon saw-add-oopp" title="Přidat">+</button>
+                                                    <div class="saw-oopp-item" data-id="<?php echo esc_attr($oopp['id']); ?>" style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; transition: all 0.2s ease;">
+                                                        <div style="flex: 1; min-width: 0;">
+                                                            <div class="saw-oopp-name" style="font-weight: 500; color: #374151; font-size: 14px; margin-bottom: 2px;"><?php echo esc_html($oopp['name']); ?></div>
+                                                            <?php if (!empty($oopp['group_name'])): ?>
+                                                                <div class="saw-oopp-group" style="font-size: 12px; color: #6b7280;"><?php echo esc_html($oopp['group_name']); ?></div>
+                                                            <?php endif; ?>
+                                                        </div>
+                                                        <button type="button" class="saw-btn-icon saw-add-oopp" title="Přidat" style="background: #10b981; color: #fff; border: none; border-radius: 4px; width: 28px; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; flex-shrink: 0; transition: all 0.2s ease;">+</button>
                                                     </div>
                                                 <?php endif; ?>
                                             <?php endforeach; ?>
                                         </div>
                                     </div>
                                     
-                                    <div class="saw-oopp-selected">
-                                        <h4><?php echo esc_html($tr('selected_oopp', 'Vybrané pro tuto akci')); ?></h4>
-                                        <div class="saw-oopp-list" id="selected-action-oopp">
-                                            <?php foreach ($action_oopp_options as $oopp): ?>
-                                                <?php if (in_array($oopp['id'], $selected_oopp_ids)): ?>
-                                                    <?php 
-                                                    $selected_oopp = array_filter($action_oopp, function($a) use ($oopp) {
-                                                        return $a['oopp_id'] == $oopp['id'];
-                                                    });
-                                                    $selected_oopp = reset($selected_oopp);
-                                                    ?>
-                                                    <div class="saw-oopp-item selected" data-id="<?php echo esc_attr($oopp['id']); ?>">
-                                                        <span class="saw-oopp-name"><?php echo esc_html($oopp['name']); ?></span>
-                                                        <label class="saw-checkbox-inline">
-                                                            <input type="checkbox" 
-                                                                   name="action_oopp_required[<?php echo esc_attr($oopp['id']); ?>]" 
-                                                                   value="1" 
-                                                                   <?php checked($selected_oopp['is_required'] ?? 1, 1); ?>>
-                                                            <?php echo esc_html($tr('required', 'Povinné')); ?>
-                                                        </label>
-                                                        <button type="button" class="saw-btn-icon saw-remove-oopp" title="Odebrat">✕</button>
-                                                        <input type="hidden" name="action_oopp_ids[]" value="<?php echo esc_attr($oopp['id']); ?>">
-                                                    </div>
-                                                <?php endif; ?>
-                                            <?php endforeach; ?>
+                                    <div class="saw-oopp-selected" style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 16px;">
+                                        <h4 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: #92400e; display: flex; align-items: center; gap: 8px;">
+                                            <span class="dashicons dashicons-yes-alt" style="font-size: 16px; color: #f59e0b; display: inline-block; font-family: dashicons !important;"></span>
+                                            <?php echo esc_html($tr('selected_oopp', 'Vybrané pro akci')); ?>
+                                        </h4>
+                                        <div class="saw-oopp-list" id="selected-action-oopp" style="display: flex; flex-direction: column; gap: 8px; min-height: 60px;">
+                                            <?php if (empty($selected_oopp_ids)): ?>
+                                                <div style="padding: 20px; text-align: center; color: #92400e; font-size: 13px; font-style: italic;">
+                                                    <?php echo esc_html($tr('no_selected_oopp', 'Zatím není vybráno žádné OOPP')); ?>
+                                                </div>
+                                            <?php else: ?>
+                                                <?php foreach ($action_oopp_options as $oopp): ?>
+                                                    <?php if (in_array($oopp['id'], $selected_oopp_ids)): ?>
+                                                        <?php 
+                                                        $selected_oopp = array_filter($action_oopp, function($a) use ($oopp) {
+                                                            return $a['oopp_id'] == $oopp['id'];
+                                                        });
+                                                        $selected_oopp = reset($selected_oopp);
+                                                        ?>
+                                                        <div class="saw-oopp-item selected" data-id="<?php echo esc_attr($oopp['id']); ?>" style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #fff; border: 1px solid #f59e0b; border-radius: 6px; transition: all 0.2s ease;">
+                                                            <div style="flex: 1; min-width: 0;">
+                                                                <div class="saw-oopp-name" style="font-weight: 500; color: #374151; font-size: 14px; margin-bottom: 4px;"><?php echo esc_html($oopp['name']); ?></div>
+                                                                <label class="saw-checkbox-inline" style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6b7280; cursor: pointer;">
+                                                                    <input type="checkbox" 
+                                                                           name="action_oopp_required[<?php echo esc_attr($oopp['id']); ?>]" 
+                                                                           value="1" 
+                                                                           <?php checked($selected_oopp['is_required'] ?? 1, 1); ?>
+                                                                           style="margin: 0; cursor: pointer;">
+                                                                    <span><?php echo esc_html($tr('required', 'Povinné')); ?></span>
+                                                                </label>
+                                                            </div>
+                                                            <button type="button" class="saw-btn-icon saw-remove-oopp" title="Odebrat" style="background: #ef4444; color: #fff; border: none; border-radius: 4px; width: 28px; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; transition: all 0.2s ease;">✕</button>
+                                                            <input type="hidden" name="action_oopp_ids[]" value="<?php echo esc_attr($oopp['id']); ?>">
+                                                        </div>
+                                                    <?php endif; ?>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
                                         </div>
                                     </div>
                                 </div>
                             <?php endif; ?>
                             
-                            <p class="saw-help-text" style="margin-top: 8px;">
-                                💡 <?php echo esc_html($tr('help_action_oopp', 'Nové OOPP pro akce vytvoříte v modulu OOPP s typem "Pro konkrétní akce".')); ?>
-                            </p>
+                            <div class="saw-alert saw-alert-info" style="margin-top: 16px; padding: 12px 16px; background: #eff6ff; border-left: 4px solid #2563eb; border-radius: 6px;">
+                                <p style="margin: 0; color: #1e40af; font-size: 13px; line-height: 1.5;">
+                                    <strong>💡 Tip:</strong> <?php echo esc_html($tr('help_action_oopp', 'Nové OOPP pro akce vytvoříte v modulu OOPP s typem "Pro konkrétní akce".')); ?>
+                                </p>
+                            </div>
                         </div>
                     </div>
                     
@@ -936,22 +1064,90 @@ $form_action = $is_edit
      ================================================ -->
 <script>
 jQuery(document).ready(function($) {
+    // Handle has_company radio button change
+    $('input[name="has_company"]').on('change', function() {
+        var hasCompany = $(this).val();
+        var $companyRow = $('.field-company-row');
+        var $hiddenInput = $('#saw-select-visit_company_selection-value');
+        
+        if (hasCompany === '0') {
+            // Fyzická osoba - skrýt pole a vynulovat hodnotu
+            $companyRow.slideUp(200);
+            if ($hiddenInput.length) {
+                $hiddenInput.val('');
+            }
+        } else {
+            // Právnická osoba - zobrazit pole
+            $companyRow.slideDown(200);
+            // Pokud už je nějaká hodnota vybraná, ponechat ji
+        }
+    });
+    
     $('.saw-visit-form').on('submit', function(e) {
         var $form = $(this);
         
-        // FIX: Get company_id from selected dropdown item
+        // Get uploaded files from file upload component
+        var uploadedActionDocs = [];
+        var $uploadContainer = $form.find('#action-documents-upload').closest('.saw-file-upload-modern-container');
+        if ($uploadContainer.length) {
+            var uploadInstance = $uploadContainer.data('saw-file-upload-instance');
+            if (uploadInstance && typeof uploadInstance.getUploadedFiles === 'function') {
+                uploadedActionDocs = uploadInstance.getUploadedFiles();
+            }
+        }
+        
+        // Add uploaded files data to form
+        if (uploadedActionDocs.length > 0) {
+            var $hiddenInput = $('<input>', {
+                type: 'hidden',
+                name: 'action_documents_uploaded',
+                value: JSON.stringify(uploadedActionDocs)
+            });
+            $form.append($hiddenInput);
+        }
+        
+        // Get existing document IDs (from existing files that weren't removed)
+        var existingDocIds = [];
+        if (uploadInstance && typeof uploadInstance.files !== 'undefined') {
+            uploadInstance.files.forEach(function(fileObj) {
+                // Check if it's an existing file (not removed) and has a database ID
+                if (fileObj.isExisting && fileObj.metadata && fileObj.metadata.id) {
+                    existingDocIds.push(parseInt(fileObj.metadata.id));
+                }
+            });
+        }
+        
+        if (existingDocIds.length > 0) {
+            var $docIdsInput = $('<input>', {
+                type: 'hidden',
+                name: 'action_document_ids',
+                value: JSON.stringify(existingDocIds)
+            });
+            $form.append($docIdsInput);
+        }
+        
+        // FIX: Get company_id from hidden input
         // ⭐ FIX v3.8.0: Use new field name 'visit_company_selection'
         var hasCompany = $form.find('input[name="has_company"]:checked').val();
+        var $hiddenInput = $('#saw-select-visit_company_selection-value');
         
-        if (hasCompany === '1') {
-            // Get value from selected item in dropdown
-            var $selected = $('#saw-select-visit_company_selection-dropdown .saw-select-search-item.selected');
-            if ($selected.length) {
-                var val = $selected.attr('data-value');
-                $('input[type="hidden"][name="visit_company_selection"]').val(val);
+        if ($hiddenInput.length) {
+            var val = $hiddenInput.val();
+            
+            // Ujistit se, že hodnota je nastavená
+            if (hasCompany === '1' && !val) {
+                // Pokud je právnická osoba, ale hodnota není nastavená, zkusit najít v selectu
+                var $select = $('#saw-select-visit_company_selection');
+                if ($select.length) {
+                    val = $select.val();
+                    $hiddenInput.val(val);
+                }
             }
-        } else {
-            $('input[type="hidden"][name="visit_company_selection"]').val('');
+            
+            // Pokud je fyzická osoba, vynulovat
+            if (hasCompany === '0') {
+                $hiddenInput.val('');
+            }
         }
         
         // Fix dates
@@ -1021,6 +1217,290 @@ jQuery(document).ready(function($) {
     
     // Also trigger events for other components that might need them
     $(document).trigger('saw:page-loaded');
+    
+    // ========================================
+    // LANGUAGE TABS FOR ACTION INFO
+    // ========================================
+    
+    var $actionTabsContainer = $('.saw-form-section-action-info .saw-language-tabs');
+    var $actionTabs = $('.saw-form-section-action-info .saw-language-tab');
+    var $actionPrevBtn = $('.saw-form-section-action-info .saw-language-tab-nav-prev');
+    var $actionNextBtn = $('.saw-form-section-action-info .saw-language-tab-nav-next');
+    
+    if ($actionTabsContainer.length) {
+        function updateActionNavButtons() {
+            var scrollLeft = $actionTabsContainer.scrollLeft();
+            var scrollWidth = $actionTabsContainer[0].scrollWidth;
+            var clientWidth = $actionTabsContainer[0].clientWidth;
+            
+            $actionPrevBtn.prop('disabled', scrollLeft === 0);
+            $actionNextBtn.prop('disabled', scrollLeft >= scrollWidth - clientWidth - 1);
+        }
+        
+        // Update buttons on scroll
+        $actionTabsContainer.on('scroll', updateActionNavButtons);
+        
+        // Update buttons on resize
+        $(window).on('resize', updateActionNavButtons);
+        
+        // Initial update
+        updateActionNavButtons();
+        
+        // Navigation buttons
+        $actionPrevBtn.on('click', function() {
+            if (!$(this).prop('disabled')) {
+                $actionTabsContainer.animate({
+                    scrollLeft: $actionTabsContainer.scrollLeft() - 200
+                }, 300);
+            }
+        });
+        
+        $actionNextBtn.on('click', function() {
+            if (!$(this).prop('disabled')) {
+                $actionTabsContainer.animate({
+                    scrollLeft: $actionTabsContainer.scrollLeft() + 200
+                }, 300);
+            }
+        });
+        
+        // Tab click handler
+        $actionTabs.on('click', function() {
+            var $tab = $(this);
+            var targetTab = $tab.data('tab');
+            
+            // Remove active class from all tabs
+            $actionTabs.removeClass('active');
+            
+            // Add active class to clicked tab
+            $tab.addClass('active');
+            
+            // Hide all content and remove required from all inputs
+            $('.saw-form-section-action-info .saw-language-content').each(function() {
+                $(this).hide();
+                $(this).find('input[type="text"], textarea').removeAttr('required');
+                $(this).find('label').removeClass('saw-required');
+                $(this).find('.saw-required-marker').remove();
+            });
+            
+            // Show target content and add required to first input
+            var $targetContent = $('.saw-form-section-action-info .saw-language-content[data-tab-content="' + targetTab + '"]');
+            $targetContent.show();
+            var $firstInput = $targetContent.find('input[name*="[name]"]').first();
+            if ($firstInput.length) {
+                $firstInput.attr('required', 'required');
+                $firstInput.closest('.saw-form-group').find('label').addClass('saw-required');
+                if (!$firstInput.closest('.saw-form-group').find('.saw-required-marker').length) {
+                    $firstInput.closest('.saw-form-group').find('label').append('<span class="saw-required-marker">*</span>');
+                }
+            }
+            
+            // Scroll clicked tab into view
+            var tabOffset = $tab.position().left + $actionTabsContainer.scrollLeft();
+            var tabWidth = $tab.outerWidth();
+            var containerWidth = $actionTabsContainer.outerWidth();
+            var scrollLeft = $actionTabsContainer.scrollLeft();
+            
+            if (tabOffset < scrollLeft) {
+                // Tab is to the left, scroll to show it
+                $actionTabsContainer.animate({
+                    scrollLeft: tabOffset - 20
+                }, 300);
+            } else if (tabOffset + tabWidth > scrollLeft + containerWidth) {
+                // Tab is to the right, scroll to show it
+                $actionTabsContainer.animate({
+                    scrollLeft: tabOffset - containerWidth + tabWidth + 20
+                }, 300);
+            }
+        });
+    }
+    
+    // ========================================
+    // OOPP SELECTOR FOR ACTION INFO
+    // ========================================
+    $(document).on('click', '.saw-form-section-action-info .saw-add-oopp', function(e) {
+        e.preventDefault();
+        var $item = $(this).closest('.saw-oopp-item');
+        var ooppId = $item.data('id');
+        var ooppName = $item.find('.saw-oopp-name').text();
+        var ooppGroup = $item.find('.saw-oopp-group').text() || '';
+        
+        // Přesunout do vybraných
+        var $selectedList = $('#selected-action-oopp');
+        
+        // Odstranit prázdný stav
+        $selectedList.find('div:contains("Zatím není vybráno")').remove();
+        
+        // Vytvořit nový item
+        var $newItem = $('<div>')
+            .addClass('saw-oopp-item selected')
+            .attr('data-id', ooppId)
+            .html(
+                '<div style="flex: 1; min-width: 0;">' +
+                '<div class="saw-oopp-name" style="font-weight: 500; color: #374151; font-size: 14px; margin-bottom: 4px;">' + ooppName + '</div>' +
+                '<label class="saw-checkbox-inline" style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6b7280; cursor: pointer;">' +
+                '<input type="checkbox" name="action_oopp_required[' + ooppId + ']" value="1" checked style="margin: 0; cursor: pointer;">' +
+                '<span>Povinné</span>' +
+                '</label>' +
+                '</div>' +
+                '<button type="button" class="saw-btn-icon saw-remove-oopp" title="Odebrat" style="background: #ef4444; color: #fff; border: none; border-radius: 4px; width: 28px; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; transition: all 0.2s ease;">✕</button>' +
+                '<input type="hidden" name="action_oopp_ids[]" value="' + ooppId + '">'
+            )
+            .css({
+                'display': 'flex',
+                'align-items': 'center',
+                'gap': '10px',
+                'padding': '10px 12px',
+                'background': '#fff',
+                'border': '1px solid #f59e0b',
+                'border-radius': '6px',
+                'transition': 'all 0.2s ease'
+            });
+        
+        $selectedList.append($newItem);
+        
+        // Odstranit z dostupných
+        $item.remove();
+    });
+    
+    $(document).on('click', '.saw-form-section-action-info .saw-remove-oopp', function(e) {
+        e.preventDefault();
+        var $item = $(this).closest('.saw-oopp-item');
+        var ooppId = $item.data('id');
+        var ooppName = $item.find('.saw-oopp-name').text();
+        var ooppGroup = $item.find('.saw-oopp-group').text() || '';
+        
+        // Přesunout zpět do dostupných
+        var $availableList = $('.saw-oopp-available .saw-oopp-list');
+        
+        // Vytvořit nový item
+        var $newItem = $('<div>')
+            .addClass('saw-oopp-item')
+            .attr('data-id', ooppId)
+            .html(
+                '<div style="flex: 1; min-width: 0;">' +
+                '<div class="saw-oopp-name" style="font-weight: 500; color: #374151; font-size: 14px; margin-bottom: 2px;">' + ooppName + '</div>' +
+                (ooppGroup ? '<div class="saw-oopp-group" style="font-size: 12px; color: #6b7280;">' + ooppGroup + '</div>' : '') +
+                '</div>' +
+                '<button type="button" class="saw-btn-icon saw-add-oopp" title="Přidat" style="background: #10b981; color: #fff; border: none; border-radius: 4px; width: 28px; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; flex-shrink: 0; transition: all 0.2s ease;">+</button>'
+            )
+            .css({
+                'display': 'flex',
+                'align-items': 'center',
+                'gap': '10px',
+                'padding': '10px 12px',
+                'background': '#fff',
+                'border': '1px solid #e5e7eb',
+                'border-radius': '6px',
+                'transition': 'all 0.2s ease'
+            });
+        
+        $availableList.append($newItem);
+        
+        // Odstranit z vybraných
+        $item.remove();
+        
+        // Pokud není žádné vybrané, zobrazit prázdný stav
+        if ($('#selected-action-oopp .saw-oopp-item').length === 0) {
+            $('#selected-action-oopp').html('<div style="padding: 20px; text-align: center; color: #92400e; font-size: 13px; font-style: italic;">Zatím není vybráno žádné OOPP</div>');
+        }
+    });
+    
+    // ========================================
+    // INITIALIZE ACTIVE LANGUAGE ON SECTION OPEN
+    // ========================================
+    function initializeActiveLanguage() {
+        var $section = $('.saw-form-section-action-info');
+        if ($section.length && ($section.prop('open') || $section.attr('open'))) {
+            var $activeTab = $section.find('.saw-language-tab.active');
+            if ($activeTab.length) {
+                var targetTab = $activeTab.data('tab');
+                var $targetContent = $section.find('.saw-language-content[data-tab-content="' + targetTab + '"]');
+                $targetContent.show();
+                
+                // Zajistit, že required atributy jsou správně nastavené
+                var $firstInput = $targetContent.find('input[name*="[name]"]').first();
+                if ($firstInput.length) {
+                    $firstInput.attr('required', 'required');
+                    $firstInput.closest('.saw-form-group').find('label').addClass('saw-required');
+                    if (!$firstInput.closest('.saw-form-group').find('.saw-required-marker').length) {
+                        $firstInput.closest('.saw-form-group').find('label').append('<span class="saw-required-marker">*</span>');
+                    }
+                }
+            }
+        }
+    }
+    
+    // Inicializace při načtení stránky
+    $(document).ready(function() {
+        initializeActiveLanguage();
+        
+        // Inicializace TinyMCE editorů pro action info
+        if (typeof wp !== 'undefined' && wp.editor && wp.editor.initialize) {
+            $('.saw-form-section-action-info textarea.wp-editor-area').each(function() {
+                var editorId = $(this).attr('id');
+                if (editorId && !tinyMCE.get(editorId)) {
+                    // Počkat, až bude DOM připraven
+                    setTimeout(function() {
+                        if (typeof tinyMCE !== 'undefined' && tinyMCE.get(editorId)) {
+                            // Editor už existuje
+                            return;
+                        }
+                        // Zkusit znovu inicializovat
+                        if (wp.editor && wp.editor.initialize) {
+                            try {
+                                wp.editor.initialize(editorId, {
+                                    tinymce: {
+                                        toolbar1: 'formatselect,bold,italic,underline,strikethrough,forecolor,backcolor,bullist,numlist,alignleft,aligncenter,alignright,link,unlink',
+                                        toolbar2: 'undo,redo,removeformat,code,hr,blockquote,subscript,superscript,charmap,indent,outdent,pastetext,searchreplace,fullscreen',
+                                        block_formats: 'Odstavec=p;Nadpis 1=h1;Nadpis 2=h2;Nadpis 3=h3;Nadpis 4=h4;Citace=blockquote',
+                                    },
+                                    media_buttons: false,
+                                    quicktags: true,
+                                });
+                            } catch(e) {
+                                console.error('[Visits Form] Error initializing TinyMCE:', e);
+                            }
+                        }
+                    }, 500);
+                }
+            });
+        }
+    });
+    
+    // Inicializace při otevření sekce
+    $('.saw-form-section-action-info').on('toggle', function() {
+        if ($(this).prop('open')) {
+            setTimeout(function() {
+                initializeActiveLanguage();
+                
+                // Znovu inicializovat TinyMCE po otevření sekce
+                if (typeof wp !== 'undefined' && wp.editor && wp.editor.initialize) {
+                    $('.saw-form-section-action-info textarea.wp-editor-area').each(function() {
+                        var editorId = $(this).attr('id');
+                        if (editorId && !tinyMCE.get(editorId)) {
+                            setTimeout(function() {
+                                if (wp.editor && wp.editor.initialize) {
+                                    try {
+                                        wp.editor.initialize(editorId, {
+                                            tinymce: {
+                                                toolbar1: 'formatselect,bold,italic,underline,strikethrough,forecolor,backcolor,bullist,numlist,alignleft,aligncenter,alignright,link,unlink',
+                                                toolbar2: 'undo,redo,removeformat,code,hr,blockquote,subscript,superscript,charmap,indent,outdent,pastetext,searchreplace,fullscreen',
+                                                block_formats: 'Odstavec=p;Nadpis 1=h1;Nadpis 2=h2;Nadpis 3=h3;Nadpis 4=h4;Citace=blockquote',
+                                            },
+                                            media_buttons: false,
+                                            quicktags: true,
+                                        });
+                                    } catch(e) {
+                                        console.error('[Visits Form] Error initializing TinyMCE:', e);
+                                    }
+                                }
+                            }, 300);
+                        }
+                    });
+                }
+            }, 100);
+        }
+    });
     
 })(jQuery);
 </script>

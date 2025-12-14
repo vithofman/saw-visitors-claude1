@@ -42,7 +42,33 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         if (function_exists('saw_can') && !saw_can('list', $this->entity)) {
             wp_die('Nemáte oprávnění.', 403);
         }
+        
+        // Přidej jazyky do config pro formulář
+        $customer_id = class_exists('SAW_Context') ? SAW_Context::get_customer_id() : 0;
+        if ($customer_id && method_exists($this->model, 'get_customer_languages')) {
+            $this->config['form_languages'] = $this->model->get_customer_languages($customer_id);
+        } else {
+            $this->config['form_languages'] = array();
+        }
+        
         $this->render_list_view();
+    }
+    
+    /**
+     * Override handle_edit_mode pro přidání action_info translations
+     */
+    protected function handle_edit_mode($sidebar_context) {
+        $item = parent::handle_edit_mode($sidebar_context);
+        
+        // Přidej jazyky do config pro formulář
+        $customer_id = class_exists('SAW_Context') ? SAW_Context::get_customer_id() : 0;
+        if ($customer_id && method_exists($this->model, 'get_customer_languages')) {
+            $this->config['form_languages'] = $this->model->get_customer_languages($customer_id);
+        } else {
+            $this->config['form_languages'] = array();
+        }
+        
+        return $item;
     }
     
     /**
@@ -217,6 +243,9 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         
         // ⭐ FIX v3.8.0: Check for 'visit_company_selection' first (neutral field name to prevent autocomplete)
         // Then fallback to 'company_id' for backward compatibility
+        error_log('$_POST[visit_company_selection]: ' . var_export($_POST['visit_company_selection'] ?? 'NOT SET', true));
+        error_log('Hidden input exists check: ' . (isset($_POST['visit_company_selection']) ? 'YES' : 'NO'));
+        
         if (isset($_POST['visit_company_selection'])) {
             $raw_value = $_POST['visit_company_selection'];
             error_log('Found in $_POST[visit_company_selection]: ' . var_export($raw_value, true));
@@ -247,18 +276,21 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
             }
         }
         
-        // Fallback to $data if POST was empty
+        // Fallback to $data if POST was empty (but only if it's a valid value)
         if ($company_id === null && isset($data['company_id'])) {
             $raw_value = $data['company_id'];
             error_log('Fallback to $data: ' . var_export($raw_value, true));
             
-            if ($raw_value === '' || $raw_value === '0' || $raw_value === 0 || $raw_value === null) {
-                $company_id = null;
-            } else {
+            // Fallback: pokud byla hodnota v $data (např. z prepare_form_data)
+            if ($raw_value !== '' && $raw_value !== '0' && $raw_value !== 0 && $raw_value !== null) {
                 $company_id = absint($raw_value);
-                if ($company_id === 0) {
+                if ($company_id > 0) {
+                    error_log('Fallback: Using company_id from $data: ' . $company_id);
+                } else {
                     $company_id = null;
                 }
+            } else {
+                $company_id = null;
             }
         }
         
@@ -301,6 +333,23 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
     error_log('FINAL $data[company_id]: ' . var_export($data['company_id'], true));
     error_log('FINAL $data[customer_id]: ' . var_export($data['customer_id'] ?? 'NOT SET', true));
     error_log('========== END BEFORE_SAVE ==========');
+    
+    // ============================================
+    // VALIDATE ACTION INFO TRANSLATIONS
+    // ============================================
+    if (isset($_POST['action_info_translations']) && is_array($_POST['action_info_translations'])) {
+        $has_name = false;
+        foreach ($_POST['action_info_translations'] as $lang_code => $trans_data) {
+            if (!empty($trans_data['name'])) {
+                $has_name = true;
+                break;
+            }
+        }
+        
+        if (!$has_name) {
+            $this->add_error('action_info_translations', 'Alespoň jeden jazyk musí mít vyplněný název akce.');
+        }
+    }
     
     return $data;
 }
@@ -543,9 +592,20 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
     protected function save_action_info($visit_id, $customer_id, $branch_id) {
         global $wpdb;
         
-        $has_action_info = !empty($_POST['has_action_info']);
+        // Kontrola, zda existují data pro action info
+        $has_action_data = false;
+        if (isset($_POST['action_info_translations']) && is_array($_POST['action_info_translations'])) {
+            // Zkontrolovat, zda alespoň jeden jazyk má nějaká data
+            foreach ($_POST['action_info_translations'] as $lang_data) {
+                if (!empty($lang_data['name']) || !empty($lang_data['description']) || !empty($lang_data['content_text'])) {
+                    $has_action_data = true;
+                    break;
+                }
+            }
+        }
         
-        if (!$has_action_info) {
+        // Pokud nejsou žádná data, smazat vše
+        if (!$has_action_data) {
             // Delete all action info for this visit
             $wpdb->delete($wpdb->prefix . 'saw_visit_action_info', array('visit_id' => $visit_id), array('%d'));
             $wpdb->delete($wpdb->prefix . 'saw_visit_action_documents', array('visit_id' => $visit_id), array('%d'));
@@ -556,26 +616,24 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         $user_email = wp_get_current_user()->user_email;
         
         // ============================================
-        // 1. Save/update action info text
+        // 1. Save/update action info (bez content_text - ten je v translations)
         // ============================================
-        $content_text = isset($_POST['action_content_text']) 
-            ? wp_kses_post($_POST['action_content_text']) 
-            : '';
-        
         $existing = $wpdb->get_var($wpdb->prepare(
             "SELECT id FROM {$wpdb->prefix}saw_visit_action_info WHERE visit_id = %d",
             $visit_id
         ));
         
+        $action_info_id = null;
+        
         if ($existing) {
+            $action_info_id = $existing;
             $wpdb->update(
                 $wpdb->prefix . 'saw_visit_action_info',
                 array(
-                    'content_text' => $content_text,
                     'updated_by' => $user_email,
                 ),
                 array('visit_id' => $visit_id),
-                array('%s', '%s'),
+                array('%s'),
                 array('%d')
             );
         } else {
@@ -585,20 +643,42 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
                     'visit_id' => $visit_id,
                     'customer_id' => $customer_id,
                     'branch_id' => $branch_id,
-                    'content_text' => $content_text,
                     'created_by' => $user_email,
                 ),
-                array('%d', '%d', '%d', '%s', '%s')
+                array('%d', '%d', '%d', '%s')
             );
+            $action_info_id = $wpdb->insert_id;
+        }
+        
+        // ============================================
+        // 2. Save translations
+        // ============================================
+        if ($action_info_id && isset($_POST['action_info_translations']) && is_array($_POST['action_info_translations'])) {
+            $translation_result = $this->model->save_all_action_info_translations(
+                $action_info_id, 
+                $_POST['action_info_translations']
+            );
+            
+            if (is_wp_error($translation_result)) {
+                error_log('[SAW Visits] Failed to save action info translations: ' . $translation_result->get_error_message());
+            }
         }
         
         // ============================================
         // 2. Handle documents
         // ============================================
         // Keep existing documents that are still in the form
-        $keep_doc_ids = isset($_POST['action_document_ids']) 
-            ? array_map('intval', $_POST['action_document_ids']) 
-            : array();
+        $keep_doc_ids = array();
+        if (isset($_POST['action_document_ids'])) {
+            if (is_string($_POST['action_document_ids'])) {
+                $keep_doc_ids = json_decode(stripslashes($_POST['action_document_ids']), true);
+                if (!is_array($keep_doc_ids)) {
+                    $keep_doc_ids = array();
+                }
+            } elseif (is_array($_POST['action_document_ids'])) {
+                $keep_doc_ids = array_map('intval', $_POST['action_document_ids']);
+            }
+        }
         
         if (!empty($keep_doc_ids)) {
             $placeholders = implode(',', array_fill(0, count($keep_doc_ids), '%d'));
@@ -611,7 +691,75 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
             $wpdb->delete($wpdb->prefix . 'saw_visit_action_documents', array('visit_id' => $visit_id), array('%d'));
         }
         
-        // Upload new documents
+        // Handle uploaded files from modern file upload component
+        if (!empty($_POST['action_documents_uploaded'])) {
+            $uploaded_files_json = stripslashes($_POST['action_documents_uploaded']);
+            $uploaded_files = json_decode($uploaded_files_json, true);
+            
+            if (is_array($uploaded_files)) {
+                $upload_dir = wp_upload_dir();
+                $target_dir = $upload_dir['basedir'] . '/saw-visitors/action-docs/' . $visit_id . '/';
+                
+                if (!file_exists($target_dir)) {
+                    wp_mkdir_p($target_dir);
+                }
+                
+                foreach ($uploaded_files as $file_data) {
+                    if (!empty($file_data['path'])) {
+                        // Get file path - could be relative or absolute
+                        $file_path = $file_data['path'];
+                        if (strpos($file_path, $upload_dir['basedir']) === false) {
+                            // Relative path
+                            $temp_path = $upload_dir['basedir'] . '/' . ltrim($file_path, '/');
+                        } else {
+                            // Absolute path
+                            $temp_path = $file_path;
+                        }
+                        
+                        $file_name = sanitize_file_name($file_data['name'] ?? basename($file_path));
+                        $final_path = $target_dir . $file_name;
+                        
+                        // Handle duplicate filenames
+                        $counter = 1;
+                        $original_name = $file_name;
+                        while (file_exists($final_path)) {
+                            $path_info = pathinfo($original_name);
+                            $file_name = $path_info['filename'] . '_' . $counter . '.' . ($path_info['extension'] ?? '');
+                            $final_path = $target_dir . $file_name;
+                            $counter++;
+                        }
+                        
+                        // Move or copy file if it exists
+                        if (file_exists($temp_path)) {
+                            if (copy($temp_path, $final_path)) {
+                                // Optionally delete temp file (if it's in temp location)
+                                if (strpos($temp_path, '/saw-visitors/documents/') !== false) {
+                                    @unlink($temp_path);
+                                }
+                                
+                                $relative_path = 'saw-visitors/action-docs/' . $visit_id . '/' . $file_name;
+                                
+                                $wpdb->insert(
+                                    $wpdb->prefix . 'saw_visit_action_documents',
+                                    array(
+                                        'visit_id' => $visit_id,
+                                        'customer_id' => $customer_id,
+                                        'file_path' => $relative_path,
+                                        'file_name' => $file_name,
+                                        'file_size' => $file_data['size'] ?? filesize($final_path),
+                                        'mime_type' => $file_data['type'] ?? 'application/octet-stream',
+                                        'uploaded_by' => wp_get_current_user()->user_email,
+                                    ),
+                                    array('%d', '%d', '%s', '%s', '%d', '%s', '%s')
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Fallback: Upload new documents via traditional method (for backward compatibility)
         if (!empty($_FILES['action_documents']['name'][0])) {
             $this->upload_action_documents($visit_id, $customer_id);
         }
@@ -734,11 +882,35 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         
         $item = array_merge($item, $enriched);
         
-        // Load action info if exists
+        // Load action info if exists (with translations)
         if (method_exists($this->model, 'get_action_info')) {
             $action_info = $this->model->get_action_info($item['id']);
             if ($action_info) {
                 $item['action_info'] = $action_info;
+                
+                // Get current language for display
+                $lang = 'cs';
+                if (class_exists('SAW_Component_Language_Switcher')) {
+                    $lang = SAW_Component_Language_Switcher::get_user_language();
+                }
+                
+                // Get translations and set current language values
+                $translations = $action_info['translations'] ?? array();
+                if (!empty($translations)) {
+                    // Try current language first, then default language, then first available
+                    $current_trans = $translations[$lang] ?? 
+                                    $translations['cs'] ?? 
+                                    (reset($translations) ?: array());
+                    
+                    // Set display values
+                    $item['action_info']['name'] = $current_trans['name'] ?? $item['action_name'] ?? '';
+                    $item['action_info']['description'] = $current_trans['description'] ?? '';
+                    $item['action_info']['content_text'] = $current_trans['content_text'] ?? $action_info['content_text'] ?? '';
+                } else {
+                    // Fallback to old action_name if no translations
+                    $item['action_info']['name'] = $item['action_name'] ?? '';
+                    $item['action_info']['description'] = '';
+                }
             }
         }
         

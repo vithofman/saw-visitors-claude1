@@ -3,6 +3,8 @@
  * @version 3.0.0 - REDESIGNED: Modern layout with improved schedule rows and soft shadows
  */
 
+@import '../admin/components/_action-sections.css';
+
 /* ✅ FIX: Ensure table wrapper doesn't overflow */
 .saw-module-visits {
     max-width: 100%;
@@ -729,5 +731,184 @@
         margin-left: 0;
         width: 100%;
         justify-content: flex-end;
+    }
+}
+
+/* ================================================
+   ACTION INFO SECTION - STYLING
+   ================================================ */
+
+.saw-form-section-action-info {
+    border: 2px solid #fbbf24 !important;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+}
+
+.saw-form-section-action-info summary {
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%) !important;
+    color: #fff !important;
+    border-bottom: 2px solid #d97706 !important;
+}
+
+.saw-form-section-action-info summary:hover {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+}
+
+.saw-form-section-action-info .saw-form-section-content {
+    background: #ffffff;
+}
+
+/* ================================================
+   LANGUAGE TABS FOR ACTION INFO
+   ================================================ */
+
+.saw-language-tabs-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 24px;
+    padding: 12px;
+    background: #fef3c7;
+    border-radius: 8px;
+    border: 1px solid #fbbf24;
+}
+
+.saw-language-tabs {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    flex: 1;
+    scroll-behavior: smooth;
+}
+
+.saw-language-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.saw-language-tab {
+    flex-shrink: 0;
+    padding: 10px 20px;
+    background: #ffffff;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    color: #6b7280;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.saw-language-tab:hover {
+    background: #fef3c7;
+    border-color: #fbbf24;
+    color: #92400e;
+}
+
+.saw-language-tab.active {
+    background: #fbbf24;
+    border-color: #d97706;
+    color: #78350f;
+    font-weight: 600;
+}
+
+.saw-language-tab-nav {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    background: #ffffff;
+    border: 1px solid #fbbf24;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #92400e;
+    padding: 0;
+}
+
+.saw-language-tab-nav:hover:not(:disabled) {
+    background: #fbbf24;
+    border-color: #d97706;
+    color: #78350f;
+}
+
+.saw-language-tab-nav:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.saw-language-contents {
+    position: relative;
+}
+
+.saw-language-content {
+    display: none;
+}
+
+.saw-language-content[style*="display: block"],
+.saw-language-content:not([style]) {
+    display: block;
+}
+
+/* Action info content spacing */
+.saw-action-info-content {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid #e5e7eb;
+}
+
+/* WYSIWYG editor in action info */
+.saw-form-section-action-info .wp-editor-container {
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.saw-form-section-action-info .wp-editor-area {
+    min-height: 200px;
+}
+
+/* Dropzone styling in action info */
+.saw-form-section-action-info .saw-dropzone {
+    border: 2px dashed #fbbf24;
+    background: #fef3c7;
+}
+
+.saw-form-section-action-info .saw-dropzone:hover {
+    border-color: #f59e0b;
+    background: #fde68a;
+}
+
+/* OOPP selector in action info */
+.saw-form-section-action-info .saw-oopp-selector {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 16px;
+    background: #fafafa;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .saw-language-tabs-wrapper {
+        padding: 8px;
+        gap: 4px;
+    }
+    
+    .saw-language-tab {
+        padding: 8px 16px;
+        font-size: 13px;
+    }
+    
+    .saw-language-tab-nav {
+        width: 28px;
+        height: 28px;
     }
 }

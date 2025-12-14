@@ -172,6 +172,7 @@ class SAW_Installer {
             'visitor_certificates',
             'visit_invitation_materials',
             'visit_action_info',
+            'visit_action_info_translations',
             'visit_action_documents',
             'visit_action_oopp',
 
@@ -311,6 +312,9 @@ class SAW_Installer {
             // visit_action_documents
             array('table' => 'visit_action_documents', 'constraint' => 'fk_action_docs_visit', 'column' => 'visit_id', 'ref_table' => 'visits', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             array('table' => 'visit_action_documents', 'constraint' => 'fk_action_docs_customer', 'column' => 'customer_id', 'ref_table' => 'customers', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
+            
+            // visit_action_info_translations
+            array('table' => 'visit_action_info_translations', 'constraint' => 'fk_action_info_translations', 'column' => 'action_info_id', 'ref_table' => 'visit_action_info', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),
             
             // visit_action_oopp
             array('table' => 'visit_action_oopp', 'constraint' => 'fk_action_oopp_visit', 'column' => 'visit_id', 'ref_table' => 'visits', 'ref_column' => 'id', 'on_delete' => 'CASCADE'),

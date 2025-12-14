@@ -1290,6 +1290,9 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
             return null;
         }
         
+        // Get translations
+        $info['translations'] = $this->get_action_info_translations($info['id']);
+        
         // Get documents
         $info['documents'] = $wpdb->get_results($wpdb->prepare(
             "SELECT * FROM {$wpdb->prefix}saw_visit_action_documents 
@@ -1325,5 +1328,129 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
             "SELECT COUNT(*) FROM {$wpdb->prefix}saw_visit_action_info WHERE visit_id = %d",
             $visit_id
         ));
+    }
+    
+    /**
+     * Get all languages for customer
+     * 
+     * Načítá jazyky z saw_training_languages pro zákazníka.
+     * Stejná logika jako v OOPP modelu.
+     * 
+     * @param int $customer_id ID zákazníka
+     * @return array Pole jazyků ['code' => 'cs', 'name' => 'Čeština', 'flag' => '🇨🇿']
+     */
+    public function get_customer_languages($customer_id) {
+        global $wpdb;
+        
+        $languages = $wpdb->get_results($wpdb->prepare(
+            "SELECT language_code as code, language_name as name, flag_emoji as flag 
+             FROM {$wpdb->prefix}saw_training_languages 
+             WHERE customer_id = %d
+             ORDER BY language_name ASC",
+            $customer_id
+        ), ARRAY_A);
+        
+        return $languages ?: array();
+    }
+    
+    /**
+     * Get all translations for action info
+     * 
+     * @param int $action_info_id ID action info
+     * @return array Asociativní pole ['cs' => [...], 'en' => [...]]
+     */
+    public function get_action_info_translations($action_info_id) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'saw_visit_action_info_translations';
+        
+        $translations = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$table} WHERE action_info_id = %d ORDER BY language_code ASC",
+            $action_info_id
+        ), ARRAY_A);
+        
+        $result = array();
+        foreach ($translations as $trans) {
+            $lang_code = $trans['language_code'];
+            $result[$lang_code] = array(
+                'name' => $trans['name'],
+                'description' => $trans['description'],
+                'content_text' => $trans['content_text'],
+            );
+        }
+        
+        return $result;
+    }
+    
+    /**
+     * Save one translation for action info
+     * 
+     * @param int $action_info_id ID action info
+     * @param string $language_code Kód jazyka
+     * @param array $data Data překladu
+     * @return bool|WP_Error True při úspěchu
+     */
+    public function save_action_info_translation($action_info_id, $language_code, $data) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'saw_visit_action_info_translations';
+        
+        $existing = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM {$table} WHERE action_info_id = %d AND language_code = %s",
+            $action_info_id,
+            $language_code
+        ));
+        
+        $translation_data = array(
+            'action_info_id' => $action_info_id,
+            'language_code' => $language_code,
+            'name' => !empty($data['name']) ? sanitize_text_field($data['name']) : null,
+            'description' => !empty($data['description']) ? sanitize_textarea_field($data['description']) : null,
+            'content_text' => !empty($data['content_text']) ? wp_kses_post($data['content_text']) : null,
+        );
+        
+        if ($existing) {
+            // Update
+            $result = $wpdb->update(
+                $table,
+                $translation_data,
+                array('id' => $existing),
+                array('%d', '%s', '%s', '%s', '%s'),
+                array('%d')
+            );
+        } else {
+            // Insert
+            $result = $wpdb->insert(
+                $table,
+                $translation_data,
+                array('%d', '%s', '%s', '%s', '%s')
+            );
+        }
+        
+        if ($result === false) {
+            return new WP_Error('db_error', 'Failed to save translation: ' . $wpdb->last_error);
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Save all translations for action info
+     * 
+     * @param int $action_info_id ID action info
+     * @param array $translations Asociativní pole ['cs' => [...], 'en' => [...]]
+     * @return bool|WP_Error True při úspěchu
+     */
+    public function save_all_action_info_translations($action_info_id, $translations) {
+        if (empty($translations) || !is_array($translations)) {
+            return true;
+        }
+        
+        foreach ($translations as $language_code => $data) {
+            $result = $this->save_action_info_translation($action_info_id, $language_code, $data);
+            if (is_wp_error($result)) {
+                return $result;
+            }
+        }
+        
+        return true;
     }
 }

@@ -154,6 +154,10 @@ $js_translations = array(
         wp_nonce_field($nonce_action, '_wpnonce', false);
         ?>
         
+        <?php if ($in_sidebar): ?>
+            <input type="hidden" name="_ajax_sidebar_submit" value="1">
+        <?php endif; ?>
+        
         <?php if ($is_edit): ?>
             <input type="hidden" name="id" value="<?php echo esc_attr($item['id']); ?>">
         <?php endif; ?>
@@ -1600,6 +1604,114 @@ jQuery(document).ready(function($) {
     $('.saw-radio-card input[type="radio"]:checked').each(function() {
         $(this).closest('.saw-radio-card').addClass('selected');
     });
+    
+    // ========================================
+    // ✅ FIX: AJAX SIDEBAR FORM SUBMISSION
+    // ========================================
+    
+    var $form = $('.saw-oopp-form');
+    var $sidebar = $form.closest('.saw-sidebar');
+    
+    // Only handle if form is inside a sidebar
+    if ($sidebar.length) {
+        
+        // Handle form submission via AJAX
+        $form.off('submit.sidebar').on('submit.sidebar', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            var formData = new FormData(this);
+            
+            // Get mode from sidebar
+            var mode = $sidebar.data('mode') || 'create';
+            
+            // Determine AJAX action
+            var action = mode === 'edit' ? 'saw_edit_oopp' : 'saw_create_oopp';
+            
+            // Get AJAX URL and nonce
+            var ajaxUrl = (typeof window.sawGlobal !== 'undefined' && window.sawGlobal.ajaxurl) 
+                ? window.sawGlobal.ajaxurl 
+                : '/wp-admin/admin-ajax.php';
+            
+            var nonce = (typeof window.sawGlobal !== 'undefined' && window.sawGlobal.nonce) 
+                ? window.sawGlobal.nonce 
+                : '';
+            
+            if (!nonce) {
+                console.error('[OOPP] Missing nonce');
+                alert('Chyba: Nelze ověřit požadavek. Zkuste obnovit stránku.');
+                return false;
+            }
+            
+            // Add action and nonce to form data
+            formData.append('action', action);
+            formData.append('nonce', nonce);
+            
+            // Show loading state
+            var $submitBtn = $form.find('button[type="submit"]');
+            var originalHtml = $submitBtn.html();
+            $submitBtn.prop('disabled', true).html('<span class="spinner is-active" style="float:none;margin:0 5px 0 0;"></span> Ukládám...');
+            
+            $.ajax({
+                url: ajaxUrl,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                dataType: 'json',
+                success: function(response) {
+                    if (response && response.success) {
+                        var entityId = response.data.id;
+                        var detailUrl = window.location.origin + '/admin/oopp/' + entityId + '/';
+                        
+                        console.log('[OOPP] Successfully saved, navigating to:', detailUrl);
+                        
+                        // Show success message
+                        if (typeof window.sawShowToast === 'function') {
+                            window.sawShowToast(response.data.message || 'OOPP byl úspěšně uložen', 'success');
+                        }
+                        
+                        // Navigate to detail
+                        setTimeout(function() {
+                            if (window.viewTransition && typeof window.viewTransition.navigateTo === 'function') {
+                                window.viewTransition.navigateTo(detailUrl);
+                            } else {
+                                window.location.href = detailUrl;
+                            }
+                        }, 300);
+                    } else {
+                        var errorMsg = response.data?.message || 'Chyba při ukládání';
+                        if (typeof window.sawShowToast === 'function') {
+                            window.sawShowToast(errorMsg, 'error');
+                        } else {
+                            alert(errorMsg);
+                        }
+                        $submitBtn.prop('disabled', false).html(originalHtml);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('[OOPP] AJAX Error:', status, error, xhr.responseText);
+                    
+                    var errorMsg = 'Chyba při ukládání';
+                    if (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
+                        errorMsg = xhr.responseJSON.data.message;
+                    }
+                    
+                    if (typeof window.sawShowToast === 'function') {
+                        window.sawShowToast(errorMsg, 'error');
+                    } else {
+                        alert(errorMsg);
+                    }
+                    
+                    $submitBtn.prop('disabled', false).html(originalHtml);
+                }
+            });
+            
+            return false;
+        });
+        
+        console.log('[OOPP] Sidebar AJAX handler initialized');
+    }
     
 });
 </script>

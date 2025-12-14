@@ -321,30 +321,18 @@ $has_instructions = !empty($current_trans['usage_instructions']);
     </div>
 
     <!-- ================================================
-         INSTRUCTIONS SECTION
+         INSTRUCTIONS CARD - Pokyny pro použití
          ================================================ -->
-    <div class="saw-oopp-instructions-section" data-translate-section="usage_instructions" <?php if (empty($current_trans['usage_instructions'])): ?>style="display: none;"<?php endif; ?>>
-        <div class="saw-oopp-section-header">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/>
-                <path d="M12 16v-4"/>
-                <path d="M12 8h.01"/>
-            </svg>
-            <span><?php echo esc_html($tr('section_instructions', 'Pokyny pro používání')); ?></span>
-        </div>
-        
-        <!-- Usage Instructions -->
-        <div class="saw-oopp-instruction-card saw-oopp-instruction-usage">
-            <div class="saw-oopp-instruction-header">
-                <div class="saw-oopp-instruction-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-                    </svg>
-                </div>
-                <span class="saw-oopp-instruction-title"><?php echo esc_html($tr('label_usage', 'Pokyny pro použití')); ?></span>
+    <div class="saw-oopp-info-card saw-oopp-card-instructions" data-translate-section="usage_instructions" <?php if (empty($current_trans['usage_instructions'])): ?>style="display: none;"<?php endif; ?>>
+        <div class="saw-oopp-info-inner">
+            <div class="saw-oopp-info-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                </svg>
             </div>
-            <div class="saw-oopp-instruction-body" data-translate="usage_instructions">
-                <?php echo nl2br(esc_html($current_trans['usage_instructions'] ?? '')); ?>
+            <div class="saw-oopp-info-content">
+                <div class="saw-oopp-info-label"><?php echo esc_html($tr('label_usage', 'Pokyny pro použití')); ?></div>
+                <div class="saw-oopp-info-text" data-translate="usage_instructions"><?php echo nl2br(esc_html($current_trans['usage_instructions'] ?? '')); ?></div>
             </div>
         </div>
     </div>
@@ -881,6 +869,14 @@ jQuery(document).ready(function($) {
     background: linear-gradient(135deg, #10b981 0%, #059669 100%);
 }
 
+.saw-oopp-card-instructions {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.saw-oopp-card-instructions .saw-oopp-info-icon {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
 .saw-oopp-info-content {
     flex: 1;
     min-width: 0;
@@ -901,86 +897,6 @@ jQuery(document).ready(function($) {
     color: #374151;
 }
 
-/* ================================================
-   INSTRUCTIONS SECTION
-   ================================================ */
-.saw-oopp-instructions-section {
-    background: #f8fafc;
-    border-radius: 16px;
-    padding: 16px;
-}
-
-.saw-oopp-section-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 14px;
-    font-weight: 700;
-    color: #475569;
-    margin-bottom: 16px;
-    padding-bottom: 12px;
-    border-bottom: 2px solid #e2e8f0;
-}
-
-.saw-oopp-section-header svg {
-    color: #64748b;
-}
-
-.saw-oopp-instruction-card {
-    background: white;
-    border-radius: 12px;
-    border: 1px solid #e2e8f0;
-    overflow: hidden;
-    margin-bottom: 12px;
-}
-
-.saw-oopp-instruction-card:last-child {
-    margin-bottom: 0;
-}
-
-.saw-oopp-instruction-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    border-bottom: 1px solid #f1f5f9;
-}
-
-.saw-oopp-instruction-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    flex-shrink: 0;
-}
-
-.saw-oopp-instruction-usage .saw-oopp-instruction-icon {
-    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
-}
-
-.saw-oopp-instruction-maintenance .saw-oopp-instruction-icon {
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-}
-
-.saw-oopp-instruction-storage .saw-oopp-instruction-icon {
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-}
-
-.saw-oopp-instruction-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #1e293b;
-}
-
-.saw-oopp-instruction-body {
-    padding: 16px;
-    font-size: 14px;
-    line-height: 1.7;
-    color: #374151;
-}
 
 /* ================================================
    META CARD
@@ -1092,21 +1008,7 @@ jQuery(document).ready(function($) {
         height: 40px;
     }
     
-    .saw-oopp-instructions-section {
-        padding: 14px;
-    }
     
-    .saw-oopp-instruction-card {
-        margin-bottom: 10px;
-    }
-    
-    .saw-oopp-instruction-header {
-        padding: 10px 14px;
-    }
-    
-    .saw-oopp-instruction-body {
-        padding: 14px;
-    }
     
     .saw-oopp-meta-inner {
         flex-direction: column;
@@ -1176,10 +1078,6 @@ jQuery(document).ready(function($) {
     .saw-oopp-info-icon {
         width: 36px;
         height: 36px;
-    }
-    
-    .saw-oopp-instructions-section {
-        padding: 12px;
     }
 }
 
