@@ -313,6 +313,7 @@ $has_invitation_email = !empty($item['invitation_email']);
 
 <div class="saw-detail-cards-stack">
     <!-- VISITOR CARD -->
+    <div class="saw-info-item" style="grid-column: 1 / -1; width: 100%;">
     <div class="saw-visitor-card">
         <div class="saw-visitor-card-inner">
             <div class="saw-visitor-card-left">
@@ -360,6 +361,7 @@ $has_invitation_email = !empty($item['invitation_email']);
                 </div>
             </div>
         </div>
+    </div>
     </div>
 
     <!-- INVITATION CARD -->
@@ -522,8 +524,11 @@ $risks_emails = array_filter($email_logs, fn($e) => $e['email_type'] === 'risks_
 
 // Can send risks request?
 $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_token']);
+// Show risks section if there are materials, can edit, can send request, or has invitation token
+// ALWAYS show if can edit or can send - allows showing history and request button
+$show_risks_section = !empty($materials) || !empty($item['invitation_token']) || $can_edit_risks || $can_send_risks || !empty($risks_emails);
 ?>
-<?php if (!empty($materials) || !empty($item['invitation_token']) || $can_edit_risks || $can_send_risks): ?>
+<?php if ($show_risks_section): ?>
 <div class="saw-risks-card">
     <div class="saw-risks-card-inner">
         <div class="saw-risks-card-header">
@@ -765,6 +770,8 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
 .saw-detail-cards-stack {
     max-width: 100%;
     overflow: hidden;
+    overflow-x: hidden;
+    box-sizing: border-box;
 }
 
 /* ============================================
@@ -1088,10 +1095,17 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
 }
 
 /* Visitor Card */
+.saw-info-item .saw-visitor-card {
+    width: 100%;
+    max-width: 100%;
+}
+
 .saw-visitor-card {
     background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
     border-radius: 14px;
     padding: 2px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .saw-visitor-card-inner {
@@ -1102,6 +1116,8 @@ $can_send_risks = !empty($item['invitation_email']) && !empty($item['invitation_
     align-items: center;
     justify-content: space-between;
     gap: 16px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .saw-visitor-card-left {

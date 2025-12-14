@@ -1,6 +1,11 @@
 <?php
 /**
- * Frontend Dashboard Page v5.8.0
+ * Frontend Dashboard Page v5.9.0
+ * 
+ * Changes in 5.9.0:
+ * - ADDED: Full dark mode support
+ * - IMPROVED: Hourly chart now shows full 24 hours (0-23) instead of 6-20
+ * - IMPROVED: Chart.js colors adapt to dark/light theme
  * 
  * Changes in 5.8.0:
  * - IMPROVED: Mobile header - 2 column layout (text left, button right)
@@ -10,7 +15,7 @@
  * - IMPROVED: Emergency button - larger text
  * 
  * @package SAW_Visitors
- * @version 5.8.0
+ * @version 5.9.0
  */
 
 if (!defined('ABSPATH')) {
@@ -19,7 +24,7 @@ if (!defined('ABSPATH')) {
 
 class SAW_Frontend_Dashboard {
     
-    const VERSION = '5.8.0';
+    const VERSION = '5.9.0';
     
     public static function init() {}
     
@@ -225,7 +230,7 @@ class SAW_Frontend_Dashboard {
                 $chart_values[] = $count;
             }
             
-            // HOURLY CHART
+            // HOURLY CHART - Full 24 hours
             $hourly_raw = $wpdb->get_results($wpdb->prepare(
                 "SELECT HOUR(dl.checked_in_at) as hour, COUNT(*) as count
                  FROM {$wpdb->prefix}saw_visit_daily_logs dl
@@ -235,10 +240,10 @@ class SAW_Frontend_Dashboard {
                 $branch_id
             ), ARRAY_A);
             
-            for ($h = 6; $h <= 20; $h++) { $hourly_data[$h] = 0; }
+            for ($h = 0; $h <= 23; $h++) { $hourly_data[$h] = 0; }
             foreach ($hourly_raw as $row) {
                 $h = (int) $row['hour'];
-                if ($h >= 6 && $h <= 20) { $hourly_data[$h] = (int) $row['count']; }
+                if ($h >= 0 && $h <= 23) { $hourly_data[$h] = (int) $row['count']; }
             }
             
             // TRAINING STATS
@@ -587,15 +592,97 @@ class SAW_Frontend_Dashboard {
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
         <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // CHARTS
-            var w = document.getElementById('chart-week');
-            if (w) new Chart(w, {type:'bar',data:{labels:<?php echo json_encode($chart_labels); ?>,datasets:[{data:<?php echo json_encode($chart_values); ?>,backgroundColor:'rgba(37,99,235,0.85)',borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1,color:'#9ca3af'},grid:{color:'#f3f4f6'}},x:{ticks:{color:'#6b7280'},grid:{display:false}}}}});
+            // Dark mode detection
+            var isDark = document.documentElement.getAttribute('data-theme') === 'dark' || 
+                         document.body.getAttribute('data-theme') === 'dark';
             
+            // Chart colors based on theme
+            var chartColors = {
+                barBg: isDark ? 'rgba(96, 165, 250, 0.85)' : 'rgba(37, 99, 235, 0.85)',
+                lineBorder: '#10b981',
+                lineBg: isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)',
+                gridColor: isDark ? '#334155' : '#f3f4f6',
+                tickColor: isDark ? '#94a3b8' : '#9ca3af',
+                tickColorAlt: isDark ? '#64748b' : '#6b7280'
+            };
+            
+            // WEEKLY CHART
+            var w = document.getElementById('chart-week');
+            if (w) new Chart(w, {
+                type: 'bar',
+                data: {
+                    labels: <?php echo json_encode($chart_labels); ?>,
+                    datasets: [{
+                        data: <?php echo json_encode($chart_values); ?>,
+                        backgroundColor: chartColors.barBg,
+                        borderRadius: 6,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1, color: chartColors.tickColor },
+                            grid: { color: chartColors.gridColor }
+                        },
+                        x: {
+                            ticks: { color: chartColors.tickColorAlt },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+            
+            // HOURLY CHART (24 hours)
             var h = document.getElementById('chart-hour');
             if (h) {
-                var hL=[], hV=[];
-                <?php foreach ($hourly_data as $hr => $cnt): ?>hL.push('<?php echo $hr; ?>h'); hV.push(<?php echo $cnt; ?>);<?php endforeach; ?>
-                new Chart(h, {type:'line',data:{labels:hL,datasets:[{data:hV,borderColor:'#10b981',backgroundColor:'rgba(16,185,129,0.1)',borderWidth:2,fill:true,tension:0.4,pointRadius:3,pointBackgroundColor:'#10b981'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1,color:'#9ca3af'},grid:{color:'#f3f4f6'}},x:{ticks:{color:'#9ca3af',maxRotation:0,autoSkip:true,maxTicksLimit:8},grid:{display:false}}}}});
+                var hL = [], hV = [];
+                <?php foreach ($hourly_data as $hr => $cnt): ?>
+                hL.push('<?php echo $hr; ?>h');
+                hV.push(<?php echo $cnt; ?>);
+                <?php endforeach; ?>
+                
+                new Chart(h, {
+                    type: 'line',
+                    data: {
+                        labels: hL,
+                        datasets: [{
+                            data: hV,
+                            borderColor: chartColors.lineBorder,
+                            backgroundColor: chartColors.lineBg,
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 2,
+                            pointBackgroundColor: chartColors.lineBorder
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { stepSize: 1, color: chartColors.tickColor },
+                                grid: { color: chartColors.gridColor }
+                            },
+                            x: {
+                                ticks: {
+                                    color: chartColors.tickColor,
+                                    maxRotation: 0,
+                                    autoSkip: true,
+                                    maxTicksLimit: 12
+                                },
+                                grid: { display: false }
+                            }
+                        }
+                    }
+                });
             }
             
             // CHECKOUT

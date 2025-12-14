@@ -1,12 +1,13 @@
 <?php
 /**
- * PIN & Token Section - Detail Sidebar Part
+ * PIN & Token Section - Compact Collapsible Design
  * 
- * Displays PIN code and Invitation Token with expiration management.
+ * Compact collapsible section for access credentials (PIN code and invitation link).
+ * Shows aggregated status in collapsed state, full details when expanded.
  * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Visits/Parts
- * @version     5.0.0 - Added Token section with extend functionality
+ * @version     6.0.0 - Compact collapsible design
  */
 
 if (!defined('ABSPATH')) exit;
@@ -26,18 +27,19 @@ if (!isset($tr) || !is_callable($tr)) {
 }
 
 // ============================================
-// PIN LABELS
+// LABELS & TRANSLATIONS
 // ============================================
+$section_title = $tr('access_credentials_title', 'Přístupové údaje');
+$expand_label = $tr('expand', 'Rozbalit');
+$collapse_label = $tr('collapse', 'Sbalit');
+
 $pin_label = $tr('pin_label', 'PIN kód pro vstup');
 $pin_copy = $tr('pin_copy', 'Kopírovat');
 $pin_copied = $tr('pin_copied', 'Zkopírováno');
-$pin_status = $tr('pin_status', 'Stav');
-$pin_expiration = $tr('pin_expiration', 'Expirace');
-$pin_unlimited = $tr('pin_unlimited', 'Bez omezení');
-$pin_permanent = $tr('pin_permanent', 'Trvalý přístup');
 $pin_expired = $tr('pin_expired', 'Vypršelo');
 $pin_expired_ago = $tr('pin_expired_ago', 'Před');
 $pin_remaining = $tr('pin_remaining', 'Zbývá');
+$pin_active = $tr('pin_active', 'Aktivní');
 $pin_extend_24h = $tr('pin_extend_24h', '+24h');
 $pin_extend_48h = $tr('pin_extend_48h', '+48h');
 $pin_extend_7d = $tr('pin_extend_7d', '+7 dní');
@@ -48,19 +50,13 @@ $pin_back = $tr('pin_back', 'Zpět');
 $pin_not_generated = $tr('pin_not_generated', 'PIN kód nebyl vygenerován.');
 $pin_generate = $tr('pin_generate', 'Vygenerovat PIN');
 
-// ============================================
-// TOKEN LABELS
-// ============================================
 $token_label = $tr('token_label', 'Registrační odkaz');
 $token_copy = $tr('token_copy', 'Kopírovat odkaz');
 $token_copied = $tr('token_copied', 'Zkopírováno');
-$token_status = $tr('token_status', 'Stav');
-$token_expiration = $tr('token_expiration', 'Expirace');
-$token_unlimited = $tr('token_unlimited', 'Bez omezení');
-$token_permanent = $tr('token_permanent', 'Trvalý odkaz');
 $token_expired = $tr('token_expired', 'Vypršelo');
 $token_expired_ago = $tr('token_expired_ago', 'Před');
 $token_remaining = $tr('token_remaining', 'Zbývá');
+$token_active = $tr('token_active', 'Aktivní');
 $token_extend_24h = $tr('token_extend_24h', '+24h');
 $token_extend_3d = $tr('token_extend_3d', '+3 dny');
 $token_extend_7d = $tr('token_extend_7d', '+7 dní');
@@ -68,6 +64,13 @@ $token_extend_manual = $tr('token_extend_manual', 'Ručně');
 $token_set_expiry = $tr('token_set_expiry', 'Nastavit novou expiraci');
 $token_not_generated = $tr('token_not_generated', 'Registrační odkaz nebyl vygenerován.');
 $token_open = $tr('token_open', 'Otevřít');
+
+// Status badge labels
+$status_all_active = $tr('status_all_active', 'Aktivní');
+$status_pin_expired = $tr('status_pin_expired', 'PIN vypršel');
+$status_token_expired = $tr('status_token_expired', 'Odkaz vypršel');
+$status_both_expired = $tr('status_both_expired', 'Vše vypršelo');
+$status_none_generated = $tr('status_none_generated', 'Žádné údaje');
 
 // Duration labels
 $day_singular = $tr('duration_day', 'den');
@@ -114,6 +117,55 @@ if (!function_exists('saw_format_czech_duration_tr')) {
 }
 
 // ============================================
+// CALCULATE AGGREGATED STATUS
+// ============================================
+$has_pin = !empty($item['pin_code']);
+$has_token = !empty($item['invitation_token']);
+
+$pin_expired = false;
+$token_expired = false;
+
+if ($has_pin && !empty($item['pin_expires_at'])) {
+    $pin_exp_dt = new DateTime($item['pin_expires_at'], $prague_tz);
+    $pin_expired = $pin_exp_dt < $now_dt;
+}
+
+if ($has_token && !empty($item['invitation_token_expires_at'])) {
+    $token_exp_dt = new DateTime($item['invitation_token_expires_at'], $prague_tz);
+    $token_expired = $token_exp_dt < $now_dt;
+}
+
+// Determine aggregated status
+$aggregated_status = 'none'; // none, all_active, pin_expired, token_expired, both_expired
+$status_badge_text = $status_none_generated;
+$status_badge_icon = '⚪';
+$status_badge_class = 'status-none';
+
+if ($has_pin || $has_token) {
+    if ($pin_expired && $token_expired) {
+        $aggregated_status = 'both_expired';
+        $status_badge_text = $status_both_expired;
+        $status_badge_icon = '🔴';
+        $status_badge_class = 'status-error';
+    } elseif ($pin_expired) {
+        $aggregated_status = 'pin_expired';
+        $status_badge_text = $status_pin_expired;
+        $status_badge_icon = '⚠️';
+        $status_badge_class = 'status-warning';
+    } elseif ($token_expired) {
+        $aggregated_status = 'token_expired';
+        $status_badge_text = $status_token_expired;
+        $status_badge_icon = '⚠️';
+        $status_badge_class = 'status-warning';
+    } else {
+        $aggregated_status = 'all_active';
+        $status_badge_text = $status_all_active;
+        $status_badge_icon = '✅';
+        $status_badge_class = 'status-success';
+    }
+}
+
+// ============================================
 // BUILD INVITATION URL
 // ============================================
 $invitation_url = '';
@@ -122,468 +174,376 @@ if (!empty($item['invitation_token'])) {
     $invitation_url = home_url('/visitor-invitation/' . $item['invitation_token'] . '/');
     // Shorten URL for display
     $invitation_url_short = str_replace(['https://', 'http://'], '', $invitation_url);
-    if (strlen($invitation_url_short) > 40) {
-        $invitation_url_short = substr($invitation_url_short, 0, 37) . '...';
+    if (strlen($invitation_url_short) > 35) {
+        $half = (35 - 3) / 2;
+        $invitation_url_short = substr($invitation_url_short, 0, floor($half)) . '...' . substr($invitation_url_short, -ceil($half));
     }
 }
 
-// ============================================
-// PIN SECTION
-// ============================================
-if (!empty($item['pin_code'])): 
-    $js_expiry_ts = 0;
-    if (!empty($item['pin_expires_at'])) {
-        $exp_dt = new DateTime($item['pin_expires_at'], $prague_tz);
-        $js_expiry_ts = $exp_dt->getTimestamp() * 1000;
-    }
+$visit_id = intval($item['id'] ?? 0);
 ?>
-
-<div class="saw-info-item" style="grid-column: 1 / -1; width: 100%;">
-    <label style="margin-bottom: 10px; display:block; font-weight:600; color:#475569;">
-        🔐 <?php echo esc_html($pin_label); ?>
-    </label>
-    
-    <div class="saw-pin-modern-card" 
-         id="pin-card-<?php echo $item['id']; ?>" 
-         data-current-expiry="<?php echo $js_expiry_ts; ?>">
-        
-        <div class="saw-pin-display-box" 
-             onclick="copyPinToClipboard('<?php echo esc_js($item['pin_code']); ?>', <?php echo $item['id']; ?>)">
-            <div class="saw-pin-left-section">
-                <div class="saw-pin-icon-wrapper">
-                    <span>🔒</span>
-                </div>
-                <div class="saw-pin-code-display" id="pin-code-<?php echo $item['id']; ?>">
-                    <?php echo esc_html($item['pin_code']); ?>
-                </div>
-            </div>
-            <div class="saw-pin-copy-badge" id="pin-badge-<?php echo $item['id']; ?>">
-                <span>📋</span> 
-                <span class="saw-badge-text"><?php echo esc_html($pin_copy); ?></span>
-            </div>
-        </div>
-        
-        <?php 
-        $expiry_status_class = '';
-        $expiry_text_main = $pin_unlimited;
-        $expiry_text_sub = $pin_permanent;
-        $dot_class = 'valid';
-        
-        $calendar_val = (clone $now_dt)->modify('+24 hours')->format('Y-m-d\TH:i');
-
-        if (!empty($item['pin_expires_at'])) {
-            $expiry_dt = new DateTime($item['pin_expires_at'], $prague_tz);
-            $current_now = new DateTime('now', $prague_tz);
-            
-            if ($expiry_dt < $current_now) {
-                $diff = $current_now->diff($expiry_dt);
-                $expiry_text_main = $pin_expired;
-                $duration = saw_format_czech_duration_tr($diff, $day_singular, $day_few, $day_many, $hour_singular, $hour_few, $hour_many, $min_label);
-                $expiry_text_sub = $pin_expired_ago . " " . $duration;
-                $dot_class = 'expired';
-                $expiry_status_class = 'expired';
-                $calendar_val = (clone $current_now)->modify('+24 hours')->format('Y-m-d\TH:i');
-            } else {
-                $diff = $expiry_dt->diff($current_now);
-                $total_hours = ($diff->days * 24) + $diff->h;
-                
-                $duration = saw_format_czech_duration_tr($diff, $day_singular, $day_few, $day_many, $hour_singular, $hour_few, $hour_many, $min_label);
-                $expiry_text_main = $pin_remaining . " " . $duration;
-                $expiry_text_sub = $expiry_dt->format('d.m.Y H:i');
-                
-                $dot_class = ($total_hours < 6) ? 'warning' : 'valid';
-                $expiry_status_class = ($total_hours < 6) ? 'warning' : 'valid';
-                
-                $calendar_val = (clone $expiry_dt)->modify('+24 hours')->format('Y-m-d\TH:i');
-            }
-        }
-        ?>
-        
-        <div class="saw-pin-status-bar">
-            <div class="saw-pin-status-info">
-                <div class="saw-status-dot <?php echo $dot_class; ?>"></div>
-                <div class="saw-pin-status-text">
-                    <span class="saw-pin-status-title"><?php echo esc_html($pin_status); ?></span>
-                    <span class="saw-pin-status-value <?php echo $expiry_status_class; ?>" 
-                          id="status-val-<?php echo $item['id']; ?>">
-                        <?php echo esc_html($expiry_text_main); ?>
-                    </span>
-                </div>
-            </div>
-            <div class="saw-pin-status-text saw-pin-status-right">
-                <span class="saw-pin-status-title"><?php echo esc_html($pin_expiration); ?></span>
-                <span style="font-size: 13px; color: #64748b; font-weight: 500;" 
-                      id="expiry-val-<?php echo $item['id']; ?>">
-                    <?php echo esc_html($expiry_text_sub); ?>
-                </span>
-            </div>
-        </div>
-
-        <?php if ($item['status'] !== 'cancelled'): ?>
-        
-        <div id="pin-extend-buttons-<?php echo $item['id']; ?>" class="saw-pin-buttons-wrapper">
-            <div class="saw-pin-actions-grid">
-                <button type="button" 
-                        class="saw-pin-action-btn" 
-                        onclick="extendPinQuick(<?php echo $item['id']; ?>, 24)">
-                    <span>🔄</span> <?php echo esc_html($pin_extend_24h); ?>
-                </button>
-                <button type="button" 
-                        class="saw-pin-action-btn" 
-                        onclick="extendPinQuick(<?php echo $item['id']; ?>, 48)">
-                    <span>⏱️</span> <?php echo esc_html($pin_extend_48h); ?>
-                </button>
-                <button type="button" 
-                        class="saw-pin-action-btn" 
-                        onclick="extendPinQuick(<?php echo $item['id']; ?>, 168)">
-                    <span>📅</span> <?php echo esc_html($pin_extend_7d); ?>
-                </button>
-                <button type="button" 
-                        class="saw-pin-action-btn primary" 
-                        onclick="showExtendPinForm(<?php echo $item['id']; ?>)">
-                    <span>⚙️</span> <?php echo esc_html($pin_extend_manual); ?>
-                </button>
-            </div>
-        </div>
-
-        <div id="pin-extend-form-<?php echo $item['id']; ?>" 
-             style="display: none; width: 100%;">
-            <div class="saw-pin-custom-form">
-                <div class="saw-pin-form-title">
-                    <span>📆</span> <?php echo esc_html($pin_set_expiry); ?>
-                </div>
-                
-                <input type="datetime-local" 
-                       id="pin-expiry-datetime-<?php echo $item['id']; ?>" 
-                       class="saw-pin-datetime-input"
-                       value="<?php echo $calendar_val; ?>">
-                
-                <div class="saw-pin-actions-grid">
-                    <button type="button" 
-                            class="saw-pin-action-btn" 
-                            style="background:#10b981; color:white; border:none; justify-content: center;" 
-                            onclick="extendPinCustom(<?php echo $item['id']; ?>)">
-                        <span>✅</span> <?php echo esc_html($pin_save); ?>
-                    </button>
-                    <button type="button" 
-                            class="saw-pin-action-btn" 
-                            style="justify-content: center;" 
-                            onclick="hideExtendPinForm(<?php echo $item['id']; ?>)">
-                        <span>❌</span> <?php echo esc_html($pin_back); ?>
-                    </button>
-                </div>
-            </div>
-        </div>
-        <?php endif; ?>
-    </div>
-</div>
-<?php endif; ?>
-
-<?php 
-// Show generate PIN button if no PIN and visit is planned
-if (empty($item['pin_code']) && 
-    $item['status'] !== 'cancelled' && 
-    ($item['visit_type'] ?? '') === 'planned'): 
-?>
-<div class="saw-info-item" style="grid-column: 1 / -1; width: 100%;">
-    <div class="saw-pin-modern-card">
-        <div class="saw-pin-empty-state">
-            <div class="saw-pin-empty-icon">🔓</div>
-            <p style="margin:0 0 20px 0; color:#94a3b8; font-size:14px; line-height: 1.5;">
-                <?php echo esc_html($pin_not_generated); ?>
-            </p>
-            <button type="button" 
-                    class="saw-pin-generate-btn" 
-                    onclick="generatePin(<?php echo $item['id']; ?>)">
-                <span>✨</span> <?php echo esc_html($pin_generate); ?>
-            </button>
-        </div>
-    </div>
-</div>
-<?php endif; ?>
-
-
-<?php
-// ============================================
-// TOKEN SECTION
-// ============================================
-if (!empty($item['invitation_token'])): 
-    $js_token_expiry_ts = 0;
-    if (!empty($item['invitation_token_expires_at'])) {
-        $token_exp_dt = new DateTime($item['invitation_token_expires_at'], $prague_tz);
-        $js_token_expiry_ts = $token_exp_dt->getTimestamp() * 1000;
-    }
-?>
-
-<div class="saw-info-item" style="grid-column: 1 / -1; width: 100%;">
-    <label style="margin-bottom: 10px; display:block; font-weight:600; color:#475569;">
-        🔗 <?php echo esc_html($token_label); ?>
-    </label>
-    
-    <div class="saw-token-modern-card" 
-         id="token-card-<?php echo $item['id']; ?>" 
-         data-current-expiry="<?php echo $js_token_expiry_ts; ?>">
-        
-        <!-- Token Display Box -->
-        <div class="saw-token-display-box">
-            <div class="saw-token-left-section">
-                <div class="saw-token-icon-wrapper">
-                    <span>🌐</span>
-                </div>
-                <div class="saw-token-url-display" id="token-url-<?php echo $item['id']; ?>" title="<?php echo esc_attr($invitation_url); ?>">
-                    <?php echo esc_html($invitation_url_short); ?>
-                </div>
-            </div>
-            <div class="saw-token-actions">
-                <a href="<?php echo esc_url($invitation_url); ?>" 
-                   target="_blank" 
-                   class="saw-token-open-btn"
-                   title="<?php echo esc_attr($token_open); ?>">
-                    <span>↗️</span>
-                </a>
-                <button type="button" 
-                        class="saw-token-copy-badge" 
-                        id="token-badge-<?php echo $item['id']; ?>"
-                        onclick="copyUrlToClipboard('<?php echo esc_js($invitation_url); ?>', <?php echo $item['id']; ?>)">
-                    <span>📋</span> 
-                    <span class="saw-badge-text"><?php echo esc_html($token_copy); ?></span>
-                </button>
-            </div>
-        </div>
-        
-        <?php 
-        // Token expiry status
-        $token_expiry_status_class = '';
-        $token_expiry_text_main = $token_unlimited;
-        $token_expiry_text_sub = $token_permanent;
-        $token_dot_class = 'valid';
-        
-        $token_calendar_val = (clone $now_dt)->modify('+24 hours')->format('Y-m-d\TH:i');
-
-        if (!empty($item['invitation_token_expires_at'])) {
-            $token_expiry_dt = new DateTime($item['invitation_token_expires_at'], $prague_tz);
-            $current_now = new DateTime('now', $prague_tz);
-            
-            if ($token_expiry_dt < $current_now) {
-                $diff = $current_now->diff($token_expiry_dt);
-                $token_expiry_text_main = $token_expired;
-                $duration = saw_format_czech_duration_tr($diff, $day_singular, $day_few, $day_many, $hour_singular, $hour_few, $hour_many, $min_label);
-                $token_expiry_text_sub = $token_expired_ago . " " . $duration;
-                $token_dot_class = 'expired';
-                $token_expiry_status_class = 'expired';
-                $token_calendar_val = (clone $current_now)->modify('+24 hours')->format('Y-m-d\TH:i');
-            } else {
-                $diff = $token_expiry_dt->diff($current_now);
-                $total_hours = ($diff->days * 24) + $diff->h;
-                
-                $duration = saw_format_czech_duration_tr($diff, $day_singular, $day_few, $day_many, $hour_singular, $hour_few, $hour_many, $min_label);
-                $token_expiry_text_main = $token_remaining . " " . $duration;
-                $token_expiry_text_sub = $token_expiry_dt->format('d.m.Y H:i');
-                
-                $token_dot_class = ($total_hours < 24) ? 'warning' : 'valid';
-                $token_expiry_status_class = ($total_hours < 24) ? 'warning' : 'valid';
-                
-                $token_calendar_val = (clone $token_expiry_dt)->modify('+24 hours')->format('Y-m-d\TH:i');
-            }
-        }
-        ?>
-        
-        <!-- Token Status Bar -->
-        <div class="saw-token-status-bar">
-            <div class="saw-token-status-info">
-                <div class="saw-status-dot <?php echo $token_dot_class; ?>"></div>
-                <div class="saw-token-status-text">
-                    <span class="saw-token-status-title"><?php echo esc_html($token_status); ?></span>
-                    <span class="saw-token-status-value <?php echo $token_expiry_status_class; ?>" 
-                          id="token-status-val-<?php echo $item['id']; ?>">
-                        <?php echo esc_html($token_expiry_text_main); ?>
-                    </span>
-                </div>
-            </div>
-            <div class="saw-token-status-text saw-token-status-right">
-                <span class="saw-token-status-title"><?php echo esc_html($token_expiration); ?></span>
-                <span style="font-size: 13px; color: #64748b; font-weight: 500;" 
-                      id="token-expiry-val-<?php echo $item['id']; ?>">
-                    <?php echo esc_html($token_expiry_text_sub); ?>
-                </span>
-            </div>
-        </div>
-
-        <?php if ($item['status'] !== 'cancelled'): ?>
-        
-        <!-- Token Extend Buttons -->
-        <div id="token-extend-buttons-<?php echo $item['id']; ?>" class="saw-token-buttons-wrapper">
-            <div class="saw-token-actions-grid">
-                <button type="button" 
-                        class="saw-token-action-btn" 
-                        onclick="extendTokenQuick(<?php echo $item['id']; ?>, 24)">
-                    <span>🔄</span> <?php echo esc_html($token_extend_24h); ?>
-                </button>
-                <button type="button" 
-                        class="saw-token-action-btn" 
-                        onclick="extendTokenQuick(<?php echo $item['id']; ?>, 72)">
-                    <span>⏱️</span> <?php echo esc_html($token_extend_3d); ?>
-                </button>
-                <button type="button" 
-                        class="saw-token-action-btn" 
-                        onclick="extendTokenQuick(<?php echo $item['id']; ?>, 168)">
-                    <span>📅</span> <?php echo esc_html($token_extend_7d); ?>
-                </button>
-                <button type="button" 
-                        class="saw-token-action-btn primary" 
-                        onclick="showExtendTokenForm(<?php echo $item['id']; ?>)">
-                    <span>⚙️</span> <?php echo esc_html($token_extend_manual); ?>
-                </button>
-            </div>
-        </div>
-
-        <!-- Token Custom Expiry Form -->
-        <div id="token-extend-form-<?php echo $item['id']; ?>" 
-             style="display: none; width: 100%;">
-            <div class="saw-token-custom-form">
-                <div class="saw-token-form-title">
-                    <span>📆</span> <?php echo esc_html($token_set_expiry); ?>
-                </div>
-                
-                <input type="datetime-local" 
-                       id="token-expiry-datetime-<?php echo $item['id']; ?>" 
-                       class="saw-token-datetime-input"
-                       value="<?php echo $token_calendar_val; ?>">
-                
-                <div class="saw-token-actions-grid">
-                    <button type="button" 
-                            class="saw-token-action-btn" 
-                            style="background:#10b981; color:white; border:none; justify-content: center;" 
-                            onclick="extendTokenCustom(<?php echo $item['id']; ?>)">
-                        <span>✅</span> <?php echo esc_html($pin_save); ?>
-                    </button>
-                    <button type="button" 
-                            class="saw-token-action-btn" 
-                            style="justify-content: center;" 
-                            onclick="hideExtendTokenForm(<?php echo $item['id']; ?>)">
-                        <span>❌</span> <?php echo esc_html($pin_back); ?>
-                    </button>
-                </div>
-            </div>
-        </div>
-        <?php endif; ?>
-    </div>
-</div>
-<?php endif; ?>
-
-<?php 
-// Show message if no token and visit is planned
-if (empty($item['invitation_token']) && 
-    $item['status'] !== 'cancelled' && 
-    ($item['visit_type'] ?? '') === 'planned'): 
-?>
-<div class="saw-info-item" style="grid-column: 1 / -1; width: 100%;">
-    <div class="saw-token-modern-card saw-token-empty">
-        <div class="saw-token-empty-state">
-            <div class="saw-token-empty-icon">🔗</div>
-            <p style="margin:0; color:#94a3b8; font-size:14px; line-height: 1.5;">
-                <?php echo esc_html($token_not_generated); ?>
-            </p>
-            <p style="margin:8px 0 0 0; color:#64748b; font-size:12px;">
-                <?php echo esc_html($tr('token_generate_hint', 'Token se vygeneruje automaticky při odeslání pozvánky.')); ?>
-            </p>
-        </div>
-    </div>
-</div>
-<?php endif; ?>
-
 
 <!-- ============================================ -->
-<!-- JAVASCRIPT                                   -->
+<!-- ACCESS CREDENTIALS SECTION (COMPACT)        -->
+<!-- ============================================ -->
+<div class="saw-info-item saw-access-credentials-wrapper" style="grid-column: 1 / -1; width: 100%;">
+<div class="saw-access-credentials-section" id="access-credentials-<?php echo $visit_id; ?>">
+    <!-- HEADER (Always visible) -->
+    <div class="saw-access-header" onclick="sawToggleAccessCredentials(<?php echo $visit_id; ?>)">
+        <div class="saw-access-header-left">
+            <span class="saw-access-icon">🔐</span>
+            <span class="saw-access-title"><?php echo esc_html($section_title); ?></span>
+        </div>
+        <div class="saw-access-header-right">
+            <span class="saw-access-status-badge <?php echo esc_attr($status_badge_class); ?>">
+                <span class="status-icon"><?php echo $status_badge_icon; ?></span>
+                <span class="status-text"><?php echo esc_html($status_badge_text); ?></span>
+            </span>
+            <span class="saw-access-toggle-icon" id="toggle-icon-<?php echo $visit_id; ?>">▼</span>
+        </div>
+    </div>
+
+    <!-- COLLAPSIBLE CONTENT -->
+    <div class="saw-access-content" id="access-content-<?php echo $visit_id; ?>" style="display: none;">
+        <div class="saw-access-content-inner">
+            
+            <!-- PIN CARD -->
+            <?php if ($has_pin): 
+                $js_pin_expiry_ts = 0;
+                if (!empty($item['pin_expires_at'])) {
+                    $exp_dt = new DateTime($item['pin_expires_at'], $prague_tz);
+                    $js_pin_expiry_ts = $exp_dt->getTimestamp() * 1000;
+                }
+                $calendar_val = (clone $now_dt)->modify('+24 hours')->format('Y-m-d\TH:i');
+                if (!empty($item['pin_expires_at'])) {
+                    $exp_dt = new DateTime($item['pin_expires_at'], $prague_tz);
+                    $current_now = new DateTime('now', $prague_tz);
+                    if ($exp_dt > $current_now) {
+                        $calendar_val = (clone $exp_dt)->modify('+24 hours')->format('Y-m-d\TH:i');
+                    }
+                }
+            ?>
+            <div class="saw-credential-card saw-pin-card <?php echo $pin_expired ? 'expired' : ''; ?>" 
+                 id="pin-card-<?php echo $visit_id; ?>" 
+                 data-current-expiry="<?php echo $js_pin_expiry_ts; ?>">
+                
+                <div class="saw-credential-title"><?php echo esc_html($pin_label); ?></div>
+                
+                <div class="saw-credential-display">
+                    <div class="saw-credential-value-box" onclick="copyPinToClipboard('<?php echo esc_js($item['pin_code']); ?>', <?php echo $visit_id; ?>)">
+                        <span class="credential-icon">🔑</span>
+                        <span class="credential-value pin-value" id="pin-code-<?php echo $visit_id; ?>">
+                            <?php echo esc_html($item['pin_code']); ?>
+                        </span>
+                        <span class="credential-copy-icon" id="pin-copy-icon-<?php echo $visit_id; ?>">👁️</span>
+                        <span class="credential-copy-text" id="pin-copy-text-<?php echo $visit_id; ?>"><?php echo esc_html($pin_copy); ?></span>
+                    </div>
+                </div>
+                
+                <?php 
+                $pin_status_text = $pin_active;
+                $pin_status_class = 'active';
+                $pin_expiry_text = '';
+                
+                if (!empty($item['pin_expires_at'])) {
+                    $exp_dt = new DateTime($item['pin_expires_at'], $prague_tz);
+                    $current_now = new DateTime('now', $prague_tz);
+                    
+                    if ($exp_dt < $current_now) {
+                        $diff = $current_now->diff($exp_dt);
+                        $duration = saw_format_czech_duration_tr($diff, $day_singular, $day_few, $day_many, $hour_singular, $hour_few, $hour_many, $min_label);
+                        $pin_status_text = $pin_expired_ago . ' ' . $duration;
+                        $pin_status_class = 'expired';
+                    } else {
+                        $diff = $exp_dt->diff($current_now);
+                        $duration = saw_format_czech_duration_tr($diff, $day_singular, $day_few, $day_many, $hour_singular, $hour_few, $hour_many, $min_label);
+                        $pin_status_text = $pin_active . ' - ' . $pin_remaining . ' ' . $duration;
+                        $pin_expiry_text = $exp_dt->format('d.m.Y H:i');
+                    }
+                }
+                ?>
+                
+                <div class="saw-credential-status">
+                    <span class="status-indicator <?php echo esc_attr($pin_status_class); ?>">
+                        <?php echo $pin_expired ? '⚠️' : '✅'; ?>
+                    </span>
+                    <span class="status-text <?php echo esc_attr($pin_status_class); ?>">
+                        <?php echo esc_html($pin_status_text); ?>
+                    </span>
+                </div>
+                
+                <?php if ($item['status'] !== 'cancelled'): ?>
+                <div class="saw-credential-actions">
+                    <div class="saw-extend-buttons" id="pin-extend-buttons-<?php echo $visit_id; ?>">
+                        <button type="button" class="saw-extend-btn" onclick="extendPinQuick(<?php echo $visit_id; ?>, 24)">
+                            <span>🔄</span> <?php echo esc_html($pin_extend_24h); ?>
+                        </button>
+                        <button type="button" class="saw-extend-btn" onclick="extendPinQuick(<?php echo $visit_id; ?>, 48)">
+                            <span>⏱️</span> <?php echo esc_html($pin_extend_48h); ?>
+                        </button>
+                        <button type="button" class="saw-extend-btn" onclick="extendPinQuick(<?php echo $visit_id; ?>, 168)">
+                            <span>📅</span> <?php echo esc_html($pin_extend_7d); ?>
+                        </button>
+                        <button type="button" class="saw-extend-btn primary" onclick="showExtendPinForm(<?php echo $visit_id; ?>)">
+                            <span>⚙️</span> <?php echo esc_html($pin_extend_manual); ?>
+                        </button>
+                    </div>
+                    
+                    <div class="saw-extend-form" id="pin-extend-form-<?php echo $visit_id; ?>" style="display: none;">
+                        <div class="saw-form-title">📆 <?php echo esc_html($pin_set_expiry); ?></div>
+                        <input type="datetime-local" 
+                               id="pin-expiry-datetime-<?php echo $visit_id; ?>" 
+                               class="saw-datetime-input"
+                               value="<?php echo esc_attr($calendar_val); ?>">
+                        <div class="saw-form-buttons">
+                            <button type="button" class="saw-form-btn save" onclick="extendPinCustom(<?php echo $visit_id; ?>)">
+                                <span>✅</span> <?php echo esc_html($pin_save); ?>
+                            </button>
+                            <button type="button" class="saw-form-btn cancel" onclick="hideExtendPinForm(<?php echo $visit_id; ?>)">
+                                <span>❌</span> <?php echo esc_html($pin_back); ?>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
+            </div>
+            <?php elseif ($item['status'] !== 'cancelled' && ($item['visit_type'] ?? '') === 'planned'): ?>
+            <div class="saw-credential-card saw-pin-card empty">
+                <div class="saw-credential-title"><?php echo esc_html($pin_label); ?></div>
+                <div class="saw-empty-state">
+                    <span class="empty-icon">🔓</span>
+                    <p><?php echo esc_html($pin_not_generated); ?></p>
+                    <button type="button" class="saw-generate-btn" onclick="generatePin(<?php echo $visit_id; ?>)">
+                        <span>✨</span> <?php echo esc_html($pin_generate); ?>
+                    </button>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <!-- TOKEN CARD -->
+            <?php if ($has_token): 
+                $js_token_expiry_ts = 0;
+                if (!empty($item['invitation_token_expires_at'])) {
+                    $token_exp_dt = new DateTime($item['invitation_token_expires_at'], $prague_tz);
+                    $js_token_expiry_ts = $token_exp_dt->getTimestamp() * 1000;
+                }
+                $token_calendar_val = (clone $now_dt)->modify('+24 hours')->format('Y-m-d\TH:i');
+                if (!empty($item['invitation_token_expires_at'])) {
+                    $token_exp_dt = new DateTime($item['invitation_token_expires_at'], $prague_tz);
+                    $current_now = new DateTime('now', $prague_tz);
+                    if ($token_exp_dt > $current_now) {
+                        $token_calendar_val = (clone $token_exp_dt)->modify('+24 hours')->format('Y-m-d\TH:i');
+                    }
+                }
+            ?>
+            <div class="saw-credential-card saw-token-card <?php echo $token_expired ? 'expired' : ''; ?>" 
+                 id="token-card-<?php echo $visit_id; ?>" 
+                 data-current-expiry="<?php echo $js_token_expiry_ts; ?>">
+                
+                <div class="saw-credential-title"><?php echo esc_html($token_label); ?></div>
+                
+                <div class="saw-credential-display">
+                    <div class="saw-credential-value-box">
+                        <span class="credential-icon">🔗</span>
+                        <span class="credential-value url-value" id="token-url-<?php echo $visit_id; ?>" title="<?php echo esc_attr($invitation_url); ?>">
+                            <?php echo esc_html($invitation_url_short); ?>
+                        </span>
+                        <a href="<?php echo esc_url($invitation_url); ?>" 
+                           target="_blank" 
+                           class="credential-open-link" 
+                           title="<?php echo esc_attr($token_open); ?>">↗️</a>
+                        <button type="button" 
+                                class="credential-copy-btn" 
+                                id="token-copy-btn-<?php echo $visit_id; ?>"
+                                onclick="copyUrlToClipboard('<?php echo esc_js($invitation_url); ?>', <?php echo $visit_id; ?>)">
+                            <span class="copy-icon">📋</span>
+                            <span class="copy-text"><?php echo esc_html($token_copy); ?></span>
+                        </button>
+                    </div>
+                </div>
+                
+                <?php 
+                $token_status_text = $token_active;
+                $token_status_class = 'active';
+                $token_expiry_text = '';
+                
+                if (!empty($item['invitation_token_expires_at'])) {
+                    $token_exp_dt = new DateTime($item['invitation_token_expires_at'], $prague_tz);
+                    $current_now = new DateTime('now', $prague_tz);
+                    
+                    if ($token_exp_dt < $current_now) {
+                        $diff = $current_now->diff($token_exp_dt);
+                        $duration = saw_format_czech_duration_tr($diff, $day_singular, $day_few, $day_many, $hour_singular, $hour_few, $hour_many, $min_label);
+                        $token_status_text = $token_expired_ago . ' ' . $duration;
+                        $token_status_class = 'expired';
+                    } else {
+                        $diff = $token_exp_dt->diff($current_now);
+                        $duration = saw_format_czech_duration_tr($diff, $day_singular, $day_few, $day_many, $hour_singular, $hour_few, $hour_many, $min_label);
+                        $token_status_text = $token_active . ' - ' . $token_remaining . ' ' . $duration;
+                        $token_expiry_text = $token_exp_dt->format('d.m.Y H:i');
+                    }
+                }
+                ?>
+                
+                <div class="saw-credential-status">
+                    <span class="status-indicator <?php echo esc_attr($token_status_class); ?>">
+                        <?php echo $token_expired ? '⚠️' : '✅'; ?>
+                    </span>
+                    <span class="status-text <?php echo esc_attr($token_status_class); ?>">
+                        <?php echo esc_html($token_status_text); ?>
+                    </span>
+                </div>
+                
+                <?php if ($item['status'] !== 'cancelled'): ?>
+                <div class="saw-credential-actions">
+                    <div class="saw-extend-buttons" id="token-extend-buttons-<?php echo $visit_id; ?>">
+                        <button type="button" class="saw-extend-btn" onclick="extendTokenQuick(<?php echo $visit_id; ?>, 24)">
+                            <span>🔄</span> <?php echo esc_html($token_extend_24h); ?>
+                        </button>
+                        <button type="button" class="saw-extend-btn" onclick="extendTokenQuick(<?php echo $visit_id; ?>, 72)">
+                            <span>⏱️</span> <?php echo esc_html($token_extend_3d); ?>
+                        </button>
+                        <button type="button" class="saw-extend-btn" onclick="extendTokenQuick(<?php echo $visit_id; ?>, 168)">
+                            <span>📅</span> <?php echo esc_html($token_extend_7d); ?>
+                        </button>
+                        <button type="button" class="saw-extend-btn primary" onclick="showExtendTokenForm(<?php echo $visit_id; ?>)">
+                            <span>⚙️</span> <?php echo esc_html($token_extend_manual); ?>
+                        </button>
+                    </div>
+                    
+                    <div class="saw-extend-form" id="token-extend-form-<?php echo $visit_id; ?>" style="display: none;">
+                        <div class="saw-form-title">📆 <?php echo esc_html($token_set_expiry); ?></div>
+                        <input type="datetime-local" 
+                               id="token-expiry-datetime-<?php echo $visit_id; ?>" 
+                               class="saw-datetime-input"
+                               value="<?php echo esc_attr($token_calendar_val); ?>">
+                        <div class="saw-form-buttons">
+                            <button type="button" class="saw-form-btn save" onclick="extendTokenCustom(<?php echo $visit_id; ?>)">
+                                <span>✅</span> <?php echo esc_html($pin_save); ?>
+                            </button>
+                            <button type="button" class="saw-form-btn cancel" onclick="hideExtendTokenForm(<?php echo $visit_id; ?>)">
+                                <span>❌</span> <?php echo esc_html($pin_back); ?>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
+            </div>
+            <?php elseif ($item['status'] !== 'cancelled' && ($item['visit_type'] ?? '') === 'planned'): ?>
+            <div class="saw-credential-card saw-token-card empty">
+                <div class="saw-credential-title"><?php echo esc_html($token_label); ?></div>
+                <div class="saw-empty-state">
+                    <span class="empty-icon">🔗</span>
+                    <p><?php echo esc_html($token_not_generated); ?></p>
+                    <p class="empty-hint"><?php echo esc_html($tr('token_generate_hint', 'Token se vygeneruje automaticky při odeslání pozvánky.')); ?></p>
+                </div>
+            </div>
+            <?php endif; ?>
+
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- ============================================ -->
+<!-- JAVASCRIPT                                  -->
 <!-- ============================================ -->
 <script>
-// ============================================
-// PIN FUNCTIONS
-// ============================================
+// Toggle expand/collapse
+if (typeof sawToggleAccessCredentials === 'undefined') {
+    function sawToggleAccessCredentials(visitId) {
+        const content = document.getElementById('access-content-' + visitId);
+        const icon = document.getElementById('toggle-icon-' + visitId);
+        
+        if (!content || !icon) return;
+        
+        const isExpanded = content.style.display !== 'none';
+        
+        if (isExpanded) {
+            content.style.display = 'none';
+            icon.textContent = '▼';
+            icon.style.transform = 'rotate(0deg)';
+        } else {
+            content.style.display = 'block';
+            icon.textContent = '▲';
+            icon.style.transform = 'rotate(180deg)';
+        }
+    }
+}
+
+// PIN copy function
 if (typeof copyPinToClipboard === 'undefined') {
     function copyPinToClipboard(pin, visitId) {
         if (!pin) return;
         
         const displayEl = document.getElementById('pin-code-' + visitId);
-        const badgeEl = document.getElementById('pin-badge-' + visitId);
+        const copyIcon = document.getElementById('pin-copy-icon-' + visitId);
+        const copyText = document.getElementById('pin-copy-text-' + visitId);
         
-        if (!displayEl || !badgeEl) return;
+        if (!displayEl) return;
         
         const originalText = displayEl.innerText;
-        const originalBadge = badgeEl.innerHTML;
+        const originalIcon = copyIcon ? copyIcon.textContent : '';
+        const originalCopyText = copyText ? copyText.textContent : '';
         
         navigator.clipboard.writeText(pin).then(() => {
-            displayEl.innerText = "✓";
-            displayEl.classList.add('copied');
-            badgeEl.classList.add('copied');
-            
-            const badgeText = badgeEl.querySelector('.saw-badge-text');
-            if (badgeText && getComputedStyle(badgeText).display !== 'none') {
-                badgeText.innerText = "<?php echo esc_js($pin_copied); ?>";
-            }
+            if (copyIcon) copyIcon.textContent = '✓';
+            if (copyText) copyText.textContent = '<?php echo esc_js($pin_copied); ?>';
             
             if (window.navigator && window.navigator.vibrate) {
                 window.navigator.vibrate([50]);
             }
             
             setTimeout(() => {
-                displayEl.classList.remove('copied');
-                displayEl.innerText = originalText;
-                badgeEl.classList.remove('copied');
-                badgeEl.innerHTML = originalBadge;
-            }, 1500);
+                if (copyIcon) copyIcon.textContent = originalIcon;
+                if (copyText) copyText.textContent = originalCopyText;
+            }, 2000);
         }).catch(err => {
             console.error('Copy error:', err);
-            // Fallback for older browsers
             fallbackCopyToClipboard(pin);
         });
     }
 }
 
-// ============================================
-// TOKEN FUNCTIONS
-// ============================================
+// URL copy function
 if (typeof copyUrlToClipboard === 'undefined') {
     function copyUrlToClipboard(url, visitId) {
         if (!url) return;
         
-        const badgeEl = document.getElementById('token-badge-' + visitId);
+        const badgeEl = document.getElementById('token-copy-btn-' + visitId);
         if (!badgeEl) return;
         
-        const originalBadge = badgeEl.innerHTML;
+        const copyIcon = badgeEl.querySelector('.copy-icon');
+        const copyText = badgeEl.querySelector('.copy-text');
+        const originalIcon = copyIcon ? copyIcon.textContent : '';
+        const originalText = copyText ? copyText.textContent : '';
         
         navigator.clipboard.writeText(url).then(() => {
-            badgeEl.classList.add('copied');
-            
-            const badgeText = badgeEl.querySelector('.saw-badge-text');
-            if (badgeText) {
-                badgeText.innerText = "<?php echo esc_js($token_copied); ?>";
-            }
+            if (copyIcon) copyIcon.textContent = '✓';
+            if (copyText) copyText.textContent = '<?php echo esc_js($token_copied); ?>';
             
             if (window.navigator && window.navigator.vibrate) {
                 window.navigator.vibrate([50]);
             }
             
             setTimeout(() => {
-                badgeEl.classList.remove('copied');
-                badgeEl.innerHTML = originalBadge;
-            }, 1500);
+                if (copyIcon) copyIcon.textContent = originalIcon;
+                if (copyText) copyText.textContent = originalText;
+            }, 2000);
         }).catch(err => {
             console.error('Copy error:', err);
-            // Fallback for older browsers
             fallbackCopyToClipboard(url);
         });
     }
 }
 
-// Fallback copy function for older browsers
+// Fallback copy
 if (typeof fallbackCopyToClipboard === 'undefined') {
     function fallbackCopyToClipboard(text) {
         const textArea = document.createElement('textarea');
         textArea.value = text;
         textArea.style.position = 'fixed';
         textArea.style.left = '-999999px';
-        textArea.style.top = '-999999px';
         document.body.appendChild(textArea);
         textArea.focus();
         textArea.select();
@@ -593,45 +553,127 @@ if (typeof fallbackCopyToClipboard === 'undefined') {
             alert('<?php echo esc_js($tr('copied_fallback', 'Zkopírováno do schránky')); ?>');
         } catch (err) {
             console.error('Fallback copy failed:', err);
-            alert('<?php echo esc_js($tr('copy_failed', 'Kopírování selhalo. Zkopírujte ručně.')); ?>');
         }
         
         document.body.removeChild(textArea);
     }
 }
 
-// ============================================
-// TOKEN EXTEND FUNCTIONS
-// ============================================
+// PIN extend functions (from existing implementation)
+if (typeof extendPinQuick === 'undefined') {
+    function extendPinQuick(visitId, hours) {
+        const card = document.getElementById('pin-card-' + visitId);
+        if (!card) {
+            alert('<?php echo esc_js($tr('alert_error', 'Chyba')); ?>: Nenalezen PIN element');
+            return;
+        }
+        
+        const currentExpiry = parseInt(card.getAttribute('data-current-expiry')) || 0;
+        const now = Date.now();
+        const baseTime = (currentExpiry && currentExpiry > now) ? currentExpiry : now;
+        const newTimeMs = baseTime + (hours * 3600 * 1000);
+        const newDate = new Date(newTimeMs);
+        newDate.setSeconds(0, 0);
+        
+        const displayDate = formatDateTime(newDate);
+        if (!confirm('<?php echo esc_js($tr('confirm_extend_pin', 'Prodloužit platnost PIN o')); ?> ' + hours + ' <?php echo esc_js($tr('hours', 'hodin')); ?>?\n\n<?php echo esc_js($tr('new_expiration', 'Nová expirace')); ?>: ' + displayDate)) {
+            return;
+        }
+        
+        const sqlDate = formatSQLDateTime(newDate);
+        extendPinToExactTime(visitId, sqlDate, newDate);
+    }
+}
+
+if (typeof extendPinToExactTime === 'undefined') {
+    function extendPinToExactTime(visitId, sqlDate, dateObj) {
+        jQuery.post(sawGlobal.ajaxurl, {
+            action: 'saw_extend_pin',
+            visit_id: visitId,
+            exact_expiry: sqlDate,
+            nonce: sawGlobal.nonce
+        }, function(response) {
+            if (response.success) {
+                const card = document.getElementById('pin-card-' + visitId);
+                if (card) {
+                    card.setAttribute('data-current-expiry', dateObj.getTime());
+                }
+                alert('✅ <?php echo esc_js($tr('alert_pin_extended', 'PIN prodloužen do')); ?>: ' + formatDateTime(dateObj));
+                location.reload();
+            } else {
+                alert('<?php echo esc_js($tr('alert_error', 'Chyba')); ?>: ' + (response.data?.message || 'Neznámá chyba'));
+            }
+        }).fail(function(xhr, status, error) {
+            alert('<?php echo esc_js($tr('alert_error', 'Chyba')); ?> komunikace se serverem\n\n' + error);
+        });
+    }
+}
+
+if (typeof showExtendPinForm === 'undefined') {
+    function showExtendPinForm(visitId) {
+        document.getElementById('pin-extend-buttons-' + visitId).style.display = 'none';
+        const form = document.getElementById('pin-extend-form-' + visitId);
+        form.style.display = 'block';
+        const datetimeInput = document.getElementById('pin-expiry-datetime-' + visitId);
+        datetimeInput.min = new Date().toISOString().slice(0, 16);
+    }
+}
+
+if (typeof hideExtendPinForm === 'undefined') {
+    function hideExtendPinForm(visitId) {
+        document.getElementById('pin-extend-form-' + visitId).style.display = 'none';
+        document.getElementById('pin-extend-buttons-' + visitId).style.display = 'flex';
+    }
+}
+
+if (typeof extendPinCustom === 'undefined') {
+    function extendPinCustom(visitId) {
+        const datetimeInput = document.getElementById('pin-expiry-datetime-' + visitId);
+        const datetimeValue = datetimeInput.value;
+        
+        if (!datetimeValue) {
+            alert('<?php echo esc_js($tr('enter_datetime', 'Prosím zadejte datum a čas.')); ?>');
+            return;
+        }
+        
+        const newDate = new Date(datetimeValue);
+        if (isNaN(newDate.getTime())) {
+            alert('<?php echo esc_js($tr('invalid_date', 'Neplatné datum')); ?>');
+            return;
+        }
+        
+        const displayDate = formatDateTime(newDate);
+        if (!confirm('<?php echo esc_js($tr('confirm_set_expiry', 'Nastavit expiraci PIN na')); ?>:\n' + displayDate + '?')) {
+            return;
+        }
+        
+        const sqlDate = formatSQLDateTime(newDate);
+        extendPinToExactTime(visitId, sqlDate, newDate);
+    }
+}
+
+// TOKEN extend functions
 if (typeof extendTokenQuick === 'undefined') {
     function extendTokenQuick(visitId, hours) {
-        var card = document.getElementById('token-card-' + visitId);
+        const card = document.getElementById('token-card-' + visitId);
         if (!card) {
             alert('<?php echo esc_js($tr('alert_error', 'Chyba')); ?>: Nenalezen Token element');
             return;
         }
         
-        var currentExpiry = parseInt(card.getAttribute('data-current-expiry'));
-        var now = Date.now();
-        var baseTime;
-        
-        if (currentExpiry && currentExpiry > now) {
-            baseTime = currentExpiry;
-        } else {
-            baseTime = now;
-        }
-        
-        var newTimeMs = baseTime + (hours * 3600 * 1000);
-        var newDate = new Date(newTimeMs);
+        const currentExpiry = parseInt(card.getAttribute('data-current-expiry')) || 0;
+        const now = Date.now();
+        const baseTime = (currentExpiry && currentExpiry > now) ? currentExpiry : now;
+        const newTimeMs = baseTime + (hours * 3600 * 1000);
+        const newDate = new Date(newTimeMs);
         newDate.setSeconds(0, 0);
         
-        var displayDate = formatDateTime(newDate);
-        
+        const displayDate = formatDateTime(newDate);
         if (!confirm('<?php echo esc_js($tr('confirm_extend_token', 'Prodloužit platnost odkazu o')); ?> ' + hours + ' <?php echo esc_js($tr('hours', 'hodin')); ?>?\n\n<?php echo esc_js($tr('new_expiration', 'Nová expirace')); ?>: ' + displayDate)) {
             return;
         }
         
-        var sqlDate = formatSQLDateTime(newDate);
+        const sqlDate = formatSQLDateTime(newDate);
         extendTokenToExactTime(visitId, sqlDate, newDate);
     }
 }
@@ -645,7 +687,7 @@ if (typeof extendTokenToExactTime === 'undefined') {
             nonce: sawGlobal.nonce
         }, function(response) {
             if (response.success) {
-                var card = document.getElementById('token-card-' + visitId);
+                const card = document.getElementById('token-card-' + visitId);
                 if (card) {
                     card.setAttribute('data-current-expiry', dateObj.getTime());
                 }
@@ -663,9 +705,9 @@ if (typeof extendTokenToExactTime === 'undefined') {
 if (typeof showExtendTokenForm === 'undefined') {
     function showExtendTokenForm(visitId) {
         document.getElementById('token-extend-buttons-' + visitId).style.display = 'none';
-        var form = document.getElementById('token-extend-form-' + visitId);
+        const form = document.getElementById('token-extend-form-' + visitId);
         form.style.display = 'block';
-        var datetimeInput = document.getElementById('token-expiry-datetime-' + visitId);
+        const datetimeInput = document.getElementById('token-expiry-datetime-' + visitId);
         datetimeInput.min = new Date().toISOString().slice(0, 16);
     }
 }
@@ -679,817 +721,659 @@ if (typeof hideExtendTokenForm === 'undefined') {
 
 if (typeof extendTokenCustom === 'undefined') {
     function extendTokenCustom(visitId) {
-        var datetimeInput = document.getElementById('token-expiry-datetime-' + visitId);
-        var datetimeValue = datetimeInput.value;
+        const datetimeInput = document.getElementById('token-expiry-datetime-' + visitId);
+        const datetimeValue = datetimeInput.value;
         
         if (!datetimeValue) {
             alert('<?php echo esc_js($tr('enter_datetime', 'Prosím zadejte datum a čas.')); ?>');
             return;
         }
         
-        var newDate = new Date(datetimeValue);
-        
+        const newDate = new Date(datetimeValue);
         if (isNaN(newDate.getTime())) {
             alert('<?php echo esc_js($tr('invalid_date', 'Neplatné datum')); ?>');
             return;
         }
         
-        var displayDate = formatDateTime(newDate);
-        
+        const displayDate = formatDateTime(newDate);
         if (!confirm('<?php echo esc_js($tr('confirm_set_expiry', 'Nastavit expiraci odkazu na')); ?>:\n' + displayDate + '?')) {
             return;
         }
         
-        var sqlDate = formatSQLDateTime(newDate);
+        const sqlDate = formatSQLDateTime(newDate);
         extendTokenToExactTime(visitId, sqlDate, newDate);
     }
 }
 
-// ============================================
-// HELPER FUNCTIONS (shared)
-// ============================================
+// Helper functions
 if (typeof formatDateTime === 'undefined') {
     function formatDateTime(date) {
-        var d = date.getDate().toString().padStart(2, '0');
-        var m = (date.getMonth() + 1).toString().padStart(2, '0');
-        var y = date.getFullYear();
-        var h = date.getHours().toString().padStart(2, '0');
-        var min = date.getMinutes().toString().padStart(2, '0');
+        const d = date.getDate().toString().padStart(2, '0');
+        const m = (date.getMonth() + 1).toString().padStart(2, '0');
+        const y = date.getFullYear();
+        const h = date.getHours().toString().padStart(2, '0');
+        const min = date.getMinutes().toString().padStart(2, '0');
         return d + '.' + m + '.' + y + ' ' + h + ':' + min;
     }
 }
 
 if (typeof formatSQLDateTime === 'undefined') {
     function formatSQLDateTime(date) {
-        var year = date.getFullYear();
-        var month = (date.getMonth() + 1).toString().padStart(2, '0');
-        var day = date.getDate().toString().padStart(2, '0');
-        var hours = date.getHours().toString().padStart(2, '0');
-        var minutes = date.getMinutes().toString().padStart(2, '0');
-        var seconds = date.getSeconds().toString().padStart(2, '0');
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        const seconds = date.getSeconds().toString().padStart(2, '0');
         return year + '-' + month + '-' + day + ' ' + hours + ':' + minutes + ':' + seconds;
     }
 }
-</script>
 
+// Generate PIN function (if not exists)
+if (typeof generatePin === 'undefined') {
+    function generatePin(visitId) {
+        if (!confirm('<?php echo esc_js($tr('confirm_generate_pin', 'Vygenerovat PIN kód pro tuto návštěvu?\n\nPIN bude platný do posledního plánovaného dne návštěvy + 24 hodin.')); ?>')) {
+            return;
+        }
+        
+        jQuery.post(sawGlobal.ajaxurl, {
+            action: 'saw_generate_pin',
+            visit_id: visitId,
+            nonce: sawGlobal.nonce
+        }, function(response) {
+            if (response.success) {
+                alert('✅ <?php echo esc_js($tr('alert_pin_generated', 'PIN úspěšně vygenerován')); ?>: ' + (response.data.pin_code || 'N/A') + '\n\nPlatnost: ' + (response.data.pin_expires_at || 'N/A'));
+                location.reload();
+            } else {
+                alert('<?php echo esc_js($tr('alert_error', 'Chyba')); ?>: ' + (response.data?.message || 'Neznámá chyba'));
+            }
+        }).fail(function(xhr, status, error) {
+            alert('<?php echo esc_js($tr('alert_error', 'Chyba')); ?> komunikace se serverem\n\n' + error);
+        });
+    }
+}
+</script>
 
 <!-- ============================================ -->
 <!-- STYLES                                       -->
 <!-- ============================================ -->
 <style>
-:root {
-    --saw-primary: #4f46e5;
-    --saw-success: #10b981;
-    --saw-warning: #f59e0b;
-    --saw-danger: #ef4444;
-    --saw-link: #0ea5e9;
-    --saw-text-main: #1e293b;
-    --saw-text-muted: #64748b;
-    --saw-bg-glass: rgba(255, 255, 255, 0.95);
-    --saw-border-light: rgba(226, 232, 240, 0.8);
+/* ============================================
+   WRAPPER (ensures full width)
+   ============================================ */
+.saw-access-credentials-wrapper {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
 }
 
-.saw-info-item, 
-.saw-pin-modern-card *,
-.saw-token-modern-card * {
-    box-sizing: border-box !important;
+/* Ensure parent grid doesn't constrain width */
+.saw-info-grid .saw-access-credentials-wrapper {
+    grid-column: 1 / -1;
+    width: 100%;
+    max-width: 100%;
 }
 
 /* ============================================
-   PIN CARD STYLES
+   MAIN SECTION CONTAINER
    ============================================ */
-.saw-pin-modern-card {
-    background: var(--saw-bg-glass);
-    border: 1px solid var(--saw-border-light);
-    border-radius: 20px;
-    padding: 24px;
-    margin-top: 10px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
-    position: relative;
-    overflow: hidden;
+.saw-access-credentials-section {
     width: 100%;
+    margin: 0;
+    background: white;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    overflow-x: hidden;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
-.saw-pin-modern-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #6366f1, #a855f7, #ec4899);
-}
-
-.saw-pin-display-box {
-    background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
-    border: 1px solid #e2e8f0;
-    border-radius: 16px;
-    padding: 16px;
+/* ============================================
+   HEADER (Always visible)
+   ============================================ */
+.saw-access-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 20px;
+    padding: 12px 16px;
     cursor: pointer;
     user-select: none;
-    -webkit-tap-highlight-color: transparent;
-    width: 100%;
-    transition: transform 0.2s ease;
+    transition: background-color 0.2s ease;
+    max-width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
 }
 
-.saw-pin-display-box:active {
-    transform: scale(0.98);
+.saw-access-header:hover {
+    background-color: #F9FAFB;
 }
 
-.saw-pin-left-section {
+.saw-access-header-left {
     display: flex;
     align-items: center;
     gap: 12px;
     flex: 1;
     min-width: 0;
+    overflow: hidden;
 }
 
-.saw-pin-icon-wrapper {
-    width: 40px;
-    height: 40px;
-    background: #e0e7ff;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+.saw-access-icon {
     font-size: 18px;
-    color: var(--saw-primary);
-    flex-shrink: 0;
+    line-height: 1;
 }
 
-.saw-pin-code-display {
-    font-family: 'SF Mono', 'Menlo', 'Monaco', monospace;
-    font-size: 32px;
-    font-weight: 800;
-    color: var(--saw-text-main);
-    letter-spacing: 0.05em;
-    line-height: 1;
-    white-space: nowrap;
+.saw-access-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #111827;
     overflow: hidden;
     text-overflow: ellipsis;
-}
-
-.saw-pin-copy-badge {
-    padding: 8px 12px;
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 99px;
-    color: var(--saw-text-muted);
-    font-size: 12px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
     white-space: nowrap;
-    transition: all 0.3s ease;
-}
-
-.saw-pin-status-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px;
-    background: #f8fafc;
-    border: 1px solid #f1f5f9;
-    border-radius: 12px;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-    gap: 10px;
-    width: 100%;
-}
-
-.saw-pin-status-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.saw-status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-
-.saw-status-dot.valid {
-    background: var(--saw-success);
-    box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
-}
-
-.saw-status-dot.expired {
-    background: var(--saw-danger);
-    box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
-}
-
-.saw-status-dot.warning {
-    background: var(--saw-warning);
-    box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
-}
-
-.saw-pin-status-text {
-    display: flex;
-    flex-direction: column;
-}
-
-.saw-pin-status-title {
-    font-size: 10px;
-    text-transform: uppercase;
-    color: var(--saw-text-muted);
-    font-weight: 700;
-    margin-bottom: 2px;
-}
-
-.saw-pin-status-value {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--saw-text-main);
-}
-
-.saw-pin-status-value.expired {
-    color: var(--saw-danger);
-}
-
-.saw-pin-status-value.warning {
-    color: var(--saw-warning);
-}
-
-.saw-pin-status-right {
-    text-align: right;
-    margin-left: auto;
-}
-
-.saw-pin-buttons-wrapper {
-    width: 100%;
-    display: block;
-}
-
-.saw-pin-actions-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-    width: 100%;
-}
-
-.saw-pin-action-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 12px 4px;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    background: white;
-    color: var(--saw-text-muted);
-    font-weight: 600;
-    font-size: 13px;
-    cursor: pointer;
-    width: 100%;
     min-width: 0;
-    min-height: 44px;
-    white-space: nowrap;
-    transition: all 0.2s ease;
-    font-family: inherit;
 }
 
-.saw-pin-action-btn:hover {
-    border-color: #cbd5e1;
-    transform: translateY(-1px);
-}
-
-.saw-pin-action-btn:active {
-    transform: translateY(0);
-}
-
-.saw-pin-action-btn.primary {
-    background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
-    border: none;
-    color: white;
-}
-
-.saw-pin-action-btn.primary:hover {
-    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
-}
-
-.saw-pin-custom-form {
-    margin-top: 16px;
-    padding: 16px;
-    background: #fffbeb;
-    border: 1px solid #fcd34d;
-    border-radius: 14px;
-    width: 100%;
-}
-
-.saw-pin-form-title {
-    font-weight: 700;
-    color: #92400e;
-    margin-bottom: 10px;
+.saw-access-header-right {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
+    flex-shrink: 0;
+    min-width: 0;
 }
 
-.saw-pin-datetime-input {
-    width: 100%;
-    padding: 10px 12px;
-    border: 2px solid #fbbf24;
-    border-radius: 10px;
-    margin-bottom: 12px;
-    background: white;
-    font-size: 16px;
-    color: #333;
-    font-family: inherit;
-}
-
-.saw-pin-datetime-input:focus {
-    outline: none;
-    border-color: var(--saw-primary);
-    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-}
-
-.saw-pin-empty-state {
-    text-align: center;
-    padding: 20px 10px;
-}
-
-.saw-pin-empty-icon {
-    font-size: 48px;
-    margin-bottom: 16px;
-}
-
-.saw-pin-generate-btn {
-    background: var(--saw-primary);
-    color: white;
-    padding: 12px 20px;
-    border-radius: 99px;
-    border: none;
-    font-weight: 700;
-    width: 100%;
-    max-width: 250px;
+/* Status Badge */
+.saw-access-status-badge {
     display: inline-flex;
-    justify-content: center;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+    min-width: 150px;
+    width: auto;
+    white-space: nowrap;
+    justify-content: center;
+}
+
+.saw-access-status-badge .status-icon {
     font-size: 14px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-family: inherit;
+    line-height: 1;
 }
 
-.saw-pin-generate-btn:hover {
-    background: #4338ca;
-    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+.saw-access-status-badge.status-success {
+    background-color: #DCFCE7;
+    border: 1px solid #86EFAC;
+    color: #166534;
 }
 
-.saw-pin-code-display.copied {
-    color: var(--saw-success);
-    font-family: sans-serif;
-    animation: sawPop 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+.saw-access-status-badge.status-warning {
+    background-color: #FEF3C7;
+    border: 1px solid #FCD34D;
+    color: #92400E;
+    min-width: 150px;
+    width: auto;
 }
 
-.saw-pin-copy-badge.copied {
-    background: var(--saw-success) !important;
-    color: white !important;
-    border-color: var(--saw-success) !important;
+.saw-access-status-badge.status-error {
+    background-color: #FEE2E2;
+    border: 1px solid #FCA5A5;
+    color: #DC2626;
 }
 
-@keyframes sawPop {
-    0% { transform: scale(0.5); opacity: 0.5; }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1); opacity: 1; }
+.saw-access-status-badge.status-none {
+    background-color: #F3F4F6;
+    border: 1px solid #D1D5DB;
+    color: #6B7280;
+}
+
+.saw-access-toggle-icon {
+    font-size: 14px;
+    color: #6B7280;
+    transition: transform 0.3s ease;
+    line-height: 1;
 }
 
 /* ============================================
-   TOKEN CARD STYLES
+   COLLAPSIBLE CONTENT
    ============================================ */
-.saw-token-modern-card {
-    background: var(--saw-bg-glass);
-    border: 1px solid var(--saw-border-light);
-    border-radius: 20px;
-    padding: 24px;
-    margin-top: 10px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
-    position: relative;
-    overflow: hidden;
-    width: 100%;
+.saw-access-content {
+    border-top: 1px solid #E5E7EB;
+    background-color: #FAFBFC;
+    overflow-x: hidden;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
-.saw-token-modern-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #0ea5e9, #06b6d4, #14b8a6);
-}
-
-.saw-token-display-box {
-    background: linear-gradient(145deg, #ffffff 0%, #f0f9ff 100%);
-    border: 1px solid #bae6fd;
-    border-radius: 16px;
+.saw-access-content-inner {
     padding: 16px;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 20px;
-    width: 100%;
+    flex-direction: column;
+    gap: 16px;
+    overflow-x: hidden;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
-.saw-token-left-section {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-}
-
-.saw-token-icon-wrapper {
-    width: 40px;
-    height: 40px;
-    background: #e0f2fe;
+/* ============================================
+   CREDENTIAL CARD
+   ============================================ */
+.saw-credential-card {
+    background: white;
+    border: 1px solid #E2E8F0;
     border-radius: 10px;
+    padding: 16px;
+}
+
+.saw-credential-card.expired {
+    border-color: #FCA5A5;
+    border-width: 2px;
+}
+
+.saw-credential-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6B7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+}
+
+/* Credential Display */
+.saw-credential-display {
+    margin-bottom: 12px;
+}
+
+.saw-credential-value-box {
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 10px;
+    padding: 12px;
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    max-width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
+}
+
+.saw-credential-value-box:hover {
+    background: #F1F5F9;
+    border-color: #CBD5E1;
+}
+
+.credential-icon {
     font-size: 18px;
-    color: var(--saw-link);
     flex-shrink: 0;
 }
 
-.saw-token-url-display {
+.credential-value {
+    flex: 1;
+    min-width: 0;
+}
+
+.credential-value.pin-value {
     font-family: 'SF Mono', 'Menlo', 'Monaco', monospace;
+    font-size: 36px !important;
+    font-weight: 800;
+    color: #111827;
+    letter-spacing: 4px;
+    line-height: 1.2;
+    word-break: break-all;
+    overflow-wrap: break-word;
+    max-width: 100%;
+}
+
+.credential-value.url-value {
+    font-size: 13px;
+    color: #2563EB;
+    text-decoration: underline;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.credential-copy-icon,
+.credential-copy-text {
+    font-size: 12px;
+    color: #64748B;
+    flex-shrink: 0;
+}
+
+.credential-open-link {
+    font-size: 14px;
+    text-decoration: none;
+    color: #2563EB;
+    flex-shrink: 0;
+    padding: 4px;
+}
+
+.credential-open-link:hover {
+    opacity: 0.7;
+}
+
+.credential-copy-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: white;
+    border: 1px solid #E2E8F0;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #64748B;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.credential-copy-btn:hover {
+    background: #F1F5F9;
+    border-color: #CBD5E1;
+}
+
+/* Status */
+.saw-credential-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 8px 0;
+}
+
+.status-indicator {
+    font-size: 14px;
+    line-height: 1;
+}
+
+.status-text {
     font-size: 13px;
     font-weight: 500;
-    color: var(--saw-link);
-    line-height: 1.3;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
-.saw-token-actions {
+.status-text.active {
+    color: #059669;
+}
+
+.status-text.expired {
+    color: #DC2626;
+}
+
+/* Actions */
+.saw-credential-actions {
+    margin-top: 8px;
+}
+
+.saw-extend-buttons {
     display: flex;
-    align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
-    flex-shrink: 0;
 }
 
-.saw-token-open-btn {
-    width: 36px;
-    height: 36px;
-    background: white;
-    border: 1px solid #bae6fd;
-    border-radius: 10px;
+.saw-extend-btn {
     display: flex;
     align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    color: var(--saw-link);
-    text-decoration: none;
-    transition: all 0.2s ease;
-}
-
-.saw-token-open-btn:hover {
-    background: #e0f2fe;
-    border-color: #7dd3fc;
-    transform: translateY(-1px);
-}
-
-.saw-token-copy-badge {
+    gap: 6px;
     padding: 8px 12px;
     background: white;
-    border: 1px solid #bae6fd;
-    border-radius: 99px;
-    color: var(--saw-link);
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
     font-size: 12px;
     font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
-    white-space: nowrap;
+    color: #374151;
     cursor: pointer;
-    transition: all 0.3s ease;
-    font-family: inherit;
-}
-
-.saw-token-copy-badge:hover {
-    background: #e0f2fe;
-    border-color: #7dd3fc;
-}
-
-.saw-token-copy-badge.copied {
-    background: var(--saw-success) !important;
-    color: white !important;
-    border-color: var(--saw-success) !important;
-}
-
-.saw-token-status-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px;
-    background: #f0f9ff;
-    border: 1px solid #e0f2fe;
-    border-radius: 12px;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-    gap: 10px;
-    width: 100%;
-}
-
-.saw-token-status-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.saw-token-status-text {
-    display: flex;
-    flex-direction: column;
-}
-
-.saw-token-status-title {
-    font-size: 10px;
-    text-transform: uppercase;
-    color: var(--saw-text-muted);
-    font-weight: 700;
-    margin-bottom: 2px;
-}
-
-.saw-token-status-value {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--saw-text-main);
-}
-
-.saw-token-status-value.expired {
-    color: var(--saw-danger);
-}
-
-.saw-token-status-value.warning {
-    color: var(--saw-warning);
-}
-
-.saw-token-status-right {
-    text-align: right;
-    margin-left: auto;
-}
-
-.saw-token-buttons-wrapper {
-    width: 100%;
-    display: flex;
-}
-
-.saw-token-actions-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-    width: 100%;
-}
-
-.saw-token-action-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 12px 4px;
-    border: 1px solid #bae6fd;
-    border-radius: 12px;
-    background: white;
-    color: var(--saw-link);
-    font-weight: 600;
-    font-size: 13px;
-    cursor: pointer;
-    width: 100%;
-    min-width: 0;
-    min-height: 44px;
-    white-space: nowrap;
     transition: all 0.2s ease;
     font-family: inherit;
+    white-space: nowrap;
 }
 
-.saw-token-action-btn:hover {
-    background: #e0f2fe;
-    border-color: #7dd3fc;
+.saw-extend-btn:hover {
+    border-color: #CBD5E1;
+    background: #F9FAFB;
     transform: translateY(-1px);
 }
 
-.saw-token-action-btn:active {
-    transform: translateY(0);
-}
-
-.saw-token-action-btn.primary {
-    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+.saw-extend-btn.primary {
+    background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
     border: none;
     color: white;
 }
 
-.saw-token-action-btn.primary:hover {
-    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+.saw-extend-btn.primary:hover {
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
-.saw-token-custom-form {
-    margin-top: 16px;
-    padding: 16px;
-    background: #ecfeff;
-    border: 1px solid #67e8f9;
-    border-radius: 14px;
+.saw-extend-btn span {
+    font-size: 14px;
+}
+
+/* Custom Form */
+.saw-extend-form {
+    margin-top: 12px;
+    padding: 12px;
+    background: #FFFBEB;
+    border: 1px solid #FCD34D;
+    border-radius: 8px;
+}
+
+.saw-form-title {
+    font-weight: 600;
+    color: #92400E;
+    margin-bottom: 8px;
+    font-size: 13px;
+}
+
+.saw-datetime-input {
     width: 100%;
-}
-
-.saw-token-form-title {
-    font-weight: 700;
-    color: #0e7490;
+    padding: 8px 10px;
+    border: 2px solid #FBBF24;
+    border-radius: 6px;
     margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.saw-token-datetime-input {
-    width: 100%;
-    padding: 10px 12px;
-    border: 2px solid #22d3ee;
-    border-radius: 10px;
-    margin-bottom: 12px;
     background: white;
-    font-size: 16px;
+    font-size: 14px;
     color: #333;
     font-family: inherit;
 }
 
-.saw-token-datetime-input:focus {
+.saw-datetime-input:focus {
     outline: none;
-    border-color: var(--saw-link);
-    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+    border-color: #2563EB;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
-.saw-token-empty-state {
+.saw-form-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.saw-form-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    flex: 1;
+    justify-content: center;
+}
+
+.saw-form-btn.save {
+    background: #10B981;
+    border: none;
+    color: white;
+}
+
+.saw-form-btn.save:hover {
+    background: #059669;
+}
+
+.saw-form-btn.cancel {
+    background: white;
+    border: 1px solid #E5E7EB;
+    color: #374151;
+}
+
+.saw-form-btn.cancel:hover {
+    background: #F9FAFB;
+}
+
+/* Empty State */
+.saw-empty-state {
     text-align: center;
-    padding: 20px 10px;
+    padding: 24px 12px;
 }
 
-.saw-token-empty-icon {
-    font-size: 48px;
-    margin-bottom: 16px;
+.saw-empty-state .empty-icon {
+    font-size: 32px;
+    display: block;
+    margin-bottom: 8px;
+    opacity: 0.5;
 }
 
-.saw-token-modern-card.saw-token-empty {
-    background: #f8fafc;
-    border-style: dashed;
+.saw-empty-state p {
+    margin: 0 0 16px 0;
+    color: #9CA3AF;
+    font-size: 13px;
 }
 
-.saw-token-modern-card.saw-token-empty::before {
-    background: linear-gradient(90deg, #cbd5e1, #94a3b8, #cbd5e1);
+.saw-empty-state .empty-hint {
+    font-size: 11px;
+    color: #D1D5DB;
+    margin-top: 4px;
+}
+
+.saw-generate-btn {
+    background: #2563EB;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.saw-generate-btn:hover {
+    background: #1D4ED8;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
 /* ============================================
-   RESPONSIVE STYLES
+   RESPONSIVE
    ============================================ */
 @media (max-width: 420px) {
-    .saw-pin-modern-card,
-    .saw-token-modern-card { 
-        padding: 16px 12px; 
+    .saw-access-header {
+        padding: 10px 12px;
+        flex-wrap: wrap;
+        gap: 8px;
     }
     
-    .saw-pin-code-display { 
-        font-size: 24px; 
-        letter-spacing: 0; 
+    .saw-access-header-left {
+        flex: 1 1 100%;
+        min-width: 0;
     }
     
-    .saw-badge-text { 
-        display: none; 
+    .saw-access-header-right {
+        flex: 1 1 100%;
+        justify-content: space-between;
+        min-width: 0;
     }
     
-    .saw-pin-copy-badge,
-    .saw-token-copy-badge { 
-        padding: 8px; 
-        border-radius: 8px; 
+    .saw-access-title {
+        font-size: 14px;
     }
     
-    .saw-pin-status-bar,
-    .saw-token-status-bar { 
-        flex-direction: column; 
-        align-items: flex-start; 
-        gap: 12px; 
-    }
-    
-    .saw-pin-status-right,
-    .saw-token-status-right { 
-        text-align: left; 
-        margin-left: 0; 
-        width: 100%; 
-        padding-top: 10px; 
-        border-top: 1px dashed #cbd5e1; 
-    }
-    
-    .saw-pin-status-value,
-    .saw-token-status-value { 
-        white-space: normal; 
-        line-height: 1.4; 
-    }
-    
-    .saw-pin-actions-grid,
-    .saw-token-actions-grid { 
-        grid-template-columns: 1fr; 
-        gap: 8px; 
-    }
-    
-    .saw-pin-action-btn,
-    .saw-token-action-btn { 
-        justify-content: flex-start; 
-        padding-left: 16px; 
-    }
-    
-    .saw-token-display-box {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 12px;
-    }
-    
-    .saw-token-actions {
-        justify-content: flex-end;
-    }
-    
-    .saw-token-url-display {
+    .saw-access-status-badge {
         font-size: 11px;
+        padding: 3px 8px;
+        min-width: auto !important;
+        max-width: 100%;
+        flex: 1 1 auto;
+    }
+    
+    .saw-access-status-badge.status-warning {
+        min-width: auto !important;
+    }
+    
+    .saw-access-toggle-icon {
+        flex-shrink: 0;
+    }
+    
+    .saw-access-content-inner {
+        padding: 12px;
+    }
+    
+    .saw-credential-card {
+        padding: 12px;
+    }
+    
+    .saw-credential-value-box {
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 10px;
+    }
+    
+    .credential-value.pin-value {
+        font-size: 24px !important;
+        letter-spacing: 2px;
+        word-break: break-all;
+    }
+    
+    .credential-value.url-value {
+        font-size: 11px;
+        max-width: 100%;
+    }
+    
+    .saw-extend-buttons {
+        flex-direction: column;
+    }
+    
+    .saw-extend-btn {
+        width: 100%;
+        justify-content: center;
+        white-space: normal;
+        padding: 10px 12px;
     }
 }
 
-@media (max-width: 380px) {
-    .saw-pin-modern-card,
-    .saw-token-modern-card { 
-        padding: 12px 8px; 
-        border-radius: 16px; 
+/* ============================================
+   VERY SMALL SCREENS
+   ============================================ */
+@media (max-width: 360px) {
+    .saw-access-status-badge {
+        font-size: 10px;
+        padding: 2px 6px;
     }
     
-    .saw-pin-display-box,
-    .saw-token-display-box { 
-        padding: 12px; 
-        gap: 8px; 
+    .saw-access-title {
+        font-size: 13px;
     }
     
-    .saw-pin-icon-wrapper,
-    .saw-token-icon-wrapper { 
-        width: 36px; 
-        height: 36px; 
-        font-size: 16px; 
+    .credential-value.pin-value {
+        font-size: 20px !important;
+        letter-spacing: 1px;
     }
     
-    .saw-pin-code-display { 
-        font-size: 22px; 
-    }
-    
-    .saw-pin-status-bar,
-    .saw-token-status-bar { 
-        padding: 12px; 
-    }
-    
-    .saw-pin-status-title,
-    .saw-token-status-title { 
-        font-size: 9px; 
-    }
-    
-    .saw-pin-status-value,
-    .saw-token-status-value { 
-        font-size: 12px; 
-    }
-    
-    .saw-pin-custom-form,
-    .saw-token-custom-form { 
-        padding: 12px; 
-    }
-    
-    .saw-pin-action-btn,
-    .saw-token-action-btn { 
-        font-size: 12px; 
-        min-height: 40px; 
-        padding: 10px 12px; 
-    }
-}
-
-@media (max-width: 340px) {
-    .saw-pin-code-display { 
-        font-size: 20px; 
-    }
-    
-    .saw-pin-action-btn span:first-child,
-    .saw-token-action-btn span:first-child { 
-        font-size: 14px; 
-    }
-    
-    .saw-pin-form-title,
-    .saw-token-form-title { 
-        font-size: 13px; 
+    .saw-extend-btn {
+        font-size: 11px;
+        padding: 8px 10px;
     }
 }
 </style>

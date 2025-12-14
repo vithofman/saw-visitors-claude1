@@ -317,12 +317,48 @@
         
         console.log('[SelectCreate v2.0] New option added:', data.id, '->', displayName);
         
-        // Close nested sidebar
-        if (window.SAWSidebar && typeof window.SAWSidebar.closeNested === 'function') {
-            window.SAWSidebar.closeNested();
-        } else {
-            // Fallback - close any nested sidebar
-            $('.saw-sidebar-wrapper[data-is-nested="1"]').last().remove();
+        // Close nested sidebar properly
+        const $nested = $('.saw-sidebar-wrapper[data-is-nested="1"]').last();
+        if ($nested.length) {
+            // Use the closeNested method from forms.js if available
+            if (window.SAWSelectCreate && typeof window.SAWSelectCreate.closeNested === 'function') {
+                window.SAWSelectCreate.closeNested($nested);
+            } else {
+                // Fallback implementation - properly close nested and reactivate parent
+                console.log('[SelectCreate v2.0] Closing nested sidebar (fallback)');
+                
+                // Remove active class and trigger close animation
+                $nested.removeClass('active');
+                $nested.removeClass('saw-sidebar-active');
+                
+                setTimeout(() => {
+                    // Remove nested from DOM
+                    $nested.remove();
+                    
+                    // Reactivate parent sidebar - CRITICAL: remove has-nested class
+                    const $parent = $('.saw-sidebar-wrapper').not('[data-is-nested="1"]').first();
+                    if ($parent.length) {
+                        console.log('[SelectCreate v2.0] Reactivating parent sidebar');
+                        
+                        // Remove has-nested class to restore full interactivity and remove overlay
+                        $parent.removeClass('has-nested');
+                        
+                        // Ensure parent is active and visible
+                        $parent.addClass('active');
+                        
+                        // Ensure inner sidebar is active
+                        const $parentInner = $parent.find('.saw-sidebar');
+                        if ($parentInner.length) {
+                            $parentInner.addClass('saw-sidebar-active');
+                        }
+                        
+                        // Trigger custom event for any listeners
+                        $parent.trigger('saw:sidebar:reactivated');
+                    } else {
+                        console.warn('[SelectCreate v2.0] No parent sidebar found to reactivate');
+                    }
+                }, 300);
+            }
         }
         
         // Trigger change

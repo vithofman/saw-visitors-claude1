@@ -406,7 +406,7 @@ h4.saw-section-title {
 }
 
 .saw-info-item span {
-    display: block !important;
+    display: flex !important;
     font-size: 14px !important;
     color: #1a1a1a !important;
     font-weight: 500 !important;
