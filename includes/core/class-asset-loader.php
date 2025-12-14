@@ -62,6 +62,7 @@ class SAW_Asset_Loader {
         'saw-tabs'                => 'components/tabs.css',
         'saw-feedback'            => 'components/feedback.css',
         'saw-admin-table-detail'  => 'components/admin-table-detail.css',
+        'saw-audit-history'       => 'components/audit-history.css',
         
         // Interactive components
         'saw-navigation'          => 'components/navigation.css',
@@ -146,6 +147,8 @@ class SAW_Asset_Loader {
                 $deps = ['saw-variables'];
             } elseif ($handle === 'saw-admin-table-detail') {
                 $deps = ['saw-variables', 'saw-base-components', 'saw-tables'];
+            } elseif ($handle === 'saw-audit-history') {
+                $deps = ['saw-variables', 'saw-base-components'];
             } elseif ($handle === 'saw-tabs') {
                 $deps = ['saw-variables', 'saw-base-components', 'saw-tables'];
             } elseif ($handle === 'saw-radio-cards') {

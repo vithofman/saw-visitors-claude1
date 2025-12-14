@@ -184,6 +184,20 @@ class SAW_Visit_Risks_Controller {
         $delete_files = isset($_POST['delete_files']) ? (array) $_POST['delete_files'] : [];
         
         // ========================================
+        // Get old values for audit
+        // ========================================
+        $old_risks_text = null;
+        if (class_exists('SAW_Entity_Audit')) {
+            $old_text_record = $wpdb->get_row($wpdb->prepare(
+                "SELECT text_content FROM {$wpdb->prefix}saw_visit_invitation_materials 
+                 WHERE visit_id = %d AND material_type = 'text'
+                 ORDER BY uploaded_at DESC LIMIT 1",
+                $this->visit_id
+            ), ARRAY_A);
+            $old_risks_text = $old_text_record['text_content'] ?? null;
+        }
+        
+        // ========================================
         // 1. Save/Update text content
         // ========================================
         $existing_text_id = $wpdb->get_var($wpdb->prepare(
@@ -234,6 +248,7 @@ class SAW_Visit_Risks_Controller {
         // ========================================
         // 2. Delete marked files
         // ========================================
+        $deleted_files_for_audit = [];
         if (!empty($delete_files)) {
             $upload_dir = wp_upload_dir();
             
@@ -246,7 +261,16 @@ class SAW_Visit_Risks_Controller {
                      WHERE id = %d AND visit_id = %d AND material_type = 'document'",
                     $file_id,
                     $this->visit_id
-                ));
+                ), ARRAY_A);
+                
+                // Collect file info for audit before deletion
+                if ($file && class_exists('SAW_Entity_Audit')) {
+                    $deleted_files_for_audit[] = [
+                        'name' => $file->file_name ?? '',
+                        'size' => isset($file->file_size) ? intval($file->file_size) : null,
+                        'mime' => $file->mime_type ?? null,
+                    ];
+                }
                 
                 if ($file && !empty($file->file_path)) {
                     $file_path = $upload_dir['basedir'] . $file->file_path;
@@ -265,6 +289,7 @@ class SAW_Visit_Risks_Controller {
         // ========================================
         // 3. Upload new files
         // ========================================
+        $uploaded_files_for_audit = [];
         if (!empty($_FILES['risks_documents']['name'][0])) {
             require_once ABSPATH . 'wp-admin/includes/file.php';
             require_once ABSPATH . 'wp-admin/includes/image.php';
@@ -330,6 +355,13 @@ class SAW_Visit_Risks_Controller {
                             'uploaded_at' => current_time('mysql'),
                         ]
                     );
+                    
+                    // Collect for audit
+                    $uploaded_files_for_audit[] = [
+                        'name' => sanitize_file_name($file['name']),
+                        'size' => intval($file['size']),
+                        'mime' => $movefile['type'],
+                    ];
                 }
             }
         }
@@ -361,6 +393,41 @@ class SAW_Visit_Risks_Controller {
         // Determine if risks are present
         $has_risks = $has_risks_text || $has_risks_docs || $has_existing_text || 
                      $has_existing_docs || $visit_has_risks;
+        
+        // ========================================
+        // AUDIT LOG: Risks changes
+        // ========================================
+        if (class_exists('SAW_Entity_Audit')) {
+            $audit = SAW_Entity_Audit::for_entity('visits', $this->visit_id);
+            
+            // Log risks_text change
+            $new_risks_text = !empty(trim($risks_text)) ? $risks_text : null;
+            if ($old_risks_text !== $new_risks_text) {
+                // Update visits table risks_text for audit compatibility
+                $wpdb->update(
+                    $wpdb->prefix . 'saw_visits',
+                    ['risks_text' => $new_risks_text],
+                    ['id' => $this->visit_id],
+                    ['%s'],
+                    ['%d']
+                );
+                
+                $audit->log_change(
+                    ['risks_text' => $old_risks_text],
+                    ['risks_text' => $new_risks_text]
+                );
+            }
+            
+            // Log deleted files
+            if (!empty($deleted_files_for_audit)) {
+                $audit->log_file_change('removed', $deleted_files_for_audit, 'invitation_materials');
+            }
+            
+            // Log uploaded files
+            if (!empty($uploaded_files_for_audit)) {
+                $audit->log_file_change('added', $uploaded_files_for_audit, 'invitation_materials');
+            }
+        }
         
         // Update risks_status
         if ($has_risks) {

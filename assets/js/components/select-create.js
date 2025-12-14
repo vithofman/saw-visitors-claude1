@@ -77,9 +77,10 @@
                 type: 'text',
                 class: 'saw-input saw-select-search-input',
                 id: fieldId + '-search',
-                placeholder: placeholder,
-                autocomplete: 'new-password' // Prevent browser from recognizing as company field
+                placeholder: placeholder
             });
+            // Set autocomplete attribute separately to avoid jQuery UI autocomplete plugin conflict
+            $searchInput.attr('autocomplete', 'new-password'); // Prevent browser from recognizing as company field
             
             // ============================================
             // Create dropdown

@@ -236,5 +236,106 @@ return array(
             return 'yes';
         },
     ),
-),
+    ),
+    
+    // ============================================
+    // AUDIT CONFIGURATION
+    // Universal Audit System v3.0
+    // ============================================
+    'audit' => array(
+        'enabled' => true,
+        'long_text_fields' => array(
+            'risks_text',
+            'purpose',
+            'notes',
+        ),
+        'sensitive_fields' => array(
+            'pin_code' => 'mask',
+            'invitation_token' => 'mask',
+        ),
+        'excluded_fields' => array(
+            'updated_at',
+            'created_at',
+            'customer_id',  // Technical field - should not be shown in audit
+            'branch_id',    // Technical field - should not be shown in audit
+        ),
+        'relations' => array(
+            'hosts' => array(
+                'table' => 'saw_visit_hosts',
+                'foreign_key' => 'visit_id',
+                'type' => 'many_to_many',
+                'pivot_key' => 'user_id',
+                'resolve' => array(
+                    'table' => 'saw_users',
+                    'display' => "CONCAT(first_name, ' ', last_name)",
+                    'extra_fields' => array('email', 'position'),
+                ),
+                'labels' => array(
+                    'added' => 'Hostitel přiřazen',
+                    'removed' => 'Hostitel odebrán',
+                    'changed' => 'Hostitelé změněni',
+                ),
+            ),
+            'action_oopp' => array(
+                'table' => 'saw_visit_action_oopp',
+                'foreign_key' => 'visit_id',
+                'type' => 'many_to_many',
+                'pivot_key' => 'oopp_id',
+                'resolve' => array(
+                    'table' => 'saw_oopp', // Main OOPP table (not pivot)
+                    'translation_table' => 'saw_oopp_translations',
+                    'translation_foreign_key' => 'oopp_id', // Foreign key in translation table
+                    'field' => 'name',
+                ),
+            ),
+            'visitors' => array(
+                'table' => 'saw_visitors',
+                'foreign_key' => 'visit_id',
+                'type' => 'one_to_many',
+                'resolve' => array(
+                    'table' => 'saw_visitors',
+                    'display' => "CONCAT(first_name, ' ', last_name)",
+                    'extra_fields' => array('email', 'position'),
+                ),
+                'labels' => array(
+                    'added' => 'Návštěvník přidán',
+                    'removed' => 'Návštěvník odebrán',
+                    'changed' => 'Návštěvníci změněni',
+                ),
+            ),
+        ),
+        'action_info' => array(
+            'enabled' => true,
+            'main_table' => 'saw_visit_action_info',
+            'translations' => array(
+                'table' => 'saw_visit_action_info_translations',
+                'foreign_key' => 'action_info_id',
+                'long_text_fields' => array('content_text'),
+            ),
+            'documents' => array(
+                'table' => 'saw_visit_action_documents',
+                'foreign_key' => 'visit_id',
+                'file_fields' => true,
+            ),
+            'oopp' => array(
+                'table' => 'saw_visit_action_oopp',
+                'foreign_key' => 'visit_id',
+                'type' => 'many_to_many',
+                'pivot_key' => 'oopp_id',
+                'resolve' => array(
+                    'translation_table' => 'saw_oopp_translations',
+                    'field' => 'name',
+                ),
+            ),
+        ),
+        'custom_actions' => array(
+            'status_changed',
+            'pin_generated',
+            'invitation_sent',
+            'invitation_confirmed',
+            'reminder_sent',
+            'visitor_arrived',
+            'visitor_departed',
+        ),
+    ),
 );

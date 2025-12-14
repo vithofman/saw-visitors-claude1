@@ -874,6 +874,14 @@ class SAW_Module_Visits_Model extends SAW_Base_Model
         
         error_log("[Visits Model] PIN generated for visit #{$visit_id}: {$pin}, expires: {$pin_expires_at}");
         
+        // ========================================
+        // AUDIT LOG: PIN generated
+        // ========================================
+        if (class_exists('SAW_Entity_Audit')) {
+            SAW_Entity_Audit::for_entity('visits', $visit_id)
+                ->log_custom_action('pin_generated');
+        }
+        
         // Invalidate cache
         $this->invalidate_cache();
         

@@ -375,6 +375,52 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
         // ========================================
         do_action('saw_visitor_checked_in', $visitor_id, $visit_id);
         
+        // ========================================
+        // AUDIT LOG: Check-in
+        // ========================================
+        if (class_exists('SAW_Entity_Audit')) {
+            $audit = SAW_Entity_Audit::for_entity('visits', $visit_id);
+            
+            // Check if this is from terminal
+            if (class_exists('SAW_Session_Manager')) {
+                $session = SAW_Session_Manager::instance();
+                $flow = $session->get('terminal_flow');
+                if (!empty($flow['visit_id']) && $flow['visit_id'] == $visit_id) {
+                    $audit->set_source('terminal', [
+                        'branch_id' => $flow['branch_id'] ?? null,
+                    ]);
+                    $audit->set_visitor_context(
+                        $visitor_id,
+                        $visitor['first_name'] . ' ' . $visitor['last_name'],
+                        $visitor['email'] ?? null
+                    );
+                }
+            }
+            
+            $audit->log_custom_action('visitor_arrived', [
+                'visitor_id' => $visitor_id,
+                'visitor_name' => $visitor['first_name'] . ' ' . $visitor['last_name'],
+                'time' => date('H:i'),
+            ]);
+            
+            // Also log on visitor entity
+            $visitor_audit = SAW_Entity_Audit::for_entity('visitors', $visitor_id);
+            if (class_exists('SAW_Session_Manager')) {
+                $session = SAW_Session_Manager::instance();
+                $flow = $session->get('terminal_flow');
+                if (!empty($flow['visit_id']) && $flow['visit_id'] == $visit_id) {
+                    $visitor_audit->set_source('terminal', [
+                        'branch_id' => $flow['branch_id'] ?? null,
+                    ]);
+                    $visitor_audit->set_visitor_context(
+                        $visitor_id,
+                        $visitor['first_name'] . ' ' . $visitor['last_name']
+                    );
+                }
+            }
+            $visitor_audit->log_custom_action('arrived');
+        }
+        
         return true;
     }
     
@@ -480,6 +526,64 @@ class SAW_Module_Visitors_Model extends SAW_Base_Model
         // Notifikace hostitelům o odchodu návštěvníka
         // ========================================
         do_action('saw_visitor_checked_out', $visitor_id, $visit_id);
+        
+        // ========================================
+        // AUDIT LOG: Check-out
+        // ========================================
+        if (class_exists('SAW_Entity_Audit')) {
+            $audit = SAW_Entity_Audit::for_entity('visits', $visit_id);
+            
+            // Check if this is from terminal
+            if (class_exists('SAW_Session_Manager')) {
+                $session = SAW_Session_Manager::instance();
+                $flow = $session->get('terminal_flow');
+                if (!empty($flow['visit_id']) && $flow['visit_id'] == $visit_id) {
+                    $audit->set_source('terminal', [
+                        'branch_id' => $flow['branch_id'] ?? null,
+                    ]);
+                    $audit->set_visitor_context(
+                        $visitor_id,
+                        $visitor['first_name'] . ' ' . $visitor['last_name'],
+                        $visitor['email'] ?? null
+                    );
+                }
+            }
+            
+            // Calculate duration if possible
+            $duration = null;
+            if (!empty($log['checked_in_at'])) {
+                $checkin_time = strtotime($log['checked_in_at']);
+                $checkout_time = strtotime(current_time('mysql'));
+                $duration_seconds = $checkout_time - $checkin_time;
+                $duration = gmdate('H:i', $duration_seconds);
+            }
+            
+            $audit->log_custom_action('visitor_departed', [
+                'visitor_id' => $visitor_id,
+                'visitor_name' => $visitor['first_name'] . ' ' . $visitor['last_name'],
+                'time' => date('H:i'),
+                'duration' => $duration,
+            ]);
+            
+            // Also log on visitor entity
+            $visitor_audit = SAW_Entity_Audit::for_entity('visitors', $visitor_id);
+            if (class_exists('SAW_Session_Manager')) {
+                $session = SAW_Session_Manager::instance();
+                $flow = $session->get('terminal_flow');
+                if (!empty($flow['visit_id']) && $flow['visit_id'] == $visit_id) {
+                    $visitor_audit->set_source('terminal', [
+                        'branch_id' => $flow['branch_id'] ?? null,
+                    ]);
+                    $visitor_audit->set_visitor_context(
+                        $visitor_id,
+                        $visitor['first_name'] . ' ' . $visitor['last_name']
+                    );
+                }
+            }
+            $visitor_audit->log_custom_action('departed', [
+                'duration' => $duration,
+            ]);
+        }
         
         return true;
     }

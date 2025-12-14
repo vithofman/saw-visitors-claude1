@@ -16,6 +16,12 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
 {
     use SAW_AJAX_Handlers;
     
+    /**
+     * Store old values before update for audit logging
+     * @var array|null
+     */
+    protected $old_values_for_audit = null;
+    
     public function __construct() {
         $module_path = SAW_VISITORS_PLUGIN_DIR . 'includes/modules/visits/';
         $this->config = require $module_path . 'config.php';
@@ -208,6 +214,13 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
     }
     
     protected function before_save($data) {
+        // Store old values for audit logging (only for updates, not creates)
+        if (!empty($data['id']) && class_exists('SAW_Entity_Audit')) {
+            $old_item = $this->model->get_by_id($data['id']);
+            if ($old_item) {
+                $this->old_values_for_audit = $old_item;
+            }
+        }
     // ============================================
     // DEBUG LOGGING (keep for troubleshooting)
     // ============================================
@@ -336,18 +349,31 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
     
     // ============================================
     // VALIDATE ACTION INFO TRANSLATIONS
+    // Only validate if action_info section has any actual data
     // ============================================
     if (isset($_POST['action_info_translations']) && is_array($_POST['action_info_translations'])) {
-        $has_name = false;
+        // Check if there's any non-empty data in action_info_translations
+        $has_any_data = false;
         foreach ($_POST['action_info_translations'] as $lang_code => $trans_data) {
-            if (!empty($trans_data['name'])) {
-                $has_name = true;
+            if (!empty($trans_data['name']) || !empty($trans_data['description']) || !empty($trans_data['content_text'])) {
+                $has_any_data = true;
                 break;
             }
         }
         
-        if (!$has_name) {
-            $this->add_error('action_info_translations', 'Alespoň jeden jazyk musí mít vyplněný název akce.');
+        // Only validate name requirement if user actually filled in some action_info data
+        if ($has_any_data) {
+            $has_name = false;
+            foreach ($_POST['action_info_translations'] as $lang_code => $trans_data) {
+                if (!empty($trans_data['name'])) {
+                    $has_name = true;
+                    break;
+                }
+            }
+            
+            if (!$has_name) {
+                return new WP_Error('missing_action_name', 'Alespoň jeden jazyk musí mít vyplněný název akce.');
+            }
         }
     }
     
@@ -368,6 +394,10 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         if (!$visit_id || !isset($_POST)) {
             return;
         }
+        
+        // NOTE: Audit logging for main field changes happens at the END of after_save()
+        // after all related data (schedules, hosts, action_info, visitors) has been saved
+        // This ensures we capture all changes including calculated fields like planned_date_from/planned_date_to
         
         // Get customer_id and branch_id for schedules
         $visit_data = $wpdb->get_row($wpdb->prepare(
@@ -556,6 +586,21 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         }
         
         // ========================================
+        // AUDIT LOG: Hosts changed
+        // ========================================
+        if (class_exists('SAW_Entity_Audit')) {
+            $old_host_ids = array_values($existing_hosts_before);
+            $new_host_ids = array_values($hosts);
+            sort($old_host_ids);
+            sort($new_host_ids);
+            
+            if ($old_host_ids !== $new_host_ids) {
+                SAW_Entity_Audit::for_entity('visits', $visit_id)
+                    ->log_relation_change('hosts', $old_host_ids, $new_host_ids);
+            }
+        }
+        
+        // ========================================
         // NOTIFICATION TRIGGER: visit_assigned
         // Notifikace hostitelům o přiřazení k návštěvě
         // ========================================
@@ -580,6 +625,80 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         // SAVE ACTION-SPECIFIC INFORMATION
         // ========================================
         $this->save_action_info($visit_id, $customer_id, $branch_id);
+        
+        // ========================================
+        // AUDIT LOG: Main field changes (AT THE END, after all saves)
+        // This must be done after all related data has been saved to capture
+        // all changes including calculated fields like planned_date_from/planned_date_to
+        // ========================================
+        if (class_exists('SAW_Entity_Audit')) {
+            // Check if this is create or update mode
+            $is_create_mode = empty($this->old_values_for_audit);
+            
+            if ($is_create_mode) {
+                // CREATE MODE: Log simple "created" entry without changed_fields
+                SAW_Entity_Audit::for_entity('visits', $visit_id)
+                    ->log_change([], [], ['action' => 'created']);
+            } else {
+                // UPDATE MODE: Log actual changes
+                // Get new values from DATABASE (after all saves) instead of POST
+                // This ensures we compare all fields, including calculated ones
+                $new_values = $this->model->get_by_id($visit_id, true); // bypass_cache to get fresh data
+                
+                if (!$new_values) {
+                    // Fallback: if we can't get from DB, use POST data (shouldn't happen)
+                    $new_values = $this->prepare_form_data($_POST);
+                }
+                
+                // Filter out fields that shouldn't be logged (excluded_fields from config)
+                $excluded_fields = $this->config['audit']['excluded_fields'] ?? ['updated_at', 'created_at', 'customer_id', 'branch_id'];
+                foreach ($excluded_fields as $field) {
+                    unset($new_values[$field]);
+                    unset($this->old_values_for_audit[$field]);
+                }
+                
+                // Remove virtual/computed fields that shouldn't be compared
+                $virtual_fields = ['status_label', 'created_at_formatted'];
+                foreach ($virtual_fields as $field) {
+                    unset($new_values[$field]);
+                    unset($this->old_values_for_audit[$field]);
+                }
+                
+                // Normalize values for comparison (handle int vs string differences)
+                $normalize_value = function($value) {
+                    if ($value === null || $value === '') {
+                        return null;
+                    }
+                    if (is_numeric($value) && !is_float($value)) {
+                        return (string) $value;
+                    }
+                    return $value;
+                };
+                
+                // Only log if there are actual changes
+                $has_changes = false;
+                foreach ($new_values as $key => $new_val) {
+                    $old_val = $this->old_values_for_audit[$key] ?? null;
+                    
+                    // Normalize both values before comparison
+                    $old_normalized = $normalize_value($old_val);
+                    $new_normalized = $normalize_value($new_val);
+                    
+                    if ($old_normalized !== $new_normalized) {
+                        $has_changes = true;
+                        break;
+                    }
+                }
+                
+                if ($has_changes) {
+                    SAW_Entity_Audit::for_entity('visits', $visit_id)
+                        ->log_change($this->old_values_for_audit, $new_values);
+                }
+                
+                // Clear old values
+                $this->old_values_for_audit = null;
+            }
+        }
     }
     
     /**
@@ -654,6 +773,18 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         // 2. Save translations
         // ============================================
         if ($action_info_id && isset($_POST['action_info_translations']) && is_array($_POST['action_info_translations'])) {
+            // Get old translations before save
+            $old_translations = [];
+            if (class_exists('SAW_Entity_Audit')) {
+                $old_translations_raw = $wpdb->get_results($wpdb->prepare(
+                    "SELECT lang_code, name, description, content_text FROM {$wpdb->prefix}saw_visit_action_info_translations WHERE action_info_id = %d",
+                    $action_info_id
+                ), ARRAY_A);
+                foreach ($old_translations_raw as $row) {
+                    $old_translations[$row['lang_code']] = $row;
+                }
+            }
+            
             $translation_result = $this->model->save_all_action_info_translations(
                 $action_info_id, 
                 $_POST['action_info_translations']
@@ -661,6 +792,75 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
             
             if (is_wp_error($translation_result)) {
                 error_log('[SAW Visits] Failed to save action info translations: ' . $translation_result->get_error_message());
+            } elseif (class_exists('SAW_Entity_Audit')) {
+                // Log translation changes
+                $audit = SAW_Entity_Audit::for_entity('visits', $visit_id);
+                $config = $this->config['audit']['action_info']['translations'] ?? [];
+                
+                // Get new translations AFTER save to compare with old ones
+                $new_translations = [];
+                $new_translations_raw = $wpdb->get_results($wpdb->prepare(
+                    "SELECT lang_code, name, description, content_text FROM {$wpdb->prefix}saw_visit_action_info_translations WHERE action_info_id = %d",
+                    $action_info_id
+                ), ARRAY_A);
+                foreach ($new_translations_raw as $row) {
+                    $new_translations[$row['lang_code']] = $row;
+                }
+                
+                foreach ($_POST['action_info_translations'] as $lang_code => $new_data) {
+                    $old_data = $old_translations[$lang_code] ?? [];
+                    $new_data_after_save = $new_translations[$lang_code] ?? [];
+                    
+                    // Use data AFTER save (from DB) instead of POST data for accurate comparison
+                    if (empty($new_data_after_save)) {
+                        continue; // Skip if translation doesn't exist after save
+                    }
+                    
+                    // Normalize data for comparison (trim strings, handle empty values)
+                    $normalize = function($data) {
+                        if (empty($data) || !is_array($data)) {
+                            return [];
+                        }
+                        $normalized = [];
+                        foreach ($data as $key => $value) {
+                            if (is_string($value)) {
+                                $value = trim($value);
+                                // Treat empty string same as null for comparison
+                                $normalized[$key] = $value === '' ? null : $value;
+                            } else {
+                                $normalized[$key] = $value;
+                            }
+                        }
+                        return $normalized;
+                    };
+                    
+                    $normalized_old = $normalize($old_data);
+                    $normalized_new = $normalize($new_data_after_save);
+                    
+                    // Compare only relevant keys
+                    $keys_to_check = ['name', 'description', 'content_text'];
+                    $has_changes = false;
+                    foreach ($keys_to_check as $key) {
+                        $old_val = $normalized_old[$key] ?? null;
+                        $new_val = $normalized_new[$key] ?? null;
+                        
+                        // Skip if both are null/empty (no change)
+                        if (($old_val === null || $old_val === '') && ($new_val === null || $new_val === '')) {
+                            continue;
+                        }
+                        
+                        // Check if values actually changed
+                        if ($old_val !== $new_val) {
+                            $has_changes = true;
+                            break;
+                        }
+                    }
+                    
+                    // Only log if there are actual changes
+                    if ($has_changes) {
+                        $audit->log_translation_change($lang_code, $old_data, $new_data_after_save, $config);
+                    }
+                }
             }
         }
         
@@ -680,6 +880,24 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
             }
         }
         
+        // Get deleted documents before deletion for audit
+        $deleted_documents = [];
+        if (class_exists('SAW_Entity_Audit')) {
+            if (!empty($keep_doc_ids)) {
+                $placeholders = implode(',', array_fill(0, count($keep_doc_ids), '%d'));
+                $deleted_documents = $wpdb->get_results($wpdb->prepare(
+                    "SELECT file_name, file_size, mime_type FROM {$wpdb->prefix}saw_visit_action_documents 
+                     WHERE visit_id = %d AND id NOT IN ({$placeholders})",
+                    array_merge(array($visit_id), $keep_doc_ids)
+                ), ARRAY_A);
+            } else {
+                $deleted_documents = $wpdb->get_results($wpdb->prepare(
+                    "SELECT file_name, file_size, mime_type FROM {$wpdb->prefix}saw_visit_action_documents WHERE visit_id = %d",
+                    $visit_id
+                ), ARRAY_A);
+            }
+        }
+        
         if (!empty($keep_doc_ids)) {
             $placeholders = implode(',', array_fill(0, count($keep_doc_ids), '%d'));
             $wpdb->query($wpdb->prepare(
@@ -692,6 +910,7 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         }
         
         // Handle uploaded files from modern file upload component
+        $uploaded_files_for_audit = [];
         if (!empty($_POST['action_documents_uploaded'])) {
             $uploaded_files_json = stripslashes($_POST['action_documents_uploaded']);
             $uploaded_files = json_decode($uploaded_files_json, true);
@@ -752,6 +971,13 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
                                     ),
                                     array('%d', '%d', '%s', '%s', '%d', '%s', '%s')
                                 );
+                                
+                                // Collect uploaded files for audit
+                                $uploaded_files_for_audit[] = [
+                                    'name' => $file_name,
+                                    'size' => $file_data['size'] ?? filesize($final_path),
+                                    'mime' => $file_data['type'] ?? 'application/octet-stream',
+                                ];
                             }
                         }
                     }
@@ -764,9 +990,36 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
             $this->upload_action_documents($visit_id, $customer_id);
         }
         
+        // ========================================
+        // AUDIT LOG: Action documents changed
+        // ========================================
+        if (class_exists('SAW_Entity_Audit')) {
+            $audit = SAW_Entity_Audit::for_entity('visits', $visit_id);
+            
+            // Log deleted documents
+            if (!empty($deleted_documents)) {
+                $audit->log_file_change('removed', $deleted_documents, 'action_documents');
+            }
+            
+            // Log uploaded documents
+            if (!empty($uploaded_files_for_audit)) {
+                $audit->log_file_change('added', $uploaded_files_for_audit, 'action_documents');
+            }
+        }
+        
         // ============================================
         // 3. Handle OOPP
         // ============================================
+        // Get old OOPP IDs before deletion
+        $old_oopp_ids = [];
+        if (class_exists('SAW_Entity_Audit')) {
+            $old_oopp_ids = $wpdb->get_col($wpdb->prepare(
+                "SELECT oopp_id FROM {$wpdb->prefix}saw_visit_action_oopp WHERE visit_id = %d",
+                $visit_id
+            ));
+            $old_oopp_ids = array_map('intval', $old_oopp_ids);
+        }
+        
         $wpdb->delete($wpdb->prefix . 'saw_visit_action_oopp', array('visit_id' => $visit_id), array('%d'));
         
         $oopp_ids = isset($_POST['action_oopp_ids']) 
@@ -787,6 +1040,20 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
                 ),
                 array('%d', '%d', '%d', '%d', '%s')
             );
+        }
+        
+        // ========================================
+        // AUDIT LOG: Action OOPP changed
+        // ========================================
+        if (class_exists('SAW_Entity_Audit')) {
+            $new_oopp_ids = array_values($oopp_ids);
+            sort($old_oopp_ids);
+            sort($new_oopp_ids);
+            
+            if ($old_oopp_ids !== $new_oopp_ids) {
+                SAW_Entity_Audit::for_entity('visits', $visit_id)
+                    ->log_relation_change('action_oopp', $old_oopp_ids, $new_oopp_ids);
+            }
         }
     }
     
@@ -1175,6 +1442,14 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
             wp_send_json_error(['message' => 'Chyba databáze: ' . $wpdb->last_error]);
         }
         
+        // ========================================
+        // AUDIT LOG: Status changed
+        // ========================================
+        if (class_exists('SAW_Entity_Audit')) {
+            SAW_Entity_Audit::for_entity('visits', $visit_id)
+                ->log_status_change($visit['status'], $new_status);
+        }
+        
         if (class_exists('SAW_Cache')) {
             SAW_Cache::flush('visits');
         }
@@ -1532,6 +1807,14 @@ public function ajax_send_invitation() {
         ['id' => $visit_id]
     );
     
+    // ========================================
+    // AUDIT LOG: Invitation sent
+    // ========================================
+    if (class_exists('SAW_Entity_Audit')) {
+        SAW_Entity_Audit::for_entity('visits', $visit_id)
+            ->log_custom_action('invitation_sent');
+    }
+    
     // Clear cache
     if (class_exists('SAW_Cache')) {
         SAW_Cache::flush('visits');
@@ -1755,6 +2038,20 @@ public function ajax_send_invitation() {
         $branch_id = intval($visit['branch_id']);
         $visitors_table = $wpdb->prefix . 'saw_visitors';
         
+        // Get old visitor IDs before changes (for audit)
+        $old_visitor_ids = [];
+        if (class_exists('SAW_Entity_Audit')) {
+            $old_visitor_ids = $wpdb->get_col($wpdb->prepare(
+                "SELECT id FROM {$visitors_table} WHERE visit_id = %d",
+                $visit_id
+            ));
+            $old_visitor_ids = array_map('intval', $old_visitor_ids);
+        }
+        
+        $new_visitor_ids = [];
+        $added_visitor_ids = [];
+        $deleted_visitor_ids = [];
+        
         foreach ($visitors as $visitor) {
             $status = sanitize_text_field($visitor['_status'] ?? '');
             $db_id = !empty($visitor['_dbId']) ? intval($visitor['_dbId']) : null;
@@ -1774,24 +2071,47 @@ public function ajax_send_invitation() {
             
             switch ($status) {
                 case 'new':
-                    $this->insert_visitor($visit_id, $customer_id, $branch_id, $visitor);
+                    $inserted_id = $this->insert_visitor($visit_id, $customer_id, $branch_id, $visitor);
+                    if ($inserted_id) {
+                        $new_visitor_ids[] = $inserted_id;
+                        $added_visitor_ids[] = $inserted_id;
+                    }
                     break;
                     
                 case 'modified':
                     if ($db_id) {
                         $this->update_visitor($db_id, $visitor);
+                        $new_visitor_ids[] = $db_id;
                     }
                     break;
                     
                 case 'deleted':
                     if ($db_id) {
                         $wpdb->delete($visitors_table, ['id' => $db_id], ['%d']);
+                        $deleted_visitor_ids[] = $db_id;
                     }
                     break;
                     
                 case 'existing':
-                    // Beze změny - nic nedělat
+                    if ($db_id) {
+                        $new_visitor_ids[] = $db_id;
+                    }
                     break;
+            }
+        }
+        
+        // ========================================
+        // AUDIT LOG: Visitors changed
+        // ========================================
+        if (class_exists('SAW_Entity_Audit')) {
+            // Check if visitors changed
+            sort($old_visitor_ids);
+            sort($new_visitor_ids);
+            
+            if ($old_visitor_ids !== $new_visitor_ids) {
+                // 'visitors' relation is now in config, so log_relation_change should work
+                $audit = SAW_Entity_Audit::for_entity('visits', $visit_id);
+                $audit->log_relation_change('visitors', $old_visitor_ids, $new_visitor_ids);
             }
         }
     }

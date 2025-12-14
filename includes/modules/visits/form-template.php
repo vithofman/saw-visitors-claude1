@@ -1083,8 +1083,43 @@ jQuery(document).ready(function($) {
         }
     });
     
+    // FIX: Remove required attribute from hidden/inactive fields BEFORE submit
+    // This must be done BEFORE HTML5 validation runs, so we do it on form submit attempt
+    // (click on submit button) rather than actual submit event
+    function syncRequiredAttributesBeforeSubmit($form) {
+        $form.find('input[required], textarea[required]').each(function() {
+            var $field = $(this);
+            var $parentContent = $field.closest('.saw-language-content');
+            var $detailsSection = $field.closest('details');
+            
+            // Check if field is in a closed <details> element (main issue)
+            var isInClosedDetails = $detailsSection.length > 0 && !$detailsSection.prop('open');
+            
+            // Check if field is in inactive language tab
+            var isInHiddenTab = $parentContent.length > 0 && $parentContent.css('display') === 'none';
+            
+            // Check if field is not visible or in display:none element
+            var isNotVisible = !$field.is(':visible') || $field.closest('[style*="display: none"]').length > 0;
+            
+            // Remove required if field is not accessible
+            if (isInClosedDetails || isInHiddenTab || isNotVisible) {
+                $field.removeAttr('required');
+            }
+        });
+    }
+    
+    // Sync required attributes when submit button is clicked (BEFORE form submit)
+    $(document).on('click', '.saw-visit-form button[type="submit"], .saw-visit-form input[type="submit"]', function(e) {
+        var $form = $(this).closest('form');
+        if ($form.length) {
+            syncRequiredAttributesBeforeSubmit($form);
+        }
+    });
+    
+    // Also sync on actual form submit as fallback
     $('.saw-visit-form').on('submit', function(e) {
         var $form = $(this);
+        syncRequiredAttributesBeforeSubmit($form);
         
         // Get uploaded files from file upload component
         var uploadedActionDocs = [];
@@ -1432,6 +1467,9 @@ jQuery(document).ready(function($) {
     
     // Inicializace při načtení stránky
     $(document).ready(function() {
+        // Remove required from fields in closed details sections on page load
+        syncRequiredAttributesForDetails();
+        
         initializeActiveLanguage();
         
         // Inicializace TinyMCE editorů pro action info
@@ -1467,9 +1505,31 @@ jQuery(document).ready(function($) {
         }
     });
     
+    // Helper function to sync required attributes with details open state
+    function syncRequiredAttributesForDetails() {
+        $('details.saw-form-section').each(function() {
+            var $details = $(this);
+            var isOpen = $details.prop('open');
+            
+            if (!isOpen) {
+                // Remove required from all fields in closed details
+                $details.find('input[required], textarea[required]').removeAttr('required');
+            }
+        });
+    }
+    
     // Inicializace při otevření sekce
     $('.saw-form-section-action-info').on('toggle', function() {
-        if ($(this).prop('open')) {
+        var $section = $(this);
+        var isOpen = $section.prop('open');
+        
+        // Sync required attributes when section is toggled
+        if (!isOpen) {
+            // Remove required from fields in closed section
+            $section.find('input[required], textarea[required]').removeAttr('required');
+        }
+        
+        if (isOpen) {
             setTimeout(function() {
                 initializeActiveLanguage();
                 
@@ -1499,6 +1559,17 @@ jQuery(document).ready(function($) {
                     });
                 }
             }, 100);
+        }
+    });
+    
+    // Sync required attributes for ALL details sections on toggle
+    $(document).on('toggle', 'details.saw-form-section', function() {
+        var $details = $(this);
+        var isOpen = $details.prop('open');
+        
+        if (!isOpen) {
+            // Remove required from fields in closed details
+            $details.find('input[required], textarea[required]').removeAttr('required');
         }
     });
     

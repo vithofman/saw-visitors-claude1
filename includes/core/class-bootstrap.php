@@ -124,6 +124,9 @@ class SAW_Bootstrap {
             // Session Manager (must load early - used by terminal and other components)
             'includes/core/class-saw-session-manager.php',
             
+            // Entity Audit System v3.0
+            'includes/core/class-saw-entity-audit.php',
+            
             // PWA Support
             'includes/pwa/class-saw-pwa.php',
 

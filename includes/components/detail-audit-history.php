@@ -7,11 +7,29 @@
  * 
  * @package     SAW_Visitors
  * @subpackage  Components
- * @version     1.0.0
+ * @version     3.0.0 - Universal Audit System v3.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
+}
+
+// Load audit helper functions
+$audit_helpers_path = __DIR__ . '/audit-helpers.php';
+if (file_exists($audit_helpers_path)) {
+    require_once $audit_helpers_path;
+} else {
+    // Fallback if file doesn't exist - prevent fatal error
+    error_log('[SAW] Audit helpers file not found: ' . $audit_helpers_path);
+    return; // Exit gracefully
+}
+
+// Ensure required functions exist
+if (!function_exists('saw_get_audit_action_config') || 
+    !function_exists('saw_format_compact_changes') || 
+    !function_exists('saw_render_audit_author')) {
+    error_log('[SAW] Audit helper functions not loaded properly');
+    return; // Exit gracefully if functions are missing
 }
 
 // Check if item has audit info
@@ -103,6 +121,8 @@ $format_field_label = function($field_name) {
         'updated_at' => 'Datum aktualizace',
         'started_at' => 'Zahájeno',
         'completed_at' => 'Dokončeno',
+        'planned_date_from' => 'Plánované datum od',
+        'planned_date_to' => 'Plánované datum do',
         'purpose' => 'Účel návštěvy',
         'notes' => 'Poznámky',
         'invitation_email' => 'Email pro pozvánku',
@@ -246,165 +266,64 @@ if ($has_change_history) {
         </div>
         <?php endif; ?>
         
-        <div class="saw-audit-timeline">
+        <div class="saw-audit-history-modern">
             
             <?php if ($has_change_history): ?>
-                <!-- Change History Timeline -->
-                <?php foreach ($change_history as $change): ?>
-                    <?php
-                    $change_action = $change['action'] ?? 'updated';
-                    $change_user_email = $change['user_email'] ?? null;
-                    $change_user_id = $change['user_id'] ?? null;
-                    $change_created_at = $change['created_at'] ?? null;
-                    $change_branch_id = $change['branch_id'] ?? null;
-                    $change_changed_fields = $change['changed_fields'] ?? [];
-                    
-                    // Format date
-                    $change_date_formatted = null;
-                    $change_date_relative = null;
-                    if ($change_created_at) {
-                        $change_date_formatted = date_i18n('j. n. Y H:i', strtotime($change_created_at));
-                        $change_date_relative = human_time_diff(strtotime($change_created_at), current_time('timestamp')) . ' ' . __('před', 'saw-visitors');
-                    }
-                    
-                    // Get branch name
-                    $change_branch_name = null;
-                    if ($change_branch_id && isset($branch_cache[$change_branch_id])) {
-                        $change_branch_name = $branch_cache[$change_branch_id];
-                    }
-                    ?>
-                    
-                    <div class="saw-audit-timeline-item saw-audit-item-<?php echo esc_attr($change_action === 'created' ? 'created' : 'updated'); ?>">
-                        <div class="saw-audit-timeline-content">
+                <!-- Change History Modern Layout -->
+                <div class="saw-audit-list">
+                        <?php foreach ($change_history as $change): ?>
+                            <?php
+                            // Decode details JSON for v3.0 format
+                            $details = json_decode($change['details'] ?? '{}', true) ?? [];
+                            
+                            // Skip old format records (without source)
+                            if (empty($details['source'])) {
+                                continue; // Skip old format
+                            }
+                            
+                            $change_action = $change['action'] ?? 'updated';
+                            $change_created_at = $change['created_at'] ?? null;
+                            
+                            // Format date
+                            $change_date_formatted = null;
+                            $change_date_relative = null;
+                            if ($change_created_at) {
+                                $change_date_formatted = date_i18n('j.n.Y H:i', strtotime($change_created_at));
+                                $change_date_relative = human_time_diff(strtotime($change_created_at), current_time('timestamp')) . ' ' . __('před', 'saw-visitors');
+                            }
+                            
+                            // Get action config
+                            $action_config = saw_get_audit_action_config($change_action);
+                            
+                            // Format compact changes
+                            $changes_text = saw_format_compact_changes($details);
+                            ?>
+                            
+                    <div class="saw-audit-item" style="--action-color: <?php echo esc_attr($action_config['color']); ?>">
+                        <div class="saw-audit-item-icon" title="<?php echo esc_attr($action_config['label']); ?>">
+                            <?php echo esc_html($action_config['icon']); ?>
+                        </div>
+                        <div class="saw-audit-item-content">
                             <div class="saw-audit-item-header">
-                                <div class="saw-audit-timeline-dot">
-                                    <?php if ($change_action === 'created'): ?>
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                            <line x1="12" y1="5" x2="12" y2="19"/>
-                                            <line x1="5" y1="12" x2="19" y2="12"/>
-                                        </svg>
-                                    <?php else: ?>
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                                        </svg>
+                                <div class="saw-audit-item-date">
+                                    <span class="saw-audit-date-main"><?php echo esc_html($change_date_formatted); ?></span>
+                                    <?php if ($change_date_relative): ?>
+                                        <span class="saw-audit-date-relative"><?php echo esc_html($change_date_relative); ?></span>
                                     <?php endif; ?>
                                 </div>
-                                <div class="saw-audit-item-label">
-                                    <?php echo esc_html($change_action === 'created' ? $tr('audit_created_by', 'Vytvořil') : $tr('audit_updated_by', 'Aktualizoval')); ?>
+                                <div class="saw-audit-item-author">
+                                    <?php echo saw_render_audit_author($details); ?>
                                 </div>
                             </div>
-                            <div class="saw-audit-item-body">
-                                <?php if ($change_user_email): ?>
-                                    <img src="<?php echo esc_url($get_gravatar($change_user_email)); ?>" 
-                                         alt="" 
-                                         class="saw-audit-avatar"
-                                         onerror="this.onerror=null; this.src='https://www.gravatar.com/avatar/00000000000000000000000000000000?s=40&d=identicon';">
-                                    <div class="saw-audit-item-info">
-                                        <a href="mailto:<?php echo esc_attr($change_user_email); ?>" class="saw-audit-email">
-                                            <?php echo esc_html($change_user_email); ?>
-                                        </a>
-                                        <?php if ($change_date_formatted): ?>
-                                            <div class="saw-audit-item-time">
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                    <circle cx="12" cy="12" r="10"/>
-                                                    <polyline points="12 6 12 12 16 14"/>
-                                                </svg>
-                                                <span><?php echo esc_html($change_date_formatted); ?></span>
-                                                <?php if ($change_date_relative): ?>
-                                                    <span class="saw-audit-time-relative">(<?php echo esc_html($change_date_relative); ?>)</span>
-                                                <?php endif; ?>
-                                            </div>
-                                        <?php endif; ?>
-                                        <?php if ($change_branch_name): ?>
-                                            <div class="saw-audit-branch-info">
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                                                    <circle cx="12" cy="10" r="3"/>
-                                                </svg>
-                                                <span><?php echo esc_html($change_branch_name); ?></span>
-                                            </div>
-                                        <?php endif; ?>
-                                        
-                                        <?php 
-                                        // Display changed fields if available
-                                        if (!empty($change_changed_fields) && is_array($change_changed_fields)): 
-                                            // Filter out fields that should not be displayed (internal/system fields)
-                                            $hidden_fields = ['id']; // Basic internal fields - customer_id can be useful to show
-                                            $display_fields = array();
-                                            foreach ($change_changed_fields as $field_name => $field_change) {
-                                                if (!in_array($field_name, $hidden_fields)) {
-                                                    $display_fields[$field_name] = $field_change;
-                                                }
-                                            }
-                                        ?>
-                                            <?php if (!empty($display_fields)): ?>
-                                            <div class="saw-audit-field-changes">
-                                                <?php foreach ($display_fields as $field_name => $field_change): ?>
-                                                    <?php
-                                                    $field_label = $format_field_label($field_name);
-                                                    $old_value = $field_change['old'] ?? null;
-                                                    $new_value = $field_change['new'] ?? null;
-                                                    
-                                                    // Skip if both values are empty/null for update actions
-                                                    if ($change_action !== 'created' && $old_value === null && ($new_value === null || $new_value === '')) {
-                                                        continue;
-                                                    }
-                                                    ?>
-                                                    <div class="saw-audit-field-change <?php echo $field_name === 'image_path' ? 'saw-audit-field-image' : ''; ?>">
-                                                        <span class="saw-audit-field-label"><?php echo esc_html($field_label); ?>:</span>
-                                                        <span class="saw-audit-field-diff">
-                                                            <?php if ($change_action === 'created'): ?>
-                                                                <span class="saw-audit-value-new"><?php echo $format_value($new_value, $field_name); ?></span>
-                                                            <?php else: ?>
-                                                                <span class="saw-audit-value-old"><?php echo $format_value($old_value, $field_name); ?></span>
-                                                                <?php if ($field_name !== 'image_path'): ?>
-                                                                    <span class="saw-audit-diff-arrow">→</span>
-                                                                <?php endif; ?>
-                                                                <span class="saw-audit-value-new"><?php echo $format_value($new_value, $field_name); ?></span>
-                                                            <?php endif; ?>
-                                                        </span>
-                                                    </div>
-                                                <?php endforeach; ?>
-                                            </div>
-                                            <?php elseif ($change_action === 'created'): ?>
-                                                <!-- For create action, show message if no fields to display -->
-                                                <div class="saw-audit-field-changes">
-                                                    <div class="saw-audit-field-change">
-                                                        <span class="saw-audit-value-new">Záznam byl vytvořen</span>
-                                                    </div>
-                                                </div>
-                                            <?php endif; ?>
-                                        <?php elseif ($change_action === 'created'): ?>
-                                            <!-- For create action without changed_fields, show message -->
-                                            <div class="saw-audit-field-changes">
-                                                <div class="saw-audit-field-change">
-                                                    <span class="saw-audit-value-new">Záznam byl vytvořen</span>
-                                                </div>
-                                            </div>
-                                        <?php endif; ?>
-                                    </div>
-                                <?php else: ?>
-                                    <div class="saw-audit-item-info">
-                                        <span class="saw-audit-unknown"><?php echo esc_html($tr('audit_unknown', 'Neznámý')); ?></span>
-                                        <?php if ($change_date_formatted): ?>
-                                            <div class="saw-audit-item-time">
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                    <circle cx="12" cy="12" r="10"/>
-                                                    <polyline points="12 6 12 12 16 14"/>
-                                                </svg>
-                                                <span><?php echo esc_html($change_date_formatted); ?></span>
-                                                <?php if ($change_date_relative): ?>
-                                                    <span class="saw-audit-time-relative">(<?php echo esc_html($change_date_relative); ?>)</span>
-                                                <?php endif; ?>
-                                            </div>
-                                        <?php endif; ?>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
+                            <?php if ($changes_text): ?>
+                                <div class="saw-audit-item-changes">
+                                    <?php echo $changes_text; ?>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
-                <?php endforeach; ?>
+                        <?php endforeach; ?>
+                </div>
             <?php else: ?>
                 <!-- Fallback: Simple Created/Updated Info -->
                 <!-- Created Info -->

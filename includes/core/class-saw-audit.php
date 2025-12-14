@@ -501,11 +501,21 @@ class SAW_Audit {
             $changed_fields_json = wp_json_encode($data['changed_fields']);
         }
 
-        // Prepare details JSON with changed_fields
+        // Prepare details JSON
         $details_json = null;
-        if ($changed_fields_json) {
+        
+        // If 'details' is already provided as JSON string, use it (preserves all data including source, source_context, etc.)
+        if (isset($data['details']) && is_string($data['details'])) {
+            $details_json = $data['details'];
+        }
+        // Otherwise, if changed_fields exist, create details from them (backward compatibility)
+        elseif ($changed_fields_json) {
             // Store changed_fields directly in details
             $details_json = wp_json_encode(['changed_fields' => $data['changed_fields']]);
+        }
+        // If details is provided as array, serialize it
+        elseif (isset($data['details']) && is_array($data['details'])) {
+            $details_json = wp_json_encode($data['details']);
         }
 
         // Auto-detect IP and user agent
