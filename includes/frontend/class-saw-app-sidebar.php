@@ -275,6 +275,37 @@ class SAW_App_Sidebar {
     }
     
     /**
+     * Map emoji/Dashicons to Lucide icon name
+     *
+     * @since 2.0.0
+     * @param string $icon Emoji or Dashicons class
+     * @return string Lucide icon name
+     */
+    private function map_icon($icon) {
+        $map = [
+            '📊' => 'bar-chart-3',
+            '📅' => 'calendar',
+            '🖥️' => 'settings', // Terminal - using settings as fallback
+            '🏭' => 'building-2',
+            '👥' => 'users',
+            '🏢' => 'building-2',
+            '📂' => 'folder',
+            '👤' => 'user',
+            '🌍' => 'globe',
+            '📚' => 'file-text', // Content - using file-text
+            '🦺' => 'shield',
+            '🔒' => 'lock',
+            '🏬' => 'building-2',
+            '💳' => 'badge-check', // Account types
+            '⚙️' => 'settings',
+            '🌐' => 'globe',
+            'ℹ️' => 'info',
+        ];
+        
+        return $map[$icon] ?? 'settings';
+    }
+    
+    /**
      * Get translated text
      *
      * Helper method to get translation with fallback.
@@ -354,7 +385,15 @@ class SAW_App_Sidebar {
                                         data-menu="<?php echo esc_attr($item['id']); ?>"
                                         <?php if (!empty($item['target'])): ?>target="<?php echo esc_attr($item['target']); ?>"<?php endif; ?>
                                     >
-                                        <span class="saw-nav-icon"><?php echo $item['icon']; ?></span>
+                                        <span class="saw-nav-icon"><?php 
+                                            // Convert emoji/Dashicons to SAW_Icons
+                                            if (class_exists('SAW_Icons')) {
+                                                $icon_name = $this->map_icon($item['icon']);
+                                                echo SAW_Icons::get($icon_name, 'saw-icon--md');
+                                            } else {
+                                                echo esc_html($item['icon']);
+                                            }
+                                        ?></span>
                                         <span class="saw-nav-label"><?php echo esc_html($item['label']); ?></span>
                                     </a>
                                 <?php endforeach; ?>
@@ -368,7 +407,15 @@ class SAW_App_Sidebar {
                                 data-menu="<?php echo esc_attr($item['id']); ?>"
                                 <?php if (!empty($item['target'])): ?>target="<?php echo esc_attr($item['target']); ?>"<?php endif; ?>
                             >
-                                <span class="saw-nav-icon"><?php echo $item['icon']; ?></span>
+                                <span class="saw-nav-icon"><?php 
+                                    // Convert emoji/Dashicons to SAW_Icons
+                                    if (class_exists('SAW_Icons')) {
+                                        $icon_name = $this->map_icon($item['icon']);
+                                        echo SAW_Icons::get($icon_name, 'saw-icon--md');
+                                    } else {
+                                        echo esc_html($item['icon']);
+                                    }
+                                ?></span>
                                 <span class="saw-nav-label"><?php echo esc_html($item['label']); ?></span>
                             </a>
                         <?php endforeach; ?>

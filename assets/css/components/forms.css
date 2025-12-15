@@ -93,8 +93,8 @@
 }
 
 .saw-form-section summary:hover {
-    background: var(--saw-form-summary-hover-bg, #eff6ff) !important;
-    border-color: #2563eb !important;
+    background: var(--saw-form-summary-hover-bg, var(--saw-brand-50)) !important;
+    border-color: var(--saw-brand-600) !important;
 }
 
 .saw-form-section summary .dashicons {
@@ -103,8 +103,8 @@
     width: 40px !important; /* Total width: 24px icon + 8px*2 padding */
     height: 40px !important; /* Total height: 24px icon + 8px*2 padding */
     line-height: 40px !important; /* Match height for vertical centering of font icon */
-    color: var(--saw-form-summary-icon-color, #2563eb) !important;
-    background: var(--saw-form-summary-icon-bg, #eff6ff) !important;
+    color: var(--saw-form-summary-icon-color, var(--saw-brand-600)) !important;
+    background: var(--saw-form-summary-icon-bg, var(--saw-brand-50)) !important;
     border-radius: 10px !important;
     padding: 0 !important; /* Remove padding, use line-height for centering */
     transition: all 0.2s ease !important;
@@ -132,16 +132,16 @@
 }
 
 .saw-form-section[open] summary {
-    border-bottom-color: #2563eb !important; /* Blue bottom border when open */
+    border-bottom-color: var(--saw-brand-600) !important; /* Blue bottom border when open */
     background: var(--saw-form-section-bg, #ffffff) !important;
 }
 
 .saw-form-section[open] {
-    border-color: #2563eb !important; /* Blue border on entire section when open */
+    border-color: var(--saw-brand-600) !important; /* Blue border on entire section when open */
 }
 
 .saw-form-section[open] summary .dashicons {
-    background: #2563eb;
+    background: var(--saw-brand-600);
     color: #ffffff;
 }
 
@@ -175,7 +175,7 @@
 .saw-form-section[open] summary::after {
     content: '▼' !important; /* Down arrow when open */
     transform: rotate(0deg) !important;
-    color: #2563eb !important;
+    color: var(--saw-brand-600) !important;
 }
 
 .saw-form-section-content {
@@ -268,8 +268,8 @@
 .saw-select:focus,
 .saw-textarea:focus {
     outline: none;
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3px #eff6ff;
+    border-color: var(--saw-brand-600);
+    box-shadow: 0 0 0 3px var(--saw-brand-50);
 }
 
 .saw-input:disabled,
@@ -369,8 +369,8 @@
 }
 
 .saw-checkbox-label input[type="checkbox"]:checked {
-    background: #2563eb;
-    border-color: #2563eb;
+    background: var(--saw-brand-600);
+    border-color: var(--saw-brand-600);
 }
 
 .saw-checkbox-label input[type="checkbox"]:checked::after {
@@ -386,7 +386,7 @@
 
 .saw-checkbox-label input[type="checkbox"]:focus {
     outline: none;
-    box-shadow: 0 0 0 3px #eff6ff;
+    box-shadow: 0 0 0 3px var(--saw-brand-50);
 }
 
 .saw-checkbox-text {
@@ -480,8 +480,8 @@
 }
 
 .saw-back-button:hover {
-    background: #2563eb;
-    border-color: #2563eb;
+    background: var(--saw-brand-600);
+    border-color: var(--saw-brand-600);
     color: #ffffff;
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
@@ -759,12 +759,12 @@
 }
 
 .saw-button-primary {
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, var(--saw-brand-600) 0%, var(--saw-brand-700) 100%);
     color: #ffffff;
 }
 
 .saw-button-primary:hover:not(:disabled) {
-    background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%);
+    background: linear-gradient(135deg, var(--saw-brand-700) 0%, #1e3a8a 100%);
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
 }
@@ -1710,11 +1710,11 @@
 }
 
 .saw-form-section summary:hover {
-    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
+    background: linear-gradient(135deg, var(--saw-brand-50) 0%, #dbeafe 100%) !important;
 }
 
 .saw-form-section[open] summary {
-    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
+    background: linear-gradient(135deg, var(--saw-brand-50) 0%, #dbeafe 100%) !important;
     box-shadow: 0 2px 4px rgba(37, 99, 235, 0.08);
 }
 
@@ -1725,7 +1725,7 @@
     height: 48px !important;
     line-height: 48px !important;
     color: #ffffff !important;
-    background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%) !important;
+    background: linear-gradient(135deg, var(--saw-brand-600) 0%, var(--saw-brand-500) 100%) !important;
     border-radius: 12px !important;
     padding: 0 !important;
     transition: all 0.3s ease !important;
@@ -1743,13 +1743,13 @@
 }
 
 .saw-form-section summary:hover .dashicons {
-    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%) !important;
+    background: linear-gradient(135deg, var(--saw-brand-700) 0%, var(--saw-brand-600) 100%) !important;
     transform: scale(1.05);
     box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
 }
 
 .saw-form-section[open] summary .dashicons {
-    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%) !important;
+    background: linear-gradient(135deg, var(--saw-brand-700) 0%, var(--saw-brand-600) 100%) !important;
     box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
 }
 
@@ -1774,7 +1774,7 @@
 .saw-form-section[open] summary::after {
     content: '▼' !important;
     transform: rotate(0deg) !important;
-    color: #2563eb !important;
+    color: var(--saw-brand-600) !important;
     background: #dbeafe;
 }
 
@@ -1845,7 +1845,7 @@
 .saw-form-section {
     background: #ffffff;
     border: 1px solid #e5e7eb !important;
-    border-left: 4px solid #2563eb !important;
+    border-left: 4px solid var(--saw-brand-600) !important;
     border-radius: 8px;
     margin-bottom: 20px;
     overflow: hidden;
@@ -1854,7 +1854,7 @@
 }
 
 .saw-form-section:hover {
-    border-left-color: #1d4ed8 !important;
+    border-left-color: var(--saw-brand-700) !important;
     box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12);
 }
 */

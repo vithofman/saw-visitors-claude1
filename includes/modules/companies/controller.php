@@ -73,11 +73,64 @@ class SAW_Module_Companies_Controller extends SAW_Base_Controller
         return $data;
     }
     
+    /**
+     * Store old values before update for audit logging
+     * @var array|null
+     */
+    protected $old_values_for_audit = null;
+    
     protected function before_save($data) {
         if (empty($data['customer_id'])) {
             $data['customer_id'] = SAW_Context::get_customer_id();
         }
+        
+        // Store old values for audit logging (edit mode only)
+        if (!empty($data['id'])) {
+            $this->old_values_for_audit = $this->model->get_by_id($data['id'], true);
+        }
+        
         return $data;
+    }
+    
+    protected function after_save($company_id) {
+        // Audit logging
+        if (class_exists('SAW_Entity_Audit')) {
+            $audit = SAW_Entity_Audit::for_entity('companies', $company_id);
+            
+            // Check if this is a new record (no old values stored)
+            $is_new = empty($this->old_values_for_audit);
+            
+            if ($is_new) {
+                // Log creation - get fresh data from database
+                $new_values = $this->model->get_by_id($company_id, true);
+                
+                // Remove virtual fields
+                $virtual_fields = ['branch_name', 'created_at_formatted', 'updated_at_formatted', 'created_at_relative', 'updated_at_relative', 'has_audit_info', 'change_history'];
+                foreach ($virtual_fields as $field) {
+                    unset($new_values[$field]);
+                }
+                
+                $audit->log_change([], $new_values);
+            } else {
+                // Log changes
+                $old_values = $this->old_values_for_audit ?? [];
+                
+                // Get fresh data from database to ensure all fields are captured
+                $new_values = $this->model->get_by_id($company_id, true);
+                
+                // Remove virtual fields that shouldn't be compared
+                $virtual_fields = ['branch_name', 'created_at_formatted', 'updated_at_formatted', 'created_at_relative', 'updated_at_relative', 'has_audit_info', 'change_history'];
+                foreach ($virtual_fields as $field) {
+                    unset($new_values[$field]);
+                    unset($old_values[$field]);
+                }
+                
+                // Log general changes
+                if (!empty($old_values)) {
+                    $audit->log_change($old_values, $new_values);
+                }
+            }
+        }
     }
     
     protected function format_detail_data($item) {

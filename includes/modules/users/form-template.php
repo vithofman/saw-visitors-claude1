@@ -102,7 +102,11 @@ if ($is_edit && !empty($item['id'])) {
                 : esc_html($tr('form_title_create', 'Nový uživatel')); ?>
         </h1>
         <a href="<?php echo esc_url(home_url('/admin/users/')); ?>" class="saw-back-button">
-            <span class="dashicons dashicons-arrow-left-alt2"></span>
+            <?php if (class_exists('SAW_Icons')): ?>
+                <?php echo SAW_Icons::get('chevron-left'); ?>
+            <?php else: ?>
+                <span class="dashicons dashicons-arrow-left-alt2"></span>
+            <?php endif; ?>
             <?php echo esc_html($tr('btn_back_to_list', 'Zpět na seznam')); ?>
         </a>
     </div>
@@ -128,7 +132,11 @@ if ($is_edit && !empty($item['id'])) {
         <!-- ============================================ -->
         <details class="saw-form-section" open>
             <summary>
-                <span class="dashicons dashicons-admin-users"></span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('users', 'saw-section-icon'); ?>
+                <?php else: ?>
+                    <span class="dashicons dashicons-admin-users"></span>
+                <?php endif; ?>
                 <strong><?php echo esc_html($tr('section_basic', 'Základní údaje')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
@@ -253,7 +261,11 @@ if ($is_edit && !empty($item['id'])) {
         <?php if (current_user_can('manage_options')): ?>
         <details class="saw-form-section field-customer" style="display:none;">
             <summary>
-                <span class="dashicons dashicons-building"></span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('building-2'); ?>
+                <?php else: ?>
+                    <span class="dashicons dashicons-building"></span>
+                <?php endif; ?>
                 <strong><?php echo esc_html($tr('section_customer', 'Zákazník')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
@@ -283,7 +295,11 @@ if ($is_edit && !empty($item['id'])) {
         <!-- ============================================ -->
         <details class="saw-form-section field-branch-departments" style="display:none;" open>
             <summary>
-                <span class="dashicons dashicons-location"></span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('map-pin'); ?>
+                <?php else: ?>
+                    <span class="dashicons dashicons-location"></span>
+                <?php endif; ?>
                 <strong><?php echo esc_html($tr('section_branch_departments', 'Pobočka a oddělení')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
@@ -371,7 +387,11 @@ if ($is_edit && !empty($item['id'])) {
         <!-- ============================================ -->
         <details class="saw-form-section field-pin" style="display:none;">
             <summary>
-                <span class="dashicons dashicons-lock"></span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('lock'); ?>
+                <?php else: ?>
+                    <span class="dashicons dashicons-lock"></span>
+                <?php endif; ?>
                 <strong><?php echo esc_html($tr('section_pin', 'PIN pro přihlášení')); ?></strong>
             </summary>
             <div class="saw-form-section-content">

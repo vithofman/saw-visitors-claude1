@@ -105,7 +105,11 @@ if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $selected_date)) {
                 
                 <!-- Create button -->
                 <a href="<?php echo esc_url(home_url('/admin/visits/create')); ?>" class="saw-btn saw-btn-primary saw-calendar-create-btn">
-                    <span class="dashicons dashicons-plus-alt2"></span>
+                    <?php if (class_exists('SAW_Icons')): ?>
+                        <?php echo SAW_Icons::get('plus'); ?>
+                    <?php else: ?>
+                        <span class="dashicons dashicons-plus-alt2"></span>
+                    <?php endif; ?>
                     <span class="saw-calendar-create-btn__text">Nová návštěva</span>
                 </a>
             </div>

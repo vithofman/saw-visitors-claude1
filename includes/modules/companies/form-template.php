@@ -74,7 +74,11 @@ $form_action = $is_edit
             <?php echo $is_edit ? esc_html($tr('form_title_edit', 'Upravit firmu')) : esc_html($tr('form_title_create', 'Nová firma')); ?>
         </h1>
         <a href="<?php echo esc_url(home_url('/admin/companies/')); ?>" class="saw-back-button">
-            <span class="dashicons dashicons-arrow-left-alt2"></span>
+            <?php if (class_exists('SAW_Icons')): ?>
+                <?php echo SAW_Icons::get('chevron-left'); ?>
+            <?php else: ?>
+                <span class="dashicons dashicons-arrow-left-alt2"></span>
+            <?php endif; ?>
             <?php echo esc_html($tr('btn_back_to_list', 'Zpět na seznam')); ?>
         </a>
     </div>
@@ -103,7 +107,11 @@ $form_action = $is_edit
         <!-- ================================================ -->
         <details class="saw-form-section" open>
             <summary>
-                <span class="dashicons dashicons-admin-generic"></span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('settings', 'saw-section-icon'); ?>
+                <?php else: ?>
+                    <span class="dashicons dashicons-admin-generic"></span>
+                <?php endif; ?>
                 <strong><?php echo esc_html($tr('form_section_basic', 'Základní informace')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
@@ -207,7 +215,11 @@ $form_action = $is_edit
         <!-- ================================================ -->
         <details class="saw-form-section">
             <summary>
-                <span class="dashicons dashicons-location"></span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('map-pin'); ?>
+                <?php else: ?>
+                    <span class="dashicons dashicons-location"></span>
+                <?php endif; ?>
                 <strong><?php echo esc_html($tr('form_section_address', 'Adresa sídla')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
@@ -286,7 +298,11 @@ $form_action = $is_edit
         <!-- ================================================ -->
         <details class="saw-form-section">
             <summary>
-                <span class="dashicons dashicons-email"></span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('mail'); ?>
+                <?php else: ?>
+                    <span class="dashicons dashicons-email"></span>
+                <?php endif; ?>
                 <strong><?php echo esc_html($tr('form_section_contact', 'Kontaktní údaje')); ?></strong>
             </summary>
             <div class="saw-form-section-content">

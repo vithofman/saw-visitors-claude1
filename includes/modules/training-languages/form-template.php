@@ -76,7 +76,11 @@ $form_action = $is_edit
              ============================================ -->
         <details class="saw-form-section" open>
             <summary>
-                <span class="saw-section-emoji">🌐</span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('globe', 'saw-section-icon'); ?>
+                <?php else: ?>
+                    <span class="saw-section-emoji">🌐</span>
+                <?php endif; ?>
                 <strong><?php echo esc_html($tr('section_basic', 'Základní údaje')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
@@ -138,7 +142,11 @@ $form_action = $is_edit
              ============================================ -->
         <details class="saw-form-section" open>
             <summary>
-                <span class="saw-section-emoji">🏢</span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('building-2', 'saw-section-icon'); ?>
+                <?php else: ?>
+                    <span class="saw-section-emoji">🏢</span>
+                <?php endif; ?>
                 <strong><?php echo esc_html($tr('section_branches', 'Aktivace pro pobočky')); ?></strong>
                 <span class="saw-section-badge" id="branches-count">0</span>
             </summary>

@@ -592,8 +592,8 @@ class SAW_Asset_Loader {
         
         // Visits module CSS
         if ($slug === 'visits') {
+            // Load form and section CSS first
             $visits_css_files = [
-                'saw-visits-detail' => 'assets/css/modules/visits/visits-detail.css',
                 'saw-visits-form' => 'assets/css/modules/visits/visits-form.css',
                 'saw-visitors-section' => 'assets/css/modules/visits/visitors-section.css',
             ];
@@ -603,10 +603,21 @@ class SAW_Asset_Loader {
                     wp_enqueue_style(
                         $handle,
                         SAW_VISITORS_PLUGIN_URL . $path,
-                        ['saw-module-visits', 'saw-admin-table-detail', 'saw-feedback'],
+                        ['saw-module-visits', 'saw-admin-table-detail', 'saw-tables', 'saw-feedback'],
                         filemtime(SAW_VISITORS_PLUGIN_DIR . $path)
                     );
                 }
+            }
+            
+            // Load detail CSS last to ensure highest priority
+            $detail_css = 'assets/css/modules/visits/visits-detail.css';
+            if (file_exists(SAW_VISITORS_PLUGIN_DIR . $detail_css)) {
+                wp_enqueue_style(
+                    'saw-visits-detail',
+                    SAW_VISITORS_PLUGIN_URL . $detail_css,
+                    ['saw-module-visits', 'saw-admin-table-detail', 'saw-tables', 'saw-feedback', 'saw-visits-form', 'saw-visitors-section'],
+                    filemtime(SAW_VISITORS_PLUGIN_DIR . $detail_css)
+                );
             }
         }
         

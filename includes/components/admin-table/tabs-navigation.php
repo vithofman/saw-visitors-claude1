@@ -13,6 +13,43 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Map emoji icon to Lucide icon name
+ */
+function saw_map_tab_icon($emoji) {
+    if (!class_exists('SAW_Icons')) {
+        return $emoji; // Fallback na emoji
+    }
+    
+    $map = [
+        '📋' => 'clipboard-list',
+        '📝' => 'file-text',
+        '⏳' => 'clock',
+        '✅' => 'check-circle',
+        '🔄' => 'refresh-cw',
+        '✔️' => 'check',
+        '❌' => 'x-circle',
+        '📊' => 'bar-chart-3',
+        '📅' => 'calendar',
+        '🚪' => 'log-out',
+        '📦' => 'package',
+        '⏸️' => 'pause',
+        '✓' => 'check',
+        '✕' => 'x',
+        '🏛️' => 'building',
+        '🏢' => 'building-2',
+        '👔' => 'briefcase',
+        '🎯' => 'target',
+        '📧' => 'mail',
+        '⚙️' => 'settings',
+        '🌐' => 'globe',
+        '🖥️' => 'monitor',
+        '👥' => 'users',
+    ];
+    
+    return $map[$emoji] ?? 'circle';
+}
+
 $tabs_config = $config['tabs'] ?? array();
 if (empty($tabs_config['enabled'])) {
     return;
@@ -41,7 +78,11 @@ unset($base_params[$tab_param], $base_params['paged']);
     <div class="saw-table-tabs-container">
         <!-- Left Arrow - před tabs -->
         <button type="button" class="saw-tabs-nav-arrow saw-tabs-nav-arrow-left" aria-label="Scroll left" style="display: none;">
-            <span class="dashicons dashicons-arrow-left-alt2"></span>
+            <?php if (class_exists('SAW_Icons')): ?>
+                <?php echo SAW_Icons::get('chevron-left'); ?>
+            <?php else: ?>
+                <span class="dashicons dashicons-arrow-left-alt2"></span>
+            <?php endif; ?>
         </button>
         
         <div class="saw-table-tabs">
@@ -69,7 +110,18 @@ unset($base_params[$tab_param], $base_params['paged']);
                class="saw-table-tab<?php echo $is_active ? ' active' : ''; ?>"
                data-tab="<?php echo esc_attr($tab_key); ?>"
                data-filter-value="<?php echo esc_attr($tab['filter_value'] ?? ''); ?>">
-                <span class="saw-tab-icon"><?php echo $tab['icon'] ?? ''; ?></span>
+                <span class="saw-tab-icon">
+                    <?php 
+                    if (!empty($tab['icon'])) {
+                        if (class_exists('SAW_Icons')) {
+                            $lucide_name = saw_map_tab_icon($tab['icon']);
+                            echo SAW_Icons::get($lucide_name, 'saw-icon--sm');
+                        } else {
+                            echo esc_html($tab['icon']);
+                        }
+                    }
+                    ?>
+                </span>
                 <span class="saw-tab-label"><?php echo esc_html($tab['label']); ?></span>
                 <span class="saw-tab-count"><?php echo number_format_i18n($count); ?></span>
             </a>
@@ -78,7 +130,11 @@ unset($base_params[$tab_param], $base_params['paged']);
         
         <!-- Right Arrow - za tabs -->
         <button type="button" class="saw-tabs-nav-arrow saw-tabs-nav-arrow-right" aria-label="Scroll right" style="display: none;">
-            <span class="dashicons dashicons-arrow-right-alt2"></span>
+            <?php if (class_exists('SAW_Icons')): ?>
+                <?php echo SAW_Icons::get('chevron-right'); ?>
+            <?php else: ?>
+                <span class="dashicons dashicons-arrow-right-alt2"></span>
+            <?php endif; ?>
         </button>
     </div>
 </div>

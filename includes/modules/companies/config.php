@@ -179,4 +179,19 @@ return array(
         'ttl' => 300,
         'invalidate_on' => array('save', 'delete'),
     ),
+    
+    // Audit configuration
+    'audit' => array(
+        'enabled' => true,
+        'long_text_fields' => array(), // Companies don't have long text fields
+        'sensitive_fields' => array(), // No sensitive fields
+        'excluded_fields' => array(
+            'updated_at',
+            'created_at',
+            'customer_id',    // Technical field - should not be shown in audit
+            'branch_id',      // Technical field - should not be shown in audit
+        ),
+        'relations' => array(),
+        'custom_actions' => array(),
+    ),
 );

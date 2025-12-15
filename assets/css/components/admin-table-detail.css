@@ -10,8 +10,7 @@
  * @version     4.0.0 - Refactored: All local detail sidebar styles moved to global, ensuring consistent spacing across all modules
  */
 
-/* Import fonts from visitors */
-@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap');
+/* Fonts are now imported in foundation/typography.css */
 
 /* ============================================
    GLOBAL DASHICONS FIX
@@ -49,7 +48,7 @@
    ============================================ */
 
 .saw-detail-sidebar-content {
-    font-family: 'Roboto', sans-serif !important;
+    font-family: var(--saw-font-body) !important;
     color: #1a1a1a !important;
     box-sizing: border-box;
 }
@@ -63,7 +62,7 @@
 .saw-sidebar-content,
 .saw-detail-wrapper,
 .saw-detail-stack {
-    font-family: 'Roboto', sans-serif !important;
+    font-family: var(--saw-font-body) !important;
     color: #1a1a1a !important;
 }
 
@@ -86,7 +85,7 @@
     margin-top: 0 !important;
     margin-bottom: 0 !important;
     padding: 0 !important;
-    font-family: 'Roboto', sans-serif !important;
+    font-family: var(--saw-font-body) !important;
     color: #1a1a1a !important;
 }
 
@@ -99,7 +98,7 @@
 
 /* Detail wrapper - ensure consistent styling */
 .saw-detail-wrapper {
-    font-family: 'Roboto', sans-serif !important;
+    font-family: var(--saw-font-body) !important;
     color: #1a1a1a !important;
     box-sizing: border-box !important;
     max-width: 100% !important;
@@ -111,7 +110,7 @@
 
 /* Detail sidebar content - ensure consistent padding and spacing */
 .saw-detail-sidebar-content {
-    font-family: 'Roboto', sans-serif !important;
+    font-family: var(--saw-font-body) !important;
     color: #1a1a1a !important;
     box-sizing: border-box !important;
     padding: 0 !important; /* No padding - handled by .saw-detail-content-wrapper */
@@ -125,7 +124,7 @@
 /* Ensure .saw-detail-content-wrapper has consistent padding - override tables.css */
 .saw-detail-content-wrapper {
     padding: 0px !important; /* Mobile-first: minimální padding */
-    font-family: 'Roboto', sans-serif !important;
+    font-family: var(--saw-font-body) !important;
     color: #1a1a1a !important;
     margin: 0 !important;
 }
@@ -178,7 +177,7 @@
 .saw-sidebar-content *,
 .saw-detail-wrapper *,
 .saw-detail-stack * {
-    font-family: 'Roboto', sans-serif !important;
+    font-family: var(--saw-font-body) !important;
 }
 
 /* Except section titles which use Oswald */
@@ -188,55 +187,73 @@
 .saw-industrial-section .saw-section-title *,
 h4.saw-section-title,
 h4.saw-section-title * {
-    font-family: 'Oswald', sans-serif !important;
+    font-family: var(--saw-font-heading) !important;
 }
 
-/* Apply Oswald to ALL section titles - override any module-specific styles */
+/* Apply Oswald to ALL section titles - Enhanced */
 .saw-industrial-section .saw-section-title,
 .saw-section-title,
 .saw-section-title.saw-section-title-accent,
 h4.saw-section-title {
-    font-family: 'Oswald', sans-serif !important;
-    font-size: 16px !important;
+    font-family: var(--saw-font-heading, 'Oswald', sans-serif) !important;
+    font-size: 15px !important;
     font-weight: 700 !important;
     text-transform: uppercase !important;
-    color: #005A8C !important;
+    color: var(--saw-brand-600, #005A8C) !important;
     margin: 0 !important;
     display: flex !important;
     align-items: center !important;
-    gap: 8px !important;
+    gap: 10px !important;
     justify-content: flex-start !important;
-    letter-spacing: 0;
+    letter-spacing: 0.05em !important;
 }
 
-/* Apply visitors styles to ALL industrial sections - override module-specific styles */
+/* Apply visitors styles to ALL industrial sections - Enhanced Design */
 .saw-industrial-section {
-    background: #fff !important;
-    border: 1px solid #dce1e5 !important;
-    border-radius: 4px !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, .05) !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 10px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
     margin-bottom: 20px !important;
+    transition: all 0.2s ease !important;
+    overflow: hidden;
+}
+
+.saw-industrial-section:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+    border-color: #cbd5e1 !important;
 }
 
 .saw-section-head {
-    background: #fff !important;
-    padding: 14px 20px !important;
-    border-bottom: 2px solid #f4f6f8 !important;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+    padding: 16px 20px !important;
+    border-bottom: 2px solid #f1f5f9 !important;
 }
 
 .saw-section-body {
     padding: 20px !important;
+    background: #ffffff !important;
 }
 
-/* Apply visitors styles to ALL info rows - override module-specific styles */
+/* Apply visitors styles to ALL info rows - Enhanced Readability */
 .saw-info-row {
     display: grid !important;
-    grid-template-columns: 140px 1fr !important;
-    gap: 12px !important;
+    grid-template-columns: 150px 1fr !important;
+    gap: 16px !important;
     align-items: baseline !important;
-    border-bottom: 1px dotted #e5e7eb !important;
-    padding-bottom: 8px !important;
-    margin-bottom: 8px !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    padding-bottom: 12px !important;
+    margin-bottom: 12px !important;
+    transition: background-color 0.15s ease !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+    border-radius: 4px !important;
+}
+
+.saw-info-row:hover {
+    background-color: #f8fafc !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
 }
 
 .saw-info-row:last-child {
@@ -246,27 +263,34 @@ h4.saw-section-title {
 }
 
 .saw-info-label {
-    font-size: 12px !important;
-    color: #888 !important;
+    font-size: 11px !important;
+    color: var(--saw-text-secondary, #64748b) !important;
     font-weight: 700 !important;
     text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    line-height: 1.4 !important;
 }
 
 .saw-info-val {
     font-size: 14px !important;
-    color: #1a1a1a !important;
+    color: var(--saw-text-primary, #1a1a1a) !important;
     font-weight: 500 !important;
     text-align: left !important;
+    line-height: 1.5 !important;
+    word-break: break-word !important;
 }
 
 .saw-info-val a {
-    color: #0077B5 !important;
+    color: var(--saw-brand-600, #005A8C) !important;
     text-decoration: none !important;
     font-weight: 600 !important;
+    transition: color 0.2s ease !important;
+    border-bottom: 1px solid transparent !important;
 }
 
 .saw-info-val a:hover {
-    text-decoration: underline !important;
+    color: var(--saw-brand-700, #004466) !important;
+    border-bottom-color: var(--saw-brand-700, #004466) !important;
 }
 
 /* ============================================
@@ -298,13 +322,13 @@ h4.saw-section-title {
 .saw-badge-transparent.saw-badge-info {
     background: rgba(59, 130, 246, 0.2);
     border-color: rgba(59, 130, 246, 0.4);
-    color: #60a5fa;
+    color: var(--saw-brand-400);
 }
 
 .saw-badge-transparent.saw-badge-primary {
     background: rgba(59, 130, 246, 0.2);
     border-color: rgba(59, 130, 246, 0.4);
-    color: #60a5fa;
+    color: var(--saw-brand-400);
 }
 
 .saw-badge-transparent.saw-badge-success {
@@ -340,22 +364,22 @@ h4.saw-section-title {
 
 /* These duplicate styles removed - using visitors styles from above section */
 
-/* Warning Section - keep warning styles but override base */
+/* Warning Section - Enhanced */
 .saw-industrial-section.saw-warning-section {
-    background: var(--saw-warning-light) !important;
-    border: 1px solid #dce1e5 !important;
-    border-left: 4px solid var(--saw-warning) !important;
+    background: #fffbeb !important;
+    border: 1px solid #fde68a !important;
+    border-left: 4px solid var(--saw-warning, #f59e0b) !important;
 }
 
 .saw-warning-section .saw-section-body.saw-warning-section-body {
-    padding: 16px 20px;
+    padding: 20px !important;
 }
 
 .saw-warning-content {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 16px;
     flex-wrap: wrap;
 }
 
@@ -365,16 +389,20 @@ h4.saw-section-title {
 }
 
 .saw-warning-title {
-    color: var(--saw-warning-dark);
+    color: var(--saw-warning-dark, #92400e);
     font-size: 14px;
-    font-weight: 600;
-    margin: 0 0 4px 0;
+    font-weight: 700;
+    margin: 0 0 6px 0;
+    font-family: var(--saw-font-heading, 'Oswald', sans-serif);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
 }
 
 .saw-warning-description {
-    margin: 4px 0 0 0;
+    margin: 6px 0 0 0;
     font-size: 13px;
-    color: var(--saw-text-secondary);
+    color: var(--saw-text-secondary, #64748b);
+    line-height: 1.5;
 }
 
 /* ============================================
@@ -402,7 +430,7 @@ h4.saw-section-title {
     color: #888 !important;
     font-weight: 700 !important;
     margin-bottom: 4px !important;
-    font-family: 'Roboto', sans-serif !important;
+    font-family: var(--saw-font-body) !important;
 }
 
 .saw-info-item span {
@@ -410,11 +438,11 @@ h4.saw-section-title {
     font-size: 14px !important;
     color: #1a1a1a !important;
     font-weight: 500 !important;
-    font-family: 'Roboto', sans-serif !important;
+    font-family: var(--saw-font-body) !important;
 }
 
 .saw-info-item a {
-    color: #0077B5 !important;
+    color: var(--saw-brand-500) !important;
     text-decoration: none !important;
     font-weight: 600 !important;
 }
@@ -427,10 +455,10 @@ h4.saw-section-title {
 .saw-link,
 .saw-info-item a,
 .saw-info-val a {
-    color: #0077B5 !important;
+    color: var(--saw-brand-500) !important;
     text-decoration: none !important;
     font-weight: 600 !important;
-    font-family: 'Roboto', sans-serif !important;
+    font-family: var(--saw-font-body) !important;
 }
 
 .saw-link:hover,
@@ -599,25 +627,32 @@ h4.saw-section-title {
 .saw-detail-visit-btn {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
-    background: var(--saw-primary);
+    gap: 8px;
+    padding: 10px 18px;
+    background: var(--saw-brand-600, #005A8C);
     color: #ffffff;
     border: none;
-    border-radius: 3px;
+    border-radius: 6px;
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 700;
     text-decoration: none;
     text-transform: uppercase;
-    transition: all 0.3s ease;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
+    letter-spacing: 0.05em;
+    box-shadow: 0 2px 4px rgba(0, 90, 140, 0.15);
 }
 
 .saw-detail-visit-btn:hover {
-    background: var(--saw-primary-hover);
+    background: var(--saw-brand-700, #004466);
     color: #ffffff;
-    transform: translateY(-1px);
-    box-shadow: 0 3px 8px rgba(59, 130, 246, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 90, 140, 0.25);
+}
+
+.saw-detail-visit-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 90, 140, 0.15);
 }
 
 .saw-visitor-row {

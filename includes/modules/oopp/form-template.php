@@ -139,7 +139,11 @@ $js_translations = array(
                 : esc_html($tr('form_title_create', 'Nový OOPP')); ?>
         </h1>
         <a href="<?php echo esc_url(home_url('/admin/oopp/')); ?>" class="saw-back-button">
-            <span class="dashicons dashicons-arrow-left-alt2"></span>
+            <?php if (class_exists('SAW_Icons')): ?>
+                <?php echo SAW_Icons::get('chevron-left'); ?>
+            <?php else: ?>
+                <span class="dashicons dashicons-arrow-left-alt2"></span>
+            <?php endif; ?>
             <?php echo esc_html($tr('form_back_to_list', 'Zpět na seznam')); ?>
         </a>
     </div>
@@ -170,7 +174,11 @@ $js_translations = array(
         <!-- ================================================ -->
         <details class="saw-form-section" open>
             <summary>
-                <span class="dashicons dashicons-admin-generic"></span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('settings', 'saw-section-icon'); ?>
+                <?php else: ?>
+                    <span class="dashicons dashicons-admin-generic"></span>
+                <?php endif; ?>
                 <strong><?php echo esc_html($tr('section_basic', 'Základní informace')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
@@ -217,12 +225,20 @@ $js_translations = array(
                                         <?php if ($has_image): ?>
                                             <img src="<?php echo esc_url($current_image_url); ?>" alt="<?php echo esc_attr($tr('form_current_photo', 'Aktuální fotografie')); ?>" class="saw-preview-image">
                                             <button type="button" class="saw-file-remove-overlay" title="<?php echo esc_attr($tr('form_remove_photo', 'Odstranit fotografii')); ?>">
-                                                <span class="dashicons dashicons-no-alt"></span>
+                                                <?php if (class_exists('SAW_Icons')): ?>
+                                                    <?php echo SAW_Icons::get('x'); ?>
+                                                <?php else: ?>
+                                                    <span class="dashicons dashicons-no-alt"></span>
+                                                <?php endif; ?>
                                             </button>
                                         <?php else: ?>
                                             <div class="saw-file-empty-state">
                                                 <div class="saw-file-icon-wrapper">
-                                                    <span class="dashicons dashicons-format-image"></span>
+                                                    <?php if (class_exists('SAW_Icons')): ?>
+                                                        <?php echo SAW_Icons::get('image'); ?>
+                                                    <?php else: ?>
+                                                        <span class="dashicons dashicons-format-image"></span>
+                                                    <?php endif; ?>
                                                 </div>
                                                 <p class="saw-file-empty-text"><?php echo esc_html($tr('form_no_photo', 'Žádná fotografie')); ?></p>
                                             </div>
@@ -244,21 +260,33 @@ $js_translations = array(
                                         data-max-size="2097152"
                                     >
                                     <label for="image" class="saw-file-upload-trigger">
-                                        <span class="dashicons dashicons-upload"></span>
+                                        <?php if (class_exists('SAW_Icons')): ?>
+                                            <?php echo SAW_Icons::get('upload'); ?>
+                                        <?php else: ?>
+                                            <span class="dashicons dashicons-upload"></span>
+                                        <?php endif; ?>
                                         <?php echo esc_html($tr('form_upload_photo', 'Nahrát fotografii')); ?>
                                     </label>
                                     
                                     <!-- Selected File Info (hidden by default) -->
                                     <div class="saw-file-selected-info hidden">
                                         <div class="saw-file-selected-icon">
-                                            <span class="dashicons dashicons-yes-alt"></span>
+                                            <?php if (class_exists('SAW_Icons')): ?>
+                                                <?php echo SAW_Icons::get('check-circle'); ?>
+                                            <?php else: ?>
+                                                <span class="dashicons dashicons-yes-alt"></span>
+                                            <?php endif; ?>
                                         </div>
                                         <div class="saw-file-selected-details">
                                             <span class="saw-file-selected-name"></span>
                                             <span class="saw-file-selected-meta"></span>
                                         </div>
                                         <button type="button" class="saw-file-clear-btn" title="<?php echo esc_attr($tr('form_cancel_selection', 'Zrušit výběr')); ?>">
-                                            <span class="dashicons dashicons-dismiss"></span>
+                                            <?php if (class_exists('SAW_Icons')): ?>
+                                                <?php echo SAW_Icons::get('x'); ?>
+                                            <?php else: ?>
+                                                <span class="dashicons dashicons-dismiss"></span>
+                                            <?php endif; ?>
                                         </button>
                                     </div>
                                     
@@ -289,7 +317,11 @@ $js_translations = array(
         <!-- ================================================ -->
         <details class="saw-form-section">
             <summary>
-                <span class="dashicons dashicons-location"></span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('map-pin'); ?>
+                <?php else: ?>
+                    <span class="dashicons dashicons-location"></span>
+                <?php endif; ?>
                 <strong><?php echo esc_html($tr('section_validity', 'Platnost')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
@@ -401,7 +433,11 @@ $js_translations = array(
         <?php if (!empty($languages)): ?>
         <details class="saw-form-section" open>
             <summary>
-                <span class="dashicons dashicons-translation"></span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('globe'); ?>
+                <?php else: ?>
+                    <span class="dashicons dashicons-translation"></span>
+                <?php endif; ?>
                 <strong><?php echo esc_html($tr('section_translations', 'Překlady')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
@@ -426,7 +462,11 @@ $js_translations = array(
                 <!-- Jazykové záložky -->
                 <div class="saw-language-tabs-wrapper">
                     <button type="button" class="saw-language-tab-nav saw-language-tab-nav-prev" aria-label="Předchozí jazyky">
-                        <span class="dashicons dashicons-arrow-left-alt2"></span>
+                        <?php if (class_exists('SAW_Icons')): ?>
+                            <?php echo SAW_Icons::get('chevron-left'); ?>
+                        <?php else: ?>
+                            <span class="dashicons dashicons-arrow-left-alt2"></span>
+                        <?php endif; ?>
                     </button>
                     <div class="saw-language-tabs">
                         <?php foreach ($languages as $index => $language): ?>
@@ -441,7 +481,11 @@ $js_translations = array(
                         <?php endforeach; ?>
                     </div>
                     <button type="button" class="saw-language-tab-nav saw-language-tab-nav-next" aria-label="Další jazyky">
-                        <span class="dashicons dashicons-arrow-right-alt2"></span>
+                        <?php if (class_exists('SAW_Icons')): ?>
+                            <?php echo SAW_Icons::get('chevron-right'); ?>
+                        <?php else: ?>
+                            <span class="dashicons dashicons-arrow-right-alt2"></span>
+                        <?php endif; ?>
                     </button>
                 </div>
                 
@@ -563,7 +607,11 @@ $js_translations = array(
         <!-- ================================================ -->
         <details class="saw-form-section">
             <summary>
-                <span class="dashicons dashicons-admin-settings"></span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('settings'); ?>
+                <?php else: ?>
+                    <span class="dashicons dashicons-admin-settings"></span>
+                <?php endif; ?>
                 <strong><?php echo esc_html($tr('section_settings', 'Nastavení')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
@@ -638,7 +686,11 @@ $js_translations = array(
         <!-- Tlačítka -->
         <div class="saw-form-actions">
             <button type="submit" class="saw-btn saw-btn-primary">
-                <span class="dashicons dashicons-saved"></span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('save'); ?>
+                <?php else: ?>
+                    <span class="dashicons dashicons-saved"></span>
+                <?php endif; ?>
                 <?php echo $is_edit 
                     ? esc_html($tr('btn_save_changes', 'Uložit změny')) 
                     : esc_html($tr('btn_create', 'Vytvořit OOPP')); ?>

@@ -102,15 +102,27 @@ $_t = function($key) use ($translations) {
         <!-- Quick Action Buttons -->
         <div class="saw-quick-actions">
             <button type="button" class="saw-btn saw-btn-secondary" id="btn-allow-all">
-                <span class="dashicons dashicons-unlock"></span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('unlock'); ?>
+                <?php else: ?>
+                    <span class="dashicons dashicons-unlock"></span>
+                <?php endif; ?>
                 <?php echo esc_html($_t('btn_allow_all')); ?>
             </button>
             <button type="button" class="saw-btn saw-btn-secondary" id="btn-deny-all">
-                <span class="dashicons dashicons-lock"></span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('lock'); ?>
+                <?php else: ?>
+                    <span class="dashicons dashicons-lock"></span>
+                <?php endif; ?>
                 <?php echo esc_html($_t('btn_deny_all')); ?>
             </button>
             <button type="button" class="saw-btn saw-btn-secondary" id="btn-reset">
-                <span class="dashicons dashicons-image-rotate"></span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('refresh-cw'); ?>
+                <?php else: ?>
+                    <span class="dashicons dashicons-image-rotate"></span>
+                <?php endif; ?>
                 <?php echo esc_html($_t('btn_reset')); ?>
             </button>
         </div>
@@ -121,7 +133,11 @@ $_t = function($key) use ($translations) {
     <!-- ================================================ -->
     <div class="saw-permissions-info">
         <p class="saw-info-text">
-            <span class="dashicons dashicons-info"></span>
+            <?php if (class_exists('SAW_Icons')): ?>
+                <?php echo SAW_Icons::get('info'); ?>
+            <?php else: ?>
+                <span class="dashicons dashicons-info"></span>
+            <?php endif; ?>
             <?php echo esc_html($_t('info_auto_save')); ?>
         </p>
     </div>
@@ -197,7 +213,11 @@ $_t = function($key) use ($translations) {
 <!-- SAVE INDICATOR (Toast Notification) -->
 <!-- ================================================ -->
 <div id="save-indicator" class="saw-save-indicator" style="display: none;">
-    <span class="dashicons dashicons-saved"></span>
+    <?php if (class_exists('SAW_Icons')): ?>
+        <?php echo SAW_Icons::get('save'); ?>
+    <?php else: ?>
+        <span class="dashicons dashicons-saved"></span>
+    <?php endif; ?>
     <span class="save-text"><?php echo esc_html($_t('msg_saved')); ?></span>
 </div>
 

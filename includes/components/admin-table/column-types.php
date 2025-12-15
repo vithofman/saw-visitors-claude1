@@ -84,6 +84,12 @@ class SAW_Table_Column_Types {
         }
         
         $placeholder_icon = $column['placeholder'] ?? 'admin-generic';
+        if (class_exists('SAW_Icons')) {
+            $lucide_name = SAW_Icons::from_dashicon($placeholder_icon) ?? 'settings';
+            return '<div class="saw-table-logo-placeholder">' .
+                   SAW_Icons::get($lucide_name) .
+                   '</div>';
+        }
         return '<div class="saw-table-logo-placeholder">' .
                '<span class="dashicons dashicons-' . esc_attr($placeholder_icon) . '"></span>' .
                '</div>';

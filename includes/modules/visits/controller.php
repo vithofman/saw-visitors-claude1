@@ -415,6 +415,15 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         // Save visit schedules (days and times)
         $schedule_table = $wpdb->prefix . 'saw_visit_schedules';
         
+        // Get old schedules BEFORE deletion (for audit)
+        $old_schedules = [];
+        if (class_exists('SAW_Entity_Audit')) {
+            $old_schedules = $wpdb->get_results($wpdb->prepare(
+                "SELECT date, time_from, time_to FROM {$schedule_table} WHERE visit_id = %d ORDER BY sort_order ASC",
+                $visit_id
+            ), ARRAY_A);
+        }
+        
         // Delete existing schedules
         $wpdb->delete($schedule_table, array('visit_id' => $visit_id), array('%d'));
         
@@ -424,6 +433,7 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
         $schedule_times_to = isset($_POST['schedule_times_to']) && is_array($_POST['schedule_times_to']) ? $_POST['schedule_times_to'] : array();
         $schedule_notes = isset($_POST['schedule_notes']) && is_array($_POST['schedule_notes']) ? $_POST['schedule_notes'] : array();
         
+        $new_schedules = [];
         if (!empty($schedule_dates)) {
             foreach ($schedule_dates as $index => $date) {
                 $date = trim($date);
@@ -444,6 +454,13 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
                     $time_to = null;
                 }
                 
+                // Store for audit
+                $new_schedules[] = [
+                    'date' => $date,
+                    'time_from' => $time_from,
+                    'time_to' => $time_to,
+                ];
+                
                 $wpdb->insert(
                     $schedule_table,
                     array(
@@ -458,6 +475,81 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
                     ),
                     array('%d', '%d', '%d', '%s', $time_from === null ? null : '%s', $time_to === null ? null : '%s', '%s', '%d')
                 );
+            }
+        }
+        
+        // ========================================
+        // AUDIT LOG: Schedules changed (times)
+        // ========================================
+        if (class_exists('SAW_Entity_Audit') && !empty($old_schedules) || !empty($new_schedules)) {
+            // Compare old and new schedules
+            $old_schedules_keyed = [];
+            foreach ($old_schedules as $schedule) {
+                $key = $schedule['date'];
+                $old_schedules_keyed[$key] = [
+                    'time_from' => $schedule['time_from'],
+                    'time_to' => $schedule['time_to'],
+                ];
+            }
+            
+            $new_schedules_keyed = [];
+            foreach ($new_schedules as $schedule) {
+                $key = $schedule['date'];
+                $new_schedules_keyed[$key] = [
+                    'time_from' => $schedule['time_from'],
+                    'time_to' => $schedule['time_to'],
+                ];
+            }
+            
+            // Find changes
+            $all_dates = array_unique(array_merge(array_keys($old_schedules_keyed), array_keys($new_schedules_keyed)));
+            $schedule_changes = [];
+            
+            foreach ($all_dates as $date) {
+                $old = $old_schedules_keyed[$date] ?? null;
+                $new = $new_schedules_keyed[$date] ?? null;
+                
+                if ($old !== $new) {
+                    $old_time_from = $old['time_from'] ?? null;
+                    $old_time_to = $old['time_to'] ?? null;
+                    $new_time_from = $new['time_from'] ?? null;
+                    $new_time_to = $new['time_to'] ?? null;
+                    
+                    // Format for display
+                    $old_display = $date;
+                    if ($old_time_from || $old_time_to) {
+                        $old_display .= ' ' . ($old_time_from ?: '') . ($old_time_from && $old_time_to ? '-' : '') . ($old_time_to ?: '');
+                    }
+                    
+                    $new_display = $date;
+                    if ($new_time_from || $new_time_to) {
+                        $new_display .= ' ' . ($new_time_from ?: '') . ($new_time_from && $new_time_to ? '-' : '') . ($new_time_to ?: '');
+                    }
+                    
+                    $schedule_changes[] = [
+                        'date' => $date,
+                        'old' => $old_display,
+                        'new' => $new_display,
+                    ];
+                }
+            }
+            
+            // Log schedule changes
+            if (!empty($schedule_changes)) {
+                $audit = SAW_Entity_Audit::for_entity('visits', $visit_id);
+                
+                // Create changed_fields for schedules
+                $changed_fields = [];
+                foreach ($schedule_changes as $change) {
+                    $field_key = 'schedule_' . $change['date'];
+                    $changed_fields[$field_key] = [
+                        'old' => $change['old'],
+                        'new' => $change['new'],
+                    ];
+                }
+                
+                // Use log_custom_action() instead of write_log() (write_log is protected)
+                $audit->log_custom_action('schedules_changed', ['changed_fields' => $changed_fields]);
             }
         }
         
@@ -1051,8 +1143,100 @@ class SAW_Module_Visits_Controller extends SAW_Base_Controller
             sort($new_oopp_ids);
             
             if ($old_oopp_ids !== $new_oopp_ids) {
-                SAW_Entity_Audit::for_entity('visits', $visit_id)
-                    ->log_relation_change('action_oopp', $old_oopp_ids, $new_oopp_ids);
+                $audit = SAW_Entity_Audit::for_entity('visits', $visit_id);
+                
+                // Get OOPP names BEFORE deletion (for removed items)
+                $old_oopp_names = [];
+                if (!empty($old_oopp_ids)) {
+                    $lang = 'cs';
+                    if (class_exists('SAW_Component_Language_Switcher')) {
+                        $lang = SAW_Component_Language_Switcher::get_user_language();
+                    }
+                    
+                    $old_oopp_data = $wpdb->get_results($wpdb->prepare(
+                        "SELECT o.id, 
+                         COALESCE(
+                             MAX(CASE WHEN t.language_code = %s THEN t.name END),
+                             MAX(CASE WHEN t.language_code = 'cs' THEN t.name END),
+                             MAX(t.name)
+                         ) as name
+                         FROM {$wpdb->prefix}saw_oopp o
+                         LEFT JOIN {$wpdb->prefix}saw_oopp_translations t ON o.id = t.oopp_id
+                         WHERE o.id IN (" . implode(',', array_fill(0, count($old_oopp_ids), '%d')) . ")
+                         GROUP BY o.id",
+                        $lang,
+                        ...$old_oopp_ids
+                    ), ARRAY_A);
+                    
+                    foreach ($old_oopp_data as $oopp) {
+                        $old_oopp_names[intval($oopp['id'])] = $oopp['name'] ?? 'OOPP #' . $oopp['id'];
+                    }
+                }
+                
+                // Get new OOPP names (for added items)
+                $new_oopp_names = [];
+                if (!empty($new_oopp_ids)) {
+                    $lang = 'cs';
+                    if (class_exists('SAW_Component_Language_Switcher')) {
+                        $lang = SAW_Component_Language_Switcher::get_user_language();
+                    }
+                    
+                    $new_oopp_data = $wpdb->get_results($wpdb->prepare(
+                        "SELECT o.id, 
+                         COALESCE(
+                             MAX(CASE WHEN t.language_code = %s THEN t.name END),
+                             MAX(CASE WHEN t.language_code = 'cs' THEN t.name END),
+                             MAX(t.name)
+                         ) as name
+                         FROM {$wpdb->prefix}saw_oopp o
+                         LEFT JOIN {$wpdb->prefix}saw_oopp_translations t ON o.id = t.oopp_id
+                         WHERE o.id IN (" . implode(',', array_fill(0, count($new_oopp_ids), '%d')) . ")
+                         GROUP BY o.id",
+                        $lang,
+                        ...$new_oopp_ids
+                    ), ARRAY_A);
+                    
+                    foreach ($new_oopp_data as $oopp) {
+                        $new_oopp_names[intval($oopp['id'])] = $oopp['name'] ?? 'OOPP #' . $oopp['id'];
+                    }
+                }
+                
+                // Build related_items manually
+                $related_items = [];
+                
+                // Added OOPP
+                $added_ids = array_diff($new_oopp_ids, $old_oopp_ids);
+                foreach ($added_ids as $id) {
+                    $related_items[] = [
+                        'type' => 'action_oopp',
+                        'id' => $id,
+                        'name' => $new_oopp_names[$id] ?? 'OOPP #' . $id,
+                        'action' => 'added',
+                    ];
+                }
+                
+                // Removed OOPP - use pre-fetched names
+                $removed_ids = array_diff($old_oopp_ids, $new_oopp_ids);
+                foreach ($removed_ids as $id) {
+                    $related_items[] = [
+                        'type' => 'action_oopp',
+                        'id' => $id,
+                        'name' => $old_oopp_names[$id] ?? 'OOPP #' . $id,
+                        'action' => 'removed',
+                    ];
+                }
+                
+                // Log with manually created related_items
+                if (!empty($related_items)) {
+                    $action = 'relation_changed';
+                    if (!empty($added_ids) && empty($removed_ids)) {
+                        $action = 'relation_added';
+                    } elseif (empty($added_ids) && !empty($removed_ids)) {
+                        $action = 'relation_removed';
+                    }
+                    
+                    $audit->log_related_items($related_items, $action);
+                }
             }
         }
     }
@@ -1909,16 +2093,24 @@ public function ajax_send_invitation() {
                     if (!empty($item['company_id'])) {
                         echo '<div style="display: flex; align-items: center; gap: 8px;">';
                         echo '<strong>' . esc_html($item['company_name'] ?? 'Firma #' . $item['company_id']) . '</strong>';
-                        echo '<span class="saw-badge saw-badge-info" style="font-size: 11px;">🏢 Firma</span>';
+                        if (class_exists('SAW_Icons')) {
+                            echo '<span class="saw-badge saw-badge-info saw-text-xs">' . SAW_Icons::get('building-2', 'saw-icon--xs') . ' Firma</span>';
+                        } else {
+                            echo '<span class="saw-badge saw-badge-info saw-text-xs">🏢 Firma</span>';
+                        }
                         echo '</div>';
                     } else {
                         echo '<div style="display: flex; align-items: center; gap: 8px;">';
                         if (!empty($item['first_visitor_name'])) {
-                            echo '<strong style="color: #6366f1;">' . esc_html($item['first_visitor_name']) . '</strong>';
+                            echo '<strong class="saw-text-brand">' . esc_html($item['first_visitor_name']) . '</strong>';
                         } else {
-                            echo '<strong style="color: #6366f1;">Fyzická osoba</strong>';
+                            echo '<strong class="saw-text-brand">Fyzická osoba</strong>';
                         }
-                        echo '<span class="saw-badge" style="background: #6366f1; color: white; font-size: 11px;">👤 Fyzická</span>';
+                            if (class_exists('SAW_Icons')) {
+                                echo '<span class="saw-badge saw-badge-primary saw-text-xs">' . SAW_Icons::get('user', 'saw-icon--xs') . ' Fyzická</span>';
+                            } else {
+                                echo '<span class="saw-badge saw-badge-primary saw-text-xs">👤 Fyzická</span>';
+                            }
                         echo '</div>';
                     }
                 },
@@ -1946,9 +2138,13 @@ public function ajax_send_invitation() {
                 'callback' => function($value, $item) {
                     $count = intval($item['visitor_count'] ?? 0);
                     if ($count === 0) {
-                        echo '<span style="color: #999;">—</span>';
+                        echo '<span class="saw-text-muted">—</span>';
                     } else {
-                        echo '<strong style="color: #0066cc;">👥 ' . $count . '</strong>';
+                        if (class_exists('SAW_Icons')) {
+                            echo '<strong class="saw-text-brand">' . SAW_Icons::get('users', 'saw-icon--sm') . ' ' . $count . '</strong>';
+                        } else {
+                            echo '<strong class="saw-text-brand">👥 ' . $count . '</strong>';
+                        }
                     }
                 },
             ),
@@ -2040,12 +2236,16 @@ public function ajax_send_invitation() {
         
         // Get old visitor IDs before changes (for audit)
         $old_visitor_ids = [];
+        $old_visitor_names = []; // Store names BEFORE deletion
         if (class_exists('SAW_Entity_Audit')) {
-            $old_visitor_ids = $wpdb->get_col($wpdb->prepare(
-                "SELECT id FROM {$visitors_table} WHERE visit_id = %d",
+            $old_visitors = $wpdb->get_results($wpdb->prepare(
+                "SELECT id, CONCAT(first_name, ' ', last_name) as name FROM {$visitors_table} WHERE visit_id = %d",
                 $visit_id
-            ));
-            $old_visitor_ids = array_map('intval', $old_visitor_ids);
+            ), ARRAY_A);
+            foreach ($old_visitors as $visitor) {
+                $old_visitor_ids[] = intval($visitor['id']);
+                $old_visitor_names[intval($visitor['id'])] = $visitor['name'] ?? '';
+            }
         }
         
         $new_visitor_ids = [];
@@ -2087,8 +2287,20 @@ public function ajax_send_invitation() {
                     
                 case 'deleted':
                     if ($db_id) {
-                        $wpdb->delete($visitors_table, ['id' => $db_id], ['%d']);
+                        // Store name BEFORE deletion
+                        $deleted_name = $old_visitor_names[$db_id] ?? '';
+                        if (empty($deleted_name)) {
+                            // Try to get name one more time before deletion
+                            $deleted_name = $wpdb->get_var($wpdb->prepare(
+                                "SELECT CONCAT(first_name, ' ', last_name) FROM {$visitors_table} WHERE id = %d",
+                                $db_id
+                            ));
+                        }
                         $deleted_visitor_ids[] = $db_id;
+                        $deleted_visitor_names[$db_id] = $deleted_name ?: 'Návštěvník #' . $db_id;
+                        
+                        // NOW delete
+                        $wpdb->delete($visitors_table, ['id' => $db_id], ['%d']);
                     }
                     break;
                     
@@ -2109,9 +2321,56 @@ public function ajax_send_invitation() {
             sort($new_visitor_ids);
             
             if ($old_visitor_ids !== $new_visitor_ids) {
-                // 'visitors' relation is now in config, so log_relation_change should work
                 $audit = SAW_Entity_Audit::for_entity('visits', $visit_id);
-                $audit->log_relation_change('visitors', $old_visitor_ids, $new_visitor_ids);
+                
+                // For removed visitors, we need to manually create related_items with names
+                // because they're already deleted from DB
+                $related_items = [];
+                
+                // Added visitors - can be resolved normally using log_relation_change
+                // But we'll handle it manually to ensure consistency
+                $added_ids = array_diff($new_visitor_ids, $old_visitor_ids);
+                if (!empty($added_ids)) {
+                    // Resolve added visitors from DB
+                    $added_visitors = $wpdb->get_results($wpdb->prepare(
+                        "SELECT id, CONCAT(first_name, ' ', last_name) as name FROM {$visitors_table} WHERE id IN (" . implode(',', array_fill(0, count($added_ids), '%d')) . ")",
+                        ...$added_ids
+                    ), ARRAY_A);
+                    foreach ($added_visitors as $visitor) {
+                        $related_items[] = [
+                            'type' => 'visitors',
+                            'id' => intval($visitor['id']),
+                            'name' => $visitor['name'] ?? 'Návštěvník #' . $visitor['id'],
+                            'action' => 'added',
+                        ];
+                    }
+                }
+                
+                // Removed visitors - use pre-fetched names
+                $removed_ids = array_diff($old_visitor_ids, $new_visitor_ids);
+                if (!empty($removed_ids)) {
+                    foreach ($removed_ids as $removed_id) {
+                        $name = $deleted_visitor_names[$removed_id] ?? $old_visitor_names[$removed_id] ?? 'Návštěvník #' . $removed_id;
+                        $related_items[] = [
+                            'type' => 'visitors',
+                            'id' => $removed_id,
+                            'name' => $name,
+                            'action' => 'removed',
+                        ];
+                    }
+                }
+                
+                // Log with manually created related_items
+                if (!empty($related_items)) {
+                    $action = 'relation_changed';
+                    if (!empty($added_ids) && empty($removed_ids)) {
+                        $action = 'relation_added';
+                    } elseif (empty($added_ids) && !empty($removed_ids)) {
+                        $action = 'relation_removed';
+                    }
+                    
+                    $audit->log_related_items($related_items, $action);
+                }
             }
         }
     }

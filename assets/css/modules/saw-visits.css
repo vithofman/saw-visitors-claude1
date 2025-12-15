@@ -105,7 +105,7 @@
     content: '';
     width: 3px;
     height: 14px;
-    background: linear-gradient(to bottom, #2563eb, #3b82f6);
+    background: linear-gradient(to bottom, var(--saw-brand-600), var(--saw-brand-500));
     border-radius: 2px;
 }
 
@@ -120,7 +120,7 @@
 
 .saw-schedule-field input:focus {
     outline: none;
-    border-color: #2563eb;
+    border-color: var(--saw-brand-600);
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
@@ -157,7 +157,7 @@
 .saw-schedule-notes-full input:focus,
 .saw-schedule-field.saw-schedule-notes-full input:focus {
     outline: none;
-    border-color: #2563eb;
+    border-color: var(--saw-brand-600);
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
@@ -344,7 +344,7 @@
 
 .saw-host-item.selected {
     background: linear-gradient(to right, #eff6ff, #dbeafe);
-    border-left: 4px solid #2563eb;
+    border-left: 4px solid var(--saw-brand-600);
     padding-left: 14px;
 }
 
@@ -358,7 +358,7 @@
     width: 18px;
     height: 18px;
     flex-shrink: 0;
-    accent-color: #2563eb;
+    accent-color: var(--saw-brand-600);
 }
 
 .saw-host-item label {
@@ -688,7 +688,7 @@
 
 .saw-nested-form-body .saw-input:focus {
     outline: none;
-    border-color: #2563eb;
+    border-color: var(--saw-brand-600);
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 

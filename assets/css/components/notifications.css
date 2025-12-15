@@ -50,12 +50,12 @@
 
 .saw-notifications-toggle:focus {
     outline: none;
-    box-shadow: 0 0 0 2px var(--saw-primary, #2563eb);
+    box-shadow: 0 0 0 2px var(--saw-primary, var(--saw-brand-600));
 }
 
 .saw-notifications-toggle.active {
     background: var(--saw-bg-tertiary, #f1f5f9);
-    color: var(--saw-primary, #2563eb);
+    color: var(--saw-primary, var(--saw-brand-600));
 }
 
 /* Bell Icon */
@@ -182,7 +182,7 @@
     min-width: 22px;
     height: 22px;
     padding: 0 6px;
-    background: var(--saw-primary, #2563eb);
+    background: var(--saw-primary, var(--saw-brand-600));
     color: white;
     font-size: 12px;
     font-weight: 600;
@@ -283,7 +283,7 @@
 }
 
 .saw-notification-item.unread {
-    background: #eff6ff;
+    background: var(--saw-brand-50);
 }
 
 .saw-notification-item.unread:hover {
@@ -299,7 +299,7 @@
     transform: translateY(-50%);
     width: 6px;
     height: 6px;
-    background: var(--saw-primary, #2563eb);
+    background: var(--saw-primary, var(--saw-brand-600));
     border-radius: 50%;
 }
 

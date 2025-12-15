@@ -761,11 +761,31 @@ class SAW_Component_Admin_Table {
                     <th style="text-align: <?php echo esc_attr($align); ?>;">
                         <?php if ($sortable): ?>
                         <a href="<?php echo esc_url($this->get_sort_url($key, $this->config['orderby'], $this->config['order'])); ?>" class="saw-sortable">
+                            <?php 
+                            // Podpora pro ikony v nadpisech
+                            if (is_array($column) && !empty($column['icon'])) {
+                                if (class_exists('SAW_Icons')) {
+                                    echo SAW_Icons::get($column['icon'], 'saw-icon--sm saw-column-icon');
+                                } else {
+                                    echo '<span class="saw-column-icon">' . esc_html($column['icon']) . '</span>';
+                                }
+                            }
+                            ?>
                             <?php echo esc_html($label); ?>
                             <?php echo $this->get_sort_icon($key, $this->config['orderby'], $this->config['order']); ?>
                         </a>
                         <?php else: ?>
-                        <?php echo esc_html($label); ?>
+                            <?php 
+                            // Podpora pro ikony v nesortovatelných nadpisech
+                            if (is_array($column) && !empty($column['icon'])) {
+                                if (class_exists('SAW_Icons')) {
+                                    echo SAW_Icons::get($column['icon'], 'saw-icon--sm saw-column-icon');
+                                } else {
+                                    echo '<span class="saw-column-icon">' . esc_html($column['icon']) . '</span>';
+                                }
+                            }
+                            ?>
+                            <?php echo esc_html($label); ?>
                         <?php endif; ?>
                     </th>
                     <?php endforeach; ?>
@@ -1008,6 +1028,18 @@ class SAW_Component_Admin_Table {
     }
     
     private function get_sort_icon($column, $current_orderby, $current_order) {
+        // Use Lucide icons if available
+        if (class_exists('SAW_Icons')) {
+            if ($column !== $current_orderby) {
+                return SAW_Icons::get('arrow-up-down', 'saw-sort-icon');
+            }
+            if ($current_order === 'ASC') {
+                return SAW_Icons::get('arrow-up', 'saw-sort-icon');
+            }
+            return SAW_Icons::get('arrow-down', 'saw-sort-icon');
+        }
+        
+        // Fallback to Dashicons
         if ($column !== $current_orderby) {
             return '<span class="dashicons dashicons-sort saw-sort-icon"></span>';
         }

@@ -71,7 +71,11 @@ class SAW_Widget_Current_Visitors {
         
         if (empty($present)) {
             echo '<div class="saw-empty-state">';
-            echo '<span class="dashicons dashicons-yes-alt" style="font-size: 48px; color: #10b981;"></span>';
+            if (class_exists('SAW_Icons')) {
+                echo '<span style="color: var(--saw-success);">' . SAW_Icons::get('check-circle', 'saw-icon--xl') . '</span>';
+            } else {
+                echo '<span class="dashicons dashicons-yes-alt" style="font-size: 48px; color: #10b981;"></span>';
+            }
             echo '<p style="margin: 12px 0 0; color: #6b7280;">Nikdo aktuálně uvnitř</p>';
             echo '</div>';
             return;
@@ -85,7 +89,11 @@ class SAW_Widget_Current_Visitors {
            class="saw-visitor-card" 
            data-visitor-id="<?php echo esc_attr($person['visitor_id']); ?>">
             <div class="saw-visitor-avatar">
-                <span class="dashicons dashicons-admin-users"></span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('users'); ?>
+                <?php else: ?>
+                    <span class="dashicons dashicons-admin-users"></span>
+                <?php endif; ?>
             </div>
             
             <div class="saw-visitor-info">
@@ -104,16 +112,28 @@ class SAW_Widget_Current_Visitors {
                 
                 <div class="saw-visitor-meta">
                     <span class="saw-visitor-time">
-                        <span class="dashicons dashicons-clock"></span>
+                        <?php if (class_exists('SAW_Icons')): ?>
+                            <?php echo SAW_Icons::get('clock'); ?>
+                        <?php else: ?>
+                            <span class="dashicons dashicons-clock"></span>
+                        <?php endif; ?>
                         <?php echo date('H:i', strtotime($person['today_checkin'])); ?>
                     </span>
                     <span class="saw-visitor-duration">
-                        <span class="dashicons dashicons-backup"></span>
+                        <?php if (class_exists('SAW_Icons')): ?>
+                            <?php echo SAW_Icons::get('clock'); ?>
+                        <?php else: ?>
+                            <span class="dashicons dashicons-backup"></span>
+                        <?php endif; ?>
                         <?php echo $person['minutes_inside']; ?> min
                     </span>
                     <?php if (!empty($person['phone'])): ?>
                     <span class="saw-visitor-phone">
-                        <span class="dashicons dashicons-phone"></span>
+                        <?php if (class_exists('SAW_Icons')): ?>
+                            <?php echo SAW_Icons::get('phone'); ?>
+                        <?php else: ?>
+                            <span class="dashicons dashicons-phone"></span>
+                        <?php endif; ?>
                         <?php echo esc_html($person['phone']); ?>
                     </span>
                     <?php endif; ?>
@@ -125,7 +145,11 @@ class SAW_Widget_Current_Visitors {
             class="saw-manual-checkout-btn"
             data-visitor-id="<?php echo esc_attr($person['visitor_id']); ?>"
             title="Ručně odhlásit">
-        <span class="dashicons dashicons-exit"></span>
+        <?php if (class_exists('SAW_Icons')): ?>
+            <?php echo SAW_Icons::get('log-out'); ?>
+        <?php else: ?>
+            <span class="dashicons dashicons-exit"></span>
+        <?php endif; ?>
         Check-out
     </button>
 </div>

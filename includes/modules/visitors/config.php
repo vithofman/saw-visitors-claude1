@@ -150,21 +150,25 @@ return array(
         'tabs' => array(
             'all' => array(
                 'label' => $tr('tab_all', 'Všichni'),
+                'icon' => '📋',
                 'filter_value' => null,
                 'count_query' => true,
             ),
             'present' => array(
-                'label' => $tr('tab_present', '✅ Přítomní'),
+                'label' => $tr('tab_present', 'Přítomní'),
+                'icon' => '✅',
                 'filter_value' => 'present',
                 'count_query' => true,
             ),
             'checked_out' => array(
-                'label' => $tr('tab_checked_out', '🚪 Odhlášení'),
+                'label' => $tr('tab_checked_out', 'Odhlášení'),
+                'icon' => '🚪',
                 'filter_value' => 'checked_out',
                 'count_query' => true,
             ),
             'planned' => array(
-                'label' => $tr('tab_planned', '📅 Plánovaní'),
+                'label' => $tr('tab_planned', 'Plánovaní'),
+                'icon' => '📅',
                 'filter_value' => 'planned',
                 'count_query' => true,
             ),

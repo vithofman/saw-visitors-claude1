@@ -121,14 +121,27 @@ $size_class = $size_map[$size] ?? $size;
                                 class="<?php echo esc_attr(implode(' ', $btn_classes)); ?>"
                                 <?php echo $data_attrs_string; ?>
                                 title="<?php echo esc_attr($action_label ?: ucfirst($action_type)); ?>">
-                            <span class="dashicons <?php echo esc_attr($action_icon); ?>"></span>
+                            <?php 
+                            if (class_exists('SAW_Icons')) {
+                                // Map Dashicons to Lucide
+                                $dashicon_name = str_replace('dashicons-', '', $action_icon);
+                                $lucide_name = SAW_Icons::from_dashicon($dashicon_name) ?? 'settings';
+                                echo SAW_Icons::get($lucide_name);
+                            } else {
+                                echo '<span class="dashicons ' . esc_attr($action_icon) . '"></span>';
+                            }
+                            ?>
                         </button>
                     <?php endforeach; ?>
                 <?php endif; ?>
                 
                 <?php if ($show_close): ?>
                     <button type="button" class="saw-modal-close">
-                        <span class="dashicons dashicons-no-alt"></span>
+                        <?php if (class_exists('SAW_Icons')): ?>
+                            <?php echo SAW_Icons::get('x'); ?>
+                        <?php else: ?>
+                            <span class="dashicons dashicons-no-alt"></span>
+                        <?php endif; ?>
                     </button>
                 <?php endif; ?>
             </div>

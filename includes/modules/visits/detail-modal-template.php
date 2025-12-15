@@ -188,7 +188,14 @@ if (!empty($item['id'])) {
 <!-- ============================================ -->
 <div class="saw-industrial-section">
     <div class="saw-section-head">
-        <h4 class="saw-section-title saw-section-title-accent">🔄 <?php echo esc_html($tr('change_status', 'Změnit stav')); ?></h4>
+        <h4 class="saw-section-title saw-section-title-accent">
+            <?php if (class_exists('SAW_Icons')): ?>
+                <?php echo SAW_Icons::get('refresh-cw', 'saw-section-title-icon'); ?>
+            <?php else: ?>
+                🔄
+            <?php endif; ?>
+            <?php echo esc_html($tr('change_status', 'Změnit stav')); ?>
+        </h4>
     </div>
     <div class="saw-section-body">
         <div class="saw-status-buttons-grid">
@@ -220,7 +227,14 @@ if (!empty($item['id'])) {
 <?php if (!empty($item['started_at']) || !empty($item['completed_at'])): ?>
 <div class="saw-industrial-section">
     <div class="saw-section-head">
-        <h4 class="saw-section-title saw-section-title-accent">⏱️ <?php echo esc_html($tr('section_timeline', 'Průběh návštěvy')); ?></h4>
+        <h4 class="saw-section-title saw-section-title-accent">
+            <?php if (class_exists('SAW_Icons')): ?>
+                <?php echo SAW_Icons::get('clock', 'saw-section-title-icon'); ?>
+            <?php else: ?>
+                ⏱️
+            <?php endif; ?>
+            <?php echo esc_html($tr('section_timeline', 'Průběh návštěvy')); ?>
+        </h4>
     </div>
     <div class="saw-section-body">
         <div class="saw-visit-timeline">
@@ -300,7 +314,14 @@ if (!empty($item['id'])) {
 <?php if (!empty($schedules)): ?>
 <div class="saw-industrial-section">
     <div class="saw-section-head">
-        <h4 class="saw-section-title saw-section-title-accent">📅 <?php echo esc_html($tr('section_schedule', 'Naplánované dny návštěvy')); ?></h4>
+        <h4 class="saw-section-title saw-section-title-accent">
+            <?php if (class_exists('SAW_Icons')): ?>
+                <?php echo SAW_Icons::get('calendar', 'saw-section-title-icon'); ?>
+            <?php else: ?>
+                📅
+            <?php endif; ?>
+            <?php echo esc_html($tr('section_schedule', 'Naplánované dny návštěvy')); ?>
+        </h4>
     </div>
     <div class="saw-section-body">
         <div class="saw-visit-schedule-detail">
@@ -319,7 +340,11 @@ if (!empty($item['id'])) {
                         </div>
                         <?php if (!empty($schedule['time_from']) || !empty($schedule['time_to'])): ?>
                         <div class="saw-schedule-day-time">
-                            <span class="dashicons dashicons-clock"></span>
+                            <?php if (class_exists('SAW_Icons')): ?>
+                                <?php echo SAW_Icons::get('clock'); ?>
+                            <?php else: ?>
+                                <span class="dashicons dashicons-clock"></span>
+                            <?php endif; ?>
                             <span>
                                 <?php 
                                 echo !empty($schedule['time_from']) ? esc_html(substr($schedule['time_from'], 0, 5)) : '—';
@@ -332,7 +357,11 @@ if (!empty($item['id'])) {
                     </div>
                     <?php if (!empty($schedule['notes'])): ?>
                     <div class="saw-schedule-day-notes">
-                        <span class="dashicons dashicons-admin-comments"></span>
+                        <?php if (class_exists('SAW_Icons')): ?>
+                            <?php echo SAW_Icons::get('info'); ?>
+                        <?php else: ?>
+                            <span class="dashicons dashicons-admin-comments"></span>
+                        <?php endif; ?>
                         <?php echo esc_html($schedule['notes']); ?>
                     </div>
                     <?php endif; ?>
@@ -348,7 +377,14 @@ if (!empty($item['id'])) {
 <!-- ============================================ -->
 <div class="saw-industrial-section">
     <div class="saw-section-head">
-        <h4 class="saw-section-title saw-section-title-accent">ℹ️ <?php echo esc_html($tr('section_info', 'Informace o návštěvě')); ?></h4>
+        <h4 class="saw-section-title saw-section-title-accent">
+            <?php if (class_exists('SAW_Icons')): ?>
+                <?php echo SAW_Icons::get('info', 'saw-section-title-icon'); ?>
+            <?php else: ?>
+                ℹ️
+            <?php endif; ?>
+            <?php echo esc_html($tr('section_info', 'Informace o návštěvě')); ?>
+        </h4>
     </div>
     <div class="saw-section-body">
         <div class="saw-info-grid">
@@ -3075,7 +3111,12 @@ function sendInvitation(visitId) {
     
     var originalText = btn.innerHTML;
     btn.disabled = true;
-    btn.innerHTML = '<span class="dashicons dashicons-update" style="animation: spin 1s linear infinite;"></span> <?php echo esc_js($tr('sending', 'Odesílám...')); ?>';
+    <?php if (class_exists('SAW_Icons')): ?>
+        var iconHtml = '<?php echo addslashes(str_replace(["\n", "\r"], '', SAW_Icons::get('refresh-cw'))); ?>';
+        btn.innerHTML = '<span style="animation: spin 1s linear infinite; display: inline-flex; align-items: center;">' + iconHtml + '</span> <?php echo esc_js($tr('sending', 'Odesílám...')); ?>';
+    <?php else: ?>
+        btn.innerHTML = '<span class="dashicons dashicons-update" style="animation: spin 1s linear infinite;"></span> <?php echo esc_js($tr('sending', 'Odesílám...')); ?>';
+    <?php endif; ?>
     
     jQuery.post(sawGlobal.ajaxurl, {
         action: 'saw_send_invitation',

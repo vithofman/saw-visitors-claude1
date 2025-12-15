@@ -47,7 +47,25 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
 <div class="saw-sidebar saw-sidebar-detail" data-mode="detail" data-entity="<?php echo esc_attr($entity); ?>" data-current-id="<?php echo esc_attr($item['id']); ?>">
     <div class="saw-sidebar-header">
         <div class="saw-sidebar-title">
-            <span class="saw-sidebar-icon"><?php echo esc_html($config['icon'] ?? '📋'); ?></span>
+            <span class="saw-sidebar-icon"><?php 
+                if (class_exists('SAW_Icons')) {
+                    $icon_emoji = $config['icon'] ?? '📋';
+                    $icon_map = [
+                        '📋' => 'clipboard-list',
+                        '🏢' => 'building-2',
+                        '📝' => 'file-text',
+                        '👤' => 'user',
+                        '📧' => 'mail',
+                        '⚙️' => 'settings',
+                        '📊' => 'bar-chart-3',
+                        '🔒' => 'lock',
+                    ];
+                    $icon_name = $icon_map[$icon_emoji] ?? 'clipboard-list';
+                    echo SAW_Icons::get($icon_name, 'saw-icon--md');
+                } else {
+                    echo esc_html($config['icon'] ?? '📋');
+                }
+            ?></span>
             <?php 
             // For modules with header_display_name (like OOPP), show just the name
             // Otherwise show "Module #ID"
@@ -228,7 +246,11 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
         <a href="<?php echo esc_url($edit_url); ?>" 
            class="saw-floating-action-btn edit" 
            title="Upravit">
-            <span class="dashicons dashicons-edit"></span>
+            <?php if (class_exists('SAW_Icons')): ?>
+                <?php echo SAW_Icons::get('pencil'); ?>
+            <?php else: ?>
+                <span class="dashicons dashicons-edit"></span>
+            <?php endif; ?>
         </a>
         <?php endif; ?>
         
@@ -239,7 +261,11 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
                 data-entity="<?php echo esc_attr($entity); ?>"
                 data-name="<?php echo esc_attr($item['name'] ?? '#' . $item['id']); ?>"
                 title="Smazat">
-            <span class="dashicons dashicons-trash"></span>
+            <?php if (class_exists('SAW_Icons')): ?>
+                <?php echo SAW_Icons::get('trash-2'); ?>
+            <?php else: ?>
+                <span class="dashicons dashicons-trash"></span>
+            <?php endif; ?>
         </button>
         <?php endif; ?>
     </div>

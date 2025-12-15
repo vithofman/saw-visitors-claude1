@@ -14,6 +14,11 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Set visit_id in global context for schedule time lookup
+if (!empty($item['id'])) {
+    $GLOBALS['saw_audit_visit_id'] = intval($item['id']);
+}
+
 // Load audit helper functions
 $audit_helpers_path = __DIR__ . '/audit-helpers.php';
 if (file_exists($audit_helpers_path)) {

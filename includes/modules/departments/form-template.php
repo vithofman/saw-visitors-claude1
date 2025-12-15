@@ -75,7 +75,11 @@ $form_action = $is_edit
                 : esc_html($tr('label_new_department', 'Nové oddělení')); ?>
         </h1>
         <a href="<?php echo esc_url(home_url('/admin/departments/')); ?>" class="saw-back-button">
-            <span class="dashicons dashicons-arrow-left-alt2"></span>
+            <?php if (class_exists('SAW_Icons')): ?>
+                <?php echo SAW_Icons::get('chevron-left'); ?>
+            <?php else: ?>
+                <span class="dashicons dashicons-arrow-left-alt2"></span>
+            <?php endif; ?>
             <?php echo esc_html($tr('btn_back', 'Zpět na seznam')); ?>
         </a>
     </div>
@@ -100,7 +104,11 @@ $form_action = $is_edit
         <!-- ============================================ -->
         <details class="saw-form-section" open>
             <summary>
-                <span class="dashicons dashicons-admin-generic"></span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('settings', 'saw-section-icon'); ?>
+                <?php else: ?>
+                    <span class="dashicons dashicons-admin-generic"></span>
+                <?php endif; ?>
                 <strong><?php echo esc_html($tr('form_section_basic', 'Základní informace')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
@@ -203,7 +211,11 @@ $form_action = $is_edit
         <!-- ============================================ -->
         <details class="saw-form-section">
             <summary>
-                <span class="dashicons dashicons-edit-page"></span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('pencil'); ?>
+                <?php else: ?>
+                    <span class="dashicons dashicons-edit-page"></span>
+                <?php endif; ?>
                 <strong><?php echo esc_html($tr('form_section_notes', 'Popis a poznámky')); ?></strong>
             </summary>
             <div class="saw-form-section-content">

@@ -287,6 +287,11 @@ return array(
                     'translation_foreign_key' => 'oopp_id', // Foreign key in translation table
                     'field' => 'name',
                 ),
+                'labels' => array(
+                    'added' => 'OOPP přidáno',
+                    'removed' => 'OOPP odebráno',
+                    'changed' => 'OOPP změněno',
+                ),
             ),
             'visitors' => array(
                 'table' => 'saw_visitors',

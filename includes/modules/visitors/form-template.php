@@ -90,7 +90,11 @@ $form_action = $is_edit
             <?php echo $is_edit ? esc_html($tr('form_title_edit', 'Upravit návštěvníka')) : esc_html($tr('form_title_create', 'Nový návštěvník')); ?>
         </h1>
         <a href="<?php echo esc_url(home_url('/admin/visitors/')); ?>" class="saw-back-button">
-            <span class="dashicons dashicons-arrow-left-alt2"></span>
+            <?php if (class_exists('SAW_Icons')): ?>
+                <?php echo SAW_Icons::get('chevron-left'); ?>
+            <?php else: ?>
+                <span class="dashicons dashicons-arrow-left-alt2"></span>
+            <?php endif; ?>
             <?php echo esc_html($tr('btn_back_to_list', 'Zpět na seznam')); ?>
         </a>
     </div>
@@ -111,7 +115,11 @@ $form_action = $is_edit
         <!-- BASIC INFORMATION -->
         <details class="saw-form-section" open>
             <summary style="display: flex; align-items: center; gap: 10px;">
-                <span class="dashicons dashicons-admin-users" style="display: flex !important; align-items: center !important; justify-content: center !important; line-height: 1 !important;"></span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('users', 'saw-section-icon'); ?>
+                <?php else: ?>
+                    <span class="dashicons dashicons-admin-users" style="display: flex !important; align-items: center !important; justify-content: center !important; line-height: 1 !important;"></span>
+                <?php endif; ?>
                 <strong><?php echo esc_html($tr('form_section_basic', 'Základní informace')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
@@ -232,7 +240,11 @@ $form_action = $is_edit
         <!-- CERTIFICATES -->
         <details class="saw-form-section">
             <summary style="display: flex; align-items: center; gap: 10px;">
-                <span class="dashicons dashicons-awards" style="display: flex !important; align-items: center !important; justify-content: center !important; line-height: 1 !important;"></span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('badge-check', 'saw-section-icon'); ?>
+                <?php else: ?>
+                    <span class="dashicons dashicons-awards" style="display: flex !important; align-items: center !important; justify-content: center !important; line-height: 1 !important;"></span>
+                <?php endif; ?>
                 <strong><?php echo esc_html($tr('form_section_certificates', 'Profesní průkazy')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
@@ -270,7 +282,11 @@ $form_action = $is_edit
                                 
                                 <div class="saw-form-group saw-col-2" style="display: flex; align-items: flex-end;">
                                     <button type="button" class="saw-button saw-button-danger saw-remove-certificate" style="width: 100%;" title="<?php echo esc_attr($tr('btn_remove', 'Odstranit')); ?>">
-                                        <span class="dashicons dashicons-trash"></span>
+                                        <?php if (class_exists('SAW_Icons')): ?>
+                                            <?php echo SAW_Icons::get('trash-2'); ?>
+                                        <?php else: ?>
+                                            <span class="dashicons dashicons-trash"></span>
+                                        <?php endif; ?>
                                     </button>
                                 </div>
                             </div>
@@ -280,7 +296,11 @@ $form_action = $is_edit
                 </div>
                 
                 <button type="button" id="add-certificate-btn" class="saw-button saw-button-secondary" style="margin-top: 12px;">
-                    <span class="dashicons dashicons-plus-alt"></span>
+                    <?php if (class_exists('SAW_Icons')): ?>
+                        <?php echo SAW_Icons::get('plus'); ?>
+                    <?php else: ?>
+                        <span class="dashicons dashicons-plus-alt"></span>
+                    <?php endif; ?>
                     <?php echo esc_html($tr('btn_add_certificate', 'Přidat průkaz')); ?>
                 </button>
                 

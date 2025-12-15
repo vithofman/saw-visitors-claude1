@@ -517,8 +517,8 @@
 }
 
 .saw-modal-action-btn.edit {
-    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-    color: #2563eb;
+    background: linear-gradient(135deg, var(--saw-brand-50) 0%, #dbeafe 100%);
+    color: var(--saw-brand-600);
 }
 
 .saw-modal-action-btn.edit:hover {
@@ -665,7 +665,7 @@ body.saw-modal-active {
 }
 
 .saw-toast-info {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    background: linear-gradient(135deg, #3b82f6 0%, var(--saw-brand-600) 100%);
 }
 
 /* ============================================
@@ -877,7 +877,7 @@ body.saw-modal-active {
     width: 48px;
     height: 48px;
     border-radius: 12px;
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    background: linear-gradient(135deg, #3b82f6 0%, var(--saw-brand-600) 100%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -937,7 +937,7 @@ body.saw-modal-active {
 }
 
 .saw-related-section:hover .saw-related-section-badge {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    background: linear-gradient(135deg, #3b82f6 0%, var(--saw-brand-600) 100%);
     color: #ffffff;
     transform: scale(1.1);
 }
@@ -993,7 +993,7 @@ body.saw-modal-active {
 }
 
 .saw-related-item-link:hover {
-    background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+    background: linear-gradient(135deg, var(--saw-brand-50) 0%, #f0f9ff 100%);
     border-color: #3b82f6;
     box-shadow: 
         0 2px 8px rgba(59, 130, 246, 0.1),
@@ -1043,7 +1043,7 @@ body.saw-modal-active {
 }
 
 .saw-related-item-link:hover .saw-related-item-text {
-    color: #1e40af;
+    color: var(--saw-brand-800);
     font-weight: 600;
 }
 
@@ -1069,14 +1069,14 @@ body.saw-modal-active {
 
 /* Color schemes per section */
 .saw-related-section:nth-child(2) .saw-related-section-icon-wrapper {
-    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, #3b82f6 0%, var(--saw-brand-700) 100%);
     box-shadow: 
         0 4px 8px rgba(59, 130, 246, 0.25),
         0 0 0 4px rgba(59, 130, 246, 0.1);
 }
 
 .saw-related-section:nth-child(2)::before {
-    background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+    background: linear-gradient(90deg, #3b82f6, var(--saw-brand-700));
 }
 
 .saw-related-section:nth-child(3) .saw-related-section-icon-wrapper {

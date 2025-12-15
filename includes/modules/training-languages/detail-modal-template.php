@@ -60,7 +60,7 @@ foreach ($active_branches as $b) {
         <!-- STATISTICS -->
         <div class="saw-industrial-section">
             <div class="saw-section-head">
-                <h4 class="saw-section-title">📊 <?php echo esc_html($tr('section_statistics', 'Statistiky')); ?></h4>
+                <h4 class="saw-section-title"><?php if (class_exists('SAW_Icons')): ?><?php echo SAW_Icons::get('bar-chart-3', 'saw-icon--sm'); ?><?php else: ?>📊<?php endif; ?> <?php echo esc_html($tr('section_statistics', 'Statistiky')); ?></h4>
             </div>
             <div class="saw-section-body">
                 <div class="saw-info-row">
@@ -78,7 +78,7 @@ foreach ($active_branches as $b) {
         <?php if (!empty($active_branches)): ?>
         <div class="saw-industrial-section">
             <div class="saw-section-head">
-                <h4 class="saw-section-title">🏢 <?php echo esc_html($tr('section_branches', 'Pobočky')); ?> <span class="saw-visit-badge-count"><?php echo $branches_count; ?></span></h4>
+                <h4 class="saw-section-title"><?php if (class_exists('SAW_Icons')): ?><?php echo SAW_Icons::get('building-2', 'saw-icon--sm'); ?><?php else: ?>🏢<?php endif; ?> <?php echo esc_html($tr('section_branches', 'Pobočky')); ?> <span class="saw-visit-badge-count"><?php echo $branches_count; ?></span></h4>
             </div>
             <div class="saw-section-body" style="padding: 0;">
                 <?php foreach ($active_branches as $branch): ?>
@@ -86,7 +86,13 @@ foreach ($active_branches as $b) {
                    class="saw-info-row" 
                    style="display: flex; padding: 12px 20px; text-decoration: none; border-bottom: 1px solid #f0f0f0;">
                     <span class="saw-info-label" style="flex-shrink: 0;">
-                        <?php echo !empty($branch['is_default']) ? '⭐' : '🏢'; ?>
+                        <?php 
+                        if (class_exists('SAW_Icons')) {
+                            echo !empty($branch['is_default']) ? SAW_Icons::get('star', 'saw-icon--sm') : SAW_Icons::get('building-2', 'saw-icon--sm');
+                        } else {
+                            echo !empty($branch['is_default']) ? '⭐' : '🏢';
+                        }
+                        ?>
                     </span>
                     <span class="saw-info-val" style="flex: 1;">
                         <?php echo esc_html($branch['name']); ?>
@@ -107,7 +113,7 @@ foreach ($active_branches as $b) {
         <?php else: ?>
         <div class="saw-industrial-section">
             <div class="saw-section-head">
-                <h4 class="saw-section-title">🏢 <?php echo esc_html($tr('section_branches', 'Pobočky')); ?></h4>
+                <h4 class="saw-section-title"><?php if (class_exists('SAW_Icons')): ?><?php echo SAW_Icons::get('building-2', 'saw-icon--sm'); ?><?php else: ?>🏢<?php endif; ?> <?php echo esc_html($tr('section_branches', 'Pobočky')); ?></h4>
             </div>
             <div class="saw-section-body">
                 <div class="saw-notice saw-notice-warning" style="margin: 0;">
@@ -120,7 +126,7 @@ foreach ($active_branches as $b) {
         <!-- INFO (without ID) -->
         <div class="saw-industrial-section">
             <div class="saw-section-head">
-                <h4 class="saw-section-title">ℹ️ <?php echo esc_html($tr('section_info', 'Informace')); ?></h4>
+                <h4 class="saw-section-title"><?php if (class_exists('SAW_Icons')): ?><?php echo SAW_Icons::get('info', 'saw-icon--sm'); ?><?php else: ?>ℹ️<?php endif; ?> <?php echo esc_html($tr('section_info', 'Informace')); ?></h4>
             </div>
             <div class="saw-section-body">
                 <div class="saw-info-row">

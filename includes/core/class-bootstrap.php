@@ -118,6 +118,9 @@ class SAW_Bootstrap {
             'includes/core/class-saw-router.php',
             'includes/core/class-saw-component-manager.php',
             
+            // Icons system
+            'includes/core/class-saw-icons.php',
+            
             // CRITICAL: helpers.php must load AFTER middleware.php
             'includes/core/helpers.php',
             

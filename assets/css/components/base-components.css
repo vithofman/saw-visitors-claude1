@@ -40,8 +40,8 @@
 
 /* Specific Actions */
 .saw-action-edit:hover {
-    background-color: #eff6ff;
-    color: #2563eb;
+    background-color: var(--saw-brand-50);
+    color: var(--saw-brand-600);
     border-color: #dbeafe;
 }
 
@@ -88,7 +88,7 @@
 
 .saw-badge-info {
     background-color: #dbeafe;
-    color: #1e40af;
+    color: var(--saw-brand-800);
 }
 
 .saw-badge-gray {

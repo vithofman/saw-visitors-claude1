@@ -104,7 +104,7 @@
    ============================================ */
 .saw-file-upload-modern {
     width: 100%;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-family: var(--saw-font-body);
     font-size: 0.875rem;
     line-height: 1.5;
     color: var(--file-upload-text-primary);

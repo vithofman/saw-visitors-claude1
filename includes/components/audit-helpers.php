@@ -80,7 +80,11 @@ function saw_render_audit_author($details) {
             $html .= '<img src="' . esc_url($gravatar_url) . '" alt="' . esc_attr($user_email) . '" class="saw-audit-author-avatar" width="28" height="28">';
             $html .= '<span class="saw-audit-author-email">' . esc_html($user_email) . '</span>';
         } else {
-            $html .= '<span class="saw-audit-author-icon">🖥️</span>';
+            if (class_exists('SAW_Icons')) {
+                $html .= '<span class="saw-audit-author-icon">' . SAW_Icons::get('settings', 'saw-icon--sm') . '</span>';
+            } else {
+                $html .= '<span class="saw-audit-author-icon">🖥️</span>';
+            }
             $html .= '<span class="saw-audit-author-email">' . esc_html($context['terminal_name'] ?? 'Terminál') . '</span>';
         }
     } elseif ($source === 'invitation') {
@@ -89,7 +93,11 @@ function saw_render_audit_author($details) {
         $html .= '<img src="' . esc_url($gravatar_url) . '" alt="' . esc_attr($invitation_email) . '" class="saw-audit-author-avatar" width="28" height="28">';
         $html .= '<span class="saw-audit-author-email">' . esc_html($invitation_email) . '</span>';
     } else {
-        $html .= '<span class="saw-audit-author-icon">⚙️</span>';
+        if (class_exists('SAW_Icons')) {
+            $html .= '<span class="saw-audit-author-icon">' . SAW_Icons::get('settings', 'saw-icon--sm') . '</span>';
+        } else {
+            $html .= '<span class="saw-audit-author-icon">⚙️</span>';
+        }
         $html .= '<span class="saw-audit-author-email">Systém</span>';
     }
     
@@ -114,7 +122,76 @@ function saw_get_field_label($field) {
         'pin_expires_at' => 'Platnost PIN',
     ];
     
+    // Handle schedule fields (schedule_YYYY-MM-DD)
+    if (strpos($field, 'schedule_') === 0) {
+        $date_part = substr($field, 9); // Remove 'schedule_' prefix
+        $timestamp = strtotime($date_part);
+        if ($timestamp !== false) {
+            $date_formatted = date_i18n('j.n.Y', $timestamp);
+            return 'Harmonogram ' . $date_formatted;
+        }
+        return 'Harmonogram';
+    }
+    
     return $labels[$field] ?? ucfirst(str_replace('_', ' ', $field));
+}
+
+/**
+ * Get schedule time for a specific date
+ * 
+ * @param int|null $visit_id Visit ID
+ * @param string $date Date in Y-m-d format
+ * @param string $position 'first' for planned_date_from, 'last' for planned_date_to
+ * @return string|null Time string (e.g., "08:00-16:00") or null
+ */
+function saw_get_schedule_time_for_date($visit_id, $date, $position = 'first') {
+    if (!$visit_id || !$date) {
+        return null;
+    }
+    
+    global $wpdb;
+    
+    // Get schedules for this date
+    $schedules = $wpdb->get_results($wpdb->prepare(
+        "SELECT time_from, time_to FROM {$wpdb->prefix}saw_visit_schedules 
+         WHERE visit_id = %d AND date = %s 
+         ORDER BY sort_order ASC",
+        $visit_id,
+        $date
+    ), ARRAY_A);
+    
+    if (empty($schedules)) {
+        return null;
+    }
+    
+    // For 'first', get first schedule; for 'last', get last schedule
+    $schedule = $position === 'first' ? $schedules[0] : end($schedules);
+    
+    $time_from = $schedule['time_from'] ?? null;
+    $time_to = $schedule['time_to'] ?? null;
+    
+    if (!$time_from && !$time_to) {
+        return null;
+    }
+    
+    // Format time (e.g., "08:00-16:00" or "08:00" or "-16:00")
+    $time_str = '';
+    if ($time_from) {
+        // Remove seconds if present (08:00:00 -> 08:00)
+        $time_from = substr($time_from, 0, 5);
+        $time_str = $time_from;
+    }
+    if ($time_to) {
+        // Remove seconds if present
+        $time_to = substr($time_to, 0, 5);
+        if ($time_str) {
+            $time_str .= '-' . $time_to;
+        } else {
+            $time_str = '-' . $time_to;
+        }
+    }
+    
+    return $time_str;
 }
 
 /**
@@ -216,17 +293,40 @@ function saw_format_compact_changes($details) {
                     }
                 }
             } elseif (in_array($field, ['planned_date_from', 'planned_date_to'])) {
-                // These are DATE fields (not DATETIME), so only date, no time
+                // These are DATE fields, but we want to show time from schedules if available
+                // Get visit_id from context (if available)
+                $visit_id = null;
+                if (isset($GLOBALS['saw_audit_visit_id'])) {
+                    $visit_id = $GLOBALS['saw_audit_visit_id'];
+                }
+                
+                // Format old value
                 if (!empty($change['old']) && $change['old'] !== '0000-00-00' && $change['old'] !== '0000-00-00 00:00:00' && $change['old'] !== null) {
                     $timestamp = strtotime($change['old']);
                     if ($timestamp !== false) {
-                        $old_val = date_i18n('j.n.Y', $timestamp);
+                        $old_date = date_i18n('j.n.Y', $timestamp);
+                        // Try to get time from schedules
+                        $old_time = saw_get_schedule_time_for_date($visit_id, $change['old'], $field === 'planned_date_from' ? 'first' : 'last');
+                        if ($old_time) {
+                            $old_val = $old_date . ' ' . $old_time;
+                        } else {
+                            $old_val = $old_date;
+                        }
                     }
                 }
+                
+                // Format new value
                 if (!empty($change['new']) && $change['new'] !== '0000-00-00' && $change['new'] !== '0000-00-00 00:00:00' && $change['new'] !== null) {
                     $timestamp = strtotime($change['new']);
                     if ($timestamp !== false) {
-                        $new_val = date_i18n('j.n.Y', $timestamp);
+                        $new_date = date_i18n('j.n.Y', $timestamp);
+                        // Try to get time from schedules
+                        $new_time = saw_get_schedule_time_for_date($visit_id, $change['new'], $field === 'planned_date_from' ? 'first' : 'last');
+                        if ($new_time) {
+                            $new_val = $new_date . ' ' . $new_time;
+                        } else {
+                            $new_val = $new_date;
+                        }
                     }
                 }
             }
@@ -251,8 +351,8 @@ function saw_format_compact_changes($details) {
     
     // Related items (hosts, visitors, OOPP, files)
     if (!empty($details['related_items'])) {
-        // Group by type
-        $by_type = [];
+        // Group by type AND action (added/removed) for clarity
+        $by_type_action = [];
         foreach ($details['related_items'] as $item) {
             $type = $item['type'] ?? 'unknown';
             $action = $item['action'] ?? 'changed';
@@ -270,21 +370,31 @@ function saw_format_compact_changes($details) {
                 continue;
             }
             
-            $icon = ($action === 'added') ? '➕' : (($action === 'removed') ? '➖' : '');
+            // Create key: type_action (e.g., "visitors_added", "visitors_removed")
+            $key = $type . '_' . $action;
             
-            if (!isset($by_type[$type])) {
-                $by_type[$type] = [];
+            if (!isset($by_type_action[$key])) {
+                $by_type_action[$key] = [
+                    'type' => $type,
+                    'action' => $action,
+                    'items' => []
+                ];
             }
-            $by_type[$type][] = $icon . ' ' . esc_html($name);
+            
+            $by_type_action[$key]['items'][] = esc_html($name);
         }
         
-        // Format by type with labels
-        foreach ($by_type as $type => $items) {
-            if (empty($items)) {
+        // Format by type and action with clear labels
+        foreach ($by_type_action as $key => $group) {
+            if (empty($group['items'])) {
                 continue;
             }
-            $type_label = saw_get_relation_type_label($type);
-            $parts[] = '<div class="saw-audit-change-item"><strong>' . esc_html($type_label) . ':</strong> ' . implode(', ', $items) . '</div>';
+            
+            $type_label = saw_get_relation_type_label($group['type']);
+            $action_label = ($group['action'] === 'added') ? 'Přidáno' : (($group['action'] === 'removed') ? 'Odebráno' : 'Změněno');
+            $icon = ($group['action'] === 'added') ? '➕' : (($group['action'] === 'removed') ? '➖' : '');
+            
+            $parts[] = '<div class="saw-audit-change-item"><strong>' . esc_html($type_label) . ' (' . $icon . ' ' . esc_html($action_label) . '):</strong> ' . implode(', ', $group['items']) . '</div>';
         }
     }
     

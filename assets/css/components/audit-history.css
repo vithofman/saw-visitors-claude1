@@ -289,7 +289,7 @@
 
 /* Source-specific colors */
 .saw-audit-author-admin {
-    --author-color: #3b82f6;
+    --author-color: var(--saw-brand-500);
 }
 
 .saw-audit-author-invitation {

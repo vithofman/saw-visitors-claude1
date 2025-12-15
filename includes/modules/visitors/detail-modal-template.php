@@ -62,7 +62,11 @@ if (empty($item)) {
                         <?php if (!empty($item['visit_data']['hosts'])): ?>
                             <?php foreach ($item['visit_data']['hosts'] as $host): ?>
                                 <div class="saw-host-mini">
-                                    <span class="dashicons dashicons-businessman" style="color:#ccc"></span>
+                                    <?php if (class_exists('SAW_Icons')): ?>
+                                        <span style="color: var(--saw-gray-400);"><?php echo SAW_Icons::get('user'); ?></span>
+                                    <?php else: ?>
+                                        <span class="dashicons dashicons-businessman" style="color:#ccc"></span>
+                                    <?php endif; ?>
                                     <span><?php echo esc_html($host['first_name'] . ' ' . $host['last_name']); ?></span>
                                 </div>
                             <?php endforeach; ?>
@@ -77,7 +81,11 @@ if (empty($item)) {
                     <a href="<?php echo esc_url(home_url('/admin/visits/' . $item['visit_id'] . '/')); ?>" 
                        class="saw-button saw-button-primary" 
                        style="display: inline-flex; align-items: center; gap: 8px; width: 100%; justify-content: center;">
-                        <span class="dashicons dashicons-visibility" style="font-size: 16px; width: 16px; height: 16px;"></span>
+                        <?php if (class_exists('SAW_Icons')): ?>
+                            <?php echo SAW_Icons::get('eye', 'saw-icon--sm'); ?>
+                        <?php else: ?>
+                            <span class="dashicons dashicons-visibility" style="font-size: 16px; width: 16px; height: 16px;"></span>
+                        <?php endif; ?>
                         <?php echo esc_html($tr('link_view_visit', 'Zobrazit návštěvu')); ?> #<?php echo $item['visit_id']; ?>
                     </a>
                 </div>

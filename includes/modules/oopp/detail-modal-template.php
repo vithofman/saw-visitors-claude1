@@ -99,7 +99,11 @@ $has_instructions = !empty($current_trans['usage_instructions']);
     <?php if (!empty($languages) && count($languages) > 1): ?>
     <div class="saw-oopp-language-switcher-wrapper">
         <button type="button" class="saw-oopp-lang-nav saw-oopp-lang-nav-prev" aria-label="Předchozí jazyky">
-            <span class="dashicons dashicons-arrow-left-alt2"></span>
+            <?php if (class_exists('SAW_Icons')): ?>
+                <?php echo SAW_Icons::get('chevron-left'); ?>
+            <?php else: ?>
+                <span class="dashicons dashicons-arrow-left-alt2"></span>
+            <?php endif; ?>
         </button>
         <div class="saw-oopp-language-switcher">
             <?php foreach ($languages as $lang): 
@@ -121,7 +125,11 @@ $has_instructions = !empty($current_trans['usage_instructions']);
             <?php endforeach; ?>
         </div>
         <button type="button" class="saw-oopp-lang-nav saw-oopp-lang-nav-next" aria-label="Další jazyky">
-            <span class="dashicons dashicons-arrow-right-alt2"></span>
+            <?php if (class_exists('SAW_Icons')): ?>
+                <?php echo SAW_Icons::get('chevron-right'); ?>
+            <?php else: ?>
+                <span class="dashicons dashicons-arrow-right-alt2"></span>
+            <?php endif; ?>
         </button>
     </div>
     <?php endif; ?>

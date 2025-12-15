@@ -264,7 +264,11 @@ $form_action = $is_edit
             <?php echo $is_edit ? $tr('form_title_edit', 'Upravit návštěvu') : $tr('form_title_create', 'Nová návštěva'); ?>
         </h1>
         <a href="<?php echo esc_url(home_url('/admin/visits/')); ?>" class="saw-back-button">
-            <span class="dashicons dashicons-arrow-left-alt2"></span>
+            <?php if (class_exists('SAW_Icons')): ?>
+                <?php echo SAW_Icons::get('chevron-left'); ?>
+            <?php else: ?>
+                <span class="dashicons dashicons-arrow-left-alt2"></span>
+            <?php endif; ?>
             <?php echo $tr('btn_back_to_list', 'Zpět na seznam'); ?>
         </a>
     </div>
@@ -293,7 +297,11 @@ $form_action = $is_edit
         
         <details class="saw-form-section" open>
             <summary>
-                <span class="dashicons dashicons-admin-generic"></span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('settings', 'saw-section-icon'); ?>
+                <?php else: ?>
+                    <span class="dashicons dashicons-admin-generic"></span>
+                <?php endif; ?>
                 <strong><?php echo $tr('form_section_basic', 'Základní informace'); ?></strong>
             </summary>
             <div class="saw-form-section-content">
@@ -522,10 +530,18 @@ $form_action = $is_edit
                                                 class="saw-remove-schedule-day" 
                                                 title="<?php echo esc_attr($tr('btn_remove_day', 'Odstranit den')); ?>"
                                                 <?php echo count($schedules) === 1 ? 'disabled' : ''; ?>>
-                                            <span class="dashicons dashicons-trash"></span>
+                                            <?php if (class_exists('SAW_Icons')): ?>
+                                                <?php echo SAW_Icons::get('trash-2'); ?>
+                                            <?php else: ?>
+                                                <span class="dashicons dashicons-trash"></span>
+                                            <?php endif; ?>
                                         </button>
                                         <button type="button" class="saw-add-schedule-day-inline" title="<?php echo esc_attr($tr('btn_add_day', 'Přidat další den')); ?>">
-                                            <span class="dashicons dashicons-plus-alt"></span>
+                                            <?php if (class_exists('SAW_Icons')): ?>
+                                                <?php echo SAW_Icons::get('plus'); ?>
+                                            <?php else: ?>
+                                                <span class="dashicons dashicons-plus-alt"></span>
+                                            <?php endif; ?>
                                         </button>
                                     </div>
                                 </div>
@@ -618,7 +634,7 @@ $form_action = $is_edit
                     <div class="saw-form-group saw-col-12">
                         <label class="saw-label saw-required">
                             <?php echo $tr('form_hosts', 'Koho navštěvují'); ?>
-                            <span id="host-counter" style="display: inline-block; margin-left: 12px; padding: 4px 12px; background: #0073aa; color: white; border-radius: 4px; font-size: 13px; font-weight: 600;">
+                            <span id="host-counter" class="saw-badge saw-badge-primary" style="display: inline-block; margin-left: 12px;">
                                 <span id="host-selected">0</span> / <span id="host-total">0</span>
                             </span>
                         </label>
@@ -634,7 +650,11 @@ $form_action = $is_edit
                         <div id="hosts-list" style="border: 2px solid #dcdcde; border-radius: 6px; max-height: 320px; overflow-y: auto; background: #fff;">
                             <?php if ($selected_branch_id): ?>
                                 <p class="saw-text-muted" style="padding: 20px; margin: 0; text-align: center;">
-                                    <span class="dashicons dashicons-update-alt" style="animation: rotation 1s infinite linear; display: inline-block;"></span> 
+                                    <?php if (class_exists('SAW_Icons')): ?>
+                                        <span style="animation: rotation 1s infinite linear; display: inline-block;"><?php echo SAW_Icons::get('refresh-cw'); ?></span>
+                                    <?php else: ?>
+                                        <span class="dashicons dashicons-update-alt" style="animation: rotation 1s infinite linear; display: inline-block;"></span>
+                                    <?php endif; ?> 
                                     Načítám uživatele...
                                 </p>
                             <?php else: ?>
@@ -654,7 +674,11 @@ $form_action = $is_edit
              ================================================ -->
         <details class="saw-form-section saw-form-section-action-info" <?php echo $has_action_data ? 'open' : ''; ?>>
             <summary>
-                <span class="dashicons dashicons-warning"></span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('alert-triangle'); ?>
+                <?php else: ?>
+                    <span class="dashicons dashicons-warning"></span>
+                <?php endif; ?>
                 <strong><?php echo esc_html($tr('section_action_info', 'Specifické informace pro akci')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
@@ -667,7 +691,11 @@ $form_action = $is_edit
                 <?php if (!empty($languages) && count($languages) > 1): ?>
                 <div class="saw-language-tabs-wrapper">
                     <button type="button" class="saw-language-tab-nav saw-language-tab-nav-prev" aria-label="Předchozí jazyky">
-                        <span class="dashicons dashicons-arrow-left-alt2"></span>
+                        <?php if (class_exists('SAW_Icons')): ?>
+                            <?php echo SAW_Icons::get('chevron-left'); ?>
+                        <?php else: ?>
+                            <span class="dashicons dashicons-arrow-left-alt2"></span>
+                        <?php endif; ?>
                     </button>
                     <div class="saw-language-tabs">
                         <?php foreach ($languages as $index => $language): ?>
@@ -682,7 +710,11 @@ $form_action = $is_edit
                         <?php endforeach; ?>
                     </div>
                     <button type="button" class="saw-language-tab-nav saw-language-tab-nav-next" aria-label="Další jazyky">
-                        <span class="dashicons dashicons-arrow-right-alt2"></span>
+                        <?php if (class_exists('SAW_Icons')): ?>
+                            <?php echo SAW_Icons::get('chevron-right'); ?>
+                        <?php else: ?>
+                            <span class="dashicons dashicons-arrow-right-alt2"></span>
+                        <?php endif; ?>
                     </button>
                 </div>
                 <?php endif; ?>
@@ -778,7 +810,11 @@ $form_action = $is_edit
                     <div class="saw-form-row" style="margin-top: 24px;">
                         <div class="saw-form-group saw-col-12">
                             <label class="saw-label">
-                                <span class="dashicons dashicons-media-document" style="font-size: 18px; vertical-align: middle; margin-right: 6px; color: #f59e0b; display: inline-block; font-family: dashicons !important;"></span>
+                                <?php if (class_exists('SAW_Icons')): ?>
+                                    <span style="display: inline-flex; align-items: center; margin-right: 6px; color: var(--saw-warning);"><?php echo SAW_Icons::get('file-text', 'saw-icon--md'); ?></span>
+                                <?php else: ?>
+                                    <span class="dashicons dashicons-media-document" style="font-size: 18px; vertical-align: middle; margin-right: 6px; color: #f59e0b; display: inline-block; font-family: dashicons !important;"></span>
+                                <?php endif; ?>
                                 <?php echo esc_html($tr('field_action_documents', 'Dokumenty k akci')); ?>
                             </label>
                             
@@ -825,7 +861,11 @@ $form_action = $is_edit
                     <div class="saw-form-row" style="margin-top: 24px;">
                         <div class="saw-form-group saw-col-12">
                             <label class="saw-label">
-                                <span class="dashicons dashicons-shield" style="font-size: 18px; vertical-align: middle; margin-right: 6px; color: #f59e0b; display: inline-block; font-family: dashicons !important;"></span>
+                                <?php if (class_exists('SAW_Icons')): ?>
+                                    <span style="display: inline-flex; align-items: center; margin-right: 6px; color: var(--saw-warning);"><?php echo SAW_Icons::get('shield', 'saw-icon--md'); ?></span>
+                                <?php else: ?>
+                                    <span class="dashicons dashicons-shield" style="font-size: 18px; vertical-align: middle; margin-right: 6px; color: #f59e0b; display: inline-block; font-family: dashicons !important;"></span>
+                                <?php endif; ?>
                                 <?php echo esc_html($tr('field_action_oopp', 'Ochranné pomůcky pro tuto akci')); ?>
                             </label>
                             <p class="saw-help-text" style="margin-bottom: 16px; color: #6b7280; font-size: 13px;">
@@ -869,7 +909,11 @@ $form_action = $is_edit
                                 <div class="saw-oopp-selector" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 16px;">
                                     <div class="saw-oopp-available" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px;">
                                         <h4 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: #374151; display: flex; align-items: center; gap: 8px;">
-                                            <span class="dashicons dashicons-list-view" style="font-size: 16px; color: #6b7280; display: inline-block; font-family: dashicons !important;"></span>
+                                            <?php if (class_exists('SAW_Icons')): ?>
+                                                <?php echo SAW_Icons::get('list', 'saw-icon--sm'); ?>
+                                            <?php else: ?>
+                                                <span class="dashicons dashicons-list-view" style="font-size: 16px; color: #6b7280; display: inline-block; font-family: dashicons !important;"></span>
+                                            <?php endif; ?>
                                             <?php echo esc_html($tr('available_oopp', 'Dostupné pomůcky')); ?>
                                         </h4>
                                         <div class="saw-oopp-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;">
@@ -891,7 +935,11 @@ $form_action = $is_edit
                                     
                                     <div class="saw-oopp-selected" style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 16px;">
                                         <h4 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: #92400e; display: flex; align-items: center; gap: 8px;">
-                                            <span class="dashicons dashicons-yes-alt" style="font-size: 16px; color: #f59e0b; display: inline-block; font-family: dashicons !important;"></span>
+                                            <?php if (class_exists('SAW_Icons')): ?>
+                                                <span style="color: var(--saw-warning);"><?php echo SAW_Icons::get('check-circle', 'saw-icon--sm'); ?></span>
+                                            <?php else: ?>
+                                                <span class="dashicons dashicons-yes-alt" style="font-size: 16px; color: #f59e0b; display: inline-block; font-family: dashicons !important;"></span>
+                                            <?php endif; ?>
                                             <?php echo esc_html($tr('selected_oopp', 'Vybrané pro akci')); ?>
                                         </h4>
                                         <div class="saw-oopp-list" id="selected-action-oopp" style="display: flex; flex-direction: column; gap: 8px; min-height: 60px;">

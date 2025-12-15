@@ -76,7 +76,11 @@ if (!empty($selected) && !empty($options)) {
                 <input type="text" 
                        class="saw-selectbox-search-input" 
                        placeholder="Hledat...">
-                <span class="dashicons dashicons-search saw-selectbox-search-icon"></span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('search', 'saw-selectbox-search-icon'); ?>
+                <?php else: ?>
+                    <span class="dashicons dashicons-search saw-selectbox-search-icon"></span>
+                <?php endif; ?>
             </div>
         <?php endif; ?>
         

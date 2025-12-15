@@ -45,7 +45,11 @@ $form_action = $is_edit
             <?php echo $is_edit ? esc_html($tr('form_title_edit', 'Upravit překlad')) : esc_html($tr('form_title_create', 'Nový překlad')); ?>
         </h1>
         <a href="<?php echo esc_url(home_url('/admin/translations/')); ?>" class="saw-back-button">
-            <span class="dashicons dashicons-arrow-left-alt2"></span>
+            <?php if (class_exists('SAW_Icons')): ?>
+                <?php echo SAW_Icons::get('chevron-left'); ?>
+            <?php else: ?>
+                <span class="dashicons dashicons-arrow-left-alt2"></span>
+            <?php endif; ?>
             <?php echo esc_html($tr('btn_back_to_list', 'Zpět na seznam')); ?>
         </a>
     </div>
@@ -66,7 +70,11 @@ $form_action = $is_edit
         <!-- BASIC INFORMATION -->
         <details class="saw-form-section" open>
             <summary style="display: flex; align-items: center; gap: 10px;">
-                <span class="dashicons dashicons-translation" style="display: flex !important; align-items: center !important; justify-content: center !important; line-height: 1 !important;"></span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('globe', 'saw-section-icon'); ?>
+                <?php else: ?>
+                    <span class="dashicons dashicons-translation" style="display: flex !important; align-items: center !important; justify-content: center !important; line-height: 1 !important;"></span>
+                <?php endif; ?>
                 <strong><?php echo esc_html($tr('form_section_basic', 'Základní informace')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
@@ -128,7 +136,11 @@ $form_action = $is_edit
         <!-- TRANSLATION TEXT -->
         <details class="saw-form-section" open>
             <summary style="display: flex; align-items: center; gap: 10px;">
-                <span class="dashicons dashicons-edit" style="display: flex !important; align-items: center !important; justify-content: center !important; line-height: 1 !important;"></span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('pencil', 'saw-section-icon'); ?>
+                <?php else: ?>
+                    <span class="dashicons dashicons-edit" style="display: flex !important; align-items: center !important; justify-content: center !important; line-height: 1 !important;"></span>
+                <?php endif; ?>
                 <strong><?php echo esc_html($tr('form_section_text', 'Text překladu')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
@@ -151,7 +163,11 @@ $form_action = $is_edit
         <!-- ADDITIONAL INFORMATION -->
         <details class="saw-form-section">
             <summary style="display: flex; align-items: center; gap: 10px;">
-                <span class="dashicons dashicons-info" style="display: flex !important; align-items: center !important; justify-content: center !important; line-height: 1 !important;"></span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('info', 'saw-section-icon'); ?>
+                <?php else: ?>
+                    <span class="dashicons dashicons-info" style="display: flex !important; align-items: center !important; justify-content: center !important; line-height: 1 !important;"></span>
+                <?php endif; ?>
                 <strong><?php echo esc_html($tr('form_section_additional', 'Další informace')); ?></strong>
             </summary>
             <div class="saw-form-section-content">

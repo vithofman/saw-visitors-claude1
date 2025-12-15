@@ -99,14 +99,14 @@
 /* Hover state (non-touch devices) */
 @media (hover: hover) and (pointer: fine) {
     .saw-bottom-nav-item:hover {
-        color: #2563eb;
+        color: var(--saw-brand-600);
         background: rgba(37, 99, 235, 0.05);
     }
 }
 
 /* Active/current page state */
 .saw-bottom-nav-item.active {
-    color: #2563eb;
+    color: var(--saw-brand-600);
 }
 
 /* Active indicator - top bar */
@@ -118,7 +118,7 @@
     transform: translateX(-50%);
     width: 32px;
     height: 3px;
-    background: #2563eb;
+    background: var(--saw-brand-600);
     border-radius: 0 0 3px 3px;
     animation: saw-bottom-nav-indicator-appear 0.3s ease-out;
 }
@@ -412,7 +412,7 @@ body[data-theme="dark"] .saw-bottom-nav-item.active::before {
 
 .saw-bottom-nav-item:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px #2563eb inset;
+    box-shadow: 0 0 0 2px var(--saw-brand-600) inset;
 }
 
 .saw-bottom-nav-item:focus:not(:focus-visible) {

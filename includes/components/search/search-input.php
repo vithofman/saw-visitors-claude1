@@ -53,14 +53,22 @@ $clear_url = $config['clear_url'] ?? '';
             data-ajax-action="<?php echo esc_attr($ajax_action); ?>"
             data-ajax-enabled="<?php echo $ajax_enabled ? '1' : '0'; ?>"
         >
-        <span class="dashicons dashicons-search saw-search-icon"></span>
+        <?php if (class_exists('SAW_Icons')): ?>
+            <?php echo SAW_Icons::get('search', 'saw-search-icon'); ?>
+        <?php else: ?>
+            <span class="dashicons dashicons-search saw-search-icon"></span>
+        <?php endif; ?>
         <?php if ($show_clear): ?>
             <button 
                 type="button" 
                 class="saw-search-clear" 
                 style="display: <?php echo !empty($search_value) ? 'flex' : 'none'; ?>;"
             >
-                <span class="dashicons dashicons-no-alt"></span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('x'); ?>
+                <?php else: ?>
+                    <span class="dashicons dashicons-no-alt"></span>
+                <?php endif; ?>
             </button>
         <?php endif; ?>
         <?php if ($show_button): ?>
@@ -68,7 +76,11 @@ $clear_url = $config['clear_url'] ?? '';
                 type="button" 
                 class="saw-search-submit"
             >
-                <span class="dashicons dashicons-search"></span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('search'); ?>
+                <?php else: ?>
+                    <span class="dashicons dashicons-search"></span>
+                <?php endif; ?>
                 <span class="saw-search-submit-text">Hledat</span>
             </button>
         <?php endif; ?>

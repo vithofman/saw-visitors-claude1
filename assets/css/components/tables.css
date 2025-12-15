@@ -153,8 +153,8 @@
     align-items: center;
     gap: 8px;
     padding: 6px 12px;
-    background: var(--saw-primary-light, #eff6ff);
-    border: 1px solid var(--saw-primary, #2563eb);
+    background: var(--saw-primary-light, var(--saw-brand-50));
+    border: 1px solid var(--saw-primary, var(--saw-brand-600));
     border-radius: 20px;
     font-size: 13px;
     line-height: 1.4;
@@ -169,14 +169,14 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    color: var(--saw-primary, #2563eb);
+    color: var(--saw-primary, var(--saw-brand-600));
     flex: 1;
     min-width: 0;
 }
 
 .saw-search-active-badge-inline .saw-search-term {
     font-weight: 600;
-    color: var(--saw-primary, #2563eb);
+    color: var(--saw-primary, var(--saw-brand-600));
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -192,7 +192,7 @@
     background: transparent;
     border: none;
     border-radius: 50%;
-    color: var(--saw-primary, #2563eb);
+    color: var(--saw-primary, var(--saw-brand-600));
     cursor: pointer;
     transition: all 0.2s ease;
     padding: 0;
@@ -217,8 +217,8 @@
     gap: 8px;
     margin-top: 8px;
     padding: 6px 12px;
-    background: var(--saw-primary-light, #eff6ff);
-    border: 1px solid var(--saw-primary, #2563eb);
+    background: var(--saw-primary-light, var(--saw-brand-50));
+    border: 1px solid var(--saw-primary, var(--saw-brand-600));
     border-radius: 20px;
     font-size: 13px;
     line-height: 1.4;
@@ -230,19 +230,19 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    color: var(--saw-primary, #2563eb);
+    color: var(--saw-primary, var(--saw-brand-600));
 }
 
 .saw-search-active-text .dashicons {
     font-size: 16px;
     width: 16px;
     height: 16px;
-    color: var(--saw-primary, #2563eb);
+    color: var(--saw-primary, var(--saw-brand-600));
 }
 
 .saw-search-term {
     font-weight: 600;
-    color: var(--saw-primary, #2563eb);
+    color: var(--saw-primary, var(--saw-brand-600));
 }
 
 .saw-search-clear-badge {
@@ -255,7 +255,7 @@
     background: transparent;
     border: none;
     border-radius: 50%;
-    color: var(--saw-primary, #2563eb);
+    color: var(--saw-primary, var(--saw-brand-600));
     text-decoration: none;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -272,7 +272,7 @@
     font-size: 14px;
     width: 14px;
     height: 14px;
-    color: var(--saw-primary, #2563eb);
+    color: var(--saw-primary, var(--saw-brand-600));
 }
 
 /* Mobile optimization for search */
@@ -669,7 +669,7 @@
         #e0f2fe 50%,
         #dbeafe 100%
     );
-    border: 3px solid #3b82f6; /* ZVÝŠENO: Silnější border */
+    border: 3px solid var(--saw-brand-500); /* ZVÝŠENO: Silnější border */
     border-radius: 16px; /* ZVĚTŠENO: Více zaoblené */
     box-shadow: 
         0 8px 24px rgba(59, 130, 246, 0.3),
@@ -737,7 +737,7 @@
     font-size: 24px;
     width: 24px;
     height: 24px;
-    color: #3b82f6;
+    color: var(--saw-brand-500);
     filter: drop-shadow(0 2px 4px rgba(59, 130, 246, 0.3));
     position: relative;
     z-index: 1;
@@ -772,7 +772,7 @@
             #1e3a5f 100%
         );
         color: #e2e8f0;
-        border-color: #60a5fa;
+        border-color: var(--saw-brand-400);
     }
     
     .saw-infinite-scroll-loader {
@@ -1070,7 +1070,7 @@
 
 .saw-admin-table tbody tr.saw-row-active {
     background: var(--saw-table-row-active-bg) !important;
-    border-left: 3px solid #3b82f6 !important;
+    border-left: 3px solid var(--saw-brand-500) !important;
     position: relative;
     /* Remove ALL transitions - instant visual feedback only */
     transition: none !important;
@@ -1289,7 +1289,7 @@
 }
 
 .saw-action-view:hover .dashicons {
-    color: var(--saw-info, #3b82f6) !important;
+    color: var(--saw-info, var(--saw-brand-500)) !important;
 }
 
 
@@ -1300,6 +1300,7 @@
 .saw-badge {
     display: inline-flex;
     align-items: center;
+    gap: 4px;
     padding: 4px 10px;
     font-size: 11px;
     font-weight: 600;
@@ -1307,6 +1308,16 @@
     line-height: 1.4;
     text-transform: uppercase;
     letter-spacing: 0.03em;
+}
+
+.saw-badge .saw-icon {
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+}
+
+.saw-badge-text {
+    white-space: nowrap;
 }
 
 .saw-badge-success {
@@ -1326,7 +1337,17 @@
 
 .saw-badge-info {
     background: #dbeafe;
-    color: #1e40af;
+    color: var(--saw-brand-800, #1e40af);
+}
+
+.saw-badge-primary {
+    background: var(--saw-brand-600, #005A8C);
+    color: #ffffff;
+}
+
+.saw-badge-secondary {
+    background: #f3f4f6;
+    color: #374151;
 }
 
 .saw-badge-default {
@@ -1521,7 +1542,7 @@
     .saw-floating-button .dashicons::before,
     .saw-floating-btn .dashicons::before {
         content: '+';
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-family: var(--saw-font-body);
         font-size: 32px;
         font-weight: 300;
         line-height: 1;
@@ -1553,7 +1574,7 @@
     display: none; /* Hidden by default */
     align-items: center;
     justify-content: center;
-    background: #3b82f6;
+    background: var(--saw-brand-500);
     border: none;
     border-radius: 50%;
     box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
@@ -1577,7 +1598,7 @@
 }
 
 .saw-scroll-to-top:hover {
-    background: #2563eb;
+    background: var(--saw-brand-600);
     transform: translateY(-4px);
     box-shadow: 0 6px 24px rgba(59, 130, 246, 0.5);
 }
@@ -1718,7 +1739,7 @@
     font-size: 20px;
     line-height: 1;
     flex-shrink: 0;
-    color: #60a5fa;
+    color: var(--saw-brand-400);
 }
 
 .saw-sidebar-wrapper .saw-sidebar-heading,
@@ -1854,7 +1875,7 @@
    ============================================ */
 
 .saw-sidebar-wrapper .saw-detail-header-universal {
-    background: #005A8C;
+    background: var(--saw-brand-600);
     color: #fff;
     overflow: hidden;
     margin: 0;
@@ -1878,7 +1899,7 @@
 }
 
 .saw-sidebar-wrapper .saw-detail-header-title {
-    font-family: 'Oswald', sans-serif;
+    font-family: var(--saw-font-heading);
     font-weight: 700;
     font-size: 28px;
     text-transform: uppercase;
@@ -1906,8 +1927,8 @@
     /* Start with blue, then white stripe, repeat */
     background-image: repeating-linear-gradient(
         -45deg,
-        #005A8C 0px,
-        #005A8C 10px,
+        var(--saw-brand-600) 0px,
+        var(--saw-brand-600) 10px,
         rgba(255, 255, 255, 0.25) 10px,
         rgba(255, 255, 255, 0.25) 20px
     );
@@ -1923,9 +1944,102 @@
     will-change: auto;
 }
 
+/* ============================================
+   RISKS COLUMN STYLING
+   ============================================ */
+.saw-risks-missing {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: #fee2e2;
+    border: 1px solid #fca5a5;
+    border-radius: var(--saw-border-radius-md, 6px);
+    color: #991b1b;
+    font-weight: 600;
+    font-size: var(--saw-text-sm, 13px);
+    transition: all 0.2s ease;
+}
+
+.saw-risks-missing:hover {
+    background: #fecaca;
+    border-color: #f87171;
+}
+
+.saw-risks-missing .saw-icon {
+    color: #dc2626;
+    flex-shrink: 0;
+}
+
+.saw-risks-label {
+    color: #991b1b;
+    white-space: nowrap;
+}
+
+/* Column icon styling */
+.saw-column-icon {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+.saw-column-icon.saw-icon {
+    color: var(--saw-brand-600);
+}
+
+/* ============================================
+   VISITOR CELL STYLING
+   ============================================ */
+.saw-visitor-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.saw-visitor-name {
+    color: var(--saw-text-primary, #1a1a1a);
+    font-weight: 600;
+}
+
+.saw-visitor-name-person {
+    color: var(--saw-brand-600, #005A8C);
+}
+
+.saw-visitor-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    padding: 3px 8px;
+}
+
+.saw-visitor-type-badge .saw-icon {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+}
+
+.saw-visitor-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.saw-visitor-count .saw-icon {
+    color: var(--saw-brand-600, #005A8C);
+    flex-shrink: 0;
+}
+
+.saw-visitor-count-number {
+    color: var(--saw-brand-600, #005A8C);
+    font-weight: 600;
+}
+
 .saw-detail-content-wrapper {
     padding: 12px; /* Mobile-first: minimální padding */
-    font-family: 'Roboto', sans-serif;
+    font-family: var(--saw-font-body);
     color: #1a1a1a;
 }
 
@@ -1948,42 +2062,52 @@
 .saw-detail-header {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 20px;
-    margin-bottom: 16px;
-    background: var(--saw-detail-header-bg);
-    border-radius: 8px;
+    gap: 20px;
+    padding: 24px;
+    margin-bottom: 24px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border-radius: 12px;
     color: var(--saw-text-primary);
     border: 1px solid #e2e8f0;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 
+                0 1px 2px rgba(0, 0, 0, 0.02);
+    transition: box-shadow 0.2s ease;
+}
+
+.saw-detail-header:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06), 
+                0 2px 4px rgba(0, 0, 0, 0.03);
 }
 
 .saw-detail-logo {
-    width: 56px;
-    height: 56px;
-    border-radius: 8px;
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
     object-fit: contain;
-    background: var(--saw-sidebar-content-bg);
-    padding: 6px;
-    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    padding: 8px;
+    border: 2px solid #e2e8f0;
     flex-shrink: 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
 }
 
 .saw-detail-logo-placeholder {
-    width: 56px;
-    height: 56px;
+    width: 64px;
+    height: 64px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%);
-    border-radius: 8px;
+    background: linear-gradient(135deg, var(--saw-brand-500, #0073aa) 0%, var(--saw-brand-600, #005A8C) 100%);
+    border-radius: 12px;
     flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0, 90, 140, 0.2);
 }
 
+.saw-detail-logo-placeholder .saw-icon,
 .saw-detail-logo-placeholder .dashicons {
-    font-size: 28px;
-    width: 28px;
-    height: 28px;
+    font-size: 32px;
+    width: 32px;
+    height: 32px;
     color: #ffffff;
 }
 
@@ -1993,21 +2117,24 @@
 }
 
 .saw-detail-header-info .saw-detail-header-title {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--saw-text-primary);
-    margin: 0 0 4px 0;
-    letter-spacing: -0.01em;
-    line-height: 1.3;
+    font-family: var(--saw-font-heading, 'Oswald', sans-serif);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--saw-text-primary, #1a1a1a);
+    margin: 0 0 8px 0;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    text-transform: uppercase;
 }
 
 .saw-detail-header-info .saw-detail-header-meta {
     display: flex;
-    gap: 12px;
+    gap: 16px;
     flex-wrap: wrap;
-    font-size: 12px;
-    color: var(--saw-text-secondary);
+    font-size: 13px;
+    color: var(--saw-text-secondary, #64748b);
     font-weight: 500;
+    align-items: center;
 }
 
 .saw-detail-header-info .saw-detail-header-meta span {
@@ -2016,37 +2143,55 @@
     gap: 6px;
 }
 
+/* Badge in Header */
+.saw-detail-header .saw-badge {
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
 /* ============================================
-   DETAIL SECTIONS
+   DETAIL SECTIONS - ENHANCED
    ============================================ */
 
 .saw-detail-section {
-    margin-bottom: 12px;
+    margin-bottom: 20px;
 }
 
 .saw-detail-section-title {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 11px;
+    gap: 10px;
+    font-family: var(--saw-font-heading, 'Oswald', sans-serif);
+    font-size: 13px;
     font-weight: 700;
-    color: var(--saw-text-secondary);
+    color: var(--saw-brand-600, #005A8C);
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 8px;
-    padding-left: 2px;
+    letter-spacing: 0.08em;
+    margin-bottom: 12px;
+    padding-left: 4px;
 }
 
 .saw-detail-section-icon {
-    font-size: 14px;
+    font-size: 16px;
+    color: var(--saw-brand-500, #0073aa);
 }
 
 .saw-detail-section-content {
-    padding: 16px;
-    background: var(--saw-detail-section-bg);
-    border-radius: 8px;
-    border: 1px solid var(--saw-border-color);
+    padding: 20px;
+    background: #ffffff;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
     color: var(--saw-text-primary);
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.saw-detail-section-content:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
 }
 
 /* ============================================
@@ -2163,7 +2308,7 @@
 }
 
 /* ============================================
-   FLOATING ACTION BUTTONS (IN SIDEBAR)
+   FLOATING ACTION BUTTONS (IN SIDEBAR) - PROFESSIONAL REDESIGN
    ============================================ */
 
 .saw-sidebar-floating-actions {
@@ -2172,7 +2317,7 @@
     bottom: 28px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 16px;
     z-index: 100000;
 }
 
@@ -2183,37 +2328,100 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 
+                0 2px 4px rgba(0, 0, 0, 0.08);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     text-decoration: none;
     border: none;
-    font-size: 20px;
+    font-size: 0;
+    position: relative;
+    overflow: hidden;
 }
 
-.saw-floating-action-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-}
-
+/* Edit Button - Brand Blue */
 .saw-floating-action-btn.edit {
-    background: #0ea5e9;
+    background: var(--saw-brand-600, #005A8C);
     color: #ffffff;
+}
+
+.saw-floating-action-btn.edit::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 100%);
+    opacity: 0;
+    transition: opacity 0.25s ease;
 }
 
 .saw-floating-action-btn.edit:hover {
-    background: #0284c7;
+    background: var(--saw-brand-700, #004466);
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 8px 24px rgba(0, 90, 140, 0.25), 
+                0 4px 8px rgba(0, 90, 140, 0.15);
 }
 
+.saw-floating-action-btn.edit:hover::before {
+    opacity: 1;
+}
+
+.saw-floating-action-btn.edit:active {
+    transform: translateY(-1px) scale(1.02);
+    box-shadow: 0 4px 12px rgba(0, 90, 140, 0.2);
+}
+
+/* Delete Button - Danger Red */
 .saw-floating-action-btn.delete {
-    background: #ef4444;
+    background: var(--saw-danger, #dc2626);
     color: #ffffff;
 }
 
-.saw-floating-action-btn.delete:hover {
-    background: #dc2626;
+.saw-floating-action-btn.delete::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 100%);
+    opacity: 0;
+    transition: opacity 0.25s ease;
 }
 
+.saw-floating-action-btn.delete:hover {
+    background: var(--saw-danger-hover, #b91c1c);
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 8px 24px rgba(220, 38, 38, 0.25), 
+                0 4px 8px rgba(220, 38, 38, 0.15);
+}
+
+.saw-floating-action-btn.delete:hover::before {
+    opacity: 1;
+}
+
+.saw-floating-action-btn.delete:active {
+    transform: translateY(-1px) scale(1.02);
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+}
+
+/* Icon Styling - White for Maximum Contrast */
+.saw-floating-action-btn .saw-icon {
+    color: #ffffff !important;
+    width: 24px;
+    height: 24px;
+    position: relative;
+    z-index: 1;
+}
+
+.saw-floating-action-btn .saw-icon svg {
+    stroke: #ffffff;
+    stroke-width: 2.5;
+}
+
+/* Legacy Dashicons Support */
 .saw-floating-action-btn .dashicons {
     font-family: dashicons !important;
     width: 24px;
@@ -2221,14 +2429,61 @@
     font-size: 24px;
     line-height: 1;
     display: inline-block;
-    /* Ensure proper dashicons rendering */
+    color: #ffffff !important;
     speak: none;
+    position: relative;
+    z-index: 1;
     font-style: normal;
     font-weight: normal;
     font-variant: normal;
     text-transform: none;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .saw-sidebar-floating-actions {
+        right: 20px;
+        bottom: 20px;
+        gap: 12px;
+    }
+    
+    .saw-floating-action-btn {
+        width: 52px;
+        height: 52px;
+    }
+    
+    .saw-floating-action-btn .saw-icon,
+    .saw-floating-action-btn .dashicons {
+        width: 22px;
+        height: 22px;
+        font-size: 22px;
+    }
+    
+    .saw-detail-header {
+        padding: 20px;
+        gap: 16px;
+    }
+    
+    .saw-detail-logo,
+    .saw-detail-logo-placeholder {
+        width: 56px;
+        height: 56px;
+    }
+    
+    .saw-detail-header-info .saw-detail-header-title {
+        font-size: 20px;
+    }
+    
+    .saw-info-row {
+        grid-template-columns: 1fr !important;
+        gap: 8px !important;
+    }
+    
+    .saw-info-label {
+        margin-bottom: 4px !important;
+    }
 }
 
 /* ============================================

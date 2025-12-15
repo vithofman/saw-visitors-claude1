@@ -17,39 +17,7 @@
    CSS VARIABLES
    ============================================ */
 
-:root {
-    --saw-primary: #2563eb;
-    --saw-success: #10b981;
-    --saw-warning: #f59e0b;
-    --saw-danger: #ef4444;
-    --saw-info: #3b82f6;
-    
-    --saw-gray-50: #f9fafb;
-    --saw-gray-100: #f3f4f6;
-    --saw-gray-200: #e5e7eb;
-    --saw-gray-300: #d1d5db;
-    --saw-gray-400: #9ca3af;
-    --saw-gray-500: #6b7280;
-    --saw-gray-600: #4b5563;
-    --saw-gray-700: #374151;
-    --saw-gray-800: #1f2937;
-    --saw-gray-900: #111827;
-    
-    --saw-spacing-xs: 4px;
-    --saw-spacing-sm: 8px;
-    --saw-spacing-md: 16px;
-    --saw-spacing-lg: 24px;
-    --saw-spacing-xl: 32px;
-    --saw-spacing-2xl: 48px;
-    
-    --saw-radius-sm: 4px;
-    --saw-radius-md: 6px;
-    --saw-radius-lg: 8px;
-    
-    --saw-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-    --saw-shadow-md: 0 1px 3px rgba(0, 0, 0, 0.1);
-    --saw-shadow-lg: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
+/* CSS Variables jsou nyní v foundation/_design-tokens.css */
 
 /* ============================================
    RESET & BASE
@@ -80,7 +48,7 @@ body.saw-app-body {
     flex-direction: column !important;
     padding-top: 0 !important;
     background: var(--saw-body-bg);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    font-family: var(--saw-font-body) !important;
     margin: 0;
     font-size: 14px;
     line-height: 1.5;
@@ -253,7 +221,7 @@ body, html {
     justify-content: center;
     width: 36px;
     height: 36px;
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, var(--saw-brand-600) 0%, var(--saw-brand-700) 100%);
     color: #ffffff;
     border-radius: 8px;
     font-size: 14px;
@@ -339,7 +307,7 @@ body, html {
     justify-content: center;
     width: 48px;
     height: 48px;
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, var(--saw-brand-600) 0%, var(--saw-brand-700) 100%);
     color: #ffffff;
     border-radius: 12px;
     font-size: 18px;
@@ -711,7 +679,7 @@ body, html {
 
 .saw-footer-link {
     font-size: 13px;
-    color: #2563eb;
+    color: var(--saw-brand-600);
     text-decoration: none;
     transition: all 0.2s ease;
     position: relative;
@@ -720,7 +688,7 @@ body, html {
 }
 
 .saw-footer-link:hover {
-    color: #1d4ed8;
+    color: var(--saw-brand-700);
 }
 
 .saw-footer-link::after {
@@ -902,7 +870,7 @@ body, html {
 
 .saw-badge-info {
     background: #dbeafe;
-    color: #1e40af;
+    color: var(--saw-brand-800);
 }
 
 /* ============================================
@@ -935,8 +903,8 @@ body, html {
 
 .saw-alert-info {
     background: #dbeafe;
-    color: #1e40af;
-    border-left: 4px solid #3b82f6;
+    color: var(--saw-brand-800);
+    border-left: 4px solid var(--saw-brand-500);
 }
 
 /* ============================================

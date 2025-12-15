@@ -52,7 +52,11 @@ if (!empty($item['features'])) {
         <!-- BASIC INFO -->
         <details class="saw-form-section" open>
             <summary>
-                <span class="saw-section-emoji">💳</span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('badge-check', 'saw-section-icon'); ?>
+                <?php else: ?>
+                    <span class="saw-section-emoji">💳</span>
+                <?php endif; ?>
                 <strong>Základní informace</strong>
             </summary>
             <div class="saw-form-section-content">
@@ -132,7 +136,11 @@ if (!empty($item['features'])) {
         <!-- VISUAL -->
         <details class="saw-form-section" open>
             <summary>
-                <span class="saw-section-emoji">🎨</span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('tag', 'saw-section-icon'); ?>
+                <?php else: ?>
+                    <span class="saw-section-emoji">🎨</span>
+                <?php endif; ?>
                 <strong>Vizuální označení</strong>
             </summary>
             <div class="saw-form-section-content">
@@ -170,7 +178,11 @@ if (!empty($item['features'])) {
         <!-- FEATURES -->
         <details class="saw-form-section">
             <summary>
-                <span class="saw-section-emoji">✨</span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('star', 'saw-section-icon'); ?>
+                <?php else: ?>
+                    <span class="saw-section-emoji">✨</span>
+                <?php endif; ?>
                 <strong>Funkce a možnosti</strong>
             </summary>
             <div class="saw-form-section-content">
@@ -193,7 +205,11 @@ if (!empty($item['features'])) {
         <!-- STATUS -->
         <details class="saw-form-section" open>
             <summary>
-                <span class="saw-section-emoji">⚙️</span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('settings', 'saw-section-icon'); ?>
+                <?php else: ?>
+                    <span class="saw-section-emoji">⚙️</span>
+                <?php endif; ?>
                 <strong>Nastavení</strong>
             </summary>
             <div class="saw-form-section-content">

@@ -246,7 +246,7 @@
 
 /* Departments Section - Special Styling */
 .saw-section-departments {
-    border: 2px solid #3b82f6;
+    border: 2px solid var(--saw-brand-500);
     background: linear-gradient(135deg, var(--saw-primary-light) 0%, var(--saw-form-section-bg) 100%);
 }
 
@@ -428,7 +428,7 @@
     align-items: center !important;
     gap: 0.5rem !important;
     padding: 0.75rem 1.5rem !important;
-    background: #2563eb !important;
+    background: var(--saw-brand-600) !important;
     color: #ffffff !important;
     border: none !important;
     border-radius: 8px !important;
@@ -441,7 +441,7 @@
 }
 
 .saw-file-input-label:hover {
-    background: #1d4ed8 !important;
+    background: var(--saw-brand-700) !important;
     transform: translateY(-1px) !important;
     box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3) !important;
 }
@@ -520,7 +520,7 @@
     visibility: visible !important;
     opacity: 1 !important;
     padding: 6px 12px;
-    background: #2563eb;
+    background: var(--saw-brand-600);
     color: #ffffff;
     border: none;
     border-radius: 6px;
@@ -532,7 +532,7 @@
 }
 
 .wp-media-buttons .insert-media:hover {
-    background: #1d4ed8;
+    background: var(--saw-brand-700);
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
 }
@@ -780,7 +780,7 @@
     align-items: center !important;
     gap: 0.5rem !important;
     padding: 0.75rem 1.5rem !important;
-    background: #2563eb !important;
+    background: var(--saw-brand-600) !important;
     color: #ffffff !important;
     border: none !important;
     border-radius: 8px !important;
@@ -793,7 +793,7 @@
 }
 
 .saw-document-item .saw-file-input-label:hover {
-    background: #1d4ed8 !important;
+    background: var(--saw-brand-700) !important;
     transform: translateY(-1px) !important;
     box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3) !important;
 }

@@ -148,18 +148,28 @@ $table_config['columns'] = array(
         'callback' => function($value, $item) use ($visitor_company_label, $visitor_physical_label, $visitor_physical_short) {
             if (!empty($item['company_id'])) {
                 $company_name = esc_html($item['company_name'] ?? 'Firma #' . $item['company_id']);
-                echo '<div style="display: flex; align-items: center; gap: 8px;">';
-                echo '<strong>' . $company_name . '</strong>';
-                echo '<span class="saw-badge saw-badge-info" style="font-size: 11px;">🏢 ' . esc_html($visitor_company_label) . '</span>';
+                echo '<div class="saw-visitor-cell">';
+                echo '<strong class="saw-visitor-name">' . $company_name . '</strong>';
+                echo '<span class="saw-badge saw-badge-info saw-visitor-type-badge">';
+                if (class_exists('SAW_Icons')) {
+                    echo SAW_Icons::get('building-2', 'saw-icon--xs');
+                }
+                echo '<span class="saw-badge-text">' . esc_html($visitor_company_label) . '</span>';
+                echo '</span>';
                 echo '</div>';
             } else {
                 $person_name = !empty($item['first_visitor_name']) 
                     ? esc_html($item['first_visitor_name']) 
                     : esc_html($visitor_physical_label);
                     
-                echo '<div style="display: flex; align-items: center; gap: 8px;">';
-                echo '<strong style="color: #6366f1;">' . $person_name . '</strong>';
-                echo '<span class="saw-badge" style="background: #6366f1; color: white; font-size: 11px;">👤 ' . esc_html($visitor_physical_short) . '</span>';
+                echo '<div class="saw-visitor-cell">';
+                echo '<strong class="saw-visitor-name saw-visitor-name-person">' . $person_name . '</strong>';
+                echo '<span class="saw-badge saw-badge-primary saw-visitor-type-badge">';
+                if (class_exists('SAW_Icons')) {
+                    echo SAW_Icons::get('user', 'saw-icon--sm');
+                }
+                echo '<span class="saw-badge-text">' . esc_html($visitor_physical_short) . '</span>';
+                echo '</span>';
                 echo '</div>';
             }
         },
@@ -189,29 +199,49 @@ $table_config['columns'] = array(
         'callback' => function($value, $item) {
             $count = intval($item['visitor_count'] ?? 0);
             if ($count === 0) {
-                echo '<span style="color: #999;">—</span>';
+                echo '<span class="saw-text-muted">—</span>';
             } else {
-                echo '<strong style="color: #0066cc;">👥 ' . $count . '</strong>';
+                echo '<div class="saw-visitor-count">';
+                if (class_exists('SAW_Icons')) {
+                    echo SAW_Icons::get('users', 'saw-icon--sm');
+                }
+                echo '<strong class="saw-visitor-count-number">' . $count . '</strong>';
+                echo '</div>';
             }
         },
     ),
     
     'risks_status' => array(
         'label' => $tr('col_risks', 'Rizika'),
-        'type' => 'badge',
+        'type' => 'custom',
         'sortable' => true,
-        'width' => '12%',  // Badge střední
+        'width' => '12%',
         'align' => 'center',
-        'map' => array(
-            'pending' => 'secondary',
-            'completed' => 'success',
-            'missing' => 'danger',
-        ),
-        'labels' => array(
-            'pending' => $tr('risks_pending', 'Čeká se'),
-            'completed' => $tr('risks_ok', 'OK'),
-            'missing' => $tr('risks_missing', 'Chybí'),
-        ),
+        'callback' => function($value, $item) use ($tr) {
+            $status = $item['risks_status'] ?? 'missing';
+            
+            if ($status === 'missing') {
+                // Červené/oranžové zvýraznění pro chybějící rizika
+                echo '<span class="saw-risks-missing" title="' . esc_attr($tr('risks_missing_title', 'Chybí informace o rizicích')) . '">';
+                if (class_exists('SAW_Icons')) {
+                    echo SAW_Icons::get('alert-triangle', 'saw-icon--sm');
+                }
+                echo '<span class="saw-risks-label">' . esc_html($tr('risks_missing', 'Chybí')) . '</span>';
+                echo '</span>';
+            } elseif ($status === 'pending') {
+                echo '<span class="saw-badge saw-badge-secondary">' . esc_html($tr('risks_pending', 'Čeká se')) . '</span>';
+            } elseif ($status === 'completed') {
+                // Zelené zvýraznění pro OK rizika
+                echo '<span class="saw-badge saw-badge-success">';
+                if (class_exists('SAW_Icons')) {
+                    echo SAW_Icons::get('check-circle', 'saw-icon--sm');
+                }
+                echo '<span class="saw-badge-text">' . esc_html($tr('risks_ok', 'OK')) . '</span>';
+                echo '</span>';
+            } else {
+                echo '<span class="saw-text-muted">—</span>';
+            }
+        },
     ),
     
     'status' => array(

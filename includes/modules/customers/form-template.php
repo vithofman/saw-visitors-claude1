@@ -104,7 +104,11 @@ $language_options = array(
              ============================================ -->
         <details class="saw-form-section" open>
             <summary>
-                <span class="saw-section-emoji">🏢</span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('building-2', 'saw-section-icon'); ?>
+                <?php else: ?>
+                    <span class="saw-section-emoji">🏢</span>
+                <?php endif; ?>
                 <strong><?php echo esc_html($tr('section_basic_info', 'Základní informace')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
@@ -169,7 +173,11 @@ $language_options = array(
              ============================================ -->
         <details class="saw-form-section">
             <summary>
-                <span class="saw-section-emoji">📋</span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('clipboard-list', 'saw-section-icon'); ?>
+                <?php else: ?>
+                    <span class="saw-section-emoji">📋</span>
+                <?php endif; ?>
                 <strong><?php echo esc_html($tr('section_company_details', 'Údaje společnosti')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
@@ -222,7 +230,11 @@ $language_options = array(
              ============================================ -->
         <details class="saw-form-section">
             <summary>
-                <span class="saw-section-emoji">📍</span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('map-pin', 'saw-section-icon'); ?>
+                <?php else: ?>
+                    <span class="saw-section-emoji">📍</span>
+                <?php endif; ?>
                 <strong><?php echo esc_html($tr('section_address', 'Sídlo společnosti')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
@@ -268,7 +280,11 @@ $language_options = array(
              ============================================ -->
         <details class="saw-form-section">
             <summary>
-                <span class="saw-section-emoji">💳</span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('badge-check', 'saw-section-icon'); ?>
+                <?php else: ?>
+                    <span class="saw-section-emoji">💳</span>
+                <?php endif; ?>
                 <strong><?php echo esc_html($tr('section_billing_address', 'Fakturační adresa')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
@@ -315,7 +331,11 @@ $language_options = array(
              ============================================ -->
         <details class="saw-form-section">
             <summary>
-                <span class="saw-section-emoji">📧</span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('mail', 'saw-section-icon'); ?>
+                <?php else: ?>
+                    <span class="saw-section-emoji">📧</span>
+                <?php endif; ?>
                 <strong><?php echo esc_html($tr('section_contact', 'Kontaktní údaje')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
@@ -373,7 +393,11 @@ $language_options = array(
              ============================================ -->
         <details class="saw-form-section">
             <summary>
-                <span class="saw-section-emoji">⚙️</span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('settings', 'saw-section-icon'); ?>
+                <?php else: ?>
+                    <span class="saw-section-emoji">⚙️</span>
+                <?php endif; ?>
                 <strong><?php echo esc_html($tr('section_settings', 'Nastavení')); ?></strong>
             </summary>
             <div class="saw-form-section-content">
@@ -417,7 +441,11 @@ $language_options = array(
              ============================================ -->
         <details class="saw-form-section">
             <summary>
-                <span class="saw-section-emoji">📝</span>
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('file-text', 'saw-section-icon'); ?>
+                <?php else: ?>
+                    <span class="saw-section-emoji">📝</span>
+                <?php endif; ?>
                 <strong><?php echo esc_html($tr('section_notes', 'Poznámky')); ?></strong>
             </summary>
             <div class="saw-form-section-content">

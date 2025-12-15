@@ -1,136 +1,98 @@
 /**
- * SAW Design Tokens - CSS Variables
- * Centrální definice barev, spacing, radius, shadows
+ * SAW Variables - Compatibility Layer
+ * 
+ * Importuje design tokens a mapuje staré názvy na nové.
  * 
  * @package SAW_Visitors
- * @version 2.0.0 - Redesigned Dark Mode (Modern Soft)
+ * @version 2.0.0 - Design System Refactoring
+ * @deprecated Používejte přímo proměnné z _design-tokens.css
  */
+
+@import url('./_design-tokens.css');
 
 :root {
     /* ============================================
-       PRIMARY COLORS
+       COMPATIBILITY ALIASES
+       Mapování starých názvů na nové pro zpětnou kompatibilitu
        ============================================ */
-    --saw-primary: #2563eb;
-    --saw-primary-hover: #1d4ed8;
-    --saw-primary-light: #eff6ff;
-    --saw-primary-dark: #1e40af;
     
-    /* ============================================
-       STATUS COLORS
-       ============================================ */
-    --saw-success: #10b981;
-    --saw-success-hover: #059669;
-    --saw-success-light: #d1fae5;
-    --saw-success-dark: #065f46;
+    /* Primary colors - mapování na brand */
+    --saw-primary: var(--saw-brand-600);
+    --saw-primary-hover: var(--saw-brand-700);
+    --saw-primary-light: var(--saw-brand-50);
+    --saw-primary-dark: var(--saw-brand-800);
     
-    --saw-danger: #ef4444;
-    --saw-danger-hover: #dc2626;
-    --saw-danger-light: #fee2e2;
-    --saw-danger-dark: #991b1b;
+    /* Status colors - aliasy */
+    --saw-success: var(--saw-success);
+    --saw-success-hover: var(--saw-success-hover);
+    --saw-success-light: var(--saw-success-light);
+    --saw-success-dark: var(--saw-success-dark);
     
-    --saw-warning: #f59e0b;
-    --saw-warning-hover: #d97706;
-    --saw-warning-light: #fef3c7;
-    --saw-warning-dark: #92400e;
+    --saw-danger: var(--saw-danger);
+    --saw-danger-hover: var(--saw-danger-hover);
+    --saw-danger-light: var(--saw-danger-light);
+    --saw-danger-dark: var(--saw-danger-dark);
     
-    --saw-info: #3b82f6;
-    --saw-info-hover: #2563eb;
-    --saw-info-light: #dbeafe;
-    --saw-info-dark: #1e40af;
+    --saw-warning: var(--saw-warning);
+    --saw-warning-hover: var(--saw-warning-hover);
+    --saw-warning-light: var(--saw-warning-light);
+    --saw-warning-dark: var(--saw-warning-dark);
     
-    /* ============================================
-       GRAY SCALE
-       ============================================ */
-    --saw-gray-50: #f9fafb;
-    --saw-gray-100: #f3f4f6;
-    --saw-gray-200: #e5e7eb;
-    --saw-gray-300: #d1d5db;
-    --saw-gray-400: #9ca3af;
-    --saw-gray-500: #6b7280;
-    --saw-gray-600: #4b5563;
-    --saw-gray-700: #374151;
-    --saw-gray-800: #1f2937;
-    --saw-gray-900: #111827;
+    --saw-info: var(--saw-info);
+    --saw-info-hover: var(--saw-info-hover);
+    --saw-info-light: var(--saw-info-light);
+    --saw-info-dark: var(--saw-info-dark);
     
-    /* ============================================
-       TYPOGRAPHY
-       ============================================ */
-    --saw-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    --saw-font-mono: 'SF Mono', 'Monaco', 'Courier New', monospace;
+    /* Typography - aliasy pro zpětnou kompatibilitu */
+    --saw-font-family: var(--saw-font-body);
+    --saw-font-size-xs: var(--saw-text-xs);
+    --saw-font-size-sm: var(--saw-text-sm);
+    --saw-font-size-base: var(--saw-text-base);
+    --saw-font-size-md: var(--saw-text-md);
+    --saw-font-size-lg: var(--saw-text-lg);
+    --saw-font-size-xl: var(--saw-text-xl);
+    --saw-font-size-2xl: var(--saw-text-2xl);
+    --saw-font-size-3xl: var(--saw-text-3xl);
+    --saw-font-size-4xl: var(--saw-text-4xl);
     
-    --saw-font-size-xs: 12px;
-    --saw-font-size-sm: 13px;
-    --saw-font-size-base: 14px;
-    --saw-font-size-md: 15px;
-    --saw-font-size-lg: 16px;
-    --saw-font-size-xl: 18px;
-    --saw-font-size-2xl: 20px;
-    --saw-font-size-3xl: 24px;
-    --saw-font-size-4xl: 28px;
+    --saw-font-weight-normal: var(--saw-font-normal);
+    --saw-font-weight-medium: var(--saw-font-medium);
+    --saw-font-weight-semibold: var(--saw-font-semibold);
+    --saw-font-weight-bold: var(--saw-font-bold);
     
-    --saw-font-weight-normal: 400;
-    --saw-font-weight-medium: 500;
-    --saw-font-weight-semibold: 600;
-    --saw-font-weight-bold: 700;
+    --saw-line-height-tight: var(--saw-leading-tight);
+    --saw-line-height-normal: var(--saw-leading-normal);
+    --saw-line-height-relaxed: var(--saw-leading-relaxed);
     
-    --saw-line-height-tight: 1.2;
-    --saw-line-height-normal: 1.5;
-    --saw-line-height-relaxed: 1.8;
+    /* Spacing - aliasy */
+    --saw-space-xs: var(--saw-space-1);
+    --saw-space-sm: var(--saw-space-2);
+    --saw-space-md: var(--saw-space-3);
+    --saw-space-lg: var(--saw-space-4);
+    --saw-space-xl: var(--saw-space-5);
+    --saw-space-2xl: var(--saw-space-6);
+    --saw-space-3xl: var(--saw-space-8);
+    --saw-space-4xl: var(--saw-space-10);
+    --saw-space-5xl: var(--saw-space-12);
     
-    /* ============================================
-       SPACING
-       ============================================ */
-    --saw-space-xs: 4px;
-    --saw-space-sm: 8px;
-    --saw-space-md: 12px;
-    --saw-space-lg: 16px;
-    --saw-space-xl: 20px;
-    --saw-space-2xl: 24px;
-    --saw-space-3xl: 32px;
-    --saw-space-4xl: 40px;
-    --saw-space-5xl: 48px;
-    
-    /* ============================================
-       BORDERS
-       ============================================ */
+    /* Borders - aliasy */
     --saw-border-width: 1px;
     --saw-border-width-thick: 2px;
     --saw-border-width-thicker: 3px;
-    
-    --saw-border-color: var(--saw-gray-200);
-    --saw-border-color-dark: var(--saw-gray-300);
     --saw-border-color-light: var(--saw-gray-100);
     
-    --saw-border-radius-sm: 4px;
-    --saw-border-radius-md: 6px;
-    --saw-border-radius-lg: 8px;
-    --saw-border-radius-xl: 12px;
-    --saw-border-radius-full: 9999px;
+    /* Border radius - aliasy */
+    --saw-border-radius-sm: var(--saw-radius-sm);
+    --saw-border-radius-md: var(--saw-radius-md);
+    --saw-border-radius-lg: var(--saw-radius-lg);
+    --saw-border-radius-xl: var(--saw-radius-xl);
+    --saw-border-radius-full: var(--saw-radius-full);
     
-    /* ============================================
-       SHADOWS
-       ============================================ */
-    --saw-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
-    --saw-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
-    --saw-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.1);
-    --saw-shadow-lg: 0 4px 6px rgba(0, 0, 0, 0.1);
-    --saw-shadow-xl: 0 4px 12px rgba(0, 0, 0, 0.15);
-    --saw-shadow-2xl: 0 8px 24px rgba(0, 0, 0, 0.2);
+    /* Shadows - aliasy */
+    --saw-shadow-xs: var(--saw-shadow-sm);
     
-    /* ============================================
-       TRANSITIONS
-       ============================================ */
-    --saw-transition-fast: 150ms ease;
-    --saw-transition-base: 200ms ease;
-    --saw-transition-slow: 300ms ease;
-    
-    /* ============================================
-       Z-INDEX LAYERS
-       ============================================ */
-    --saw-z-dropdown: 1000;
-    --saw-z-sticky: 1001;
-    --saw-z-modal: 9999;
-    --saw-z-tooltip: 10000;
+    /* Z-index - aliasy */
+    --saw-z-sticky: var(--saw-z-sticky);
     
     /* ============================================
        LAYOUT
@@ -156,15 +118,10 @@
     
     /* ============================================
        LIGHT MODE COLORS
+       Používají proměnné z design tokens
        ============================================ */
-    --saw-bg-primary: #ffffff;
-    --saw-bg-secondary: #f8fafc;
-    --saw-bg-tertiary: #f1f5f9;
-    --saw-text-primary: #111827;
-    --saw-text-secondary: #6b7280;
-    --saw-text-muted: #9ca3af;
-    --saw-border-color: #e5e7eb;
-    --saw-border-color-light: #f3f4f6;
+    --saw-bg-secondary: var(--saw-gray-50);
+    --saw-bg-tertiary: var(--saw-gray-100);
     --saw-shadow-color: rgba(0, 0, 0, 0.1);
     --saw-shadow-color-strong: rgba(0, 0, 0, 0.2);
     
@@ -220,9 +177,9 @@
     --saw-widget-body-bg: #ffffff;
     
     /* Form Summary Hover & Icons */
-    --saw-form-summary-hover-bg: #eff6ff;
-    --saw-form-summary-icon-bg: #eff6ff;
-    --saw-form-summary-icon-color: #2563eb;
+    --saw-form-summary-hover-bg: var(--saw-brand-50);
+    --saw-form-summary-icon-bg: var(--saw-brand-50);
+    --saw-form-summary-icon-color: var(--saw-brand-600);
     
     /* Sidebar Sections */
     --saw-sidebar-section-bg: #ffffff;
@@ -307,11 +264,11 @@
     
     /* ===== PRIMARY COLORS - Přizpůsobené pro dark mode ===== */
     
-    /* Primary - světlejší modrá pro lepší viditelnost (#60a5fa místo #3b82f6) */
-    --saw-primary: #60a5fa;
-    --saw-primary-hover: #3b82f6;
-    --saw-primary-light: rgba(96, 165, 250, 0.12);
-    --saw-primary-dark: #2563eb;
+    /* Primary - v dark mode použijeme světlejší odstíny brand barvy */
+    --saw-primary: var(--saw-brand-400);
+    --saw-primary-hover: var(--saw-brand-500);
+    --saw-primary-light: rgba(26, 137, 181, 0.12);
+    --saw-primary-dark: var(--saw-brand-700);
     
     /* ===== STATUS COLORS - Optimalizované pro dark mode ===== */
     
@@ -331,9 +288,9 @@
     --saw-warning-light: rgba(251, 191, 36, 0.12);
     
     /* Info - stejná jako primary */
-    --saw-info: #60a5fa;
-    --saw-info-hover: #3b82f6;
-    --saw-info-light: rgba(96, 165, 250, 0.12);
+    --saw-info: var(--saw-brand-400);
+    --saw-info-hover: var(--saw-brand-500);
+    --saw-info-light: rgba(26, 137, 181, 0.12);
     
     /* ===== APP LAYOUT ===== */
     --saw-body-bg: var(--saw-bg-primary);

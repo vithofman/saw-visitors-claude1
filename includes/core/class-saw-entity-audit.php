@@ -349,11 +349,13 @@ class SAW_Entity_Audit {
         
         if (!empty($added_ids)) {
             $added_items = $this->resolve_related_items($relation_config, $added_ids);
+            // DEBUG: Log what we're resolving
+            error_log('[SAW_Entity_Audit] Resolved added items for ' . $relation_name . ': ' . print_r($added_items, true));
             foreach ($added_items as $item) {
                 $related_items[] = [
                     'type' => $relation_name,
                     'id' => $item['id'],
-                    'name' => $item['name'],
+                    'name' => $item['name'] ?? 'MISSING NAME',
                     'action' => 'added',
                     'extra' => $item['extra'] ?? null,
                 ];
@@ -362,16 +364,21 @@ class SAW_Entity_Audit {
         
         if (!empty($removed_ids)) {
             $removed_items = $this->resolve_related_items($relation_config, $removed_ids);
+            // DEBUG: Log what we're resolving
+            error_log('[SAW_Entity_Audit] Resolved removed items for ' . $relation_name . ': ' . print_r($removed_items, true));
             foreach ($removed_items as $item) {
                 $related_items[] = [
                     'type' => $relation_name,
                     'id' => $item['id'],
-                    'name' => $item['name'],
+                    'name' => $item['name'] ?? 'MISSING NAME',
                     'action' => 'removed',
                     'extra' => $item['extra'] ?? null,
                 ];
             }
         }
+        
+        // DEBUG: Log final related_items before saving
+        error_log('[SAW_Entity_Audit] Final related_items for ' . $relation_name . ': ' . print_r($related_items, true));
         
         $details = [
             'source' => $this->source,
@@ -485,6 +492,27 @@ class SAW_Entity_Audit {
         ];
         
         return $this->write_log('file_' . $action, $details);
+    }
+    
+    /**
+     * Log related items directly (for cases where items are deleted before resolution)
+     * 
+     * @param array $related_items Array of related items with type, id, name, action
+     * @param string $action Action name (default: 'relation_changed')
+     * @return int|false
+     */
+    public function log_related_items($related_items, $action = 'relation_changed') {
+        if (empty($related_items) || !is_array($related_items)) {
+            return false;
+        }
+        
+        $details = [
+            'source' => $this->get_source(),
+            'source_context' => $this->get_source_context(),
+            'related_items' => $related_items,
+        ];
+        
+        return $this->write_log($action, $details);
     }
     
     /**
@@ -788,9 +816,18 @@ class SAW_Entity_Audit {
                 // Build items array with all IDs - use fallback for missing names
                 foreach ($ids_for_query as $id) {
                     $name = $name_map[$id] ?? null;
-                    // Fallback if name is still empty
+                    // Fallback if name is still empty - ensure we always have a name
                     if (empty($name) || trim($name) === '') {
-                        $name = 'OOPP #' . absint($id);
+                        // Try one more time with direct query to translation table
+                        $direct_result = $wpdb->get_var($wpdb->prepare(
+                            "SELECT {$field_escaped} FROM {$translation_table_escaped} WHERE {$translation_fk_escaped} = %d LIMIT 1",
+                            $id
+                        ));
+                        if (!empty($direct_result) && trim($direct_result) !== '') {
+                            $name = trim($direct_result);
+                        } else {
+                            $name = 'OOPP #' . absint($id);
+                        }
                     }
                     $items[] = [
                         'id' => absint($id),
@@ -828,6 +865,30 @@ class SAW_Entity_Audit {
     }
     
     /**
+     * Get source
+     * 
+     * @return string
+     */
+    public function get_source() {
+        if (empty($this->source)) {
+            $this->detect_source();
+        }
+        return $this->source ?? self::SOURCE_SYSTEM;
+    }
+    
+    /**
+     * Get source context
+     * 
+     * @return array
+     */
+    public function get_source_context() {
+        if (empty($this->source)) {
+            $this->detect_source();
+        }
+        return $this->source_context ?? [];
+    }
+    
+    /**
      * Get entity config
      * 
      * @return array
@@ -835,6 +896,11 @@ class SAW_Entity_Audit {
     protected function get_entity_config() {
         // Load module config
         $config_file = SAW_VISITORS_PLUGIN_DIR . "includes/modules/{$this->entity_type}/config.php";
+        
+        // Handle potential missing trailing slash in constant
+        if (!file_exists($config_file) && defined('SAW_VISITORS_PLUGIN_DIR')) {
+            $config_file = rtrim(SAW_VISITORS_PLUGIN_DIR, '/\\') . "/includes/modules/{$this->entity_type}/config.php";
+        }
         
         if (file_exists($config_file)) {
             $config = include $config_file;
@@ -908,6 +974,13 @@ class SAW_Entity_Audit {
         // Serialize complete details to JSON
         $details_json = wp_json_encode($details);
         
+        // DEBUG: Log what we're saving
+        error_log('[SAW_Entity_Audit] Writing log - Action: ' . $action . ', Entity: ' . $this->entity_type . ' #' . $this->entity_id);
+        error_log('[SAW_Entity_Audit] Details JSON: ' . $details_json);
+        if (!empty($details['related_items'])) {
+            error_log('[SAW_Entity_Audit] Related items in details: ' . print_r($details['related_items'], true));
+        }
+        
         // Build log data
         $log_data = [
             'entity_type' => $this->entity_type,
@@ -921,7 +994,22 @@ class SAW_Entity_Audit {
         // DON'T pass 'changed_fields' separately - it's already in details
         // If we pass it separately, log_change() will override details and lose other data
         
-        return SAW_Audit::log_change($log_data);
+        $result = SAW_Audit::log_change($log_data);
+        
+        // DEBUG: Log result and verify what was saved
+        error_log('[SAW_Entity_Audit] Log result: ' . ($result ? 'SUCCESS (ID: ' . $result . ')' : 'FAILED'));
+        if ($result) {
+            global $wpdb;
+            $saved = $wpdb->get_row($wpdb->prepare(
+                "SELECT details FROM {$wpdb->prefix}saw_audit_log WHERE id = %d",
+                $result
+            ), ARRAY_A);
+            if ($saved) {
+                error_log('[SAW_Entity_Audit] Saved details in DB: ' . $saved['details']);
+            }
+        }
+        
+        return $result;
     }
 }
 
