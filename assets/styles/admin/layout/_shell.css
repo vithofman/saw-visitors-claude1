@@ -16,14 +16,18 @@
     color: var(--saw-text-primary);
 }
 
+/* Sticky headers handled in _table-toolbar.css and _table-element.css */
+
 .sa-app-container,
 .saw-app-container {
     flex: 1;
     display: flex;
     min-height: 0;
     overflow: hidden;
-    padding-top: 30px; /* Header height */
-    padding-bottom: 45px; /* Footer height */
+    padding-top: 30px;
+    /* Header height */
+    padding-bottom: 45px;
+    /* Footer height */
 }
 
 .sa-app-main,
@@ -54,6 +58,7 @@
 }
 
 @media (min-width: 1025px) {
+
     .sa-app-main,
     .saw-app-main {
         margin-left: 260px !important;
@@ -61,17 +66,20 @@
 }
 
 @media (max-width: 1024px) {
+
     .sa-app-container,
     .saw-app-container {
-        padding-top: 60px; /* Header height on mobile too */
-        padding-bottom: 0; /* No footer on mobile */
+        padding-top: 60px;
+        /* Header height on mobile too */
+        padding-bottom: 0;
+        /* No footer on mobile */
     }
-    
+
     .sa-app-main,
     .saw-app-main {
         margin-left: 0 !important;
     }
-    
+
     .sa-app-content,
     .saw-app-content {
         -webkit-overflow-scrolling: touch;
@@ -79,12 +87,15 @@
 }
 
 @media (max-width: 768px) {
+
     .sa-app-container,
     .saw-app-container {
-        padding-top: 60px; /* Header height on mobile */
-        padding-bottom: 0; /* No footer on mobile */
+        padding-top: 60px;
+        /* Header height on mobile */
+        padding-bottom: 0;
+        /* No footer on mobile */
     }
-    
+
     .sa-app-content,
     .saw-app-content {
         padding: 0;
@@ -92,37 +103,26 @@
 }
 
 @media (max-width: 480px) {
+
     .sa-app-container,
     .saw-app-container {
-        padding-top: 60px; /* Header height on mobile */
-        padding-bottom: 0; /* No footer on mobile */
+        padding-top: 60px;
+        /* Header height on mobile */
+        padding-bottom: 0;
+        /* No footer on mobile */
     }
 }
 
 /* ============================================
-   TABLE PAGES - SCROLL CONTAINER
+   TABLE PAGES - STICKY FIX
    ============================================ */
-/* Pro stránky s tabulkou - .sa-app-content NESMÍ scrollovat, scrolluje .sa-table-scroll */
-.saw-app-content:has(.sa-table-scroll),
-.sa-app-content:has(.sa-table-scroll),
+/* Zakázat scroll na .saw-app-content pro stránky s tabulkou
+   Tím se zajistí, že .sa-table-scroll je JEDINÝ scroll container
+   a sticky elementy (toolbar, thead) budou fungovat */
 .sa-page-has-table .saw-app-content,
-.sa-page-has-table .sa-app-content {
-    /* ZAKÁZAT scroll na .sa-app-content - scrolluje .sa-table-scroll */
+.sa-page-has-table .sa-app-content,
+.saw-app-content:has(.sa-table-scroll),
+.sa-app-content:has(.sa-table-scroll) {
     overflow: hidden !important;
     height: 100% !important;
-}
-
-/* KRITICKÉ: Parent elementy musí mít overflow: visible pro sticky */
-.sa-app-main:has(.sa-table-scroll),
-.saw-app-main:has(.sa-table-scroll),
-.sa-page-has-table .sa-app-main,
-.sa-page-has-table .saw-app-main {
-    overflow: visible !important; /* Změnit z hidden na visible */
-}
-
-.sa-app-container:has(.sa-table-scroll),
-.saw-app-container:has(.sa-table-scroll),
-.sa-page-has-table .sa-app-container,
-.sa-page-has-table .saw-app-container {
-    overflow: visible !important; /* Změnit z hidden na visible */
 }

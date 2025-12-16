@@ -4,41 +4,33 @@
  * Nastavuje CSS proměnnou --saw-toolbar-height pro správné pozicování
  * sticky thead pod toolbarem.
  * 
+ * STICKY FIX: CSS proměnná se nastavuje na .sa-table-scroll,
+ * který je scroll container pro sticky elementy.
+ * 
  * @package SAW_Visitors
- * @version 3.0.0
+ * @version 4.0.0
  */
 (function() {
     'use strict';
     
     /**
-     * Měří výšku toolbaru a nastavuje CSS proměnnou
+     * Měří výšku toolbaru a nastavuje CSS proměnnou na scroll container
      */
     function updateToolbarHeight() {
         var toolbar = document.querySelector('.sa-table-toolbar');
-        if (!toolbar) return;
+        var tableScroll = document.querySelector('.sa-table-scroll');
+        
+        if (!toolbar || !tableScroll) return;
         
         var height = toolbar.offsetHeight;
         
         // Nastavit CSS proměnnou na scroll container
-        var scrollContainer = document.querySelector('.sa-app-content, .saw-app-content');
-        if (scrollContainer) {
-            scrollContainer.style.setProperty('--saw-toolbar-height', height + 'px');
-        }
+        // Tato proměnná se použije pro top hodnotu sticky thead
+        tableScroll.style.setProperty('--saw-toolbar-height', height + 'px');
         
-        // Také nastavit na table-scroll pro jistotu
-        var tableScroll = document.querySelector('.sa-table-scroll');
-        if (tableScroll) {
-            tableScroll.style.setProperty('--saw-toolbar-height', height + 'px');
-        }
-        
-        // Pro mobilní verzi
+        // Pro mobilní verzi - menší toolbar
         if (window.innerWidth <= 768) {
-            if (scrollContainer) {
-                scrollContainer.style.setProperty('--saw-toolbar-height-mobile', height + 'px');
-            }
-            if (tableScroll) {
-                tableScroll.style.setProperty('--saw-toolbar-height-mobile', height + 'px');
-            }
+            tableScroll.style.setProperty('--saw-toolbar-height-mobile', height + 'px');
         }
         
         console.log('📏 Toolbar height:', height + 'px');
@@ -51,10 +43,10 @@
         // Počkat na DOM
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', function() {
-                updateToolbarHeight();
+                setTimeout(updateToolbarHeight, 10); // Malé zpoždění pro jistotu
             });
         } else {
-            updateToolbarHeight();
+            setTimeout(updateToolbarHeight, 10);
         }
         
         // Aktualizovat při resize
@@ -64,21 +56,25 @@
             resizeTimeout = setTimeout(updateToolbarHeight, 100);
         });
         
-        // Aktualizovat po dynamickém načtení obsahu
-        document.addEventListener('saw:content-loaded', updateToolbarHeight);
+        // Aktualizovat po dynamickém načtení obsahu (SPA navigace)
+        document.addEventListener('saw:content-loaded', function() {
+            setTimeout(updateToolbarHeight, 10);
+        });
         
-        // MutationObserver pro změny v toolbaru
-        var toolbar = document.querySelector('.sa-table-toolbar');
-        if (toolbar) {
-            var observer = new MutationObserver(function() {
-                updateToolbarHeight();
-            });
-            observer.observe(toolbar, { 
-                childList: true, 
-                subtree: true,
-                attributes: true 
-            });
-        }
+        // MutationObserver pro změny v toolbaru (např. změna záložek)
+        setTimeout(function() {
+            var toolbar = document.querySelector('.sa-table-toolbar');
+            if (toolbar) {
+                var observer = new MutationObserver(function() {
+                    updateToolbarHeight();
+                });
+                observer.observe(toolbar, { 
+                    childList: true, 
+                    subtree: true,
+                    attributes: true 
+                });
+            }
+        }, 100);
     }
     
     init();

@@ -213,6 +213,10 @@ class SAW_Component_Admin_Table {
         $this->enqueue_assets();
         $this->output_js_config();
         
+        // STICKY FIX: Add class to body for CSS targeting
+        // This disables scroll on .saw-app-content so .sa-table-scroll becomes the scroll container
+        echo '<script>document.body.classList.add("sa-page-has-table");</script>';
+        
         // Set global page title for header
         if (!empty($this->config['title'])) {
             global $saw_page_title;

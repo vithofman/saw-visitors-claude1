@@ -8,6 +8,7 @@
     display: flex;
     flex: 1;
     min-height: 0;
+    height: 100%; /* STICKY FIX: Zajistit správnou výšku pro child elementy */
     overflow: hidden; /* Potřebujeme pro správnou výšku child elementů */
     
     /* Light blue gradient background - very subtle */
