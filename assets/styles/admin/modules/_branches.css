@@ -6,23 +6,20 @@
  * Specifické styly pro modul Branches
  */
 
-/* Branch thumbnail in table */
+/* Branch thumbnail in table - zarovnání na střed */
 .sa-branch-thumbnail {
-    max-width: 50px;
-    height: auto;
+    max-width: 40px;
+    max-height: 40px;
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
     border-radius: var(--saw-radius-md);
-    margin: 0;
 }
 
-/* Branch icon fallback */
-.sa-branch-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 50px;
-    height: 50px;
-    font-size: 24px;
-    margin: 0;
+/* Branch icon fallback - stejné zarovnání jako obrázek */
+.sa-table-cell-image-placeholder .sa-branch-icon {
+    font-size: 20px;
+    line-height: 1;
 }
 
 /* Code badge */

@@ -31,11 +31,11 @@
 .sa-table-th {
     display: table-cell;
     
-    /* CSS STICKY - jednoduché a spolehlivé */
+    /* STICKY - pod toolbarem */
     position: sticky !important;
-    top: 44px !important; /* Výška toolbaru: 8px padding + ~28px content + 8px padding = 44px */
+    top: var(--saw-toolbar-height, 46px) !important; /* CSS proměnná s fallbackem */
     z-index: 99 !important;
-    background: rgba(255, 255, 255, 0.6) !important; /* Semi-transparent white to show gradient */
+    background: rgba(255, 255, 255, 0.95) !important; /* Více opaque */
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     
@@ -193,20 +193,83 @@
 @media (max-width: 768px) {
     .sa-table-thead th,
     .sa-table-th {
-        top: 46px !important; /* Menší toolbar na mobile */
+        top: var(--saw-toolbar-height-mobile, 42px) !important; /* CSS proměnná s fallbackem */
         padding: 6px var(--saw-space-3);
         font-size: 0.7rem;
+        white-space: nowrap; /* Zabraňuje zalamování textu v hlavičce */
     }
     
     .sa-table-cell {
         padding: var(--saw-space-2) var(--saw-space-3);
         font-size: var(--saw-text-xs);
+        min-width: 100px; /* Minimální šířka sloupce na mobilu - zvýšeno z 80px */
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+    
+    /* První sloupec (obrázek) - fixní šířka na mobilu */
+    .sa-table-tbody .sa-table-row td:first-child,
+    .sa-table-thead th:first-child {
+        min-width: 70px; /* Zvýšeno z 60px */
+        width: 70px;
+        max-width: 70px;
+        padding-left: var(--saw-space-2);
+        padding-right: var(--saw-space-2);
+        text-align: center;
+    }
+    
+    /* Druhý sloupec (obvykle název) - širší na mobilu */
+    .sa-table-tbody .sa-table-row td:nth-child(2),
+    .sa-table-thead th:nth-child(2) {
+        min-width: 120px; /* Širší pro název */
+    }
+    
+    /* Ostatní sloupce - flexibilní šířka */
+    .sa-table-tbody .sa-table-row td:nth-child(n+3),
+    .sa-table-thead th:nth-child(n+3) {
+        min-width: 90px;
     }
     
     .sa-table-cell-image-wrapper,
     .sa-table-cell-image,
     .sa-table-cell-image-placeholder {
-        width: 32px;
-        height: 32px;
+        width: 50px; /* Větší na mobilu pro lepší viditelnost - zvýšeno z 40px */
+        height: 50px;
+    }
+    
+    /* Zajistit, že tabulka má horizontální scroll na mobilu */
+    .sa-table-scroll {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* Extra malé obrazovky */
+@media (max-width: 480px) {
+    .sa-table-cell {
+        padding: var(--saw-space-2);
+        font-size: 0.7rem;
+        min-width: 90px; /* Mírně menší na velmi malých obrazovkách */
+    }
+    
+    .sa-table-thead th,
+    .sa-table-th {
+        padding: 4px var(--saw-space-2);
+        font-size: 0.65rem;
+    }
+    
+    /* První sloupec ještě kompaktnější */
+    .sa-table-tbody .sa-table-row td:first-child,
+    .sa-table-thead th:first-child {
+        min-width: 60px;
+        width: 60px;
+        max-width: 60px;
+    }
+    
+    .sa-table-cell-image-wrapper,
+    .sa-table-cell-image,
+    .sa-table-cell-image-placeholder {
+        width: 45px;
+        height: 45px;
     }
 }

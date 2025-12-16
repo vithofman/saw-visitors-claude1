@@ -100,10 +100,29 @@
 }
 
 /* ============================================
-   TABLE PAGES - DISABLE SCROLL ON CONTENT
+   TABLE PAGES - SCROLL CONTAINER
    ============================================ */
+/* Pro stránky s tabulkou - .sa-app-content NESMÍ scrollovat, scrolluje .sa-table-scroll */
 .saw-app-content:has(.sa-table-scroll),
-.sa-app-content:has(.sa-table-scroll) {
+.sa-app-content:has(.sa-table-scroll),
+.sa-page-has-table .saw-app-content,
+.sa-page-has-table .sa-app-content {
+    /* ZAKÁZAT scroll na .sa-app-content - scrolluje .sa-table-scroll */
     overflow: hidden !important;
     height: 100% !important;
+}
+
+/* KRITICKÉ: Parent elementy musí mít overflow: visible pro sticky */
+.sa-app-main:has(.sa-table-scroll),
+.saw-app-main:has(.sa-table-scroll),
+.sa-page-has-table .sa-app-main,
+.sa-page-has-table .saw-app-main {
+    overflow: visible !important; /* Změnit z hidden na visible */
+}
+
+.sa-app-container:has(.sa-table-scroll),
+.saw-app-container:has(.sa-table-scroll),
+.sa-page-has-table .sa-app-container,
+.sa-page-has-table .saw-app-container {
+    overflow: visible !important; /* Změnit z hidden na visible */
 }

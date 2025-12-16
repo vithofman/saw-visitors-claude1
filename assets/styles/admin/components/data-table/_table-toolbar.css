@@ -12,10 +12,10 @@
     align-items: center;
     gap: var(--saw-space-4);
     padding: 8px var(--saw-space-4);
-    background: rgba(255, 255, 255, 0.5) !important; /* Semi-transparent white to show gradient */
+    background: rgba(255, 255, 255, 0.95) !important; /* Více opaque pro lepší čitelnost */
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
     
     /* CSS STICKY - jednoduché a spolehlivé */
     position: sticky !important;

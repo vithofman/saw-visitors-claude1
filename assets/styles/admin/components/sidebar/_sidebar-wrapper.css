@@ -4,8 +4,8 @@
  * @version 3.0.0
  */
 
-/* Overlay */
-.sa-sidebar-overlay {
+/* Overlay for RIGHT detail sidebar (not navigation menu) */
+.sa-detail-sidebar-overlay {
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.5);
@@ -16,7 +16,7 @@
     z-index: 99999;
 }
 
-.sa-sidebar-overlay--active {
+.sa-detail-sidebar-overlay--active {
     opacity: 1;
     visibility: visible;
 }

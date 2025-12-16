@@ -56,12 +56,6 @@
     -webkit-overflow-scrolling: touch;
 }
 
-@media (max-width: 1024px) {
-    .sa-app-sidebar {
-        z-index: 1000; /* Higher than overlay (998) on mobile */
-    }
-}
-
 /* Custom scrollbar for dark background */
 .sa-app-sidebar::-webkit-scrollbar {
     width: 6px;
@@ -93,45 +87,37 @@
     left: 0;
     width: 100%;
     height: 100vh;
-    background: rgba(10, 37, 64, 0.7);
-    backdrop-filter: blur(2px); /* Reduced blur to prevent interaction issues */
-    -webkit-backdrop-filter: blur(2px);
-    z-index: 998;
+    background: rgba(10, 37, 64, 0.5);
+    /* REMOVED backdrop-filter to prevent stacking context issues */
+    z-index: 9998;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s ease;
 }
 
 .sa-sidebar-overlay--active {
+    display: block;
     opacity: 1;
     pointer-events: auto;
 }
 
-/* Ensure overlay doesn't interfere with sidebar on mobile */
-@media (max-width: 1024px) {
-    .sa-sidebar-overlay {
-        z-index: 998; /* Below sidebar (1000) */
-    }
-    
-    .sa-app-sidebar {
-        z-index: 1000 !important; /* Above overlay */
-        pointer-events: auto !important; /* Ensure sidebar is clickable */
-    }
-}
-
+/* Mobile sidebar behavior */
 @media (max-width: 1024px) {
     .sa-sidebar-overlay {
         display: block;
     }
     
     .sa-app-sidebar {
-        top: 0; /* Start from top on mobile - full screen */
+        position: fixed;
+        top: 0;
+        left: 0;
         bottom: 0;
-        width: 100% !important; /* Full width on mobile */
-        height: 100vh !important; /* Full height */
-        z-index: 999; /* Above overlay */
+        width: 100% !important;
+        height: 100vh !important;
+        z-index: 9999 !important; /* ALWAYS above overlay (9998) */
         transform: translateX(-100%);
         transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        pointer-events: auto !important;
     }
     
     .sa-app-sidebar--open {

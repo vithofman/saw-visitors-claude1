@@ -8,7 +8,7 @@
     display: flex;
     flex: 1;
     min-height: 0;
-    overflow: hidden;
+    overflow: hidden; /* Potřebujeme pro správnou výšku child elementů */
     
     /* Light blue gradient background - very subtle */
     background: linear-gradient(
@@ -40,7 +40,7 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
-    overflow: hidden;
+    overflow: hidden; /* Potřebujeme pro správnou výšku .sa-table-scroll */
     height: 100% !important;
     max-height: 100% !important;
     background: transparent; /* Transparent to show parent gradient */
@@ -51,8 +51,9 @@
     min-height: 0;
     height: 100% !important;
     max-height: 100% !important;
+    /* VRÁCENO: .sa-table-scroll je scroll container pro sticky */
     overflow-y: auto !important;
-    overflow-x: auto;
+    overflow-x: auto; /* Horizontální scroll pro široké tabulky */
     -webkit-overflow-scrolling: touch;
     position: relative;
     background: transparent; /* Transparent to show parent gradient */

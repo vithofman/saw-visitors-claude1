@@ -89,12 +89,14 @@ $table_config['columns'] = array(
                     ? $value 
                     : $upload_dir['baseurl'] . '/' . ltrim($value, '/');
                 
+                // Použít wrapper pro konzistentní zarovnání
                 return sprintf(
-                    '<img src="%s" alt="" class="sa-table-cell-image sa-branch-thumbnail">',
+                    '<div class="sa-table-cell-image-wrapper"><img src="%s" alt="" class="sa-table-cell-image sa-branch-thumbnail"></div>',
                     esc_url($thumb_url)
                 );
             } else {
-                return '<span class="sa-branch-icon">🏢</span>';
+                // Použít placeholder wrapper pro konzistentní zarovnání
+                return '<div class="sa-table-cell-image-placeholder"><span class="sa-branch-icon">🏢</span></div>';
             }
         }
     ),
