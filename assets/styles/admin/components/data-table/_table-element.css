@@ -1,7 +1,7 @@
 /**
  * SAW Admin - Table Element (<table>, <thead>, <tbody>, <tr>, <td>)
  * @package SAW_Visitors
- * @version 4.0.0 - Sticky Fix
+ * @version 7.0.0 - JS Transform Sticky
  */
 
 /* ============================================
@@ -9,38 +9,38 @@
    ============================================ */
 .sa-table-element {
     width: 100%;
-    border-collapse: separate; /* ZMĚNA: separate místo collapse pro sticky */
-    border-spacing: 0; /* Stejný vizuální efekt jako collapse */
-    background: var(--saw-bg-primary);
+    border-collapse: separate;
+    border-spacing: 0;
+    background: transparent; /* Transparent to show parent gradient */
 }
 
 /* ============================================
-   THEAD - STICKY POD TOOLBAREM
+   THEAD - CSS STICKY
    ============================================ */
 .sa-table-thead {
     display: table-header-group;
 }
 
-/* TR v thead */
 .sa-table-thead .sa-table-row,
 .sa-table-thead tr {
     display: table-row;
 }
 
-/* TH elementy - STICKY */
+/* TH elementy - CSS STICKY pod toolbarem */
 .sa-table-thead th,
 .sa-table-th {
     display: table-cell;
     
-    /* STICKY POSITIONING */
-    position: sticky;
-    /* Toolbar výška: padding 8px*2 + content ~26px = ~42px */
-    top: 42px;
-    z-index: 99;
+    /* CSS STICKY - jednoduché a spolehlivé */
+    position: sticky !important;
+    top: 44px !important; /* Výška toolbaru: 8px padding + ~28px content + 8px padding = 44px */
+    z-index: 99 !important;
+    background: rgba(255, 255, 255, 0.6) !important; /* Semi-transparent white to show gradient */
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     
     /* Styling */
     padding: 8px var(--saw-space-4);
-    background: var(--saw-bg-secondary);
     font-size: var(--saw-text-xs);
     font-weight: var(--saw-font-semibold);
     text-align: left;
@@ -49,7 +49,7 @@
     letter-spacing: 0.5px;
     line-height: 1.3;
     border-bottom: 2px solid var(--saw-border-color);
-    border-left: 1px solid transparent; /* Pro správné zarovnání */
+    border-left: 1px solid transparent;
     border-right: 1px solid transparent;
 }
 
@@ -91,11 +91,6 @@
 
 .sa-table-tbody .sa-table-row td:last-child {
     border-right: none;
-}
-
-/* Poslední řádek - padding pro footer */
-.sa-table-tbody .sa-table-row:last-child td {
-    padding-bottom: 80px;
 }
 
 /* ============================================
@@ -196,10 +191,9 @@
    RESPONSIVE
    ============================================ */
 @media (max-width: 768px) {
-    /* Toolbar je vyšší na mobile */
     .sa-table-thead th,
     .sa-table-th {
-        top: 52px; /* Vyšší toolbar na mobile */
+        top: 46px !important; /* Menší toolbar na mobile */
         padding: 6px var(--saw-space-3);
         font-size: 0.7rem;
     }

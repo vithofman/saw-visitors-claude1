@@ -50,12 +50,12 @@
     // ========================================
     
     function initSidebarAccordion() {
-        $(document).on('click', '.saw-nav-heading', function(e) {
+        $(document).on('click', '.sa-nav-heading[data-section-toggle]', function(e) {
             e.preventDefault();
             e.stopPropagation();
             
-            var $section = $(this).closest('.saw-nav-section');
-            $section.toggleClass('collapsed');
+            var $section = $(this).closest('.sa-nav-section');
+            $section.toggleClass('sa-nav-section--collapsed');
         });
     }
     

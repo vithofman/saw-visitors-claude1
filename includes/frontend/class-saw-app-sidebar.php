@@ -7,7 +7,7 @@
  *
  * @package SAW_Visitors
  * @since   4.6.2
- * @version 5.3.0 - ADDED: Calendar menu item
+ * @version 5.4.0 - REDESIGN: Modern gradient sidebar with glassmorphism switchers
  */
 
 if (!defined('ABSPATH')) {
@@ -336,24 +336,46 @@ class SAW_App_Sidebar {
      * and navigation menu with permission filtering.
      *
      * @since 4.6.1
+     * @since 5.4.0 - REDESIGN: Wrapped switchers in glassmorphism container
      * @return void
      */
     public function render() {
         $menu = $this->get_menu_items();
+        $show_switchers = ($this->saw_role === 'super_admin' || $this->saw_role === 'admin');
         ?>
         <div class="sa-sidebar-overlay" id="sawSidebarOverlay"></div>
         <aside class="sa-app-sidebar" id="sawAppSidebar">
-            <?php if ($this->saw_role === 'super_admin' || $this->saw_role === 'admin'): ?>
-                <?php $this->render_customer_switcher(); ?>
-                <?php $this->render_branch_switcher(); ?>
+            
+            <?php if ($show_switchers): ?>
+                <!-- Switchers Section - Glassmorphism Container -->
+                <div class="sa-sidebar-switchers">
+                    <span class="sa-sidebar-switchers-label">
+                        <?php echo $this->lang === 'en' ? 'Workspace' : 'Pracovní prostor'; ?>
+                    </span>
+                    <?php $this->render_customer_switcher(); ?>
+                    <?php $this->render_branch_switcher(); ?>
+                </div>
             <?php endif; ?>
             
             <nav class="sa-sidebar-nav">
                 <?php 
                 $first_section = true;
+                // Find all sections with headings and their indices
+                $sections_with_heading = array();
+                foreach ($menu as $idx => $sec) {
+                    if (isset($sec['heading'])) {
+                        $sections_with_heading[] = $idx;
+                    }
+                }
+                $last_section_index = !empty($sections_with_heading) ? end($sections_with_heading) : null;
+                
                 foreach ($menu as $index => $section): 
                     $has_active = $this->section_has_active_item($section);
+                    // Last section (settings) should be collapsed by default
                     $is_collapsed = false;
+                    if (isset($section['heading']) && $index === $last_section_index) {
+                        $is_collapsed = true;
+                    }
                     
                     // Filter items by permissions
                     $visible_items = array();
@@ -370,7 +392,7 @@ class SAW_App_Sidebar {
                 ?>
                     <?php if (isset($section['heading'])): ?>
                         <div class="sa-nav-section <?php echo $is_collapsed ? 'sa-nav-section--collapsed' : ''; ?>">
-                            <div class="sa-nav-heading">
+                            <div class="sa-nav-heading" data-section-toggle>
                                 <?php echo esc_html($section['heading']); ?>
                                 <span class="sa-nav-heading-toggle">
                                     <svg viewBox="0 0 24 24">

@@ -5,10 +5,48 @@
  */
 
 .sa-card {
+    background: transparent; /* Transparent to show parent gradient */
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: var(--saw-radius-lg);
+    overflow: hidden;
+}
+
+/* When card is inside table-split, make it transparent */
+.sa-table-split .sa-card,
+.sa-table-panel .sa-card {
+    background: transparent !important;
+    border: none !important;
+}
+
+/* Legacy saw-card class - make transparent in table context */
+.sa-table-split .saw-card,
+.sa-table-panel .saw-card,
+.sa-table-scroll .saw-card {
+    background: transparent !important;
+    border: none !important;
+}
+
+.saw-card {
     background: var(--saw-bg-primary);
     border: 1px solid var(--saw-border-color);
     border-radius: var(--saw-radius-lg);
     overflow: hidden;
+}
+
+/* In table context, make saw-card transparent */
+.sa-table-split .saw-card,
+.sa-table-panel .saw-card,
+.sa-table-scroll .saw-card {
+    background: transparent !important;
+    border: none !important;
+}
+
+.saw-card-header-unified {
+    background: transparent !important;
+}
+
+.saw-card-body {
+    background: transparent !important;
 }
 
 .sa-card-header {

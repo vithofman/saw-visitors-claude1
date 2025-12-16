@@ -1,22 +1,54 @@
 /**
  * SAW Admin - Navigation Sidebar
+ * Modern, elegant design with gradient background and glassmorphism elements
  * @package SAW_Visitors
- * @version 3.0.0
+ * @version 3.1.0
  */
 
 /* ============================================
-   SIDEBAR CONTAINER
+   SIDEBAR CONTAINER - MODERN GRADIENT DESIGN
    ============================================ */
 
 .sa-app-sidebar {
     position: fixed;
-    top: 0; /* Full height - starts at top */
+    top: 60px; /* Start below header */
     left: 0;
-    bottom: 0;
+    bottom: 45px; /* End above footer */
     width: 260px;
-    height: 100vh; /* Full viewport height */
-    background: var(--saw-bg-secondary);
-    border-right: 1px solid var(--saw-border-color);
+    height: calc(100vh - 60px - 45px); /* Full height minus header and footer */
+    
+    /* Elegant gradient background - dark to light blue */
+    background: linear-gradient(
+        180deg,
+        #0a2540 0%,           /* Very dark navy at top */
+        #0d3a5c 30%,          /* Transition */
+        #005A8C 70%,          /* Brand blue */
+        #0077b6 100%          /* Slightly lighter at bottom */
+    );
+    
+    /* Subtle pattern overlay for depth */
+    background-image: 
+        linear-gradient(
+            180deg,
+            #0a2540 0%,
+            #0d3a5c 30%,
+            #005A8C 70%,
+            #0077b6 100%
+        ),
+        repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 2px,
+            rgba(255, 255, 255, 0.01) 2px,
+            rgba(255, 255, 255, 0.01) 4px
+        );
+    
+    /* Shadow between sidebar and content - elegant depth */
+    box-shadow: 
+        4px 0 24px rgba(0, 0, 0, 0.15),
+        1px 0 0 rgba(255, 255, 255, 0.05);
+    
+    border-right: none; /* Remove hard border, use shadow instead */
     overflow-y: auto;
     overflow-x: hidden;
     z-index: 999;
@@ -24,24 +56,25 @@
     -webkit-overflow-scrolling: touch;
 }
 
+/* Custom scrollbar for dark background */
 .sa-app-sidebar::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
 }
 
 .sa-app-sidebar::-webkit-scrollbar-track {
-    background: transparent;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
 }
 
 .sa-app-sidebar::-webkit-scrollbar-thumb {
-    background: var(--saw-gray-300);
-    border-radius: var(--saw-radius-md);
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    transition: background 0.2s ease;
 }
 
 .sa-app-sidebar::-webkit-scrollbar-thumb:hover {
-    background: var(--saw-gray-400);
+    background: rgba(255, 255, 255, 0.35);
 }
-
-/* Collapsible sidebar - REMOVED - sidebar is always visible */
 
 /* ============================================
    SIDEBAR OVERLAY (mobile)
@@ -50,15 +83,17 @@
 .sa-sidebar-overlay {
     display: none;
     position: fixed;
-    top: 0; /* Full height overlay */
+    top: 0;
     left: 0;
     width: 100%;
     height: 100vh;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(10, 37, 64, 0.7);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     z-index: 998;
     opacity: 0;
     pointer-events: none;
-    transition: opacity var(--saw-transition-base);
+    transition: opacity 0.3s ease;
 }
 
 .sa-sidebar-overlay--active {
@@ -72,8 +107,11 @@
     }
     
     .sa-app-sidebar {
+        top: 60px; /* Start below header on mobile too */
+        bottom: 0; /* Full height on mobile (no footer) */
+        height: calc(100vh - 60px); /* Full height minus header */
         transform: translateX(-100%);
-        transition: transform var(--saw-transition-base);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
     
     .sa-app-sidebar--open {
@@ -82,11 +120,42 @@
 }
 
 /* ============================================
+   SWITCHERS SECTION - GLASSMORPHISM CONTAINER
+   ============================================ */
+
+.sa-sidebar-switchers {
+    margin: 0;
+    padding: var(--saw-space-3);
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    box-shadow: 
+        0 4px 16px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.sa-sidebar-switchers-label {
+    display: block;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: var(--saw-space-2);
+    padding-left: var(--saw-space-1);
+}
+
+/* ============================================
    NAVIGATION MENU
    ============================================ */
 
 .sa-sidebar-nav {
-    padding: var(--saw-space-2) 0;
+    padding: var(--saw-space-3) 0;
     display: flex !important;
     flex-direction: column !important;
     width: 100%;
@@ -94,114 +163,66 @@
 }
 
 /* ============================================
-   NAVIGATION ITEMS - COMPLETE RESET
+   NAVIGATION SECTION - ENHANCED VISUAL HIERARCHY
    ============================================ */
 
-/* Reset ALL margins and paddings for nav items */
-.sa-sidebar-nav .sa-nav-item {
-    /* Complete reset */
-    margin: 0 !important;
-    margin-top: 0 !important;
-    margin-bottom: 0 !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    padding: 0 !important;
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    text-indent: 0 !important;
-    
-    /* Explicit layout */
-    position: relative;
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    gap: var(--saw-space-3);
-    width: 100% !important;
-    box-sizing: border-box !important;
-    
-    /* Explicit padding - all items start at same X coordinate */
-    padding-left: var(--saw-space-6) !important;
-    padding-right: var(--saw-space-6) !important;
-    padding-top: 6px !important;
-    padding-bottom: 6px !important;
-    
-    /* Reset any transforms or positioning */
-    left: 0 !important;
-    right: 0 !important;
-    transform: none !important;
-}
-
-/* Active item - SAME alignment */
-.sa-sidebar-nav .sa-nav-item--active,
-.sa-sidebar-nav .sa-nav-item.sa-nav-item--active {
-    /* Same padding as regular items */
-    padding-left: var(--saw-space-6) !important;
-    padding-right: var(--saw-space-6) !important;
-    padding-top: 6px !important;
-    padding-bottom: 6px !important;
-    margin: 0 !important;
-}
-
-/* Border-left indicator - doesn't affect alignment */
-.sa-sidebar-nav .sa-nav-item::before {
-    left: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-}
-
-.sa-sidebar-nav .sa-nav-item--active::before {
-    left: 0 !important;
-}
-
-/* Icon - explicit positioning */
-.sa-sidebar-nav .sa-nav-item .sa-nav-icon {
-    margin: 0 !important;
-    margin-left: 0 !important;
-    margin-right: var(--saw-space-3) !important;
-    padding: 0 !important;
-    flex-shrink: 0;
-}
-
-/* Label - no margins */
-.sa-sidebar-nav .sa-nav-item .sa-nav-label {
-    margin: 0 !important;
-    padding: 0 !important;
-    flex: 1;
-}
-
-/* Navigation Section */
 .sa-nav-section {
-    margin-bottom: 2px;
+    margin-bottom: var(--saw-space-2);
+    padding-top: var(--saw-space-2);
+}
+
+/* Section separator line */
+.sa-nav-section::before {
+    content: '';
+    display: block;
+    height: 1px;
+    margin: 0 var(--saw-space-4) var(--saw-space-2);
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.15) 20%,
+        rgba(255, 255, 255, 0.15) 80%,
+        transparent 100%
+    );
+}
+
+/* First section - no separator */
+.sa-nav-section:first-child::before {
+    display: none;
 }
 
 .sa-nav-heading {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: var(--saw-space-2) var(--saw-space-6) 4px;
-    font-size: var(--saw-text-xs);
-    font-weight: var(--saw-font-semibold);
+    padding: var(--saw-space-2) var(--saw-space-5) var(--saw-space-2);
+    font-size: 11px;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--saw-text-muted);
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.45);
     cursor: pointer;
     user-select: none;
-    transition: color var(--saw-transition-fast);
+    transition: color 0.2s ease;
 }
 
 .sa-nav-heading:hover {
-    color: var(--saw-text-secondary);
+    color: rgba(255, 255, 255, 0.7);
 }
 
 .sa-nav-heading-toggle {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 16px;
-    height: 16px;
-    transition: transform var(--saw-transition-fast);
+    width: 18px;
+    height: 18px;
+    border-radius: var(--saw-radius-sm);
+    background: rgba(255, 255, 255, 0.05);
+    transition: all 0.2s ease;
+}
+
+.sa-nav-heading:hover .sa-nav-heading-toggle {
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .sa-nav-heading-toggle svg {
@@ -210,9 +231,10 @@
     stroke: currentColor;
     stroke-width: 2;
     fill: none;
+    transition: transform 0.2s ease;
 }
 
-.sa-nav-section--collapsed .sa-nav-heading-toggle {
+.sa-nav-section--collapsed .sa-nav-heading-toggle svg {
     transform: rotate(-90deg);
 }
 
@@ -221,8 +243,9 @@
     flex-direction: column;
     max-height: 1000px;
     overflow: hidden;
-    transition: max-height var(--saw-transition-base), opacity var(--saw-transition-base);
+    transition: max-height 0.3s ease, opacity 0.3s ease;
     opacity: 1;
+    padding: 0 var(--saw-space-2);
 }
 
 .sa-nav-section--collapsed .sa-nav-items {
@@ -230,70 +253,171 @@
     opacity: 0;
 }
 
-/* Navigation Item - VŠECHNY ZAROVNANÉ POD SEBOU */
-.sa-nav-item {
+/* ============================================
+   NAVIGATION ITEMS - MODERN DARK THEME
+   ============================================ */
+
+/* Complete reset for nav items */
+.sa-sidebar-nav .sa-nav-item {
+    /* Complete reset */
+    margin: 2px var(--saw-space-2) !important;
+    padding: 0 !important;
+    text-indent: 0 !important;
+    
+    /* Explicit layout */
     position: relative;
     display: flex !important;
-    align-items: center;
-    gap: var(--saw-space-3);
-    padding: 6px var(--saw-space-6) !important;
-    padding-left: var(--saw-space-6) !important;
-    padding-right: var(--saw-space-6) !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    margin-top: 0 !important;
-    margin-bottom: 0 !important;
-    color: var(--saw-text-secondary);
-    text-decoration: none;
-    transition: all var(--saw-transition-fast);
-    width: 100% !important;
     flex-direction: row !important;
+    align-items: center !important;
+    gap: var(--saw-space-3);
+    width: calc(100% - 2 * var(--saw-space-2)) !important;
     box-sizing: border-box !important;
-    text-indent: 0 !important;
+    
+    /* Padding for content */
+    padding: 10px var(--saw-space-4) !important;
+    
+    /* Dark theme styling */
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    border-radius: var(--saw-radius-md);
+    transition: all 0.2s ease;
+    
+    /* Reset positioning */
     left: 0 !important;
     right: 0 !important;
+    transform: none !important;
 }
 
-/* Border-left jako pseudo-element, aby neovlivňoval zarovnání */
-.sa-nav-item::before {
+/* Hover state */
+.sa-sidebar-nav .sa-nav-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    transform: translateX(2px);
+}
+
+/* Active state - Highlighted with glow */
+.sa-sidebar-nav .sa-nav-item--active,
+.sa-sidebar-nav .sa-nav-item.sa-nav-item--active {
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    font-weight: 600;
+    box-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.15),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+    margin: 2px var(--saw-space-2) !important;
+    padding: 10px var(--saw-space-4) !important;
+}
+
+/* Active indicator - left accent bar */
+.sa-sidebar-nav .sa-nav-item::before {
     content: '';
     position: absolute;
     left: 0;
-    top: 0;
-    bottom: 0;
+    top: 50%;
+    transform: translateY(-50%);
     width: 3px;
-    background: transparent;
-    transition: background var(--saw-transition-fast);
+    height: 0;
+    background: linear-gradient(180deg, #60d0ff 0%, #00a8e8 100%);
+    border-radius: 0 2px 2px 0;
+    transition: height 0.2s ease;
+    box-shadow: 0 0 8px rgba(96, 208, 255, 0.4);
 }
 
-.sa-nav-item:hover {
-    background: var(--saw-bg-tertiary);
-    color: var(--saw-text-primary);
+.sa-sidebar-nav .sa-nav-item--active::before {
+    height: 60%;
 }
 
-.sa-nav-item--active {
-    background: var(--saw-brand-50);
-    color: var(--saw-brand-700);
-    font-weight: var(--saw-font-semibold);
-    padding-left: var(--saw-space-6) !important;
-}
-
-.sa-nav-item--active::before {
-    background: var(--saw-brand-600);
-}
-
-.sa-nav-icon {
+/* Icon styling */
+.sa-sidebar-nav .sa-nav-item .sa-nav-icon {
+    margin: 0 !important;
+    padding: 0 !important;
+    flex-shrink: 0;
     width: 20px;
     height: 20px;
-    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
+    opacity: 0.8;
+    transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
-.sa-nav-label {
-    font-size: var(--saw-text-sm);
-    font-weight: var(--saw-font-medium);
+.sa-sidebar-nav .sa-nav-item:hover .sa-nav-icon,
+.sa-sidebar-nav .sa-nav-item--active .sa-nav-icon {
+    opacity: 1;
+}
+
+.sa-sidebar-nav .sa-nav-item--active .sa-nav-icon {
+    transform: scale(1.05);
+}
+
+/* Icon SVG styling for dark theme */
+.sa-sidebar-nav .sa-nav-icon svg {
+    stroke: currentColor;
+    width: 18px;
+    height: 18px;
+}
+
+/* Label styling */
+.sa-sidebar-nav .sa-nav-item .sa-nav-label {
+    margin: 0 !important;
+    padding: 0 !important;
     flex: 1;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
 }
 
+/* ============================================
+   MAIN NAVIGATION (without heading) - QUICK ACTIONS
+   ============================================ */
+
+/* First section items (Dashboard, Calendar, Terminal) - slightly larger */
+.sa-sidebar-nav > .sa-nav-item:first-child,
+.sa-sidebar-nav > a.sa-nav-item:nth-child(-n+3) {
+    padding: 12px var(--saw-space-4) !important;
+}
+
+/* ============================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================ */
+
+@media (max-width: 1024px) {
+    .sa-app-sidebar {
+        width: 280px;
+        box-shadow: 
+            8px 0 32px rgba(0, 0, 0, 0.3),
+            1px 0 0 rgba(255, 255, 255, 0.05);
+    }
+}
+
+@media (max-width: 768px) {
+    .sa-sidebar-switchers {
+        margin: var(--saw-space-3);
+        padding: var(--saw-space-2);
+    }
+    
+    .sa-nav-heading {
+        padding: var(--saw-space-2) var(--saw-space-4) var(--saw-space-1);
+        font-size: 10px;
+    }
+    
+    .sa-sidebar-nav .sa-nav-item {
+        padding: 10px var(--saw-space-3) !important;
+    }
+}
+
+/* ============================================
+   SIDEBAR FOOTER - VERSION INFO (optional)
+   ============================================ */
+
+.sa-sidebar-footer {
+    margin-top: auto;
+    padding: var(--saw-space-4);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sa-sidebar-version {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.3);
+    text-align: center;
+}

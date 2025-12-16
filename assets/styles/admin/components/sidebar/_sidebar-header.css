@@ -13,8 +13,8 @@
     background: #0f172a !important; /* Dark, modern, elegant */
     border-bottom: none;
     flex-shrink: 0;
-    min-height: 48px;
-    height: 48px; /* Fixed compact height */
+    min-height: 60px;
+    height: 60px;
     color: #ffffff;
     margin-bottom: 0 !important; /* No margin between header and blue section */
     padding-bottom: var(--saw-space-2) !important; /* Minimal padding */

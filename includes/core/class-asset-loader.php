@@ -513,6 +513,18 @@ class SAW_Asset_Loader {
             );
         }
 
+        // Admin table sticky
+        $sticky_table_js = SAW_VISITORS_PLUGIN_DIR . 'assets/js/modules/admin-table-sticky.js';
+        if (file_exists($sticky_table_js)) {
+            wp_enqueue_script(
+                'saw-admin-table-sticky',
+                SAW_VISITORS_PLUGIN_URL . 'assets/js/modules/admin-table-sticky.js',
+                [],
+                filemtime($sticky_table_js),
+                true
+            );
+        }
+
         // Component scripts
         self::enqueue_component_scripts();
     }

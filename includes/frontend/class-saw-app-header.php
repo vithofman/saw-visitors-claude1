@@ -99,9 +99,9 @@ class SAW_App_Header {
             </div>
             
             <div class="sa-header-right">
-                <?php $this->render_language_switcher(); ?>
-                
                 <?php $this->render_notifications(); ?>
+                
+                <?php $this->render_language_switcher(); ?>
                 
                 <div class="sa-user-menu">
                     <button class="sa-user-menu-toggle" id="sawUserMenuToggle">
@@ -152,8 +152,8 @@ class SAW_App_Header {
                     id="sawNotificationsToggle"
                     onclick="sawToggleNotifications()"
                     aria-label="<?php esc_attr_e('Notifikace', 'saw-visitors'); ?>"
-                    style="position: relative; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 0; background: transparent; border: none; border-radius: 8px; cursor: pointer; color: #6b7280;">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
+                    style="position: relative; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 0; background: transparent; border: none; border-radius: 8px; cursor: pointer; color: #ffffff;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: block; color: #ffffff;">
                     <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
                     <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
                 </svg>
@@ -183,7 +183,7 @@ class SAW_App_Header {
                             onclick="sawMarkAllRead()" 
                             id="sawMarkAllBtn"
                             <?php echo $unread_count === 0 ? 'disabled' : ''; ?>
-                            style="display: flex; align-items: center; gap: 4px; padding: 6px 10px; background: transparent; border: none; border-radius: 6px; font-size: 12px; font-weight: 500; color: #6b7280; cursor: pointer; <?php echo $unread_count === 0 ? 'opacity: 0.5; cursor: not-allowed;' : ''; ?>">
+                            style="display: flex; align-items: center; gap: 4px; padding: 6px 10px; background: transparent; border: none; border-radius: 6px; font-size: 12px; font-weight: 500; color: rgba(255, 255, 255, 0.7); cursor: pointer; <?php echo $unread_count === 0 ? 'opacity: 0.5; cursor: not-allowed;' : ''; ?>">
                         <svg viewBox="0 0 16 16" fill="currentColor" style="width: 14px; height: 14px;">
                             <path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z"/>
                         </svg>
@@ -197,8 +197,8 @@ class SAW_App_Header {
                     <div id="sawNotificationsContent">
                         <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; text-align: center;">
                             <div style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;">🔔</div>
-                            <h4 style="margin: 0 0 8px; font-size: 16px; font-weight: 600; color: #374151;">Žádné notifikace</h4>
-                            <p style="margin: 0; font-size: 14px; color: #9ca3af;">Zatím nemáte žádné oznámení</p>
+                            <h4 style="margin: 0 0 8px; font-size: 16px; font-weight: 600; color: rgba(255, 255, 255, 0.9);">Žádné notifikace</h4>
+                            <p style="margin: 0; font-size: 14px; color: rgba(255, 255, 255, 0.6);">Zatím nemáte žádné oznámení</p>
                         </div>
                     </div>
                 </div>
@@ -283,7 +283,7 @@ class SAW_App_Header {
                 var content = document.getElementById('sawNotificationsContent');
                 
                 // Show loading
-                content.innerHTML = '<div style="padding: 20px; text-align: center; color: #6b7280;">Načítání...</div>';
+                content.innerHTML = '<div style="padding: 20px; text-align: center; color: rgba(255, 255, 255, 0.7);">Načítání...</div>';
                 
                 var formData = new FormData();
                 formData.append('action', 'saw_get_notifications');
@@ -308,7 +308,7 @@ class SAW_App_Header {
                 })
                 .catch(function(error) {
                     console.error('[SAW] Error loading notifications:', error);
-                    content.innerHTML = '<div style="padding: 20px; text-align: center; color: #ef4444;">Chyba při načítání</div>';
+                    content.innerHTML = '<div style="padding: 20px; text-align: center; color: rgba(239, 68, 68, 0.9);">Chyba při načítání</div>';
                 });
             };
             
@@ -323,12 +323,12 @@ class SAW_App_Header {
                 
                 var html = config.notifications.map(function(n) {
                     var isUnread = !parseInt(n.is_read);
-                    return '<div onclick="sawNotificationClick(' + n.id + ', \'' + (n.action_url || '') + '\', ' + isUnread + ')" style="display: flex; gap: 12px; padding: 14px 0; border-bottom: 1px solid #f3f4f6; cursor: pointer; ' + (isUnread ? 'background: #f0f9ff; margin: 0 -20px; padding-left: 20px; padding-right: 20px;' : '') + '">' +
-                        '<div style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: #f3f4f6; border-radius: 10px; font-size: 18px; flex-shrink: 0;">' + (n.icon || '🔔') + '</div>' +
+                    return '<div onclick="sawNotificationClick(' + n.id + ', \'' + (n.action_url || '') + '\', ' + isUnread + ')" style="display: flex; gap: 12px; padding: 14px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); cursor: pointer; ' + (isUnread ? 'background: rgba(96, 208, 255, 0.15); margin: 0 -20px; padding-left: 20px; padding-right: 20px; border-left: 3px solid rgba(96, 208, 255, 0.5);' : '') + '">' +
+                        '<div style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; font-size: 18px; flex-shrink: 0;">' + (n.icon || '🔔') + '</div>' +
                         '<div style="flex: 1; min-width: 0;">' +
-                            '<h4 style="margin: 0 0 4px; font-size: 14px; font-weight: ' + (isUnread ? '600' : '500') + '; color: #111827;">' + sawEscape(n.title) + '</h4>' +
-                            '<p style="margin: 0 0 6px; font-size: 13px; color: #6b7280;">' + sawEscape(n.message) + '</p>' +
-                            '<span style="font-size: 12px; color: #9ca3af;">' + (n.time_ago || '') + '</span>' +
+                            '<h4 style="margin: 0 0 4px; font-size: 14px; font-weight: ' + (isUnread ? '600' : '500') + '; color: ' + (isUnread ? 'rgba(255, 255, 255, 1)' : 'rgba(255, 255, 255, 0.95)') + ';">' + sawEscape(n.title) + '</h4>' +
+                            '<p style="margin: 0 0 6px; font-size: 13px; color: rgba(255, 255, 255, 0.7);">' + sawEscape(n.message) + '</p>' +
+                            '<span style="font-size: 12px; color: rgba(255, 255, 255, 0.5);">' + (n.time_ago || '') + '</span>' +
                         '</div>' +
                     '</div>';
                 }).join('');
@@ -341,8 +341,8 @@ class SAW_App_Header {
                 var content = document.getElementById('sawNotificationsContent');
                 content.innerHTML = '<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; text-align: center;">' +
                     '<div style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;">🔔</div>' +
-                    '<h4 style="margin: 0 0 8px; font-size: 16px; font-weight: 600; color: #374151;">Žádné notifikace</h4>' +
-                    '<p style="margin: 0; font-size: 14px; color: #9ca3af;">Zatím nemáte žádné oznámení</p>' +
+                    '<h4 style="margin: 0 0 8px; font-size: 16px; font-weight: 600; color: rgba(255, 255, 255, 0.9);">Žádné notifikace</h4>' +
+                    '<p style="margin: 0; font-size: 14px; color: rgba(255, 255, 255, 0.6);">Zatím nemáte žádné oznámení</p>' +
                 '</div>';
             };
             

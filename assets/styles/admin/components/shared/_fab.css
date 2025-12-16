@@ -6,7 +6,7 @@
 
 .sa-fab {
     position: fixed;
-    bottom: var(--saw-space-6);
+    bottom: calc(45px + var(--saw-space-4)); /* Footer height (45px) + spacing */
     right: var(--saw-space-6);
     width: 56px;
     height: 56px;
@@ -42,7 +42,7 @@
 /* FAB Group - pro více float buttons */
 .sa-fab-group {
     position: fixed;
-    bottom: var(--saw-space-6);
+    bottom: calc(45px + var(--saw-space-4)); /* Footer height (45px) + spacing */
     right: var(--saw-space-6);
     display: flex;
     flex-direction: column;

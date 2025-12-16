@@ -1,8 +1,8 @@
 /**
  * SAW Admin - Switchers (Customer, Branch, Language)
- * Modern, elegant, UX-friendly styling for PC and mobile
+ * Modern glassmorphism design for dark sidebar theme
  * @package SAW_Visitors
- * @version 3.0.0
+ * @version 3.1.0
  */
 
 /* ============================================
@@ -49,27 +49,35 @@
     flex-shrink: 0;
     width: 16px;
     height: 16px;
-    color: var(--saw-text-muted);
+    color: rgba(255, 255, 255, 0.6);
     transition: transform var(--saw-transition-fast), color var(--saw-transition-fast);
 }
 
 .sa-switcher-button:hover .sa-switcher-arrow {
-    color: var(--saw-brand-600);
+    color: rgba(255, 255, 255, 0.95);
+}
+
+/* Language switcher arrow - always white in header */
+.sa-language-switcher-button .sa-switcher-arrow {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.sa-language-switcher-button:hover .sa-switcher-arrow {
+    color: #ffffff;
 }
 
 .sa-switcher-dropdown {
     position: absolute;
     top: calc(100% + 8px);
-    background: #ffffff !important; /* PEVNÉ BÍLÉ - žádný blur */
+    background: #ffffff !important;
     border: 1px solid var(--saw-border-color);
     border-radius: var(--saw-radius-lg);
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15), 0 4px 10px rgba(0, 0, 0, 0.1);
     display: none;
     flex-direction: column;
-    z-index: 1100; /* VYŠŠÍ než header (1000) */
+    z-index: 10000;
     overflow: hidden;
     min-width: 280px;
-    /* ODSTRANIT backdrop-filter - způsobuje průhlednost */
 }
 
 .sa-switcher-dropdown--active {
@@ -89,7 +97,7 @@
 }
 
 /* ============================================
-   CUSTOMER SWITCHER (Header)
+   CUSTOMER SWITCHER (Header - unchanged)
    ============================================ */
 
 .sa-customer-switcher {
@@ -119,7 +127,7 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* Customer icon - same as branch icon */
+/* Customer icon */
 .sa-customer-icon {
     font-size: 16px;
     flex-shrink: 0;
@@ -140,7 +148,7 @@
     border-radius: var(--saw-radius-sm);
 }
 
-/* Customer info - same structure as branch info */
+/* Customer info */
 .sa-customer-info {
     display: flex;
     flex-direction: column;
@@ -173,19 +181,23 @@
     position: absolute;
     top: calc(100% + 8px);
     left: 0;
-    width: 100%; /* Compact - same width as button */
+    width: 100%;
     max-width: 100%;
     max-height: 500px;
-    background: #ffffff !important; /* PEVNÉ BÍLÉ - žádný blur */
-    border: 1px solid var(--saw-border-color);
+    background: rgba(10, 37, 64, 0.98) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: var(--saw-radius-lg);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15), 0 4px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 
+        0 20px 40px rgba(0, 0, 0, 0.4),
+        0 8px 16px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
     display: none;
     flex-direction: column;
-    z-index: 1100; /* VYŠŠÍ než header (1000) */
+    z-index: 99999 !important; /* Maximum z-index */
     overflow: hidden;
-    word-wrap: break-word; /* Allow text wrapping */
-    /* ODSTRANIT backdrop-filter - způsobuje průhlednost */
+    word-wrap: break-word;
 }
 
 .sa-customer-switcher-dropdown.sa-switcher-dropdown--active {
@@ -193,36 +205,42 @@
     animation: saDropdownFadeIn 0.2s ease;
 }
 
-/* Search - SKRYTÝ když dropdown není aktivní */
+/* Search */
 .sa-customer-switcher-dropdown:not(.sa-switcher-dropdown--active) .sa-switcher-search {
     display: none;
 }
 
 .sa-switcher-search {
     padding: var(--saw-space-3);
-    border-bottom: 1px solid var(--saw-border-color);
-    background: var(--saw-bg-secondary);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
     flex-shrink: 0;
 }
 
 .sa-switcher-search-input {
     width: 100%;
     padding: var(--saw-space-2) var(--saw-space-3) var(--saw-space-2) 36px;
-    background: var(--saw-bg-primary);
-    border: 1px solid var(--saw-border-color);
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: var(--saw-radius-md);
     font-size: var(--saw-text-sm);
+    color: rgba(255, 255, 255, 0.95);
     transition: all var(--saw-transition-fast);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'%3E%3C/line%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.6)' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'%3E%3C/line%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: 10px center;
     background-size: 16px;
 }
 
+.sa-switcher-search-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
 .sa-switcher-search-input:focus {
     outline: none;
-    border-color: var(--saw-brand-500);
-    box-shadow: 0 0 0 3px var(--saw-brand-50);
+    border-color: rgba(96, 208, 255, 0.5);
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 0 0 3px rgba(96, 208, 255, 0.1);
 }
 
 .sa-switcher-list {
@@ -262,12 +280,12 @@
 }
 
 .sa-switcher-item:hover {
-    background: var(--saw-bg-tertiary);
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .sa-switcher-item--active {
-    background: var(--saw-brand-50);
-    border: 1px solid var(--saw-brand-200);
+    background: rgba(96, 208, 255, 0.2);
+    border: 1px solid rgba(96, 208, 255, 0.3);
 }
 
 .sa-switcher-item-logo {
@@ -292,23 +310,28 @@
 .sa-switcher-item-info {
     flex: 1;
     min-width: 0;
-    word-wrap: break-word; /* Allow text wrapping in dropdown */
-    white-space: normal; /* Allow wrapping */
+    word-wrap: break-word;
+    white-space: normal;
 }
 
 .sa-switcher-item-name {
     font-size: var(--saw-text-sm);
     font-weight: var(--saw-font-medium);
-    color: var(--saw-text-primary);
+    color: rgba(255, 255, 255, 0.95);
     line-height: 1.3;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
+.sa-switcher-item--active .sa-switcher-item-name {
+    color: #ffffff;
+    font-weight: var(--saw-font-semibold);
+}
+
 .sa-switcher-item-ico {
     font-size: var(--saw-text-xs);
-    color: var(--saw-text-muted);
+    color: rgba(255, 255, 255, 0.6);
     margin-top: 2px;
     line-height: 1.2;
 }
@@ -384,12 +407,13 @@
 }
 
 /* ============================================
-   BRANCH SWITCHER (Sidebar) - KOMPAKTNÍ DESIGN
+   BRANCH SWITCHER (Sidebar) - GLASSMORPHISM DARK THEME
    ============================================ */
 
 .sa-branch-switcher {
     position: relative;
-    margin: var(--saw-space-4) var(--saw-space-5);
+    margin: 0;
+    margin-top: var(--saw-space-2);
     padding: 0;
     background: transparent;
     border: none;
@@ -402,55 +426,71 @@
     width: 100%;
     display: flex;
     align-items: center;
-    gap: var(--saw-space-2);
-    padding: var(--saw-space-2) var(--saw-space-3);
-    background: var(--saw-bg-primary);
-    border: 1px solid var(--saw-border-color);
+    gap: var(--saw-space-3);
+    padding: var(--saw-space-3);
+    
+    /* Glassmorphism button on dark background */
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: var(--saw-radius-md);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-    transition: all var(--saw-transition-fast);
+    box-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    
+    transition: all 0.2s ease;
     cursor: pointer;
 }
 
 .sa-branch-switcher-button:hover {
-    background: var(--saw-bg-secondary);
-    border-color: var(--saw-brand-300);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 
+        0 4px 12px rgba(0, 0, 0, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
     transform: translateY(-1px);
 }
 
 .sa-branch-switcher-button:active {
     transform: translateY(0);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .sa-branch-icon {
     font-size: 16px;
     flex-shrink: 0;
-    width: 28px;
-    height: 28px;
+    width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--saw-brand-50);
-    color: var(--saw-brand-600);
-    border-radius: var(--saw-radius-sm);
+    
+    /* Icon container - subtle glass effect */
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    border-radius: var(--saw-radius-md);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sa-branch-icon svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
 }
 
 /* ============================================
-   SWITCHERS IN SIDEBAR - SAME IMAGE SIZE
+   SWITCHERS IN SIDEBAR - DARK THEME OVERRIDES
    ============================================ */
 
 /* Customer and Branch switchers in sidebar - same image size */
 .sa-app-sidebar .sa-customer-switcher .sa-customer-icon,
 .sa-app-sidebar .sa-branch-switcher .sa-branch-icon {
-    width: 32px !important;
-    height: 32px !important;
+    width: 36px !important;
+    height: 36px !important;
 }
 
-/* Customer switcher in sidebar - compact styling */
+/* Customer switcher in sidebar - glassmorphism styling */
 .sa-app-sidebar .sa-customer-switcher {
-    margin: var(--saw-space-3) var(--saw-space-4);
+    margin: 0;
+    margin-bottom: var(--saw-space-2);
     padding: 0;
 }
 
@@ -458,8 +498,53 @@
     width: 100%;
     min-width: auto;
     max-width: none;
+    
+    /* Glassmorphism button on dark background */
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--saw-radius-md);
+    box-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    padding: var(--saw-space-3);
 }
 
+.sa-app-sidebar .sa-customer-switcher-button:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 
+        0 4px 12px rgba(0, 0, 0, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
+}
+
+/* Customer icon in sidebar - match branch icon */
+.sa-app-sidebar .sa-customer-icon {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Customer info in sidebar - light text */
+.sa-app-sidebar .sa-customer-label {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.sa-app-sidebar .sa-customer-name {
+    color: #ffffff;
+}
+
+/* Switcher arrow in sidebar */
+.sa-app-sidebar .sa-switcher-arrow {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.sa-app-sidebar .sa-customer-switcher-button:hover .sa-switcher-arrow,
+.sa-app-sidebar .sa-branch-switcher-button:hover .sa-switcher-arrow {
+    color: #ffffff;
+}
+
+/* Branch info in sidebar */
 .sa-branch-info {
     display: flex;
     flex-direction: column;
@@ -474,14 +559,14 @@
     font-weight: var(--saw-font-semibold);
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: var(--saw-text-muted);
+    color: rgba(255, 255, 255, 0.5);
     line-height: 1.2;
 }
 
 .sa-branch-name {
     font-size: var(--saw-text-sm);
     font-weight: var(--saw-font-semibold);
-    color: var(--saw-text-primary);
+    color: #ffffff;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -493,16 +578,20 @@
     top: calc(100% + 8px);
     left: 0;
     right: 0;
-    background: #ffffff !important; /* PEVNÉ BÍLÉ - žádný blur */
-    border: 1px solid var(--saw-border-color);
+    background: rgba(10, 37, 64, 0.98) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: var(--saw-radius-lg);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15), 0 4px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 
+        0 20px 40px rgba(0, 0, 0, 0.4),
+        0 8px 16px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
     display: none;
     flex-direction: column;
-    z-index: 1100; /* VYŠŠÍ než header */
+    z-index: 99999 !important; /* Maximum z-index */
     overflow: hidden;
     max-height: 400px;
-    /* ODSTRANIT backdrop-filter - způsobuje průhlednost */
 }
 
 .sa-branch-switcher-dropdown.sa-switcher-dropdown--active {
@@ -515,7 +604,7 @@
     overflow-x: hidden;
     padding: var(--saw-space-1);
     max-height: 350px;
-    background: var(--saw-bg-primary);
+    background: transparent;
 }
 
 .sa-branch-list::-webkit-scrollbar {
@@ -544,16 +633,16 @@
     cursor: pointer;
     transition: all var(--saw-transition-fast);
     margin-bottom: 1px;
-    background: var(--saw-bg-primary);
+    background: transparent;
 }
 
 .sa-branch-item:hover {
-    background: var(--saw-bg-tertiary);
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .sa-branch-item--active {
-    background: var(--saw-brand-50);
-    border-left: 3px solid var(--saw-brand-600);
+    background: rgba(96, 208, 255, 0.2);
+    border-left: 3px solid rgba(96, 208, 255, 0.5);
     padding-left: calc(var(--saw-space-3) - 3px);
 }
 
@@ -565,14 +654,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--saw-bg-tertiary);
+    background: rgba(255, 255, 255, 0.1);
     border-radius: var(--saw-radius-sm);
-    color: var(--saw-text-secondary);
+    color: rgba(255, 255, 255, 0.7);
 }
 
 .sa-branch-item--active .sa-branch-item-icon {
-    background: var(--saw-brand-100);
-    color: var(--saw-brand-600);
+    background: rgba(96, 208, 255, 0.3);
+    color: rgba(96, 208, 255, 1);
 }
 
 .sa-branch-item-info {
@@ -583,7 +672,7 @@
 .sa-branch-item-name {
     font-size: var(--saw-text-sm);
     font-weight: var(--saw-font-medium);
-    color: var(--saw-text-primary);
+    color: rgba(255, 255, 255, 0.95);
     line-height: 1.3;
     white-space: nowrap;
     overflow: hidden;
@@ -592,12 +681,12 @@
 
 .sa-branch-item--active .sa-branch-item-name {
     font-weight: var(--saw-font-semibold);
-    color: var(--saw-brand-700);
+    color: #ffffff;
 }
 
 .sa-branch-item-address {
     font-size: var(--saw-text-xs);
-    color: var(--saw-text-muted);
+    color: rgba(255, 255, 255, 0.6);
     margin-top: 1px;
     white-space: nowrap;
     overflow: hidden;
@@ -633,21 +722,27 @@
     display: flex;
     align-items: center;
     gap: var(--saw-space-2);
-    padding: 6px var(--saw-space-3);
-    height: 40px;
+    padding: 6px 12px 6px 6px;
+    height: 48px; /* Same as user menu toggle */
     min-width: 80px;
-    background: var(--saw-bg-primary);
-    border: 1px solid var(--saw-border-color);
-    border-radius: var(--saw-radius-md);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--saw-radius-lg);
     cursor: pointer;
     transition: all var(--saw-transition-fast);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .sa-language-switcher-button:hover {
-    background: var(--saw-bg-secondary);
-    border-color: var(--saw-brand-300);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 
+        0 4px 12px rgba(0, 0, 0, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
     transform: translateY(-1px);
 }
 
@@ -665,24 +760,28 @@
 .sa-language-code {
     font-size: var(--saw-text-sm);
     font-weight: var(--saw-font-semibold);
-    color: var(--saw-text-primary);
+    color: rgba(255, 255, 255, 0.95);
 }
 
 .sa-language-switcher-dropdown {
     position: absolute;
     top: calc(100% + 8px);
     right: 0;
-    background: #ffffff !important; /* PEVNÉ BÍLÉ - žádný blur */
-    border: 1px solid var(--saw-border-color);
+    background: rgba(10, 37, 64, 0.98) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: var(--saw-radius-lg);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15), 0 4px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 
+        0 10px 25px rgba(0, 0, 0, 0.3),
+        0 4px 10px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
     display: none;
     flex-direction: column;
-    z-index: 1100; /* VYŠŠÍ než header */
+    z-index: 10000;
     overflow: hidden;
     min-width: 200px;
     padding: var(--saw-space-2);
-    /* ODSTRANIT backdrop-filter - způsobuje průhlednost */
 }
 
 .sa-language-switcher-dropdown.sa-switcher-dropdown--active {
@@ -702,12 +801,12 @@
 }
 
 .sa-language-item:hover {
-    background: var(--saw-bg-tertiary);
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .sa-language-item--active {
-    background: var(--saw-brand-50);
-    border: 1px solid var(--saw-brand-200);
+    background: rgba(96, 208, 255, 0.2);
+    border: 1px solid rgba(96, 208, 255, 0.3);
 }
 
 .sa-language-item-flag {
@@ -719,7 +818,7 @@
     flex: 1;
     font-size: var(--saw-text-sm);
     font-weight: var(--saw-font-medium);
-    color: var(--saw-text-primary);
+    color: rgba(255, 255, 255, 0.95);
 }
 
 .sa-language-item-check {
@@ -775,7 +874,7 @@
 }
 
 @media (max-width: 768px) {
-    /* Skrýt šipky na mobile - otevírá se jen kliknutím na logo/vlajku */
+    /* Hide arrows on mobile */
     .sa-customer-switcher-button .sa-switcher-arrow,
     .sa-language-switcher-button .sa-switcher-arrow,
     .sa-branch-switcher-button .sa-switcher-arrow {
@@ -803,7 +902,7 @@
     }
     
     .sa-switcher-ico {
-        display: none; /* Skrýt IČO na velmi malých obrazovkách */
+        display: none;
     }
     
     .sa-customer-switcher-dropdown {
@@ -814,10 +913,13 @@
     }
     
     /* Branch switcher - mobile */
+    .sa-app-sidebar .sa-customer-switcher,
     .sa-branch-switcher {
-        margin: var(--saw-space-2);
+        margin: 0;
+        margin-top: var(--saw-space-2);
     }
     
+    .sa-app-sidebar .sa-customer-switcher-button,
     .sa-branch-switcher-button {
         padding: var(--saw-space-2);
     }
@@ -846,11 +948,6 @@
         left: auto;
         min-width: 180px;
     }
-    
-    .sa-branch-switcher {
-        margin: var(--saw-space-3);
-        padding: var(--saw-space-2);
-    }
 }
 
 @media (max-width: 480px) {
@@ -859,10 +956,4 @@
         left: 8px;
         right: 8px;
     }
-    
-    .sa-branch-switcher {
-        margin: var(--saw-space-2);
-        padding: var(--saw-space-2);
-    }
 }
-

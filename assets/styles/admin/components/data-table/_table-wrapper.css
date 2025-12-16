@@ -1,60 +1,70 @@
 /**
  * SAW Admin - Table Wrapper & Split Layout
  * @package SAW_Visitors
- * @version 4.0.0 - Sticky Fix
+ * @version 7.0.0
  */
 
-/* ============================================
-   MAIN SPLIT CONTAINER
-   ============================================ */
 .sa-table-split {
     display: flex;
     flex: 1;
     min-height: 0;
     overflow: hidden;
-    background: var(--saw-bg-primary);
+    
+    /* Light blue gradient background - very subtle */
+    background: linear-gradient(
+        135deg,
+        #f0f9ff 0%,           /* Very light blue at top-left */
+        #e0f2fe 50%,          /* Light blue in middle */
+        #f0f9ff 100%          /* Very light blue at bottom-right */
+    );
+    
+    /* Subtle pattern overlay for depth */
+    background-image: 
+        linear-gradient(
+            135deg,
+            #f0f9ff 0%,
+            #e0f2fe 50%,
+            #f0f9ff 100%
+        ),
+        repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 2px,
+            rgba(59, 130, 246, 0.02) 2px,
+            rgba(59, 130, 246, 0.02) 4px
+        );
 }
 
-/* ============================================
-   TABLE PANEL (left side)
-   ============================================ */
 .sa-table-panel {
     flex: 1;
     display: flex;
     flex-direction: column;
     min-height: 0;
-    overflow: hidden; /* KRITICKÉ: Panel NESCROLLUJE */
+    overflow: hidden;
+    height: 100% !important;
+    max-height: 100% !important;
+    background: transparent; /* Transparent to show parent gradient */
 }
 
-/* ============================================
-   SCROLL CONTAINER
-   Jediný element který scrolluje.
-   Obsahuje toolbar + tabulku.
-   ============================================ */
 .sa-table-scroll {
     flex: 1;
-    overflow-y: auto;
+    min-height: 0;
+    height: 100% !important;
+    max-height: 100% !important;
+    overflow-y: auto !important;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    position: relative; /* Pro sticky positioning */
-    padding-bottom: 60px; /* Footer height - prevent last row from being hidden */
+    position: relative;
+    background: transparent; /* Transparent to show parent gradient */
 }
 
-/* Odstranit pseudo-elementy */
-.sa-table-scroll::before,
-.sa-table-scroll::after {
-    display: none !important;
-    content: none !important;
-}
-
-/* Custom scrollbar */
 .sa-table-scroll::-webkit-scrollbar {
     width: 8px;
     height: 8px;
 }
 
 .sa-table-scroll::-webkit-scrollbar-track {
-    background: transparent;
+    background: var(--saw-bg-secondary);
 }
 
 .sa-table-scroll::-webkit-scrollbar-thumb {
@@ -66,23 +76,10 @@
     background: var(--saw-gray-400);
 }
 
-/* ============================================
-   RESPONSIVE
-   ============================================ */
-@media (max-width: 768px) {
-    .sa-table-scroll {
-        -webkit-overflow-scrolling: touch;
-    }
-}
-
-/* When sidebar is open */
 .sa-table-split--has-sidebar .sa-table-panel {
     border-right: 1px solid var(--saw-border-color);
 }
 
-/* ============================================
-   SCROLL TO TOP BUTTON
-   ============================================ */
 .sa-scroll-to-top {
     position: fixed;
     bottom: 80px;
@@ -115,24 +112,17 @@
 
 .sa-scroll-to-top:hover {
     background: var(--saw-brand-700) !important;
-    box-shadow: var(--saw-shadow-xl);
     transform: translateY(-2px);
-}
-
-.sa-scroll-to-top:active {
-    transform: translateY(0);
 }
 
 .sa-scroll-to-top svg {
     width: 24px;
     height: 24px;
-    fill: currentColor;
-    stroke: currentColor;
 }
 
 @media (max-width: 768px) {
     .sa-scroll-to-top {
-        bottom: 20px;
+        bottom: 70px;
         right: var(--saw-space-3);
         width: 44px;
         height: 44px;

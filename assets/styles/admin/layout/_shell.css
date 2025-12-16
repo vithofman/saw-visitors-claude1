@@ -1,7 +1,7 @@
 /**
  * SAW Admin - App Shell Layout
  * @package SAW_Visitors
- * @version 3.0.0
+ * @version 7.0.0
  */
 
 .sa-app-body {
@@ -22,8 +22,8 @@
     display: flex;
     min-height: 0;
     overflow: hidden;
-    padding-top: 30px; /* Reduced from 60px */
-    min-height: 100vh;
+    padding-top: 30px; /* Header height */
+    padding-bottom: 45px; /* Footer height */
 }
 
 .sa-app-main,
@@ -37,57 +37,12 @@
     background: var(--saw-bg-primary);
 }
 
-/* ============================================
-   RESPONSIVE CONTENT
-   ============================================ */
-
-@media (min-width: 1025px) {
-    .sa-app-main,
-    .saw-app-main {
-        margin-left: 260px !important; /* Sidebar width - always visible on desktop */
-    }
-}
-
-@media (max-width: 1024px) {
-    .sa-app-container,
-    .saw-app-container {
-        padding-top: 28px; /* Reduced from 56px */
-    }
-    
-    .sa-app-main,
-    .saw-app-main {
-        margin-left: 0 !important; /* No margin on mobile/tablet */
-    }
-    
-    .sa-app-content,
-    .saw-app-content {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-}
-
-@media (max-width: 768px) {
-    .sa-app-container,
-    .saw-app-container {
-        padding-top: 28px; /* Reduced from 56px */
-    }
-    
-    .sa-app-content,
-    .saw-app-content {
-        padding: 0;
-        overflow-x: auto;
-    }
-}
-
-@media (max-width: 480px) {
-    .sa-app-container,
-    .saw-app-container {
-        padding-top: 26px; /* Reduced from 52px */
-    }
-}
-
-.sa-app-content {
+.sa-app-content,
+.saw-app-content {
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
     padding: 0;
@@ -98,20 +53,57 @@
     background: var(--saw-bg-primary);
 }
 
-.sa-app-content::-webkit-scrollbar {
-    width: 8px;
+@media (min-width: 1025px) {
+    .sa-app-main,
+    .saw-app-main {
+        margin-left: 260px !important;
+    }
 }
 
-.sa-app-content::-webkit-scrollbar-track {
-    background: transparent;
+@media (max-width: 1024px) {
+    .sa-app-container,
+    .saw-app-container {
+        padding-top: 60px; /* Header height on mobile too */
+        padding-bottom: 0; /* No footer on mobile */
+    }
+    
+    .sa-app-main,
+    .saw-app-main {
+        margin-left: 0 !important;
+    }
+    
+    .sa-app-content,
+    .saw-app-content {
+        -webkit-overflow-scrolling: touch;
+    }
 }
 
-.sa-app-content::-webkit-scrollbar-thumb {
-    background: var(--saw-gray-300);
-    border-radius: var(--saw-radius-md);
+@media (max-width: 768px) {
+    .sa-app-container,
+    .saw-app-container {
+        padding-top: 60px; /* Header height on mobile */
+        padding-bottom: 0; /* No footer on mobile */
+    }
+    
+    .sa-app-content,
+    .saw-app-content {
+        padding: 0;
+    }
 }
 
-.sa-app-content::-webkit-scrollbar-thumb:hover {
-    background: var(--saw-gray-400);
+@media (max-width: 480px) {
+    .sa-app-container,
+    .saw-app-container {
+        padding-top: 60px; /* Header height on mobile */
+        padding-bottom: 0; /* No footer on mobile */
+    }
 }
 
+/* ============================================
+   TABLE PAGES - DISABLE SCROLL ON CONTENT
+   ============================================ */
+.saw-app-content:has(.sa-table-scroll),
+.sa-app-content:has(.sa-table-scroll) {
+    overflow: hidden !important;
+    height: 100% !important;
+}
