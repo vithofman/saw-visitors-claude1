@@ -97,11 +97,11 @@
         
         toggle.addEventListener('click', function(e) {
             e.stopPropagation();
-            dropdown.classList.toggle('active');
+            dropdown.classList.toggle('sa-user-dropdown--active');
         });
         
         document.addEventListener('click', function() {
-            dropdown.classList.remove('active');
+            dropdown.classList.remove('sa-user-dropdown--active');
         });
         
         dropdown.addEventListener('click', function(e) {

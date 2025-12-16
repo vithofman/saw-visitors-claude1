@@ -1,0 +1,51 @@
+/**
+ * SAW Admin - Form Actions (Submit/Cancel Buttons)
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-form-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-3);
+    padding: var(--saw-space-5);
+    background: var(--saw-bg-secondary);
+    border-top: 1px solid var(--saw-border-color);
+    margin-top: var(--saw-space-6);
+}
+
+.sa-form-actions--sticky {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+}
+
+.sa-form-actions-primary {
+    display: flex;
+    gap: var(--saw-space-3);
+    flex: 1;
+    justify-content: flex-end;
+}
+
+.sa-form-actions-secondary {
+    display: flex;
+    gap: var(--saw-space-3);
+}
+
+@media (max-width: 768px) {
+    .sa-form-actions {
+        flex-direction: column;
+    }
+    
+    .sa-form-actions-primary,
+    .sa-form-actions-secondary {
+        width: 100%;
+    }
+    
+    .sa-form-actions-primary .sa-btn,
+    .sa-form-actions-secondary .sa-btn {
+        flex: 1;
+    }
+}
+
+

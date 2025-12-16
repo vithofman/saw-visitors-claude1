@@ -35,18 +35,20 @@ $in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'
 ?>
 
 <?php if (!$in_sidebar): ?>
-<div class="saw-page-header">
-    <div class="saw-page-header-content">
-        <h1 class="saw-page-title">
+<div class="sa-page-header">
+    <div class="sa-page-header-content">
+        <h1 class="sa-page-title">
             <?php echo $is_edit 
                 ? esc_html($tr('form_title_edit', 'Upravit pobočku')) 
                 : esc_html($tr('form_title_create', 'Nová pobočka')); ?>
         </h1>
-        <a href="<?php echo esc_url(home_url('/admin/branches/')); ?>" class="saw-back-button">
+        <a href="<?php echo esc_url(home_url('/admin/branches/')); ?>" class="sa-btn sa-btn--ghost">
             <?php if (class_exists('SAW_Icons')): ?>
                 <?php echo SAW_Icons::get('chevron-left'); ?>
             <?php else: ?>
-                <span class="dashicons dashicons-arrow-left-alt2"></span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
             <?php endif; ?>
             <?php echo esc_html($tr('btn_back', 'Zpět na seznam')); ?>
         </a>
@@ -54,8 +56,8 @@ $in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'
 </div>
 <?php endif; ?>
 
-<div class="saw-form-container saw-module-branches">
-    <form method="post" action="" enctype="multipart/form-data" class="saw-branch-form">
+<div class="sa-form-container">
+    <form method="post" action="" enctype="multipart/form-data" class="sa-form">
         <?php
         $nonce_action = $is_edit ? 'saw_edit_branches' : 'saw_create_branches';
         wp_nonce_field($nonce_action, '_wpnonce', false);
@@ -68,47 +70,47 @@ $in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'
         <!-- ============================================ -->
         <!-- ZÁKLADNÍ INFORMACE -->
         <!-- ============================================ -->
-        <details class="saw-form-section" open>
+        <details class="sa-form-section" open>
             <summary>
                 <?php if (class_exists('SAW_Icons')): ?>
-                    <?php echo SAW_Icons::get('settings', 'saw-section-icon'); ?>
+                    <?php echo SAW_Icons::get('settings', 'sa-form-section-icon'); ?>
                 <?php else: ?>
                     <span class="dashicons dashicons-admin-generic"></span>
                 <?php endif; ?>
-                <strong><?php echo esc_html($tr('section_basic', 'Základní informace')); ?></strong>
+                <strong class="sa-form-section-title"><?php echo esc_html($tr('section_basic', 'Základní informace')); ?></strong>
             </summary>
-            <div class="saw-form-section-content">
+            <div class="sa-form-section-content">
                 
-                <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-8">
-                        <label for="name" class="saw-label saw-required">
+                <div class="sa-form-row">
+                    <div class="sa-form-group">
+                        <label for="name" class="sa-form-label sa-form-label--required">
                             <?php echo esc_html($tr('field_name', 'Název pobočky')); ?>
                         </label>
-                        <input type="text" id="name" name="name" class="saw-input"
+                        <input type="text" id="name" name="name" class="sa-input"
                                value="<?php echo esc_attr($item['name'] ?? ''); ?>" required>
                     </div>
                     
-                    <div class="saw-form-group saw-col-4">
-                        <label for="code" class="saw-label">
+                    <div class="sa-form-group">
+                        <label for="code" class="sa-form-label">
                             <?php echo esc_html($tr('field_code', 'Kód pobočky')); ?>
                         </label>
-                        <input type="text" id="code" name="code" class="saw-input"
+                        <input type="text" id="code" name="code" class="sa-input"
                                value="<?php echo esc_attr($item['code'] ?? ''); ?>"
                                placeholder="<?php echo esc_attr($tr('field_code_placeholder', 'např. HQ, PR1')); ?>">
                     </div>
                 </div>
                 
-                <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-6">
-                        <label class="saw-checkbox-label">
+                <div class="sa-form-row">
+                    <div class="sa-form-group">
+                        <label class="sa-checkbox">
                             <input type="checkbox" name="is_headquarters" value="1"
                                    <?php checked(!empty($item['is_headquarters'])); ?>>
                             <span><?php echo esc_html($tr('field_is_headquarters', 'Sídlo firmy')); ?></span>
                         </label>
                     </div>
                     
-                    <div class="saw-form-group saw-col-6">
-                        <label class="saw-checkbox-label">
+                    <div class="sa-form-group">
+                        <label class="sa-checkbox">
                             <input type="checkbox" name="is_active" value="1"
                                    <?php checked(empty($item) || !empty($item['is_active'])); ?>>
                             <span><?php echo esc_html($tr('field_is_active', 'Aktivní')); ?></span>
@@ -116,12 +118,12 @@ $in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'
                     </div>
                 </div>
                 
-                <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-4">
-                        <label for="sort_order" class="saw-label">
+                <div class="sa-form-row">
+                    <div class="sa-form-group">
+                        <label for="sort_order" class="sa-form-label">
                             <?php echo esc_html($tr('field_sort_order', 'Pořadí')); ?>
                         </label>
-                        <input type="number" id="sort_order" name="sort_order" class="saw-input"
+                        <input type="number" id="sort_order" name="sort_order" class="sa-input"
                                value="<?php echo esc_attr($item['sort_order'] ?? 10); ?>" min="0">
                     </div>
                 </div>
@@ -132,32 +134,32 @@ $in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'
         <!-- ============================================ -->
         <!-- KONTAKT -->
         <!-- ============================================ -->
-        <details class="saw-form-section" open>
+        <details class="sa-form-section" open>
             <summary>
                 <?php if (class_exists('SAW_Icons')): ?>
-                    <?php echo SAW_Icons::get('phone'); ?>
+                    <?php echo SAW_Icons::get('phone', 'sa-form-section-icon'); ?>
                 <?php else: ?>
                     <span class="dashicons dashicons-phone"></span>
                 <?php endif; ?>
-                <strong><?php echo esc_html($tr('section_contact', 'Kontaktní údaje')); ?></strong>
+                <strong class="sa-form-section-title"><?php echo esc_html($tr('section_contact', 'Kontaktní údaje')); ?></strong>
             </summary>
-            <div class="saw-form-section-content">
+            <div class="sa-form-section-content">
                 
-                <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-6">
-                        <label for="phone" class="saw-label">
+                <div class="sa-form-row">
+                    <div class="sa-form-group">
+                        <label for="phone" class="sa-form-label">
                             <?php echo esc_html($tr('field_phone', 'Telefon')); ?>
                         </label>
-                        <input type="text" id="phone" name="phone" class="saw-input"
+                        <input type="text" id="phone" name="phone" class="sa-input"
                                value="<?php echo esc_attr($item['phone'] ?? ''); ?>"
                                placeholder="+420 123 456 789">
                     </div>
                     
-                    <div class="saw-form-group saw-col-6">
-                        <label for="email" class="saw-label">
+                    <div class="sa-form-group">
+                        <label for="email" class="sa-form-label">
                             <?php echo esc_html($tr('field_email', 'Email')); ?>
                         </label>
-                        <input type="email" id="email" name="email" class="saw-input"
+                        <input type="email" id="email" name="email" class="sa-input"
                                value="<?php echo esc_attr($item['email'] ?? ''); ?>"
                                placeholder="pobocka@firma.cz">
                     </div>
@@ -169,52 +171,52 @@ $in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'
         <!-- ============================================ -->
         <!-- ADRESA -->
         <!-- ============================================ -->
-        <details class="saw-form-section" open>
+        <details class="sa-form-section" open>
             <summary>
                 <?php if (class_exists('SAW_Icons')): ?>
-                    <?php echo SAW_Icons::get('map-pin'); ?>
+                    <?php echo SAW_Icons::get('map-pin', 'sa-form-section-icon'); ?>
                 <?php else: ?>
                     <span class="dashicons dashicons-location"></span>
                 <?php endif; ?>
-                <strong><?php echo esc_html($tr('section_address', 'Adresa')); ?></strong>
+                <strong class="sa-form-section-title"><?php echo esc_html($tr('section_address', 'Adresa')); ?></strong>
             </summary>
-            <div class="saw-form-section-content">
+            <div class="sa-form-section-content">
                 
-                <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-12">
-                        <label for="street" class="saw-label">
+                <div class="sa-form-row">
+                    <div class="sa-form-group">
+                        <label for="street" class="sa-form-label">
                             <?php echo esc_html($tr('field_street', 'Ulice a č.p.')); ?>
                         </label>
-                        <input type="text" id="street" name="street" class="saw-input"
+                        <input type="text" id="street" name="street" class="sa-input"
                                value="<?php echo esc_attr($item['street'] ?? ''); ?>"
                                placeholder="<?php echo esc_attr($tr('field_street_placeholder', 'Hlavní 123')); ?>">
                     </div>
                 </div>
                 
-                <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-6">
-                        <label for="city" class="saw-label">
+                <div class="sa-form-row">
+                    <div class="sa-form-group">
+                        <label for="city" class="sa-form-label">
                             <?php echo esc_html($tr('field_city', 'Město')); ?>
                         </label>
-                        <input type="text" id="city" name="city" class="saw-input"
+                        <input type="text" id="city" name="city" class="sa-input"
                                value="<?php echo esc_attr($item['city'] ?? ''); ?>"
                                placeholder="Praha">
                     </div>
                     
-                    <div class="saw-form-group saw-col-3">
-                        <label for="postal_code" class="saw-label">
+                    <div class="sa-form-group">
+                        <label for="postal_code" class="sa-form-label">
                             <?php echo esc_html($tr('field_postal_code', 'PSČ')); ?>
                         </label>
-                        <input type="text" id="postal_code" name="postal_code" class="saw-input"
+                        <input type="text" id="postal_code" name="postal_code" class="sa-input"
                                value="<?php echo esc_attr($item['postal_code'] ?? ''); ?>"
                                placeholder="110 00">
                     </div>
                     
-                    <div class="saw-form-group saw-col-3">
-                        <label for="country" class="saw-label">
+                    <div class="sa-form-group">
+                        <label for="country" class="sa-form-label">
                             <?php echo esc_html($tr('field_country', 'Země')); ?>
                         </label>
-                        <input type="text" id="country" name="country" class="saw-input"
+                        <input type="text" id="country" name="country" class="sa-input"
                                value="<?php echo esc_attr($item['country'] ?? 'CZ'); ?>"
                                maxlength="2"
                                placeholder="CZ">
@@ -227,16 +229,16 @@ $in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'
         <!-- ============================================ -->
         <!-- LOGO / OBRÁZEK -->
         <!-- ============================================ -->
-        <details class="saw-form-section">
+        <details class="sa-form-section">
             <summary>
                 <?php if (class_exists('SAW_Icons')): ?>
-                    <?php echo SAW_Icons::get('image'); ?>
+                    <?php echo SAW_Icons::get('image', 'sa-form-section-icon'); ?>
                 <?php else: ?>
                     <span class="dashicons dashicons-format-image"></span>
                 <?php endif; ?>
-                <strong><?php echo esc_html($tr('section_image', 'Logo / Obrázek')); ?></strong>
+                <strong class="sa-form-section-title"><?php echo esc_html($tr('section_image', 'Logo / Obrázek')); ?></strong>
             </summary>
-            <div class="saw-form-section-content">
+            <div class="sa-form-section-content">
                 
                 <?php
                 $has_image = !empty($item['image_url']);
@@ -309,32 +311,32 @@ $in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'
         <!-- ============================================ -->
         <!-- POZNÁMKY -->
         <!-- ============================================ -->
-        <details class="saw-form-section">
+        <details class="sa-form-section">
             <summary>
                 <?php if (class_exists('SAW_Icons')): ?>
-                    <?php echo SAW_Icons::get('pencil'); ?>
+                    <?php echo SAW_Icons::get('pencil', 'sa-form-section-icon'); ?>
                 <?php else: ?>
                     <span class="dashicons dashicons-edit-page"></span>
                 <?php endif; ?>
-                <strong><?php echo esc_html($tr('section_notes', 'Poznámky a popis')); ?></strong>
+                <strong class="sa-form-section-title"><?php echo esc_html($tr('section_notes', 'Poznámky a popis')); ?></strong>
             </summary>
-            <div class="saw-form-section-content">
+            <div class="sa-form-section-content">
                 
-                <div class="saw-form-group">
-                    <label for="description" class="saw-label">
+                <div class="sa-form-group">
+                    <label for="description" class="sa-form-label">
                         <?php echo esc_html($tr('field_description', 'Popis')); ?>
                     </label>
-                    <textarea id="description" name="description" class="saw-textarea" rows="3"
+                    <textarea id="description" name="description" class="sa-textarea" rows="3"
                               placeholder="<?php echo esc_attr($tr('field_description_placeholder', 'Veřejný popis pobočky...')); ?>"><?php 
                         echo esc_textarea($item['description'] ?? ''); 
                     ?></textarea>
                 </div>
                 
-                <div class="saw-form-group">
-                    <label for="notes" class="saw-label">
+                <div class="sa-form-group">
+                    <label for="notes" class="sa-form-label">
                         <?php echo esc_html($tr('field_notes', 'Interní poznámky')); ?>
                     </label>
-                    <textarea id="notes" name="notes" class="saw-textarea" rows="3"
+                    <textarea id="notes" name="notes" class="sa-textarea" rows="3"
                               placeholder="<?php echo esc_attr($tr('field_notes_placeholder', 'Poznámky viditelné pouze pro administrátory...')); ?>"><?php 
                         echo esc_textarea($item['notes'] ?? ''); 
                     ?></textarea>
@@ -346,15 +348,15 @@ $in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'
         <!-- ============================================ -->
         <!-- SUBMIT -->
         <!-- ============================================ -->
-        <div class="saw-form-actions">
-            <button type="submit" class="saw-button saw-button-primary">
+        <div class="sa-form-actions">
+            <button type="submit" class="sa-btn sa-btn--primary">
                 <?php echo $is_edit 
                     ? esc_html($tr('btn_save', 'Uložit změny')) 
                     : esc_html($tr('btn_create', 'Vytvořit pobočku')); ?>
             </button>
             
             <?php if (!$in_sidebar): ?>
-                <a href="<?php echo esc_url(home_url('/admin/branches/')); ?>" class="saw-button saw-button-secondary">
+                <a href="<?php echo esc_url(home_url('/admin/branches/')); ?>" class="sa-btn sa-btn--secondary">
                     <?php echo esc_html($tr('btn_cancel', 'Zrušit')); ?>
                 </a>
             <?php endif; ?>

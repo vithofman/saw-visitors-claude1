@@ -1,0 +1,108 @@
+/**
+ * SAW Admin - Buttons
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--saw-space-2);
+    padding: 10px 20px;
+    font-family: var(--saw-font-body);
+    font-size: var(--saw-text-base);
+    font-weight: var(--saw-font-semibold);
+    line-height: 1;
+    border-radius: var(--saw-radius-md);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all var(--saw-transition-fast);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.sa-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Primary */
+.sa-btn--primary {
+    background: var(--saw-brand-600);
+    color: #ffffff;
+    border-color: var(--saw-brand-600);
+}
+
+.sa-btn--primary:hover:not(:disabled) {
+    background: var(--saw-brand-700);
+    border-color: var(--saw-brand-700);
+}
+
+/* Secondary */
+.sa-btn--secondary {
+    background: var(--saw-bg-secondary);
+    color: var(--saw-text-primary);
+    border-color: var(--saw-border-color);
+}
+
+.sa-btn--secondary:hover:not(:disabled) {
+    background: var(--saw-bg-tertiary);
+    border-color: var(--saw-border-color-dark);
+}
+
+/* Danger */
+.sa-btn--danger {
+    background: var(--saw-danger);
+    color: #ffffff;
+    border-color: var(--saw-danger);
+}
+
+.sa-btn--danger:hover:not(:disabled) {
+    background: var(--saw-danger-hover);
+    border-color: var(--saw-danger-hover);
+}
+
+/* Success */
+.sa-btn--success {
+    background: var(--saw-success);
+    color: #ffffff;
+    border-color: var(--saw-success);
+}
+
+.sa-btn--success:hover:not(:disabled) {
+    background: var(--saw-success-hover);
+    border-color: var(--saw-success-hover);
+}
+
+/* Ghost */
+.sa-btn--ghost {
+    background: transparent;
+    color: var(--saw-text-secondary);
+    border-color: transparent;
+}
+
+.sa-btn--ghost:hover:not(:disabled) {
+    background: var(--saw-bg-tertiary);
+    color: var(--saw-text-primary);
+}
+
+/* Icon only */
+.sa-btn--icon {
+    padding: 8px;
+    width: 36px;
+    height: 36px;
+}
+
+/* Sizes */
+.sa-btn--sm {
+    padding: 6px 12px;
+    font-size: var(--saw-text-sm);
+}
+
+.sa-btn--lg {
+    padding: 14px 28px;
+    font-size: var(--saw-text-lg);
+}
+
+

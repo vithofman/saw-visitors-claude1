@@ -1,0 +1,309 @@
+/**
+ * SAW Admin - Table Toolbar (Tabs + Search + Filters)
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-table-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-4);
+    padding: var(--saw-space-3) var(--saw-space-4);
+    background: var(--saw-bg-primary);
+    border-bottom: 1px solid var(--saw-border-color);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+/* Tabs container */
+.sa-table-tabs {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex: 1;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.sa-table-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+/* Single tab */
+.sa-table-tab {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-2);
+    padding: 10px 16px;
+    font-size: var(--saw-text-sm);
+    font-weight: var(--saw-font-medium);
+    color: var(--saw-text-secondary);
+    background: transparent;
+    border: none;
+    border-radius: var(--saw-radius-md);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all var(--saw-transition-fast);
+    text-decoration: none;
+}
+
+.sa-table-tab:hover {
+    background: var(--saw-bg-tertiary);
+    color: var(--saw-text-primary);
+}
+
+.sa-table-tab--active {
+    background: var(--saw-brand-50);
+    color: var(--saw-brand-700);
+}
+
+.sa-table-tab-icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.sa-table-tab-label {
+    flex: 1;
+    white-space: nowrap;
+}
+
+.sa-table-tab-count {
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: var(--saw-font-semibold);
+    background: var(--saw-gray-200);
+    color: var(--saw-gray-600);
+    border-radius: var(--saw-radius-full);
+    flex-shrink: 0;
+}
+
+.sa-table-tab--active .sa-table-tab-count {
+    background: var(--saw-brand-100);
+    color: var(--saw-brand-700);
+}
+
+/* Search input */
+.sa-table-search {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-2);
+    min-width: 200px;
+    max-width: 300px;
+}
+
+.sa-table-search-form {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-2);
+    flex: 1;
+    min-width: 200px;
+    max-width: 300px;
+}
+
+.sa-table-search-input {
+    flex: 1;
+    padding: 8px 12px 8px 36px;
+    font-size: var(--saw-text-sm);
+    background: var(--saw-bg-primary);
+    border: 1px solid var(--saw-border-color);
+    border-radius: var(--saw-radius-md);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'%3E%3C/line%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 10px center;
+    background-size: 16px;
+    transition: border-color var(--saw-transition-fast);
+}
+
+.sa-table-search-input:focus {
+    outline: none;
+    border-color: var(--saw-brand-500);
+    box-shadow: 0 0 0 3px var(--saw-brand-50);
+}
+
+/* Table sortable */
+.sa-table-sortable {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-1);
+    color: inherit;
+    text-decoration: none;
+    transition: color var(--saw-transition-fast);
+}
+
+.sa-table-sortable:hover {
+    color: var(--saw-brand-600);
+}
+
+/* Filters wrapper */
+.sa-table-filters-wrapper {
+    position: relative;
+}
+
+/* Filter button */
+.sa-table-filter-btn {
+    position: relative;
+    padding: 8px 12px;
+}
+
+.sa-table-filter-btn--active {
+    background: var(--saw-brand-50);
+    color: var(--saw-brand-700);
+}
+
+/* Filters dropdown */
+.sa-table-filters-wrapper {
+    position: relative;
+}
+
+.sa-dropdown--filters {
+    position: absolute;
+    top: calc(100% + var(--saw-space-2));
+    right: 0;
+    min-width: 250px;
+    max-width: 350px;
+    background: var(--saw-bg-primary);
+    border: 1px solid var(--saw-border-color);
+    border-radius: var(--saw-radius-lg);
+    box-shadow: var(--saw-shadow-lg);
+    padding: var(--saw-space-4);
+    z-index: var(--saw-z-dropdown);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    transition: opacity var(--saw-transition-fast), 
+                visibility var(--saw-transition-fast),
+                transform var(--saw-transition-fast);
+}
+
+.sa-dropdown--filters.sa-dropdown--open,
+.sa-table-filters-wrapper.active .sa-dropdown--filters {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.sa-table-filters-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--saw-space-4);
+}
+
+.sa-table-filters-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: var(--saw-space-3);
+    border-top: 1px solid var(--saw-border-color);
+    margin-top: var(--saw-space-2);
+}
+
+/* ============================================
+   RESPONSIVE TABLE TOOLBAR
+   ============================================ */
+
+@media (max-width: 768px) {
+    .sa-table-toolbar {
+        flex-wrap: wrap;
+        align-items: stretch;
+        gap: var(--saw-space-3);
+        padding: var(--saw-space-3) var(--saw-space-3);
+    }
+    
+    .sa-table-tabs {
+        flex: 1 1 100%;
+        order: 1;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: var(--saw-space-2);
+    }
+    
+    .sa-table-tabs::-webkit-scrollbar {
+        display: none;
+    }
+    
+    .sa-table-tab {
+        padding: 8px 12px;
+        font-size: var(--saw-text-sm);
+        white-space: nowrap;
+    }
+    
+    /* Search a filter vedle sebe na větších mobile */
+    .sa-table-search,
+    .sa-table-filters-wrapper {
+        flex: 1 1 auto;
+        order: 2;
+        display: flex !important;
+        min-width: 0;
+        max-width: 100%;
+    }
+    
+    .sa-table-search {
+        order: 2;
+    }
+    
+    .sa-table-filters-wrapper {
+        order: 2;
+        justify-content: flex-end;
+    }
+    
+    .sa-table-search-form {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+    }
+    
+    .sa-table-search-input {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+    }
+}
+
+/* Na větších mobile (480px+) - search a filter vedle sebe */
+@media (min-width: 480px) and (max-width: 768px) {
+    .sa-table-toolbar {
+        flex-wrap: wrap;
+    }
+    
+    .sa-table-search {
+        flex: 1 1 60%;
+        order: 2;
+    }
+    
+    .sa-table-filters-wrapper {
+        flex: 1 1 35%;
+        order: 2;
+    }
+}
+
+@media (max-width: 480px) {
+    .sa-table-toolbar {
+        padding: var(--saw-space-2) var(--saw-space-2);
+        gap: var(--saw-space-2);
+    }
+    
+    .sa-table-tab {
+        padding: 6px 10px;
+        font-size: var(--saw-text-xs);
+        gap: var(--saw-space-1);
+    }
+    
+    .sa-table-tab-label {
+        display: inline;
+    }
+    
+    .sa-table-tab-icon {
+        width: 16px;
+        height: 16px;
+    }
+    
+    .sa-table-tab-count {
+        min-width: 18px;
+        height: 16px;
+        font-size: 10px;
+        padding: 2px 6px;
+    }
+}
+
+

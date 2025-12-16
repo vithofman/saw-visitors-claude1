@@ -1,0 +1,52 @@
+/**
+ * SAW Admin - Color Utilities
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+/* Background Colors */
+.sa-bg-primary {
+    background-color: var(--saw-bg-primary);
+}
+
+.sa-bg-secondary {
+    background-color: var(--saw-bg-secondary);
+}
+
+.sa-bg-tertiary {
+    background-color: var(--saw-bg-tertiary);
+}
+
+.sa-bg-brand {
+    background-color: var(--saw-brand-600);
+}
+
+.sa-bg-brand-light {
+    background-color: var(--saw-brand-50);
+}
+
+.sa-bg-success {
+    background-color: var(--saw-success);
+}
+
+.sa-bg-success-light {
+    background-color: var(--saw-success-light);
+}
+
+.sa-bg-danger {
+    background-color: var(--saw-danger);
+}
+
+.sa-bg-danger-light {
+    background-color: var(--saw-danger-light);
+}
+
+.sa-bg-warning {
+    background-color: var(--saw-warning);
+}
+
+.sa-bg-warning-light {
+    background-color: var(--saw-warning-light);
+}
+
+

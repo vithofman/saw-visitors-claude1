@@ -545,7 +545,8 @@ body, html {
     opacity: 0;
 }
 
-.saw-nav-item {
+/* LEGACY: Pouze pro staré třídy bez nového systému - pokud se používá nový CSS systém, tyto styly se neaplikují */
+.saw-nav-item:not(.sa-nav-item) {
     display: flex;
     align-items: center;
     gap: 12px;
@@ -555,16 +556,16 @@ body, html {
     transition: all 0.2s;
 }
 
-.saw-nav-item:hover {
+.saw-nav-item:not(.sa-nav-item):hover {
     background: var(--saw-nav-item-hover-bg);
     color: var(--saw-text-primary);
 }
 
-.saw-nav-item.active {
+.saw-nav-item:not(.sa-nav-item).active {
     background: var(--saw-nav-item-active-bg);
     color: var(--saw-primary);
     border-left: 3px solid var(--saw-primary);
-    padding-left: 21px;
+    padding-left: 24px; /* Opraveno: konzistentní zarovnání */
 }
 
 .saw-nav-icon {

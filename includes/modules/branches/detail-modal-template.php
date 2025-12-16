@@ -34,7 +34,7 @@ $tr = function($key, $fallback = null) use ($t) {
 // VALIDATION
 // ============================================
 if (empty($item)) {
-    echo '<div class="saw-alert saw-alert-danger">' . esc_html($tr('error_not_found', 'Pobočka nebyla nalezena')) . '</div>';
+    echo '<div class="sa-alert sa-alert--danger">' . esc_html($tr('error_not_found', 'Pobočka nebyla nalezena')) . '</div>';
     return;
 }
 
@@ -82,26 +82,26 @@ if (!empty($item['id'])) {
 
 <!-- Header with image is rendered by detail-sidebar.php -->
 
-<div class="saw-detail-wrapper">
-    <div class="saw-detail-stack">
+<div class="sa-detail-wrapper">
+    <div class="sa-detail-stack">
         
         <!-- STATISTICS -->
-        <div class="saw-industrial-section">
-            <div class="saw-section-head">
-                <h4 class="saw-section-title">📊 <?php echo esc_html($tr('section_statistics', 'Statistiky')); ?></h4>
+        <div class="sa-detail-section">
+            <div class="sa-detail-section-head">
+                <h4 class="sa-detail-section-title">📊 <?php echo esc_html($tr('section_statistics', 'Statistiky')); ?></h4>
             </div>
-            <div class="saw-section-body">
-                <div class="saw-info-row">
-                    <span class="saw-info-label"><?php echo esc_html($tr('stat_departments', 'Oddělení')); ?></span>
-                    <span class="saw-info-val"><strong><?php echo $departments_count; ?></strong></span>
+            <div class="sa-detail-section-body">
+                <div class="sa-detail-field">
+                    <span class="sa-detail-field-label"><?php echo esc_html($tr('stat_departments', 'Oddělení')); ?></span>
+                    <span class="sa-detail-field-value"><strong><?php echo $departments_count; ?></strong></span>
                 </div>
-                <div class="saw-info-row">
-                    <span class="saw-info-label"><?php echo esc_html($tr('stat_visits', 'Návštěv')); ?></span>
-                    <span class="saw-info-val"><strong><?php echo $visits_count; ?></strong></span>
+                <div class="sa-detail-field">
+                    <span class="sa-detail-field-label"><?php echo esc_html($tr('stat_visits', 'Návštěv')); ?></span>
+                    <span class="sa-detail-field-value"><strong><?php echo $visits_count; ?></strong></span>
                 </div>
-                <div class="saw-info-row">
-                    <span class="saw-info-label"><?php echo esc_html($tr('stat_visitors', 'Návštěvníků')); ?></span>
-                    <span class="saw-info-val"><strong><?php echo $visitors_count; ?></strong></span>
+                <div class="sa-detail-field">
+                    <span class="sa-detail-field-label"><?php echo esc_html($tr('stat_visitors', 'Návštěvníků')); ?></span>
+                    <span class="sa-detail-field-value"><strong><?php echo $visitors_count; ?></strong></span>
                 </div>
             </div>
         </div>
@@ -111,22 +111,22 @@ if (!empty($item['id'])) {
         $has_address = !empty($item['street']) || !empty($item['city']) || !empty($item['postal_code']);
         if ($has_address): 
         ?>
-        <div class="saw-industrial-section">
-            <div class="saw-section-head">
-                <h4 class="saw-section-title">📍 <?php echo esc_html($tr('section_address', 'Adresa')); ?></h4>
+        <div class="sa-detail-section">
+            <div class="sa-detail-section-head">
+                <h4 class="sa-detail-section-title">📍 <?php echo esc_html($tr('section_address', 'Adresa')); ?></h4>
             </div>
-            <div class="saw-section-body">
+            <div class="sa-detail-section-body">
                 <?php if (!empty($item['street'])): ?>
-                <div class="saw-info-row">
-                    <span class="saw-info-label"><?php echo esc_html($tr('field_street', 'Ulice')); ?></span>
-                    <span class="saw-info-val"><?php echo esc_html($item['street']); ?></span>
+                <div class="sa-detail-field">
+                    <span class="sa-detail-field-label"><?php echo esc_html($tr('field_street', 'Ulice')); ?></span>
+                    <span class="sa-detail-field-value"><?php echo esc_html($item['street']); ?></span>
                 </div>
                 <?php endif; ?>
                 
                 <?php if (!empty($item['city']) || !empty($item['postal_code'])): ?>
-                <div class="saw-info-row">
-                    <span class="saw-info-label"><?php echo esc_html($tr('field_city_zip', 'Město a PSČ')); ?></span>
-                    <span class="saw-info-val"><?php 
+                <div class="sa-detail-field">
+                    <span class="sa-detail-field-label"><?php echo esc_html($tr('field_city_zip', 'Město a PSČ')); ?></span>
+                    <span class="sa-detail-field-value"><?php 
                         $city_parts = array();
                         if (!empty($item['postal_code'])) $city_parts[] = $item['postal_code'];
                         if (!empty($item['city'])) $city_parts[] = $item['city'];
@@ -136,9 +136,9 @@ if (!empty($item['id'])) {
                 <?php endif; ?>
                 
                 <?php if (!empty($item['country']) && $item['country'] !== 'CZ'): ?>
-                <div class="saw-info-row">
-                    <span class="saw-info-label"><?php echo esc_html($tr('field_country', 'Země')); ?></span>
-                    <span class="saw-info-val"><?php echo esc_html($item['country']); ?></span>
+                <div class="sa-detail-field">
+                    <span class="sa-detail-field-label"><?php echo esc_html($tr('field_country', 'Země')); ?></span>
+                    <span class="sa-detail-field-value"><?php echo esc_html($item['country']); ?></span>
                 </div>
                 <?php endif; ?>
             </div>
@@ -147,16 +147,16 @@ if (!empty($item['id'])) {
         
         <!-- CONTACT -->
         <?php if (!empty($item['phone']) || !empty($item['email'])): ?>
-        <div class="saw-industrial-section">
-            <div class="saw-section-head">
-                <h4 class="saw-section-title">📞 <?php echo esc_html($tr('section_contact', 'Kontakt')); ?></h4>
+        <div class="sa-detail-section">
+            <div class="sa-detail-section-head">
+                <h4 class="sa-detail-section-title">📞 <?php echo esc_html($tr('section_contact', 'Kontakt')); ?></h4>
             </div>
-            <div class="saw-section-body">
+            <div class="sa-detail-section-body">
                 <?php if (!empty($item['phone'])): ?>
-                <div class="saw-info-row">
-                    <span class="saw-info-label"><?php echo esc_html($tr('field_phone', 'Telefon')); ?></span>
-                    <span class="saw-info-val">
-                        <a href="tel:<?php echo esc_attr(str_replace(' ', '', $item['phone'])); ?>" class="saw-link">
+                <div class="sa-detail-field">
+                    <span class="sa-detail-field-label"><?php echo esc_html($tr('field_phone', 'Telefon')); ?></span>
+                    <span class="sa-detail-field-value">
+                        <a href="tel:<?php echo esc_attr(str_replace(' ', '', $item['phone'])); ?>" class="sa-link">
                             <?php echo esc_html($item['phone']); ?>
                         </a>
                     </span>
@@ -164,10 +164,10 @@ if (!empty($item['id'])) {
                 <?php endif; ?>
                 
                 <?php if (!empty($item['email'])): ?>
-                <div class="saw-info-row">
-                    <span class="saw-info-label"><?php echo esc_html($tr('field_email', 'Email')); ?></span>
-                    <span class="saw-info-val">
-                        <a href="mailto:<?php echo esc_attr($item['email']); ?>" class="saw-link">
+                <div class="sa-detail-field">
+                    <span class="sa-detail-field-label"><?php echo esc_html($tr('field_email', 'Email')); ?></span>
+                    <span class="sa-detail-field-value">
+                        <a href="mailto:<?php echo esc_attr($item['email']); ?>" class="sa-link">
                             <?php echo esc_html($item['email']); ?>
                         </a>
                     </span>
@@ -178,49 +178,49 @@ if (!empty($item['id'])) {
         <?php endif; ?>
         
         <!-- INFO -->
-        <div class="saw-industrial-section">
-            <div class="saw-section-head">
-                <h4 class="saw-section-title">ℹ️ <?php echo esc_html($tr('section_info', 'Informace')); ?></h4>
+        <div class="sa-detail-section">
+            <div class="sa-detail-section-head">
+                <h4 class="sa-detail-section-title">ℹ️ <?php echo esc_html($tr('section_info', 'Informace')); ?></h4>
             </div>
-            <div class="saw-section-body">
-                <div class="saw-info-row">
-                    <span class="saw-info-label">ID</span>
-                    <span class="saw-info-val"><code><?php echo intval($item['id']); ?></code></span>
+            <div class="sa-detail-section-body">
+                <div class="sa-detail-field">
+                    <span class="sa-detail-field-label">ID</span>
+                    <span class="sa-detail-field-value"><code><?php echo intval($item['id']); ?></code></span>
                 </div>
                 
                 <?php if (!empty($item['code'])): ?>
-                <div class="saw-info-row">
-                    <span class="saw-info-label"><?php echo esc_html($tr('field_code', 'Kód pobočky')); ?></span>
-                    <span class="saw-info-val"><code><?php echo esc_html($item['code']); ?></code></span>
+                <div class="sa-detail-field">
+                    <span class="sa-detail-field-label"><?php echo esc_html($tr('field_code', 'Kód pobočky')); ?></span>
+                    <span class="sa-detail-field-value"><code><?php echo esc_html($item['code']); ?></code></span>
                 </div>
                 <?php endif; ?>
                 
-                <div class="saw-info-row">
-                    <span class="saw-info-label"><?php echo esc_html($tr('field_type', 'Typ')); ?></span>
-                    <span class="saw-info-val">
+                <div class="sa-detail-field">
+                    <span class="sa-detail-field-label"><?php echo esc_html($tr('field_type', 'Typ')); ?></span>
+                    <span class="sa-detail-field-value">
                         <?php if (!empty($item['is_headquarters'])): ?>
-                            <span class="saw-badge saw-badge-primary"><?php echo esc_html($tr('badge_headquarters', 'Sídlo firmy')); ?></span>
+                            <span class="sa-badge sa-badge--info"><?php echo esc_html($tr('badge_headquarters', 'Sídlo firmy')); ?></span>
                         <?php else: ?>
                             <?php echo esc_html($tr('badge_branch', 'Pobočka')); ?>
                         <?php endif; ?>
                     </span>
                 </div>
                 
-                <div class="saw-info-row">
-                    <span class="saw-info-label"><?php echo esc_html($tr('field_status', 'Status')); ?></span>
-                    <span class="saw-info-val">
+                <div class="sa-detail-field">
+                    <span class="sa-detail-field-label"><?php echo esc_html($tr('field_status', 'Status')); ?></span>
+                    <span class="sa-detail-field-value">
                         <?php if (!empty($item['is_active'])): ?>
-                            <span class="saw-badge saw-badge-success"><?php echo esc_html($tr('status_active', 'Aktivní')); ?></span>
+                            <span class="sa-badge sa-badge--success"><?php echo esc_html($tr('status_active', 'Aktivní')); ?></span>
                         <?php else: ?>
-                            <span class="saw-badge saw-badge-secondary"><?php echo esc_html($tr('status_inactive', 'Neaktivní')); ?></span>
+                            <span class="sa-badge sa-badge--neutral"><?php echo esc_html($tr('status_inactive', 'Neaktivní')); ?></span>
                         <?php endif; ?>
                     </span>
                 </div>
                 
                 <?php if (!empty($item['sort_order'])): ?>
-                <div class="saw-info-row">
-                    <span class="saw-info-label"><?php echo esc_html($tr('field_sort_order', 'Pořadí')); ?></span>
-                    <span class="saw-info-val"><?php echo intval($item['sort_order']); ?></span>
+                <div class="sa-detail-field">
+                    <span class="sa-detail-field-label"><?php echo esc_html($tr('field_sort_order', 'Pořadí')); ?></span>
+                    <span class="sa-detail-field-value"><?php echo intval($item['sort_order']); ?></span>
                 </div>
                 <?php endif; ?>
             </div>
@@ -228,46 +228,45 @@ if (!empty($item['id'])) {
         
         <!-- DESCRIPTION -->
         <?php if (!empty($item['description'])): ?>
-        <div class="saw-industrial-section">
-            <div class="saw-section-head">
-                <h4 class="saw-section-title">📝 <?php echo esc_html($tr('section_description', 'Popis')); ?></h4>
+        <div class="sa-detail-section">
+            <div class="sa-detail-section-head">
+                <h4 class="sa-detail-section-title">📝 <?php echo esc_html($tr('section_description', 'Popis')); ?></h4>
             </div>
-            <div class="saw-section-body">
-                <p style="margin: 0; line-height: 1.6;"><?php echo nl2br(esc_html($item['description'])); ?></p>
+            <div class="sa-detail-section-body">
+                <p class="sa-detail-field-value"><?php echo nl2br(esc_html($item['description'])); ?></p>
             </div>
         </div>
         <?php endif; ?>
         
         <!-- NOTES -->
         <?php if (!empty($item['notes'])): ?>
-        <div class="saw-industrial-section">
-            <div class="saw-section-head">
-                <h4 class="saw-section-title">💬 <?php echo esc_html($tr('section_notes', 'Interní poznámky')); ?></h4>
+        <div class="sa-detail-section">
+            <div class="sa-detail-section-head">
+                <h4 class="sa-detail-section-title">💬 <?php echo esc_html($tr('section_notes', 'Interní poznámky')); ?></h4>
             </div>
-            <div class="saw-section-body">
-                <p style="margin: 0; line-height: 1.6; color: #666; font-style: italic;"><?php echo nl2br(esc_html($item['notes'])); ?></p>
+            <div class="sa-detail-section-body">
+                <p class="sa-detail-field-value sa-text-muted" style="font-style: italic;"><?php echo nl2br(esc_html($item['notes'])); ?></p>
             </div>
         </div>
         <?php endif; ?>
         
         <!-- DEPARTMENTS -->
         <?php if (!empty($departments)): ?>
-        <div class="saw-industrial-section">
-            <div class="saw-section-head">
-                <h4 class="saw-section-title">🏭 <?php echo esc_html($tr('section_departments', 'Oddělení')); ?> <span class="saw-visit-badge-count"><?php echo $departments_count; ?></span></h4>
+        <div class="sa-detail-section">
+            <div class="sa-detail-section-head">
+                <h4 class="sa-detail-section-title">🏭 <?php echo esc_html($tr('section_departments', 'Oddělení')); ?> <span class="sa-badge sa-badge--count"><?php echo $departments_count; ?></span></h4>
             </div>
-            <div class="saw-section-body" style="padding: 0;">
+            <div class="sa-detail-section-body sa-p-0">
                 <?php foreach ($departments as $dept): ?>
                 <a href="<?php echo esc_url(home_url('/admin/departments/' . intval($dept['id']) . '/')); ?>" 
-                   class="saw-info-row" 
-                   style="display: flex; padding: 12px 20px; text-decoration: none; border-bottom: 1px solid #f0f0f0;">
-                    <span class="saw-info-label" style="flex-shrink: 0;">
+                   class="sa-department-link">
+                    <span class="sa-department-icon">
                         <?php echo !empty($dept['is_active']) ? '🏭' : '⏸️'; ?>
                     </span>
-                    <span class="saw-info-val" style="flex: 1;">
+                    <span class="sa-department-name">
                         <?php echo esc_html($dept['name']); ?>
                         <?php if (!empty($dept['department_number'])): ?>
-                            <span style="color: #888; font-size: 12px;">#<?php echo esc_html($dept['department_number']); ?></span>
+                            <span class="sa-department-number">#<?php echo esc_html($dept['department_number']); ?></span>
                         <?php endif; ?>
                     </span>
                 </a>
@@ -275,7 +274,7 @@ if (!empty($item['id'])) {
                 
                 <?php if ($departments_count > 5): ?>
                 <a href="<?php echo esc_url(home_url('/admin/departments/?branch_id=' . intval($item['id']))); ?>" 
-                   style="display: block; padding: 12px 20px; text-align: center; color: #0077B5; font-weight: 600; text-decoration: none;">
+                   class="sa-department-show-all">
                     → <?php echo esc_html($tr('show_all', 'Zobrazit všechna')); ?> (<?php echo $departments_count; ?>)
                 </a>
                 <?php endif; ?>
@@ -284,22 +283,22 @@ if (!empty($item['id'])) {
         <?php endif; ?>
         
         <!-- METADATA -->
-        <div class="saw-industrial-section">
-            <div class="saw-section-head">
-                <h4 class="saw-section-title">🕐 <?php echo esc_html($tr('section_metadata', 'Metadata')); ?></h4>
+        <div class="sa-detail-section">
+            <div class="sa-detail-section-head">
+                <h4 class="sa-detail-section-title">🕐 <?php echo esc_html($tr('section_metadata', 'Metadata')); ?></h4>
             </div>
-            <div class="saw-section-body">
+            <div class="sa-detail-section-body">
                 <?php if (!empty($item['created_at_formatted'])): ?>
-                <div class="saw-info-row">
-                    <span class="saw-info-label"><?php echo esc_html($tr('field_created_at', 'Vytvořeno')); ?></span>
-                    <span class="saw-info-val"><?php echo esc_html($item['created_at_formatted']); ?></span>
+                <div class="sa-detail-field">
+                    <span class="sa-detail-field-label"><?php echo esc_html($tr('field_created_at', 'Vytvořeno')); ?></span>
+                    <span class="sa-detail-field-value"><?php echo esc_html($item['created_at_formatted']); ?></span>
                 </div>
                 <?php endif; ?>
                 
                 <?php if (!empty($item['updated_at_formatted'])): ?>
-                <div class="saw-info-row">
-                    <span class="saw-info-label"><?php echo esc_html($tr('field_updated_at', 'Změněno')); ?></span>
-                    <span class="saw-info-val"><?php echo esc_html($item['updated_at_formatted']); ?></span>
+                <div class="sa-detail-field">
+                    <span class="sa-detail-field-label"><?php echo esc_html($tr('field_updated_at', 'Změněno')); ?></span>
+                    <span class="sa-detail-field-value"><?php echo esc_html($item['updated_at_formatted']); ?></span>
                 </div>
                 <?php endif; ?>
             </div>

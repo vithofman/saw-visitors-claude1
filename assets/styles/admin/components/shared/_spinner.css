@@ -1,0 +1,35 @@
+/**
+ * SAW Admin - Loading Spinner
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--saw-gray-200);
+    border-top-color: var(--saw-brand-600);
+    border-radius: var(--saw-radius-full);
+    animation: sa-spin 0.6s linear infinite;
+}
+
+@keyframes sa-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.sa-spinner--sm {
+    width: 16px;
+    height: 16px;
+    border-width: 2px;
+}
+
+.sa-spinner--lg {
+    width: 32px;
+    height: 32px;
+    border-width: 3px;
+}
+
+

@@ -1,0 +1,209 @@
+/**
+ * SAW Design Tokens - Unified Design System
+ * 
+ * Centrální definice všech designových proměnných.
+ * TOTO JE JEDINÝ ZDROJ PRAVDY pro barvy, fonty, spacing.
+ * 
+ * @package SAW_Visitors
+ * @version 3.0.0 - New CSS Architecture
+ */
+
+:root {
+    /* ============================================
+       BRAND COLORS
+       ============================================ */
+    
+    /* Firemní modrá - základní barva #005A8C */
+    --saw-brand: #005A8C;
+    
+    /* Odstíny odvozené od brand barvy */
+    --saw-brand-50:  #E8F4F8;
+    --saw-brand-100: #C5E3EE;
+    --saw-brand-200: #8BC5DB;
+    --saw-brand-300: #4FA7C8;
+    --saw-brand-400: #1A89B5;
+    --saw-brand-500: #0077B5;
+    --saw-brand-600: #005A8C;  /* === BRAND === */
+    --saw-brand-700: #004A73;
+    --saw-brand-800: #003D5C;
+    --saw-brand-900: #002E45;
+    
+    /* Aliasy pro snadné použití */
+    --saw-primary: var(--saw-brand-600);
+    --saw-primary-hover: var(--saw-brand-700);
+    --saw-primary-active: var(--saw-brand-800);
+    --saw-primary-light: var(--saw-brand-50);
+    --saw-primary-dark: var(--saw-brand-800);
+    
+    /* ============================================
+       STATUS COLORS
+       ============================================ */
+    
+    /* Success - Zelená */
+    --saw-success: #16a34a;
+    --saw-success-hover: #15803d;
+    --saw-success-light: #dcfce7;
+    --saw-success-dark: #14532d;
+    
+    /* Danger - Červená */
+    --saw-danger: #dc2626;
+    --saw-danger-hover: #b91c1c;
+    --saw-danger-light: #fee2e2;
+    --saw-danger-dark: #991b1b;
+    
+    /* Warning - Oranžová */
+    --saw-warning: #f59e0b;
+    --saw-warning-hover: #d97706;
+    --saw-warning-light: #fef3c7;
+    --saw-warning-dark: #92400e;
+    
+    /* Info - používá brand-500 */
+    --saw-info: var(--saw-brand-500);
+    --saw-info-hover: var(--saw-brand-600);
+    --saw-info-light: var(--saw-brand-50);
+    --saw-info-dark: var(--saw-brand-800);
+    
+    /* ============================================
+       NEUTRAL COLORS (Gray Scale)
+       ============================================ */
+    
+    --saw-gray-50:  #f9fafb;
+    --saw-gray-100: #f3f4f6;
+    --saw-gray-200: #e5e7eb;
+    --saw-gray-300: #d1d5db;
+    --saw-gray-400: #9ca3af;
+    --saw-gray-500: #6b7280;
+    --saw-gray-600: #4b5563;
+    --saw-gray-700: #374151;
+    --saw-gray-800: #1f2937;
+    --saw-gray-900: #111827;
+    
+    /* ============================================
+       SEMANTIC COLORS
+       ============================================ */
+    
+    --saw-text-primary: var(--saw-gray-900);
+    --saw-text-secondary: var(--saw-gray-600);
+    --saw-text-muted: var(--saw-gray-500);
+    --saw-text-light: var(--saw-gray-400);
+    --saw-text-inverse: #ffffff;
+    
+    --saw-bg-primary: #ffffff;
+    --saw-bg-secondary: var(--saw-gray-50);
+    --saw-bg-tertiary: var(--saw-gray-100);
+    
+    --saw-border-color: var(--saw-gray-200);
+    --saw-border-color-dark: var(--saw-gray-300);
+    
+    /* ============================================
+       TYPOGRAPHY
+       ============================================ */
+    
+    /* Font Families */
+    --saw-font-heading: 'Oswald', -apple-system, BlinkMacSystemFont, sans-serif;
+    --saw-font-body: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --saw-font-mono: 'SF Mono', 'Monaco', 'Consolas', 'Courier New', monospace;
+    
+    /* Font Sizes */
+    --saw-text-xs:   12px;
+    --saw-text-sm:   13px;
+    --saw-text-base: 14px;
+    --saw-text-md:   15px;
+    --saw-text-lg:   16px;
+    --saw-text-xl:   18px;
+    --saw-text-2xl:  20px;
+    --saw-text-3xl:  24px;
+    --saw-text-4xl:  28px;
+    
+    /* Font Weights */
+    --saw-font-normal: 400;
+    --saw-font-medium: 500;
+    --saw-font-semibold: 600;
+    --saw-font-bold: 700;
+    
+    /* Line Heights */
+    --saw-leading-tight: 1.2;
+    --saw-leading-normal: 1.5;
+    --saw-leading-relaxed: 1.75;
+    
+    /* ============================================
+       SPACING
+       ============================================ */
+    
+    --saw-space-1:  4px;
+    --saw-space-2:  8px;
+    --saw-space-3:  12px;
+    --saw-space-4:  16px;
+    --saw-space-5:  20px;
+    --saw-space-6:  24px;
+    --saw-space-8:  32px;
+    --saw-space-10: 40px;
+    --saw-space-12: 48px;
+    --saw-space-16: 64px;
+    
+    /* ============================================
+       BORDER RADIUS
+       ============================================ */
+    
+    --saw-radius-sm: 4px;
+    --saw-radius-md: 6px;
+    --saw-radius-lg: 8px;
+    --saw-radius-xl: 12px;
+    --saw-radius-2xl: 16px;
+    --saw-radius-full: 9999px;
+    
+    /* ============================================
+       SHADOWS
+       ============================================ */
+    
+    --saw-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --saw-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --saw-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --saw-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    
+    /* ============================================
+       TRANSITIONS
+       ============================================ */
+    
+    --saw-transition-fast: 150ms ease;
+    --saw-transition-base: 200ms ease;
+    --saw-transition-slow: 300ms ease;
+    
+    /* ============================================
+       Z-INDEX SCALE
+       ============================================ */
+    
+    --saw-z-dropdown: 1000;
+    --saw-z-sticky: 1020;
+    --saw-z-fixed: 1030;
+    --saw-z-sidebar: 1010;
+    --saw-z-modal-backdrop: 1040;
+    --saw-z-modal: 1050;
+    --saw-z-popover: 1060;
+    --saw-z-tooltip: 1070;
+    
+    /* ============================================
+       ICON SYSTEM
+       ============================================ */
+    
+    --saw-icon-xs: 14px;
+    --saw-icon-sm: 16px;
+    --saw-icon-md: 20px;
+    --saw-icon-lg: 24px;
+    --saw-icon-xl: 32px;
+    
+    --saw-icon-color: var(--saw-brand-600);
+    --saw-icon-color-muted: var(--saw-gray-500);
+    --saw-icon-color-inverse: #ffffff;
+    
+    /* ============================================
+       INPUT SYSTEM
+       ============================================ */
+    
+    --saw-input-bg: #ffffff;
+    --saw-input-border: var(--saw-border-color);
+    --saw-input-focus-border: var(--saw-brand-500);
+    --saw-input-focus-shadow: 0 0 0 3px var(--saw-brand-50);
+}
+
+

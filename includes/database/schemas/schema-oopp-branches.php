@@ -9,3 +9,4 @@ function saw_get_schema_oopp_branches($table_name, $prefix, $charset_collate) {
 	) {$charset_collate} COMMENT='Omezení OOPP na pobočky (prázdné = všechny)';";
 }
 
+

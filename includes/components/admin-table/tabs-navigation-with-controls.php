@@ -79,84 +79,61 @@ $search_html = $config['search_html'] ?? '';
 $filters_html = $config['filters_html'] ?? '';
 ?>
 
-<div class="saw-table-tabs-wrapper">
-    <div class="saw-table-tabs-container">
-        <!-- Left Arrow - před tabs -->
-        <button type="button" class="saw-tabs-nav-arrow saw-tabs-nav-arrow-left" aria-label="Scroll left" style="display: none;">
-            <?php if (class_exists('SAW_Icons')): ?>
-                <?php echo SAW_Icons::get('chevron-left'); ?>
-            <?php else: ?>
-                <span class="dashicons dashicons-arrow-left-alt2"></span>
-            <?php endif; ?>
-        </button>
-        
-        <!-- Tabs Navigation -->
-        <div class="saw-table-tabs">
-            <?php foreach ($tabs as $tab_key => $tab): ?>
-                <?php
-                // Ensure tab_key is string for comparison
-                $tab_key = (string) $tab_key;
-                // Strict comparison with both as strings
-                $is_active = ((string)$tab_key === (string)$current_tab);
-                
-                // CRITICAL FIX: Generate URL with filter_value, not tab_key
-                if ($tab['filter_value'] === null || $tab['filter_value'] === '') {
-                    // "All" tab - no filter parameter in URL
-                    $tab_url = add_query_arg($base_params, $base_url);
-                } else {
-                    // Other tabs - use filter_value in URL
-                    $url_params = array_merge($base_params, array($tab_param => $tab['filter_value']));
-                    $tab_url = add_query_arg($url_params, $base_url);
-                }
-                
-                $count = $tab_counts[$tab_key] ?? 0;
-                ?>
-                <a href="<?php echo esc_url($tab_url); ?>" 
-                   class="saw-table-tab<?php echo $is_active ? ' active' : ''; ?>"
-                   data-tab="<?php echo esc_attr($tab_key); ?>"
-                   data-filter-value="<?php echo esc_attr($tab['filter_value'] ?? ''); ?>">
-                    <span class="saw-tab-icon">
-                        <?php 
-                        if (!empty($tab['icon'])) {
-                            if (class_exists('SAW_Icons')) {
-                                $lucide_name = saw_map_tab_icon($tab['icon']);
-                                echo SAW_Icons::get($lucide_name, 'saw-icon--sm');
-                            } else {
-                                echo esc_html($tab['icon']);
-                            }
-                        }
-                        ?>
-                    </span>
-                    <span class="saw-tab-label"><?php echo esc_html($tab['label']); ?></span>
-                    <span class="saw-tab-count"><?php echo number_format_i18n($count); ?></span>
-                </a>
-            <?php endforeach; ?>
-        </div>
-        
-        <!-- Right Arrow - za tabs, před search -->
-        <button type="button" class="saw-tabs-nav-arrow saw-tabs-nav-arrow-right" aria-label="Scroll right" style="display: none;">
-            <?php if (class_exists('SAW_Icons')): ?>
-                <?php echo SAW_Icons::get('chevron-right'); ?>
-            <?php else: ?>
-                <span class="dashicons dashicons-arrow-right-alt2"></span>
-            <?php endif; ?>
-        </button>
-        
-        <!-- Search and Filters -->
-        <?php if ($search_enabled || $filters_enabled): ?>
-        <div class="saw-table-controls-inline">
-            <?php if ($search_enabled && !empty($search_html)): ?>
-                <div class="saw-table-search">
-                    <?php echo $search_html; ?>
-                </div>
-            <?php endif; ?>
+<div class="sa-table-toolbar">
+    <div class="sa-table-tabs">
+        <?php foreach ($tabs as $tab_key => $tab): ?>
+            <?php
+            // Ensure tab_key is string for comparison
+            $tab_key = (string) $tab_key;
+            // Strict comparison with both as strings
+            $is_active = ((string)$tab_key === (string)$current_tab);
             
-            <?php if ($filters_enabled && !empty($filters_html)): ?>
-                <div class="saw-table-filters">
-                    <?php echo $filters_html; ?>
-                </div>
-            <?php endif; ?>
-        </div>
-        <?php endif; ?>
+            // CRITICAL FIX: Generate URL with filter_value, not tab_key
+            if ($tab['filter_value'] === null || $tab['filter_value'] === '') {
+                // "All" tab - no filter parameter in URL
+                $tab_url = add_query_arg($base_params, $base_url);
+            } else {
+                // Other tabs - use filter_value in URL
+                $url_params = array_merge($base_params, array($tab_param => $tab['filter_value']));
+                $tab_url = add_query_arg($url_params, $base_url);
+            }
+            
+            $count = $tab_counts[$tab_key] ?? 0;
+            ?>
+            <a href="<?php echo esc_url($tab_url); ?>" 
+               class="sa-table-tab<?php echo $is_active ? ' sa-table-tab--active' : ''; ?>"
+               data-tab="<?php echo esc_attr($tab_key); ?>"
+               data-filter-value="<?php echo esc_attr($tab['filter_value'] ?? ''); ?>">
+                <?php 
+                if (!empty($tab['icon'])) {
+                    if (class_exists('SAW_Icons')) {
+                        $lucide_name = saw_map_tab_icon($tab['icon']);
+                        echo SAW_Icons::get($lucide_name, 'sa-table-tab-icon');
+                    } else {
+                        echo '<span class="sa-table-tab-icon">' . esc_html($tab['icon']) . '</span>';
+                    }
+                }
+                ?>
+                <span class="sa-table-tab-label"><?php echo esc_html($tab['label']); ?></span>
+                <?php if ($count > 0): ?>
+                <span class="sa-table-tab-count"><?php echo number_format_i18n($count); ?></span>
+                <?php endif; ?>
+            </a>
+        <?php endforeach; ?>
     </div>
+    
+    <!-- Search and Filters -->
+    <?php if ($search_enabled || $filters_enabled): ?>
+        <?php if ($search_enabled && !empty($search_html)): ?>
+            <div class="sa-table-search">
+                <?php echo $search_html; ?>
+            </div>
+        <?php endif; ?>
+        
+        <?php if ($filters_enabled && !empty($filters_html)): ?>
+            <div class="sa-table-filters">
+                <?php echo $filters_html; ?>
+            </div>
+        <?php endif; ?>
+    <?php endif; ?>
 </div>

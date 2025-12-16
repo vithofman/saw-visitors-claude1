@@ -65,15 +65,36 @@ if ($is_edit) {
 $is_nested = isset($GLOBALS['saw_nested_inline_create']) && $GLOBALS['saw_nested_inline_create'];
 ?>
 
-<div class="saw-sidebar" data-mode="<?php echo $is_edit ? 'edit' : 'create'; ?>" data-entity="<?php echo esc_attr($entity); ?>" data-module="<?php echo esc_attr($entity); ?>" data-is-nested="<?php echo $is_nested ? '1' : '0'; ?>" <?php if ($is_edit && !empty($item['id'])): ?>data-current-id="<?php echo intval($item['id']); ?>"<?php endif; ?>>
-    <div class="saw-sidebar-header">
-        <div class="saw-sidebar-title">
-            <span><?php echo esc_html($config['icon'] ?? '📝'); ?></span>
-            <h2><?php echo esc_html($sidebar_title); ?></h2>
+<div class="sa-sidebar sa-sidebar--active" data-mode="<?php echo $is_edit ? 'edit' : 'create'; ?>" data-entity="<?php echo esc_attr($entity); ?>" data-module="<?php echo esc_attr($entity); ?>" data-is-nested="<?php echo $is_nested ? '1' : '0'; ?>" <?php if ($is_edit && !empty($item['id'])): ?>data-current-id="<?php echo intval($item['id']); ?>"<?php endif; ?>>
+    <div class="sa-sidebar-header">
+        <div class="sa-sidebar-title">
+            <span class="sa-sidebar-icon"><?php 
+                if (class_exists('SAW_Icons')) {
+                    $icon_emoji = $config['icon'] ?? '📝';
+                    $icon_map = [
+                        '📝' => 'file-text',
+                        '📋' => 'clipboard-list',
+                        '🏢' => 'building-2',
+                        '👤' => 'user',
+                        '📧' => 'mail',
+                        '⚙️' => 'settings',
+                    ];
+                    $icon_name = $icon_map[$icon_emoji] ?? 'file-text';
+                    echo SAW_Icons::get($icon_name, 'sa-icon--md');
+                } else {
+                    echo esc_html($config['icon'] ?? '📝');
+                }
+            ?></span>
+            <h2 class="sa-sidebar-heading"><?php echo esc_html($sidebar_title); ?></h2>
         </div>
-        <a href="<?php echo esc_url($close_url); ?>" class="saw-sidebar-close" title="<?php echo esc_attr($tr('btn_close', 'Zavřít')); ?>">&times;</a>
+        <a href="<?php echo esc_url($close_url); ?>" class="sa-sidebar-close" title="<?php echo esc_attr($tr('btn_close', 'Zavřít')); ?>">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        </a>
     </div>
-    <div class="saw-sidebar-content">
+    <div class="sa-sidebar-content">
         <?php 
         if (file_exists($form_template)) {
             $GLOBALS['saw_sidebar_form'] = true;

@@ -1,0 +1,75 @@
+/**
+ * SAW Admin - Modal Dialogs
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--saw-transition-base), 
+                visibility var(--saw-transition-base);
+    z-index: var(--saw-z-modal-backdrop);
+}
+
+.sa-modal-backdrop--active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.sa-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.95);
+    max-width: 90vw;
+    max-height: 90vh;
+    background: var(--saw-bg-primary);
+    border-radius: var(--saw-radius-xl);
+    box-shadow: var(--saw-shadow-xl);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--saw-transition-base), 
+                visibility var(--saw-transition-base),
+                transform var(--saw-transition-base);
+    z-index: var(--saw-z-modal);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.sa-modal-backdrop--active .sa-modal {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.sa-modal-header {
+    padding: var(--saw-space-5);
+    border-bottom: 1px solid var(--saw-border-color);
+}
+
+.sa-modal-title {
+    margin: 0;
+    font-size: var(--saw-text-xl);
+    font-weight: var(--saw-font-semibold);
+}
+
+.sa-modal-body {
+    padding: var(--saw-space-5);
+    overflow-y: auto;
+    flex: 1;
+}
+
+.sa-modal-footer {
+    padding: var(--saw-space-5);
+    border-top: 1px solid var(--saw-border-color);
+    display: flex;
+    gap: var(--saw-space-3);
+    justify-content: flex-end;
+}
+
+

@@ -1,0 +1,72 @@
+/**
+ * SAW Admin - Display Utilities
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-hidden {
+    display: none;
+}
+
+.sa-block {
+    display: block;
+}
+
+.sa-inline {
+    display: inline;
+}
+
+.sa-inline-block {
+    display: inline-block;
+}
+
+.sa-flex {
+    display: flex;
+}
+
+.sa-inline-flex {
+    display: inline-flex;
+}
+
+.sa-grid {
+    display: grid;
+}
+
+.sa-flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sa-flex-between {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.sa-flex-start {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.sa-flex-end {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.sa-flex-column {
+    display: flex;
+    flex-direction: column;
+}
+
+.sa-flex-wrap {
+    flex-wrap: wrap;
+}
+
+.sa-flex-nowrap {
+    flex-wrap: nowrap;
+}
+
+

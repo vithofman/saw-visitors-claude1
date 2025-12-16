@@ -1,0 +1,108 @@
+/**
+ * SAW Admin Design System
+ * 
+ * Entry point - importuje vše ve správném pořadí.
+ * Pořadí je KRITICKÉ pro správnou specificity bez !important.
+ * 
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+/* ============================================
+   1. TOKENS - CSS proměnné (nejvyšší priorita)
+   ============================================ */
+@import "tokens/_tokens.css";
+
+/* ============================================
+   2. BASE - Reset a HTML elementy
+   ============================================ */
+@import "base/_reset.css";
+@import "base/_typography.css";
+@import "base/_buttons.css";
+@import "base/_inputs.css";
+@import "base/_icons.css";
+
+/* ============================================
+   3. LAYOUT - App shell structure
+   ============================================ */
+@import "layout/_shell.css";
+@import "layout/_header.css";
+@import "layout/_sidebar-nav.css";
+@import "layout/_content.css";
+@import "layout/_footer.css";
+@import "layout/_bottom-nav.css";
+
+/* ============================================
+   4. COMPONENTS - Znovupoužitelné bloky
+   ============================================ */
+
+/* Shared (nejdřív - ostatní komponenty je používají) */
+@import "components/shared/_badge.css";
+@import "components/shared/_avatar.css";
+@import "components/shared/_alert.css";
+@import "components/shared/_dropdown.css";
+@import "components/shared/_modal.css";
+@import "components/shared/_card.css";
+@import "components/shared/_tabs.css";
+@import "components/shared/_tooltip.css";
+@import "components/shared/_spinner.css";
+@import "components/shared/_fab.css";
+@import "components/shared/_switchers.css";
+
+/* Data Table */
+@import "components/data-table/_table-wrapper.css";
+@import "components/data-table/_table-header.css";
+@import "components/data-table/_table-toolbar.css";
+@import "components/data-table/_table-element.css";
+@import "components/data-table/_table-cells.css";
+@import "components/data-table/_table-pagination.css";
+@import "components/data-table/_table-empty.css";
+@import "components/data-table/_table-responsive.css";
+
+/* Sidebar */
+@import "components/sidebar/_sidebar-wrapper.css";
+@import "components/sidebar/_sidebar-header.css";
+@import "components/sidebar/_sidebar-content.css";
+@import "components/sidebar/_sidebar-footer.css";
+@import "components/sidebar/_sidebar-nested.css";
+@import "components/sidebar/_sidebar-responsive.css";
+
+/* Detail */
+@import "components/detail/_detail-header.css";
+@import "components/detail/_detail-section.css";
+@import "components/detail/_detail-field.css";
+@import "components/detail/_detail-timeline.css";
+@import "components/detail/_detail-cards.css";
+
+/* Form */
+@import "components/form/_form-container.css";
+@import "components/form/_form-section.css";
+@import "components/form/_form-group.css";
+@import "components/form/_form-row.css";
+@import "components/form/_form-actions.css";
+@import "components/form/_form-validation.css";
+
+/* ============================================
+   5. MODULES - Specifické pro moduly (POSLEDNÍ z komponent)
+   ============================================ */
+@import "modules/_branches.css";
+@import "modules/_visitors.css";
+@import "modules/_visits.css";
+@import "modules/_companies.css";
+@import "modules/_oopp.css";
+@import "modules/_content.css";
+@import "modules/_dashboard.css";
+
+/* ============================================
+   6. UTILITIES - Pomocné třídy (úplně poslední)
+   ============================================ */
+@import "utilities/_display.css";
+@import "utilities/_spacing.css";
+@import "utilities/_text.css";
+@import "utilities/_colors.css";
+
+/* ============================================
+   7. THEMES - Dark mode (conditional load)
+   ============================================ */
+@import "themes/_dark.css";
+

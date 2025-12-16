@@ -1,0 +1,144 @@
+/**
+ * SAW Admin - Sidebar Header
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-sidebar-header {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-4);
+    padding: 0;
+    background: var(--saw-brand-600);
+    border-bottom: none;
+    flex-shrink: 0;
+    min-height: 60px;
+}
+
+/* Dark header variant - default styling */
+.sa-sidebar-header {
+    background: var(--saw-brand-600);
+    color: #ffffff;
+}
+
+.sa-sidebar-header .sa-sidebar-heading {
+    color: #ffffff;
+}
+
+.sa-sidebar-header .sa-sidebar-icon {
+    color: #ffffff;
+}
+
+.sa-sidebar-header .sa-sidebar-nav-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+
+.sa-sidebar-header .sa-sidebar-nav-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #ffffff;
+}
+
+.sa-sidebar-header .sa-sidebar-close {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.4);
+    color: #ffffff;
+}
+
+.sa-sidebar-header .sa-sidebar-close:hover {
+    background: var(--saw-danger);
+    border-color: var(--saw-danger);
+    color: #ffffff;
+}
+
+/* Navigation controls (prev/next) */
+.sa-sidebar-nav {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-2);
+    padding: var(--saw-space-4);
+    padding-right: var(--saw-space-2);
+}
+
+.sa-sidebar-nav-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--saw-radius-md);
+    color: #ffffff;
+    cursor: pointer;
+    transition: all var(--saw-transition-fast);
+}
+
+.sa-sidebar-nav-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #ffffff;
+}
+
+.sa-sidebar-nav-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* Title area */
+.sa-sidebar-title {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-3);
+    flex: 1;
+    min-width: 0;
+    padding: var(--saw-space-4);
+}
+
+.sa-sidebar-icon {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    color: #ffffff;
+}
+
+.sa-sidebar-heading {
+    margin: 0;
+    font-size: var(--saw-text-lg);
+    font-weight: var(--saw-font-semibold);
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Close button */
+.sa-sidebar-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    border-radius: var(--saw-radius-md);
+    color: #ffffff;
+    cursor: pointer;
+    transition: all var(--saw-transition-fast);
+    text-decoration: none;
+    font-size: 18px;
+    line-height: 1;
+    margin-right: var(--saw-space-4);
+}
+
+.sa-sidebar-close:hover {
+    background: var(--saw-danger);
+    border-color: var(--saw-danger);
+    color: #ffffff;
+}
+
+

@@ -1,0 +1,91 @@
+/**
+ * SAW Admin - Floating Action Buttons
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-fab {
+    position: fixed;
+    bottom: var(--saw-space-6);
+    right: var(--saw-space-6);
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--saw-brand-600);
+    color: #ffffff;
+    border: none;
+    border-radius: var(--saw-radius-full);
+    box-shadow: var(--saw-shadow-lg);
+    cursor: pointer;
+    transition: all var(--saw-transition-fast);
+    z-index: var(--saw-z-fixed);
+}
+
+.sa-fab:hover {
+    background: var(--saw-brand-700);
+    box-shadow: var(--saw-shadow-xl);
+    transform: scale(1.05);
+}
+
+.sa-fab--sm {
+    width: 48px;
+    height: 48px;
+}
+
+.sa-fab--lg {
+    width: 64px;
+    height: 64px;
+}
+
+/* FAB Group - pro více float buttons */
+.sa-fab-group {
+    position: fixed;
+    bottom: var(--saw-space-6);
+    right: var(--saw-space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--saw-space-3);
+    z-index: var(--saw-z-fixed);
+}
+
+.sa-fab-group .sa-fab {
+    position: relative;
+    bottom: auto;
+    right: auto;
+}
+
+/* Když je sidebar aktivní, FAB by měl být za ním */
+.sa-sidebar--active ~ .sa-fab,
+.sa-sidebar-wrapper.active ~ .sa-fab,
+body:has(.sa-sidebar--active) .sa-fab,
+body:has(.sa-sidebar-wrapper.active) .sa-fab {
+    z-index: calc(var(--saw-z-fixed) - 1);
+}
+
+.sa-sidebar--active ~ .sa-fab-group,
+.sa-sidebar-wrapper.active ~ .sa-fab-group,
+body:has(.sa-sidebar--active) .sa-fab-group,
+body:has(.sa-sidebar-wrapper.active) .sa-fab-group {
+    z-index: calc(var(--saw-z-fixed) - 1);
+}
+
+/* Secondary a danger varianty pro FAB */
+.sa-fab--secondary {
+    background: var(--saw-gray-600);
+}
+
+.sa-fab--secondary:hover {
+    background: var(--saw-gray-700);
+}
+
+.sa-fab--danger {
+    background: var(--saw-danger, #dc2626);
+}
+
+.sa-fab--danger:hover {
+    background: var(--saw-danger-dark, #b91c1c);
+}
+
+

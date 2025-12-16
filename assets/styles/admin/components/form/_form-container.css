@@ -1,0 +1,16 @@
+/**
+ * SAW Admin - Form Container
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-form {
+    width: 100%;
+}
+
+.sa-form-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+

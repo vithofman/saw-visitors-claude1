@@ -44,25 +44,32 @@ $edit_prefix = $tr('form_edit_prefix', 'Upravit');
 $sidebar_title = $edit_prefix . ': ' . $item_name;
 ?>
 
-<div class="saw-sidebar saw-detail-sidebar" data-entity="<?php echo esc_attr($entity); ?>" data-id="<?php echo intval($item['id']); ?>">
+<div class="sa-sidebar sa-sidebar--active" data-mode="edit" data-entity="<?php echo esc_attr($entity); ?>" data-id="<?php echo intval($item['id']); ?>">
     
     <!-- Sidebar Header -->
-    <div class="saw-sidebar-header">
-        <div class="saw-sidebar-header-content">
-            <h2 class="saw-sidebar-title">
-                <span class="dashicons dashicons-edit"></span>
-                <?php echo esc_html($sidebar_title); ?>
-            </h2>
-            <a href="<?php echo esc_url($detail_url); ?>" 
-               class="saw-sidebar-close" 
-               title="<?php echo esc_attr($tr('btn_close', 'Zavřít')); ?>">
-                <span class="dashicons dashicons-no-alt"></span>
-            </a>
+    <div class="sa-sidebar-header">
+        <div class="sa-sidebar-title">
+            <span class="sa-sidebar-icon">
+                <?php if (class_exists('SAW_Icons')): ?>
+                    <?php echo SAW_Icons::get('pencil', 'sa-icon--md'); ?>
+                <?php else: ?>
+                    <span class="dashicons dashicons-edit"></span>
+                <?php endif; ?>
+            </span>
+            <h2 class="sa-sidebar-heading"><?php echo esc_html($sidebar_title); ?></h2>
         </div>
+        <a href="<?php echo esc_url($detail_url); ?>" 
+           class="sa-sidebar-close" 
+           title="<?php echo esc_attr($tr('btn_close', 'Zavřít')); ?>">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        </a>
     </div>
 
     <!-- Scrollable Content (Form) -->
-    <div class="saw-sidebar-content">
+    <div class="sa-sidebar-content">
         <?php echo $form_html; ?>
     </div>
 

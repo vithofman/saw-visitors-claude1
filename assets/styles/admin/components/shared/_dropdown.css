@@ -1,0 +1,63 @@
+/**
+ * SAW Admin - Dropdown Menus
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.sa-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: var(--saw-z-dropdown);
+    min-width: 200px;
+    padding: var(--saw-space-2);
+    background: var(--saw-bg-primary);
+    border: 1px solid var(--saw-border-color);
+    border-radius: var(--saw-radius-lg);
+    box-shadow: var(--saw-shadow-lg);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    transition: opacity var(--saw-transition-fast), 
+                visibility var(--saw-transition-fast),
+                transform var(--saw-transition-fast);
+}
+
+.sa-dropdown--open .sa-dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.sa-dropdown-item {
+    display: block;
+    width: 100%;
+    padding: var(--saw-space-2) var(--saw-space-3);
+    font-size: var(--saw-text-sm);
+    color: var(--saw-text-primary);
+    text-align: left;
+    background: none;
+    border: none;
+    border-radius: var(--saw-radius-md);
+    cursor: pointer;
+    transition: background var(--saw-transition-fast);
+}
+
+.sa-dropdown-item:hover {
+    background: var(--saw-bg-tertiary);
+}
+
+.sa-dropdown-item--danger {
+    color: var(--saw-danger);
+}
+
+.sa-dropdown-item--danger:hover {
+    background: var(--saw-danger-light);
+}
+
+

@@ -1,0 +1,93 @@
+/**
+ * SAW Admin - Branches Module Styles
+ * @package SAW_Visitors
+ * @version 3.0.0
+ * 
+ * Specifické styly pro modul Branches
+ */
+
+/* Branch thumbnail in table */
+.sa-branch-thumbnail {
+    max-width: 50px;
+    height: auto;
+    border-radius: var(--saw-radius-md);
+    margin: 0;
+}
+
+/* Branch icon fallback */
+.sa-branch-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
+    font-size: 24px;
+    margin: 0;
+}
+
+/* Code badge */
+.sa-code-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    font-size: var(--saw-text-xs);
+    font-weight: var(--saw-font-semibold);
+    font-family: var(--saw-font-mono);
+    background: var(--saw-gray-100);
+    color: var(--saw-gray-700);
+    border-radius: var(--saw-radius-md);
+    border: 1px solid var(--saw-border-color);
+}
+
+/* Department links in detail */
+.sa-department-link {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-3);
+    padding: var(--saw-space-3) var(--saw-space-5);
+    text-decoration: none;
+    color: var(--saw-text-primary);
+    border-bottom: 1px solid var(--saw-border-color);
+    transition: background var(--saw-transition-fast);
+}
+
+.sa-department-link:hover {
+    background: var(--saw-bg-secondary);
+}
+
+.sa-department-link:last-child {
+    border-bottom: none;
+}
+
+.sa-department-icon {
+    flex-shrink: 0;
+    font-size: 20px;
+    line-height: 1;
+}
+
+.sa-department-name {
+    flex: 1;
+    font-size: var(--saw-text-sm);
+    color: var(--saw-text-primary);
+}
+
+.sa-department-number {
+    color: var(--saw-text-muted);
+    font-size: var(--saw-text-xs);
+    margin-left: var(--saw-space-2);
+}
+
+.sa-department-show-all {
+    display: block;
+    padding: var(--saw-space-3) var(--saw-space-5);
+    text-align: center;
+    color: var(--saw-brand-600);
+    font-weight: var(--saw-font-semibold);
+    text-decoration: none;
+    transition: color var(--saw-transition-fast);
+}
+
+.sa-department-show-all:hover {
+    color: var(--saw-brand-700);
+}
+
+

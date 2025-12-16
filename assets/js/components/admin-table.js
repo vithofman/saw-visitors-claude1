@@ -26,21 +26,23 @@
             scrollToRow = false;
         }
 
-        $('.saw-admin-table tbody tr').removeClass('saw-row-active');
-        const $activeRow = $('.saw-admin-table tbody tr[data-id="' + id + '"]');
+        // Support both old and new CSS classes
+        $('.sa-table-element tbody tr, .saw-admin-table tbody tr').removeClass('saw-row-active sa-table-row--active');
+        const $activeRow = $('.sa-table-element tbody tr[data-id="' + id + '"], .saw-admin-table tbody tr[data-id="' + id + '"]');
 
         if (!$activeRow.length) {
             console.warn('⚠️ Active row not found for ID:', id);
             return;
         }
 
-        $activeRow.addClass('saw-row-active');
+        $activeRow.addClass('saw-row-active sa-table-row--active');
         console.log('✨ Active row updated:', id);
 
         // Scroll active row into view
         if (scrollToRow) {
             setTimeout(function () {
-                const $scrollContainer = $('.saw-table-scroll-area');
+                // Support both old and new CSS classes
+                const $scrollContainer = $('.sa-table-scroll, .saw-table-scroll-area');
 
                 if (!$scrollContainer.length) {
                     console.warn('⚠️ Scroll container (.saw-table-scroll-area) not found');
@@ -223,11 +225,13 @@
      */
     function initAdminTable() {
         // Get entity from table data attribute
-        const $table = $('.saw-admin-table');
+        // Support both old and new CSS classes
+        const $table = $('.sa-table-element, .saw-admin-table');
         const entity = $table.data('entity');
 
         // ===== PRIORITY CHECK: SIDEBAR HAS HIGHEST PRIORITY =====
-        const $sidebar = $('.saw-sidebar[data-current-id]');
+        // Support both old and new CSS classes
+        const $sidebar = $('.sa-sidebar[data-current-id], .saw-sidebar[data-current-id]');
         const hasSidebarActiveRow = $sidebar.length && $sidebar.data('current-id');
         
         // Store flag globally for restore logic
@@ -266,7 +270,8 @@
         // Clickable table rows - intercept clicks
         document.addEventListener('click', function (e) {
             // Find if we clicked inside a table row
-            const $row = $(e.target).closest('.saw-admin-table tbody tr');
+            // Support both old and new CSS classes
+            const $row = $(e.target).closest('.sa-table-element tbody tr, .saw-admin-table tbody tr');
 
             if (!$row.length) {
                 return; // Not in a table row
@@ -331,7 +336,8 @@
         }, true); // Use capture phase
 
         // Floating button (Add New) - navigate to create form
-        $(document).on('click', '.saw-floating-button', function (e) {
+        // Support both old and new CSS classes
+        $(document).on('click', '.sa-fab, .saw-floating-button', function (e) {
             e.preventDefault();
             e.stopPropagation();
 
@@ -376,17 +382,23 @@
             event.stopPropagation();
         }
         
-        const wrapper = button.closest('.saw-filters-dropdown-wrapper');
+        // Support both old and new CSS classes
+        const wrapper = button.closest('.sa-table-filters-wrapper, .saw-filters-dropdown-wrapper');
         if (!wrapper) {
             return;
         }
         
-        const isActive = wrapper.classList.contains('active');
+        const dropdown = wrapper.querySelector('.sa-dropdown--filters, .saw-filters-dropdown-menu');
+        if (!dropdown) {
+            return;
+        }
+        
+        const isActive = dropdown.classList.contains('sa-dropdown--open') || wrapper.classList.contains('active');
         
         // Close all other filter dropdowns
-        document.querySelectorAll('.saw-filters-dropdown-wrapper.active').forEach(function(el) {
-            if (el !== wrapper) {
-                el.classList.remove('active');
+        document.querySelectorAll('.sa-dropdown--filters.sa-dropdown--open, .saw-filters-dropdown-wrapper.active').forEach(function(el) {
+            if (el !== dropdown && el !== wrapper) {
+                el.classList.remove('sa-dropdown--open', 'active');
             }
         });
         
@@ -401,8 +413,10 @@
         
         // Toggle current dropdown
         if (!isActive) {
+            dropdown.classList.add('sa-dropdown--open');
             wrapper.classList.add('active');
         } else {
+            dropdown.classList.remove('sa-dropdown--open');
             wrapper.classList.remove('active');
         }
     };

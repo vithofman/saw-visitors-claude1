@@ -1,0 +1,48 @@
+/**
+ * SAW Admin - Detail Cards (Visit Cards, Stat Cards)
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-detail-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--saw-space-4);
+}
+
+.sa-detail-card {
+    background: var(--saw-bg-primary);
+    border: 1px solid var(--saw-border-color);
+    border-radius: var(--saw-radius-lg);
+    padding: var(--saw-space-4);
+}
+
+.sa-detail-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--saw-space-3);
+}
+
+.sa-detail-card-title {
+    margin: 0;
+    font-size: var(--saw-text-sm);
+    font-weight: var(--saw-font-semibold);
+    color: var(--saw-text-secondary);
+}
+
+.sa-detail-card-value {
+    font-size: var(--saw-text-2xl);
+    font-weight: var(--saw-font-bold);
+    color: var(--saw-text-primary);
+}
+
+.sa-detail-card-footer {
+    margin-top: var(--saw-space-3);
+    padding-top: var(--saw-space-3);
+    border-top: 1px solid var(--saw-border-color);
+    font-size: var(--saw-text-xs);
+    color: var(--saw-text-muted);
+}
+
+

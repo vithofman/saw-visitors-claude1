@@ -1,0 +1,64 @@
+/**
+ * SAW Admin - Table Responsive (Mobile Card View)
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+@media (max-width: 768px) {
+    .sa-table-element {
+        display: none;
+    }
+    
+    .sa-table-cards {
+        display: block;
+    }
+    
+    .sa-table-card {
+        background: var(--saw-bg-primary);
+        border: 1px solid var(--saw-border-color);
+        border-radius: var(--saw-radius-lg);
+        padding: var(--saw-space-4);
+        margin-bottom: var(--saw-space-3);
+    }
+    
+    .sa-table-card-header {
+        display: flex;
+        align-items: center;
+        gap: var(--saw-space-3);
+        margin-bottom: var(--saw-space-3);
+        padding-bottom: var(--saw-space-3);
+        border-bottom: 1px solid var(--saw-border-color);
+    }
+    
+    .sa-table-card-field {
+        display: flex;
+        justify-content: space-between;
+        padding: var(--saw-space-2) 0;
+        border-bottom: 1px solid var(--saw-border-color);
+    }
+    
+    .sa-table-card-field:last-child {
+        border-bottom: none;
+    }
+    
+    .sa-table-card-label {
+        font-size: var(--saw-text-xs);
+        font-weight: var(--saw-font-semibold);
+        color: var(--saw-text-secondary);
+        text-transform: uppercase;
+    }
+    
+    .sa-table-card-value {
+        font-size: var(--saw-text-sm);
+        color: var(--saw-text-primary);
+        text-align: right;
+    }
+}
+
+@media (min-width: 769px) {
+    .sa-table-cards {
+        display: none;
+    }
+}
+
+

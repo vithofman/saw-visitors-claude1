@@ -1,0 +1,54 @@
+/**
+ * SAW Admin - Typography
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+body {
+    font-family: var(--saw-font-body);
+    font-size: var(--saw-text-base);
+    line-height: var(--saw-leading-normal);
+    color: var(--saw-text-primary);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--saw-font-heading);
+    font-weight: var(--saw-font-bold);
+    line-height: var(--saw-leading-tight);
+    color: var(--saw-text-primary);
+    margin: 0;
+}
+
+h1 {
+    font-size: var(--saw-text-4xl);
+}
+
+h2 {
+    font-size: var(--saw-text-3xl);
+}
+
+h3 {
+    font-size: var(--saw-text-2xl);
+}
+
+h4 {
+    font-size: var(--saw-text-xl);
+}
+
+h5 {
+    font-size: var(--saw-text-lg);
+}
+
+h6 {
+    font-size: var(--saw-text-base);
+}
+
+p {
+    margin: 0 0 var(--saw-space-4);
+}
+
+p:last-child {
+    margin-bottom: 0;
+}
+
+

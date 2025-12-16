@@ -1,0 +1,68 @@
+/**
+ * SAW Admin - Table Element (<table>, <thead>, <tbody>, <tr>, <td>)
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-table-element {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--saw-bg-primary);
+}
+
+.sa-table-thead {
+    background: var(--saw-bg-secondary);
+}
+
+.sa-table-thead .sa-table-row {
+    border-bottom: 2px solid var(--saw-border-color);
+}
+
+.sa-table-th {
+    padding: var(--saw-space-3) var(--saw-space-4);
+    font-size: var(--saw-text-xs);
+    font-weight: var(--saw-font-semibold);
+    text-align: left;
+    color: var(--saw-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sa-table-tbody .sa-table-row {
+    border-bottom: 1px solid var(--saw-border-color);
+    transition: background var(--saw-transition-fast);
+}
+
+.sa-table-tbody .sa-table-row:hover {
+    background: var(--saw-bg-secondary);
+}
+
+.sa-table-row--selected {
+    background: var(--saw-brand-50);
+}
+
+.sa-table-row--active,
+.saw-row-active {
+    background: var(--saw-brand-50);
+    border-left: 3px solid var(--saw-brand-600);
+}
+
+.sa-table-row--clickable {
+    cursor: pointer;
+}
+
+.sa-table-cell {
+    padding: var(--saw-space-3) var(--saw-space-4);
+    font-size: var(--saw-text-sm);
+    color: var(--saw-text-primary);
+}
+
+.sa-table-cell--center {
+    text-align: center;
+}
+
+.sa-table-cell--right {
+    text-align: right;
+}
+
+

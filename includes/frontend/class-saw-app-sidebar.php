@@ -341,13 +341,13 @@ class SAW_App_Sidebar {
     public function render() {
         $menu = $this->get_menu_items();
         ?>
-        <div class="saw-sidebar-overlay" id="sawSidebarOverlay"></div>
-        <aside class="saw-app-sidebar" id="sawAppSidebar">
+        <div class="sa-sidebar-overlay" id="sawSidebarOverlay"></div>
+        <aside class="sa-app-sidebar" id="sawAppSidebar">
             <?php if ($this->saw_role === 'super_admin' || $this->saw_role === 'admin'): ?>
                 <?php $this->render_branch_switcher(); ?>
             <?php endif; ?>
             
-            <nav class="saw-sidebar-nav">
+            <nav class="sa-sidebar-nav">
                 <?php 
                 $first_section = true;
                 foreach ($menu as $index => $section): 
@@ -368,33 +368,33 @@ class SAW_App_Sidebar {
                     }
                 ?>
                     <?php if (isset($section['heading'])): ?>
-                        <div class="saw-nav-section <?php echo $is_collapsed ? 'collapsed' : ''; ?>">
-                            <div class="saw-nav-heading">
+                        <div class="sa-nav-section <?php echo $is_collapsed ? 'sa-nav-section--collapsed' : ''; ?>">
+                            <div class="sa-nav-heading">
                                 <?php echo esc_html($section['heading']); ?>
-                                <span class="saw-nav-heading-toggle">
+                                <span class="sa-nav-heading-toggle">
                                     <svg viewBox="0 0 24 24">
                                         <polyline points="6 9 12 15 18 9"></polyline>
                                     </svg>
                                 </span>
                             </div>
-                            <div class="saw-nav-items">
+                            <div class="sa-nav-items">
                                 <?php foreach ($visible_items as $item): ?>
                                     <a 
                                         href="<?php echo esc_url($item['url']); ?>" 
-                                        class="saw-nav-item <?php echo ($this->active_menu === $item['id']) ? 'active' : ''; ?>"
+                                        class="sa-nav-item <?php echo ($this->active_menu === $item['id']) ? 'sa-nav-item--active' : ''; ?>"
                                         data-menu="<?php echo esc_attr($item['id']); ?>"
                                         <?php if (!empty($item['target'])): ?>target="<?php echo esc_attr($item['target']); ?>"<?php endif; ?>
                                     >
-                                        <span class="saw-nav-icon"><?php 
+                                        <span class="sa-nav-icon"><?php 
                                             // Convert emoji/Dashicons to SAW_Icons
                                             if (class_exists('SAW_Icons')) {
                                                 $icon_name = $this->map_icon($item['icon']);
-                                                echo SAW_Icons::get($icon_name, 'saw-icon--md');
+                                                echo SAW_Icons::get($icon_name, 'sa-icon--md');
                                             } else {
                                                 echo esc_html($item['icon']);
                                             }
                                         ?></span>
-                                        <span class="saw-nav-label"><?php echo esc_html($item['label']); ?></span>
+                                        <span class="sa-nav-label"><?php echo esc_html($item['label']); ?></span>
                                     </a>
                                 <?php endforeach; ?>
                             </div>
@@ -403,20 +403,20 @@ class SAW_App_Sidebar {
                         <?php foreach ($visible_items as $item): ?>
                             <a 
                                 href="<?php echo esc_url($item['url']); ?>" 
-                                class="saw-nav-item <?php echo ($this->active_menu === $item['id']) ? 'active' : ''; ?>"
+                                class="sa-nav-item <?php echo ($this->active_menu === $item['id']) ? 'sa-nav-item--active' : ''; ?>"
                                 data-menu="<?php echo esc_attr($item['id']); ?>"
                                 <?php if (!empty($item['target'])): ?>target="<?php echo esc_attr($item['target']); ?>"<?php endif; ?>
                             >
-                                <span class="saw-nav-icon"><?php 
+                                <span class="sa-nav-icon"><?php 
                                     // Convert emoji/Dashicons to SAW_Icons
                                     if (class_exists('SAW_Icons')) {
                                         $icon_name = $this->map_icon($item['icon']);
-                                        echo SAW_Icons::get($icon_name, 'saw-icon--md');
+                                        echo SAW_Icons::get($icon_name, 'sa-icon--md');
                                     } else {
                                         echo esc_html($item['icon']);
                                     }
                                 ?></span>
-                                <span class="saw-nav-label"><?php echo esc_html($item['label']); ?></span>
+                                <span class="sa-nav-label"><?php echo esc_html($item['label']); ?></span>
                             </a>
                         <?php endforeach; ?>
                     <?php endif; ?>

@@ -197,28 +197,28 @@ class SAW_Component_Language_Switcher {
         
         $current = $this->available_languages[$this->current_language] ?? $this->available_languages['cs'];
         ?>
-        <div class="saw-language-switcher" id="sawLanguageSwitcher">
-            <button class="saw-language-switcher-button" id="sawLanguageSwitcherButton"
+        <div class="sa-language-switcher" id="sawLanguageSwitcher">
+            <button class="sa-language-switcher-button" id="sawLanguageSwitcherButton"
                     data-current-language="<?php echo esc_attr($this->current_language); ?>">
-                <span class="saw-language-flag"><?php echo esc_html($current['flag']); ?></span>
-                <span class="saw-language-code"><?php echo esc_html(strtoupper($current['code'])); ?></span>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" class="saw-language-arrow">
+                <span class="sa-language-flag"><?php echo esc_html($current['flag']); ?></span>
+                <span class="sa-language-code"><?php echo esc_html(strtoupper($current['code'])); ?></span>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" class="sa-switcher-arrow">
                     <path d="M8 10.5l-4-4h8l-4 4z"/>
                 </svg>
             </button>
             
-            <div class="saw-language-switcher-dropdown" id="sawLanguageSwitcherDropdown">
+            <div class="sa-language-switcher-dropdown" id="sawLanguageSwitcherDropdown">
                 <?php foreach ($this->available_languages as $lang): ?>
                     <?php
                     $isActive = $lang['code'] === $this->current_language;
-                    $activeClass = $isActive ? 'active' : '';
+                    $activeClass = $isActive ? 'sa-language-item--active' : '';
                     ?>
-                    <div class="saw-language-item <?php echo esc_attr($activeClass); ?>" 
+                    <div class="sa-language-item <?php echo esc_attr($activeClass); ?>" 
                          data-language="<?php echo esc_attr($lang['code']); ?>">
-                        <span class="saw-language-item-flag"><?php echo esc_html($lang['flag']); ?></span>
-                        <span class="saw-language-item-name"><?php echo esc_html($lang['name']); ?></span>
+                        <span class="sa-language-item-flag"><?php echo esc_html($lang['flag']); ?></span>
+                        <span class="sa-language-item-name"><?php echo esc_html($lang['name']); ?></span>
                         <?php if ($isActive): ?>
-                            <span class="saw-language-item-check">✓</span>
+                            <span class="sa-language-item-check">✓</span>
                         <?php endif; ?>
                     </div>
                 <?php endforeach; ?>

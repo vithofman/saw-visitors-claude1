@@ -1,0 +1,74 @@
+/**
+ * SAW Admin - Alerts / Flash Messages
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--saw-space-3);
+    padding: var(--saw-space-4);
+    border-radius: var(--saw-radius-lg);
+    border: 1px solid;
+}
+
+.sa-alert-icon {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+}
+
+.sa-alert-content {
+    flex: 1;
+}
+
+.sa-alert-title {
+    font-weight: var(--saw-font-semibold);
+    margin-bottom: 4px;
+}
+
+.sa-alert-message {
+    font-size: var(--saw-text-sm);
+}
+
+.sa-alert-close {
+    flex-shrink: 0;
+    padding: 4px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity var(--saw-transition-fast);
+}
+
+.sa-alert-close:hover {
+    opacity: 1;
+}
+
+/* Variants */
+.sa-alert--success {
+    background: var(--saw-success-light);
+    border-color: var(--saw-success);
+    color: var(--saw-success-dark);
+}
+
+.sa-alert--error {
+    background: var(--saw-danger-light);
+    border-color: var(--saw-danger);
+    color: var(--saw-danger-dark);
+}
+
+.sa-alert--warning {
+    background: var(--saw-warning-light);
+    border-color: var(--saw-warning);
+    color: var(--saw-warning-dark);
+}
+
+.sa-alert--info {
+    background: var(--saw-brand-50);
+    border-color: var(--saw-brand-500);
+    color: var(--saw-brand-800);
+}
+
+

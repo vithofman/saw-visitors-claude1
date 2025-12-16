@@ -1,0 +1,43 @@
+/**
+ * SAW Admin - Table Empty State & Loading
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-table-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--saw-space-12);
+    text-align: center;
+}
+
+.sa-table-empty-icon {
+    width: 64px;
+    height: 64px;
+    margin-bottom: var(--saw-space-4);
+    color: var(--saw-text-muted);
+}
+
+.sa-table-empty-title {
+    margin: 0 0 var(--saw-space-2);
+    font-size: var(--saw-text-lg);
+    font-weight: var(--saw-font-semibold);
+    color: var(--saw-text-primary);
+}
+
+.sa-table-empty-message {
+    margin: 0;
+    font-size: var(--saw-text-sm);
+    color: var(--saw-text-secondary);
+}
+
+.sa-table-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--saw-space-12);
+}
+
+

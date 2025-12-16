@@ -1,0 +1,76 @@
+/**
+ * SAW Admin - Sidebar Wrapper
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+/* Overlay */
+.sa-sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--saw-transition-base), 
+                visibility var(--saw-transition-base);
+    z-index: 99999;
+}
+
+.sa-sidebar-overlay--active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Sidebar wrapper */
+.sa-sidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 720px;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    background: var(--saw-bg-primary);
+    box-shadow: var(--saw-shadow-xl);
+    transform: translateX(100%);
+    transition: transform var(--saw-transition-base);
+    z-index: calc(var(--saw-z-sidebar) + 10);
+    height: 100vh;
+}
+
+.sa-sidebar--active {
+    transform: translateX(0);
+}
+
+/* Dark header variant */
+.sa-sidebar--dark-header .sa-sidebar-header {
+    background: #0f172a;
+    color: #f1f5f9;
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Nested sidebar */
+.sa-sidebar--nested {
+    z-index: 100001;
+    width: 680px;
+}
+
+/* When nested is open, dim parent */
+.sa-sidebar--has-nested {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .sa-sidebar {
+        width: 100%;
+    }
+    
+    .sa-sidebar--nested {
+        width: 100%;
+    }
+}
+
+

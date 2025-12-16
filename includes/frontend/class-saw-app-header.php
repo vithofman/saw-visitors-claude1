@@ -84,9 +84,9 @@ class SAW_App_Header {
     
     public function render() {
         ?>
-        <header class="saw-app-header" id="sawAppHeader">
-            <div class="saw-header-left">
-                <button class="saw-mobile-menu-toggle" id="sawMobileMenuToggle" aria-label="Menu">
+        <header class="sa-app-header" id="sawAppHeader">
+            <div class="sa-header-left">
+                <button class="sa-mobile-menu-toggle" id="sawMobileMenuToggle" aria-label="Menu">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="3" y1="12" x2="21" y2="12"></line>
                         <line x1="3" y1="6" x2="21" y2="6"></line>
@@ -97,21 +97,21 @@ class SAW_App_Header {
                 <?php $this->render_customer_switcher(); ?>
             </div>
             
-            <div class="saw-header-right">
+            <div class="sa-header-right">
                 <?php $this->render_language_switcher(); ?>
                 
                 <?php $this->render_notifications(); ?>
                 
-                <div class="saw-user-menu">
-                    <button class="saw-user-menu-toggle" id="sawUserMenuToggle">
-                        <div class="saw-user-avatar">
+                <div class="sa-user-menu">
+                    <button class="sa-user-menu-toggle" id="sawUserMenuToggle">
+                        <div class="sa-user-avatar">
                             <?php echo esc_html(strtoupper(substr($this->user['name'], 0, 1))); ?>
                         </div>
-                        <div class="saw-user-info">
-                            <div class="saw-user-name"><?php echo esc_html($this->user['name']); ?></div>
-                            <div class="saw-user-role"><?php echo esc_html($this->get_role_label()); ?></div>
+                        <div class="sa-user-info">
+                            <div class="sa-user-name"><?php echo esc_html($this->user['name']); ?></div>
+                            <div class="sa-user-role"><?php echo esc_html($this->get_role_label()); ?></div>
                         </div>
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" class="saw-user-arrow">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" class="sa-user-arrow">
                             <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/>
                         </svg>
                     </button>
@@ -446,20 +446,20 @@ class SAW_App_Header {
     private function render_user_dropdown() {
         $logout_url = wp_logout_url(home_url('/login/'));
         ?>
-        <div class="saw-user-dropdown" id="sawUserDropdown">
-            <div class="saw-user-dropdown-header">
-                <div class="saw-user-dropdown-avatar">
+        <div class="sa-user-dropdown saw-user-dropdown" id="sawUserDropdown">
+            <div class="sa-user-dropdown-header saw-user-dropdown-header">
+                <div class="sa-user-dropdown-avatar saw-user-dropdown-avatar">
                     <?php echo esc_html(strtoupper(substr($this->user['name'], 0, 1))); ?>
                 </div>
-                <div class="saw-user-dropdown-info">
-                    <div class="saw-user-dropdown-name"><?php echo esc_html($this->user['name']); ?></div>
-                    <div class="saw-user-dropdown-email"><?php echo esc_html($this->user['email']); ?></div>
+                <div class="sa-user-dropdown-info saw-user-dropdown-info">
+                    <div class="sa-user-dropdown-name saw-user-dropdown-name"><?php echo esc_html($this->user['name']); ?></div>
+                    <div class="sa-user-dropdown-email saw-user-dropdown-email"><?php echo esc_html($this->user['email']); ?></div>
                 </div>
             </div>
             
-            <div class="saw-user-dropdown-divider"></div>
+            <div class="sa-user-dropdown-divider saw-user-dropdown-divider"></div>
             
-            <a href="<?php echo esc_url(home_url('/admin/profile/')); ?>" class="saw-dropdown-item">
+            <a href="<?php echo esc_url(home_url('/admin/profile/')); ?>" class="sa-dropdown-item saw-dropdown-item">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                     <circle cx="12" cy="7" r="4"></circle>
@@ -467,9 +467,9 @@ class SAW_App_Header {
                 <?php esc_html_e('Můj profil', 'saw-visitors'); ?>
             </a>
             
-            <div class="saw-user-dropdown-divider"></div>
+            <div class="sa-user-dropdown-divider saw-user-dropdown-divider"></div>
             
-            <a href="<?php echo esc_url($logout_url); ?>" class="saw-dropdown-item saw-dropdown-item-danger">
+            <a href="<?php echo esc_url($logout_url); ?>" class="sa-dropdown-item sa-dropdown-item--danger saw-dropdown-item saw-dropdown-item-danger">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                     <polyline points="16 17 21 12 16 7"></polyline>

@@ -1,0 +1,67 @@
+/**
+ * SAW Admin - Icons
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--saw-icon-lg);
+    height: var(--saw-icon-lg);
+    color: var(--saw-icon-color);
+    flex-shrink: 0;
+}
+
+.sa-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+.sa-icon--xs {
+    width: var(--saw-icon-xs);
+    height: var(--saw-icon-xs);
+}
+
+.sa-icon--sm {
+    width: var(--saw-icon-sm);
+    height: var(--saw-icon-sm);
+}
+
+.sa-icon--md {
+    width: var(--saw-icon-md);
+    height: var(--saw-icon-md);
+}
+
+.sa-icon--lg {
+    width: var(--saw-icon-lg);
+    height: var(--saw-icon-lg);
+}
+
+.sa-icon--xl {
+    width: var(--saw-icon-xl);
+    height: var(--saw-icon-xl);
+}
+
+.sa-icon--muted {
+    color: var(--saw-icon-color-muted);
+}
+
+.sa-icon--inverse {
+    color: var(--saw-icon-color-inverse);
+}
+
+.sa-icon--success {
+    color: var(--saw-success);
+}
+
+.sa-icon--danger {
+    color: var(--saw-danger);
+}
+
+.sa-icon--warning {
+    color: var(--saw-warning);
+}
+
+

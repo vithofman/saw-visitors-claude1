@@ -9,3 +9,4 @@ function saw_get_schema_oopp_departments($table_name, $prefix, $charset_collate)
 	) {$charset_collate} COMMENT='Vazba OOPP na oddělení (prázdné = všechna)';";
 }
 
+

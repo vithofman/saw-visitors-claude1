@@ -327,44 +327,44 @@ class SAW_Component_Customer_Switcher {
         
         $logo_url = $this->get_logo_url();
         ?>
-        <div class="saw-customer-switcher" id="sawCustomerSwitcher">
-            <button class="saw-customer-switcher-button" id="sawCustomerSwitcherButton" 
+        <div class="sa-customer-switcher" id="sawCustomerSwitcher">
+            <button class="sa-customer-switcher-button" id="sawCustomerSwitcherButton" 
                     data-current-customer-id="<?php echo esc_attr($this->current_customer['id']); ?>">
-                <div class="saw-switcher-logo">
+                <div class="sa-switcher-logo">
                     <?php if ($logo_url): ?>
                         <img src="<?php echo esc_url($logo_url); ?>" 
                              alt="<?php echo esc_attr($this->current_customer['name']); ?>" 
                              width="40"
                              height="40"
-                             class="saw-switcher-logo-image">
+                             class="sa-switcher-logo-image">
                     <?php else: ?>
-                        <svg width="32" height="32" viewBox="0 0 40 40" fill="none" class="saw-switcher-logo-fallback">
+                        <svg width="32" height="32" viewBox="0 0 40 40" fill="none" class="sa-switcher-logo-fallback">
                             <rect width="40" height="40" rx="8" fill="#2563eb"/>
                             <text x="20" y="28" font-size="20" font-weight="bold" fill="white" text-anchor="middle">SAW</text>
                         </svg>
                     <?php endif; ?>
                 </div>
-                <div class="saw-switcher-info">
-                    <div class="saw-switcher-name"><?php echo esc_html($this->current_customer['name']); ?></div>
+                <div class="sa-switcher-info">
+                    <div class="sa-switcher-name"><?php echo esc_html($this->current_customer['name']); ?></div>
                     <?php if (!empty($this->current_customer['ico'])): ?>
-                        <div class="saw-switcher-ico">IČO: <?php echo esc_html($this->current_customer['ico']); ?></div>
+                        <div class="sa-switcher-ico">IČO: <?php echo esc_html($this->current_customer['ico']); ?></div>
                     <?php endif; ?>
                 </div>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" class="saw-switcher-arrow">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" class="sa-switcher-arrow">
                     <path d="M8 10.5l-4-4h8l-4 4z"/>
                 </svg>
             </button>
             
-            <div class="saw-customer-switcher-dropdown" id="sawCustomerSwitcherDropdown">
-                <div class="saw-switcher-search">
+            <div class="sa-customer-switcher-dropdown" id="sawCustomerSwitcherDropdown">
+                <div class="sa-switcher-search">
                     <input type="text" 
-                           class="saw-switcher-search-input" 
+                           class="sa-switcher-search-input" 
                            id="sawCustomerSwitcherSearch" 
                            placeholder="Hledat zákazníka...">
                 </div>
-                <div class="saw-switcher-list" id="sawCustomerSwitcherList">
-                    <div class="saw-switcher-loading">
-                        <div class="saw-spinner"></div>
+                <div class="sa-switcher-list" id="sawCustomerSwitcherList">
+                    <div class="sa-switcher-loading">
+                        <div class="sa-spinner"></div>
                         <span>Načítání zákazníků...</span>
                     </div>
                 </div>
@@ -384,25 +384,25 @@ class SAW_Component_Customer_Switcher {
     private function render_static_info() {
         $logo_url = $this->get_logo_url();
         ?>
-        <div class="saw-customer-info-static">
-            <div class="saw-logo">
+        <div class="sa-customer-info-static">
+            <div class="sa-switcher-logo">
                 <?php if ($logo_url): ?>
                     <img src="<?php echo esc_url($logo_url); ?>" 
                          alt="<?php echo esc_attr($this->current_customer['name']); ?>"
                          width="40"
                          height="40"
-                         class="saw-logo-image">
+                         class="sa-switcher-logo-image">
                 <?php else: ?>
-                    <svg width="40" height="40" viewBox="0 0 40 40" fill="none" class="saw-logo-fallback">
+                    <svg width="40" height="40" viewBox="0 0 40 40" fill="none" class="sa-switcher-logo-fallback">
                         <rect width="40" height="40" rx="8" fill="#2563eb"/>
                         <text x="20" y="28" font-size="20" font-weight="bold" fill="white" text-anchor="middle">SAW</text>
                     </svg>
                 <?php endif; ?>
             </div>
-            <div class="saw-customer-info">
-                <div class="saw-customer-name"><?php echo esc_html($this->current_customer['name']); ?></div>
+            <div class="sa-switcher-info">
+                <div class="sa-switcher-name"><?php echo esc_html($this->current_customer['name']); ?></div>
                 <?php if (!empty($this->current_customer['ico'])): ?>
-                    <div class="saw-customer-ico">IČO: <?php echo esc_html($this->current_customer['ico']); ?></div>
+                    <div class="sa-switcher-ico">IČO: <?php echo esc_html($this->current_customer['ico']); ?></div>
                 <?php endif; ?>
             </div>
         </div>

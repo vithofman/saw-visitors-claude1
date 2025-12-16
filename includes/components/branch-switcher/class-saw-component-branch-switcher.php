@@ -293,8 +293,8 @@ class SAW_Component_Branch_Switcher {
         // Show error if customer_id missing
         if (!$this->customer_id) {
             ?>
-            <div class="saw-branch-switcher">
-                <div class="saw-branch-error">⚠️ Chybí ID zákazníka</div>
+            <div class="sa-branch-switcher">
+                <div class="sa-branch-error">⚠️ Chybí ID zákazníka</div>
             </div>
             <?php
             return;
@@ -302,15 +302,18 @@ class SAW_Component_Branch_Switcher {
         
         // Normal render
         ?>
-        <div class="saw-branch-switcher" id="sawBranchSwitcher" data-customer-id="<?php echo esc_attr($this->customer_id); ?>">
-            <button class="saw-branch-switcher-button" id="sawBranchSwitcherButton" data-current-branch-id="<?php echo esc_attr($this->current_branch['id'] ?? 0); ?>">
-                <span class="saw-branch-icon">🏢</span>
-                <span class="saw-branch-name"><?php echo esc_html($this->current_branch['name'] ?? 'Všechny pobočky'); ?></span>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" class="saw-branch-arrow"><path d="M8 10.5l-4-4h8l-4 4z"/></svg>
+        <div class="sa-branch-switcher" id="sawBranchSwitcher" data-customer-id="<?php echo esc_attr($this->customer_id); ?>">
+            <button class="sa-branch-switcher-button" id="sawBranchSwitcherButton" data-current-branch-id="<?php echo esc_attr($this->current_branch['id'] ?? 0); ?>">
+                <span class="sa-branch-icon">🏢</span>
+                <div class="sa-branch-info">
+                    <div class="sa-branch-label">Pobočka</div>
+                    <div class="sa-branch-name"><?php echo esc_html($this->current_branch['name'] ?? 'Všechny pobočky'); ?></div>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" class="sa-switcher-arrow"><path d="M8 10.5l-4-4h8l-4 4z"/></svg>
             </button>
-            <div class="saw-branch-switcher-dropdown" id="sawBranchSwitcherDropdown">
-                <div class="saw-branch-list" id="sawBranchSwitcherList">
-                    <div class="saw-branch-loading"><div class="saw-spinner"></div><span>Načítání...</span></div>
+            <div class="sa-branch-switcher-dropdown" id="sawBranchSwitcherDropdown">
+                <div class="sa-branch-list" id="sawBranchSwitcherList">
+                    <div class="sa-branch-loading"><div class="sa-spinner"></div><span>Načítání...</span></div>
                 </div>
             </div>
         </div>

@@ -1,0 +1,47 @@
+/**
+ * SAW Admin - Special Table Cells (Avatar, Badge, Actions)
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-table-cell--avatar {
+    width: 48px;
+    padding: var(--saw-space-2);
+}
+
+.sa-table-cell--avatar .sa-avatar {
+    width: 32px;
+    height: 32px;
+}
+
+.sa-table-cell--badge {
+    white-space: nowrap;
+}
+
+.sa-table-cell--actions {
+    width: 1%;
+    white-space: nowrap;
+    text-align: right;
+}
+
+.sa-table-cell-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--saw-space-2);
+}
+
+.sa-table-cell-logo {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+}
+
+.sa-table-cell-image {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: var(--saw-radius-md);
+}
+
+

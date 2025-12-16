@@ -1,0 +1,53 @@
+/**
+ * SAW Admin - Nested Sidebar (Inline Create)
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-sidebar-nested {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    background: var(--saw-bg-primary);
+    transform: translateX(100%);
+    transition: transform var(--saw-transition-base);
+    z-index: 1;
+}
+
+.sa-sidebar-nested--active {
+    transform: translateX(0);
+}
+
+.sa-sidebar-nested-header {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-3);
+    padding: var(--saw-space-3) var(--saw-space-4);
+    background: var(--saw-bg-secondary);
+    border-bottom: 1px solid var(--saw-border-color);
+}
+
+.sa-sidebar-nested-back {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: var(--saw-bg-tertiary);
+    border: 1px solid var(--saw-border-color);
+    border-radius: var(--saw-radius-md);
+    color: var(--saw-text-secondary);
+    cursor: pointer;
+    transition: all var(--saw-transition-fast);
+}
+
+.sa-sidebar-nested-back:hover {
+    background: var(--saw-brand-600);
+    border-color: var(--saw-brand-600);
+    color: #ffffff;
+}
+
+

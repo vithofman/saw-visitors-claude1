@@ -219,14 +219,14 @@ class SAW_Component_Admin_Table {
             $this->render_split_layout();
         } else {
             ?>
-            <div class="saw-table-panel<?php echo !empty($this->config['infinite_scroll']['enabled']) ? ' saw-table-infinite-scroll-enabled' : ''; ?>">
+            <div class="sa-table-panel<?php echo !empty($this->config['infinite_scroll']['enabled']) ? ' sa-table-infinite-scroll-enabled' : ''; ?>">
     <?php
     $this->render_header();
     $this->render_controls();
     ?>
     
     <!-- Scrollovací oblast -->
-    <div class="saw-table-scroll-area">
+    <div class="sa-table-scroll">
         <?php $this->render_table_or_empty(); ?>
     </div>
     
@@ -245,17 +245,17 @@ class SAW_Component_Admin_Table {
     
    private function render_split_layout() {
     $has_sidebar = !empty($this->config['sidebar_mode']);
-    $sidebar_class = $has_sidebar ? ' has-sidebar' : '';
+    $sidebar_class = $has_sidebar ? ' sa-table-split--has-sidebar' : '';
     ?>
-    <div class="saw-admin-table-split<?php echo $sidebar_class; ?>">
-        <div class="saw-table-panel<?php echo !empty($this->config['infinite_scroll']['enabled']) ? ' saw-table-infinite-scroll-enabled' : ''; ?>">
+    <div class="sa-table-split<?php echo $sidebar_class; ?>">
+        <div class="sa-table-panel<?php echo !empty($this->config['infinite_scroll']['enabled']) ? ' sa-table-infinite-scroll-enabled' : ''; ?>">
             <?php
             $this->render_header();
             $this->render_controls();
             ?>
             
             <!-- Scrollovací oblast -->
-            <div class="saw-table-scroll-area">
+            <div class="sa-table-scroll">
                 <?php $this->render_table_or_empty(); ?>
             </div>
             
@@ -267,7 +267,7 @@ class SAW_Component_Admin_Table {
         </div>
         
         <?php if ($has_sidebar): ?>
-        <div class="saw-sidebar-wrapper active">
+        <div class="sa-sidebar sa-sidebar--active">
             <?php $this->render_sidebar(); ?>
         </div>
         <?php endif; ?>
@@ -306,19 +306,19 @@ class SAW_Component_Admin_Table {
             return;
         }
         ?>
-        <div class="saw-page-header">
-            <div class="saw-page-header-content">
+        <div class="sa-table-header">
+            <div class="sa-table-header-content">
                 <?php if (!empty($this->config['title'])): ?>
-                    <h1 class="saw-page-title">
+                    <h1 class="sa-table-header-title">
                         <?php if (!empty($this->config['icon'])): ?>
-                            <span class="saw-page-icon"><?php echo esc_html($this->config['icon']); ?></span>
+                            <span class="sa-table-header-icon"><?php echo esc_html($this->config['icon']); ?></span>
                         <?php endif; ?>
                         <?php echo esc_html($this->config['title']); ?>
                     </h1>
                 <?php endif; ?>
                 
                 <?php if (!empty($this->config['subtitle'])): ?>
-                    <p class="saw-page-subtitle"><?php echo esc_html($this->config['subtitle']); ?></p>
+                    <p class="sa-table-header-meta"><?php echo esc_html($this->config['subtitle']); ?></p>
                 <?php endif; ?>
             </div>
         </div>
@@ -351,15 +351,15 @@ class SAW_Component_Admin_Table {
                 return;
             }
             ?>
-            <div class="saw-table-controls">
+            <div class="sa-table-toolbar">
                 <?php if ($search_enabled): ?>
-                    <div class="saw-table-search">
+                    <div class="sa-table-search">
                         <?php $this->render_search_form($base_url, $current_params, $search_config); ?>
                     </div>
                 <?php endif; ?>
                 
                 <?php if ($filters_enabled): ?>
-                    <div class="saw-table-filters">
+                    <div class="sa-table-filters">
                         <?php $this->render_filters($base_url, $current_params); ?>
                     </div>
                 <?php endif; ?>
@@ -455,19 +455,19 @@ class SAW_Component_Admin_Table {
         // ⭐ NOVÉ: Pokud je aktivní search, zobrazit badge místo formu
         if (!empty($search_value) && $show_info_banner) {
             ?>
-            <div class="saw-search-active-badge-inline" id="saw-search-badge-<?php echo esc_attr($this->entity); ?>">
-                <span class="saw-search-active-text">
+            <div class="sa-table-search-badge" id="sa-search-badge-<?php echo esc_attr($this->entity); ?>">
+                <span class="sa-table-search-badge-text">
                     <span class="dashicons dashicons-search"></span>
-                    <span class="saw-search-term"><?php echo esc_html($search_value); ?></span>
+                    <span class="sa-table-search-badge-term"><?php echo esc_html($search_value); ?></span>
                 </span>
                 <a href="<?php echo esc_url($this->build_url($base_url, array_diff_key($current_params, array('s' => '', 'paged' => '')))); ?>" 
-                   class="saw-search-clear-badge" 
+                   class="sa-table-search-badge-clear" 
                    title="Zrušit vyhledávání">
                     <span class="dashicons dashicons-no-alt"></span>
                 </a>
                 <button type="button" 
-                        class="saw-search-edit" 
-                        onclick="document.getElementById('saw-search-badge-<?php echo esc_attr($this->entity); ?>').style.display='none'; document.getElementById('saw-search-form-<?php echo esc_attr($this->entity); ?>').style.display='flex'; document.getElementById('saw-search-input-<?php echo esc_attr($this->entity); ?>').focus();"
+                        class="sa-table-search-badge-edit" 
+                        onclick="document.getElementById('sa-search-badge-<?php echo esc_attr($this->entity); ?>').style.display='none'; document.getElementById('sa-search-form-<?php echo esc_attr($this->entity); ?>').style.display='flex'; document.getElementById('sa-search-input-<?php echo esc_attr($this->entity); ?>').focus();"
                         title="Upravit vyhledávání">
                     <span class="dashicons dashicons-edit"></span>
                 </button>
@@ -477,8 +477,8 @@ class SAW_Component_Admin_Table {
         ?>
         <form method="GET" 
               action="<?php echo esc_url($base_url); ?>" 
-              class="saw-search-form" 
-              id="saw-search-form-<?php echo esc_attr($this->entity); ?>"
+              class="sa-table-search-form" 
+              id="sa-search-form-<?php echo esc_attr($this->entity); ?>"
               style="<?php echo !empty($search_value) && $show_info_banner ? 'display: none;' : ''; ?>">
             <?php
             // Preserve filters and other params
@@ -491,13 +491,16 @@ class SAW_Component_Admin_Table {
             
             <input type="text" 
                    name="s" 
-                   id="saw-search-input-<?php echo esc_attr($this->entity); ?>"
+                   id="sa-search-input-<?php echo esc_attr($this->entity); ?>"
                    value="<?php echo esc_attr($search_value); ?>" 
                    placeholder="<?php echo esc_attr($placeholder); ?>"
-                   class="saw-search-input">
+                   class="sa-table-search-input">
             
-            <button type="submit" class="saw-search-button" title="Hledat">
-                <span class="dashicons dashicons-search"></span>
+            <button type="submit" class="sa-btn sa-btn--icon" title="Hledat">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
             </button>
         </form>
         <?php
@@ -526,19 +529,21 @@ class SAW_Component_Admin_Table {
         }
         
         ?>
-        <div class="saw-filters-dropdown-wrapper">
+        <div class="sa-table-filters-wrapper">
             <button type="button" 
-                    class="saw-filters-trigger <?php echo $has_active_filters ? 'has-active' : ''; ?>"
+                    class="sa-btn sa-btn--icon sa-table-filter-btn <?php echo $has_active_filters ? 'sa-table-filter-btn--active' : ''; ?>"
                     onclick="toggleFiltersMenu(this, event)"
                     title="Filtry">
-                <span class="dashicons dashicons-filter"></span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                </svg>
                 <?php if ($active_filters_count > 0): ?>
-                    <span class="saw-filter-badge"><?php echo $active_filters_count; ?></span>
+                    <span class="sa-badge sa-badge--count"><?php echo $active_filters_count; ?></span>
                 <?php endif; ?>
             </button>
             
-            <div class="saw-filters-dropdown-menu">
-                <form method="GET" action="<?php echo esc_url($base_url); ?>" class="saw-filters-form">
+            <div class="sa-dropdown sa-dropdown--filters">
+                <form method="GET" action="<?php echo esc_url($base_url); ?>" class="sa-table-filters-form">
                     <?php
                     // Preserve search
                     if (!empty($_GET['s'])) {
@@ -559,9 +564,9 @@ class SAW_Component_Admin_Table {
                     ?>
                     
                     <?php if ($has_active_filters): ?>
-                    <div class="saw-filters-actions">
+                    <div class="sa-table-filters-actions">
                         <a href="<?php echo esc_url($base_url); ?>" 
-                           class="saw-filter-clear-all"
+                           class="sa-btn sa-btn--ghost sa-btn--sm"
                            title="Vymazat všechny filtry">
                             Vymazat filtry
                         </a>
@@ -607,11 +612,11 @@ class SAW_Component_Admin_Table {
         $has_selection = $filter_value !== '' && $filter_value !== null;
         
         ?>
-        <div class="saw-filter-item">
-            <label class="saw-filter-label"><?php echo esc_html($label); ?></label>
+        <div class="sa-form-group">
+            <label class="sa-form-label"><?php echo esc_html($label); ?></label>
             <select name="<?php echo esc_attr($filter_key); ?>" 
-                    class="saw-select saw-filter-select <?php echo $has_selection ? 'has-value' : ''; ?>"
-                    onchange="this.classList.toggle('has-value', this.value !== ''); this.form.submit();"
+                    class="sa-select <?php echo $has_selection ? 'sa-select--has-value' : ''; ?>"
+                    onchange="this.classList.toggle('sa-select--has-value', this.value !== ''); this.form.submit();"
                     aria-label="<?php echo esc_attr($label); ?>">
                 <option value="" <?php echo !$has_selection ? 'selected' : ''; ?> disabled><?php echo esc_html($placeholder); ?></option>
                 <?php foreach ($options as $option_value => $option_label): ?>
@@ -710,18 +715,24 @@ class SAW_Component_Admin_Table {
     
     private function render_empty_state() {
         ?>
-        <div class="saw-empty-state">
-            <div class="saw-empty-icon">
-                <span class="dashicons dashicons-search"></span>
+        <div class="sa-table-empty">
+            <div class="sa-table-empty-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
             </div>
-            <h3><?php echo esc_html($this->config['empty_message']); ?></h3>
+            <h3 class="sa-table-empty-title"><?php echo esc_html($this->config['empty_message']); ?></h3>
             <?php if (!empty($this->config['create_url'])): ?>
                 <?php
                 $can_create = function_exists('saw_can') ? saw_can('create', $this->entity) : true;
                 if ($can_create):
                 ?>
-                <a href="<?php echo esc_url($this->config['create_url']); ?>" class="saw-button saw-button-primary">
-                    <span class="dashicons dashicons-plus-alt"></span>
+                <a href="<?php echo esc_url($this->config['create_url']); ?>" class="sa-btn sa-btn--primary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
                     <?php echo esc_html($this->config['add_new']); ?>
                 </a>
                 <?php endif; ?>
@@ -740,7 +751,7 @@ class SAW_Component_Admin_Table {
             }
         }
         ?>
-        <table class="saw-admin-table" 
+        <table class="sa-table-element" 
                data-entity="<?php echo esc_attr($this->entity); ?>"
                <?php if ($has_widths): ?>style="table-layout: fixed; width: 100%;"<?php endif; ?>>
             <?php if ($has_widths): ?>
@@ -750,24 +761,30 @@ class SAW_Component_Admin_Table {
                 <?php endforeach; ?>
             </colgroup>
             <?php endif; ?>
-            <thead>
-                <tr>
+            <thead class="sa-table-thead">
+                <tr class="sa-table-row">
                     <?php foreach ($this->config['columns'] as $key => $column): ?>
                     <?php
                     $label = is_array($column) ? ($column['label'] ?? ucfirst($key)) : $column;
                     $sortable = is_array($column) && !empty($column['sortable']);
                     $align = is_array($column) ? ($column['align'] ?? 'left') : 'left';
+                    $th_class = 'sa-table-th';
+                    if ($align === 'center') {
+                        $th_class .= ' sa-table-cell--center';
+                    } elseif ($align === 'right') {
+                        $th_class .= ' sa-table-cell--right';
+                    }
                     ?>
-                    <th style="text-align: <?php echo esc_attr($align); ?>;">
+                    <th class="<?php echo esc_attr($th_class); ?>">
                         <?php if ($sortable): ?>
-                        <a href="<?php echo esc_url($this->get_sort_url($key, $this->config['orderby'], $this->config['order'])); ?>" class="saw-sortable">
+                        <a href="<?php echo esc_url($this->get_sort_url($key, $this->config['orderby'], $this->config['order'])); ?>" class="sa-table-sortable">
                             <?php 
                             // Podpora pro ikony v nadpisech
                             if (is_array($column) && !empty($column['icon'])) {
                                 if (class_exists('SAW_Icons')) {
-                                    echo SAW_Icons::get($column['icon'], 'saw-icon--sm saw-column-icon');
+                                    echo SAW_Icons::get($column['icon'], 'sa-icon--sm sa-column-icon');
                                 } else {
-                                    echo '<span class="saw-column-icon">' . esc_html($column['icon']) . '</span>';
+                                    echo '<span class="sa-column-icon">' . esc_html($column['icon']) . '</span>';
                                 }
                             }
                             ?>
@@ -779,9 +796,9 @@ class SAW_Component_Admin_Table {
                             // Podpora pro ikony v nesortovatelných nadpisech
                             if (is_array($column) && !empty($column['icon'])) {
                                 if (class_exists('SAW_Icons')) {
-                                    echo SAW_Icons::get($column['icon'], 'saw-icon--sm saw-column-icon');
+                                    echo SAW_Icons::get($column['icon'], 'sa-icon--sm sa-column-icon');
                                 } else {
-                                    echo '<span class="saw-column-icon">' . esc_html($column['icon']) . '</span>';
+                                    echo '<span class="sa-column-icon">' . esc_html($column['icon']) . '</span>';
                                 }
                             }
                             ?>
@@ -791,13 +808,13 @@ class SAW_Component_Admin_Table {
                     <?php endforeach; ?>
                 </tr>
             </thead>
-            <tbody>
+            <tbody class="sa-table-tbody">
                 <?php foreach ($this->config['rows'] as $row): ?>
                 <?php
                 $detail_url = !empty($this->config['detail_url']) 
                     ? str_replace('{id}', intval($row['id'] ?? 0), $this->config['detail_url'])
                     : '';
-                $row_class = 'saw-table-row' . (!empty($detail_url) ? ' saw-clickable-row' : '');
+                $row_class = 'sa-table-row' . (!empty($detail_url) ? ' sa-table-row--clickable' : '');
                 ?>
                 <tr class="<?php echo esc_attr($row_class); ?>" 
                     data-id="<?php echo esc_attr($row['id'] ?? ''); ?>"
@@ -825,19 +842,29 @@ class SAW_Component_Admin_Table {
             $style .= " overflow: hidden; text-overflow: ellipsis; white-space: nowrap;";
         }
         
-        echo '<td' . ($class ? ' class="' . esc_attr($class) . '"' : '') . ' style="' . esc_attr($style) . '">';
+        $td_class = 'sa-table-cell';
+        if ($align === 'center') {
+            $td_class .= ' sa-table-cell--center';
+        } elseif ($align === 'right') {
+            $td_class .= ' sa-table-cell--right';
+        }
+        if ($class) {
+            $td_class .= ' ' . esc_attr($class);
+        }
+        
+        echo '<td class="' . esc_attr($td_class) . '"' . ($has_width ? ' style="' . esc_attr($style) . '"' : '') . '>';
         
         switch ($type) {
             case 'image':
                 if (!empty($value)) {
-                    echo '<img src="' . esc_url($value) . '" alt="" class="saw-table-image">';
+                    echo '<img src="' . esc_url($value) . '" alt="" class="sa-table-cell-image">';
                 }
                 break;
             case 'badge':
                 if ($value !== '' && $value !== null) {
-                    $badge_class = 'saw-badge';
+                    $badge_class = 'sa-badge';
                     if (is_array($column) && isset($column['map'][$value])) {
-                        $badge_class .= ' saw-badge-' . $column['map'][$value];
+                        $badge_class .= ' sa-badge--' . $column['map'][$value];
                     }
                     $label = isset($column['labels'][$value]) ? $column['labels'][$value] : $value;
                     echo '<span class="' . esc_attr($badge_class) . '">' . esc_html($label) . '</span>';
@@ -894,37 +921,42 @@ class SAW_Component_Admin_Table {
         $current_params = $this->get_current_params();
         
         ?>
-        <div class="saw-pagination">
-            <?php if ($page > 1): ?>
-                <?php
-                $prev_params = array_merge($current_params, array('paged' => $page - 1));
-                ?>
-                <a href="<?php echo esc_url($this->build_url($base_url, $prev_params)); ?>" class="saw-pagination-link">
-                    « Předchozí
-                </a>
-            <?php endif; ?>
-            
-            <?php for ($i = 1; $i <= $total_pages; $i++): ?>
-                <?php if ($i == $page): ?>
-                    <span class="saw-pagination-link current"><?php echo $i; ?></span>
-                <?php else: ?>
+        <div class="sa-table-pagination">
+            <div class="sa-table-pagination-info">
+                Stránka <?php echo $page; ?> z <?php echo $total_pages; ?>
+            </div>
+            <div class="sa-table-pagination-controls">
+                <?php if ($page > 1): ?>
                     <?php
-                    $page_params = array_merge($current_params, array('paged' => $i));
+                    $prev_params = array_merge($current_params, array('paged' => $page - 1));
                     ?>
-                    <a href="<?php echo esc_url($this->build_url($base_url, $page_params)); ?>" class="saw-pagination-link">
-                        <?php echo $i; ?>
+                    <a href="<?php echo esc_url($this->build_url($base_url, $prev_params)); ?>" class="sa-table-pagination-btn">
+                        « Předchozí
                     </a>
                 <?php endif; ?>
-            <?php endfor; ?>
-            
-            <?php if ($page < $total_pages): ?>
-                <?php
-                $next_params = array_merge($current_params, array('paged' => $page + 1));
-                ?>
-                <a href="<?php echo esc_url($this->build_url($base_url, $next_params)); ?>" class="saw-pagination-link">
-                    Další »
-                </a>
-            <?php endif; ?>
+                
+                <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                    <?php if ($i == $page): ?>
+                        <span class="sa-table-pagination-btn sa-table-pagination-btn--active"><?php echo $i; ?></span>
+                    <?php else: ?>
+                        <?php
+                        $page_params = array_merge($current_params, array('paged' => $i));
+                        ?>
+                        <a href="<?php echo esc_url($this->build_url($base_url, $page_params)); ?>" class="sa-table-pagination-btn">
+                            <?php echo $i; ?>
+                        </a>
+                    <?php endif; ?>
+                <?php endfor; ?>
+                
+                <?php if ($page < $total_pages): ?>
+                    <?php
+                    $next_params = array_merge($current_params, array('paged' => $page + 1));
+                    ?>
+                    <a href="<?php echo esc_url($this->build_url($base_url, $next_params)); ?>" class="sa-table-pagination-btn">
+                        Další »
+                    </a>
+                <?php endif; ?>
+            </div>
         </div>
         <?php
     }
@@ -942,9 +974,12 @@ class SAW_Component_Admin_Table {
         
         ?>
         <a href="<?php echo esc_url($this->config['create_url']); ?>" 
-           class="saw-floating-button" 
+           class="sa-fab" 
            title="<?php echo esc_attr($this->config['add_new']); ?>">
-            <span class="dashicons dashicons-plus"></span>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
         </a>
         <?php
     }
@@ -952,7 +987,7 @@ class SAW_Component_Admin_Table {
     private function render_scroll_to_top() {
         ?>
         <button type="button" 
-                class="saw-scroll-to-top" 
+                class="sa-scroll-to-top" 
                 title="Zpět nahoru"
                 aria-label="Zpět nahoru">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1031,23 +1066,23 @@ class SAW_Component_Admin_Table {
         // Use Lucide icons if available
         if (class_exists('SAW_Icons')) {
             if ($column !== $current_orderby) {
-                return SAW_Icons::get('arrow-up-down', 'saw-sort-icon');
+                return SAW_Icons::get('arrow-up-down', 'sa-table-sort-icon');
             }
             if ($current_order === 'ASC') {
-                return SAW_Icons::get('arrow-up', 'saw-sort-icon');
+                return SAW_Icons::get('arrow-up', 'sa-table-sort-icon');
             }
-            return SAW_Icons::get('arrow-down', 'saw-sort-icon');
+            return SAW_Icons::get('arrow-down', 'sa-table-sort-icon');
         }
         
         // Fallback to Dashicons
         if ($column !== $current_orderby) {
-            return '<span class="dashicons dashicons-sort saw-sort-icon"></span>';
+            return '<span class="dashicons dashicons-sort sa-table-sort-icon"></span>';
         }
         
         if ($current_order === 'ASC') {
-            return '<span class="dashicons dashicons-arrow-up saw-sort-icon"></span>';
+            return '<span class="dashicons dashicons-arrow-up sa-table-sort-icon"></span>';
         } else {
-            return '<span class="dashicons dashicons-arrow-down saw-sort-icon"></span>';
+            return '<span class="dashicons dashicons-arrow-down sa-table-sort-icon"></span>';
         }
     }
     

@@ -1,0 +1,101 @@
+/**
+ * SAW Admin - Text Utilities
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-text-center {
+    text-align: center;
+}
+
+.sa-text-left {
+    text-align: left;
+}
+
+.sa-text-right {
+    text-align: right;
+}
+
+.sa-text-primary {
+    color: var(--saw-text-primary);
+}
+
+.sa-text-secondary {
+    color: var(--saw-text-secondary);
+}
+
+.sa-text-muted {
+    color: var(--saw-text-muted);
+}
+
+.sa-text-brand {
+    color: var(--saw-brand-600);
+}
+
+.sa-text-success {
+    color: var(--saw-success);
+}
+
+.sa-text-danger {
+    color: var(--saw-danger);
+}
+
+.sa-text-warning {
+    color: var(--saw-warning);
+}
+
+.sa-text-white {
+    color: #ffffff;
+}
+
+.sa-text-xs {
+    font-size: var(--saw-text-xs);
+}
+
+.sa-text-sm {
+    font-size: var(--saw-text-sm);
+}
+
+.sa-text-base {
+    font-size: var(--saw-text-base);
+}
+
+.sa-text-lg {
+    font-size: var(--saw-text-lg);
+}
+
+.sa-text-xl {
+    font-size: var(--saw-text-xl);
+}
+
+.sa-text-bold {
+    font-weight: var(--saw-font-bold);
+}
+
+.sa-text-semibold {
+    font-weight: var(--saw-font-semibold);
+}
+
+.sa-text-medium {
+    font-weight: var(--saw-font-medium);
+}
+
+.sa-truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sa-uppercase {
+    text-transform: uppercase;
+}
+
+.sa-lowercase {
+    text-transform: lowercase;
+}
+
+.sa-capitalize {
+    text-transform: capitalize;
+}
+
+

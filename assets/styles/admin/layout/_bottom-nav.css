@@ -1,0 +1,51 @@
+/**
+ * SAW Admin - Mobile Bottom Navigation
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+@media (max-width: 768px) {
+    .sa-bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        padding: var(--saw-space-2);
+        background: var(--saw-bg-primary);
+        border-top: 1px solid var(--saw-border-color);
+        z-index: var(--saw-z-fixed);
+    }
+    
+    .sa-bottom-nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--saw-space-1);
+        padding: var(--saw-space-2);
+        font-size: var(--saw-text-xs);
+        color: var(--saw-text-secondary);
+        text-decoration: none;
+        border-radius: var(--saw-radius-md);
+        transition: all var(--saw-transition-fast);
+    }
+    
+    .sa-bottom-nav-item--active {
+        color: var(--saw-brand-600);
+    }
+    
+    .sa-bottom-nav-icon {
+        width: 24px;
+        height: 24px;
+    }
+}
+
+@media (min-width: 769px) {
+    .sa-bottom-nav {
+        display: none;
+    }
+}
+
+

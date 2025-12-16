@@ -1,0 +1,63 @@
+/**
+ * SAW Admin - Detail Timeline (Audit Log, History)
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-detail-timeline {
+    position: relative;
+    padding-left: var(--saw-space-6);
+}
+
+.sa-detail-timeline::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--saw-border-color);
+}
+
+.sa-detail-timeline-item {
+    position: relative;
+    padding-bottom: var(--saw-space-4);
+}
+
+.sa-detail-timeline-item:last-child {
+    padding-bottom: 0;
+}
+
+.sa-detail-timeline-dot {
+    position: absolute;
+    left: -20px;
+    top: 4px;
+    width: 12px;
+    height: 12px;
+    background: var(--saw-brand-600);
+    border: 2px solid var(--saw-bg-primary);
+    border-radius: var(--saw-radius-full);
+}
+
+.sa-detail-timeline-content {
+    background: var(--saw-bg-secondary);
+    border: 1px solid var(--saw-border-color);
+    border-radius: var(--saw-radius-md);
+    padding: var(--saw-space-3);
+}
+
+.sa-detail-timeline-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-2);
+    margin-bottom: var(--saw-space-2);
+    font-size: var(--saw-text-xs);
+    color: var(--saw-text-muted);
+}
+
+.sa-detail-timeline-text {
+    font-size: var(--saw-text-sm);
+    color: var(--saw-text-primary);
+}
+
+

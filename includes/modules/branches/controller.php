@@ -533,21 +533,21 @@ class SAW_Module_Branches_Controller extends SAW_Base_Controller
         
         // 1. Kód pobočky
         if (!empty($item['code'])) {
-            $meta_parts[] = '<span class="saw-badge-transparent">' . esc_html($item['code']) . '</span>';
+            $meta_parts[] = '<span class="sa-badge sa-badge--neutral">' . esc_html($item['code']) . '</span>';
         }
         
         // 2. Sídlo firmy / Pobočka
         if (!empty($item['is_headquarters'])) {
-            $meta_parts[] = '<span class="saw-badge-transparent saw-badge-primary">🏛️ ' . esc_html($this->tr('badge_headquarters', 'Sídlo firmy')) . '</span>';
+            $meta_parts[] = '<span class="sa-badge sa-badge--info">🏛️ ' . esc_html($this->tr('badge_headquarters', 'Sídlo firmy')) . '</span>';
         } else {
-            $meta_parts[] = '<span class="saw-badge-transparent">🏢 ' . esc_html($this->tr('badge_branch', 'Pobočka')) . '</span>';
+            $meta_parts[] = '<span class="sa-badge sa-badge--neutral">🏢 ' . esc_html($this->tr('badge_branch', 'Pobočka')) . '</span>';
         }
         
         // 3. Status
         if (!empty($item['is_active'])) {
-            $meta_parts[] = '<span class="saw-badge-transparent saw-badge-success">✓ ' . esc_html($this->tr('status_active', 'Aktivní')) . '</span>';
+            $meta_parts[] = '<span class="sa-badge sa-badge--success">✓ ' . esc_html($this->tr('status_active', 'Aktivní')) . '</span>';
         } else {
-            $meta_parts[] = '<span class="saw-badge-transparent saw-badge-secondary">' . esc_html($this->tr('status_inactive', 'Neaktivní')) . '</span>';
+            $meta_parts[] = '<span class="sa-badge sa-badge--neutral">' . esc_html($this->tr('status_inactive', 'Neaktivní')) . '</span>';
         }
         
         return implode(' ', $meta_parts);

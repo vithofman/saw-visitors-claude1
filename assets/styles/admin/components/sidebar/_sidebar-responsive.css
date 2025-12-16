@@ -1,0 +1,36 @@
+/**
+ * SAW Admin - Sidebar Responsive
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+@media (max-width: 768px) {
+    .sa-sidebar {
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    .sa-sidebar-header {
+        padding: var(--saw-space-3);
+    }
+    
+    .sa-sidebar-content {
+        padding: var(--saw-space-3);
+    }
+    
+    .sa-sidebar-footer {
+        padding: var(--saw-space-3);
+        flex-direction: column;
+    }
+    
+    .sa-sidebar-footer-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+    
+    .sa-sidebar-footer-actions .sa-btn {
+        width: 100%;
+    }
+}
+
+

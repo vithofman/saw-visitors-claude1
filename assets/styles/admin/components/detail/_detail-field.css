@@ -1,0 +1,44 @@
+/**
+ * SAW Admin - Detail Fields (Label + Value)
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-detail-field {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: var(--saw-space-4);
+    margin-bottom: var(--saw-space-3);
+}
+
+.sa-detail-field:last-child {
+    margin-bottom: 0;
+}
+
+.sa-detail-field-label {
+    flex: 0 0 140px;
+    display: block;
+    margin-bottom: 0;
+    font-size: var(--saw-text-xs);
+    font-weight: var(--saw-font-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--saw-text-secondary);
+    text-align: right;
+    padding-top: 2px;
+}
+
+.sa-detail-field-value {
+    flex: 1;
+    font-size: var(--saw-text-sm);
+    color: var(--saw-text-primary);
+    line-height: var(--saw-leading-relaxed);
+}
+
+.sa-detail-field-value--empty {
+    color: var(--saw-text-muted);
+    font-style: italic;
+}
+
+

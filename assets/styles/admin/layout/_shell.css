@@ -1,0 +1,210 @@
+/**
+ * SAW Admin - App Shell Layout
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-app-body {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+    background: var(--saw-bg-primary);
+    font-family: var(--saw-font-body);
+    font-size: var(--saw-text-base);
+    line-height: 1.5;
+    color: var(--saw-text-primary);
+}
+
+.sa-app-container {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+    overflow: hidden;
+    padding-top: 60px; /* Header height */
+    min-height: 100vh;
+}
+
+.sa-app-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+    margin-left: 0;
+    padding-bottom: 0;
+    transition: margin-left var(--saw-transition-base);
+    background: var(--saw-bg-primary);
+}
+
+@media (min-width: 1025px) {
+    .sa-app-main {
+        margin-left: 260px; /* Sidebar width */
+    }
+}
+
+/* ============================================
+   RESPONSIVE CONTENT
+   ============================================ */
+
+@media (max-width: 1024px) {
+    .sa-app-container {
+        padding-top: 56px; /* Smaller header on tablet */
+    }
+    
+    .sa-app-main {
+        margin-left: 0;
+    }
+    
+    .sa-app-content {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+@media (max-width: 768px) {
+    .sa-app-container {
+        padding-top: 56px;
+    }
+    
+    .sa-app-content {
+        padding: 0;
+        overflow-x: auto;
+    }
+}
+
+@media (max-width: 480px) {
+    .sa-app-container {
+        padding-top: 52px; /* Even smaller header on mobile */
+    }
+}
+
+.sa-app-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0;
+    width: 100%;
+    box-sizing: border-box;
+    max-width: 100%;
+    margin: 0 auto;
+    background: var(--saw-bg-primary);
+}
+
+.sa-app-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.sa-app-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sa-app-content::-webkit-scrollbar-thumb {
+    background: var(--saw-gray-300);
+    border-radius: var(--saw-radius-md);
+}
+
+.sa-app-content::-webkit-scrollbar-thumb:hover {
+    background: var(--saw-gray-400);
+}
+
+/* Legacy mapping */
+body.saw-app-body {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+    background: var(--saw-bg-primary);
+    font-family: var(--saw-font-body);
+    font-size: var(--saw-text-base);
+    line-height: 1.5;
+    color: var(--saw-text-primary);
+}
+
+.saw-app-container {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+    overflow: hidden;
+    padding-top: 60px;
+    min-height: 100vh;
+}
+
+.saw-app-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+    margin-left: 0;
+    padding-bottom: 0;
+    transition: margin-left var(--saw-transition-base);
+    background: var(--saw-bg-primary);
+}
+
+@media (min-width: 1025px) {
+    .saw-app-main {
+        margin-left: 260px;
+    }
+}
+
+@media (max-width: 1024px) {
+    .saw-app-container {
+        padding-top: 56px;
+    }
+    
+    .saw-app-main {
+        margin-left: 0;
+    }
+    
+    .saw-app-content {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+@media (max-width: 768px) {
+    .saw-app-container {
+        padding-top: 56px;
+    }
+    
+    .saw-app-content {
+        padding: 0;
+        overflow-x: auto;
+    }
+}
+
+@media (max-width: 480px) {
+    .saw-app-container {
+        padding-top: 52px;
+    }
+}
+
+.saw-app-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0;
+    width: 100%;
+    box-sizing: border-box;
+    max-width: 100%;
+    margin: 0 auto;
+    background: var(--saw-bg-primary);
+}
+
+.saw-app-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.saw-app-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.saw-app-content::-webkit-scrollbar-thumb {
+    background: var(--saw-gray-300);
+    border-radius: var(--saw-radius-md);
+}
+
+.saw-app-content::-webkit-scrollbar-thumb:hover {
+    background: var(--saw-gray-400);
+}

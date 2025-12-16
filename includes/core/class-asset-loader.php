@@ -36,6 +36,21 @@ class SAW_Asset_Loader {
     private static $wordpress_editor_handles = [];
     
     /**
+     * Feature flag pro nový CSS systém
+     * 
+     * @since 3.0.0
+     * @var bool
+     */
+    const USE_NEW_CSS = true; // Změnit na true pro aktivaci nového CSS systému
+    
+    /**
+     * New admin design system CSS path
+     * 
+     * @since 3.0.0
+     */
+    const NEW_ADMIN_STYLES = 'styles/admin/index.css';
+    
+    /**
      * Core CSS files to enqueue
      *
      * @since 1.0.0
@@ -112,16 +127,156 @@ class SAW_Asset_Loader {
      * Enqueue global assets (CSS and JS)
      *
      * @since 1.0.0
+     * @since 3.0.0 Added new CSS system support with feature flag
      */
     public static function enqueue_global() {
-        self::enqueue_core_styles();
-        self::enqueue_component_styles();
-        self::enqueue_layout_styles();
-        self::enqueue_app_styles();
+        // #region agent log - Debug CSS loading
+        $log_data = array(
+            'use_new_css' => self::USE_NEW_CSS,
+            'timestamp' => time(),
+            'sessionId' => 'debug-session',
+            'runId' => 'run1',
+            'hypothesisId' => 'B'
+        );
+        error_log('[SAW Debug] CSS Loading: ' . json_encode($log_data));
+        // #endregion
+        
+        // Feature flag pro nový CSS systém
+        if (self::USE_NEW_CSS) {
+            self::enqueue_new_admin_styles();
+        } else {
+            self::enqueue_core_styles();
+            self::enqueue_component_styles();
+            self::enqueue_layout_styles();
+            self::enqueue_app_styles();
+        }
+        
         self::enqueue_global_scripts();
         
         // Enqueue dashicons for icons
         wp_enqueue_style('dashicons');
+    }
+    
+    /**
+     * Enqueue new admin styles (new CSS architecture)
+     * 
+     * FIXED: Načítá všechny CSS soubory individuálně místo @import
+     * WordPress nezpracovává @import spolehlivě, takže načítáme každý soubor zvlášť
+     * 
+     * @since 3.0.0
+     */
+    public static function enqueue_new_admin_styles() {
+        // Všechny CSS soubory jsou v assets/styles/admin/ - žádné staré cesty!
+        // Design tokens jsou v tokens/_tokens.css, ne ve starém assets/css/
+        
+        // Definice všech CSS souborů ve správném pořadí (podle index.css)
+        $css_files = [
+            // 1. TOKENS - musí být první!
+            'tokens/_tokens.css',
+            
+            // 2. BASE
+            'base/_reset.css',
+            'base/_typography.css',
+            'base/_buttons.css',
+            'base/_inputs.css',
+            'base/_icons.css',
+            
+            // 3. LAYOUT
+            'layout/_shell.css',
+            'layout/_header.css',
+            'layout/_sidebar-nav.css',
+            'layout/_content.css',
+            'layout/_footer.css',
+            'layout/_bottom-nav.css',
+            
+            // 4. COMPONENTS - Shared
+            'components/shared/_badge.css',
+            'components/shared/_avatar.css',
+            'components/shared/_alert.css',
+            'components/shared/_dropdown.css',
+            'components/shared/_modal.css',
+            'components/shared/_card.css',
+            'components/shared/_tabs.css',
+            'components/shared/_tooltip.css',
+            'components/shared/_spinner.css',
+            'components/shared/_fab.css',
+            'components/shared/_switchers.css',
+            
+            // 4. COMPONENTS - Data Table
+            'components/data-table/_table-wrapper.css',
+            'components/data-table/_table-header.css',
+            'components/data-table/_table-toolbar.css',
+            'components/data-table/_table-element.css',
+            'components/data-table/_table-cells.css',
+            'components/data-table/_table-pagination.css',
+            'components/data-table/_table-empty.css',
+            'components/data-table/_table-responsive.css',
+            
+            // 4. COMPONENTS - Sidebar
+            'components/sidebar/_sidebar-wrapper.css',
+            'components/sidebar/_sidebar-header.css',
+            'components/sidebar/_sidebar-content.css',
+            'components/sidebar/_sidebar-footer.css',
+            'components/sidebar/_sidebar-nested.css',
+            'components/sidebar/_sidebar-responsive.css',
+            
+            // 4. COMPONENTS - Detail
+            'components/detail/_detail-header.css',
+            'components/detail/_detail-section.css',
+            'components/detail/_detail-field.css',
+            'components/detail/_detail-timeline.css',
+            'components/detail/_detail-cards.css',
+            
+            // 4. COMPONENTS - Form
+            'components/form/_form-container.css',
+            'components/form/_form-section.css',
+            'components/form/_form-group.css',
+            'components/form/_form-row.css',
+            'components/form/_form-actions.css',
+            'components/form/_form-validation.css',
+            
+            // 5. MODULES
+            'modules/_branches.css',
+            'modules/_visitors.css',
+            'modules/_visits.css',
+            'modules/_companies.css',
+            'modules/_oopp.css',
+            'modules/_content.css',
+            'modules/_dashboard.css',
+            
+            // 6. UTILITIES
+            'utilities/_display.css',
+            'utilities/_spacing.css',
+            'utilities/_text.css',
+            'utilities/_colors.css',
+            
+            // 7. THEMES
+            'themes/_dark.css',
+        ];
+        
+        $base_path = SAW_VISITORS_PLUGIN_DIR . 'assets/styles/admin/';
+        $base_url = SAW_VISITORS_PLUGIN_URL . 'assets/styles/admin/';
+        
+        // První soubor (tokens) nemá závislosti - je to základ
+        $deps = [];
+        
+        foreach ($css_files as $css_file) {
+            $full_path = $base_path . $css_file;
+            
+            if (file_exists($full_path)) {
+                $handle = 'sa-admin-' . str_replace(['/', '_', '.css'], ['-', '-', ''], $css_file);
+                
+                wp_enqueue_style(
+                    $handle,
+                    $base_url . $css_file,
+                    $deps,
+                    filemtime($full_path)
+                );
+                
+                // Každý další soubor závisí na předchozím
+                $deps = [$handle];
+            }
+        }
     }
     
     /**

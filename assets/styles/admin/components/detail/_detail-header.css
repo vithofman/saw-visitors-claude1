@@ -1,0 +1,68 @@
+/**
+ * SAW Admin - Detail Header (Universal)
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-detail-header {
+    background: var(--saw-brand-600);
+    color: #ffffff;
+    overflow: hidden;
+}
+
+.sa-detail-header-inner {
+    padding: var(--saw-space-5) var(--saw-space-6) var(--saw-space-4);
+}
+
+.sa-detail-header-title {
+    font-family: var(--saw-font-heading);
+    font-size: var(--saw-text-3xl);
+    font-weight: var(--saw-font-bold);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 0 0 var(--saw-space-2);
+    line-height: 1.1;
+    color: #ffffff !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.sa-detail-header-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-3);
+    flex-wrap: wrap;
+    font-size: var(--saw-text-sm);
+    opacity: 0.9;
+}
+
+.sa-detail-header-meta-item {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-1);
+}
+
+/* Diagonal stripe */
+.sa-detail-header-stripe {
+    height: 8px;
+    width: 100%;
+    background-image: repeating-linear-gradient(
+        -45deg,
+        var(--saw-brand-600) 0px,
+        var(--saw-brand-600) 10px,
+        rgba(255, 255, 255, 0.25) 10px,
+        rgba(255, 255, 255, 0.25) 20px
+    );
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .sa-detail-header-inner {
+        padding: var(--saw-space-4);
+    }
+    
+    .sa-detail-header-title {
+        font-size: var(--saw-text-2xl);
+    }
+}
+
+

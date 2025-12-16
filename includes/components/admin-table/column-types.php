@@ -78,19 +78,19 @@ class SAW_Table_Column_Types {
     private static function render_image($value, $column) {
         if (!empty($value)) {
             $alt = $column['alt'] ?? '';
-            return '<div class="saw-table-logo-wrapper">' .
-                   '<img src="' . esc_url($value) . '" alt="' . esc_attr($alt) . '">' .
+            return '<div class="sa-table-cell-image-wrapper">' .
+                   '<img src="' . esc_url($value) . '" alt="' . esc_attr($alt) . '" class="sa-table-cell-image">' .
                    '</div>';
         }
         
         $placeholder_icon = $column['placeholder'] ?? 'admin-generic';
         if (class_exists('SAW_Icons')) {
             $lucide_name = SAW_Icons::from_dashicon($placeholder_icon) ?? 'settings';
-            return '<div class="saw-table-logo-placeholder">' .
-                   SAW_Icons::get($lucide_name) .
+            return '<div class="sa-table-cell-image-placeholder">' .
+                   SAW_Icons::get($lucide_name, 'sa-icon--md') .
                    '</div>';
         }
-        return '<div class="saw-table-logo-placeholder">' .
+        return '<div class="sa-table-cell-image-placeholder">' .
                '<span class="dashicons dashicons-' . esc_attr($placeholder_icon) . '"></span>' .
                '</div>';
     }
@@ -107,16 +107,16 @@ class SAW_Table_Column_Types {
      */
     private static function render_badge($value, $column) {
         if (empty($value)) {
-            return '<span class="saw-text-muted">—</span>';
+            return '<span class="sa-text-muted">—</span>';
         }
         
         $map = $column['map'] ?? array();
         $labels = $column['labels'] ?? array();
         
-        $badge_class = isset($map[$value]) ? $map[$value] : 'secondary';
+        $badge_class = isset($map[$value]) ? $map[$value] : 'neutral';
         $label = isset($labels[$value]) ? $labels[$value] : $value;
         
-        return '<span class="saw-badge saw-badge-' . esc_attr($badge_class) . '">' . 
+        return '<span class="sa-badge sa-badge--' . esc_attr($badge_class) . '">' . 
                esc_html($label) . 
                '</span>';
     }
@@ -133,7 +133,7 @@ class SAW_Table_Column_Types {
      */
     private static function render_enum($value, $column) {
         if (empty($value)) {
-            return '<span class="saw-text-muted">—</span>';
+            return '<span class="sa-text-muted">—</span>';
         }
         
         $map = $column['map'] ?? array();
@@ -154,7 +154,7 @@ class SAW_Table_Column_Types {
      */
     private static function render_date($value, $column) {
         if (empty($value)) {
-            return '<span class="saw-text-muted">—</span>';
+            return '<span class="sa-text-muted">—</span>';
         }
         
         $format = $column['format'] ?? 'd.m.Y';
@@ -182,10 +182,10 @@ class SAW_Table_Column_Types {
      */
     private static function render_color_badge($value) {
         if (empty($value)) {
-            return '<span class="saw-text-muted">—</span>';
+            return '<span class="sa-text-muted">—</span>';
         }
         
-        return '<span class="saw-table-color-badge" style="background-color: ' . esc_attr($value) . ';" title="' . esc_attr($value) . '"></span>';
+        return '<span class="sa-table-color-badge" style="background-color: ' . esc_attr($value) . ';" title="' . esc_attr($value) . '"></span>';
     }
     
     /**
@@ -199,9 +199,9 @@ class SAW_Table_Column_Types {
      */
     private static function render_boolean($value) {
         if ($value) {
-            return '<span class="saw-badge saw-badge-success">Ano</span>';
+            return '<span class="sa-badge sa-badge--success">Ano</span>';
         } else {
-            return '<span class="saw-badge saw-badge-secondary">Ne</span>';
+            return '<span class="sa-badge sa-badge--neutral">Ne</span>';
         }
     }
     
@@ -236,7 +236,7 @@ class SAW_Table_Column_Types {
      */
     private static function render_text($value, $column) {
         if (empty($value)) {
-            return '<span class="saw-text-muted">—</span>';
+            return '<span class="sa-text-muted">—</span>';
         }
         
         $bold = $column['bold'] ?? false;

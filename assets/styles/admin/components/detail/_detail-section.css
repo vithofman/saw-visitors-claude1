@@ -1,0 +1,72 @@
+/**
+ * SAW Admin - Detail Sections (Collapsible)
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-detail-section {
+    background: var(--saw-bg-primary);
+    border: 1px solid var(--saw-border-color);
+    border-radius: var(--saw-radius-lg);
+    overflow: hidden;
+}
+
+.sa-detail-section + .sa-detail-section {
+    margin-top: var(--saw-space-4);
+}
+
+/* Section header */
+.sa-detail-section-head {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-3);
+    padding: var(--saw-space-3) var(--saw-space-4);
+    background: var(--saw-bg-secondary);
+    cursor: pointer;
+    user-select: none;
+    transition: background var(--saw-transition-fast);
+    color: var(--saw-text-primary);
+}
+
+.sa-detail-section-head:hover {
+    background: var(--saw-bg-tertiary);
+}
+
+.sa-detail-section-icon {
+    font-size: 20px;
+    line-height: 1;
+}
+
+.sa-detail-section-title {
+    flex: 1;
+    margin: 0;
+    font-size: var(--saw-text-base);
+    font-weight: var(--saw-font-semibold);
+    color: var(--saw-text-primary);
+}
+
+.sa-detail-section-toggle {
+    width: 20px;
+    height: 20px;
+    color: var(--saw-text-muted);
+    transition: transform var(--saw-transition-fast);
+}
+
+.sa-detail-section--open .sa-detail-section-toggle {
+    transform: rotate(180deg);
+}
+
+/* Section body */
+.sa-detail-section-body {
+    padding: var(--saw-space-4);
+    display: block;
+    background: #ffffff;
+}
+
+/* Collapsible behavior (when using details element) */
+.sa-detail-section[open] .sa-detail-section-body,
+.sa-detail-section--open .sa-detail-section-body {
+    display: block;
+}
+
+

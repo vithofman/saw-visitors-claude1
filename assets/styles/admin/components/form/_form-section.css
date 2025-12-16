@@ -1,0 +1,83 @@
+/**
+ * SAW Admin - Form Sections (<details>)
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-form-section {
+    background: linear-gradient(to bottom, #ffffff, #fafbfc);
+    border-radius: var(--saw-radius-xl);
+    overflow: hidden;
+    box-shadow: var(--saw-shadow-sm);
+    margin-bottom: var(--saw-space-5);
+}
+
+.sa-form-section summary {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-3);
+    padding: var(--saw-space-4) var(--saw-space-5);
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    transition: background var(--saw-transition-fast);
+}
+
+.sa-form-section summary::-webkit-details-marker {
+    display: none;
+}
+
+.sa-form-section summary:hover {
+    background: linear-gradient(135deg, var(--saw-brand-50) 0%, #dbeafe 100%);
+}
+
+.sa-form-section[open] summary {
+    background: linear-gradient(135deg, var(--saw-brand-50) 0%, #dbeafe 100%);
+    border-bottom: 1px solid var(--saw-border-color);
+}
+
+/* Icon in summary */
+.sa-form-section-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, var(--saw-brand-600) 0%, var(--saw-brand-500) 100%);
+    border-radius: var(--saw-radius-lg);
+    color: #ffffff;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0, 90, 140, 0.25);
+}
+
+.sa-form-section-icon .sa-icon {
+    width: 24px;
+    height: 24px;
+}
+
+.sa-form-section-title {
+    flex: 1;
+    font-size: var(--saw-text-lg);
+    font-weight: var(--saw-font-semibold);
+    color: var(--saw-text-primary);
+}
+
+/* Chevron */
+.sa-form-section-chevron {
+    width: 20px;
+    height: 20px;
+    color: var(--saw-text-muted);
+    transition: transform var(--saw-transition-fast);
+}
+
+.sa-form-section[open] .sa-form-section-chevron {
+    transform: rotate(180deg);
+}
+
+/* Content */
+.sa-form-section-content {
+    padding: var(--saw-space-5);
+}
+
+

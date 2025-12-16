@@ -90,11 +90,11 @@ $table_config['columns'] = array(
                     : $upload_dir['baseurl'] . '/' . ltrim($value, '/');
                 
                 return sprintf(
-                    '<img src="%s" alt="" class="saw-branch-thumbnail" style="margin-right: 0; max-width: 50px; height: auto; border-radius: 4px;">',
+                    '<img src="%s" alt="" class="sa-table-cell-image sa-branch-thumbnail">',
                     esc_url($thumb_url)
                 );
             } else {
-                return '<span class="saw-branch-icon" style="margin-right: 0; font-size: 24px;">🏢</span>';
+                return '<span class="sa-branch-icon">🏢</span>';
             }
         }
     ),
@@ -102,7 +102,7 @@ $table_config['columns'] = array(
         'label' => $tr('col_name', 'Název pobočky'),
         'type' => 'text',
         'sortable' => true,
-        'class' => 'saw-table-cell-bold',
+        'class' => 'sa-text-semibold',
         'width' => '30%',  // Hlavní identifikátor
     ),
     'is_headquarters' => array(
@@ -112,9 +112,9 @@ $table_config['columns'] = array(
         'align' => 'center',
         'callback' => function($value) use ($tr) {
             if (empty($value)) {
-                return '<span class="saw-text-muted">—</span>';
+                return '<span class="sa-text-muted">—</span>';
             }
-            return '<span class="saw-badge saw-badge-sm saw-badge-primary">' . esc_html($tr('badge_headquarters', 'Sídlo')) . '</span>';
+            return '<span class="sa-badge sa-badge--info">' . esc_html($tr('badge_headquarters', 'Sídlo')) . '</span>';
         }
     ),
     'code' => array(
@@ -123,8 +123,8 @@ $table_config['columns'] = array(
         'width' => '10%',  // Kód střední
         'align' => 'center',
         'callback' => function($value) {
-            if (empty($value)) return '<span class="saw-text-muted">—</span>';
-            return sprintf('<span class="saw-code-badge">%s</span>', esc_html($value));
+            if (empty($value)) return '<span class="sa-text-muted">—</span>';
+            return sprintf('<span class="sa-code-badge">%s</span>', esc_html($value));
         }
     ),
     'city' => array(
@@ -138,9 +138,9 @@ $table_config['columns'] = array(
         'type' => 'custom',
         'width' => '16%',
         'callback' => function($value) {
-            if (empty($value)) return '<span class="saw-text-muted">—</span>';
+            if (empty($value)) return '<span class="sa-text-muted">—</span>';
             return sprintf(
-                '<a href="tel:%s" class="saw-phone-link">%s</a>',
+                '<a href="tel:%s" class="sa-link">%s</a>',
                 esc_attr(preg_replace('/[^\d+]/', '', $value)),
                 esc_html($value)
             );
@@ -154,7 +154,7 @@ $table_config['columns'] = array(
         'align' => 'center',
         'map' => array(
             '1' => 'success',
-            '0' => 'secondary',
+            '0' => 'neutral',
         ),
         'labels' => array(
             '1' => $tr('status_active', 'Aktivní'),

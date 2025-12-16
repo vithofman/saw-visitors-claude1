@@ -1,0 +1,26 @@
+/**
+ * SAW Admin - Sidebar Footer
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-sidebar-footer {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-3);
+    padding: var(--saw-space-4);
+    background: var(--saw-bg-secondary);
+    border-top: 1px solid var(--saw-border-color);
+    flex-shrink: 0;
+    position: sticky;
+    bottom: 0;
+}
+
+.sa-sidebar-footer-actions {
+    display: flex;
+    gap: var(--saw-space-3);
+    flex: 1;
+    justify-content: flex-end;
+}
+
+

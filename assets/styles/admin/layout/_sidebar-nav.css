@@ -1,0 +1,244 @@
+/**
+ * SAW Admin - Navigation Sidebar
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+/* ============================================
+   SIDEBAR CONTAINER
+   ============================================ */
+
+.sa-app-sidebar {
+    position: fixed;
+    top: 60px; /* Header height */
+    left: 0;
+    bottom: 0;
+    width: 260px;
+    background: var(--saw-bg-secondary);
+    border-right: 1px solid var(--saw-border-color);
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 999;
+    flex-shrink: 0;
+    -webkit-overflow-scrolling: touch;
+}
+
+.sa-app-sidebar::-webkit-scrollbar {
+    width: 8px;
+}
+
+.sa-app-sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sa-app-sidebar::-webkit-scrollbar-thumb {
+    background: var(--saw-gray-300);
+    border-radius: var(--saw-radius-md);
+}
+
+.sa-app-sidebar::-webkit-scrollbar-thumb:hover {
+    background: var(--saw-gray-400);
+}
+
+/* ============================================
+   SIDEBAR OVERLAY (mobile)
+   ============================================ */
+
+.sa-sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 60px;
+    left: 0;
+    width: 100%;
+    height: calc(100vh - 60px);
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 998;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--saw-transition-base);
+}
+
+.sa-sidebar-overlay--active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+@media (max-width: 1024px) {
+    .sa-sidebar-overlay {
+        display: block;
+    }
+    
+    .sa-app-sidebar {
+        transform: translateX(-100%);
+        transition: transform var(--saw-transition-base);
+    }
+    
+    .sa-app-sidebar--open {
+        transform: translateX(0);
+    }
+}
+
+/* ============================================
+   NAVIGATION MENU
+   ============================================ */
+
+.sa-sidebar-nav {
+    padding: var(--saw-space-2) 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Zajištění stejného zarovnání pro všechny nav items - VŠECHNY ZAČÍNAJÍ NA STEJNÉM MÍSTĚ */
+.sa-sidebar-nav .sa-nav-item {
+    padding-left: var(--saw-space-6) !important;
+    padding-right: var(--saw-space-6) !important;
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+    margin-left: 0 !important;
+    text-indent: 0 !important;
+}
+
+/* Aktivní item musí mít STEJNÉ zarovnání */
+.sa-sidebar-nav .sa-nav-item--active,
+.sa-sidebar-nav .sa-nav-item.sa-nav-item--active {
+    padding-left: var(--saw-space-6) !important;
+    padding-right: var(--saw-space-6) !important;
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+}
+
+.sa-sidebar-nav .sa-nav-item::before {
+    left: 0;
+}
+
+.sa-sidebar-nav .sa-nav-item--active::before {
+    left: 0;
+}
+
+/* Zajistit, že všechny nested items také začínají na stejném místě */
+.sa-sidebar-nav .sa-nav-item .sa-nav-icon {
+    margin-left: 0;
+    margin-right: var(--saw-space-3);
+}
+
+/* Navigation Section */
+.sa-nav-section {
+    margin-bottom: 2px;
+}
+
+.sa-nav-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--saw-space-2) var(--saw-space-6) 4px;
+    font-size: var(--saw-text-xs);
+    font-weight: var(--saw-font-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--saw-text-muted);
+    cursor: pointer;
+    user-select: none;
+    transition: color var(--saw-transition-fast);
+}
+
+.sa-nav-heading:hover {
+    color: var(--saw-text-secondary);
+}
+
+.sa-nav-heading-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    transition: transform var(--saw-transition-fast);
+}
+
+.sa-nav-heading-toggle svg {
+    width: 12px;
+    height: 12px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+}
+
+.sa-nav-section--collapsed .sa-nav-heading-toggle {
+    transform: rotate(-90deg);
+}
+
+.sa-nav-items {
+    display: flex;
+    flex-direction: column;
+    max-height: 1000px;
+    overflow: hidden;
+    transition: max-height var(--saw-transition-base), opacity var(--saw-transition-base);
+    opacity: 1;
+}
+
+.sa-nav-section--collapsed .sa-nav-items {
+    max-height: 0;
+    opacity: 0;
+}
+
+/* Navigation Item - VŠECHNY ZAROVNANÉ POD SEBOU */
+.sa-nav-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-3);
+    padding: 6px var(--saw-space-6) !important;
+    padding-left: var(--saw-space-6) !important;
+    padding-right: var(--saw-space-6) !important;
+    margin-left: 0 !important;
+    color: var(--saw-text-secondary);
+    text-decoration: none;
+    transition: all var(--saw-transition-fast);
+    width: 100%;
+    flex-direction: row;
+    box-sizing: border-box;
+    text-indent: 0 !important;
+}
+
+/* Border-left jako pseudo-element, aby neovlivňoval zarovnání */
+.sa-nav-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: transparent;
+    transition: background var(--saw-transition-fast);
+}
+
+.sa-nav-item:hover {
+    background: var(--saw-bg-tertiary);
+    color: var(--saw-text-primary);
+}
+
+.sa-nav-item--active {
+    background: var(--saw-brand-50);
+    color: var(--saw-brand-700);
+    font-weight: var(--saw-font-semibold);
+    padding-left: var(--saw-space-6) !important;
+}
+
+.sa-nav-item--active::before {
+    background: var(--saw-brand-600);
+}
+
+.sa-nav-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sa-nav-label {
+    font-size: var(--saw-text-sm);
+    font-weight: var(--saw-font-medium);
+    flex: 1;
+}
+

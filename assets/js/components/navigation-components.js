@@ -13,6 +13,43 @@
 (function($) {
     'use strict';
 
+    // #region agent log - Debug sidebar menu alignment
+    if (typeof window !== 'undefined' && document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                const navItems = document.querySelectorAll('.sa-nav-item, .saw-nav-item');
+                const computedStyles = [];
+                navItems.forEach(function(item, index) {
+                    if (index < 5) { // Log first 5 items
+                        const style = window.getComputedStyle(item);
+                        computedStyles.push({
+                            index: index,
+                            classes: item.className,
+                            paddingLeft: style.paddingLeft,
+                            marginLeft: style.marginLeft,
+                            textIndent: style.textIndent,
+                            offsetLeft: item.offsetLeft
+                        });
+                    }
+                });
+                fetch('http://127.0.0.1:7242/ingest/e3a8ec2f-cd7c-4b57-85c0-5d7ba0c3caf0', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        location: 'navigation-components.js:DOMContentLoaded',
+                        message: 'Sidebar nav items computed styles',
+                        data: {items: computedStyles, totalItems: navItems.length},
+                        timestamp: Date.now(),
+                        sessionId: 'debug-session',
+                        runId: 'run1',
+                        hypothesisId: 'A'
+                    })
+                }).catch(function() {});
+            }, 500);
+        });
+    }
+    // #endregion
+
     /* ============================================
        CUSTOMER SWITCHER
        ============================================ */
@@ -118,7 +155,7 @@
          */
         open() {
             this.isOpen = true;
-            this.dropdown.addClass('active');
+            this.dropdown.addClass('sa-switcher-dropdown--active');
             this.searchInput.focus();
             
             if (this.customers.length === 0) {
@@ -136,7 +173,7 @@
          */
         close() {
             this.isOpen = false;
-            this.dropdown.removeClass('active');
+            this.dropdown.removeClass('sa-switcher-dropdown--active');
             this.searchInput.val('');
             this.filteredCustomers = this.customers;
         }
@@ -218,7 +255,7 @@
          */
         renderCustomers() {
             if (this.filteredCustomers.length === 0) {
-                this.list.html('<div class="saw-switcher-empty">Žádní zákazníci nenalezeni</div>');
+                this.list.html('<div class="sa-switcher-empty">Žádní zákazníci nenalezeni</div>');
                 return;
             }
             
@@ -226,14 +263,14 @@
             
             this.filteredCustomers.forEach(customer => {
                 const isActive = customer.id === this.currentCustomerId;
-                const activeClass = isActive ? 'active' : '';
+                const activeClass = isActive ? 'sa-switcher-item--active' : '';
                 
                 html += `
-                    <div class="saw-switcher-item ${activeClass}" data-customer-id="${customer.id}">
-                        <div class="saw-switcher-item-logo">
+                    <div class="sa-switcher-item ${activeClass}" data-customer-id="${customer.id}">
+                        <div class="sa-switcher-item-logo">
                             ${customer.logo_url ? 
                                 `<img src="${this.escapeHtml(customer.logo_url)}" alt="${this.escapeHtml(customer.name)}">` : 
-                                `<svg width="36" height="36" viewBox="0 0 40 40" fill="none" class="saw-switcher-item-logo-fallback">
+                                `<svg width="36" height="36" viewBox="0 0 40 40" fill="none" class="sa-switcher-item-logo-fallback">
                                     <rect width="40" height="40" rx="8" fill="${customer.primary_color || '#2563eb'}"/>
                                     <text x="20" y="28" font-size="20" font-weight="bold" fill="white" text-anchor="middle">
                                         ${this.escapeHtml(customer.name.charAt(0).toUpperCase())}
@@ -241,11 +278,11 @@
                                 </svg>`
                             }
                         </div>
-                        <div class="saw-switcher-item-info">
-                            <div class="saw-switcher-item-name">${this.escapeHtml(customer.name)}</div>
-                            ${customer.ico ? `<div class="saw-switcher-item-ico">IČO: ${this.escapeHtml(customer.ico)}</div>` : ''}
+                        <div class="sa-switcher-item-info">
+                            <div class="sa-switcher-item-name">${this.escapeHtml(customer.name)}</div>
+                            ${customer.ico ? `<div class="sa-switcher-item-ico">IČO: ${this.escapeHtml(customer.ico)}</div>` : ''}
                         </div>
-                        ${isActive ? '<div class="saw-switcher-item-check">✓</div>' : ''}
+                        ${isActive ? '<div class="sa-switcher-item-check">✓</div>' : ''}
                     </div>
                 `;
             });
@@ -253,7 +290,7 @@
             this.list.html(html);
             
             // Attach click handlers
-            this.list.find('.saw-switcher-item').on('click', (e) => {
+            this.list.find('.sa-switcher-item').on('click', (e) => {
                 const customerId = parseInt($(e.currentTarget).data('customer-id'));
                 this.switchCustomer(customerId);
             });
@@ -309,8 +346,8 @@
          */
         showLoading() {
             this.list.html(`
-                <div class="saw-switcher-loading">
-                    <div class="saw-spinner"></div>
+                <div class="sa-switcher-loading">
+                    <div class="sa-spinner"></div>
                     <span>Načítání zákazníků...</span>
                 </div>
             `);
@@ -327,7 +364,7 @@
          */
         showError(message) {
             this.list.html(`
-                <div class="saw-switcher-error">${this.escapeHtml(message)}</div>
+                <div class="sa-switcher-error">${this.escapeHtml(message)}</div>
             `);
         }
         
@@ -491,7 +528,7 @@
          */
         close() {
             this.isOpen = false;
-            this.dropdown.removeClass('active');
+            this.dropdown.removeClass('sa-switcher-dropdown--active');
         }
         
         /**
@@ -610,7 +647,7 @@
         renderBranches() {
             if (this.branches.length === 0) {
                 this.list.html(`
-                    <div class="saw-branch-empty">
+                    <div class="sa-switcher-empty">
                         <p>Zákazník nemá žádné pobočky</p>
                     </div>
                 `);
@@ -621,16 +658,16 @@
             
             this.branches.forEach(branch => {
                 const isActive = branch.id === this.currentBranchId;
-                const activeClass = isActive ? 'active' : '';
+                const activeClass = isActive ? 'sa-switcher-item--active' : '';
                 
                 html += `
-                    <div class="saw-branch-item ${activeClass}" data-branch-id="${branch.id}">
-                        <span class="saw-branch-item-icon">🏢</span>
-                        <div class="saw-branch-item-info">
-                            <div class="saw-branch-item-name">${this.escapeHtml(branch.name)}</div>
-                            ${branch.address ? `<div class="saw-branch-item-address">${this.escapeHtml(branch.address)}</div>` : ''}
+                    <div class="sa-switcher-item ${activeClass}" data-branch-id="${branch.id}">
+                        <span class="sa-branch-icon">🏢</span>
+                        <div class="sa-switcher-item-info">
+                            <div class="sa-switcher-item-name">${this.escapeHtml(branch.name)}</div>
+                            ${branch.address ? `<div class="sa-switcher-item-ico">${this.escapeHtml(branch.address)}</div>` : ''}
                         </div>
-                        ${isActive ? '<span class="saw-branch-item-check">✓</span>' : ''}
+                        ${isActive ? '<span class="sa-switcher-item-check">✓</span>' : ''}
                     </div>
                 `;
             });
@@ -638,7 +675,7 @@
             this.list.html(html);
             
             // Attach click handlers
-            this.list.find('.saw-branch-item').on('click', (e) => {
+            this.list.find('.sa-switcher-item').on('click', (e) => {
                 const branchId = parseInt($(e.currentTarget).data('branch-id'));
                 this.switchBranch(branchId);
             });
@@ -805,7 +842,7 @@
             });
             
             // Language item click
-            this.dropdown.find('.saw-language-item').on('click', (e) => {
+            this.dropdown.find('.sa-language-item').on('click', (e) => {
                 const language = $(e.currentTarget).data('language');
                 this.switchLanguage(language);
             });
@@ -851,7 +888,7 @@
          */
         open() {
             this.isOpen = true;
-            this.dropdown.addClass('active');
+            this.dropdown.addClass('sa-switcher-dropdown--active');
         }
         
         /**
@@ -864,7 +901,7 @@
          */
         close() {
             this.isOpen = false;
-            this.dropdown.removeClass('active');
+            this.dropdown.removeClass('sa-switcher-dropdown--active');
         }
         
         /**

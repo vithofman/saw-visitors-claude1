@@ -1,0 +1,56 @@
+/**
+ * SAW Admin - Tab Navigation
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-tabs {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    border-bottom: 1px solid var(--saw-border-color);
+}
+
+.sa-tab {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-2);
+    padding: 10px 16px;
+    font-size: var(--saw-text-sm);
+    font-weight: var(--saw-font-medium);
+    color: var(--saw-text-secondary);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all var(--saw-transition-fast);
+    text-decoration: none;
+}
+
+.sa-tab:hover {
+    color: var(--saw-text-primary);
+    background: var(--saw-bg-tertiary);
+}
+
+.sa-tab--active {
+    color: var(--saw-brand-700);
+    border-bottom-color: var(--saw-brand-600);
+    background: var(--saw-brand-50);
+}
+
+.sa-tab-count {
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: var(--saw-font-semibold);
+    background: var(--saw-gray-200);
+    color: var(--saw-gray-600);
+    border-radius: var(--saw-radius-full);
+}
+
+.sa-tab--active .sa-tab-count {
+    background: var(--saw-brand-100);
+    color: var(--saw-brand-700);
+}
+
+

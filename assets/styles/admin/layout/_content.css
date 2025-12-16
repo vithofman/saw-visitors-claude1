@@ -1,0 +1,22 @@
+/**
+ * SAW Admin - Main Content Area
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.sa-content-body {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: var(--saw-space-5);
+}
+
+

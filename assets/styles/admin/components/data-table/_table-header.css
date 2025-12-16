@@ -1,0 +1,42 @@
+/**
+ * SAW Admin - Table Page Header
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-table-header {
+    padding: var(--saw-space-4) var(--saw-space-5);
+    background: var(--saw-bg-primary);
+    border-bottom: 1px solid var(--saw-border-color);
+}
+
+.sa-table-header-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--saw-space-2);
+}
+
+.sa-table-header-title {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-2);
+    margin: 0;
+    font-size: var(--saw-text-2xl);
+    font-weight: var(--saw-font-bold);
+    color: var(--saw-text-primary);
+}
+
+.sa-table-header-icon {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    color: var(--saw-brand-500);
+}
+
+.sa-table-header-meta {
+    margin: 0;
+    font-size: var(--saw-text-sm);
+    color: var(--saw-text-secondary);
+}
+
+

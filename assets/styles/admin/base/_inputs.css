@@ -1,0 +1,96 @@
+/**
+ * SAW Admin - Form Inputs
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-input,
+.sa-select,
+.sa-textarea {
+    display: block;
+    width: 100%;
+    padding: 10px 14px;
+    font-family: var(--saw-font-body);
+    font-size: var(--saw-text-base);
+    line-height: 1.5;
+    color: var(--saw-text-primary);
+    background: var(--saw-input-bg, #ffffff);
+    border: 1px solid var(--saw-border-color);
+    border-radius: var(--saw-radius-md);
+    transition: border-color var(--saw-transition-fast), 
+                box-shadow var(--saw-transition-fast);
+}
+
+.sa-input:focus,
+.sa-select:focus,
+.sa-textarea:focus {
+    outline: none;
+    border-color: var(--saw-brand-500);
+    box-shadow: 0 0 0 3px var(--saw-brand-50);
+}
+
+.sa-input::placeholder {
+    color: var(--saw-text-light);
+}
+
+.sa-input:disabled,
+.sa-select:disabled,
+.sa-textarea:disabled {
+    background: var(--saw-gray-100);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* Error state */
+.sa-input--error,
+.sa-select--error,
+.sa-textarea--error {
+    border-color: var(--saw-danger);
+}
+
+.sa-input--error:focus,
+.sa-select--error:focus,
+.sa-textarea--error:focus {
+    box-shadow: 0 0 0 3px var(--saw-danger-light);
+}
+
+/* Select specific */
+.sa-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 16px;
+    padding-right: 40px;
+}
+
+.sa-select--has-value {
+    border-color: var(--saw-brand-500);
+    background-color: var(--saw-brand-50);
+}
+
+/* Textarea specific */
+.sa-textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+/* Checkbox & Radio */
+.sa-checkbox,
+.sa-radio {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--saw-space-2);
+    cursor: pointer;
+}
+
+.sa-checkbox input,
+.sa-radio input {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    cursor: pointer;
+    accent-color: var(--saw-brand-600);
+}
+
+

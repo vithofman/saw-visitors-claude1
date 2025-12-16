@@ -74,10 +74,10 @@ $base_params = $current_params;
 unset($base_params[$tab_param], $base_params['paged']);
 ?>
 
-<div class="saw-table-tabs-wrapper">
-    <div class="saw-table-tabs-container">
+<div class="sa-table-tabs-wrapper">
+    <div class="sa-table-tabs-container">
         <!-- Left Arrow - před tabs -->
-        <button type="button" class="saw-tabs-nav-arrow saw-tabs-nav-arrow-left" aria-label="Scroll left" style="display: none;">
+        <button type="button" class="sa-table-tabs-nav-arrow sa-table-tabs-nav-arrow-left" aria-label="Scroll left" style="display: none;">
             <?php if (class_exists('SAW_Icons')): ?>
                 <?php echo SAW_Icons::get('chevron-left'); ?>
             <?php else: ?>
@@ -85,7 +85,7 @@ unset($base_params[$tab_param], $base_params['paged']);
             <?php endif; ?>
         </button>
         
-        <div class="saw-table-tabs">
+        <div class="sa-table-tabs">
         <?php foreach ($tabs as $tab_key => $tab): ?>
             <?php
             // Ensure tab_key is string for comparison
@@ -107,29 +107,29 @@ unset($base_params[$tab_param], $base_params['paged']);
             $count = $tab_counts[$tab_key] ?? 0;
             ?>
             <a href="<?php echo esc_url($tab_url); ?>" 
-               class="saw-table-tab<?php echo $is_active ? ' active' : ''; ?>"
+               class="sa-table-tab<?php echo $is_active ? ' sa-table-tab--active' : ''; ?>"
                data-tab="<?php echo esc_attr($tab_key); ?>"
                data-filter-value="<?php echo esc_attr($tab['filter_value'] ?? ''); ?>">
-                <span class="saw-tab-icon">
+                <span class="sa-table-tab-icon">
                     <?php 
                     if (!empty($tab['icon'])) {
                         if (class_exists('SAW_Icons')) {
                             $lucide_name = saw_map_tab_icon($tab['icon']);
-                            echo SAW_Icons::get($lucide_name, 'saw-icon--sm');
+                            echo SAW_Icons::get($lucide_name, 'sa-icon--sm');
                         } else {
                             echo esc_html($tab['icon']);
                         }
                     }
                     ?>
                 </span>
-                <span class="saw-tab-label"><?php echo esc_html($tab['label']); ?></span>
-                <span class="saw-tab-count"><?php echo number_format_i18n($count); ?></span>
+                <span class="sa-table-tab-label"><?php echo esc_html($tab['label']); ?></span>
+                <span class="sa-table-tab-count"><?php echo number_format_i18n($count); ?></span>
             </a>
         <?php endforeach; ?>
         </div>
         
         <!-- Right Arrow - za tabs -->
-        <button type="button" class="saw-tabs-nav-arrow saw-tabs-nav-arrow-right" aria-label="Scroll right" style="display: none;">
+        <button type="button" class="sa-table-tabs-nav-arrow sa-table-tabs-nav-arrow-right" aria-label="Scroll right" style="display: none;">
             <?php if (class_exists('SAW_Icons')): ?>
                 <?php echo SAW_Icons::get('chevron-right'); ?>
             <?php else: ?>

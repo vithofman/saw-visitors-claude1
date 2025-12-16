@@ -1,0 +1,47 @@
+/**
+ * SAW Admin - Generic Cards
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-card {
+    background: var(--saw-bg-primary);
+    border: 1px solid var(--saw-border-color);
+    border-radius: var(--saw-radius-lg);
+    overflow: hidden;
+}
+
+.sa-card-header {
+    padding: var(--saw-space-4);
+    border-bottom: 1px solid var(--saw-border-color);
+}
+
+.sa-card-title {
+    margin: 0;
+    font-size: var(--saw-text-lg);
+    font-weight: var(--saw-font-semibold);
+}
+
+.sa-card-body {
+    padding: var(--saw-space-4);
+}
+
+.sa-card-footer {
+    padding: var(--saw-space-4);
+    border-top: 1px solid var(--saw-border-color);
+    background: var(--saw-bg-secondary);
+}
+
+/* Link utility */
+.sa-link {
+    color: var(--saw-brand-600);
+    text-decoration: none;
+    transition: color var(--saw-transition-fast);
+}
+
+.sa-link:hover {
+    color: var(--saw-brand-700);
+    text-decoration: underline;
+}
+
+

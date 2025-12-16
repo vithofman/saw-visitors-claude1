@@ -1,0 +1,258 @@
+/**
+ * SAW Admin - Dark Mode Theme
+ * @package SAW_Visitors
+ * @version 3.0.0
+ * 
+ * Modern dark mode implementation using CSS custom properties
+ * Supports both [data-theme="dark"] and @media (prefers-color-scheme: dark)
+ */
+
+/* ============================================
+   DARK MODE - Modern Implementation
+   ============================================ */
+
+[data-theme="dark"] {
+    :root {
+        /* ===== BASE BACKGROUNDS ===== */
+        --saw-bg-primary: #1a1d2e;
+        --saw-bg-secondary: #22253a;
+        --saw-bg-tertiary: #2a2d42;
+        
+        /* ===== TEXT COLORS ===== */
+        --saw-text-primary: #e5e7eb;
+        --saw-text-secondary: #9ca3af;
+        --saw-text-muted: #6b7280;
+        --saw-text-light: #4b5563;
+        --saw-text-inverse: #111827;
+        
+        /* ===== BORDERS ===== */
+        --saw-border-color: rgba(156, 163, 175, 0.15);
+        --saw-border-color-dark: rgba(156, 163, 175, 0.25);
+        
+        /* ===== SHADOWS ===== */
+        --saw-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+        --saw-shadow-md: 0 4px 8px rgba(0, 0, 0, 0.35);
+        --saw-shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.4);
+        --saw-shadow-xl: 0 12px 24px rgba(0, 0, 0, 0.45);
+        
+        /* ===== PRIMARY COLORS ===== */
+        --saw-primary: var(--saw-brand-400);
+        --saw-primary-hover: var(--saw-brand-500);
+        --saw-primary-light: rgba(26, 137, 181, 0.12);
+        
+        /* ===== STATUS COLORS ===== */
+        --saw-success: #34d399;
+        --saw-success-hover: #10b981;
+        --saw-success-light: rgba(52, 211, 153, 0.12);
+        --saw-success-dark: #059669;
+        
+        --saw-danger: #f87171;
+        --saw-danger-hover: #ef4444;
+        --saw-danger-light: rgba(248, 113, 113, 0.12);
+        --saw-danger-dark: #dc2626;
+        
+        --saw-warning: #fbbf24;
+        --saw-warning-hover: #f59e0b;
+        --saw-warning-light: rgba(251, 191, 36, 0.12);
+        --saw-warning-dark: #d97706;
+        
+        /* ===== INPUTS ===== */
+        --saw-input-bg: var(--saw-bg-secondary);
+        --saw-input-border: var(--saw-border-color);
+        --saw-input-focus-border: var(--saw-brand-400);
+        --saw-input-focus-shadow: 0 0 0 3px rgba(26, 137, 181, 0.2);
+        
+        /* ===== ICONS ===== */
+        --saw-icon-color: var(--saw-brand-400);
+        --saw-icon-color-muted: var(--saw-text-muted);
+    }
+}
+
+/* ============================================
+   DARK MODE - Component Overrides
+   ============================================ */
+
+[data-theme="dark"] .sa-btn--primary {
+        background: var(--saw-brand-500);
+        border-color: var(--saw-brand-500);
+    }
+    
+    .sa-btn--primary:hover:not(:disabled) {
+        background: var(--saw-brand-400);
+        border-color: var(--saw-brand-400);
+    }
+    
+    .sa-btn--secondary {
+        background: var(--saw-bg-tertiary);
+        color: var(--saw-text-primary);
+        border-color: var(--saw-border-color);
+    }
+    
+    .sa-btn--secondary:hover:not(:disabled) {
+        background: var(--saw-bg-quaternary, #32354a);
+        border-color: var(--saw-border-color-dark);
+    }
+    
+    .sa-card {
+        background: var(--saw-bg-secondary);
+        border-color: var(--saw-border-color);
+    }
+    
+    .sa-card-header {
+        background: var(--saw-bg-tertiary);
+        border-bottom-color: var(--saw-border-color);
+    }
+    
+    .sa-card-footer {
+        background: var(--saw-bg-tertiary);
+        border-top-color: var(--saw-border-color);
+    }
+    
+    .sa-table-thead {
+        background: var(--saw-bg-secondary);
+    }
+    
+    .sa-table-tbody .sa-table-row:hover {
+        background: var(--saw-bg-secondary);
+    }
+    
+    .sa-table-row--selected {
+        background: rgba(26, 137, 181, 0.1);
+    }
+    
+    .sa-sidebar {
+        background: var(--saw-bg-primary);
+        box-shadow: var(--saw-shadow-xl);
+    }
+    
+    .sa-sidebar-header {
+        background: var(--saw-bg-secondary);
+        border-bottom-color: var(--saw-border-color);
+    }
+    
+    .sa-sidebar-content {
+        background: var(--saw-bg-primary);
+    }
+    
+    .sa-sidebar-footer {
+        background: var(--saw-bg-secondary);
+        border-top-color: var(--saw-border-color);
+    }
+    
+    .sa-detail-header {
+        background: var(--saw-brand-600);
+    }
+    
+    .sa-detail-section {
+        background: var(--saw-bg-secondary);
+        border-color: var(--saw-border-color);
+    }
+    
+    .sa-detail-section-head {
+        background: var(--saw-bg-tertiary);
+    }
+    
+    .sa-detail-section-head:hover {
+        background: var(--saw-bg-quaternary, #32354a);
+    }
+    
+    .sa-form-section {
+        background: linear-gradient(to bottom, var(--saw-bg-secondary), var(--saw-bg-tertiary));
+    }
+    
+    .sa-form-section summary {
+        background: linear-gradient(135deg, var(--saw-bg-secondary) 0%, var(--saw-bg-tertiary) 100%);
+    }
+    
+    .sa-form-section summary:hover {
+        background: linear-gradient(135deg, rgba(26, 137, 181, 0.1) 0%, rgba(26, 137, 181, 0.15) 100%);
+    }
+    
+    .sa-form-section[open] summary {
+        background: linear-gradient(135deg, rgba(26, 137, 181, 0.1) 0%, rgba(26, 137, 181, 0.15) 100%);
+        border-bottom-color: var(--saw-border-color);
+    }
+    
+    .sa-form-actions {
+        background: var(--saw-bg-secondary);
+        border-top-color: var(--saw-border-color);
+    }
+    
+    .sa-badge--neutral {
+        background: var(--saw-bg-tertiary);
+        color: var(--saw-text-primary);
+    }
+    
+    .sa-badge--count {
+        background: var(--saw-bg-tertiary);
+        color: var(--saw-text-secondary);
+    }
+    
+    .sa-code-badge {
+        background: var(--saw-bg-tertiary);
+        color: var(--saw-text-primary);
+        border-color: var(--saw-border-color);
+    }
+    
+    .sa-department-link {
+        border-bottom-color: var(--saw-border-color);
+    }
+    
+    .sa-department-link:hover {
+        background: var(--saw-bg-tertiary);
+    }
+    
+    .sa-department-show-all {
+        color: var(--saw-brand-400);
+    }
+    
+    .sa-department-show-all:hover {
+        color: var(--saw-brand-300);
+    }
+}
+
+/* Support for prefers-color-scheme media query */
+@media (prefers-color-scheme: dark) {
+    :root {
+        /* ===== BASE BACKGROUNDS ===== */
+        --saw-bg-primary: #1a1d2e;
+        --saw-bg-secondary: #22253a;
+        --saw-bg-tertiary: #2a2d42;
+        
+        /* ===== TEXT COLORS ===== */
+        --saw-text-primary: #e5e7eb;
+        --saw-text-secondary: #9ca3af;
+        --saw-text-muted: #6b7280;
+        --saw-text-light: #4b5563;
+        
+        /* ===== BORDERS ===== */
+        --saw-border-color: rgba(156, 163, 175, 0.15);
+        --saw-border-color-dark: rgba(156, 163, 175, 0.25);
+        
+        /* ===== PRIMARY COLORS ===== */
+        --saw-primary: var(--saw-brand-400);
+        --saw-primary-hover: var(--saw-brand-500);
+        --saw-primary-light: rgba(26, 137, 181, 0.12);
+        
+        /* ===== STATUS COLORS ===== */
+        --saw-success: #34d399;
+        --saw-success-hover: #10b981;
+        --saw-success-light: rgba(52, 211, 153, 0.12);
+        --saw-danger: #f87171;
+        --saw-danger-hover: #ef4444;
+        --saw-danger-light: rgba(248, 113, 113, 0.12);
+        --saw-warning: #fbbf24;
+        --saw-warning-hover: #f59e0b;
+        --saw-warning-light: rgba(251, 191, 36, 0.12);
+        
+        /* ===== INPUTS ===== */
+        --saw-input-bg: var(--saw-bg-secondary);
+        --saw-input-border: var(--saw-border-color);
+        --saw-input-focus-border: var(--saw-brand-400);
+        --saw-input-focus-shadow: 0 0 0 3px rgba(26, 137, 181, 0.2);
+        
+        /* ===== ICONS ===== */
+        --saw-icon-color: var(--saw-brand-400);
+        --saw-icon-color-muted: var(--saw-text-muted);
+    }
+}

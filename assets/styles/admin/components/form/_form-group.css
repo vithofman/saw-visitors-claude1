@@ -1,0 +1,54 @@
+/**
+ * SAW Admin - Form Groups (Label + Input)
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-form-group {
+    margin-bottom: var(--saw-space-4);
+}
+
+.sa-form-group:last-child {
+    margin-bottom: 0;
+}
+
+.sa-form-label {
+    display: block;
+    margin-bottom: var(--saw-space-2);
+    font-size: var(--saw-text-sm);
+    font-weight: var(--saw-font-medium);
+    color: var(--saw-text-secondary);
+}
+
+/* Required indicator */
+.sa-form-label--required::after {
+    content: " *";
+    color: var(--saw-danger);
+}
+
+/* Hint text */
+.sa-form-hint {
+    margin-top: var(--saw-space-1);
+    font-size: var(--saw-text-xs);
+    color: var(--saw-text-muted);
+}
+
+/* Error message */
+.sa-form-error {
+    margin-top: var(--saw-space-1);
+    font-size: var(--saw-text-xs);
+    color: var(--saw-danger);
+}
+
+/* Error state */
+.sa-form-group--error .sa-form-label {
+    color: var(--saw-danger);
+}
+
+.sa-form-group--error .sa-input,
+.sa-form-group--error .sa-select,
+.sa-form-group--error .sa-textarea {
+    border-color: var(--saw-danger);
+}
+
+

@@ -1,0 +1,37 @@
+/**
+ * SAW Admin - Form Validation States
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+.sa-form-group--success .sa-input,
+.sa-form-group--success .sa-select,
+.sa-form-group--success .sa-textarea {
+    border-color: var(--saw-success);
+}
+
+.sa-form-group--success .sa-input:focus,
+.sa-form-group--success .sa-select:focus,
+.sa-form-group--success .sa-textarea:focus {
+    box-shadow: 0 0 0 3px var(--saw-success-light);
+}
+
+.sa-form-success {
+    margin-top: var(--saw-space-1);
+    font-size: var(--saw-text-xs);
+    color: var(--saw-success);
+}
+
+.sa-form-group--warning .sa-input,
+.sa-form-group--warning .sa-select,
+.sa-form-group--warning .sa-textarea {
+    border-color: var(--saw-warning);
+}
+
+.sa-form-warning {
+    margin-top: var(--saw-space-1);
+    font-size: var(--saw-text-xs);
+    color: var(--saw-warning);
+}
+
+
