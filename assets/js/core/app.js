@@ -38,10 +38,19 @@
             $('body').toggleClass('sa-sidebar-open');
         });
         
-        $overlay.on('click', function() {
+        $overlay.on('click', function(e) {
+            // Don't close if clicking inside sidebar
+            if ($(e.target).closest('#sawAppSidebar').length) {
+                return;
+            }
             $sidebar.removeClass('sa-app-sidebar--open');
             $overlay.removeClass('sa-sidebar-overlay--active');
             $('body').removeClass('sa-sidebar-open');
+        });
+        
+        // Prevent sidebar clicks from closing menu
+        $sidebar.on('click', function(e) {
+            e.stopPropagation();
         });
     }
     
