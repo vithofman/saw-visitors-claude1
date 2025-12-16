@@ -363,10 +363,7 @@ class SAW_Component_Customer_Switcher {
                            placeholder="Hledat zákazníka...">
                 </div>
                 <div class="sa-switcher-list" id="sawCustomerSwitcherList">
-                    <div class="sa-switcher-loading">
-                        <div class="sa-spinner"></div>
-                        <span>Načítání zákazníků...</span>
-                    </div>
+                    <!-- Loading se zobrazí až po otevření dropdownu přes JavaScript -->
                 </div>
             </div>
         </div>

@@ -313,7 +313,7 @@ class SAW_Component_Branch_Switcher {
             </button>
             <div class="sa-branch-switcher-dropdown" id="sawBranchSwitcherDropdown">
                 <div class="sa-branch-list" id="sawBranchSwitcherList">
-                    <div class="sa-branch-loading"><div class="sa-spinner"></div><span>Načítání...</span></div>
+                    <div class="sa-switcher-loading"><div class="sa-spinner"></div><span>Načítání...</span></div>
                 </div>
             </div>
         </div>

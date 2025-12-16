@@ -10,15 +10,29 @@
     background: var(--saw-bg-primary);
 }
 
+/* ZAJISTIT, ŽE THEAD JE VIDITELNÝ */
+.sa-table-element thead.sa-table-thead {
+    display: table-header-group !important;
+    background: var(--saw-bg-secondary) !important;
+}
+
+.sa-table-element .sa-table-thead {
+    display: table-header-group !important;
+    background: var(--saw-bg-secondary) !important;
+}
+
 .sa-table-thead {
+    display: table-header-group !important;
     background: var(--saw-bg-secondary);
 }
 
 .sa-table-thead .sa-table-row {
+    display: table-row !important;
     border-bottom: 2px solid var(--saw-border-color);
 }
 
 .sa-table-th {
+    display: table-cell !important;
     padding: var(--saw-space-3) var(--saw-space-4);
     font-size: var(--saw-text-xs);
     font-weight: var(--saw-font-semibold);

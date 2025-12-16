@@ -254,6 +254,9 @@
          * @return {void}
          */
         renderCustomers() {
+            // Odstranit loading spinner pokud existuje
+            this.list.find('.sa-switcher-loading').remove();
+            
             if (this.filteredCustomers.length === 0) {
                 this.list.html('<div class="sa-switcher-empty">Žádní zákazníci nenalezeni</div>');
                 return;
@@ -725,8 +728,8 @@
          */
         showLoading() {
             this.list.html(`
-                <div class="saw-branch-loading">
-                    <div class="saw-spinner"></div>
+                <div class="sa-switcher-loading">
+                    <div class="sa-spinner"></div>
                     <span>Načítání...</span>
                 </div>
             `);
