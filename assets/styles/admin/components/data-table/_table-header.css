@@ -5,15 +5,15 @@
  */
 
 .sa-table-header {
-    padding: var(--saw-space-4) var(--saw-space-5);
-    background: var(--saw-bg-primary);
-    border-bottom: 1px solid var(--saw-border-color);
+    display: none !important; /* Completely hidden - not needed */
 }
 
 .sa-table-header-content {
     display: flex;
     flex-direction: column;
-    gap: var(--saw-space-2);
+    gap: 0 !important; /* No gap */
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
 .sa-table-header-title {

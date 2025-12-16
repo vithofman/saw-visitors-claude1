@@ -60,12 +60,12 @@ $get_sort_icon = function($column) use ($table_instance, $orderby, $order) {
     
     // Fallback
     if ($column !== $orderby) {
-        return '<span class="dashicons dashicons-sort saw-sort-icon"></span>';
+        return '<span class="sa-sort-icon">↕</span>';
     }
     if ($order === 'ASC') {
-        return '<span class="dashicons dashicons-arrow-up saw-sort-icon"></span>';
+        return '<span class="sa-sort-icon">↑</span>';
     }
-    return '<span class="dashicons dashicons-arrow-down saw-sort-icon"></span>';
+    return '<span class="sa-sort-icon">↓</span>';
 };
 
 // Helper function to render cell
@@ -95,9 +95,9 @@ $render_cell = function($row, $key, $column) use ($table_instance) {
             break;
         case 'badge':
             if ($value !== '' && $value !== null) {
-                $badge_class = 'saw-badge';
+                $badge_class = 'sa-badge';
                 if (is_array($column) && isset($column['map'][$value])) {
-                    $badge_class .= ' saw-badge-' . $column['map'][$value];
+                    $badge_class .= ' sa-badge--' . $column['map'][$value];
                 }
                 $label = isset($column['labels'][$value]) ? $column['labels'][$value] : $value;
                 echo '<span class="' . esc_attr($badge_class) . '">' . esc_html($label) . '</span>';
@@ -120,7 +120,7 @@ $render_cell = function($row, $key, $column) use ($table_instance) {
             break;
         case 'image':
             if (!empty($value)) {
-                echo '<img src="' . esc_url($value) . '" alt="" class="saw-table-image">';
+                echo '<img src="' . esc_url($value) . '" alt="" class="sa-table-cell-image">';
             }
             break;
         default:
@@ -133,24 +133,26 @@ $render_cell = function($row, $key, $column) use ($table_instance) {
 
 ?>
 
-<div class="saw-table-responsive-wrapper saw-table-grouped">
-    <table class="saw-admin-table">
-        <thead>
-            <tr>
+<div class="sa-table-scroll">
+    <table class="sa-table-element">
+        <thead class="sa-table-thead">
+            <tr class="sa-table-row">
                 <?php foreach ($columns as $column_key => $column_config): ?>
                     <?php
                     $sortable = is_array($column_config) && isset($column_config['sortable']) ? $column_config['sortable'] : false;
                     $label = is_array($column_config) ? ($column_config['label'] ?? ucfirst($column_key)) : $column_config;
                     $width = is_array($column_config) && isset($column_config['width']) ? $column_config['width'] : '';
                     $align = is_array($column_config) && isset($column_config['align']) ? $column_config['align'] : 'left';
-                    $class = 'saw-th-' . esc_attr($column_key);
-                    if ($sortable) {
-                        $class .= ' saw-sortable';
+                    $th_class = 'sa-table-th';
+                    if ($align === 'center') {
+                        $th_class .= ' sa-table-cell--center';
+                    } elseif ($align === 'right') {
+                        $th_class .= ' sa-table-cell--right';
                     }
                     ?>
-                    <th class="<?php echo esc_attr($class); ?>" style="<?php echo $width ? 'width: ' . esc_attr($width) . ';' : ''; ?> text-align: <?php echo esc_attr($align); ?>;">
+                    <th class="<?php echo esc_attr($th_class); ?>" <?php echo $width ? 'style="width: ' . esc_attr($width) . ';"' : ''; ?>>
                         <?php if ($sortable): ?>
-                            <a href="<?php echo esc_url($get_sort_url($column_key)); ?>" class="saw-sortable">
+                            <a href="<?php echo esc_url($get_sort_url($column_key)); ?>" class="sa-table-sortable">
                                 <?php echo esc_html($label); ?>
                                 <?php echo $get_sort_icon($column_key); ?>
                             </a>
@@ -162,30 +164,30 @@ $render_cell = function($row, $key, $column) use ($table_instance) {
             </tr>
         </thead>
         
-        <tbody id="saw-<?php echo esc_attr($entity); ?>-tbody">
+        <tbody class="sa-table-tbody">
             <?php 
             $group_index = 0;
             foreach ($grouped_data as $group_id => $group): 
                 $is_first = ($group_index === 0);
                 $is_expanded = $is_first && !$default_collapsed;
-                $group_class = $is_expanded ? 'saw-group-expanded' : 'saw-group-collapsed';
-                $row_class = $is_expanded ? '' : 'saw-group-hidden';
+                $group_class = $is_expanded ? 'sa-group-expanded' : 'sa-group-collapsed';
+                $row_class = $is_expanded ? '' : 'sa-group-hidden';
                 $group_index++;
             ?>
                 <!-- GROUP HEADER -->
-                <tr class="saw-group-header <?php echo esc_attr($group_class); ?>" 
+                <tr class="sa-group-header <?php echo esc_attr($group_class); ?>" 
                     data-group-id="group_<?php echo esc_attr($group_id); ?>"
                     data-group-count="<?php echo esc_attr($group['count']); ?>">
-                    <td colspan="<?php echo esc_attr($colspan); ?>">
-                        <div class="saw-group-title">
-                            <span class="saw-group-toggle">
-                                <svg class="saw-group-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <td colspan="<?php echo esc_attr($colspan); ?>" class="sa-table-cell">
+                        <div class="sa-group-title">
+                            <span class="sa-group-toggle">
+                                <svg class="sa-group-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
                                     <path d="M6 12L10 8L6 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                 </svg>
                             </span>
-                            <span class="saw-group-label"><?php echo esc_html($group['label']); ?></span>
+                            <span class="sa-group-label"><?php echo esc_html($group['label']); ?></span>
                             <?php if ($show_count): ?>
-                                <span class="saw-group-count"><?php echo esc_html($group['count']); ?></span>
+                                <span class="sa-group-count"><?php echo esc_html($group['count']); ?></span>
                             <?php endif; ?>
                         </div>
                     </td>
@@ -197,9 +199,9 @@ $render_cell = function($row, $key, $column) use ($table_instance) {
                     $row_id = $item['id'] ?? 0;
                     $detail_link = $detail_url ? str_replace('{id}', $row_id, $detail_url) : '';
                     
-                    $row_class_full = 'saw-group-row ' . $row_class;
+                    $row_class_full = 'sa-table-row sa-group-row ' . $row_class;
                     if (!empty($detail_link)) {
-                        $row_class_full .= ' saw-clickable-row';
+                        $row_class_full .= ' sa-table-row--clickable';
                     }
                     ?>
                     <tr class="<?php echo esc_attr($row_class_full); ?>" 

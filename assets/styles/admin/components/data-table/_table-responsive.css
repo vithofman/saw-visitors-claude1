@@ -5,12 +5,33 @@
  */
 
 @media (max-width: 768px) {
+    /* Keep table visible on mobile - don't hide it */
     .sa-table-element {
-        display: none;
+        display: table !important;
+        width: 100% !important;
+    }
+    
+    .sa-table-element thead {
+        display: table-header-group !important;
+    }
+    
+    .sa-table-element tbody {
+        display: table-row-group !important;
+    }
+    
+    .sa-table-element tr {
+        display: table-row !important;
+    }
+    
+    .sa-table-element td,
+    .sa-table-element th {
+        display: table-cell !important;
+        padding: var(--saw-space-2) var(--saw-space-3);
+        font-size: var(--saw-text-xs);
     }
     
     .sa-table-cards {
-        display: block;
+        display: none; /* Hide cards, show table */
     }
     
     .sa-table-card {

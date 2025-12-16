@@ -66,17 +66,20 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
                     echo esc_html($config['icon'] ?? '📋');
                 }
             ?></span>
-            <?php 
-            // For modules with header_display_name (like OOPP), show just the name
-            // Otherwise show "Module #ID"
-            $header_title = '';
-            if (!empty($item['header_display_name'])) {
-                $header_title = esc_html($item['header_display_name']);
-            } else {
-                $header_title = esc_html($config['singular'] ?? 'Detail') . ' #' . intval($item['id']);
-            }
-            ?>
-            <h2 class="sa-sidebar-heading"><?php echo $header_title; ?></h2>
+            <div class="sa-sidebar-title-text">
+                <div class="sa-sidebar-module-name"><?php echo esc_html($config['plural'] ?? $config['title'] ?? ucfirst($entity)); ?></div>
+                <?php 
+                // For modules with header_display_name (like OOPP), show just the name
+                // Otherwise show "Module #ID"
+                $header_title = '';
+                if (!empty($item['header_display_name'])) {
+                    $header_title = esc_html($item['header_display_name']);
+                } else {
+                    $header_title = esc_html($config['singular'] ?? 'Detail') . ' #' . intval($item['id']);
+                }
+                ?>
+                <h2 class="sa-sidebar-heading"><?php echo $header_title; ?></h2>
+            </div>
         </div>
         <div class="sa-sidebar-nav">
             <button type="button" class="sa-sidebar-nav-btn sa-sidebar-prev" title="Předchozí">
@@ -89,13 +92,13 @@ $can_delete = function_exists('saw_can') ? saw_can('delete', $entity) : true;
                     <polyline points="9 18 15 12 9 6"></polyline>
                 </svg>
             </button>
+            <a href="<?php echo esc_url($close_url); ?>" class="sa-sidebar-close" title="Zavřít">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </a>
         </div>
-        <a href="<?php echo esc_url($close_url); ?>" class="sa-sidebar-close" title="Zavřít">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-        </a>
     </div>
     
     <div class="sa-sidebar-content">

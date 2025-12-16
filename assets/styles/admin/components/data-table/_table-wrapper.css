@@ -19,21 +19,44 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
-    overflow: hidden;
+    overflow: visible; /* Changed to visible to allow sticky positioning */
+    overflow-x: hidden; /* Prevent horizontal overflow */
 }
 
-/* Scrollable table area */
+/* Scrollable table area - this is the scroll container for sticky */
 .sa-table-scroll {
     flex: 1;
     overflow-y: auto;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    padding-bottom: 60px; /* Footer height - prevent last row from being hidden */
+    position: relative; /* Create stacking context for sticky */
 }
 
 /* Odstranit šedý scroll indicator s šipkou */
 .sa-table-scroll::before,
 .sa-table-scroll::after {
-    display: none;
+    display: none !important;
+    content: none !important;
+}
+
+/* Custom scrollbar styling */
+.sa-table-scroll::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.sa-table-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sa-table-scroll::-webkit-scrollbar-thumb {
+    background: var(--saw-gray-300);
+    border-radius: var(--saw-radius-md);
+}
+
+.sa-table-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--saw-gray-400);
 }
 
 /* ============================================
@@ -56,61 +79,69 @@
     }
 }
 
-/* Legacy class mapping */
-.saw-table-scroll-area {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-}
-
 /* When sidebar is open */
 .sa-table-split--has-sidebar .sa-table-panel {
     border-right: 1px solid var(--saw-border-color);
 }
 
-/* Legacy split layout mapping */
-.saw-admin-table-split {
-    display: flex;
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
-    background: var(--saw-bg-primary);
-}
 
-.saw-admin-table-split.has-sidebar {
-    /* Sidebar is position: fixed overlay, so table stays same width */
-}
+/* ============================================
+   SCROLL TO TOP BUTTON
+   ============================================ */
 
-.saw-table-panel {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    border-right: none;
-    background: var(--saw-bg-primary);
-    min-height: 0;
-}
-
-.saw-admin-table-split.has-sidebar .saw-table-panel {
-    border-right: 1px solid var(--saw-border-color);
-}
-
-.saw-sidebar-wrapper {
+.sa-scroll-to-top {
     position: fixed;
-    top: 60px; /* Header height */
-    right: 0;
-    bottom: 0;
-    width: 400px;
-    background: var(--saw-bg-primary);
-    border-left: 1px solid var(--saw-border-color);
-    box-shadow: var(--saw-shadow-xl);
-    z-index: var(--saw-z-sidebar);
-    transform: translateX(100%);
-    transition: transform var(--saw-transition-base);
+    bottom: 80px; /* Above footer */
+    right: var(--saw-space-5);
+    width: 48px;
+    height: 48px;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    background: var(--saw-brand-600) !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: var(--saw-radius-full);
+    box-shadow: var(--saw-shadow-lg);
+    cursor: pointer;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(20px);
+    transition: all var(--saw-transition-base);
+    z-index: 1001; /* Above footer (900) and header (1000) */
+    pointer-events: none; /* Disable when hidden */
 }
 
-.saw-sidebar-wrapper.active {
-    transform: translateX(0);
+.sa-scroll-to-top--visible {
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: translateY(0) !important;
+    pointer-events: auto !important; /* Enable when visible */
+}
+
+.sa-scroll-to-top:hover {
+    background: var(--saw-brand-700) !important;
+    box-shadow: var(--saw-shadow-xl);
+    transform: translateY(-2px);
+}
+
+.sa-scroll-to-top:active {
+    transform: translateY(0);
+}
+
+.sa-scroll-to-top svg {
+    width: 24px;
+    height: 24px;
+    fill: currentColor;
+    stroke: currentColor;
+}
+
+@media (max-width: 768px) {
+    .sa-scroll-to-top {
+        bottom: 20px;
+        right: var(--saw-space-3);
+        width: 44px;
+        height: 44px;
+    }
 }
 

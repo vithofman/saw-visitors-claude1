@@ -344,6 +344,7 @@ class SAW_App_Sidebar {
         <div class="sa-sidebar-overlay" id="sawSidebarOverlay"></div>
         <aside class="sa-app-sidebar" id="sawAppSidebar">
             <?php if ($this->saw_role === 'super_admin' || $this->saw_role === 'admin'): ?>
+                <?php $this->render_customer_switcher(); ?>
                 <?php $this->render_branch_switcher(); ?>
             <?php endif; ?>
             
@@ -426,6 +427,28 @@ class SAW_App_Sidebar {
             </nav>
         </aside>
         <?php
+    }
+    
+    /**
+     * Render customer switcher component
+     *
+     * Loads and renders customer switcher for super admins.
+     *
+     * @since 6.0.0
+     * @return void
+     */
+    private function render_customer_switcher() {
+        if (!class_exists('SAW_Component_Customer_Switcher')) {
+            $file = SAW_VISITORS_PLUGIN_DIR . 'includes/components/customer-switcher/class-saw-component-customer-switcher.php';
+            if (file_exists($file)) {
+                require_once $file;
+            }
+        }
+        
+        if (class_exists('SAW_Component_Customer_Switcher')) {
+            $switcher = new SAW_Component_Customer_Switcher($this->customer);
+            $switcher->render();
+        }
     }
     
     /**

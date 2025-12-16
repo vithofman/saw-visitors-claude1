@@ -213,6 +213,12 @@ class SAW_Component_Admin_Table {
         $this->enqueue_assets();
         $this->output_js_config();
         
+        // Set global page title for header
+        if (!empty($this->config['title'])) {
+            global $saw_page_title;
+            $saw_page_title = $this->config['title'];
+        }
+        
         $has_sidebar = !empty($this->config['sidebar_mode']);
         
         if ($has_sidebar) {
@@ -302,27 +308,8 @@ class SAW_Component_Admin_Table {
     }
     
     private function render_header() {
-        if (empty($this->config['title'])) {
-            return;
-        }
-        ?>
-        <div class="sa-table-header">
-            <div class="sa-table-header-content">
-                <?php if (!empty($this->config['title'])): ?>
-                    <h1 class="sa-table-header-title">
-                        <?php if (!empty($this->config['icon'])): ?>
-                            <span class="sa-table-header-icon"><?php echo esc_html($this->config['icon']); ?></span>
-                        <?php endif; ?>
-                        <?php echo esc_html($this->config['title']); ?>
-                    </h1>
-                <?php endif; ?>
-                
-                <?php if (!empty($this->config['subtitle'])): ?>
-                    <p class="sa-table-header-meta"><?php echo esc_html($this->config['subtitle']); ?></p>
-                <?php endif; ?>
-            </div>
-        </div>
-        <?php
+        // Header removed - not needed, only causes issues
+        return;
     }
     
     /**

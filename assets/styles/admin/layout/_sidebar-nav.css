@@ -10,10 +10,11 @@
 
 .sa-app-sidebar {
     position: fixed;
-    top: 60px; /* Header height */
+    top: 0; /* Full height - starts at top */
     left: 0;
     bottom: 0;
     width: 260px;
+    height: 100vh; /* Full viewport height */
     background: var(--saw-bg-secondary);
     border-right: 1px solid var(--saw-border-color);
     overflow-y: auto;
@@ -40,6 +41,8 @@
     background: var(--saw-gray-400);
 }
 
+/* Collapsible sidebar - REMOVED - sidebar is always visible */
+
 /* ============================================
    SIDEBAR OVERLAY (mobile)
    ============================================ */
@@ -47,10 +50,10 @@
 .sa-sidebar-overlay {
     display: none;
     position: fixed;
-    top: 60px;
+    top: 0; /* Full height overlay */
     left: 0;
     width: 100%;
-    height: calc(100vh - 60px);
+    height: 100vh;
     background: rgba(0, 0, 0, 0.5);
     z-index: 998;
     opacity: 0;
@@ -84,41 +87,88 @@
 
 .sa-sidebar-nav {
     padding: var(--saw-space-2) 0;
-    display: flex;
-    flex-direction: column;
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100%;
+    box-sizing: border-box;
 }
 
-/* Zajištění stejného zarovnání pro všechny nav items - VŠECHNY ZAČÍNAJÍ NA STEJNÉM MÍSTĚ */
+/* ============================================
+   NAVIGATION ITEMS - COMPLETE RESET
+   ============================================ */
+
+/* Reset ALL margins and paddings for nav items */
 .sa-sidebar-nav .sa-nav-item {
+    /* Complete reset */
+    margin: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    text-indent: 0 !important;
+    
+    /* Explicit layout */
+    position: relative;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: var(--saw-space-3);
+    width: 100% !important;
+    box-sizing: border-box !important;
+    
+    /* Explicit padding - all items start at same X coordinate */
     padding-left: var(--saw-space-6) !important;
     padding-right: var(--saw-space-6) !important;
     padding-top: 6px !important;
     padding-bottom: 6px !important;
-    margin-left: 0 !important;
-    text-indent: 0 !important;
+    
+    /* Reset any transforms or positioning */
+    left: 0 !important;
+    right: 0 !important;
+    transform: none !important;
 }
 
-/* Aktivní item musí mít STEJNÉ zarovnání */
+/* Active item - SAME alignment */
 .sa-sidebar-nav .sa-nav-item--active,
 .sa-sidebar-nav .sa-nav-item.sa-nav-item--active {
+    /* Same padding as regular items */
     padding-left: var(--saw-space-6) !important;
     padding-right: var(--saw-space-6) !important;
     padding-top: 6px !important;
     padding-bottom: 6px !important;
+    margin: 0 !important;
 }
 
+/* Border-left indicator - doesn't affect alignment */
 .sa-sidebar-nav .sa-nav-item::before {
-    left: 0;
+    left: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
 .sa-sidebar-nav .sa-nav-item--active::before {
-    left: 0;
+    left: 0 !important;
 }
 
-/* Zajistit, že všechny nested items také začínají na stejném místě */
+/* Icon - explicit positioning */
 .sa-sidebar-nav .sa-nav-item .sa-nav-icon {
-    margin-left: 0;
-    margin-right: var(--saw-space-3);
+    margin: 0 !important;
+    margin-left: 0 !important;
+    margin-right: var(--saw-space-3) !important;
+    padding: 0 !important;
+    flex-shrink: 0;
+}
+
+/* Label - no margins */
+.sa-sidebar-nav .sa-nav-item .sa-nav-label {
+    margin: 0 !important;
+    padding: 0 !important;
+    flex: 1;
 }
 
 /* Navigation Section */
@@ -183,20 +233,25 @@
 /* Navigation Item - VŠECHNY ZAROVNANÉ POD SEBOU */
 .sa-nav-item {
     position: relative;
-    display: flex;
+    display: flex !important;
     align-items: center;
     gap: var(--saw-space-3);
     padding: 6px var(--saw-space-6) !important;
     padding-left: var(--saw-space-6) !important;
     padding-right: var(--saw-space-6) !important;
     margin-left: 0 !important;
+    margin-right: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
     color: var(--saw-text-secondary);
     text-decoration: none;
     transition: all var(--saw-transition-fast);
-    width: 100%;
-    flex-direction: row;
-    box-sizing: border-box;
+    width: 100% !important;
+    flex-direction: row !important;
+    box-sizing: border-box !important;
     text-indent: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
 }
 
 /* Border-left jako pseudo-element, aby neovlivňoval zarovnání */

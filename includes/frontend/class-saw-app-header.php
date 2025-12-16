@@ -83,6 +83,7 @@ class SAW_App_Header {
     }
     
     public function render() {
+        global $saw_page_title;
         ?>
         <header class="sa-app-header" id="sawAppHeader">
             <div class="sa-header-left">
@@ -94,7 +95,7 @@ class SAW_App_Header {
                     </svg>
                 </button>
                 
-                <?php $this->render_customer_switcher(); ?>
+                <?php $this->render_page_title($saw_page_title); ?>
             </div>
             
             <div class="sa-header-right">
@@ -413,18 +414,37 @@ class SAW_App_Header {
         ));
     }
     
-    private function render_customer_switcher() {
-        if (!class_exists('SAW_Component_Customer_Switcher')) {
-            $file = SAW_VISITORS_PLUGIN_DIR . 'includes/components/customer-switcher/class-saw-component-customer-switcher.php';
-            if (file_exists($file)) {
-                require_once $file;
-            }
+    /**
+     * Render app logo placeholder
+     * 
+     * @since 6.0.0
+     * @return void
+     */
+    private function render_app_logo() {
+        ?>
+        <div class="sa-app-logo">
+            <svg width="40" height="40" viewBox="0 0 40 40" fill="none" class="sa-app-logo-placeholder">
+                <rect width="40" height="40" rx="8" fill="#2563eb"/>
+                <text x="20" y="28" font-size="20" font-weight="bold" fill="white" text-anchor="middle">SAW</text>
+            </svg>
+        </div>
+        <?php
+    }
+    
+    /**
+     * Render page title in header
+     * 
+     * @since 6.0.0
+     * @param string|null $title Page title
+     * @return void
+     */
+    private function render_page_title($title = null) {
+        if (empty($title)) {
+            return;
         }
-        
-        if (class_exists('SAW_Component_Customer_Switcher')) {
-            $switcher = new SAW_Component_Customer_Switcher($this->customer);
-            $switcher->render();
-        }
+        ?>
+        <h1 class="sa-page-title"><?php echo esc_html($title); ?></h1>
+        <?php
     }
     
     private function render_language_switcher() {

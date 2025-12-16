@@ -15,8 +15,8 @@
      * Ensures active tab is visible after page load
      */
     function scrollActiveTabIntoView() {
-        const $tabs = $('.saw-table-tabs');
-        const $activeTab = $('.saw-table-tab.active');
+        const $tabs = $('.sa-table-tabs');
+        const $activeTab = $('.sa-table-tab.sa-table-tab--active');
         
         if (!$tabs.length || !$activeTab.length) {
             return;
@@ -57,7 +57,7 @@
      */
     function initTabsNavigation() {
         // Click handler for tabs
-        $(document).on('click', '.saw-table-tab', function(e) {
+        $(document).on('click', '.sa-table-tab', function(e) {
             e.preventDefault();
             
             const $tab = $(this);
@@ -70,9 +70,9 @@
             }
             
             // Show loading state
-            $('.saw-table-tabs').addClass('loading');
-            $('.saw-table-tab').removeClass('active');
-            $tab.addClass('active');
+            $('.sa-table-tabs').addClass('loading');
+            $('.sa-table-tab').removeClass('sa-table-tab--active');
+            $tab.addClass('sa-table-tab--active');
             
             // Navigate to tab URL
             window.location.href = url;
@@ -83,10 +83,10 @@
      * Initialize tabs arrow navigation
      */
     function initTabsArrowNavigation() {
-        const $wrapper = $('.saw-table-tabs-wrapper');
-        const $tabs = $('.saw-table-tabs');
-        const $arrowLeft = $('.saw-tabs-nav-arrow-left');
-        const $arrowRight = $('.saw-tabs-nav-arrow-right');
+        const $wrapper = $('.sa-table-tabs-wrapper');
+        const $tabs = $('.sa-table-tabs');
+        const $arrowLeft = $('.sa-tabs-nav-arrow-left');
+        const $arrowRight = $('.sa-tabs-nav-arrow-right');
         
         if (!$wrapper.length || !$tabs.length) {
             return;
@@ -189,7 +189,7 @@
 
     // Initialize on DOM ready
     $(document).ready(function() {
-        if ($('.saw-table-tabs').length) {
+        if ($('.sa-table-tabs').length) {
             initTabsNavigation();
             initTabsArrowNavigation();
             
@@ -208,7 +208,7 @@
     
     // Re-initialize on dynamic content load
     $(document).on('saw:page-loaded', function() {
-        if ($('.saw-table-tabs').length) {
+        if ($('.sa-table-tabs').length) {
             initTabsArrowNavigation();
         }
     });

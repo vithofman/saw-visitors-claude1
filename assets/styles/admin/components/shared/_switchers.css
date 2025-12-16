@@ -60,17 +60,16 @@
 .sa-switcher-dropdown {
     position: absolute;
     top: calc(100% + 8px);
-    background: var(--saw-bg-primary);
+    background: #ffffff !important; /* PEVNÉ BÍLÉ - žádný blur */
     border: 1px solid var(--saw-border-color);
     border-radius: var(--saw-radius-lg);
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15), 0 4px 10px rgba(0, 0, 0, 0.1);
     display: none;
     flex-direction: column;
-    z-index: 1001;
+    z-index: 1100; /* VYŠŠÍ než header (1000) */
     overflow: hidden;
     min-width: 280px;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    /* ODSTRANIT backdrop-filter - způsobuje průhlednost */
 }
 
 .sa-switcher-dropdown--active {
@@ -95,6 +94,8 @@
 
 .sa-customer-switcher {
     position: relative;
+    flex-shrink: 0;
+    min-width: 0;
 }
 
 .sa-customer-switcher-button {
@@ -108,74 +109,100 @@
     cursor: pointer;
     transition: all var(--saw-transition-fast);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    min-width: 200px;
+    max-width: 300px;
 }
 
-.sa-switcher-logo {
+.sa-customer-switcher-button:hover {
+    background: var(--saw-bg-secondary);
+    border-color: var(--saw-brand-300);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Customer icon - same as branch icon */
+.sa-customer-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
-    flex-shrink: 0;
+    background: var(--saw-brand-50);
+    color: var(--saw-brand-600);
     border-radius: var(--saw-radius-sm);
-    overflow: hidden;
-    background: var(--saw-bg-tertiary);
-    border: 1px solid var(--saw-border-color);
 }
 
-.sa-switcher-logo-image {
+.sa-customer-icon-image {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    border-radius: var(--saw-radius-sm);
 }
 
-.sa-switcher-logo-fallback {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(135deg, var(--saw-brand-600) 0%, var(--saw-brand-700) 100%);
-    color: #ffffff;
-    font-size: 14px;
-    font-weight: var(--saw-font-bold);
-}
-
-.sa-switcher-info {
+/* Customer info - same structure as branch info */
+.sa-customer-info {
     display: flex;
     flex-direction: column;
     gap: 2px;
-    min-width: 0;
     flex: 1;
+    min-width: 0;
+    text-align: left;
 }
 
-.sa-switcher-name {
+.sa-customer-label {
+    font-size: 10px;
+    font-weight: var(--saw-font-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--saw-text-muted);
+    line-height: 1.2;
+}
+
+.sa-customer-name {
     font-size: var(--saw-text-sm);
     font-weight: var(--saw-font-semibold);
     color: var(--saw-text-primary);
-    line-height: 1.3;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-}
-
-.sa-switcher-ico {
-    font-size: var(--saw-text-xs);
-    color: var(--saw-text-muted);
-    white-space: nowrap;
     line-height: 1.2;
 }
 
 .sa-customer-switcher-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
     left: 0;
-    width: 380px;
+    width: 100%; /* Compact - same width as button */
+    max-width: 100%;
     max-height: 500px;
+    background: #ffffff !important; /* PEVNÉ BÍLÉ - žádný blur */
+    border: 1px solid var(--saw-border-color);
+    border-radius: var(--saw-radius-lg);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15), 0 4px 10px rgba(0, 0, 0, 0.1);
+    display: none;
+    flex-direction: column;
+    z-index: 1100; /* VYŠŠÍ než header (1000) */
+    overflow: hidden;
+    word-wrap: break-word; /* Allow text wrapping */
+    /* ODSTRANIT backdrop-filter - způsobuje průhlednost */
+}
+
+.sa-customer-switcher-dropdown.sa-switcher-dropdown--active {
+    display: flex !important;
+    animation: saDropdownFadeIn 0.2s ease;
+}
+
+/* Search - SKRYTÝ když dropdown není aktivní */
+.sa-customer-switcher-dropdown:not(.sa-switcher-dropdown--active) .sa-switcher-search {
+    display: none;
 }
 
 .sa-switcher-search {
     padding: var(--saw-space-3);
     border-bottom: 1px solid var(--saw-border-color);
     background: var(--saw-bg-secondary);
+    flex-shrink: 0;
 }
 
 .sa-switcher-search-input {
@@ -265,6 +292,8 @@
 .sa-switcher-item-info {
     flex: 1;
     min-width: 0;
+    word-wrap: break-word; /* Allow text wrapping in dropdown */
+    white-space: normal; /* Allow wrapping */
 }
 
 .sa-switcher-item-name {
@@ -365,22 +394,34 @@
     background: transparent;
     border: none;
     box-shadow: none;
+    flex-shrink: 0;
+    min-width: 0;
 }
 
 .sa-branch-switcher-button {
     width: 100%;
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-2);
     padding: var(--saw-space-2) var(--saw-space-3);
     background: var(--saw-bg-primary);
     border: 1px solid var(--saw-border-color);
     border-radius: var(--saw-radius-md);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     transition: all var(--saw-transition-fast);
+    cursor: pointer;
 }
 
 .sa-branch-switcher-button:hover {
     background: var(--saw-bg-secondary);
     border-color: var(--saw-brand-300);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+}
+
+.sa-branch-switcher-button:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .sa-branch-icon {
@@ -394,6 +435,29 @@
     background: var(--saw-brand-50);
     color: var(--saw-brand-600);
     border-radius: var(--saw-radius-sm);
+}
+
+/* ============================================
+   SWITCHERS IN SIDEBAR - SAME IMAGE SIZE
+   ============================================ */
+
+/* Customer and Branch switchers in sidebar - same image size */
+.sa-app-sidebar .sa-customer-switcher .sa-customer-icon,
+.sa-app-sidebar .sa-branch-switcher .sa-branch-icon {
+    width: 32px !important;
+    height: 32px !important;
+}
+
+/* Customer switcher in sidebar - compact styling */
+.sa-app-sidebar .sa-customer-switcher {
+    margin: var(--saw-space-3) var(--saw-space-4);
+    padding: 0;
+}
+
+.sa-app-sidebar .sa-customer-switcher-button {
+    width: 100%;
+    min-width: auto;
+    max-width: none;
 }
 
 .sa-branch-info {
@@ -429,18 +493,16 @@
     top: calc(100% + 8px);
     left: 0;
     right: 0;
-    background: var(--saw-bg-primary);
+    background: #ffffff !important; /* PEVNÉ BÍLÉ - žádný blur */
     border: 1px solid var(--saw-border-color);
     border-radius: var(--saw-radius-lg);
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15), 0 4px 10px rgba(0, 0, 0, 0.1);
-    display: none; /* KRITICKÉ - chybí! */
+    display: none;
     flex-direction: column;
-    z-index: 1001;
+    z-index: 1100; /* VYŠŠÍ než header */
     overflow: hidden;
     max-height: 400px;
-    margin-top: var(--saw-space-2);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    /* ODSTRANIT backdrop-filter - způsobuje průhlednost */
 }
 
 .sa-branch-switcher-dropdown.sa-switcher-dropdown--active {
@@ -563,12 +625,35 @@
 
 .sa-language-switcher {
     position: relative;
+    flex-shrink: 0;
+    min-width: 0;
 }
 
 .sa-language-switcher-button {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-2);
     padding: 6px var(--saw-space-3);
     height: 40px;
     min-width: 80px;
+    background: var(--saw-bg-primary);
+    border: 1px solid var(--saw-border-color);
+    border-radius: var(--saw-radius-md);
+    cursor: pointer;
+    transition: all var(--saw-transition-fast);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.sa-language-switcher-button:hover {
+    background: var(--saw-bg-secondary);
+    border-color: var(--saw-brand-300);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+}
+
+.sa-language-switcher-button:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .sa-language-flag {
@@ -587,18 +672,17 @@
     position: absolute;
     top: calc(100% + 8px);
     right: 0;
-    background: var(--saw-bg-primary);
+    background: #ffffff !important; /* PEVNÉ BÍLÉ - žádný blur */
     border: 1px solid var(--saw-border-color);
     border-radius: var(--saw-radius-lg);
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15), 0 4px 10px rgba(0, 0, 0, 0.1);
-    display: none; /* KRITICKÉ - chybí! */
+    display: none;
     flex-direction: column;
-    z-index: 1001;
+    z-index: 1100; /* VYŠŠÍ než header */
     overflow: hidden;
     min-width: 200px;
     padding: var(--saw-space-2);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    /* ODSTRANIT backdrop-filter - způsobuje průhlednost */
 }
 
 .sa-language-switcher-dropdown.sa-switcher-dropdown--active {
@@ -662,7 +746,8 @@
     
     .sa-customer-switcher-button {
         padding: var(--saw-space-2);
-        min-width: 40px;
+        min-width: auto;
+        max-width: 200px;
     }
     
     .sa-switcher-logo {
@@ -671,9 +756,10 @@
     }
     
     .sa-customer-switcher-dropdown {
-        width: 320px;
-        right: 0;
-        left: auto;
+        width: calc(100vw - 32px);
+        max-width: 360px;
+        left: 0;
+        right: auto;
     }
     
     .sa-language-code {
@@ -691,14 +777,16 @@
 @media (max-width: 768px) {
     /* Skrýt šipky na mobile - otevírá se jen kliknutím na logo/vlajku */
     .sa-customer-switcher-button .sa-switcher-arrow,
-    .sa-language-switcher-button .sa-switcher-arrow {
+    .sa-language-switcher-button .sa-switcher-arrow,
+    .sa-branch-switcher-button .sa-switcher-arrow {
         display: none;
     }
     
     .sa-customer-switcher-button {
         padding: var(--saw-space-1);
-        min-width: 36px;
-        justify-content: center;
+        min-width: auto;
+        max-width: 150px;
+        justify-content: flex-start;
     }
     
     .sa-switcher-logo {
@@ -706,13 +794,42 @@
         height: 28px;
     }
     
-    .sa-customer-switcher-dropdown {
-        width: calc(100vw - 32px);
-        max-width: 360px;
-        left: 0;
-        right: auto;
+    .sa-switcher-info {
+        min-width: 0;
     }
     
+    .sa-switcher-name {
+        font-size: var(--saw-text-xs);
+    }
+    
+    .sa-switcher-ico {
+        display: none; /* Skrýt IČO na velmi malých obrazovkách */
+    }
+    
+    .sa-customer-switcher-dropdown {
+        width: calc(100vw - 16px);
+        max-width: none;
+        left: 8px;
+        right: 8px;
+    }
+    
+    /* Branch switcher - mobile */
+    .sa-branch-switcher {
+        margin: var(--saw-space-2);
+    }
+    
+    .sa-branch-switcher-button {
+        padding: var(--saw-space-2);
+    }
+    
+    .sa-branch-switcher-dropdown {
+        left: 0;
+        right: 0;
+        width: 100%;
+        max-width: calc(100vw - 16px);
+    }
+    
+    /* Language switcher - mobile */
     .sa-language-switcher-button {
         padding: 6px;
         height: 36px;
@@ -722,6 +839,12 @@
     
     .sa-language-flag {
         font-size: 16px;
+    }
+    
+    .sa-language-switcher-dropdown {
+        right: 0;
+        left: auto;
+        min-width: 180px;
     }
     
     .sa-branch-switcher {

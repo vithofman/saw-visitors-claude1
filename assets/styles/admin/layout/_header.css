@@ -11,7 +11,7 @@
 .sa-app-header {
     position: fixed;
     top: 0;
-    left: 0;
+    left: 260px; /* Start next to sidebar */
     right: 0;
     height: 60px;
     z-index: 1000;
@@ -23,10 +23,11 @@
     justify-content: space-between;
     padding: 0 var(--saw-space-5);
     box-shadow: var(--saw-shadow-sm);
+    transition: left var(--saw-transition-base); /* Smooth transition when sidebar collapses */
 }
 
 /* ============================================
-   HEADER LEFT (Mobile menu + Customer switcher)
+   HEADER LEFT (Mobile menu + App logo)
    ============================================ */
 
 .sa-header-left {
@@ -35,6 +36,31 @@
     gap: var(--saw-space-4);
     flex: 1;
     min-width: 0;
+}
+
+/* App Logo - REMOVED - no longer used */
+.sa-app-logo {
+    display: none !important;
+}
+
+/* Page Title */
+.sa-page-title {
+    margin: 0;
+    padding: 0 var(--saw-space-4);
+    font-size: var(--saw-text-xl);
+    font-weight: var(--saw-font-bold);
+    color: var(--saw-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+    .sa-page-title {
+        font-size: var(--saw-text-lg);
+        padding: 0 var(--saw-space-2);
+    }
 }
 
 .sa-mobile-menu-toggle {
@@ -73,16 +99,25 @@
     align-items: center;
     gap: var(--saw-space-2);
     flex-shrink: 0;
+    margin-right: 0;
+    padding-right: 10px !important; /* Fixed 10px padding */
 }
 
 /* ============================================
    RESPONSIVE HEADER
    ============================================ */
 
+@media (max-width: 1024px) {
+    .sa-app-header {
+        left: 0; /* On mobile/tablet, header starts from left */
+    }
+}
+
 @media (max-width: 768px) {
     .sa-app-header {
         padding: 0 var(--saw-space-3);
         height: 56px;
+        left: 0; /* On mobile, header starts from left */
     }
     
     .sa-header-left {
@@ -108,11 +143,16 @@
     }
     
     .sa-user-info {
-        display: none;
+        display: none !important;
     }
     
     .sa-user-arrow {
-        display: none;
+        display: none !important;
+    }
+    
+    .sa-user-avatar {
+        width: 36px;
+        height: 36px;
     }
     
     /* Language switcher - only flag on mobile */
@@ -137,6 +177,7 @@
     .sa-app-header {
         padding: 0 var(--saw-space-2);
         height: 52px;
+        left: 0; /* On mobile, header starts from left */
     }
     
     .sa-header-left {

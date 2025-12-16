@@ -5,20 +5,19 @@
  */
 
 .sa-sidebar-header {
-    display: flex;
-    align-items: center;
-    gap: var(--saw-space-4);
-    padding: 0;
-    background: var(--saw-brand-600);
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important; /* Title on left, nav buttons + close on right */
+    gap: var(--saw-space-2);
+    padding: var(--saw-space-2) var(--saw-space-3);
+    background: #0f172a !important; /* Dark, modern, elegant */
     border-bottom: none;
     flex-shrink: 0;
-    min-height: 60px;
-}
-
-/* Dark header variant - default styling */
-.sa-sidebar-header {
-    background: var(--saw-brand-600);
+    min-height: 48px;
+    height: 48px; /* Fixed compact height */
     color: #ffffff;
+    margin-bottom: 0 !important; /* No margin between header and blue section */
+    padding-bottom: var(--saw-space-2) !important; /* Minimal padding */
 }
 
 .sa-sidebar-header .sa-sidebar-heading {
@@ -41,33 +40,35 @@
     color: #ffffff;
 }
 
-.sa-sidebar-header .sa-sidebar-close {
-    background: rgba(239, 68, 68, 0.2);
-    border-color: rgba(239, 68, 68, 0.4);
-    color: #ffffff;
-}
+/* Removed duplicate rules - see below */
 
-.sa-sidebar-header .sa-sidebar-close:hover {
-    background: var(--saw-danger);
-    border-color: var(--saw-danger);
-    color: #ffffff;
-}
-
-/* Navigation controls (prev/next) */
-.sa-sidebar-nav {
-    display: flex;
-    align-items: center;
+/* Navigation controls (prev/next) - now in header, horizontal layout, positioned on RIGHT */
+.sa-sidebar-header .sa-sidebar-nav {
+    display: flex !important;
+    align-items: center !important;
+    flex-direction: row !important; /* Horizontal layout - buttons side by side */
     gap: var(--saw-space-2);
-    padding: var(--saw-space-4);
-    padding-right: var(--saw-space-2);
+    padding: 0 !important;
+    margin: 0 !important;
+    margin-left: auto !important; /* Push to right side */
+    flex: 0 0 auto !important; /* Cannot shrink, fixed size */
+    flex-shrink: 0 !important;
+    order: 2 !important; /* Ensure it's after title */
+    width: auto !important;
+    min-width: 100px !important; /* Reserve space for buttons */
+}
+
+.sa-sidebar-header .sa-sidebar-nav-btn {
+    display: flex !important;
+    flex-shrink: 0;
 }
 
 .sa-sidebar-nav-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 28px; /* Smaller buttons */
+    height: 28px;
     padding: 0;
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -90,49 +91,79 @@
 
 /* Title area */
 .sa-sidebar-title {
-    display: flex;
-    align-items: center;
+    display: flex !important;
+    align-items: center !important;
     gap: var(--saw-space-3);
-    flex: 1;
-    min-width: 0;
-    padding: var(--saw-space-4);
+    flex: 1 1 auto !important; /* Can shrink if needed */
+    min-width: 0 !important;
+    max-width: calc(100% - 120px) !important; /* Reserve space for nav buttons */
+    padding: var(--saw-space-2) var(--saw-space-3);
+    order: 1 !important; /* Ensure it's before nav buttons */
+    overflow: hidden !important; /* Prevent overflow */
 }
 
 .sa-sidebar-icon {
     flex-shrink: 0;
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
     color: #ffffff;
+}
+
+.sa-sidebar-title-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+}
+
+.sa-sidebar-module-name {
+    font-size: var(--saw-text-xs);
+    font-weight: var(--saw-font-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.2;
 }
 
 .sa-sidebar-heading {
     margin: 0;
-    font-size: var(--saw-text-lg);
+    font-size: var(--saw-text-base);
     font-weight: var(--saw-font-semibold);
     color: #ffffff;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    line-height: 1.2;
 }
 
-/* Close button */
-.sa-sidebar-close {
-    display: flex;
+/* Close button - now inside .sa-sidebar-nav */
+.sa-sidebar-header .sa-sidebar-close {
+    display: flex !important;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     padding: 0;
-    background: rgba(239, 68, 68, 0.2);
-    border: 1px solid rgba(239, 68, 68, 0.4);
+    background: rgba(239, 68, 68, 0.2) !important;
+    border: 1px solid rgba(239, 68, 68, 0.4) !important;
     border-radius: var(--saw-radius-md);
-    color: #ffffff;
+    color: #ffffff !important;
     cursor: pointer;
     transition: all var(--saw-transition-fast);
     text-decoration: none;
     font-size: 18px;
     line-height: 1;
-    margin-right: var(--saw-space-4);
+    margin: 0;
+    flex-shrink: 0;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+.sa-sidebar-close svg {
+    width: 20px;
+    height: 20px;
+    display: block;
 }
 
 .sa-sidebar-close:hover {

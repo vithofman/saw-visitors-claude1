@@ -330,25 +330,20 @@ class SAW_Component_Customer_Switcher {
         <div class="sa-customer-switcher" id="sawCustomerSwitcher">
             <button class="sa-customer-switcher-button" id="sawCustomerSwitcherButton" 
                     data-current-customer-id="<?php echo esc_attr($this->current_customer['id']); ?>">
-                <div class="sa-switcher-logo">
+                <span class="sa-customer-icon">
                     <?php if ($logo_url): ?>
                         <img src="<?php echo esc_url($logo_url); ?>" 
                              alt="<?php echo esc_attr($this->current_customer['name']); ?>" 
-                             width="40"
-                             height="40"
-                             class="sa-switcher-logo-image">
+                             width="32"
+                             height="32"
+                             class="sa-customer-icon-image">
                     <?php else: ?>
-                        <svg width="32" height="32" viewBox="0 0 40 40" fill="none" class="sa-switcher-logo-fallback">
-                            <rect width="40" height="40" rx="8" fill="#2563eb"/>
-                            <text x="20" y="28" font-size="20" font-weight="bold" fill="white" text-anchor="middle">SAW</text>
-                        </svg>
+                        🏢
                     <?php endif; ?>
-                </div>
-                <div class="sa-switcher-info">
-                    <div class="sa-switcher-name"><?php echo esc_html($this->current_customer['name']); ?></div>
-                    <?php if (!empty($this->current_customer['ico'])): ?>
-                        <div class="sa-switcher-ico">IČO: <?php echo esc_html($this->current_customer['ico']); ?></div>
-                    <?php endif; ?>
+                </span>
+                <div class="sa-customer-info">
+                    <div class="sa-customer-label">Zákazník</div>
+                    <div class="sa-customer-name"><?php echo esc_html($this->current_customer['name']); ?></div>
                 </div>
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" class="sa-switcher-arrow">
                     <path d="M8 10.5l-4-4h8l-4 4z"/>

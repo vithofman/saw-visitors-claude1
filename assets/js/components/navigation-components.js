@@ -514,7 +514,7 @@
          */
         open() {
             this.isOpen = true;
-            this.dropdown.addClass('active');
+            this.dropdown.addClass('sa-switcher-dropdown--active');
             
             if (this.branches.length === 0) {
                 this.loadBranches();

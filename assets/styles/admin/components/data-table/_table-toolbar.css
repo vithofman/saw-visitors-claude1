@@ -8,12 +8,14 @@
     display: flex;
     align-items: center;
     gap: var(--saw-space-4);
-    padding: var(--saw-space-3) var(--saw-space-4);
-    background: var(--saw-bg-primary);
+    padding: 4px var(--saw-space-4) !important; /* Minimal padding - very compact */
+    background: var(--saw-bg-primary) !important;
     border-bottom: 1px solid var(--saw-border-color);
-    position: sticky;
-    top: 0;
-    z-index: 10;
+    position: sticky !important;
+    top: 0 !important; /* At the top - no header above */
+    z-index: 100 !important; /* High z-index for sticky */
+    margin-bottom: 0 !important; /* No margin */
+    flex-shrink: 0; /* Prevent shrinking */
 }
 
 /* Tabs container */
@@ -210,12 +212,17 @@
         padding: var(--saw-space-3) var(--saw-space-3);
     }
     
+    .sa-table-toolbar {
+        flex-wrap: nowrap !important; /* Prevent wrapping - tabs and filter on same line */
+    }
+    
     .sa-table-tabs {
-        flex: 1 1 100%;
+        flex: 1 1 auto; /* Allow shrinking */
         order: 1;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
-        padding-bottom: var(--saw-space-2);
+        padding-bottom: 0; /* No padding bottom */
+        min-width: 0; /* Allow shrinking */
     }
     
     .sa-table-tabs::-webkit-scrollbar {
@@ -228,23 +235,21 @@
         white-space: nowrap;
     }
     
-    /* Search a filter vedle sebe na větších mobile */
-    .sa-table-search,
+    /* Filter vedle záložek na mobilu */
     .sa-table-filters-wrapper {
+        order: 1 !important; /* Same order as tabs - on same line */
+        flex-shrink: 0 !important; /* Don't shrink */
+        margin-left: var(--saw-space-2) !important; /* Small gap from tabs */
+        margin-right: 0 !important;
+    }
+    
+    /* Search a filter vedle sebe na větších mobile */
+    .sa-table-search {
         flex: 1 1 auto;
         order: 2;
         display: flex !important;
         min-width: 0;
         max-width: 100%;
-    }
-    
-    .sa-table-search {
-        order: 2;
-    }
-    
-    .sa-table-filters-wrapper {
-        order: 2;
-        justify-content: flex-end;
     }
     
     .sa-table-search-form {

@@ -27,48 +27,47 @@
         }
 
         // Support both old and new CSS classes
-        $('.sa-table-element tbody tr, .saw-admin-table tbody tr').removeClass('saw-row-active sa-table-row--active');
-        const $activeRow = $('.sa-table-element tbody tr[data-id="' + id + '"], .saw-admin-table tbody tr[data-id="' + id + '"]');
+        $('.sa-table-element tbody tr').removeClass('sa-table-row--active');
+        const $activeRow = $('.sa-table-element tbody tr[data-id="' + id + '"]');
 
         if (!$activeRow.length) {
             console.warn('⚠️ Active row not found for ID:', id);
             return;
         }
 
-        $activeRow.addClass('saw-row-active sa-table-row--active');
+        $activeRow.addClass('sa-table-row--active');
         console.log('✨ Active row updated:', id);
 
-        // Scroll active row into view
-        if (scrollToRow) {
-            setTimeout(function () {
-                // Support both old and new CSS classes
-                const $scrollContainer = $('.sa-table-scroll, .saw-table-scroll-area');
+        // Scroll active row into view - ALWAYS when row is set
+        setTimeout(function () {
+            const $scrollContainer = $('.sa-table-scroll');
 
-                if (!$scrollContainer.length) {
-                    console.warn('⚠️ Scroll container (.saw-table-scroll-area) not found');
-                    return;
-                }
+            if (!$scrollContainer.length) {
+                console.warn('⚠️ Scroll container not found');
+                return;
+            }
 
-                const containerTop = $scrollContainer.offset().top;
-                const containerScrollTop = $scrollContainer.scrollTop();
-                const rowTop = $activeRow.offset().top;
-                const rowHeight = $activeRow.outerHeight();
-                const containerHeight = $scrollContainer.outerHeight();
+            const containerTop = $scrollContainer.offset().top;
+            const containerScrollTop = $scrollContainer.scrollTop();
+            const rowTop = $activeRow.offset().top;
+            const rowHeight = $activeRow.outerHeight();
+            const containerHeight = $scrollContainer.outerHeight();
 
-                // Calculate if row is visible
-                const rowRelativeTop = rowTop - containerTop;
-                const isRowVisible = (rowRelativeTop >= 0) && (rowRelativeTop + rowHeight <= containerHeight);
+            // Calculate if row is visible
+            const rowRelativeTop = rowTop - containerTop;
+            const isRowVisible = (rowRelativeTop >= 0) && (rowRelativeTop + rowHeight <= containerHeight);
 
-                if (!isRowVisible) {
-                    // Scroll so row is centered in viewport
-                    const targetScrollTop = containerScrollTop + rowRelativeTop - (containerHeight / 2) + (rowHeight / 2);
-                    $scrollContainer.scrollTop(targetScrollTop);
-                    console.log('📜 Scrolled active row into view');
-                } else {
-                    console.log('✅ Active row already visible');
-                }
-            }, 100);
-        }
+            if (!isRowVisible || scrollToRow) {
+                // Scroll so row is centered in viewport
+                const targetScrollTop = containerScrollTop + rowRelativeTop - (containerHeight / 2) + (rowHeight / 2);
+                $scrollContainer.animate({
+                    scrollTop: targetScrollTop
+                }, 300);
+                console.log('📜 Scrolled active row into view');
+            } else {
+                console.log('✅ Active row already visible');
+            }
+        }, 200);
     }
 
     // Export updateActiveRow as global function
@@ -129,7 +128,7 @@
             return;
         }
 
-        const $scrollArea = $('.saw-table-scroll-area');
+        const $scrollArea = $('.sa-table-scroll');
         const scrollTop = $scrollArea.length ? $scrollArea.scrollTop() : 0;
 
         window.stateManager.saveTableState(entity, {
@@ -165,7 +164,7 @@
             return;
         }
 
-        const $scrollArea = $('.saw-table-scroll-area');
+        const $scrollArea = $('.sa-table-scroll');
         
         // Restore scroll position
         if ($scrollArea.length && state.scrollTop) {
@@ -226,7 +225,7 @@
     function initAdminTable() {
         // Get entity from table data attribute
         // Support both old and new CSS classes
-        const $table = $('.sa-table-element, .saw-admin-table');
+        const $table = $('.sa-table-element');
         const entity = $table.data('entity');
 
         // ===== PRIORITY CHECK: SIDEBAR HAS HIGHEST PRIORITY =====
@@ -271,7 +270,7 @@
         document.addEventListener('click', function (e) {
             // Find if we clicked inside a table row
             // Support both old and new CSS classes
-            const $row = $(e.target).closest('.sa-table-element tbody tr, .saw-admin-table tbody tr');
+            const $row = $(e.target).closest('.sa-table-element tbody tr');
 
             if (!$row.length) {
                 return; // Not in a table row
@@ -367,7 +366,59 @@
             }
         });
 
+        // Initialize scroll to top button
+        initScrollToTop();
+        
         console.log('✅ Admin Table initialized v6.0.0 - Full page reload with View Transition');
+    }
+    
+    /**
+     * Initialize scroll to top button
+     * 
+     * Shows/hides button based on scroll position and handles click
+     * 
+     * @return {void}
+     */
+    function initScrollToTop() {
+        const $scrollArea = $('.sa-table-scroll');
+        const $scrollToTopBtn = $('.sa-scroll-to-top');
+        
+        if (!$scrollArea.length) {
+            console.warn('[Scroll to Top] Scroll area not found');
+            return;
+        }
+        
+        if (!$scrollToTopBtn.length) {
+            console.warn('[Scroll to Top] Button not found');
+            return;
+        }
+        
+        console.log('[Scroll to Top] Initializing', { scrollArea: $scrollArea.length, button: $scrollToTopBtn.length });
+        
+        // Show/hide button based on scroll position
+        function toggleScrollToTop() {
+            const scrollTop = $scrollArea.scrollTop();
+            if (scrollTop > 300) {
+                $scrollToTopBtn.addClass('sa-scroll-to-top--visible');
+            } else {
+                $scrollToTopBtn.removeClass('sa-scroll-to-top--visible');
+            }
+        }
+        
+        // Check on scroll
+        $scrollArea.on('scroll', toggleScrollToTop);
+        
+        // Check on load
+        setTimeout(toggleScrollToTop, 100);
+        
+        // Handle click
+        $scrollToTopBtn.on('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $scrollArea.animate({
+                scrollTop: 0
+            }, 300);
+        });
     }
 
     /**
@@ -454,7 +505,7 @@
      * @return {string} Entity name
      */
     function getCurrentEntity() {
-        const $table = $('.saw-admin-table');
+        const $table = $('.sa-table-element');
         if ($table.length && $table.data('entity')) {
             return $table.data('entity');
         }
@@ -602,7 +653,7 @@ function setActiveRowFromSidebar() {
     
     // Check if row exists in DOM
     const checkAndSetActiveRow = () => {
-        const $activeRow = $('.saw-admin-table tbody tr[data-id="' + currentId + '"]');
+        const $activeRow = $('.sa-table-element tbody tr[data-id="' + currentId + '"]');
         
         if ($activeRow.length) {
             // ===== ROW FOUND: SET ACTIVE + SCROLL =====
@@ -610,7 +661,7 @@ function setActiveRowFromSidebar() {
             updateActiveRow(currentId, true); // true = scroll to row
             
             // Clear any pending flags
-            const scrollArea = document.querySelector('.saw-table-scroll-area');
+            const scrollArea = document.querySelector('.sa-table-scroll');
             if (scrollArea) {
                 scrollArea._pendingActiveRowId = undefined;
                 scrollArea._needsActiveRow = false;
@@ -619,7 +670,7 @@ function setActiveRowFromSidebar() {
             // ===== ROW NOT FOUND: SET FLAG FOR INFINITE SCROLL =====
             console.log('⏳ Row not in DOM, setting pending flag for infinite scroll');
             
-            const scrollArea = document.querySelector('.saw-table-scroll-area');
+            const scrollArea = document.querySelector('.sa-table-scroll');
             if (scrollArea) {
                 // Store pending active row ID
                 scrollArea._pendingActiveRowId = currentId;
@@ -730,7 +781,7 @@ function setActiveRowFromSidebar() {
             }
         }
         
-        const tbody = document.querySelector('.saw-admin-table tbody');
+        const tbody = document.querySelector('.sa-table-element tbody');
         
         if (!scrollArea || !tbody) {
             if (DEBUG) {
@@ -778,7 +829,7 @@ function setActiveRowFromSidebar() {
         const actions = config.actions || [];
         
         // Count existing rows to determine starting page
-        const existingRows = tbody.querySelectorAll('tr.saw-table-row').length;
+        const existingRows = tbody.querySelectorAll('tr.sa-table-row').length;
         const totalItems = config.total_items || 0; // ⭐ NOVÉ: Získat total_items z configu
         
         // ⭐ KRITICKÁ OPRAVA: Inicializovat hasMore na základě total_items
@@ -857,7 +908,7 @@ function setActiveRowFromSidebar() {
         
         // Track loaded row IDs to prevent duplicates
         const getRowIds = () => {
-            const rows = tbody.querySelectorAll('tr.saw-table-row[data-id]');
+            const rows = tbody.querySelectorAll('tr.sa-table-row[data-id]');
             return Array.from(rows).map(row => row.getAttribute('data-id')).filter(Boolean);
         };
         
@@ -900,7 +951,7 @@ function setActiveRowFromSidebar() {
             }
             
             // Check if rows from this page are already in DOM
-            const currentRowCount = tbody.querySelectorAll('tr.saw-table-row[data-id]').length;
+            const currentRowCount = tbody.querySelectorAll('tr.sa-table-row[data-id]').length;
             
             // ✅ OPRAVA: Správný výpočet pro infinite scroll
             // Page 1 = initialLoad (100), Page 2 = initialLoad + perPage (150), Page 3 = initialLoad + 2*perPage (200)
@@ -941,9 +992,9 @@ function setActiveRowFromSidebar() {
             
             const loadingRow = document.createElement('tr');
             loadingRow.className = 'saw-infinite-scroll-loading';
-            const colCount = document.querySelector('.saw-admin-table thead tr')?.querySelectorAll('th').length || 10;
-            loadingRow.innerHTML = `<td colspan="${colCount}" class="saw-infinite-scroll-loading-cell">
-                <div class="saw-infinite-scroll-loader">
+            const colCount = document.querySelector('.sa-table-element thead tr')?.querySelectorAll('th').length || 10;
+            loadingRow.innerHTML = `<td colspan="${colCount}" class="sa-infinite-scroll-loading-cell">
+                <div class="sa-infinite-scroll-loader">
                     <span class="dashicons dashicons-update"></span>
                     <span class="saw-infinite-scroll-loader-text">Načítání...</span>
                 </div>
@@ -958,7 +1009,7 @@ function setActiveRowFromSidebar() {
             
             // Build request data
             // ⭐ NOVÉ: Pošli skutečný počet již načtených záznamů pro offset-based pagination
-            const loadedCount = tbody.querySelectorAll('tr.saw-table-row[data-id]').length;
+            const loadedCount = tbody.querySelectorAll('tr.sa-table-row[data-id]').length;
             
             const requestData = new URLSearchParams({
                 action: 'saw_get_items_infinite_' + entity.replace(/_/g, '-'),
@@ -988,7 +1039,7 @@ function setActiveRowFromSidebar() {
                 const tabParam = config.tabs.tab_param || 'tab';
                 
                 // Get filter_value from active tab
-                const activeTab = document.querySelector('.saw-table-tab.active');
+                const activeTab = document.querySelector('.sa-table-tab.sa-table-tab--active');
                 if (activeTab) {
                     const filterValue = activeTab.getAttribute('data-filter-value');
                     if (filterValue && filterValue !== '' && filterValue !== 'null') {
@@ -1133,7 +1184,7 @@ console.log('🚀 SENDING AJAX REQUEST:', {
                         // ╚═══════════════════════════════════════════════════════════╝
                         if (scrollArea._needsActiveRow && scrollArea._pendingActiveRowId) {
                             const activeRowId = scrollArea._pendingActiveRowId;
-                            const $activeRow = $('.saw-admin-table tbody tr[data-id="' + activeRowId + '"]');
+                            const $activeRow = $('.sa-table-element tbody tr[data-id="' + activeRowId + '"]');
                             
                             if ($activeRow.length) {
                                 // ===== ROW FOUND! SET IT ACTIVE AND SCROLL TO IT =====
@@ -1209,7 +1260,7 @@ console.log('🚀 SENDING AJAX REQUEST:', {
                                     // Only restore if NOT locked to active row
                                     if (!scrollArea._isLockedToActiveRow) {
                                         const pendingPage = scrollArea._pendingScrollPage || 1;
-                                        const currentRowCount = tbody.querySelectorAll('tr.saw-table-row[data-id]').length;
+                                        const currentRowCount = tbody.querySelectorAll('tr.sa-table-row[data-id]').length;
                                         const expectedRowsForPage = pendingPage * perPage;
                                         
                                         // Check if we have enough rows now
@@ -1534,7 +1585,7 @@ console.log('🚀 SENDING AJAX REQUEST:', {
             }
             
             const isScrollable = scrollArea.scrollHeight > scrollArea.clientHeight;
-            const currentRowCount = tbody.querySelectorAll('tr.saw-table-row[data-id]').length;
+            const currentRowCount = tbody.querySelectorAll('tr.sa-table-row[data-id]').length;
             
             if (DEBUG) {
                 console.log('🔍 Checking if auto-load needed:', {
@@ -1788,7 +1839,7 @@ console.log('🚀 SENDING AJAX REQUEST:', {
      */
     function handleGlobalSearch() {
         const $searchForm = $('.saw-search-form');
-        const $tabs = $('.saw-table-tabs');
+        const $tabs = $('.sa-table-tabs');
         
         if (!$searchForm.length || !$tabs.length) {
             return;
@@ -1818,6 +1869,45 @@ console.log('🚀 SENDING AJAX REQUEST:', {
 
     
     $(document).ready(function () {
+        // #region agent log - Debug sticky header and table header appearance
+        setTimeout(function() {
+            const $toolbar = $('.sa-table-toolbar');
+            const $thead = $('.sa-table-thead');
+            const $th = $('.sa-table-thead th');
+            const $scrollContainer = $('.sa-table-scroll');
+            const $tablePanel = $('.sa-table-panel');
+            
+            if ($toolbar.length && $th.length) {
+                const toolbarHeight = $toolbar.outerHeight();
+                const toolbarComputed = window.getComputedStyle($toolbar[0]);
+                const thComputed = window.getComputedStyle($th[0]);
+                const scrollComputed = $scrollContainer.length ? window.getComputedStyle($scrollContainer[0]) : null;
+                const panelComputed = $tablePanel.length ? window.getComputedStyle($tablePanel[0]) : null;
+                
+                fetch('http://127.0.0.1:7242/ingest/e3a8ec2f-cd7c-4b57-85c0-5d7ba0c3caf0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'admin-table.js:1871',message:'Toolbar dimensions and styles',data:{toolbarHeight:toolbarHeight,toolbarPadding:toolbarComputed.padding,toolbarBorder:toolbarComputed.borderBottom,toolbarPosition:toolbarComputed.position,toolbarTop:toolbarComputed.top,toolbarZIndex:toolbarComputed.zIndex,scrollOverflow:scrollComputed?scrollComputed.overflow:'N/A',scrollOverflowY:scrollComputed?scrollComputed.overflowY:'N/A',panelOverflow:panelComputed?panelComputed.overflow:'N/A',panelOverflowY:panelComputed?panelComputed.overflowY:'N/A'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A1'})}).catch(()=>{});
+                
+                const thHeight = $th.first().outerHeight();
+                const thPadding = thComputed.padding;
+                const thLineHeight = thComputed.lineHeight;
+                const thBorder = thComputed.borderBottom;
+                const thPosition = thComputed.position;
+                const thTop = thComputed.top;
+                const thZIndex = thComputed.zIndex;
+                const rowBorder = window.getComputedStyle($thead.find('.sa-table-row')[0]).borderBottom;
+                
+                fetch('http://127.0.0.1:7242/ingest/e3a8ec2f-cd7c-4b57-85c0-5d7ba0c3caf0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'admin-table.js:1871',message:'Table header (th) dimensions and styles',data:{thHeight:thHeight,thPadding:thPadding,thLineHeight:thLineHeight,thBorder:thBorder,thPosition:thPosition,thTop:thTop,thZIndex:thZIndex,rowBorder:rowBorder},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B1'})}).catch(()=>{});
+                
+                // Check if sticky is actually working
+                const scrollTop = $scrollContainer.length ? $scrollContainer.scrollTop() : 0;
+                const thOffsetTop = $th.first().offset().top;
+                const toolbarOffsetTop = $toolbar.offset().top;
+                const scrollContainerOffsetTop = $scrollContainer.length ? $scrollContainer.offset().top : 0;
+                
+                fetch('http://127.0.0.1:7242/ingest/e3a8ec2f-cd7c-4b57-85c0-5d7ba0c3caf0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'admin-table.js:1871',message:'Sticky positioning check',data:{scrollTop:scrollTop,thOffsetTop:thOffsetTop,toolbarOffsetTop:toolbarOffsetTop,scrollContainerOffsetTop:scrollContainerOffsetTop,thRelativeToScroll:thOffsetTop-scrollContainerOffsetTop},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A2'})}).catch(()=>{});
+            }
+        }, 500);
+        // #endregion
+        
         initAdminTable();
         
         // REMOVED: Grouping initialization (replaced by tabs)
@@ -1851,6 +1941,25 @@ console.log('🚀 SENDING AJAX REQUEST:', {
         
         // Initialize global search handling
         handleGlobalSearch();
+        
+        // #region agent log - Debug sticky on scroll
+        const $scrollContainer = $('.sa-table-scroll');
+        if ($scrollContainer.length) {
+            $scrollContainer.on('scroll', function() {
+                const $toolbar = $('.sa-table-toolbar');
+                const $th = $('.sa-table-thead th');
+                if ($toolbar.length && $th.length) {
+                    const scrollTop = $scrollContainer.scrollTop();
+                    const thOffsetTop = $th.first().offset().top;
+                    const toolbarOffsetTop = $toolbar.offset().top;
+                    const scrollContainerOffsetTop = $scrollContainer.offset().top;
+                    const thComputed = window.getComputedStyle($th[0]);
+                    
+                    fetch('http://127.0.0.1:7242/ingest/e3a8ec2f-cd7c-4b57-85c0-5d7ba0c3caf0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'admin-table.js:1905',message:'Scroll event - sticky check',data:{scrollTop:scrollTop,thOffsetTop:thOffsetTop,toolbarOffsetTop:toolbarOffsetTop,scrollContainerOffsetTop:scrollContainerOffsetTop,thRelativeToScroll:thOffsetTop-scrollContainerOffsetTop,thPosition:thComputed.position,thTop:thComputed.top},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A3'})}).catch(()=>{});
+                }
+            });
+        }
+        // #endregion
     });
 
 })(jQuery);
