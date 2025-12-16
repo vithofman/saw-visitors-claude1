@@ -1867,138 +1867,7 @@
         });
     }
 
-    /**
-     * Initialize sticky header - FIXED POSITION APPROACH
-     * 
-     * Since CSS sticky doesn't work reliably, we use position:fixed
-     * like the main header does. Creates fixed clones of toolbar and thead.
-     */
-    function initStickyHeader() {
-        console.log('🏗️ Sticky Header: Initializing with FIXED position approach...');
-
-        const scrollArea = document.querySelector('.sa-table-scroll');
-        const toolbar = document.querySelector('.sa-table-toolbar');
-        const thead = document.querySelector('.sa-table-thead');
-
-        if (!scrollArea || !toolbar) {
-            console.warn('❌ Missing elements for sticky header');
-            return;
-        }
-
-        // Get header height for offset calculation
-        const mainHeader = document.querySelector('.sa-app-header');
-        const headerHeight = mainHeader ? mainHeader.offsetHeight : 60;
-
-        // Create fixed container for sticky elements
-        const fixedContainer = document.createElement('div');
-        fixedContainer.className = 'sa-fixed-header-container';
-        fixedContainer.style.cssText = `
-            position: fixed;
-            top: ${headerHeight}px;
-            left: 0;
-            right: 0;
-            z-index: 500;
-            background: #fff;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            display: none;
-        `;
-
-        // Clone toolbar
-        const toolbarClone = toolbar.cloneNode(true);
-        toolbarClone.className = 'sa-table-toolbar sa-table-toolbar--fixed';
-        toolbarClone.style.cssText = `
-            position: relative;
-            top: 0;
-            margin: 0;
-        `;
-        fixedContainer.appendChild(toolbarClone);
-
-        // Clone thead if exists
-        let theadClone = null;
-        if (thead) {
-            // Create a wrapper table for the thead clone
-            const table = thead.closest('table');
-            if (table) {
-                const tableClone = document.createElement('table');
-                tableClone.className = table.className;
-                tableClone.style.cssText = table.style.cssText + '; margin: 0; border-collapse: collapse;';
-
-                // Copy colgroup if exists
-                const colgroup = table.querySelector('colgroup');
-                if (colgroup) {
-                    tableClone.appendChild(colgroup.cloneNode(true));
-                }
-
-                theadClone = thead.cloneNode(true);
-                theadClone.style.cssText = 'position: relative; top: 0;';
-                tableClone.appendChild(theadClone);
-
-                fixedContainer.appendChild(tableClone);
-            }
-        }
-
-        // Add to DOM
-        document.body.appendChild(fixedContainer);
-
-        // Get original positions
-        const toolbarRect = toolbar.getBoundingClientRect();
-        const toolbarTop = toolbarRect.top + window.scrollY;
-
-        // Handle scroll to show/hide fixed header
-        let isFixed = false;
-        const scrollHandler = () => {
-            const scrollTop = scrollArea.scrollTop;
-            const shouldBeFixed = scrollTop > 10; // Show after 10px scroll
-
-            if (shouldBeFixed !== isFixed) {
-                isFixed = shouldBeFixed;
-                fixedContainer.style.display = isFixed ? 'block' : 'none';
-
-                // Sync horizontal scroll
-                if (isFixed && theadClone) {
-                    const tableWrapper = fixedContainer.querySelector('table');
-                    if (tableWrapper) {
-                        tableWrapper.style.marginLeft = `-${scrollArea.scrollLeft}px`;
-                    }
-                }
-            }
-
-            // Always sync horizontal scroll when fixed
-            if (isFixed) {
-                const tableWrapper = fixedContainer.querySelector('table');
-                if (tableWrapper) {
-                    tableWrapper.style.marginLeft = `-${scrollArea.scrollLeft}px`;
-                }
-            }
-        };
-
-        // Attach scroll listener
-        scrollArea.addEventListener('scroll', scrollHandler, { passive: true });
-
-        // Sync clicks from cloned toolbar to original
-        toolbarClone.addEventListener('click', (e) => {
-            const targetTab = e.target.closest('.sa-table-tab');
-            if (targetTab) {
-                const tabValue = targetTab.dataset.tab || targetTab.getAttribute('href');
-                const originalTab = toolbar.querySelector(`.sa-table-tab[data-tab="${targetTab.dataset.tab}"], .sa-table-tab[href="${tabValue}"]`);
-                if (originalTab) {
-                    originalTab.click();
-                }
-            }
-        });
-
-        // Update container width on resize
-        const resizeHandler = () => {
-            const panelRect = scrollArea.getBoundingClientRect();
-            fixedContainer.style.left = `${panelRect.left}px`;
-            fixedContainer.style.width = `${panelRect.width}px`;
-        };
-
-        resizeHandler(); // Initial sizing
-        window.addEventListener('resize', resizeHandler, { passive: true });
-
-        console.log('✅ Sticky Header: Fixed position initialized');
-    }
+    
 
 
     $(document).ready(function () {
@@ -2036,8 +1905,6 @@
         // Initialize global search handling
         handleGlobalSearch();
 
-        // Initialize sticky header dynamic height
-        initStickyHeader();
     });
 
 })(jQuery);

@@ -1,0 +1,404 @@
+/**
+ * Companies Merge Modal Styles
+ * 
+ * Styles for the merge companies modal dialog
+ * 
+ * @package     SAW_Visitors
+ * @subpackage  Modules/Companies
+ * @version     1.0.0
+ */
+
+/* ============================================
+   MODAL OVERLAY
+   ============================================ */
+
+.saw-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+/* ============================================
+   MODAL CONTAINER
+   ============================================ */
+
+.saw-merge-modal {
+    background: var(--saw-card-bg);
+    border-radius: 8px;
+    max-width: 700px;
+    width: 100%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    animation: slideIn 0.3s ease;
+    border: 1px solid var(--saw-border-color);
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ============================================
+   MODAL HEADER
+   ============================================ */
+
+.saw-modal-header {
+    background: var(--saw-primary);
+    color: #fff;
+    padding: 24px;
+    border-radius: 8px 8px 0 0;
+    position: relative;
+}
+
+.saw-modal-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 8px;
+    background-image: repeating-linear-gradient(
+        -45deg,
+        rgba(255, 255, 255, 0.1),
+        rgba(255, 255, 255, 0.1) 10px,
+        transparent 10px,
+        transparent 20px
+    );
+}
+
+.saw-modal-header h2 {
+    font-size: 24px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin: 0 0 8px 0;
+    letter-spacing: 1px;
+}
+
+.saw-modal-header p {
+    margin: 0;
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.saw-modal-header strong {
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.saw-modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: #fff;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.3s;
+}
+
+.saw-modal-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* ============================================
+   MODAL BODY
+   ============================================ */
+
+.saw-modal-body {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+    background: var(--saw-card-bg);
+}
+
+.saw-help-text {
+    background: var(--saw-warning-light);
+    border-left: 4px solid var(--saw-warning);
+    padding: 12px 16px;
+    margin: 0 0 20px 0;
+    font-size: 14px;
+    color: var(--saw-text-primary);
+    border-radius: 4px;
+}
+
+.saw-no-duplicates {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--saw-success);
+    font-size: 16px;
+    font-weight: 600;
+}
+
+/* ============================================
+   DUPLICATE LIST
+   ============================================ */
+
+.saw-duplicate-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.saw-duplicate-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    border: 2px solid var(--saw-border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: var(--saw-card-bg);
+}
+
+.saw-duplicate-item:hover {
+    border-color: var(--saw-primary);
+    background: var(--saw-bg-tertiary);
+    transform: translateX(4px);
+}
+
+.saw-duplicate-item input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+    cursor: pointer;
+    flex-shrink: 0;
+    accent-color: var(--saw-primary);
+}
+
+.saw-dup-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.saw-dup-info strong {
+    font-size: 16px;
+    color: var(--saw-text-primary);
+    font-weight: 700;
+}
+
+.saw-dup-meta {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.saw-similarity-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--saw-success-light);
+    color: var(--saw-success-dark);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    border: 1px solid var(--saw-success);
+}
+
+.saw-visit-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--saw-bg-tertiary);
+    color: var(--saw-text-secondary);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.saw-ico-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--saw-text-muted);
+    font-size: 12px;
+}
+
+/* ============================================
+   MODAL ACTIONS
+   ============================================ */
+
+.saw-modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    padding-top: 20px;
+    border-top: 2px solid var(--saw-border-color);
+}
+
+.saw-btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    letter-spacing: 0.5px;
+}
+
+.saw-btn-primary {
+    background: var(--saw-primary);
+    color: #fff;
+}
+
+.saw-btn-primary:hover {
+    background: var(--saw-primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.saw-btn-primary:disabled {
+    background: var(--saw-gray-400);
+    cursor: not-allowed;
+    transform: none;
+}
+
+.saw-btn-secondary {
+    background: var(--saw-card-bg);
+    color: var(--saw-text-secondary);
+    border: 2px solid var(--saw-border-color);
+}
+
+.saw-btn-secondary:hover {
+    background: var(--saw-bg-tertiary);
+    border-color: var(--saw-border-color-dark);
+}
+
+/* ============================================
+   WARNING
+   ============================================ */
+
+.saw-merge-warning {
+    background: var(--saw-warning-light);
+    border: 2px solid var(--saw-warning);
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 20px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.saw-merge-warning-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.saw-merge-warning-text {
+    flex: 1;
+}
+
+.saw-merge-warning-text strong {
+    display: block;
+    color: var(--saw-warning-dark);
+    margin-bottom: 4px;
+    font-size: 14px;
+}
+
+.saw-merge-warning-text p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--saw-text-secondary);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 600px) {
+    .saw-modal-overlay {
+        padding: 10px;
+    }
+    
+    .saw-merge-modal {
+        max-height: 95vh;
+    }
+    
+    .saw-modal-header {
+        padding: 20px;
+    }
+    
+    .saw-modal-header h2 {
+        font-size: 20px;
+    }
+    
+    .saw-modal-body {
+        padding: 16px;
+    }
+    
+    .saw-duplicate-item {
+        padding: 12px;
+    }
+    
+    .saw-dup-info strong {
+        font-size: 14px;
+    }
+    
+    .saw-modal-actions {
+        flex-direction: column;
+    }
+    
+    .saw-btn {
+        width: 100%;
+    }
+}
+

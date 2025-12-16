@@ -1,0 +1,234 @@
+/**
+ * SAW Typography
+ * 
+ * Centrální definice typografie.
+ * 
+ * @package SAW_Visitors
+ * @version 2.0.0 - Design System Refactoring
+ */
+
+/* Google Fonts - načíst jen jednou */
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Roboto:wght@300;400;500;600;700&display=swap');
+
+/* ============================================
+   BASE TYPOGRAPHY
+   ============================================ */
+
+body,
+.saw-app,
+.saw-admin {
+    font-family: var(--saw-font-body);
+    font-size: var(--saw-text-base);
+    font-weight: var(--saw-font-normal);
+    line-height: var(--saw-leading-normal);
+    color: var(--saw-text-primary);
+}
+
+/* ============================================
+   HEADINGS
+   ============================================ */
+
+h1, h2, h3,
+.saw-heading-1,
+.saw-heading-2,
+.saw-heading-3 {
+    font-family: var(--saw-font-heading);
+    font-weight: var(--saw-font-bold);
+    line-height: var(--saw-leading-tight);
+    color: var(--saw-text-primary);
+    margin: 0;
+}
+
+h1, .saw-heading-1 {
+    font-size: var(--saw-text-4xl);
+}
+
+h2, .saw-heading-2 {
+    font-size: var(--saw-text-3xl);
+    font-weight: var(--saw-font-semibold);
+}
+
+h3, .saw-heading-3 {
+    font-size: var(--saw-text-2xl);
+    font-weight: var(--saw-font-semibold);
+}
+
+h4, h5, h6,
+.saw-heading-4,
+.saw-heading-5,
+.saw-heading-6 {
+    font-family: var(--saw-font-body);
+    font-weight: var(--saw-font-semibold);
+    line-height: var(--saw-leading-tight);
+}
+
+h4, .saw-heading-4 {
+    font-size: var(--saw-text-xl);
+}
+
+h5, .saw-heading-5 {
+    font-size: var(--saw-text-lg);
+}
+
+h6, .saw-heading-6 {
+    font-size: var(--saw-text-md);
+}
+
+/* ============================================
+   TEXT STYLES
+   ============================================ */
+
+.saw-text-xs {
+    font-size: var(--saw-text-xs);
+}
+
+.saw-text-sm {
+    font-size: var(--saw-text-sm);
+}
+
+.saw-text-base {
+    font-size: var(--saw-text-base);
+}
+
+.saw-text-md {
+    font-size: var(--saw-text-md);
+}
+
+.saw-text-lg {
+    font-size: var(--saw-text-lg);
+}
+
+.saw-text-xl {
+    font-size: var(--saw-text-xl);
+}
+
+.saw-text-2xl {
+    font-size: var(--saw-text-2xl);
+}
+
+.saw-text-3xl {
+    font-size: var(--saw-text-3xl);
+}
+
+.saw-text-4xl {
+    font-size: var(--saw-text-4xl);
+}
+
+.saw-font-normal {
+    font-weight: var(--saw-font-normal);
+}
+
+.saw-font-medium {
+    font-weight: var(--saw-font-medium);
+}
+
+.saw-font-semibold {
+    font-weight: var(--saw-font-semibold);
+}
+
+.saw-font-bold {
+    font-weight: var(--saw-font-bold);
+}
+
+.saw-text-muted {
+    color: var(--saw-text-muted);
+}
+
+.saw-text-secondary {
+    color: var(--saw-text-secondary);
+}
+
+.saw-text-primary {
+    color: var(--saw-text-primary);
+}
+
+.saw-text-brand {
+    color: var(--saw-brand-600);
+}
+
+.saw-text-center {
+    text-align: center;
+}
+
+.saw-text-left {
+    text-align: left;
+}
+
+.saw-text-right {
+    text-align: right;
+}
+
+/* ============================================
+   LABELS & SMALL TEXT
+   ============================================ */
+
+label,
+.saw-label {
+    font-family: var(--saw-font-body);
+    font-size: var(--saw-text-sm);
+    font-weight: var(--saw-font-medium);
+    color: var(--saw-text-secondary);
+}
+
+small,
+.saw-small {
+    font-size: var(--saw-text-xs);
+    color: var(--saw-text-muted);
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+
+button,
+.saw-btn,
+.saw-button {
+    font-family: var(--saw-font-body);
+    font-size: var(--saw-text-base);
+    font-weight: var(--saw-font-semibold);
+}
+
+/* ============================================
+   INPUTS
+   ============================================ */
+
+input,
+textarea,
+select,
+.saw-input {
+    font-family: var(--saw-font-body);
+    font-size: var(--saw-text-base);
+}
+
+/* ============================================
+   CODE
+   ============================================ */
+
+code,
+pre,
+.saw-code {
+    font-family: var(--saw-font-mono);
+    font-size: var(--saw-text-sm);
+}
+
+.saw-text-success {
+    color: var(--saw-success);
+}
+
+.saw-text-danger {
+    color: var(--saw-danger);
+}
+
+.saw-text-warning {
+    color: var(--saw-warning);
+}
+
+.saw-text-truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.saw-text-mono {
+    font-family: var(--saw-font-mono);
+}

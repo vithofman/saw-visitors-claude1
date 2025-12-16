@@ -1,7 +1,7 @@
 /**
  * SAW Admin - Table Toolbar (Tabs + Search + Filters)
  * @package SAW_Visitors
- * @version 7.0.0 - JS Transform Sticky
+ * @version 10.0.0 - FIXED: Search, Filters dropdown, and toolbar spacing
  */
 
 /* ============================================
@@ -10,23 +10,38 @@
 .sa-table-toolbar {
     display: flex;
     align-items: center;
-    gap: var(--saw-space-4);
-    padding: 8px var(--saw-space-4);
-    background: rgba(255, 255, 255, 0.95) !important; /* Více opaque pro lepší čitelnost */
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    gap: var(--saw-space-4, 16px);
+    padding: 12px var(--saw-space-4, 16px);
     
-    /* CSS STICKY - jednoduché a spolehlivé */
+    /* Pozadí - světle modrý gradient pro záložky */
+    background: linear-gradient(180deg, #e0f2fe 0%, #dbeafe 100%) !important;
+    
+    /* Zaoblení pro hezčí vzhled */
+    border-radius: var(--saw-radius-lg, 8px) var(--saw-radius-lg, 8px) 0 0;
+    
+    /* Jemný spodní okraj */
+    border-bottom: 1px solid rgba(59, 130, 246, 0.15);
+    
+    /* STICKY POSITIONING - top: 16px pro oddělení od headeru i při scrollu */
     position: sticky !important;
-    top: 0 !important;
+    top: 16px !important;
     z-index: 100 !important;
     
-    /* Prevent shrinking */
+    /* Prevent shrinking in flex */
     flex-shrink: 0;
+    
+    /* Min height pro konzistenci */
+    min-height: 54px;
 }
 
-/* Tabs container */
+/* Když je toolbar přilepen nahoře */
+.sa-table-toolbar.is-stuck {
+    border-radius: var(--saw-radius-md, 6px);
+}
+
+/* ============================================
+   TABS CONTAINER
+   ============================================ */
 .sa-table-tabs {
     display: flex;
     align-items: center;
@@ -40,34 +55,37 @@
     display: none;
 }
 
-/* Single tab */
+/* ============================================
+   SINGLE TAB
+   ============================================ */
 .sa-table-tab {
     display: flex;
     align-items: center;
-    gap: var(--saw-space-2);
+    gap: var(--saw-space-2, 8px);
     padding: 10px 16px;
-    font-size: var(--saw-text-sm);
-    font-weight: var(--saw-font-medium);
-    color: var(--saw-text-secondary);
+    font-size: var(--saw-text-sm, 0.875rem);
+    font-weight: var(--saw-font-medium, 500);
+    color: var(--saw-text-secondary, #64748b);
     background: transparent;
     border: none;
-    border-radius: var(--saw-radius-md);
+    border-radius: var(--saw-radius-md, 6px);
     cursor: pointer;
     white-space: nowrap;
-    transition: all var(--saw-transition-fast);
+    transition: all var(--saw-transition-fast, 0.15s);
     text-decoration: none;
 }
 
 .sa-table-tab:hover {
-    background: var(--saw-bg-tertiary);
-    color: var(--saw-text-primary);
+    background: var(--saw-bg-tertiary, #f1f5f9);
+    color: var(--saw-text-primary, #0f172a);
 }
 
 .sa-table-tab--active {
-    background: var(--saw-brand-50);
-    color: var(--saw-brand-700);
+    background: var(--saw-brand-50, #eff6ff);
+    color: var(--saw-brand-700, #1d4ed8);
 }
 
+/* Tab components */
 .sa-table-tab-icon {
     width: 18px;
     height: 18px;
@@ -82,113 +100,245 @@
 .sa-table-tab-count {
     padding: 2px 8px;
     font-size: 11px;
-    font-weight: var(--saw-font-semibold);
-    background: var(--saw-gray-200);
-    color: var(--saw-gray-600);
-    border-radius: var(--saw-radius-full);
-    flex-shrink: 0;
+    font-weight: var(--saw-font-semibold, 600);
+    background: var(--saw-bg-secondary, #f1f5f9);
+    border-radius: var(--saw-radius-full, 9999px);
+    color: var(--saw-text-secondary, #64748b);
 }
 
 .sa-table-tab--active .sa-table-tab-count {
-    background: var(--saw-brand-100);
-    color: var(--saw-brand-700);
+    background: var(--saw-brand-100, #dbeafe);
+    color: var(--saw-brand-700, #1d4ed8);
 }
 
-/* Search input */
+/* ============================================
+   SEARCH CONTAINER
+   ============================================ */
 .sa-table-search {
-    display: flex;
-    align-items: center;
-    gap: var(--saw-space-2);
+    flex-shrink: 0;
     min-width: 200px;
     max-width: 300px;
 }
 
+/* ============================================
+   SEARCH FORM
+   ============================================ */
 .sa-table-search-form {
     display: flex;
     align-items: center;
-    gap: var(--saw-space-2);
-    flex: 1;
-    min-width: 200px;
-    max-width: 300px;
+    gap: var(--saw-space-2, 8px);
+    background: var(--saw-bg-secondary, #f1f5f9);
+    border: 1px solid var(--saw-border-color, #e2e8f0);
+    border-radius: var(--saw-radius-lg, 8px);
+    padding: 4px 4px 4px 12px;
+    transition: all var(--saw-transition-fast, 0.15s);
+}
+
+.sa-table-search-form:focus-within {
+    background: #ffffff;
+    border-color: var(--saw-brand-500, #3b82f6);
+    box-shadow: 0 0 0 3px var(--saw-brand-50, rgba(59, 130, 246, 0.1));
 }
 
 .sa-table-search-input {
     flex: 1;
-    padding: 8px 12px 8px 36px;
-    font-size: var(--saw-text-sm);
-    background: var(--saw-bg-primary);
-    border: 1px solid var(--saw-border-color);
-    border-radius: var(--saw-radius-md);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'%3E%3C/line%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: 10px center;
-    background-size: 16px;
-    transition: border-color var(--saw-transition-fast);
-}
-
-.sa-table-search-input:focus {
+    min-width: 0;
+    padding: 6px 0;
+    font-size: var(--saw-text-sm, 0.875rem);
+    color: var(--saw-text-primary, #0f172a);
+    background: transparent;
+    border: none;
     outline: none;
-    border-color: var(--saw-brand-500);
-    box-shadow: 0 0 0 3px var(--saw-brand-50);
 }
 
-/* Table sortable */
-.sa-table-sortable {
+.sa-table-search-input::placeholder {
+    color: var(--saw-text-light, #94a3b8);
+}
+
+.sa-table-search-form .sa-btn--icon {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    padding: 0;
     display: flex;
     align-items: center;
-    gap: var(--saw-space-1);
-    color: inherit;
+    justify-content: center;
+    background: var(--saw-brand-600, #2563eb);
+    color: #ffffff;
+    border: none;
+    border-radius: var(--saw-radius-md, 6px);
+    cursor: pointer;
+    transition: background var(--saw-transition-fast, 0.15s);
+}
+
+.sa-table-search-form .sa-btn--icon:hover {
+    background: var(--saw-brand-700, #1d4ed8);
+}
+
+.sa-table-search-form .sa-btn--icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* ============================================
+   SEARCH BADGE (active search indicator)
+   ============================================ */
+.sa-table-search-badge {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-2, 8px);
+    padding: 6px 8px 6px 12px;
+    background: var(--saw-brand-50, #eff6ff);
+    border: 1px solid var(--saw-brand-200, #bfdbfe);
+    border-radius: var(--saw-radius-lg, 8px);
+    color: var(--saw-brand-700, #1d4ed8);
+    font-size: var(--saw-text-sm, 0.875rem);
+}
+
+.sa-table-search-badge-text {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-2, 8px);
+}
+
+.sa-table-search-badge-text .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    color: var(--saw-brand-500, #3b82f6);
+}
+
+.sa-table-search-badge-term {
+    font-weight: var(--saw-font-semibold, 600);
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sa-table-search-badge-clear,
+.sa-table-search-badge-edit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: var(--saw-radius-md, 6px);
+    cursor: pointer;
+    color: var(--saw-brand-600, #2563eb);
+    transition: all var(--saw-transition-fast, 0.15s);
     text-decoration: none;
-    transition: color var(--saw-transition-fast);
 }
 
-.sa-table-sortable:hover {
-    color: var(--saw-brand-600);
+.sa-table-search-badge-clear:hover {
+    background: var(--saw-danger-light, #fef2f2);
+    color: var(--saw-danger, #ef4444);
 }
 
-/* Filters wrapper */
+.sa-table-search-badge-edit:hover {
+    background: var(--saw-brand-100, #dbeafe);
+    color: var(--saw-brand-700, #1d4ed8);
+}
+
+.sa-table-search-badge-clear .dashicons,
+.sa-table-search-badge-edit .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+/* ============================================
+   FILTERS CONTAINER
+   ============================================ */
+.sa-table-filters {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-2, 8px);
+}
+
+/* ============================================
+   FILTERS WRAPPER & DROPDOWN
+   ============================================ */
 .sa-table-filters-wrapper {
     position: relative;
 }
 
-/* Filter button */
 .sa-table-filter-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     position: relative;
-    padding: 8px 12px;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    background: var(--saw-bg-secondary, #f1f5f9);
+    border: 1px solid var(--saw-border-color, #e2e8f0);
+    border-radius: var(--saw-radius-md, 6px);
+    color: var(--saw-text-secondary, #64748b);
+    cursor: pointer;
+    transition: all var(--saw-transition-fast, 0.15s);
+}
+
+.sa-table-filter-btn:hover {
+    background: var(--saw-bg-tertiary, #e2e8f0);
+    color: var(--saw-text-primary, #0f172a);
 }
 
 .sa-table-filter-btn--active {
-    background: var(--saw-brand-50);
-    color: var(--saw-brand-700);
+    background: var(--saw-brand-50, #eff6ff);
+    border-color: var(--saw-brand-200, #bfdbfe);
+    color: var(--saw-brand-600, #2563eb);
 }
 
-/* Filters dropdown */
-.sa-table-filters-wrapper {
-    position: relative;
+.sa-table-filter-btn svg {
+    width: 18px;
+    height: 18px;
 }
 
+.sa-table-filter-btn .sa-badge--count {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    font-size: 11px;
+    font-weight: var(--saw-font-semibold, 600);
+    line-height: 18px;
+    text-align: center;
+    background: var(--saw-brand-600, #2563eb);
+    color: #ffffff;
+    border-radius: 9px;
+}
+
+/* Filters Dropdown - HIDDEN by default */
 .sa-dropdown--filters {
     position: absolute;
-    top: calc(100% + var(--saw-space-2));
+    top: calc(100% + 8px);
     right: 0;
-    min-width: 250px;
-    max-width: 350px;
-    background: var(--saw-bg-primary);
-    border: 1px solid var(--saw-border-color);
-    border-radius: var(--saw-radius-lg);
-    box-shadow: var(--saw-shadow-lg);
-    padding: var(--saw-space-4);
-    z-index: var(--saw-z-dropdown);
+    z-index: var(--saw-z-dropdown, 1000);
+    min-width: 280px;
+    padding: var(--saw-space-4, 16px);
+    background: #ffffff;
+    border: 1px solid var(--saw-border-color, #e2e8f0);
+    border-radius: var(--saw-radius-lg, 8px);
+    box-shadow: var(--saw-shadow-lg, 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1));
+    
+    /* Hidden by default */
     opacity: 0;
     visibility: hidden;
     transform: translateY(-8px);
-    transition: opacity var(--saw-transition-fast), 
-                visibility var(--saw-transition-fast),
-                transform var(--saw-transition-fast);
+    transition: opacity var(--saw-transition-fast, 0.15s), 
+                visibility var(--saw-transition-fast, 0.15s),
+                transform var(--saw-transition-fast, 0.15s);
 }
 
-.sa-dropdown--filters.sa-dropdown--open,
-.sa-table-filters-wrapper.active .sa-dropdown--filters {
+/* Show dropdown when open */
+.sa-dropdown--filters.sa-dropdown--open {
     opacity: 1;
     visibility: visible;
     transform: translateY(0);
@@ -197,126 +347,151 @@
 .sa-table-filters-form {
     display: flex;
     flex-direction: column;
-    gap: var(--saw-space-4);
+    gap: var(--saw-space-4, 16px);
+}
+
+.sa-table-filters-form .sa-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--saw-space-2, 8px);
+}
+
+.sa-table-filters-form .sa-form-label {
+    font-size: var(--saw-text-sm, 0.875rem);
+    font-weight: var(--saw-font-medium, 500);
+    color: var(--saw-text-secondary, #64748b);
+}
+
+.sa-table-filters-form .sa-select {
+    width: 100%;
+    padding: 10px 40px 10px 14px;
+    font-size: var(--saw-text-sm, 0.875rem);
+    color: var(--saw-text-primary, #0f172a);
+    background: #ffffff;
+    border: 1px solid var(--saw-border-color, #e2e8f0);
+    border-radius: var(--saw-radius-md, 6px);
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 16px;
+    cursor: pointer;
+    transition: border-color var(--saw-transition-fast, 0.15s), 
+                box-shadow var(--saw-transition-fast, 0.15s);
+}
+
+.sa-table-filters-form .sa-select:focus {
+    outline: none;
+    border-color: var(--saw-brand-500, #3b82f6);
+    box-shadow: 0 0 0 3px var(--saw-brand-50, rgba(59, 130, 246, 0.1));
+}
+
+.sa-table-filters-form .sa-select--has-value {
+    border-color: var(--saw-brand-300, #93c5fd);
+    background-color: var(--saw-brand-50, #eff6ff);
 }
 
 .sa-table-filters-actions {
     display: flex;
     justify-content: flex-end;
-    padding-top: var(--saw-space-3);
-    border-top: 1px solid var(--saw-border-color);
-    margin-top: var(--saw-space-2);
+    padding-top: var(--saw-space-3, 12px);
+    border-top: 1px solid var(--saw-border-color, #e2e8f0);
+    margin-top: var(--saw-space-2, 8px);
+}
+
+.sa-table-filters-actions .sa-btn--ghost {
+    padding: 8px 16px;
+    font-size: var(--saw-text-sm, 0.875rem);
+    color: var(--saw-text-secondary, #64748b);
+    background: transparent;
+    border: none;
+    border-radius: var(--saw-radius-md, 6px);
+    cursor: pointer;
+    text-decoration: none;
+    transition: all var(--saw-transition-fast, 0.15s);
+}
+
+.sa-table-filters-actions .sa-btn--ghost:hover {
+    background: var(--saw-bg-tertiary, #f1f5f9);
+    color: var(--saw-text-primary, #0f172a);
 }
 
 /* ============================================
-   RESPONSIVE TABLE TOOLBAR
+   TOOLBAR ACTIONS (right side)
    ============================================ */
+.sa-table-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-2, 8px);
+    margin-left: auto;
+    flex-shrink: 0;
+}
 
+/* ============================================
+   RESPONSIVE
+   ============================================ */
 @media (max-width: 768px) {
     .sa-table-toolbar {
         flex-wrap: wrap;
-        align-items: stretch;
-        gap: var(--saw-space-3);
-        padding: var(--saw-space-3) var(--saw-space-3);
-    }
-    
-    .sa-table-toolbar {
-        flex-wrap: nowrap !important; /* Prevent wrapping - tabs and filter on same line */
+        padding: var(--saw-space-2, 8px) var(--saw-space-3, 12px);
+        gap: var(--saw-space-2, 8px);
+        min-height: auto;
     }
     
     .sa-table-tabs {
-        flex: 1 1 auto; /* Allow shrinking */
         order: 1;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        padding-bottom: 0; /* No padding bottom */
-        min-width: 0; /* Allow shrinking */
+        width: 100%;
+        flex: none;
     }
     
-    .sa-table-tabs::-webkit-scrollbar {
-        display: none;
+    .sa-table-search {
+        order: 2;
+        flex: 1;
+        min-width: 0;
+        max-width: none;
+    }
+    
+    .sa-table-filters {
+        order: 3;
+    }
+    
+    .sa-table-actions {
+        order: 4;
+        margin-left: 0;
     }
     
     .sa-table-tab {
         padding: 8px 12px;
-        font-size: var(--saw-text-sm);
-        white-space: nowrap;
+        font-size: var(--saw-text-xs, 0.75rem);
     }
     
-    /* Filter vedle záložek na mobilu */
-    .sa-table-filters-wrapper {
-        order: 1 !important; /* Same order as tabs - on same line */
-        flex-shrink: 0 !important; /* Don't shrink */
-        margin-left: var(--saw-space-2) !important; /* Small gap from tabs */
-        margin-right: 0 !important;
-    }
-    
-    /* Search a filter vedle sebe na větších mobile */
-    .sa-table-search {
-        flex: 1 1 auto;
-        order: 2;
-        display: flex !important;
-        min-width: 0;
-        max-width: 100%;
-    }
-    
+    /* Search responsive */
     .sa-table-search-form {
-        width: 100%;
-        min-width: 0;
-        max-width: 100%;
+        padding: 3px 3px 3px 10px;
     }
     
     .sa-table-search-input {
-        width: 100%;
-        min-width: 0;
-        max-width: 100%;
+        font-size: var(--saw-text-xs, 0.75rem);
+    }
+    
+    .sa-table-search-form .sa-btn--icon {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .sa-table-search-badge {
+        padding: 4px 6px 4px 10px;
+        font-size: var(--saw-text-xs, 0.75rem);
+    }
+    
+    .sa-table-search-badge-term {
+        max-width: 100px;
+    }
+    
+    /* Filter dropdown responsive */
+    .sa-dropdown--filters {
+        min-width: 240px;
+        right: 0;
+        left: auto;
     }
 }
-
-/* Na větších mobile (480px+) - search a filter vedle sebe */
-@media (min-width: 480px) and (max-width: 768px) {
-    .sa-table-toolbar {
-        flex-wrap: wrap;
-    }
-    
-    .sa-table-search {
-        flex: 1 1 60%;
-        order: 2;
-    }
-    
-    .sa-table-filters-wrapper {
-        flex: 1 1 35%;
-        order: 2;
-    }
-}
-
-@media (max-width: 480px) {
-    .sa-table-toolbar {
-        padding: var(--saw-space-2) var(--saw-space-2);
-        gap: var(--saw-space-2);
-    }
-    
-    .sa-table-tab {
-        padding: 6px 10px;
-        font-size: var(--saw-text-xs);
-        gap: var(--saw-space-1);
-    }
-    
-    .sa-table-tab-label {
-        display: inline;
-    }
-    
-    .sa-table-tab-icon {
-        width: 16px;
-        height: 16px;
-    }
-    
-    .sa-table-tab-count {
-        min-width: 18px;
-        height: 16px;
-        font-size: 10px;
-        padding: 2px 6px;
-    }
-}
-
-

@@ -1,0 +1,373 @@
+/**
+ * Permissions Module - Styles
+ * 
+ * Matrix view styling for permissions management UI.
+ * Provides a visual interface for managing role-based permissions
+ * across all modules with action types and scope selectors.
+ * 
+ * @package     SAW_Visitors
+ * @subpackage  Modules/Permissions
+ * @version     4.10.0
+ */
+
+/* ================================================
+   CONTAINER & LAYOUT
+   ================================================ */
+
+.saw-permissions-container {
+    max-width: 100%;
+    margin: 0 auto;
+    width: 100%;
+}
+
+/* ================================================
+   CONTROLS BAR
+   ================================================ */
+
+.saw-permissions-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--saw-space-xl);
+    margin-bottom: var(--saw-space-2xl);
+    padding: var(--saw-space-xl);
+    background: var(--saw-white);
+    border-radius: var(--saw-border-radius-md);
+    box-shadow: var(--saw-shadow-sm);
+}
+
+/* Role Selector */
+.saw-role-selector {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-md);
+}
+
+.saw-role-selector label {
+    font-weight: 600;
+    color: var(--saw-gray-700);
+    margin: 0;
+}
+
+.saw-role-selector .saw-select {
+    min-width: 200px;
+}
+
+/* Quick Actions */
+.saw-quick-actions {
+    display: flex;
+    gap: var(--saw-space-sm);
+}
+
+/* ================================================
+   INFO BANNER
+   ================================================ */
+
+.saw-permissions-info {
+    margin-bottom: var(--saw-space-xl);
+}
+
+.saw-info-text {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-sm);
+    padding: var(--saw-space-md) var(--saw-space-lg);
+    background: var(--saw-primary-light);
+    border-left: 4px solid var(--saw-primary);
+    border-radius: var(--saw-border-radius-sm);
+    color: var(--saw-primary-dark);
+    margin: 0;
+}
+
+.saw-info-text .dashicons {
+    color: var(--saw-primary);
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+}
+
+/* ================================================
+   PERMISSIONS MATRIX TABLE
+   ================================================ */
+
+.saw-permissions-matrix {
+    background: var(--saw-white);
+    border-radius: var(--saw-border-radius-md);
+    box-shadow: var(--saw-shadow-sm);
+    overflow: hidden;
+}
+
+.saw-permissions-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+/* Table Header */
+.saw-permissions-table thead {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.saw-permissions-table thead th {
+    padding: var(--saw-space-lg) var(--saw-space-md);
+    text-align: left;
+    font-size: var(--saw-font-size-sm);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #ffffff;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.saw-permissions-table thead th.col-action {
+    text-align: center;
+    min-width: 90px;
+}
+
+.saw-permissions-table thead th.col-scope {
+    text-align: center;
+    min-width: 160px;
+}
+
+.saw-permissions-table thead th.col-module {
+    min-width: 200px;
+}
+
+/* Table Body */
+.saw-permissions-table tbody tr {
+    border-bottom: var(--saw-border-width) solid var(--saw-border-color);
+    transition: background-color var(--saw-transition-base);
+}
+
+.saw-permissions-table tbody tr:hover {
+    background-color: var(--saw-gray-50);
+}
+
+.saw-permissions-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.saw-permissions-table tbody td {
+    padding: var(--saw-space-lg) var(--saw-space-md);
+    vertical-align: middle;
+}
+
+/* Module Name Cell */
+.module-name {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-md);
+    font-weight: 500;
+    color: var(--saw-gray-900);
+}
+
+.module-icon {
+    font-size: 24px;
+    line-height: 1;
+}
+
+/* ================================================
+   PERMISSION TOGGLE (Checkbox)
+   ================================================ */
+
+.permission-cell {
+    text-align: center;
+}
+
+.permission-toggle {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    position: relative;
+}
+
+.permission-toggle input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+/* Toggle Indicator */
+.toggle-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--saw-border-radius-md);
+    background: var(--saw-gray-100);
+    transition: all var(--saw-transition-base);
+    position: relative;
+}
+
+/* Unchecked State (Red X) */
+.toggle-indicator::before {
+    content: '✕';
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--saw-danger);
+}
+
+/* Checked State (Green Check) */
+.toggle-indicator.active {
+    background: var(--saw-success-light);
+}
+
+.toggle-indicator.active::before {
+    content: '✓';
+    color: var(--saw-success);
+}
+
+/* Hover Effect */
+.permission-toggle:hover .toggle-indicator {
+    transform: scale(1.05);
+    box-shadow: var(--saw-shadow-md);
+}
+
+/* ================================================
+   SCOPE SELECT DROPDOWN
+   ================================================ */
+
+.scope-cell {
+    text-align: center;
+}
+
+.scope-select {
+    padding: var(--saw-space-sm) var(--saw-space-md);
+    border: var(--saw-border-width) solid var(--saw-gray-300);
+    border-radius: var(--saw-border-radius-sm);
+    background: var(--saw-white);
+    font-size: var(--saw-font-size-sm);
+    color: var(--saw-gray-700);
+    cursor: pointer;
+    transition: all var(--saw-transition-base);
+    min-width: 140px;
+}
+
+.scope-select:hover {
+    border-color: var(--saw-gray-500);
+}
+
+.scope-select:focus {
+    outline: none;
+    border-color: var(--saw-primary);
+    box-shadow: 0 0 0 3px var(--saw-primary-light);
+}
+
+/* ================================================
+   SAVE INDICATOR (Toast Notification)
+   ================================================ */
+
+.saw-save-indicator {
+    position: fixed;
+    bottom: var(--saw-space-2xl);
+    right: var(--saw-space-2xl);
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-sm);
+    padding: var(--saw-space-md) var(--saw-space-xl);
+    background: var(--saw-white);
+    border-radius: var(--saw-border-radius-md);
+    box-shadow: var(--saw-shadow-lg);
+    z-index: 9999;
+    animation: slideInUp 0.3s ease;
+}
+
+@keyframes slideInUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Success State */
+.saw-save-indicator.success {
+    border-left: 4px solid var(--saw-success);
+}
+
+.saw-save-indicator.success .dashicons {
+    color: var(--saw-success);
+}
+
+/* Error State */
+.saw-save-indicator.error {
+    border-left: 4px solid var(--saw-danger);
+}
+
+.saw-save-indicator.error .dashicons {
+    color: var(--saw-danger);
+}
+
+/* Icon */
+.saw-save-indicator .dashicons {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+}
+
+/* Text */
+.saw-save-indicator .save-text {
+    font-weight: 600;
+    color: var(--saw-gray-700);
+}
+
+/* ================================================
+   RESPONSIVE DESIGN
+   ================================================ */
+
+/* Tablet & Below (1200px) */
+@media (max-width: 1200px) {
+    .saw-permissions-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .saw-quick-actions {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .saw-permissions-matrix {
+        overflow-x: auto;
+    }
+
+    .saw-permissions-table {
+        min-width: 900px;
+    }
+}
+
+/* Mobile (768px) */
+@media (max-width: 768px) {
+    .saw-permissions-controls {
+        padding: var(--saw-space-lg);
+    }
+
+    .saw-role-selector {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .saw-role-selector .saw-select {
+        min-width: 100%;
+    }
+
+    .saw-quick-actions {
+        flex-direction: column;
+    }
+
+    .saw-quick-actions .saw-btn {
+        width: 100%;
+    }
+
+    .saw-save-indicator {
+        bottom: var(--saw-space-lg);
+        right: var(--saw-space-lg);
+        left: var(--saw-space-lg);
+        justify-content: center;
+    }
+}

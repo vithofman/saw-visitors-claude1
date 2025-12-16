@@ -1,0 +1,108 @@
+/* ============================================
+   RADIO CARDS - Pro výběr typu (např. OOPP)
+   ============================================ */
+
+.saw-radio-cards {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.saw-radio-card {
+    flex: 1;
+    min-width: 200px;
+    max-width: 300px;
+    border: 2px solid var(--saw-border-color, #e5e7eb);
+    border-radius: 12px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: var(--saw-bg-white, #ffffff);
+    position: relative;
+}
+
+.saw-radio-card:hover {
+    border-color: var(--saw-primary-light, #93c5fd);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.saw-radio-card.selected {
+    border-color: var(--saw-primary, #2563eb);
+    background: var(--saw-primary-bg, #eff6ff);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+}
+
+.saw-radio-card input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.saw-radio-card-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 8px;
+}
+
+.saw-radio-card-icon {
+    font-size: 32px;
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.saw-radio-card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--saw-text-primary, #1f2937);
+}
+
+.saw-radio-card.selected .saw-radio-card-title {
+    color: var(--saw-primary, #2563eb);
+}
+
+.saw-radio-card-desc {
+    font-size: 13px;
+    color: var(--saw-text-secondary, #6b7280);
+    line-height: 1.4;
+    margin-top: 4px;
+}
+
+.saw-radio-card.selected .saw-radio-card-desc {
+    color: var(--saw-text-primary, #374151);
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .saw-radio-cards {
+        flex-direction: column;
+    }
+    
+    .saw-radio-card {
+        max-width: 100%;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .saw-radio-card {
+        background: var(--saw-bg-dark, #1f2937);
+        border-color: var(--saw-border-dark, #374151);
+    }
+    
+    .saw-radio-card.selected {
+        background: var(--saw-primary-bg-dark, #1e3a8a);
+        border-color: var(--saw-primary, #3b82f6);
+    }
+    
+    .saw-radio-card-title {
+        color: var(--saw-text-primary-dark, #f9fafb);
+    }
+    
+    .saw-radio-card-desc {
+        color: var(--saw-text-secondary-dark, #9ca3af);
+    }
+}
+

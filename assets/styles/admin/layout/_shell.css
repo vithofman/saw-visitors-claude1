@@ -1,99 +1,137 @@
 /**
  * SAW Admin - App Shell Layout
  * @package SAW_Visitors
- * @version 7.0.0
+ * @version 9.0.0 - FIXED: Complete height chain for CSS Sticky
+ * 
+ * KLÍČOVÝ PRINCIP PRO STICKY:
+ * ===========================
+ * CSS sticky funguje správně pouze když:
+ * 1. CELÝ height chain je správně nastaven (html → body → ... → scroll)
+ * 2. Scroll container má overflow: auto
+ * 3. Všechny parent elementy mají overflow: hidden (ne visible!)
+ * 4. Všechny parent elementy mají min-height: 0 (pro flex shrink)
  */
 
-.sa-app-body {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    overflow: hidden;
-    background: var(--saw-bg-primary);
-    font-family: var(--saw-font-body);
-    font-size: var(--saw-text-base);
-    line-height: 1.5;
-    color: var(--saw-text-primary);
+/* ============================================
+   HTML & BODY - KRITICKÉ PRO HEIGHT CHAIN
+   ============================================ */
+html {
+    height: 100% !important;
+    overflow: hidden !important;
 }
 
-/* Sticky headers handled in _table-toolbar.css and _table-element.css */
+body {
+    height: 100% !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+}
 
+/* ============================================
+   APP BODY
+   ============================================ */
+.sa-app-body,
+.saw-app-body {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    background: var(--saw-bg-primary, #ffffff);
+    font-family: var(--saw-font-body, system-ui, -apple-system, sans-serif);
+    font-size: var(--saw-text-base, 1rem);
+    line-height: 1.5;
+    color: var(--saw-text-primary, #0f172a);
+}
+
+/* ============================================
+   CONTAINER
+   ============================================ */
 .sa-app-container,
 .saw-app-container {
-    flex: 1;
-    display: flex;
-    min-height: 0;
-    overflow: hidden;
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
     padding-top: 30px;
-    /* Header height */
     padding-bottom: 45px;
-    /* Footer height */
 }
 
+/* ============================================
+   MAIN CONTENT AREA
+   ============================================ */
 .sa-app-main,
 .saw-app-main {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    overflow: hidden;
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
     padding-bottom: 0;
-    background: var(--saw-bg-primary);
+    background: var(--saw-bg-primary, #ffffff);
 }
 
-.sa-app-content,
-.saw-app-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 0;
-    width: 100%;
-    box-sizing: border-box;
-    max-width: 100%;
-    margin: 0 auto;
-    background: var(--saw-bg-primary);
-}
-
+/* Desktop: offset pro sidebar */
 @media (min-width: 1025px) {
-
     .sa-app-main,
     .saw-app-main {
         margin-left: 260px !important;
     }
 }
 
-@media (max-width: 1024px) {
+/* ============================================
+   CONTENT AREA
+   ============================================ */
+.sa-app-content,
+.saw-app-content {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    padding: 0;
+    width: 100%;
+    box-sizing: border-box;
+    max-width: 100%;
+    margin: 0 auto;
+    background: var(--saw-bg-primary, #ffffff);
+}
 
+/* ============================================
+   MODULE WRAPPER - KRITICKÉ PRO STICKY!
+   ============================================ */
+[class^="saw-module-"],
+[class*=" saw-module-"] {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+}
+
+/* ============================================
+   MOBILE RESPONSIVE
+   ============================================ */
+@media (max-width: 1024px) {
     .sa-app-container,
     .saw-app-container {
         padding-top: 60px;
-        /* Header height on mobile too */
         padding-bottom: 0;
-        /* No footer on mobile */
     }
 
     .sa-app-main,
     .saw-app-main {
         margin-left: 0 !important;
     }
-
-    .sa-app-content,
-    .saw-app-content {
-        -webkit-overflow-scrolling: touch;
-    }
 }
 
 @media (max-width: 768px) {
-
     .sa-app-container,
     .saw-app-container {
         padding-top: 60px;
-        /* Header height on mobile */
         padding-bottom: 0;
-        /* No footer on mobile */
     }
 
     .sa-app-content,
@@ -103,26 +141,9 @@
 }
 
 @media (max-width: 480px) {
-
     .sa-app-container,
     .saw-app-container {
         padding-top: 60px;
-        /* Header height on mobile */
         padding-bottom: 0;
-        /* No footer on mobile */
     }
-}
-
-/* ============================================
-   TABLE PAGES - STICKY FIX
-   ============================================ */
-/* Zakázat scroll na .saw-app-content pro stránky s tabulkou
-   Tím se zajistí, že .sa-table-scroll je JEDINÝ scroll container
-   a sticky elementy (toolbar, thead) budou fungovat */
-.sa-page-has-table .saw-app-content,
-.sa-page-has-table .sa-app-content,
-.saw-app-content:has(.sa-table-scroll),
-.sa-app-content:has(.sa-table-scroll) {
-    overflow: hidden !important;
-    height: 100% !important;
 }

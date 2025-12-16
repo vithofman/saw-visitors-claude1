@@ -1,0 +1,877 @@
+/**
+ * Modern File Upload Component - Version 3.0.1
+ * 
+ * FIX: Dark mode pouze na explicit aktivaci
+ * FIX: Jemnější hover efekt
+ * 
+ * @package     SAW_Visitors
+ * @subpackage  Components/FileUpload
+ * @version     3.0.1
+ * @since       3.0.0
+ */
+
+/* ============================================
+   CSS Variables - Light Mode (DEFAULT)
+   ============================================ */
+:root {
+    /* Primary Colors - Professional Blue */
+    --file-upload-primary: #4F46E5;
+    --file-upload-primary-hover: #4338CA;
+    --file-upload-primary-light: #EEF2FF;
+    --file-upload-primary-lighter: #F5F7FF;
+    
+    /* Success - Modern Green */
+    --file-upload-success: #10B981;
+    --file-upload-success-hover: #059669;
+    --file-upload-success-light: #ECFDF5;
+    --file-upload-success-border: #86EFAC;
+    
+    /* Error - Vibrant Red */
+    --file-upload-error: #EF4444;
+    --file-upload-error-hover: #DC2626;
+    --file-upload-error-light: #FEF2F2;
+    --file-upload-error-border: #FCA5A5;
+    
+    /* Warning - Amber */
+    --file-upload-warning: #F59E0B;
+    --file-upload-warning-light: #FFFBEB;
+    
+    /* Neutrals - Light Mode (DEFAULT) */
+    --file-upload-bg-primary: #FFFFFF;
+    --file-upload-bg-secondary: #F9FAFB;
+    --file-upload-bg-tertiary: #F3F4F6;
+    --file-upload-border: #E5E7EB;
+    --file-upload-border-hover: #D1D5DB;
+    --file-upload-text-primary: #111827;
+    --file-upload-text-secondary: #6B7280;
+    --file-upload-text-tertiary: #9CA3AF;
+    
+    /* Shadows */
+    --file-upload-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --file-upload-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --file-upload-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --file-upload-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    
+    /* Spacing */
+    --file-upload-spacing-xs: 0.25rem;
+    --file-upload-spacing-sm: 0.5rem;
+    --file-upload-spacing-md: 0.75rem;
+    --file-upload-spacing-lg: 1rem;
+    --file-upload-spacing-xl: 1.5rem;
+    
+    /* Border Radius */
+    --file-upload-radius-sm: 0.375rem;
+    --file-upload-radius-md: 0.5rem;
+    --file-upload-radius-lg: 0.75rem;
+    
+    /* Transitions */
+    --file-upload-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --file-upload-transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================
+   Dark Mode - POUZE explicit aktivace
+   ============================================ */
+[data-theme="dark"] {
+    --file-upload-bg-primary: #1F2937;
+    --file-upload-bg-secondary: #111827;
+    --file-upload-bg-tertiary: #374151;
+    --file-upload-border: #374151;
+    --file-upload-border-hover: #4B5563;
+    --file-upload-text-primary: #F9FAFB;
+    --file-upload-text-secondary: #D1D5DB;
+    --file-upload-text-tertiary: #9CA3AF;
+    
+    /* Adjusted colors for dark mode */
+    --file-upload-primary: #6366F1;
+    --file-upload-primary-hover: #818CF8;
+    --file-upload-primary-light: #312E81;
+    --file-upload-primary-lighter: #1E1B4B;
+    
+    --file-upload-success-light: #064E3B;
+    --file-upload-error-light: #7F1D1D;
+    --file-upload-warning-light: #78350F;
+    
+    /* Lighter shadows for dark mode */
+    --file-upload-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --file-upload-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+    --file-upload-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+    --file-upload-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
+}
+
+/* ============================================
+   Main Container
+   ============================================ */
+.saw-file-upload-modern {
+    width: 100%;
+    font-family: var(--saw-font-body);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--file-upload-text-primary);
+}
+
+/* ============================================
+   Upload Zone
+   ============================================ */
+.saw-upload-zone {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--file-upload-spacing-md);
+    padding: var(--file-upload-spacing-lg);
+    background: var(--file-upload-bg-secondary);
+    border: 2px dashed var(--file-upload-border);
+    border-radius: var(--file-upload-radius-lg);
+    transition: all var(--file-upload-transition-base);
+    cursor: pointer;
+    min-height: 80px;
+}
+
+/* FIX: Jemnější hover efekt */
+.saw-upload-zone:hover {
+    background: rgba(79, 70, 229, 0.02);
+    border-color: rgba(79, 70, 229, 0.4);
+}
+
+.saw-upload-zone.dragging {
+    background: var(--file-upload-primary-light);
+    border-color: var(--file-upload-primary);
+    border-style: solid;
+    box-shadow: var(--file-upload-shadow-lg);
+    transform: scale(1.01);
+}
+
+.saw-upload-zone:focus-within {
+	border-color: rgba(79, 70, 229, 0.3);
+}
+
+/* Upload Zone Content */
+.saw-upload-zone-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--file-upload-spacing-md);
+}
+
+.saw-upload-zone-row {
+    display: flex;
+    align-items: center;
+    gap: var(--file-upload-spacing-md);
+    flex-wrap: wrap;
+}
+
+.saw-upload-zone-row-main {
+    justify-content: center;
+}
+
+/* Upload Icon - SVG Container */
+.saw-upload-icon {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--file-upload-primary-light);
+    border-radius: var(--file-upload-radius-md);
+    color: var(--file-upload-primary);
+    transition: all var(--file-upload-transition-base);
+}
+
+.saw-upload-zone:hover .saw-upload-icon {
+    background: var(--file-upload-primary);
+    color: white;
+    transform: scale(1.05);
+}
+
+.saw-upload-icon svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+}
+
+/* Upload Text */
+.saw-upload-text {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--file-upload-text-secondary);
+    transition: color var(--file-upload-transition-base);
+}
+
+.saw-upload-zone:hover .saw-upload-text {
+    color: var(--file-upload-primary);
+}
+
+/* Upload Button */
+.saw-upload-button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--file-upload-spacing-sm);
+    padding: var(--file-upload-spacing-sm) var(--file-upload-spacing-lg);
+    background: var(--file-upload-primary);
+    color: white;
+    border: none;
+    border-radius: var(--file-upload-radius-md);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--file-upload-transition-base);
+    text-decoration: none;
+    white-space: nowrap;
+    min-height: 36px;
+}
+
+.saw-upload-button:hover {
+    background: var(--file-upload-primary-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--file-upload-shadow-md);
+}
+
+.saw-upload-button:active {
+    transform: translateY(0);
+}
+
+/* Info Icon */
+.saw-upload-info {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--file-upload-text-tertiary);
+    cursor: help;
+    transition: color var(--file-upload-transition-fast);
+}
+
+.saw-upload-info:hover {
+    color: var(--file-upload-primary);
+}
+
+.saw-upload-info svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* ============================================
+   Category Select
+   ============================================ */
+.saw-upload-category-row {
+    display: flex;
+    align-items: center;
+    gap: var(--file-upload-spacing-md);
+    padding-top: var(--file-upload-spacing-md);
+    border-top: 1px solid var(--file-upload-border);
+}
+
+.saw-upload-category-label {
+    flex-shrink: 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--file-upload-text-primary);
+    min-width: 100px;
+}
+
+.saw-category-select-wrapper {
+    flex: 1;
+    min-width: 0;
+}
+
+.saw-category-select-input {
+    width: 100%;
+    padding: var(--file-upload-spacing-sm) var(--file-upload-spacing-md);
+    background: var(--file-upload-bg-primary);
+    border: 1px solid var(--file-upload-border);
+    border-radius: var(--file-upload-radius-md);
+    font-size: 0.8125rem;
+    font-family: inherit;
+    color: var(--file-upload-text-primary);
+    transition: all var(--file-upload-transition-base);
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+    background-position: right var(--file-upload-spacing-sm) center;
+    background-repeat: no-repeat;
+    background-size: 1.5em;
+    padding-right: 2.5rem;
+}
+
+.saw-category-select-input:hover {
+    border-color: var(--file-upload-border-hover);
+}
+
+.saw-category-select-input:focus {
+    outline: none;
+    border-color: var(--file-upload-primary);
+    box-shadow: 0 0 0 3px var(--file-upload-primary-light);
+}
+
+/* ============================================
+   File List
+   ============================================ */
+.saw-file-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--file-upload-spacing-sm);
+    margin-top: var(--file-upload-spacing-md);
+}
+
+/* File Item */
+.saw-file-item {
+    display: flex;
+    align-items: center;
+    gap: var(--file-upload-spacing-md);
+    padding: var(--file-upload-spacing-md);
+    background: var(--file-upload-bg-primary);
+    border: 1px solid var(--file-upload-border);
+    border-radius: var(--file-upload-radius-md);
+    transition: all var(--file-upload-transition-base);
+}
+
+.saw-file-item:hover {
+    border-color: var(--file-upload-border-hover);
+    box-shadow: var(--file-upload-shadow-sm);
+}
+
+.saw-file-item.uploading {
+    background: var(--file-upload-bg-secondary);
+}
+
+.saw-file-item.success {
+    background: var(--file-upload-success-light);
+    border-color: var(--file-upload-success-border);
+}
+
+.saw-file-item.error {
+    background: var(--file-upload-error-light);
+    border-color: var(--file-upload-error-border);
+}
+
+/* File Icon Container */
+.saw-file-icon-container {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--file-upload-bg-tertiary);
+    border-radius: var(--file-upload-radius-md);
+    color: var(--file-upload-text-secondary);
+    transition: all var(--file-upload-transition-base);
+}
+
+.saw-file-item.success .saw-file-icon-container {
+    background: var(--file-upload-success-light);
+    color: var(--file-upload-success);
+}
+
+.saw-file-item.error .saw-file-icon-container {
+    background: var(--file-upload-error-light);
+    color: var(--file-upload-error);
+}
+
+.saw-file-icon-container svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* File Info */
+.saw-file-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--file-upload-spacing-xs);
+}
+
+.saw-file-name {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--file-upload-text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.saw-file-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--file-upload-spacing-md);
+    flex-wrap: wrap;
+}
+
+.saw-file-size,
+.saw-file-type {
+    font-size: 0.75rem;
+    color: var(--file-upload-text-secondary);
+}
+
+.saw-file-category {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem var(--file-upload-spacing-sm);
+    background: var(--file-upload-primary-light);
+    color: var(--file-upload-primary);
+    border-radius: var(--file-upload-radius-sm);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+/* Progress Bar */
+.saw-file-progress {
+    width: 100%;
+    height: 4px;
+    background: var(--file-upload-border);
+    border-radius: var(--file-upload-radius-sm);
+    overflow: hidden;
+    margin-top: var(--file-upload-spacing-xs);
+}
+
+.saw-file-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--file-upload-primary) 0%, var(--file-upload-primary-hover) 100%);
+    border-radius: var(--file-upload-radius-sm);
+    transition: width var(--file-upload-transition-base);
+    position: relative;
+    overflow: hidden;
+}
+
+.saw-file-progress-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+/* Status Badge */
+.saw-file-status {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--file-upload-spacing-xs);
+    padding: 0.25rem var(--file-upload-spacing-sm);
+    border-radius: var(--file-upload-radius-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.saw-file-status.uploading {
+    background: var(--file-upload-warning-light);
+    color: var(--file-upload-warning);
+}
+
+.saw-file-status.success {
+    background: var(--file-upload-success-light);
+    color: var(--file-upload-success);
+}
+
+.saw-file-status.error {
+    background: var(--file-upload-error-light);
+    color: var(--file-upload-error);
+}
+
+.saw-file-status svg {
+    width: 12px;
+    height: 12px;
+}
+
+.saw-file-status.uploading svg {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* File Actions */
+.saw-file-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--file-upload-spacing-xs);
+    flex-shrink: 0;
+}
+
+.saw-file-remove,
+.saw-file-retry {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: var(--file-upload-radius-md);
+    color: var(--file-upload-text-tertiary);
+    cursor: pointer;
+    transition: all var(--file-upload-transition-fast);
+}
+
+.saw-file-remove:hover {
+    background: var(--file-upload-error-light);
+    color: var(--file-upload-error);
+}
+
+.saw-file-retry:hover {
+    background: var(--file-upload-primary-light);
+    color: var(--file-upload-primary);
+}
+
+.saw-file-remove svg,
+.saw-file-retry svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* ============================================
+   Toast Notifications
+   ============================================ */
+.saw-toast-container {
+    position: fixed;
+    top: var(--file-upload-spacing-xl);
+    right: var(--file-upload-spacing-xl);
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: var(--file-upload-spacing-sm);
+    pointer-events: none;
+}
+
+.saw-toast {
+    min-width: 320px;
+    max-width: 400px;
+    display: flex;
+    align-items: center;
+    gap: var(--file-upload-spacing-md);
+    padding: var(--file-upload-spacing-lg);
+    background: var(--file-upload-bg-primary);
+    border-radius: var(--file-upload-radius-lg);
+    box-shadow: var(--file-upload-shadow-xl);
+    border: 1px solid var(--file-upload-border);
+    pointer-events: auto;
+    animation: slideInRight 0.5s ease-out forwards; /* ← PRODLOUŽ z 0.3s */
+    opacity: 1 !important; /* ← FORCE opacity */
+    visibility: visible !important; /* ← FORCE visibility */
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.saw-toast.removing {
+    animation: slideOutRight 0.5s ease-out 5s forwards; /* ← DELAY 5s před zmizením */
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+.saw-toast-icon {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--file-upload-radius-md);
+}
+
+.saw-toast.success .saw-toast-icon {
+    background: var(--file-upload-success-light);
+    color: var(--file-upload-success);
+}
+
+.saw-toast.error .saw-toast-icon {
+    background: var(--file-upload-error-light);
+    color: var(--file-upload-error);
+}
+
+.saw-toast-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.saw-toast-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.saw-toast-title {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--file-upload-text-primary);
+    margin: 0 0 0.25rem 0;
+}
+
+.saw-toast-message {
+    font-size: 0.8125rem;
+    color: var(--file-upload-text-secondary);
+    margin: 0;
+}
+
+.saw-toast-close {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: var(--file-upload-radius-sm);
+    color: var(--file-upload-text-tertiary);
+    cursor: pointer;
+    transition: all var(--file-upload-transition-fast);
+}
+
+.saw-toast-close:hover {
+    background: var(--file-upload-bg-secondary);
+    color: var(--file-upload-text-primary);
+}
+
+.saw-toast-close svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* ============================================
+   Status & Info Bars
+   ============================================ */
+.saw-status-bar,
+.saw-info-bar {
+    margin-top: var(--file-upload-spacing-md);
+    padding: var(--file-upload-spacing-md);
+    border-radius: var(--file-upload-radius-md);
+    font-size: 0.8125rem;
+    display: flex;
+    align-items: center;
+    gap: var(--file-upload-spacing-sm);
+}
+
+.saw-status-bar {
+    background: var(--file-upload-bg-secondary);
+    border: 1px solid var(--file-upload-border);
+    color: var(--file-upload-text-primary);
+}
+
+.saw-info-bar {
+    background: var(--file-upload-primary-light);
+    border: 1px solid var(--file-upload-primary);
+    color: var(--file-upload-primary);
+}
+
+.saw-status-bar svg,
+.saw-info-bar svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+/* ============================================
+   Responsive Design - Mobile First
+   ============================================ */
+
+/* Tablets: 768px and below */
+@media (max-width: 768px) {
+    .saw-upload-zone {
+        padding: var(--file-upload-spacing-md);
+    }
+    
+    .saw-upload-zone-row-main {
+        flex-wrap: wrap;
+        justify-content: center;
+        text-align: center;
+    }
+    
+    .saw-upload-text {
+        width: 100%;
+        order: -1;
+        margin-bottom: var(--file-upload-spacing-xs);
+    }
+    
+    .saw-upload-category-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .saw-upload-category-label {
+        min-width: auto;
+        text-align: left;
+    }
+    
+    .saw-file-item {
+        flex-wrap: wrap;
+    }
+    
+    .saw-file-info {
+        flex: 1 1 100%;
+        order: 2;
+    }
+    
+    .saw-file-icon-container {
+        order: 1;
+    }
+    
+    .saw-file-actions {
+        order: 3;
+        margin-left: auto;
+    }
+    
+    .saw-toast-container {
+        right: var(--file-upload-spacing-md);
+        left: var(--file-upload-spacing-md);
+    }
+    
+    .saw-toast {
+        min-width: auto;
+        max-width: none;
+    }
+}
+
+/* Mobile: 480px and below */
+@media (max-width: 480px) {
+    .saw-upload-zone {
+        padding: var(--file-upload-spacing-sm) var(--file-upload-spacing-md);
+        min-height: 100px;
+    }
+    
+    .saw-upload-icon {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .saw-upload-icon svg {
+        width: 16px;
+        height: 16px;
+    }
+    
+    .saw-upload-text {
+        font-size: 0.8125rem;
+    }
+    
+    .saw-upload-button {
+        width: 100%;
+        justify-content: center;
+        padding: var(--file-upload-spacing-md);
+        min-height: 44px;
+    }
+    
+    .saw-file-item {
+        padding: var(--file-upload-spacing-sm);
+        gap: var(--file-upload-spacing-sm);
+    }
+    
+    .saw-file-icon-container {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .saw-file-name {
+        font-size: 0.8125rem;
+    }
+    
+    .saw-file-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--file-upload-spacing-xs);
+    }
+    
+    .saw-file-remove,
+    .saw-file-retry {
+        width: 44px;
+        height: 44px;
+    }
+    
+    .saw-toast {
+        padding: var(--file-upload-spacing-md);
+    }
+}
+
+/* ============================================
+   Accessibility
+   ============================================ */
+
+/* Focus Visible */
+.saw-upload-button:focus-visible,
+.saw-file-remove:focus-visible,
+.saw-file-retry:focus-visible,
+.saw-category-select-input:focus-visible {
+    outline: 2px solid var(--file-upload-primary);
+    outline-offset: 2px;
+}
+
+/* Screen Reader Only */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+    .saw-upload-zone,
+    .saw-file-item {
+        border-width: 2px;
+    }
+    
+    .saw-upload-button,
+    .saw-file-remove,
+    .saw-file-retry {
+        border: 2px solid currentColor;
+    }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .saw-upload-zone,
+    .saw-file-actions,
+    .saw-toast-container {
+        display: none !important;
+    }
+    
+    .saw-file-item {
+        break-inside: avoid;
+    }
+}

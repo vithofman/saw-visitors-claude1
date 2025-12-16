@@ -1,0 +1,712 @@
+/**
+ * SAW Navigation - Consolidated
+ * 
+ * All navigation switcher styles including:
+ * - Customer switcher (superadmin dropdown)
+ * - Branch switcher (sidebar dropdown)
+ * - Language switcher (header dropdown)
+ * 
+ * @package SAW_Visitors
+ * @version 1.0.0
+ */
+
+/* ============================================
+   COMMON STYLES - SHARED ACROSS SWITCHERS
+   ============================================ */
+
+.saw-spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid var(--saw-border-color);
+    border-top-color: var(--saw-primary);
+    border-radius: 50%;
+    animation: saw-spin 0.8s linear infinite;
+}
+
+@keyframes saw-spin {
+    to { 
+        transform: rotate(360deg); 
+    }
+}
+
+/* ============================================
+   CUSTOMER SWITCHER (pro superadminy)
+   ============================================ */
+
+.saw-customer-switcher {
+    position: relative;
+}
+
+.saw-customer-switcher-button {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-md);
+    padding: var(--saw-space-sm) var(--saw-space-md) var(--saw-space-sm) var(--saw-space-sm);
+    background: var(--saw-switcher-button-bg);
+    border: 0px solid var(--saw-border-color);
+    border-radius: var(--saw-border-radius-md);
+    cursor: pointer;
+    transition: all var(--saw-transition-base);
+}
+
+.saw-customer-switcher-button:hover {
+    background: var(--saw-switcher-button-hover-bg);
+    border-color: var(--saw-gray-300);
+}
+
+.saw-customer-switcher-button:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.saw-switcher-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+}
+
+.saw-switcher-logo-image {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    border-radius: var(--saw-border-radius-sm);
+}
+
+.saw-switcher-logo-fallback {
+    display: block;
+}
+
+.saw-switcher-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.saw-switcher-name {
+    font-size: var(--saw-font-size-base);
+    font-weight: 600;
+    color: var(--saw-text-primary);
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.saw-switcher-ico {
+    font-size: 11px;
+    color: var(--saw-text-secondary);
+    white-space: nowrap;
+}
+
+.saw-switcher-arrow {
+    flex-shrink: 0;
+    color: var(--saw-text-secondary);
+    transition: transform var(--saw-transition-base);
+}
+
+.saw-customer-switcher-button:hover .saw-switcher-arrow {
+    color: var(--saw-text-primary);
+}
+
+/* Customer Switcher Dropdown */
+.saw-customer-switcher-dropdown {
+    position: absolute;
+    top: calc(100% + var(--saw-space-sm));
+    left: 0;
+    width: 360px;
+    max-height: 480px;
+    background: var(--saw-switcher-dropdown-bg);
+    border: var(--saw-border-width) solid var(--saw-border-color);
+    border-radius: var(--saw-border-radius-md);
+    box-shadow: var(--saw-shadow-lg);
+    display: none;
+    flex-direction: column;
+    z-index: 1001;
+    color: var(--saw-text-primary);
+}
+
+.saw-customer-switcher-dropdown.active {
+    display: flex;
+}
+
+.saw-switcher-search {
+    padding: var(--saw-space-md);
+    border-bottom: var(--saw-border-width) solid var(--saw-border-color);
+}
+
+.saw-switcher-search-input {
+    width: 100%;
+    padding: var(--saw-space-sm) var(--saw-space-md);
+    background: var(--saw-switcher-input-bg);
+    border: var(--saw-border-width) solid var(--saw-gray-300);
+    border-radius: var(--saw-border-radius-sm);
+    font-size: var(--saw-font-size-sm);
+    transition: border-color var(--saw-transition-base);
+}
+
+.saw-switcher-search-input:focus {
+    outline: none;
+    border-color: var(--saw-primary);
+}
+
+.saw-switcher-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--saw-space-sm);
+}
+
+.saw-switcher-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.saw-switcher-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.saw-switcher-list::-webkit-scrollbar-thumb {
+    background: var(--saw-gray-300);
+    border-radius: 3px;
+}
+
+.saw-switcher-list::-webkit-scrollbar-thumb:hover {
+    background: var(--saw-gray-400);
+}
+
+/* Customer Items */
+.saw-switcher-item {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-md);
+    padding: 10px var(--saw-space-md);
+    border-radius: var(--saw-border-radius-sm);
+    cursor: pointer;
+    transition: all var(--saw-transition-base);
+}
+
+.saw-switcher-item:hover {
+    background: var(--saw-bg-tertiary);
+}
+
+.saw-switcher-item.active {
+    background: var(--saw-primary-light);
+}
+
+.saw-switcher-item-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+}
+
+.saw-switcher-item-logo img {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    border-radius: var(--saw-space-xs);
+}
+
+.saw-switcher-item-logo-fallback {
+    width: 36px;
+    height: 36px;
+}
+
+.saw-switcher-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.saw-switcher-item-name {
+    font-size: var(--saw-font-size-sm);
+    font-weight: 500;
+    color: var(--saw-text-primary);
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.saw-switcher-item-ico {
+    font-size: 11px;
+    color: var(--saw-text-secondary);
+    margin-top: 2px;
+}
+
+.saw-switcher-item-check {
+    font-size: 16px;
+    color: var(--saw-primary);
+    flex-shrink: 0;
+}
+
+/* Customer Switcher States */
+.saw-switcher-loading,
+.saw-switcher-error,
+.saw-switcher-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--saw-space-md);
+    padding: var(--saw-space-3xl) var(--saw-space-lg);
+    text-align: center;
+    color: var(--saw-text-secondary);
+    font-size: var(--saw-font-size-sm);
+}
+
+.saw-switcher-error {
+    color: var(--saw-danger);
+}
+
+/* Customer Info Static (pro non-superadminy) */
+.saw-customer-info-static {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-lg);
+}
+
+.saw-customer-info-static .saw-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+}
+
+.saw-customer-info-static .saw-logo-image {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+}
+
+.saw-customer-info-static .saw-logo-fallback {
+    display: block;
+}
+
+.saw-customer-info-static .saw-customer-info {
+    border-left: var(--saw-border-width) solid var(--saw-border-color);
+    padding-left: var(--saw-space-lg);
+    min-width: 0;
+}
+
+.saw-customer-info-static .saw-customer-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--saw-text-primary);
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.saw-customer-info-static .saw-customer-ico {
+    font-size: var(--saw-font-size-xs);
+    color: var(--saw-text-secondary);
+    white-space: nowrap;
+}
+
+/* ============================================
+   BRANCH SWITCHER (v sidebaru)
+   ============================================ */
+
+.saw-branch-switcher {
+    position: relative;
+    margin: var(--saw-space-md) var(--saw-space-lg);
+}
+
+.saw-branch-switcher-button {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-md);
+    width: 100%;
+    padding: var(--saw-space-md);
+    background: var(--saw-switcher-button-bg);
+    border: var(--saw-border-width) solid var(--saw-border-color);
+    border-radius: var(--saw-border-radius-md);
+    cursor: pointer;
+    transition: all var(--saw-transition-base);
+}
+
+.saw-branch-switcher-button:hover {
+    background: var(--saw-switcher-button-hover-bg);
+    border-color: var(--saw-gray-300);
+}
+
+.saw-branch-switcher-button:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.saw-branch-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.saw-branch-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+
+.saw-branch-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--saw-text-secondary);
+}
+
+.saw-branch-name {
+    font-size: var(--saw-font-size-sm);
+    font-weight: 500;
+    color: var(--saw-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.saw-branch-arrow {
+    flex-shrink: 0;
+    color: var(--saw-text-secondary);
+    transition: transform var(--saw-transition-base);
+}
+
+.saw-branch-switcher-button:hover .saw-branch-arrow {
+    color: var(--saw-text-primary);
+}
+
+/* Branch Switcher Dropdown */
+.saw-branch-switcher-dropdown {
+    position: absolute;
+    top: calc(100% + var(--saw-space-xs));
+    left: 0;
+    right: 0;
+    max-height: 360px;
+    background: var(--saw-switcher-dropdown-bg);
+    border: var(--saw-border-width) solid var(--saw-border-color);
+    border-radius: var(--saw-border-radius-md);
+    box-shadow: var(--saw-shadow-lg);
+    display: none;
+    flex-direction: column;
+    z-index: 1000;
+}
+
+.saw-branch-switcher-dropdown.active {
+    display: flex;
+}
+
+.saw-branch-list {
+    overflow-y: auto;
+    padding: var(--saw-space-sm);
+}
+
+.saw-branch-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.saw-branch-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.saw-branch-list::-webkit-scrollbar-thumb {
+    background: var(--saw-gray-300);
+    border-radius: 3px;
+}
+
+.saw-branch-list::-webkit-scrollbar-thumb:hover {
+    background: var(--saw-gray-400);
+}
+
+/* Branch Items */
+.saw-branch-item {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-md);
+    padding: 10px var(--saw-space-md);
+    border-radius: var(--saw-border-radius-sm);
+    cursor: pointer;
+    transition: all var(--saw-transition-base);
+}
+
+.saw-branch-item:hover {
+    background: var(--saw-bg-tertiary);
+}
+
+.saw-branch-item.active {
+    background: var(--saw-primary-light);
+}
+
+.saw-branch-item-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.saw-branch-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.saw-branch-item-name {
+    font-size: var(--saw-font-size-sm);
+    font-weight: 500;
+    color: var(--saw-text-primary);
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.saw-branch-item-address {
+    font-size: 11px;
+    color: var(--saw-text-secondary);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.saw-branch-item-check {
+    font-size: 16px;
+    color: var(--saw-primary);
+    flex-shrink: 0;
+}
+
+/* Branch Switcher States */
+.saw-branch-loading,
+.saw-branch-error,
+.saw-branch-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--saw-space-md);
+    padding: var(--saw-space-2xl) var(--saw-space-lg);
+    text-align: center;
+    color: var(--saw-text-secondary);
+    font-size: var(--saw-font-size-xs);
+}
+
+.saw-branch-error {
+    color: var(--saw-danger);
+}
+
+.saw-branch-create-button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--saw-space-sm);
+    margin-top: var(--saw-space-sm);
+    padding: var(--saw-space-sm) var(--saw-space-lg);
+    background: var(--saw-primary);
+    color: #ffffff;
+    border-radius: var(--saw-border-radius-sm);
+    font-size: var(--saw-font-size-xs);
+    font-weight: 500;
+    text-decoration: none;
+    transition: background var(--saw-transition-base);
+}
+
+.saw-branch-create-button:hover {
+    background: var(--saw-primary-hover);
+    color: #ffffff;
+}
+
+/* ============================================
+   LANGUAGE SWITCHER (v headeru)
+   ============================================ */
+
+.saw-language-switcher {
+    position: relative;
+}
+
+.saw-language-switcher-button {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-sm);
+    padding: 6px var(--saw-space-md);
+    height: 48px;
+    background: var(--saw-switcher-button-bg);
+    border: var(--saw-border-width) solid var(--saw-border-color);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all var(--saw-transition-fast);
+    white-space: nowrap;
+}
+
+.saw-language-switcher-button:hover {
+    background: var(--saw-switcher-button-hover-bg);
+    border-color: var(--saw-gray-300);
+    box-shadow: var(--saw-shadow-md);
+}
+
+.saw-language-switcher-button:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.saw-language-flag {
+    font-size: 18px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.saw-language-code {
+    font-size: var(--saw-font-size-sm);
+    font-weight: 600;
+    color: var(--saw-text-primary);
+}
+
+.saw-language-arrow {
+    flex-shrink: 0;
+    color: var(--saw-text-muted);
+    transition: color var(--saw-transition-fast);
+}
+
+.saw-language-switcher-button:hover .saw-language-arrow {
+    color: var(--saw-text-secondary);
+}
+
+/* Language Switcher Dropdown */
+.saw-language-switcher-dropdown {
+    position: absolute;
+    top: calc(100% + var(--saw-space-sm));
+    right: 0;
+    min-width: 180px;
+    background: var(--saw-switcher-dropdown-bg);
+    border: var(--saw-border-width) solid var(--saw-border-color);
+    border-radius: var(--saw-border-radius-lg);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+    padding: var(--saw-space-sm);
+    display: none;
+    z-index: 1001;
+}
+
+.saw-language-switcher-dropdown.active {
+    display: block;
+    animation: sawDropdownFadeIn var(--saw-transition-fast) ease;
+}
+
+@keyframes sawDropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Language Items */
+.saw-language-item {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-md);
+    padding: 10px var(--saw-space-md);
+    border-radius: var(--saw-border-radius-md);
+    cursor: pointer;
+    transition: all var(--saw-transition-fast);
+}
+
+.saw-language-item:hover {
+    background: var(--saw-bg-tertiary);
+}
+
+.saw-language-item.active {
+    background: var(--saw-primary-light);
+}
+
+.saw-language-item-flag {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.saw-language-item-name {
+    flex: 1;
+    font-size: var(--saw-font-size-sm);
+    font-weight: 500;
+    color: var(--saw-text-primary);
+}
+
+.saw-language-item-check {
+    font-size: 16px;
+    color: var(--saw-primary);
+    flex-shrink: 0;
+}
+
+/* ============================================
+   RESPONSIVE - CUSTOMER SWITCHER
+   ============================================ */
+
+@media (max-width: 1024px) {
+    .saw-switcher-info {
+        display: none;
+    }
+    
+    .saw-customer-switcher-button {
+        padding: var(--saw-space-sm);
+    }
+    
+    .saw-customer-switcher-dropdown {
+        width: 320px;
+        right: 0;
+        left: auto;
+    }
+}
+
+@media (max-width: 768px) {
+    .saw-customer-switcher-dropdown {
+        width: calc(100vw - 80px);
+        max-width: 360px;
+        left: 0;
+        right: auto;
+        transform: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .saw-customer-switcher-dropdown {
+        width: calc(100vw - 32px);
+        left: 0;
+        right: auto;
+        transform: none;
+    }
+}
+
+/* ============================================
+   RESPONSIVE - BRANCH SWITCHER
+   ============================================ */
+
+@media (max-width: 768px) {
+    .saw-branch-switcher {
+        margin: var(--saw-space-md);
+    }
+}
+
+/* ============================================
+   RESPONSIVE - LANGUAGE SWITCHER
+   ============================================ */
+
+@media (max-width: 768px) {
+    .saw-language-code {
+        display: none;
+    }
+    
+    .saw-language-switcher-button {
+        padding: 6px;
+        height: 40px;
+        min-width: 48px;
+        justify-content: center;
+    }
+    
+    .saw-language-switcher-dropdown {
+        min-width: 160px;
+    }
+}
+

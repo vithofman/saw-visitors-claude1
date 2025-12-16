@@ -1,0 +1,297 @@
+/**
+ * File Upload Component Styles - Modern & Elegant
+ * 
+ * Elegant file upload component with preview, drag-and-drop support,
+ * and comprehensive file information display.
+ * 
+ * @package     SAW_Visitors
+ * @subpackage  Components/FileUpload
+ * @version     1.0.0
+ * @since       1.0.0
+ * @author      SAW Visitors Team
+ */
+
+/* ============================================
+   MAIN CONTAINER
+   ============================================ */
+.saw-file-upload-component {
+    width: 100%;
+}
+
+.saw-file-upload-area {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: var(--saw-space-2xl);
+    align-items: start;
+}
+
+/* ============================================
+   PREVIEW SECTION
+   ============================================ */
+.saw-file-preview-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--saw-space-sm);
+}
+
+.saw-file-preview-box {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    border: var(--saw-border-width-thick) solid var(--saw-border-color);
+    border-radius: var(--saw-border-radius-lg);
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    transition: all var(--saw-transition-base);
+}
+
+.saw-file-preview-box:hover {
+    border-color: var(--saw-gray-300);
+    box-shadow: var(--saw-shadow-md);
+}
+
+.saw-file-preview-box.has-file {
+    cursor: pointer;
+}
+
+.saw-preview-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    padding: var(--saw-space-md);
+}
+
+/* Empty State */
+.saw-file-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--saw-space-md);
+    padding: var(--saw-space-2xl);
+    text-align: center;
+}
+
+.saw-file-icon-wrapper {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--saw-gray-100);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--saw-transition-base);
+}
+
+.saw-file-icon-wrapper .dashicons {
+    font-size: 32px;
+    width: 32px;
+    height: 32px;
+    color: var(--saw-gray-400);
+}
+
+.saw-file-empty-text {
+    margin: 0;
+    font-size: var(--saw-font-size-sm);
+    color: var(--saw-gray-500);
+    font-weight: 500;
+}
+
+/* Remove Overlay */
+.saw-file-remove-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(220, 38, 38, 0.95);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity var(--saw-transition-fast);
+    border: none;
+    cursor: pointer;
+}
+
+.saw-file-preview-box.has-file:hover .saw-file-remove-overlay {
+    opacity: 1;
+}
+
+.saw-file-remove-overlay .dashicons {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    color: #ffffff;
+}
+
+/* ============================================
+   UPLOAD CONTROLS
+   ============================================ */
+.saw-file-upload-controls {
+    display: flex;
+    flex-direction: column;
+    gap: var(--saw-space-md);
+}
+
+.saw-file-input {
+    position: absolute;
+    width: 0.1px;
+    height: 0.1px;
+    opacity: 0;
+    overflow: hidden;
+    z-index: -1;
+}
+
+.saw-file-upload-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--saw-space-sm);
+    padding: 10px 20px;
+    background: #ffffff;
+    color: var(--saw-gray-700);
+    border: var(--saw-border-width-thick) solid var(--saw-gray-300);
+    border-radius: var(--saw-border-radius-md);
+    font-size: var(--saw-font-size-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--saw-transition-fast);
+    align-self: flex-start;
+}
+
+.saw-file-upload-trigger:hover {
+    background: var(--saw-gray-50);
+    border-color: var(--saw-primary);
+    color: var(--saw-primary);
+}
+
+.saw-file-upload-trigger:active {
+    transform: scale(0.98);
+}
+
+.saw-file-input:focus + .saw-file-upload-trigger {
+    outline: 2px solid var(--saw-primary);
+    outline-offset: 2px;
+}
+
+.saw-file-upload-trigger .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+/* ============================================
+   SELECTED FILE INFO
+   ============================================ */
+.saw-file-selected-info {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-md);
+    padding: var(--saw-space-md) var(--saw-space-lg);
+    background: var(--saw-success-light);
+    border: var(--saw-border-width) solid #bbf7d0;
+    border-radius: var(--saw-border-radius-md);
+    transition: all var(--saw-transition-fast);
+}
+
+.saw-file-selected-info.hidden {
+    display: none;
+}
+
+.saw-file-selected-icon {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #dcfce7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.saw-file-selected-icon .dashicons {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    color: var(--saw-success);
+}
+
+.saw-file-selected-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.saw-file-selected-name {
+    font-size: var(--saw-font-size-sm);
+    font-weight: 600;
+    color: #166534;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.saw-file-selected-meta {
+    font-size: var(--saw-font-size-xs);
+    color: #15803d;
+    margin-top: 2px;
+}
+
+.saw-file-clear-btn {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all var(--saw-transition-fast);
+    color: #15803d;
+}
+
+.saw-file-clear-btn:hover {
+    background: #dcfce7;
+}
+
+.saw-file-clear-btn .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+/* ============================================
+   HELP TEXT
+   ============================================ */
+.saw-help-text {
+    font-size: var(--saw-font-size-sm);
+    color: var(--saw-gray-500);
+    line-height: 1.5;
+    margin: 0;
+}
+
+.saw-help-text.error {
+    color: var(--saw-danger);
+    font-weight: 500;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+    .saw-file-upload-area {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .saw-file-preview-box {
+        width: 100%;
+        max-width: 300px;
+        margin: 0 auto;
+    }
+}

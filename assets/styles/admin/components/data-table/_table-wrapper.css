@@ -1,119 +1,116 @@
 /**
  * SAW Admin - Table Wrapper & Split Layout
  * @package SAW_Visitors
- * @version 7.0.0
+ * @version 9.0.0 - FIXED: Proper scroll container for CSS Sticky
  */
 
+/* ============================================
+   SPLIT LAYOUT
+   ============================================ */
 .sa-table-split {
-    display: flex;
-    flex: 1;
-    min-height: 0;
-    height: 100%; /* STICKY FIX: Zajistit správnou výšku pro child elementy */
-    overflow: hidden; /* Potřebujeme pro správnou výšku child elementů */
+    flex: 1 !important;
+    display: flex !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
     
-    /* Light blue gradient background - very subtle */
+    /* Light blue gradient background */
     background: linear-gradient(
         135deg,
-        #f0f9ff 0%,           /* Very light blue at top-left */
-        #e0f2fe 50%,          /* Light blue in middle */
-        #f0f9ff 100%          /* Very light blue at bottom-right */
+        #f0f9ff 0%,
+        #e0f2fe 50%,
+        #f0f9ff 100%
     );
-    
-    /* Subtle pattern overlay for depth */
-    background-image: 
-        linear-gradient(
-            135deg,
-            #f0f9ff 0%,
-            #e0f2fe 50%,
-            #f0f9ff 100%
-        ),
-        repeating-linear-gradient(
-            45deg,
-            transparent,
-            transparent 2px,
-            rgba(59, 130, 246, 0.02) 2px,
-            rgba(59, 130, 246, 0.02) 4px
-        );
 }
 
+/* ============================================
+   TABLE PANEL
+   ============================================ */
 .sa-table-panel {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    overflow: hidden; /* Potřebujeme pro správnou výšku .sa-table-scroll */
-    height: 100% !important;
-    max-height: 100% !important;
-    background: transparent; /* Transparent to show parent gradient */
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    background: transparent;
 }
 
+/* ============================================
+   TABLE SCROLL - JEDINÝ SCROLL CONTAINER!
+   ============================================ */
 .sa-table-scroll {
-    flex: 1;
-    min-height: 0;
-    height: 100% !important;
-    max-height: 100% !important;
-    /* VRÁCENO: .sa-table-scroll je scroll container pro sticky */
+    flex: 1 !important;
+    min-height: 0 !important;
     overflow-y: auto !important;
-    overflow-x: auto; /* Horizontální scroll pro široké tabulky */
+    overflow-x: auto !important;
     -webkit-overflow-scrolling: touch;
     position: relative;
-    background: transparent; /* Transparent to show parent gradient */
+    background: transparent;
+    
+    /* Scroll padding pro sticky header - browser ví kde začít obsah */
+    scroll-padding-top: calc(16px + var(--saw-toolbar-height, 54px) + 40px);
 }
 
+/* Custom scrollbar */
 .sa-table-scroll::-webkit-scrollbar {
     width: 8px;
     height: 8px;
 }
 
 .sa-table-scroll::-webkit-scrollbar-track {
-    background: var(--saw-bg-secondary);
+    background: var(--saw-bg-secondary, #f1f5f9);
 }
 
 .sa-table-scroll::-webkit-scrollbar-thumb {
-    background: var(--saw-gray-300);
-    border-radius: var(--saw-radius-md);
+    background: var(--saw-gray-300, #cbd5e1);
+    border-radius: var(--saw-radius-md, 6px);
 }
 
 .sa-table-scroll::-webkit-scrollbar-thumb:hover {
-    background: var(--saw-gray-400);
+    background: var(--saw-gray-400, #94a3b8);
 }
 
+/* ============================================
+   SIDEBAR VARIANT
+   ============================================ */
 .sa-table-split--has-sidebar .sa-table-panel {
-    border-right: 1px solid var(--saw-border-color);
+    border-right: 1px solid var(--saw-border-color, #e2e8f0);
 }
 
+/* ============================================
+   SCROLL TO TOP BUTTON
+   ============================================ */
 .sa-scroll-to-top {
     position: fixed;
     bottom: 80px;
-    right: var(--saw-space-5);
+    right: var(--saw-space-5, 20px);
     width: 48px;
     height: 48px;
-    display: flex !important;
+    display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--saw-brand-600) !important;
-    color: #ffffff !important;
-    border: none !important;
-    border-radius: var(--saw-radius-full);
-    box-shadow: var(--saw-shadow-lg);
+    background: var(--saw-brand-600, #2563eb);
+    color: #ffffff;
+    border: none;
+    border-radius: var(--saw-radius-full, 9999px);
+    box-shadow: var(--saw-shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.1));
     cursor: pointer;
     opacity: 0;
     visibility: hidden;
     transform: translateY(20px);
-    transition: all var(--saw-transition-base);
+    transition: all var(--saw-transition-base, 0.2s);
     z-index: 1001;
     pointer-events: none;
 }
 
 .sa-scroll-to-top--visible {
-    opacity: 1 !important;
-    visibility: visible !important;
-    transform: translateY(0) !important;
-    pointer-events: auto !important;
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    pointer-events: auto;
 }
 
 .sa-scroll-to-top:hover {
-    background: var(--saw-brand-700) !important;
+    background: var(--saw-brand-700, #1d4ed8);
     transform: translateY(-2px);
 }
 
@@ -125,7 +122,7 @@
 @media (max-width: 768px) {
     .sa-scroll-to-top {
         bottom: 70px;
-        right: var(--saw-space-3);
+        right: var(--saw-space-3, 12px);
         width: 44px;
         height: 44px;
     }

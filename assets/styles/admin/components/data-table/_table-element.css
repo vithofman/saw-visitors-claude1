@@ -1,7 +1,7 @@
 /**
  * SAW Admin - Table Element (<table>, <thead>, <tbody>, <tr>, <td>)
  * @package SAW_Visitors
- * @version 7.0.0 - JS Transform Sticky
+ * @version 9.0.0 - FIXED: CSS Sticky thead
  */
 
 /* ============================================
@@ -11,7 +11,7 @@
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
-    background: transparent; /* Transparent to show parent gradient */
+    background: transparent;
 }
 
 /* ============================================
@@ -26,31 +26,31 @@
     display: table-row;
 }
 
-/* TH elementy - CSS STICKY pod toolbarem */
+/* TH elementy - STICKY pod toolbarem */
 .sa-table-thead th,
 .sa-table-th {
     display: table-cell;
     
-    /* STICKY - pod toolbarem */
+    /* STICKY POSITIONING */
+    /* toolbar je na top: 16px, takže thead je toolbar offset + toolbar height */
     position: sticky !important;
-    top: var(--saw-toolbar-height, 46px) !important; /* CSS proměnná s fallbackem */
+    top: calc(16px + var(--saw-toolbar-height, 58px)) !important;
     z-index: 99 !important;
-    background: rgba(255, 255, 255, 0.95) !important; /* Více opaque */
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    
+    /* Pozadí - velmi světle modrý pro záhlaví tabulky */
+    background: linear-gradient(180deg, #f0f9ff 0%, #e8f4fc 100%) !important;
     
     /* Styling */
-    padding: 8px var(--saw-space-4);
-    font-size: var(--saw-text-xs);
-    font-weight: var(--saw-font-semibold);
+    padding: 10px var(--saw-space-4, 16px);
+    font-size: var(--saw-text-xs, 0.75rem);
+    font-weight: var(--saw-font-semibold, 600);
     text-align: left;
-    color: var(--saw-text-secondary);
+    color: var(--saw-text-secondary, #64748b);
     text-transform: uppercase;
     letter-spacing: 0.5px;
     line-height: 1.3;
-    border-bottom: 2px solid var(--saw-border-color);
-    border-left: 1px solid transparent;
-    border-right: 1px solid transparent;
+    border-bottom: 2px solid rgba(59, 130, 246, 0.2);
+    white-space: nowrap;
 }
 
 .sa-table-thead th:first-child,
@@ -63,6 +63,32 @@
     border-right: none;
 }
 
+/* Sortable header styling */
+.sa-table-sortable {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+    transition: color var(--saw-transition-fast, 0.15s);
+}
+
+.sa-table-sortable:hover {
+    color: var(--saw-brand-600, #2563eb);
+}
+
+.sa-table-sortable svg {
+    width: 14px;
+    height: 14px;
+    opacity: 0.5;
+}
+
+.sa-table-sortable.active svg {
+    opacity: 1;
+    color: var(--saw-brand-600, #2563eb);
+}
+
 /* ============================================
    TBODY
    ============================================ */
@@ -70,43 +96,42 @@
     display: table-row-group;
 }
 
-.sa-table-tbody .sa-table-row {
+.sa-table-tbody .sa-table-row,
+.sa-table-tbody tr {
     display: table-row;
-    transition: background var(--saw-transition-fast);
+    transition: background var(--saw-transition-fast, 0.15s);
+    /* Scroll margin pro správnou viditelnost pod sticky header */
+    scroll-margin-top: calc(16px + var(--saw-toolbar-height, 58px) + 50px);
+}
+
+/* První řádek - extra horní padding pro jistotu viditelnosti */
+.sa-table-tbody .sa-table-row:first-child .sa-table-cell,
+.sa-table-tbody tr:first-child td {
+    padding-top: 16px;
 }
 
 .sa-table-tbody .sa-table-row:hover {
-    background: var(--saw-bg-secondary);
+    background: var(--saw-bg-secondary, #f8fafc);
 }
 
 .sa-table-tbody .sa-table-row td {
-    border-bottom: 1px solid var(--saw-border-color);
-    border-left: 1px solid transparent;
-    border-right: 1px solid transparent;
-}
-
-.sa-table-tbody .sa-table-row td:first-child {
-    border-left: none;
-}
-
-.sa-table-tbody .sa-table-row td:last-child {
-    border-right: none;
+    border-bottom: 1px solid var(--saw-border-color, #e2e8f0);
 }
 
 /* ============================================
    ROW STATES
    ============================================ */
 .sa-table-row--selected {
-    background: var(--saw-brand-50);
+    background: var(--saw-brand-50, #eff6ff);
 }
 
 .sa-table-row--active {
-    background: var(--saw-brand-50) !important;
-    border-left: 3px solid var(--saw-brand-600) !important;
+    background: var(--saw-brand-50, #eff6ff) !important;
+    border-left: 3px solid var(--saw-brand-600, #2563eb) !important;
 }
 
 .sa-table-row--active td {
-    background: var(--saw-brand-50) !important;
+    background: var(--saw-brand-50, #eff6ff) !important;
 }
 
 .sa-table-row--clickable {
@@ -118,9 +143,9 @@
    ============================================ */
 .sa-table-cell {
     display: table-cell;
-    padding: var(--saw-space-3) var(--saw-space-4);
-    font-size: var(--saw-text-sm);
-    color: var(--saw-text-primary);
+    padding: 12px var(--saw-space-4, 16px);
+    font-size: var(--saw-text-sm, 0.875rem);
+    color: var(--saw-text-primary, #0f172a);
     vertical-align: middle;
 }
 
@@ -130,6 +155,12 @@
 
 .sa-table-cell--right {
     text-align: right;
+}
+
+/* Bold cell variant */
+.sa-table-cell-bold,
+.saw-table-cell-bold {
+    font-weight: var(--saw-font-semibold, 600);
 }
 
 /* ============================================
@@ -146,7 +177,7 @@
 .sa-table-cell-image {
     max-width: 40px;
     max-height: 40px;
-    border-radius: var(--saw-radius-md);
+    border-radius: var(--saw-radius-md, 6px);
     object-fit: cover;
 }
 
@@ -156,27 +187,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--saw-bg-tertiary);
-    border-radius: var(--saw-radius-md);
-    color: var(--saw-text-muted);
+    background: var(--saw-bg-tertiary, #f1f5f9);
+    border-radius: var(--saw-radius-md, 6px);
+    color: var(--saw-text-muted, #94a3b8);
 }
 
 /* ============================================
    SORTABLE HEADERS
    ============================================ */
-.sa-table-sortable {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--saw-space-1);
-    color: inherit;
-    text-decoration: none;
-    cursor: pointer;
-}
-
-.sa-table-sortable:hover {
-    color: var(--saw-text-primary);
-}
-
 .sa-sort-icon {
     font-size: 0.75rem;
     opacity: 0.5;
@@ -184,7 +202,7 @@
 
 .sa-sort-icon--active {
     opacity: 1;
-    color: var(--saw-brand-600);
+    color: var(--saw-brand-600, #2563eb);
 }
 
 /* ============================================
@@ -193,83 +211,47 @@
 @media (max-width: 768px) {
     .sa-table-thead th,
     .sa-table-th {
-        top: var(--saw-toolbar-height-mobile, 42px) !important; /* CSS proměnná s fallbackem */
-        padding: 6px var(--saw-space-3);
-        font-size: 0.7rem;
-        white-space: nowrap; /* Zabraňuje zalamování textu v hlavičce */
-    }
-    
-    .sa-table-cell {
-        padding: var(--saw-space-2) var(--saw-space-3);
-        font-size: var(--saw-text-xs);
-        min-width: 100px; /* Minimální šířka sloupce na mobilu - zvýšeno z 80px */
-        word-wrap: break-word;
-        overflow-wrap: break-word;
-    }
-    
-    /* První sloupec (obrázek) - fixní šířka na mobilu */
-    .sa-table-tbody .sa-table-row td:first-child,
-    .sa-table-thead th:first-child {
-        min-width: 70px; /* Zvýšeno z 60px */
-        width: 70px;
-        max-width: 70px;
-        padding-left: var(--saw-space-2);
-        padding-right: var(--saw-space-2);
-        text-align: center;
-    }
-    
-    /* Druhý sloupec (obvykle název) - širší na mobilu */
-    .sa-table-tbody .sa-table-row td:nth-child(2),
-    .sa-table-thead th:nth-child(2) {
-        min-width: 120px; /* Širší pro název */
-    }
-    
-    /* Ostatní sloupce - flexibilní šířka */
-    .sa-table-tbody .sa-table-row td:nth-child(n+3),
-    .sa-table-thead th:nth-child(n+3) {
-        min-width: 90px;
-    }
-    
-    .sa-table-cell-image-wrapper,
-    .sa-table-cell-image,
-    .sa-table-cell-image-placeholder {
-        width: 50px; /* Větší na mobilu pro lepší viditelnost - zvýšeno z 40px */
-        height: 50px;
-    }
-    
-    /* Zajistit, že tabulka má horizontální scroll na mobilu */
-    .sa-table-scroll {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-}
-
-/* Extra malé obrazovky */
-@media (max-width: 480px) {
-    .sa-table-cell {
-        padding: var(--saw-space-2);
-        font-size: 0.7rem;
-        min-width: 90px; /* Mírně menší na velmi malých obrazovkách */
-    }
-    
-    .sa-table-thead th,
-    .sa-table-th {
-        padding: 4px var(--saw-space-2);
+        /* Mobile: toolbar je často vyšší kvůli wrappingu */
+        top: calc(16px + var(--saw-toolbar-height-mobile, var(--saw-toolbar-height, 80px))) !important;
+        padding: 8px var(--saw-space-3, 12px);
         font-size: 0.65rem;
     }
     
-    /* První sloupec ještě kompaktnější */
-    .sa-table-tbody .sa-table-row td:first-child,
-    .sa-table-thead th:first-child {
-        min-width: 60px;
-        width: 60px;
-        max-width: 60px;
+    /* První řádek na mobilu */
+    .sa-table-tbody .sa-table-row:first-child .sa-table-cell,
+    .sa-table-tbody tr:first-child td {
+        padding-top: 12px;
+    }
+    
+    .sa-table-cell {
+        padding: var(--saw-space-2, 8px) var(--saw-space-3, 12px);
+        font-size: var(--saw-text-xs, 0.75rem);
     }
     
     .sa-table-cell-image-wrapper,
     .sa-table-cell-image,
     .sa-table-cell-image-placeholder {
-        width: 45px;
-        height: 45px;
+        width: 36px;
+        height: 36px;
+    }
+}
+
+@media (max-width: 480px) {
+    .sa-table-thead th,
+    .sa-table-th {
+        padding: 6px var(--saw-space-2, 8px);
+        font-size: 0.6rem;
+    }
+    
+    .sa-table-cell {
+        padding: var(--saw-space-2, 8px);
+        font-size: 0.7rem;
+    }
+    
+    .sa-table-cell-image-wrapper,
+    .sa-table-cell-image,
+    .sa-table-cell-image-placeholder {
+        width: 32px;
+        height: 32px;
     }
 }
