@@ -1,10 +1,12 @@
 /**
  * SAW Admin - Table Wrapper & Split Layout
  * @package SAW_Visitors
- * @version 3.0.0
+ * @version 4.0.0 - Sticky Fix
  */
 
-/* Main split container */
+/* ============================================
+   MAIN SPLIT CONTAINER
+   ============================================ */
 .sa-table-split {
     display: flex;
     flex: 1;
@@ -13,34 +15,39 @@
     background: var(--saw-bg-primary);
 }
 
-/* Table panel (left side) */
+/* ============================================
+   TABLE PANEL (left side)
+   ============================================ */
 .sa-table-panel {
     flex: 1;
     display: flex;
     flex-direction: column;
     min-height: 0;
-    overflow: visible; /* Changed to visible to allow sticky positioning */
-    overflow-x: hidden; /* Prevent horizontal overflow */
+    overflow: hidden; /* KRITICKÉ: Panel NESCROLLUJE */
 }
 
-/* Scrollable table area - this is the scroll container for sticky */
+/* ============================================
+   SCROLL CONTAINER
+   Jediný element který scrolluje.
+   Obsahuje toolbar + tabulku.
+   ============================================ */
 .sa-table-scroll {
     flex: 1;
     overflow-y: auto;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    position: relative; /* Pro sticky positioning */
     padding-bottom: 60px; /* Footer height - prevent last row from being hidden */
-    position: relative; /* Create stacking context for sticky */
 }
 
-/* Odstranit šedý scroll indicator s šipkou */
+/* Odstranit pseudo-elementy */
 .sa-table-scroll::before,
 .sa-table-scroll::after {
     display: none !important;
     content: none !important;
 }
 
-/* Custom scrollbar styling */
+/* Custom scrollbar */
 .sa-table-scroll::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -60,22 +67,11 @@
 }
 
 /* ============================================
-   RESPONSIVE TABLE WRAPPER
+   RESPONSIVE
    ============================================ */
-
 @media (max-width: 768px) {
-    .sa-table-panel {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-    
     .sa-table-scroll {
-        overflow-x: auto;
         -webkit-overflow-scrolling: touch;
-    }
-    
-    .sa-table-split {
-        overflow-x: auto;
     }
 }
 
@@ -84,14 +80,12 @@
     border-right: 1px solid var(--saw-border-color);
 }
 
-
 /* ============================================
    SCROLL TO TOP BUTTON
    ============================================ */
-
 .sa-scroll-to-top {
     position: fixed;
-    bottom: 80px; /* Above footer */
+    bottom: 80px;
     right: var(--saw-space-5);
     width: 48px;
     height: 48px;
@@ -108,15 +102,15 @@
     visibility: hidden;
     transform: translateY(20px);
     transition: all var(--saw-transition-base);
-    z-index: 1001; /* Above footer (900) and header (1000) */
-    pointer-events: none; /* Disable when hidden */
+    z-index: 1001;
+    pointer-events: none;
 }
 
 .sa-scroll-to-top--visible {
     opacity: 1 !important;
     visibility: visible !important;
     transform: translateY(0) !important;
-    pointer-events: auto !important; /* Enable when visible */
+    pointer-events: auto !important;
 }
 
 .sa-scroll-to-top:hover {
@@ -144,4 +138,3 @@
         height: 44px;
     }
 }
-

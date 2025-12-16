@@ -1869,45 +1869,6 @@ console.log('🚀 SENDING AJAX REQUEST:', {
 
     
     $(document).ready(function () {
-        // #region agent log - Debug sticky header and table header appearance
-        setTimeout(function() {
-            const $toolbar = $('.sa-table-toolbar');
-            const $thead = $('.sa-table-thead');
-            const $th = $('.sa-table-thead th');
-            const $scrollContainer = $('.sa-table-scroll');
-            const $tablePanel = $('.sa-table-panel');
-            
-            if ($toolbar.length && $th.length) {
-                const toolbarHeight = $toolbar.outerHeight();
-                const toolbarComputed = window.getComputedStyle($toolbar[0]);
-                const thComputed = window.getComputedStyle($th[0]);
-                const scrollComputed = $scrollContainer.length ? window.getComputedStyle($scrollContainer[0]) : null;
-                const panelComputed = $tablePanel.length ? window.getComputedStyle($tablePanel[0]) : null;
-                
-                fetch('http://127.0.0.1:7242/ingest/e3a8ec2f-cd7c-4b57-85c0-5d7ba0c3caf0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'admin-table.js:1871',message:'Toolbar dimensions and styles',data:{toolbarHeight:toolbarHeight,toolbarPadding:toolbarComputed.padding,toolbarBorder:toolbarComputed.borderBottom,toolbarPosition:toolbarComputed.position,toolbarTop:toolbarComputed.top,toolbarZIndex:toolbarComputed.zIndex,scrollOverflow:scrollComputed?scrollComputed.overflow:'N/A',scrollOverflowY:scrollComputed?scrollComputed.overflowY:'N/A',panelOverflow:panelComputed?panelComputed.overflow:'N/A',panelOverflowY:panelComputed?panelComputed.overflowY:'N/A'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A1'})}).catch(()=>{});
-                
-                const thHeight = $th.first().outerHeight();
-                const thPadding = thComputed.padding;
-                const thLineHeight = thComputed.lineHeight;
-                const thBorder = thComputed.borderBottom;
-                const thPosition = thComputed.position;
-                const thTop = thComputed.top;
-                const thZIndex = thComputed.zIndex;
-                const rowBorder = window.getComputedStyle($thead.find('.sa-table-row')[0]).borderBottom;
-                
-                fetch('http://127.0.0.1:7242/ingest/e3a8ec2f-cd7c-4b57-85c0-5d7ba0c3caf0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'admin-table.js:1871',message:'Table header (th) dimensions and styles',data:{thHeight:thHeight,thPadding:thPadding,thLineHeight:thLineHeight,thBorder:thBorder,thPosition:thPosition,thTop:thTop,thZIndex:thZIndex,rowBorder:rowBorder},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B1'})}).catch(()=>{});
-                
-                // Check if sticky is actually working
-                const scrollTop = $scrollContainer.length ? $scrollContainer.scrollTop() : 0;
-                const thOffsetTop = $th.first().offset().top;
-                const toolbarOffsetTop = $toolbar.offset().top;
-                const scrollContainerOffsetTop = $scrollContainer.length ? $scrollContainer.offset().top : 0;
-                
-                fetch('http://127.0.0.1:7242/ingest/e3a8ec2f-cd7c-4b57-85c0-5d7ba0c3caf0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'admin-table.js:1871',message:'Sticky positioning check',data:{scrollTop:scrollTop,thOffsetTop:thOffsetTop,toolbarOffsetTop:toolbarOffsetTop,scrollContainerOffsetTop:scrollContainerOffsetTop,thRelativeToScroll:thOffsetTop-scrollContainerOffsetTop},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A2'})}).catch(()=>{});
-            }
-        }, 500);
-        // #endregion
-        
         initAdminTable();
         
         // REMOVED: Grouping initialization (replaced by tabs)
@@ -1941,25 +1902,6 @@ console.log('🚀 SENDING AJAX REQUEST:', {
         
         // Initialize global search handling
         handleGlobalSearch();
-        
-        // #region agent log - Debug sticky on scroll
-        const $scrollContainer = $('.sa-table-scroll');
-        if ($scrollContainer.length) {
-            $scrollContainer.on('scroll', function() {
-                const $toolbar = $('.sa-table-toolbar');
-                const $th = $('.sa-table-thead th');
-                if ($toolbar.length && $th.length) {
-                    const scrollTop = $scrollContainer.scrollTop();
-                    const thOffsetTop = $th.first().offset().top;
-                    const toolbarOffsetTop = $toolbar.offset().top;
-                    const scrollContainerOffsetTop = $scrollContainer.offset().top;
-                    const thComputed = window.getComputedStyle($th[0]);
-                    
-                    fetch('http://127.0.0.1:7242/ingest/e3a8ec2f-cd7c-4b57-85c0-5d7ba0c3caf0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'admin-table.js:1905',message:'Scroll event - sticky check',data:{scrollTop:scrollTop,thOffsetTop:thOffsetTop,toolbarOffsetTop:toolbarOffsetTop,scrollContainerOffsetTop:scrollContainerOffsetTop,thRelativeToScroll:thOffsetTop-scrollContainerOffsetTop,thPosition:thComputed.position,thTop:thComputed.top},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A3'})}).catch(()=>{});
-                }
-            });
-        }
-        // #endregion
     });
 
 })(jQuery);

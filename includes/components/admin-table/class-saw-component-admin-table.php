@@ -226,25 +226,26 @@ class SAW_Component_Admin_Table {
         } else {
             ?>
             <div class="sa-table-panel<?php echo !empty($this->config['infinite_scroll']['enabled']) ? ' sa-table-infinite-scroll-enabled' : ''; ?>">
-    <?php
-    $this->render_header();
-    $this->render_controls();
-    ?>
-    
-    <!-- Scrollovací oblast -->
-    <div class="sa-table-scroll">
-        <?php $this->render_table_or_empty(); ?>
-    </div>
-    
-    <!-- Pagination vždy dole -->
-    <?php $this->render_pagination(); ?>
-    
-    <?php
-    $this->render_modal();
-    $this->render_floating_button();
-    $this->render_scroll_to_top();
-    ?>
-</div>
+            <?php $this->render_header(); ?>
+            
+            <!-- Scrollovací oblast - OBSAHUJE toolbar i tabulku -->
+            <div class="sa-table-scroll">
+                <?php 
+                // ZMĚNA: Controls jsou UVNITŘ scroll containeru
+                $this->render_controls(); 
+                $this->render_table_or_empty(); 
+                ?>
+            </div>
+            
+            <!-- Pagination vždy dole -->
+            <?php $this->render_pagination(); ?>
+            
+            <?php
+            $this->render_modal();
+            $this->render_floating_button();
+            $this->render_scroll_to_top();
+            ?>
+        </div>
             <?php
         }
     }
@@ -255,14 +256,15 @@ class SAW_Component_Admin_Table {
     ?>
     <div class="sa-table-split<?php echo $sidebar_class; ?>">
         <div class="sa-table-panel<?php echo !empty($this->config['infinite_scroll']['enabled']) ? ' sa-table-infinite-scroll-enabled' : ''; ?>">
-            <?php
-            $this->render_header();
-            $this->render_controls();
-            ?>
+            <?php $this->render_header(); ?>
             
-            <!-- Scrollovací oblast -->
+            <!-- Scrollovací oblast - OBSAHUJE toolbar i tabulku -->
             <div class="sa-table-scroll">
-                <?php $this->render_table_or_empty(); ?>
+                <?php 
+                // ZMĚNA: Controls jsou UVNITŘ scroll containeru
+                $this->render_controls(); 
+                $this->render_table_or_empty(); 
+                ?>
             </div>
             
             <!-- Pagination vždy dole -->

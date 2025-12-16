@@ -1,58 +1,77 @@
 /**
  * SAW Admin - Table Element (<table>, <thead>, <tbody>, <tr>, <td>)
  * @package SAW_Visitors
- * @version 3.0.0
+ * @version 4.0.0 - Sticky Fix
  */
 
+/* ============================================
+   TABLE BASE
+   ============================================ */
 .sa-table-element {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate; /* ZMĚNA: separate místo collapse pro sticky */
+    border-spacing: 0; /* Stejný vizuální efekt jako collapse */
     background: var(--saw-bg-primary);
 }
 
-/* ZAJISTIT, ŽE THEAD JE VIDITELNÝ */
-.sa-table-element thead.sa-table-thead {
-    display: table-header-group !important;
-    background: var(--saw-bg-secondary) !important;
-}
-
-.sa-table-element .sa-table-thead {
-    display: table-header-group !important;
-    background: var(--saw-bg-secondary) !important;
-}
-
+/* ============================================
+   THEAD - STICKY POD TOOLBAREM
+   ============================================ */
 .sa-table-thead {
-    display: table-header-group !important;
-    background: var(--saw-bg-secondary);
+    display: table-header-group;
 }
 
-/* Sticky thead - must be applied to th elements, not thead */
-.sa-table-thead th {
-    position: sticky !important;
-    top: 38px !important; /* Below toolbar (4px padding * 2 + content ~30px = ~38px) */
-    z-index: 99 !important; /* Below toolbar (100) */
-    background: var(--saw-bg-secondary) !important; /* Solid background for sticky */
+/* TR v thead */
+.sa-table-thead .sa-table-row,
+.sa-table-thead tr {
+    display: table-row;
 }
 
-.sa-table-thead .sa-table-row {
-    display: table-row !important;
-    border-bottom: 2px solid var(--saw-border-color);
-}
-
+/* TH elementy - STICKY */
+.sa-table-thead th,
 .sa-table-th {
-    display: table-cell !important;
-    padding: 6px var(--saw-space-4) !important; /* Reduced from var(--saw-space-3) = 12px to 6px for compact header */
+    display: table-cell;
+    
+    /* STICKY POSITIONING */
+    position: sticky;
+    /* Toolbar výška: padding 8px*2 + content ~26px = ~42px */
+    top: 42px;
+    z-index: 99;
+    
+    /* Styling */
+    padding: 8px var(--saw-space-4);
+    background: var(--saw-bg-secondary);
     font-size: var(--saw-text-xs);
     font-weight: var(--saw-font-semibold);
     text-align: left;
     color: var(--saw-text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    line-height: 1.2 !important; /* Compact line-height */
+    line-height: 1.3;
+    border-bottom: 2px solid var(--saw-border-color);
+    border-left: 1px solid transparent; /* Pro správné zarovnání */
+    border-right: 1px solid transparent;
+}
+
+.sa-table-thead th:first-child,
+.sa-table-th:first-child {
+    border-left: none;
+}
+
+.sa-table-thead th:last-child,
+.sa-table-th:last-child {
+    border-right: none;
+}
+
+/* ============================================
+   TBODY
+   ============================================ */
+.sa-table-tbody {
+    display: table-row-group;
 }
 
 .sa-table-tbody .sa-table-row {
-    border-bottom: 1px solid var(--saw-border-color);
+    display: table-row;
     transition: background var(--saw-transition-fast);
 }
 
@@ -60,6 +79,28 @@
     background: var(--saw-bg-secondary);
 }
 
+.sa-table-tbody .sa-table-row td {
+    border-bottom: 1px solid var(--saw-border-color);
+    border-left: 1px solid transparent;
+    border-right: 1px solid transparent;
+}
+
+.sa-table-tbody .sa-table-row td:first-child {
+    border-left: none;
+}
+
+.sa-table-tbody .sa-table-row td:last-child {
+    border-right: none;
+}
+
+/* Poslední řádek - padding pro footer */
+.sa-table-tbody .sa-table-row:last-child td {
+    padding-bottom: 80px;
+}
+
+/* ============================================
+   ROW STATES
+   ============================================ */
 .sa-table-row--selected {
     background: var(--saw-brand-50);
 }
@@ -77,10 +118,15 @@
     cursor: pointer;
 }
 
+/* ============================================
+   CELLS
+   ============================================ */
 .sa-table-cell {
+    display: table-cell;
     padding: var(--saw-space-3) var(--saw-space-4);
     font-size: var(--saw-text-sm);
     color: var(--saw-text-primary);
+    vertical-align: middle;
 }
 
 .sa-table-cell--center {
@@ -91,4 +137,82 @@
     text-align: right;
 }
 
+/* ============================================
+   CELL CONTENT TYPES
+   ============================================ */
+.sa-table-cell-image-wrapper {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 
+.sa-table-cell-image {
+    max-width: 40px;
+    max-height: 40px;
+    border-radius: var(--saw-radius-md);
+    object-fit: cover;
+}
+
+.sa-table-cell-image-placeholder {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--saw-bg-tertiary);
+    border-radius: var(--saw-radius-md);
+    color: var(--saw-text-muted);
+}
+
+/* ============================================
+   SORTABLE HEADERS
+   ============================================ */
+.sa-table-sortable {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--saw-space-1);
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.sa-table-sortable:hover {
+    color: var(--saw-text-primary);
+}
+
+.sa-sort-icon {
+    font-size: 0.75rem;
+    opacity: 0.5;
+}
+
+.sa-sort-icon--active {
+    opacity: 1;
+    color: var(--saw-brand-600);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+    /* Toolbar je vyšší na mobile */
+    .sa-table-thead th,
+    .sa-table-th {
+        top: 52px; /* Vyšší toolbar na mobile */
+        padding: 6px var(--saw-space-3);
+        font-size: 0.7rem;
+    }
+    
+    .sa-table-cell {
+        padding: var(--saw-space-2) var(--saw-space-3);
+        font-size: var(--saw-text-xs);
+    }
+    
+    .sa-table-cell-image-wrapper,
+    .sa-table-cell-image,
+    .sa-table-cell-image-placeholder {
+        width: 32px;
+        height: 32px;
+    }
+}
