@@ -1,0 +1,106 @@
+/**
+ * SAW Bento - Contact Card
+ * 
+ * Styly pro kontaktní karty.
+ * Podporuje tmavou variantu.
+ * 
+ * @version 1.0.0
+ */
+
+/* ===== CONTACT CONTENT ===== */
+.bento-contact-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* ===== CONTACT ITEM ===== */
+.bento-contact-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: var(--bento-card-radius-sm);
+    text-decoration: none;
+    color: inherit;
+    transition: background-color var(--bento-transition-fast);
+}
+
+.bento-contact-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.bento-card:not(.bento-card--dark):not(.bento-card--blue) .bento-contact-item:hover {
+    background: var(--bento-bg-muted);
+}
+
+.bento-contact-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.bento-card:not(.bento-card--dark):not(.bento-card--blue) .bento-contact-icon {
+    background: var(--bento-brand-50);
+    color: var(--bento-brand-600);
+}
+
+.bento-contact-icon .saw-icon,
+.bento-contact-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.bento-contact-value {
+    font-size: 0.875rem;
+    font-weight: 500;
+    word-break: break-word;
+}
+
+/* Telefonní čísla nelámeme */
+a[href^="tel:"] .bento-contact-value {
+    white-space: nowrap;
+}
+
+/* ===== CONTACT BUTTON ===== */
+.bento-contact-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 20px;
+    margin-top: 8px;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: white;
+    text-decoration: none;
+    transition: all var(--bento-transition-fast);
+}
+
+.bento-contact-button:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.bento-card:not(.bento-card--dark):not(.bento-card--blue) .bento-contact-button {
+    background: var(--bento-brand-600);
+    border-color: var(--bento-brand-600);
+}
+
+.bento-card:not(.bento-card--dark):not(.bento-card--blue) .bento-contact-button:hover {
+    background: var(--bento-brand-700);
+    border-color: var(--bento-brand-700);
+}
+
+/* ===== HIDE DUPLICATE HEADER ICON ===== */
+.bento-contact .bento-card-header .bento-card-icon {
+    display: none;
+}
+

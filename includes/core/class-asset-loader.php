@@ -252,6 +252,23 @@ class SAW_Asset_Loader {
             
             // 7. THEMES
             'themes/_dark.css',
+            
+            // 8. BENTO DESIGN SYSTEM
+            'components/bento/_bento-variables.css',
+            'components/bento/_bento-grid.css',
+            'components/bento/_bento-card-base.css',
+            'components/bento/_bento-header.css',
+            'components/bento/_bento-stats.css',
+            'components/bento/_bento-info.css',
+            'components/bento/_bento-address.css',
+            'components/bento/_bento-contact.css',
+            'components/bento/_bento-list.css',
+            'components/bento/_bento-text.css',
+            'components/bento/_bento-meta.css',
+            'components/bento/_bento-animations.css',
+            'components/bento/_bento-responsive.css',
+            'components/bento/_bento-dark.css',
+            'components/bento/_bento-sidebar-integration.css',
         ];
         
         $base_path = SAW_VISITORS_PLUGIN_DIR . 'assets/styles/admin/';
@@ -596,6 +613,10 @@ class SAW_Asset_Loader {
             'saw-tabs-navigation' => [
                 'path' => 'assets/js/components/tabs-navigation.js',
                 'deps' => ['jquery', 'saw-app', 'saw-admin-table-component'],
+            ],
+            'saw-bento' => [
+                'path' => 'assets/js/components/bento.js',
+                'deps' => ['jquery', 'saw-app'],
             ],
         ];
         

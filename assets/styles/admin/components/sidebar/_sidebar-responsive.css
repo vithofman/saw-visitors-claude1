@@ -12,9 +12,9 @@
    ============================================ */
 @media (max-width: 1024px) and (min-width: 769px) {
     .sa-sidebar {
-        /* Tablet width: 360px (zúženo o 25% z původních 480px) */
-        width: 360px !important;
-        max-width: calc(100% - 40px) !important;
+        /* Narrower width on tablet - approximately 67% of desktop (480px vs 720px) */
+        width: 480px !important;
+        max-width: calc(100% - 0px) !important;
         height: calc(100vh - var(--saw-bottom-nav-height, 52px)) !important;
         height: calc(100dvh - var(--saw-bottom-nav-height, 52px)) !important;
         bottom: var(--saw-bottom-nav-height, 52px) !important;
@@ -22,9 +22,8 @@
     }
     
     .sa-sidebar--nested {
-        /* Nested tablet width: 330px (zúženo o 25% z původních 440px) */
-        width: 330px !important;
-        max-width: calc(100% - 60px) !important;
+        width: 440px !important;
+        max-width: calc(100% - 80px) !important;
     }
     
     .sa-sidebar-header {
@@ -33,10 +32,19 @@
         height: 56px;
     }
     
+    /* Reduced padding on tablet - content fills more sidebar width */
     .sa-sidebar-content {
-        padding: var(--saw-space-3);
-        /* Extra padding at bottom for scrolling to last items */
+        padding: 0 !important;
         padding-bottom: var(--saw-space-10, 40px) !important;
+    }
+    
+    .sa-detail-wrapper,
+    .sa-detail-content-wrapper {
+        padding: var(--saw-space-2) !important;
+    }
+    
+    .sa-form-section-content {
+        padding: var(--saw-space-3) !important;
     }
     
     .sa-sidebar-footer {

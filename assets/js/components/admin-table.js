@@ -558,7 +558,7 @@
             const $sidebar = $button.closest('.saw-sidebar, .sa-sidebar');
             const entity = $sidebar.data('entity');
             const currentId = parseInt($sidebar.data('current-id') || 0);
-            const direction = $button.hasClass('saw-sidebar-prev') ? 'prev' : 'next';
+            const direction = ($button.hasClass('saw-sidebar-prev') || $button.hasClass('sa-sidebar-prev')) ? 'prev' : 'next';
 
             console.log('🔄 Sidebar navigation clicked:', {
                 entity,

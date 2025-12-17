@@ -1,13 +1,14 @@
 <?php
 /**
- * Branches Detail Sidebar Template
+ * Branches Detail Sidebar Template - BENTO DESIGN
  *
- * SPRÁVNÁ VERZE - stejná struktura jako visitors/companies
- * Header se renderuje externě v detail-sidebar.php
+ * Moderní Bento Box design systém pro zobrazení detailu pobočky.
+ * Asymetrický grid s kartami různých velikostí, firemní barvy.
  *
  * @package     SAW_Visitors
  * @subpackage  Modules/Branches
- * @version     19.0.0 - ADDED: Translation support
+ * @version     20.0.0 - BENTO DESIGN SYSTEM
+ * @since       4.0.0
  */
 
 if (!defined('ABSPATH')) {
@@ -78,231 +79,237 @@ if (!empty($item['id'])) {
         $branch_id
     ), ARRAY_A) ?: array();
 }
+
+// ============================================
+// BUILD HEADER BADGES
+// ============================================
+$badges = [];
+
+if (!empty($item['is_headquarters'])) {
+    $badges[] = [
+        'label' => $tr('badge_headquarters', 'Sídlo firmy'),
+        'variant' => 'primary',
+        'icon' => '🏢',
+    ];
+}
+
+if (!empty($item['is_active'])) {
+    $badges[] = [
+        'label' => $tr('status_active', 'Aktivní'),
+        'variant' => 'success',
+        'dot' => true,
+    ];
+} else {
+    $badges[] = [
+        'label' => $tr('status_inactive', 'Neaktivní'),
+        'variant' => 'warning',
+    ];
+}
+
+// ============================================
+// RENDER BENTO GRID
+// ============================================
 ?>
 
-<!-- Header with image is rendered by detail-sidebar.php -->
-
-<div class="sa-detail-wrapper">
-    <div class="sa-detail-stack">
+<div class="sa-detail-wrapper bento-wrapper">
+    <?php 
+    // Initialize Bento
+    if (function_exists('saw_bento_start')) {
         
-        <!-- STATISTICS -->
-        <div class="sa-detail-section">
-            <div class="sa-detail-section-head">
-                <h4 class="sa-detail-section-title">📊 <?php echo esc_html($tr('section_statistics', 'Statistiky')); ?></h4>
-            </div>
-            <div class="sa-detail-section-body">
-                <div class="sa-detail-field">
-                    <span class="sa-detail-field-label"><?php echo esc_html($tr('stat_departments', 'Oddělení')); ?></span>
-                    <span class="sa-detail-field-value"><strong><?php echo $departments_count; ?></strong></span>
-                </div>
-                <div class="sa-detail-field">
-                    <span class="sa-detail-field-label"><?php echo esc_html($tr('stat_visits', 'Návštěv')); ?></span>
-                    <span class="sa-detail-field-value"><strong><?php echo $visits_count; ?></strong></span>
-                </div>
-                <div class="sa-detail-field">
-                    <span class="sa-detail-field-label"><?php echo esc_html($tr('stat_visitors', 'Návštěvníků')); ?></span>
-                    <span class="sa-detail-field-value"><strong><?php echo $visitors_count; ?></strong></span>
-                </div>
-            </div>
-        </div>
+        // Start Bento Grid
+        saw_bento_start('bento-branches');
         
-        <!-- ADDRESS -->
-        <?php 
+        // ================================
+        // HEADER
+        // ================================
+        saw_bento_header([
+            'icon' => 'building-2',
+            'module' => 'branches',
+            'module_label' => $tr('module_name', 'Pobočky'),
+            'id' => $item['id'],
+            'title' => $item['name'] ?? $tr('unnamed', 'Bez názvu'),
+            'subtitle' => !empty($item['is_headquarters']) ? $tr('badge_headquarters', 'Sídlo firmy') : $tr('badge_branch', 'Pobočka'),
+            'badges' => $badges,
+            'nav_enabled' => true,
+            'stripe' => true,
+            'image_url' => $item['image_url'] ?? '',
+            'close_url' => $close_url,
+        ]);
+        
+        // ================================
+        // STATISTICS (3 stat cards)
+        // ================================
+        saw_bento_stat([
+            'icon' => 'building',
+            'value' => $departments_count,
+            'label' => $tr('stat_departments', 'Oddělení'),
+            'variant' => 'light-blue',
+            'link' => home_url('/admin/departments/?branch_id=' . intval($item['id'])),
+        ]);
+        
+        saw_bento_stat([
+            'icon' => 'clipboard-list',
+            'value' => $visits_count,
+            'label' => $tr('stat_visits', 'Návštěv'),
+            'variant' => 'default',
+            'link' => home_url('/admin/visits/?branch_id=' . intval($item['id'])),
+        ]);
+        
+        saw_bento_stat([
+            'icon' => 'users',
+            'value' => $visitors_count,
+            'label' => $tr('stat_visitors', 'Návštěvníků'),
+            'variant' => 'default',
+            'link' => home_url('/admin/visitors/?branch_id=' . intval($item['id'])),
+        ]);
+        
+        // ================================
+        // ADDRESS (if exists)
+        // ================================
         $has_address = !empty($item['street']) || !empty($item['city']) || !empty($item['postal_code']);
-        if ($has_address): 
-        ?>
-        <div class="sa-detail-section">
-            <div class="sa-detail-section-head">
-                <h4 class="sa-detail-section-title">📍 <?php echo esc_html($tr('section_address', 'Adresa')); ?></h4>
-            </div>
-            <div class="sa-detail-section-body">
-                <?php if (!empty($item['street'])): ?>
-                <div class="sa-detail-field">
-                    <span class="sa-detail-field-label"><?php echo esc_html($tr('field_street', 'Ulice')); ?></span>
-                    <span class="sa-detail-field-value"><?php echo esc_html($item['street']); ?></span>
-                </div>
-                <?php endif; ?>
-                
-                <?php if (!empty($item['city']) || !empty($item['postal_code'])): ?>
-                <div class="sa-detail-field">
-                    <span class="sa-detail-field-label"><?php echo esc_html($tr('field_city_zip', 'Město a PSČ')); ?></span>
-                    <span class="sa-detail-field-value"><?php 
-                        $city_parts = array();
-                        if (!empty($item['postal_code'])) $city_parts[] = $item['postal_code'];
-                        if (!empty($item['city'])) $city_parts[] = $item['city'];
-                        echo esc_html(implode(' ', $city_parts));
-                    ?></span>
-                </div>
-                <?php endif; ?>
-                
-                <?php if (!empty($item['country']) && $item['country'] !== 'CZ'): ?>
-                <div class="sa-detail-field">
-                    <span class="sa-detail-field-label"><?php echo esc_html($tr('field_country', 'Země')); ?></span>
-                    <span class="sa-detail-field-value"><?php echo esc_html($item['country']); ?></span>
-                </div>
-                <?php endif; ?>
-            </div>
-        </div>
-        <?php endif; ?>
+        if ($has_address) {
+            saw_bento_address([
+                'icon' => 'map-pin',
+                'title' => $tr('section_address', 'Adresa'),
+                'subtitle' => !empty($item['is_headquarters']) ? $tr('main_headquarters', 'Hlavní sídlo') : '',
+                'street' => $item['street'] ?? '',
+                'city' => $item['city'] ?? '',
+                'zip' => $item['postal_code'] ?? '',
+                'country' => $item['country'] ?? '',
+                'highlight_city' => true,
+                'colspan' => 2,
+                'show_map_link' => true,
+            ]);
+        }
         
-        <!-- CONTACT -->
-        <?php if (!empty($item['phone']) || !empty($item['email'])): ?>
-        <div class="sa-detail-section">
-            <div class="sa-detail-section-head">
-                <h4 class="sa-detail-section-title">📞 <?php echo esc_html($tr('section_contact', 'Kontakt')); ?></h4>
-            </div>
-            <div class="sa-detail-section-body">
-                <?php if (!empty($item['phone'])): ?>
-                <div class="sa-detail-field">
-                    <span class="sa-detail-field-label"><?php echo esc_html($tr('field_phone', 'Telefon')); ?></span>
-                    <span class="sa-detail-field-value">
-                        <a href="tel:<?php echo esc_attr(str_replace(' ', '', $item['phone'])); ?>" class="sa-link">
-                            <?php echo esc_html($item['phone']); ?>
-                        </a>
-                    </span>
-                </div>
-                <?php endif; ?>
-                
-                <?php if (!empty($item['email'])): ?>
-                <div class="sa-detail-field">
-                    <span class="sa-detail-field-label"><?php echo esc_html($tr('field_email', 'Email')); ?></span>
-                    <span class="sa-detail-field-value">
-                        <a href="mailto:<?php echo esc_attr($item['email']); ?>" class="sa-link">
-                            <?php echo esc_html($item['email']); ?>
-                        </a>
-                    </span>
-                </div>
-                <?php endif; ?>
-            </div>
-        </div>
-        <?php endif; ?>
+        // ================================
+        // CONTACT (if exists)
+        // ================================
+        $has_contact = !empty($item['phone']) || !empty($item['email']);
+        if ($has_contact) {
+            saw_bento_contact([
+                'icon' => 'phone',
+                'title' => $tr('section_contact', 'Kontakt'),
+                'phone' => $item['phone'] ?? '',
+                'email' => $item['email'] ?? '',
+                'variant' => 'dark',
+                'colspan' => 1,
+            ]);
+        }
         
-        <!-- INFO -->
-        <div class="sa-detail-section">
-            <div class="sa-detail-section-head">
-                <h4 class="sa-detail-section-title">ℹ️ <?php echo esc_html($tr('section_info', 'Informace')); ?></h4>
-            </div>
-            <div class="sa-detail-section-body">
-                <div class="sa-detail-field">
-                    <span class="sa-detail-field-label">ID</span>
-                    <span class="sa-detail-field-value"><code><?php echo intval($item['id']); ?></code></span>
-                </div>
-                
-                <?php if (!empty($item['code'])): ?>
-                <div class="sa-detail-field">
-                    <span class="sa-detail-field-label"><?php echo esc_html($tr('field_code', 'Kód pobočky')); ?></span>
-                    <span class="sa-detail-field-value"><code><?php echo esc_html($item['code']); ?></code></span>
-                </div>
-                <?php endif; ?>
-                
-                <div class="sa-detail-field">
-                    <span class="sa-detail-field-label"><?php echo esc_html($tr('field_type', 'Typ')); ?></span>
-                    <span class="sa-detail-field-value">
-                        <?php if (!empty($item['is_headquarters'])): ?>
-                            <span class="sa-badge sa-badge--info"><?php echo esc_html($tr('badge_headquarters', 'Sídlo firmy')); ?></span>
-                        <?php else: ?>
-                            <?php echo esc_html($tr('badge_branch', 'Pobočka')); ?>
-                        <?php endif; ?>
-                    </span>
-                </div>
-                
-                <div class="sa-detail-field">
-                    <span class="sa-detail-field-label"><?php echo esc_html($tr('field_status', 'Status')); ?></span>
-                    <span class="sa-detail-field-value">
-                        <?php if (!empty($item['is_active'])): ?>
-                            <span class="sa-badge sa-badge--success"><?php echo esc_html($tr('status_active', 'Aktivní')); ?></span>
-                        <?php else: ?>
-                            <span class="sa-badge sa-badge--neutral"><?php echo esc_html($tr('status_inactive', 'Neaktivní')); ?></span>
-                        <?php endif; ?>
-                    </span>
-                </div>
-                
-                <?php if (!empty($item['sort_order'])): ?>
-                <div class="sa-detail-field">
-                    <span class="sa-detail-field-label"><?php echo esc_html($tr('field_sort_order', 'Pořadí')); ?></span>
-                    <span class="sa-detail-field-value"><?php echo intval($item['sort_order']); ?></span>
-                </div>
-                <?php endif; ?>
-            </div>
-        </div>
+        // ================================
+        // INFO
+        // ================================
+        $info_fields = [
+            [
+                'label' => 'ID',
+                'value' => $item['id'],
+                'type' => 'code',
+            ],
+        ];
         
-        <!-- DESCRIPTION -->
-        <?php if (!empty($item['description'])): ?>
-        <div class="sa-detail-section">
-            <div class="sa-detail-section-head">
-                <h4 class="sa-detail-section-title">📝 <?php echo esc_html($tr('section_description', 'Popis')); ?></h4>
-            </div>
-            <div class="sa-detail-section-body">
-                <p class="sa-detail-field-value"><?php echo nl2br(esc_html($item['description'])); ?></p>
-            </div>
-        </div>
-        <?php endif; ?>
+        if (!empty($item['code'])) {
+            $info_fields[] = [
+                'label' => $tr('field_code', 'Kód pobočky'),
+                'value' => $item['code'],
+                'type' => 'code',
+                'copyable' => true,
+            ];
+        }
         
-        <!-- NOTES -->
-        <?php if (!empty($item['notes'])): ?>
-        <div class="sa-detail-section">
-            <div class="sa-detail-section-head">
-                <h4 class="sa-detail-section-title">💬 <?php echo esc_html($tr('section_notes', 'Interní poznámky')); ?></h4>
-            </div>
-            <div class="sa-detail-section-body">
-                <p class="sa-detail-field-value sa-text-muted" style="font-style: italic;"><?php echo nl2br(esc_html($item['notes'])); ?></p>
-            </div>
-        </div>
-        <?php endif; ?>
+        $info_fields[] = [
+            'label' => $tr('field_type', 'Typ'),
+            'value' => !empty($item['is_headquarters']) ? $tr('badge_headquarters', 'Sídlo firmy') : $tr('badge_branch', 'Pobočka'),
+            'type' => 'badge',
+            'variant' => !empty($item['is_headquarters']) ? 'info' : 'default',
+        ];
         
-        <!-- DEPARTMENTS -->
-        <?php if (!empty($departments)): ?>
-        <div class="sa-detail-section">
-            <div class="sa-detail-section-head">
-                <h4 class="sa-detail-section-title">🏭 <?php echo esc_html($tr('section_departments', 'Oddělení')); ?> <span class="sa-badge sa-badge--count"><?php echo $departments_count; ?></span></h4>
-            </div>
-            <div class="sa-detail-section-body sa-p-0">
-                <?php foreach ($departments as $dept): ?>
-                <a href="<?php echo esc_url(home_url('/admin/departments/' . intval($dept['id']) . '/')); ?>" 
-                   class="sa-department-link">
-                    <span class="sa-department-icon">
-                        <?php echo !empty($dept['is_active']) ? '🏭' : '⏸️'; ?>
-                    </span>
-                    <span class="sa-department-name">
-                        <?php echo esc_html($dept['name']); ?>
-                        <?php if (!empty($dept['department_number'])): ?>
-                            <span class="sa-department-number">#<?php echo esc_html($dept['department_number']); ?></span>
-                        <?php endif; ?>
-                    </span>
-                </a>
-                <?php endforeach; ?>
-                
-                <?php if ($departments_count > 5): ?>
-                <a href="<?php echo esc_url(home_url('/admin/departments/?branch_id=' . intval($item['id']))); ?>" 
-                   class="sa-department-show-all">
-                    → <?php echo esc_html($tr('show_all', 'Zobrazit všechna')); ?> (<?php echo $departments_count; ?>)
-                </a>
-                <?php endif; ?>
-            </div>
-        </div>
-        <?php endif; ?>
+        $info_fields[] = [
+            'label' => $tr('field_status', 'Status'),
+            'value' => !empty($item['is_active']) ? $tr('status_active', 'Aktivní') : $tr('status_inactive', 'Neaktivní'),
+            'type' => 'status',
+            'status' => !empty($item['is_active']) ? 'success' : 'default',
+            'dot' => true,
+        ];
         
-        <!-- METADATA -->
-        <div class="sa-detail-section">
-            <div class="sa-detail-section-head">
-                <h4 class="sa-detail-section-title">🕐 <?php echo esc_html($tr('section_metadata', 'Metadata')); ?></h4>
-            </div>
-            <div class="sa-detail-section-body">
-                <?php if (!empty($item['created_at_formatted'])): ?>
-                <div class="sa-detail-field">
-                    <span class="sa-detail-field-label"><?php echo esc_html($tr('field_created_at', 'Vytvořeno')); ?></span>
-                    <span class="sa-detail-field-value"><?php echo esc_html($item['created_at_formatted']); ?></span>
-                </div>
-                <?php endif; ?>
-                
-                <?php if (!empty($item['updated_at_formatted'])): ?>
-                <div class="sa-detail-field">
-                    <span class="sa-detail-field-label"><?php echo esc_html($tr('field_updated_at', 'Změněno')); ?></span>
-                    <span class="sa-detail-field-value"><?php echo esc_html($item['updated_at_formatted']); ?></span>
-                </div>
-                <?php endif; ?>
-            </div>
-        </div>
+        saw_bento_info([
+            'icon' => 'info',
+            'title' => $tr('section_info', 'Informace'),
+            'fields' => $info_fields,
+            'colspan' => 1,
+        ]);
         
-    </div>
+        // ================================
+        // DESCRIPTION (if exists)
+        // ================================
+        if (!empty($item['description'])) {
+            saw_bento_text([
+                'icon' => 'file-text',
+                'title' => $tr('section_description', 'Popis'),
+                'content' => $item['description'],
+                'colspan' => 2,
+            ]);
+        }
+        
+        // ================================
+        // NOTES (if exists)
+        // ================================
+        if (!empty($item['notes'])) {
+            saw_bento_text([
+                'icon' => 'file-text',
+                'title' => $tr('section_notes', 'Interní poznámky'),
+                'content' => $item['notes'],
+                'variant' => 'muted',
+                'colspan' => 2,
+            ]);
+        }
+        
+        // ================================
+        // DEPARTMENTS LIST (if exists)
+        // ================================
+        if (!empty($departments)) {
+            $dept_items = array_map(function($dept) {
+                return [
+                    'icon' => 'building',
+                    'name' => $dept['name'],
+                    'meta' => !empty($dept['department_number']) ? '#' . $dept['department_number'] : '',
+                    'url' => home_url('/admin/departments/' . intval($dept['id']) . '/'),
+                    'active' => !empty($dept['is_active']),
+                ];
+            }, $departments);
+            
+            saw_bento_list([
+                'icon' => 'building',
+                'title' => $tr('section_departments', 'Oddělení'),
+                'badge_count' => $departments_count,
+                'items' => $dept_items,
+                'show_all_url' => home_url('/admin/departments/?branch_id=' . intval($item['id'])),
+                'show_all_label' => $tr('show_all', 'Zobrazit všechna'),
+                'max_items' => 5,
+                'colspan' => 2,
+            ]);
+        }
+        
+        // ================================
+        // METADATA (always last, full width)
+        // ================================
+        saw_bento_meta([
+            'icon' => 'clock',
+            'title' => $tr('section_metadata', 'Metadata'),
+            'created_at' => $item['created_at_formatted'] ?? null,
+            'updated_at' => $item['updated_at_formatted'] ?? null,
+            'colspan' => 'full',
+            'compact' => true,
+        ]);
+        
+        // End Bento Grid
+        saw_bento_end();
+        
+    } else {
+        // Fallback - show error if Bento not loaded
+        echo '<div class="sa-alert sa-alert--warning">';
+        echo 'Bento design system není načten. ';
+        echo '</div>';
+    }
+    ?>
 </div>

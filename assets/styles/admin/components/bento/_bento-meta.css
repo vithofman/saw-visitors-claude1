@@ -1,0 +1,109 @@
+/**
+ * SAW Bento - Meta Card
+ * 
+ * Styly pro metadata karty (vytvořeno/změněno).
+ * 
+ * @version 1.0.0
+ */
+
+/* ===== META CONTENT ===== */
+.bento-meta-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* ===== META ITEM ===== */
+.bento-meta-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.bento-meta-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--bento-bg-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--bento-text-muted);
+    flex-shrink: 0;
+}
+
+.bento-meta-icon .saw-icon,
+.bento-meta-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.bento-meta-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.bento-meta-label {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--bento-text-muted);
+    margin-bottom: 2px;
+}
+
+.bento-meta-value {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--bento-text-primary);
+}
+
+.bento-meta-by {
+    font-size: 0.75rem;
+    color: var(--bento-text-secondary);
+    margin-top: 2px;
+}
+
+/* ===== COMPACT VARIANT (full width footer style) ===== */
+.bento-meta--compact {
+    padding: var(--bento-card-padding-sm);
+    background: var(--bento-bg-muted);
+}
+
+.bento-meta--compact .bento-card-header {
+    display: none; /* Hide header in compact mode */
+}
+
+.bento-meta--compact .bento-meta-content {
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.bento-meta--compact .bento-meta-item {
+    flex: 0 1 auto;
+}
+
+.bento-meta--compact .bento-meta-icon {
+    width: 28px;
+    height: 28px;
+}
+
+/* ===== FULL WIDTH META ===== */
+.bento-meta.bento-colspan-full {
+    margin-top: 8px;
+}
+
+.bento-meta.bento-colspan-full.bento-meta--compact .bento-meta-content {
+    justify-content: flex-start;
+    gap: 48px;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 640px) {
+    .bento-meta--compact .bento-meta-content {
+        flex-direction: column;
+        gap: 12px;
+    }
+}
+

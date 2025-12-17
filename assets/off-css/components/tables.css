@@ -2636,24 +2636,13 @@
 /* Responsive sidebar width adjustments */
 @media (max-width: 1400px) {
     .saw-admin-table-split .saw-sidebar-wrapper {
-        width: 600px !important; /* Zúženo */
+        width: 680px !important; /* Scaled from 720px */
     }
 }
 
 @media (max-width: 1200px) {
     .saw-admin-table-split .saw-sidebar-wrapper {
-        width: 500px !important; /* Zúženo */
-    }
-}
-
-/* Tablet (769-1024px) - nové pravidlo */
-@media (max-width: 1024px) and (min-width: 769px) {
-    .saw-admin-table-split .saw-sidebar-wrapper {
-        width: 375px !important; /* Zúženo o 25% */
-    }
-    
-    .saw-admin-table-split .saw-sidebar-wrapper[data-is-nested="1"] {
-        width: 340px !important;
+        width: 640px !important; /* Scaled from 720px */
     }
 }
 

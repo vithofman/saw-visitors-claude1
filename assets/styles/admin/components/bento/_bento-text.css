@@ -1,0 +1,96 @@
+/**
+ * SAW Bento - Text Card
+ * 
+ * Styly pro textové karty (popis, poznámky).
+ * 
+ * @version 1.0.0
+ */
+
+/* ===== TEXT CONTENT ===== */
+.bento-text-content {
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--bento-text-secondary);
+    overflow: hidden;
+    position: relative;
+}
+
+.bento-text-content p {
+    margin: 0;
+}
+
+.bento-text-content p + p {
+    margin-top: 12px;
+}
+
+/* ===== MUTED VARIANT ===== */
+.bento-text--muted .bento-text-content {
+    font-style: italic;
+    color: var(--bento-text-muted);
+}
+
+/* ===== COLLAPSIBLE ===== */
+.bento-text-content[style*="max-height"] {
+    transition: max-height var(--bento-transition-slow);
+}
+
+.bento-text-content[style*="max-height"]::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40px;
+    background: linear-gradient(transparent, var(--bento-bg-card));
+    pointer-events: none;
+}
+
+.bento-text[data-expanded="true"] .bento-text-content[style*="max-height"]::after {
+    display: none;
+}
+
+/* ===== TOGGLE BUTTON ===== */
+.bento-text-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 10px;
+    margin-top: 8px;
+    background: var(--bento-bg-muted);
+    border: none;
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--bento-brand-600);
+    cursor: pointer;
+    transition: all var(--bento-transition-fast);
+}
+
+.bento-text-toggle:hover {
+    background: var(--bento-brand-50);
+}
+
+.bento-text-toggle-icon {
+    width: 16px;
+    height: 16px;
+    transition: transform var(--bento-transition);
+}
+
+.bento-text-toggle-less {
+    display: none;
+}
+
+.bento-text[data-expanded="true"] .bento-text-toggle-more {
+    display: none;
+}
+
+.bento-text[data-expanded="true"] .bento-text-toggle-less {
+    display: inline;
+}
+
+.bento-text[data-expanded="true"] .bento-text-toggle-icon {
+    transform: rotate(180deg);
+}
+

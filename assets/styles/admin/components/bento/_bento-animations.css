@@ -1,0 +1,185 @@
+/**
+ * SAW Bento - Animations
+ * 
+ * Hover efekty a animace pro Bento komponenty.
+ * 
+ * @version 1.0.0
+ */
+
+/* ===== CARD HOVER EFFECTS ===== */
+.bento-card {
+    transition: 
+        transform var(--bento-transition),
+        box-shadow var(--bento-transition),
+        background-color var(--bento-transition),
+        border-color var(--bento-transition);
+}
+
+.bento-card:hover {
+    transform: translateY(-2px) scale(1.01);
+    box-shadow: var(--bento-card-shadow-hover);
+}
+
+/* ===== PULSE ANIMATION ===== */
+@keyframes bento-pulse {
+    0%, 100% { 
+        opacity: 1; 
+    }
+    50% { 
+        opacity: 0.5; 
+    }
+}
+
+.bento-badge-dot {
+    animation: bento-pulse 2s infinite;
+}
+
+/* ===== FADE IN ANIMATION ===== */
+@keyframes bento-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.bento-grid {
+    animation: bento-fade-in 0.3s ease-out;
+}
+
+/* Staggered card animation */
+.bento-card {
+    opacity: 0;
+    animation: bento-fade-in 0.4s ease-out forwards;
+}
+
+.bento-card:nth-child(1) { animation-delay: 0ms; }
+.bento-card:nth-child(2) { animation-delay: 50ms; }
+.bento-card:nth-child(3) { animation-delay: 100ms; }
+.bento-card:nth-child(4) { animation-delay: 150ms; }
+.bento-card:nth-child(5) { animation-delay: 200ms; }
+.bento-card:nth-child(6) { animation-delay: 250ms; }
+.bento-card:nth-child(7) { animation-delay: 300ms; }
+.bento-card:nth-child(8) { animation-delay: 350ms; }
+.bento-card:nth-child(9) { animation-delay: 400ms; }
+.bento-card:nth-child(10) { animation-delay: 450ms; }
+
+/* Header should appear first */
+.bento-header {
+    animation-delay: 0ms;
+}
+
+/* ===== SLIDE ANIMATIONS ===== */
+@keyframes bento-slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes bento-slide-down {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===== SCALE ANIMATION ===== */
+@keyframes bento-scale-in {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* ===== SHIMMER EFFECT (loading) ===== */
+@keyframes bento-shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+.bento-loading {
+    background: linear-gradient(
+        90deg,
+        var(--bento-bg-muted) 25%,
+        var(--bento-bg-card) 50%,
+        var(--bento-bg-muted) 75%
+    );
+    background-size: 200% 100%;
+    animation: bento-shimmer 1.5s infinite;
+}
+
+/* ===== ICON ROTATION ===== */
+.bento-text-toggle-icon {
+    transition: transform var(--bento-transition);
+}
+
+.bento-text[data-expanded="true"] .bento-text-toggle-icon {
+    transform: rotate(180deg);
+}
+
+/* ===== ARROW SLIDE ===== */
+.bento-list-item-arrow {
+    opacity: 0;
+    transform: translateX(-4px);
+    transition: 
+        opacity var(--bento-transition-fast),
+        transform var(--bento-transition-fast);
+}
+
+.bento-list-item:hover .bento-list-item-arrow {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* ===== COPY BUTTON FEEDBACK ===== */
+.bento-copy-btn.copied {
+    color: var(--bento-success);
+}
+
+.bento-copy-btn.copied::after {
+    content: '✓';
+    position: absolute;
+    font-size: 10px;
+}
+
+/* ===== STATUS DOT PULSE ===== */
+.bento-status--success .bento-status-dot {
+    animation: bento-pulse 2s infinite;
+}
+
+/* ===== REDUCED MOTION ===== */
+@media (prefers-reduced-motion: reduce) {
+    .bento-card,
+    .bento-grid,
+    .bento-badge-dot,
+    .bento-text-toggle-icon,
+    .bento-list-item-arrow {
+        animation: none;
+        transition: none;
+    }
+    
+    .bento-card {
+        opacity: 1;
+    }
+}
+

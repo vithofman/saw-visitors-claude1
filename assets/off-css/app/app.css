@@ -1235,8 +1235,7 @@ body, html {
     }
     
     .saw-sidebar-wrapper {
-        /* Tablet width: 375px (zúženo o 25% z původních 500px) */
-        width: 375px !important;
+        width: 500px !important;
     }
 }
 

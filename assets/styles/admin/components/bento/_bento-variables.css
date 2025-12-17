@@ -1,0 +1,93 @@
+/**
+ * SAW Bento - CSS Variables
+ * 
+ * Definice všech CSS proměnných pro Bento design systém.
+ * Tyto proměnné využívají existující --saw-brand-* proměnné kde je to možné.
+ * 
+ * @version 1.0.0
+ */
+
+:root {
+    /* ===== BRAND COLORS (use existing tokens) ===== */
+    --bento-brand: var(--saw-brand-600, #005A8C);
+    --bento-brand-50: var(--saw-brand-50, #E8F4F8);
+    --bento-brand-100: var(--saw-brand-100, #C5E3EE);
+    --bento-brand-200: var(--saw-brand-200, #8BC5DB);
+    --bento-brand-300: var(--saw-brand-300, #4FA7C8);
+    --bento-brand-400: var(--saw-brand-400, #1A89B5);
+    --bento-brand-500: var(--saw-brand-500, #0077B5);
+    --bento-brand-600: var(--saw-brand-600, #005A8C);
+    --bento-brand-700: var(--saw-brand-700, #004A73);
+    --bento-brand-800: var(--saw-brand-800, #003D5C);
+    --bento-brand-900: var(--saw-brand-900, #002E45);
+    
+    /* ===== BACKGROUNDS ===== */
+    --bento-bg-page: #f1f5f9;
+    --bento-bg-card: #ffffff;
+    --bento-bg-card-hover: #f8fafc;
+    --bento-bg-muted: #f8fafc;
+    
+    /* ===== TEXT ===== */
+    --bento-text-primary: #1e293b;
+    --bento-text-secondary: #64748b;
+    --bento-text-muted: #94a3b8;
+    --bento-text-inverse: #ffffff;
+    
+    /* ===== BORDERS ===== */
+    --bento-border: #e2e8f0;
+    --bento-border-hover: var(--bento-brand-200);
+    --bento-border-focus: var(--bento-brand-400);
+    
+    /* ===== STATUS ===== */
+    --bento-success: #16a34a;
+    --bento-success-light: #dcfce7;
+    --bento-success-dark: #15803d;
+    --bento-warning: #f59e0b;
+    --bento-warning-light: #fef3c7;
+    --bento-warning-dark: #d97706;
+    --bento-danger: #dc2626;
+    --bento-danger-light: #fee2e2;
+    --bento-danger-dark: #b91c1c;
+    --bento-info: var(--bento-brand-500);
+    --bento-info-light: var(--bento-brand-50);
+    
+    /* ===== GRID ===== */
+    --bento-grid-gap: 16px;
+    --bento-grid-columns: 3;
+    
+    /* ===== CARDS ===== */
+    --bento-card-radius: 20px;
+    --bento-card-radius-sm: 12px;
+    --bento-card-padding: 20px;
+    --bento-card-padding-sm: 16px;
+    --bento-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    --bento-card-shadow-hover: 0 10px 40px rgba(0, 0, 0, 0.12);
+    
+    /* ===== HEADER ===== */
+    --bento-header-bg: linear-gradient(135deg, var(--bento-brand-600) 0%, var(--bento-brand-800) 100%);
+    --bento-header-radius: 24px;
+    
+    /* ===== TRANSITIONS ===== */
+    --bento-transition-fast: 150ms ease;
+    --bento-transition: 200ms ease;
+    --bento-transition-slow: 300ms ease;
+    
+    /* ===== Z-INDEX ===== */
+    --bento-z-card: 1;
+    --bento-z-card-hover: 2;
+    --bento-z-header: 10;
+    --bento-z-fab: 100;
+    
+    /* ===== TYPOGRAPHY ===== */
+    --bento-font-title: 600;
+    --bento-font-title-size: 2rem;
+    --bento-font-card-title: 0.875rem;
+    --bento-font-card-title-weight: 600;
+    --bento-font-stat: 2rem;
+    --bento-font-stat-weight: 700;
+    --bento-font-label: 0.75rem;
+    --bento-font-label-weight: 500;
+    --bento-font-label-transform: uppercase;
+    --bento-font-label-spacing: 0.05em;
+}
+

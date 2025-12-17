@@ -1,0 +1,152 @@
+/**
+ * SAW Bento - List Cards
+ * 
+ * Styly pro seznamové karty s odkazovanými položkami.
+ * 
+ * @version 1.0.0
+ */
+
+/* ===== LIST CONTENT ===== */
+.bento-list-content {
+    display: flex;
+    flex-direction: column;
+}
+
+/* ===== LIST ITEMS ===== */
+.bento-list-items {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.bento-list-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    margin: 0 -12px;
+    border-radius: var(--bento-card-radius-sm);
+    text-decoration: none;
+    color: inherit;
+    transition: background-color var(--bento-transition-fast);
+}
+
+.bento-list-item:hover {
+    background: var(--bento-bg-muted);
+}
+
+/* ===== ITEM ICON ===== */
+.bento-list-item-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.bento-list-item-icon .saw-icon,
+.bento-list-item-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.bento-list-item-icon--active {
+    background: var(--bento-success-light);
+    color: var(--bento-success);
+}
+
+.bento-list-item-icon--inactive {
+    background: var(--bento-bg-muted);
+    color: var(--bento-text-muted);
+}
+
+/* ===== ITEM INFO ===== */
+.bento-list-item-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.bento-list-item-name {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--bento-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color var(--bento-transition-fast);
+}
+
+.bento-list-item:hover .bento-list-item-name {
+    color: var(--bento-brand-600);
+}
+
+.bento-list-item-meta {
+    font-size: 0.75rem;
+    color: var(--bento-text-muted);
+    margin-top: 2px;
+}
+
+/* ===== ITEM ARROW ===== */
+.bento-list-item-arrow {
+    color: var(--bento-text-muted);
+    opacity: 0;
+    transform: translateX(-4px);
+    transition: 
+        opacity var(--bento-transition-fast),
+        transform var(--bento-transition-fast);
+}
+
+.bento-list-item-arrow .saw-icon,
+.bento-list-item-arrow svg {
+    width: 16px;
+    height: 16px;
+}
+
+.bento-list-item:hover .bento-list-item-arrow {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* ===== SHOW ALL LINK ===== */
+.bento-list-show-all {
+    display: block;
+    padding: 12px;
+    margin-top: 8px;
+    text-align: center;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--bento-brand-600);
+    text-decoration: none;
+    border-radius: var(--bento-card-radius-sm);
+    transition: background-color var(--bento-transition-fast);
+}
+
+.bento-list-show-all:hover {
+    background: var(--bento-brand-50);
+}
+
+/* ===== EMPTY STATE ===== */
+.bento-list-empty {
+    padding: 20px;
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--bento-text-muted);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 640px) {
+    .bento-list-item {
+        padding: 8px 10px;
+        margin: 0 -10px;
+    }
+    
+    .bento-list-item-arrow {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+

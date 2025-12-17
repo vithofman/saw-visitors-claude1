@@ -1,48 +1,138 @@
 /**
- * SAW Admin - Detail Cards (Visit Cards, Stat Cards)
+ * SAW Admin - Detail Cards (Modern Redesign)
+ * 
+ * Stats cards with hover effects and blue accents
+ *
  * @package SAW_Visitors
- * @version 3.0.0
+ * @version 4.0.0 - REDESIGN: Modern cards, hover states
  */
 
 .sa-detail-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: var(--saw-space-4);
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: var(--saw-space-3, 12px);
 }
 
 .sa-detail-card {
-    background: var(--saw-bg-primary);
-    border: 1px solid var(--saw-border-color);
-    border-radius: var(--saw-radius-lg);
-    padding: var(--saw-space-4);
+    background: var(--saw-bg-primary, #ffffff);
+    border: 1px solid var(--saw-border-color, #e2e8f0);
+    border-radius: var(--saw-radius-lg, 8px);
+    padding: var(--saw-space-4, 16px);
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.sa-detail-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--saw-brand-400, #60a5fa), var(--saw-brand-600, #2563eb));
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.sa-detail-card:hover {
+    border-color: var(--saw-brand-200, #bfdbfe);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+    transform: translateY(-2px);
+}
+
+.sa-detail-card:hover::before {
+    opacity: 1;
 }
 
 .sa-detail-card-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: var(--saw-space-3);
+    margin-bottom: var(--saw-space-3, 12px);
+}
+
+.sa-detail-card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, var(--saw-brand-50, #eff6ff) 0%, var(--saw-brand-100, #dbeafe) 100%);
+    border: 1px solid var(--saw-brand-200, #bfdbfe);
+    border-radius: var(--saw-radius-md, 6px);
+    color: var(--saw-brand-600, #2563eb);
+    transition: all 0.2s ease;
+}
+
+.sa-detail-card-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.sa-detail-card:hover .sa-detail-card-icon {
+    background: linear-gradient(135deg, var(--saw-brand-100, #dbeafe) 0%, var(--saw-brand-200, #bfdbfe) 100%);
+    transform: scale(1.05);
 }
 
 .sa-detail-card-title {
     margin: 0;
-    font-size: var(--saw-text-sm);
-    font-weight: var(--saw-font-semibold);
-    color: var(--saw-text-secondary);
+    font-size: var(--saw-text-sm, 0.875rem);
+    font-weight: var(--saw-font-semibold, 600);
+    color: var(--saw-text-secondary, #64748b);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .sa-detail-card-value {
-    font-size: var(--saw-text-2xl);
-    font-weight: var(--saw-font-bold);
-    color: var(--saw-text-primary);
+    font-size: var(--saw-text-3xl, 1.875rem);
+    font-weight: var(--saw-font-bold, 700);
+    color: var(--saw-text-primary, #1e293b);
+    line-height: 1.2;
 }
 
 .sa-detail-card-footer {
-    margin-top: var(--saw-space-3);
-    padding-top: var(--saw-space-3);
-    border-top: 1px solid var(--saw-border-color);
-    font-size: var(--saw-text-xs);
-    color: var(--saw-text-muted);
+    margin-top: var(--saw-space-3, 12px);
+    padding-top: var(--saw-space-3, 12px);
+    border-top: 1px solid var(--saw-border-light, #f1f5f9);
+    font-size: var(--saw-text-xs, 0.75rem);
+    color: var(--saw-text-muted, #94a3b8);
 }
 
+/* Stat variations */
+.sa-detail-card--success .sa-detail-card-value {
+    color: var(--saw-success, #22c55e);
+}
 
+.sa-detail-card--success .sa-detail-card-icon {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+    border-color: #86efac;
+    color: #16a34a;
+}
+
+.sa-detail-card--warning .sa-detail-card-value {
+    color: var(--saw-warning, #f59e0b);
+}
+
+.sa-detail-card--warning .sa-detail-card-icon {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-color: #fcd34d;
+    color: #d97706;
+}
+
+.sa-detail-card--danger .sa-detail-card-value {
+    color: var(--saw-danger, #ef4444);
+}
+
+.sa-detail-card--danger .sa-detail-card-icon {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    border-color: #fca5a5;
+    color: #dc2626;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .sa-detail-cards {
+        grid-template-columns: 1fr;
+    }
+}

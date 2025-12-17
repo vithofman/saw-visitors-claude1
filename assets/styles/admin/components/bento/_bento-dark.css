@@ -1,0 +1,138 @@
+/**
+ * SAW Bento - Dark Mode
+ * 
+ * Styly pro tmavý režim Bento design systému.
+ * 
+ * @version 1.0.0
+ */
+
+/* ===== DARK MODE VARIABLES ===== */
+[data-theme="dark"],
+.sa-sidebar[data-theme="dark"],
+body.saw-dark-mode {
+    /* Backgrounds */
+    --bento-bg-page: #1a1d2e;
+    --bento-bg-card: #22253a;
+    --bento-bg-card-hover: #2a2d42;
+    --bento-bg-muted: #2a2d42;
+    
+    /* Text */
+    --bento-text-primary: #e5e7eb;
+    --bento-text-secondary: #9ca3af;
+    --bento-text-muted: #6b7280;
+    
+    /* Borders */
+    --bento-border: rgba(156, 163, 175, 0.15);
+    --bento-border-hover: var(--bento-brand-400);
+    
+    /* Shadows */
+    --bento-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --bento-card-shadow-hover: 0 10px 40px rgba(0, 0, 0, 0.4);
+    
+    /* Brand (lighter in dark mode) */
+    --bento-brand: var(--bento-brand-400);
+    
+    /* Status (adjusted for dark) */
+    --bento-success: #34d399;
+    --bento-success-light: rgba(52, 211, 153, 0.15);
+    --bento-success-dark: #10b981;
+    --bento-warning: #fbbf24;
+    --bento-warning-light: rgba(251, 191, 36, 0.15);
+    --bento-warning-dark: #f59e0b;
+    --bento-danger: #f87171;
+    --bento-danger-light: rgba(248, 113, 113, 0.15);
+    --bento-danger-dark: #ef4444;
+}
+
+/* ===== CARD OVERRIDES ===== */
+/* Border is now in base card, dark mode just changes colors via variables */
+
+/* ===== ICON OVERRIDES ===== */
+[data-theme="dark"] .bento-card-icon,
+body.saw-dark-mode .bento-card-icon {
+    background: rgba(26, 137, 181, 0.2);
+    color: var(--bento-brand-400);
+}
+
+[data-theme="dark"] .bento-stat-icon,
+body.saw-dark-mode .bento-stat-icon {
+    background: rgba(26, 137, 181, 0.2);
+}
+
+/* ===== CODE OVERRIDES ===== */
+[data-theme="dark"] .bento-code,
+body.saw-dark-mode .bento-code {
+    background: rgba(26, 137, 181, 0.15);
+    color: var(--bento-brand-300);
+}
+
+/* ===== LIST OVERRIDES ===== */
+[data-theme="dark"] .bento-list-item:hover,
+body.saw-dark-mode .bento-list-item:hover {
+    background: var(--bento-bg-card-hover);
+}
+
+[data-theme="dark"] .bento-list-show-all:hover,
+body.saw-dark-mode .bento-list-show-all:hover {
+    background: rgba(26, 137, 181, 0.15);
+}
+
+/* ===== ADDRESS OVERRIDES ===== */
+[data-theme="dark"] .bento-address-field--highlight,
+body.saw-dark-mode .bento-address-field--highlight {
+    background: rgba(26, 137, 181, 0.15);
+}
+
+[data-theme="dark"] .bento-address-map-link,
+body.saw-dark-mode .bento-address-map-link {
+    background: var(--bento-bg-card-hover);
+}
+
+[data-theme="dark"] .bento-address-map-link:hover,
+body.saw-dark-mode .bento-address-map-link:hover {
+    background: rgba(26, 137, 181, 0.2);
+}
+
+/* ===== TEXT TOGGLE OVERRIDES ===== */
+[data-theme="dark"] .bento-text-toggle,
+body.saw-dark-mode .bento-text-toggle {
+    background: var(--bento-bg-card-hover);
+}
+
+[data-theme="dark"] .bento-text-toggle:hover,
+body.saw-dark-mode .bento-text-toggle:hover {
+    background: rgba(26, 137, 181, 0.2);
+}
+
+/* ===== TEXT CONTENT GRADIENT ===== */
+[data-theme="dark"] .bento-text-content[style*="max-height"]::after,
+body.saw-dark-mode .bento-text-content[style*="max-height"]::after {
+    background: linear-gradient(transparent, var(--bento-bg-card));
+}
+
+/* ===== HEADER OVERRIDES ===== */
+[data-theme="dark"] .bento-header,
+body.saw-dark-mode .bento-header {
+    /* Header zůstává stejný i v dark mode - má vlastní gradient */
+}
+
+/* ===== PREFERS-COLOR-SCHEME SUPPORT ===== */
+/* DISABLED: Dark mode should be explicit only via data-theme="dark" or .saw-dark-mode class
+ * Not automatically applied based on system preferences
+ *
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --bento-bg-page: #1a1d2e;
+        --bento-bg-card: #22253a;
+        --bento-bg-card-hover: #2a2d42;
+        --bento-bg-muted: #2a2d42;
+        --bento-text-primary: #e5e7eb;
+        --bento-text-secondary: #9ca3af;
+        --bento-text-muted: #6b7280;
+        --bento-border: rgba(156, 163, 175, 0.15);
+        --bento-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        --bento-card-shadow-hover: 0 10px 40px rgba(0, 0, 0, 0.4);
+    }
+}
+*/
+

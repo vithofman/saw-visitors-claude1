@@ -14,38 +14,32 @@
     left: 0;
     bottom: var(--saw-footer-height, 45px);
     width: var(--saw-sidebar-width, 260px);
-    
+
     /* Elegant gradient background - dark to light blue */
-    background: linear-gradient(
-        180deg,
-        #0a2540 0%,
-        #0d3a5c 30%,
-        #005A8C 70%,
-        #0077b6 100%
-    );
-    
-    /* Subtle pattern overlay for depth */
-    background-image: 
-        linear-gradient(
-            180deg,
+    background: linear-gradient(180deg,
             #0a2540 0%,
             #0d3a5c 30%,
             #005A8C 70%,
-            #0077b6 100%
-        ),
-        repeating-linear-gradient(
-            45deg,
+            #0077b6 100%);
+
+    /* Subtle pattern overlay for depth */
+    background-image:
+        linear-gradient(180deg,
+            #0a2540 0%,
+            #0d3a5c 30%,
+            #005A8C 70%,
+            #0077b6 100%),
+        repeating-linear-gradient(45deg,
             transparent,
             transparent 2px,
             rgba(255, 255, 255, 0.01) 2px,
-            rgba(255, 255, 255, 0.01) 4px
-        );
-    
+            rgba(255, 255, 255, 0.01) 4px);
+
     /* Shadow between sidebar and content - elegant depth */
-    box-shadow: 
+    box-shadow:
         4px 0 24px rgba(0, 0, 0, 0.15),
         1px 0 0 rgba(255, 255, 255, 0.05);
-    
+
     border-right: none;
     overflow-y: auto;
     overflow-x: hidden;
@@ -105,7 +99,7 @@
     .sa-sidebar-overlay {
         display: block;
     }
-    
+
     .sa-app-sidebar {
         position: fixed;
         top: 0;
@@ -115,16 +109,16 @@
         transform: translateX(-100%);
         transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         pointer-events: auto !important;
-        
+
         /* End above bottom-nav */
         bottom: var(--saw-bottom-nav-height, 52px) !important;
         height: calc(100vh - var(--saw-bottom-nav-height, 52px)) !important;
         height: calc(100dvh - var(--saw-bottom-nav-height, 52px)) !important;
-        
+
         /* Extra padding for safety */
         padding-bottom: var(--saw-space-4, 16px);
     }
-    
+
     .sa-app-sidebar--open {
         transform: translateX(0);
     }
@@ -157,7 +151,7 @@
     border-left: none;
     border-right: none;
     border-top: none;
-    box-shadow: 
+    box-shadow:
         0 4px 16px rgba(0, 0, 0, 0.1),
         inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
@@ -169,7 +163,7 @@
 .sa-sidebar-nav {
     padding: var(--saw-space-3) 0;
     display: flex !important;
-    flex-direction: column !important;
+    flex-direction: column;
     width: 100%;
     box-sizing: border-box;
 }
@@ -189,13 +183,11 @@
     display: block;
     height: 1px;
     margin: 0 var(--saw-space-4) var(--saw-space-2);
-    background: linear-gradient(
-        90deg,
-        transparent 0%,
-        rgba(255, 255, 255, 0.15) 20%,
-        rgba(255, 255, 255, 0.15) 80%,
-        transparent 100%
-    );
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.15) 20%,
+            rgba(255, 255, 255, 0.15) 80%,
+            transparent 100%);
 }
 
 .sa-nav-section:first-child::before {
@@ -303,7 +295,7 @@
     background: rgba(255, 255, 255, 0.15);
     color: #ffffff;
     font-weight: 600;
-    box-shadow: 
+    box-shadow:
         0 2px 8px rgba(0, 0, 0, 0.15),
         inset 0 0 0 1px rgba(255, 255, 255, 0.1);
     margin: 2px var(--saw-space-2) !important;
@@ -369,8 +361,8 @@
 }
 
 /* First section items - slightly larger */
-.sa-sidebar-nav > .sa-nav-item:first-child,
-.sa-sidebar-nav > a.sa-nav-item:nth-child(-n+3) {
+.sa-sidebar-nav>.sa-nav-item:first-child,
+.sa-sidebar-nav>a.sa-nav-item:nth-child(-n+3) {
     padding: 12px var(--saw-space-4) !important;
 }
 
@@ -379,7 +371,7 @@
    ============================================ */
 @media (max-width: 1024px) {
     .sa-app-sidebar {
-        box-shadow: 
+        box-shadow:
             8px 0 32px rgba(0, 0, 0, 0.3),
             1px 0 0 rgba(255, 255, 255, 0.05);
     }
@@ -393,12 +385,12 @@
         margin: var(--saw-space-3);
         padding: var(--saw-space-2);
     }
-    
+
     .sa-nav-heading {
         padding: var(--saw-space-2) var(--saw-space-4) var(--saw-space-1);
         font-size: 10px;
     }
-    
+
     .sa-sidebar-nav .sa-nav-item {
         padding: 10px var(--saw-space-3) !important;
     }

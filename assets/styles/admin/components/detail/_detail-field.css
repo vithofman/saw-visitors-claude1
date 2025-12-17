@@ -1,44 +1,128 @@
 /**
- * SAW Admin - Detail Fields (Label + Value)
+ * SAW Admin - Detail Fields (Modern Redesign)
+ * 
+ * Clean field layout with subtle hover effects
+ *
  * @package SAW_Visitors
- * @version 3.0.0
+ * @version 4.0.0 - REDESIGN: Clean layout, hover states, better spacing
  */
 
 .sa-detail-field {
     display: flex;
     flex-direction: row;
     align-items: flex-start;
-    gap: var(--saw-space-4);
-    margin-bottom: var(--saw-space-3);
+    gap: var(--saw-space-3, 12px);
+    padding: var(--saw-space-2, 8px) 0;
+    border-bottom: 1px solid var(--saw-border-light, #f1f5f9);
+    transition: all 0.15s ease;
+    border-radius: var(--saw-radius-sm, 4px);
 }
 
 .sa-detail-field:last-child {
-    margin-bottom: 0;
+    border-bottom: none;
+    padding-bottom: 0;
 }
 
+.sa-detail-field:first-child {
+    padding-top: 0;
+}
+
+/* Hover effect - extends to edges */
+.sa-detail-field:hover {
+    background: var(--saw-bg-secondary, #f8fafc);
+    margin-left: calc(var(--saw-space-4, 16px) * -1);
+    margin-right: calc(var(--saw-space-4, 16px) * -1);
+    padding-left: var(--saw-space-4, 16px);
+    padding-right: var(--saw-space-4, 16px);
+}
+
+/* Label styling */
 .sa-detail-field-label {
-    flex: 0 0 140px;
+    flex: 0 0 120px;
     display: block;
     margin-bottom: 0;
-    font-size: var(--saw-text-xs);
-    font-weight: var(--saw-font-semibold);
+    font-size: var(--saw-text-xs, 0.75rem);
+    font-weight: var(--saw-font-semibold, 600);
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: var(--saw-text-secondary);
+    color: var(--saw-text-muted, #94a3b8);
     text-align: right;
-    padding-top: 2px;
+    padding-top: 3px;
+    line-height: 1.4;
 }
 
+/* Value styling */
 .sa-detail-field-value {
     flex: 1;
-    font-size: var(--saw-text-sm);
-    color: var(--saw-text-primary);
-    line-height: var(--saw-leading-relaxed);
+    font-size: var(--saw-text-sm, 0.875rem);
+    color: var(--saw-text-primary, #1e293b);
+    line-height: 1.5;
+    word-break: break-word;
 }
 
-.sa-detail-field-value--empty {
-    color: var(--saw-text-muted);
+.sa-detail-field-value--empty,
+.sa-detail-field-value .sa-text-muted {
+    color: var(--saw-text-muted, #94a3b8);
     font-style: italic;
 }
 
+/* Code styling */
+.sa-detail-field-value code {
+    display: inline-block;
+    padding: 2px 8px;
+    background: var(--saw-bg-secondary, #f8fafc);
+    border: 1px solid var(--saw-border-color, #e2e8f0);
+    border-radius: var(--saw-radius-sm, 4px);
+    font-family: var(--saw-font-mono, monospace);
+    font-size: var(--saw-text-xs, 0.75rem);
+    color: var(--saw-brand-600, #2563eb);
+}
 
+/* Link styling */
+.sa-detail-field-value a.sa-link,
+.sa-detail-field-value a {
+    color: var(--saw-brand-600, #2563eb);
+    text-decoration: none;
+    transition: color 0.15s ease;
+    border-bottom: 1px solid transparent;
+}
+
+.sa-detail-field-value a:hover {
+    color: var(--saw-brand-700, #1d4ed8);
+    border-bottom-color: var(--saw-brand-300, #93c5fd);
+}
+
+/* Badge in value */
+.sa-detail-field-value .sa-badge {
+    font-size: 11px;
+}
+
+/* Strong text */
+.sa-detail-field-value strong {
+    font-weight: var(--saw-font-bold, 700);
+    color: var(--saw-text-primary, #1e293b);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 480px) {
+    .sa-detail-field {
+        flex-direction: column;
+        gap: var(--saw-space-1, 4px);
+    }
+    
+    .sa-detail-field-label {
+        flex: none;
+        text-align: left;
+        padding-top: 0;
+    }
+    
+    .sa-detail-field:hover {
+        margin-left: calc(var(--saw-space-3, 12px) * -1);
+        margin-right: calc(var(--saw-space-3, 12px) * -1);
+        padding-left: var(--saw-space-3, 12px);
+        padding-right: var(--saw-space-3, 12px);
+    }
+}

@@ -217,10 +217,12 @@ if ($has_change_history) {
 <div class="saw-detail-audit-history" id="<?php echo esc_attr($unique_id); ?>" data-storage-key="<?php echo esc_attr($storage_key); ?>">
     <button type="button" class="saw-audit-header" onclick="sawToggleAuditHistory('<?php echo esc_js($unique_id); ?>')">
         <div class="saw-audit-header-left">
-            <svg class="saw-audit-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"/>
-                <polyline points="12 6 12 12 16 14"/>
-            </svg>
+            <span class="saw-audit-icon-wrapper">
+                <svg class="saw-audit-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12 6 12 12 16 14"/>
+                </svg>
+            </span>
             <span class="saw-audit-title"><?php echo esc_html($tr('audit_title', 'Historie změn')); ?></span>
         </div>
         <div class="saw-audit-header-right">
@@ -555,13 +557,13 @@ if (typeof sawToggleAuditHistory === 'undefined') {
 
 @media (min-width: 768px) {
     .saw-detail-audit-history {
-        padding: 0 20px;
+        padding: 0 15px;
     }
 }
 
 @media (min-width: 1024px) {
     .saw-detail-audit-history {
-        padding: 0 24px;
+        padding: 0 15px;
     }
 }
 
@@ -570,10 +572,11 @@ if (typeof sawToggleAuditHistory === 'undefined') {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 16px;
-    background: #f1f5f9;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
+    padding: 16px 20px;
+    background: var(--bento-bg-card, #ffffff);
+    border: 1px solid var(--bento-border, #e2e8f0);
+    border-radius: var(--bento-card-radius, 20px);
+    box-shadow: var(--bento-card-shadow, 0 1px 3px rgba(0, 0, 0, 0.08));
     cursor: pointer;
     transition: all 0.2s ease;
     text-align: left;
@@ -581,25 +584,39 @@ if (typeof sawToggleAuditHistory === 'undefined') {
 }
 
 .saw-audit-header:hover {
-    background: #f1f5f9;
-    border-color: #cbd5e1;
+    transform: translateY(-2px);
+    box-shadow: var(--bento-card-shadow-hover, 0 10px 40px rgba(0, 0, 0, 0.12));
+    border-color: var(--bento-border-hover, #cbd5e1);
 }
 
 .saw-audit-header-left {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
 }
 
-.saw-audit-icon {
-    color: #64748b;
+.saw-audit-icon-wrapper {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--bento-brand-50, #E8F4F8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
 }
 
+.saw-audit-icon {
+    color: var(--bento-brand-600, #005A8C);
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+}
+
 .saw-audit-title {
-    font-size: 14px;
+    font-size: 0.875rem;
     font-weight: 600;
-    color: #1e293b;
+    color: var(--bento-text-primary, #1e293b);
 }
 
 .saw-audit-header-right {
@@ -609,13 +626,13 @@ if (typeof sawToggleAuditHistory === 'undefined') {
 }
 
 .saw-audit-summary {
-    font-size: 12px;
-    color: #64748b;
+    font-size: 0.75rem;
+    color: var(--bento-text-muted, #94a3b8);
 }
 
 .saw-audit-toggle-icon {
-    font-size: 12px;
-    color: #64748b;
+    font-size: 0.75rem;
+    color: var(--bento-text-muted, #94a3b8);
     transition: transform 0.2s ease;
     user-select: none;
 }
@@ -628,9 +645,9 @@ if (typeof sawToggleAuditHistory === 'undefined') {
 .saw-audit-content {
     margin-top: 8px;
     padding: 12px 16px;
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
+    background: var(--bento-bg-card, white);
+    border: 1px solid var(--bento-border, #e2e8f0);
+    border-radius: var(--bento-card-radius, 16px);
     animation: sawAuditSlideDown 0.3s ease-out;
 }
 

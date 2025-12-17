@@ -121,6 +121,9 @@ class SAW_Bootstrap {
             // Icons system
             'includes/core/class-saw-icons.php',
             
+            // Bento Design System
+            'includes/components/bento/class-saw-bento-renderer.php',
+            
             // CRITICAL: helpers.php must load AFTER middleware.php
             'includes/core/helpers.php',
             
@@ -146,6 +149,11 @@ class SAW_Bootstrap {
             if (file_exists($path)) {
                 require_once $path;
             }
+        }
+        
+        // Initialize Bento Design System (loads functions.php and card classes)
+        if (class_exists('SAW_Bento_Renderer')) {
+            SAW_Bento_Renderer::instance();
         }
         
         // Initialize Invitation Router early

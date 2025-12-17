@@ -1,113 +1,62 @@
 /**
- * SAW Admin - Sidebar Header
+ * SAW Admin - Sidebar Header (Modern Redesign)
+ * 
+ * Clean dark header with blue accents and smooth hover effects
+ *
  * @package SAW_Visitors
- * @version 3.0.0
+ * @version 4.0.0 - REDESIGN: Modern dark header, SVG icons
  */
 
 .sa-sidebar-header {
     display: flex !important;
     align-items: center !important;
-    justify-content: space-between !important; /* Title on left, nav buttons + close on right */
-    gap: var(--saw-space-2);
-    padding: var(--saw-space-2) var(--saw-space-3);
-    background: #0f172a !important; /* Dark, modern, elegant */
-    border-bottom: none;
-    flex-shrink: 0 !important; /* CRITICAL: Header must not shrink */
-    flex-grow: 0 !important;
-    min-height: 60px;
-    height: 60px;
-    color: #ffffff;
-    margin-bottom: 0 !important; /* No margin between header and blue section */
-    padding-bottom: var(--saw-space-2) !important; /* Minimal padding */
-}
-
-.sa-sidebar-header .sa-sidebar-heading {
-    color: #ffffff;
-}
-
-.sa-sidebar-header .sa-sidebar-icon {
-    color: #ffffff;
-}
-
-.sa-sidebar-header .sa-sidebar-nav-btn {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.2);
-    color: #ffffff;
-}
-
-.sa-sidebar-header .sa-sidebar-nav-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.3);
-    color: #ffffff;
-}
-
-/* Removed duplicate rules - see below */
-
-/* Navigation controls (prev/next) - now in header, horizontal layout, positioned on RIGHT */
-.sa-sidebar-header .sa-sidebar-nav {
-    display: flex !important;
-    align-items: center !important;
-    flex-direction: row !important; /* Horizontal layout - buttons side by side */
-    gap: var(--saw-space-2);
-    padding: 0 !important;
-    margin: 0 !important;
-    margin-left: auto !important; /* Push to right side */
-    flex: 0 0 auto !important; /* Cannot shrink, fixed size */
+    justify-content: space-between !important;
+    gap: var(--saw-space-2, 8px);
+    padding: var(--saw-space-3, 12px) var(--saw-space-4, 16px);
+    background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%) !important;
+    border-bottom: 1px solid rgba(59, 130, 246, 0.2);
     flex-shrink: 0 !important;
-    order: 2 !important; /* Ensure it's after title */
-    width: auto !important;
-    min-width: 100px !important; /* Reserve space for buttons */
-}
-
-.sa-sidebar-header .sa-sidebar-nav-btn {
-    display: flex !important;
-    flex-shrink: 0;
-}
-
-.sa-sidebar-nav-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px; /* Smaller buttons */
-    height: 28px;
-    padding: 0;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: var(--saw-radius-md);
+    flex-grow: 0 !important;
+    min-height: 61px;
+    height: 61px;
     color: #ffffff;
-    cursor: pointer;
-    transition: all var(--saw-transition-fast);
-}
-
-.sa-sidebar-nav-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.3);
-    color: #ffffff;
-}
-
-.sa-sidebar-nav-btn:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
 }
 
 /* Title area */
 .sa-sidebar-title {
     display: flex !important;
     align-items: center !important;
-    gap: var(--saw-space-3);
-    flex: 1 1 auto !important; /* Can shrink if needed */
+    gap: var(--saw-space-3, 12px);
+    flex: 1 1 auto !important;
     min-width: 0 !important;
-    max-width: calc(100% - 120px) !important; /* Reserve space for nav buttons */
-    padding: var(--saw-space-2) var(--saw-space-3);
-    order: 1 !important; /* Ensure it's before nav buttons */
-    overflow: hidden !important; /* Prevent overflow */
+    max-width: calc(100% - 120px) !important;
+    order: 1 !important;
+    overflow: hidden !important;
 }
 
+/* Icon container */
 .sa-sidebar-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, var(--saw-brand-500, #3b82f6) 0%, var(--saw-brand-600, #2563eb) 100%);
+    border-radius: var(--saw-radius-md, 6px);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+    transition: all 0.2s ease;
+}
+
+.sa-sidebar-icon svg {
     width: 20px;
     height: 20px;
     color: #ffffff;
+}
+
+.sa-sidebar-icon:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
 .sa-sidebar-title-text {
@@ -119,58 +68,213 @@
 }
 
 .sa-sidebar-module-name {
-    font-size: var(--saw-text-xs);
-    font-weight: var(--saw-font-semibold);
+    font-size: 10px;
+    font-weight: var(--saw-font-semibold, 600);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: rgba(255, 255, 255, 0.7);
+    letter-spacing: 1px;
+    color: var(--saw-brand-300, #93c5fd);
     line-height: 1.2;
 }
 
 .sa-sidebar-heading {
     margin: 0;
-    font-size: var(--saw-text-base);
-    font-weight: var(--saw-font-semibold);
+    font-size: var(--saw-text-base, 1rem);
+    font-weight: var(--saw-font-semibold, 600);
     color: #ffffff;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    line-height: 1.2;
+    line-height: 1.3;
 }
 
-/* Close button - now inside .sa-sidebar-nav */
-.sa-sidebar-header .sa-sidebar-close {
+/* Navigation controls */
+.sa-sidebar--active .sa-sidebar-nav,
+.sa-sidebar[data-mode="detail"] .sa-sidebar-nav,
+.sa-sidebar[data-mode="edit"] .sa-sidebar-nav,
+.sa-sidebar[data-mode="create"] .sa-sidebar-nav {
+    display: flex !important;
+    align-items: center !important;
+    flex-direction: row !important;
+    gap: var(--saw-space-2, 8px);
+    margin-left: auto !important;
+    flex: 0 0 auto !important;
+    order: 2 !important;
+}
+
+.sa-sidebar-nav-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: var(--saw-radius-md, 6px);
+    color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.sa-sidebar-nav-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.sa-sidebar-nav-btn:hover {
+    background: rgba(59, 130, 246, 0.3);
+    border-color: rgba(59, 130, 246, 0.5);
+    color: #ffffff;
+    transform: scale(1.05);
+}
+
+.sa-sidebar-nav-btn:active {
+    transform: scale(0.95);
+}
+
+.sa-sidebar-nav-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Close button */
+.sa-sidebar-close {
     display: flex !important;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     padding: 0;
-    background: rgba(239, 68, 68, 0.2) !important;
-    border: 1px solid rgba(239, 68, 68, 0.4) !important;
-    border-radius: var(--saw-radius-md);
+    background: rgba(239, 68, 68, 0.15) !important;
+    border: 1px solid rgba(239, 68, 68, 0.3) !important;
+    border-radius: var(--saw-radius-md, 6px);
     color: #ffffff !important;
     cursor: pointer;
-    transition: all var(--saw-transition-fast);
+    transition: all 0.2s ease;
     text-decoration: none;
-    font-size: 18px;
-    line-height: 1;
-    margin: 0;
-    flex-shrink: 0;
-    opacity: 1 !important;
-    visibility: visible !important;
+    margin-left: var(--saw-space-1, 4px);
 }
 
 .sa-sidebar-close svg {
-    width: 20px;
-    height: 20px;
-    display: block;
+    width: 18px;
+    height: 18px;
 }
 
 .sa-sidebar-close:hover {
-    background: var(--saw-danger);
-    border-color: var(--saw-danger);
+    background: var(--saw-danger, #ef4444) !important;
+    border-color: var(--saw-danger, #ef4444) !important;
+    color: #ffffff !important;
+    transform: scale(1.05);
+}
+
+.sa-sidebar-close:active {
+    transform: scale(0.95);
+}
+
+/* When nav has only close button (no prev/next), push it to the right */
+.sa-sidebar[data-mode="create"] .sa-sidebar-nav,
+.sa-sidebar[data-mode="edit"] .sa-sidebar-nav {
+    margin-left: auto !important;
+}
+
+.sa-sidebar[data-mode="create"] .sa-sidebar-nav .sa-sidebar-close,
+.sa-sidebar[data-mode="edit"] .sa-sidebar-nav .sa-sidebar-close {
+    margin-left: 0;
+}
+
+/* ============================================
+   FAB CONTAINER (Floating Action Buttons)
+   ============================================ */
+
+.sa-sidebar-fab-container {
+    position: absolute;
+    bottom: var(--saw-space-4, 16px);
+    right: var(--saw-space-4, 16px);
+    display: flex;
+    flex-direction: column;
+    gap: var(--saw-space-3, 12px);
+    z-index: 100;
+}
+
+.sa-sidebar-fab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    text-decoration: none;
+}
+
+.sa-sidebar-fab svg {
+    width: 22px;
+    height: 22px;
+}
+
+.sa-sidebar-fab--edit {
+    background: linear-gradient(135deg, var(--saw-brand-500, #3b82f6) 0%, var(--saw-brand-600, #2563eb) 100%);
     color: #ffffff;
 }
 
+.sa-sidebar-fab--edit:hover {
+    background: linear-gradient(135deg, var(--saw-brand-600, #2563eb) 0%, var(--saw-brand-700, #1d4ed8) 100%);
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+}
 
+.sa-sidebar-fab--delete {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: #ffffff;
+}
+
+.sa-sidebar-fab--delete:hover {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+}
+
+.sa-sidebar-fab:active {
+    transform: scale(0.95);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+    .sa-sidebar-header {
+        padding: var(--saw-space-2, 8px) var(--saw-space-3, 12px);
+        min-height: 56px;
+    }
+
+    .sa-sidebar-icon {
+        width: 32px;
+        height: 32px;
+    }
+
+    .sa-sidebar-icon svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .sa-sidebar-nav-btn,
+    .sa-sidebar-close {
+        width: 28px;
+        height: 28px;
+    }
+
+    .sa-sidebar-fab-container {
+        bottom: var(--saw-space-3, 12px);
+        right: var(--saw-space-3, 12px);
+    }
+
+    .sa-sidebar-fab {
+        width: 44px;
+        height: 44px;
+    }
+}

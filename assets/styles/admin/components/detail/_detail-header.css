@@ -1,78 +1,108 @@
 /**
- * SAW Admin - Detail Header (Universal)
+ * SAW Admin - Detail Header (Modern Redesign)
+ * 
+ * Elegant gradient header with blue theme and subtle animations
+ *
  * @package SAW_Visitors
- * @version 3.0.0
+ * @version 4.0.0 - REDESIGN: Clean, modern, blue theme
  */
 
 .sa-detail-header {
-    background: var(--saw-brand-600);
+    background: linear-gradient(135deg, var(--saw-brand-600, #2563eb) 0%, var(--saw-brand-700, #1d4ed8) 100%);
     color: #ffffff;
     overflow: hidden;
-    margin-left: calc(var(--saw-space-3) * -1) !important; /* Negative margin to extend over parent padding */
-    margin-right: calc(var(--saw-space-3) * -1) !important; /* Negative margin to extend over parent padding */
-    margin-top: 0 !important; /* No margin - directly after sidebar header */
-    margin-bottom: 0 !important;
-    padding: 0 !important; /* No padding - goes from sidebar header to edges */
-    width: calc(100% + var(--saw-space-3) * 2) !important; /* Extend width to compensate for negative margin */
+    margin: 0 calc(var(--saw-space-2, 8px) * -1) !important;
+    width: calc(100% + var(--saw-space-2, 8px) * 2) !important;
     box-sizing: border-box;
+    border-radius: 0;
+    position: relative;
+}
+
+/* Subtle gradient overlay for depth */
+.sa-detail-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        radial-gradient(ellipse at 20% 50%, rgba(255,255,255,0.12) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 40%);
+    pointer-events: none;
 }
 
 .sa-detail-header-inner {
-    padding: var(--saw-space-4) var(--saw-space-5) !important; /* Vertical and horizontal padding for content */
+    position: relative;
+    z-index: 1;
+    padding: var(--saw-space-5, 20px) var(--saw-space-4, 16px) !important;
     margin: 0 !important;
     width: 100%;
     box-sizing: border-box;
 }
 
 .sa-detail-header-title {
-    font-family: var(--saw-font-heading);
-    font-size: var(--saw-text-3xl);
-    font-weight: var(--saw-font-bold);
+    font-family: var(--saw-font-heading, inherit);
+    font-size: clamp(1.25rem, 4vw, 1.75rem);
+    font-weight: var(--saw-font-bold, 700);
     text-transform: uppercase;
-    letter-spacing: 1px;
-    margin: 0 0 var(--saw-space-2);
-    line-height: 1.1;
+    letter-spacing: 1.5px;
+    margin: 0 0 var(--saw-space-2, 8px);
+    line-height: 1.2;
     color: #ffffff !important;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
 .sa-detail-header-meta {
     display: flex;
     align-items: center;
-    gap: var(--saw-space-3);
+    gap: var(--saw-space-2, 8px);
     flex-wrap: wrap;
-    font-size: var(--saw-text-sm);
-    opacity: 0.9;
+    font-size: var(--saw-text-sm, 0.875rem);
 }
 
-.sa-detail-header-meta-item {
-    display: flex;
-    align-items: center;
-    gap: var(--saw-space-1);
+/* Badge styling inside header */
+.sa-detail-header-meta .sa-badge {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #ffffff;
+    backdrop-filter: blur(4px);
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: var(--saw-radius-full, 9999px);
+    font-size: 11px;
 }
 
-/* Diagonal stripe */
+/* Animated stripe - subtle, elegant */
 .sa-detail-header-stripe {
-    height: 8px;
+    height: 5px;
     width: 100%;
-    background-image: repeating-linear-gradient(
-        -45deg,
-        var(--saw-brand-600) 0px,
-        var(--saw-brand-600) 10px,
-        rgba(255, 255, 255, 0.25) 10px,
-        rgba(255, 255, 255, 0.25) 20px
+    background: linear-gradient(
+        90deg,
+        var(--saw-brand-500, #3b82f6) 0%,
+        var(--saw-brand-400, #60a5fa) 25%,
+        var(--saw-brand-500, #3b82f6) 50%,
+        var(--saw-brand-400, #60a5fa) 75%,
+        var(--saw-brand-500, #3b82f6) 100%
     );
+    background-size: 40px 100%;
+    animation: stripe-shimmer 3s linear infinite;
+    opacity: 0.7;
+}
+
+@keyframes stripe-shimmer {
+    0% { background-position: 0 0; }
+    100% { background-position: 40px 0; }
 }
 
 /* Responsive */
 @media (max-width: 768px) {
     .sa-detail-header-inner {
-        padding: var(--saw-space-4) var(--saw-space-4) !important; /* Smaller horizontal padding on mobile */
+        padding: var(--saw-space-4, 16px) var(--saw-space-3, 12px) !important;
     }
     
     .sa-detail-header-title {
-        font-size: var(--saw-text-2xl);
+        font-size: 1.25rem;
+        letter-spacing: 1px;
     }
 }
-
-

@@ -1,0 +1,94 @@
+/**
+ * SAW Bento - Sidebar Integration
+ * 
+ * Styly pro integraci Bento karet se stávajícím sidebar systémem.
+ * 
+ * @version 1.0.0
+ */
+
+/* ===== BENTO CONTENT WRAPPER ===== */
+.bento-content-wrapper {
+    padding: 0 !important;
+}
+
+.bento-content-wrapper .bento-wrapper {
+    padding: 0;
+}
+
+/* ===== SIDEBAR ADJUSTMENTS ===== */
+.sa-sidebar .bento-grid {
+    padding: 16px;
+    padding-top: 0;
+}
+
+.sa-sidebar .bento-header {
+    border-radius: 0;
+    margin: 0 -16px;
+    width: calc(100% + 32px);
+}
+
+.sa-sidebar-content .bento-content-wrapper:first-child .bento-grid {
+    padding-top: 0;
+}
+
+/* ===== REMOVE DUPLICATE HEADERS ===== */
+.bento-content-wrapper + .sa-detail-header,
+.bento-wrapper .sa-detail-header {
+    display: none;
+}
+
+/* ===== SIDEBAR WIDTH ADJUSTMENTS ===== */
+@media (min-width: 1200px) {
+    .sa-sidebar--active .bento-grid {
+        --bento-grid-columns: 3;
+    }
+}
+
+@media (max-width: 1199px) {
+    .sa-sidebar--active .bento-grid {
+        --bento-grid-columns: 2;
+    }
+}
+
+@media (max-width: 768px) {
+    .sa-sidebar--active .bento-grid {
+        --bento-grid-columns: 1;
+    }
+    
+    .sa-sidebar .bento-header {
+        margin: 0 -12px;
+        width: calc(100% + 24px);
+    }
+}
+
+/* ===== HEADER NAVIGATION INTEGRATION ===== */
+.sa-sidebar .bento-header .bento-nav-close {
+    /* Use existing close button if needed */
+}
+
+/* Link existing sidebar navigation to Bento */
+/* Hide old sidebar header when using Bento design */
+.sa-sidebar.bento-active .sa-sidebar-header {
+    display: none;
+}
+
+/* Ensure non-Bento modules still show header */
+.sa-sidebar:not(.bento-active) .sa-sidebar-header {
+    display: flex;
+}
+
+/* ===== FAB POSITION WITH BENTO ===== */
+.bento-content-wrapper ~ .sa-sidebar-fab-container,
+.bento-wrapper ~ .sa-sidebar-fab-container {
+    /* FAB buttons work normally */
+}
+
+/* ===== SMOOTH CONTENT TRANSITIONS ===== */
+.sa-sidebar-content {
+    transition: opacity 0.2s ease;
+}
+
+.sa-sidebar-content.loading {
+    opacity: 0.5;
+}
+

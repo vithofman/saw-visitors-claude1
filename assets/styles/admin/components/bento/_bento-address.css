@@ -1,0 +1,89 @@
+/**
+ * SAW Bento - Address Card
+ * 
+ * Styly pro adresní karty.
+ * 
+ * @version 1.0.0
+ */
+
+/* ===== ADDRESS CONTENT ===== */
+.bento-address-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.bento-address-row {
+    display: flex;
+    gap: 16px;
+}
+
+.bento-address-field {
+    flex: 1;
+}
+
+.bento-address-label {
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--bento-text-muted);
+    margin-bottom: 4px;
+}
+
+.bento-address-value {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--bento-text-primary);
+}
+
+/* ===== HIGHLIGHTED FIELD (ZIP) ===== */
+.bento-address-field--highlight {
+    background: var(--bento-brand-50);
+    padding: 10px 12px;
+    border-radius: var(--bento-card-radius-sm);
+}
+
+.bento-address-field--highlight .bento-address-value {
+    color: var(--bento-brand-700);
+    font-weight: 600;
+}
+
+/* ===== MAP LINK ===== */
+.bento-address-map-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+    padding: 8px 14px;
+    background: var(--bento-bg-muted);
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--bento-brand-600);
+    text-decoration: none;
+    transition: all var(--bento-transition-fast);
+}
+
+.bento-address-map-link:hover {
+    background: var(--bento-brand-50);
+    color: var(--bento-brand-700);
+}
+
+.bento-map-icon,
+.bento-address-map-link svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    vertical-align: middle;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 480px) {
+    .bento-address-row {
+        flex-direction: column;
+        gap: 8px;
+    }
+}
+

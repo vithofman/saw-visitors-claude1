@@ -1,7 +1,10 @@
 /**
- * SAW Admin - Sidebar Content
+ * SAW Admin - Sidebar Content (Modern Redesign)
+ * 
+ * Proper scroll container with smooth scrolling
+ *
  * @package SAW_Visitors
- * @version 4.2.0
+ * @version 4.0.0 - REDESIGN: Better scrolling, spacing
  * 
  * CRITICAL: min-height: 0 is required for flexbox scroll to work
  */
@@ -11,8 +14,9 @@
     min-height: 0 !important; /* CRITICAL: Allows flex child to shrink and enable proper scrolling */
     overflow-y: auto !important;
     overflow-x: hidden;
-    padding: 0 var(--saw-space-2) var(--saw-space-3) var(--saw-space-2);
+    padding: 0;
     -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
     
     /* Ensure content area fills available space */
     display: flex;
@@ -24,39 +28,46 @@
     flex-shrink: 0;
 }
 
+/* Custom scrollbar - subtle, modern */
 .sa-sidebar-content::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
 }
 
 .sa-sidebar-content::-webkit-scrollbar-track {
-    background: var(--saw-bg-secondary);
+    background: transparent;
 }
 
 .sa-sidebar-content::-webkit-scrollbar-thumb {
-    background: var(--saw-gray-300);
-    border-radius: var(--saw-radius-full);
+    background: var(--saw-gray-300, #d1d5db);
+    border-radius: var(--saw-radius-full, 9999px);
 }
 
 .sa-sidebar-content::-webkit-scrollbar-thumb:hover {
-    background: var(--saw-gray-400);
+    background: var(--saw-brand-300, #93c5fd);
+}
+
+/* Firefox scrollbar */
+.sa-sidebar-content {
+    scrollbar-width: thin;
+    scrollbar-color: var(--saw-gray-300, #d1d5db) transparent;
 }
 
 /* Detail content wrapper */
 .sa-detail-content-wrapper {
-    padding: var(--saw-space-3);
+    padding: var(--saw-space-3, 12px);
     flex-shrink: 0;
 }
 
 /* Detail wrapper */
 .sa-detail-wrapper {
-    padding: var(--saw-space-3);
+    padding: var(--saw-space-3, 12px);
     flex-shrink: 0;
 }
 
 .sa-detail-stack {
     display: flex;
     flex-direction: column;
-    gap: var(--saw-space-4);
+    gap: var(--saw-space-3, 12px);
 }
 
 /* Audit history and related sections need space at bottom */
@@ -64,4 +75,13 @@
 .sa-audit-history {
     flex-shrink: 0;
     margin-bottom: var(--saw-space-4, 16px);
+}
+
+/* Modern sidebar modifier */
+.sa-sidebar--modern {
+    position: relative;
+}
+
+.sa-sidebar--modern .sa-sidebar-content {
+    padding-bottom: 80px; /* Space for FAB buttons */
 }

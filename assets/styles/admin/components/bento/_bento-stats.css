@@ -1,0 +1,125 @@
+/**
+ * SAW Bento - Stat Cards
+ * 
+ * Styly pro statistické karty (číslo + label).
+ * 
+ * @version 1.0.0
+ */
+
+/* ===== STAT CARD ===== */
+.bento-stat {
+    text-align: center;
+    padding: var(--bento-card-padding);
+}
+
+.bento-stat-icon {
+    width: 40px;
+    height: 40px;
+    margin: 0 auto 12px;
+    border-radius: var(--bento-card-radius-sm);
+    background: var(--bento-brand-50);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--bento-brand-600);
+}
+
+.bento-stat-icon .saw-icon,
+.bento-stat-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* ===== STAT VARIANTS ===== */
+.bento-stat--light-blue .bento-stat-icon {
+    background: var(--bento-brand-100);
+}
+
+.bento-stat--blue .bento-stat-icon,
+.bento-stat--dark .bento-stat-icon {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+/* ===== VALUE ===== */
+.bento-stat-value {
+    font-size: var(--bento-font-stat);
+    font-weight: var(--bento-font-stat-weight);
+    color: var(--bento-text-primary);
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.bento-stat--blue .bento-stat-value,
+.bento-stat--dark .bento-stat-value {
+    color: white;
+}
+
+/* ===== LABEL ===== */
+.bento-stat-label {
+    font-size: 0.6875rem;
+    font-weight: var(--bento-font-label-weight);
+    text-transform: var(--bento-font-label-transform);
+    letter-spacing: var(--bento-font-label-spacing);
+    color: var(--bento-text-muted);
+}
+
+.bento-stat--light-blue .bento-stat-label {
+    color: var(--bento-brand-600);
+}
+
+.bento-stat--blue .bento-stat-label,
+.bento-stat--dark .bento-stat-label {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* ===== TREND ===== */
+.bento-stat-trend {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 8px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+}
+
+.bento-stat-trend--up {
+    background: var(--bento-success-light);
+    color: var(--bento-success);
+}
+
+.bento-stat-trend--down {
+    background: var(--bento-danger-light);
+    color: var(--bento-danger);
+}
+
+.bento-trend-icon {
+    width: 12px;
+    height: 12px;
+}
+
+/* ===== CLICKABLE STAT ===== */
+a.bento-stat {
+    text-decoration: none;
+    cursor: pointer;
+}
+
+a.bento-stat:hover {
+    transform: translateY(-4px) scale(1.02);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .bento-stat-value {
+        font-size: 1.75rem;
+    }
+    
+    .bento-stat-icon {
+        width: 36px;
+        height: 36px;
+        margin-bottom: 8px;
+    }
+}
+

@@ -1,72 +1,375 @@
 /**
- * SAW Admin - Detail Sections (Collapsible)
+ * SAW Admin - Detail Sections (Modern Redesign)
+ * 
+ * Clean cards with smooth hover effects and blue accents
+ *
  * @package SAW_Visitors
- * @version 3.0.0
+ * @version 4.0.0 - REDESIGN: Modern cards, hover states, SVG icons
  */
 
+/* ============================================
+   BASE SECTION CARD
+   ============================================ */
+
 .sa-detail-section {
-    background: var(--saw-bg-primary);
-    border: 1px solid var(--saw-border-color);
-    border-radius: var(--saw-radius-lg);
+    background: var(--saw-bg-primary, #ffffff);
+    border: 1px solid var(--saw-border-color, #e2e8f0);
+    border-radius: var(--saw-radius-lg, 8px);
     overflow: hidden;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.sa-detail-section:hover {
+    border-color: var(--saw-brand-200, #bfdbfe);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
 }
 
 .sa-detail-section + .sa-detail-section {
-    margin-top: var(--saw-space-4);
+    margin-top: var(--saw-space-3, 12px);
 }
 
-/* Section header */
+/* ============================================
+   SECTION HEADER
+   ============================================ */
+
 .sa-detail-section-head {
     display: flex;
     align-items: center;
-    gap: var(--saw-space-3);
-    padding: var(--saw-space-3) var(--saw-space-4);
-    background: var(--saw-bg-secondary);
-    cursor: pointer;
+    gap: var(--saw-space-3, 12px);
+    padding: var(--saw-space-3, 12px) var(--saw-space-4, 16px);
+    background: linear-gradient(180deg, var(--saw-bg-secondary, #f8fafc) 0%, var(--saw-bg-primary, #ffffff) 100%);
+    border-bottom: 1px solid var(--saw-border-color, #e2e8f0);
+    cursor: default;
     user-select: none;
-    transition: background var(--saw-transition-fast);
-    color: var(--saw-text-primary);
+    transition: background 0.2s ease;
+    color: var(--saw-text-primary, #1e293b);
+    min-height: 48px;
 }
 
-.sa-detail-section-head:hover {
-    background: var(--saw-bg-secondary) !important; /* No hover effect - same as normal state */
-}
-
+/* Section icon - for SVG icons */
 .sa-detail-section-icon {
-    font-size: 20px;
-    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, var(--saw-brand-50, #eff6ff) 0%, var(--saw-brand-100, #dbeafe) 100%);
+    border: 1px solid var(--saw-brand-200, #bfdbfe);
+    border-radius: var(--saw-radius-md, 6px);
+    color: var(--saw-brand-600, #2563eb);
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+}
+
+.sa-detail-section-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.sa-detail-section:hover .sa-detail-section-icon {
+    background: linear-gradient(135deg, var(--saw-brand-100, #dbeafe) 0%, var(--saw-brand-200, #bfdbfe) 100%);
+    transform: scale(1.05);
 }
 
 .sa-detail-section-title {
     flex: 1;
     margin: 0;
-    font-size: var(--saw-text-base);
-    font-weight: var(--saw-font-semibold);
-    color: var(--saw-text-primary);
+    font-size: var(--saw-text-sm, 0.875rem);
+    font-weight: var(--saw-font-semibold, 600);
+    color: var(--saw-text-primary, #1e293b);
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-2, 8px);
 }
 
+/* Count badge in title */
+.sa-detail-section-title .sa-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    background: var(--saw-brand-100, #dbeafe);
+    color: var(--saw-brand-700, #1d4ed8);
+    border: none;
+}
+
+/* Section toggle arrow */
 .sa-detail-section-toggle {
     width: 20px;
     height: 20px;
-    color: var(--saw-text-muted);
-    transition: transform var(--saw-transition-fast);
+    color: var(--saw-text-muted, #94a3b8);
+    transition: transform 0.2s ease;
 }
 
 .sa-detail-section--open .sa-detail-section-toggle {
     transform: rotate(180deg);
 }
 
-/* Section body */
+/* ============================================
+   SECTION BODY
+   ============================================ */
+
 .sa-detail-section-body {
-    padding: var(--saw-space-3); /* Reduced from var(--saw-space-4) */
+    padding: var(--saw-space-4, 16px);
     display: block;
-    background: #ffffff;
+    background: var(--saw-bg-primary, #ffffff);
 }
 
-/* Collapsible behavior (when using details element) */
-.sa-detail-section[open] .sa-detail-section-body,
-.sa-detail-section--open .sa-detail-section-body {
-    display: block;
+.sa-detail-section-body.sa-p-0 {
+    padding: 0;
 }
 
+/* ============================================
+   RELATED SECTIONS
+   ============================================ */
 
+.sa-detail-related-sections {
+    margin-top: var(--saw-space-4, 16px);
+    padding: 0 var(--saw-space-3, 12px);
+}
+
+.sa-detail-related-sections-title {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-2, 8px);
+    font-size: var(--saw-text-sm, 0.875rem);
+    font-weight: var(--saw-font-semibold, 600);
+    color: var(--saw-text-secondary, #64748b);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0 0 var(--saw-space-3, 12px);
+    padding-bottom: var(--saw-space-2, 8px);
+    border-bottom: 1px solid var(--saw-border-color, #e2e8f0);
+}
+
+.sa-detail-related-sections-title svg {
+    color: var(--saw-brand-500, #3b82f6);
+}
+
+.sa-detail-related-section {
+    background: var(--saw-bg-primary, #ffffff);
+    border: 1px solid var(--saw-border-color, #e2e8f0);
+    border-radius: var(--saw-radius-lg, 8px);
+    margin-bottom: var(--saw-space-3, 12px);
+    overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+.sa-detail-related-section:hover {
+    border-color: var(--saw-brand-200, #bfdbfe);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.08);
+}
+
+/* Related section header */
+.sa-detail-related-section-header {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-3, 12px);
+    padding: var(--saw-space-3, 12px) var(--saw-space-4, 16px);
+    background: var(--saw-bg-secondary, #f8fafc);
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.sa-detail-related-section-header:hover {
+    background: var(--saw-brand-50, #eff6ff);
+}
+
+.sa-detail-related-section-icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, var(--saw-brand-500, #3b82f6) 0%, var(--saw-brand-600, #2563eb) 100%);
+    border-radius: var(--saw-radius-md, 6px);
+    color: #ffffff;
+    flex-shrink: 0;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+    transition: all 0.2s ease;
+}
+
+.sa-detail-related-section-icon-wrapper svg {
+    width: 18px;
+    height: 18px;
+}
+
+.sa-detail-related-section-header:hover .sa-detail-related-section-icon-wrapper {
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+}
+
+.sa-detail-related-section-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.sa-detail-related-section-label {
+    margin: 0;
+    font-size: var(--saw-text-sm, 0.875rem);
+    font-weight: var(--saw-font-semibold, 600);
+    color: var(--saw-text-primary, #1e293b);
+}
+
+.sa-detail-related-section-count {
+    font-size: var(--saw-text-xs, 0.75rem);
+    color: var(--saw-text-muted, #94a3b8);
+}
+
+.sa-detail-related-section-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 8px;
+    background: var(--saw-brand-100, #dbeafe);
+    color: var(--saw-brand-700, #1d4ed8);
+    border-radius: var(--saw-radius-full, 9999px);
+    font-size: var(--saw-text-xs, 0.75rem);
+    font-weight: var(--saw-font-bold, 700);
+}
+
+/* Related items list */
+.sa-detail-related-items {
+    border-top: 1px solid var(--saw-border-color, #e2e8f0);
+}
+
+.sa-detail-related-item-link {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-3, 12px);
+    padding: var(--saw-space-3, 12px) var(--saw-space-4, 16px);
+    color: var(--saw-text-primary, #1e293b);
+    text-decoration: none;
+    transition: all 0.15s ease;
+    border-bottom: 1px solid var(--saw-border-light, #f1f5f9);
+}
+
+.sa-detail-related-item-link:last-child {
+    border-bottom: none;
+}
+
+.sa-detail-related-item-link:hover {
+    background: var(--saw-brand-50, #eff6ff);
+    color: var(--saw-brand-700, #1d4ed8);
+    padding-left: calc(var(--saw-space-4, 16px) + 4px);
+}
+
+.sa-detail-related-item-link:hover svg {
+    transform: translateX(4px);
+    color: var(--saw-brand-500, #3b82f6);
+}
+
+.sa-detail-related-item-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--saw-brand-400, #60a5fa);
+    border-radius: 50%;
+    flex-shrink: 0;
+    transition: transform 0.15s ease;
+}
+
+.sa-detail-related-item-link:hover .sa-detail-related-item-dot {
+    transform: scale(1.3);
+    background: var(--saw-brand-500, #3b82f6);
+}
+
+.sa-detail-related-item-text {
+    flex: 1;
+    font-size: var(--saw-text-sm, 0.875rem);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sa-detail-related-item-link svg {
+    width: 14px;
+    height: 14px;
+    color: var(--saw-brand-300, #93c5fd);
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+}
+
+.sa-detail-related-empty {
+    padding: var(--saw-space-4, 16px);
+    text-align: center;
+    color: var(--saw-text-muted, #94a3b8);
+    font-size: var(--saw-text-sm, 0.875rem);
+    font-style: italic;
+    margin: 0;
+}
+
+/* ============================================
+   DEPARTMENT LINKS (Branches specific)
+   ============================================ */
+
+.sa-department-link {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-3, 12px);
+    padding: var(--saw-space-3, 12px) var(--saw-space-4, 16px);
+    color: var(--saw-text-primary, #1e293b);
+    text-decoration: none;
+    transition: all 0.15s ease;
+    border-bottom: 1px solid var(--saw-border-light, #f1f5f9);
+}
+
+.sa-department-link:last-child {
+    border-bottom: none;
+}
+
+.sa-department-link:hover {
+    background: var(--saw-brand-50, #eff6ff);
+    color: var(--saw-brand-700, #1d4ed8);
+    padding-left: calc(var(--saw-space-4, 16px) + 4px);
+}
+
+.sa-department-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: var(--saw-brand-100, #dbeafe);
+    color: var(--saw-brand-600, #2563eb);
+    border-radius: var(--saw-radius-md, 6px);
+    font-size: 16px;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+}
+
+.sa-department-link:hover .sa-department-icon {
+    background: var(--saw-brand-200, #bfdbfe);
+    transform: scale(1.05);
+}
+
+.sa-department-name {
+    flex: 1;
+    font-size: var(--saw-text-sm, 0.875rem);
+    font-weight: var(--saw-font-medium, 500);
+}
+
+.sa-department-number {
+    margin-left: var(--saw-space-2, 8px);
+    font-size: var(--saw-text-xs, 0.75rem);
+    color: var(--saw-text-muted, #94a3b8);
+    font-weight: normal;
+}
+
+.sa-department-show-all {
+    display: block;
+    padding: var(--saw-space-3, 12px) var(--saw-space-4, 16px);
+    text-align: center;
+    color: var(--saw-brand-600, #2563eb);
+    font-size: var(--saw-text-sm, 0.875rem);
+    font-weight: var(--saw-font-medium, 500);
+    text-decoration: none;
+    background: var(--saw-brand-50, #eff6ff);
+    border-top: 1px solid var(--saw-border-color, #e2e8f0);
+    transition: all 0.15s ease;
+}
+
+.sa-department-show-all:hover {
+    background: var(--saw-brand-100, #dbeafe);
+    color: var(--saw-brand-700, #1d4ed8);
+}

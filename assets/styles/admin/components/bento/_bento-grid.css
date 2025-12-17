@@ -1,0 +1,79 @@
+/**
+ * SAW Bento - Grid Layout
+ * 
+ * Základní grid systém pro Bento karty.
+ * Desktop 3 sloupce → Tablet 2 → Mobil 1
+ * 
+ * @version 1.0.0
+ */
+
+/* ===== GRID CONTAINER ===== */
+.bento-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--bento-grid-columns, 3), 1fr);
+    gap: var(--bento-grid-gap, 16px);
+    padding: var(--bento-grid-gap, 16px);
+    width: 100%;
+    max-width: 100%;
+}
+
+/* ===== COLSPAN CLASSES ===== */
+.bento-colspan-1 { 
+    grid-column: span 1; 
+}
+
+.bento-colspan-2 { 
+    grid-column: span 2; 
+}
+
+.bento-colspan-3 { 
+    grid-column: span 3; 
+}
+
+.bento-colspan-full { 
+    grid-column: 1 / -1; 
+}
+
+/* ===== ROWSPAN CLASSES ===== */
+.bento-rowspan-1 { 
+    grid-row: span 1; 
+}
+
+.bento-rowspan-2 { 
+    grid-row: span 2; 
+}
+
+/* ===== TABLET: 2 COLUMNS ===== */
+@media (max-width: 1024px) {
+    .bento-grid {
+        --bento-grid-columns: 2;
+    }
+    
+    .bento-colspan-3 {
+        grid-column: span 2;
+    }
+}
+
+/* ===== MOBILE: 1 COLUMN ===== */
+@media (max-width: 640px) {
+    .bento-grid {
+        --bento-grid-columns: 1;
+        gap: 12px;
+        padding: 12px;
+    }
+    
+    .bento-colspan-2,
+    .bento-colspan-3 {
+        grid-column: span 1;
+    }
+}
+
+/* ===== SIDEBAR CONTEXT ===== */
+.sa-sidebar .bento-grid {
+    padding: 0;
+}
+
+.sa-sidebar-content .bento-grid {
+    padding: var(--bento-grid-gap, 16px);
+}
+
