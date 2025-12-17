@@ -45,4 +45,19 @@
     gap: var(--saw-space-4);
 }
 
+/* ============================================
+   RESPONSIVE - BOTTOM PADDING FOR MOBILE
+   ============================================ */
+@media (max-width: 1024px) {
+    .sa-sidebar-content {
+        padding-bottom: calc(var(--saw-bottom-nav-height, 64px) + var(--saw-space-6, 24px)) !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .sa-sidebar-content {
+        padding-bottom: calc(var(--saw-bottom-nav-height-mobile, 58px) + var(--saw-space-6, 24px)) !important;
+    }
+}
+
 

@@ -1,17 +1,11 @@
 /**
  * SAW Admin - Mobile Bottom Navigation
  * @package SAW_Visitors
- * @version 3.1.0 - FIXED: Complete styles with proper desktop hiding
- * 
- * CHANGELOG v3.1.0:
- * - Fixed: Desktop hiding at min-width: 1025px (was causing 180px gap in table layout)
- * - Fixed: Complete styles for sa-bottom-nav component
- * - Fixed: Tablet and mobile responsive styles
+ * @version 4.0.0
  */
 
 /* ============================================
-   DESKTOP - HIDE BOTTOM NAV (CRITICAL!)
-   This prevents 180px gap in document flow
+   DESKTOP - HIDE BOTTOM NAV
    ============================================ */
 @media (min-width: 1025px) {
     .sa-bottom-nav {
@@ -31,19 +25,26 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        height: 64px;
-        padding: var(--saw-space-2, 8px);
+        height: 52px;
+        padding: 0;
         padding-bottom: env(safe-area-inset-bottom, 0);
-        background: var(--saw-bg-primary, #ffffff);
-        border-top: 1px solid var(--saw-border-color, #e2e8f0);
-        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08);
-        z-index: 1000;
+        z-index: 10001;
         
-        /* GPU acceleration */
+        /* Matching sidebar gradient */
+        background: linear-gradient(
+            90deg,
+            #0a2540 0%,
+            #0d3a5c 50%,
+            #005A8C 100%
+        );
+        
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 
+            0 -4px 20px rgba(0, 0, 0, 0.25),
+            inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        
         transform: translateZ(0);
         -webkit-transform: translateZ(0);
-        
-        /* Prevent content selection */
         -webkit-user-select: none;
         user-select: none;
     }
@@ -54,9 +55,9 @@
         justify-content: space-around;
         height: 100%;
         width: 100%;
-        max-width: 500px;
+        max-width: 400px;
         margin: 0 auto;
-        padding: 0 8px;
+        padding: 0 4px;
     }
     
     .sa-bottom-nav-item {
@@ -66,32 +67,36 @@
         justify-content: center;
         flex: 1;
         min-width: 0;
-        padding: 8px 4px;
+        padding: 6px 8px;
         text-decoration: none;
-        color: var(--saw-text-secondary, #64748b);
         background: transparent;
         border: none;
         border-radius: var(--saw-radius-md, 6px);
         cursor: pointer;
-        transition: all 0.2s ease;
         position: relative;
-        margin: 6px 2px;
-        min-height: 44px;
+        margin: 4px 2px;
         outline: none;
         -webkit-tap-highlight-color: transparent;
+        
+        /* Matching sidebar text color */
+        color: rgba(255, 255, 255, 0.7);
+        transition: all 0.2s ease;
     }
     
     .sa-bottom-nav-item:hover {
-        background: var(--saw-bg-secondary, #f1f5f9);
-        color: var(--saw-text-primary, #0f172a);
+        background: rgba(255, 255, 255, 0.1);
+        color: #ffffff;
     }
     
     .sa-bottom-nav-item--active {
-        color: var(--saw-brand-600, #2563eb);
-        background: var(--saw-brand-50, #eff6ff);
+        background: rgba(255, 255, 255, 0.15);
+        color: #ffffff;
+        box-shadow: 
+            0 2px 8px rgba(0, 0, 0, 0.15),
+            inset 0 0 0 1px rgba(255, 255, 255, 0.1);
     }
     
-    /* Active indicator - top bar */
+    /* Active indicator - top accent bar matching sidebar */
     .sa-bottom-nav-item--active::before {
         content: '';
         position: absolute;
@@ -100,29 +105,42 @@
         transform: translateX(-50%);
         width: 24px;
         height: 3px;
-        background: var(--saw-brand-600, #2563eb);
+        background: linear-gradient(90deg, #60d0ff 0%, #00a8e8 100%);
         border-radius: 0 0 3px 3px;
+        box-shadow: 0 0 8px rgba(96, 208, 255, 0.4);
     }
     
     .sa-bottom-nav-icon {
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 24px;
-        height: 24px;
+        width: 20px;
+        height: 20px;
         margin-bottom: 2px;
+        opacity: 0.9;
+        transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+    
+    .sa-bottom-nav-item:hover .sa-bottom-nav-icon,
+    .sa-bottom-nav-item--active .sa-bottom-nav-icon {
+        opacity: 1;
+    }
+    
+    .sa-bottom-nav-item--active .sa-bottom-nav-icon {
+        transform: scale(1.05);
     }
     
     .sa-bottom-nav-icon svg {
-        width: 22px;
-        height: 22px;
+        width: 20px;
+        height: 20px;
         stroke: currentColor;
         stroke-width: 2;
     }
     
     .sa-bottom-nav-label {
-        font-size: 11px;
-        font-weight: var(--saw-font-medium, 500);
+        font-size: 10px;
+        font-weight: 500;
+        letter-spacing: 0.02em;
         line-height: 1.2;
         text-align: center;
         white-space: nowrap;
@@ -131,43 +149,49 @@
         max-width: 100%;
     }
     
-    /* Hide desktop footer when bottom nav is visible */
+    /* Hide desktop footer */
     .sa-app-footer {
         display: none !important;
     }
     
-    /* Adjust sidebar to account for bottom nav */
-    .sa-sidebar-wrapper {
-        bottom: calc(64px + env(safe-area-inset-bottom, 0)) !important;
-    }
-    
-    /* Adjust FAB button position */
+    /* Adjust FAB position */
     .sa-fab,
     .sa-floating-btn {
-        bottom: calc(64px + 20px + env(safe-area-inset-bottom, 0)) !important;
+        bottom: calc(52px + 16px + env(safe-area-inset-bottom, 0)) !important;
     }
 }
 
 /* ============================================
-   MOBILE - SMALLER BOTTOM NAV
+   MOBILE
    ============================================ */
 @media (max-width: 768px) {
     .sa-bottom-nav {
-        height: 58px;
+        height: 48px;
     }
     
     .sa-bottom-nav-item {
-        padding: 6px 4px;
-        margin: 4px 2px;
+        padding: 4px 6px;
+        margin: 3px 2px;
+    }
+    
+    .sa-bottom-nav-icon {
+        width: 18px;
+        height: 18px;
+        margin-bottom: 1px;
     }
     
     .sa-bottom-nav-icon svg {
-        width: 20px;
-        height: 20px;
+        width: 18px;
+        height: 18px;
     }
     
     .sa-bottom-nav-label {
-        font-size: 10px;
+        font-size: 9px;
+    }
+    
+    .sa-fab,
+    .sa-floating-btn {
+        bottom: calc(48px + 12px + env(safe-area-inset-bottom, 0)) !important;
     }
 }
 
@@ -176,15 +200,15 @@
    ============================================ */
 @media (max-width: 380px) {
     .sa-bottom-nav-inner {
-        padding: 0 4px;
+        padding: 0 2px;
     }
     
     .sa-bottom-nav-item {
-        padding: 4px 2px;
-        margin: 4px 1px;
+        padding: 4px 4px;
+        margin: 3px 1px;
     }
     
     .sa-bottom-nav-label {
-        font-size: 9px;
+        font-size: 8px;
     }
 }

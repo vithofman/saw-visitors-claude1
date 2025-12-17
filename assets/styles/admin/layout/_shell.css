@@ -1,7 +1,7 @@
 /**
  * SAW Admin - App Shell Layout
  * @package SAW_Visitors
- * @version 11.0.0
+ * @version 12.0.0
  */
 
 /* ============================================
@@ -12,8 +12,8 @@
     --saw-header-height-tablet: 56px;
     --saw-header-height-mobile: 52px;
     --saw-footer-height: 45px;
-    --saw-bottom-nav-height: 64px;
-    --saw-bottom-nav-height-mobile: 58px;
+    --saw-bottom-nav-height: 52px;
+    --saw-bottom-nav-height-mobile: 48px;
     --saw-sidebar-width: 260px;
 }
 

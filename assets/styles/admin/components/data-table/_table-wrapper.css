@@ -78,21 +78,23 @@
 
 /* ============================================
    SCROLL TO TOP BUTTON
+   Subtle, light gray style - positioned above FAB
    ============================================ */
 .sa-scroll-to-top {
     position: fixed;
-    bottom: 80px;
-    right: var(--saw-space-5, 20px);
-    width: 48px;
-    height: 48px;
+    bottom: 140px; /* Higher position - above FAB button */
+    right: var(--saw-space-6, 24px);
+    width: 56px; /* Same size as FAB */
+    height: 56px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--saw-brand-600, #2563eb);
+    /* Subtle light gray style */
+    background: rgba(148, 163, 184, 0.6); /* Gray-400 with transparency */
     color: #ffffff;
     border: none;
     border-radius: var(--saw-radius-full, 9999px);
-    box-shadow: var(--saw-shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.1));
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     cursor: pointer;
     opacity: 0;
     visibility: hidden;
@@ -110,8 +112,9 @@
 }
 
 .sa-scroll-to-top:hover {
-    background: var(--saw-brand-700, #1d4ed8);
+    background: rgba(100, 116, 139, 0.85); /* Darker gray on hover */
     transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .sa-scroll-to-top svg {
@@ -119,12 +122,20 @@
     height: 24px;
 }
 
+/* Tablet - account for bottom nav */
+@media (max-width: 1024px) {
+    .sa-scroll-to-top {
+        bottom: calc(var(--saw-bottom-nav-height, 64px) + 100px);
+    }
+}
+
+/* Mobile - smaller size, account for bottom nav */
 @media (max-width: 768px) {
     .sa-scroll-to-top {
-        bottom: 70px;
+        bottom: calc(var(--saw-bottom-nav-height-mobile, 58px) + 90px);
         right: var(--saw-space-3, 12px);
-        width: 44px;
-        height: 44px;
+        width: 48px;
+        height: 48px;
     }
 }
 

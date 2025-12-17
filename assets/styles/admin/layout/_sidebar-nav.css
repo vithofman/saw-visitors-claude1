@@ -114,10 +114,11 @@
         bottom: 0;
         width: 100% !important;
         height: 100vh !important;
-        z-index: 9999 !important; /* ALWAYS above overlay (9998) */
+        z-index: 9999 !important; /* ALWAYS above overlay (9998), but below bottom-nav (10001) */
         transform: translateX(-100%);
         transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         pointer-events: auto !important;
+        padding-bottom: calc(var(--saw-bottom-nav-height, 64px) + var(--saw-space-4, 16px)); /* Space for bottom nav */
     }
     
     .sa-app-sidebar--open {
@@ -404,6 +405,10 @@
     
     .sa-sidebar-nav .sa-nav-item {
         padding: 10px var(--saw-space-3) !important;
+    }
+    
+    .sa-app-sidebar {
+        padding-bottom: calc(var(--saw-bottom-nav-height-mobile, 58px) + var(--saw-space-4, 16px)); /* Space for mobile bottom nav */
     }
 }
 
