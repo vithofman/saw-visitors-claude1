@@ -11,9 +11,12 @@
     padding: var(--saw-space-4);
     background: var(--saw-bg-secondary);
     border-top: 1px solid var(--saw-border-color);
-    flex-shrink: 0;
+    flex-shrink: 0 !important; /* CRITICAL: Footer must not shrink */
+    flex-grow: 0 !important;
+    /* Sticky positioning for form sidebars with save/cancel buttons */
     position: sticky;
     bottom: 0;
+    z-index: 10;
 }
 
 .sa-sidebar-footer-actions {

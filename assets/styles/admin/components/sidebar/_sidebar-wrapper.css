@@ -1,7 +1,9 @@
 /**
  * SAW Admin - Sidebar Wrapper
  * @package SAW_Visitors
- * @version 3.0.0
+ * @version 4.2.0
+ * 
+ * NOTE: Responsive overrides are in _sidebar-responsive.css (loaded later)
  */
 
 /* Overlay for RIGHT detail sidebar (not navigation menu) */
@@ -13,7 +15,7 @@
     visibility: hidden;
     transition: opacity var(--saw-transition-base), 
                 visibility var(--saw-transition-base);
-    z-index: 99999;
+    z-index: 9997; /* Below bottom-nav (10001) and sidebar-nav overlay (9998) */
 }
 
 .sa-detail-sidebar-overlay--active {
@@ -21,7 +23,9 @@
     visibility: visible;
 }
 
-/* Sidebar wrapper */
+/* ============================================
+   SIDEBAR CONTAINER - DESKTOP DEFAULT
+   ============================================ */
 .sa-sidebar {
     position: fixed;
     top: 0;
@@ -29,14 +33,20 @@
     bottom: 0;
     width: 720px;
     max-width: 100%;
-    display: flex;
-    flex-direction: column;
+    
+    /* Flexbox layout for header/content/footer */
+    display: flex !important;
+    flex-direction: column !important;
+    
     background: var(--saw-bg-primary);
     box-shadow: var(--saw-shadow-xl);
     transform: translateX(100%);
     transition: transform var(--saw-transition-base);
-    z-index: calc(var(--saw-z-sidebar) + 10);
+    z-index: 10000; /* Above overlay (9997), below bottom-nav (10001) */
+    
+    /* Use dvh for better mobile support, fallback to vh */
     height: 100vh;
+    height: 100dvh;
 }
 
 .sa-sidebar--active {
@@ -61,16 +71,3 @@
     opacity: 0.7;
     pointer-events: none;
 }
-
-/* Responsive */
-@media (max-width: 768px) {
-    .sa-sidebar {
-        width: 100%;
-    }
-    
-    .sa-sidebar--nested {
-        width: 100%;
-    }
-}
-
-

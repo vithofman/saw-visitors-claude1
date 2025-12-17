@@ -1,8 +1,7 @@
 /**
  * SAW Admin - Navigation Sidebar
- * Modern, elegant design with gradient background and glassmorphism elements
  * @package SAW_Visitors
- * @version 3.1.0
+ * @version 4.0.0
  */
 
 /* ============================================
@@ -11,19 +10,18 @@
 
 .sa-app-sidebar {
     position: fixed;
-    top: 60px; /* Start below header */
+    top: var(--saw-header-height, 60px);
     left: 0;
-    bottom: 45px; /* End above footer */
-    width: 260px;
-    height: calc(100vh - 60px - 45px); /* Full height minus header and footer */
+    bottom: var(--saw-footer-height, 45px);
+    width: var(--saw-sidebar-width, 260px);
     
     /* Elegant gradient background - dark to light blue */
     background: linear-gradient(
         180deg,
-        #0a2540 0%,           /* Very dark navy at top */
-        #0d3a5c 30%,          /* Transition */
-        #005A8C 70%,          /* Brand blue */
-        #0077b6 100%          /* Slightly lighter at bottom */
+        #0a2540 0%,
+        #0d3a5c 30%,
+        #005A8C 70%,
+        #0077b6 100%
     );
     
     /* Subtle pattern overlay for depth */
@@ -48,7 +46,7 @@
         4px 0 24px rgba(0, 0, 0, 0.15),
         1px 0 0 rgba(255, 255, 255, 0.05);
     
-    border-right: none; /* Remove hard border, use shadow instead */
+    border-right: none;
     overflow-y: auto;
     overflow-x: hidden;
     z-index: 999;
@@ -77,7 +75,7 @@
 }
 
 /* ============================================
-   SIDEBAR OVERLAY (mobile)
+   SIDEBAR OVERLAY (mobile/tablet)
    ============================================ */
 
 .sa-sidebar-overlay {
@@ -88,7 +86,6 @@
     width: 100%;
     height: 100vh;
     background: rgba(10, 37, 64, 0.5);
-    /* REMOVED backdrop-filter to prevent stacking context issues */
     z-index: 9998;
     opacity: 0;
     pointer-events: none;
@@ -101,7 +98,9 @@
     pointer-events: auto;
 }
 
-/* Mobile sidebar behavior */
+/* ============================================
+   TABLET & MOBILE SIDEBAR
+   ============================================ */
 @media (max-width: 1024px) {
     .sa-sidebar-overlay {
         display: block;
@@ -111,18 +110,35 @@
         position: fixed;
         top: 0;
         left: 0;
-        bottom: 0;
         width: 100% !important;
-        height: 100vh !important;
-        z-index: 9999 !important; /* ALWAYS above overlay (9998), but below bottom-nav (10001) */
+        z-index: 9999 !important;
         transform: translateX(-100%);
         transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         pointer-events: auto !important;
-        padding-bottom: calc(var(--saw-bottom-nav-height, 64px) + var(--saw-space-4, 16px)); /* Space for bottom nav */
+        
+        /* End above bottom-nav */
+        bottom: var(--saw-bottom-nav-height, 52px) !important;
+        height: calc(100vh - var(--saw-bottom-nav-height, 52px)) !important;
+        height: calc(100dvh - var(--saw-bottom-nav-height, 52px)) !important;
+        
+        /* Extra padding for safety */
+        padding-bottom: var(--saw-space-4, 16px);
     }
     
     .sa-app-sidebar--open {
         transform: translateX(0);
+    }
+}
+
+/* ============================================
+   MOBILE SIDEBAR
+   ============================================ */
+@media (max-width: 768px) {
+    .sa-app-sidebar {
+        bottom: var(--saw-bottom-nav-height-mobile, 48px) !important;
+        height: calc(100vh - var(--saw-bottom-nav-height-mobile, 48px)) !important;
+        height: calc(100dvh - var(--saw-bottom-nav-height-mobile, 48px)) !important;
+        padding-bottom: var(--saw-space-4, 16px);
     }
 }
 
@@ -146,8 +162,6 @@
         inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-/* Label removed - not needed */
-
 /* ============================================
    NAVIGATION MENU
    ============================================ */
@@ -161,7 +175,7 @@
 }
 
 /* ============================================
-   NAVIGATION SECTION - ENHANCED VISUAL HIERARCHY
+   NAVIGATION SECTION
    ============================================ */
 
 .sa-nav-section {
@@ -184,7 +198,6 @@
     );
 }
 
-/* First section - no separator */
 .sa-nav-section:first-child::before {
     display: none;
 }
@@ -202,7 +215,6 @@
     cursor: pointer;
     user-select: none;
     transition: color 0.2s ease;
-    /* Ensure clickable */
     pointer-events: auto;
     position: relative;
     z-index: 1;
@@ -256,17 +268,13 @@
 }
 
 /* ============================================
-   NAVIGATION ITEMS - MODERN DARK THEME
+   NAVIGATION ITEMS
    ============================================ */
 
-/* Complete reset for nav items */
 .sa-sidebar-nav .sa-nav-item {
-    /* Complete reset */
     margin: 2px var(--saw-space-2) !important;
     padding: 0 !important;
     text-indent: 0 !important;
-    
-    /* Explicit layout */
     position: relative;
     display: flex !important;
     flex-direction: row !important;
@@ -274,30 +282,22 @@
     gap: var(--saw-space-3);
     width: calc(100% - 2 * var(--saw-space-2)) !important;
     box-sizing: border-box !important;
-    
-    /* Padding for content */
     padding: 10px var(--saw-space-4) !important;
-    
-    /* Dark theme styling */
     color: rgba(255, 255, 255, 0.7);
     text-decoration: none;
     border-radius: var(--saw-radius-md);
     transition: all 0.2s ease;
-    
-    /* Reset positioning */
     left: 0 !important;
     right: 0 !important;
     transform: none !important;
 }
 
-/* Hover state */
 .sa-sidebar-nav .sa-nav-item:hover {
     background: rgba(255, 255, 255, 0.1);
     color: #ffffff;
     transform: translateX(2px);
 }
 
-/* Active state - Highlighted with glow */
 .sa-sidebar-nav .sa-nav-item--active,
 .sa-sidebar-nav .sa-nav-item.sa-nav-item--active {
     background: rgba(255, 255, 255, 0.15);
@@ -352,7 +352,6 @@
     transform: scale(1.05);
 }
 
-/* Icon SVG styling for dark theme */
 .sa-sidebar-nav .sa-nav-icon svg {
     stroke: currentColor;
     width: 18px;
@@ -369,29 +368,26 @@
     letter-spacing: 0.01em;
 }
 
-/* ============================================
-   MAIN NAVIGATION (without heading) - QUICK ACTIONS
-   ============================================ */
-
-/* First section items (Dashboard, Calendar, Terminal) - slightly larger */
+/* First section items - slightly larger */
 .sa-sidebar-nav > .sa-nav-item:first-child,
 .sa-sidebar-nav > a.sa-nav-item:nth-child(-n+3) {
     padding: 12px var(--saw-space-4) !important;
 }
 
 /* ============================================
-   RESPONSIVE ADJUSTMENTS
+   TABLET ADJUSTMENTS
    ============================================ */
-
 @media (max-width: 1024px) {
     .sa-app-sidebar {
-        width: 100% !important; /* Full width on mobile */
         box-shadow: 
             8px 0 32px rgba(0, 0, 0, 0.3),
             1px 0 0 rgba(255, 255, 255, 0.05);
     }
 }
 
+/* ============================================
+   MOBILE ADJUSTMENTS
+   ============================================ */
 @media (max-width: 768px) {
     .sa-sidebar-switchers {
         margin: var(--saw-space-3);
@@ -406,14 +402,10 @@
     .sa-sidebar-nav .sa-nav-item {
         padding: 10px var(--saw-space-3) !important;
     }
-    
-    .sa-app-sidebar {
-        padding-bottom: calc(var(--saw-bottom-nav-height-mobile, 58px) + var(--saw-space-4, 16px)); /* Space for mobile bottom nav */
-    }
 }
 
 /* ============================================
-   SIDEBAR FOOTER - VERSION INFO (optional)
+   SIDEBAR FOOTER - VERSION INFO
    ============================================ */
 
 .sa-sidebar-footer {

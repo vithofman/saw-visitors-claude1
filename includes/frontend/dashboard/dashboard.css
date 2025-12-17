@@ -1,22 +1,23 @@
 /**
- * SAW Dashboard v6.0.0
+ * SAW Dashboard v7.0.0
  * 
- * Complete refactoring with unified design system
- * Uses brand color #005A8C and global --saw-* variables
+ * Complete redesign with full-width layout, modern elegant design
+ * Uses brand color #005A8C and gradient backgrounds
  * 
- * CHANGES in 6.0.0:
- * - UNIFIED: All colors now use global design tokens
- * - BRAND: Primary color changed from #2563eb to #005A8C
- * - DARK MODE: Full support with consistent theming
- * - ELEGANT: Clean, modern design without "taškařice"
- * - FONTS: Oswald for headings, Roboto for body
+ * CHANGES in 7.0.0:
+ * - FULL WIDTH: Dashboard always 100% width, even when empty
+ * - MODERN: Elegant gradient backgrounds with brand colors
+ * - HERO SECTION: Key stats prominently displayed at top
+ * - VISUAL HIERARCHY: Clear separation between sections
+ * - REFINED: Sophisticated shadows, rounded corners, transitions
+ * - RESPONSIVE: Mobile-first with beautiful scaling
  * 
  * @package SAW_Visitors
- * @version 6.0.0
+ * @version 7.0.0
  */
 
 /* ============================================
-   CSS VARIABLES - Using Design System
+   CSS VARIABLES - Design System
    ============================================ */
 .saw-dash {
     /* Brand-based colors */
@@ -24,108 +25,131 @@
     --dash-primary-hover: var(--saw-brand-700, #004A73);
     --dash-primary-light: var(--saw-brand-50, #E8F4F8);
     --dash-primary-dark: var(--saw-brand-800, #003D5C);
+    --dash-primary-900: var(--saw-brand-900, #002E45);
     
     /* Gradient for header - brand-based */
     --dash-gradient: linear-gradient(135deg, var(--saw-brand-600, #005A8C) 0%, var(--saw-brand-800, #003D5C) 100%);
     --dash-gradient-hover: linear-gradient(135deg, var(--saw-brand-700, #004A73) 0%, var(--saw-brand-900, #002E45) 100%);
+    --dash-gradient-subtle: linear-gradient(180deg, var(--saw-brand-50, #E8F4F8) 0%, #ffffff 100%);
+    
+    /* Page background with elegant pattern */
+    --dash-page-bg: linear-gradient(135deg, #f8fafc 0%, #e8f4f8 50%, #f0f9ff 100%);
     
     /* Background hierarchy */
-    --dash-bg: var(--saw-bg-secondary, #f9fafb);
-    --dash-card-bg: var(--saw-bg-primary, #ffffff);
-    --dash-card-border: var(--saw-border-color, #e5e7eb);
-    --dash-card-header-bg: var(--saw-gray-50, #f9fafb);
+    --dash-bg: #f8fafc;
+    --dash-card-bg: #ffffff;
+    --dash-card-border: rgba(0, 90, 140, 0.08);
+    --dash-card-header-bg: rgba(0, 90, 140, 0.02);
     
     /* Text hierarchy */
-    --dash-text-primary: var(--saw-text-primary, #111827);
-    --dash-text-secondary: var(--saw-text-secondary, #4b5563);
-    --dash-text-muted: var(--saw-text-muted, #6b7280);
+    --dash-text-primary: #0f172a;
+    --dash-text-secondary: #475569;
+    --dash-text-muted: #64748b;
+    --dash-text-white: #ffffff;
     
     /* Borders & Hover */
-    --dash-border-light: var(--saw-gray-100, #f3f4f6);
-    --dash-hover-bg: var(--saw-gray-50, #f9fafb);
+    --dash-border-light: rgba(0, 90, 140, 0.06);
+    --dash-hover-bg: rgba(0, 90, 140, 0.04);
     
     /* Status colors from design system */
-    --dash-success: var(--saw-success, #16a34a);
-    --dash-success-light: var(--saw-success-light, #dcfce7);
-    --dash-success-dark: var(--saw-success-dark, #14532d);
+    --dash-success: #059669;
+    --dash-success-light: #d1fae5;
+    --dash-success-dark: #047857;
     
-    --dash-danger: var(--saw-danger, #dc2626);
-    --dash-danger-light: var(--saw-danger-light, #fee2e2);
-    --dash-danger-dark: var(--saw-danger-dark, #991b1b);
+    --dash-danger: #dc2626;
+    --dash-danger-light: #fee2e2;
+    --dash-danger-dark: #b91c1c;
     
-    --dash-warning: var(--saw-warning, #f59e0b);
-    --dash-warning-light: var(--saw-warning-light, #fef3c7);
-    --dash-warning-dark: var(--saw-warning-dark, #92400e);
+    --dash-warning: #d97706;
+    --dash-warning-light: #fef3c7;
+    --dash-warning-dark: #92400e;
     
     /* Component specific */
-    --dash-stat-icon-bg: var(--saw-gray-100, #f3f4f6);
-    --dash-ring-center: var(--saw-bg-primary, #ffffff);
-    --dash-chart-grid: var(--saw-gray-200, #e5e7eb);
-    --dash-rank-bg: var(--saw-gray-100, #f3f4f6);
+    --dash-stat-icon-bg: rgba(0, 90, 140, 0.08);
+    --dash-ring-center: #ffffff;
+    --dash-chart-grid: #e2e8f0;
+    --dash-rank-bg: rgba(0, 90, 140, 0.04);
     
     /* Time badges */
-    --dash-time-bg: var(--saw-success-light, #dcfce7);
-    --dash-time-color: var(--saw-success-dark, #14532d);
-    --dash-time-overnight-bg: var(--saw-warning-light, #fef3c7);
-    --dash-time-overnight-color: var(--saw-warning-dark, #92400e);
+    --dash-time-bg: #d1fae5;
+    --dash-time-color: #047857;
+    --dash-time-overnight-bg: #fef3c7;
+    --dash-time-overnight-color: #92400e;
     
-    /* Shadows */
-    --dash-shadow: var(--saw-shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.1));
-    --dash-shadow-lg: var(--saw-shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.12));
-    --dash-shadow-brand: 0 6px 24px rgba(0, 90, 140, 0.25);
+    /* Shadows - Elegant, layered */
+    --dash-shadow-xs: 0 1px 2px rgba(0, 90, 140, 0.04);
+    --dash-shadow-sm: 0 2px 4px rgba(0, 90, 140, 0.06);
+    --dash-shadow: 0 4px 12px rgba(0, 90, 140, 0.08);
+    --dash-shadow-lg: 0 8px 24px rgba(0, 90, 140, 0.10);
+    --dash-shadow-xl: 0 16px 48px rgba(0, 90, 140, 0.12);
+    --dash-shadow-brand: 0 8px 32px rgba(0, 90, 140, 0.25);
+    --dash-shadow-glow: 0 0 40px rgba(0, 90, 140, 0.15);
     
     /* Transitions */
-    --dash-transition: 0.2s ease;
+    --dash-transition-fast: 0.15s ease;
+    --dash-transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    --dash-transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Border radius */
+    --dash-radius-sm: 8px;
+    --dash-radius: 12px;
+    --dash-radius-lg: 16px;
+    --dash-radius-xl: 20px;
+    --dash-radius-2xl: 24px;
 }
 
 /* ============================================
-   DARK MODE - Using Design System
+   DARK MODE - Elegant Dark Theme
    ============================================ */
 [data-theme="dark"] .saw-dash,
 .saw-dash[data-theme="dark"] {
     /* Brand stays vibrant in dark mode */
-    --dash-primary: var(--saw-brand-400, #1A89B5);
-    --dash-primary-hover: var(--saw-brand-500, #0077B5);
-    --dash-primary-light: rgba(26, 137, 181, 0.12);
-    --dash-primary-dark: var(--saw-brand-600, #005A8C);
+    --dash-primary: #3b9eca;
+    --dash-primary-hover: #5cb3d9;
+    --dash-primary-light: rgba(59, 158, 202, 0.15);
+    --dash-primary-dark: #005A8C;
     
     /* Dark gradients */
-    --dash-gradient: linear-gradient(135deg, var(--saw-brand-500, #0077B5) 0%, var(--saw-brand-700, #004A73) 100%);
-    --dash-gradient-hover: linear-gradient(135deg, var(--saw-brand-400, #1A89B5) 0%, var(--saw-brand-600, #005A8C) 100%);
+    --dash-gradient: linear-gradient(135deg, #1a5276 0%, #0d3446 100%);
+    --dash-gradient-hover: linear-gradient(135deg, #217dbb 0%, #1a5276 100%);
+    --dash-gradient-subtle: linear-gradient(180deg, #0f1419 0%, #1a2332 100%);
+    
+    /* Page background */
+    --dash-page-bg: linear-gradient(135deg, #0f1419 0%, #1a2332 50%, #0d1b2a 100%);
     
     /* Background hierarchy - dark */
     --dash-bg: #0f1419;
-    --dash-card-bg: #1a1f26;
-    --dash-card-border: rgba(156, 163, 175, 0.15);
-    --dash-card-header-bg: #22272e;
+    --dash-card-bg: #1a2332;
+    --dash-card-border: rgba(255, 255, 255, 0.06);
+    --dash-card-header-bg: rgba(255, 255, 255, 0.03);
     
     /* Text - light on dark */
-    --dash-text-primary: #e5e7eb;
-    --dash-text-secondary: #9ca3af;
-    --dash-text-muted: #6b7280;
+    --dash-text-primary: #f1f5f9;
+    --dash-text-secondary: #94a3b8;
+    --dash-text-muted: #64748b;
     
     /* Borders & Hover */
-    --dash-border-light: rgba(156, 163, 175, 0.1);
-    --dash-hover-bg: rgba(156, 163, 175, 0.08);
+    --dash-border-light: rgba(255, 255, 255, 0.06);
+    --dash-hover-bg: rgba(255, 255, 255, 0.05);
     
     /* Status colors - brighter for dark mode */
     --dash-success: #34d399;
-    --dash-success-light: rgba(52, 211, 153, 0.12);
+    --dash-success-light: rgba(52, 211, 153, 0.15);
     --dash-success-dark: #10b981;
     
     --dash-danger: #f87171;
-    --dash-danger-light: rgba(248, 113, 113, 0.12);
+    --dash-danger-light: rgba(248, 113, 113, 0.15);
     --dash-danger-dark: #ef4444;
     
     --dash-warning: #fbbf24;
-    --dash-warning-light: rgba(251, 191, 36, 0.12);
+    --dash-warning-light: rgba(251, 191, 36, 0.15);
     --dash-warning-dark: #f59e0b;
     
     /* Component specific */
-    --dash-stat-icon-bg: rgba(156, 163, 175, 0.1);
-    --dash-ring-center: #1a1f26;
-    --dash-chart-grid: rgba(156, 163, 175, 0.15);
-    --dash-rank-bg: rgba(156, 163, 175, 0.1);
+    --dash-stat-icon-bg: rgba(59, 158, 202, 0.15);
+    --dash-ring-center: #1a2332;
+    --dash-chart-grid: rgba(255, 255, 255, 0.08);
+    --dash-rank-bg: rgba(255, 255, 255, 0.05);
     
     /* Time badges - dark mode */
     --dash-time-bg: rgba(52, 211, 153, 0.15);
@@ -134,19 +158,46 @@
     --dash-time-overnight-color: #fbbf24;
     
     /* Shadows - darker */
-    --dash-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-    --dash-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
-    --dash-shadow-brand: 0 6px 24px rgba(0, 90, 140, 0.35);
+    --dash-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
+    --dash-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.25);
+    --dash-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    --dash-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.35);
+    --dash-shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.4);
+    --dash-shadow-brand: 0 8px 32px rgba(59, 158, 202, 0.25);
+    --dash-shadow-glow: 0 0 40px rgba(59, 158, 202, 0.2);
 }
 
 /* ============================================
-   BASE STYLES
+   BASE STYLES - Full Width Layout
    ============================================ */
 .saw-dash {
-    padding: 24px;
-    max-width: 100%;
-    margin: 0 auto;
-    font-family: var(--saw-font-body, 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif);
+    /* CRITICAL: Fill parent container completely */
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    
+    /* No overflow on outer - scroll is in inner container */
+    overflow: hidden !important;
+    
+    /* Page background with elegant gradient */
+    background: var(--dash-page-bg);
+    
+    /* No padding on outer container */
+    padding: 0;
+    margin: 0;
+    
+    /* Typography */
+    font-family: var(--saw-font-body, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--dash-text-primary);
+    
+    /* Smooth rendering */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 .saw-dash * {
@@ -154,91 +205,155 @@
 }
 
 /* ============================================
-   HEADER - Welcome Banner
+   SCROLL CONTAINER - This is the scrollable area
    ============================================ */
-.saw-head {
-    display: flex;
-    gap: 16px;
-    margin-bottom: 24px;
-    align-items: stretch;
+.saw-dash-scroll {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch;
 }
 
-.saw-welcome {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-    padding: 24px 28px;
-    background: var(--dash-gradient);
-    border-radius: 16px;
-    color: #fff;
-    box-shadow: var(--dash-shadow-brand);
-    transition: all var(--dash-transition);
+/* Custom scrollbar */
+.saw-dash-scroll::-webkit-scrollbar {
+    width: 8px;
+}
+
+.saw-dash-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.saw-dash-scroll::-webkit-scrollbar-thumb {
+    background: rgba(0, 90, 140, 0.2);
+    border-radius: 4px;
+}
+
+.saw-dash-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 90, 140, 0.35);
+}
+
+[data-theme="dark"] .saw-dash-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+[data-theme="dark"] .saw-dash-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* ============================================
+   PAGE WRAPPER - Inner Container with content
+   ============================================ */
+.saw-dash-inner {
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 24px 32px 48px;
+    
+    /* Ensure minimum height for short content */
+    min-height: 100%;
+}
+
+/* ============================================
+   HERO SECTION - Welcome Banner with Stats
+   ============================================ */
+.saw-hero {
     position: relative;
+    margin-bottom: 28px;
+    border-radius: var(--dash-radius-2xl);
     overflow: hidden;
+    background: var(--dash-gradient);
+    box-shadow: var(--dash-shadow-brand);
 }
 
-/* Subtle pattern overlay */
-.saw-welcome::before {
+/* Decorative pattern overlay */
+.saw-hero::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    inset: 0;
+    background: 
+        radial-gradient(circle at 100% 0%, rgba(255,255,255,0.1) 0%, transparent 50%),
+        radial-gradient(circle at 0% 100%, rgba(255,255,255,0.08) 0%, transparent 40%),
+        url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Ccircle cx='50' cy='50' r='1.5'/%3E%3C/g%3E%3C/svg%3E");
     pointer-events: none;
 }
 
-.saw-welcome-text {
-    flex: 1;
-    min-width: 0;
-    position: relative;
-    z-index: 1;
+/* Glass morphism effect layer */
+.saw-hero::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 40%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.05) 100%);
+    pointer-events: none;
 }
 
-.saw-welcome h1 {
-    margin: 0 0 4px;
+.saw-hero-content {
+    position: relative;
+    z-index: 1;
+    padding: 32px 36px;
+}
+
+/* Hero Header Row */
+.saw-hero-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 28px;
+}
+
+.saw-hero-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.saw-hero-title {
+    margin: 0 0 6px;
     font-family: var(--saw-font-heading, 'Oswald', sans-serif);
-    font-size: 1.5rem;
+    font-size: 1.75rem;
     font-weight: 600;
+    color: #fff;
     letter-spacing: 0.5px;
     text-transform: uppercase;
 }
 
-.saw-welcome p {
+.saw-hero-subtitle {
     margin: 0;
-    opacity: 0.9;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.85);
     font-weight: 400;
+}
+
+/* Hero Actions */
+.saw-hero-actions {
+    display: flex;
+    gap: 12px;
+    flex-shrink: 0;
 }
 
 /* New Visit Button */
 .saw-btn-new {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 12px 24px;
+    gap: 10px;
+    padding: 14px 28px;
     background: #fff;
-    color: var(--saw-brand-700, #004A73);
-    border-radius: 10px;
-    font-size: 0.9rem;
+    color: var(--dash-primary-dark);
+    border-radius: var(--dash-radius);
+    font-size: 0.95rem;
     font-weight: 600;
     text-decoration: none;
     transition: all var(--dash-transition);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     white-space: nowrap;
-    flex-shrink: 0;
-    position: relative;
-    z-index: 1;
 }
 
 .saw-btn-new:hover {
-    background: var(--saw-brand-50, #E8F4F8);
-    color: var(--saw-brand-800, #003D5C);
+    background: var(--dash-primary-light);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
 }
 
 .saw-btn-new:active {
@@ -251,56 +366,140 @@
 }
 
 /* ============================================
-   EMERGENCY BUTTON
+   EMERGENCY BUTTON - Prominent & Urgent
    ============================================ */
 .saw-emergency {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 14px 20px;
-    background: linear-gradient(135deg, var(--dash-danger) 0%, var(--dash-danger-dark) 100%);
+    gap: 14px;
+    padding: 14px 24px;
+    background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
     border: 2px solid rgba(255, 255, 255, 0.2);
-    border-radius: 14px;
+    border-radius: var(--dash-radius);
     color: #fff;
     cursor: pointer;
     transition: all var(--dash-transition);
-    box-shadow: 0 4px 16px rgba(220, 38, 38, 0.3);
+    box-shadow: 0 4px 20px rgba(220, 38, 38, 0.35);
     animation: emergency-pulse 2s ease-in-out infinite;
 }
 
 @keyframes emergency-pulse {
     0%, 100% { 
-        box-shadow: 0 4px 16px rgba(220, 38, 38, 0.3);
+        box-shadow: 0 4px 20px rgba(220, 38, 38, 0.35);
     }
     50% { 
-        box-shadow: 0 4px 28px rgba(220, 38, 38, 0.5);
+        box-shadow: 0 4px 32px rgba(220, 38, 38, 0.5);
     }
 }
 
 .saw-emergency:hover {
-    transform: scale(1.02);
+    transform: scale(1.03);
     animation: none;
-    box-shadow: 0 6px 24px rgba(220, 38, 38, 0.4);
+    box-shadow: 0 6px 28px rgba(220, 38, 38, 0.45);
 }
 
 .saw-em-count {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     background: rgba(255, 255, 255, 0.2);
-    border-radius: 10px;
+    border-radius: var(--dash-radius-sm);
     font-family: var(--saw-font-heading, 'Oswald', sans-serif);
-    font-size: 1.2rem;
+    font-size: 1.3rem;
     font-weight: 700;
 }
 
 .saw-em-text {
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     font-weight: 700;
     letter-spacing: 0.5px;
     text-transform: uppercase;
+}
+
+.saw-emergency svg {
+    width: 20px;
+    height: 20px;
+    opacity: 0.9;
+}
+
+/* ============================================
+   HERO STATS - Key Metrics Grid
+   ============================================ */
+.saw-hero-stats {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 16px;
+}
+
+.saw-hero-stat {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 16px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: var(--dash-radius-lg);
+    text-align: center;
+    transition: all var(--dash-transition);
+}
+
+.saw-hero-stat:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+}
+
+/* Highlighted stat (present visitors) */
+.saw-hero-stat--highlight {
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.saw-hero-stat-icon {
+    font-size: 1.5rem;
+    margin-bottom: 8px;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+}
+
+.saw-hero-stat-value {
+    font-family: var(--saw-font-heading, 'Oswald', sans-serif);
+    font-size: 2rem;
+    font-weight: 600;
+    color: #fff;
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.saw-hero-stat-label {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* LIVE indicator */
+.saw-live {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    padding: 3px 8px;
+    background: #fff;
+    color: var(--dash-danger);
+    font-size: 0.6rem;
+    font-weight: 700;
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    animation: live-blink 1.2s ease-in-out infinite;
+}
+
+@keyframes live-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
 }
 
 /* ============================================
@@ -309,149 +508,90 @@
 .saw-alert {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 14px 18px;
+    gap: 14px;
+    padding: 16px 20px;
     background: var(--dash-warning-light);
     border: 1px solid var(--dash-warning);
     border-left: 4px solid var(--dash-warning);
-    border-radius: 10px;
+    border-radius: var(--dash-radius);
     color: var(--dash-warning-dark);
-    margin-bottom: 24px;
-    font-size: 0.9rem;
+    margin-bottom: 28px;
+    font-size: 0.95rem;
+    font-weight: 500;
 }
 
 [data-theme="dark"] .saw-alert {
     background: var(--dash-warning-light);
-    border-color: rgba(251, 191, 36, 0.3);
+    border-color: rgba(251, 191, 36, 0.4);
     color: var(--dash-warning);
 }
 
 /* ============================================
-   STATS GRID
+   SECTION HEADERS
    ============================================ */
-.saw-stats {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 14px;
-    margin-bottom: 24px;
+.saw-section {
+    margin-bottom: 28px;
 }
 
-.saw-stat {
-    position: relative;
+.saw-section-header {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 16px 18px;
-    background: var(--dash-card-bg);
-    border: 1px solid var(--dash-card-border);
-    border-radius: 14px;
-    transition: all var(--dash-transition);
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--dash-border-light);
 }
 
-.saw-stat:hover {
-    transform: translateY(-3px);
-    box-shadow: var(--dash-shadow-lg);
-}
-
-/* Highlighted stat (e.g., overtime) */
-.saw-stat-hl {
-    background: linear-gradient(135deg, var(--dash-warning-light) 0%, rgba(251, 191, 36, 0.15) 100%);
-    border-color: var(--dash-warning);
-}
-
-[data-theme="dark"] .saw-stat-hl {
-    background: linear-gradient(135deg, var(--dash-warning-light) 0%, rgba(251, 191, 36, 0.08) 100%);
-    border-color: rgba(251, 191, 36, 0.4);
-}
-
-.saw-stat-icon {
-    width: 42px;
-    height: 42px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--dash-stat-icon-bg);
-    border-radius: 10px;
-    font-size: 1.3rem;
-    flex-shrink: 0;
-    transition: all var(--dash-transition);
-}
-
-.saw-stat:hover .saw-stat-icon {
-    background: var(--dash-primary-light);
-}
-
-.saw-stat-hl .saw-stat-icon {
-    background: linear-gradient(135deg, var(--dash-warning), var(--dash-warning-dark));
-}
-
-.saw-stat-content {
-    flex: 1;
-    min-width: 0;
-}
-
-.saw-stat b {
-    display: block;
+.saw-section-title {
+    margin: 0;
     font-family: var(--saw-font-heading, 'Oswald', sans-serif);
-    font-size: 1.6rem;
-    font-weight: 600;
-    color: var(--dash-text-primary);
-    line-height: 1;
-    margin-bottom: 2px;
-}
-
-.saw-stat small {
-    font-size: 0.75rem;
-    color: var(--dash-text-secondary);
+    font-size: 1.1rem;
     font-weight: 500;
-}
-
-/* LIVE indicator */
-.saw-live {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    padding: 3px 8px;
-    background: var(--dash-danger);
-    color: #fff;
-    font-size: 0.6rem;
-    font-weight: 700;
-    border-radius: 8px;
+    color: var(--dash-text-primary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    animation: live-pulse 1.5s ease-in-out infinite;
 }
 
-@keyframes live-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
+.saw-section-icon {
+    font-size: 1.25rem;
 }
 
 /* ============================================
-   LAYOUT GRID (3-Column Row)
+   LAYOUT GRIDS
    ============================================ */
+/* Primary Row: 3 equal columns */
 .saw-row3 {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 18px;
-    margin-bottom: 18px;
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+/* Secondary Row: 2 columns */
+.saw-row2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    margin-bottom: 24px;
 }
 
 /* ============================================
-   CARDS
+   CARDS - Elegant & Refined
    ============================================ */
 .saw-card {
     background: var(--dash-card-bg);
     border: 1px solid var(--dash-card-border);
-    border-radius: 16px;
+    border-radius: var(--dash-radius-xl);
     overflow: hidden;
     display: flex;
     flex-direction: column;
     transition: all var(--dash-transition);
+    box-shadow: var(--dash-shadow-xs);
 }
 
 .saw-card:hover {
     box-shadow: var(--dash-shadow);
+    border-color: rgba(0, 90, 140, 0.12);
 }
 
 /* Card Header */
@@ -459,7 +599,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 14px 18px;
+    gap: 12px;
+    padding: 16px 20px;
     background: var(--dash-card-header-bg);
     border-bottom: 1px solid var(--dash-card-border);
 }
@@ -467,7 +608,7 @@
 .saw-card-h h3 {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     margin: 0;
     font-family: var(--saw-font-heading, 'Oswald', sans-serif);
     font-size: 0.95rem;
@@ -478,21 +619,23 @@
 }
 
 .saw-card-h a {
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     color: var(--dash-primary);
     text-decoration: none;
     font-weight: 600;
-    transition: color var(--dash-transition);
+    transition: all var(--dash-transition-fast);
+    padding: 6px 12px;
+    border-radius: var(--dash-radius-sm);
 }
 
 .saw-card-h a:hover {
+    background: var(--dash-primary-light);
     color: var(--dash-primary-hover);
-    text-decoration: underline;
 }
 
 /* Card Body */
 .saw-card-b {
-    padding: 14px 18px;
+    padding: 16px 20px;
     flex: 1;
 }
 
@@ -502,7 +645,7 @@
 
 /* Scroll Container */
 .saw-scroll {
-    max-height: 340px;
+    max-height: 380px;
     overflow-y: auto;
 }
 
@@ -530,34 +673,36 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 22px;
-    height: 22px;
-    padding: 0 8px;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 10px;
     background: var(--dash-primary);
     color: #fff;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     font-weight: 700;
-    border-radius: 11px;
+    border-radius: 12px;
 }
 
 .saw-tag {
-    padding: 4px 10px;
+    padding: 5px 12px;
     background: var(--dash-stat-icon-bg);
     color: var(--dash-text-secondary);
     font-size: 0.7rem;
     font-weight: 600;
-    border-radius: 6px;
+    border-radius: var(--dash-radius-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
 /* Refresh Button */
 .saw-refresh {
-    width: 30px;
-    height: 30px;
+    width: 34px;
+    height: 34px;
     background: var(--dash-card-bg);
     border: 1px solid var(--dash-card-border);
-    border-radius: 8px;
+    border-radius: var(--dash-radius-sm);
     cursor: pointer;
-    font-size: 1rem;
+    font-size: 1.1rem;
     color: var(--dash-text-secondary);
     transition: all var(--dash-transition);
     display: flex;
@@ -572,35 +717,35 @@
 }
 
 /* ============================================
-   EMPTY STATES
+   EMPTY STATES - Elegant & Helpful
    ============================================ */
 .saw-empty {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 48px 20px;
+    padding: 48px 24px;
     text-align: center;
     color: var(--dash-text-muted);
 }
 
 .saw-empty-icon {
     font-size: 2.5rem;
-    margin-bottom: 12px;
-    opacity: 0.6;
+    margin-bottom: 16px;
+    opacity: 0.5;
 }
 
 .saw-empty p {
-    margin: 8px 0 0;
-    font-size: 0.9rem;
-    color: var(--dash-text-muted);
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--dash-text-secondary);
 }
 
 .saw-empty-sm {
-    padding: 24px;
+    padding: 32px 20px;
     text-align: center;
     color: var(--dash-text-muted);
-    font-size: 0.85rem;
+    font-size: 0.9rem;
 }
 
 /* ============================================
@@ -609,10 +754,10 @@
 .saw-person {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 12px 18px;
+    gap: 14px;
+    padding: 14px 20px;
     border-bottom: 1px solid var(--dash-border-light);
-    transition: background var(--dash-transition);
+    transition: background var(--dash-transition-fast);
 }
 
 .saw-person:last-child {
@@ -626,7 +771,7 @@
 .saw-person-link {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
     flex: 1;
     min-width: 0;
     text-decoration: none;
@@ -635,18 +780,19 @@
 
 /* Avatar */
 .saw-avatar {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
     background: var(--dash-gradient);
     color: #fff;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     font-weight: 700;
-    border-radius: 12px;
+    border-radius: var(--dash-radius);
     flex-shrink: 0;
     font-family: var(--saw-font-heading, 'Oswald', sans-serif);
+    box-shadow: var(--dash-shadow-sm);
 }
 
 .saw-person-info {
@@ -656,12 +802,13 @@
 
 .saw-person-info strong {
     display: block;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     font-weight: 600;
     color: var(--dash-text-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    margin-bottom: 2px;
 }
 
 .saw-person-info em {
@@ -676,12 +823,12 @@
 
 /* Time Badge */
 .saw-time {
-    padding: 6px 12px;
+    padding: 8px 14px;
     background: var(--dash-time-bg);
     color: var(--dash-time-color);
     font-size: 0.8rem;
     font-weight: 700;
-    border-radius: 8px;
+    border-radius: var(--dash-radius-sm);
     flex-shrink: 0;
 }
 
@@ -697,43 +844,92 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    padding: 8px 14px;
-    background: linear-gradient(135deg, var(--dash-danger) 0%, var(--dash-danger-dark) 100%);
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    font-size: 0.8rem;
-    font-weight: 600;
+    gap: 8px;
+    padding: 10px 18px;
+    background: transparent;
+    border: 2px solid var(--dash-danger);
+    color: var(--dash-danger);
+    border-radius: var(--dash-radius);
     cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
     transition: all var(--dash-transition);
     flex-shrink: 0;
-    min-height: 36px;
 }
 
 .saw-checkout:hover {
-    background: linear-gradient(135deg, var(--dash-danger-dark) 0%, #991b1b 100%);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
-}
-
-.saw-checkout:active {
-    transform: translateY(0);
+    background: var(--dash-danger);
+    color: #fff;
 }
 
 .saw-checkout svg {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
 }
 
 .saw-checkout-text {
     display: inline;
 }
 
-.saw-person.saw-loading {
-    opacity: 0.5;
-    pointer-events: none;
+/* ============================================
+   ACTIVITY LIST
+   ============================================ */
+.saw-act {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--dash-border-light);
+    transition: background var(--dash-transition-fast);
+}
+
+.saw-act:last-child {
+    border-bottom: none;
+}
+
+.saw-act:hover {
+    background: var(--dash-hover-bg);
+}
+
+.saw-act-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 0.9rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.saw-act-icon.in {
+    background: var(--dash-success-light);
+    color: var(--dash-success);
+}
+
+.saw-act-icon.out {
+    background: var(--dash-danger-light);
+    color: var(--dash-danger);
+}
+
+.saw-act-text {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.9rem;
+    color: var(--dash-text-secondary);
+}
+
+.saw-act-text strong {
+    color: var(--dash-text-primary);
+    font-weight: 600;
+}
+
+.saw-act-time {
+    font-size: 0.85rem;
+    color: var(--dash-text-muted);
+    font-weight: 500;
+    flex-shrink: 0;
 }
 
 /* ============================================
@@ -742,12 +938,12 @@
 .saw-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px 18px;
+    gap: 14px;
+    padding: 14px 20px;
     text-decoration: none;
     color: inherit;
     border-bottom: 1px solid var(--dash-border-light);
-    transition: background var(--dash-transition);
+    transition: all var(--dash-transition-fast);
 }
 
 .saw-item:last-child {
@@ -759,7 +955,15 @@
 }
 
 .saw-item-icon {
-    font-size: 1.3rem;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--dash-stat-icon-bg);
+    border-radius: var(--dash-radius);
+    font-size: 1.1rem;
+    flex-shrink: 0;
 }
 
 .saw-item-text {
@@ -769,35 +973,31 @@
 
 .saw-item-text strong {
     display: block;
-    font-size: 0.85rem;
+    font-size: 0.95rem;
     font-weight: 600;
     color: var(--dash-text-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    margin-bottom: 2px;
 }
 
 .saw-item-text em {
     display: block;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     font-style: normal;
     color: var(--dash-text-secondary);
 }
 
 /* Status Pills */
 .saw-pill {
-    padding: 4px 10px;
-    font-size: 0.65rem;
-    font-weight: 700;
-    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 20px;
     text-transform: uppercase;
     letter-spacing: 0.3px;
     flex-shrink: 0;
-}
-
-.saw-pill.confirmed {
-    background: var(--dash-primary-light);
-    color: var(--dash-primary-dark);
 }
 
 .saw-pill.pending {
@@ -805,164 +1005,103 @@
     color: var(--dash-warning-dark);
 }
 
-.saw-pill.today {
-    box-shadow: 0 0 0 2px var(--dash-warning);
-}
-
-[data-theme="dark"] .saw-pill.confirmed {
-    background: var(--dash-primary-light);
-    color: var(--dash-primary);
-}
-
-[data-theme="dark"] .saw-pill.pending {
-    background: var(--dash-warning-light);
-    color: var(--dash-warning);
-}
-
-/* ============================================
-   ACTIVITY FEED
-   ============================================ */
-.saw-act {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 18px;
-    border-bottom: 1px solid var(--dash-border-light);
-}
-
-.saw-act:last-child {
-    border-bottom: none;
-}
-
-.saw-act-icon {
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    font-weight: 700;
-    flex-shrink: 0;
-}
-
-.saw-act-icon.in {
+.saw-pill.confirmed {
     background: var(--dash-success-light);
     color: var(--dash-success-dark);
 }
 
-.saw-act-icon.out {
-    background: var(--dash-danger-light);
-    color: var(--dash-danger-dark);
-}
-
-[data-theme="dark"] .saw-act-icon.in {
-    background: var(--dash-success-light);
-    color: var(--dash-success);
-}
-
-[data-theme="dark"] .saw-act-icon.out {
-    background: var(--dash-danger-light);
-    color: var(--dash-danger);
-}
-
-.saw-act-text {
-    flex: 1;
-    font-size: 0.85rem;
-    color: var(--dash-text-secondary);
-}
-
-.saw-act-text strong {
-    font-weight: 600;
-    color: var(--dash-text-primary);
-}
-
-.saw-act-time {
-    font-size: 0.75rem;
-    color: var(--dash-text-muted);
+.saw-pill.today {
+    background: var(--dash-primary);
+    color: #fff;
 }
 
 /* ============================================
-   CHARTS CONTAINER
+   CHARTS
    ============================================ */
 .saw-chart {
-    height: 180px;
-    position: relative;
-    padding: 10px;
+    height: 200px;
+    padding: 8px 0;
+}
+
+.saw-chart canvas {
+    width: 100% !important;
+    height: 100% !important;
 }
 
 /* ============================================
-   TRAINING RING
+   TRAINING STATS - Donut Chart
    ============================================ */
 .saw-training {
     display: flex;
     align-items: center;
-    gap: 24px;
-    padding: 12px 0;
+    gap: 28px;
+    padding: 20px;
 }
 
 .saw-ring {
     position: relative;
-    width: 100px;
-    height: 100px;
+    width: 110px;
+    height: 110px;
     border-radius: 50%;
     background: conic-gradient(
-        var(--dash-success) 0% calc(var(--c) * 1%),
-        var(--dash-warning) calc(var(--c) * 1%) calc((var(--c) + var(--p)) * 1%),
-        var(--dash-card-border) calc((var(--c) + var(--p)) * 1%) 100%
+        var(--dash-success) 0% calc(var(--c, 0) * 1%),
+        var(--dash-warning) calc(var(--c, 0) * 1%) calc((var(--c, 0) + var(--p, 0)) * 1%),
+        var(--dash-chart-grid) calc((var(--c, 0) + var(--p, 0)) * 1%) 100%
     );
-    display: flex;
-    align-items: center;
-    justify-content: center;
     flex-shrink: 0;
-}
-
-[data-theme="dark"] .saw-ring {
-    background: conic-gradient(
-        var(--dash-success) 0% calc(var(--c) * 1%),
-        var(--dash-warning) calc(var(--c) * 1%) calc((var(--c) + var(--p)) * 1%),
-        rgba(100, 116, 139, 0.3) calc((var(--c) + var(--p)) * 1%) 100%
-    );
+    box-shadow: var(--dash-shadow);
 }
 
 .saw-ring::before {
     content: '';
     position: absolute;
-    width: 70px;
-    height: 70px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 72px;
+    height: 72px;
     background: var(--dash-ring-center);
     border-radius: 50%;
 }
 
 .saw-ring span {
-    position: relative;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     font-family: var(--saw-font-heading, 'Oswald', sans-serif);
-    font-size: 1.2rem;
+    font-size: 1.4rem;
     font-weight: 600;
     color: var(--dash-text-primary);
 }
 
-/* Legend */
 .saw-legend {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    flex: 1;
 }
 
 .saw-leg {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 0.8rem;
+    gap: 10px;
+    font-size: 0.9rem;
     color: var(--dash-text-secondary);
+    margin-bottom: 10px;
 }
 
-.saw-leg span {
+.saw-leg:last-child {
+    margin-bottom: 0;
+}
+
+.saw-leg span:first-child {
     width: 12px;
     height: 12px;
-    border-radius: 4px;
+    border-radius: 3px;
     flex-shrink: 0;
 }
+
+.saw-leg span.ok { background: var(--dash-success); }
+.saw-leg span.wait { background: var(--dash-warning); }
+.saw-leg span.skip { background: var(--dash-chart-grid); }
 
 .saw-leg b {
     margin-left: auto;
@@ -970,78 +1109,59 @@
     color: var(--dash-text-primary);
 }
 
-.saw-leg span.ok { background: var(--dash-success); }
-.saw-leg span.wait { background: var(--dash-warning); }
-.saw-leg span.skip { background: var(--dash-card-border); }
-
-[data-theme="dark"] .saw-leg span.skip {
-    background: rgba(100, 116, 139, 0.4);
-}
-
 /* ============================================
-   RANK LIST (Top Companies/Visitors)
+   RANKING LIST
    ============================================ */
 .saw-rank-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px 18px;
+    gap: 14px;
+    padding: 14px 20px;
     border-bottom: 1px solid var(--dash-border-light);
-    text-decoration: none;
-    color: inherit;
+    transition: background var(--dash-transition-fast);
 }
 
 .saw-rank-item:last-child {
     border-bottom: none;
 }
 
-.saw-rank-link:hover {
+.saw-rank-item:hover {
     background: var(--dash-hover-bg);
 }
 
+.saw-rank-link {
+    text-decoration: none;
+    color: inherit;
+}
+
 .saw-rank {
+    width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
     background: var(--dash-rank-bg);
+    border-radius: var(--dash-radius-sm);
+    font-family: var(--saw-font-heading, 'Oswald', sans-serif);
+    font-size: 0.95rem;
+    font-weight: 600;
     color: var(--dash-text-secondary);
-    font-size: 0.75rem;
-    font-weight: 700;
-    border-radius: 8px;
     flex-shrink: 0;
 }
 
-/* Medal styles for top 3 */
 .saw-rank.r1 {
-    background: linear-gradient(135deg, #fef3c7, #fde68a);
-    color: #92400e;
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    color: #fff;
 }
 
 .saw-rank.r2 {
-    background: linear-gradient(135deg, #e5e7eb, #d1d5db);
-    color: #374151;
+    background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+    color: #fff;
 }
 
 .saw-rank.r3 {
-    background: linear-gradient(135deg, #fed7aa, #fdba74);
-    color: #9a3412;
-}
-
-[data-theme="dark"] .saw-rank.r1 {
-    background: linear-gradient(135deg, rgba(251, 191, 36, 0.3), rgba(245, 158, 11, 0.2));
-    color: #fbbf24;
-}
-
-[data-theme="dark"] .saw-rank.r2 {
-    background: linear-gradient(135deg, rgba(148, 163, 184, 0.3), rgba(100, 116, 139, 0.2));
-    color: #94a3b8;
-}
-
-[data-theme="dark"] .saw-rank.r3 {
-    background: linear-gradient(135deg, rgba(251, 146, 60, 0.3), rgba(249, 115, 22, 0.2));
-    color: #fb923c;
+    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+    color: #fff;
 }
 
 .saw-rank-text {
@@ -1051,244 +1171,147 @@
 
 .saw-rank-text strong {
     display: block;
-    font-size: 0.85rem;
+    font-size: 0.95rem;
     font-weight: 600;
     color: var(--dash-text-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    margin-bottom: 2px;
 }
 
 .saw-rank-text em {
     display: block;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     font-style: normal;
     color: var(--dash-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .saw-rank-count {
     font-family: var(--saw-font-heading, 'Oswald', sans-serif);
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--dash-primary);
-}
-
-[data-theme="dark"] .saw-rank-count {
-    color: var(--dash-primary);
-}
-
-.saw-rank-dur {
-    padding: 4px 10px;
-    background: var(--dash-primary-light);
-    color: var(--dash-primary-dark);
-    font-size: 0.75rem;
-    font-weight: 700;
-    border-radius: 6px;
-}
-
-[data-theme="dark"] .saw-rank-dur {
-    background: var(--dash-primary-light);
-    color: var(--dash-primary);
-}
-
-/* ============================================
-   VISITOR COUNT BADGE
-   ============================================ */
-.saw-visitor-count-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 14px;
-    background: var(--dash-primary-light);
-    border: 1px solid var(--dash-primary);
-    border-radius: 10px;
-}
-
-.saw-visitor-count-badge .saw-count {
-    font-family: var(--saw-font-heading, 'Oswald', sans-serif);
     font-size: 1.1rem;
     font-weight: 600;
     color: var(--dash-primary);
+    flex-shrink: 0;
 }
 
-.saw-visitor-count-badge .saw-label {
-    font-size: 0.8rem;
-    color: var(--dash-primary-dark);
+.saw-rank-dur {
+    padding: 8px 14px;
+    background: var(--dash-stat-icon-bg);
+    border-radius: var(--dash-radius-sm);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--dash-text-primary);
+    flex-shrink: 0;
 }
 
-[data-theme="dark"] .saw-visitor-count-badge .saw-label {
-    color: var(--dash-primary);
+/* ============================================
+   SECONDARY SECTION - Lower Visual Priority
+   ============================================ */
+.saw-section-secondary {
+    margin-top: 12px;
+    padding-top: 32px;
+    border-top: 2px solid var(--dash-border-light);
+}
+
+.saw-section-secondary .saw-card {
+    background: rgba(255, 255, 255, 0.7);
+}
+
+[data-theme="dark"] .saw-section-secondary .saw-card {
+    background: rgba(26, 35, 50, 0.7);
 }
 
 /* ============================================
    RESPONSIVE - TABLET (max 1200px)
    ============================================ */
 @media (max-width: 1200px) {
-    .saw-stats {
+    .saw-dash-inner {
+        padding: 20px 24px 40px;
+    }
+    
+    .saw-hero-stats {
         grid-template-columns: repeat(3, 1fr);
     }
     
     .saw-row3 {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: repeat(2, 1fr);
     }
     
-    .saw-row3 .saw-card:last-child {
-        grid-column: span 2;
+    /* Make third card full width */
+    .saw-row3 > .saw-card:nth-child(3) {
+        grid-column: 1 / -1;
     }
 }
 
 /* ============================================
-   RESPONSIVE - SMALL TABLET (max 900px)
+   RESPONSIVE - MOBILE (max 768px)
    ============================================ */
-@media (max-width: 900px) {
-    .saw-head {
+@media (max-width: 768px) {
+    .saw-dash-inner {
+        padding: 16px 16px 32px;
+    }
+    
+    /* Hero section */
+    .saw-hero-content {
+        padding: 24px 20px;
+    }
+    
+    .saw-hero-header {
         flex-direction: column;
+        gap: 16px;
+        margin-bottom: 20px;
     }
     
-    .saw-welcome {
-        flex-direction: column;
-        text-align: center;
-    }
-    
-    .saw-welcome-text {
-        text-align: center;
-    }
-    
-    .saw-emergency {
-        justify-content: center;
-    }
-    
-    .saw-row3 {
-        grid-template-columns: 1fr;
-    }
-    
-    .saw-row3 .saw-card:last-child {
-        grid-column: auto;
-    }
-}
-
-/* ============================================
-   RESPONSIVE - MOBILE (max 640px)
-   ============================================ */
-@media (max-width: 640px) {
-    .saw-dash {
-        padding: 16px 14px 28px;
-    }
-    
-    /* ----------------------------------------
-       HEADER - 2 column layout
-       ---------------------------------------- */
-    .saw-welcome {
-        flex-direction: row;
-        align-items: center;
-        justify-content: space-between;
-        text-align: left;
-        padding: 18px;
-        gap: 14px;
-        border-radius: 14px;
-    }
-    
-    .saw-welcome-text {
-        flex: 1;
-        min-width: 0;
-        text-align: left;
-    }
-    
-    .saw-welcome h1 {
-        font-size: 1.25rem;
-        margin-bottom: 4px;
-    }
-    
-    .saw-welcome p {
-        font-size: 0.85rem;
-    }
-    
-    /* Button - icon only on mobile */
-    .saw-btn-new {
-        padding: 14px;
-        border-radius: 12px;
-        min-width: 52px;
-        min-height: 52px;
-    }
-    
-    .saw-btn-new svg {
-        width: 24px;
-        height: 24px;
-    }
-    
-    .saw-btn-new-text {
-        display: none;
-    }
-    
-    /* ----------------------------------------
-       EMERGENCY - LARGER
-       ---------------------------------------- */
-    .saw-emergency {
-        padding: 16px 18px;
-        gap: 12px;
-    }
-    
-    .saw-em-count {
-        width: 48px;
-        height: 48px;
+    .saw-hero-title {
         font-size: 1.4rem;
     }
     
-    .saw-em-text {
-        font-size: 1rem;
-        letter-spacing: 0.3px;
-    }
-    
-    .saw-emergency svg {
-        width: 24px;
-        height: 24px;
-    }
-    
-    /* ----------------------------------------
-       STATS - 3 columns, centered
-       ---------------------------------------- */
-    .saw-stats {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 10px;
-    }
-    
-    .saw-stat {
+    .saw-hero-actions {
+        width: 100%;
         flex-direction: column;
-        align-items: center;
-        text-align: center;
-        padding: 14px 8px;
-        gap: 8px;
-        border-radius: 12px;
     }
     
-    .saw-stat-icon {
-        width: 36px;
-        height: 36px;
-        font-size: 1.15rem;
-        border-radius: 10px;
+    .saw-btn-new {
+        width: 100%;
+        justify-content: center;
+        padding: 14px 20px;
     }
     
-    .saw-stat b {
-        font-size: 1.5rem;
+    .saw-emergency {
+        width: 100%;
+        justify-content: center;
     }
     
-    .saw-stat small {
+    .saw-hero-stats {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+    
+    .saw-hero-stat {
+        padding: 16px 12px;
+    }
+    
+    .saw-hero-stat-value {
+        font-size: 1.6rem;
+    }
+    
+    .saw-hero-stat-label {
         font-size: 0.7rem;
-        line-height: 1.3;
     }
     
-    .saw-live {
-        top: 6px;
-        right: 6px;
-        padding: 2px 6px;
-        font-size: 0.55rem;
+    /* Cards */
+    .saw-row3,
+    .saw-row2 {
+        grid-template-columns: 1fr;
+        gap: 16px;
     }
     
-    /* ----------------------------------------
-       CARDS
-       ---------------------------------------- */
-    .saw-card {
-        border-radius: 14px;
+    .saw-row3 > .saw-card:nth-child(3) {
+        grid-column: auto;
     }
     
     .saw-card-h {
@@ -1303,28 +1326,15 @@
         padding: 0;
     }
     
-    /* ----------------------------------------
-       PERSON LIST - Mobile 3-column grid
-       [Name/Position] [Time] [Checkout]
-       ---------------------------------------- */
+    /* Person List - Mobile 3-column grid */
     .saw-person {
         display: grid;
         grid-template-columns: 1fr auto auto;
         align-items: center;
         gap: 14px;
         padding: 16px;
-        border-bottom: 1px solid var(--dash-border-light);
     }
     
-    .saw-person:last-child {
-        border-bottom: none;
-    }
-    
-    .saw-person:active {
-        background: var(--dash-hover-bg);
-    }
-    
-    /* Hide avatar on mobile */
     .saw-person .saw-avatar {
         display: none;
     }
@@ -1334,46 +1344,25 @@
         min-width: 0;
     }
     
-    .saw-person-info {
-        display: block;
-    }
-    
     .saw-person-info strong {
         font-size: 1rem;
-        font-weight: 600;
         margin-bottom: 4px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        display: block;
     }
     
     .saw-person-info em {
         font-size: 0.85rem;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        display: block;
     }
     
-    /* Time badge */
     .saw-time {
         padding: 8px 12px;
         font-size: 0.85rem;
-        font-weight: 700;
-        border-radius: 8px;
-        white-space: nowrap;
     }
     
-    /* Checkout button - icon only, large touch target */
     .saw-checkout {
         width: 50px;
         height: 50px;
         padding: 0;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        border-radius: var(--dash-radius);
     }
     
     .saw-checkout svg {
@@ -1385,10 +1374,6 @@
         display: none;
     }
     
-    /* ----------------------------------------
-       OTHER MOBILE ADJUSTMENTS
-       ---------------------------------------- */
-    
     /* Activity */
     .saw-act {
         padding: 14px 16px;
@@ -1399,24 +1384,12 @@
         font-size: 0.9rem;
     }
     
-    .saw-act-time {
-        font-size: 0.85rem;
-    }
-    
-    /* Items (planned visits) */
+    /* Items */
     .saw-item {
         padding: 16px;
     }
     
-    .saw-item-text strong {
-        font-size: 0.95rem;
-    }
-    
-    .saw-item-text em {
-        font-size: 0.85rem;
-    }
-    
-    /* Training ring */
+    /* Training */
     .saw-training {
         padding: 16px;
         gap: 20px;
@@ -1436,10 +1409,6 @@
         font-size: 1.1rem;
     }
     
-    .saw-leg {
-        font-size: 0.9rem;
-    }
-    
     /* Charts */
     .saw-chart {
         height: 160px;
@@ -1449,14 +1418,6 @@
     /* Empty states */
     .saw-empty {
         padding: 36px 16px;
-    }
-    
-    .saw-empty-icon {
-        font-size: 2rem;
-    }
-    
-    .saw-empty p {
-        font-size: 0.95rem;
     }
     
     /* Rank items */
@@ -1471,24 +1432,7 @@
         font-size: 0.85rem;
     }
     
-    .saw-rank-text strong {
-        font-size: 0.95rem;
-    }
-    
-    .saw-rank-text em {
-        font-size: 0.8rem;
-    }
-    
-    .saw-rank-count {
-        font-size: 1rem;
-    }
-    
-    .saw-rank-dur {
-        padding: 6px 12px;
-        font-size: 0.8rem;
-    }
-    
-    /* Scroll container */
+    /* Scroll */
     .saw-scroll {
         max-height: 320px;
     }
@@ -1498,50 +1442,40 @@
    RESPONSIVE - SMALL MOBILE (max 400px)
    ============================================ */
 @media (max-width: 400px) {
-    .saw-dash {
-        padding: 12px 10px 24px;
+    .saw-dash-inner {
+        padding: 12px 12px 24px;
     }
     
-    /* Header */
-    .saw-welcome {
-        padding: 16px 14px;
+    .saw-hero-content {
+        padding: 20px 16px;
     }
     
-    .saw-welcome h1 {
-        font-size: 1.15rem;
+    .saw-hero-title {
+        font-size: 1.2rem;
     }
     
-    .saw-welcome p {
-        font-size: 0.8rem;
+    .saw-hero-subtitle {
+        font-size: 0.85rem;
     }
     
-    /* Stats - 2 columns for very small screens */
-    .saw-stats {
-        grid-template-columns: repeat(2, 1fr);
+    .saw-hero-stats {
         gap: 8px;
     }
     
-    .saw-stat {
-        padding: 12px 8px;
+    .saw-hero-stat {
+        padding: 14px 8px;
     }
     
-    .saw-stat-icon {
-        width: 32px;
-        height: 32px;
-        font-size: 1rem;
+    .saw-hero-stat-value {
+        font-size: 1.4rem;
     }
     
-    .saw-stat b {
-        font-size: 1.35rem;
-    }
-    
-    .saw-stat small {
+    .saw-hero-stat-label {
         font-size: 0.65rem;
     }
     
-    /* Person list */
     .saw-person {
-        padding: 14px;
+        padding: 14px 12px;
         gap: 10px;
     }
     
@@ -1601,7 +1535,32 @@
     }
 }
 
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
 /* Notification */
 .saw-notice {
     animation: slideInRight 0.3s ease;
 }
+
+/* Card entrance animation */
+.saw-card {
+    animation: fadeIn 0.4s ease;
+}
+
+.saw-row3 .saw-card:nth-child(1) { animation-delay: 0.05s; }
+.saw-row3 .saw-card:nth-child(2) { animation-delay: 0.1s; }
+.saw-row3 .saw-card:nth-child(3) { animation-delay: 0.15s; }

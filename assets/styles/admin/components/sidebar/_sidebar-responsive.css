@@ -1,21 +1,76 @@
 /**
  * SAW Admin - Sidebar Responsive
  * @package SAW_Visitors
- * @version 3.0.0
+ * @version 4.1.0
+ * 
+ * IMPORTANT: This file is loaded AFTER _sidebar-wrapper.css
+ * All responsive overrides for sidebar width/height should be here
  */
 
-@media (max-width: 768px) {
+/* ============================================
+   TABLET (769px - 1024px)
+   ============================================ */
+@media (max-width: 1024px) and (min-width: 769px) {
     .sa-sidebar {
-        width: 100%;
-        max-width: 100%;
+        /* Narrower width on tablet - approximately 67% of desktop (480px vs 720px) */
+        width: 480px !important;
+        max-width: calc(100% - 60px) !important;
+        height: calc(100vh - var(--saw-bottom-nav-height, 52px)) !important;
+        height: calc(100dvh - var(--saw-bottom-nav-height, 52px)) !important;
+        bottom: var(--saw-bottom-nav-height, 52px) !important;
+        top: 0 !important;
+    }
+    
+    .sa-sidebar--nested {
+        width: 440px !important;
+        max-width: calc(100% - 80px) !important;
     }
     
     .sa-sidebar-header {
-        padding: var(--saw-space-3);
+        padding: var(--saw-space-2) var(--saw-space-3);
+        min-height: 56px;
+        height: 56px;
     }
     
     .sa-sidebar-content {
         padding: var(--saw-space-3);
+        /* Extra padding at bottom for scrolling to last items */
+        padding-bottom: var(--saw-space-10, 40px) !important;
+    }
+    
+    .sa-sidebar-footer {
+        padding: var(--saw-space-3);
+    }
+}
+
+/* ============================================
+   MOBILE (768px and below)
+   ============================================ */
+@media (max-width: 768px) {
+    .sa-sidebar {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: calc(100vh - var(--saw-bottom-nav-height-mobile, 48px)) !important;
+        height: calc(100dvh - var(--saw-bottom-nav-height-mobile, 48px)) !important;
+        bottom: var(--saw-bottom-nav-height-mobile, 48px) !important;
+        top: 0 !important;
+    }
+    
+    .sa-sidebar--nested {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    .sa-sidebar-header {
+        padding: var(--saw-space-3);
+        min-height: 52px;
+        height: 52px;
+    }
+    
+    .sa-sidebar-content {
+        padding: var(--saw-space-3);
+        /* Large padding at bottom for scrolling to last items */
+        padding-bottom: var(--saw-space-12, 48px) !important;
     }
     
     .sa-sidebar-footer {
@@ -32,5 +87,3 @@
         width: 100%;
     }
 }
-
-

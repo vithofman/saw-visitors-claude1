@@ -1,15 +1,27 @@
 /**
  * SAW Admin - Sidebar Content
  * @package SAW_Visitors
- * @version 3.0.0
+ * @version 4.2.0
+ * 
+ * CRITICAL: min-height: 0 is required for flexbox scroll to work
  */
 
 .sa-sidebar-content {
-    flex: 1;
-    overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 0 !important; /* CRITICAL: Allows flex child to shrink and enable proper scrolling */
+    overflow-y: auto !important;
     overflow-x: hidden;
-    padding: 0 var(--saw-space-2) var(--saw-space-3) var(--saw-space-2) !important; /* padding-top: 0, left-right: half */
+    padding: 0 var(--saw-space-2) var(--saw-space-3) var(--saw-space-2);
     -webkit-overflow-scrolling: touch;
+    
+    /* Ensure content area fills available space */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Inner wrapper should also allow scroll */
+.sa-sidebar-content > * {
+    flex-shrink: 0;
 }
 
 .sa-sidebar-content::-webkit-scrollbar {
@@ -31,12 +43,14 @@
 
 /* Detail content wrapper */
 .sa-detail-content-wrapper {
-    padding: var(--saw-space-3); /* Reduced from var(--saw-space-4) */
+    padding: var(--saw-space-3);
+    flex-shrink: 0;
 }
 
 /* Detail wrapper */
 .sa-detail-wrapper {
-    padding: var(--saw-space-3); /* Reduced from var(--saw-space-4) */
+    padding: var(--saw-space-3);
+    flex-shrink: 0;
 }
 
 .sa-detail-stack {
@@ -45,19 +59,9 @@
     gap: var(--saw-space-4);
 }
 
-/* ============================================
-   RESPONSIVE - BOTTOM PADDING FOR MOBILE
-   ============================================ */
-@media (max-width: 1024px) {
-    .sa-sidebar-content {
-        padding-bottom: calc(var(--saw-bottom-nav-height, 64px) + var(--saw-space-6, 24px)) !important;
-    }
+/* Audit history and related sections need space at bottom */
+.sa-detail-related-sections,
+.sa-audit-history {
+    flex-shrink: 0;
+    margin-bottom: var(--saw-space-4, 16px);
 }
-
-@media (max-width: 768px) {
-    .sa-sidebar-content {
-        padding-bottom: calc(var(--saw-bottom-nav-height-mobile, 58px) + var(--saw-space-6, 24px)) !important;
-    }
-}
-
-
