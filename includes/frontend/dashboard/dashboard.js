@@ -22,7 +22,7 @@ jQuery(document).ready(function($) {
             .text(message)
             .css({
                 position: 'fixed',
-                top: '24px',
+                top: (24 + ($('.saw-notice').length * 56)) + 'px',
                 right: '24px',
                 padding: '14px 24px',
                 background: colors[type] || colors.info,
@@ -58,6 +58,41 @@ jQuery(document).ready(function($) {
     $('.saw-refresh').on('click', function() {
         $(this).addClass('spin');
     });
+
+    // Premium hover tilt (non-breaking, respects prefers-reduced-motion)
+    (function initCardTilt(){
+        var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (reduce) return;
+
+        var $cards = $('.saw-card');
+        if (!$cards.length) return;
+
+        $cards.each(function(){
+            var $card = $(this);
+            $card.addClass('saw-tilt');
+
+            $card.on('mousemove', function(e){
+                var rect = this.getBoundingClientRect();
+                var x = e.clientX - rect.left;
+                var y = e.clientY - rect.top;
+                var px = (x / rect.width) - 0.5;
+                var py = (y / rect.height) - 0.5;
+
+                // Gentle values; keep readable
+                var ry = (px * 6).toFixed(2) + 'deg';
+                var rx = (-py * 4).toFixed(2) + 'deg';
+
+                this.style.setProperty('--ry', ry);
+                this.style.setProperty('--rx', rx);
+            });
+
+            $card.on('mouseleave', function(){
+                this.style.setProperty('--ry', '0deg');
+                this.style.setProperty('--rx', '0deg');
+            });
+        });
+    })();
+
 });
 
 // Inject animations

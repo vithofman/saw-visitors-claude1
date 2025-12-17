@@ -21,6 +21,21 @@
     background: transparent;
 }
 
+@media (min-width: 1025px) {
+    .sa-table-element--fixed {
+        table-layout: fixed !important;
+        width: 100% !important;
+    }
+}
+
+/* Na mobilu a tabletu vždy auto layout */
+@media (max-width: 1024px) {
+    .sa-table-element--fixed {
+        table-layout: auto !important;
+        width: auto !important;
+    }
+}
+
 /* ============================================
    THEAD - CSS STICKY
    ============================================ */
@@ -41,7 +56,7 @@
     /* STICKY POSITIONING */
     /* Toolbar je na top: 0, takže thead je pouze výška toolbaru */
     position: sticky !important;
-    top: var(--saw-toolbar-height, 67px) !important;
+    top: 0 !important;
     z-index: 99 !important;
     
     /* Pozadí - velmi světle modrý pro záhlaví tabulky */

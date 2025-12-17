@@ -1,129 +1,288 @@
 /**
- * SAW Admin - Table Responsive (Mobile Card View)
+ * SAW Admin - Table Responsive (Mobile Horizontal Scroll)
  * @package SAW_Visitors
- * @version 3.0.0
+ * @version 5.0.0 - FINAL FIX: Toolbar stays 100%, only table scrolls
+ * 
+ * STRUKTURA:
+ * .sa-table-panel
+ *   ├── .sa-table-toolbar (controls, tabs) - 100% šířky, NESCROLLUJE SE
+ *   ├── .sa-table-scroll - scroll container
+ *   │     └── .sa-table-element - tabulka s min-width
+ *   └── .sa-pagination - 100% šířky
  */
 
+/* ============================================
+   MOBILE (max-width: 768px)
+   ============================================ */
 @media (max-width: 768px) {
+    
     /* ============================================
-       MOBILE: Tabulka s horizontálním scrollem
-       - Kontejner má max-width: 100% = šířka displeje
-       - Tabulka uvnitř má min-width: 800px
-       - Scroll je POUZE uvnitř kontejneru
-       - Header, footer, záložky zůstávají pevné
+       1. GLOBAL CONTAINMENT
        ============================================ */
     
-    /* KRITICKÉ: Scroll kontejner musí mít max-width! */
-    .sa-table-scroll {
+    html,
+    body {
+        overflow-x: hidden !important;
+        max-width: 100vw !important;
+    }
+    
+    body.sa-page-has-table {
+        overflow-x: hidden !important;
+    }
+    
+    /* App shell layers */
+    .sa-app-body,
+    .saw-app-body,
+    .sa-app-container,
+    .saw-app-container,
+    .sa-app-main,
+    .saw-app-main,
+    .sa-app-content,
+    .saw-app-content {
+        overflow-x: hidden !important;
         max-width: 100% !important;
+        min-width: 0 !important;
+    }
+    
+    /* Module wrappers */
+    [class^="saw-module-"],
+    [class*=" saw-module-"] {
+        overflow-x: hidden !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+    }
+    
+    /* ============================================
+       2. TABLE PANEL - Hlavní kontejner
+       ============================================ */
+    
+    .sa-table-split,
+    .sa-table-panel {
+        overflow: hidden !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+    }
+    
+    /* ============================================
+       3. TOOLBAR & CONTROLS - 100% šířky, BEZ scrollu
+       ============================================ */
+    
+    .sa-table-toolbar,
+    .sa-table-controls,
+    .sa-table-controls-inline {
         width: 100% !important;
-        overflow-x: scroll !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        overflow: hidden !important;
+        flex-shrink: 0 !important;
+    }
+    
+    /* Tabs wrapper - 100% šířky */
+    .sa-tabs-wrapper {
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: auto !important; /* Tabs mohou scrollovat horizontálně */
         -webkit-overflow-scrolling: touch;
     }
     
-    /* Tabulka má min-width POUZE na mobilu */
+    /* Search input - normální šířka */
+    .sa-search-input,
+    .sa-table-search input {
+        width: 100% !important;
+        max-width: none !important;
+        flex: 1 1 auto !important;
+    }
+    
+    /* Search form container */
+    .sa-search-form,
+    .sa-table-search {
+        flex: 1 1 auto !important;
+        max-width: calc(100% - 60px) !important; /* Prostor pro filter tlačítko */
+    }
+    
+    /* Filter button - vždy viditelné */
+    .sa-filter-btn,
+    .sa-table-filter-btn {
+        flex-shrink: 0 !important;
+    }
+    
+    /* ============================================
+       4. SCROLL CONTAINER - POUZE tabulka
+       ============================================ */
+    
+    .sa-table-scroll {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        
+        /* Horizontální scroll */
+        overflow-x: auto !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+        
+        /* KRITICKÉ: Izolace scrollu */
+        overscroll-behavior-x: contain !important;
+        overscroll-behavior-y: auto !important;
+    }
+    
+    /* Scrollbar styling */
+    .sa-table-scroll::-webkit-scrollbar {
+        height: 6px !important;
+    }
+    
+    .sa-table-scroll::-webkit-scrollbar-track {
+        background: #f1f5f9;
+    }
+    
+    .sa-table-scroll::-webkit-scrollbar-thumb {
+        background: #94a3b8;
+        border-radius: 3px;
+    }
+    
+    /* ============================================
+       5. TABLE ELEMENT - Minimální šířka pro scroll
+       ============================================ */
+    
     .sa-table-element {
         display: table !important;
         width: auto !important;
         min-width: 800px !important;
+        max-width: none !important;
+        table-layout: auto !important;
     }
     
-    .sa-table-element thead {
+    /* Třída pro fixed layout - POUZE na desktopu */
+    .sa-table-element--fixed {
+        table-layout: auto !important; /* Na mobilu vždy auto */
+    }
+    
+    /* Přebít jakékoliv inline styles */
+    .sa-table-element[style] {
+        width: auto !important;
+        min-width: 800px !important;
+        table-layout: auto !important;
+    }
+    
+    /* Skrýt colgroup na mobilu */
+    .sa-table-element colgroup {
+        display: none !important;
+    }
+    
+    /* ============================================
+       6. TABLE STRUKTURA
+       ============================================ */
+    
+    .sa-table-element thead,
+    .sa-table-thead {
         display: table-header-group !important;
     }
     
-    .sa-table-element tbody {
+    .sa-table-element tbody,
+    .sa-table-tbody {
         display: table-row-group !important;
     }
     
-    .sa-table-element tr {
+    .sa-table-element tr,
+    .sa-table-row {
         display: table-row !important;
     }
     
+    .sa-table-element th,
+    .sa-table-th,
     .sa-table-element td,
-    .sa-table-element th {
+    .sa-table-cell {
         display: table-cell !important;
-        padding: var(--saw-space-2) var(--saw-space-3);
-        font-size: var(--saw-text-xs);
-        white-space: nowrap;
+        white-space: nowrap !important;
+        padding: 8px 12px !important;
+        font-size: 12px !important;
     }
     
-    /* Zajistit, že parent kontejnery nepřetékají */
+    /* ============================================
+       7. STICKY THEAD - Funguje i při horizontálním scrollu
+       ============================================ */
+    
+    .sa-table-thead th,
+    .sa-table-th {
+        position: sticky !important;
+        top: 0 !important; /* Relativně k .sa-table-scroll, ne k toolbaru */
+        z-index: 10 !important;
+        background: linear-gradient(180deg, #f0f9ff 0%, #e8f4fc 100%) !important;
+    }
+    
+    /* ============================================
+       8. PAGINATION - 100% šířky
+       ============================================ */
+    
+    .sa-pagination,
+    .sa-table-pagination {
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow: hidden !important;
+    }
+}
+
+/* ============================================
+   TABLET (769px - 1024px)
+   ============================================ */
+@media (min-width: 769px) and (max-width: 1024px) {
+    
+    .sa-table-scroll {
+        overflow-x: auto !important;
+        overscroll-behavior-x: contain !important;
+    }
+    
+    .sa-table-element {
+        min-width: 1000px !important;
+        width: auto !important;
+        table-layout: auto !important;
+    }
+    
+    .sa-table-element[style] {
+        width: auto !important;
+        min-width: 1000px !important;
+        table-layout: auto !important;
+    }
+    
+    .sa-table-element colgroup {
+        display: none !important;
+    }
+    
+    .sa-table-split,
     .sa-table-panel {
         overflow: hidden !important;
         max-width: 100% !important;
     }
+}
+
+/* ============================================
+   DESKTOP (1025px+)
+   ============================================ */
+@media (min-width: 1025px) {
     
-    .sa-table-split {
-        overflow: hidden !important;
-        max-width: 100% !important;
+    .sa-table-element {
+        width: 100% !important;
+        min-width: auto !important;
     }
     
-    /* Flex děti nesmí přetékat - KRITICKÉ pro správný scroll */
-    .sa-app-content,
-    .sa-app-main,
-    .sa-app-container {
-        min-width: 0 !important;
-        max-width: 100% !important;
+    /* Fixed layout pouze na desktopu */
+    .sa-table-element--fixed {
+        table-layout: fixed !important;
+        width: 100% !important;
     }
     
-    /* Module wrapper nesmí přetékat */
-    [class^="saw-module-"],
-    [class*=" saw-module-"] {
-        min-width: 0 !important;
-        max-width: 100% !important;
+    /* Colgroup funguje na desktopu */
+    .sa-table-element colgroup {
+        display: table-column-group !important;
     }
     
-    .sa-table-cards {
-        display: none; /* Hide cards, show table */
-    }
-    
-    .sa-table-card {
-        background: var(--saw-bg-primary);
-        border: 1px solid var(--saw-border-color);
-        border-radius: var(--saw-radius-lg);
-        padding: var(--saw-space-4);
-        margin-bottom: var(--saw-space-3);
-    }
-    
-    .sa-table-card-header {
-        display: flex;
-        align-items: center;
-        gap: var(--saw-space-3);
-        margin-bottom: var(--saw-space-3);
-        padding-bottom: var(--saw-space-3);
-        border-bottom: 1px solid var(--saw-border-color);
-    }
-    
-    .sa-table-card-field {
-        display: flex;
-        justify-content: space-between;
-        padding: var(--saw-space-2) 0;
-        border-bottom: 1px solid var(--saw-border-color);
-    }
-    
-    .sa-table-card-field:last-child {
-        border-bottom: none;
-    }
-    
-    .sa-table-card-label {
-        font-size: var(--saw-text-xs);
-        font-weight: var(--saw-font-semibold);
-        color: var(--saw-text-secondary);
-        text-transform: uppercase;
-    }
-    
-    .sa-table-card-value {
-        font-size: var(--saw-text-sm);
-        color: var(--saw-text-primary);
-        text-align: right;
+    .sa-table-scroll {
+        overflow-x: auto !important;
     }
 }
 
-@media (min-width: 769px) {
-    .sa-table-cards {
-        display: none;
-    }
+/* ============================================
+   CARD VIEW - Skryto
+   ============================================ */
+.sa-table-cards {
+    display: none !important;
 }
-
-

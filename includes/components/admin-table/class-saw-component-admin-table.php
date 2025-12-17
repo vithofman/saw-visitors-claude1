@@ -6,8 +6,14 @@
  *
  * @package     SAW_Visitors
  * @subpackage  Components
- * @version     6.0.0 - REFACTORED: Integrated search & filters
+ * @version     7.0.0 - FIXED: Mobile horizontal scroll - controls outside scroll container
  * @since       1.0.0
+ * 
+ * CHANGELOG v7.0.0:
+ * - Fixed: Controls (tabs, search, filters) moved OUTSIDE scroll container
+ * - Fixed: Removed inline styles from table element (table-layout, width)
+ * - Fixed: Added CSS class .sa-table-element--fixed for desktop fixed layout
+ * - Result: Toolbar stays at 100% width, only table scrolls horizontally on mobile
  */
 
 if (!defined('ABSPATH')) {
@@ -230,62 +236,60 @@ class SAW_Component_Admin_Table {
         } else {
             ?>
             <div class="sa-table-panel<?php echo !empty($this->config['infinite_scroll']['enabled']) ? ' sa-table-infinite-scroll-enabled' : ''; ?>">
-            <?php $this->render_header(); ?>
-            
-            <!-- Scrollovací oblast - OBSAHUJE toolbar i tabulku -->
-            <div class="sa-table-scroll">
-                <?php 
-                // ZMĚNA: Controls jsou UVNITŘ scroll containeru
-                $this->render_controls(); 
-                $this->render_table_or_empty(); 
+                <?php $this->render_header(); ?>
+                
+                <!-- ⭐ OPRAVA v7.0.0: Controls MIMO scroll container - zůstávají na 100% šířky -->
+                <?php $this->render_controls(); ?>
+                
+                <!-- Scrollovací oblast - POUZE tabulka -->
+                <div class="sa-table-scroll">
+                    <?php $this->render_table_or_empty(); ?>
+                </div>
+                
+                <!-- Pagination vždy dole -->
+                <?php $this->render_pagination(); ?>
+                
+                <?php
+                $this->render_modal();
+                $this->render_floating_button();
+                $this->render_scroll_to_top();
                 ?>
             </div>
-            
-            <!-- Pagination vždy dole -->
-            <?php $this->render_pagination(); ?>
-            
-            <?php
-            $this->render_modal();
-            $this->render_floating_button();
-            $this->render_scroll_to_top();
-            ?>
-        </div>
             <?php
         }
     }
     
-   private function render_split_layout() {
-    $has_sidebar = !empty($this->config['sidebar_mode']);
-    $sidebar_class = $has_sidebar ? ' sa-table-split--has-sidebar' : '';
-    ?>
-    <div class="sa-table-split<?php echo $sidebar_class; ?>">
-        <div class="sa-table-panel<?php echo !empty($this->config['infinite_scroll']['enabled']) ? ' sa-table-infinite-scroll-enabled' : ''; ?>">
-            <?php $this->render_header(); ?>
-            
-            <!-- Scrollovací oblast - OBSAHUJE toolbar i tabulku -->
-            <div class="sa-table-scroll">
-                <?php 
-                // ZMĚNA: Controls jsou UVNITŘ scroll containeru
-                $this->render_controls(); 
-                $this->render_table_or_empty(); 
-                ?>
+    private function render_split_layout() {
+        $has_sidebar = !empty($this->config['sidebar_mode']);
+        $sidebar_class = $has_sidebar ? ' sa-table-split--has-sidebar' : '';
+        ?>
+        <div class="sa-table-split<?php echo $sidebar_class; ?>">
+            <div class="sa-table-panel<?php echo !empty($this->config['infinite_scroll']['enabled']) ? ' sa-table-infinite-scroll-enabled' : ''; ?>">
+                <?php $this->render_header(); ?>
+                
+                <!-- ⭐ OPRAVA v7.0.0: Controls MIMO scroll container - zůstávají na 100% šířky -->
+                <?php $this->render_controls(); ?>
+                
+                <!-- Scrollovací oblast - POUZE tabulka -->
+                <div class="sa-table-scroll">
+                    <?php $this->render_table_or_empty(); ?>
+                </div>
+                
+                <!-- Pagination vždy dole -->
+                <?php $this->render_pagination(); ?>
+                
+                <?php $this->render_floating_button(); ?>
+                <?php $this->render_scroll_to_top(); ?>
             </div>
             
-            <!-- Pagination vždy dole -->
-            <?php $this->render_pagination(); ?>
-            
-            <?php $this->render_floating_button(); ?>
-            <?php $this->render_scroll_to_top(); ?>
+            <?php if ($has_sidebar): ?>
+            <div class="sa-sidebar sa-sidebar--active">
+                <?php $this->render_sidebar(); ?>
+            </div>
+            <?php endif; ?>
         </div>
-        
-        <?php if ($has_sidebar): ?>
-        <div class="sa-sidebar sa-sidebar--active">
-            <?php $this->render_sidebar(); ?>
-        </div>
-        <?php endif; ?>
-    </div>
-    <?php
-}
+        <?php
+    }
 
     private function render_sidebar() {
         $mode = $this->config['sidebar_mode'];
@@ -743,10 +747,15 @@ class SAW_Component_Admin_Table {
                 break;
             }
         }
+        
+        // ⭐ OPRAVA v7.0.0: Žádné inline styly - použít CSS třídu místo toho
+        $table_class = 'sa-table-element';
+        if ($has_widths) {
+            $table_class .= ' sa-table-element--fixed';
+        }
         ?>
-        <table class="sa-table-element" 
-               data-entity="<?php echo esc_attr($this->entity); ?>"
-               <?php if ($has_widths): ?>style="table-layout: fixed; width: 100%;"<?php endif; ?>>
+        <table class="<?php echo esc_attr($table_class); ?>" 
+               data-entity="<?php echo esc_attr($this->entity); ?>">
             <?php if ($has_widths): ?>
             <colgroup>
                 <?php foreach ($this->config['columns'] as $column): ?>
@@ -1119,54 +1128,52 @@ class SAW_Component_Admin_Table {
     }
     
     /**
- * Render table cell - public helper for templates
- * 
- * @since 7.0.0
- * @param array $row Row data
- * @param string $key Column key
- * @param array|string $column Column config
- * @param bool $is_translations_first_col Whether this is first column in translations table
- * @param string $first_col_width Width for first column
- */
-public function render_table_cell_for_template($row, $key, $column) {
-    $this->render_table_cell($row, $key, $column);
-}
+     * Render table cell - public helper for templates
+     * 
+     * @since 7.0.0
+     * @param array $row Row data
+     * @param string $key Column key
+     * @param array|string $column Column config
+     */
+    public function render_table_cell_for_template($row, $key, $column) {
+        $this->render_table_cell($row, $key, $column);
+    }
     
     
     /**
- * Output JS configuration for infinite scroll and tabs
- * 
- * @since 7.1.0
- */
-private function output_js_config() {
-    // Filter out non-serializable values (callbacks) from columns
-    $safe_columns = array();
-    foreach ($this->config['columns'] as $key => $column) {
-        $safe_column = array();
-        foreach ($column as $prop => $value) {
-            // Skip callback functions - they can't be serialized to JSON
-            if ($prop === 'callback' || is_callable($value)) {
-                continue;
+     * Output JS configuration for infinite scroll and tabs
+     * 
+     * @since 7.1.0
+     */
+    private function output_js_config() {
+        // Filter out non-serializable values (callbacks) from columns
+        $safe_columns = array();
+        foreach ($this->config['columns'] as $key => $column) {
+            $safe_column = array();
+            foreach ($column as $prop => $value) {
+                // Skip callback functions - they can't be serialized to JSON
+                if ($prop === 'callback' || is_callable($value)) {
+                    continue;
+                }
+                $safe_column[$prop] = $value;
             }
-            $safe_column[$prop] = $value;
+            $safe_columns[$key] = $safe_column;
         }
-        $safe_columns[$key] = $safe_column;
+        
+        $config = array(
+            'entity' => $this->entity,
+            'columns' => $safe_columns,  // ← Použít safe_columns místo config['columns']
+            'actions' => $this->config['actions'],
+            'detail_url' => $this->config['detail_url'],
+            'edit_url' => $this->config['edit_url'],
+            'infinite_scroll' => $this->config['infinite_scroll'],
+            'tabs' => $this->config['tabs'] ?? null,
+            'current_tab' => $this->config['current_tab'] ?? null,
+            'total_items' => $this->config['total_items'] ?? 0, // ⭐ NOVÉ: Přidat total_items pro správnou inicializaci hasMore
+        );
+        
+        echo '<script>';
+        echo 'window.sawInfiniteScrollConfig = ' . wp_json_encode($config) . ';';
+        echo '</script>';
     }
-    
-    $config = array(
-        'entity' => $this->entity,
-        'columns' => $safe_columns,  // ← Použít safe_columns místo config['columns']
-        'actions' => $this->config['actions'],
-        'detail_url' => $this->config['detail_url'],
-        'edit_url' => $this->config['edit_url'],
-        'infinite_scroll' => $this->config['infinite_scroll'],
-        'tabs' => $this->config['tabs'] ?? null,
-        'current_tab' => $this->config['current_tab'] ?? null,
-        'total_items' => $this->config['total_items'] ?? 0, // ⭐ NOVÉ: Přidat total_items pro správnou inicializaci hasMore
-    );
-    
-    echo '<script>';
-    echo 'window.sawInfiniteScrollConfig = ' . wp_json_encode($config) . ';';
-    echo '</script>';
-}
 }
