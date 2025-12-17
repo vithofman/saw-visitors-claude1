@@ -74,14 +74,13 @@ $table_config = array(
 );
 
 // ============================================
-// COLUMNS CONFIGURATION - ŠÍŘKY V PROCENTECH
+// COLUMNS CONFIGURATION - ŠÍŘKY V PROCENTECH (PC poměrové, mobil scrolluje)
 // ============================================
 $table_config['columns'] = array(
     'image_url' => array(
         'label' => $tr('col_image', 'Obrázek'),
         'type' => 'custom',
-        'width' => '8%',   // Obrázek je malý
-        'align' => 'center',
+        'width' => '8%',   // Obrázek malý
         'callback' => function($value) {
             if (!empty($value)) {
                 $upload_dir = wp_upload_dir();
@@ -105,13 +104,12 @@ $table_config['columns'] = array(
         'type' => 'text',
         'sortable' => true,
         'class' => 'sa-text-semibold',
-        'width' => '30%',  // Hlavní identifikátor
+        'width' => '30%',  // Hlavní identifikátor - nejširší
     ),
     'is_headquarters' => array(
         'label' => $tr('col_headquarters', 'Sídlo'),
         'type' => 'custom',
-        'width' => '10%',  // Badge malý
-        'align' => 'center',
+        'width' => '10%',  // Badge
         'callback' => function($value) use ($tr) {
             if (empty($value)) {
                 return '<span class="sa-text-muted">—</span>';
@@ -122,8 +120,7 @@ $table_config['columns'] = array(
     'code' => array(
         'label' => $tr('col_code', 'Kód'),
         'type' => 'custom',
-        'width' => '10%',  // Kód střední
-        'align' => 'center',
+        'width' => '10%',  // Kód pobočky
         'callback' => function($value) {
             if (empty($value)) return '<span class="sa-text-muted">—</span>';
             return sprintf('<span class="sa-code-badge">%s</span>', esc_html($value));
@@ -133,12 +130,12 @@ $table_config['columns'] = array(
         'label' => $tr('col_city', 'Město'),
         'type' => 'text',
         'sortable' => true,
-        'width' => '16%',
+        'width' => '16%',  // Město
     ),
     'phone' => array(
         'label' => $tr('col_phone', 'Telefon'),
         'type' => 'custom',
-        'width' => '16%',
+        'width' => '16%',  // Telefon
         'callback' => function($value) {
             if (empty($value)) return '<span class="sa-text-muted">—</span>';
             return sprintf(
@@ -152,8 +149,7 @@ $table_config['columns'] = array(
         'label' => $tr('col_status', 'Status'),
         'type' => 'badge',
         'sortable' => true,
-        'width' => '10%',  // Badge malý
-        'align' => 'center',
+        'width' => '10%',  // Status badge
         'map' => array(
             '1' => 'success',
             '0' => 'neutral',

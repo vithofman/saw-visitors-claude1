@@ -15,6 +15,21 @@
     'use strict';
 
     /**
+     * Clear active row highlighting from all table rows
+     *
+     * Called when sidebar is closed (navigating back to list page without detail)
+     *
+     * @return {void}
+     */
+    function clearActiveRow() {
+        $('.sa-table-element tbody tr').removeClass('sa-table-row--active');
+        console.log('✨ Active row cleared');
+    }
+
+    // Export clearActiveRow as global function
+    window.clearActiveRow = clearActiveRow;
+
+    /**
      * Update active row in table
      *
      * @param {number} id Item ID
@@ -181,12 +196,17 @@
             }, 100);
         }
 
-        // Restore active row
-        if (state.activeRowId) {
+        // Restore active row - ONLY on detail pages, NOT on list pages
+        // On list pages without sidebar, we want to clear the active row highlighting
+        const isDetailPage = window.location.pathname.split('/').filter(p => p && !isNaN(p)).length > 0;
+        
+        if (state.activeRowId && isDetailPage) {
             setTimeout(function () {
                 updateActiveRow(state.activeRowId, true);
                 console.log('✨ Active row restored:', state.activeRowId);
             }, 800);
+        } else if (state.activeRowId && !isDetailPage) {
+            console.log('⏭️ Active row restore skipped - on list page without sidebar');
         }
     }
 
@@ -251,6 +271,10 @@
                 // No sidebar → safe to restore
                 console.log('📜 No sidebar, attempting restore');
                 restoreTableState(entity);
+                
+                // ===== CLEAR ACTIVE ROW WHEN SIDEBAR IS CLOSED =====
+                // When navigating back to list page (no sidebar), clear any previous row highlighting
+                clearActiveRow();
             } else {
                 console.log('⏭️ Sidebar active row detected, skipping restore');
             }

@@ -14,6 +14,8 @@
    ============================================ */
 .sa-table-element {
     width: 100%;
+    /* Na PC žádný min-width - tabulka je 100% a sloupce poměrové */
+    /* Min-width se aplikuje pouze na mobilu v _table-responsive.css */
     border-collapse: separate;
     border-spacing: 0;
     background: transparent;
@@ -108,6 +110,8 @@
     /* Scroll margin pro správnou viditelnost pod sticky header */
     /* Toolbar (67px) + thead (~40px) + malá rezerva */
     scroll-margin-top: calc(var(--saw-toolbar-height, 67px) + 50px);
+    /* Bílé pozadí pro normální řádky - zabraňuje prosvítání pozadí .sa-table-split */
+    background: #ffffff;
 }
 
 /* První řádek - standardní padding (extra padding již není potřeba) */
@@ -153,8 +157,13 @@
     font-size: var(--saw-text-sm, 0.875rem);
     color: var(--saw-text-primary, #0f172a);
     vertical-align: middle;
+    /* GLOBÁLNÍ ZAROVNÁNÍ DOLEVA - přepíše inline styly z PHP */
+    text-align: left !important;
+    /* Na PC žádný min-width - sloupce se přizpůsobí poměrově */
 }
 
+/* POZOR: Tyto třídy jsou nyní potlačeny globálním text-align: left
+   Pokud potřebujete center/right, použijte inline styl s !important */
 .sa-table-cell--center {
     text-align: center;
 }

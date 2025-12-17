@@ -5,10 +5,27 @@
  */
 
 @media (max-width: 768px) {
-    /* Keep table visible on mobile - don't hide it */
+    /* ============================================
+       MOBILE: Tabulka s horizontálním scrollem
+       - Kontejner má max-width: 100% = šířka displeje
+       - Tabulka uvnitř má min-width: 800px
+       - Scroll je POUZE uvnitř kontejneru
+       - Header, footer, záložky zůstávají pevné
+       ============================================ */
+    
+    /* KRITICKÉ: Scroll kontejner musí mít max-width! */
+    .sa-table-scroll {
+        max-width: 100% !important;
+        width: 100% !important;
+        overflow-x: scroll !important;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Tabulka má min-width POUZE na mobilu */
     .sa-table-element {
         display: table !important;
-        width: 100% !important;
+        width: auto !important;
+        min-width: 800px !important;
     }
     
     .sa-table-element thead {
@@ -28,6 +45,33 @@
         display: table-cell !important;
         padding: var(--saw-space-2) var(--saw-space-3);
         font-size: var(--saw-text-xs);
+        white-space: nowrap;
+    }
+    
+    /* Zajistit, že parent kontejnery nepřetékají */
+    .sa-table-panel {
+        overflow: hidden !important;
+        max-width: 100% !important;
+    }
+    
+    .sa-table-split {
+        overflow: hidden !important;
+        max-width: 100% !important;
+    }
+    
+    /* Flex děti nesmí přetékat - KRITICKÉ pro správný scroll */
+    .sa-app-content,
+    .sa-app-main,
+    .sa-app-container {
+        min-width: 0 !important;
+        max-width: 100% !important;
+    }
+    
+    /* Module wrapper nesmí přetékat */
+    [class^="saw-module-"],
+    [class*=" saw-module-"] {
+        min-width: 0 !important;
+        max-width: 100% !important;
     }
     
     .sa-table-cards {
