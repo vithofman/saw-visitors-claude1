@@ -115,18 +115,19 @@ class SAW_Module_Companies_Model extends SAW_Base_Model
         
         // Normalize master name for comparison
         $normalized = $this->normalize_company_name($name);
+        $normalized_len = mb_strlen($normalized);
         
-        // Get all companies from same branch (excluding master)
+        // Get ALL companies from same branch (including archived)
         $companies = $wpdb->get_results($wpdb->prepare(
             "SELECT 
                 c.id, 
                 c.name, 
                 c.ico,
+                c.is_archived,
                 (SELECT COUNT(*) FROM {$wpdb->prefix}saw_visits WHERE company_id = c.id) as visit_count
              FROM %i c
              WHERE c.branch_id = %d 
              AND c.id != %d
-             AND c.is_archived = 0
              ORDER BY c.name ASC",
             $this->table,
             $branch_id, 
@@ -136,14 +137,66 @@ class SAW_Module_Companies_Model extends SAW_Base_Model
         // Calculate similarity for each company
         $similar = array();
         foreach ($companies as $company) {
-            $similarity = $this->calculate_similarity(
+            $candidate_normalized = $this->normalize_company_name($company['name']);
+            $candidate_len = mb_strlen($candidate_normalized);
+            
+            // Check for EXACT name match (including legal form)
+            $original_lower = mb_strtolower(trim($name), 'UTF-8');
+            $candidate_lower = mb_strtolower(trim($company['name']), 'UTF-8');
+            $is_exact_match = ($original_lower === $candidate_lower);
+            
+            // Check for normalized match (same name, different legal form)
+            $is_normalized_match = ($normalized === $candidate_normalized);
+            
+            // Calculate combined similarity score
+            $similarity = $this->calculate_similarity_advanced(
                 $normalized, 
-                $this->normalize_company_name($company['name'])
+                $candidate_normalized
             );
             
-            // Only include if similarity > 70%
-            if ($similarity > 0.7) {
-                $company['similarity'] = round($similarity * 100);
+            // Dynamic threshold based on name length
+            // Short names (1-3 chars): 50% threshold (e.g., "a1" vs "a2")
+            // Medium names (4-8 chars): 60% threshold
+            // Long names (9+ chars): 70% threshold
+            $min_len = min($normalized_len, $candidate_len);
+            if ($min_len <= 3) {
+                $threshold = 0.50;
+            } elseif ($min_len <= 8) {
+                $threshold = 0.60;
+            } else {
+                $threshold = 0.70;
+            }
+            
+            // Check for prefix match (e.g., "archivovana" matches "archivovana2")
+            $is_prefix_match = false;
+            if ($min_len >= 2) {
+                $shorter = $normalized_len <= $candidate_len ? $normalized : $candidate_normalized;
+                $longer = $normalized_len > $candidate_len ? $normalized : $candidate_normalized;
+                if (strpos($longer, $shorter) === 0 || strpos($shorter, $longer) === 0) {
+                    $is_prefix_match = true;
+                }
+            }
+            
+            // Include if meets threshold OR is prefix match OR is normalized match
+            if ($similarity >= $threshold || $is_prefix_match || $is_normalized_match) {
+                // Determine final similarity percentage
+                if ($is_exact_match) {
+                    // EXACT match (including legal form) = 100%
+                    $final_similarity = 100;
+                } elseif ($is_normalized_match) {
+                    // Same name, different legal form = 95%
+                    $final_similarity = 95;
+                } elseif ($is_prefix_match) {
+                    // Prefix match = 80-90%
+                    $final_similarity = 85;
+                } else {
+                    // Regular similarity
+                    $final_similarity = round($similarity * 100);
+                }
+                
+                $company['similarity'] = $final_similarity;
+                $company['is_exact_match'] = $is_exact_match;
+                $company['is_archived'] = !empty($company['is_archived']);
                 $similar[] = $company;
             }
         }
@@ -198,16 +251,55 @@ class SAW_Module_Companies_Model extends SAW_Base_Model
     }
     
     /**
-     * Calculate similarity between two strings
-     * Uses similar_text() function
+     * Advanced similarity calculation
+     * Combines multiple algorithms for better short-string matching
      * 
-     * @param string $str1 First string
-     * @param string $str2 Second string
+     * @param string $str1 First string (normalized)
+     * @param string $str2 Second string (normalized)
      * @return float Similarity score (0.0 to 1.0)
      */
-    private function calculate_similarity($str1, $str2) {
-        similar_text($str1, $str2, $percent);
-        return $percent / 100;
+    private function calculate_similarity_advanced($str1, $str2) {
+        if (empty($str1) || empty($str2)) {
+            return 0.0;
+        }
+        
+        // Exact match
+        if ($str1 === $str2) {
+            return 1.0;
+        }
+        
+        // 1. similar_text percentage
+        similar_text($str1, $str2, $similar_percent);
+        $similar_score = $similar_percent / 100;
+        
+        // 2. Levenshtein distance (good for typos and small differences)
+        $max_len = max(mb_strlen($str1), mb_strlen($str2));
+        if ($max_len > 0 && $max_len <= 255) { // levenshtein has length limit
+            $lev_distance = levenshtein($str1, $str2);
+            $lev_score = 1 - ($lev_distance / $max_len);
+        } else {
+            $lev_score = $similar_score;
+        }
+        
+        // 3. Common prefix bonus (important for "A1" vs "A2" style names)
+        $prefix_len = 0;
+        $min_len = min(mb_strlen($str1), mb_strlen($str2));
+        for ($i = 0; $i < $min_len; $i++) {
+            if ($str1[$i] === $str2[$i]) {
+                $prefix_len++;
+            } else {
+                break;
+            }
+        }
+        $prefix_score = $prefix_len / $max_len;
+        
+        // Weighted combination
+        // - 40% similar_text
+        // - 40% levenshtein
+        // - 20% common prefix bonus
+        $combined = ($similar_score * 0.4) + ($lev_score * 0.4) + ($prefix_score * 0.2);
+        
+        return min(1.0, $combined);
     }
     
     /**

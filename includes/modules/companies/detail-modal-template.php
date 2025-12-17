@@ -358,6 +358,10 @@ if (!empty($item['is_archived'])) {
 (function($) {
     'use strict';
     
+    // Define AJAX configuration
+    var ajaxUrl = '<?php echo esc_js(admin_url('admin-ajax.php')); ?>';
+    var mergeNonce = '<?php echo esc_js(wp_create_nonce('saw_ajax_nonce')); ?>';
+    
     // Show merge container
     window.showMerge = function() {
         var $container = $('#sawMergeContainer');
@@ -392,12 +396,12 @@ if (!empty($item['is_archived'])) {
         $content.html('<div class="bento-merge-loading"><span>⏳ <?php echo esc_js($tr('loading', 'Načítání...')); ?></span></div>');
         
         $.ajax({
-            url: sawAjax.ajaxUrl,
+            url: ajaxUrl,
             type: 'POST',
             data: {
-                action: 'saw_show_merge_modal_companies',
+                action: 'saw_show_merge_modal',
                 id: entityId,
-                _wpnonce: sawAjax.nonce
+                nonce: mergeNonce
             },
             success: function(response) {
                 $content.html(response);
@@ -445,13 +449,13 @@ if (!empty($item['is_archived'])) {
         $btn.prop('disabled', true).text('<?php echo esc_js($tr('merging', 'Slučuji...')); ?>');
         
         $.ajax({
-            url: sawAjax.ajaxUrl,
+            url: ajaxUrl,
             type: 'POST',
             data: {
                 action: 'saw_merge_companies',
                 master_id: entityId,
                 duplicate_ids: JSON.stringify(duplicateIds),
-                _wpnonce: sawAjax.nonce
+                nonce: mergeNonce
             },
             success: function(response) {
                 if (response.success) {
@@ -493,10 +497,15 @@ if (!empty($item['is_archived'])) {
     
     // Initialize on document ready
     $(document).ready(function() {
-        // Bind merge button click
+        // Bind merge button click (fallback if warning box is shown)
         $(document).on('click', '#sawMergeBtn', function() {
             showMerge();
         });
+        
+        // Auto-load duplicate detection since merge is auto-expanded
+        if ($('#sawMergeContainer').hasClass('active')) {
+            loadAutoDetection();
+        }
     });
     
 })(jQuery);

@@ -52,7 +52,7 @@ class SAW_Bento_Merge extends SAW_Bento_Card {
      */
     public function render() {
         $args = $this->args;
-        $t = $args['translations'];
+        $t = $args['translations'] ?? [];
         
         $tr = function($key, $fallback) use ($t) {
             return $t[$key] ?? $fallback;
@@ -66,8 +66,8 @@ class SAW_Bento_Merge extends SAW_Bento_Card {
         ?>
         <div class="<?php echo esc_attr($classes); ?>" data-entity-id="<?php echo intval($args['entity_id']); ?>" data-entity-type="<?php echo esc_attr($args['entity_type']); ?>">
             
-            <!-- Warning Box -->
-            <div class="bento-merge-warning">
+            <!-- Warning Box (hidden - auto-expand is enabled) -->
+            <div class="bento-merge-warning" style="display: none;">
                 <div class="bento-merge-warning-icon">
                     <?php $this->render_icon('alert-triangle'); ?>
                 </div>
@@ -85,8 +85,8 @@ class SAW_Bento_Merge extends SAW_Bento_Card {
                 </button>
             </div>
             
-            <!-- Merge Container (hidden by default) -->
-            <div class="bento-merge-container" id="sawMergeContainer">
+            <!-- Merge Container (auto-expanded) -->
+            <div class="bento-merge-container active" id="sawMergeContainer">
                 <div class="bento-merge-header">
                     <div class="bento-merge-header-title">
                         <?php $this->render_icon('git-merge', 'bento-merge-header-icon'); ?>

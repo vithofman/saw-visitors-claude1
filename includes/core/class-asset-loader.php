@@ -857,7 +857,7 @@ class SAW_Asset_Loader {
         // Companies module JS
         if ($slug === 'companies') {
             $companies_js_files = [
-                'saw-companies-detail' => 'assets/js/modules/companies/companies-detail.js',
+                // 'saw-companies-detail' => 'assets/js/modules/companies/companies-detail.js', // DISABLED: Using inline bento merge script
                 'saw-companies-merge' => 'assets/js/modules/companies/companies-merge.js',
             ];
             
@@ -1092,7 +1092,7 @@ class SAW_Asset_Loader {
         // Companies specific assets
         if ($slug === 'companies') {
             $companies_js_files = [
-                'saw-companies-detail' => 'assets/js/modules/companies/companies-detail.js',
+                // 'saw-companies-detail' => 'assets/js/modules/companies/companies-detail.js', // DISABLED: Using inline bento merge script
                 'saw-companies-merge' => 'assets/js/modules/companies/companies-merge.js',
             ];
             

@@ -359,6 +359,11 @@ class SAW_App_Layout {
         </head>
         <body class="saw-app-body" <?php echo $this->get_body_attributes(); ?>>
             
+            <!-- Page loader overlay - visible until JS marks page as ready -->
+            <div id="sawPageLoader" class="saw-page-loader">
+                <div class="saw-page-loader-spinner"></div>
+            </div>
+            
             <?php $this->render_header(); ?>
             
             <div class="saw-app-container">
