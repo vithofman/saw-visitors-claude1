@@ -103,7 +103,7 @@ $icon_name = $icon_map[$icon_emoji] ?? 'clipboard-list';
 
 <?php 
 // Check if module uses Bento design system (for header hiding)
-$bento_enabled_modules = ['branches'];
+$bento_enabled_modules = ['branches', 'companies'];
 $is_bento_module = in_array($entity, $bento_enabled_modules) && function_exists('saw_bento');
 $bento_class = $is_bento_module ? ' bento-active' : '';
 ?>
@@ -184,7 +184,7 @@ $bento_class = $is_bento_module ? ' bento-active' : '';
         
         <?php 
         // Check if module uses Bento design system
-        $bento_modules = ['branches']; // Modules with Bento design
+        $bento_modules = ['branches', 'companies']; // Modules with Bento design
         $use_bento = in_array($entity, $bento_modules) && function_exists('saw_bento');
         ?>
         

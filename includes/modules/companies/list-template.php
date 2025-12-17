@@ -2,9 +2,12 @@
 /**
  * Companies List Template
  * 
+ * Refaktorovaná šablona dle vzoru branches modulu.
+ * Používá admin-table komponentu s custom callbacks a Bento stylingem.
+ * 
  * @package     SAW_Visitors
  * @subpackage  Modules/Companies
- * @version     2.0.0 - Refactored: Fixed column widths, infinite scroll
+ * @version     3.0.0 - REFACTORED: Bento style dle branches vzoru
  */
 
 if (!defined('ABSPATH')) {
@@ -41,8 +44,8 @@ $total = $total ?? 0;
 $page = $page ?? 1;
 $total_pages = $total_pages ?? 0;
 $search = $search ?? '';
-$orderby = $orderby ?? 'created_at';
-$order = $order ?? 'DESC';
+$orderby = $orderby ?? 'name';
+$order = $order ?? 'ASC';
 
 // ============================================
 // TABLE CONFIGURATION
@@ -74,12 +77,97 @@ $table_config = array(
 );
 
 // ============================================
+// COLUMNS CONFIGURATION - ŠÍŘKY V PROCENTECH
+// ============================================
+$table_config['columns'] = array(
+    'name' => array(
+        'label' => $tr('col_name', 'Název firmy'),
+        'type' => 'text',
+        'sortable' => true,
+        'class' => 'sa-text-semibold',
+        'width' => '25%',  // Hlavní identifikátor - nejširší
+    ),
+    'ico' => array(
+        'label' => $tr('col_ico', 'IČO'),
+        'type' => 'custom',
+        'sortable' => true,
+        'width' => '12%',
+        'callback' => function($value) {
+            if (empty($value)) {
+                return '<span class="sa-text-muted">—</span>';
+            }
+            return sprintf('<span class="sa-code-badge">%s</span>', esc_html($value));
+        }
+    ),
+    'city' => array(
+        'label' => $tr('col_city', 'Město'),
+        'type' => 'text',
+        'sortable' => true,
+        'width' => '15%',
+    ),
+    'email' => array(
+        'label' => $tr('col_email', 'Email'),
+        'type' => 'custom',
+        'width' => '18%',
+        'callback' => function($value) {
+            if (empty($value)) {
+                return '<span class="sa-text-muted">—</span>';
+            }
+            return sprintf(
+                '<a href="mailto:%s" class="sa-link sa-link--truncate" title="%s">%s</a>',
+                esc_attr($value),
+                esc_attr($value),
+                esc_html($value)
+            );
+        }
+    ),
+    'phone' => array(
+        'label' => $tr('col_phone', 'Telefon'),
+        'type' => 'custom',
+        'width' => '14%',
+        'callback' => function($value) {
+            if (empty($value)) {
+                return '<span class="sa-text-muted">—</span>';
+            }
+            return sprintf(
+                '<a href="tel:%s" class="sa-link">%s</a>',
+                esc_attr(preg_replace('/[^\d+]/', '', $value)),
+                esc_html($value)
+            );
+        }
+    ),
+    'is_archived' => array(
+        'label' => $tr('col_status', 'Status'),
+        'type' => 'badge',
+        'sortable' => true,
+        'width' => '10%',
+        'align' => 'center',
+        'map' => array(
+            '1' => 'neutral',
+            '0' => 'success',
+        ),
+        'labels' => array(
+            '1' => $tr('status_archived', 'Archivováno'),
+            '0' => $tr('status_active', 'Aktivní'),
+        ),
+    ),
+    'created_at' => array(
+        'label' => $tr('col_created_at', 'Vytvořeno'),
+        'type' => 'date',
+        'sortable' => true,
+        'format' => 'd.m.Y',
+        'width' => '6%',
+    ),
+);
+// Součet: 25 + 12 + 15 + 18 + 14 + 10 + 6 = 100%
+
+// ============================================
 // SEARCH CONFIGURATION
 // ============================================
 $table_config['search'] = array(
     'enabled' => true,
     'placeholder' => $tr('search_placeholder', 'Hledat firmy...'),
-    'fields' => array('name', 'ico', 'email', 'phone', 'city'),
+    'fields' => array('name', 'ico', 'email', 'phone', 'city', 'street'),
     'show_info_banner' => true,
 );
 
@@ -97,74 +185,6 @@ $table_config['filters'] = array(
         ),
     ),
 );
-
-// ============================================
-// COLUMNS CONFIGURATION - ŠÍŘKY V PROCENTECH
-// ============================================
-$table_config['columns'] = array(
-    'name' => array(
-        'label' => $tr('col_name', 'Název firmy'),
-        'type' => 'text',
-        'class' => 'saw-table-cell-bold',
-        'sortable' => true,
-        'width' => '20%',  // Hlavní identifikátor
-    ),
-    'ico' => array(
-        'label' => $tr('col_ico', 'IČO'),
-        'type' => 'text',
-        'sortable' => true,
-        'width' => '10%',
-    ),
-    'street' => array(
-        'label' => $tr('col_street', 'Ulice'),
-        'type' => 'text',
-        'class' => 'saw-table-cell-truncate',
-        'width' => '13%',
-    ),
-    'city' => array(
-        'label' => $tr('col_city', 'Město'),
-        'type' => 'text',
-        'sortable' => true,
-        'width' => '12%',
-    ),
-    'zip' => array(
-        'label' => $tr('col_zip', 'PSČ'),
-        'type' => 'text',
-        'width' => '7%',
-    ),
-    'email' => array(
-        'label' => $tr('col_email', 'Email'),
-        'type' => 'email',
-        'width' => '13%',
-    ),
-    'phone' => array(
-        'label' => $tr('col_phone', 'Telefon'),
-        'type' => 'text',
-        'width' => '11%',
-    ),
-    'is_archived' => array(
-        'label' => $tr('col_status', 'Status'),
-        'type' => 'badge',
-        'sortable' => true,
-        'width' => '8%',   // Badge je malý
-        'align' => 'center',
-        'map' => array(
-            '1' => 'secondary',
-            '0' => 'success',
-        ),
-        'labels' => array(
-            '1' => $tr('status_archived', 'Archivováno'),
-            '0' => $tr('status_active', 'Aktivní'),
-        ),
-    ),
-    'created_at' => array(
-        'label' => $tr('col_created_at', 'Vytvořeno'),
-        'type' => 'date',
-        'format' => 'd.m.Y',
-        'width' => '6%',
-    ),
-);
-// Součet: 20 + 10 + 13 + 12 + 7 + 13 + 11 + 8 + 6 = 100%
 
 // ============================================
 // TABS CONFIGURATION

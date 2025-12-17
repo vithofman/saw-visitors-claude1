@@ -1,12 +1,725 @@
 /**
  * SAW Admin - Companies Module Styles
  * @package SAW_Visitors
- * @version 3.0.0
+ * @version 3.0.0 - BENTO DESIGN SYSTEM
  * 
  * Specifické styly pro modul Companies
- * (Logo upload, color picker, atd.)
+ * Including: table styles, Bento merge card, visit list
  */
 
-/* Placeholder - bude doplněno při migraci modulu */
+/* ============================================
+   FORM STYLES
+   ============================================ */
 
+/* Highlighted checkbox (for archive, important actions) */
+.sa-checkbox--highlight {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: var(--saw-warning-light, #fef3c7);
+    border: 1px solid var(--saw-warning, #f59e0b);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
 
+.sa-checkbox--highlight:hover {
+    background: var(--saw-warning-lighter, #fef9e7);
+    border-color: var(--saw-warning-dark, #d97706);
+}
+
+.sa-checkbox--highlight input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--saw-warning, #f59e0b);
+}
+
+.sa-checkbox--highlight span {
+    font-weight: 500;
+    color: var(--saw-warning-dark, #92400e);
+}
+
+[data-theme="dark"] .sa-checkbox--highlight {
+    background: rgba(245, 158, 11, 0.15);
+    border-color: var(--saw-warning);
+}
+
+[data-theme="dark"] .sa-checkbox--highlight span {
+    color: var(--saw-warning-light);
+}
+
+/* Form help text */
+.sa-form-help {
+    margin: 6px 0 0 0;
+    font-size: 12px;
+    color: var(--saw-text-muted);
+}
+
+/* ============================================
+   TABLE STYLES
+   ============================================ */
+
+/* Code badge for IČO */
+.sa-code-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    font-size: var(--saw-text-xs);
+    font-weight: var(--saw-font-semibold);
+    font-family: var(--saw-font-mono);
+    background: var(--saw-gray-100);
+    color: var(--saw-gray-700);
+    border-radius: var(--saw-radius-md);
+    border: 1px solid var(--saw-border-color);
+}
+
+[data-theme="dark"] .sa-code-badge {
+    background: var(--saw-gray-800);
+    color: var(--saw-gray-200);
+    border-color: var(--saw-gray-600);
+}
+
+/* Truncate long emails */
+.sa-link--truncate {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ============================================
+   BENTO MERGE CARD
+   ============================================ */
+
+.bento-merge {
+    background: var(--saw-card-bg);
+    border-radius: var(--bento-card-radius, 20px);
+    padding: 0;
+    overflow: hidden;
+}
+
+/* Warning Box */
+.bento-merge-warning {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    background: linear-gradient(135deg, var(--saw-warning-light) 0%, rgba(251, 191, 36, 0.1) 100%);
+    border-left: 4px solid var(--saw-warning);
+}
+
+.bento-merge-warning-icon {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--saw-warning);
+    border-radius: 50%;
+    color: #fff;
+}
+
+.bento-merge-warning-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.bento-merge-warning-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.bento-merge-warning-title {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--saw-warning-dark);
+    margin: 0 0 4px 0;
+}
+
+.bento-merge-warning-text {
+    margin: 0;
+    font-size: 13px;
+    color: var(--saw-text-secondary);
+}
+
+.bento-merge-check-btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: var(--saw-primary);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.bento-merge-check-btn:hover {
+    background: var(--saw-primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.bento-merge-check-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Merge Container */
+.bento-merge-container {
+    display: none;
+    margin-top: 0;
+    border-top: 1px solid var(--saw-border-color);
+}
+
+.bento-merge-container.active {
+    display: block;
+}
+
+.bento-merge-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, var(--saw-primary) 0%, var(--saw-primary-dark) 100%);
+}
+
+.bento-merge-header-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.bento-merge-header-icon {
+    width: 18px;
+    height: 18px;
+}
+
+.bento-merge-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    border-radius: 50%;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.bento-merge-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(90deg);
+}
+
+.bento-merge-close svg {
+    width: 14px;
+    height: 14px;
+}
+
+.bento-merge-body {
+    padding: 20px;
+}
+
+/* Tabs */
+.bento-merge-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--saw-border-color);
+}
+
+.bento-merge-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: none;
+    border: none;
+    color: var(--saw-text-secondary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+    transition: color 0.2s ease;
+}
+
+.bento-merge-tab:hover {
+    color: var(--saw-primary);
+}
+
+.bento-merge-tab.active {
+    color: var(--saw-primary);
+}
+
+.bento-merge-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--saw-primary);
+    border-radius: 2px 2px 0 0;
+}
+
+.bento-merge-tab-icon {
+    font-size: 14px;
+}
+
+/* Content */
+.bento-merge-content {
+    display: none;
+}
+
+.bento-merge-content.active {
+    display: block;
+}
+
+.bento-merge-loading,
+.bento-merge-error {
+    text-align: center;
+    padding: 30px 20px;
+    color: var(--saw-text-muted);
+}
+
+.bento-merge-spinner {
+    animation: spin 1s linear infinite;
+    margin-right: 8px;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Help Text */
+.bento-merge-help-text {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 16px;
+    background: var(--saw-info-light);
+    border-left: 3px solid var(--saw-info);
+    border-radius: 4px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: var(--saw-text-primary);
+}
+
+.bento-merge-help-icon {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    color: var(--saw-info);
+}
+
+/* Search */
+.bento-merge-search {
+    margin-bottom: 16px;
+}
+
+.bento-merge-search-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.bento-merge-search-icon {
+    position: absolute;
+    left: 12px;
+    width: 16px;
+    height: 16px;
+    color: var(--saw-text-muted);
+    pointer-events: none;
+}
+
+.bento-merge-search-input {
+    width: 100%;
+    padding: 10px 12px 10px 40px;
+    background: var(--saw-input-bg);
+    border: 2px solid var(--saw-border-color);
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--saw-text-primary);
+    transition: all 0.2s ease;
+}
+
+.bento-merge-search-input:focus {
+    outline: none;
+    border-color: var(--saw-primary);
+    box-shadow: 0 0 0 3px var(--saw-primary-light);
+}
+
+/* List */
+.bento-merge-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 4px;
+    margin-bottom: 16px;
+}
+
+.bento-merge-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--saw-card-bg);
+    border: 2px solid var(--saw-border-color);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.bento-merge-item:hover {
+    border-color: var(--saw-primary);
+    background: var(--saw-bg-tertiary);
+    transform: translateX(4px);
+}
+
+.bento-merge-item input[type="checkbox"] {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--saw-primary);
+}
+
+.bento-merge-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.bento-merge-item-info strong {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--saw-text-primary);
+    margin-bottom: 4px;
+}
+
+.bento-merge-item-meta {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--saw-text-muted);
+}
+
+.bento-merge-item-visits,
+.bento-merge-item-ico {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.bento-merge-meta-icon {
+    width: 12px;
+    height: 12px;
+}
+
+/* Actions */
+.bento-merge-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 16px;
+    border-top: 1px solid var(--saw-border-color);
+}
+
+.bento-merge-submit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: var(--saw-primary);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.bento-merge-submit-btn:hover:not(:disabled) {
+    background: var(--saw-primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+}
+
+.bento-merge-submit-btn:disabled {
+    background: var(--saw-gray-400);
+    cursor: not-allowed;
+}
+
+.bento-merge-submit-icon {
+    width: 16px;
+    height: 16px;
+}
+
+/* ============================================
+   DUPLICATE LIST FROM AJAX
+   ============================================ */
+
+.saw-duplicate-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.saw-duplicate-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--saw-card-bg);
+    border: 2px solid var(--saw-border-color);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.saw-duplicate-item:hover {
+    border-color: var(--saw-primary);
+    background: var(--saw-bg-tertiary);
+}
+
+.saw-dup-info strong {
+    display: block;
+    font-size: 14px;
+    color: var(--saw-text-primary);
+    margin-bottom: 4px;
+}
+
+.saw-dup-meta {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    font-size: 12px;
+}
+
+.saw-similarity-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: var(--saw-success-light);
+    color: var(--saw-success-dark);
+    border-radius: 6px;
+    font-weight: 700;
+}
+
+.saw-visit-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: var(--saw-bg-tertiary);
+    color: var(--saw-text-secondary);
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+.saw-ico-badge,
+.saw-ico-text {
+    color: var(--saw-text-muted);
+}
+
+.saw-merge-warning {
+    background: var(--saw-warning-light);
+    border: 2px solid var(--saw-warning);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 16px;
+}
+
+.saw-merge-warning strong {
+    display: block;
+    color: var(--saw-warning-dark);
+    margin-bottom: 6px;
+    font-size: 13px;
+}
+
+.saw-merge-warning-text-p {
+    margin: 0;
+    font-size: 12px;
+    color: var(--saw-text-secondary);
+}
+
+.saw-no-duplicates {
+    text-align: center;
+    padding: 30px 20px;
+    color: var(--saw-success);
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.saw-help-text {
+    background: var(--saw-info-light);
+    border-left: 3px solid var(--saw-info);
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: var(--saw-text-primary);
+    border-radius: 4px;
+}
+
+.saw-merge-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    padding-top: 16px;
+    border-top: 1px solid var(--saw-border-color);
+}
+
+.saw-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.saw-btn-primary {
+    background: var(--saw-primary);
+    color: #fff;
+}
+
+.saw-btn-primary:hover {
+    background: var(--saw-primary-hover);
+}
+
+.saw-btn-primary:disabled {
+    background: var(--saw-gray-400);
+    cursor: not-allowed;
+}
+
+/* ============================================
+   ELEGANT ALERTS
+   ============================================ */
+
+.saw-elegant-alert {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 999999;
+    background: var(--saw-card-bg);
+    padding: 20px 24px;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-width: 320px;
+    max-width: 400px;
+    animation: slideInRight 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    border: 1px solid var(--saw-border-color);
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.saw-alert-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.saw-alert-content {
+    flex: 1;
+}
+
+.saw-alert-content strong {
+    display: block;
+    font-size: 15px;
+    margin-bottom: 4px;
+    color: var(--saw-text-primary);
+}
+
+.saw-alert-content p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--saw-text-secondary);
+}
+
+.saw-alert-close {
+    background: none;
+    border: none;
+    color: var(--saw-text-muted);
+    cursor: pointer;
+    padding: 4px;
+    font-size: 20px;
+    line-height: 1;
+}
+
+.saw-alert-close:hover {
+    color: var(--saw-text-primary);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 600px) {
+    .bento-merge-warning {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .bento-merge-check-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .bento-merge-tabs {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .bento-merge-tab {
+        justify-content: center;
+    }
+
+    .saw-elegant-alert {
+        left: 20px;
+        right: 20px;
+        min-width: 0;
+    }
+}

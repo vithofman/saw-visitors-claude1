@@ -57,7 +57,7 @@ $in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'
 <?php endif; ?>
 
 <div class="sa-form-container">
-    <form method="post" action="" enctype="multipart/form-data" class="sa-form">
+    <form method="post" action="" enctype="multipart/form-data" class="sa-form" id="saw-branches-form">
         <?php
         $nonce_action = $is_edit ? 'saw_edit_branches' : 'saw_create_branches';
         wp_nonce_field($nonce_action, '_wpnonce', false);

@@ -180,6 +180,14 @@ return array(
         'invalidate_on' => array('save', 'delete'),
     ),
     
+    // Infinite scroll configuration
+    'infinite_scroll' => array(
+        'enabled' => true,
+        'initial_load' => 100,
+        'per_page' => 50,
+        'threshold' => 0.6,
+    ),
+    
     // Audit configuration
     'audit' => array(
         'enabled' => true,
